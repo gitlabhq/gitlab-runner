@@ -122,14 +122,14 @@ Microsoft, we officially [deprecate the
 version](https://about.gitlab.com/handbook/product/#deprecated) and
 remove it in the next major change. For example, in 12.x we started
 supporting [`Windows
-1803`](https://support.microsoft.com/en-us/lifecycle/search?alpha=1803)
+1803`](https://docs.microsoft.com/en-us/lifecycle/products/?alpha=1803)
 because it came out on `2018-04-30`. Mainstream support ended on
 `2019-11-12`, so we deprecated `Windows 1803` in 12.x and it was
 [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6553) in
 GitLab 13.0.
 
 As a single source of truth we use
-<https://support.microsoft.com/en-us/lifecycle/search> which specifies
+<https://docs.microsoft.com/en-us/lifecycle/products/> which specifies
 both the release and mainstream support dates.
 
 Below is a list of versions that are commonly used and their end of life
@@ -174,5 +174,5 @@ If you don't have a Windows Password, Runner's service won't start but you can
 use the Built-in System Account.
 
 If you have issues with the Built-in System Account, please read
-[How to Configure the Service to Start Up with the Built-in System Account](https://support.microsoft.com/en-us/help/327545/how-to-troubleshoot-service-startup-permissions-in-windows-server-2003#6)
+[Configure the Service to Start Up with the Built-in System Account](https://docs.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/service-startup-permissions#resolution-3-configure-the-service-to-start-up-with-the-built-in-system-account)
 on Microsoft's support website.

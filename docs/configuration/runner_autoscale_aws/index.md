@@ -439,5 +439,5 @@ be an issue.
 You can read the following use cases from which this tutorial was (heavily)
 influenced:
 
-- [HumanGeo - Scaling GitLab CI](http://blog.thehumangeo.com/gitlab-autoscale-runners.html)
+- [HumanGeo switched from Jenkins to GitLab](https://about.gitlab.com/blog/2017/11/14/humangeo-switches-jenkins-gitlab-ci/)
 - [Substrakt Health - Autoscale GitLab CI Runners and save 90% on EC2 costs](https://about.gitlab.com/blog/2017/11/23/autoscale-ci-runners/)

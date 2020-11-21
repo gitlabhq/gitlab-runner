@@ -278,6 +278,8 @@ You can add `SeServiceLogonRight` in two ways:
      > **Notice:** The _Local Security Policy_ tool may be not available in some
      > Windows versions - for example in "Home Edition" variant of each version.
 
+<!-- I'm unable to download `Ntrights.exe` from Microsoft -->
+
 1. From command line, using the `Ntrights.exe` tool:
    - Download tools from [Microsoft's download site](https://www.microsoft.com/en-us/download/details.aspx?id=17657),
    - execute `ntrights.exe ntrights +r SeServiceLogonRight -u USER_NAME_HERE` (remember,
