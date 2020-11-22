@@ -341,6 +341,10 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}
 
+	// git init will fail if an existing config is locked. This file might
+	// be there in the git fetch strategy case.
+	w.RmFile(filepath.Join(projectDir, ".git/config.lock"))
+
 	w.Command("git", "init", projectDir, "--template", templateDir)
 	w.Cd(projectDir)
 	b.writeGitCleanup(w)
