@@ -373,6 +373,25 @@ func TestBuildWithHeadLock(t *testing.T) {
 	})
 }
 
+func TestBuildWithLeftoverConfigLock(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		err = buildtest.RunBuild(t, build)
+		assert.NoError(t, err)
+
+		build.JobResponse.AllowGitFetch = true
+		err = ioutil.WriteFile(build.BuildDir+"/.git/config.lock", []byte{}, os.ModeSticky)
+		require.NoError(t, err)
+
+		err = buildtest.RunBuild(t, build)
+		assert.NoError(t, err)
+	})
+}
+
 func TestBuildWithGitLFSHook(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()

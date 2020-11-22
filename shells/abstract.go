@@ -341,13 +341,10 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}
 
-	// git init will fail if an existing config is locked. This file might
-	// be there in the git fetch strategy case.
-	w.RmFile(filepath.Join(projectDir, ".git/config.lock"))
+	b.writeGitCleanup(w, projectDir)
 
 	w.Command("git", "init", projectDir, "--template", templateDir)
 	w.Cd(projectDir)
-	b.writeGitCleanup(w)
 
 	// Add `git remote` or update existing
 	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
@@ -367,14 +364,20 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	w.Command("git", fetchArgs...)
 }
 
-func (b *AbstractShell) writeGitCleanup(w ShellWriter) {
-	// Remove .git/{index,shallow,HEAD}.lock files from .git, which can fail the fetch command
+func (b *AbstractShell) writeGitCleanup(w ShellWriter, projectDir string) {
+	// Remove .git/{index,shallow,HEAD,config}.lock files from .git, which can fail the fetch command
 	// The file can be left if previous build was terminated during git operation
-	w.RmFile(".git/index.lock")
-	w.RmFile(".git/shallow.lock")
-	w.RmFile(".git/HEAD.lock")
+	files := []string{
+		".git/index.lock",
+		".git/shallow.lock",
+		".git/HEAD.lock",
+		".git/hooks/post-checkout",
+		".git/config.lock",
+	}
 
-	w.RmFile(".git/hooks/post-checkout")
+	for _, f := range files {
+		w.RmFile(path.Join(projectDir, f))
+	}
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
