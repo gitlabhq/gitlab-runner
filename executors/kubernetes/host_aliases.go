@@ -81,5 +81,10 @@ func createServicesHostAlias(srvs common.Services) (*api.HostAlias, error) {
 		servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, srv.Alias)
 	}
 
+	// no service hostnames to add to aliases
+	if len(servicesHostAlias.Hostnames) == 0 {
+		return nil, nil
+	}
+
 	return &servicesHostAlias, nil
 }
