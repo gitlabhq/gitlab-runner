@@ -83,7 +83,7 @@ type FeaturesInfo struct {
 	MultiBuildSteps         bool `json:"multi_build_steps"`
 	TraceReset              bool `json:"trace_reset"`
 	TraceChecksum           bool `json:"trace_checksum"`
-	TraceBytesize           bool `json:"trace_bytesize"`
+	TraceSize               bool `json:"trace_size"`
 	VaultSecrets            bool `json:"vault_secrets"`
 	Cancelable              bool `json:"cancelable"`
 }
