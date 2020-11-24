@@ -846,6 +846,4 @@ func TestJobBytesize(t *testing.T) {
 	_, err = jobTrace.Write([]byte(traceMessage))
 	require.NoError(t, err)
 	jobTrace.Success()
-
-	require.Equal(t, 53, jobTrace.bytesize())
 }

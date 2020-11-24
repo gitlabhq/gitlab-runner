@@ -134,6 +134,7 @@ func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string)
 func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 	features.TraceReset = true
 	features.TraceChecksum = true
+	features.TraceSize = true
 	features.Cancelable = true
 }
 
