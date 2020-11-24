@@ -29,8 +29,8 @@ you need to first configure it.
 For extra security, and to protect your server from the outside world, you can
 bind CNTLM to listen on the `docker0` interface which has an IP that is reachable
 from inside the containers. If you tell CNTLM on the Docker host to bind only
-to this address, Docker containers will be able to reach it, but the outside
-world won't.
+to this address, Docker containers are be able to reach it, but the outside
+world can't.
 
 1. Find the IP that Docker is using:
 
@@ -155,8 +155,8 @@ environment variable. This is because the proxy intercepts the TCP connection be
 - `dockerd` from the dind container.
 - `docker` from the client container.
 
-The ports can be required because otherwise `docker push` will be blocked
-as it originates from the IP mapped to Docker. However, in that case, it is meant to go through the proxy.
+The ports can be required because otherwise `docker push` is blocked,
+because it originates from the IP mapped to Docker. However, in that case, it is meant to go through the proxy.
 
 When testing the communication between `dockerd` from dind and a `docker` client locally
 (as described here: <https://hub.docker.com/_/docker/>),
@@ -177,18 +177,18 @@ For example:
 }
 ```
 
-However, the container started for executing `.gitlab-ci.yml` scripts will have
+However, the container started for executing `.gitlab-ci.yml` scripts has
 the environment variables set by the settings of the `gitlab-runner` configuration (`/etc/gitlab-runner/config.toml`).
 These are available as environment variables as is (in contrast to `.docker/config.json` of the local test above)
 in the dind containers running `dockerd` as a service and `docker` client executing `.gitlab-ci.yml`.
-In `.gitlab-ci.yml`, the environment variables will be picked up by any program honouring the proxy settings from default environment variables. For example,
+In `.gitlab-ci.yml`, the environment variables are picked up by any program that honors the proxy settings from default environment variables. For example,
 `wget`, `apt`, `apk`, `docker info` and `docker pull` (but not by `docker run` or `docker build` as per:
 <https://github.com/moby/moby/issues/24697#issuecomment-366680499>).
 
 `docker run` or `docker build` executed inside the container of the Docker executor
-will look for the proxy settings in `$HOME/.docker/config.json`,
+looks for the proxy settings in `$HOME/.docker/config.json`,
 which is now inside the executor container (and initially empty).
-Therefore, `docker run` or `docker build` executions will have no proxy settings. In order to pass on the settings,
+Therefore, `docker run` or `docker build` executions have no proxy settings. In order to pass on the settings,
 a `$HOME/.docker/config.json` needs to be created in the executor container. For example:
 
 ```yaml

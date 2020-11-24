@@ -55,7 +55,8 @@ place.
 
 When a runner is installed on a host and runs local executors, it starts additional processes for some operations,
 like downloading or uploading artifacts, or handling cache.
-These processes are executed as `gitlab-runner` commands, which means that using `pkill -QUIT gitlab-runner` or `killall QUIT gitlab-runner` can kill them as well, and the operations they are responsible for will fail.
+These processes are executed as `gitlab-runner` commands, which means that you can use `pkill -QUIT gitlab-runner`
+or `killall QUIT gitlab-runner` to kill them. When you kill them, the operations they are responsible for fail.
 
 Here are two ways to prevent this:
 
