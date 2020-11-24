@@ -41,8 +41,8 @@ All supported virtualization/cloud provider parameters, are available at the
 
 ## Runner configuration
 
-In this section we will describe only the significant parameters from the
-autoscale feature point of view. For more configurations details read the
+This section describes the significant autoscale parameters.
+For more configurations details read the
 [advanced configuration](advanced-configuration.md).
 
 ### Runner global options
@@ -147,15 +147,15 @@ where queued, new machines were created, so in total we had 7 machines. Five of
 them were running jobs, and 2 were in _Idle_ state, waiting for the next
 jobs.
 
-The algorithm will still work in the same way; GitLab Runner will create a new
+The algorithm still works the same way; GitLab Runner creates a new
 _Idle_ machine for each machine used for the job execution until `IdleCount`
-is satisfied. Those machines will be created up to the number defined by
+is satisfied. Those machines are created up to the number defined by
 `limit` parameter. If GitLab Runner notices that there is a `limit` number of
-total created machines, it will stop autoscaling, and new jobs will need to
+total created machines, it stops autoscaling, and new jobs must
 wait in the job queue until machines start returning to _Idle_ state.
 
-In the above example we will always have two idle machines. The `IdleTime`
-applies only when we are over the `IdleCount`, then we try to reduce the number
+In the above example we always have two idle machines. The `IdleTime`
+applies only when we are over the `IdleCount`. Then we try to reduce the number
 of machines to `IdleCount`.
 
 ---
@@ -164,9 +164,9 @@ of machines to `IdleCount`.
 After the job is finished, the machine is set to _Idle_ state and is waiting
 for the next jobs to be executed. Let's suppose that we have no new jobs in
 the queue. After the time designated by `IdleTime` passes, the _Idle_ machines
-will be removed. In our example, after 30 minutes, all machines will be removed
+are removed. In our example, after 30 minutes, all machines are removed
 (each machine after 30 minutes from when last job execution ended) and GitLab
-Runner will start to keep an `IdleCount` of _Idle_ machines running, just like
+Runner starts to keep an `IdleCount` of _Idle_ machines running, just like
 at the beginning of the example.
 
 ---
@@ -180,8 +180,8 @@ So, to sum up:
    having the two idle machines
 1. Job finishes, we have 3 idle machines
 1. When one of the three idle machines goes over `IdleTime` from the time when
-   last time it picked the job it will be removed
-1. The Runner will always have at least 2 idle machines waiting for fast
+   last time it picked the job it is removed
+1. The Runner always has at least 2 idle machines waiting for fast
    picking of the jobs
 
 Below you can see a comparison chart of jobs statuses and machines statuses
@@ -191,14 +191,14 @@ in time:
 
 ## How `concurrent`, `limit` and `IdleCount` generate the upper limit of running machines
 
-There doesn't exist a magic equation that will tell you what to set `limit` or
+A magic equation doesn't exist to tell you what to set `limit` or
 `concurrent` to. Act according to your needs. Having `IdleCount` of _Idle_
 machines is a speedup feature. You don't need to wait 10s/20s/30s for the
 instance to be created. But as a user, you'd want all your machines (for which
 you need to pay) to be running jobs, not stay in _Idle_ state. So you should
-have `concurrent` and `limit` set to values that will run the maximum count of
+have `concurrent` and `limit` set to values that run the maximum count of
 machines you are willing to pay for. As for `IdleCount`, it should be set to a
-value that will generate a minimum amount of _not used_ machines when the job
+value that generates a minimum amount of _not used_ machines when the job
 queue is empty.
 
 Let's assume the following example:
@@ -229,9 +229,8 @@ concurrent=20
     IdleCount = 10
 ```
 
-In this example we will have at most 20 concurrent jobs, and at most 25
-machines created. In the worst case scenario regarding idle machines, we will
-not be able to have 10 idle machines, but only 5, because the `limit` is 25.
+In this example, you can have a maximum of 20 concurrent jobs and 25 machines.
+In the worst case scenario, you can't have 10 idle machines, but only 5, because the `limit` is 25.
 
 ## Autoscaling periods configuration
 
@@ -251,7 +250,7 @@ Each of them supports setting `IdleCount` and `IdleTime` based on a set of `Peri
 
 In the `[runners.machine]` settings, you can add multiple `[[runners.machine.autoscaling]]` sections, each one with its own `IdleCount`, `IdleTime`, `Periods` and `Timezone` properties. A section should be defined for each configuration, proceeding in order from the most general scenario to the most specific scenario.
 
-All sections will be parsed and the last one to match the current time will be active. If none matches, the values from the root of `[runners.machine]` are used.
+All sections are parsed. The last one to match the current time is active. If none match, the values from the root of `[runners.machine]` are used.
 
 For example:
 
@@ -273,16 +272,16 @@ For example:
     Timezone = "UTC"
 ```
 
-In this configuration, every weekday between 9 and 17 UTC, machines will be overprovisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
-During the rest of the time the values will be taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
+In this configuration, every weekday between 9 and 17 UTC, machines are overprovisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
+The rest of the time, the values are taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
 
 NOTE: **Note:**
 The 59th second of the last
-minute in any period that you specify will *not* be considered part of the
+minute in any period that you specify is *not* be considered part of the
 period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
 
 You can specify the `Timezone` of a period, for example `"Australia/Sydney"`. If you don't,
-the system setting of the host machine of every runner will be used. This
+the system setting of the host machine of every runner is used. This
 default can be stated as `Timezone = "Local"` explicitly.
 
 More information about the syntax of `[[runner.machine.autoscaling]]` sections can be found
@@ -300,8 +299,8 @@ Autoscale can be configured with the support for _Off Peak_ time mode periods.
 Some organizations can select a regular time periods when no work is done.
 These time periods are called _Off Peak_.
 
-Organizations where _Off Peak_ time periods occurs probably don't want
-to pay for the _Idle_ machines when it's certain that no jobs will be
+Organizations where _Off Peak_ time periods occur probably don't want
+to pay for the _Idle_ machines when jobs are going to be
 executed in this time. Especially when `IdleCount` is set to a big number.
 
 **How it is working?**
@@ -319,7 +318,7 @@ when the _Off Peak_ time mode should be set on. For example:
   ]
 ```
 
-will enable the _Off Peak_ periods described above, so on weekdays
+This example enables the _Off Peak_ periods described above, so on weekdays
 from 12:00am through 8:59am and 6:00pm through 11:59pm, plus all of Saturday and Sunday. Machines
 scheduler is checking all patterns from the array and if at least one of
 them describes current time, then the _Off Peak_ time mode is enabled.
@@ -341,17 +340,17 @@ where selected directories and/or files are saved and shared between subsequent
 jobs.
 
 This is working fine when jobs are run on the same host, but when you start
-using the Runners autoscale feature, most of your jobs will be running on a
-new (or almost new) host, which will execute each job in a new Docker
-container. In that case, you will not be able to take advantage of the cache
+using the Runners autoscale feature, most of your jobs run on a
+new (or almost new) host, which executes each job in a new Docker
+container. In that case, you can't take advantage of the cache
 feature.
 
 To overcome this issue, together with the autoscale feature, the distributed
 Runners cache feature was introduced.
 
 It uses configured object storage server to share the cache between used Docker hosts.
-When restoring and archiving the cache, GitLab Runner will query the server
-and will download or upload the archive respectively.
+When restoring and archiving the cache, GitLab Runner queried the server
+and downloaded or uploaded the archive respectively.
 
 To enable distributed caching, you have to define it in `config.toml` using the
 [`[runners.cache]` directive](advanced-configuration.md#the-runnerscache-section):
@@ -376,19 +375,19 @@ In the example above, the S3 URLs follow the structure
 `http(s)://<ServerAddress>/<BucketName>/<Path>/runner/<runner-id>/project/<id>/<cache-key>`.
 
 To share the cache between two or more Runners, set the `Shared` flag to true.
-That will remove the runner token from the URL (`runner/<runner-id>`) and
-all configured Runners will share the same cache. Remember that you can also
+This flag removes the runner token from the URL (`runner/<runner-id>`) and
+all configured Runners share the same cache. You can also
 set `Path` to separate caches between Runners when cache sharing is enabled.
 
 ## Distributed container registry mirroring
 
 To speed up jobs executed inside of Docker containers, you can use the [Docker
-registry mirroring service](https://docs.docker.com/registry/). This will provide a proxy between your
-Docker machines and all used registries. Images will be downloaded once by the
+registry mirroring service](https://docs.docker.com/registry/). This service provides a proxy between your
+Docker machines and all used registries. Images are downloaded one time by the
 registry mirror. On each new host, or on an existing host where the image is
-not available, it will be downloaded from the configured registry mirror.
+not available, the image is downloaded from the configured registry mirror.
 
-Provided that the mirror will exist in your Docker machines LAN, the image
+Provided that the mirror exists in your Docker machines LAN, the image
 downloading step should be much faster on each host.
 
 To configure the Docker registry mirroring, you have to add `MachineOptions` to
