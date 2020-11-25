@@ -170,6 +170,18 @@ before_script:
   - windows
   - windows-1909
 
+.windows2004_variables:
+  variables:
+    WINDOWS_VERSION: servercore2004
+
+.windows2004:
+  extends:
+  - .windows_base
+  - .windows2004_variables
+  tags:
+  - windows
+  - windows-2004
+
 # .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:

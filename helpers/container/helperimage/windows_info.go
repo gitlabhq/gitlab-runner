@@ -11,6 +11,7 @@ const (
 	baseImage1809 = "servercore1809"
 	baseImage1903 = "servercore1903"
 	baseImage1909 = "servercore1909"
+	baseImage2004 = "servercore2004"
 
 	windowsSupportedArchitecture = "x86_64"
 )
@@ -19,6 +20,7 @@ var helperImages = map[string]string{
 	windows.V1809: baseImage1809,
 	windows.V1903: baseImage1903,
 	windows.V1909: baseImage1909,
+	windows.V2004: baseImage2004,
 }
 
 var powerShellCmdArgs = []string{

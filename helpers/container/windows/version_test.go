@@ -33,6 +33,11 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
+			operatingSystem: "Windows 10 Pro Version 2004 (OS Build 19041.329)",
+			expectedVersion: V2004,
+			expectedErr:     nil,
+		},
+		{
 			operatingSystem: "some random string",
 			expectedErr:     NewUnsupportedWindowsVersionError("some random string"),
 		},
