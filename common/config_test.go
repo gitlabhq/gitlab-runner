@@ -753,3 +753,109 @@ func TestRunnerSettings_GetGracefulKillTimeout_GetForceKillTimeout(t *testing.T)
 		})
 	}
 }
+
+func TestDockerConfig_GetPullPolicies(t *testing.T) {
+	allPolicies := DockerPullPolicies{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever}
+	defaultPolicy := DockerPullPolicies{PullPolicyAlways}
+
+	tests := map[string]struct {
+		config               DockerConfig
+		expectedPullPolicies DockerPullPolicies
+		expectedErr          bool
+	}{
+		"nil pull_policy": {
+			config:               DockerConfig{},
+			expectedPullPolicies: defaultPolicy,
+			expectedErr:          false,
+		},
+		"empty pull_policy": {
+			config:               DockerConfig{PullPolicy: DockerPullPolicies{}},
+			expectedPullPolicies: defaultPolicy,
+			expectedErr:          false,
+		},
+		"known elements in pull_policy": {
+			config:               DockerConfig{PullPolicy: allPolicies},
+			expectedPullPolicies: allPolicies,
+			expectedErr:          false,
+		},
+		"invalid pull_policy": {
+			config:      DockerConfig{PullPolicy: DockerPullPolicies{"invalid"}},
+			expectedErr: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			policies, err := tt.config.GetPullPolicies()
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedPullPolicies, policies)
+		})
+	}
+}
+
+func TestDockerConfig_PullPolicies_UnmarshalTOML(t *testing.T) {
+	tests := map[string]struct {
+		toml           string
+		expectedResult DockerPullPolicies
+		expectedErr    bool
+	}{
+		"no pull_policy element": {
+			toml:           "",
+			expectedResult: nil,
+			expectedErr:    false,
+		},
+		"single unknown policy in pull_policy": {
+			toml:           `pull_policy = "unknown"`,
+			expectedResult: DockerPullPolicies{"unknown"},
+			expectedErr:    false,
+		},
+		"single invalid policy data type in pull_policy": {
+			toml:        `pull_policy = 10`,
+			expectedErr: true,
+		},
+		"valid policy and invalid policy in pull_policy": {
+			toml:           `pull_policy = ["unknown", "always"]`,
+			expectedResult: DockerPullPolicies{"unknown", "always"},
+			expectedErr:    false,
+		},
+		"valid policy and invalid type in pull_policy": {
+			toml:        `pull_policy = ["unknown", 10]`,
+			expectedErr: true,
+		},
+		"multiple policies with invalid data type in pull_policy": {
+			toml:        `pull_policy = [true, false]`,
+			expectedErr: true,
+		},
+		"single always policy in pull_policy": {
+			toml:           `pull_policy = "always"`,
+			expectedResult: DockerPullPolicies{PullPolicyAlways},
+			expectedErr:    false,
+		},
+		"all policies in pull_policy": {
+			toml:           `pull_policy = ["always", "if-not-present", "never"]`,
+			expectedResult: DockerPullPolicies{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
+			expectedErr:    false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			var result DockerConfig
+			_, err := toml.Decode(tt.toml, &result)
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, result.PullPolicy)
+		})
+	}
+}

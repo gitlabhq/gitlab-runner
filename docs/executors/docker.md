@@ -602,7 +602,12 @@ limitless.
 ## How pull policies work
 
 When using the `docker` or `docker+machine` executors, you can set the
-`pull_policy` parameter in the runner `config.toml` file as described in the configuration docs [Docker section](../configuration/advanced-configuration.md#the-runnersdocker-section). This parameter defines how the runner works when pulling Docker images (for both `image` and `services` keywords).
+`pull_policy` parameter in the runner `config.toml` file as described in the configuration docs'
+[Docker section](../configuration/advanced-configuration.md#the-runnersdocker-section).
+
+This parameter defines how the runner works when pulling Docker images (for both `image` and `services` keywords).
+You can set it to a single value, or a list of pull policies, which will be attempted in order
+until an image is pulled successfully. 
 
 If you don't set any value for the `pull_policy` parameter, then
 the runner will use the `always` pull policy as the default value.
@@ -648,8 +653,8 @@ image will be used. Otherwise, the runner will try to pull the image.
 **When to use this pull policy?**
 
 This pull policy is a good choice if you want to use images pulled from
-remote registries but you want to reduce time spent on analyzing image
-layers difference, when using heavy and rarely updated images.
+remote registries, but you want to reduce time spent on analyzing image
+layers difference when using heavy and rarely updated images.
 In that case, you will need once in a while to manually remove the image
 from the local Docker Engine store to force the update of the image.
 
@@ -723,6 +728,45 @@ Docker registry), the build will fail with:
 ```plaintext
 Pulling docker image local_image:latest ...
 ERROR: Build failed: Error: image local_image:latest not found
+```
+
+### Using multiple pull policies
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26558) in GitLab Runner 13.8.
+
+The `pull_policy` parameter allows you to specify a list of pull policies.
+The policies in the list will be attempted in order from left to right until a pull attempt
+is successful, or the list is exhausted.
+
+**When to use multiple pull policies?**
+
+This functionality can be useful when the Docker registry is not available
+and you need to increase job resiliency.
+If you use the `always` policy and the registry is not available, the job fails even if the desired image is cached locally.
+
+To overcome that behavior, you can add additional fallback pull policies
+that execute in case of failure.
+By adding a second pull policy value of `if-not-present`, the runner finds any locally-cached Docker image layers:
+
+```toml
+[runners.docker]
+  pull_policy = ["always", "if-not-present"]
+```
+
+**Any** failure to fetch the Docker image causes the runner to attempt the following pull policy.
+Examples include an `HTTP 403 Forbidden` or an `HTTP 500 Internal Server Error` response from the repository.
+
+Note that the security implications mentioned in the `When not to use this pull policy?` sub-section of the
+[Using the if-not-present pull policy](#using-the-if-not-present-pull-policy) section still apply,
+so you should be aware of the security implications and read the
+[security considerations documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+
+```plaintext
+Using Docker executor with image alpine:latest ...
+Pulling docker image alpine:latest ...
+WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s)
+Attempt #2: Trying "if-not-present" pull policy
+Using locally found image version due to "if-not-present" pull policy
 ```
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)

@@ -63,20 +63,24 @@ func (e *InvalidTimePeriodsError) Unwrap() error {
 	return e.cause
 }
 
-// Get returns one of the predefined values or returns an error if the value can't match the predefined
-func (p DockerPullPolicy) Get() (DockerPullPolicy, error) {
+// GetPullPolicies returns a validated list of pull policies, falling back to a predefined value if empty,
+// or returns an error if the list is not valid
+func (c DockerConfig) GetPullPolicies() (DockerPullPolicies, error) {
 	// Default policy is always
-	if p == "" {
-		return PullPolicyAlways, nil
+	if len(c.PullPolicy) == 0 {
+		return DockerPullPolicies{PullPolicyAlways}, nil
 	}
 
-	// Verify pull policy
-	if p != PullPolicyNever &&
-		p != PullPolicyIfNotPresent &&
-		p != PullPolicyAlways {
-		return "", fmt.Errorf("unsupported docker-pull-policy: %v", p)
+	// Verify pull policies
+	for _, p := range c.PullPolicy {
+		switch p {
+		case PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever:
+		default:
+			return DockerPullPolicies{}, fmt.Errorf("unsupported docker-pull-policy: %q", p)
+		}
 	}
-	return p, nil
+
+	return c.PullPolicy, nil
 }
 
 type DockerPullPolicies []DockerPullPolicy
@@ -87,12 +91,15 @@ func (p *DockerPullPolicies) UnmarshalTOML(data interface{}) error {
 		*p = DockerPullPolicies{DockerPullPolicy(v)}
 	case []interface{}:
 		for _, vv := range v {
-			s, ok := vv.(string)
-			if !ok {
-				continue
+			switch item := vv.(type) {
+			case string:
+				*p = append(*p, DockerPullPolicy(item))
+			default:
+				return fmt.Errorf("unexpected policy data type: %v", item)
 			}
-			*p = append(*p, DockerPullPolicy(s))
 		}
+	default:
+		return fmt.Errorf("unexpected policy data type: %v", v)
 	}
 
 	return nil

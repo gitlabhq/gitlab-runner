@@ -335,11 +335,12 @@ func TestHelperImageWithVariable(t *testing.T) {
 	assert.Equal(t, "helper-image", img.ID)
 }
 
-func (e *executor) setPolicyMode(pullPolicy common.DockerPullPolicy) {
+// setPolicyMode is only meant to be used for tests. If called with an empty array, it will clear out the pull policies.
+func (e *executor) setPolicyMode(pullPolicies ...common.DockerPullPolicy) {
 	e.Config = common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Docker: &common.DockerConfig{
-				PullPolicy: pullPolicy,
+				PullPolicy: pullPolicies,
 			},
 		},
 	}
@@ -351,7 +352,7 @@ func TestDockerGetImageById(t *testing.T) {
 
 	// Use default policy
 	e := executorWithMockClient(c)
-	e.setPolicyMode("")
+	e.setPolicyMode()
 
 	c.On("ImageInspectWithRaw", e.Context, "ID").
 		Return(types.ImageInspect{ID: "ID"}, nil, nil).
@@ -522,6 +523,69 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Once()
 
 	image, err = e.getDockerImage("not-existing")
+	assert.Error(t, err)
+	assert.Nil(t, image, "No existing image")
+}
+
+func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testing.T) {
+	c := new(docker.MockClient)
+	defer c.AssertExpectations(t)
+
+	logger, _ := logrustest.NewNullLogger()
+	output := bytes.NewBufferString("")
+	e := &executor{client: c}
+	e.Build = new(common.Build)
+	e.AbstractExecutor = executors.AbstractExecutor{
+		BuildLogger: common.NewBuildLogger(&common.Trace{Writer: output}, logger.WithField("test", t.Name())),
+		Build:       new(common.Build),
+		Context:     context.Background(),
+	}
+
+	e.setPolicyMode(common.PullPolicyAlways, common.PullPolicyIfNotPresent)
+
+	c.On("ImageInspectWithRaw", e.Context, "existing").
+		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
+		Once()
+
+	c.On("ImagePullBlocking", e.Context, "existing:latest", buildImagePullOptions()).
+		Return(errors.New("received unexpected HTTP status: 502 Bad Gateway")).
+		Once()
+
+	c.On("ImageInspectWithRaw", e.Context, "existing").
+		Return(types.ImageInspect{ID: "local-image-id"}, nil, nil).
+		Once()
+
+	image, err := e.getDockerImage("existing")
+	assert.NoError(t, err)
+	assert.Contains(t, output.String(), `WARNING: Failed to pull image with policy "always": `+
+		`received unexpected HTTP status: 502 Bad Gateway`)
+	assert.Contains(t, output.String(), `Attempt #2: Trying "if-not-present" pull policy`)
+	assert.Contains(t, output.String(), `Using locally found image version due to "if-not-present" pull policy`)
+	require.NotNil(t, image)
+	assert.Equal(t, "local-image-id", image.ID)
+}
+
+func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *testing.T) {
+	c := new(docker.MockClient)
+	defer c.AssertExpectations(t)
+
+	e := executorWithMockClient(c)
+	e.setPolicyMode(common.PullPolicyAlways, common.PullPolicyIfNotPresent)
+
+	c.On("ImageInspectWithRaw", e.Context, "not-existing").
+		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Once()
+
+	options := buildImagePullOptions()
+	c.On("ImagePullBlocking", e.Context, "not-existing:latest", options).
+		Return(os.ErrNotExist).
+		Twice()
+
+	c.On("ImageInspectWithRaw", e.Context, "not-existing").
+		Return(types.ImageInspect{}, nil, os.ErrNotExist).
+		Once()
+
+	image, err := e.getDockerImage("not-existing")
 	assert.Error(t, err)
 	assert.Nil(t, image, "No existing image")
 }
@@ -1084,7 +1148,7 @@ func getTestExecutor() *executor {
 
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{
-		PullPolicy: common.PullPolicyAlways,
+		PullPolicy: common.DockerPullPolicies{common.PullPolicyAlways},
 	}
 
 	return e
@@ -1165,7 +1229,7 @@ func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
 
 	e := getTestExecutor()
 	e.Context = context.Background()
-	e.Config.Docker.PullPolicy = common.PullPolicyAlways
+	e.Config.Docker.PullPolicy = common.DockerPullPolicies{common.PullPolicyAlways}
 
 	testGetDockerImage(t, e, remoteImage, addPullsRemoteImageExpectations)
 	testDeniesDockerImage(t, e, remoteImage, addDeniesPullExpectations)
@@ -1180,7 +1244,7 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 
 	e := getTestExecutor()
 	e.Context = context.Background()
-	e.Config.Docker.PullPolicy = common.PullPolicyIfNotPresent
+	e.Config.Docker.PullPolicy = common.DockerPullPolicies{common.PullPolicyIfNotPresent}
 
 	testGetDockerImage(t, e, remoteImage, addFindsLocalImageExpectations)
 	testGetDockerImage(t, e, gitlabImage, addFindsLocalImageExpectations)
@@ -1211,7 +1275,7 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{
-		PullPolicy: common.PullPolicyIfNotPresent,
+		PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
 	}
 
 	output := bytes.NewBufferString("")
