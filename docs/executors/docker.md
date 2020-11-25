@@ -465,7 +465,7 @@ directory as persistent by defining it in `volumes = ["/my/cache/"]` under the
 ### Clearing Docker cache
 
 GitLab Runner provides the [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/packaging/root/usr/share/gitlab-runner/clear-docker-cache)
-script to remove containers that can unnecessarily consume disk space.
+script to remove old containers, images and volumes that can unnecessarily consume disk space.
 
 Run `clear-docker-cache` regularly (using `cron` once per week, for example),
 ensuring a balance is struck between:
@@ -473,7 +473,16 @@ ensuring a balance is struck between:
 - Maintaining some recent containers in the cache for performance.
 - Reclaiming disk space.
 
-`clear-docker-cache` does not clean build or cache volumes.
+`clear-docker-cache` provides the following options that can be used while launching the script.
+
+```shell
+ -d Remove all dangling images
+ -o Remove all old or unused containers
+ -v Remove all old or unused volumes
+ -b Remove all unused build cache, not just dangling ones
+ -p Remove all unused containers, networks, images (both dangling and unreferenced)
+ -a Remove all unused containers, networks, images (both dangling and unreferenced) and volumes
+```
 
 ## The persistent storage
 
