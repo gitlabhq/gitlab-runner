@@ -12,12 +12,15 @@ dockerfiles/runner/ubuntu/gitlab-runner_*.deb
 dockerfiles/runner-helper/binaries/
 .DS_Store
 .idea/
-.editorconfig
 tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
 /.gopath/
 /.tmp/
+
+# Ignore all editorconfig files except the root one
+.editorconfig
+!/.editorconfig
 
 testsdefinitions.txt
 /.testoutput/
