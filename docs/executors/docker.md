@@ -473,15 +473,10 @@ ensuring a balance is struck between:
 - Maintaining some recent containers in the cache for performance.
 - Reclaiming disk space.
 
-`clear-docker-cache` provides the following options that can be used while launching the script.
+`clear-docker-cache` can remove dangling images, old or unused containers and volumes, unused build cache, etc. For a list of options, run the script without any flags:
 
 ```shell
- -d Remove all dangling images
- -o Remove all old or unused containers
- -v Remove all old or unused volumes
- -b Remove all unused build cache, not just dangling ones
- -p Remove all unused containers, networks, images (both dangling and unreferenced)
- -a Remove all unused containers, networks, images (both dangling and unreferenced) and volumes
+clear-docker-cache
 ```
 
 ## The persistent storage
