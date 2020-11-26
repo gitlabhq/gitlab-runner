@@ -232,7 +232,6 @@ git 1.7.1:
     GOROOT: /usr/local/go
     GOPATH: /go
     CGO_ENABLED: 0
-    OUR_PACKAGES: gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
   before_script:
   - unset GPG_KEY
   - yum install -y -q git && git version
@@ -240,7 +239,7 @@ git 1.7.1:
   - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
   - source ci/touch_make_dependencies
   script:
-  - make simple-test
+  - make git1.7-test
 
 integration_k8s:
   extends:
