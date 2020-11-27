@@ -300,10 +300,12 @@ func (c *clientJobTrace) touchJob() common.UpdateJobResult {
 	}
 
 	jobInfo := common.UpdateJobInfo{
-		ID:       c.id,
-		State:    common.Running,
-		Checksum: c.checksum(),
-		Bytesize: c.bytesize(),
+		ID:    c.id,
+		State: common.Running,
+		Output: common.JobTraceOutput{
+			Checksum: c.checksum(),
+			Bytesize: c.bytesize(),
+		},
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
@@ -328,8 +330,10 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 		ID:            c.id,
 		State:         state,
 		FailureReason: c.failureReason,
-		Checksum:      c.checksum(),
-		Bytesize:      c.bytesize(),
+		Output: common.JobTraceOutput{
+			Checksum: c.checksum(),
+			Bytesize: c.bytesize(),
+		},
 	}
 
 	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)

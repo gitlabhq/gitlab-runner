@@ -453,8 +453,12 @@ type UpdateJobRequest struct {
 	Token         string           `json:"token,omitempty"`
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
-	Checksum      string           `json:"checksum,omitempty"`
-	Bytesize      int              `json:"bytesize,omitempty"`
+	Output        JobTraceOutput   `json:"output,omitempty"`
+}
+
+type JobTraceOutput struct {
+	Checksum string `json:"checksum,omitempty"`
+	Bytesize int    `json:"bytesize,omitempty"`
 }
 
 //nolint:lll
@@ -491,8 +495,7 @@ type UpdateJobInfo struct {
 	ID            int
 	State         JobState
 	FailureReason JobFailureReason
-	Checksum      string
-	Bytesize      int
+	Output        JobTraceOutput
 }
 
 type ArtifactsOptions struct {

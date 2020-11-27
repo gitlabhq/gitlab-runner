@@ -784,10 +784,12 @@ func TestJobChecksum(t *testing.T) {
 	traceMaskedMessage := "This string should be [MASKED] $$$$"
 
 	expectedJobInfo := common.UpdateJobInfo{
-		ID:       -1,
-		State:    "success",
-		Checksum: "crc32:0fc72945", // this is a checksum of `traceMaskedMessage`
-		Bytesize: 35,
+		ID:    -1,
+		State: "success",
+		Output: common.JobTraceOutput{
+			Checksum: "crc32:0fc72945", // this is a checksum of `traceMaskedMessage`
+			Bytesize: 35,
+		},
 	}
 
 	mockNetwork := new(common.MockNetwork)
@@ -821,10 +823,12 @@ func TestJobBytesize(t *testing.T) {
 	traceMaskedMessage := "Build trace with [MASKED] and multi-byte ü character"
 
 	expectedJobInfo := common.UpdateJobInfo{
-		ID:       -1,
-		State:    "success",
-		Checksum: "crc32:984a6af7",
-		Bytesize: 53,
+		ID:    -1,
+		State: "success",
+		Output: common.JobTraceOutput{
+			Checksum: "crc32:984a6af7",
+			Bytesize: 53,
+		},
 	}
 
 	mockNetwork := new(common.MockNetwork)
