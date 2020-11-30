@@ -118,8 +118,8 @@ runners:
             BucketLocation = "eu-west-1"
             Insecure = false
 
-cache:
-    secretName: s3access
+  cache:
+      secretName: s3access
 ```
 
 Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
