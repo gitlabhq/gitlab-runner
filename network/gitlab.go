@@ -382,6 +382,7 @@ func (n *GitLabClient) UpdateJob(
 		Token:         jobCredentials.Token,
 		State:         jobInfo.State,
 		FailureReason: jobInfo.FailureReason,
+		Checksum:      jobInfo.Output.Checksum, // deprecated
 		Output:        jobInfo.Output,
 	}
 

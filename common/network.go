@@ -453,6 +453,7 @@ type UpdateJobRequest struct {
 	Token         string           `json:"token,omitempty"`
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
+	Checksum      string           `json:"checksum,omitempty"` // deprecated
 	Output        JobTraceOutput   `json:"output,omitempty"`
 }
 
