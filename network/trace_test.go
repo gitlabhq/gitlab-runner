@@ -775,18 +775,21 @@ func TestUpdateIntervalChanges(t *testing.T) {
 	}
 }
 
-// TestJobChecksum validates a completness of crc32 checksum as send
-// in `UpdateJob`. It ensures that checksum engine generates a checksum
-// of a masked content that is send in a chunks to Rails
+// TestJobChecksum validates a completness of crc32 checksum as sent in
+// `UpdateJob`. It ensures that checksum engine generates a checksum of a
+// masked content that is send in a chunks to Rails
 func TestJobChecksum(t *testing.T) {
 	maskedValues := []string{"masked"}
 	traceMessage := "This string should be masked $$$$"
 	traceMaskedMessage := "This string should be [MASKED] $$$$"
 
 	expectedJobInfo := common.UpdateJobInfo{
-		ID:       -1,
-		State:    "success",
-		Checksum: "crc32:0fc72945", // this is a checksum of `traceMaskedMessage`
+		ID:    -1,
+		State: "success",
+		Output: common.JobTraceOutput{
+			Checksum: "crc32:0fc72945", // this is a checksum of `traceMaskedMessage`
+			Bytesize: 35,
+		},
 	}
 
 	mockNetwork := new(common.MockNetwork)
@@ -806,6 +809,41 @@ func TestJobChecksum(t *testing.T) {
 	require.NoError(t, err)
 
 	jobTrace.maxTracePatchSize = 22
+	jobTrace.SetMasked(maskedValues)
+	jobTrace.start()
+
+	_, err = jobTrace.Write([]byte(traceMessage))
+	require.NoError(t, err)
+	jobTrace.Success()
+}
+
+func TestJobBytesize(t *testing.T) {
+	maskedValues := []string{"secret"}
+	traceMessage := "Build trace with secret and multi-byte ü character"
+	traceMaskedMessage := "Build trace with [MASKED] and multi-byte ü character"
+
+	expectedJobInfo := common.UpdateJobInfo{
+		ID:    -1,
+		State: "success",
+		Output: common.JobTraceOutput{
+			Checksum: "crc32:984a6af7",
+			Bytesize: 53,
+		},
+	}
+
+	mockNetwork := new(common.MockNetwork)
+	defer mockNetwork.AssertExpectations(t)
+
+	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage), 0).
+		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.PatchSucceeded, 0)).Once()
+
+	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, expectedJobInfo).
+		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
+
+	jobTrace, err := newJobTrace(mockNetwork, jobConfig, jobCredentials)
+	require.NoError(t, err)
+
+	jobTrace.maxTracePatchSize = 100
 	jobTrace.SetMasked(maskedValues)
 	jobTrace.start()
 

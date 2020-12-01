@@ -134,6 +134,7 @@ func (n *GitLabClient) getLastUpdate(credentials requestCredentials) (lu string)
 func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 	features.TraceReset = true
 	features.TraceChecksum = true
+	features.TraceSize = true
 	features.Cancelable = true
 }
 
@@ -381,7 +382,8 @@ func (n *GitLabClient) UpdateJob(
 		Token:         jobCredentials.Token,
 		State:         jobInfo.State,
 		FailureReason: jobInfo.FailureReason,
-		Checksum:      jobInfo.Checksum,
+		Checksum:      jobInfo.Output.Checksum, // deprecated
+		Output:        jobInfo.Output,
 	}
 
 	statusCode, statusText, response := n.doJSON(
