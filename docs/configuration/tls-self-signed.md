@@ -19,7 +19,8 @@ Post https://hostname.tld/api/v4/jobs/request: x509: certificate signed by unkno
 GitLab Runner supports the following options:
 
 - **Default**: GitLab Runner reads the system certificate store and verifies the
-  GitLab server against the certificate authorities (CA) stored in the system.
+  GitLab server against the certificate authorities (CA) stored in the system. Note that reading from
+  the system certificate store is [not supported in Windows](https://github.com/golang/go/issues/16736).
 
 - GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
   predefined file:
