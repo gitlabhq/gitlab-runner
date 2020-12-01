@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -120,8 +121,9 @@ func (n *client) addTLSCA(tlsConfig *tls.Config) {
 		return
 	}
 
+	// SystemCertPool doesn't work on Windows: https://github.com/golang/go/issues/16736
 	pool, err := x509.SystemCertPool()
-	if err != nil {
+	if err != nil && runtime.GOOS != "windows" {
 		logrus.Warningln("Failed to load system CertPool:", err)
 	}
 	if pool == nil {
