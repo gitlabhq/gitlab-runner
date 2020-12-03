@@ -61,7 +61,60 @@ on the cluster.
 
 ## The keywords
 
-The following keywords help to define the behavior of the Runner within Kubernetes:
+The following keywords help to define the behavior of the Runner within Kubernetes.
+
+### CPU requests and limits
+
+| Keyword | Description |
+|---------|-------------|
+| `cpu_limit` | The CPU allocation given to build containers. |
+| `cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature. |
+| `cpu_request` | The CPU allocation requested for build containers. |
+| `cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature. |
+| `helper_cpu_limit` | The CPU allocation given to build helper containers. |
+| `helper_cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature. |
+| `helper_cpu_request` | The CPU allocation requested for build helper containers. |
+| `helper_cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature. |
+| `service_cpu_limit` | The CPU allocation given to build service containers. |
+| `service_cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature. |
+| `service_cpu_request` | The CPU allocation requested for build service containers. |
+| `service_cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature. |
+
+### Memory requests and limits
+
+| Keyword | Description |
+|---------|-------------|
+| `memory_limit` | The amount of memory allocated to build containers. |
+| `memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature. |
+| `memory_request` | The amount of memory requested from build containers. |
+| `memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature. |
+| `helper_memory_limit` | The amount of memory allocated to build helper containers. |
+| `helper_memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature. |
+| `helper_memory_request` | The amount of memory requested for build helper containers. |
+| `helper_memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature. |
+| `service_memory_limit` | The amount of memory allocated to build service containers. |
+| `service_memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature. |
+| `service_memory_request` | The amount of memory requested for build service containers. |
+| `service_memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature. |
+
+### Storage requests and limits
+
+| Keyword | Description |
+|---------|-------------|
+| `ephemeral_storage_limit` | The ephemeral storage limit for build containers. |
+| `ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature. |
+| `ephemeral_storage_request` | The ephemeral storage request given to build containers. |
+| `ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `helper_ephemeral_storage_limit` | The ephemeral storage limit given to helper containers. |
+| `helper_ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `helper_ephemeral_storage_request` | The ephemeral storage request given to helper containers. |
+| `helper_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `service_ephemeral_storage_limit` | The ephemeral storage limit given to service containers. |
+| `service_ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
+| `service_ephemeral_storage_request` | The ephemeral storage request given to service containers. |
+| `service_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
+
+### Other keywords
 
 | Keyword | Description |
 |---------|-------------|
@@ -71,32 +124,8 @@ The following keywords help to define the behavior of the Runner within Kubernet
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
 | `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
-| `cpu_limit` | The CPU allocation given to build containers. |
-| `cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature. |
-| `cpu_request` | The CPU allocation requested for build containers. |
-| `cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature. |
-| `ephemeral_storage_limit` | The ephemeral storage limit for build containers. |
-| `ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature. |
-| `ephemeral_storage_request` | The ephemeral storage request given to build containers. |
-| `ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for build containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `helper_cpu_limit` | The CPU allocation given to build helper containers. |
-| `helper_cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature. |
-| `helper_cpu_request` | The CPU allocation requested for build helper containers. |
-| `helper_cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature. |
-| `helper_ephemeral_storage_limit` | The ephemeral storage limit given to helper containers. |
-| `helper_ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `helper_ephemeral_storage_request` | The ephemeral storage request given to helper containers. |
-| `helper_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for helper containers. When empty, it disables the ephemeral storage request overwrite feature. |
 | `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
-| `helper_memory_limit` | The amount of memory allocated to build helper containers. |
-| `helper_memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for helper containers. When empty, it disables the memory limit overwrite feature. |
-| `helper_memory_request` | The amount of memory requested for build helper containers. |
-| `helper_memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for helper containers. When empty, it disables the memory request overwrite feature. |
 | `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
-| `memory_limit` | The amount of memory allocated to build containers. |
-| `memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature. |
-| `memory_request` | The amount of memory requested from build containers. |
-| `memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for build containers. When empty, it disables the memory request overwrite feature. |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
 | `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
 | `node_selector` | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. |
@@ -111,18 +140,6 @@ The following keywords help to define the behavior of the Runner within Kubernet
 | `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. The cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) will be used if not set. See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). |
 | `service_account` | Default service account job/executor pods use to talk to Kubernetes API. |
 | `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
-| `service_cpu_limit` | The CPU allocation given to build service containers. |
-| `service_cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature. |
-| `service_cpu_request` | The CPU allocation requested for build service containers. |
-| `service_cpu_request_overwrite_max_allowed` | The max amount the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature. |
-| `service_ephemeral_storage_limit` | The ephemeral storage limit given to service containers. |
-| `service_ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `service_ephemeral_storage_request` | The ephemeral storage request given to service containers. |
-| `service_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
-| `service_memory_limit` | The amount of memory allocated to build service containers. |
-| `service_memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for service containers. When empty, it disables the memory limit overwrite feature. |
-| `service_memory_request` | The amount of memory requested for build service containers. |
-| `service_memory_request_overwrite_max_allowed` | The max amount the memory allocation request can be written to for service containers. When empty, it disables the memory request overwrite feature. |
 | `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#using-services). |
 | `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. |
 | `volumes` | Configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes). |
