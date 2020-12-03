@@ -130,8 +130,8 @@ simple-test: TEST_PKG ?= $(shell go list ./...)
 simple-test:
 	go test $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
 
-git1.7-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
-git1.7-test:
+git1.8-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
+git1.8-test:
 	$(MAKE) simple-test
 
 parallel_test_prepare:

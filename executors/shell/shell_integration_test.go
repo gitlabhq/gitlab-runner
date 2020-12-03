@@ -34,7 +34,7 @@ func gitInDir(dir string, args ...string) ([]byte, error) {
 	return cmd.Output()
 }
 
-func skipOnGitWithMessage(t *testing.T, constraints string, message string) {
+func skipOnGit(t *testing.T, constraints string) {
 	out, err := gitInDir("", "version")
 	if err != nil {
 		t.Fatal("Can't detect git version", err)
@@ -65,20 +65,8 @@ func skipOnGitWithMessage(t *testing.T, constraints string, message string) {
 
 	shouldSkip := rules.Check(gitVersion)
 	if shouldSkip {
-		t.Skipf("Git %q found, skipping the test; %s", constraints, message)
+		t.Skipf("Git %q found, skipping the test", constraints)
 	}
-}
-
-func skipIfGitDoesNotSupportLFS(t *testing.T) {
-	skipOnGitWithMessage(t, "< 1.8.2", "available git version doesn't support LFS")
-}
-
-func skipOnGit(t *testing.T, constraints string) {
-	skipOnGitWithMessage(t, constraints, "")
-}
-
-func skipOnGit17x(t *testing.T) {
-	skipOnGit(t, "< 1.8")
 }
 
 func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (*common.Build, func()) {
@@ -461,8 +449,6 @@ func TestBuildWithGitStrategyNoneWithoutLFS(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyNoneWithLFS(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
@@ -504,8 +490,6 @@ func TestBuildWithGitStrategyFetchWithoutLFS(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
@@ -531,8 +515,6 @@ func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
@@ -593,8 +575,6 @@ func TestBuildWithGitStrategyFetchNoCheckoutWithoutLFS(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyFetchNoCheckoutWithLFS(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
@@ -646,8 +626,6 @@ func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyCloneWithLFS(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
@@ -664,8 +642,6 @@ func TestBuildWithGitStrategyCloneWithLFS(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyCloneWithUserDisabledLFS(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
@@ -712,8 +688,6 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 }
 
 func TestBuildWithGitStrategyCloneNoCheckoutWithLFS(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
@@ -735,8 +709,6 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithLFS(t *testing.T) {
 }
 
 func TestBuildWithSubmoduleLFSPullsLFSObject(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
@@ -760,8 +732,6 @@ func TestBuildWithSubmoduleLFSPullsLFSObject(t *testing.T) {
 }
 
 func TestBuildWithSubmoduleLFSDisabledSmudging(t *testing.T) {
-	skipIfGitDoesNotSupportLFS(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
@@ -839,8 +809,6 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
-	skipOnGit17x(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -864,8 +832,6 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 }
 
 func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
-	skipOnGit17x(t)
-
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -1042,7 +1008,7 @@ func TestBuildMultilineCommand(t *testing.T) {
 }
 
 func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
-	skipOnGit17x(t)
+	skipOnGit(t, "< 1.9")
 	skipOnGit(t, ">= 2.10.2")
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
