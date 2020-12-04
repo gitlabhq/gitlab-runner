@@ -432,11 +432,11 @@ Starting with GitLab CE/EE 8.14, GitLab will send credentials for its integrated
 registry along with the build data. These credentials will be automatically
 added to registries authorization parameters list.
 
-After this authorization against the registry will be proceed like for
-configuration added with `DOCKER_AUTH_CONFIG` variable.
+After this, authorization against the registry will proceed similarly to
+configuration added with the `DOCKER_AUTH_CONFIG` variable.
 
-Thanks to this, in your builds you can use any image from you GitLab integrated
-registry, even if the image is private/protected. To fully understand for
+Thanks to this, in your builds you can use any image from your GitLab integrated
+registry, even if the image is private/protected. To fully understand to
 which images the builds will have access, read the
 [New CI build permissions model](https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html) documentation.
 
