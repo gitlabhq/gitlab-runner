@@ -503,8 +503,8 @@ instructs Kubernetes to add entries to `/etc/hosts` file inside of the container
 
 | Option     | Type     | Required | Description |
 |------------|----------|----------|-------------|
-| IP         | string   | yes      | The IP address you want to attach hosts too |
-| Hostnames  | []string | yes      | A list of host name aliases that will be attached to the IP |
+| IP         | `string`   | yes      | The IP address you want to attach hosts too |
+| Hostnames  | `[]string` | yes      | A list of host name aliases that will be attached to the IP |
 
 Here is an example configuration:
 
