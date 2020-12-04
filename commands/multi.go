@@ -496,7 +496,7 @@ func (mr *RunCommand) processRunner(
 func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
 	if err != nil {
 		fmt.Fprintln(trace, err.Error())
-		trace.Fail(err, common.RunnerSystemFailure)
+		trace.Fail(err, common.JobFailureData{Reason: common.RunnerSystemFailure})
 	} else {
 		trace.Success()
 	}

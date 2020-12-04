@@ -121,7 +121,7 @@ func (s *executor) runLegacy(cmd common.ExecutorCommand) error {
 		err := c.Wait()
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			err = &common.BuildError{Inner: err}
+			err = &common.BuildError{Inner: err, ExitCode: exitErr.ExitCode()}
 		}
 		waitCh <- err
 	}()
@@ -193,7 +193,7 @@ func (s *executor) run(cmd common.ExecutorCommand) error {
 		waitErr := c.Wait()
 		var exitErr *exec.ExitError
 		if errors.As(waitErr, &exitErr) {
-			waitErr = &common.BuildError{Inner: waitErr}
+			waitErr = &common.BuildError{Inner: waitErr, ExitCode: exitErr.ExitCode()}
 		}
 		waitCh <- waitErr
 	}()

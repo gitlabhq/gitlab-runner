@@ -180,6 +180,7 @@ func TestMultistepBuild(t *testing.T) {
 				if tt.errExpected {
 					var buildErr *common.BuildError
 					assert.ErrorAs(t, err, &buildErr)
+					assert.Equal(t, 1, buildErr.ExitCode)
 					return
 				}
 				assert.NoError(t, err)

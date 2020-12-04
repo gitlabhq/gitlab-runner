@@ -42,6 +42,14 @@ func (e *ExitError) Error() string {
 	return e.Inner.Error()
 }
 
+func (e *ExitError) ExitCode() int {
+	var cryptoExitError *ssh.ExitError
+	if errors.As(e.Inner, &cryptoExitError) {
+		return cryptoExitError.ExitStatus()
+	}
+	return 0
+}
+
 func (s *Client) getSSHKey(identityFile string) (key ssh.Signer, err error) {
 	buf, err := ioutil.ReadFile(identityFile)
 	if err != nil {

@@ -70,7 +70,7 @@ func TestIgnoreStatusChange(t *testing.T) {
 
 	b.start()
 	b.Success()
-	b.Fail(errors.New("test"), "script_failure")
+	b.Fail(errors.New("test"), common.JobFailureData{Reason: "script_failure"})
 }
 
 func TestTouchJobAbort(t *testing.T) {

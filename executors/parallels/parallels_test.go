@@ -106,8 +106,10 @@ func TestParallelsBuildFail(t *testing.T) {
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
-	assert.IsType(t, &common.BuildError{}, err)
+	var buildError *common.BuildError
+	assert.ErrorAs(t, err, &buildError)
 	assert.Contains(t, err.Error(), "Process exited with status 1")
+	assert.Equal(t, 1, buildError.ExitCode)
 }
 
 func TestParallelsMissingImage(t *testing.T) {

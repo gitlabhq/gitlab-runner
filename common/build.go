@@ -798,13 +798,13 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 			failureReason = ScriptFailure
 		}
 
-		trace.Fail(err, failureReason)
+		trace.Fail(err, JobFailureData{Reason: failureReason, ExitCode: buildError.ExitCode})
 
 		return
 	}
 
 	logger.Errorln("Job failed (system failure):", err)
-	trace.Fail(err, RunnerSystemFailure)
+	trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure})
 }
 
 func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {

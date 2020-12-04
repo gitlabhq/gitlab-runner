@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
 	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/util/exec"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -231,8 +232,9 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	select {
 	case err := <-s.runInContainerWithExecLegacy(ctx, containerName, containerCommand, cmd.Script):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
-		if err != nil && strings.Contains(err.Error(), "command terminated with exit code") {
-			return &common.BuildError{Inner: err}
+		var exitError exec.CodeExitError
+		if err != nil && errors.As(err, &exitError) {
+			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
 		}
 		return err
 
@@ -283,8 +285,9 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	select {
 	case err := <-s.runInContainer(containerName, containerCommand):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
-		if err != nil && errors.Is(err, new(commandTerminatedError)) {
-			return &common.BuildError{Inner: err}
+		var terminatedError *commandTerminatedError
+		if err != nil && errors.As(err, &terminatedError) {
+			return &common.BuildError{Inner: err, ExitCode: terminatedError.exitCode}
 		}
 
 		return err

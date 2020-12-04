@@ -14,6 +14,11 @@ type Trace struct {
 	mutex      sync.Mutex
 }
 
+type JobFailureData struct {
+	Reason   JobFailureReason
+	ExitCode int
+}
+
 func (s *Trace) Write(p []byte) (n int, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -30,7 +35,7 @@ func (s *Trace) SetMasked(values []string) {
 func (s *Trace) Success() {
 }
 
-func (s *Trace) Fail(err error, failureReason JobFailureReason) {
+func (s *Trace) Fail(err error, failureData JobFailureData) {
 }
 
 func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {

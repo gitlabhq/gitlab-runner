@@ -87,6 +87,7 @@ type ExecutorProvider interface {
 type BuildError struct {
 	Inner         error
 	FailureReason JobFailureReason
+	ExitCode      int
 }
 
 // Error implements the error interface.
