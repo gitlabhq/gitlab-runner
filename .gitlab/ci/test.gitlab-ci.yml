@@ -221,12 +221,12 @@ windows 2004 tests:
   - .windows2004
   - .runner_master
 
-git 1.7.1:
+git 1.8.3.1:
   extends:
   - .merge_request_pipelines
   - .except_docs
   - .go-cache
-  image: centos:6
+  image: centos:7
   stage: test
   variables:
     GOROOT: /usr/local/go
@@ -234,12 +234,14 @@ git 1.7.1:
     CGO_ENABLED: 0
   before_script:
   - unset GPG_KEY
-  - yum install -y -q git && git version
+  - yum install -y -q git make && git version
   - curl https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+  - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx -C /usr/bin
+  - git-lfs install --skip-repo
   - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
   - source ci/touch_make_dependencies
   script:
-  - make git1.7-test
+  - make git1.8-test
 
 integration_k8s:
   extends:
