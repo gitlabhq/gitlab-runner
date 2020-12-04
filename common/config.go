@@ -788,7 +788,9 @@ func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSche
 	}
 }
 
-func (c *KubernetesConfig) GetHostAliases() (hostAliases []api.HostAlias) {
+func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
+	var hostAliases []api.HostAlias
+
 	for _, hostAlias := range c.HostAliases {
 		hostAliases = append(
 			hostAliases,
@@ -799,7 +801,7 @@ func (c *KubernetesConfig) GetHostAliases() (hostAliases []api.HostAlias) {
 		)
 	}
 
-	return
+	return hostAliases
 }
 
 func (c *DockerMachine) GetIdleCount() int {

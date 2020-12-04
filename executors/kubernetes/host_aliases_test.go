@@ -146,8 +146,8 @@ func TestCreateHostAliases(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			hostAliases, err := createHostAliases(tt.services, tt.hostAliases)
-			assert.Equal(t, tt.expectedHostAliases, hostAliases)
 			assert.ErrorIs(t, err, tt.expectedError)
+			assert.Equal(t, tt.expectedHostAliases, hostAliases)
 		})
 	}
 }

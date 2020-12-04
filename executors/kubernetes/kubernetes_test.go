@@ -2863,6 +2863,35 @@ func TestSetupBuildPod(t *testing.T) {
 				}, pod.Spec.HostAliases)
 			},
 		},
+		"ignores non RFC1123 aliases": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Services: common.Services{
+					{
+						Name:  "test-service",
+						Alias: "INVALID_ALIAS",
+					},
+					{
+						Name: "docker:dind",
+					},
+				},
+			},
+			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
+				var expected *invalidHostAliasDNSError
+				assert.ErrorAs(t, err, &expected)
+				assert.True(t, expected.Is(err))
+				errMsg := err.Error()
+				assert.Contains(t, errMsg, "is invalid DNS")
+				assert.Contains(t, errMsg, "INVALID_ALIAS")
+				assert.Contains(t, errMsg, "test-service")
+			},
+		},
 		"no host aliases when feature is not supported in kubernetes": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{

@@ -35,6 +35,9 @@ func createHostAliases(services common.Services, hostAliases []api.HostAlias) ([
 		return nil, err
 	}
 
+	// The order that we add host aliases matter here. The host file resolves
+	// host on a firs-come-first-served basis. We always want to have the
+	// service host aliases first so it resolves to that ip.
 	var allHostAliases []api.HostAlias
 	if servicesHostAlias != nil {
 		allHostAliases = append(allHostAliases, *servicesHostAlias)
