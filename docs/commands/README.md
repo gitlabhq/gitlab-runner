@@ -377,14 +377,14 @@ arguments depending on which system it's run on.
 When run on **Windows** or as super-user, it accepts the `--user` flag which
 allows you to drop privileges of builds run with the **shell** executor.
 
-| Parameter             | Default               | Description |
-|-----------------------|-----------------------|-------------|
-| `--service`           | `gitlab-runner`       | Specify service name to use |
-| `--config`           | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
-| `--syslog`            | `true`                | Specify if the service should integrate with system logging service |
-| `--working-directory` | the current directory | Specify the root directory where all data is stored when builds are run with the **shell** executor |
-| `--user`              | `root`                | Specify the user that executes the builds |
-| `--password`          | none                  | Specify the password for the user that executes the builds |
+| Parameter             | Default                                           | Description |
+|-----------------------|---------------------------------------------------|-------------|
+| `--service`           | `gitlab-runner`                                   | Specify service name to use |
+| `--config`            | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
+| `--syslog`            | `true` (for non systemd systems)                  | Specify if the service should integrate with system logging service |
+| `--working-directory` | the current directory                             | Specify the root directory where all data is stored when builds are run with the **shell** executor |
+| `--user`              | `root`                                            | Specify the user that executes the builds |
+| `--password`          | none                                              | Specify the password for the user that executes the builds |
 
 ### `gitlab-runner uninstall`
 
