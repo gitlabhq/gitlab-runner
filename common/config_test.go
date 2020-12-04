@@ -408,6 +408,96 @@ func TestConfigParse(t *testing.T) {
 	}
 }
 
+func TestKubernetesHostAliases(t *testing.T) {
+	tests := map[string]struct {
+		config              KubernetesConfig
+		expectedHostAliases []api.HostAlias
+	}{
+		"parse Kubernetes HostAliases with empty list": {
+			config:              KubernetesConfig{},
+			expectedHostAliases: nil,
+		},
+		"parse Kubernetes HostAliases with unique ips": {
+			config: KubernetesConfig{
+				HostAliases: []KubernetesHostAliases{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web2"},
+					},
+					{
+						IP:        "192.168.1.1",
+						Hostnames: []string{"web14", "web15"},
+					},
+				},
+			},
+			expectedHostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web2"},
+				},
+				{
+					IP:        "192.168.1.1",
+					Hostnames: []string{"web14", "web15"},
+				},
+			},
+		},
+		"parse Kubernetes HostAliases with duplicated ip": {
+			config: KubernetesConfig{
+				HostAliases: []KubernetesHostAliases{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web2"},
+					},
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web14", "web15"},
+					},
+				},
+			},
+			expectedHostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web2"},
+				},
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web14", "web15"},
+				},
+			},
+		},
+		"parse Kubernetes HostAliases with duplicated hostname": {
+			config: KubernetesConfig{
+				HostAliases: []KubernetesHostAliases{
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web1", "web2"},
+					},
+					{
+						IP:        "127.0.0.1",
+						Hostnames: []string{"web1", "web15"},
+					},
+				},
+			},
+			expectedHostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web1", "web2"},
+				},
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"web1", "web15"},
+				},
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expectedHostAliases, tt.config.GetHostAliases())
+		})
+	}
+}
+
 func TestService_ToImageDefinition(t *testing.T) {
 	tests := map[string]struct {
 		service       Service

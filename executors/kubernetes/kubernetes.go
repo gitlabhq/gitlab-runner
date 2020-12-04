@@ -24,7 +24,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -843,26 +842,7 @@ func (s *executor) setupCredentials() error {
 	return nil
 }
 
-type invalidHostAliasDNSError struct {
-	service common.Image
-	inner   error
-}
-
-func (e *invalidHostAliasDNSError) Error() string {
-	return fmt.Sprintf(
-		"provided host alias %s for service %s is invalid DNS. %s",
-		e.service.Alias,
-		e.service.Name,
-		e.inner,
-	)
-}
-
-func (e *invalidHostAliasDNSError) Is(err error) bool {
-	_, ok := err.(*invalidHostAliasDNSError)
-	return ok
-}
-
-func (s *executor) prepareHostAlias() (*api.HostAlias, error) {
+func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 	supportsHostAliases, err := s.featureChecker.IsHostAliasSupported()
 	switch {
 	case errors.Is(err, &badVersionError{}):
@@ -874,44 +854,7 @@ func (s *executor) prepareHostAlias() (*api.HostAlias, error) {
 		return nil, nil
 	}
 
-	return s.createHostAlias()
-}
-
-func (s *executor) createHostAlias() (*api.HostAlias, error) {
-	servicesHostAlias := api.HostAlias{IP: "127.0.0.1"}
-
-	for _, service := range s.options.Services {
-		// Services with ports are coming from .gitlab-webide.yml
-		// they are used for ports mapping and their aliases are in no way validated
-		// so we ignore them. Check out https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1170
-		// for details
-		if len(service.Ports) > 0 {
-			continue
-		}
-
-		serviceMeta := services.SplitNameAndVersion(service.Name)
-		for _, alias := range serviceMeta.Aliases {
-			// For backward compatibility reasons a non DNS1123 compliant alias might be generated,
-			// this will be removed in https://gitlab.com/gitlab-org/gitlab-runner/issues/6100
-			err := dns.ValidateDNS1123Subdomain(alias)
-			if err == nil {
-				servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, alias)
-			}
-		}
-
-		if service.Alias == "" {
-			continue
-		}
-
-		err := dns.ValidateDNS1123Subdomain(service.Alias)
-		if err != nil {
-			return nil, &invalidHostAliasDNSError{service: service, inner: err}
-		}
-
-		servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, service.Alias)
-	}
-
-	return &servicesHostAlias, nil
+	return createHostAliases(s.options.Services, s.Config.Kubernetes.GetHostAliases())
 }
 
 func (s *executor) setupBuildPod(initContainers []api.Container) error {
@@ -951,12 +894,12 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
 	}
 
-	hostAlias, err := s.prepareHostAlias()
+	hostAliases, err := s.getHostAliases()
 	if err != nil {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAlias, initContainers)
+	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -977,7 +920,7 @@ func (s *executor) preparePodConfig(
 	labels, annotations map[string]string,
 	services []api.Container,
 	imagePullSecrets []api.LocalObjectReference,
-	hostAlias *api.HostAlias,
+	hostAliases []api.HostAlias,
 	initContainers []api.Container,
 ) api.Pod {
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
@@ -1018,14 +961,11 @@ func (s *executor) preparePodConfig(
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
+			HostAliases:                   hostAliases,
 			Affinity:                      s.Config.Kubernetes.GetAffinity(),
 			DNSPolicy:                     s.getDNSPolicy(),
 			DNSConfig:                     s.Config.Kubernetes.GetDNSConfig(),
 		},
-	}
-
-	if hostAlias != nil {
-		pod.Spec.HostAliases = []api.HostAlias{*hostAlias}
 	}
 
 	return pod
