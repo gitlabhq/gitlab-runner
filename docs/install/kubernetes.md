@@ -50,7 +50,7 @@ You can use a [configuration template file](../register/index.md#runners-configu
 to configure the runner. You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
-Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository:
+Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository. It is important to note that, for the `config:` section, the format should be `toml` (`<parameter> = <value>` instead of `<parameter>: <value>`), as we are embedding `cofig.toml` in `values.yaml`. 
 
 ```yaml
 runners:
@@ -79,7 +79,7 @@ helpers:
     cpuLimit: 200m
 ```
 
-Now you can set them as `helper_cpu_limit`:
+Now you can set them as `helper_cpu_limit`. Ensure you are using `toml` formatting (`=` rather than `:`) in the `config:` section:
 
 ```yaml
 runners:
@@ -87,7 +87,7 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "ubuntu:16.04"
-        helper_cpu_limit: "200m"
+        helper_cpu_limit = "200m"
 
 ## helpers:
 ##    cpuLimit: 200m
@@ -100,7 +100,7 @@ to avoid conflicts.
 ### Using cache with configuration template
 
 To use cache with your configuration template, set `cache.secretName` in `values.yaml` and
-set the other settings for [the cache](../configuration/advanced-configuration.md#the-runnerscache-section) in the `runners.config`:
+set the other settings for [the cache](../configuration/advanced-configuration.md#the-runnerscache-section) in the `runners.config` file. Use `toml` formatting for the `config:` section:
 
 ```yaml
 runners:
