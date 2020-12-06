@@ -1627,6 +1627,45 @@ func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 	}
 }
 
+func TestBuild_getFeatureFlagInfo(t *testing.T) {
+	const changedFeatureFlags = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION:true"
+	tests := []struct {
+		value          string
+		expectedStatus string
+	}{
+		{
+			value:          "true",
+			expectedStatus: changedFeatureFlags,
+		},
+		{
+			value:          "1",
+			expectedStatus: changedFeatureFlags,
+		},
+		{
+			value:          "invalid",
+			expectedStatus: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.value, func(t *testing.T) {
+			b := Build{
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{
+							Key:    featureflags.CmdDisableDelayedErrorLevelExpansion,
+							Value:  tt.value,
+							Public: true,
+						},
+					},
+				},
+			}
+
+			assert.Equal(t, tt.expectedStatus, b.getFeatureFlagInfo())
+		})
+	}
+}
+
 func setupSuccessfulMockExecutor(
 	t *testing.T,
 	prepareFn func(options ExecutorPrepareOptions) error,
