@@ -17,6 +17,7 @@
     GIT_LFS_S390X_CHECKSUM: "8d3d5bb5ed98fe8df788011e890e2d47351ccec8bf47b679576b375840eb0610"
   dependencies:
   - 'helper images'
+  - 'ecr public token'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
   - 'package-deb'
   script:
@@ -36,6 +37,7 @@
     PWSH_256_CHECKSUM: "ad3b4a868d1b7e47a1048e1eb20f7f782d9b95d5066d79a25d02ccc4dd14e79f"
   dependencies:
   - 'helper images'
+  - 'ecr public token'
   - 'binaries windows/386 windows/amd64'
   before_script:
   - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
