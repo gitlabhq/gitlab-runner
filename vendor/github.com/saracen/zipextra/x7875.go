@@ -8,6 +8,8 @@ import (
 // identifier.
 const ExtraFieldUnixN uint16 = 0x7875
 
+const minimumLength = 4
+
 // InfoZIPNewUnix is the New Unix Extra Field structure for holding UID and GID
 // file ownership data.
 type InfoZIPNewUnix struct {
@@ -31,7 +33,14 @@ func (field InfoZIPNewUnix) Encode() []byte {
 	defer buf.WriteHeader(ExtraFieldUnixN)()
 
 	buid := bigBytesToLittleEndian(field.Uid)
+	if len(buid) < minimumLength {
+		buid = append(buid, make([]byte, minimumLength-len(buid))...)
+	}
+
 	bgid := bigBytesToLittleEndian(field.Gid)
+	if len(bgid) < minimumLength {
+		bgid = append(bgid, make([]byte, minimumLength-len(bgid))...)
+	}
 
 	buf.WriteByte(field.Version)
 
