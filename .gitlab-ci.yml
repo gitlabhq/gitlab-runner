@@ -11,6 +11,7 @@ stages:
 
 include:
 - local: /.gitlab/ci/_common.gitlab-ci.yml
+- local: /.gitlab/ci/_rules.gitlab-ci.yml
 - local: /.gitlab/ci/prepare.gitlab-ci.yml
 - local: /.gitlab/ci/prebuild.gitlab-ci.yml
 - local: /.gitlab/ci/test.gitlab-ci.yml
