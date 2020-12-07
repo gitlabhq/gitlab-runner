@@ -301,7 +301,7 @@ func newTestKubernetesLogProcessor() *kubernetesLogProcessor {
 
 func newDefaultMockBackoffCalculator() *mockBackoffCalculator {
 	c := new(mockBackoffCalculator)
-	c.On("ForAttempt", mock.Anything).Return(time.Duration(0)).Maybe()
+	c.On("ForAttempt", mock.Anything).Return(50 * time.Millisecond).Maybe()
 
 	return c
 }
