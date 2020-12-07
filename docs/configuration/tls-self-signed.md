@@ -38,7 +38,7 @@ GitLab Runner supports the following options:
   echo | openssl s_client -CAfile /etc/gitlab-runner/certs/gitlab-hostname.tld.crt -connect gitlab-hostname.tld:443
   ```
 
-  NOTE: **Note:**
+  NOTE:
   You may need to concatenate the intermediate and server certificate for the chain to
   be properly identified. For example, if you have a primary, intermediate, and root certificate,
   you can put all of them into one file:
@@ -67,7 +67,7 @@ GitLab Runner supports the following options:
 - As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
 
-NOTE: **Note:**
+NOTE:
 If your GitLab server certificate is signed by your CA, use your CA certificate
 (not your GitLab server signed certificate). You might need to add the intermediates to the chain as well.
 

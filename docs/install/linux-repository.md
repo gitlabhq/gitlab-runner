@@ -31,7 +31,7 @@ using the Runner. [Read how to install Docker for your distribution](https://doc
 
 ## Installing the Runner
 
-CAUTION: **Important:**
+NOTE:
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
 to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
 to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
@@ -48,13 +48,13 @@ To install the Runner:
    curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
    ```
 
-   NOTE: **Note:**
+   NOTE:
    Debian users should use [APT pinning](#apt-pinning).
 
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
 
-   NOTE: **Note:**
+   NOTE:
    Debian buster users should [disable skel](#disable-skel) to prevent
    [No such file or directory Job
    failures](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)
@@ -170,7 +170,7 @@ To upgrade GitLab Runner from a version prior to 10.0:
    sudo /usr/share/gitlab-runner/post-install
    ```
 
-   CAUTION: **Caution:**
+   WARNING:
    If you don't run the above command, you will be left
    with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2786)
    for more information.

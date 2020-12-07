@@ -8,7 +8,7 @@ Before proceeding further, you need to make sure that you've already
 
 ## Configuring CNTLM
 
-NOTE: **Note:**
+NOTE:
 If you already use a proxy without authentication, this section is optional and
 you can skip straight to [configuring Docker](#configuring-docker-for-downloading-images).
 Configuring CNTLM is only needed if you are behind a proxy with authentication,
@@ -61,7 +61,7 @@ world can't.
 
 ## Configuring Docker for downloading images
 
-NOTE: **Note:**
+NOTE:
 The following apply to OSes that have systemd support.
 
 Follow [Docker's documentation](https://docs.docker.com/config/daemon/systemd/#httphttps-proxy)
@@ -139,7 +139,7 @@ Where `docker0_interface_ip` is the IP address of the `docker0` interface. You n
 be able to reach it from within the Docker containers, so it's important to set
 it right.
 
-NOTE: **Note:**
+NOTE:
 In our examples, we are setting both lower case and upper case variables
 because certain programs expect `HTTP_PROXY` and others `http_proxy`.
 Unfortunately, there is no
@@ -206,7 +206,7 @@ configuration of the `gitlab-runner` (`/etc/gitlab-runner/config.toml`) that is 
   pre_build_script = "mkdir -p $HOME/.docker/ && echo \"{ \\\"proxies\\\": { \\\"default\\\": { \\\"httpProxy\\\": \\\"$HTTP_PROXY\\\", \\\"httpsProxy\\\": \\\"$HTTPS_PROXY\\\", \\\"noProxy\\\": \\\"$NO_PROXY\\\" } } }\" > $HOME/.docker/config.json"
 ```
 
-NOTE: **Note:**
+NOTE:
 An additional level of escaping `"` is needed here because this is the creation of a
 JSON file with a shell specified as a single string inside a TOML file.
 Because it is not YAML anymore, do not escape the `:`.
@@ -231,6 +231,6 @@ rate limits. As a result, GitLab Runner handles rate limited scenarios with the 
    - If the header is not present, no additional actions are taken, the response error is returned.
 1. The process above is repeated 5 times, then a `gave up due to rate limit` error is returned.
 
-NOTE: **Note:**
+NOTE:
 The header `RateLimit-ResetTime` is case insensitive since all header keys are run
 through the [`http.CanonicalHeaderKey`](https://golang.org/pkg/net/http/#CanonicalHeaderKey) function.

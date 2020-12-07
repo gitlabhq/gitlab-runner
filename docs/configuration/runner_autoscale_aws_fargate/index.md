@@ -253,7 +253,7 @@ to the container image that you are going to use for your CI builds.
 1. Click **Create**.
 1. Click **View task definition**.
 
-CAUTION: **Caution:**
+WARNING:
 A single Fargate task may launch one or more containers.
 The Fargate driver injects the `SSH_PUBLIC_KEY` environment variable
 in containers with the `ci-coordinator` name only. You must
@@ -285,7 +285,7 @@ Your configuration should now be ready to use.
 1. Click **Run Pipeline**.
 1. Update the branch and any variables and click **Run Pipeline**.
 
-NOTE: **Note:**
+NOTE:
 The `image` and `service` keywords in your `gitlab-ci.yml` file are ignored.
 The runner only uses the values specified in the task definition.
 

@@ -56,7 +56,7 @@ out of the scope of this documentation. For more details please read the
    After this, you can destroy the machine with `docker-machine rm [machine_name]`
    and start the Runner.
 
-   NOTE: **Note:**
+   NOTE:
    Multiple concurrent requests to `docker-machine create` that are done
    **at first usage** are not good. When the `docker+machine` executor is used,
    the Runner may spin up few concurrent `docker-machine create` commands. If
@@ -91,7 +91,7 @@ out of the scope of this documentation. For more details please read the
      sudo killall -SIGQUIT gitlab-runner
      ```
 
-   NOTE: **Note:**
+   NOTE:
    Sending the [`SIGQUIT` signal](../commands/README.md#signals) will make the
    Runner to stop gracefully. It will stop accepting new jobs, and will exit
    as soon as the current jobs are finished.

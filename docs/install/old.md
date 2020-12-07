@@ -6,7 +6,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Old GitLab Runner URLs
 
-NOTE: **Note:**
+NOTE:
 Take a look at the [compatibility section](../index.md#gitlab-runner-versions) to check the Runner's compatibility
 with your version of GitLab.
 

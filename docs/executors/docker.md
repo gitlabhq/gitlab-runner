@@ -31,7 +31,7 @@ These configurations are **not** supported:
 | Windows                  | `docker`         | Windows                |
 | Windows                  | `docker-windows` | Linux                  |
 
-NOTE: **Note:**
+NOTE:
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
 Engine. This means the
@@ -139,7 +139,7 @@ or later, than the Windows Server release.
 
 ### Configuring a Windows Docker executor
 
-NOTE: **Note:**
+NOTE:
 When a runner is registered with `c:\\cache`
 as a source directory when passing the `--docker-volumes` or
 `DOCKER_VOLUMES` environment variable, there is a
@@ -727,7 +727,7 @@ ERROR: Build failed: Error: image local_image:latest not found
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
-DANGER: **Deprecated:**
+DANGER:
 Starting with GitLab Runner 10.0, both Docker-SSH and Docker-SSH+machine executors
 are **deprecated** and will be removed in one of the upcoming releases.
 

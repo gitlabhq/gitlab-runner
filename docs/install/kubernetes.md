@@ -1,6 +1,6 @@
 # GitLab Runner Helm Chart
 
-NOTE: **Note:**
+NOTE:
 This chart has been tested on Google Kubernetes Engine and Azure Container Service.
 Other Kubernetes installations may work as well, if not please
 [open an issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues).
@@ -93,7 +93,7 @@ runners:
 ##    cpuLimit: 200m
 ```
 
-NOTE: **Note:**
+NOTE:
 Make sure to comment or remove the old configuration values from your `values.yaml` file
 to avoid conflicts.
 

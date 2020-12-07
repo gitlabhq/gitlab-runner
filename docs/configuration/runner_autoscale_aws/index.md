@@ -24,11 +24,9 @@ powerful autoscaling machines.
 
 ## Prerequisites
 
-NOTE: **Note:**
 A familiarity with Amazon Web Services (AWS) is required as this is where most
 of the configuration will take place.
 
-TIP: **Tip:**
 We suggest a quick read through Docker machine [`amazonec2` driver
 documentation](https://docs.docker.com/machine/drivers/aws/) to familiarize
 yourself with the parameters we will set later in this article.
@@ -70,7 +68,7 @@ machine since it will not run any jobs itself, a `t2.micro` instance will do.
 This machine will be a dedicated host since we need it always up and running,
 thus it will be the only standard cost.
 
-NOTE: **Note:**
+NOTE:
 For the Runner Manager instance, choose a distribution that both Docker and GitLab
 Runner support, for example either Ubuntu, Debian, CentOS or RHEL will work fine.
 
@@ -94,7 +92,7 @@ it connects with your GitLab instance:
 
 You can now move on to the most important part, configuring the GitLab Runner.
 
-TIP: **Tip:**
+NOTE:
 If you want every user in your instance to be able to use the autoscaled Runners,
 register the Runner as a shared one.
 
@@ -268,23 +266,20 @@ under `MachineOptions`. Below you can see the most common ones.
 | `amazonec2-security-group=xxxx` | AWS VPC security group name, not the security group ID. See [AWS security groups](#aws-security-groups). |
 | `amazonec2-instance-type=m4.2xlarge` | The instance type that the child Runners will run on. |
 
-TIP: **Tip:**
-Under `MachineOptions` you can add anything that the [AWS Docker Machine driver
-supports](https://docs.docker.com/machine/drivers/aws/#options). You are highly
-encouraged to read Docker's docs as your infrastructure setup may warrant
-different options to be applied.
+Notes:
 
-NOTE: **Note:**
-The child instances will use by default Ubuntu 16.04 unless you choose a
-different AMI ID by setting `amazonec2-ami`. Set only [supported
-base operating systems for Docker Machine](https://docs.docker.com/machine/drivers/os-base/).
-
-NOTE: **Note:**
-If you specify `amazonec2-private-address-only=true` as one of the machine
-options, your EC2 instance won't get assigned a public IP. This is ok if your
-VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
-but it’s something to consider if you've got a more complex configuration. Read
-more in [Docker docs about VPC connectivity](https://docs.docker.com/machine/drivers/aws/#vpc-connectivity).
+- Under `MachineOptions` you can add anything that the [AWS Docker Machine driver
+  supports](https://docs.docker.com/machine/drivers/aws/#options). You are highly
+  encouraged to read Docker's docs as your infrastructure setup may warrant
+  different options to be applied.
+- The child instances will use by default Ubuntu 16.04 unless you choose a
+  different AMI ID by setting `amazonec2-ami`. Set only [supported
+  base operating systems for Docker Machine](https://docs.docker.com/machine/drivers/os-base/).
+- If you specify `amazonec2-private-address-only=true` as one of the machine
+  options, your EC2 instance won't get assigned a public IP. This is ok if your
+  VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
+  but it’s something to consider if you've got a more complex configuration. Read
+  more in [Docker docs about VPC connectivity](https://docs.docker.com/machine/drivers/aws/#vpc-connectivity).
 
 [Other options](../advanced-configuration.md#the-runnersmachine-section)
 under `[runners.machine]` are also available.
@@ -418,7 +413,7 @@ machine to see the Docker Machines state:
 docker-machine ls -q --filter state=Error --format "{{.NAME}}"
 ```
 
-NOTE: **Note:**
+NOTE:
 There are some issues regarding making GitLab Runner gracefully handle Spot
 price changes, and there are reports of `docker-machine` attempting to
 continually remove a Docker Machine. GitLab has provided patches for both cases

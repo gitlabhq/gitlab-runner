@@ -31,7 +31,7 @@ The used _Builds Directory_ may be defined explicitly by the user with the
 [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
 setting.
 
-TIP: **Tip:**
+NOTE:
 You can also specify
 [`GIT_CLONE_PATH`](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories)
 if you want to clone to a custom directory, and the guideline below
