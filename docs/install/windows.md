@@ -14,7 +14,7 @@ To install and run GitLab Runner on Windows you need:
 
 ## Installation
 
-CAUTION: **Important:**
+WARNING:
 With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
 want to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
@@ -110,7 +110,7 @@ This is the case for both the [Windows binaries](#installation) that we
 distribute, and also for the [Docker
 executor](../executors/docker.md#supported-windows-versions).
 
-NOTE: **Note:**
+NOTE:
 The Docker executor for Windows containers has strict version
 requirements, because containers have to match the version of the host
 OS. See the [list of supported Windows

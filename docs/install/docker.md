@@ -53,7 +53,7 @@ To run `gitlab-runner` inside a Docker container, you need to make sure that the
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes some of the most common problems with GitLab Runner.
 
-NOTE: **Note:**
+NOTE:
 If you are using a [`session_server`](../configuration/advanced-configuration.md), you will also need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
 
 ### Option 1: Use local system volume mounts to start the Runner container
@@ -67,7 +67,7 @@ This example uses the local system for the configuration volume that is mounted 
      gitlab/gitlab-runner:latest
    ```
 
-   TIP: **Tip:**
+   NOTE:
    On macOS, use `/Users/Shared` instead of `/srv`.
 
 ### Option 2: Use Docker volumes to start the Runner container
@@ -89,7 +89,7 @@ In this example, you can use a configuration container to mount your custom data
        gitlab/gitlab-runner:latest
    ```
 
-TIP: **Tip:**
+NOTE:
 To set the container's timezone, in the `docker run` command, use the flag `--env TZ=<TIMEZONE>`. [View a list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 ### Register the Runner
@@ -128,7 +128,7 @@ docker run -d --name gitlab-runner --restart always \
   gitlab/gitlab-runner:latest
 ```
 
-NOTE: **Note:**
+NOTE:
 You need to use the same method for mounting you data volume as you
 did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 `--volumes-from gitlab-runner-config`).
@@ -188,11 +188,10 @@ The following multi-platform Docker images are available:
 - `gitlab/gitlab-runner:alpine` based on Alpine with much a smaller footprint
   (~160/350 MB Ubuntu vs ~45/130 MB Alpine compressed/decompressed).
 
-TIP: **Tip:**
 See [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles)
 source for possible build instructions for both Ubuntu and Alpine images.
 
-NOTE: **Note:**
+NOTE:
 The IBM Z image does not contain the `docker-machine` dependency, as it is not yet maintained for the Linux s390x
 platform. See [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551) for current status.
 

@@ -85,7 +85,7 @@ It is possible to download and install via binary file, if necessary.
 
 ### Install
 
-CAUTION: **Important:**
+WARNING:
 With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
 want to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
@@ -132,7 +132,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
 1. [Register the Runner](../register/index.md)
 
-NOTE: **Note:**
+NOTE:
 If `gitlab-runner` is installed and run as service (what is described
 in this page), it will run as root, but will execute jobs as user specified by
 the `install` command. This means that some of the job functions like cache and

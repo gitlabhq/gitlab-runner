@@ -6,12 +6,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Install GitLab Runner on FreeBSD
 
-NOTE: **Note:**
+NOTE:
 The FreeBSD version is also available as a [bleeding edge](bleeding-edge.md)
 release. Make sure that you read the [FAQ](../faq/README.md) section which
 describes some of the most common problems with GitLab Runner.
 
-CAUTION: **Important:**
+WARNING:
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
 to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
 to install a version prior to GitLab Runner 10, [visit the old docs](old.md).

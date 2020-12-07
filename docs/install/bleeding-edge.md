@@ -6,7 +6,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # GitLab Runner bleeding edge releases
 
-CAUTION: **Warning:**
+WARNING:
 These are the latest, probably untested releases of GitLab Runner built straight
 from `master` branch. Use at your own risk.
 

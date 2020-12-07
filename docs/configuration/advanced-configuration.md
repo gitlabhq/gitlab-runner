@@ -120,7 +120,7 @@ be repeated after all requests for the other workers + their sleeps are called.
 
 ## The `[session_server]` section
 
-NOTE: **Note:**
+NOTE:
 `session_server` is not yet supported by
 [`gitlab-runner` Helm chart](https://docs.gitlab.com/charts/charts/gitlab/gitlab-runner/index.html),
 but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
@@ -640,7 +640,7 @@ in the [runners autoscale documentation](autoscale.md#distributed-runners-cachin
 | `Path`           | string           | Name of the path to prepend to the cache URL. |
 | `Shared`         | boolean          | Enables cache sharing between runners, `false` by default. |
 
-CAUTION: **Important:**
+WARNING:
 With GitLab Runner 11.3.0, the configuration parameters related to S3 were moved to a dedicated `[runners.cache.s3]` section.
 The old format of the configuration with S3 configured directly in `[runners.cache]` was deprecated with GitLab Runner 11.3.0.
 **With GitLab Runner 12.0.0 the old configuration syntax was removed and is no longer supported**.

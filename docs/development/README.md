@@ -174,7 +174,7 @@ go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./
 Currently, GoLand doesn't support dynamic Go tool arguments, so you'll need to run `make print_ldflags` first
 and then paste it in the configuration.
 
-NOTE: **Note:**
+NOTE:
 To use the debugger, make sure to remove the last two flags (`-s -w`).
 
 ### Helper image

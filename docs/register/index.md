@@ -23,7 +23,7 @@ Before registering a runner, you need to first:
   - For a [project-specific runner](https://docs.gitlab.com/ee/ci/runners/README.html#specific-runners),
     go to **Settings > CI/CD** and expand the **Runners** section
 
-NOTE: **Note:**
+NOTE:
 When registering a GitLab Runner on GitLab.com, the `gitlab-ci coordinator URL`
 is `https://gitlab.com`.
 
@@ -48,7 +48,7 @@ To register a runner using a Docker container:
    docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
    ```
 
-   NOTE: **Note:**
+   NOTE:
    If you used a configuration volume other than `/srv/gitlab-runner/config`
    during install, be sure to update the command with the correct volume.
 
@@ -94,7 +94,7 @@ To register a GitLab Runner under Linux:
 
 ## macOS
 
-NOTE: **Note:**
+NOTE:
 Install [Docker.app](https://docs.docker.com/docker-for-mac/install/)
 before registering a runner under macOS.
 

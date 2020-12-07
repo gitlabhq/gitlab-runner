@@ -129,7 +129,7 @@ For [graceful shutdowns](../best_practice/index.md#graceful-shutdown):
 sudo kill -SIGQUIT <main_runner_pid>
 ```
 
-CAUTION: **Caution:**
+WARNING:
 Do **not** use `killall` or `pkill` for graceful shutdowns if you are using `shell`
 or `docker` executors. This can cause improper handling of the signals due to subprocessess
 being killed as well. Use it only on the main process handling the jobs.
@@ -211,7 +211,7 @@ There are two options to register a runner:
 - interactive.
 - non-interactive.
 
-NOTE: **Note:**
+NOTE:
 Runners can be registered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner) but
 configuration is not generated automatically.
 
@@ -260,7 +260,7 @@ export REGISTER_NON_INTERACTIVE=true
 gitlab-runner register
 ```
 
-NOTE: **Note:**
+NOTE:
 Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 #### `[[runners]]` configuration template file
@@ -291,7 +291,7 @@ Verifying runner... is alive                        runner=32773c0f
 To delete the old and removed from GitLab runners, execute the following
 command.
 
-CAUTION: **Warning:**
+WARNING:
 This operation cannot be undone. It updates the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
 
@@ -310,7 +310,7 @@ It expects either:
 
 With the `--all-runners` option, it unregisters all the attached runners.
 
-NOTE: **Note:**
+NOTE:
 Runners can be unregistered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner) but
 configuration is not modified for the user.
 
@@ -323,7 +323,7 @@ test-runner     Executor=shell Token=t0k3n URL=http://gitlab.example.com
 
 Then use this information to unregister it, using one of the following commands.
 
-CAUTION: **Warning:**
+WARNING:
 This operation cannot be undone. It updates the configuration file, so
 make sure to have a backup of `config.toml` before executing it.
 
@@ -339,7 +339,7 @@ gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
 gitlab-runner unregister --name test-runner
 ```
 
-NOTE: **Note:**
+NOTE:
 If there is more than one runner with the given name, only the first one is removed.
 
 #### All runners
@@ -461,7 +461,7 @@ exiting. The default of `0` means that the runner has no timeout and waits forev
 
 ### `gitlab-runner exec`
 
-NOTE: **Note:**
+NOTE:
 Not all features of `.gitlab-ci.yml` are supported by `exec`. Please
 check what exactly is supported in the [limitations of `gitlab-runner exec`](#limitations-of-gitlab-runner-exec)
 section.

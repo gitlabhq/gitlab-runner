@@ -269,7 +269,7 @@ PowerShell.
 
 ## Windows Batch
 
-NOTE: **Note:**
+NOTE:
 In GitLab 11.11, we announced the [deprecation](https://about.gitlab.com/handbook/product/#deprecated)
 of the Windows Batch executor, `cmd` shell, for the GitLab Runner in favor
 of [PowerShell](#powershell). The `cmd` shell remains included in future versions

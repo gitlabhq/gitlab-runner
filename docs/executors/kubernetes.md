@@ -209,7 +209,7 @@ variables:
   KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
 ```
 
-NOTE: **Note:**
+NOTE:
 You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file.
 
 ### Overwriting Container Resources

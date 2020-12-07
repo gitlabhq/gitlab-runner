@@ -75,7 +75,7 @@ You can read more about using `pprof` in its [documentation](https://golang.org/
 
 ## Configuration of the metrics HTTP server
 
-NOTE: **Note:**
+NOTE:
 The metrics server exports data about the internal state of the
 GitLab Runner process and should not be publicly available!
 

@@ -275,7 +275,7 @@ For example:
 In this configuration, every weekday between 9 and 17 UTC, machines are overprovisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
 The rest of the time, the values are taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
 
-NOTE: **Note:**
+NOTE:
 The 59th second of the last
 minute in any period that you specify is *not* be considered part of the
 period. For more information, see [issue #2170](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2170).
@@ -332,7 +332,7 @@ the `OffPeakPeriods` pattern is fulfilled then it switches back to
 
 ## Distributed runners caching
 
-NOTE: **Note:**
+NOTE:
 Read how to [use a distributed cache](../configuration/speed_up_job_execution.md#use-a-distributed-cache).
 
 To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/README.html#cache)

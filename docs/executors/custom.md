@@ -268,7 +268,7 @@ order:
 1. `upload_artifacts_on_success` OR `upload_artifacts_on_failure`
 1. `cleanup_file_variables`
 
-NOTE: **Note:**
+NOTE:
 In GitLab Runner 14.0 and later, `build_script` will be replaced with `step_script`. For more information, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426).
 
 For each stage mentioned above, the `run_exec` executable will be
@@ -436,7 +436,7 @@ If the script that the user defines inside of `.gitlab-ci.yml` file
 exits with a non-zero code, `run_exec` should exit with
 `BUILD_FAILURE_EXIT_CODE` value.
 
-NOTE: **Note:**
+NOTE:
 We strongly suggest using `BUILD_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.
@@ -457,7 +457,7 @@ Below is a table of what stages are retried, and by how many times.
 | `restore_cache`      | Value of `RESTORE_CACHE_ATTEMPTS` variable. (Default 1)     | 0 seconds                           |
 | `download_artifacts` | Value of `ARTIFACT_DOWNLOAD_ATTEMPTS` variable. (Default 1) | 0 seconds                           |
 
-NOTE: **Note:**
+NOTE:
 We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.

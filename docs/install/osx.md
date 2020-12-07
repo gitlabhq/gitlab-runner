@@ -11,7 +11,7 @@ There are two methods for installing GitLab Runner on macOS:
 
 ### Manual installation (official)
 
-NOTE: **Note:**
+NOTE:
 For documentation on GitLab Runner 9 and earlier, [visit this documentation](old.md).
 
 1. Download the binary for your system:
@@ -33,7 +33,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
 1. [Register the Runner](../register/index.md)
 
-   NOTE: **Note:**
+   NOTE:
    When you build iOS or macOS applications on macOS, use [the shell executor](../executors/shell.md).
    The build and tests run as the identity of the logged-in user, directly on the build host.
    It does not run in a container. This is less secure than using container executors. For more information, see the
@@ -54,7 +54,7 @@ Runner is installed and will be run after a system reboot.
 
 A Homebrew [formula is available](https://formulae.brew.sh/formula/gitlab-runner) to install GitLab.
 
-CAUTION: **Caution:**
+WARNING:
 GitLab does not maintain the Homebrew formula.
 
 To install GitLab Runner using Homebrew:
@@ -75,7 +75,7 @@ Runner is installed and running.
 
 ### Limitations on macOS
 
-NOTE: **Note:**
+NOTE:
 The service needs to be installed from a Terminal window logged in
 as your current user. Only then will you be able to manage the service.
 
