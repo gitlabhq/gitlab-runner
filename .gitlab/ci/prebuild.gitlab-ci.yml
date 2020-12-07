@@ -54,8 +54,8 @@ ecr public token:
   - .rules:release:all
   stage: prebuild
   script:
-  - PUBLIC_ECR_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
-  - echo "PUBLIC_ECR_PASSWORD=$PUBLIC_ECR_PASSWORD" >> ecr.env
+  - ECR_PUBLIC_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
+  - echo "ECR_PUBLIC_PASSWORD=$ECR_PUBLIC_PASSWORD" >> ecr.env
   environment:
     name: ecr_public_distribution/$CI_COMMIT_REF_SLUG
   artifacts:

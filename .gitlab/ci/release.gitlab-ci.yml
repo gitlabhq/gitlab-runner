@@ -6,6 +6,7 @@
   variables:
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
+    PUSH_TO_ECR_PUBLIC: "true"
     TARGET_ARCHS: "amd64,arm64,s390x"
     DOCKER_MACHINE_AMD64_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
     DOCKER_MACHINE_ARM64_CHECKSUM: "109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac"
@@ -31,6 +32,7 @@
   stage: release
   variables:
     PUSH_TO_DOCKER_HUB: "true"
+    PUSH_TO_ECR_PUBLIC: "true"
     PUBLISH_IMAGES: "true"
     GIT_256_CHECKSUM: "bdb8c1560eca39f4d99b07705006c00d94a3f8612501046a0f89353afc5307fa"
     GIT_LFS_256_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
@@ -122,6 +124,7 @@ development docker images:
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore1809 helper docker image:
   extends:
@@ -131,6 +134,7 @@ development servercore1809 helper docker image:
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore1903 helper docker image:
   extends:
@@ -140,6 +144,7 @@ development servercore1903 helper docker image:
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore1909 helper docker image:
   extends:
@@ -149,6 +154,7 @@ development servercore1909 helper docker image:
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore2004 helper docker image:
   extends:
@@ -158,6 +164,7 @@ development servercore2004 helper docker image:
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
 
 bleeding edge S3:
   extends:
