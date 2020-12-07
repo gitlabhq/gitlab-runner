@@ -126,7 +126,12 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string) 
 		attempt++
 		if attempt > 0 {
 			backoffDuration = l.backoff.ForAttempt(attempt)
-			l.logger.Debugln(fmt.Sprintf("Backing off reattaching log for %s for %s", l.logStreamer, backoffDuration))
+			l.logger.Debugln(fmt.Sprintf(
+				"Backing off reattaching log for %s for %s (attempt %f)",
+				l.logStreamer,
+				backoffDuration,
+				attempt,
+			))
 		}
 
 		select {
@@ -137,6 +142,8 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string) 
 			err := l.processStream(ctx, outCh)
 			if err != nil {
 				l.logger.Warningln(fmt.Sprintf("Error %v. Retrying...", err))
+			} else {
+				l.logger.Debug("processStream exited with no error")
 			}
 		}
 	}
@@ -196,6 +203,7 @@ func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, o
 			return nil
 		case line, more := <-linesCh:
 			if !more {
+				l.logger.Debug("No more data in linesCh")
 				return logsScanner.Err()
 			}
 

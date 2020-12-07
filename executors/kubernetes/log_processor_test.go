@@ -133,6 +133,11 @@ func TestKubernetesLogStreamProviderLogStream(t *testing.T) {
 
 func TestReadLogsBrokenReader(t *testing.T) {
 	proc := new(kubernetesLogProcessor)
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	proc.logger = logger
+
 	output := make(chan string)
 	err := proc.readLogs(context.Background(), newBrokenReader(new(brokenReaderError)), output)
 
@@ -141,6 +146,10 @@ func TestReadLogsBrokenReader(t *testing.T) {
 
 func TestProcessedOffsetSet(t *testing.T) {
 	proc := new(kubernetesLogProcessor)
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	proc.logger = logger
 
 	ch := make(chan string)
 	go func() {
@@ -246,6 +255,13 @@ func TestListenReadLines(t *testing.T) {
 		}).
 		Return(nil).
 		Once()
+	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			t.Log(args)
+			assert.FailNow(t, "unexpected call to Stream()")
+		}).
+		Return(nil).
+		Maybe()
 
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
@@ -274,15 +290,18 @@ func writeLogs(to io.Writer, logs ...log) {
 }
 
 func newTestKubernetesLogProcessor() *kubernetesLogProcessor {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
 	return &kubernetesLogProcessor{
-		logger:  logrus.New(),
+		logger:  logger,
 		backoff: newDefaultMockBackoffCalculator(),
 	}
 }
 
 func newDefaultMockBackoffCalculator() *mockBackoffCalculator {
 	c := new(mockBackoffCalculator)
-	c.On("ForAttempt", mock.Anything).Return(time.Duration(0)).Maybe()
+	c.On("ForAttempt", mock.Anything).Return(50 * time.Millisecond).Maybe()
 
 	return c
 }
@@ -298,6 +317,13 @@ func TestListenCancelContext(t *testing.T) {
 			<-ctx.Done()
 		}).
 		Return(io.EOF)
+	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			t.Log(args)
+			assert.FailNow(t, "unexpected call to Stream()")
+		}).
+		Return(nil).
+		Maybe()
 
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
@@ -325,6 +351,13 @@ func TestAttachReconnectLogStream(t *testing.T) {
 		}).
 		Return(io.EOF).
 		Times(expectedConnectCount)
+	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			t.Log(args)
+			assert.FailNow(t, "unexpected call to Stream()")
+		}).
+		Return(nil).
+		Maybe()
 
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
@@ -354,6 +387,13 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 		}).
 		Return(nil).
 		Times(expectedConnectCount)
+	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			t.Log(args)
+			assert.FailNow(t, "unexpected call to Stream()")
+		}).
+		Return(nil).
+		Maybe()
 
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
@@ -399,6 +439,14 @@ func TestAttachCorrectOffset(t *testing.T) {
 		}).
 		Return(new(brokenReaderError)).
 		Once()
+
+	mockLogStreamer.On("Stream", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			t.Log(args)
+			assert.FailNow(t, "unexpected call to Stream()")
+		}).
+		Return(nil).
+		Maybe()
 
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
