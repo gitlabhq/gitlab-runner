@@ -14,9 +14,10 @@ scalable solution.
 
 ## Introduction
 
-In this tutorial, we'll explore how to properly configure a GitLab Runner in
-AWS that will serve as the Runner Manager where it will spawn new Docker machines on
-demand.
+In this tutorial, we'll explore how to properly configure GitLab Runner in
+AWS. The instance in AWS will serve as a Runner Manager that spawns new Docker instances on
+demand. The runners on these instances are automatically created. They use the parameters
+covered in this guide and do not require manual configuration after creation.  
 
 In addition, we'll make use of [Amazon's EC2 Spot instances](https://aws.amazon.com/ec2/spot/) which will
 greatly reduce the costs of the Runner instances while still using quite
@@ -63,14 +64,13 @@ security credentials in an editor as we'll use them later during the
 ## Prepare the Runner Manager instance
 
 The first step is to install GitLab Runner in an EC2 instance that will serve
-as the Runner Manager that spawns new machines. This doesn't have to be a powerful
+as the Runner Manager that spawns new machines. Choose a distribution that both
+Docker and GitLab Runner support, like Ubuntu, Debian, CentOS, or RHEL.
+
+This doesn't have to be a powerful
 machine since it will not run any jobs itself, a `t2.micro` instance will do.
 This machine will be a dedicated host since we need it always up and running,
 thus it will be the only standard cost.
-
-NOTE:
-For the Runner Manager instance, choose a distribution that both Docker and GitLab
-Runner support, for example either Ubuntu, Debian, CentOS or RHEL will work fine.
 
 Install the prerequisites:
 
