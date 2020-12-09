@@ -73,12 +73,12 @@ sequenceDiagram
     participant Kube as Kubernetes API
     participant P as POD
     R->>+G: Get a CI job.
-        loop 
-        G-->R: 
+        loop
+        G-->R: ;
     end
     Note over R,G: POST /api/v4/jobs/request
     G->>+R: CI job data.
-    R-->>-Kube: Create a POD to run the CI job.  
+    R-->>-Kube: Create a POD to run the CI job.
     Note over R,Kube: POST to Kube API
     P->>+P: Execute job
     Note over P: CI build job = Prepare + Pre-build + Build + Post-build
