@@ -91,3 +91,23 @@ mode. It blocks access to all peripherals and shared folders.
 Runners use a token to identify to the GitLab Server. If you clone a runner then
 the cloned runner could be picking up the same jobs for that token. This is a possible
 attack vector to "steal" runner jobs.
+
+## Network Segmentation
+
+The GitLab Runner is designed to run user-controlled scripts. To reduce the
+attack surface if a job is malicious, you can consider running them in their
+own network segement. This would provide network separation from other
+infrastructure and services.
+
+All needs are unique, but for a cloud environment, this could include:
+
+- Configuring runner virtual machines in their own network segment
+- Blocking SSH access from the Internet to runner virtual machines
+- Restricting traffic between runner virtual machines
+- Filtering access to cloud provider metadata endpoints
+
+NOTE:
+All GitLab Runners will need outbound network connectivity to
+GitLab.com or your GitLab instance.
+Most of jobs will also require outbound network connectivity to
+the Internet - for dependency pulling etc.
