@@ -59,6 +59,32 @@ If you are running it externally to the Cluster then you will need to set each
 of these keywords and make sure that the Runner has access to the Kubernetes API
 on the cluster.
 
+## Kubernetes executor interaction diagram
+
+The diagram below depicts the interaction with a GitLab Runner hosted on a Kubernetes cluster and the Kubernetes API. The Kubernetes API is the mechanism that is used by the runner on Kubernetes to create pods on the cluster. The interaction depicted in this diagram is valid on any Kubernetes cluster, whether that's a turnkey solution hosted on the major public cloud providers or a self-managed Kubernetes installation. 
+
+NOTE:
+The GitLab Runner [Helm chart](../install/kubernetes.md) has been tested on Google Kubernetes Engine and Azure Container Service.
+
+```mermaid
+sequenceDiagram
+    participant G as GitLab instance
+    participant R as Runner on Kubernetes cluster
+    participant Kube as Kubernetes API
+    participant P as POD
+    R->>+G: Get a CI job.
+        loop 
+        G-->R: 
+    end
+    Note over R,G: POST /api/v4/jobs/request
+    G->>+R: CI job data.
+    R-->>-Kube: Create a POD to run the CI job.  
+    Note over R,Kube: POST to Kube API
+    P->>+P: Execute job
+    Note over P: CI build job = Prepare + Pre-build + Build + Post-build
+    P->>+G: Job logs
+```
+
 ## The keywords
 
 The following keywords help to define the behavior of the Runner within Kubernetes.
