@@ -1,3 +1,82 @@
+## v13.7.0-rc1 (2020-12-10)
+
+### Security fixes
+
+- Updating min TLS version to 1.2 !2576
+- Replace umask usage with files permission change when a non-root image used !2539
+
+### Bug fixes
+
+- Upgrade fastzip to v0.1.4 !2605
+- Remove .git/config.lock in build directory !2580
+- Fix attempting Kubernetes docker registry secret cleanup on failed creation !2429
+
+### Maintenance
+
+- Gracefully fail unexpected Stream() calls !2609
+- Update lowest git version support inside of CI !2600
+- windows: Don't log crypto/x509: system root pool warning !2595
+- Add .editorconfig !2588
+- Use helper image to change K8s log dir permissions !2573
+- Fix check_modules command !2572
+- Replace assert.True and errors.Is with assert.ErrorAs/ErrorIs !2571
+- Exclude secure jobs from docs pipelines !2564
+- Submit exit code back to Rails when a job fails !2562
+- Fix dead URL in docker.go !2557 (Victor Mireyev @AmbientLighter)
+- Pin StefanScherer/windows_2019_docker box to 2020.04.15 !2555
+- Pull helper image from GitLab.com registry !2554
+- Update testify package to version supporting errors.Is/As directly !2537
+- Introduce docker internal user package !2534
+- Introduce docker internal exec package !2533
+- Send build trace bytesize in the final build update !2521
+- Support Pod DNS policy for Kubernetes executor !2477
+- Support Pod DNS Config and Policy for Kubernetes executor !2473
+- Add support for Windows Server Core 2004 !2459 (Raphael Gozzo @raphaelgz)
+- Ensure that runner is unregistered on registration failure !2447
+- Make runner-and-helper-docker-host use host arch and os. !2432 (Horatiu Eugen Vlad @hvlad)
+- Improve cache upload speed !2358 (Erik Lindahl @erik.lindahl)
+- Disable syslogging by default for systemd systems !2333 (Matthias Baur @m.baur)
+
+### GitLab Runner distribution
+
+- Publish docker images to ECR public !2608
+- Add job to create ecr token for pipeline !2607
+- Install aws cli in CI image !2599
+
+### Documentation changes
+
+- Removed spaces from diagram !2616
+- Remove alert box vale rules !2613
+- Add interaction diagram to Kubernetes executor docs !2612
+- Changed format of alert boxes !2610
+- Fix unescaped characters in a table !2604
+- Correct grammar/spelling errors in advanced configuration !2603
+- Removed one-sentence topics !2601
+- Fixed error in `config example` !2598
+- Fix indentation of runners.cache in kubernetes.md !2592 (Yorgos Oikonomou @yorgos..oik)
+- Fixed Vale future tense issues !2585
+- Fixed Vale future tense errors !2584
+- Moved Kubernetes keywords into sub-tables !2583
+- Commented out modal install window details (2 of 2) !2577
+- Fix trailing space issues in docs !2569
+- Fix broken links in the gitlab-runner docs !2568
+- Fix typo in monitoring documentation !2556 (Horst Gutmann @h.gutmann)
+- Add documentation on how to add a new Windows version !2498
+- Updated compatibility table !2489
+- Update index page for style !2484
+- Allow specifying `basefolder` when creating virtualbox VM !2461 (Jack Dunn @JackDunnNZ)
+- Runner guided install (2 of 2) !2460
+- Allow to set extra hosts on kubernetes executor !2446 (Horatiu Eugen Vlad @hvlad)
+- Updates documentation to highlight that SELinux can cause errors in the "Prepare Environment" state !2309 (Sean McNamara @seanmcn)
+- Update AWS autoscale docs for clarity !1820
+- Update generated PowerShell script example mkdir !1565
+- Add advice on network segmentation !1404
+
+### Other changes
+
+- Update GitLab Changelog configuration !2615
+- Remove product from product-categories URL from template !2611
+
 ## v13.6.0 (2020-11-21)
 
 ### New features
