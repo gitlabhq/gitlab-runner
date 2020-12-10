@@ -71,6 +71,18 @@ func TestWindowsIsAbs(t *testing.T) {
 			arg:      "c:\\path\\..\\to\\..\\dir",
 			expected: true,
 		},
+		"named pipe path": {
+			arg:      `\\.\pipe\docker_engine`,
+			expected: true,
+		},
+		"named pipe path with forward slashes": {
+			arg:      `//./pipe/docker_engine`,
+			expected: true,
+		},
+		"UNC share root path": {
+			arg:      `\\server\path\`,
+			expected: true,
+		},
 	}
 
 	for name, test := range tests {
@@ -105,6 +117,26 @@ func TestWindowsIsRoot(t *testing.T) {
 		},
 		"absolute path with drive": {
 			arg:      "c:/path/to/dir",
+			expected: false,
+		},
+		"named pipe path": {
+			arg:      `\\.\pipe\docker_engine`,
+			expected: false,
+		},
+		"named pipe path with forward slashes": {
+			arg:      `//./pipe/docker_engine`,
+			expected: false,
+		},
+		"UNC share name": {
+			arg:      `\\server\path`,
+			expected: false,
+		},
+		"UNC share root path": {
+			arg:      `\\server\path\`,
+			expected: true,
+		},
+		"UNC path": {
+			arg:      `\\server\path\sub-path`,
 			expected: false,
 		},
 	}

@@ -38,10 +38,10 @@ const (
 	windowsHostDir = `(?:\\\\\?\\)?[a-z]:[\\/](?:[^\\/:*?"<>|\r\n]+[\\/]?)*`
 	// windowsVolumeName is the second option of a source
 	windowsVolumeName = `[^\\/:*?"<>|\r\n]+`
-	// windowsPipe is a named path pipe (starts with `\\.\pipe\`, possibly with / instead of \)
-	windowsPipe = `[/\\]{2}.[/\\]pipe[/\\][^:*?"<>|\r\n]+`
+	// windowsNamedPipe matches a named pipe path (starts with `\\.\pipe\`, possibly with / instead of \)
+	windowsNamedPipe = `[/\\]{2}\.[/\\]pipe[/\\][^:*?"<>|\r\n]+`
 	// windowsSource is the combined possibilities for a source
-	windowsSource = `((?P<source>((` + windowsHostDir + `)|(` + windowsVolumeName + `)|(` + windowsPipe + `))):)?`
+	windowsSource = `((?P<source>((` + windowsHostDir + `)|(` + windowsVolumeName + `)|(` + windowsNamedPipe + `))):)?`
 
 	// Source. Can be either a host directory, a name, or omitted:
 	//  HostDir:
@@ -58,7 +58,7 @@ const (
 	//    -  And can be optional
 
 	// windowsDestination is the regex expression for the mount destination
-	windowsDestination = `(?P<destination>((?:\\\\\?\\)?([a-z]):((?:[\\/][^\\/:*?"<>\r\n]+)*[\\/]?))|(` + windowsPipe + `))`
+	windowsDestination = `(?P<destination>((?:\\\\\?\\)?([a-z]):((?:[\\/][^\\/:*?"<>\r\n]+)*[\\/]?))|(` + windowsNamedPipe + `))`
 
 	// windowsMode is the regex expression for the mode of the mount
 	// Mode (optional):
