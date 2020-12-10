@@ -121,7 +121,7 @@ Now install GitLab Runner on the Ubuntu instance.
 
    ```shell
    sudo mkdir -p /opt/gitlab-runner/{metadata,builds,cache}
-   curl -s https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
+   curl -s "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
    sudo apt install gitlab-runner
    ```
 
@@ -213,7 +213,7 @@ Now install GitLab Runner on the Ubuntu instance.
 1. Install the Fargate driver:
 
    ```shell
-   sudo curl -Lo /opt/gitlab-runner/fargate https://gitlab-runner-custom-fargate-downloads.s3.amazonaws.com/latest/fargate-linux-amd64
+   sudo curl -Lo /opt/gitlab-runner/fargate "https://gitlab-runner-custom-fargate-downloads.s3.amazonaws.com/latest/fargate-linux-amd64"
    sudo chmod +x /opt/gitlab-runner/fargate
    ```
 

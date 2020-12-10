@@ -45,7 +45,7 @@ dispatch alert notifications.
 To find a full list of all available metrics, `curl` the metrics endpoint after it is configured and enabled. For example, for a local runner configured with listening port `9252`:
 
 ```shell
-$ curl -s http://localhost:9252/metrics | grep -E "# HELP"
+$ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
 # HELP gitlab_runner_api_request_statuses_total The total number of api requests, partitioned by runner, endpoint and status.
 # HELP gitlab_runner_autoscaling_machine_creation_duration_seconds Histogram of machine creation time.
