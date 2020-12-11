@@ -26,6 +26,8 @@ every build. In the following example,
 [virt-builder](https://libguestfs.org/virt-builder.1.html) is used to
 create a disk VM image.
 
+<!-- vale off -->
+
 ```shell
 virt-builder debian-9 \
     --size 8G \
@@ -47,6 +49,8 @@ virt-builder debian-9 \
     --run-command "echo 'allow-hotplug eth0' >> /etc/network/interfaces" \
     --run-command "echo 'iface eth0 inet dhcp' >> /etc/network/interfaces"
 ```
+
+<!-- vale on -->
 
 The command above will install all the
 [prerequisites](../custom.md#prerequisite-software-for-running-a-job) specified

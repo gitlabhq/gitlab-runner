@@ -21,10 +21,10 @@ For versions **prior to 10.0**, the repository URLs are:
 
 ```shell
 # For Debian/Ubuntu
-curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | sudo bash
+curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh" | sudo bash
 
 # For RHEL/CentOS
-curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.rpm.sh | sudo bash
+curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.rpm.sh" | sudo bash
 ```
 
 ## Downloading the binaries manually
