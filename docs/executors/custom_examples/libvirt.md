@@ -26,8 +26,6 @@ every build. In the following example,
 [virt-builder](https://libguestfs.org/virt-builder.1.html) is used to
 create a disk VM image.
 
-<!-- vale off -->
-
 ```shell
 virt-builder debian-9 \
     --size 8G \
@@ -36,8 +34,8 @@ virt-builder debian-9 \
     --hostname gitlab-runner-stretch \
     --network \
     --install curl \
-    --run-command "curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | bash" \
-    --run-command "curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash" \
+    --run-command 'curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | bash' \
+    --run-command 'curl -s "https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh" | bash' \
     --run-command 'useradd -m -p "" gitlab-runner -s /bin/bash' \
     --install gitlab-runner,git,git-lfs,openssh-server \
     --run-command "git lfs install --skip-repo" \
@@ -49,8 +47,6 @@ virt-builder debian-9 \
     --run-command "echo 'allow-hotplug eth0' >> /etc/network/interfaces" \
     --run-command "echo 'iface eth0 inet dhcp' >> /etc/network/interfaces"
 ```
-
-<!-- vale on -->
 
 The command above will install all the
 [prerequisites](../custom.md#prerequisite-software-for-running-a-job) specified
