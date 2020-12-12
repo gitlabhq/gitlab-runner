@@ -10,6 +10,15 @@ wget https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
+### For CentOS
+
+```shell
+sudo yum install mercurial wget make
+sudo yum groupinstall 'Development Tools'
+wget https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go*-*.tar.gz
+```
+
 ### For macOS
 
 Using binary package:
