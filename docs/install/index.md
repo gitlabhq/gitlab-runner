@@ -31,7 +31,7 @@ You can find information on the different installation methods below.
 
 ## Repositories
 
-- [Install using GitLab's repository for Debian/Ubuntu/CentOS/RedHat](linux-repository.md)
+- [Install using the GitLab repository for Debian/Ubuntu/CentOS/RedHat](linux-repository.md)
 
 ## Binaries
 
