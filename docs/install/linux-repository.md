@@ -38,7 +38,7 @@ to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
 To install the Runner:
 
-1. Add GitLab's official repository:
+1. Add the official GitLab repository:
 
    ```shell
    # For Debian/Ubuntu/Mint

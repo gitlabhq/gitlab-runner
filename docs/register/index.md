@@ -60,10 +60,10 @@ To register a runner using a Docker container:
 
 1. Enter your GitLab instance URL (also known as the `gitlab-ci coordinator URL`).
 1. Enter the token you obtained to register the runner.
-1. Enter a description for the runner. You can change this value later in
-   GitLab's user interface.
+1. Enter a description for the runner. You can change this value later in the
+   GitLab user interface.
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
-   separated by commas. You can change this value later in GitLab's user
+   separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/README.md). For most use cases, enter
    `docker`.
@@ -82,10 +82,10 @@ To register a GitLab Runner under Linux:
 
 1. Enter your GitLab instance URL (also known as the `gitlab-ci coordinator URL`).
 1. Enter the token you obtained to register the runner.
-1. Enter a description for the runner. You can change this value later in
-   GitLab's user interface.
+1. Enter a description for the runner. You can change this value later in the
+   GitLab user interface.
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
-   separated by commas. You can change this value later in GitLab's user
+   separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/README.md). For most use cases, enter
    `docker`.
@@ -108,10 +108,10 @@ To register a Runner under macOS:
 
 1. Enter your GitLab instance URL (also known as the `gitlab-ci coordinator URL`).
 1. Enter the token you obtained to register the runner.
-1. Enter a description for the runner. You can change this value later in
-   GitLab's user interface.
+1. Enter a description for the runner. You can change this value later in the
+   GitLab user interface.
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
-   separated by commas. You can change this value later in GitLab's user
+   separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/README.md). For most use cases, enter
    `docker`.
@@ -130,10 +130,10 @@ To register a Runner under Windows:
 
 1. Enter your GitLab instance URL (also known as the `gitlab-ci coordinator URL`).
 1. Enter the token you obtained to register the runner.
-1. Enter a description for the runner. You can change this value later in
-   GitLab's user interface.
+1. Enter a description for the runner. You can change this value later in the
+   GitLab user interface.
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
-   separated by commas. You can change this value later in GitLab's user
+   separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/README.md). For most use cases, enter
    `docker`.
@@ -155,10 +155,10 @@ To register a Runner under FreeBSD:
 
 1. Enter your GitLab instance URL (also known as the `gitlab-ci coordinator URL`).
 1. Enter the token you obtained to register the runner.
-1. Enter a description for the runner. You can change this value later in
-   GitLab's user interface.
+1. Enter a description for the runner. You can change this value later in the
+   GitLab user interface.
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
-   separated by commas. You can change this value later in GitLab's user
+   separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/README.md). For most use cases, enter
    `docker`.

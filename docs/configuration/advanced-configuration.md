@@ -842,7 +842,7 @@ revision) is not found on Docker Engine, it is automatically loaded. It works li
 Things work a little different for the `kubernetes` executor or when GitLab Runner is installed manually. For manual
 installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor, the API of Kubernetes
 doesn't allow loading the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
-the helper image from Docker Hub, from GitLab's official repository `gitlab/gitlab-runner-helper` by using the Runner's
+the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper` by using the Runner's
 revision and architecture for defining which tag should be downloaded.
 
 ### Migrating helper image to `registry.gitlab.com`
