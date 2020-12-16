@@ -38,9 +38,11 @@ directories](https://docs.gitlab.com/ce/ci/yaml/README.html#custom-build-directo
 
 ## Create a new base virtual machine
 
-1. Install [VirtualBox](https://www.virtualbox.org) and if running from Windows,
-   add VirtualBox installation folder (e.g. `C:\Program Files\Oracle\VirtualBox`)
-   to `PATH` environment variable
+1. Install [VirtualBox](https://www.virtualbox.org).
+   - If running from Windows and VirtualBox is installed at the
+     default location (for example `%PROGRAMFILES%\Oracle\VirtualBox`),
+     GitLab Runner will automatically detect it.
+     Otherwise, you will need to add the installation folder to the `PATH` environment variable of the `gitlab-runner` process.
 1. Import or create a new virtual machine in VirtualBox
 1. Configure Network Adapter 1 as "NAT" (that's currently the only way the GitLab Runner is able to connect over SSH into the guest)
 1. (optional) Configure another Network Adapter as "Bridged networking" to get access to the internet from the guest (for example)
