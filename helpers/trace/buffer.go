@@ -47,7 +47,9 @@ func (b *Buffer) SetMasked(values []string) {
 }
 
 func (b *Buffer) SetLimit(size int) {
+	b.lock.Lock()
 	b.bytesLimit = size
+	b.lock.Unlock()
 }
 
 func (b *Buffer) Size() int {
