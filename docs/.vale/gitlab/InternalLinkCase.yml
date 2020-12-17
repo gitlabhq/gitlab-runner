@@ -1,13 +1,13 @@
 ---
-# Error: gitlab.InternalLinkExtension
+# Error: gitlab.InternalLinkCase
 #
-# Checks that internal links have .md extenstion and not .html extension.
+# Checks that anchor fragments on internal links are in lower-case.
 #
 # For a list of all options, see https://errata-ai.gitbook.io/vale/getting-started/styles
 extends: existence
-message: 'Link "%s" must use the .md file extension.'
+message: 'Links to subheadings in GitLab docs must be in lower-case: "%s"'
 link: https://docs.gitlab.com/ee/development/documentation/styleguide/index.html#links-to-internal-documentation
 level: error
 scope: raw
 raw:
-  - '\[.+\]\((https?:){0}[\w\/\.-]+(\.html).*?\)'
+  - '[^\`]\[[^\[\]]+\]\((https?:){0}[\w\/\.]*?#[^\s]*?[A-Z][^\) ]*\)[^\`]'

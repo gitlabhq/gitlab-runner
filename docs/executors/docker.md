@@ -727,7 +727,7 @@ ERROR: Build failed: Error: image local_image:latest not found
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
-DANGER:
+WARNING:
 Starting with GitLab Runner 10.0, both Docker-SSH and Docker-SSH+machine executors
 are **deprecated** and will be removed in one of the upcoming releases.
 
