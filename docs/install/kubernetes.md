@@ -440,3 +440,16 @@ Where:
 - `<NAMESPACE>` is the Kubernetes namespace where GitLab Runner is installed.
 - `<RELEASE-NAME>` is the name you gave the chart when installing it.
   In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
+
+## Troubleshooting a Kubernetes installation
+
+### `ERROR: Job failed (system failure): secrets is forbidden`
+
+If you see the following error:
+
+```plaintext
+Using Kubernetes executor with image alpine ...
+ERROR: Job failed (system failure): secrets is forbidden: User "system:serviceaccount:gitlab:default" cannot create resource "secrets" in API group "" in the namespace "gitlab"
+```
+
+[Enable RBAC support](#enabling-rbac-support) to correct the error.
