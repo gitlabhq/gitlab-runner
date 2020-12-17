@@ -14,60 +14,102 @@ first: '\b([A-Z]{3,5})\b'
 second: '(?:\b[A-Z][a-z]+ )+\(([A-Z]{3,5})\)'
 # ... with the exception of these:
 exceptions:
+  - AJAX
   - ANSI
   - API
+  - ARM
   - ARN
   - ASCII
   - AWS
+  - BSD
+  - CAS
   - CLI
+  - CNA
   - CNAME
   - CORE
   - CPU
+  - CRIME
+  - CSRF
   - CSS
   - CSV
+  - CVE
+  - DAG
   - DAST
+  - DHCP
   - DNS
+  - DOM
+  - DSA
+  - DVCS
+  - ECDSA
   - EKS
+  - EOL
+  - EXIF
   - FAQ
   - FOSS
+  - FQDN
   - GCP
   - GDK
+  - GDPR
   - GET
+  - GIF
   - GKE
   - GNU
   - GPG
   - GPL
+  - GUI
+  - HAML
+  - HIPAA
   - HTML
   - HTTP
   - HTTPS
   - IAM
+  - IANA
   - IBM
   - IDE
   - IID
   - IMAP
+  - IOPS
   - IRC
   - ISO
+  - JPEG
+  - JPG
   - JSON
+  - JWT
+  - LAN
   - LDAP
   - LDAPS
   - LESS
   - LFS
   - LRU
+  - LTS
   - MIME
+  - MIT
   - MVC
+  - NAT
   - NFS
   - NGINX
   - NOTE
   - NPM
   - ONLY
+  - OWASP
+  - PAT
+  - PCI-DSS
   - PDF
+  - PEM
+  - PEP
   - PGP
   - PHP
+  - PNG
   - POST
   - PUT
   - RAM
+  - RDP
   - REST
+  - RFC
+  - RHEL
   - RPC
+  - RPM
+  - RPS
   - RSA
   - RSS
   - RVM
@@ -77,10 +119,17 @@ exceptions:
   - SCP
   - SCSS
   - SDK
+  - SEO
   - SHA
   - SLA
+  - SMS
   - SMTP
+  - SOC
+  - SOX
+  - SPF
   - SQL
+  - SSD
+  - SSG
   - SSH
   - SSL
   - SSO
@@ -88,6 +137,7 @@ exceptions:
   - SVN
   - TCP
   - TIP
+  - TLD
   - TLS
   - TODO
   - TOML
@@ -96,9 +146,12 @@ exceptions:
   - URL
   - USB
   - UTC
+  - UTF
   - UUID
+  - VCS
   - VPC
   - WIP
   - WSL
   - XML
+  - XSS
   - YAML

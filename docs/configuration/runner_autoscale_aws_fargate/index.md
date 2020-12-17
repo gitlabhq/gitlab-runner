@@ -93,8 +93,8 @@ Now create an AWS EC2 instance. In the next step you will install GitLab Runner 
 1. Click **Next: Add Tags**.
 1. Click **Next: Configure Security Group**.
 1. Select **Create a new security group**, name it `fargate-test`, and
-   ensure that a rule for SSH is defined (`Type: SSH, Protocol: TCP, Port Range: 22`).
-   Note: You must specify the IP ranges for inbound and outbound rules.
+   ensure that a rule for SSH is defined (`Type: SSH, Protocol: TCP, Port Range: 22`). You must
+   specify the IP ranges for inbound and outbound rules.
 1. Click **Review and Launch**.
 1. Click **Launch**.
 1. Optional. Select **Create a new key pair**, name it `fargate-runner-manager`
@@ -158,7 +158,7 @@ Now install GitLab Runner on the Ubuntu instance.
        cleanup_args = ["--config", "/etc/gitlab-runner/fargate.toml", "custom", "cleanup"]
    ```
 
-   Note: The section of the `config.toml` file shown below is created by the registration command. Do not change it.
+   The section of the `config.toml` file shown below is created by the registration command. Do not change it.
 
    ```toml
    concurrent = 1
