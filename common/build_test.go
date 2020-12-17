@@ -1023,6 +1023,22 @@ func TestStartBuild(t *testing.T) {
 			expectedCacheDir: "/cache/test-namespace/test-repo",
 			expectedError:    false,
 		},
+		"out-of-bounds GIT_CLONE_PATH was specified": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: true,
+				sharedDir:             false,
+			},
+			jobVariables: JobVariables{
+				{
+					Key:    "GIT_CLONE_PATH",
+					Value:  "/builds/../outside",
+					Public: true,
+				},
+			},
+			expectedError: true,
+		},
 		"custom build disabled": {
 			args: startBuildArgs{
 				rootDir:               "/builds",
