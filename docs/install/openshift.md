@@ -1,11 +1,9 @@
-# Install GitLab Runner on OpenShift
+# Install GitLab Runner on Red Hat OpenShift
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26640) in GitLab 13.3.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26640) in GitLab 13.3.
+> - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27126) in GitLab 13.7.
 
-You can install GitLab Runner on Red Hat OpenShift v4 and later.
-
-When you've completed this process, you can run your CI/CD jobs in
-GitLab by using the runner you've installed in OpenShift.
+You can install the GitLab Runner on Red Hat OpenShift v4 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) currently available from the beta channel in Red Hat's OperatorHub - a web console for OpenShift cluster administrators to deployed by default in OpenShift Container Platform. When you've completed this process, you can run your GitLab CI/CD jobs by using the runner container image you've installed in OpenShift. This image will run each CI/CD Build in a separate pod.
 
 ## Prerequisites
 
@@ -22,8 +20,8 @@ First you must install the OpenShift Operator.
 
    ![GitLab Operator](img/openshift_allitems_v13_3.png)
 
-1. To install, click the GitLab Operator.
-1. On the GitLab Operator summary page, click **Install**.
+1. To install, click the GitLab Runner Operator.
+1. On the GitLab Runner Operator summary page, click **Install**.
 1. On the Install Operator page, under **Installed Namespace**, select the desired namespace and click **Install**.
 
    ![GitLab Operator Install Page](img/openshift_installoperator_v13_3.png)
