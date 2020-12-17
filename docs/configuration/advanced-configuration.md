@@ -636,7 +636,7 @@ in the [runners autoscale documentation](autoscale.md#distributed-runners-cachin
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
-| `Type`           | string           | One of: `s3`, `gcs`. |
+| `Type`           | string           | One of: `s3`, `gcs`, `azure`. |
 | `Path`           | string           | Name of the path to prepend to the cache URL. |
 | `Shared`         | boolean          | Enables cache sharing between runners, `false` by default. |
 
