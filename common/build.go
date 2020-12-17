@@ -279,7 +279,10 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 	}
 
 	relDir, err := filepath.Rel(rootDir, dir)
-	if err != nil || strings.HasPrefix(relDir, "..") {
+	if err != nil {
+		return "", &BuildError{Inner: err}
+	}
+	if strings.HasPrefix(relDir, "..") {
 		return "", MakeBuildError("the %s=%q has to be within %q", overrideKey, dir, rootDir)
 	}
 
