@@ -3,7 +3,7 @@
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26640) in GitLab 13.3.
 > - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27126) in GitLab 13.7.
 
-You can install the GitLab Runner on Red Hat OpenShift v4 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) currently available from the beta channel in Red Hat's OperatorHub - a web console for OpenShift cluster administrators to deployed by default in OpenShift Container Platform. When you've completed this process, you can run your GitLab CI/CD jobs by using the runner container image you've installed in OpenShift. This image will run each CI/CD Build in a separate pod.
+You can install the GitLab Runner on Red Hat OpenShift v4 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) available from the beta channel of OperatorHub embedded in OpenShift's web console. Once installed, you can run your GitLab CI/CD jobs using the newly deployed GitLab Runner instance. Each CI/CD job will run in a separate pod.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ On the Installed Operators page, when the GitLab Operator is ready, the status c
 #### Install GitLab Runner
 
 Now install GitLab Runner. The version you're installing is tagged as the latest
-in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/software/containers/search).
+in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/software/containers/gitlab/gitlab-runner/5ea0a90eecb5246c0903b9fd).
 
 1. Obtain a token that you'll use to register the runner:
    - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/#shared-runners),
@@ -49,10 +49,24 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
    oc project "PROJECT NAMESPACE"
    ```
 
-1. Use the following command with your Runner token:
+1. Create the secret file with your GitLab project's Runner token:
 
    ```shell
-   oc create secret generic gitlab-runner-secret --from-literal runner_registration_token="xxx"
+   cat > gitlab-runner-secret.yml << EOF
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: gitlab-runner-secret
+   type: Opaque
+   stringData:
+     runner-registration-token: REPLACE_ME # your project runner secret
+   EOF
+   ```
+
+1. Create the secret in your cluster by running:
+
+   ```shell
+   oc apply -f gitlab-runner-secret.yml
    ```
 
 1. Create the Custom Resource Definition (CRD) file and include
@@ -60,13 +74,12 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
 
    ```shell
    cat > gitlab-runner.yml << EOF
-   apiVersion: gitlab.com/v1beta1
+   apiVersion: apps.gitlab.com/v1beta2
    kind: Runner
    metadata:
      name: gitlab-runner
    spec:
-     gitlab:
-       url: "https://gitlab.example.com"
+     gitlabUrl: https://gitlab.example.com
      token: gitlab-runner-secret
      tags: openshift
    EOF
@@ -76,4 +89,20 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
 
    ```shell
    oc apply -f gitlab-runner.yml
+   ```
+   
+1. Confirm that the Runner is installed by running:
+
+   ```shell
+   oc get runners
+   NAME             AGE
+   gitlab-runner    5m
+   ```
+
+1. The Runner pod should also be visible:
+
+   ```shell
+   oc get pods
+   NAME                             READY   STATUS    RESTARTS   AGE
+   gitlab-runner-bf9894bdb-wplxn    1/1     Running   0          5m
    ```
