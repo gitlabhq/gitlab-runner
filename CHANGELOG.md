@@ -83,6 +83,7 @@
 
 - Add labels to cache-init docker container !2412
 - Expose custom executor services with $CI_JOB_SERVICES !1827 (Jovan Marić @jovanmaric)
+- Enable PowerShell Core support in Docker-Windows executor !2492
 
 ### Maintenance
 
