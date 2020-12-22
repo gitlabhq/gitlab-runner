@@ -99,8 +99,14 @@ to avoid conflicts.
 
 ### Using cache with configuration template
 
-To use cache with your configuration template, set `cache.secretName` in `values.yaml` and
-set the other settings for [the cache](../configuration/advanced-configuration.md#the-runnerscache-section) in the `runners.config` file. Use `toml` formatting for the `config:` section:
+To use the cache with your configuration template, set the following variables in `values.yaml`:
+
+- `runners.cache.secretName` with the secret name for your object storage provider (`s3access`, `gcsaccess`, `google-application-credentials`, or `azureaccess`).
+- `runners.config` with the other settings for [the cache](../configuration/advanced-configuration.md#the-runnerscache-section). Use `toml` formatting.
+
+#### S3
+
+For example, here is an example that configures [S3 with static credentials](https://aws.amazon.com/blogs/security/wheres-my-secret-access-key/):
 
 ```yaml
 runners:
@@ -120,6 +126,109 @@ runners:
 
   cache:
       secretName: s3access
+```
+
+Next, create an `s3access` Kubernetes secret that contains `accesskey` and `secretkey`:
+
+```shell
+kubectl create secret generic s3access \
+    --from-literal=accesskey="YourAccessKey" \
+    --from-literal=secretkey="YourSecretKey"
+```
+
+#### Google Cloud Storage (GCS)
+
+#### Static credentials directly configured
+
+The following example shows how to configure
+[GCS with credentials with an access ID and a private key](../configuration/advanced-configuration.md#the-runnerscache-section):
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
+        [runners.cache]
+          Type = "gcs"
+          Path = "runner"
+          Shared = true
+          [runners.cache.gcs]
+            BucketName = "runners-cache"
+
+  cache:
+      secretName: gcsaccess
+```
+
+Next, create a `gcsaccess` Kubernetes secret that contains `gcs-access-id`
+and `gcs-private-key`:
+
+```shell
+kubectl create secret generic gcsaccess \
+    --from-literal=gcs-access-id="YourAccessID" \
+    --from-literal=gcs-private-key="YourPrivateKey"
+```
+
+#### Static credentials in a JSON file downloaded from GCP
+
+The following example shows how to [configure GCS with credentials in a
+JSON file downloaded from Google Cloud Platform](../configuration/advanced-configuration.md#the-runnerscache-section):
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
+        [runners.cache]
+          Type = "gcs"
+          Path = "runner"
+          Shared = true
+          [runners.cache.gcs]
+            BucketName = "runners-cache"
+
+  cache:
+      secretName: google-application-credentials
+```
+
+Next, create a Kubernetes secret `google-application-credentials` and
+load the JSON file with it:
+
+```shell
+kubectl create secret generic google-application-credentials \
+    --from-file=gcs-application-credentials-file=./path-to-your-google-application-credentials-file.json
+```
+
+#### Azure
+
+The following example shows
+[how to configure Azure Blob Storage](../configuration/advanced-configuration.md#the-runnerscacheazure-section):
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
+        [runners.cache]
+          Type = "s3"
+          Path = "runner"
+          Shared = true
+          [runners.cache.azure]
+            ContainerName = "my_container_name"
+            StorageDomain = "blob.core.windows.net"
+
+  cache:
+      secretName: azureaccess
+```
+
+Next, create an `azureaccess` Kubernetes secret that contains
+`azure-account-name` and `azure-account-key`:
+
+```shell
+kubectl create secret generic azureaccess \
+    --from-literal=azure-account-name="YourAccountName" \
+    --from-literal=azure-account-key="YourAccountKey"
 ```
 
 Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
