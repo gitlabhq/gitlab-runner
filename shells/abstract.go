@@ -30,6 +30,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.ArtifactsExclude = true
 	features.MultiBuildSteps = true
 	features.VaultSecrets = true
+	features.ReturnExitCode = true
 }
 
 func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptInfo) {
