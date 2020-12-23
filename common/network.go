@@ -86,6 +86,7 @@ type FeaturesInfo struct {
 	TraceSize               bool `json:"trace_size"`
 	VaultSecrets            bool `json:"vault_secrets"`
 	Cancelable              bool `json:"cancelable"`
+	ReturnExitCode          bool `json:"return_exit_code"`
 }
 
 type RegisterRunnerParameters struct {
