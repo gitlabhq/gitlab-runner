@@ -1,7 +1,13 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Shell
 
-The Shell executor is a simple executor that allows you to execute builds
-locally to the machine that the Runner is installed. It supports all systems on
+The Shell executor is a simple executor that you use to execute builds
+locally on the machine where GitLab Runner is installed. It supports all systems on
 which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, Windows PowerShell and Windows Batch (deprecated).
 

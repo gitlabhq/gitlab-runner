@@ -1,6 +1,12 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # How to configure GitLab Runner for GitLab CE integration tests
 
-We will register the Runner using a confined Docker executor.
+We will register the runner using a confined Docker executor.
 
 The registration token can be found at `https://gitlab.com/project_namespace/project_name/runners`.
 You can export it as a variable and run the commands below as-is. Start by

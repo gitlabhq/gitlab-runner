@@ -185,8 +185,8 @@ The Docker executor divides the job into multiple steps:
 
 The special Docker image is based on [Alpine Linux](https://alpinelinux.org/) and contains all the tools
 required to run the prepare, pre-job, and post-job steps, like the Git and the
-Runner binaries for supporting caching and artifacts. You can find the definition of
-this special image [in the official Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
+GitLab Runner binaries for supporting caching and artifacts. You can find the definition of
+this special image [in the official GitLab Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
 
 ## The `image` keyword
 
@@ -347,7 +347,7 @@ Look for the `[runners.docker]` section:
 The example above uses the [array of tables syntax](https://toml.io/en/v0.4.0#array-of-tables).
 
 The image and services defined this way will be added to all builds run by
-that Runner, so even if you don't define an `image` inside `.gitlab-ci.yml`,
+that runner, so even if you don't define an `image` inside `.gitlab-ci.yml`,
 the one defined in `config.toml` will be used.
 
 ## Define an image from a private Docker registry
@@ -499,7 +499,7 @@ If you make the `/builds` directory **a host-bound storage**, your builds will b
 
 - `<short-token>` is a shortened version of the Runner's token (first 8 letters)
 - `<concurrent-id>` is a unique number, identifying the local job ID on the
-  particular Runner in context of the project
+  particular runner in context of the project
 
 ## The privileged mode
 
@@ -511,7 +511,7 @@ build container. One of these options is the [`privileged` mode](https://docs.do
 The configured `privileged` flag is passed to the build container and all
 services, thus allowing to easily use the Docker-in-Docker approach.
 
-First, configure your Runner (`config.toml`) to run in `privileged` mode:
+First, configure your runner (`config.toml`) to run in `privileged` mode:
 
 ```toml
 [[runners]]
@@ -548,7 +548,7 @@ You may think of creating a Docker image that uses an `ENTRYPOINT` that doesn't
 execute the build script, but does execute a predefined set of commands, for
 example to build the Docker image from your directory. In that case, you can
 run the build container in [privileged mode](#the-privileged-mode), and make
-the build environment of the Runner secure.
+the build environment of the runner secure.
 
 Consider the following example:
 
@@ -605,18 +605,18 @@ When using the `docker` or `docker+machine` executors, you can set the
 `pull_policy` parameter in the runner `config.toml` file as described in the configuration docs [Docker section](../configuration/advanced-configuration.md#the-runnersdocker-section). This parameter defines how the runner works when pulling Docker images (for both `image` and `services` keywords).
 
 If you don't set any value for the `pull_policy` parameter, then
-Runner will use the `always` pull policy as the default value.
+the runner will use the `always` pull policy as the default value.
 
 Now let's see how these policies work.
 
 ### Using the `never` pull policy
 
 The `never` pull policy disables images pulling completely. If you set the
-`pull_policy` parameter of a Runner to `never`, then users will be able
+`pull_policy` parameter of a runner to `never`, then users will be able
 to use only the images that have been manually pulled on the Docker host
-the Runner runs on.
+the runner runs on.
 
-If an image cannot be found locally, then the Runner will fail the build
+If an image cannot be found locally, then the runner will fail the build
 with an error similar to:
 
 ```plaintext
@@ -627,8 +627,8 @@ ERROR: Build failed: Error: image local_image:latest not found
 **When to use this pull policy?**
 
 This pull policy should be used if you want or need to have a full
-control on which images are used by the Runner's users. It is a good choice
-for private Runners that are dedicated to a project where only specific images
+control on which images are used by the runner's users. It is a good choice
+for private runners that are dedicated to a project where only specific images
 can be used (not publicly available on any registries).
 
 **When not to use this pull policy?**
@@ -641,9 +641,9 @@ Docker Engine and local copy of used images.
 
 ### Using the `if-not-present` pull policy
 
-When the `if-not-present` pull policy is used, the Runner will first check
+When the `if-not-present` pull policy is used, the runner will first check
 if the image is present locally. If it is, then the local version of
-image will be used. Otherwise, the Runner will try to pull the image.
+image will be used. Otherwise, the runner will try to pull the image.
 
 **When to use this pull policy?**
 
@@ -665,9 +665,9 @@ In such a situation, the network load reduction created by this policy may
 be less worthy than the necessity of the very frequent deletion of local
 copies of images.
 
-This pull policy should also not be used if your Runner can be used by
+This pull policy should also not be used if your runner can be used by
 different users which should not have access to private images used
-by each other. Especially do not use this pull policy for shared Runners.
+by each other. Especially do not use this pull policy for shared runners.
 
 To understand why the `if-not-present` pull policy creates security issues
 when used with private images, read the
@@ -676,7 +676,7 @@ when used with private images, read the
 ### Using the `always` pull policy
 
 The `always` pull policy will ensure that the image is **always** pulled.
-When `always` is used, the Runner will try to pull the image even if a local
+When `always` is used, the runner will try to pull the image even if a local
 copy is available. The [caching semantics](https://kubernetes.io/docs/concepts/configuration/overview/#container-images)
 of the underlying image provider make this policy efficient.
 The pull attempt is fast because all image layers are cached.
@@ -701,21 +701,21 @@ This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-
 
 **When to use this pull policy?**
 
-This pull policy should be used if your Runner is publicly available
-and configured as a shared Runner in your GitLab instance. It is the
-only pull policy that can be considered as secure when the Runner will
+This pull policy should be used if your runner is publicly available
+and configured as a shared runner in your GitLab instance. It is the
+only pull policy that can be considered as secure when the runner will
 be used with private images.
 
 This is also a good choice if you want to force users to always use
 the newest images.
 
 Also, this will be the best solution for an [auto-scaled](../configuration/autoscale.md)
-configuration of the Runner.
+configuration of the runner.
 
 **When not to use this pull policy?**
 
 This pull policy will definitely not work if you need to use locally
-stored images. In this case, the Runner will skip the local copy of the image
+stored images. In this case, the runner will skip the local copy of the image
 and try to pull it from the remote registry. If the image was built locally
 and doesn't exist in any public registry (and especially in the default
 Docker registry), the build will fail with:
