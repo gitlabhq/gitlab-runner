@@ -3,8 +3,8 @@ module gitlab.com/gitlab-org/gitlab-runner
 go 1.13
 
 require (
-	cloud.google.com/go/storage v1.9.0
-	github.com/Azure/azure-storage-blob-go v0.10.0
+	cloud.google.com/go/storage v1.12.0
+	github.com/Azure/azure-storage-blob-go v0.11.1-0.20201209121048-6df5d9af221d
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/go-winio v0.4.12 // indirect
@@ -25,13 +25,13 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
-	github.com/golang/mock v1.4.3
+	github.com/golang/mock v1.4.4
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20180425001159-e25975f29734 // indirect
 	github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
-	github.com/gorilla/websocket v1.4.0
+	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/imdario/mergo v0.3.7
@@ -64,9 +64,9 @@ require (
 	github.com/urfave/cli v1.20.0
 	gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
-	gocloud.dev v0.20.0
-	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
+	gocloud.dev v0.21.1-0.20201223184910-5094f54ed8bb
+	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
+	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20201204225414-ed752295db88
 	gopkg.in/inf.v0 v0.9.0 // indirect
