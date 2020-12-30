@@ -56,7 +56,6 @@ type client struct {
 	certFile        string
 	keyFile         string
 	caData          []byte
-	skipVerify      bool
 	updateTime      time.Time
 	lastUpdate      string
 	requestBackOffs map[string]*backoff.Backoff
@@ -107,7 +106,7 @@ func (n *client) ensureTLSConfig() {
 func (n *client) addTLSCA(tlsConfig *tls.Config) {
 	// load TLS CA certificate
 	file := n.caFile
-	if file == "" || n.skipVerify {
+	if file == "" {
 		return
 	}
 
@@ -161,8 +160,7 @@ func (n *client) addTLSAuth(tlsConfig *tls.Config) {
 func (n *client) createTransport() {
 	// create reference TLS config
 	tlsConfig := tls.Config{
-		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: n.skipVerify,
+		MinVersion: tls.VersionTLS12,
 	}
 
 	n.addTLSCA(&tlsConfig)
