@@ -48,7 +48,7 @@ func createHostAliases(services common.Services, hostAliases []api.HostAlias) ([
 }
 
 func createServicesHostAlias(srvs common.Services) (*api.HostAlias, error) {
-	servicesHostAlias := api.HostAlias{IP: "127.0.0.1"}
+	var hostnames []string
 
 	for _, srv := range srvs {
 		// Services with ports are coming from .gitlab-webide.yml
@@ -65,7 +65,7 @@ func createServicesHostAlias(srvs common.Services) (*api.HostAlias, error) {
 			// this will be removed in https://gitlab.com/gitlab-org/gitlab-runner/issues/6100
 			err := dns.ValidateDNS1123Subdomain(alias)
 			if err == nil {
-				servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, alias)
+				hostnames = append(hostnames, alias)
 			}
 		}
 
@@ -78,13 +78,13 @@ func createServicesHostAlias(srvs common.Services) (*api.HostAlias, error) {
 			return nil, &invalidHostAliasDNSError{service: srv, inner: err}
 		}
 
-		servicesHostAlias.Hostnames = append(servicesHostAlias.Hostnames, srv.Alias)
+		hostnames = append(hostnames, srv.Alias)
 	}
 
 	// no service hostnames to add to aliases
-	if len(servicesHostAlias.Hostnames) == 0 {
+	if len(hostnames) == 0 {
 		return nil, nil
 	}
 
-	return &servicesHostAlias, nil
+	return &api.HostAlias{IP: "127.0.0.1", Hostnames: hostnames}, nil
 }
