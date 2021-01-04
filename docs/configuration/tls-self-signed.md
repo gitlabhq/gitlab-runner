@@ -24,13 +24,12 @@ GitLab Runner supports the following options:
 
 - GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
   predefined file:
-
   - `/etc/gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as root.
   - `~/.gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as non-root.
   - `./certs/hostname.crt` on other systems. If running Runner as a Windows service,
     this will not work. Use the last option instead.
 
-- If your server address is: `https://my.gitlab.server.com:8443/`, create the
+  If your server address is: `https://my.gitlab.server.com:8443/`, create the
   certificate file at: `/etc/gitlab-runner/certs/my.gitlab.server.com.crt`.
   To verify that the file looks correct, you can use a tool like `openssl`. For example:
 
@@ -55,21 +54,19 @@ GitLab Runner supports the following options:
     -----END CERTIFICATE-----
     ```
 
-- If you are updating the certificate for an existing Runner, [restart it](../commands/README.md#gitlab-runner-restart).
-
 - GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/README.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
   This file will be read every time the runner tries to access the GitLab server.
 
-- If you are using GitLab Runner Helm chart, [configure custom certificates](../install/kubernetes.md).
+Notes:
 
+- If your GitLab server certificate is signed by your CA, use your CA certificate
+(not your GitLab server signed certificate). You might need to add the intermediates to the chain as well.
+- If you are updating the certificate for an existing Runner, [restart it](../commands/README.md#gitlab-runner-restart).
 - As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
-
-NOTE:
-If your GitLab server certificate is signed by your CA, use your CA certificate
-(not your GitLab server signed certificate). You might need to add the intermediates to the chain as well.
+- If you are using GitLab Runner Helm chart, you will need to configure certificates according to the doc [Providing a custom certificate for accessing GitLab](../install/kubernetes.md#providing-a-custom-certificate-for-accessing-gitlab).
 
 ## Git cloning
 
