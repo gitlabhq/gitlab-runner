@@ -55,24 +55,32 @@ type UploadToBlockBlobOptions struct {
 	// AccessConditions indicates the access conditions for the block blob.
 	AccessConditions BlobAccessConditions
 
+	// BlobAccessTier indicates the tier of blob
+	BlobAccessTier AccessTierType
+
+	// BlobTagsMap
+	BlobTagsMap BlobTagsMap
+
+	// ClientProvidedKeyOptions indicates the client provided key by name and/or by value to encrypt/decrypt data.
+	ClientProvidedKeyOptions ClientProvidedKeyOptions
+
 	// Parallelism indicates the maximum number of blocks to upload in parallel (0=default)
 	Parallelism uint16
 }
 
-// UploadBufferToBlockBlob uploads a buffer in blocks to a block blob.
-func UploadBufferToBlockBlob(ctx context.Context, b []byte,
+// uploadReaderAtToBlockBlob uploads a buffer in blocks to a block blob.
+func uploadReaderAtToBlockBlob(ctx context.Context, reader io.ReaderAt, readerSize int64,
 	blockBlobURL BlockBlobURL, o UploadToBlockBlobOptions) (CommonResponse, error) {
-	bufferSize := int64(len(b))
 	if o.BlockSize == 0 {
 		// If bufferSize > (BlockBlobMaxStageBlockBytes * BlockBlobMaxBlocks), then error
-		if bufferSize > BlockBlobMaxStageBlockBytes*BlockBlobMaxBlocks {
+		if readerSize > BlockBlobMaxStageBlockBytes*BlockBlobMaxBlocks {
 			return nil, errors.New("buffer is too large to upload to a block blob")
 		}
 		// If bufferSize <= BlockBlobMaxUploadBlobBytes, then Upload should be used with just 1 I/O request
-		if bufferSize <= BlockBlobMaxUploadBlobBytes {
+		if readerSize <= BlockBlobMaxUploadBlobBytes {
 			o.BlockSize = BlockBlobMaxUploadBlobBytes // Default if unspecified
 		} else {
-			o.BlockSize = bufferSize / BlockBlobMaxBlocks   // buffer / max blocks = block size to use all 50,000 blocks
+			o.BlockSize = readerSize / BlockBlobMaxBlocks   // buffer / max blocks = block size to use all 50,000 blocks
 			if o.BlockSize < BlobDefaultDownloadBlockSize { // If the block size is smaller than 4MB, round up to 4MB
 				o.BlockSize = BlobDefaultDownloadBlockSize
 			}
@@ -80,31 +88,31 @@ func UploadBufferToBlockBlob(ctx context.Context, b []byte,
 		}
 	}
 
-	if bufferSize <= BlockBlobMaxUploadBlobBytes {
+	if readerSize <= BlockBlobMaxUploadBlobBytes {
 		// If the size can fit in 1 Upload call, do it this way
-		var body io.ReadSeeker = bytes.NewReader(b)
+		var body io.ReadSeeker = io.NewSectionReader(reader, 0, readerSize)
 		if o.Progress != nil {
 			body = pipeline.NewRequestBodyProgress(body, o.Progress)
 		}
-		return blockBlobURL.Upload(ctx, body, o.BlobHTTPHeaders, o.Metadata, o.AccessConditions)
+		return blockBlobURL.Upload(ctx, body, o.BlobHTTPHeaders, o.Metadata, o.AccessConditions, o.BlobAccessTier, o.BlobTagsMap, o.ClientProvidedKeyOptions)
 	}
 
-	var numBlocks = uint16(((bufferSize - 1) / o.BlockSize) + 1)
+	var numBlocks = uint16(((readerSize - 1) / o.BlockSize) + 1)
 
 	blockIDList := make([]string, numBlocks) // Base-64 encoded block IDs
 	progress := int64(0)
 	progressLock := &sync.Mutex{}
 
 	err := DoBatchTransfer(ctx, BatchTransferOptions{
-		OperationName: "UploadBufferToBlockBlob",
-		TransferSize:  bufferSize,
+		OperationName: "uploadReaderAtToBlockBlob",
+		TransferSize:  readerSize,
 		ChunkSize:     o.BlockSize,
 		Parallelism:   o.Parallelism,
 		Operation: func(offset int64, count int64, ctx context.Context) error {
 			// This function is called once per block.
 			// It is passed this block's offset within the buffer and its count of bytes
 			// Prepare to read the proper block/section of the buffer
-			var body io.ReadSeeker = bytes.NewReader(b[offset : offset+count])
+			var body io.ReadSeeker = io.NewSectionReader(reader, offset, count)
 			blockNum := offset / o.BlockSize
 			if o.Progress != nil {
 				blockProgress := int64(0)
@@ -122,7 +130,7 @@ func UploadBufferToBlockBlob(ctx context.Context, b []byte,
 			// Block IDs are unique values to avoid issue if 2+ clients are uploading blocks
 			// at the same time causing PutBlockList to get a mix of blocks from all the clients.
 			blockIDList[blockNum] = base64.StdEncoding.EncodeToString(newUUID().bytes())
-			_, err := blockBlobURL.StageBlock(ctx, blockIDList[blockNum], body, o.AccessConditions.LeaseAccessConditions, nil)
+			_, err := blockBlobURL.StageBlock(ctx, blockIDList[blockNum], body, o.AccessConditions.LeaseAccessConditions, nil, o.ClientProvidedKeyOptions)
 			return err
 		},
 	})
@@ -130,7 +138,13 @@ func UploadBufferToBlockBlob(ctx context.Context, b []byte,
 		return nil, err
 	}
 	// All put blocks were successful, call Put Block List to finalize the blob
-	return blockBlobURL.CommitBlockList(ctx, blockIDList, o.BlobHTTPHeaders, o.Metadata, o.AccessConditions)
+	return blockBlobURL.CommitBlockList(ctx, blockIDList, o.BlobHTTPHeaders, o.Metadata, o.AccessConditions, o.BlobAccessTier, o.BlobTagsMap, o.ClientProvidedKeyOptions)
+}
+
+// UploadBufferToBlockBlob uploads a buffer in blocks to a block blob.
+func UploadBufferToBlockBlob(ctx context.Context, b []byte,
+	blockBlobURL BlockBlobURL, o UploadToBlockBlobOptions) (CommonResponse, error) {
+	return uploadReaderAtToBlockBlob(ctx, bytes.NewReader(b), int64(len(b)), blockBlobURL, o)
 }
 
 // UploadFileToBlockBlob uploads a file in blocks to a block blob.
@@ -141,15 +155,7 @@ func UploadFileToBlockBlob(ctx context.Context, file *os.File,
 	if err != nil {
 		return nil, err
 	}
-	m := mmf{} // Default to an empty slice; used for 0-size file
-	if stat.Size() != 0 {
-		m, err = newMMF(file, false, 0, int(stat.Size()))
-		if err != nil {
-			return nil, err
-		}
-		defer m.unmap()
-	}
-	return UploadBufferToBlockBlob(ctx, m, blockBlobURL, o)
+	return uploadReaderAtToBlockBlob(ctx, file, stat.Size(), blockBlobURL, o)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -167,6 +173,9 @@ type DownloadFromBlobOptions struct {
 	// AccessConditions indicates the access conditions used when making HTTP GET requests against the blob.
 	AccessConditions BlobAccessConditions
 
+	// ClientProvidedKeyOptions indicates the client provided key by name and/or by value to encrypt/decrypt data.
+	ClientProvidedKeyOptions ClientProvidedKeyOptions
+
 	// Parallelism indicates the maximum number of blocks to download in parallel (0=default)
 	Parallelism uint16
 
@@ -174,9 +183,9 @@ type DownloadFromBlobOptions struct {
 	RetryReaderOptionsPerBlock RetryReaderOptions
 }
 
-// downloadBlobToBuffer downloads an Azure blob to a buffer with parallel.
-func downloadBlobToBuffer(ctx context.Context, blobURL BlobURL, offset int64, count int64,
-	b []byte, o DownloadFromBlobOptions, initialDownloadResponse *DownloadResponse) error {
+// downloadBlobToWriterAt downloads an Azure blob to a buffer with parallel.
+func downloadBlobToWriterAt(ctx context.Context, blobURL BlobURL, offset int64, count int64,
+	writer io.WriterAt, o DownloadFromBlobOptions, initialDownloadResponse *DownloadResponse) error {
 	if o.BlockSize == 0 {
 		o.BlockSize = BlobDefaultDownloadBlockSize
 	}
@@ -186,7 +195,7 @@ func downloadBlobToBuffer(ctx context.Context, blobURL BlobURL, offset int64, co
 			count = initialDownloadResponse.ContentLength() - offset // if we have the length, use it
 		} else {
 			// If we don't have the length at all, get it
-			dr, err := blobURL.Download(ctx, 0, CountToEnd, o.AccessConditions, false)
+			dr, err := blobURL.Download(ctx, 0, CountToEnd, o.AccessConditions, false, o.ClientProvidedKeyOptions)
 			if err != nil {
 				return err
 			}
@@ -194,17 +203,22 @@ func downloadBlobToBuffer(ctx context.Context, blobURL BlobURL, offset int64, co
 		}
 	}
 
+	if count <= 0 {
+		// The file is empty, there is nothing to download.
+		return nil
+	}
+
 	// Prepare and do parallel download.
 	progress := int64(0)
 	progressLock := &sync.Mutex{}
 
 	err := DoBatchTransfer(ctx, BatchTransferOptions{
-		OperationName: "downloadBlobToBuffer",
+		OperationName: "downloadBlobToWriterAt",
 		TransferSize:  count,
 		ChunkSize:     o.BlockSize,
 		Parallelism:   o.Parallelism,
 		Operation: func(chunkStart int64, count int64, ctx context.Context) error {
-			dr, err := blobURL.Download(ctx, chunkStart+offset, count, o.AccessConditions, false)
+			dr, err := blobURL.Download(ctx, chunkStart+offset, count, o.AccessConditions, false, o.ClientProvidedKeyOptions)
 			if err != nil {
 				return err
 			}
@@ -222,7 +236,7 @@ func downloadBlobToBuffer(ctx context.Context, blobURL BlobURL, offset int64, co
 						progressLock.Unlock()
 					})
 			}
-			_, err = io.ReadFull(body, b[chunkStart:chunkStart+count])
+			_, err = io.Copy(newSectionWriter(writer, chunkStart, count), body)
 			body.Close()
 			return err
 		},
@@ -237,7 +251,7 @@ func downloadBlobToBuffer(ctx context.Context, blobURL BlobURL, offset int64, co
 // Offset and count are optional, pass 0 for both to download the entire blob.
 func DownloadBlobToBuffer(ctx context.Context, blobURL BlobURL, offset int64, count int64,
 	b []byte, o DownloadFromBlobOptions) error {
-	return downloadBlobToBuffer(ctx, blobURL, offset, count, b, o, nil)
+	return downloadBlobToWriterAt(ctx, blobURL, offset, count, newBytesWriter(b), o, nil)
 }
 
 // DownloadBlobToFile downloads an Azure blob to a local file.
@@ -250,7 +264,7 @@ func DownloadBlobToFile(ctx context.Context, blobURL BlobURL, offset int64, coun
 
 	if count == CountToEnd {
 		// Try to get Azure blob's size
-		props, err := blobURL.GetProperties(ctx, o.AccessConditions)
+		props, err := blobURL.GetProperties(ctx, o.AccessConditions, o.ClientProvidedKeyOptions)
 		if err != nil {
 			return err
 		}
@@ -271,13 +285,7 @@ func DownloadBlobToFile(ctx context.Context, blobURL BlobURL, offset int64, coun
 	}
 
 	if size > 0 {
-		// 3. Set mmap and call downloadBlobToBuffer.
-		m, err := newMMF(file, true, 0, int(size))
-		if err != nil {
-			return err
-		}
-		defer m.unmap()
-		return downloadBlobToBuffer(ctx, blobURL, offset, size, m, o, nil)
+		return downloadBlobToWriterAt(ctx, blobURL, offset, size, file, o, nil)
 	} else { // if the blob's size is 0, there is no need in downloading it
 		return nil
 	}
@@ -359,10 +367,13 @@ type UploadStreamToBlockBlobOptions struct {
 	// BufferSize sizes the buffer used to read data from source. If < 1 MiB, defaults to 1 MiB.
 	BufferSize int
 	// MaxBuffers defines the number of simultaneous uploads will be performed to upload the file.
-	MaxBuffers       int
-	BlobHTTPHeaders  BlobHTTPHeaders
-	Metadata         Metadata
-	AccessConditions BlobAccessConditions
+	MaxBuffers               int
+	BlobHTTPHeaders          BlobHTTPHeaders
+	Metadata                 Metadata
+	AccessConditions         BlobAccessConditions
+	BlobAccessTier           AccessTierType
+	BlobTagsMap              BlobTagsMap
+	ClientProvidedKeyOptions ClientProvidedKeyOptions
 }
 
 func (u *UploadStreamToBlockBlobOptions) defaults() {
