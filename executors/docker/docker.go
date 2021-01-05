@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -29,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
@@ -37,7 +37,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
@@ -85,12 +84,10 @@ type executor struct {
 
 	helperImageInfo helperimage.Info
 
-	usedImages     map[string]string
-	usedImagesLock sync.RWMutex
-
 	volumesManager  volumes.Manager
 	networksManager networks.Manager
 	labeler         labels.Labeler
+	pullManager     pull.Manager
 
 	networkMode container.NetworkMode
 
@@ -130,130 +127,13 @@ func (e *executor) getServiceVariables() []string {
 	return e.Build.GetAllVariables().PublicOrInternal().StringList()
 }
 
-func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*types.ImageInspect, error) {
-	e.SetCurrentStage(ExecutorStagePullingImage)
-	e.Println("Pulling docker image", imageName, "...")
-
-	ref := imageName
-	// Add :latest to limit the download results
-	if !strings.ContainsAny(ref, ":@") {
-		ref += ":latest"
-	}
-
-	options := types.ImagePullOptions{}
-	options.RegistryAuth, _ = auth.EncodeConfig(ac)
-
-	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
-	if err := e.client.ImagePullBlocking(e.Context, ref, options); err != nil {
-		if errorRegexp.MatchString(err.Error()) {
-			return nil, &common.BuildError{Inner: err}
-		}
-		return nil, err
-	}
-
-	image, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
-	return &image, err
-}
-
-func (e *executor) getDockerImage(imageName string) (*types.ImageInspect, error) {
-	pullPolicies, err := e.Config.Docker.GetPullPolicies()
-	if err != nil {
-		return nil, err
-	}
-
-	var imageErr error
-	for idx, pullPolicy := range pullPolicies {
-		attempt := 1 + idx
-		if attempt > 1 {
-			e.Infoln(fmt.Sprintf("Attempt #%d: Trying %q pull policy", attempt, pullPolicy))
-		}
-
-		var img *types.ImageInspect
-		img, imageErr = e.getImageUsingPullPolicy(imageName, pullPolicy)
-		if imageErr != nil {
-			e.Warningln(fmt.Sprintf("Failed to pull image with policy %q: %v", pullPolicy, imageErr))
-			continue
-		}
-
-		return img, nil
-	}
-
-	return nil, fmt.Errorf(
-		"failed to pull image %q with specified policies %v: %w",
-		imageName,
-		pullPolicies,
-		imageErr,
-	)
-}
-
-func (e *executor) getImageUsingPullPolicy(
-	imageName string,
-	pullPolicy common.DockerPullPolicy,
-) (image *types.ImageInspect, err error) {
-	e.Debugln("Looking for image", imageName, "...")
-	existingImage, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
-
-	// Return early if we already used that image
-	if err == nil && e.wasImageUsed(imageName, existingImage.ID) {
-		return &existingImage, nil
-	}
-
-	defer func() {
-		if err == nil {
-			e.markImageAsUsed(imageName, image)
-		}
-	}()
-
-	// If never is specified then we return what inspect did return
-	if pullPolicy == common.PullPolicyNever {
-		return &existingImage, err
-	}
-
-	if err == nil {
-		// Don't pull image that is passed by ID
-		if existingImage.ID == imageName {
-			return &existingImage, nil
-		}
-
-		// If not-present is specified
-		if pullPolicy == common.PullPolicyIfNotPresent {
-			e.Println(fmt.Sprintf("Using locally found image version due to %q pull policy", pullPolicy))
-			return &existingImage, err
-		}
-	}
-
-	registryInfo, err := auth.ResolveConfigForImage(
-		imageName,
-		e.Build.GetDockerAuthConfig(),
-		e.Shell().User,
-		e.Build.Credentials,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if registryInfo != nil {
-		e.Println(fmt.Sprintf("Authenticating with credentials from %v", registryInfo.Source))
-		e.Debugln(fmt.Sprintf(
-			"Using %v to connect to %v in order to resolve %v...",
-			registryInfo.AuthConfig.Username,
-			registryInfo.AuthConfig.ServerAddress,
-			imageName,
-		))
-		return e.pullDockerImage(imageName, &registryInfo.AuthConfig)
-	}
-
-	e.Debugln(fmt.Sprintf("No credentials found for %v", imageName))
-	return e.pullDockerImage(imageName, nil)
-}
-
 func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {
 	imageName, err := e.expandImageName(imageName, allowedImages)
 	if err != nil {
 		return nil, err
 	}
 
-	image, err := e.getDockerImage(imageName)
+	image, err := e.pullManager.GetDockerImage(imageName)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +190,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 			"...",
 		)
 
-		return e.getDockerImage(imageNameFromConfig)
+		return e.pullManager.GetDockerImage(imageNameFromConfig)
 	}
 
 	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
@@ -331,7 +211,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 	// Fall back to getting image from registry
 	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
-	return e.getDockerImage(e.helperImageInfo.String())
+	return e.pullManager.GetDockerImage(e.helperImageInfo.String())
 }
 
 func (e *executor) getLocalHelperImage() *types.ImageInspect {
@@ -368,7 +248,7 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	}
 
 	// Fetch image
-	image, err := e.getDockerImage(imageName)
+	image, err := e.pullManager.GetDockerImage(imageName)
 	if err != nil {
 		return nil, err
 	}
@@ -423,29 +303,6 @@ func (e *executor) bindDevices() (err error) {
 	return nil
 }
 
-func (e *executor) wasImageUsed(imageName, imageID string) bool {
-	e.usedImagesLock.RLock()
-	defer e.usedImagesLock.RUnlock()
-
-	return e.usedImages[imageName] == imageID
-}
-
-func (e *executor) markImageAsUsed(imageName string, image *types.ImageInspect) {
-	e.usedImagesLock.Lock()
-	defer e.usedImagesLock.Unlock()
-
-	if e.usedImages == nil {
-		e.usedImages = make(map[string]string)
-	}
-	e.usedImages[imageName] = image.ID
-
-	if imageName != image.ID && len(image.RepoDigests) > 0 {
-		e.Println("Using docker image", image.ID, "for", imageName, "with digest", image.RepoDigests[0], "...")
-	} else if imageName != image.ID {
-		e.Println("Using docker image", image.ID, "for", imageName, "...")
-	}
-}
-
 func (e *executor) createService(
 	serviceIndex int,
 	service, version, image string,
@@ -461,7 +318,7 @@ func (e *executor) createService(
 	}
 
 	e.Println("Starting service", service+":"+version, "...")
-	serviceImage, err := e.getDockerImage(image)
+	serviceImage, err := e.pullManager.GetDockerImage(image)
 	if err != nil {
 		return nil, err
 	}
@@ -1009,6 +866,7 @@ func (e *executor) createDependencies() error {
 		e.createLabeler,
 		e.createNetworksManager,
 		e.createBuildNetwork,
+		e.createPullManager,
 		e.bindDevices,
 		e.createVolumesManager,
 		e.createVolumes,
