@@ -790,6 +790,16 @@ func TestCacheInContainer(t *testing.T) {
 	assert.Regexp(t, cacheNotPresentRE, output, "Third job execution should not have cached data")
 	assert.Contains(t, output, skipCacheDownload, "Cache download be skipped with policy: push")
 	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: push")
+
+	// For failed job it should push cache as well.
+	build.JobResponse.Cache[0].Policy = common.CachePolicyPullPush
+	build.JobResponse.Cache[0].When = common.CacheWhenAlways
+	build.JobResponse.Steps[0].Script = append(build.JobResponse.Steps[0].Script, "exit 1")
+	output, err = buildtest.RunBuildReturningOutput(t, build)
+	require.Error(t, err)
+	assert.NotRegexp(t, cacheNotPresentRE, output, "Second job execution should have cached data")
+	assert.Contains(t, output, "Saving cache for failed job")
+	assert.Contains(t, output, "Created cache")
 }
 
 func TestDockerImageNameFromVariable(t *testing.T) {
