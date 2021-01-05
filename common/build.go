@@ -383,7 +383,7 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 		BuildStageDownloadArtifacts:        true,
 		BuildStageAfterScript:              false,
 		BuildStageArchiveOnSuccessCache:    true,
-		BuildStageArchiveOnFailureCache:    false,
+		BuildStageArchiveOnFailureCache:    true,
 		BuildStageUploadOnFailureArtifacts: true,
 		BuildStageUploadOnSuccessArtifacts: true,
 		BuildStageCleanupFileVariables:     true,
