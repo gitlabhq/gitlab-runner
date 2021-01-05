@@ -16,7 +16,7 @@ requested by their `coordinator`.
 ### Where are logs stored when run as a service?
 
 - If the GitLab Runner is run as service on Linux/macOS the daemon logs to syslog.
-- If the GitLab Runner is run as a service on Windows, the logs are system event logs. To view them, open the Event Viewer (from the Run menu, type `eventvwr.msc` or search for "Event Viewer"). Then go to **Windows Logs > Application**. The **Source** for Runner logs is `gitlab-runner`.
+- If GitLab Runner is running as a service on Windows, it creates system event logs. To view them, open the Event Viewer (from the Run menu, type `eventvwr.msc` or search for "Event Viewer"). Then go to **Windows Logs > Application**. The **Source** for Runner logs is `gitlab-runner`. If you are using Windows Server Core, run this PowerShell command to get the last 20 log entries: `get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto`.
 
 ### Run in `--debug` mode
 
