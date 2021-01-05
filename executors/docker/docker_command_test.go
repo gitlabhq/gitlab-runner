@@ -696,16 +696,6 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 	}
 }
 
-func runTestJobWithOutput(t *testing.T, build *common.Build) (output string) {
-	var buffer bytes.Buffer
-
-	err := build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
-	assert.NoError(t, err)
-
-	output = buffer.String()
-	return
-}
-
 func TestCacheInContainer(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
@@ -748,7 +738,8 @@ func TestCacheInContainer(t *testing.T) {
 	skipCacheUpload := "Not uploading cache key due to policy"
 
 	// The first job lacks any cache to pull, but tries to both pull and push
-	output := runTestJobWithOutput(t, build)
+	output, err := buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
 	assert.Regexp(t, cacheNotPresentRE, output, "First job execution should not have cached data")
 	assert.NotContains(
 		t,
@@ -767,7 +758,8 @@ func TestCacheInContainer(t *testing.T) {
 
 	// pull-only jobs should skip the push step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPull
-	output = runTestJobWithOutput(t, build)
+	output, err = buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
 	assert.NotRegexp(t, cacheNotPresentRE, output, "Second job execution should have cached data")
 	assert.NotContains(
 		t,
@@ -786,7 +778,8 @@ func TestCacheInContainer(t *testing.T) {
 
 	// push-only jobs should skip the pull step
 	build.JobResponse.Cache[0].Policy = common.CachePolicyPush
-	output = runTestJobWithOutput(t, build)
+	output, err = buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
 	assert.Regexp(t, cacheNotPresentRE, output, "Third job execution should not have cached data")
 	assert.Contains(t, output, skipCacheDownload, "Cache download be skipped with policy: push")
 	assert.NotContains(t, output, skipCacheUpload, "Cache upload should be performed with policy: push")
@@ -831,7 +824,8 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 
 	re := regexp.MustCompile("(?m)^ERROR: The [^ ]+ is not present on list of allowed images")
 
-	output := runTestJobWithOutput(t, build)
+	output, err := buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
 	assert.NotRegexp(t, re, output, "Image's name should be expanded from variable")
 }
 
@@ -864,7 +858,8 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 
 	re := regexp.MustCompile("(?m)^ERROR: The [^ ]+ is not present on list of allowed services")
 
-	output := runTestJobWithOutput(t, build)
+	output, err := buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
 	assert.NotRegexp(t, re, output, "Service's name should be expanded from variable")
 }
 
@@ -1532,8 +1527,8 @@ func TestChownAndUmaskUsage(t *testing.T) {
 				},
 			}
 
-			output := runTestJobWithOutput(t, build)
-			fmt.Println(output)
+			output, err := buildtest.RunBuildReturningOutput(t, build)
+			require.NoError(t, err)
 
 			tt.assertOutput(t, output)
 		})
