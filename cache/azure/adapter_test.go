@@ -230,6 +230,7 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 }
 
 type adapterOperationTestCase struct {
+	objectName    string
 	returnedURL   string
 	returnedError error
 	expectedError string
@@ -304,16 +305,25 @@ func testAdapterOperation(
 func TestAdapterOperation(t *testing.T) {
 	tests := map[string]adapterOperationTestCase{
 		"error-on-URL-signing": {
+			objectName:    objectName,
 			returnedURL:   "",
 			returnedError: fmt.Errorf("test error"),
 			expectedError: "error generating Azure pre-signed URL\" error=\"test error\"",
 		},
 		"invalid-URL-returned": {
+			objectName:    objectName,
 			returnedURL:   "://test",
 			returnedError: nil,
 			expectedError: "error generating Azure pre-signed URL\" error=\"parse",
 		},
 		"valid-configuration": {
+			objectName:    objectName,
+			returnedURL:   "https://myaccount.blob.core.windows.net/mycontainer/mydirectory/myfile.txt?sig=XYZ&sp=r",
+			returnedError: nil,
+			expectedError: "",
+		},
+		"valid-configuration-with-leading-slash": {
+			objectName:    "/" + objectName,
 			returnedURL:   "https://myaccount.blob.core.windows.net/mycontainer/mydirectory/myfile.txt?sig=XYZ&sp=r",
 			returnedError: nil,
 			expectedError: "",
@@ -324,7 +334,7 @@ func TestAdapterOperation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			config := defaultAzureCache()
 
-			a, err := New(config, defaultTimeout, objectName)
+			a, err := New(config, defaultTimeout, tc.objectName)
 			require.NoError(t, err)
 
 			adapter, ok := a.(*azureAdapter)

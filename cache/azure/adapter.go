@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -145,7 +146,7 @@ func New(config *common.CacheConfig, timeout time.Duration, objectName string) (
 	a := &azureAdapter{
 		config:              azure,
 		timeout:             timeout,
-		objectName:          objectName,
+		objectName:          strings.TrimLeft(objectName, "/"),
 		credentialsResolver: cr,
 		generateSignedURL:   presignedURL,
 		blobTokenGenerator:  getSASToken,
