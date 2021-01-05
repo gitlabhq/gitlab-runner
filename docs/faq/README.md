@@ -263,40 +263,23 @@ FATA[0000] Failed to start GitLab Runner: The service did not start due to a log
 ```
 
 This error can occur when the user used to execute the service doesn't have
-the `SeServiceLogonRight` permission. In such case you need to add this
+the `SeServiceLogonRight` permission. In this case, you need to add this
 permission for the chosen user and then try to start the service again.
 
-You can add `SeServiceLogonRight` in two ways:
+1. Go to _Control Panel > System and Security > Administrative Tools_.
+1. Open the _Local Security Policy_ tool.
+1. Choose the _Security Settings > Local Policies > User Rights Assignment_ on the
+   list on the left.
+1. Open the _Log on as a service_ on the list on the right.
+1. Click the _Add User or Group..._ button.
+1. Add the user ("by hand" or using _Advanced..._ button) and apply the settings.
 
-1. Manually using Administrative Tools:
-   - Go to _Control Panel > System and Security > Administrative Tools_,
-   - open the _Local Security Policy_ tool,
-   - chose the _Security Settings > Local Policies > User Rights Assignment_ on the
-     list on the left,
-   - open the _Log on as a service_ on the list on the right,
-   - click on the _Add User or Group..._ button,
-   - add the user ("by hand" or using _Advanced..._ button) and apply the settings.
+According to [Microsoft's documentation](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))
+this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
+Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, and Windows 8.
 
-     > **Notice:** According to [Microsoft's documentation](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))
-     > this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
-     > Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, Windows 8
-     >
-     > **Notice:** The _Local Security Policy_ tool may be not available in some
-     > Windows versions - for example in "Home Edition" variant of each version.
-
-<!-- I'm unable to download `Ntrights.exe` from Microsoft -->
-
-1. From command line, using the `Ntrights.exe` tool:
-   - Download tools from [Microsoft's download site](https://www.microsoft.com/en-us/download/details.aspx?id=17657),
-   - execute `ntrights.exe ntrights +r SeServiceLogonRight -u USER_NAME_HERE` (remember,
-     that you should provide a full path for `ntrights.exe` executable **or** add that
-     path to system's `PATH` environment variable).
-
-     > **Notice:** The tool was created in 2003 and was initially designed to use
-     > with Windows XP and Windows Server 2003. On [Microsoft sites](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd548356(v=ws.10))
-     > you can find an example of usage `Ntrights.exe` that applies to Windows 7 and Windows Server 2008 R2.
-     > This solution is not tested and because of the age of the software **it may not work
-     > on newest Windows versions**.
+The _Local Security Policy_ tool may be not available in some
+Windows versions - for example in "Home Edition" variant of each version.
 
 After adding the `SeServiceLogonRight` for the user used in service configuration,
 the command `gitlab-runner start` should finish without failures
