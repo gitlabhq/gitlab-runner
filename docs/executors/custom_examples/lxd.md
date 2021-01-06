@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Using LXD with the Custom executor
 
 In this example, we use LXD to create a container per build and clean it

@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # SSH
 
 NOTE:
@@ -37,9 +43,9 @@ The project's source is checked out to:
 
 Where:
 
-- `<short-token>` is a shortened version of the Runner's token (first 8 letters)
+- `<short-token>` is a shortened version of the runner's token (first 8 letters)
 - `<concurrent-id>` is a unique number, identifying the local job ID on the
-  particular Runner in context of the project
+  particular runner in context of the project
 - `<namespace>` is the namespace where the project is stored on GitLab
 - `<project-name>` is the name of the project as it is stored on GitLab
 

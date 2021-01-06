@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Executors
 
 GitLab Runner implements a number of executors that can be used to run your
@@ -44,18 +50,18 @@ you decide which executor to use.
 1. For example using [Vagrant](https://www.vagrantup.com/docs/providers/virtualbox "Vagrant documentation for VirtualBox")
 1. Dependent on what kind of environment you are provisioning. It can be
    completely isolated or shared between each build.
-1. When a Runner's file system access is not protected, jobs can access the entire
-   system including the Runner's token, and the cache and code of other jobs.
-   Executors marked ✓ don't allow Runner to access the file system by default.
+1. When a runner's file system access is not protected, jobs can access the entire
+   system including the runner's token, and the cache and code of other jobs.
+   Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
-   to break out of their container and access the file system hosting Runner.
+   to break out of their container and access the file system hosting runner.
 
 ### I am not sure
 
 #### Shell executor
 
 **Shell** is the simplest executor to configure. All required dependencies for
-your builds need to be installed manually on the same machine that the Runner is
+your builds need to be installed manually on the same machine that GitLab Runner is
 installed on.
 
 #### Virtual Machine executor (VirtualBox / Parallels)
@@ -137,7 +143,7 @@ Supported systems by different shells:
 1. Deprecated. Default shell if no
    [`shell`](../configuration/advanced-configuration.md#the-runners-section)
    is specified.
-1. Default shell when a new GitLab Runner is registered.
+1. Default shell when a new runner is registered.
 1. Bash shell is currently not working on Windows out of the box due to
    [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1515) but is intended
    to be supported again soon. See the issue for a workaround.

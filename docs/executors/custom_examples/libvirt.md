@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Using libvirt with the Custom executor
 
 Using [libvirt](https://libvirt.org/), the Custom executor driver will
@@ -59,7 +65,7 @@ password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the
 
 ## Configuration
 
-The following is an example of Runner configuration for libvirt:
+The following is an example of a GitLab Runner configuration for libvirt:
 
 ```toml
 concurrent = 1

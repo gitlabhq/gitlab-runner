@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # The Custom executor
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
@@ -95,7 +101,7 @@ environment variables available to them:
   variables](https://docs.gitlab.com/ee/ci/variables/), including
   [predefined
   variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
-- All environment variables provided by the Custom Runner host system.
+- All environment variables provided by the Custom executor Runner host system.
 - All services and their [available settings](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services).
   Exposed in JSON format as `CUSTOM_ENV_CI_JOB_SERVICES`.
 
@@ -178,7 +184,7 @@ times.
 | `builds_dir` | string | ✗ | ✗ | The base directory where the working directory of the job will be created. |
 | `cache_dir` | string | ✗ | ✗ | The base directory where local cache will be stored. |
 | `builds_dir_is_shared` | bool | ✗ | n/a | Defines whether the environment is shared between concurrent job or not. |
-| `hostname` | string | ✗ | ✓ | The hostname to associate with job's "metadata" stored by Runner. If undefined, the hostname is not set. |
+| `hostname` | string | ✗ | ✓ | The hostname to associate with job's "metadata" stored by the runner. If undefined, the hostname is not set. |
 | `driver.name` | string | ✗ | ✓ | The user-defined name for the driver. Printed with the `Using custom executor...` line. If undefined, no information about driver is printed. |
 | `driver.version` | string | ✗ | ✓ | The user-defined version for the drive. Printed with the `Using custom executor...` line. If undefined, only the name information is printed. |
 | `job_env` | object | ✗ | ✓ |  Name-value pairs that will be made available through environment variables to all subsequent stages of the job. |

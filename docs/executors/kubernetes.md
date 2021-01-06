@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # The Kubernetes executor
@@ -51,17 +51,17 @@ The following options are provided, which allow you to connect to the Kubernetes
 The user account provided must have permission to create, list and attach to Pods in
 the specified namespace in order to function.
 
-If you are running the GitLab CI Runner within the Kubernetes cluster you can omit
-all of the above fields to have the Runner auto-discover the Kubernetes API. This
+If you are running GitLab Runner within the Kubernetes cluster you can omit
+all of the above fields to have GitLab Runner auto-discover the Kubernetes API. This
 is the recommended approach.
 
 If you are running it externally to the Cluster then you will need to set each
-of these keywords and make sure that the Runner has access to the Kubernetes API
+of these keywords and make sure that GitLab Runner has access to the Kubernetes API
 on the cluster.
 
 ## Kubernetes executor interaction diagram
 
-The diagram below depicts the interaction with a GitLab Runner hosted on a Kubernetes cluster and the Kubernetes API. The Kubernetes API is the mechanism that is used by the runner on Kubernetes to create pods on the cluster. The interaction depicted in this diagram is valid on any Kubernetes cluster, whether that's a turnkey solution hosted on the major public cloud providers or a self-managed Kubernetes installation. 
+The diagram below depicts the interaction with a GitLab Runner hosted on a Kubernetes cluster and the Kubernetes API. The Kubernetes API is the mechanism that is used by GitLab Runner on Kubernetes to create pods on the cluster. The interaction depicted in this diagram is valid on any Kubernetes cluster, whether that's a turnkey solution hosted on the major public cloud providers or a self-managed Kubernetes installation. 
 
 NOTE:
 The GitLab Runner [Helm chart](../install/kubernetes.md) has been tested on Google Kubernetes Engine and Azure Container Service.
@@ -87,7 +87,7 @@ sequenceDiagram
 
 ## The keywords
 
-The following keywords help to define the behavior of the Runner within Kubernetes.
+The following keywords help to define the behavior of GitLab Runner within Kubernetes.
 
 ### CPU requests and limits
 
@@ -273,7 +273,7 @@ for that resource has been set to.
 
 ## Define keywords in the configuration TOML
 
-Each of the keywords can be defined in the `config.toml` for the GitLab Runner.
+Each of the keywords can be defined in the `config.toml` file.
 
 Here is an example `config.toml`:
 
