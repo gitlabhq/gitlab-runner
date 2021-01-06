@@ -1,13 +1,13 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # Old GitLab Runner URLs
 
 NOTE:
-Take a look at the [compatibility section](../index.md#gitlab-runner-versions) to check the Runner's compatibility
+Take a look at the [compatibility section](../index.md#gitlab-runner-versions) to check GitLab Runner compatibility
 with your version of GitLab.
 
 In GitLab Runner 10, the name of the executable was renamed from

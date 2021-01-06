@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 comments: false
 ---
 
@@ -19,7 +19,7 @@ Official packages are available for the following Linux distributions:
 
 - CentOS, Debian, Ubuntu, RHEL, Fedora, Mint
 
-Runner officially supports the following operating systems:
+GitLab Runner officially supports the following operating systems:
 
 - Linux, Windows, macOS, FreeBSD
 

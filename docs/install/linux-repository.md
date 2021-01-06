@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # Install GitLab Runner using the official GitLab repositories
@@ -27,16 +27,16 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 ## Prerequisites
 
 If you want to use the [Docker executor](../executors/docker.md), make sure to install Docker before
-using the Runner. [Read how to install Docker for your distribution](https://docs.docker.com/engine/installation/).
+using GitLab Runner. [Read how to install Docker for your distribution](https://docs.docker.com/engine/installation/).
 
-## Installing the Runner
+## Installing GitLab Runner
 
 NOTE:
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
 to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
 to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
 
-To install the Runner:
+To install GitLab Runner:
 
 1. Add the official GitLab repository:
 
@@ -79,9 +79,9 @@ To install the Runner:
    export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E yum install gitlab-runner-10.0.0-1
    ```
 
-1. [Register the Runner](../register/index.md)
+1. [Register a runner](../register/index.md)
 
-After completing the step above, the Runner should be started already being
+After completing the step above, a runner should be started and be
 ready to be used by your projects!
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
@@ -96,7 +96,7 @@ from the official repositories will have a higher priority.
 If you want to use our package, you should manually set the source of
 the package. The best way is to add the pinning configuration file.
 
-If you do this, the next update of the Runner's package - whether it will
+If you do this, the next update of the GitLab Runner package - whether it will
 be done manually or automatically - will be done using the same source:
 
 ```shell
@@ -108,7 +108,7 @@ Pin-Priority: 1001
 EOF
 ```
 
-## Updating the Runner
+## Updating GitLab Runner
 
 Simply execute to install latest version:
 
@@ -161,7 +161,7 @@ To upgrade GitLab Runner from a version prior to 10.0:
    sudo rm /etc/yum.repos.d/runner_gitlab-ci-multi-runner.repo
    ```
 
-1. Follow the same steps when [installing the Runner](#installing-the-runner),
+1. Follow the same steps when [installing GitLab Runner](#installing-gitlab-runner),
    **without registering it** and using the new repository.
 
 1. For RHEL/CentOS/Fedora, run:

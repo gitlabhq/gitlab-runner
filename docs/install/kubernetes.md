@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # GitLab Runner Helm Chart
 
 NOTE:
@@ -8,7 +14,7 @@ Other Kubernetes installations may work as well, if not please
 The official way of deploying a GitLab Runner instance into your
 Kubernetes cluster is by using the `gitlab-runner` Helm chart.
 
-This chart configures the Runner to:
+This chart configures GitLab Runner to:
 
 - Run using the GitLab Runner [Kubernetes executor](../executors/kubernetes.md).
 - For each new job it receives from GitLab CI/CD, it will provision a
@@ -16,7 +22,7 @@ This chart configures the Runner to:
 
 ## Prerequisites
 
-- Your GitLab Server's API is reachable from the cluster.
+- Your GitLab server's API is reachable from the cluster.
 - Kubernetes 1.4+ with Beta APIs enabled.
 - The `kubectl` CLI installed locally and authenticated for the cluster.
 - The [Helm client](https://helm.sh/docs/using_helm/#installing-the-helm-client) installed locally on your machine.
@@ -33,14 +39,14 @@ in the chart repository.
 
 ### Required configuration
 
-In order for GitLab Runner to function, your configuration file **must** specify the following:
+For GitLab Runner to function, your configuration file **must** specify the following:
 
-- `gitlabUrl` - the GitLab server full URL (e.g., `https://gitlab.example.com`) to register the Runner against.
-- `runnerRegistrationToken` - The registration token for adding new Runners to
+- `gitlabUrl` - the GitLab server full URL (e.g., `https://gitlab.example.com`) to register the runner against.
+- `runnerRegistrationToken` - The registration token for adding new runners to
   GitLab. This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
 
 Unless you need to specify any additional configuration, you are
-ready to [install the Runner](#installing-gitlab-runner-using-the-helm-chart).
+ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart).
 
 ### Additional configuration
 
@@ -267,12 +273,12 @@ controls the maximum number of pods allowed at a single time, and defaults to `1
 concurrent: 10
 ```
 
-### Running Docker-in-Docker containers with GitLab Runners
+### Running Docker-in-Docker containers with GitLab Runner
 
-See [Running Privileged Containers for the Runners](#running-privileged-containers-for-the-runners) for how to enable it,
+See [running privileged containers for the runners](#running-privileged-containers-for-the-runners) for how to enable it,
 and the [GitLab Runner documentation](../executors/kubernetes.md#using-docker-in-your-builds) on running dind.
 
-### Running privileged containers for the Runners
+### Running privileged containers for the runners
 
 You can tell the GitLab Runner to run using privileged containers. You may need
 this enabled if you need to use the Docker executable within your GitLab CI/CD jobs.
@@ -298,7 +304,7 @@ runners:
 
 Building containers within containers with Docker-in-Docker requires Docker privileged
 mode. Google's [Kaniko](https://github.com/GoogleContainerTools/kaniko) is an alternative
-that works without privileged mode, and it has been tested on the GitLab Kubernetes Runner.
+that works without privileged mode, and it has been tested on the Kubernetes GitLab Runner.
 
 The [Least Privilege Container Builds with Kaniko on GitLab](https://www.youtube.com/watch?v=d96ybcELpFs)
 video is a walkthrough of the [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build)
@@ -339,7 +345,7 @@ file content being the value associated with the key:
 
 The GitLab Runner Helm Chart does not create a secret for you. In order to create
 the secret, you tell Kubernetes to store the certificate as a secret and present it
-to the Runner containers as a file. To do this, run the following command:
+to the GitLab Runner containers as a file. To do this, run the following command:
 
 ```shell
 kubectl
@@ -398,11 +404,11 @@ At the moment it is not possible to use environment variables as pod labels with
 We are working on it in this issue: [Can't set environment variable key as pod label](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173).
 Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173#note_351057890) as a temporary solution.
 
-### Store registration tokens or Runner tokens in secrets
+### Store registration tokens or runner tokens in secrets
 
-To register a new GitLab Runner, you can specify
+To register a new runner, you can specify
 `runnerRegistrationToken` in `values.yml`. To register an existing
-Runner, you can use `runnerToken`. It can be a security risk to store
+runner, you can use `runnerToken`. It can be a security risk to store
 tokens in `values.yml`, especially if you commit these to `git`.
 
 Instead, you can store the values of these tokens inside of a
@@ -411,9 +417,9 @@ secret](https://kubernetes.io/docs/concepts/configuration/secret/), and
 then update the `runners.secret` value in `values.yml` with the name of
 the secret.
 
-If you have an existing registered Runner and want to use that, set the
-`runner-token` with the token used to identify that Runner. If you want
-to have a new Runner registered you can set the
+If you have an existing registered runner and want to use that, set the
+`runner-token` with the token used to identify that runner. If you want
+to have a new runner registered you can set the
 `runner-registration-token` with the [registration token that you would
 like](https://docs.gitlab.com/ee/ci/runners/).
 
@@ -436,11 +442,11 @@ runners:
 ```
 
 This example uses the secret `gitlab-runner-secret` and takes the value of
-`runner-registration-token` to register the new GitLab Runner.
+`runner-registration-token` to register the new runner.
 
 ### Switching to the Ubuntu-based `gitlab-runner` Docker image
 
-By default GitLab Runner's Helm Chart uses the Alpine version of the `gitlab/gitlab-runner` image,
+By default the GitLab Runner Helm Chart uses the Alpine version of the `gitlab/gitlab-runner` image,
 which uses `musl libc`. In some cases, you may want to switch to the Ubuntu-based image, which uses `glibc`.
 
 To do so, update your `values.yaml` file with the following values:

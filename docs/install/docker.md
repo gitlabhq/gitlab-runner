@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Run GitLab Runner in a container
 
 This is how you can run GitLab Runner inside a Docker container.
@@ -12,13 +18,13 @@ The general rule is that every GitLab Runner command that normally would be exec
 as:
 
 ```shell
-gitlab-runner <Runner command and options...>
+gitlab-runner <runner command and options...>
 ```
 
 can be executed with:
 
 ```shell
-docker run <chosen docker options...> gitlab/gitlab-runner <Runner command and options...>
+docker run <chosen docker options...> gitlab/gitlab-runner <runner command and options...>
 ```
 
 For example, getting the top-level help information for GitLab Runner command could be
@@ -40,7 +46,7 @@ VERSION:
 ```
 
 In short, the `gitlab-runner` part of the command is replaced with
-`docker run [docker options] gitlab/gitlab-runner`, while the rest of Runner's
+`docker run [docker options] gitlab/gitlab-runner`, while the rest of the
 command stays as it is described in the [register documentation](../register/index.md).
 The only difference is that the `gitlab-runner` command is executed inside of a
 Docker container.
@@ -80,7 +86,7 @@ In this example, you can use a configuration container to mount your custom data
    docker volume create gitlab-runner-config
    ```
 
-1. Start the Runner container using the volume we just created:
+1. Start the GitLab Runner container using the volume we just created:
 
    ```shell
    docker run -d --name gitlab-runner --restart always \
@@ -92,9 +98,9 @@ In this example, you can use a configuration container to mount your custom data
 NOTE:
 To set the container's timezone, in the `docker run` command, use the flag `--env TZ=<TIMEZONE>`. [View a list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
-### Register the Runner
+### Register the runner
 
-The final step is to [register a new Runner](../register/index.md#docker). The GitLab Runner Container won't pick up any jobs until it's registered.
+The final step is to [register a new runner](../register/index.md#docker). The GitLab Runner Container won't pick up any jobs until it's registered.
 
 ## Update configuration
 

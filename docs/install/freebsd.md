@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # Install GitLab Runner on FreeBSD
@@ -104,7 +104,7 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
    sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
    ```
 
-1. [Register the Runner](../register/index.md)
+1. [Register a runner](../register/index.md)
 1. Enable the `gitlab-runner` service and start it:
 
    ```shell
@@ -123,19 +123,19 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 To upgrade GitLab Runner from a version prior to 10.0:
 
-1. Stop the Runner:
+1. Stop GitLab Runner:
 
    ```shell
    sudo service gitlab_runner stop
    ```
 
-1. Optionally, preserve the previous version of the Runner just in case:
+1. Optionally, preserve the previous version of GitLab Runner just in case:
 
    ```shell
    sudo mv /usr/local/bin/gitlab-ci-multi-runner{,.$(/usr/local/bin/gitlab-ci-multi-runner --version| grep Version | cut -d ':' -f 2 | sed 's/ //g')}
    ```
 
-1. Download the new Runner and make it executable:
+1. Download the new GitLab Runner and make it executable:
 
    ```shell
    # For amd64
@@ -159,7 +159,7 @@ To upgrade GitLab Runner from a version prior to 10.0:
    command="/usr/local/bin/gitlab-runner run"
    ```
 
-1. Start the Runner:
+1. Start GitLab Runner:
 
    ```shell
    sudo service gitlab_runner start
