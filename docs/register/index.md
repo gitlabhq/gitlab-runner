@@ -24,7 +24,7 @@ Before registering a runner, you need to first:
     go to **Settings > CI/CD** and expand the **Runners** section
 
 NOTE:
-When registering a GitLab Runner on GitLab.com, the `gitlab-ci coordinator URL`
+When registering a runner on GitLab.com, the `gitlab-ci coordinator URL`
 is `https://gitlab.com`.
 
 ## Docker
@@ -72,7 +72,7 @@ To register a runner using a Docker container:
 
 ## Linux
 
-To register a GitLab Runner under Linux:
+To register a runner under Linux:
 
 1. Run the following command:
 
@@ -98,7 +98,7 @@ NOTE:
 Install [Docker.app](https://docs.docker.com/docker-for-mac/install/)
 before registering a runner under macOS.
 
-To register a Runner under macOS:
+To register a runner under macOS:
 
 1. Run the following command:
 
@@ -120,7 +120,7 @@ To register a Runner under macOS:
 
 ## Windows
 
-To register a Runner under Windows:
+To register a runner under Windows:
 
 1. Run the following command:
 
@@ -140,12 +140,12 @@ To register a Runner under Windows:
 1. If you entered `docker` as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
 
-If you'd like to register multiple Runners on the same machine with different
+If you'd like to register multiple runners on the same machine with different
 configurations repeat the `./gitlab-runner.exe register` command.
 
 ## FreeBSD
 
-To register a Runner under FreeBSD:
+To register a runner under FreeBSD:
 
 1. Run the following command:
 
@@ -211,16 +211,16 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 ```
 
 The `--access-level` parameter was added in GitLab Runner 12.0. It uses a registration API parameter introduced in GitLab 11.11.
-Use this parameter during registration to create a [protected Runner](https://docs.gitlab.com/ee/ci/runners/#prevent-runners-from-revealing-sensitive-information).
-For a protected Runner, use the `--access-level="ref_protected"` parameter.
-For an unprotected Runner, use `--access-level="not_protected"` instead or leave the value undefined.
+Use this parameter during registration to create a [protected runner](https://docs.gitlab.com/ee/ci/runners/#prevent-runners-from-revealing-sensitive-information).
+For a protected runner, use the `--access-level="ref_protected"` parameter.
+For an unprotected runner, use `--access-level="not_protected"` instead or leave the value undefined.
 This value can later be toggled on or off in the project's **Settings > CI/CD** menu.
 
 ## `[[runners]]` configuration template file
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
-Some Runner configuration settings can't be set with environment variables or command line options.
+Some runner configuration settings can't be set with environment variables or command line options.
 
 For example:
 
@@ -230,9 +230,9 @@ For example:
 
 This is a problem for environments that are handled by any kind of automation, such as the
 [GitLab Runner official Helm chart](../install/kubernetes.md). In cases like these, the only solution was
-to manually update the `config.toml` file after the Runner was registered. This is less
+to manually update the `config.toml` file after the runner was registered. This is less
 than ideal, error-prone, and not reliable. Especially when more than one registration
-for the same Runner installation is done.
+for the same GitLab Runner installation is done.
 
 This problem can be resolved with the usage of a _configuration template file_.
 
@@ -267,7 +267,7 @@ With this:
 
 ### Example
 
-We register a Kubernetes-executor-based Runner to some test project and see what the
+We register a Kubernetes-executor-based runner to some test project and see what the
 `config.toml` file looks like:
 
 ```shell
@@ -361,7 +361,7 @@ $ cat > /tmp/test-config.template.toml << EOF
 EOF
 ```
 
-Having the file, we can now try to register the Runner again, but this time adding the
+Having the file, we can now try to register the runner again, but this time adding the
 `--template-config /tmp/test-config.template.toml` option. Apart from this change, the
 rest of registration command will be exactly the same:
 

@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 comments: false
 ---
 
@@ -13,7 +13,7 @@ when running your jobs.
 ## Usage of Shell executor
 
 **Generally, it's unsafe to run tests with `shell` executors.** The jobs are run
-with user's permissions (GitLab Runner's) and can steal code from other
+with user's permissions (the GitLab Runner permissions) and can steal code from other
 projects that are run on this server. Use only it for running the trusted builds.
 
 ## Usage of Docker executor
@@ -42,13 +42,13 @@ Let's consider an example where the pull policy is set to `if-not-present`:
 1. User A has a private image at `registry.example.com/image/name`.
 1. User A starts a build on a shared runner: The build receives the registry
    credentials and pulls the image after authorization in registry.
-1. The image is stored on a shared Runner's host.
+1. The image is stored on a shared runner's host.
 1. User B doesn't have access to the private image at `registry.example.com/image/name`.
-1. User B starts a build that is using this image on the same shared Runner
+1. User B starts a build that is using this image on the same shared runner
    as User A: Runner finds a local version of the image and uses it **even if
    the image could not be pulled because of missing credentials**.
 
-Therefore, if you host a Runner that can be used by different users and
+Therefore, if you host a runner that can be used by different users and
 different projects (with mixed private, and public access levels) you should
 never use `if-not-present` as the pull policy value, but use:
 
@@ -56,7 +56,7 @@ never use `if-not-present` as the pull policy value, but use:
 - `always` - If you want to give users the possibility to download any image
   from any registry.
 
-The `if-not-present` pull policy should be used **only** for specific Runners
+The `if-not-present` pull policy should be used **only** for specific runners
 used by trusted builds and users.
 
 Read the [pull policies documentation](../executors/docker.md#how-pull-policies-work)
@@ -94,7 +94,7 @@ attack vector to "steal" runner jobs.
 
 ## Network Segmentation
 
-The GitLab Runner is designed to run user-controlled scripts. To reduce the
+GitLab Runner is designed to run user-controlled scripts. To reduce the
 attack surface if a job is malicious, you can consider running them in their
 own network segement. This would provide network separation from other
 infrastructure and services.
@@ -107,7 +107,7 @@ All needs are unique, but for a cloud environment, this could include:
 - Filtering access to cloud provider metadata endpoints
 
 NOTE:
-All GitLab Runners will need outbound network connectivity to
+All runners will need outbound network connectivity to
 GitLab.com or your GitLab instance.
 Most of jobs will also require outbound network connectivity to
 the Internet - for dependency pulling etc.

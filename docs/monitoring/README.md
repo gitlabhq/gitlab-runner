@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # GitLab Runner monitoring
 
 GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
@@ -7,7 +13,7 @@ GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
 > The embedded HTTP Statistics Server with Prometheus metrics was
 introduced in GitLab Runner 1.8.0.
 
-The GitLab Runner is instrumented with native Prometheus
+GitLab Runner is instrumented with native Prometheus
 metrics, which can be exposed via an embedded HTTP server on the `/metrics`
 path. The server - if enabled - can be scraped by the Prometheus monitoring
 system or accessed with any other HTTP client.
@@ -24,7 +30,7 @@ The metrics format is documented in Prometheus'
 specification.
 
 These metrics are meant as a way for operators to monitor and gain insight into
-GitLab Runners. For example, you may be interested if the load average increase
+your runners. For example, you may be interested if the load average increase
 on your runner's host is related to an increase in processed jobs or not. Or
 you are running a cluster of machines to be used for the jobs and you want to
 track build trends to plan changes in your infrastructure.
@@ -63,7 +69,7 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 
 > `pprof` integration was introduced in GitLab Runner 1.9.0.
 
-While having metrics about the internal state of the Runner process is useful
+While having metrics about the internal state of the GitLab Runner process is useful,
 we've found that in some cases it would be good to check what is happening
 inside of the Running process in real time. That's why we've introduced
 the `pprof` HTTP endpoints.

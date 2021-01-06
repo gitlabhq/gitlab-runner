@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 comments: false
 ---
 
@@ -29,7 +29,7 @@ The currently supported shells are:
 | --------------| ------------------ |  ----------- |
 | `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `powershell`  | Fully Supported    | PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default when registering a new Runner in version 12.0 or newer. |
+| `powershell`  | Fully Supported    | PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default when registering a new runner in version 12.0 or newer. |
 | `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. |
 | `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Desktop. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. |
 
@@ -57,7 +57,7 @@ cat generated-bash-script | /bin/bash
 
 ### Shell profile loading
 
-For certain executors, the Runner will pass the `--login` flag as shown above,
+For certain executors, the runner will pass the `--login` flag as shown above,
 which also loads the shell profile. Anything that you have in your `.bashrc`,
 `.bash_logout`, [or any other
 dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_01_02),
@@ -79,7 +79,7 @@ Executors that load shell profiles:
 
 ## PowerShell
 
-The default shell when a new Runner is registered using GitLab Runner
+The default shell when a new runner is registered using GitLab Runner
 12.0 or newer.
 
 PowerShell doesn't support executing the build in context of another user.
@@ -273,7 +273,7 @@ NOTE:
 In GitLab 11.11, we announced the [deprecation](https://about.gitlab.com/handbook/product/#deprecated)
 of the Windows Batch executor, `cmd` shell, for the GitLab Runner in favor
 of [PowerShell](#powershell). The `cmd` shell remains included in future versions
-of GitLab Runner however, any new Runner feature for Windows is to be tested and supported
+of GitLab Runner however, any new feature for Windows is to be tested and supported
 only for use with PowerShell. Only critical bugs and regressions to the `cmd` shell
 will be investigated and fixed.
 
@@ -426,7 +426,7 @@ video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab
 Guided Exploration project. It was tested on:
 
 - Windows PowerShell and PowerShell Core 7 on GitLab [Windows shared runners](https://docs.gitlab.com/ee/user/gitlab_com/#windows-shared-runners-beta).
-- PowerShell Core 7 in Linux Containers with the [Docker-Machine Runner](../executors/docker_machine.md).
+- PowerShell Core 7 in Linux Containers with the [Docker-Machine runner](../executors/docker_machine.md).
 
 The example can be copied to your own group or instance for testing. More details
 on what other GitLab CI patterns are demonstrated are available at the project page.
