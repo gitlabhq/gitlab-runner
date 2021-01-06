@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # Autoscaling GitLab Runner on AWS EC2
@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 One of the biggest advantages of GitLab Runner is its ability to automatically
 spin up and down VMs to make sure your builds get processed immediately. It's a
 great feature, and if used correctly, it can be extremely useful in situations
-where you don't use your Runners 24/7 and want to have a cost-effective and
+where you don't use your runners 24/7 and want to have a cost-effective and
 scalable solution.
 
 ## Introduction
@@ -20,7 +20,7 @@ demand. The runners on these instances are automatically created. They use the p
 covered in this guide and do not require manual configuration after creation.  
 
 In addition, we'll make use of [Amazon's EC2 Spot instances](https://aws.amazon.com/ec2/spot/) which will
-greatly reduce the costs of the Runner instances while still using quite
+greatly reduce the costs of the GitLab Runner instances while still using quite
 powerful autoscaling machines.
 
 ## Prerequisites
@@ -32,7 +32,7 @@ We suggest a quick read through Docker machine [`amazonec2` driver
 documentation](https://docs.docker.com/machine/drivers/aws/) to familiarize
 yourself with the parameters we will set later in this article.
 
-Your GitLab instance is going to need to talk to the Runners over the network,
+Your GitLab instance is going to need to talk to the runners over the network,
 and that is something you need think about when configuring any AWS security
 groups or when setting up your DNS configuration.
 
@@ -46,7 +46,7 @@ Docker Machine will attempt to use a
 [default security group](https://docs.docker.com/machine/drivers/aws/#security-group)
 with rules for port `2376` and SSH `22`, which is required for communication with the Docker
 daemon. Instead of relying on Docker, you can create a security group with the
-rules you need and provide that in the Runner options as we will
+rules you need and provide that in the GitLab Runner options as we will
 [see below](#the-runnersmachine-section). This way, you can customize it to your
 liking ahead of time based on your networking environment.
 You have to make sure that ports `2376` and `22` are accessible by the [Runner Manager instance](#prepare-the-runner-manager-instance).
@@ -59,7 +59,7 @@ Create a new user with [policies](https://docs.aws.amazon.com/AWSEC2/latest/User
 for EC2 (AmazonEC2FullAccess) and S3 (AmazonS3FullAccess). To be more secure,
 you can disable console login for that user. Keep the tab open or copy paste the
 security credentials in an editor as we'll use them later during the
-[Runner configuration](#the-runnersmachine-section).
+[GitLab Runner configuration](#the-runnersmachine-section).
 
 ## Prepare the Runner Manager instance
 
@@ -86,19 +86,19 @@ Now that the Runner is installed, it's time to register it.
 Before configuring the GitLab Runner, you need to first register it, so that
 it connects with your GitLab instance:
 
-1. [Obtain a Runner token](https://docs.gitlab.com/ee/ci/runners/)
-1. [Register the Runner](../../register/index.md#linux)
+1. [Obtain a runner token](https://docs.gitlab.com/ee/ci/runners/)
+1. [Register the runner](../../register/index.md#linux)
 1. When asked the executor type, enter `docker+machine`
 
 You can now move on to the most important part, configuring the GitLab Runner.
 
 NOTE:
-If you want every user in your instance to be able to use the autoscaled Runners,
-register the Runner as a shared one.
+If you want every user in your instance to be able to use the autoscaled runners,
+register the runner as a shared one.
 
-## Configuring the GitLab Runner
+## Configuring the runner
 
-Now that the Runner is registered, you need to edit its configuration file and
+Now that the runner is registered, you need to edit its configuration file and
 add the required options for the AWS machine driver.
 
 Let's first break it down to pieces.
@@ -106,12 +106,12 @@ Let's first break it down to pieces.
 ### The global section
 
 In the global section, you can define the limit of the jobs that can be run
-concurrently across all Runners (`concurrent`). This heavily depends on your
-needs, like how many users your Runners will accommodate, how much time your
+concurrently across all runners (`concurrent`). This heavily depends on your
+needs, like how many users GitLab Runner will accommodate, how much time your
 builds take, etc. You can start with something low like `10`, and increase or
 decrease its value going forward.
 
-The `check_interval` option defines how often the Runner should check GitLab
+The `check_interval` option defines how often the runner should check GitLab
 for new jobs, in seconds.
 
 Example:
@@ -128,9 +128,9 @@ are also available.
 
 From the `[[runners]]` section, the most important part is the `executor` which
 must be set to `docker+machine`. Most of those settings are taken care of when
-you register the Runner for the first time.
+you register the runner for the first time.
 
-`limit` sets the maximum number of machines (running and idle) that this Runner
+`limit` sets the maximum number of machines (running and idle) that this runner
 will spawn. For more information, check the [relationship between `limit`, `concurrent`
 and `IdleCount`](../autoscale.md#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines).
 
@@ -151,8 +151,8 @@ under `[[runners]]` are also available.
 ### The `runners.docker` section
 
 In the `[runners.docker]` section you can define the default Docker image to
-be used by the child Runners if it's not defined in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/).
-By using `privileged = true`, all Runners will be able to run
+be used by the child runners if it's not defined in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/).
+By using `privileged = true`, all runners will be able to run
 [Docker in Docker](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor)
 which is useful if you plan to build your own Docker images via GitLab CI/CD.
 
@@ -248,7 +248,7 @@ Here's an example of the `runners.machine` section:
 
 The Docker Machine driver is set to `amazonec2` and the machine name has a
 standard prefix followed by `%s` (required) that is replaced by the ID of the
-child Runner: `gitlab-docker-machine-%s`.
+child runner: `gitlab-docker-machine-%s`.
 
 Now, depending on your AWS infrastructure, there are many options you can set up
 under `MachineOptions`. Below you can see the most common ones.
@@ -262,9 +262,9 @@ under `MachineOptions`. Below you can see the most common ones.
 | `amazonec2-subnet-id=subnet-xxxx` | The AWS VPC subnet ID. |
 | `amazonec2-zone=x` | If not specified, the [availability zone is `a`](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
 | `amazonec2-use-private-address=true` | Use the private IP address of Docker Machines, but still create a public IP address. Useful to keep the traffic internal and avoid extra costs.|
-| `amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true` | AWS extra tag key-value pairs, useful to identify the instances on the AWS console. The "Name" [tag](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) is set to the machine name by default. We set the "runner-manager-name" to match the Runner name set in `[[runners]]`, so that we can filter all the EC2 instances created by a specific manager setup. |
+| `amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true` | AWS extra tag key-value pairs, useful to identify the instances on the AWS console. The "Name" [tag](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) is set to the machine name by default. We set the "runner-manager-name" to match the runner name set in `[[runners]]`, so that we can filter all the EC2 instances created by a specific manager setup. |
 | `amazonec2-security-group=xxxx` | AWS VPC security group name, not the security group ID. See [AWS security groups](#aws-security-groups). |
-| `amazonec2-instance-type=m4.2xlarge` | The instance type that the child Runners will run on. |
+| `amazonec2-instance-type=m4.2xlarge` | The instance type that the child runners will run on. |
 
 Notes:
 
@@ -295,7 +295,7 @@ check_interval = 0
 [[runners]]
   name = "gitlab-aws-autoscaler"
   url = "<URL of your GitLab instance>"
-  token = "<Runner's token>"
+  token = "<runner's token>"
   executor = "docker+machine"
   limit = 20
   [runners.docker]
@@ -435,4 +435,4 @@ You can read the following use cases from which this tutorial was (heavily)
 influenced:
 
 - [HumanGeo switched from Jenkins to GitLab](https://about.gitlab.com/blog/2017/11/14/humangeo-switches-jenkins-gitlab-ci/)
-- [Substrakt Health - Autoscale GitLab CI Runners and save 90% on EC2 costs](https://about.gitlab.com/blog/2017/11/23/autoscale-ci-runners/)
+- [Substrakt Health - Autoscale GitLab CI/CD runners and save 90% on EC2 costs](https://about.gitlab.com/blog/2017/11/23/autoscale-ci-runners/)

@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Development environment
 
 ## 1. Install dependencies and Go runtime
@@ -34,7 +40,7 @@ pkg install go-1.13.8 gmake git mercurial
 
 ## 2. Install Docker Engine
 
-The Docker Engine is required to create pre-built image that is embedded into runner and loaded when using Docker executor.
+The Docker Engine is required to create pre-built image that is embedded into GitLab Runner and loaded when using Docker executor.
 
 To install Docker, follow the Docker [installation
 instructions](https://docs.docker.com/install/) for your OS.
@@ -67,13 +73,13 @@ This is required for building ARM images that are embedded into the GitLab Runne
   { echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:CF' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
   ```
 
-## 3. Download runner sources
+## 3. Download GitLab Runner sources
 
 ```shell
 go get gitlab.com/gitlab-org/gitlab-runner
 ```
 
-## 4. Install runner dependencies
+## 4. Install GitLab Runner dependencies
 
 After you clone GitLab Runner, `cd` into the `gitlab-runner` directory and download and restore all build dependencies:
 
@@ -85,7 +91,7 @@ make deps
 
 **For FreeBSD use `gmake deps`**
 
-## 5. Run runner
+## 5. Run GitLab Runner
 
 Normally you would use `gitlab-runner`. In order to compile and run the Go sources, use the Go toolchain:
 
@@ -94,7 +100,7 @@ make runner-and-helper-bin-host
 ./out/binaries/gitlab-runner run
 ```
 
-You can run runner in debug-mode:
+You can run GitLab Runner in debug-mode:
 
 ```shell
 make runner-and-helper-bin-host
@@ -109,8 +115,8 @@ takes care of building the Runner Helper Docker archive dependencies.
 If you want to build the Docker images, run `make runner-and-helper-docker-host`, which will:
 
 1. Build `gitlab-runner-helper` and create a helper Docker image from it.
-1. Compile Runner for `linux/amd64`.
-1. Build a DEB package for Runner. The official Runner images are based on Alpine and Ubuntu,
+1. Compile GitLab Runner for `linux/amd64`.
+1. Build a DEB package for Runner. The official GitLab Runner images are based on Alpine and Ubuntu,
    and the Ubuntu image build uses the DEB package.
 1. Build the Alpine and Ubuntu versions of the `gitlab/gitlab-runner` image.
 
@@ -148,7 +154,7 @@ If you are developing functionality inside a helper, you'll most likely want to 
 the version of the Docker image that contains the newest changes.
 
 If you run tests without passing `-ldflags`, the default version in `version.go` is `development`.
-This means that the Runner defaults to pulling a [helper image](../configuration/advanced-configuration.md#helper-image)
+This means that the runner defaults to pulling a [helper image](../configuration/advanced-configuration.md#helper-image)
 with the `latest` tag.
 
 ### Make targets
@@ -211,7 +217,7 @@ if a tool is missing.
 
 ## 9. Contribute
 
-You can start hacking GitLab-Runner code.
+You can start hacking `gitlab-runner` code.
 If you need an IDE to edit and debug code, there are a few free suggestions you can use:
 
 - [JetBrains GoLand IDE](https://www.jetbrains.com/go/).
@@ -241,7 +247,7 @@ The following are required:
 Which virtual machine to use depends on your use case:
 
 - The Windows Server machine has Docker pre-installed and should always
-  be used when you are developing on Runner for Windows.
+  be used when you are developing on GitLab Runner for Windows.
 - The Windows 10 machine is there for you to have a windows environment
   with a GUI which sometimes can help you debugging some Windows
   features. Note that you cannot have Docker running inside of Windows

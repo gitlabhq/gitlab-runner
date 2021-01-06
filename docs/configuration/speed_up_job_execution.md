@@ -126,7 +126,7 @@ Instead of using AWS S3, you can create your own cache storage.
    ```
 
 1. Your cache server will be available at `MY_CACHE_IP:9005`.
-1. Create a bucket that will be used by the Runner:
+1. Create a bucket that will be used by the runner:
 
    ```shell
    sudo mkdir /export/runner
@@ -136,7 +136,7 @@ Instead of using AWS S3, you can create your own cache storage.
    bucket, then it will be different. All caches will be stored in the
    `/export` directory.
 
-1. Read the Access and Secret Key of MinIO and use it to configure the Runner:
+1. Read the Access and Secret Key of MinIO and use it to configure the runner:
 
    ```shell
    sudo cat /export/.minio.sys/config/config.json | grep Key

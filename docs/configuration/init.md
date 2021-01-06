@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # The system services of GitLab Runner
 
 GitLab Runner uses the [Go `service` library](https://github.com/kardianos/service)

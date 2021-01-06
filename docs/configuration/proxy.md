@@ -19,7 +19,7 @@ as a local proxy and has 2 major advantages compared to adding the proxy details
 everywhere manually:
 
 - One single source where you need to change your credentials
-- The credentials can not be accessed from the Docker Runners
+- The credentials can not be accessed from the Docker runners
 
 Assuming you [have installed CNTLM](https://www.howtoforge.com/linux-ntlm-authentication-proxy-isa-server-with-cntlm),
 you need to first configure it.
@@ -75,9 +75,9 @@ Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
 Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
 ```
 
-## Adding Proxy variables to the Runner configuration
+## Adding Proxy variables to the GitLab Runner configuration
 
-The proxy variables need to also be added to the Runner's configuration, so that it can
+The proxy variables need to also be added to the GitLab Runner configuration, so that it can
 get builds assigned from GitLab behind the proxy.
 
 This is basically the same as adding the proxy to the Docker service above:
@@ -123,7 +123,7 @@ This is basically the same as adding the proxy to the Docker service above:
 
 ## Adding the proxy to the Docker containers
 
-After you [registered your Runner](../register/index.md), you might want to
+After you [register your runner](../register/index.md), you might want to
 propagate your proxy settings to the Docker containers (for `git clone` and other
 stuff).
 
@@ -226,7 +226,7 @@ rate limits. As a result, GitLab Runner handles rate limited scenarios with the 
 
 1. A response code of **429 - TooManyRequests** is received.
 1. The response headers are checked for a `RateLimit-ResetTime` header. The `RateLimit-ResetTime` header should have a value which is a valid **HTTP Date (RFC1123)**, like `Wed, 21 Oct 2015 07:28:00 GMT`.
-   - If the header is present and has a valid value the Runner waits until the specified time and issues another request.
+   - If the header is present and has a valid value the runner waits until the specified time and issues another request.
    - If the header is present, but isn't a valid date, a fallback of **1 minute** is used.
    - If the header is not present, no additional actions are taken, the response error is returned.
 1. The process above is repeated 5 times, then a `gave up due to rate limit` error is returned.

@@ -1,10 +1,16 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Reviewing GitLab Runner
 
 This document contains rules and suggestions for GitLab Runner project reviewers.
 
 ## Reviewing tests coverage reports
 
-In GitLab Runner project, we have a lot of code. Unfortunately, the code coverage is not comprehensive.
+In the GitLab Runner project, we have a lot of code. Unfortunately, the code coverage is not comprehensive.
 Currently (early 2019), the coverage is on the level of ~55%.
 
 While adding tests to a legacy code is a hard task, we should ensure that new code that is being
@@ -18,7 +24,7 @@ realistic and will ensure that the most important things are being tested. Dear 
 
 Getting back to the technical details...
 
-Runner's CI Pipeline helps us here and provides the coverage reports in HTML format, for tests
+The GitLab Runner CI/CD pipeline helps us here and provides the coverage reports in HTML format, for tests
 executed in regular (`count`) and race (`atomic`) modes.
 
 There are two places where test coverage reports can be seen. For:
@@ -37,7 +43,7 @@ To open the report:
 
 1. Find the Pipeline related to the change that we want to review. It may be the latest Pipeline for the
    Merge Requests or a Pipeline for the tag. For example, we can look at this one:
-   <https://gitlab.com/gitlab-org/gitlab-runner/pipelines/48686952>, which released the `v11.8.0` version of Runner.
+   <https://gitlab.com/gitlab-org/gitlab-runner/pipelines/48686952>, which released the `v11.8.0` version of GitLab Runner.
 
 1. In the pipeline, find the `stable S3` (for tagged releases), `bleeding edge S3` (for `master` and RC tagged releases),
    or `development S3` (for regular commits) job which should be present at the `release` stage. In our example
@@ -142,7 +148,7 @@ As an example, look at <https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requ
 - `yml to yaml` - which is the original title and was added to changelog with our script,
 - `Fix values.yaml file name in documentation` - which is what I've updated it to in the changelog.
 
-What will `yml to yaml` tell a Runner administrator if they review the changelog before updating
+What will `yml to yaml` tell a GitLab Runner administrator if they review the changelog before updating
 to a newer version? Does it show the risks behind the update, the implemented behavior changes, a new
 behavior/features that were added? Keep these questions in mind when reviewing the merge request and its title.
 
