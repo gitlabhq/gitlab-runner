@@ -73,6 +73,11 @@ func TestCreateHostAliases(t *testing.T) {
 				},
 			},
 		},
+		"no services or aliases defined": {
+			services:            common.Services{},
+			hostAliases:         []api.HostAlias{},
+			expectedHostAliases: nil,
+		},
 		"no host aliases when services only with ports": {
 			services: common.Services{
 				{
@@ -84,6 +89,7 @@ func TestCreateHostAliases(t *testing.T) {
 					}},
 				},
 			},
+			expectedHostAliases: nil,
 		},
 		"hosts aliases with no services": {
 			hostAliases: []api.HostAlias{
