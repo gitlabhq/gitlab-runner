@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Install GitLab Runner on macOS
 
 GitLab Runner can be installed and updated on macOS.
@@ -29,9 +35,9 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-**The rest of the commands should execute as the user who will run the Runner.**
+**The rest of the commands should execute as the user who will run the runners.**
 
-1. [Register the Runner](../register/index.md)
+1. [Register a runner](../register/index.md)
 
    NOTE:
    When you build iOS or macOS applications on macOS, use [the shell executor](../executors/shell.md).
@@ -40,7 +46,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    [security implications documentation](../security/index.md#usage-of-shell-executor)
    for additional detail on what to keep in mind in this scenario.
 
-1. Install the Runner as a service and start it:
+1. Install GitLab Runner as a service and start it:
 
    ```shell
    cd ~
@@ -48,7 +54,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    gitlab-runner start
    ```
 
-Runner is installed and will be run after a system reboot.
+GitLab Runner is installed and will be run after a system reboot.
 
 ### Homebrew installation (alternative)
 
@@ -59,19 +65,19 @@ GitLab does not maintain the Homebrew formula.
 
 To install GitLab Runner using Homebrew:
 
-1. Install the GitLab Runner.
+1. Install GitLab Runner.
 
    ```shell
    brew install gitlab-runner
    ```
 
-1. Install the Runner as a service and start it.
+1. Install GitLab Runner as a service and start it.
 
    ```shell
    brew services start gitlab-runner
    ```
 
-Runner is installed and running.
+GitLab Runner is installed and running.
 
 ### Limitations on macOS
 
@@ -94,7 +100,7 @@ don't have the same access to UI interactions as `LaunchAgents`. You can try to
 run the Runner's service as a `LaunchDaemon`, but this mode of operation is not
 currently supported.
 
-You can verify that the Runner created the service configuration file after
+You can verify that GitLab Runner created the service configuration file after
 executing the `install` command, by checking the
 `~/Library/LaunchAgents/gitlab-runner.plist` file.
 
@@ -134,7 +140,7 @@ git config credential.helper
    gitlab-runner stop
    ```
 
-1. Download the binary to replace the Runner's executable:
+1. Download the binary to replace the GitLab Runner executable:
 
    ```shell
    sudo curl -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64"

@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Install GitLab Runner on Red Hat OpenShift
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26640) in GitLab 13.3.
@@ -49,7 +55,7 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
    oc project "PROJECT NAMESPACE"
    ```
 
-1. Create the secret file with your GitLab project's Runner token:
+1. Create the secret file with your GitLab project's runner token:
 
    ```shell
    cat > gitlab-runner-secret.yml << EOF
@@ -91,7 +97,7 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
    oc apply -f gitlab-runner.yml
    ```
    
-1. Confirm that the Runner is installed by running:
+1. Confirm that GitLab Runner is installed by running:
 
    ```shell
    oc get runners
@@ -99,7 +105,7 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
    gitlab-runner    5m
    ```
 
-1. The Runner pod should also be visible:
+1. The runner pod should also be visible:
 
    ```shell
    oc get pods

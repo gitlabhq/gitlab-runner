@@ -1,10 +1,16 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Troubleshoot GitLab Runner
 
 This section can assist when troubleshooting GitLab Runner.
 
 ## General troubleshooting
 
-The following relate to general Runner troubleshooting.
+The following relate to general troubleshooting.
 
 ### What does `coordinator` mean?
 
@@ -65,7 +71,7 @@ or this article about [control and configure with systemd](https://docs.docker.c
 
 ### I get 411 when uploading artifacts
 
-This happens due to fact that runner uses `Transfer-Encoding: chunked` which is broken on early version of NGINX (<https://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
+This happens due to fact that GitLab Runner uses `Transfer-Encoding: chunked` which is broken on early version of NGINX (<https://serverfault.com/questions/164220/is-there-a-way-to-avoid-nginx-411-content-length-required-errors>).
 
 Upgrade your NGINX to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1031>
 
@@ -106,7 +112,7 @@ See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/i
 It's possible to configure the timezone in which `[[docker.machine.autoscaling]]` periods
 are described. This feature should work on most Unix systems out of the box. However on some
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
-Runner's binaries), when used, the Runner will crash at start with an error similar to:
+GitLab Runner binaries), when used, the runner will crash at start with an error similar to:
 
 ```plaintext
 Failed to load config Invalid OffPeakPeriods value: open /usr/local/go/lib/time/zoneinfo.zip: no such file or directory
@@ -161,19 +167,19 @@ working by following the steps below:
    C:\gitlab-runner> gitlab-runner run <other options ...>
    ```
 
-   If you are starting the Runner as a system service then you will need to update/override
+   If you are starting GitLab Runner as a system service then you will need to update/override
    the service configuration in a way that is provided by your service manager software
    (unix systems) or by adding the `ZONEINFO` variable to the list of environment variables
-   available for Runner's user through System Settings (Windows).
+   available for the GitLab Runner user through System Settings (Windows).
 
-### Why can't I run more than one instance of Runner?
+### Why can't I run more than one instance of GitLab Runner?
 
 You can, but not sharing the same `config.toml` file.
 
-Running multiple instances of Runner using the same configuration file can cause
+Running multiple instances of GitLab Runner using the same configuration file can cause
 unexpected and hard-to-debug behavior. In
 [GitLab Runner 12.2](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4407),
-only a single instance of Runner can use a specific `config.toml` file at
+only a single instance of GitLab Runner can use a specific `config.toml` file at
 one time.
 
 ### `Job failed (system failure): preparing environment:`
@@ -196,7 +202,7 @@ sealert -a /var/log/audit/audit.log
 
 ## Windows troubleshooting
 
-The following relate to Runner troubleshooting on Windows.
+The following relate to troubleshooting on Windows.
 
 ### I get a PathTooLongException during my builds on Windows
 
@@ -213,7 +219,7 @@ project to use `git fetch` from the GitLab CI project settings page.
 #### b) Use NTFSSecurity tools for PowerShell
 
 The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module provides
-a *Remove-Item2* method which supports long paths. The GitLab CI Multi Runner will
+a *Remove-Item2* method which supports long paths. GitLab Runner will
 detect it if it is available and automatically make use of it.
 
 ### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
@@ -349,7 +355,7 @@ of your drive instead.
 
 ## macOS troubleshooting
 
-The following relate to Runner troubleshooting on macOS.
+The following relate to troubleshooting on macOS.
 
 ### `"launchctl" failed: exit status 112, Could not find domain for`
 
@@ -359,7 +365,7 @@ the SSH connection.
 
 ### `Failed to authorize rights (0x1) with status: -60007.`
 
-If your Runner is stuck on the above message when using macOS, there are two
+If GitLab Runner is stuck on the above message when using macOS, there are two
 causes to why this happens:
 
 1. Make sure that your user can perform UI interactions:
@@ -373,7 +379,7 @@ causes to why this happens:
    The second command allows the user who is member of the developer group to
    do UI interactions, e.g., run the iOS simulator.
 
-1. Make sure that your Runner service doesn't use `SessionCreate = true`.
+1. Make sure that your GitLab Runner service doesn't use `SessionCreate = true`.
    Previously, when running GitLab Runner as a service, we were creating
    `LaunchAgents` with `SessionCreate`. At that point (**Mavericks**), this was
    the only solution to make Code Signing work. That changed recently with
@@ -394,7 +400,7 @@ causes to why this happens:
 
 ### `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out` error in the job
 
-If one of the jobs fails with this error, make sure the Runner can connect to your GitLab instance. The connection could be blocked by things like:
+If one of the jobs fails with this error, make sure the runner can connect to your GitLab instance. The connection could be blocked by things like:
 
 - firewalls
 - proxies

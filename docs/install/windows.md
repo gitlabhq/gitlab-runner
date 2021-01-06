@@ -25,8 +25,8 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    [Bleeding Edge - download any other tagged
    release](bleeding-edge.md#download-any-other-tagged-release).
 1. Run an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
-1. [Register the Runner](../register/index.md).
-1. Install the Runner as a service and start it. You can either run the service
+1. [Register a runner](../register/index.md).
+1. Install GitLab Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
 
    **Run service using Built-in System Account** (under directory created in step 1. from above, ex.: `C:\GitLab-Runner`)
@@ -49,9 +49,9 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    ```
 
    See the [troubleshooting section](#troubleshooting) if you encounter any
-   errors during the Runner installation.
+   errors during the GitLab Runner installation.
 
-1. (Optional) Update Runners `concurrent` value in `C:\GitLab-Runner\config.toml`
+1. (Optional) Update the runner's `concurrent` value in `C:\GitLab-Runner\config.toml`
    to allow multiple concurrent jobs as detailed in [advanced configuration details](../configuration/advanced-configuration.md).
    Additionally, you can use the advanced configuration details to update your
    shell executor to use Bash or PowerShell rather than Batch.
@@ -170,7 +170,7 @@ If you encounter an error like _The account name is invalid_ try to add `.\` bef
 If you encounter a _The service did not start due to a logon failure_ error
 while starting the service, please [look in the FAQ](../faq/README.md#the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service) to check how to resolve the problem.
 
-If you don't have a Windows Password, Runner's service won't start but you can
+If you don't have a Windows Password, the GitLab Runner service won't start but you can
 use the Built-in System Account.
 
 If you have issues with the Built-in System Account, please read

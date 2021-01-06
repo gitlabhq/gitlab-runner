@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # Install GitLab Runner manually on GNU/Linux
@@ -13,7 +13,7 @@ last resort.
 
 If you want to use the [Docker executor](../executors/docker.md),
 you must [install Docker](https://docs.docker.com/install/linux/docker-ce/centos/#install-docker-ce)
-before using the Runner.
+before using GitLab Runner.
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
@@ -61,7 +61,7 @@ curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-ru
    rpm -i gitlab-runner_<arch>.rpm
    ```
 
-1. [Register the Runner](../register/index.md#linux)
+1. [Register a runner](../register/index.md#linux)
 
 ### Update
 
@@ -130,7 +130,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    sudo gitlab-runner start
    ```
 
-1. [Register the Runner](../register/index.md)
+1. [Register a runner](../register/index.md)
 
 NOTE:
 If `gitlab-runner` is installed and run as service (what is described
@@ -147,7 +147,7 @@ therefore the user under which jobs are run, needs to have access to the executa
    sudo gitlab-runner stop
    ```
 
-1. Download the binary to replace Runner's executable. For example:
+1. Download the binary to replace the GitLab Runner executable. For example:
 
    ```shell
    sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"

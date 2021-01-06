@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # GitLab Runner bleeding edge releases
@@ -23,7 +23,7 @@ from `master` branch. Use at your own risk.
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-freebsd-amd64>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/master/binaries/gitlab-runner-freebsd-arm>
 
-You can then run the Runner with:
+You can then run GitLab Runner with:
 
 ```shell
 chmod +x gitlab-runner-linux-amd64
