@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Add Docker executor support for a Windows version
 
 GitLab supports [specific versions of Windows](../install/windows.md#windows-version-support-policy).
@@ -58,7 +64,7 @@ the [install part](#install).
 
 At this point we should have a base image ready in our production
 environment, so we can use it inside the CI pipeline for the GitLab Runner
-project. The only thing that is left is to set up the runner managers.
+project. The only thing that is left is to set up the Runner Managers.
 
 #### Register
 
@@ -69,8 +75,8 @@ settings](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd).
 The name of the runner should follow the same naming convention as the
 existing ones.
 
-For example, for `Windows Server Core 2004` we should name the runner
-managers the following:
+For example, for `Windows Server Core 2004` we should name the Runner
+Managers the following:
 
 1. `windows-2004-private-runner-manager-1`
 1. `windows-2004-private-runner-manager-2`
