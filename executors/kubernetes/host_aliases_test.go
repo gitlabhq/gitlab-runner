@@ -73,6 +73,54 @@ func TestCreateHostAliases(t *testing.T) {
 				},
 			},
 		},
+		"no services or aliases defined": {
+			services:            common.Services{},
+			hostAliases:         []api.HostAlias{},
+			expectedHostAliases: nil,
+		},
+		"no host aliases when services only with ports": {
+			services: common.Services{
+				{
+					Name: "docker:dind",
+					Ports: []common.Port{{
+						Number:   0,
+						Protocol: "",
+						Name:     "",
+					}},
+				},
+			},
+			expectedHostAliases: nil,
+		},
+		"hosts aliases with no services": {
+			hostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"redis"},
+				},
+				{
+					IP:        "8.8.8.8",
+					Hostnames: []string{"dns1", "dns2"},
+				},
+				{
+					IP:        "8.8.8.8",
+					Hostnames: []string{"dns3", "dns4"},
+				},
+			},
+			expectedHostAliases: []api.HostAlias{
+				{
+					IP:        "127.0.0.1",
+					Hostnames: []string{"redis"},
+				},
+				{
+					IP:        "8.8.8.8",
+					Hostnames: []string{"dns1", "dns2"},
+				},
+				{
+					IP:        "8.8.8.8",
+					Hostnames: []string{"dns3", "dns4"},
+				},
+			},
+		},
 		"host aliases with services": {
 			hostAliases: []api.HostAlias{
 				{
