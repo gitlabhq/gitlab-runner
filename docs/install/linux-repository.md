@@ -21,8 +21,8 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Mint         | sonya                      | approx. 2021          |
 | RHEL/CentOS  | 6                          | November 2020         |
 | RHEL/CentOS  | 7                          | June 2024             |
-| RHEL/CentOS  | 8                          | May 2029              |
-| Fedora       | 30                         | approx. June 2020 |
+| RHEL/CentOS  | 8                          | December 2021         |
+| Fedora       | 30                         | approx. June 2020     |
 
 ## Prerequisites
 
