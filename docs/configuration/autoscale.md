@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Runners autoscale configuration
 
 > The autoscale feature was introduced in GitLab Runner 1.1.0.
@@ -5,9 +11,9 @@
 Autoscale provides the ability to utilize resources in a more elastic and
 dynamic way.
 
-Runners can autoscale, so that your infrastructure contains only as
-many build instances as are necessary at any time. If you configure the Runner to
-only use autoscale, the system on which the Runner is installed acts as a
+GitLab Runner can autoscale, so that your infrastructure contains only as
+many build instances as are necessary at any time. If you configure GitLab Runner to
+only use autoscale, the system on which GitLab Runner is installed acts as a
 bastion for all the machines it creates. This machine is referred to as a "Runner Manager."
 
 ## Overview
@@ -18,7 +24,7 @@ wait to run the next jobs or can be removed after the configured `IdleTime`.
 In case of many cloud providers this helps to utilize the cost of already used
 instances.
 
-Below, you can see a real life example of the runners autoscale feature, tested
+Below, you can see a real life example of the GitLab Runner autoscale feature, tested
 on GitLab.com for the [GitLab Community Edition](https://gitlab.com/gitlab-org/gitlab-foss) project:
 
 ![Real life example of autoscaling](img/autoscale-example.png)
@@ -173,15 +179,15 @@ at the beginning of the example.
 
 So, to sum up:
 
-1. We start the Runner
-1. Runner creates 2 idle machines
-1. Runner picks one job
-1. Runner creates one more machine to fulfill the strong requirement of always
+1. We start GitLab Runner
+1. GitLab Runner creates 2 idle machines
+1. GitLab Runner picks one job
+1. GitLab Runner creates one more machine to fulfill the strong requirement of always
    having the two idle machines
 1. Job finishes, we have 3 idle machines
 1. When one of the three idle machines goes over `IdleTime` from the time when
    last time it picked the job it is removed
-1. The Runner always has at least 2 idle machines waiting for fast
+1. GitLab Runner always has at least 2 idle machines waiting for fast
    picking of the jobs
 
 Below you can see a comparison chart of jobs statuses and machines statuses
@@ -340,13 +346,13 @@ where selected directories and/or files are saved and shared between subsequent
 jobs.
 
 This is working fine when jobs are run on the same host, but when you start
-using the Runners autoscale feature, most of your jobs run on a
+using the GitLab Runner autoscale feature, most of your jobs run on a
 new (or almost new) host, which executes each job in a new Docker
 container. In that case, you can't take advantage of the cache
 feature.
 
 To overcome this issue, together with the autoscale feature, the distributed
-Runners cache feature was introduced.
+runners cache feature was introduced.
 
 It uses configured object storage server to share the cache between used Docker hosts.
 When restoring and archiving the cache, GitLab Runner queried the server
@@ -374,10 +380,10 @@ To enable distributed caching, you have to define it in `config.toml` using the
 In the example above, the S3 URLs follow the structure
 `http(s)://<ServerAddress>/<BucketName>/<Path>/runner/<runner-id>/project/<id>/<cache-key>`.
 
-To share the cache between two or more Runners, set the `Shared` flag to true.
+To share the cache between two or more runners, set the `Shared` flag to true.
 This flag removes the runner token from the URL (`runner/<runner-id>`) and
-all configured Runners share the same cache. You can also
-set `Path` to separate caches between Runners when cache sharing is enabled.
+all configured runners share the same cache. You can also
+set `Path` to separate caches between runners when cache sharing is enabled.
 
 ## Distributed container registry mirroring
 
@@ -416,14 +422,14 @@ Read more about how to [use a proxy for containers](../configuration/speed_up_jo
 The `config.toml` below uses the [`google` Docker Machine driver](https://docs.docker.com/machine/drivers/gce/):
 
 ```toml
-concurrent = 50   # All registered Runners can run up to 50 concurrent jobs
+concurrent = 50   # All registered runners can run up to 50 concurrent jobs
 
 [[runners]]
   url = "https://gitlab.com"
   token = "RUNNER_TOKEN"             # Note this is different from the registration token used by `gitlab-runner register`
   name = "autoscale-runner"
-  executor = "docker+machine"        # This Runner is using the 'docker+machine' executor
-  limit = 10                         # This Runner can execute up to 10 jobs (created machines)
+  executor = "docker+machine"        # This runner is using the 'docker+machine' executor
+  limit = 10                         # This runner can execute up to 10 jobs (created machines)
   [runners.docker]
     image = "ruby:2.6"               # The default image used for jobs is 'ruby:2.6'
   [runners.machine]

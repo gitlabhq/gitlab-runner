@@ -1,3 +1,9 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
 # Self-signed certificates or custom Certification Authorities
 
 > Introduced in GitLab Runner 0.7.0
@@ -7,7 +13,7 @@ when connecting to the GitLab server.
 
 **This solves the `x509: certificate signed by unknown authority` problem when registering a runner.**
 
-For existing Runners, the same error can be shown in Runner logs when trying to check the jobs:
+For existing runners, the same error can be shown in runner logs when trying to check the jobs:
 
 ```plaintext
 Couldn't execute POST against https://hostname.tld/api/v4/jobs/request:
@@ -26,7 +32,7 @@ GitLab Runner supports the following options:
   predefined file:
   - `/etc/gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as root.
   - `~/.gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as non-root.
-  - `./certs/hostname.crt` on other systems. If running Runner as a Windows service,
+  - `./certs/hostname.crt` on other systems. If running GitLab Runner as a Windows service,
     this will not work. Use the last option instead.
 
   If your server address is: `https://my.gitlab.server.com:8443/`, create the
@@ -159,7 +165,7 @@ To install the certificate:
 
 You can map a certificate file to `/etc/gitlab-runner/certs/ca.crt` on Linux,
 or `C:\GitLab-Runner\certs\ca.crt` on Windows.
-This user-defined `ca.crt` file is installed by the Runner helper image at startup, and used
+This user-defined `ca.crt` file is installed by the GitLab Runner helper image at startup, and used
 when performing operations like cloning and uploading artifacts, for example.
 
 - **Linux**:

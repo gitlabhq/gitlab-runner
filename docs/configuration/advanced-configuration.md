@@ -17,9 +17,9 @@ The file to be edited can be found in:
    executed as non-root
 1. `./config.toml` on other systems
 
-If you edit `config.toml`, then for most options, the Runner does not require a restart. It checks the file every five minutes and automatically picks up any changes. This includes any parameters that are defined in the `[[runners]]` section and most parameters in the global section, except for `listen_address`.
+If you edit `config.toml`, then for most options, GitLab Runner does not require a restart. It checks the file every five minutes and automatically picks up any changes. This includes any parameters that are defined in the `[[runners]]` section and most parameters in the global section, except for `listen_address`.
 
-If a Runner has been previously registered, you can also modify the `config.toml` file directly. In this instance, you do not have to run the `register` command again.
+If a runner has been previously registered, you can also modify the `config.toml` file directly. In this instance, you do not have to run the `register` command again.
 
 ## The global section
 
@@ -111,8 +111,8 @@ a subsequent request would be made each 10 seconds. The loop would look like:
     1. Sleep for `5s`.
     1. Repeat.
 
-So, a request from the Runner's process is made each 5s. If `runner-1` and `runner-2` are connected to the same
-GitLab instance, it means that the request to this GitLab instance will receive a new request from this Runner
+So, a request from the runner's process is made each 5s. If `runner-1` and `runner-2` are connected to the same
+GitLab instance, it means that the request to this GitLab instance will receive a new request from this runner
 also each 5s. But as you can see, between the first request for `runner-1` and second request for `runner-1`
 there are two sleeps taking 5s, so finally it's ~10s between subsequent requests for `runner-1`. The same goes
 for `runner-2`. If you define more workers, the sleep interval will be smaller, but a request for a worker will
@@ -132,7 +132,7 @@ with jobs that the Runner is responsible for. A good example of this is the
 
 Both `listen_address` and `advertise_address` should be provided in the form
 of `host:port`, where `host` may be an IP address (e.g., `127.0.0.1:8093`)
-or a domain (e.g., `my-runner.example.com:8093`). The Runner will create a
+or a domain (e.g., `my-runner.example.com:8093`). The runner will create a
 TLS certificate automatically to have a secure connection.
 
 If you want to disable the session server, just delete the `[session_server]`
@@ -141,7 +141,7 @@ section and terminal support will be disabled.
 | Setting | Description |
 | ------- | ----------- |
 | `listen_address` | An internal URL to be used for the session server. |
-| `advertise_address`| The URL that the Runner will expose to GitLab to be used to access the session server. Fallbacks to `listen_address` if not defined.   |
+| `advertise_address`| The URL that GitLab Runner will expose to GitLab to be used to access the session server. Fallbacks to `listen_address` if not defined.   |
 | `session_timeout` | How long in seconds the session can stay active after the job completes (which will block the job from finishing), defaults to `1800` (30 minutes). |
 
 Example:
@@ -162,9 +162,9 @@ This defines one runner entry.
 
 | Setting | Description |
 | ------- | ----------- |
-| `name`               | The Runner's description, just informatory |
-| `url`                | GitLab URL |
-| `token`              | The Runner's special token (not to be confused with the registration token) |
+| `name`               | The runner's description, just informational |
+| `url`                | URL of the GitLab instance |
+| `token`              | The runner's special token (not to be confused with the registration token) |
 | `tls-ca-file`        | File containing the certificates to verify the peer when using HTTPS |
 | `tls-cert-file`      | File containing the certificate to authenticate with the peer when using HTTPS |
 | `tls-key-file`       | File containing the private key to authenticate with the peer when using HTTPS |
@@ -176,10 +176,10 @@ This defines one runner entry.
 | `environment`        | Append or overwrite environment variables |
 | `request_concurrency` | Limit number of concurrent requests for new jobs from GitLab (default 1) |
 | `output_limit`       | Set maximum build log size in kilobytes, by default set to 4096 (4MB) |
-| `pre_clone_script`   | Commands to be executed on the Runner before cloning the Git repository. this can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `pre_build_script`   | Commands to be executed on the Runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `post_build_script`  | Commands to be executed on the Runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `clone_url`          | Overwrite the URL for the GitLab instance. Used if the Runner can't connect to GitLab on the URL GitLab exposes itself. |
+| `pre_clone_script`   | Commands to be executed on the runner before cloning the Git repository. This can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `pre_build_script`   | Commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `post_build_script`  | Commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
+| `clone_url`          | Overwrite the URL for the GitLab instance. Used if the runner can't connect to GitLab on the URL GitLab exposes itself. |
 | `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to true, then debug log (trace) will remain disabled even if `CI_DEBUG_TRACE` will be set to `true` by the user. |
 | `referees` | Extra job monitoring workers that pass their results as job artifacts to GitLab |
 
@@ -218,7 +218,7 @@ There are a couple of available executors currently.
 | `shell`       | run build locally, default |
 | `docker`      | run build using Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a system that the Runner will run the job on. |
 | `docker-windows` | run build using Windows Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a Windows system. |
-| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system that the Runner runs. **This will run the Docker container on the local machine, it just changes how the commands are run inside that container. If you want to run Docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
+| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system where the runner runs. **This will run the Docker container on the local machine, it just changes how the commands are run inside that container. If you want to run Docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
 | `ssh`         | run build remotely with SSH - this requires the presence of `[runners.ssh]` |
 | `parallels`   | run build using Parallels VM, but connect to it with SSH - this requires the presence of `[runners.parallels]` and `[runners.ssh]` |
 | `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
@@ -267,7 +267,7 @@ This defines the Docker Container parameters.
 | `security_opt`                 | Set security options (--security-opt in `docker run`), takes a list of ':' separated key/values |
 | `devices`                      | Share additional host devices with the container |
 | `cache_dir`                    | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
-| `disable_cache`                | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the Runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
+| `disable_cache`                | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
 | `network_mode`              | Add container to a custom network |
 | `wait_for_services_timeout` | Specify how long to wait for Docker services, set to 0 to disable, default: 30 |
 | `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |
@@ -397,7 +397,7 @@ well.
 - This feature requires GitLab Runner **1.8** or later.
 - For GitLab Runner versions **>= 0.6, <1.8** there was a partial
   support for using private registries, which required manual configuration
-  of credentials on runner's host. We recommend to upgrade your Runner to
+  of credentials on runner's host. We recommend you upgrade GitLab Runner to
   at least version **1.8** if you want to use private registries.
 - Using private registries with the `if-not-present` pull policy may introduce
   [security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). To fully understand how pull policies work,
@@ -410,7 +410,7 @@ a project and in the `config.toml` file.
 
 For a detailed example, visit the [Using Docker images documentation](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry).
 
-The steps performed by the Runner can be summed up to:
+The steps performed by the runner can be summed up as:
 
 1. The registry name is found from the image name.
 1. If the value is not empty, the executor will search for the authentication
@@ -418,8 +418,8 @@ The steps performed by the Runner can be summed up to:
 1. Finally, if an authentication corresponding to the specified registry is
    found, subsequent pulls will make use of it.
 
-Now that the Runner is set up to authenticate against your private registry,
-learn [how to configure `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html#image-and-services) in order to use that
+Now that the runner is set up to authenticate against your private registry,
+learn [how to configure `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html#image-and-services) to use that
 registry.
 
 #### Support for GitLab integrated registry
@@ -447,7 +447,7 @@ using credentials sent in different way. To find a proper registry, the followin
 precedence is taken into account:
 
 1. Credentials configured with `DOCKER_AUTH_CONFIG`.
-1. Credentials configured locally on Runner's host with `~/.docker/config.json`
+1. Credentials configured locally on the GitLab Runner host with `~/.docker/config.json`
    or `~/.dockercfg` files (e.g., by running `docker login` on the host).
 1. Credentials sent by default with job's payload (e.g., credentials for _integrated
    registry_ described above).
@@ -537,7 +537,7 @@ Example:
 > Added in GitLab Runner v1.1.0.
 
 This defines the Docker Machine based autoscaling feature. More details can be
-found in the separate [runners autoscale documentation](autoscale.md).
+found in the separate [runner autoscale documentation](autoscale.md).
 
 | Parameter           | Description |
 |---------------------|-------------|
@@ -632,7 +632,7 @@ Define configuration for the [custom executor](../executors/custom.md).
 > Introduced in GitLab Runner 1.1.0.
 
 This defines the distributed cache feature. More details can be found
-in the [runners autoscale documentation](autoscale.md#distributed-runners-caching).
+in the [runner autoscale documentation](autoscale.md#distributed-runners-caching).
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
@@ -653,9 +653,9 @@ connects to a separate VM to execute the script). This is done for security reas
 minimizing the possibility of leaking the cache adapter's credentials.
 
 This implies [S3 cache adapter](#the-runnerscaches3-section), if configured to use
-IAM instance profile, will use the profile attached with GitLab Runner's machine.
+IAM instance profile, will use the profile attached with the GitLab Runner machine.
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
-use the `CredentialsFile`, the file needs to be present on GitLab Runner's machine.
+use the `CredentialsFile`, the file needs to be present on the GitLab Runner machine.
 
 Below is a table containing a summary of `config.toml`, cli options and ENV variables for `register`:
 
@@ -835,14 +835,14 @@ a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner 
 of available commands, as well as Git, Git LFS, SSL certificates store, and basic configuration of Alpine.
 
 When GitLab Runner is installed from the DEB/RPM packages, images for the supported architectures are installed on the host.
-When the Runner prepares the environment for the job execution, if the image in specified version (based on Runner's Git
+When the runner prepares the environment for the job execution, if the image in specified version (based on the runner's Git
 revision) is not found on Docker Engine, it is automatically loaded. It works like that for both
 `docker` and `docker+machine` executors.
 
 Things work a little different for the `kubernetes` executor or when GitLab Runner is installed manually. For manual
 installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor, the API of Kubernetes
 doesn't allow loading the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
-the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper` by using the Runner's
+the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper` by using the GitLab Runner
 revision and architecture for defining which tag should be downloaded.
 
 ### Migrating helper image to `registry.gitlab.com`
@@ -895,12 +895,12 @@ that is available for the `docker`, `docker+machine` and `kubernetes` executors:
 ```
 
 The version of the helper image should be considered as strictly coupled with the version of GitLab Runner.
-As it was described above, one of the main reasons of providing such images is that Runner is using the
+As it was described above, one of the main reasons of providing such images is that GitLab Runner is using the
 `gitlab-runner-helper` binary, and this binary is compiled from part of GitLab Runner sources which is using an internal
 API that is expected to be the same in both binaries.
 
-The Runner by default references to a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
-on the Runner's architecture and Git revision. Starting with **GitLab Runner 11.3** it's possible to define the version
+By default, GitLab Runner references a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
+on the GitLab Runner architecture and Git revision. Starting with **GitLab Runner 11.3** it's possible to define the version
 of used image automatically, by using one of the
 [version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/11-3-stable/common/version.go#L48-50):
 
@@ -914,9 +914,9 @@ of used image automatically, by using one of the
 ```
 
 With that configuration, GitLab Runner will instruct the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
-which is based on its compilation data. After updating the Runner to a new version, this will ensure that the
+which is based on its compilation data. After updating GitLab Runner to a new version, this will ensure that GitLab
 Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
-before upgrading the Runner, otherwise the jobs will start failing with a "No such image" error.
+before upgrading GitLab Runner, otherwise the jobs will start failing with a "No such image" error.
 
 In GitLab Runner 13.2 and later, the helper image is tagged by
 `$CI_RUNNER_VERSION` in addition to `$CI_RUNNER_REVISION`. Both tags are
@@ -967,21 +967,21 @@ Example:
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
 > - Requires [GitLab v12.6](https://about.gitlab.com/releases/2019/12/22/gitlab-12-6-released/) or later.
 
-Use Runner Referees to pass extra job monitoring data to GitLab. Runner referees are special workers within the Runner manager that query and collect additional data related to a job and upload their results to GitLab as job artifacts.
+Use GitLab Runner referees to pass extra job monitoring data to GitLab. Referees are special workers within the Runner Manager that query and collect additional data related to a job and upload their results to GitLab as job artifacts.
 
-### Using the Metrics Runner Referee
+### Using the Metrics Runner referee
 
 If the machine/container that is running the job exposes [Prometheus](https://prometheus.io) metrics that are gathered by a Prometheus server, GitLab Runner can query the Prometheus server for the entirety of the job duration. After the metrics are received, they are uploaded as a job artifact which can be used for analysis later.
 
 Currently, only the [`docker-machine` executor](../executors/docker_machine.md) supports the referee.
 
-### Configuring the Metrics Runner Referee for a Runner
+### Configuring the Metrics Runner Referee for GitLab Runner
 
 Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml` file within a `[[runner]]` section and add the following fields:
 
 | Setting              | Description                                                                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `prometheus_address` | The server that collects metrics from Runner instances. It must be accessible by the Runner manager when the job finishes.          |
+| `prometheus_address` | The server that collects metrics from GitLab Runner instances. It must be accessible by the Runner Manager when the job finishes.          |
 | `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
 | `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that will be executed for each interval. |
 
@@ -1021,7 +1021,7 @@ Metrics queries are in `canonical_name:query_string` format. The query string su
 | `{selector}` | Replaced with a `label_name=label_value` pair that selects metrics generated by a specific Runner instance within Prometheus. |
 | `{interval}` | Replaced with the `query_interval` parameter from the `[runners.referees.metrics]` configuration for this referee.            |
 
-For example, a shared Runner environment using the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
+For example, a shared GitLab Runner environment using the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
 
 ## Deploy to multiple servers using GitLab CI
 

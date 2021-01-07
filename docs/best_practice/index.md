@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # Best practices
@@ -37,7 +37,7 @@ You can also specify
 if you want to clone to a custom directory, and the guideline below
 doesn't apply.
 
-GitLab Runner uses the _Builds Directory_ for all the Jobs that it
+GitLab Runner uses the _Builds Directory_ for all the jobs that it
 runs, but nests them using a specific pattern
 `{builds_dir}/$RUNNER_TOKEN_KEY/$CONCURRENT_ID/$NAMESPACE/$PROJECT_NAME`.
 For example: `/builds/2mn-ncv-/0/user/playground`.
