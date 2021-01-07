@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
 # GitLab Runner commands
@@ -112,12 +112,12 @@ following commands support the following signals:
 
 | Command | Signal | Action |
 |---------|--------|--------|
-| `register` | **SIGINT** | Cancel runner registration and delete if it was already registered |
+| `register` | **SIGINT** | Cancel runner registration and delete if it was already registered. |
 | `run`, `exec`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**). |
 | `run`, `exec`, `run-single` | **SIGQUIT** | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
-| `run` | **SIGHUP** | Force to reload configuration file |
+| `run` | **SIGHUP** | Force to reload configuration file. |
 
-For example, to force a reload of the Runner's configuration file, run:
+For example, to force a reload of a runner's configuration file, run:
 
 ```shell
 sudo kill -SIGHUP <main_runner_pid>
@@ -202,7 +202,7 @@ This command registers your runner in GitLab by using the GitLab [Runners API](h
 
 The registered runner is
 added to the [configuration file](#configuration-file).
-You can use multiple configurations in a single GitLab Runner. Executing
+You can use multiple configurations in a single installation of GitLab Runner. Executing
 `gitlab-runner register` adds a new configuration entry. It doesn't remove the
 previous ones.
 
@@ -267,7 +267,7 @@ Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
-Additional options can be easily configured during Runner registration using the
+Additional options can be easily configured during runner registration using the
 [configuration template file](../register/index.md#runners-configuration-template-file) feature.
 
 ### `gitlab-runner list`
@@ -288,7 +288,7 @@ Verifying runner... is alive                        runner=826f687f
 Verifying runner... is alive                        runner=32773c0f
 ```
 
-To delete the old and removed from GitLab runners, execute the following
+To remove the old runners that have been removed from GitLab, execute the following
 command.
 
 WARNING:
@@ -419,7 +419,7 @@ This command allows to fetch and process builds from GitLab.
 ### `gitlab-runner run`
 
 This is main command that is executed when GitLab Runner is started as a
-service. It reads all defined Runners from `config.toml` and tries to run all
+service. It reads all defined runners from `config.toml` and tries to run all
 of them.
 
 The command is executed and works until it [receives a signal](#signals).
