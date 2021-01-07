@@ -278,7 +278,7 @@ This defines the Docker Container parameters.
 | `links`                     | Specify containers which should be linked with building container |
 | `allowed_images`            | Specify wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
 | `allowed_services`          | Specify wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work) |
+| `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies) |
 | `sysctls`                   | specify the sysctl options |
 | `helper_image`              | (Advanced) [Override the default helper image](#helper-image) used to clone repos and upload artifacts. |
 

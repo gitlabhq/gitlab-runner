@@ -155,12 +155,41 @@ func (e *executor) pullDockerImage(imageName string, ac *types.AuthConfig) (*typ
 	return &image, err
 }
 
-func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, err error) {
-	pullPolicy, err := e.Config.Docker.PullPolicy.Get()
+func (e *executor) getDockerImage(imageName string) (*types.ImageInspect, error) {
+	pullPolicies, err := e.Config.Docker.GetPullPolicies()
 	if err != nil {
 		return nil, err
 	}
 
+	var imageErr error
+	for idx, pullPolicy := range pullPolicies {
+		attempt := 1 + idx
+		if attempt > 1 {
+			e.Infoln(fmt.Sprintf("Attempt #%d: Trying %q pull policy", attempt, pullPolicy))
+		}
+
+		var img *types.ImageInspect
+		img, imageErr = e.getImageUsingPullPolicy(imageName, pullPolicy)
+		if imageErr != nil {
+			e.Warningln(fmt.Sprintf("Failed to pull image with policy %q: %v", pullPolicy, imageErr))
+			continue
+		}
+
+		return img, nil
+	}
+
+	return nil, fmt.Errorf(
+		"failed to pull image %q with specified policies %v: %w",
+		imageName,
+		pullPolicies,
+		imageErr,
+	)
+}
+
+func (e *executor) getImageUsingPullPolicy(
+	imageName string,
+	pullPolicy common.DockerPullPolicy,
+) (image *types.ImageInspect, err error) {
 	e.Debugln("Looking for image", imageName, "...")
 	existingImage, _, err := e.client.ImageInspectWithRaw(e.Context, imageName)
 
@@ -188,7 +217,7 @@ func (e *executor) getDockerImage(imageName string) (image *types.ImageInspect, 
 
 		// If not-present is specified
 		if pullPolicy == common.PullPolicyIfNotPresent {
-			e.Println("Using locally found image version due to if-not-present pull policy")
+			e.Println(fmt.Sprintf("Using locally found image version due to %q pull policy", pullPolicy))
 			return &existingImage, err
 		}
 	}

@@ -714,7 +714,8 @@ func (b *Build) retryCreateExecutor(
 			return executor, nil
 		}
 		executor.Cleanup()
-		if _, ok := err.(*BuildError); ok {
+		var buildErr *BuildError
+		if errors.As(err, &buildErr) {
 			return nil, err
 		} else if options.Context.Err() != nil {
 			return nil, b.handleError(options.Context.Err())

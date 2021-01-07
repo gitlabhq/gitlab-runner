@@ -46,7 +46,7 @@ func TestInteractiveTerminal(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
+					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
