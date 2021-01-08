@@ -38,6 +38,7 @@ require (
 	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
+	github.com/klauspost/compress v1.11.6 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/klauspost/pgzip v1.2.5
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
@@ -57,7 +58,7 @@ require (
 	github.com/prometheus/common v0.6.0
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sanity-io/litter v1.2.0 // indirect
-	github.com/saracen/fastzip v0.1.4
+	github.com/saracen/fastzip v0.1.5
 	github.com/sirupsen/logrus v1.5.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/spf13/pflag v1.0.1-0.20171106142849-4c012f6dcd95 // indirect
@@ -70,7 +71,7 @@ require (
 	gocloud.dev v0.21.1-0.20201223184910-5094f54ed8bb
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	golang.org/x/sys v0.0.0-20210105210732-16f7687f5001
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
