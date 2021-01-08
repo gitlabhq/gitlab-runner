@@ -164,7 +164,7 @@ github.com/gorhill/cronexpr
 github.com/gorilla/context
 # github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
 github.com/gorilla/mux
-# github.com/gorilla/websocket v1.4.1
+# github.com/gorilla/websocket v1.4.2
 github.com/gorilla/websocket
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
@@ -218,8 +218,6 @@ github.com/klauspost/compress/zip
 github.com/klauspost/cpuid
 # github.com/klauspost/pgzip v1.2.5
 github.com/klauspost/pgzip
-# github.com/konsorten/go-windows-terminal-sequences v1.0.2
-github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/pty v1.1.1
 github.com/kr/pty
 # github.com/markelog/trie v0.0.0-20171230083431-098fa99650c0
@@ -290,7 +288,7 @@ github.com/saracen/fastzip
 github.com/saracen/fastzip/internal/filepool
 # github.com/saracen/zipextra v0.0.0-20201205103923-7347a2ee3f10
 github.com/saracen/zipextra
-# github.com/sirupsen/logrus v1.5.0
+# github.com/sirupsen/logrus v1.7.0
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/test
 # github.com/spf13/pflag v1.0.1-0.20171106142849-4c012f6dcd95
@@ -307,7 +305,7 @@ github.com/tevino/abool
 github.com/urfave/cli
 # gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
 gitlab.com/ayufan/golang-cli-helpers
-# gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20180924111848-5af59b871b1b
+# gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
 gitlab.com/gitlab-org/gitlab-terminal
 # go.opencensus.io v0.22.5
 go.opencensus.io
@@ -543,7 +541,7 @@ gopkg.in/square/go-jose.v2
 gopkg.in/square/go-jose.v2/cipher
 gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
-# gopkg.in/yaml.v2 v2.2.8
+# gopkg.in/yaml.v2 v2.3.0
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 gopkg.in/yaml.v3
