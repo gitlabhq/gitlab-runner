@@ -1,3 +1,61 @@
+## v13.8.0-rc1 (2021-01-08)
+
+### New features
+
+- Allow user to specify multiple pull policies for Docker executor !2623
+
+### Bug fixes
+
+- Fix fastzip to support artifacts for nonroot users !2661
+- Fix s3 cache upload for aws EKS IRSA !2644 (Clemens Buchacher @cbuchacher)
+- Fix cache push for failed jobs for Docker and Kubernetes executor !2638 (Axel Amigo @hax0l)
+- Fix Azure cache not working in K8S executor !2626
+- Fix path checking in Build.getCustomBuildDir !2251
+
+### Maintenance
+
+- Add Docker integration tests for cache push for failed job !2657
+- Report that the Runner returns exit codes !2645
+- Update GoCloud to v0.21.1+ !2637
+- Add tests to Powershell shell !2634
+- Lock mutex in Buffer.SetLimit !2627
+- Fix/k8s skip hostaliases for empty services !2582 (Horatiu Eugen Vlad @hvlad)
+- Fix windowsPath to handle local named pipes correctly !2470
+- Override Git HTTP user agent !2392
+- Allow using prebuilt Docker helper images when running from out/binaries !2104
+
+### Documentation changes
+
+- Finish runner standardization update !2666
+- Update linux-repository.md changes date of end of life date of CentOS 8 !2662 (Mohammad.E @emamirazavi)
+- Removed ntrights reference !2660
+- Restructure "Supported options for self-signed certificates" doc section !2651
+- Edited runner to be lowercase !2650
+- Edited runner to be lowercase !2649
+- Edited runner to be lowercase !2648
+- Edited runner to be lowercase !2647
+- Edited runner capitalization !2646
+- Fix documentation issue in Kubernetes node_selector !2643
+- Update docs for the new gitlab runner operator !2640
+- Synchronize Vale rules and fix !2633
+- Improve documentation for configuring the cache with a K8S runner !2632
+- Add Azure to possible runners cache type !2631
+- Add reference to GitLab Runner Operator and 13.7 MVC issue !2630
+- Add `make runner-and-helper-docker-host` to `make help` !2629
+- Add troubleshooting guide for GitLab Runner !2628
+- Runner: add Vale test for possessive form of GitLab !2624
+- Docs: Removed possessive GitLab's !2620
+- Runner: fix unquoted curl command URL strings !2618
+- Runner: move CurlStringsQuoted.yml rule to error !2617
+- Add Windows Server Core command for logs !2602
+- Fixed typo: libivrt -> libvirt !2519 (Aaron @aaronk6)
+- Autodetect VirtualBox path on Windows !2020 (Pedro Pombeiro @pedropombeiro)
+- Update kubernetes.md to reflect https://gitlab.com/charts/gitlab-runner/merge_requests/34 !1470
+
+### Other changes
+
+- Add missing entry to 13.6 changelog !2642
+
 ## v13.7.0 (2020-12-21)
 
 ### Security fixes
