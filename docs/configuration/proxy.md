@@ -2,7 +2,7 @@
 
 This guide aims specifically to making GitLab Runner with Docker executor work behind a proxy.
 
-Before proceeding further, you need to make sure that you've already
+Before continuing, ensure that you've already
 [installed Docker](https://docs.docker.com/install/) and
 [GitLab Runner](../install/index.md) on the same machine.
 
@@ -62,7 +62,7 @@ world can't.
 ## Configuring Docker for downloading images
 
 NOTE:
-The following apply to OSes that have systemd support.
+The following apply to OSes with systemd support.
 
 Follow [Docker's documentation](https://docs.docker.com/config/daemon/systemd/#httphttps-proxy)
 how to use a proxy.
@@ -121,13 +121,12 @@ This is basically the same as adding the proxy to the Docker service above:
    Environment=HTTP_PROXY=http://docker0_interface_ip:3128/ HTTPS_PROXY=http://docker0_interface_ip:3128/
    ```
 
-## Adding the proxy to the Docker containers
+## Adding the Proxy to the Docker containers
 
-After you [register your runner](../register/index.md), you might want to
-propagate your proxy settings to the Docker containers (for `git clone` and other
-stuff).
+After you [register your runner](../register/index.md), you may want to
+propagate your proxy settings to the Docker containers (for example, for `git clone`).
 
-To do that, you need to edit `/etc/gitlab-runner/config.toml` and add the
+To do this, you need to edit `/etc/gitlab-runner/config.toml` and add the
 following to the `[[runners]]` section:
 
 ```toml
@@ -135,9 +134,7 @@ pre_clone_script = "git config --global http.proxy $HTTP_PROXY; git config --glo
 environment = ["https_proxy=http://docker0_interface_ip:3128", "http_proxy=http://docker0_interface_ip:3128", "HTTPS_PROXY=docker0_interface_ip:3128", "HTTP_PROXY=docker0_interface_ip:3128"]
 ```
 
-Where `docker0_interface_ip` is the IP address of the `docker0` interface. You need to
-be able to reach it from within the Docker containers, so it's important to set
-it right.
+Where `docker0_interface_ip` is the IP address of the `docker0` interface.
 
 NOTE:
 In our examples, we are setting both lower case and upper case variables
@@ -149,21 +146,12 @@ on these kinds of environment variables.
 ## Proxy settings when using dind service
 
 When using the [Docker-in-Docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind),
-it can be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY`
-environment variable. This is because the proxy intercepts the TCP connection between:
+it may be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY` environment variable. The ports are required, otherwise `docker push` is blocked.
 
-- `dockerd` from the dind container.
-- `docker` from the client container.
+Communication between `dockerd` from dind and the local `docker` client (as described here: <https://hub.docker.com/_/docker/>) 
+uses proxy variables held in root's Docker config.
 
-The ports can be required because otherwise `docker push` is blocked,
-because it originates from the IP mapped to Docker. However, in that case, it is meant to go through the proxy.
-
-When testing the communication between `dockerd` from dind and a `docker` client locally
-(as described here: <https://hub.docker.com/_/docker/>),
-`dockerd` from dind is initially started as a client on the host system by root,
-and the proxy variables are taken from `/root/.docker/config.json`.
-
-For example:
+To configure this, you need to edit `/root/.docker/config.json` to include your complete proxy configuration, for example:
 
 ```json
 {
@@ -177,19 +165,7 @@ For example:
 }
 ```
 
-However, the container started for executing `.gitlab-ci.yml` scripts has
-the environment variables set by the settings of the `gitlab-runner` configuration (`/etc/gitlab-runner/config.toml`).
-These are available as environment variables as is (in contrast to `.docker/config.json` of the local test above)
-in the dind containers running `dockerd` as a service and `docker` client executing `.gitlab-ci.yml`.
-In `.gitlab-ci.yml`, the environment variables are picked up by any program that honors the proxy settings from default environment variables. For example,
-`wget`, `apt`, `apk`, `docker info` and `docker pull` (but not by `docker run` or `docker build` as per:
-<https://github.com/moby/moby/issues/24697#issuecomment-366680499>).
-
-`docker run` or `docker build` executed inside the container of the Docker executor
-looks for the proxy settings in `$HOME/.docker/config.json`,
-which is now inside the executor container (and initially empty).
-Therefore, `docker run` or `docker build` executions have no proxy settings. In order to pass on the settings,
-a `$HOME/.docker/config.json` needs to be created in the executor container. For example:
+In order to pass on the settings to the container of the Docker executor, a `$HOME/.docker/config.json` also needs to be created inside the container. This may be scripted as a `before_script` in the `.gitlab-ci.yml`, for example:
 
 ```yaml
 before_script:
@@ -197,9 +173,7 @@ before_script:
   - 'echo "{ \"proxies\": { \"default\": { \"httpProxy\": \"$HTTP_PROXY\", \"httpsProxy\": \"$HTTPS_PROXY\", \"noProxy\": \"$NO_PROXY\" } } }" > $HOME/.docker/config.json'
 ```
 
-Because it is confusing to add additional lines in a `.gitlab-ci.yml` file that are only needed in case of a proxy,
-it is better to move the creation of the `$HOME/.docker/config.json` into the
-configuration of the `gitlab-runner` (`/etc/gitlab-runner/config.toml`) that is actually affected:
+Or alternatively, in the configuration of the `gitlab-runner` (`/etc/gitlab-runner/config.toml`) that is affected:
 
 ```toml
 [[runners]]
@@ -209,9 +183,9 @@ configuration of the `gitlab-runner` (`/etc/gitlab-runner/config.toml`) that is 
 NOTE:
 An additional level of escaping `"` is needed here because this is the creation of a
 JSON file with a shell specified as a single string inside a TOML file.
-Because it is not YAML anymore, do not escape the `:`.
+Because this is not YAML, do not escape the `:`.
 
-Note that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes
+Note that if the `NO_PROXY` list needs to be extended, wildcards `*` only work for suffixes,
 but not for prefixes or CIDR notation.
 For more information, see
 <https://github.com/moby/moby/issues/9145>
@@ -222,7 +196,9 @@ and
 
 A GitLab instance may be behind a reverse proxy that has rate-limiting on API requests
 to prevent abuse. GitLab Runner sends multiple requests to the API and could go over these
-rate limits. As a result, GitLab Runner handles rate limited scenarios with the following logic:
+rate limits. 
+
+As a result, GitLab Runner handles rate limited scenarios with the following logic:
 
 1. A response code of **429 - TooManyRequests** is received.
 1. The response headers are checked for a `RateLimit-ResetTime` header. The `RateLimit-ResetTime` header should have a value which is a valid **HTTP Date (RFC1123)**, like `Wed, 21 Oct 2015 07:28:00 GMT`.
