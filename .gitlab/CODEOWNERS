@@ -1,0 +1,4 @@
+* @gitlab-com/runner-maintainers
+.editorconfig   @gitlab-com/runner-group @gitlab-com/runner-maintainers
+.gitattributes  @gitlab-com/runner-group @gitlab-com/runner-maintainers
+.gitignore      @gitlab-com/runner-group @gitlab-com/runner-maintainers
