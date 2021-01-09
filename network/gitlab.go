@@ -559,17 +559,30 @@ func (n *GitLabClient) createPatchTraceResult(
 	}
 }
 
-func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Reader, baseName string) error {
-	wr, err := mpw.CreateFormFile("file", baseName)
-	if err != nil {
-		return err
-	}
+func (n *GitLabClient) createArtifactsForm(reader io.Reader, baseName string) (io.ReadCloser, string) {
+	pr, pw := io.Pipe()
 
-	_, err = io.Copy(wr, reader)
-	if err != nil {
-		return err
-	}
-	return nil
+	mpw := multipart.NewWriter(pw)
+
+	go func() {
+		defer func() {
+			_ = mpw.Close()
+			_ = pw.Close()
+		}()
+
+		wr, err := mpw.CreateFormFile("file", baseName)
+		if err != nil {
+			_ = pw.CloseWithError(err)
+			return
+		}
+
+		_, err = io.Copy(wr, reader)
+		if err != nil {
+			_ = pw.CloseWithError(err)
+		}
+	}()
+
+	return pr, mpw.FormDataContentType()
 }
 
 func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {
@@ -592,23 +605,26 @@ func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {
 
 func (n *GitLabClient) UploadRawArtifacts(
 	config common.JobCredentials,
-	reader io.Reader,
+	reader io.ReadCloser,
 	options common.ArtifactsOptions,
 ) common.UploadState {
-	pr, pw := io.Pipe()
-	defer func() { _ = pr.Close() }()
+	defer func() {
+		_ = reader.Close()
+	}()
 
-	mpw := multipart.NewWriter(pw)
+	log := logrus.WithFields(logrus.Fields{
+		"id":    config.ID,
+		"token": helpers.ShortenToken(config.Token),
+	})
 
-	go func() {
-		defer func() {
-			_ = mpw.Close()
-			_ = pw.Close()
-		}()
-		err := n.createArtifactsForm(mpw, reader, options.BaseName)
-		if err != nil {
-			_ = pw.CloseWithError(err)
-		}
+	messagePrefix := "Uploading artifacts to coordinator..."
+	if options.Type != "" {
+		messagePrefix = fmt.Sprintf("Uploading artifacts as %q to coordinator...", options.Type)
+	}
+
+	pr, contentType := n.createArtifactsForm(reader, options.BaseName)
+	defer func() {
+		_ = pr.Close()
 	}()
 
 	query := uploadRawArtifactsQuery(options)
@@ -620,28 +636,27 @@ func (n *GitLabClient) UploadRawArtifacts(
 		http.MethodPost,
 		fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()),
 		pr,
-		mpw.FormDataContentType(),
+		contentType,
 		headers,
 	)
-
-	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
-	})
 
 	if res != nil {
 		log = log.WithField("responseStatus", res.Status)
 	}
 
-	messagePrefix := "Uploading artifacts to coordinator..."
-	if options.Type != "" {
-		messagePrefix = fmt.Sprintf("Uploading artifacts as %q to coordinator...", options.Type)
+	if cerr := pr.Close(); cerr != nil {
+		log = log.WithError(cerr)
+	}
+
+	if cerr := reader.Close(); cerr != nil {
+		log = log.WithError(cerr)
 	}
 
 	if err != nil {
 		log.WithError(err).Errorln(messagePrefix, "error")
 		return common.UploadFailed
 	}
+
 	defer func() {
 		_, _ = io.Copy(ioutil.Discard, res.Body)
 		_ = res.Body.Close()

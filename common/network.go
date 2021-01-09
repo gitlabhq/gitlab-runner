@@ -555,6 +555,6 @@ type Network interface {
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile string, directDownload *bool) DownloadState
-	UploadRawArtifacts(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
+	UploadRawArtifacts(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) UploadState
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error)
 }

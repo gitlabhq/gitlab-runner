@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -157,7 +158,7 @@ type Build struct {
 	createdAt time.Time
 
 	Referees         []referees.Referee
-	ArtifactUploader func(config JobCredentials, reader io.Reader, options ArtifactsOptions) UploadState
+	ArtifactUploader func(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) UploadState
 }
 
 func (b *Build) setCurrentStage(stage BuildStage) {
@@ -555,7 +556,7 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 		}
 
 		// referee ran successfully, upload its results to GitLab as an artifact
-		b.ArtifactUploader(jobCredentials, reader, ArtifactsOptions{
+		b.ArtifactUploader(jobCredentials, ioutil.NopCloser(reader), ArtifactsOptions{
 			BaseName: referee.ArtifactBaseName(),
 			Type:     referee.ArtifactType(),
 			Format:   ArtifactFormat(referee.ArtifactFormat()),
