@@ -117,7 +117,7 @@ func (c *officialDockerClient) ContainerCreate(
 	containerName string,
 ) (container.ContainerCreateCreatedBody, error) {
 	started := time.Now()
-	container, err := c.client.ContainerCreate(ctx, config, hostConfig, networkingConfig, containerName)
+	container, err := c.client.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	return container, wrapError("ContainerCreate", err, started)
 }
 
