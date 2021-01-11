@@ -27,6 +27,40 @@ This chart configures GitLab Runner to:
 - The `kubectl` CLI installed locally and authenticated for the cluster.
 - The [Helm client](https://helm.sh/docs/using_helm/#installing-the-helm-client) installed locally on your machine.
 
+## Installing GitLab Runner using the Helm Chart
+
+Add the GitLab Helm repository:
+
+```shell
+helm repo add gitlab https://charts.gitlab.io
+```
+
+If using Helm 2, you must also initialize Helm:
+
+```shell
+helm init
+```
+
+Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
+run the following:
+
+```shell
+# For Helm 2
+helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
+
+# For Helm 3
+helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
+```
+
+Where:
+
+- `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
+- `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
+  [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
+
+If you want to install a specific version of GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
+to your `helm install` command.
+
 ## Configuring GitLab Runner using the Helm Chart
 
 Create a `values.yaml` file for your GitLab Runner configuration. See
@@ -488,59 +522,6 @@ gitlab/gitlab-runner    0.10.1          12.4.1      GitLab Runner
 gitlab/gitlab-runner    0.10.0          12.4.0      GitLab Runner
 ...
 ```
-
-## Installing GitLab Runner using the Helm Chart
-
-Add the GitLab Helm repository:
-
-```shell
-helm repo add gitlab https://charts.gitlab.io
-```
-
-If using Helm 2, you must also initialize Helm:
-
-```shell
-helm init
-```
-
-Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
-run the following:
-
-```shell
-# For Helm 2
-helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
-
-# For Helm 3
-helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
-```
-
-Where:
-
-- `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
-- `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
-  [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
-
-If you want to install a specific version of GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
-to your `helm install` command.
-
-## Updating GitLab Runner using the Helm Chart
-
-Once your GitLab Runner Chart is installed, configuration changes and chart updates should be done using `helm upgrade`:
-
-```shell
-helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
-```
-
-Where:
-
-- `<NAMESPACE>` is the Kubernetes namespace where GitLab Runner is installed.
-- `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
-  [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
-- `<RELEASE-NAME>` is the name you gave the chart when installing it.
-  In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
-
-If you want to update to a specific version of GitLab Runner Helm Chart instead of the latest one, add `--version <RUNNER_HELM_CHART_VERSION>`
-to your `helm upgrade` command.
 
 ## Uninstalling GitLab Runner using the Helm Chart
 
