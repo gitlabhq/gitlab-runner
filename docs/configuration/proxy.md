@@ -148,7 +148,7 @@ on these kinds of environment variables.
 When using the [Docker-in-Docker executor](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-executor) (dind),
 it may be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY` environment variable. The ports are required, otherwise `docker push` is blocked.
 
-Communication between `dockerd` from dind and the local `docker` client (as described here: <https://hub.docker.com/_/docker/>) 
+Communication between `dockerd` from dind and the local `docker` client (as described here: <https://hub.docker.com/_/docker/>)
 uses proxy variables held in root's Docker config.
 
 To configure this, you need to edit `/root/.docker/config.json` to include your complete proxy configuration, for example:
@@ -196,7 +196,7 @@ and
 
 A GitLab instance may be behind a reverse proxy that has rate-limiting on API requests
 to prevent abuse. GitLab Runner sends multiple requests to the API and could go over these
-rate limits. 
+rate limits.
 
 As a result, GitLab Runner handles rate limited scenarios with the following logic:
 
