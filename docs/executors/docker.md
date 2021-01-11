@@ -607,7 +607,7 @@ When using the `docker` or `docker+machine` executors, you can set the
 
 This parameter defines how the runner works when pulling Docker images (for both `image` and `services` keywords).
 You can set it to a single value, or a list of pull policies, which will be attempted in order
-until an image is pulled successfully. 
+until an image is pulled successfully.
 
 If you don't set any value for the `pull_policy` parameter, then
 the runner will use the `always` pull policy as the default value.

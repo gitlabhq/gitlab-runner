@@ -96,7 +96,7 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
    ```shell
    oc apply -f gitlab-runner.yml
    ```
-   
+
 1. Confirm that GitLab Runner is installed by running:
 
    ```shell
