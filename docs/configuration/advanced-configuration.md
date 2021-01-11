@@ -573,14 +573,9 @@ Example:
   MachineName = "auto-scale-%s"
   MachineDriver = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
   MachineOptions = [
-      "google-project=GOOGLE-PROJECT-ID",
-      "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
-      "google-machine-type=GOOGLE-MACHINE-TYPE", # e.g. 'n1-standard-8'
-      "google-machine-image=ubuntu-os-cloud/global/images/family/ubuntu-1804-lts",
-      "google-username=root",
-      "google-use-internal-ip",
-      "engine-registry-mirror=https://mirror.gcr.io"
-  ]
+      # As with creating manually, the only mandatory configuration is the google-project id
+      "google-project=<project-id>"
+    ]
   [[runners.machine.autoscaling]]
     Periods = ["* * 9-17 * * mon-fri *"]
     IdleCount = 50
@@ -592,7 +587,6 @@ Example:
     IdleTime = 60
     Timezone = "UTC"
 ```
-
 ### Periods syntax
 
 The `Periods` setting contains an array of string patterns of
