@@ -50,6 +50,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_FASTZIP` | `false` | ✗ |  | Fastzip is a performant archiver for cache/artifact archiving and extraction |
 | `FF_GITLAB_REGISTRY_HELPER_IMAGE` | `false` | ✗ |  | Use GitLab Runner helper image for the Docker and Kubernetes executors from `registry.gitlab.com` instead of Docker Hub |
 | `FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR` | `false` | ✗ |  | If enabled will remove the usage of `umask 0000` call for jobs executed with `docker` executor. Instead Runner will try to discover the UID and GID of the user configured for the image used by the build container and will change the ownership of the working directory and files by running the `chmod` command in the predefined container (after updating sources, restoring cache and downloading artifacts). POSIX utility `id` must be installed and operational in the build image for this feature flag. Runner will execute `id` with options `-u` and `-g` to retrieve the UID and GID. |
+| `FF_ENABLE_BASH_EXIT_CODE_CHECK` | `false` | ✗ |  | If enabled, bash scripts don't rely solely on `set -e`, but check for a non-zero exit code after each script command is executed. |
 
 <!-- feature_flags_list_end -->
 
