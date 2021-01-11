@@ -6,5 +6,6 @@ package main
 // on development. This is explained in great detail in
 // https://marcofranssen.nl/manage-go-tools-via-go-modules/
 import (
-	_ "github.com/mitchellh/gox" // cross-compilation of the binary
+	_ "github.com/boumenot/gocover-cobertura" // code coverage format conversion tool for inline code coverage in MRs
+	_ "github.com/mitchellh/gox"              // cross-compilation of the binary
 )

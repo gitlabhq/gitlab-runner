@@ -13,8 +13,10 @@ test coverage report:
   - unit test
   script:
   - source ci/touch_make_dependencies
-  - make parallel_test_coverage_report
+  - make parallel_test_coverage_report cobertura_report
   artifacts:
+    reports:
+      cobertura: out/cobertura/cobertura-coverage.xml
     paths:
     - out/coverage/
     expire_in: 7d

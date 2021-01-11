@@ -11,6 +11,7 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
 	github.com/bmatcuk/doublestar v1.3.0
+	github.com/boumenot/gocover-cobertura v1.1.0
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/docker/cli v0.0.0-20181219132003-336b2a5cac7f
 	github.com/docker/distribution v2.7.0+incompatible

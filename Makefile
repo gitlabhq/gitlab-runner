@@ -46,6 +46,8 @@ export CGO_ENABLED ?= 0
 
 
 # Development Tools
+GOCOVER_COBERTURA = gocover-cobertura
+
 GOX = gox
 
 MOCKERY_VERSION ?= 1.1.0
@@ -134,6 +136,14 @@ simple-test:
 git1.8-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
 git1.8-test:
 	$(MAKE) simple-test
+
+cobertura_report: $(GOCOVER_COBERTURA)
+	mkdir -p out/cobertura
+	$(GOCOVER_COBERTURA) < out/coverage/coverprofile.regular.source.txt > out/cobertura/cobertura-coverage-raw.xml
+	@ # NOTE: Remove package paths.
+	@ # See https://gitlab.com/gitlab-org/gitlab/-/issues/217664
+	sed 's;filename=\"gitlab.com/gitlab-org/gitlab-runner/;filename=\";g' out/cobertura/cobertura-coverage-raw.xml > \
+	  out/cobertura/cobertura-coverage.xml
 
 parallel_test_prepare:
 	# Preparing test commands
@@ -340,6 +350,9 @@ check_modules:
 
 
 # development tools
+$(GOCOVER_COBERTURA):
+	go get github.com/boumenot/gocover-cobertura
+
 $(GOX):
 	go get github.com/mitchellh/gox
 
