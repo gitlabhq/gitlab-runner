@@ -90,7 +90,7 @@ You can use a [configuration template file](../register/index.md#runners-configu
 to configure the runner. You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
-Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository. It is important to note that, for the `config:` section, the format should be `toml` (`<parameter> = <value>` instead of `<parameter>: <value>`), as we are embedding `cofig.toml` in `values.yaml`.
+Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository. It is important to note that, for the `config:` section, the format should be `toml` (`<parameter> = <value>` instead of `<parameter>: <value>`), as we are embedding `config.toml` in `values.yaml`.
 
 ```yaml
 runners:
