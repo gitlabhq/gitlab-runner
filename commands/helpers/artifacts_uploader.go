@@ -11,6 +11,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
@@ -31,6 +32,8 @@ var (
 type ArtifactsUploaderCommand struct {
 	common.JobCredentials
 	fileArchiver
+	meter.TransferMeterCommand
+
 	network common.Network
 
 	Name     string                `long:"name" description:"The name of the archive"`
@@ -101,6 +104,12 @@ func (c *ArtifactsUploaderCommand) Run() error {
 		Format:   c.Format,
 		Type:     c.Type,
 	}
+
+	stream = meter.New(
+		stream,
+		c.RunnerMeterFrequency,
+		meter.LabelledRateFormat(os.Stdout, "Uploading artifacts", meter.UnknownTotalSize),
+	)
 
 	// Upload the data
 	switch c.network.UploadRawArtifacts(c.JobCredentials, stream, options) {

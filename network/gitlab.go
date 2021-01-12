@@ -612,16 +612,6 @@ func (n *GitLabClient) UploadRawArtifacts(
 		_ = reader.Close()
 	}()
 
-	log := logrus.WithFields(logrus.Fields{
-		"id":    config.ID,
-		"token": helpers.ShortenToken(config.Token),
-	})
-
-	messagePrefix := "Uploading artifacts to coordinator..."
-	if options.Type != "" {
-		messagePrefix = fmt.Sprintf("Uploading artifacts as %q to coordinator...", options.Type)
-	}
-
 	pr, contentType := n.createArtifactsForm(reader, options.BaseName)
 	defer func() {
 		_ = pr.Close()
@@ -640,16 +630,21 @@ func (n *GitLabClient) UploadRawArtifacts(
 		headers,
 	)
 
+	log := logrus.WithFields(logrus.Fields{
+		"id":    config.ID,
+		"token": helpers.ShortenToken(config.Token),
+	})
+
 	if res != nil {
 		log = log.WithField("responseStatus", res.Status)
 	}
 
-	if cerr := pr.Close(); cerr != nil {
-		log = log.WithError(cerr)
-	}
+	closeWithLogging(log, pr, "pipe")
+	closeWithLogging(log, reader, "archive")
 
-	if cerr := reader.Close(); cerr != nil {
-		log = log.WithError(cerr)
+	messagePrefix := "Uploading artifacts to coordinator..."
+	if options.Type != "" {
+		messagePrefix = fmt.Sprintf("Uploading artifacts as %q to coordinator...", options.Type)
 	}
 
 	if err != nil {
@@ -663,6 +658,13 @@ func (n *GitLabClient) UploadRawArtifacts(
 	}()
 
 	return n.determineUploadState(res.StatusCode, log, messagePrefix)
+}
+
+func closeWithLogging(log logrus.FieldLogger, c io.Closer, name string) {
+	err := c.Close()
+	if err != nil {
+		log.WithError(err).Warningf("Error while closing the %s reader", name)
+	}
 }
 
 func (n *GitLabClient) determineUploadState(
