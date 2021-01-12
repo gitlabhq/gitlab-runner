@@ -84,6 +84,4 @@ require (
 
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 
-replace github.com/docker/docker v1.4.2-0.20190822180741-9552f2b2fdde => github.com/docker/engine v1.4.2-0.20190822180741-9552f2b2fdde
-
 replace github.com/minio/go-homedir v0.0.0-20190425115525-017018655514 => gitlab.com/steveazz/go-homedir v0.0.0-20190425115525-017018655514
