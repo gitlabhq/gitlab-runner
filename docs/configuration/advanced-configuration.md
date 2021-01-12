@@ -573,8 +573,12 @@ Example:
   MachineName = "auto-scale-%s"
   MachineDriver = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
   MachineOptions = [
-      # As with creating manually, the only mandatory configuration is the google-project id
-      "google-project=<project-id>"
+      # Additional machine options can be added using the Google Compute Engine driver.
+      # If you experience problems with an unreachable host (ex. "Waiting for SSH"), 
+      # you should remove optional parameters to help with debugging.
+      # https://docs.docker.com/machine/drivers/gce/
+      "google-project=GOOGLE-PROJECT-ID",
+      "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
     ]
   [[runners.machine.autoscaling]]
     Periods = ["* * 9-17 * * mon-fri *"]
