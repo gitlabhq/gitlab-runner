@@ -5,17 +5,15 @@ go 1.13
 require (
 	cloud.google.com/go/storage v1.12.0
 	github.com/Azure/azure-storage-blob-go v0.11.1-0.20201209121048-6df5d9af221d
-	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/go-winio v0.4.12 // indirect
-	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
 	github.com/bmatcuk/doublestar v1.3.0
 	github.com/boumenot/gocover-cobertura v1.1.0
-	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
+	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/docker/cli v0.0.0-20181219132003-336b2a5cac7f
 	github.com/docker/distribution v2.7.0+incompatible
-	github.com/docker/docker v1.4.2-0.20190822180741-9552f2b2fdde
+	github.com/docker/docker v20.10.2+incompatible
 	github.com/docker/docker-credential-helpers v0.4.1 // indirect
 	github.com/docker/go-connections v0.3.0
 	github.com/docker/go-metrics v0.0.0-20181218153428-b84716841b82 // indirect
@@ -47,9 +45,10 @@ require (
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/minio/minio-go/v6 v6.0.57
 	github.com/mitchellh/gox v1.0.1
+	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/opencontainers/runc v1.0.0-rc6.0.20190115182101-c1e454b2a1bf // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
@@ -59,7 +58,6 @@ require (
 	github.com/saracen/fastzip v0.1.5
 	github.com/sirupsen/logrus v1.7.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
-	github.com/spf13/pflag v1.0.1-0.20171106142849-4c012f6dcd95 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.6.2-0.20200720104044-95a9d909e987
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
@@ -85,7 +83,5 @@ require (
 )
 
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
-
-replace github.com/docker/docker v1.4.2-0.20190822180741-9552f2b2fdde => github.com/docker/engine v1.4.2-0.20190822180741-9552f2b2fdde
 
 replace github.com/minio/go-homedir v0.0.0-20190425115525-017018655514 => gitlab.com/steveazz/go-homedir v0.0.0-20190425115525-017018655514
