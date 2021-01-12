@@ -16,6 +16,12 @@ import (
 
 var defaultTimeout = 1 * time.Hour
 
+const (
+	bucketName     = "test"
+	objectName     = "key"
+	bucketLocation = "location"
+)
+
 func defaultCacheFactory() *common.CacheConfig {
 	return &common.CacheConfig{
 		Type: "s3",
@@ -23,8 +29,8 @@ func defaultCacheFactory() *common.CacheConfig {
 			ServerAddress:  "server.com",
 			AccessKey:      "access",
 			SecretKey:      "key",
-			BucketName:     "test",
-			BucketLocation: "location"},
+			BucketName:     bucketName,
+			BucketLocation: bucketLocation},
 	}
 }
 
@@ -76,7 +82,7 @@ func testCacheOperation(
 
 		cacheConfig := defaultCacheFactory()
 
-		adapter, err := New(cacheConfig, defaultTimeout, "key")
+		adapter, err := New(cacheConfig, defaultTimeout, objectName)
 
 		if tc.errorOnMinioClientInitialization {
 			assert.EqualError(t, err, "error while creating S3 cache storage client: test error")
@@ -136,7 +142,7 @@ func TestNoConfiguration(t *testing.T) {
 	s3Cache := defaultCacheFactory()
 	s3Cache.S3 = nil
 
-	adapter, err := New(s3Cache, defaultTimeout, "key")
+	adapter, err := New(s3Cache, defaultTimeout, objectName)
 	assert.Nil(t, adapter)
 
 	assert.EqualError(t, err, "missing S3 configuration")
