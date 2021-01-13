@@ -3759,3 +3759,101 @@ func TestHelperImageRegistryLogs(t *testing.T) {
 		})
 	}
 }
+
+func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
+	dockerHub, err := helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+	})
+	require.NoError(t, err)
+
+	gitlabRegistry, err := helperimage.Get(common.REVISION, helperimage.Config{
+		OSType:         helperimage.OSTypeLinux,
+		Architecture:   "amd64",
+		GitLabRegistry: true,
+	})
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		expectedImage string
+		jobVariables  common.JobVariables
+		config        common.RunnerConfig
+	}{
+		"default helper image from DockerHub": {
+			expectedImage: dockerHub.String(),
+			config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:      "alpine:3.12",
+						PullPolicy: common.PullPolicyIfNotPresent,
+						Host:       "127.0.0.1",
+					},
+				},
+			},
+		},
+		"helper image from registry.gitlab.com": {
+			expectedImage: gitlabRegistry.String(),
+			jobVariables: []common.JobVariable{
+				{
+					Key:    featureflags.GitLabRegistryHelperImage,
+					Value:  "true",
+					Public: true,
+				},
+			},
+			config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:      "alpine:3.12",
+						PullPolicy: common.PullPolicyIfNotPresent,
+						Host:       "127.0.0.1",
+					},
+				},
+			},
+		},
+		"configured helper image": {
+			expectedImage: "config-image",
+			config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HelperImage: "config-image",
+						Image:       "alpine:3.12",
+						PullPolicy:  common.PullPolicyIfNotPresent,
+						Host:        "127.0.0.1",
+					},
+				},
+			},
+		},
+	}
+
+	for testName, tt := range tests {
+		t.Run(testName, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables: tt.jobVariables,
+						},
+						Runner: &tt.config,
+					},
+					Config: tt.config,
+				},
+			}
+
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config:  &tt.config,
+				Build:   e.Build,
+				Context: context.Background(),
+			}
+
+			err := e.Prepare(prepareOptions)
+			require.NoError(t, err)
+
+			c := e.buildLogPermissionsInitContainer()
+			assert.Equal(t, tt.expectedImage, c.Image)
+			assert.Equal(t, api.PullIfNotPresent, c.ImagePullPolicy)
+			assert.Len(t, c.VolumeMounts, 1)
+			assert.Len(t, c.Command, 3)
+		})
+	}
+}
