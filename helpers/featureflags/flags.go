@@ -16,6 +16,7 @@ const (
 	UseFastzip                           string = "FF_USE_FASTZIP"
 	GitLabRegistryHelperImage            string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
 	DisableUmaskForDockerExecutor        string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
+	EnableBashExitCodeCheck              string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
 )
 
 type FeatureFlag struct {
@@ -124,6 +125,14 @@ var flags = []FeatureFlag{
 			"`chmod` command in the predefined container (after updating sources, restoring cache and " +
 			"downloading artifacts). POSIX utility `id` must be installed and operational in the build image " +
 			"for this feature flag. Runner will execute `id` with options `-u` and `-g` to retrieve the UID and GID.",
+	},
+	{
+		Name:            EnableBashExitCodeCheck,
+		DefaultValue:    "false",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "If enabled, bash scripts don't rely solely on `set -e`, but check for a non-zero exit code " +
+			"after each script command is executed.",
 	},
 }
 

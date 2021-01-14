@@ -12,6 +12,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const BashDetectShellScript = `if [ -x /usr/local/bin/bash ]; then
@@ -45,6 +46,8 @@ type BashWriter struct {
 	TemporaryPath string
 	Shell         string
 	indent        int
+
+	checkForErrors bool
 }
 
 func (b *BashWriter) GetTemporaryPath() string {
@@ -60,6 +63,11 @@ func (b *BashWriter) Linef(format string, arguments ...interface{}) {
 }
 
 func (b *BashWriter) CheckForErrors() {
+	if !b.checkForErrors {
+		return
+	}
+
+	b.Line("_runner_exit_code=$?; if [[ $_runner_exit_code -ne 0 ]]; then exit $_runner_exit_code; fi")
 }
 
 func (b *BashWriter) Indent() {
@@ -72,6 +80,7 @@ func (b *BashWriter) Unindent() {
 
 func (b *BashWriter) Command(command string, arguments ...string) {
 	b.Line(b.buildCommand(command, arguments...))
+	b.CheckForErrors()
 }
 
 func (b *BashWriter) buildCommand(command string, arguments ...string) string {
@@ -268,8 +277,9 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 
 func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
 	w := &BashWriter{
-		TemporaryPath: info.Build.TmpProjectDir(),
-		Shell:         b.Shell,
+		TemporaryPath:  info.Build.TmpProjectDir(),
+		Shell:          b.Shell,
+		checkForErrors: info.Build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 	}
 
 	return b.generateScript(w, buildStage, info)
