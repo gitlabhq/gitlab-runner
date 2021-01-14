@@ -200,6 +200,29 @@ SELinux can also be the culprit of this error. You can confirm this by looking a
 sealert -a /var/log/audit/audit.log
 ```
 
+### Helm Chart: `ERROR .. Unauthorized`
+
+Before uninstalling or upgrading runners deployed with Helm, pause them in GitLab and
+wait for any jobs to complete.
+
+If you remove a runner pod with `helm uninstall` or `helm upgrade`
+while a job is running, `Unauthorized` errors like the following
+may occur when the job completes:
+
+```plaintext
+ERROR: Error cleaning up pod: Unauthorized
+ERROR: Error cleaning up secrets: Unauthorized
+ERROR: Job failed (system failure): Unauthorized
+```
+
+This probably occurs because when the runner is removed, the role bindings
+are removed. The runner pod continues until the job completes,
+and then the runner tries to delete it.
+Without the role binding, the runner pod no longer has access.
+
+See [this issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/225)
+for details.
+
 ## Windows troubleshooting
 
 The following relate to troubleshooting on Windows.

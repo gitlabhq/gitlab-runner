@@ -61,6 +61,57 @@ Where:
 If you want to install a specific version of GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
 to your `helm install` command.
 
+## Upgrading GitLab Runner using the Helm Chart
+
+Before upgrading GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.
+Pausing the runner prevents problems arising with the jobs, such as
+[authorization errors when they complete](../faq/README.md#helm-chart-error--unauthorized).
+
+Once your GitLab Runner Chart is installed, configuration changes and chart updates should be done using `helm upgrade`:
+
+```shell
+helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
+```
+
+Where:
+
+- `<NAMESPACE>` is the Kubernetes namespace where GitLab Runner is installed.
+- `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
+  [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
+- `<RELEASE-NAME>` is the name you gave the chart when installing it.
+  In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
+
+If you want to update to a specific version of GitLab Runner Helm Chart instead of the latest one, add `--version <RUNNER_HELM_CHART_VERSION>`
+to your `helm upgrade` command.
+
+## Check available GitLab Runner Helm Chart versions
+
+Versions of Helm Chart and GitLab Runner do not follow the same versioning.
+Use the command below to get version mappings between Helm Chart and GitLab Runner:
+
+```shell
+# For Helm 2
+helm search -l gitlab/gitlab-runner
+
+# For Helm 3
+helm search repo -l gitlab/gitlab-runner
+```
+
+Example of the output is shown below:
+
+```plaintext
+NAME                    CHART VERSION   APP VERSION DESCRIPTION
+...
+gitlab/gitlab-runner    0.14.0          12.8.0      GitLab Runner
+gitlab/gitlab-runner    0.13.1          12.7.1      GitLab Runner
+gitlab/gitlab-runner    0.13.0          12.7.0      GitLab Runner
+gitlab/gitlab-runner    0.12.0          12.6.0      GitLab Runner
+gitlab/gitlab-runner    0.11.0          12.5.0      GitLab Runner
+gitlab/gitlab-runner    0.10.1          12.4.1      GitLab Runner
+gitlab/gitlab-runner    0.10.0          12.4.0      GitLab Runner
+...
+```
+
 ## Configuring GitLab Runner using the Helm Chart
 
 Create a `values.yaml` file for your GitLab Runner configuration. See
@@ -495,35 +546,11 @@ securityContext:
   runAsUser: 999
 ```
 
-## Check available GitLab Runner Helm Chart versions
-
-Versions of Helm Chart and GitLab Runner application do not follow the same versioning.
-Use the command below to get version mappings between Helm Chart and GitLab Runner:
-
-```shell
-# For Helm 2
-helm search -l gitlab/gitlab-runner
-
-# For Helm 3
-helm search repo -l gitlab/gitlab-runner
-```
-
-Example of the output is shown below:
-
-```plaintext
-NAME                    CHART VERSION   APP VERSION DESCRIPTION
-...
-gitlab/gitlab-runner    0.14.0          12.8.0      GitLab Runner
-gitlab/gitlab-runner    0.13.1          12.7.1      GitLab Runner
-gitlab/gitlab-runner    0.13.0          12.7.0      GitLab Runner
-gitlab/gitlab-runner    0.12.0          12.6.0      GitLab Runner
-gitlab/gitlab-runner    0.11.0          12.5.0      GitLab Runner
-gitlab/gitlab-runner    0.10.1          12.4.1      GitLab Runner
-gitlab/gitlab-runner    0.10.0          12.4.0      GitLab Runner
-...
-```
-
 ## Uninstalling GitLab Runner using the Helm Chart
+
+Before uninstalling GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.
+Pausing the runner prevents problems arising with the jobs, such as
+[authorization errors when they complete](../faq/README.md#helm-chart-error--unauthorized).
 
 To uninstall the GitLab Runner Chart, run the following:
 
