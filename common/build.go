@@ -834,10 +834,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	var executor Executor
 
 	b.logger = NewBuildLogger(trace, b.Log())
-	b.logger.Println("Running with", AppVersion.Line())
-	if b.Runner != nil && b.Runner.ShortDescription() != "" {
-		b.logger.Println("  on", b.Runner.Name, b.Runner.ShortDescription())
-	}
+	b.printRunningWithHeader()
 
 	b.setCurrentState(BuildRunStatePending)
 
@@ -1341,6 +1338,32 @@ func (b *Build) IsFeatureFlagOn(name string) bool {
 	}
 
 	return on
+}
+
+// getFeatureFlagInfo returns the status of feature flags that differ
+// from their default status.
+func (b *Build) getFeatureFlagInfo() string {
+	var statuses []string
+	for _, ff := range featureflags.GetAll() {
+		isOn := b.IsFeatureFlagOn(ff.Name)
+		isOnByDefault, _ := featureflags.IsOn(ff.DefaultValue)
+
+		if isOn != isOnByDefault {
+			statuses = append(statuses, fmt.Sprintf("%s:%t", ff.Name, isOn))
+		}
+	}
+
+	return strings.Join(statuses, ", ")
+}
+
+func (b *Build) printRunningWithHeader() {
+	b.logger.Println("Running with", AppVersion.Line())
+	if b.Runner != nil && b.Runner.ShortDescription() != "" {
+		b.logger.Println("  on", b.Runner.Name, b.Runner.ShortDescription())
+	}
+	if featureInfo := b.getFeatureFlagInfo(); featureInfo != "" {
+		b.logger.Println("  feature flags:", featureInfo)
+	}
 }
 
 func (b *Build) IsLFSSmudgeDisabled() bool {
