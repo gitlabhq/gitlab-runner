@@ -29,6 +29,7 @@ var (
 	errTooLarge           = errors.New("too large")
 )
 
+//nolint:lll
 type ArtifactsUploaderCommand struct {
 	common.JobCredentials
 	fileArchiver
@@ -36,10 +37,11 @@ type ArtifactsUploaderCommand struct {
 
 	network common.Network
 
-	Name     string                `long:"name" description:"The name of the archive"`
-	ExpireIn string                `long:"expire-in" description:"When to expire artifacts"`
-	Format   common.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
-	Type     string                `long:"artifact-type" description:"Type of generated artifacts"`
+	Name             string                `long:"name" description:"The name of the archive"`
+	ExpireIn         string                `long:"expire-in" description:"When to expire artifacts"`
+	Format           common.ArtifactFormat `long:"artifact-format" description:"Format of generated artifacts"`
+	Type             string                `long:"artifact-type" description:"Type of generated artifacts"`
+	CompressionLevel string                `long:"compression-level" env:"ARTIFACT_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
 }
 
 func (c *ArtifactsUploaderCommand) artifactFilename(name string, format common.ArtifactFormat) string {
@@ -71,7 +73,7 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 	filename := c.artifactFilename(c.Name, format)
 	pr, pw := io.Pipe()
 
-	archiver, err := archive.NewArchiver(archive.Format(format), pw, c.wd, archive.DefaultCompression)
+	archiver, err := archive.NewArchiver(archive.Format(format), pw, c.wd, getCompressionLevel(c.CompressionLevel))
 	if err != nil {
 		_ = pr.CloseWithError(err)
 		return filename, nil, err

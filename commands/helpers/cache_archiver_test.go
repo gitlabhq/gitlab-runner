@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,10 +15,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
 
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -260,4 +263,39 @@ func goCloudObjectExists(t *testing.T, bucketDir string, objectName string) {
 	exists, err := bucket.Exists(ctx, objectName)
 	require.NoError(t, err)
 	assert.True(t, exists)
+}
+
+func TestCacheArchiverCompressionLevel(t *testing.T) {
+	writeTestFile(t, cacheArchiverTestArchivedFile)
+	defer os.Remove(cacheArchiverTestArchivedFile)
+
+	for _, expectedLevel := range []string{"fastest", "fast", "default", "slow", "slowest"} {
+		t.Run(expectedLevel, func(t *testing.T) {
+			mockArchiver := new(archive.MockArchiver)
+			defer mockArchiver.AssertExpectations(t)
+
+			archive.Register(
+				"zip",
+				func(w io.Writer, dir string, level archive.CompressionLevel) (archive.Archiver, error) {
+					assert.Equal(t, getCompressionLevel(expectedLevel), level)
+					return mockArchiver, nil
+				},
+				nil,
+			)
+
+			mockArchiver.On("Archive", mock.Anything, mock.Anything).Return(nil)
+
+			defer os.Remove(cacheArchiverArchive)
+			cmd := CacheArchiverCommand{
+				File: cacheArchiverArchive,
+				fileArchiver: fileArchiver{
+					Paths: []string{
+						cacheArchiverTestArchivedFile,
+					},
+				},
+				CompressionLevel: expectedLevel,
+			}
+			cmd.Execute(nil)
+		})
+	}
 }
