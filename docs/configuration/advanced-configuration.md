@@ -165,7 +165,7 @@ This defines one runner entry.
 | `name`               | The runner's description, just informational |
 | `url`                | URL of the GitLab instance |
 | `token`              | The runner's special token (not to be confused with the registration token) |
-| `tls-ca-file`        | File containing the certificates to verify the peer when using HTTPS |
+| `tls-ca-file`        | File containing the certificates to verify the peer when using HTTPS (see [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md))|
 | `tls-cert-file`      | File containing the certificate to authenticate with the peer when using HTTPS |
 | `tls-key-file`       | File containing the private key to authenticate with the peer when using HTTPS |
 | `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
