@@ -64,7 +64,8 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When set to `true` Runner tries to direct-download all artifacts instead of proxying " +
 			"through GitLab on a first try. Enabling might result in a download failures due to problem validating " +
-			"TLS certificate of Object Storage if it is enabled by GitLab",
+			"TLS certificate of Object Storage if it is enabled by GitLab. " +
+			"See [Self-signed certificates or custom Certification Authorities](tls-self-signed.md)",
 	},
 	{
 		Name:            SkipNoOpBuildStages,

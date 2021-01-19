@@ -430,7 +430,7 @@ Where:
 - `<SECRET_NAME>` is the Kubernetes Secret resource name, as in the above example, `gitlab-domain-cert`.
 
 More information on how GitLab Runner uses these certificates can be found in the
-[Runner Documentation](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates).
+[Runner Documentation](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates-targeting-the-gitlab-server).
 
 ### Set pod labels to CI environment variables keys
 
