@@ -12,6 +12,12 @@ This section can assist when troubleshooting GitLab Runner.
 
 The following relate to general troubleshooting.
 
+### Confirm your GitLab and GitLab Runner versions
+
+GitLab aims to [guarantee backward compatibility](../index.md#gitlab-runner-versions).
+However, as a first troubleshooting step, you should ensure your version
+of GitLab Runner is the same as your GitLab version.
+
 ### What does `coordinator` mean?
 
 The `coordinator` is the GitLab installation from which a job is requested.
