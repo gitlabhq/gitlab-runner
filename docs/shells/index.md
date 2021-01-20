@@ -31,7 +31,7 @@ The currently supported shells are:
 | `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
 | `powershell`  | Fully Supported    | PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default when registering a new runner in version 12.0 or newer. |
 | `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. |
-| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Desktop. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. |
+| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Desktop. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. [Learn how to gain access to the CMD shell when PowerShell is the default shell](#access-cmd-shell-when-powershell-is-the-default). |
 
 If you want to select a particular shell to use other than the default, you need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
@@ -419,7 +419,11 @@ IF !errorlevel! NEQ 0 exit /b !errorlevel!
 goto :EOF
 ```
 
-## Video walkthrough of a working example
+### Access CMD shell when PowerShell is the default
+
+The project: [Call CMD From Default PowerShell in GitLab CI](https://gitlab.com/guided-explorations/microsoft/windows/call-cmd-from-powershell) demonstrates how to gain access to the CMD shell when PowerShell is the default shell on a runner.
+
+### Video walkthrough of working PowerShell examples
 
 The [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc)
 video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci)
