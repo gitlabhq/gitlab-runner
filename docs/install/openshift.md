@@ -86,6 +86,7 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
      name: gitlab-runner
    spec:
      gitlabUrl: https://gitlab.example.com
+     buildImage: alpine
      token: gitlab-runner-secret
      tags: openshift
    EOF
