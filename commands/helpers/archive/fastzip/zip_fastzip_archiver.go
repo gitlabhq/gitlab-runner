@@ -3,7 +3,9 @@ package fastzip
 import (
 	"archive/zip"
 	"context"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/saracen/fastzip"
@@ -37,8 +39,14 @@ func NewArchiver(w io.Writer, dir string, level archive.CompressionLevel) (archi
 
 // Archive archives all files provided.
 func (a *archiver) Archive(ctx context.Context, files map[string]os.FileInfo) error {
+	tmpDir, err := ioutil.TempDir("", "fastzip")
+	if err != nil {
+		return fmt.Errorf("fastzip archiver unable to create temporary directory: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
 	opts := []fastzip.ArchiverOption{
-		fastzip.WithStageDirectory(os.TempDir()),
+		fastzip.WithStageDirectory(tmpDir),
 	}
 	if a.level == archive.FastestCompression {
 		opts = append(opts, fastzip.WithArchiverMethod(zip.Store))
