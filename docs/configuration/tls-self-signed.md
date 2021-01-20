@@ -177,7 +177,7 @@ To install the certificate:
               # Copy and install CA certificate before each job
               pre_build_script = """
               apk update >/dev/null
-              apk add ca-certificates >/dev/null
+              apk add ca-certificates > /dev/null
               rm -rf /var/cache/apk/*
 
               cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
