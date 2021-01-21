@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"regexp"
 	"runtime"
 	"strings"
@@ -2285,6 +2286,9 @@ func TestLocalHelperImage(t *testing.T) {
 		IsSupportingLocalImport: true,
 	}
 
+	cleanupFn := createFakePrebuiltImages(t, defaultHelperImageInfo.Architecture)
+	defer cleanupFn()
+
 	tests := map[string]struct {
 		jobVariables     common.JobVariables
 		helperImageInfo  helperimage.Info
@@ -2473,6 +2477,27 @@ func TestLocalHelperImage(t *testing.T) {
 			image := e.getLocalHelperImage()
 			assert.Equal(t, tt.expectedImage, image)
 		})
+	}
+}
+
+func createFakePrebuiltImages(t *testing.T, architecture string) func() {
+	// Create fake image files so that tests do not need helper images built
+	tempImgDir, err := ioutil.TempDir(os.TempDir(), "runner-tests")
+	require.NoError(t, err)
+
+	prevPrebuiltImagesPaths := PrebuiltImagesPaths
+	PrebuiltImagesPaths = []string{tempImgDir}
+	for _, fakeImgName := range []string{
+		fmt.Sprintf("prebuilt-%s.tar.xz", architecture),
+	} {
+		fakeLocalImage, err := os.Create(path.Join(tempImgDir, fakeImgName))
+		require.NoError(t, err)
+		fakeLocalImage.Close()
+	}
+
+	return func() {
+		os.RemoveAll(tempImgDir)
+		PrebuiltImagesPaths = prevPrebuiltImagesPaths
 	}
 }
 
