@@ -36,13 +36,15 @@ To download the appropriate package for your system:
 For example, for Debian or Ubuntu:
 
 ```shell
-curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/deb/gitlab-runner_<arch>.deb"
+# Replace ${arch} with any of the supported architectures, e.g. x86_64, arm, arm64
+curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/deb/gitlab-runner_${arch}.deb"
 ```
 
 For example, for CentOS or Red Hat Enterprise Linux:
 
 ```shell
-curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_<arch>.rpm"
+# Replace ${arch} with any of the supported architectures, e.g. x86_64, arm, arm64
+curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_${arch}.rpm"
 ```
 
 ### Install
