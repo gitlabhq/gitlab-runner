@@ -34,8 +34,9 @@ license_scanning:
 gosec-sast:
   rules: *merge_request_pipelines_rules
 
-docs lint:
-  image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint:ruby-2.7.2-alpine-3.12-vale-2.4.3-markdownlint-0.24.0"
+# Perform documentation linting on Markdown files
+docs lint markdown:
+  image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.12-vale-2.8.0-markdownlint-0.26.0"
   stage: test
   extends:
   - .merge_request_pipelines
@@ -44,6 +45,16 @@ docs lint:
   script:
   # Lint prose and Markdown
   - make lint-docs VALE_MIN_ALERT_LEVEL=error
+
+# Perform link checks on published HTML files
+docs check links:
+  image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.12-ruby-2.7.2"
+  stage: test
+  extends:
+  - .merge_request_pipelines
+  - .no_cache_and_dependencies
+  needs: []
+  script:
   # Prepare docs for build
   - mv docs/ /tmp/gitlab-docs/content/$DOCS_GITLAB_REPO_SUFFIX
   - cd /tmp/gitlab-docs
