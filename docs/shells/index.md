@@ -57,11 +57,11 @@ cat generated-bash-script | /bin/bash
 
 ### Shell profile loading
 
-For certain executors, the runner will pass the `--login` flag as shown above,
+For certain executors, the runner passes the `--login` flag as shown above,
 which also loads the shell profile. Anything that you have in your `.bashrc`,
 `.bash_logout`, [or any other
 dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_01_02),
-will be executed in your job.
+is executed in your job.
 
 If a [job fails on the `Prepare
 environment`](../faq/README.md#job-failed-system-failure-preparing-environment) stage, it
@@ -85,7 +85,7 @@ The default shell when a new runner is registered using GitLab Runner
 PowerShell doesn't support executing the build in context of another user.
 
 The generated PowerShell script is executed by saving its content to a file and
-passing the file name to the following command:
+passing the filename to the following command:
 
 ```batch
 powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
@@ -288,7 +288,7 @@ specified.
 It doesn't support executing the build in context of another user.
 
 The generated Batch script is executed by saving its content to file and
-passing the file name to the following command:
+passing the filename to the following command:
 
 ```batch
 cmd /Q /C generated-windows-batch.cmd
