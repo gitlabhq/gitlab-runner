@@ -10,7 +10,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 GitLab Runner provides two options to configure certificates to be used to verify TLS peers:
 
-1. **For connections to the GitLab server**: the certificate file can be specified as detailed in the
+- **For connections to the GitLab server**: the certificate file can be specified as detailed in the
   [Supported options for self-signed certificates targeting the GitLab server](#supported-options-for-self-signed-certificates-targeting-the-gitlab-server) section.
 
     **This solves the `x509: certificate signed by unknown authority` problem when registering a runner.**
@@ -22,7 +22,7 @@ GitLab Runner provides two options to configure certificates to be used to verif
     Post https://hostname.tld/api/v4/jobs/request: x509: certificate signed by unknown authority
     ```
 
-1. **A more generic approach which also covers other scenarios such as user scripts, connecting to a cache server or an external Git LFS store**:
+- **A more generic approach which also covers other scenarios such as user scripts, connecting to a cache server or an external Git LFS store**:
   a certificate can be specified and installed on the container as detailed in the
   [Trusting TLS certificates for Docker and Kubernetes executors](#trusting-tls-certificates-for-docker-and-kubernetes-executors) section.
 
@@ -40,16 +40,16 @@ the [next section](#trusting-tls-certificates-for-docker-and-kubernetes-executor
 
 GitLab Runner supports the following options:
 
-- **Default**: GitLab Runner reads the system certificate store and verifies the
+- **Default - Read the system certificate**: GitLab Runner reads the system certificate store and verifies the
   GitLab server against the certificate authorities (CA) stored in the system. Note that reading from
   the system certificate store is [not supported in Windows](https://github.com/golang/go/issues/16736).
 
-- GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/README.md#gitlab-runner-register)
+- **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/README.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
   This file will be read every time the runner tries to access the GitLab server.
 
-- GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
+- **Read a PEM certificate**: GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
   predefined file:
   - `/etc/gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as root.
 
@@ -63,7 +63,7 @@ GitLab Runner supports the following options:
 
   - `~/.gitlab-runner/certs/hostname.crt` on *nix systems when GitLab Runner is executed as non-root.
   - `./certs/hostname.crt` on other systems. If running GitLab Runner as a Windows service,
-    this will not work. Use the last option instead.
+    this will not work. Specify a custom certificate file instead.
 
 Notes:
 
