@@ -15,6 +15,7 @@
 # generally used for linux based Dockerfiles.
 BASE_TAR_PATH := out/helper-images/prebuilt
 TAR_XZ += ${BASE_TAR_PATH}-x86_64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-x86_64-pwsh.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-arm.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-arm64.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-s390x.tar.xz
@@ -55,21 +56,39 @@ ${BASE_BINARY_PATH}.%: $(HELPER_GO_FILES) $(GOX)
 	$(GOX) -osarch=$(GO_ARCH_$*) -ldflags "$(GO_LDFLAGS)" -output=$@ $(PKG)/apps/gitlab-runner-helper
 
 # Build the Runner Helper tar files for host platform.
-.PHONY: helper-dockerarchive-host
-helper-dockerarchive-host: ${BASE_TAR_PATH}-$(shell uname -m).tar.xz
+.PHONY: _helper-dockerarchive-host
+_helper-dockerarchive-host: ${BASE_TAR_PATH}-$(shell uname -m)$(IMAGE_VARIANT_SUFFIX).tar.xz
 	@ # NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
 	@ # See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
-	docker import ${BASE_TAR_PATH}-$(shell uname -m).tar.xz \
+	docker import ${BASE_TAR_PATH}-$(shell uname -m)$(IMAGE_VARIANT_SUFFIX).tar.xz \
 		--change "ENTRYPOINT [\"/usr/bin/dumb-init\", \"/entrypoint\"]" \
-		gitlab/gitlab-runner-helper:$(shell uname -m)-$(REVISION)
+		gitlab/gitlab-runner-helper:$(shell uname -m)-$(REVISION)$(IMAGE_VARIANT_SUFFIX)
+
+.PHONY: helper-dockerarchive-host
+helper-dockerarchive-host:
+	@$(MAKE) _helper-dockerarchive-host IMAGE_VARIANT_SUFFIX=''
+	@$(MAKE) _helper-dockerarchive-host IMAGE_VARIANT_SUFFIX='-pwsh'
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive
 helper-dockerarchive: $(TAR_XZ)
 
+${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
+	xz -f -9 $<
+
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz -f -9 $<
 
+# See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
+${BASE_TAR_PATH}-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
+${BASE_TAR_PATH}-%-pwsh.tar: export PWSH_ALPINE_IMAGE_VERSION ?= 3.12
+${BASE_TAR_PATH}-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
+${BASE_TAR_PATH}-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-%-pwsh.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker $* $@
+
+${BASE_TAR_PATH}-%.tar: export ALPINE_IMAGE_VERSION ?= 3.12.0
 ${BASE_TAR_PATH}-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker $* $@

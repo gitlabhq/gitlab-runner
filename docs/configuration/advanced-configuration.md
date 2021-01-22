@@ -931,6 +931,13 @@ valid and point to the same image.
     helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
 ```
 
+#### When using Powershell Core
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27252) in GitLab 13.9.
+
+An additional version of the helper image for Linux
+containing Powershell Core is published under the `gitlab/gitlab-runner-helper:XYZ-pwsh` tag.
+
 ## The `[runners.custom_build_dir]` section
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
