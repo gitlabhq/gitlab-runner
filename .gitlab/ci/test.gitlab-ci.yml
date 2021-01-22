@@ -177,7 +177,8 @@ unit test with race:
   extends:
   - unit test
   - .go-cache
-  allow_failure: true
+  allow_failure:
+    exit_codes: 1
   variables:
     CGO_ENABLED: "1"
     TESTFLAGS: -cover -race
@@ -243,7 +244,8 @@ fuzz variable mask:
     - .testoutput/
     when: always
     expire_in: 7d
-  allow_failure: true
+  allow_failure:
+    exit_codes: 1
 
 .windows unit test:
   extends:
