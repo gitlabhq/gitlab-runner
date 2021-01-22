@@ -278,7 +278,7 @@ For example:
     Timezone = "UTC"
 ```
 
-In this configuration, every weekday between 9 and 17 UTC, machines are overprovisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
+In this configuration, every weekday between 9 and 16:59 UTC, machines are overprovisioned to handle the large traffic during operating hours. On the weekend, `IdleCount` drops to 5 to account for the drop in traffic.
 The rest of the time, the values are taken from the defaults in the root - `IdleCount = 10` and `IdleTime = 1800`.
 
 NOTE:
