@@ -795,7 +795,7 @@ For more information, see [Building images with kaniko and GitLab CI/CD](https:/
 At the moment we are using `kube exec` to run the scripts, which relies on
 having a stable network connection between the Runner and the pod for the duration of the command.
 This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
-If you are experiencing this problem turn off the feature flag [FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY](../configuration/feature-flags.md#available-feature-flags)
+If you are experiencing this problem turn off the feature flag [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags)
 to use `kube attach` for script execution, which is more stable.
 
 We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
