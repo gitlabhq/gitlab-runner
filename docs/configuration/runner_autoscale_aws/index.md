@@ -68,7 +68,7 @@ as the Runner Manager that spawns new machines. Choose a distribution that both
 Docker and GitLab Runner support, like Ubuntu, Debian, CentOS, or RHEL.
 
 This doesn't have to be a powerful
-machine since it will not run any jobs itself, a `t2.micro` instance will do.
+machine since it will not run any jobs itself, so for your initial configuration you can start with a smaller instance such as a `t4g.nano`.
 This machine will be a dedicated host since we need it always up and running,
 thus it will be the only standard cost.
 
