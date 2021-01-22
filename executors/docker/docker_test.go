@@ -28,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -44,12 +45,6 @@ func TestMain(m *testing.M) {
 
 	flag.Parse()
 	os.Exit(m.Run())
-}
-
-// ImagePullOptions contains the RegistryAuth which is inferred from the docker
-// configuration for the user, so just mock it out here.
-func buildImagePullOptions() mock.AnythingOfTypeArgument {
-	return mock.AnythingOfType("ImagePullOptions")
 }
 
 func TestParseDeviceStringOne(t *testing.T) {
@@ -152,6 +147,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
+	p := new(pull.MockManager)
+	defer p.AssertExpectations(t)
+
 	servicePart := fmt.Sprintf("-%s-0", strings.ReplaceAll(serviceName, "/", "__"))
 	containerNameRegex, err := regexp.Compile("runner-abcdef12-project-0-concurrent-0-[^-]+" + servicePart)
 	require.NoError(t, err)
@@ -166,9 +164,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 			Architecture: "amd64",
 		},
 		volumeParser: parser.NewLinuxParser(),
+		pullManager:  p,
 	}
 
-	options := buildImagePullOptions()
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
 	e.Build = &common.Build{
@@ -195,13 +193,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 
 	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
 
-	c.On("ImagePullBlocking", e.Context, imageName, options).
-		Return(nil).
+	p.On("GetDockerImage", imageName).
+		Return(&types.ImageInspect{ID: "helper-image"}, nil).
 		Once()
-
-	c.On("ImageInspectWithRaw", e.Context, imageName).
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Twice()
 
 	c.On(
 		"ContainerRemove",
@@ -248,59 +242,6 @@ func TestServiceFromNamedImage(t *testing.T) {
 	}
 }
 
-func TestDockerForNamedImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
-
-	e := executorWithMockClient(c)
-	options := buildImagePullOptions()
-
-	c.On("ImagePullBlocking", e.Context, "test:latest", options).
-		Return(os.ErrNotExist).
-		Once()
-
-	c.On("ImagePullBlocking", e.Context, "tagged:tag", options).
-		Return(os.ErrNotExist).
-		Once()
-
-	c.On("ImagePullBlocking", e.Context, validSHA, options).
-		Return(os.ErrNotExist).
-		Once()
-
-	image, err := e.pullDockerImage("test", nil)
-	assert.Error(t, err)
-	assert.Nil(t, image)
-
-	image, err = e.pullDockerImage("tagged:tag", nil)
-	assert.Error(t, err)
-	assert.Nil(t, image)
-
-	image, err = e.pullDockerImage(validSHA, nil)
-	assert.Error(t, err)
-	assert.Nil(t, image)
-}
-
-func TestDockerForExistingImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	options := buildImagePullOptions()
-
-	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
-		Return(nil).
-		Once()
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	image, err := e.pullDockerImage("existing", nil)
-	assert.NoError(t, err)
-	assert.NotNil(t, image)
-}
-
 func executorWithMockClient(c *docker.MockClient) *executor {
 	e := &executor{client: c}
 	e.Context = context.Background()
@@ -312,18 +253,17 @@ func TestHelperImageWithVariable(t *testing.T) {
 	c := new(docker.MockClient)
 	defer c.AssertExpectations(t)
 
+	p := new(pull.MockManager)
+	defer p.AssertExpectations(t)
+
 	runnerImageTag := "gitlab/gitlab-runner:" + common.REVISION
-	c.On("ImageInspectWithRaw", mock.Anything, runnerImageTag).
-		Return(types.ImageInspect{}, nil, errors.New("not found")).
-		Once()
-	c.On("ImagePullBlocking", mock.Anything, runnerImageTag, mock.Anything).
-		Return(nil).
-		Once()
-	c.On("ImageInspectWithRaw", mock.Anything, runnerImageTag).
-		Return(types.ImageInspect{ID: "helper-image"}, nil, nil).
+
+	p.On("GetDockerImage", runnerImageTag).
+		Return(&types.ImageInspect{ID: "helper-image"}, nil).
 		Once()
 
 	e := executorWithMockClient(c)
+	e.pullManager = p
 
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{
@@ -345,250 +285,6 @@ func (e *executor) setPolicyMode(pullPolicies ...common.DockerPullPolicy) {
 			},
 		},
 	}
-}
-
-func TestDockerGetImageById(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	// Use default policy
-	e := executorWithMockClient(c)
-	e.setPolicyMode()
-
-	c.On("ImageInspectWithRaw", e.Context, "ID").
-		Return(types.ImageInspect{ID: "ID"}, nil, nil).
-		Once()
-
-	image, err := e.getDockerImage("ID")
-	assert.NoError(t, err)
-	assert.NotNil(t, image)
-	assert.Equal(t, "ID", image.ID)
-}
-
-func TestDockerUnknownPolicyMode(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode("unknown")
-
-	_, err := e.getDockerImage("not-existing")
-	assert.Error(t, err)
-}
-
-func TestDockerPolicyModeNever(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode(common.PullPolicyNever)
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "existing"}, nil, nil).
-		Once()
-
-	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
-		Once()
-
-	image, err := e.getDockerImage("existing")
-	assert.NoError(t, err)
-	assert.Equal(t, "existing", image.ID)
-
-	_, err = e.getDockerImage("not-existing")
-	assert.Error(t, err)
-}
-
-func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode(common.PullPolicyIfNotPresent)
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	image, err := e.getDockerImage("existing")
-	assert.NoError(t, err)
-	assert.NotNil(t, image)
-}
-
-func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode(common.PullPolicyIfNotPresent)
-
-	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
-		Once()
-
-	options := buildImagePullOptions()
-	c.On("ImagePullBlocking", e.Context, "not-existing:latest", options).
-		Return(nil).
-		Once()
-
-	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	image, err := e.getDockerImage("not-existing")
-	assert.NoError(t, err)
-	assert.NotNil(t, image)
-
-	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	// It shouldn't execute the pull for second time
-	image, err = e.getDockerImage("not-existing")
-	assert.NoError(t, err)
-	assert.NotNil(t, image)
-}
-
-func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode(common.PullPolicyAlways)
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	options := buildImagePullOptions()
-	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
-		Return(nil).
-		Once()
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	image, err := e.getDockerImage("existing")
-	assert.NoError(t, err)
-	assert.NotNil(t, image)
-}
-
-func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode(common.PullPolicyAlways)
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	options := buildImagePullOptions()
-	c.On("ImagePullBlocking", e.Context, "existing:latest", options).
-		Return(fmt.Errorf("not found")).
-		Once()
-
-	image, err := e.getDockerImage("existing")
-	assert.Error(t, err)
-	assert.Nil(t, image)
-}
-
-func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode(common.PullPolicyAlways)
-
-	c.On("ImageInspectWithRaw", e.Context, "to-pull").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	options := buildImagePullOptions()
-	c.On("ImagePullBlocking", e.Context, "to-pull:latest", options).
-		Return(os.ErrNotExist).
-		Once()
-
-	image, err := e.getDockerImage("to-pull")
-	assert.Error(t, err)
-	assert.Nil(t, image, "Forces to authorize pulling")
-
-	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
-		Once()
-
-	c.On("ImagePullBlocking", e.Context, "not-existing:latest", options).
-		Return(os.ErrNotExist).
-		Once()
-
-	image, err = e.getDockerImage("not-existing")
-	assert.Error(t, err)
-	assert.Nil(t, image, "No existing image")
-}
-
-func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	logger, _ := logrustest.NewNullLogger()
-	output := bytes.NewBufferString("")
-	e := &executor{client: c}
-	e.Build = new(common.Build)
-	e.AbstractExecutor = executors.AbstractExecutor{
-		BuildLogger: common.NewBuildLogger(&common.Trace{Writer: output}, logger.WithField("test", t.Name())),
-		Build:       new(common.Build),
-		Context:     context.Background(),
-	}
-
-	e.setPolicyMode(common.PullPolicyAlways, common.PullPolicyIfNotPresent)
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
-		Once()
-
-	c.On("ImagePullBlocking", e.Context, "existing:latest", buildImagePullOptions()).
-		Return(errors.New("received unexpected HTTP status: 502 Bad Gateway")).
-		Once()
-
-	c.On("ImageInspectWithRaw", e.Context, "existing").
-		Return(types.ImageInspect{ID: "local-image-id"}, nil, nil).
-		Once()
-
-	image, err := e.getDockerImage("existing")
-	assert.NoError(t, err)
-	assert.Contains(t, output.String(), `WARNING: Failed to pull image with policy "always": `+
-		`received unexpected HTTP status: 502 Bad Gateway`)
-	assert.Contains(t, output.String(), `Attempt #2: Trying "if-not-present" pull policy`)
-	assert.Contains(t, output.String(), `Using locally found image version due to "if-not-present" pull policy`)
-	require.NotNil(t, image)
-	assert.Equal(t, "local-image-id", image.ID)
-}
-
-func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *testing.T) {
-	c := new(docker.MockClient)
-	defer c.AssertExpectations(t)
-
-	e := executorWithMockClient(c)
-	e.setPolicyMode(common.PullPolicyAlways, common.PullPolicyIfNotPresent)
-
-	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
-		Once()
-
-	options := buildImagePullOptions()
-	c.On("ImagePullBlocking", e.Context, "not-existing:latest", options).
-		Return(os.ErrNotExist).
-		Twice()
-
-	c.On("ImageInspectWithRaw", e.Context, "not-existing").
-		Return(types.ImageInspect{}, nil, os.ErrNotExist).
-		Once()
-
-	image, err := e.getDockerImage("not-existing")
-	assert.Error(t, err)
-	assert.Nil(t, image, "No existing image")
 }
 
 func TestPrepareBuildsDir(t *testing.T) {
@@ -1139,118 +835,6 @@ func TestCreateDependencies(t *testing.T) {
 	assert.Equal(t, testError, err)
 }
 
-func getTestExecutor() *executor {
-	e := new(executor)
-	e.Build = &common.Build{
-		Runner: &common.RunnerConfig{},
-	}
-
-	e.Build.Token = "abcd123456"
-
-	e.Config = common.RunnerConfig{}
-	e.Config.Docker = &common.DockerConfig{
-		PullPolicy: common.DockerPullPolicies{common.PullPolicyAlways},
-	}
-
-	return e
-}
-
-func testGetDockerImage(
-	t *testing.T,
-	e *executor,
-	imageName string,
-	setClientExpectations func(c *docker.MockClient, imageName string),
-) {
-	t.Run("get:"+imageName, func(t *testing.T) {
-		c := new(docker.MockClient)
-		defer c.AssertExpectations(t)
-
-		e.client = c
-
-		setClientExpectations(c, imageName)
-
-		image, err := e.getDockerImage(imageName)
-		assert.NoError(t, err, "Should not generate error")
-		assert.Equal(t, "this-image", image.ID, "Image ID")
-	})
-}
-
-func testDeniesDockerImage(
-	t *testing.T,
-	e *executor,
-	imageName string,
-	setClientExpectations func(c *docker.MockClient, imageName string),
-) {
-	t.Run("deny:"+imageName, func(t *testing.T) {
-		c := new(docker.MockClient)
-		defer c.AssertExpectations(t)
-
-		e.client = c
-
-		setClientExpectations(c, imageName)
-
-		_, err := e.getDockerImage(imageName)
-		assert.Error(t, err, "Should generate error")
-	})
-}
-
-func addFindsLocalImageExpectations(c *docker.MockClient, imageName string) {
-	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "this-image"}, nil, nil).
-		Once()
-}
-
-func addPullsRemoteImageExpectations(c *docker.MockClient, imageName string) {
-	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "not-this-image"}, nil, nil).
-		Once()
-
-	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("types.ImagePullOptions")).
-		Return(nil).
-		Once()
-
-	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "this-image"}, nil, nil).
-		Once()
-}
-
-func addDeniesPullExpectations(c *docker.MockClient, imageName string) {
-	c.On("ImageInspectWithRaw", mock.Anything, imageName).
-		Return(types.ImageInspect{ID: "image"}, nil, nil).
-		Once()
-
-	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("types.ImagePullOptions")).
-		Return(fmt.Errorf("deny pulling")).
-		Once()
-}
-
-func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
-	remoteImage := "registry.domain.tld:5005/image/name:version"
-	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
-
-	e := getTestExecutor()
-	e.Context = context.Background()
-	e.Config.Docker.PullPolicy = common.DockerPullPolicies{common.PullPolicyAlways}
-
-	testGetDockerImage(t, e, remoteImage, addPullsRemoteImageExpectations)
-	testDeniesDockerImage(t, e, remoteImage, addDeniesPullExpectations)
-
-	testGetDockerImage(t, e, gitlabImage, addPullsRemoteImageExpectations)
-	testDeniesDockerImage(t, e, gitlabImage, addDeniesPullExpectations)
-}
-
-func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
-	remoteImage := "registry.domain.tld:5005/image/name:version"
-	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
-
-	e := getTestExecutor()
-	e.Context = context.Background()
-	e.Config.Docker.PullPolicy = common.DockerPullPolicies{common.PullPolicyIfNotPresent}
-
-	testGetDockerImage(t, e, remoteImage, addFindsLocalImageExpectations)
-	testGetDockerImage(t, e, gitlabImage, addFindsLocalImageExpectations)
-}
-
 func TestDockerWatchOn_1_12_4(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
@@ -1289,6 +873,9 @@ func TestDockerWatchOn_1_12_4(t *testing.T) {
 	require.NoError(t, err)
 
 	err = e.createLabeler()
+	require.NoError(t, err)
+
+	err = e.createPullManager()
 	require.NoError(t, err)
 
 	container, err := e.createContainer(
@@ -1406,6 +993,9 @@ func testDockerConfigurationWithJobContainer(
 	err := e.createVolumesManager()
 	require.NoError(t, err)
 
+	err = e.createPullManager()
+	require.NoError(t, err)
+
 	_, err = e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err, "Should create container without errors")
 }
@@ -1422,6 +1012,9 @@ func testDockerConfigurationWithServiceContainer(
 		Return(nil).Once()
 
 	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	err = e.createPullManager()
 	require.NoError(t, err)
 
 	_, err = e.createService(
@@ -1523,6 +1116,7 @@ func TestDockerServicesTmpfsSetting(t *testing.T) {
 
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
 }
+
 func TestDockerTmpfsSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		Tmpfs: map[string]string{
