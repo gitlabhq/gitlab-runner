@@ -211,7 +211,7 @@ release_docker_helper_images() {
     tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
     tag_latest "${helper_image_s390x}" "${helper_image_s390x_latest}"
     tag "${helper_image_x86_64}" "${helper_image_x86_64_version}"
-    tag "${helper_image_x86_64}" "${helper_image_x86_64_pwsh_version}"
+    tag "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_version}"
     tag "${helper_image_arm}" "${helper_image_arm_version}"
     tag "${helper_image_arm64}" "${helper_image_arm64_version}"
     tag "${helper_image_s390x}" "${helper_image_s390x_version}"
