@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMeter_New_NoUpdateFrequency(t *testing.T) {
+func TestReader_New_NoUpdateFrequency(t *testing.T) {
 	// the original io.ReadCloser is returned if the meter update frequency
 	// is zero.
 	reader := ioutil.NopCloser(nil)
@@ -19,13 +19,13 @@ func TestMeter_New_NoUpdateFrequency(t *testing.T) {
 	assert.Equal(t, reader, m)
 }
 
-func TestMeter_New(t *testing.T) {
+func TestReader_New(t *testing.T) {
 	complete := new(sync.WaitGroup)
 	complete.Add(1)
 
 	m := NewReader(
 		ioutil.NopCloser(strings.NewReader("foobar")),
-		500*time.Millisecond,
+		50*time.Millisecond,
 		func(written uint64, since time.Duration, done bool) {
 			if done {
 				assert.Equal(t, uint64(6), written)

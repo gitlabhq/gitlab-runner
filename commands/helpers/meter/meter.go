@@ -1,7 +1,6 @@
 package meter
 
 import (
-	"io"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,44 +16,17 @@ type TransferMeterCommand struct {
 type UpdateCallback func(written uint64, since time.Duration, done bool)
 
 type meter struct {
-	r     io.ReadCloser
-	w     io.WriteCloser
 	count uint64
 
 	done, notify chan struct{}
 	close        sync.Once
 }
 
-func NewReader(r io.ReadCloser, frequency time.Duration, fn UpdateCallback) io.ReadCloser {
-	if frequency == 0 {
-		return r
-	}
-
-	m := &meter{
-		r:      r,
+func newMeter() *meter {
+	return &meter{
 		done:   make(chan struct{}),
 		notify: make(chan struct{}),
 	}
-
-	m.start(frequency, fn)
-
-	return m
-}
-
-func NewWriter(w io.WriteCloser, frequency time.Duration, fn UpdateCallback) io.WriteCloser {
-	if frequency == 0 {
-		return w
-	}
-
-	m := &meter{
-		w:      w,
-		done:   make(chan struct{}),
-		notify: make(chan struct{}),
-	}
-
-	m.start(frequency, fn)
-
-	return m
 }
 
 func (m *meter) start(frequency time.Duration, fn UpdateCallback) {
@@ -83,27 +55,11 @@ func (m *meter) start(frequency time.Duration, fn UpdateCallback) {
 	}()
 }
 
-func (m *meter) Read(p []byte) (int, error) {
-	n, err := m.r.Read(p)
-	atomic.AddUint64(&m.count, uint64(n))
-
-	return n, err
-}
-
-func (m *meter) Write(p []byte) (int, error) {
-	n, err := m.w.Write(p)
-	atomic.AddUint64(&m.count, uint64(n))
-
-	return n, err
-}
-
-func (m *meter) Close() error {
+func (m *meter) doClose() {
 	m.close.Do(func() {
 		// notify we're done
 		close(m.notify)
 		// wait for close
 		<-m.done
 	})
-
-	return m.r.Close()
 }

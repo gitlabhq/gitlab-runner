@@ -105,7 +105,7 @@ func (c *ArtifactsUploaderCommand) Run() error {
 		Type:     c.Type,
 	}
 
-	stream = meter.New(
+	stream = meter.NewReader(
 		stream,
 		c.RunnerMeterFrequency,
 		meter.LabelledRateFormat(os.Stdout, "Uploading artifacts", meter.UnknownTotalSize),
