@@ -233,13 +233,19 @@ packagecloud-deps:
 packagecloud-deb:
 	# Sending Debian compatible packages...
 	-for DIST in $(DEB_PLATFORMS); do \
-		package_cloud push --url $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD)/$$DIST out/deb/*.deb; \
+		echo "===================="; \
+		echo "$$DIST"; \
+		echo "====================" ;\
+		package_cloud push --verbose --url $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD)/$$DIST out/deb/*.deb; \
 	done
 
 packagecloud-rpm:
 	# Sending RedHat compatible packages...
 	-for DIST in $(RPM_PLATFORMS); do \
-		package_cloud push --url $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD)/$$DIST out/rpm/*.rpm; \
+		echo "===================="; \
+		echo "$$DIST"; \
+		echo "====================" ;\
+		package_cloud push --verbose --url $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD)/$$DIST out/rpm/*.rpm; \
 	done
 
 packagecloud-yank:
