@@ -16,6 +16,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
@@ -27,6 +28,8 @@ import (
 type CacheArchiverCommand struct {
 	fileArchiver
 	retryHelper
+	meter.TransferMeterCommand
+
 	File       string   `long:"file" description:"The path to file"`
 	URL        string   `long:"url" description:"URL of remote cache resource (pre-signed URL)"`
 	GoCloudURL string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
@@ -57,11 +60,18 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 		return err
 	}
 
+	rc := meter.New(
+		file,
+		c.RunnerMeterFrequency,
+		meter.LabelledRateFormat(os.Stdout, "Uploading cache", fi.Size()),
+	)
+	defer rc.Close()
+
 	if c.GoCloudURL != "" {
-		return c.handleGoCloudURL(file)
+		return c.handleGoCloudURL(rc)
 	}
 
-	return c.handlePresignedURL(fi, file)
+	return c.handlePresignedURL(fi, rc)
 }
 
 func (c *CacheArchiverCommand) handlePresignedURL(fi os.FileInfo, file io.Reader) error {

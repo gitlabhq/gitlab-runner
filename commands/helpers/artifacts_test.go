@@ -124,7 +124,7 @@ func (m *testNetwork) consumeRawUpload(reader io.Reader) common.UploadState {
 
 func (m *testNetwork) UploadRawArtifacts(
 	config common.JobCredentials,
-	reader io.Reader,
+	reader io.ReadCloser,
 	options common.ArtifactsOptions,
 ) common.UploadState {
 	m.uploadCalled++

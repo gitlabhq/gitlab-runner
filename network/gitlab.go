@@ -559,17 +559,30 @@ func (n *GitLabClient) createPatchTraceResult(
 	}
 }
 
-func (n *GitLabClient) createArtifactsForm(mpw *multipart.Writer, reader io.Reader, baseName string) error {
-	wr, err := mpw.CreateFormFile("file", baseName)
-	if err != nil {
-		return err
-	}
+func (n *GitLabClient) createArtifactsForm(reader io.Reader, baseName string) (io.ReadCloser, string) {
+	pr, pw := io.Pipe()
 
-	_, err = io.Copy(wr, reader)
-	if err != nil {
-		return err
-	}
-	return nil
+	mpw := multipart.NewWriter(pw)
+
+	go func() {
+		defer func() {
+			_ = mpw.Close()
+			_ = pw.Close()
+		}()
+
+		wr, err := mpw.CreateFormFile("file", baseName)
+		if err != nil {
+			_ = pw.CloseWithError(err)
+			return
+		}
+
+		_, err = io.Copy(wr, reader)
+		if err != nil {
+			_ = pw.CloseWithError(err)
+		}
+	}()
+
+	return pr, mpw.FormDataContentType()
 }
 
 func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {
@@ -592,23 +605,16 @@ func uploadRawArtifactsQuery(options common.ArtifactsOptions) url.Values {
 
 func (n *GitLabClient) UploadRawArtifacts(
 	config common.JobCredentials,
-	reader io.Reader,
+	reader io.ReadCloser,
 	options common.ArtifactsOptions,
 ) common.UploadState {
-	pr, pw := io.Pipe()
-	defer func() { _ = pr.Close() }()
+	defer func() {
+		_ = reader.Close()
+	}()
 
-	mpw := multipart.NewWriter(pw)
-
-	go func() {
-		defer func() {
-			_ = mpw.Close()
-			_ = pw.Close()
-		}()
-		err := n.createArtifactsForm(mpw, reader, options.BaseName)
-		if err != nil {
-			_ = pw.CloseWithError(err)
-		}
+	pr, contentType := n.createArtifactsForm(reader, options.BaseName)
+	defer func() {
+		_ = pr.Close()
 	}()
 
 	query := uploadRawArtifactsQuery(options)
@@ -620,7 +626,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 		http.MethodPost,
 		fmt.Sprintf("jobs/%d/artifacts?%s", config.ID, query.Encode()),
 		pr,
-		mpw.FormDataContentType(),
+		contentType,
 		headers,
 	)
 
@@ -633,6 +639,9 @@ func (n *GitLabClient) UploadRawArtifacts(
 		log = log.WithField("responseStatus", res.Status)
 	}
 
+	closeWithLogging(log, pr, "pipe")
+	closeWithLogging(log, reader, "archive")
+
 	messagePrefix := "Uploading artifacts to coordinator..."
 	if options.Type != "" {
 		messagePrefix = fmt.Sprintf("Uploading artifacts as %q to coordinator...", options.Type)
@@ -642,12 +651,20 @@ func (n *GitLabClient) UploadRawArtifacts(
 		log.WithError(err).Errorln(messagePrefix, "error")
 		return common.UploadFailed
 	}
+
 	defer func() {
 		_, _ = io.Copy(ioutil.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
 
 	return n.determineUploadState(res.StatusCode, log, messagePrefix)
+}
+
+func closeWithLogging(log logrus.FieldLogger, c io.Closer, name string) {
+	err := c.Close()
+	if err != nil {
+		log.WithError(err).Warningf("Error while closing the %s reader", name)
+	}
 }
 
 func (n *GitLabClient) determineUploadState(
