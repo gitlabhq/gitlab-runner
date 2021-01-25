@@ -117,9 +117,9 @@ func TestCacheArchiverRemoteServerNotFound(t *testing.T) {
 
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
-	os.Remove(cacheExtractorArchive)
+	defer os.Remove(cacheArchiverArchive)
 	cmd := CacheArchiverCommand{
-		File:    cacheExtractorArchive,
+		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/invalid-file.zip",
 		Timeout: 0,
 	}
@@ -134,9 +134,9 @@ func TestCacheArchiverRemoteServer(t *testing.T) {
 
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
-	os.Remove(cacheExtractorArchive)
+	defer os.Remove(cacheArchiverArchive)
 	cmd := CacheArchiverCommand{
-		File:    cacheExtractorArchive,
+		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/cache.zip",
 		Timeout: 0,
 	}
@@ -151,14 +151,9 @@ func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
 
 	objectName := "path/to/cache.zip"
 
-	testData := "hello world\n"
-	err := ioutil.WriteFile(cacheArchiverArchive, []byte(testData), 0600)
-	require.NoError(t, err)
-	defer os.Remove(cacheArchiverArchive)
-
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
-	os.Remove(cacheExtractorArchive)
+	defer os.Remove(cacheArchiverArchive)
 	cmd := CacheArchiverCommand{
 		File:       cacheArchiverArchive,
 		GoCloudURL: fmt.Sprintf("testblob://bucket/" + objectName),
@@ -178,9 +173,9 @@ func TestCacheArchiverRemoteServerWithHeaders(t *testing.T) {
 
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
-	os.Remove(cacheExtractorArchive)
+	defer os.Remove(cacheArchiverArchive)
 	cmd := CacheArchiverCommand{
-		File:    cacheExtractorArchive,
+		File:    cacheArchiverArchive,
 		URL:     ts.URL + "/cache.zip",
 		Headers: []string{"Content-Type: application/zip", "x-ms-blob-type:   BlockBlob "},
 		Timeout: 0,
@@ -201,9 +196,9 @@ func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
 
-	os.Remove(cacheExtractorArchive)
+	defer os.Remove(cacheArchiverArchive)
 	cmd := CacheArchiverCommand{
-		File: cacheExtractorArchive,
+		File: cacheArchiverArchive,
 		URL:  ts.URL + "/timeout",
 	}
 	cmd.getClient().Timeout = 1 * time.Millisecond
@@ -217,9 +212,9 @@ func TestCacheArchiverRemoteServerTimedOut(t *testing.T) {
 func TestCacheArchiverRemoteServerFailOnInvalidServer(t *testing.T) {
 	removeHook := helpers.MakeFatalToPanic()
 	defer removeHook()
-	os.Remove(cacheExtractorArchive)
+	defer os.Remove(cacheArchiverArchive)
 	cmd := CacheArchiverCommand{
-		File:    cacheExtractorArchive,
+		File:    cacheArchiverArchive,
 		URL:     "http://localhost:65333/cache.zip",
 		Timeout: 0,
 	}
