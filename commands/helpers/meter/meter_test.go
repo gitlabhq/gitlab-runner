@@ -17,7 +17,7 @@ func TestMeter_New_NoUpdateFrequency(t *testing.T) {
 	// the original io.ReadCloser is returned if the meter update frequency
 	// is zero.
 	reader := ioutil.NopCloser(nil)
-	m := New(reader, 0, func(uint64, time.Duration, bool) {})
+	m := NewReader(reader, 0, func(uint64, time.Duration, bool) {})
 	assert.Equal(t, reader, m)
 }
 
@@ -25,7 +25,7 @@ func TestMeter_New(t *testing.T) {
 	complete := new(sync.WaitGroup)
 	complete.Add(1)
 
-	m := New(
+	m := NewReader(
 		ioutil.NopCloser(strings.NewReader("foobar")),
 		500*time.Millisecond,
 		func(written uint64, since time.Duration, done bool) {

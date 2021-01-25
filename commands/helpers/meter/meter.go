@@ -20,25 +20,48 @@ type UpdateCallback func(written uint64, since time.Duration, done bool)
 
 type meter struct {
 	r     io.ReadCloser
+	w     io.WriteCloser
 	count uint64
 
 	done, notify chan struct{}
 	close        sync.Once
 }
 
-func New(r io.ReadCloser, frequency time.Duration, fn UpdateCallback) io.ReadCloser {
+func NewReader(r io.ReadCloser, frequency time.Duration, fn UpdateCallback) io.ReadCloser {
 	if frequency == 0 {
 		return r
-	}
-
-	if frequency < time.Second {
-		frequency = time.Second
 	}
 
 	m := &meter{
 		r:      r,
 		done:   make(chan struct{}),
 		notify: make(chan struct{}),
+	}
+
+	m.start(frequency, fn)
+
+	return m
+}
+
+func NewWriter(w io.WriteCloser, frequency time.Duration, fn UpdateCallback) io.WriteCloser {
+	if frequency == 0 {
+		return w
+	}
+
+	m := &meter{
+		w:      w,
+		done:   make(chan struct{}),
+		notify: make(chan struct{}),
+	}
+
+	m.start(frequency, fn)
+
+	return m
+}
+
+func (m *meter) start(frequency time.Duration, fn UpdateCallback) {
+	if frequency < time.Second {
+		frequency = time.Second
 	}
 
 	started := time.Now()
@@ -60,12 +83,17 @@ func New(r io.ReadCloser, frequency time.Duration, fn UpdateCallback) io.ReadClo
 			}
 		}
 	}()
-
-	return m
 }
 
 func (m *meter) Read(p []byte) (int, error) {
 	n, err := m.r.Read(p)
+	atomic.AddUint64(&m.count, uint64(n))
+
+	return n, err
+}
+
+func (m *meter) Write(p []byte) (int, error) {
+	n, err := m.w.Write(p)
 	atomic.AddUint64(&m.count, uint64(n))
 
 	return n, err
