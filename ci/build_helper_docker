@@ -12,13 +12,6 @@ source "${SCRIPTPATH}/docker_buildx_commands"
 # shellcheck source=ci/.colors
 source "${SCRIPTPATH}/.colors"
 
-experimental=$(_docker_experimental info -f '{{json .ExperimentalBuild}}')
-if [ "${experimental}" = 'false' ]; then
-    echo -e "${RED}Docker experimental mode needs to be enabled for multi-platform build support. Aborting."
-    echo -e "See https://github.com/docker/cli/blob/master/experimental/README.md#use-docker-experimental for more information.${RST}"
-    exit 1
-fi
-
 TARGET_ARCH=$1
 TARGET_FILE=$2
 
