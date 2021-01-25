@@ -8,7 +8,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -639,8 +638,8 @@ func (n *GitLabClient) UploadRawArtifacts(
 		log = log.WithField("responseStatus", res.Status)
 	}
 
-	closeWithLogging(log, pr, "pipe")
-	closeWithLogging(log, reader, "archive")
+	closeWithLogging(log, pr, "pipe reader")
+	closeWithLogging(log, reader, "archive reader")
 
 	messagePrefix := "Uploading artifacts to coordinator..."
 	if options.Type != "" {
@@ -663,7 +662,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 func closeWithLogging(log logrus.FieldLogger, c io.Closer, name string) {
 	err := c.Close()
 	if err != nil {
-		log.WithError(err).Warningf("Error while closing the %s reader", name)
+		log.WithError(err).Warningf("Error while closing the %s", name)
 	}
 }
 
@@ -693,7 +692,7 @@ func (n *GitLabClient) determineUploadState(
 
 func (n *GitLabClient) DownloadArtifacts(
 	config common.JobCredentials,
-	artifactsFile string,
+	artifactsFile io.WriteCloser,
 	directDownload *bool,
 ) common.DownloadState {
 	query := url.Values{}
@@ -743,18 +742,14 @@ func (n *GitLabClient) DownloadArtifacts(
 
 func (n *GitLabClient) downloadArtifactFile(
 	log logrus.FieldLogger,
-	artifactsFile string,
+	file io.WriteCloser,
 	res *http.Response,
 ) common.DownloadState {
-	file, err := os.Create(artifactsFile)
-	if err == nil {
-		defer func() { _ = file.Close() }()
-		_, err = io.Copy(file, res.Body)
-	}
+	_, err := io.Copy(file, res.Body)
+
+	closeWithLogging(log, file, "file writer")
 
 	if err != nil {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
 		log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
 		return common.DownloadFailed
 	}

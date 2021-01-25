@@ -1,9 +1,11 @@
 package network
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -1485,6 +1487,18 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=false").Bytes())
 }
 
+type nopWriteCloser struct {
+	w io.Writer
+}
+
+func (wc *nopWriteCloser) Write(p []byte) (int, error) {
+	return wc.w.Write(p)
+}
+
+func (wc *nopWriteCloser) Close() error {
+	return nil
+}
+
 func TestArtifactsDownload(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		testArtifactsDownloadHandler(w, r)
@@ -1556,16 +1570,22 @@ func TestArtifactsDownload(t *testing.T) {
 			defer os.Remove(tempDir)
 
 			artifactsFileName := filepath.Join(tempDir, "downloaded-artifact")
+			file, err := os.Create(artifactsFileName)
+			require.NoError(t, err)
 
-			state := c.DownloadArtifacts(testCase.credentials, artifactsFileName, testCase.directDownload)
+			buf := bufio.NewWriter(file)
+
+			state := c.DownloadArtifacts(testCase.credentials, &nopWriteCloser{w: buf}, testCase.directDownload)
 			require.Equal(t, testCase.expectedState, state)
 
-			artifact, err := ioutil.ReadFile(artifactsFileName)
-
 			if testCase.expectedArtifact == "" {
-				assert.Error(t, err)
 				return
 			}
+
+			err = buf.Flush()
+			require.NoError(t, err)
+
+			artifact, err := ioutil.ReadFile(artifactsFileName)
 
 			assert.NoError(t, err)
 			assert.Equal(t, string(artifact), testCase.expectedArtifact)
