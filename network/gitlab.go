@@ -728,19 +728,7 @@ func (n *GitLabClient) DownloadArtifacts(
 
 	switch res.StatusCode {
 	case http.StatusOK:
-		file, err := os.Create(artifactsFile)
-		if err == nil {
-			defer func() { _ = file.Close() }()
-			_, err = io.Copy(file, res.Body)
-		}
-		if err != nil {
-			_ = file.Close()
-			_ = os.Remove(file.Name())
-			log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
-			return common.DownloadFailed
-		}
-		log.Println("Downloading artifacts from coordinator...", "ok")
-		return common.DownloadSucceeded
+		return n.downloadArtifactFile(log, artifactsFile, res)
 	case http.StatusForbidden:
 		log.WithField("status", res.Status).Errorln("Downloading artifacts from coordinator...", "forbidden")
 		return common.DownloadForbidden
@@ -751,6 +739,29 @@ func (n *GitLabClient) DownloadArtifacts(
 		log.WithField("status", res.Status).Warningln("Downloading artifacts from coordinator...", "failed")
 		return common.DownloadFailed
 	}
+}
+
+func (n *GitLabClient) downloadArtifactFile(
+	log logrus.FieldLogger,
+	artifactsFile string,
+	res *http.Response,
+) common.DownloadState {
+	file, err := os.Create(artifactsFile)
+	if err == nil {
+		defer func() { _ = file.Close() }()
+		_, err = io.Copy(file, res.Body)
+	}
+
+	if err != nil {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+		log.WithError(err).Errorln("Downloading artifacts from coordinator...", "error")
+		return common.DownloadFailed
+	}
+
+	log.Println("Downloading artifacts from coordinator...", "ok")
+
+	return common.DownloadSucceeded
 }
 
 func (n *GitLabClient) ProcessJob(
