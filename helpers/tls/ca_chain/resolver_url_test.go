@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -182,11 +183,27 @@ func TestUrlResolver_Resolve(t *testing.T) {
 }
 
 func TestHTTPFetcher(t *testing.T) {
+	assertURLError := func(t *testing.T, err error) {
+		var e *url.Error
+		if assert.ErrorAs(t, err, &e) {
+			assert.Equal(t, "Get", e.Op)
+			assert.Contains(t, e.URL, "http://127.0.0.1:")
+		}
+	}
+	assertTimeoutError := func(t *testing.T, err error) {
+		assertURLError(t, err)
+
+		var e *url.Error
+		if assert.ErrorAs(t, err, &e) {
+			assert.True(t, e.Timeout(), "is timeout error")
+		}
+	}
+
 	tests := map[string]struct {
-		mockServer          func() *httptest.Server
-		mockFetcher         *httpFetcher
-		expectedData        []byte
-		expectedErrorSubstr string
+		mockServer   func() *httptest.Server
+		mockFetcher  *httpFetcher
+		expectedData []byte
+		assertError  func(t *testing.T, err error)
 	}{
 		"fetch ok": {
 			mockServer: func() *httptest.Server {
@@ -194,17 +211,17 @@ func TestHTTPFetcher(t *testing.T) {
 					_, _ = w.Write([]byte("data"))
 				}))
 			},
-			mockFetcher:         newHTTPFetcher(defaultURLResolverFetchTimeout),
-			expectedData:        []byte("data"),
-			expectedErrorSubstr: "",
+			mockFetcher:  newHTTPFetcher(defaultURLResolverFetchTimeout),
+			expectedData: []byte("data"),
+			assertError:  nil,
 		},
 		"fetch timeout": {
 			mockServer: func() *httptest.Server {
 				return httptest.NewUnstartedServer(nil)
 			},
-			mockFetcher:         newHTTPFetcher(50 * time.Millisecond),
-			expectedData:        nil,
-			expectedErrorSubstr: "Client.Timeout",
+			mockFetcher:  newHTTPFetcher(50 * time.Millisecond),
+			expectedData: nil,
+			assertError:  assertTimeoutError,
 		},
 		"fetch no remote": {
 			mockServer: func() *httptest.Server {
@@ -212,20 +229,21 @@ func TestHTTPFetcher(t *testing.T) {
 				_ = srv.Listener.Close()
 				return srv
 			},
-			mockFetcher:         newHTTPFetcher(50 * time.Millisecond),
-			expectedData:        nil,
-			expectedErrorSubstr: "Get http://127.0.0.1:",
+			mockFetcher:  newHTTPFetcher(50 * time.Millisecond),
+			expectedData: nil,
+			assertError:  assertURLError,
 		},
 	}
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			resp, err := tc.mockFetcher.Fetch("http://" + tc.mockServer().Listener.Addr().String())
-			if tc.expectedErrorSubstr != "" {
-				assert.NotNil(t, err)
-				assert.Contains(t, err.Error(), tc.expectedErrorSubstr)
+			if tc.assertError != nil {
+				tc.assertError(t, err)
+				return
 			}
 
+			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedData, resp)
 		})
 	}

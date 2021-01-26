@@ -201,9 +201,9 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 }
 
 type adapterOperationTestCase struct {
-	returnedURL   string
-	returnedError error
-	expectedError string
+	returnedURL        string
+	returnedError      error
+	assertErrorMessage func(t *testing.T, message string)
 }
 
 func prepareMockedCredentialsResolver(adapter *gcsAdapter) func(t *testing.T) {
@@ -256,10 +256,10 @@ func testAdapterOperation(
 
 		u := operation()
 
-		if tc.expectedError != "" {
+		if tc.assertErrorMessage != nil {
 			message, err := hook.LastEntry().String()
 			require.NoError(t, err)
-			assert.Contains(t, message, tc.expectedError)
+			tc.assertErrorMessage(t, message)
 			return
 		}
 
@@ -275,17 +275,23 @@ func TestAdapterOperation(t *testing.T) {
 		"error-on-URL-signing": {
 			returnedURL:   "",
 			returnedError: fmt.Errorf("test error"),
-			expectedError: "error while generating GCS pre-signed URL: test error",
+			assertErrorMessage: func(t *testing.T, message string) {
+				assert.Contains(t, message, "error while generating GCS pre-signed URL: test error")
+			},
 		},
 		"invalid-URL-returned": {
 			returnedURL:   "://test",
 			returnedError: nil,
-			expectedError: "error while parsing generated URL: parse ://test: missing protocol scheme",
+			assertErrorMessage: func(t *testing.T, message string) {
+				assert.Contains(t, message, "error while parsing generated URL: parse")
+				assert.Contains(t, message, "://test")
+				assert.Contains(t, message, "missing protocol scheme")
+			},
 		},
 		"valid-configuration": {
-			returnedURL:   "https://storage.googleapis.com/test/key?Expires=123456789&GoogleAccessId=test-access-id%40X.iam.gserviceaccount.com&Signature=XYZ",
-			returnedError: nil,
-			expectedError: "",
+			returnedURL:        "https://storage.googleapis.com/test/key?Expires=123456789&GoogleAccessId=test-access-id%40X.iam.gserviceaccount.com&Signature=XYZ",
+			returnedError:      nil,
+			assertErrorMessage: nil,
 		},
 	}
 

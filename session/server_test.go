@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func TestAdvertisingAddress(t *testing.T) {
 		name            string
 		config          ServerConfig
 		expectedAddress string
-		expectedError   error
+		assertError     func(t *testing.T, err error)
 	}{
 		{
 			name: "Default to listen address when Advertising address not defined",
@@ -33,7 +34,7 @@ func TestAdvertisingAddress(t *testing.T) {
 				ListenAddress: "127.0.0.1:0",
 			},
 			expectedAddress: "https://127.0.0.1:0",
-			expectedError:   nil,
+			assertError:     nil,
 		},
 		{
 			name: "Advertising address take precedence over listen address",
@@ -42,7 +43,7 @@ func TestAdvertisingAddress(t *testing.T) {
 				AdvertiseAddress: "terminal.example.com",
 			},
 			expectedAddress: "https://terminal.example.com",
-			expectedError:   nil,
+			assertError:     nil,
 		},
 		{
 			name: "Advertising address not valid ip/domain",
@@ -50,7 +51,14 @@ func TestAdvertisingAddress(t *testing.T) {
 				ListenAddress:    "0.0.0.0:0",
 				AdvertiseAddress: "%^*",
 			},
-			expectedError: errors.New(`parse https://%^*: invalid URL escape "%^*"`),
+			assertError: func(t *testing.T, err error) {
+				var e *url.Error
+				if assert.ErrorAs(t, err, &e) {
+					assert.Equal(t, "https://%^*", e.URL)
+					assert.Equal(t, "parse", e.Op)
+					assert.ErrorIs(t, e.Err, url.EscapeError("%^*"))
+				}
+			},
 		},
 		{
 			name: "Advertising address already has https schema",
@@ -58,7 +66,9 @@ func TestAdvertisingAddress(t *testing.T) {
 				ListenAddress:    "127.0.0.1:0",
 				AdvertiseAddress: "https://terminal.example.com",
 			},
-			expectedError: errors.New("url not valid, scheme defined"),
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrInvalidURL)
+			},
 		},
 		{
 			name: "Advertising address has http as scheme",
@@ -66,7 +76,9 @@ func TestAdvertisingAddress(t *testing.T) {
 				ListenAddress:    "127.0.0.1:0",
 				AdvertiseAddress: "http://terminal.example.com",
 			},
-			expectedError: errors.New("url not valid, scheme defined"),
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, ErrInvalidURL)
+			},
 		},
 	}
 
@@ -74,8 +86,8 @@ func TestAdvertisingAddress(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			server, err := NewServer(c.config, nil, certificate.X509Generator{}, fakeSessionFinder)
 
-			if c.expectedError != nil {
-				assert.EqualError(t, err, c.expectedError.Error())
+			if c.assertError != nil {
+				c.assertError(t, err)
 				return
 			}
 
