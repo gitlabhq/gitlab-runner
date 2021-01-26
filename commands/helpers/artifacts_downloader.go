@@ -49,7 +49,7 @@ func (c *ArtifactsDownloaderCommand) download(file string, retry int) error {
 
 	writer := meter.NewWriter(
 		artifactsFile,
-		c.RunnerMeterFrequency,
+		c.TransferMeterFrequency,
 		meter.LabelledRateFormat(os.Stdout, "Downloading artifacts", meter.UnknownTotalSize),
 	)
 

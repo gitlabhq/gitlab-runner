@@ -87,7 +87,7 @@ func (c *CacheExtractorCommand) download(_ int) error {
 
 	writer := meter.NewWriter(
 		file,
-		c.RunnerMeterFrequency,
+		c.TransferMeterFrequency,
 		meter.LabelledRateFormat(os.Stdout, "Downloading cache", getRemoteCacheSize(resp)),
 	)
 

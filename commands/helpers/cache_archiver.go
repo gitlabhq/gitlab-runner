@@ -62,7 +62,7 @@ func (c *CacheArchiverCommand) upload(_ int) error {
 
 	rc := meter.NewReader(
 		file,
-		c.RunnerMeterFrequency,
+		c.TransferMeterFrequency,
 		meter.LabelledRateFormat(os.Stdout, "Uploading cache", fi.Size()),
 	)
 	defer rc.Close()

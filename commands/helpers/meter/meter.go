@@ -10,7 +10,7 @@ const UnknownTotalSize = 0
 
 type TransferMeterCommand struct {
 	//nolint:lll
-	RunnerMeterFrequency time.Duration `long:"runner-meter-frequency" env:"RUNNER_METER_FREQUENCY" description:"If set to more than 0s it enables an interactive transfer meter"`
+	TransferMeterFrequency time.Duration `long:"transfer-meter-frequency" env:"TRANSFER_METER_FREQUENCY" description:"If set to more than 0s it enables an interactive transfer meter"`
 }
 
 type UpdateCallback func(written uint64, since time.Duration, done bool)
