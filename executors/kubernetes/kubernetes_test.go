@@ -25,6 +25,7 @@ import (
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest/fake"
@@ -875,10 +876,7 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 		t.Skip("Skipping inside of GitLab CI check https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26421")
 	}
 
-	config, err := getKubeClientConfig(new(common.KubernetesConfig), new(overwrites))
-	require.NoError(t, err)
-	client, err := kubernetes.NewForConfig(config)
-	require.NoError(t, err)
+	client := getTestKubeClusterClient(t)
 	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
 	require.NoError(t, err)
 
@@ -3396,6 +3394,9 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 					err: &kubeerrors.StatusError{
 						ErrStatus: metav1.Status{
 							Code: http.StatusNotFound,
+							Details: &metav1.StatusDetails{
+								Kind: "pods",
+							},
 						},
 					},
 				},
@@ -3856,4 +3857,102 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 			assert.Len(t, c.Command, 3)
 		})
 	}
+}
+
+func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := []struct {
+		stage            string
+		outputAssertions func(t *testing.T, out string, pod string)
+	}{
+		{
+			stage: "step_", // Any script the user defined
+			outputAssertions: func(t *testing.T, out string, pod string) {
+				assert.Contains(
+					t,
+					out,
+					fmt.Sprintf("ERROR: Job failed (system failure): pods %q not found", pod),
+				)
+			},
+		},
+		{
+			stage: string(common.BuildStagePrepare),
+			outputAssertions: func(t *testing.T, out string, pod string) {
+				assert.Contains(
+					t,
+					out,
+					"ERROR: Job failed (system failure):",
+				)
+
+				assert.Contains(
+					t,
+					out,
+					fmt.Sprintf("pods %q not found", pod),
+				)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.stage, func(t *testing.T) {
+			build := getTestBuild(t, common.GetRemoteLongRunningBuild)
+
+			// It's not possible to get this kind of information on the legacy execution path.
+			setBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
+
+			deletedPodCh := make(chan string)
+			defer buildtest.OnStage(build, tt.stage, func() {
+				client := getTestKubeClusterClient(t)
+				pods, err := client.CoreV1().Pods("default").List(metav1.ListOptions{
+					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+				})
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+				err = client.CoreV1().Pods("default").Delete(pod.Name, &metav1.DeleteOptions{})
+				require.NoError(t, err)
+
+				deletedPodCh <- pod.Name
+			})()
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			assert.True(t, isKubernetesPodNotFoundError(err), "expected err NotFound, but got %T", err)
+
+			tt.outputAssertions(t, out, <-deletedPodCh)
+		})
+	}
+}
+
+func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
+	jobResponse, err := getJobResponse()
+	assert.NoError(t, err)
+	jobResponse.Image.Name = common.TestAlpineImage
+
+	podUUID, err := helpers.GenerateRandomUUID(8)
+	require.NoError(t, err)
+
+	return &common.Build{
+		JobResponse: jobResponse,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Kubernetes: &common.KubernetesConfig{
+					PullPolicy: common.PullPolicyIfNotPresent,
+					PodLabels: map[string]string{
+						"test.k8s.gitlab.com/name": podUUID,
+					},
+				},
+			},
+		},
+	}
+}
+
+func getTestKubeClusterClient(t *testing.T) *kubernetes.Clientset {
+	config, err := getKubeClientConfig(new(common.KubernetesConfig), new(overwrites))
+	require.NoError(t, err)
+	client, err := kubernetes.NewForConfig(config)
+	require.NoError(t, err)
+
+	return client
 }
