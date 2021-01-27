@@ -99,6 +99,9 @@ func TestPowershell_IsDefault(t *testing.T) {
 }
 
 func TestPowershell_GetConfiguration(t *testing.T) {
+	argsForCmdAsFile := []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
+	argsForCmdAsStdIn := append(argsForCmdAsFile, "-")
+
 	testCases := map[string]struct {
 		shell    string
 		executor string
@@ -118,7 +121,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 		"pwsh on shell": {
 			shell:            SNPwsh,
 			executor:         "shell",
-			expectedPassFile: true,
+			expectedPassFile: false,
 		},
 	}
 
@@ -136,11 +139,11 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			shellConfig, err := shell.GetConfiguration(info)
 			require.NoError(t, err)
 			assert.Equal(t, tc.shell, shellConfig.Command)
-			assert.Equal(
-				t,
-				[]string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"},
-				shellConfig.Arguments,
-			)
+			if tc.expectedPassFile {
+				assert.Equal(t, argsForCmdAsFile, shellConfig.Arguments)
+			} else {
+				assert.Equal(t, argsForCmdAsStdIn, shellConfig.Arguments)
+			}
 			assert.Equal(
 				t,
 				[]string{
