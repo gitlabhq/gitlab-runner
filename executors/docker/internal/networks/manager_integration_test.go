@@ -48,6 +48,7 @@ func TestCreateNetworkLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.job.id":          "0",
 		"com.gitlab.gitlab-runner.job.ref":         "master",
 		"com.gitlab.gitlab-runner.job.sha":         "91956efe32fb7bef54f378d90c9bd74c19025872",
+		"com.gitlab.gitlab-runner.managed":         "true",
 		"com.gitlab.gitlab-runner.pipeline.id":     "1",
 		"com.gitlab.gitlab-runner.project.id":      "0",
 		"com.gitlab.gitlab-runner.runner.id":       "test-tok",

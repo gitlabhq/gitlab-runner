@@ -46,6 +46,7 @@ func TestLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.pipeline.id":     "",
 		"com.gitlab.gitlab-runner.runner.id":       "test-tok",
 		"com.gitlab.gitlab-runner.runner.local_id": "123",
+		"com.gitlab.gitlab-runner.managed":         "true",
 		"com.gitlab.gitlab-runner.other.label1":    "1",
 		"com.gitlab.gitlab-runner.other.label2":    "2",
 	}

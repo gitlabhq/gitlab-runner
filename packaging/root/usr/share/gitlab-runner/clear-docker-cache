@@ -1,15 +1,66 @@
 #!/bin/sh
 
-set -e
-docker version >/dev/null 2>/dev/null
+#########################################################################################
+#  SCRIPT: clear-docker-cache.sh
+#  Description: Used to cleanup old docker containers and volumes
+######################################################################################
+IFS=$'\n\t'
+set -euo pipefail
 
-echo Clearing docker cache...
 
-CONTAINERS=$(docker ps -a -q \
-             --filter=status=exited \
-             --filter=status=dead \
-             --filter=label=com.gitlab.gitlab-runner.type=cache)
+DOCKER_VERSION=$(docker version --format '{{.Server.Version}}') #get docker version
+REQUIRED_DOCKER_VERSION=1.13
 
-if [ -n "${CONTAINERS}" ]; then
-    docker rm -v ${CONTAINERS}
+#print usage information
+usage() {
+   echo "\nUsage: $0 prune|space|help\n"
+   echo  "\tdefault (*)      Remove all unused containers (both dangling and unreferenced) and volumes"
+   echo  "\tprune            Remove all unused containers (both dangling and unreferenced)"
+   echo  "\tspace            Show docker disk usage"
+   echo  "\thelp             Show usage"
+   exit 1 # Exit script after printing usage
+}
+
+if  awk 'BEGIN {exit !('$DOCKER_VERSION' < '$REQUIRED_DOCKER_VERSION')}'; then
+    echo "\nERROR: Your current API version is lower than 1.25. The client and daemon API must both be at least 1.25+ to run these commands. Kindly upgrade your docker version\n"
+    exit 1
 fi
+
+
+COMMAND="${1:-new}"
+
+case "$COMMAND" in
+
+  prune)
+
+    echo  "\nCheck and remove all unused containers (both dangling and unreferenced)"
+    echo  "-----------------------------------------------------------------------\n\n"
+    docker system prune -af --filter label=com.gitlab.gitlab-runner.managed=true
+    
+    exit 0
+    ;;
+
+  space)
+
+    echo  "\nShow docker disk usage"
+    echo  "----------------------\n"
+    docker system df   
+    
+    exit 0
+    ;;
+
+  help)
+
+    usage
+    ;;
+
+  *)  
+
+    echo  "\nCheck and remove all unused containers (both dangling and unreferenced) including volumes."
+    echo  "------------------------------------------------------------------------------------------\n\n"
+    docker system prune --volumes -af --filter label=com.gitlab.gitlab-runner.managed=true
+
+    exit 0
+    ;;
+
+esac
