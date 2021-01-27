@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/cli/cli/config/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
