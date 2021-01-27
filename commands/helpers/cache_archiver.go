@@ -25,16 +25,18 @@ import (
 	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
 )
 
+//nolint:lll
 type CacheArchiverCommand struct {
 	fileArchiver
 	retryHelper
 	meter.TransferMeterCommand
 
-	File       string   `long:"file" description:"The path to file"`
-	URL        string   `long:"url" description:"URL of remote cache resource (pre-signed URL)"`
-	GoCloudURL string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
-	Timeout    int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
-	Headers    []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
+	File             string   `long:"file" description:"The path to file"`
+	URL              string   `long:"url" description:"URL of remote cache resource (pre-signed URL)"`
+	GoCloudURL       string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
+	Timeout          int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
+	Headers          []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
+	CompressionLevel string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
 
 	client *CacheClient
 	mux    *blob.URLMux
@@ -155,7 +157,7 @@ func (c *CacheArchiverCommand) createZipFile(filename string) error {
 
 	logrus.Debugln("Temporary file:", f.Name())
 
-	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, archive.DefaultCompression)
+	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, getCompressionLevel(c.CompressionLevel))
 	if err != nil {
 		return err
 	}

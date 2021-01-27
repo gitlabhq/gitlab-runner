@@ -1,11 +1,13 @@
 package helpers
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/fastzip"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/ziplegacy"
-
-	"testing"
 )
 
 func OnEachZipArchiver(t *testing.T, f func(t *testing.T)) {
@@ -29,5 +31,23 @@ func OnEachZipExtractor(t *testing.T, f func(t *testing.T)) {
 	for name, extractor := range extractors {
 		archive.Register(archive.Zip, ziplegacy.NewArchiver, extractor)
 		t.Run(name, f)
+	}
+}
+
+func TestCompressionLevel(t *testing.T) {
+	tests := map[string]archive.CompressionLevel{
+		"fastest": archive.FastestCompression,
+		"fast":    archive.FastCompression,
+		"slow":    archive.SlowCompression,
+		"slowest": archive.SlowestCompression,
+		"default": archive.DefaultCompression,
+		"":        archive.DefaultCompression,
+		"invalid": archive.DefaultCompression,
+	}
+
+	for name, level := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, level, getCompressionLevel(name))
+		})
 	}
 }
