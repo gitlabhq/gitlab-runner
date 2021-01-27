@@ -78,14 +78,6 @@ buildx() {
     local args=("$@")
     local buildxFlags=()
 
-    local experimental
-    experimental=$(_docker_experimental info -f '{{json .ExperimentalBuild}}')
-    if [ "${experimental}" = 'false' ]; then
-        echo "Docker experimental mode needs to be enabled for multi-platform build support. Aborting."
-        echo "See https://github.com/docker/cli/blob/master/experimental/README.md#use-docker-experimental for more information."
-        exit 1
-    fi
-
     # Build -t tag name options from remaining arguments
     local tagOpts=()
     for tagName in "${args[@]}"; do
