@@ -266,6 +266,7 @@ This defines the Docker Container parameters.
 | `cap_drop`                     | Drop additional Linux capabilities from the container |
 | `security_opt`                 | Set security options (--security-opt in `docker run`), takes a list of ':' separated key/values |
 | `devices`                      | Share additional host devices with the container |
+| `gpus`                         | Specify GPU devices for Docker container, using the same format as the `docker` cli. Read more about the options in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu) |
 | `cache_dir`                    | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
 | `disable_cache`                | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
 | `network_mode`              | Add container to a custom network |
