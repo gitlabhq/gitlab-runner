@@ -10,15 +10,11 @@ _docker() {
     docker "${@}"
 }
 
-_docker_experimental() {
-    DOCKER_CLI_EXPERIMENTAL=enabled docker "${@}"
-}
-
 _docker_buildx() {
     # Run the command in a subshell so that we can safely unset DOCKER_HOST
     (
         unset DOCKER_HOST
-        _docker_experimental buildx "${@}"
+        _docker buildx "${@}"
     )
 }
 
