@@ -91,5 +91,5 @@ func getPowerShellCmd(shell string) []string {
 		shell = shells.SNPowershell
 	}
 
-	return append([]string{shell}, shells.PowershellCmdArgs...)
+	return shells.PowershellDockerCmd(shell)
 }

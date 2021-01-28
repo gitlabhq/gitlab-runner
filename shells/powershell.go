@@ -21,22 +21,6 @@ const (
 	SNPowershell = "powershell"
 )
 
-var (
-	PowershellCmdArgs = []string{
-		"-NoProfile",
-		"-NoLogo",
-		"-InputFormat",
-		"text",
-		"-OutputFormat",
-		"text",
-		"-NonInteractive",
-		"-ExecutionPolicy",
-		"Bypass",
-		"-Command",
-		"-",
-	}
-)
-
 type PowerShell struct {
 	AbstractShell
 	Shell string
@@ -69,6 +53,10 @@ func stdinCmdArgs() []string {
 
 func fileCmdArgs() []string {
 	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
+}
+
+func PowershellDockerCmd(shell string) []string {
+	return append([]string{shell}, stdinCmdArgs()...)
 }
 
 func psQuote(text string) string {
@@ -348,7 +336,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 		Arguments:     stdinCmdArgs(),
 		PassFile:      b.Shell != SNPwsh && info.Build.Runner.Executor != dockerWindowsExecutor,
 		Extension:     "ps1",
-		DockerCommand: append([]string{b.Shell}, stdinCmdArgs()...),
+		DockerCommand: PowershellDockerCmd(b.Shell),
 	}
 
 	if script.PassFile {

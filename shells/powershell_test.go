@@ -146,9 +146,18 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			} else {
 				assert.Equal(t, stdinCmdArgs(), shellConfig.Arguments)
 			}
-			assert.Equal(t, append([]string{tc.shell}, stdinCmdArgs()...), shellConfig.DockerCommand)
+			assert.Equal(t, PowershellDockerCmd(tc.shell), shellConfig.DockerCommand)
 			assert.Equal(t, tc.expectedPassFile, shellConfig.PassFile)
 			assert.Equal(t, "ps1", shellConfig.Extension)
+		})
+	}
+}
+
+func TestPowershellCmdArgs(t *testing.T) {
+	for _, tc := range []string{SNPwsh, SNPowershell} {
+		t.Run(tc, func(t *testing.T) {
+			args := PowershellDockerCmd(tc)
+			assert.Equal(t, append([]string{tc}, stdinCmdArgs()...), args)
 		})
 	}
 }
