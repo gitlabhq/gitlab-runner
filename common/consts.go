@@ -38,6 +38,7 @@ var PreparationRetryInterval = 3 * time.Second
 const (
 	TestAlpineImage       = "alpine:3.12.0"
 	TestWindowsImage      = "mcr.microsoft.com/windows/servercore:%s"
+	TestPwshImage         = "mcr.microsoft.com/powershell:alpine-3.12"
 	TestAlpineNoRootImage = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest"
 	TestDockerDindImage   = "docker:18-dind"
 	TestDockerGitImage    = "docker:18-git"

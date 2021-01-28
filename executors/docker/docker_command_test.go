@@ -31,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 var getWindowsImageOnce sync.Once
@@ -1211,6 +1212,31 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 			"gitlab/gitlab-runner-helper:x86_64-5a147c92 with digest "+
 			"gitlab/gitlab-runner-helper@sha256:836120f351e800cd483402a5910b0a347f9e32e97ac3e94e67e2c005a289cc4c ...",
 	)
+}
+
+func TestDockerCommand_Pwsh(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestPwshImage
+	build.Runner.Shell = shells.SNPwsh
+	build.JobResponse.Steps = common.Steps{
+		common.Step{
+			Name: common.StepNameScript,
+			Script: []string{
+				"Write-Output $PSVersionTable",
+			},
+			Timeout:      120,
+			When:         common.StepWhenAlways,
+			AllowFailure: false,
+		},
+	}
+
+	out, err := buildtest.RunBuildReturningOutput(t, &build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, "PSVersion                      7.1.1")
+	assert.Contains(t, out, "PSEdition                      Core")
 }
 
 func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
