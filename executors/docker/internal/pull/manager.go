@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	cli "github.com/docker/cli/cli/config/types"
 	"github.com/docker/docker/api/types"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -158,7 +159,7 @@ func (m *manager) getImageUsingPullPolicy(
 	return m.pullDockerImage(imageName, authConfig)
 }
 
-func (m *manager) resolveAuthConfigForImage(imageName string) (*types.AuthConfig, error) {
+func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, error) {
 	registryInfo, err := auth.ResolveConfigForImage(
 		imageName,
 		m.config.AuthConfig,
@@ -185,7 +186,7 @@ func (m *manager) resolveAuthConfigForImage(imageName string) (*types.AuthConfig
 	return authConfig, nil
 }
 
-func (m *manager) pullDockerImage(imageName string, ac *types.AuthConfig) (*types.ImageInspect, error) {
+func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.ImageInspect, error) {
 	if m.onPullImageHookFunc != nil {
 		m.onPullImageHookFunc()
 	}

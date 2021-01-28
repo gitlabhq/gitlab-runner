@@ -46,23 +46,14 @@ github.com/containerd/containerd/log
 github.com/containerd/containerd/platforms
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/docker/cli v0.0.0-20181219132003-336b2a5cac7f
+# github.com/docker/cli v20.10.2+incompatible
 github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/credentials
-github.com/docker/cli/opts
+github.com/docker/cli/cli/config/types
 # github.com/docker/distribution v2.7.0+incompatible
-github.com/docker/distribution
 github.com/docker/distribution/digestset
-github.com/docker/distribution/metrics
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
-github.com/docker/distribution/registry/api/v2
-github.com/docker/distribution/registry/client
-github.com/docker/distribution/registry/client/auth
-github.com/docker/distribution/registry/client/auth/challenge
-github.com/docker/distribution/registry/client/transport
-github.com/docker/distribution/registry/storage/cache
-github.com/docker/distribution/registry/storage/cache/memory
 # github.com/docker/docker v20.10.2+incompatible
 github.com/docker/docker/api
 github.com/docker/docker/api/types
@@ -83,13 +74,8 @@ github.com/docker/docker/api/types/volume
 github.com/docker/docker/client
 github.com/docker/docker/errdefs
 github.com/docker/docker/pkg/homedir
-github.com/docker/docker/pkg/ioutils
 github.com/docker/docker/pkg/jsonmessage
-github.com/docker/docker/pkg/longpath
 github.com/docker/docker/pkg/stdcopy
-github.com/docker/docker/pkg/stringid
-github.com/docker/docker/registry
-github.com/docker/docker/rootless
 # github.com/docker/docker-credential-helpers v0.4.1
 github.com/docker/docker-credential-helpers/client
 github.com/docker/docker-credential-helpers/credentials
@@ -97,8 +83,6 @@ github.com/docker/docker-credential-helpers/credentials
 github.com/docker/go-connections/nat
 github.com/docker/go-connections/sockets
 github.com/docker/go-connections/tlsconfig
-# github.com/docker/go-metrics v0.0.0-20181218153428-b84716841b82
-github.com/docker/go-metrics
 # github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
 github.com/docker/go-units
 # github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844

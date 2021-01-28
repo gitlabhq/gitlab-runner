@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/cli/cli/config/types"
 	"github.com/jpillora/backoff"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"

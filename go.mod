@@ -11,14 +11,12 @@ require (
 	github.com/bmatcuk/doublestar v1.3.0
 	github.com/boumenot/gocover-cobertura v1.1.0
 	github.com/containerd/containerd v1.4.3 // indirect
-	github.com/docker/cli v0.0.0-20181219132003-336b2a5cac7f
+	github.com/docker/cli v20.10.2+incompatible
 	github.com/docker/distribution v2.7.0+incompatible
 	github.com/docker/docker v20.10.2+incompatible
 	github.com/docker/docker-credential-helpers v0.4.1 // indirect
 	github.com/docker/go-connections v0.3.0
-	github.com/docker/go-metrics v0.0.0-20181218153428-b84716841b82 // indirect
 	github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
-	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
@@ -73,7 +71,6 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
-	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/api v0.0.0-20191004102349-159aefb8556b
 	k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
 	k8s.io/client-go v11.0.1-0.20191004102930-01520b8320fc+incompatible
