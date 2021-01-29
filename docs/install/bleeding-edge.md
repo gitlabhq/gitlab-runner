@@ -62,7 +62,7 @@ rpm -i gitlab-runner_386.rpm
 
 ## Download any other tagged release
 
-Simply replace `master` with either `tag` (for example, `11.4.2`) or `latest` (the latest
+Simply replace `master` with either `tag` (for example, `v11.4.2`) or `latest` (the latest
 stable). For a list of tags see <https://gitlab.com/gitlab-org/gitlab-runner/-/tags>.
 For example:
 
