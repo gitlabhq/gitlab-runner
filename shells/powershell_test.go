@@ -118,7 +118,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 		"pwsh on shell": {
 			shell:            SNPwsh,
 			executor:         "shell",
-			expectedPassFile: true,
+			expectedPassFile: false,
 		},
 	}
 
@@ -136,29 +136,12 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			shellConfig, err := shell.GetConfiguration(info)
 			require.NoError(t, err)
 			assert.Equal(t, tc.shell, shellConfig.Command)
-			assert.Equal(
-				t,
-				[]string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"},
-				shellConfig.Arguments,
-			)
-			assert.Equal(
-				t,
-				[]string{
-					tc.shell,
-					"-NoProfile",
-					"-NoLogo",
-					"-InputFormat",
-					"text",
-					"-OutputFormat",
-					"text",
-					"-NonInteractive",
-					"-ExecutionPolicy",
-					"Bypass",
-					"-Command",
-					"-",
-				},
-				shellConfig.DockerCommand,
-			)
+			if tc.expectedPassFile {
+				assert.Equal(t, fileCmdArgs(), shellConfig.Arguments)
+			} else {
+				assert.Equal(t, stdinCmdArgs(), shellConfig.Arguments)
+			}
+			assert.Equal(t, append([]string{tc.shell}, stdinCmdArgs()...), shellConfig.DockerCommand)
 			assert.Equal(t, tc.expectedPassFile, shellConfig.PassFile)
 			assert.Equal(t, "ps1", shellConfig.Extension)
 		})
