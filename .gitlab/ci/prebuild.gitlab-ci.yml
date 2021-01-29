@@ -4,6 +4,8 @@ helper images:
   - .docker
   - .go-cache-docker-qemu
   stage: prebuild
+  variables:
+    TAR_XZ_ARGS: -f -9
   script:
   - make helper-bin helper-dockerarchive
   retry: 2

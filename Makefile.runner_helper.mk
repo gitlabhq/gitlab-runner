@@ -10,6 +10,7 @@
 # variable. Note that Linux is implied by default.
 # ---------------------------------------------------------------------------
 
+TAR_XZ_ARGS ?= -f -0
 
 # Tar files that we want to generate from the Docker file system, this is
 # generally used for linux based Dockerfiles.
@@ -74,10 +75,10 @@ helper-dockerarchive-host:
 helper-dockerarchive: $(TAR_XZ)
 
 ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
-	xz -f -9 $<
+	xz $(TAR_XZ_ARGS) $<
 
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
-	xz -f -9 $<
+	xz $(TAR_XZ_ARGS) $<
 
 # See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
 ${BASE_TAR_PATH}-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
