@@ -35,6 +35,26 @@ type PsWriter struct {
 	EOL           string
 }
 
+func stdinCmdArgs() []string {
+	return []string{
+		"-NoProfile",
+		"-NoLogo",
+		"-InputFormat",
+		"text",
+		"-OutputFormat",
+		"text",
+		"-NonInteractive",
+		"-ExecutionPolicy",
+		"Bypass",
+		"-Command",
+		"-",
+	}
+}
+
+func fileCmdArgs() []string {
+	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
+}
+
 func psQuote(text string) string {
 	// taken from: http://www.robvanderwoude.com/escapechars.php
 	text = strings.ReplaceAll(text, "`", "``")
@@ -308,28 +328,15 @@ func (b *PowerShell) GetName() string {
 
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
 	script := &common.ShellConfiguration{
-		Command:   b.Shell,
-		Arguments: []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"},
-		PassFile:  b.Shell != SNPwsh && info.Build.Runner.Executor != dockerWindowsExecutor,
-		Extension: "ps1",
-		DockerCommand: []string{
-			b.Shell,
-			"-NoProfile",
-			"-NoLogo",
-			"-InputFormat",
-			"text",
-			"-OutputFormat",
-			"text",
-			"-NonInteractive",
-			"-ExecutionPolicy",
-			"Bypass",
-			"-Command",
-			"-",
-		},
+		Command:       b.Shell,
+		Arguments:     stdinCmdArgs(),
+		PassFile:      b.Shell != SNPwsh && info.Build.Runner.Executor != dockerWindowsExecutor,
+		Extension:     "ps1",
+		DockerCommand: append([]string{b.Shell}, stdinCmdArgs()...),
 	}
 
-	if !script.PassFile {
-		script.Arguments = append(script.Arguments, "-")
+	if script.PassFile {
+		script.Arguments = fileCmdArgs()
 	}
 
 	return script, nil

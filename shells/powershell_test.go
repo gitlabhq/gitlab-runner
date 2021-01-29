@@ -99,9 +99,6 @@ func TestPowershell_IsDefault(t *testing.T) {
 }
 
 func TestPowershell_GetConfiguration(t *testing.T) {
-	argsForCmdAsFile := []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
-	argsForCmdAsStdIn := append(argsForCmdAsFile, "-")
-
 	testCases := map[string]struct {
 		shell    string
 		executor string
@@ -140,28 +137,11 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.shell, shellConfig.Command)
 			if tc.expectedPassFile {
-				assert.Equal(t, argsForCmdAsFile, shellConfig.Arguments)
+				assert.Equal(t, fileCmdArgs(), shellConfig.Arguments)
 			} else {
-				assert.Equal(t, argsForCmdAsStdIn, shellConfig.Arguments)
+				assert.Equal(t, stdinCmdArgs(), shellConfig.Arguments)
 			}
-			assert.Equal(
-				t,
-				[]string{
-					tc.shell,
-					"-NoProfile",
-					"-NoLogo",
-					"-InputFormat",
-					"text",
-					"-OutputFormat",
-					"text",
-					"-NonInteractive",
-					"-ExecutionPolicy",
-					"Bypass",
-					"-Command",
-					"-",
-				},
-				shellConfig.DockerCommand,
-			)
+			assert.Equal(t, append([]string{tc.shell}, stdinCmdArgs()...), shellConfig.DockerCommand)
 			assert.Equal(t, tc.expectedPassFile, shellConfig.PassFile)
 			assert.Equal(t, "ps1", shellConfig.Extension)
 		})
