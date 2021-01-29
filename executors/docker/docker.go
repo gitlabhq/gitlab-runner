@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar"
+	"github.com/docker/cli/opts"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -80,7 +81,8 @@ type executor struct {
 
 	links []string
 
-	devices []container.DeviceMapping
+	devices        []container.DeviceMapping
+	deviceRequests []container.DeviceRequest
 
 	helperImageInfo helperimage.Info
 
@@ -300,6 +302,23 @@ func (e *executor) bindDevices() (err error) {
 
 		e.devices = append(e.devices, device)
 	}
+	return nil
+}
+
+func (e *executor) bindDeviceRequests() error {
+	if e.Config.Docker.Gpus == "" {
+		return nil
+	}
+
+	var gpus opts.GpuOpts
+
+	err := gpus.Set(e.Config.Docker.Gpus)
+	if err != nil {
+		return fmt.Errorf("parsing deviceRequest string %q: %w", e.Config.Docker.Gpus, err)
+	}
+
+	e.deviceRequests = gpus.Value()
+
 	return nil
 }
 
@@ -670,6 +689,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 			CPUShares:         e.Config.Docker.CPUShares,
 			NanoCPUs:          nanoCPUs,
 			Devices:           e.devices,
+			DeviceRequests:    e.deviceRequests,
 			OomKillDisable:    e.Config.Docker.GetOomKillDisable(),
 		},
 		DNS:           e.Config.Docker.DNS,
@@ -868,6 +888,7 @@ func (e *executor) createDependencies() error {
 		e.createBuildNetwork,
 		e.createPullManager,
 		e.bindDevices,
+		e.bindDeviceRequests,
 		e.createVolumesManager,
 		e.createVolumes,
 		e.createBuildVolume,

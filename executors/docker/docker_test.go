@@ -88,6 +88,61 @@ func TestParseDeviceStringFour(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestBindDeviceRequests(t *testing.T) {
+	tests := []struct {
+		gpus                  string
+		expectedDeviceRequest []container.DeviceRequest
+		expectedErr           bool
+	}{
+		{
+			gpus: "all",
+			expectedDeviceRequest: []container.DeviceRequest{
+				{
+					Driver:       "",
+					Count:        -1,
+					DeviceIDs:    nil,
+					Capabilities: [][]string{{"gpu"}},
+					Options:      map[string]string{},
+				},
+			},
+		},
+		{
+			gpus:                  "",
+			expectedDeviceRequest: nil,
+		},
+		{
+			gpus:                  "somestring=thatshouldtriggeranerror",
+			expectedDeviceRequest: nil,
+			expectedErr:           true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.gpus, func(t *testing.T) {
+			e := executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Docker: &common.DockerConfig{
+								Gpus: tt.gpus,
+							},
+						},
+					},
+				},
+			}
+
+			err := e.bindDeviceRequests()
+			if tt.expectedErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedDeviceRequest, e.deviceRequests)
+		})
+	}
+}
+
 type testAllowedImageDescription struct {
 	allowed       bool
 	image         string
