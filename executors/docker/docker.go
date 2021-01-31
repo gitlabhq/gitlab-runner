@@ -39,6 +39,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 const (
@@ -222,11 +223,9 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 	}
 
 	architecture := e.helperImageInfo.Architecture
+	prebuiltFileName := getPrebuiltFileName(architecture, e.Config.Shell)
 	for _, dockerPrebuiltImagesPath := range PrebuiltImagesPaths {
-		dockerPrebuiltImageFilePath := filepath.Join(
-			dockerPrebuiltImagesPath,
-			"prebuilt-"+architecture+prebuiltImageExtension,
-		)
+		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, prebuiltFileName)
 		image, err := e.loadPrebuiltImage(
 			dockerPrebuiltImageFilePath,
 			e.helperImageInfo.Name,
@@ -241,6 +240,14 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 	}
 
 	return nil
+}
+
+func getPrebuiltFileName(architecture, shell string) string {
+	if shell == shells.SNPwsh {
+		return fmt.Sprintf("prebuilt-%s-%s%s", architecture, shell, prebuiltImageExtension)
+	}
+
+	return fmt.Sprintf("prebuilt-%s%s", architecture, prebuiltImageExtension)
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {

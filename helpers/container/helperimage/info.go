@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/errors"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 const (
@@ -46,7 +47,7 @@ type Config struct {
 	OSType          string
 	Architecture    string
 	OperatingSystem string
-	Shell           string // Currently only used by the Docker executor on the Windows platform
+	Shell           string
 	GitLabRegistry  bool
 }
 
@@ -82,4 +83,13 @@ func imageName(gitlabRegistry bool) string {
 	}
 
 	return DockerHubName
+}
+
+func getPowerShellCmd(shell string) []string {
+	if shell == "" {
+		// TODO: Replace with shells.SNPwsh in 14.0 in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26419
+		shell = shells.SNPowershell
+	}
+
+	return shells.PowershellDockerCmd(shell)
 }

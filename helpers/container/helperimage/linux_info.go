@@ -3,6 +3,8 @@ package helperimage
 import (
 	"fmt"
 	"runtime"
+
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 const (
@@ -22,12 +24,24 @@ type linuxInfo struct{}
 func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 	arch := l.architecture(cfg.Architecture)
 
+	shell := cfg.Shell
+	if shell == "" {
+		shell = "bash"
+	}
+
+	cmd := bashCmd
+	tag := fmt.Sprintf("%s-%s", arch, revision)
+	if shell == shells.SNPwsh {
+		cmd = getPowerShellCmd(shell)
+		tag = fmt.Sprintf("%s-%s", tag, shell)
+	}
+
 	return Info{
 		Architecture:            arch,
 		Name:                    imageName(cfg.GitLabRegistry),
-		Tag:                     fmt.Sprintf("%s-%s", arch, revision),
+		Tag:                     tag,
 		IsSupportingLocalImport: true,
-		Cmd:                     bashCmd,
+		Cmd:                     cmd,
 	}, nil
 }
 
