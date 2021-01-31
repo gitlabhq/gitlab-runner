@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -1034,6 +1035,17 @@ func TestPrepare(t *testing.T) {
 		IsSupportingLocalImport: true,
 		Cmd:                     []string{"gitlab-runner-build"},
 	}
+	os := helperimage.OSTypeLinux
+	if runtime.GOOS == helperimage.OSTypeWindows {
+		os = helperimage.OSTypeWindows
+	}
+	pwshHelperImage, err := helperimage.Get(helperImageTag, helperimage.Config{
+		Architecture:   "x86_64",
+		OSType:         os,
+		Shell:          shells.SNPwsh,
+		GitLabRegistry: false,
+	})
+	require.NoError(t, err)
 
 	tests := []struct {
 		Name  string
@@ -1359,6 +1371,44 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
+			Name:         "minimal configuration with pwsh shell",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Shell: shells.SNPwsh,
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+				helperImageInfo: pwshHelperImage,
+			},
+		},
+		{
 			Name:         "image and one service",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
@@ -1617,6 +1667,7 @@ func TestPrepare(t *testing.T) {
 				Build:   test.Build,
 				Context: context.TODO(),
 			}
+			prepareOptions.Build.Runner.Executor = "kubernetes"
 
 			err := e.Prepare(prepareOptions)
 			if err != nil {

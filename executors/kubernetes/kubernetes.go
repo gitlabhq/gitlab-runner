@@ -186,6 +186,7 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 		OSType:         helperimage.OSTypeLinux,
 		Architecture:   "amd64",
 		GitLabRegistry: s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
+		Shell:          s.Config.Shell,
 	})
 }
 
