@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"io"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -35,7 +34,7 @@ type testNetwork struct {
 
 func (m *testNetwork) DownloadArtifacts(
 	config common.JobCredentials,
-	artifactsFile string,
+	artifactsFile io.WriteCloser,
 	directDownload *bool,
 ) common.DownloadState {
 	m.downloadCalled++
@@ -45,16 +44,11 @@ func (m *testNetwork) DownloadArtifacts(
 	}
 
 	if m.downloadState == common.DownloadSucceeded {
-		file, err := os.Create(artifactsFile)
-		if err != nil {
-			logrus.Warningln(err)
-			return common.DownloadFailed
-		}
-		defer file.Close()
+		defer func() { _ = artifactsFile.Close() }()
 
-		archive := zip.NewWriter(file)
+		archive := zip.NewWriter(artifactsFile)
 		_, _ = archive.Create(artifactsTestArchivedFile)
-		archive.Close()
+		_ = archive.Close()
 	}
 	return m.downloadState
 }

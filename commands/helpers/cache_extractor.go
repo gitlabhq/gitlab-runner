@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
@@ -20,6 +22,8 @@ import (
 
 type CacheExtractorCommand struct {
 	retryHelper
+	meter.TransferMeterCommand
+
 	File    string `long:"file" description:"The file containing your cache artifacts"`
 	URL     string `long:"url" description:"URL of remote cache resource"`
 	Timeout int    `long:"timeout" description:"Overall timeout for cache downloading request (in minutes)"`
@@ -39,6 +43,15 @@ func checkIfUpToDate(path string, resp *http.Response) (bool, time.Time) {
 	fi, _ := os.Lstat(path)
 	date, _ := time.Parse(http.TimeFormat, resp.Header.Get("Last-Modified"))
 	return fi != nil && !date.After(fi.ModTime()), date
+}
+
+func getRemoteCacheSize(resp *http.Response) int64 {
+	length, _ := strconv.Atoi(resp.Header.Get("Content-Length"))
+	if length <= 0 {
+		return meter.UnknownTotalSize
+	}
+
+	return int64(length)
 }
 
 func (c *CacheExtractorCommand) download(_ int) error {
@@ -64,22 +77,34 @@ func (c *CacheExtractorCommand) download(_ int) error {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		_ = file.Close()
 		_ = os.Remove(file.Name())
 	}()
 
 	logrus.Infoln("Downloading", filepath.Base(c.File), "from", url_helpers.CleanURL(c.URL))
-	_, err = io.Copy(file, resp.Body)
+
+	writer := meter.NewWriter(
+		file,
+		c.TransferMeterFrequency,
+		meter.LabelledRateFormat(os.Stdout, "Downloading cache", getRemoteCacheSize(resp)),
+	)
+
+	// Close() is checked properly bellow, where the file handling is being finalized
+	defer func() { _ = writer.Close() }()
+
+	_, err = io.Copy(writer, resp.Body)
 	if err != nil {
 		return retryableErr{err: err}
 	}
+
 	err = os.Chtimes(file.Name(), time.Now(), date)
 	if err != nil {
 		return err
 	}
 
-	err = file.Close()
+	err = writer.Close()
 	if err != nil {
 		return err
 	}

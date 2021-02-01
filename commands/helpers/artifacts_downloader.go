@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
@@ -20,6 +22,7 @@ type ArtifactsDownloaderCommand struct {
 	common.JobCredentials
 	retryHelper
 	network common.Network
+	meter.TransferMeterCommand
 
 	DirectDownload bool `long:"direct-download" env:"FF_USE_DIRECT_DOWNLOAD" description:"Support direct download for data stored externally to GitLab"`
 }
@@ -36,7 +39,24 @@ func (c *ArtifactsDownloaderCommand) directDownloadFlag(retry int) *bool {
 }
 
 func (c *ArtifactsDownloaderCommand) download(file string, retry int) error {
-	switch c.network.DownloadArtifacts(c.JobCredentials, file, c.directDownloadFlag(retry)) {
+	artifactsFile, err := os.Create(file)
+	if err != nil {
+		return fmt.Errorf("creating target file: %w", err)
+	}
+
+	// Close() is checked properly inside of DownloadArtifacts() call
+	defer func() { _ = artifactsFile.Close() }()
+
+	writer := meter.NewWriter(
+		artifactsFile,
+		c.TransferMeterFrequency,
+		meter.LabelledRateFormat(os.Stdout, "Downloading artifacts", meter.UnknownTotalSize),
+	)
+
+	// Close() is checked properly inside of DownloadArtifacts() call
+	defer func() { _ = writer.Close() }()
+
+	switch c.network.DownloadArtifacts(c.JobCredentials, writer, c.directDownloadFlag(retry)) {
 	case common.DownloadSucceeded:
 		return nil
 	case common.DownloadNotFound:

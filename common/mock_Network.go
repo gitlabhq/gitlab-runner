@@ -14,11 +14,11 @@ type MockNetwork struct {
 }
 
 // DownloadArtifacts provides a mock function with given fields: config, artifactsFile, directDownload
-func (_m *MockNetwork) DownloadArtifacts(config JobCredentials, artifactsFile string, directDownload *bool) DownloadState {
+func (_m *MockNetwork) DownloadArtifacts(config JobCredentials, artifactsFile io.WriteCloser, directDownload *bool) DownloadState {
 	ret := _m.Called(config, artifactsFile, directDownload)
 
 	var r0 DownloadState
-	if rf, ok := ret.Get(0).(func(JobCredentials, string, *bool) DownloadState); ok {
+	if rf, ok := ret.Get(0).(func(JobCredentials, io.WriteCloser, *bool) DownloadState); ok {
 		r0 = rf(config, artifactsFile, directDownload)
 	} else {
 		r0 = ret.Get(0).(DownloadState)
