@@ -351,7 +351,7 @@ gitlab-runner unregister --all-runners
 ## Service-related commands
 
 The following commands allow you to manage the runner as a system or user
-service. Use them to install, uninstall, start and stop the runner service.
+service. Use them to install, uninstall, start, and stop the runner service.
 
 - [`gitlab-runner install`](#gitlab-runner-install)
 - [`gitlab-runner uninstall`](#gitlab-runner-uninstall)
