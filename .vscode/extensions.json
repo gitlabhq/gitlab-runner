@@ -5,7 +5,7 @@
     "bungcip.better-toml",
     "davidanson.vscode-markdownlint",
     "romanpeshkov.go-test-outline",
-    "testthedocs.vale",
+    "errata-ai.vale-server",
     "timonwong.shellcheck",
   ]
 }
