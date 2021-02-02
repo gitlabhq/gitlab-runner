@@ -1,7 +1,7 @@
 package service_helpers
 
 import (
-	service "github.com/ayufan/golang-kardianos-service"
+	"github.com/kardianos/service"
 	"github.com/sirupsen/logrus"
 )
 
