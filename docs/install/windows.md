@@ -24,6 +24,8 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged
    release](bleeding-edge.md#download-any-other-tagged-release).
+1. Make sure to restrict the `Write` permissions on the GitLab Runner directory and executable.
+   If you do not set these permissions, regular users can replace the executable with their own and run arbitrary code with elevated privileges.
 1. Run an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
 1. [Register a runner](../register/index.md).
 1. Install GitLab Runner as a service and start it. You can either run the service
