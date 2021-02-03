@@ -468,7 +468,7 @@ directory as persistent by defining it in `volumes = ["/my/cache/"]` under the
 ### Clearing Docker cache
 
 GitLab Runner provides the [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/packaging/root/usr/share/gitlab-runner/clear-docker-cache)
-script to remove containers that can unnecessarily consume disk space.
+script to remove old containers and volumes that can unnecessarily consume disk space.
 
 Run `clear-docker-cache` regularly (using `cron` once per week, for example),
 ensuring a balance is struck between:
@@ -476,7 +476,32 @@ ensuring a balance is struck between:
 - Maintaining some recent containers in the cache for performance.
 - Reclaiming disk space.
 
-`clear-docker-cache` does not clean build or cache volumes.
+`clear-docker-cache` can remove old or unused containers and volumes that are created by the GitLab Runner. For a list of options, run the script with `help` option:
+
+```shell
+clear-docker-cache help
+```
+
+The default option is `prune-volumes` which the script will remove all unused containers (both dangling and unreferenced) and volumes.
+
+### Clearing old build images
+
+The [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/packaging/root/usr/share/gitlab-runner/clear-docker-cache) script will not remove the Docker images as they are not tagged by the GitLab Runner. You can however confirm the space that can be reclaimed by running the script with the `space` option as illustrated below:
+
+```shell
+clear-docker-cache space
+
+Show docker disk usage
+----------------------
+
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          14        9         1.306GB   545.8MB (41%)
+Containers      19        18        115kB     0B (0%)
+Local Volumes   0         0         0B        0B
+Build Cache     0         0         0B        0B
+```
+
+Once you have confirmed the reclaimable space, run the [`docker system prune`](https://docs.docker.com/engine/reference/commandline/system_prune/) command that will remove all unused containers, networks, images (both dangling and unreferenced), and optionally, volumes that are not tagged by the GitLab Runner.
 
 ## The persistent storage
 
