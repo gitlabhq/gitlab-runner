@@ -477,13 +477,6 @@ ensuring a balance is struck between:
 
 ```shell
 clear-docker-cache help
-
-Usage: clear-docker-cache prune-volumes|prune|space|help
-
-  prune-volumes   Remove all unused containers (both dangling and unreferenced) and volumes
-  prune           Remove all unused containers (both dangling and unreferenced)
-  space           Show docker disk usage
-  help            Show usage
 ```
 
 The default option is `prune-volumes` which the script will remove all unused containers (both dangling and unreferenced) and volumes.
