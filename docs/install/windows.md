@@ -178,3 +178,25 @@ use the Built-in System Account.
 If you have issues with the Built-in System Account, please read
 [Configure the Service to Start Up with the Built-in System Account](https://docs.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/service-startup-permissions#resolution-3-configure-the-service-to-start-up-with-the-built-in-system-account)
 on Microsoft's support website.
+
+### Get runner logs
+
+When you run `.\gitlab-runner.exe install` it installs `gitlab-runner`
+as a Windows service. You can find the logs in the Event Viewer
+with the provider name `gitlab-runner`.
+
+If you don't have access to the GUI, in PowerShell, you can run
+[`Get-WinEvent`](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-7.1).
+
+```shell
+PS C:\> Get-WinEvent -ProviderName gitlab-runner
+
+   ProviderName: gitlab-runner
+
+TimeCreated                     Id LevelDisplayName Message
+-----------                     -- ---------------- -------
+2/4/2021 6:20:14 AM              1 Information      [session_server].listen_address not defined, session endpoints disabled  builds=0...
+2/4/2021 6:20:14 AM              1 Information      listen_address not defined, metrics & debug endpoints disabled  builds=0...
+2/4/2021 6:20:14 AM              1 Information      Configuration loaded                                builds=0...
+2/4/2021 6:20:14 AM              1 Information      Starting multi-runner from C:\config.toml...        builds=0...
+```
