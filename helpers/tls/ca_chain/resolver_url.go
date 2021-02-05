@@ -100,6 +100,11 @@ func (r *urlResolver) Resolve(certs []*x509.Certificate) ([]*x509.Certificate, e
 			return nil, fmt.Errorf("error while fetching issuer certificate: %w", err)
 		}
 
+		if newCert == nil {
+			log.Debug("Fetched issuer certificate file does not contain any certificates: exiting the loop")
+			break
+		}
+
 		certs = append(certs, newCert)
 
 		if isSelfSigned(newCert) {
@@ -134,6 +139,11 @@ func (r *urlResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Cert
 			Warning("Certificate decoding error")
 
 		return nil, fmt.Errorf("decoding failure: %w", err)
+	}
+
+	if newCert == nil {
+		log.Debug("Issuer certificate file decoded properly but did not include any certificates")
+		return nil, nil
 	}
 
 	preparePrefixedCertificateLogger(log, newCert, "newCert").

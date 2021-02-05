@@ -103,8 +103,9 @@ func TestDecodeCertificate(t *testing.T) {
 			expectedCertificate: testX509Certificate,
 		},
 		"empty PEM pkcs7 data": {
-			data:          emptyPEMPKCS7Data,
-			expectedError: "invalid certificate: empty PEM block",
+			data:                emptyPEMPKCS7Data,
+			expectedError:       "",
+			expectedCertificate: nil,
 		},
 	}
 
