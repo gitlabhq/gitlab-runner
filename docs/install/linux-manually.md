@@ -36,14 +36,16 @@ To download the appropriate package for your system:
 For example, for Debian or Ubuntu:
 
 ```shell
-# Replace ${arch} with any of the supported architectures, e.g. x86_64, arm, arm64
+# Replace ${arch} with any of the supported architectures, e.g. amd64, arm, arm64
+# A full list of architectures can be found here https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
 curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/deb/gitlab-runner_${arch}.deb"
 ```
 
 For example, for CentOS or Red Hat Enterprise Linux:
 
 ```shell
-# Replace ${arch} with any of the supported architectures, e.g. x86_64, arm, arm64
+# Replace ${arch} with any of the supported architectures, e.g. amd64, arm, arm64
+# A full list of architectures can be found here https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
 curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_${arch}.rpm"
 ```
 
