@@ -3,6 +3,7 @@
 package common
 
 import (
+	context "context"
 	io "io"
 
 	mock "github.com/stretchr/testify/mock"
@@ -80,13 +81,13 @@ func (_m *MockNetwork) RegisterRunner(config RunnerCredentials, parameters Regis
 	return r0
 }
 
-// RequestJob provides a mock function with given fields: config, sessionInfo
-func (_m *MockNetwork) RequestJob(config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool) {
-	ret := _m.Called(config, sessionInfo)
+// RequestJob provides a mock function with given fields: ctx, config, sessionInfo
+func (_m *MockNetwork) RequestJob(ctx context.Context, config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool) {
+	ret := _m.Called(ctx, config, sessionInfo)
 
 	var r0 *JobResponse
-	if rf, ok := ret.Get(0).(func(RunnerConfig, *SessionInfo) *JobResponse); ok {
-		r0 = rf(config, sessionInfo)
+	if rf, ok := ret.Get(0).(func(context.Context, RunnerConfig, *SessionInfo) *JobResponse); ok {
+		r0 = rf(ctx, config, sessionInfo)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*JobResponse)
@@ -94,8 +95,8 @@ func (_m *MockNetwork) RequestJob(config RunnerConfig, sessionInfo *SessionInfo)
 	}
 
 	var r1 bool
-	if rf, ok := ret.Get(1).(func(RunnerConfig, *SessionInfo) bool); ok {
-		r1 = rf(config, sessionInfo)
+	if rf, ok := ret.Get(1).(func(context.Context, RunnerConfig, *SessionInfo) bool); ok {
+		r1 = rf(ctx, config, sessionInfo)
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
