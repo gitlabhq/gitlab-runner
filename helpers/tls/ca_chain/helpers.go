@@ -63,6 +63,11 @@ func decodeCertificate(data []byte) (*x509.Certificate, error) {
 
 	p, err := pkcs7.Parse(data)
 	if err == nil {
+		// pkcs7.Parse() can return a nil payload if no certs were decoded
+		if p == nil || len(p.Certificates) == 0 {
+			return nil, nil
+		}
+
 		return p.Certificates[0], nil
 	}
 

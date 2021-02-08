@@ -99,6 +99,11 @@ VqrwIVjbsGaw/NPROth/XDJp5jzpwxnf5HDQhLV04sfdN9IRw005WC+l0f19iG9V
 +3OIln1a6DKx+zEzL20uwW5L/5l3FsLwwvOLybX4mAhiyxahADEA
 -----END PKCS7-----`
 
+	// PKCS7 with no certificates
+	testEmptyCertPKCS7 = `-----BEGIN PKCS7-----
+MCcGCSqGSIb3DQEHAqAaMBgCAQExADALBgkqhkiG9w0BBwGgAKEAMQA=
+-----END PKCS7-----`
+
 	testCertPubKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtzT5ejrVzTEK95s2DU4m
 XiJcLluXMaVsN96NYqfvbrqD5RRnfGxwINYw2u6iN37sRuRCYDJS10aJ83D7EgfI

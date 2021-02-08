@@ -114,6 +114,17 @@ func TestUrlResolver_Resolve(t *testing.T) {
 				"Fetched issuer certificate is a ROOT certificate so exiting the loop",
 			},
 		},
+		"last certificate with URL but no issue certificate": {
+			certs:         []*x509.Certificate{testCertificateWithURL},
+			mockLoopLimit: defaultURLResolverLoopLimit,
+			mockFetcher:   newFetcherMock(url1, []byte("test"), nil),
+			mockDecoder:   newDecoderMock([]byte("test"), nil, nil),
+			expectedError: "",
+			expectedCerts: []*x509.Certificate{testCertificateWithURL},
+			expectedOutput: []string{
+				"Fetched issuer certificate file does not contain any certificates: exiting the loop",
+			},
+		},
 		"infinite loop": {
 			certs:         []*x509.Certificate{testCertificateWithURL},
 			mockLoopLimit: 3,

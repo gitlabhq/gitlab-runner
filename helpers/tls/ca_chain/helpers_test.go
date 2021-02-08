@@ -69,6 +69,9 @@ func TestDecodeCertificate(t *testing.T) {
 	block, _ = pem.Decode([]byte(testCertPKCS7))
 	decodedPEMPKCS7Data := block.Bytes
 
+	emptyBlock, _ := pem.Decode([]byte(testEmptyCertPKCS7))
+	emptyPEMPKCS7Data := emptyBlock.Bytes
+
 	tests := map[string]struct {
 		data                []byte
 		expectedError       string
@@ -98,6 +101,11 @@ func TestDecodeCertificate(t *testing.T) {
 			data:                decodedPEMPKCS7Data,
 			expectedError:       "",
 			expectedCertificate: testX509Certificate,
+		},
+		"empty PEM pkcs7 data": {
+			data:                emptyPEMPKCS7Data,
+			expectedError:       "",
+			expectedCertificate: nil,
 		},
 	}
 
