@@ -1,3 +1,92 @@
+## v13.9.0-rc1 (2021-02-08)
+
+### New features
+
+- Enable PowerShell Core support in Kubernetes Executor !2705
+- Enable PowerShell Core support in Docker Executor on Linux !2563
+- Add support for setting the artifact/cache compression level !2684
+- Display feature flags that are set to a non-default status !2606
+- Add GPU support for Docker executor !1955 (Andreas Gravgaard Andersen @agravgaard)
+
+### Security fixes
+
+- Remove skipVerify from client struct !2654
+
+### Bug fixes
+
+- Fix panic when PKCS7-encoded payload has no certificate !2737
+- Correctly set fastzip's staging directory !2693
+- Improve trace secret masking with x/text/transform !2677
+- Add explicit bash shell error checks !2671
+- Terminate requests on process shutdown !1684
+
+### Maintenance
+
+- Change env to bash to resolve Illegal option !2732
+- Upgrade Docker version to 20.10.2 !2722
+- Update docker script default to docker prune volumes !2720
+- Default to no Docker image compression in local environment !2717
+- pwsh scripts can be passed over STDIN on shell executor !2715
+- Update github.com/docker/cli dependency !2714
+- Add artifact and cache download progress meter !2708
+- Remove requirement for Docker daemon experimental mode from image build scripts !2707
+- Fix the image that is used to create the pwsh tag !2706
+- Exclude out/binaries/gitlab-runner-helper from binaries artifacts !2703
+- Improve logging to packagecloud push !2702
+- Upgrade Powershell Core to 7.1.1 !2696
+- Make TestHelperImageRegistry not need real prebuilt images !2682
+- Add test for permissions container in k8s !2676
+- Add object storage cache credentials adapter !2674
+- Add artifact/cache upload progress meter !2670
+- Refactor Docker pull logic into dedicated package !2659
+- Update to Docker client v20.10.2 !2658
+- Update gitlab-terminal package !2656
+- Create separate helper image with Powershell Core !2641
+- Prioritize helper image specified in config to change K8s log dir permissions !2578 (naruhito @naruhito1)
+- Remove helpers/trace redundant io.Pipe use !2464
+- Kubernetes tests simplify build creation !2445
+- Report deleted pods as a system failure with attach strategy !2444
+- Fix incorrect path/filepath use !2313
+- Improve docker cleanup script to also include old builds and images !2310
+- Output coverage to Cobertura report !2252
+
+### Documentation changes
+
+- Document how to view Windows service logs with cli !2733
+- Update linux-manually.md !2731 (Simon Carr @simonjcarr)
+- Added details about guided install !2730
+- Use correct Vale extension in VS Code ext file !2727
+- Refresh Vale linting rules !2726
+- Specify tag syntax for tagged releases !2725
+- Add note about permissions !2723
+- do not link to unmaintained docker image cleanup app !2712 (Antoine Beaupré @anarcat)
+- Fix formatting of FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY !2701 (Ben Bodenmiller @bbodenmiller)
+- Clarify download instructions !2700
+- Replace x86 and amd64 with 32-bit and 64-bit terminology for download !2699
+- Add buildImage in the default openshift operator example !2698
+- 1/3 Add crosslink to Kubernetes Agent docs !2697
+- docs: Clarify self-signed certs on windows !2695 (Stefan Schmalzhaf @the_s)
+- Docs: Fix minor whitespace inconsistency !2694 (Stefan Schmalzhaf @the_s)
+- 27451 Fix Documentation - podAnnotation should be a TOML table !2692 (Benjamin Souty @B-Souty)
+- Split docs linting jobs !2689
+- Docs: Links documentation to working example for CMD Shell usage on Windows GitLab Runners where only PowerShell can be the default !2687
+- Documentation - Supported OS updates !2683
+- Whole hour periods for autoscale !2681
+- Mention version sync on first sign of trouble !2680
+- Fix typo in kubernetes.md !2675
+- Removed extra spaces !2672
+- Update install runner on Kubernetes install page - docs !2668
+- Simplification of dind service section !2663 (Keith Kirkwood @keithkirkwood)
+- Instructions for installing dependencies on CentOS. !2619 (David Hannasch @dHannasch)
+- Include in docs details about the updated script !2586
+- Changed recommendation to instance type in docs to a smaller one !2579 (Jan Pobořil @janpoboril)
+- Document known race condition about helm upgrade !2541
+- Improve TLS custom cert documentation !2487
+
+### Other changes
+
+- Add CODEOWNERS for 3 files at repo root !2667
+
 ## v13.8.0 (2021-01-20)
 
 ### New features
