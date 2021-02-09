@@ -25,6 +25,8 @@ some additional patches for the following bugs:
 - [Add `--google-min-cpu-platform` option for machine creation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/9)
 - [Use cached IP for Google driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/15)
 - [Use cached IP for AWS driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/14)
+- [Add support for using GPUs in Google Compute Engine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/48)
+- [Support running AWS instances with IMDSv2](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/49)
 
 The intent of this fork is to fix critical and bugs affecting running
 costs only. No new features will be added.
@@ -113,3 +115,114 @@ out of the scope of this documentation. For more details please read the
    ```
 
 1. You can now safely install the new version of GitLab Runner without interrupting any jobs.
+
+## Using the forked version of Docker Machine
+
+### Install
+
+1. Download the [appropriate `docker-machine` binary](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases).
+Copy the binary to a location accessible to `PATH` and make it
+executable. For example, to download and install `v0.16.2-gitlab.11`:
+
+    ```shell
+    curl -O "https://gitlab-docker-machine-downloads.s3.amazonaws.com/v0.16.2-gitlab.11/docker-machine-Linux-x86_64"
+    cp docker-machine-Linux-x86_64 /usr/local/bin/docker-machine
+    chmod +x /usr/local/bin/docker-machine
+    ```
+
+### Using GPUs on Google Compute Engine
+
+> [Introduced](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/issues/34) in GitLab Docker Machine `0.16.2-gitlab.10` and GitLab Runner 13.9.
+
+You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create [Google Compute Engine instances
+with graphics processing units (GPUs)](https://cloud.google.com/compute/docs/gpus/).
+GitLab Runner 13.9 is [required for GPUs to work in a Docker executor](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4585).
+
+#### Docker Machine GPU options
+
+To create an instance with GPUs, use these Docker Machine options:
+
+|Option|Example|Description|
+|------|-------|-----------|
+|`--google-accelerator`|type=nvidia-tesla-p4,count=1|Specifies the type and number of GPU accelerators to attach to the instance (`type=TYPE,count=N` format)|
+|`--google-maintenance-policy`|`TERMINATE`|Always use `TERMINATE` because [Google Cloud does not allow GPU instances to be live migrated](https://cloud.google.com/compute/docs/instances/live-migration).|
+|`--google-machine-image`|`https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110`|The URL of a GPU-enabled operating system. See the [list of available images](https://cloud.google.com/ai-platform/deep-learning-vm/docs/images).|
+|`--google-metadata`|`install-nvidia-driver=True`|This flag tells the image to install the NVIDIA GPU driver.|
+
+These arguments map to [command-line arguments for `gcloud compute`](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus#gcloud_1).
+See the [Google documentation on creating VMs with attached GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus)
+for more details.
+
+#### Verifying Docker Machine options
+
+To prepare your system and test that GPUs can be created with Google Compute Engine:
+
+1. [Set up the Google Compute Engine driver credentials](https://docs.docker.com/machine/drivers/gce#credentials) for Docker Machine.
+
+1. Verify that `docker-machine` can create a virtual machine with your
+   desired options. For example, to create an `n1-standard-1` machine
+   with a single NVIDIA Telsa P4 accelerator, substitute
+   `test-gpu` with a name and run:
+
+   ```shell
+   docker-machine create --driver google --google-project your-google-project \
+     --google-disk-size 50 \
+     --google-machine-type n1-standard-1 \
+     --google-accelerator type=nvidia-tesla-p4,count=1 \
+     --google-maintenance-policy TERMINATE \
+     --google-machine-image https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110 \
+     --google-metadata "install-nvidia-driver=True" test-gpu
+   ```
+
+1. To verify the GPU is active, SSH into the machine and run `nvidia-smi`:
+
+   ```shell
+   $ docker-machine ssh test-gpu sudo nvidia-smi
+   +-----------------------------------------------------------------------------+
+   | NVIDIA-SMI 450.51.06    Driver Version: 450.51.06    CUDA Version: 11.0     |
+   |-------------------------------+----------------------+----------------------+
+   | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+   |                               |                      |               MIG M. |
+   |===============================+======================+======================|
+   |   0  Tesla P4            Off  | 00000000:00:04.0 Off |                    0 |
+   | N/A   43C    P0    22W /  75W |      0MiB /  7611MiB |      3%      Default |
+   |                               |                      |                  N/A |
+   +-------------------------------+----------------------+----------------------+
+
+   +-----------------------------------------------------------------------------+
+   | Processes:                                                                  |
+   |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+   |        ID   ID                                                   Usage      |
+   |=============================================================================|
+   |  No running processes found                                                 |
+   +-----------------------------------------------------------------------------+
+   ```
+
+1. Remove this test instance to save money:
+
+    ```shell
+    docker-machine rm test-gpu
+    ```
+
+#### Configuring GitLab Runner
+
+1. Once you have verified these options, configure the Docker executor
+to use all available GPUs in the [`runners.docker` configuration](../configuration/advanced-configuration.md#the-runnersdocker-section).
+Then add the Docker Machine options to your [`MachineOptions` settings in the GitLab Runner `runners.machine` configuration](../configuration/advanced-configuration.md#the-runnersmachine-section). For example:
+
+   ```toml
+   [runners.docker]
+     gpus = "all"
+   [runners.machine]
+     MachineOptions = [
+       "google-project=your-google-project",
+       "google-disk-size=50",
+       "google-disk-type=pd-ssd",
+       "google-machine-type=n1-standard-1",
+       "google-accelerator=count=1,type=nvidia-tesla-p4",
+       "google-maintenance-policy=TERMINATE",
+       "google-machine-image=https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110",
+       "google-metadata=install-nvidia-driver=True"
+   ]
+   ```
