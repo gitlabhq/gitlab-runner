@@ -17,7 +17,7 @@ The file to be edited can be found in:
    executed as non-root
 1. `./config.toml` on other systems
 
-If you edit `config.toml`, then for most options, GitLab Runner does not require a restart. It checks the file every five minutes and automatically picks up any changes. This includes any parameters that are defined in the `[[runners]]` section and most parameters in the global section, except for `listen_address`.
+If you edit `config.toml`, then for most options, GitLab Runner does not require a restart. This includes any parameters that are defined in the `[[runners]]` section and most parameters in the global section, except for `listen_address`. Runner checks for config modifications every 3 seconds and reloads if necessary. Configuration is also reloaded in response to the `SIGHUP` signal.
 
 If a runner has been previously registered, you can also modify the `config.toml` file directly. In this instance, you do not have to run the `register` command again.
 
