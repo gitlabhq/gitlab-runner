@@ -93,17 +93,46 @@ func TestVariablesMaskingBoundary(t *testing.T) {
 		},
 		//nolint:lll
 		{
-			input:    "a really long sensitive URL http://example.com/?x-amz-credential=" + strings.Repeat("0", sensitiveURLMaxTokenSize-len("x-amz-credential=")),
-			expected: "a really long sensitive URL http://example.com/?x-amz-credential=[MASKED]",
+			input:    "a really long sensitive URL http://example.com/?x-amz-credential=" + strings.Repeat("0", 8*1024) + " that is still scrubbed",
+			expected: "a really long sensitive URL http://example.com/?x-amz-credential=[MASKED] that is still scrubbed",
 		},
 		//nolint:lll
 		{
-			input:    "a sensitive URL containing a token too long to scrub http://example.com/?x-amz-credential=" + strings.Repeat("0", sensitiveURLMaxTokenSize-len("x-amz-credential=")+1),
-			expected: "a sensitive URL containing a token too long to scrub http://example.com/?x-amz-credential=" + strings.Repeat("0", sensitiveURLMaxTokenSize-len("x-amz-credential=")+1),
-		},
-		{
 			input:    "spl|it sensit|ive UR|L http://example.com/?x-amz-cred|ential=abcdefghij|klmnopqrstuvwxyz01234567",
 			expected: "split sensitive URL http://example.com/?x-amz-credential=[MASKED]",
+		},
+		//nolint:lll
+		{
+			input:    "newline: http://example.com/?x-amz-credential=abc\nhttp://example.com/?x-amz-credential=abc",
+			expected: "newline: http://example.com/?x-amz-credential=[MASKED]\nhttp://example.com/?x-amz-credential=[MASKED]",
+		},
+		//nolint:lll
+		{
+			input:    "control character: http://example.com/?x-amz-credential=abc\bhttp://example.com/?x-amz-credential=abc",
+			expected: "control character: http://example.com/?x-amz-credential=[MASKED]\bhttp://example.com/?x-amz-credential=[MASKED]",
+		},
+		{
+			input:    "rss_token=notmaksed http://example.com/?rss_token=!@#$A&x-amz-credential=abc&test=test",
+			expected: "rss_token=notmaksed http://example.com/?rss_token=[MASKED]&x-amz-credential=[MASKED]&test=test",
+		},
+		//nolint:lll
+		{
+			input:    "query string with no value: http://example.com/?x-amz-credential=&private_token=gitlab",
+			expected: "query string with no value: http://example.com/?x-amz-credential=[MASKED]&private_token=[MASKED]",
+		},
+		//nolint:lll
+		{
+			input:    "invalid URL with double &: http://example.com/?x-amz-credential=abc&&private_token=gitlab",
+			expected: "invalid URL with double &: http://example.com/?x-amz-credential=[MASKED]&&private_token=[MASKED]",
+		},
+		{
+			input:    "invalid URL with double ?: http://example.com/?x-amz-credential=abc?private_token=gitlab",
+			expected: "invalid URL with double ?: http://example.com/?x-amz-credential=[MASKED]?private_token=[MASKED]",
+		},
+		//nolint:lll
+		{
+			input:    "interweaved tokens: ?one ?x-amz-credential=abc two=three ?one=two &token &x-amz-credential=abc =token ?=",
+			expected: "interweaved tokens: ?one ?x-amz-credential=[MASKED] two=three ?one=two &token &x-amz-credential=[MASKED] =token ?=",
 		},
 	}
 
@@ -141,15 +170,15 @@ func TestMaskNonEOFSafeBoundary(t *testing.T) {
 	}{
 		{
 			input:    "cannot safely flush: secret secre",
-			expected: "cannot safely flush: [MASKED]",
+			expected: "cannot saf",
 		},
 		{
 			input:    "cannot safely flush: secret secre!",
-			expected: "cannot safely flush: [MASKED]",
+			expected: "cannot saf",
 		},
 		{
 			input:    "cannot safely flush: secret secre\t",
-			expected: "cannot safely flush: [MASKED]",
+			expected: "cannot saf",
 		},
 		{
 			input:    "can safely flush: secret secre\r",

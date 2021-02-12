@@ -54,6 +54,7 @@ func (b *Buffer) SetMasked(values []string) {
 	}
 
 	defaultTransformers := []transform.Transformer{
+		newSensitiveURLParamTransform(),
 		encoding.Replacement.NewEncoder(),
 	}
 
@@ -63,7 +64,6 @@ func (b *Buffer) SetMasked(values []string) {
 	for _, value := range values {
 		transformers = append(transformers, newPhraseTransform(value))
 	}
-	transformers = append(transformers, NewSensitiveURLParamTransform())
 
 	transformers = append(transformers, defaultTransformers...)
 
