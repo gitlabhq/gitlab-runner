@@ -83,7 +83,7 @@ We have some additional labels plus those defined in [gitlab-ce workflow labels]
 
 - Additional subjects: ~cache, ~executors, ~"git operations"
 - OS: ~"os::Linux" ~"os::macOS" ~"os::FreeBSD" ~"os::Windows"
-- executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox"
+- executor: ~"executor::docker" ~"executor::kubernetes" ~"executor::docker\-machine" ~"executor::shell" ~"executor::parallels" ~"executor::virtualbox"
 - For any [follow-up
   issues](https://docs.gitlab.com/ee/development/contributing/issue_workflow.html#technical-debt-in-follow-up-issues)
   created during code review the ~"follow-up" label should be added to
