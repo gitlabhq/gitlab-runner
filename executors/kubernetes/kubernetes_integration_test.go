@@ -47,6 +47,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testInteractiveTerminal":                       testInteractiveTerminalFeatureFlag,
 		"testKubernetesReplaceEnvFeatureFlag":           testKubernetesReplaceEnvFeatureFlag,
 		"testKubernetesReplaceMissingEnvVarFeatureFlag": testKubernetesReplaceMissingEnvVarFeatureFlag,
+		"testKubernetesWithNonRootSecurityContext":      testKubernetesWithNonRootSecurityContext,
 	}
 
 	featureFlags := []string{
@@ -602,6 +603,28 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 			tt.outputAssertions(t, out, <-deletedPodCh)
 		})
 	}
+}
+
+func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse("id")
+	})
+	build.Image.Name = common.TestAlpineNoRootImage
+
+	runAsNonRoot := true
+	runAsUser := int64(1895034)
+	build.Runner.Kubernetes.PodSecurityContext = common.KubernetesPodSecurityContext{
+		RunAsNonRoot: &runAsNonRoot,
+		RunAsUser:    &runAsUser,
+	}
+
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, fmt.Sprintf("uid=%d gid=0(root)", runAsUser))
 }
 
 func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
