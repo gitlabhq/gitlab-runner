@@ -39,7 +39,7 @@ docs lint markdown:
   image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.12-vale-2.8.0-markdownlint-0.26.0"
   stage: test
   extends:
-  - .merge_request_pipelines
+  - .rules:merge_request_pipelines
   - .no_cache_and_dependencies
   needs: []
   script:
@@ -51,7 +51,7 @@ docs check links:
   image: "registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.12-ruby-2.7.2"
   stage: test
   extends:
-  - .merge_request_pipelines
+  - .rules:merge_request_pipelines
   - .no_cache_and_dependencies
   needs: []
   script:
@@ -68,7 +68,7 @@ docs check links:
 check feature flags docs:
   stage: test
   extends:
-  - .merge_request_pipelines
+  - .rules:merge_request_pipelines
   - .no_cache_and_dependencies
   script:
   - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
@@ -85,8 +85,7 @@ check feature flags docs:
 check modules:
   stage: test
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs
   - .no_cache_and_dependencies
   needs:
   - 'prepare done'
@@ -96,8 +95,7 @@ check modules:
 check mocks:
   stage: test
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs
   - .no_cache_and_dependencies
   needs:
   - 'prepare done'
@@ -107,7 +105,7 @@ check mocks:
 code_quality:
   stage: test
   extends:
-  - .merge_request_pipelines
+  - .rules:merge_request_pipelines:no_docs
   - .no_dependencies
     # Use GOCACHE instead of GOLANGCI_LINT_CACHE
   # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
@@ -167,7 +165,7 @@ unit test with race:
 fuzz variable mask:
   extends:
   - .fuzz_base
-  - .merge_request_pipelines_rules
+  - .rules:merge_request_pipelines
   image: golang:1.13
   stage: test
   script:
@@ -234,8 +232,7 @@ windows 2004 tests:
 
 git 1.8.3.1:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs
   - .go-cache
   image: centos:7
   stage: test

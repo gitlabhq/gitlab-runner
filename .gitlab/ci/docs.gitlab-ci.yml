@@ -1,9 +1,10 @@
 .review-docs:
   stage: docs
   extends:
-  - .merge_request_pipelines
+  - .rules:docs:review
   - .no_cache_and_dependencies
   image: ruby:2.6-alpine
+  needs: []
   before_script:
   - unset GPG_KEY
   - gem install gitlab --no-doc
@@ -15,7 +16,7 @@
   - chmod 755 trigger-build
   variables:
     GIT_STRATEGY: none
-  when: manual
+  allow_failure: true
 
 # Trigger a docs build in gitlab-docs
 # Useful to preview the docs changes live
