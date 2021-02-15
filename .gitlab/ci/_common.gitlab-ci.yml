@@ -36,40 +36,6 @@ default:
 before_script:
 - unset GPG_KEY
 
-# Skip all jobs except the ones that begin and end with 'docs'.
-# Used for commits including ONLY documentation changes.
-# https://docs.gitlab.com/ee/development/documentation/index.html#branch-naming
-.except_docs:
-  except:
-    variables:
-    - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
-
-# Skip all jobs except the ones that begin and end with 'docs'.
-# Used for commits including ONLY documentation changes.
-# https://docs.gitlab.com/ee/development/documentation/index.html#branch-naming
-.docs:rules:skip:
-  rules:
-  - if: '$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/'
-    when: never
-  - when: on_success
-
-.merge_request_pipelines:
-  only:
-    refs:
-    - merge_requests
-    - master@gitlab-org/gitlab-runner
-    - master@gitlab-org/security/gitlab-runner
-    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/gitlab-runner
-    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/security/gitlab-runner
-    - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
-    - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/security/gitlab-runner
-
-.runner_master:
-  only:
-    refs:
-    - master@gitlab-org/gitlab-runner
-    - master@gitlab-org/security/gitlab-runner
-
 .no_cache:
   cache: {}
 

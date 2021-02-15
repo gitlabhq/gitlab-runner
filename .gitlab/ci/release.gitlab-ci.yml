@@ -57,7 +57,7 @@
 
 .release:with-rules:
   extends:
-  - .docs:rules:skip
+  - .rules:docs:skip
   stage: release
   before_script:
   - unset GPG_KEY
@@ -299,8 +299,7 @@ stable servercore2004 docker images:
 
 static QA:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs
   - .no_cache
   stage: release
   image: alpine:3.12.0

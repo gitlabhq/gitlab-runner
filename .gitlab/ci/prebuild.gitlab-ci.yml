@@ -19,8 +19,7 @@ helper images:
 
 clone test repo:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs
   - .no_cache_and_dependencies
   stage: prebuild
   variables:
@@ -37,8 +36,7 @@ clone test repo:
 
 tests definitions:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs
   - .go-cache
   stage: prebuild
   script:

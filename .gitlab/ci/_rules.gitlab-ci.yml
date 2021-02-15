@@ -1,3 +1,7 @@
+##############
+# Conditions #
+##############
+
 .if-not-canonical-namespace: &if-not-canonical-namespace
   if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
 
@@ -10,9 +14,50 @@
 .if-stable-release: &if-stable-release
   if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
 
+.if-docs-branch: &if-docs-branch
+  if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
+
+.if-merge-request-pipeline: &if-merge-request-pipeline
+  if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+.if-runner-or-security-runner-master: &if-runner-or-security-runner-master
+  if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
+
+.if-runner-or-security-runner-stable: &if-runner-or-security-runner-stable
+  if: $CI_COMMIT_REF_NAME =~ /\A[0-9]+-[0-9]+-stable\z/ && ($CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner")
+
+.if-runner-release: &if-runner-release
+  if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+
+.if-security-runner-release: &if-security-runner-release
+  if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+?\z/ && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+
+#######################
+# Merge Request rules #
+#######################
+
+.rules:merge_request_pipelines:
+  rules:
+  - <<: *if-merge-request-pipeline
+  - <<: *if-runner-or-security-runner-master
+  - <<: *if-runner-or-security-runner-stable
+  - <<: *if-runner-release
+  - <<: *if-security-runner-release
+
+.rules:merge_request_pipelines:no_docs:
+  rules:
+  - <<: *if-docs-branch
+    when: never
+  - <<: *if-merge-request-pipeline
+  - <<: *if-runner-or-security-runner-master
+  - <<: *if-runner-or-security-runner-stable
+  - <<: *if-runner-release
+  - <<: *if-security-runner-release
+
 #################
 # Release rules #
 #################
+
 .rules:release:all:
   rules:
   - <<: *if-not-canonical-namespace
@@ -20,3 +65,48 @@
   - <<: *if-default-branch
   - <<: *if-release-candidate
   - <<: *if-stable-release
+
+##############
+# Docs rules #
+##############
+.rules:docs:skip:
+  rules:
+  - <<: *if-docs-branch
+    when: never
+  - when: on_success
+
+.rules:docs:review:
+  rules:
+  - <<: *if-not-canonical-namespace
+    when: never
+  - <<: *if-merge-request-pipeline
+    when: manual
+
+###################
+# Only and Except #
+###################
+
+.merge_request_pipelines:
+  only:
+    refs:
+    - merge_requests
+    - master@gitlab-org/gitlab-runner
+    - master@gitlab-org/security/gitlab-runner
+    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/gitlab-runner
+    - /\A[0-9]+-[0-9]+-stable\Z/@gitlab-org/security/gitlab-runner
+    - /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\Z/@gitlab-org/gitlab-runner
+    - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/security/gitlab-runner
+
+# Skip all jobs except the ones that begin and end with 'docs'.
+# Used for commits including ONLY documentation changes.
+# https://docs.gitlab.com/ee/development/documentation/index.html#branch-naming
+.except_docs:
+  except:
+    variables:
+    - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
+
+.runner_master:
+  only:
+    refs:
+    - master@gitlab-org/gitlab-runner
+    - master@gitlab-org/security/gitlab-runner
