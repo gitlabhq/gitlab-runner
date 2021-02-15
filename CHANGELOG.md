@@ -1,3 +1,9 @@
+## v13.9.0-rc2 (2021-02-15)
+
+### Other changes
+
+- Revert "Improve trace secret masking with x/text/transform" !2752
+
 ## v13.9.0-rc1 (2021-02-08)
 
 ### New features
