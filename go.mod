@@ -39,6 +39,7 @@ require (
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/klauspost/pgzip v1.2.5
 	github.com/kr/pty v1.1.1
+	github.com/markelog/trie v0.0.0-20171230083431-098fa99650c0
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/minio/minio-go/v6 v6.0.57
 	github.com/mitchellh/gox v1.0.1
@@ -51,6 +52,7 @@ require (
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/common v0.6.0
 	github.com/prometheus/procfs v0.0.5 // indirect
+	github.com/sanity-io/litter v1.2.0 // indirect
 	github.com/saracen/fastzip v0.1.5
 	github.com/sirupsen/logrus v1.7.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
@@ -65,7 +67,6 @@ require (
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	golang.org/x/sys v0.0.0-20210105210732-16f7687f5001
-	golang.org/x/text v0.3.4
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
