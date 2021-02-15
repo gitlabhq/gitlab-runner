@@ -1,7 +1,8 @@
 package trace
 
 import (
-	"errors"
+	"bufio"
+	"bytes"
 	"fmt"
 	"hash"
 	"hash/crc32"
@@ -10,100 +11,82 @@ import (
 	"os"
 	"sync"
 
-	"golang.org/x/text/transform"
+	"github.com/markelog/trie"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
+const maskedText = "[MASKED]"
 const defaultBytesLimit = 4 * 1024 * 1024 // 4MB
 
-var errLogLimitExceeded = errors.New("log limit exceeded")
-
 type Buffer struct {
-	lock sync.RWMutex
-	lw   *limitWriter
-	w    io.WriteCloser
+	lock          sync.RWMutex
+	logSize       int
+	logWriter     *bufio.Writer
+	advanceBuffer bytes.Buffer
 
 	logFile    *os.File
 	bytesLimit int
 	checksum   hash.Hash32
 
-	transformers []transform.Transformer
+	maskTree *trie.Trie
 }
 
 func (b *Buffer) SetMasked(values []string) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	// changes cannot be made after the first call to Write()
-	if b.w != nil {
+	if len(values) == 0 {
+		b.maskTree = nil
 		return
 	}
 
-	b.transformers = make([]transform.Transformer, 0, len(values))
-
+	maskTree := trie.New()
 	for _, value := range values {
-		b.transformers = append(b.transformers, NewPhraseTransform(value))
+		maskTree.Add(value, nil)
 	}
+	b.maskTree = maskTree
 }
 
 func (b *Buffer) SetLimit(size int) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	// changes cannot be made after the first call to Write()
-	if b.w != nil {
-		return
-	}
-
+	b.lock.Lock()
 	b.bytesLimit = size
+	b.lock.Unlock()
 }
 
 func (b *Buffer) Size() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.lw == nil {
-		return 0
-	}
-	return int(b.lw.written)
+	return b.logSize
 }
 
 func (b *Buffer) Bytes(offset, n int) ([]byte, error) {
-	return ioutil.ReadAll(io.NewSectionReader(b.logFile, int64(offset), int64(n)))
-}
-
-func (b *Buffer) Write(p []byte) (int, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if b.w == nil {
-		b.lw = &limitWriter{
-			w:       io.MultiWriter(b.logFile, b.checksum),
-			written: 0,
-			limit:   int64(b.bytesLimit),
-		}
-
-		b.w = transform.NewWriter(b.lw, transform.Chain(b.transformers...))
+	err := b.logWriter.Flush()
+	if err != nil {
+		return nil, err
 	}
 
-	n, err := b.w.Write(p)
-	// if we get a log limit exceeded error, we've written the log limit
-	// notice out to the log and will now silently not write any additional
-	// data.
-	if err == errLogLimitExceeded {
-		return n, nil
+	return ioutil.ReadAll(io.NewSectionReader(b.logFile, int64(offset), int64(n)))
+}
+
+func (b *Buffer) Write(data []byte) (n int, err error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	for _, r := range bytes.Runes(data) {
+		_ = b.writeRuneUnsafe(r)
 	}
-	return n, err
+	_ = b.advanceAllUnsafe()
+
+	return len(data), nil
 }
 
 func (b *Buffer) Finish() {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
-	if b.w != nil {
-		_ = b.w.Close()
-	}
+	_ = b.advanceAllUnsafe()
 }
 
 func (b *Buffer) Close() {
@@ -112,52 +95,71 @@ func (b *Buffer) Close() {
 }
 
 func (b *Buffer) Checksum() string {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	return fmt.Sprintf("crc32:%08x", b.checksum.Sum32())
 }
 
-type limitWriter struct {
-	w       io.Writer
-	written int64
-	limit   int64
+func (b *Buffer) advanceAllUnsafe() error {
+	n, err := b.advanceBuffer.WriteTo(b.logWriter)
+	b.logSize += int(n)
+	return err
 }
 
-func (w *limitWriter) Write(p []byte) (int, error) {
-	capacity := w.limit - w.written
-
-	if capacity <= 0 {
-		return 0, errLogLimitExceeded
+// advanceLogUnsafe is assumed to be run every character
+func (b *Buffer) advanceLogUnsafe() error {
+	// advance all if no masking is enabled
+	if b.maskTree == nil {
+		return b.advanceAllUnsafe()
 	}
 
-	if int64(len(p)) >= capacity {
-		p = p[:capacity]
-		n, err := w.w.Write(p)
-		if err == nil {
-			err = errLogLimitExceeded
-		}
-		if n < 0 {
-			n = 0
-		}
-		w.written += int64(n)
-		w.writeLimitExceededMessage()
-
-		return n, err
+	rest := b.advanceBuffer.String()
+	results := b.maskTree.Search(rest)
+	if len(results) == 0 {
+		// we can advance as no match was found
+		return b.advanceAllUnsafe()
 	}
 
-	n, err := w.w.Write(p)
-	if n < 0 {
-		n = 0
+	// full match was found
+	if len(results) == 1 && results[0].Key == rest {
+		b.advanceBuffer.Reset()
+		b.advanceBuffer.WriteString(maskedText)
+		return b.advanceAllUnsafe()
 	}
-	w.written += int64(n)
-	return n, err
+
+	// partial match, wait for more characters
+	return nil
 }
 
-func (w *limitWriter) writeLimitExceededMessage() {
-	msg := "\n%sJob's log exceeded limit of %v bytes.%s\n"
-	n, _ := fmt.Fprintf(w.w, msg, helpers.ANSI_BOLD_RED, w.limit, helpers.ANSI_RESET)
-	w.written += int64(n)
+func (b *Buffer) limitExceededMessage() string {
+	return fmt.Sprintf(
+		"\n%sJob's log exceeded limit of %v bytes.%s\n",
+		helpers.ANSI_BOLD_RED,
+		b.bytesLimit,
+		helpers.ANSI_RESET,
+	)
+}
+
+func (b *Buffer) writeRuneUnsafe(r rune) error {
+	// over trace limit
+	if b.logSize > b.bytesLimit {
+		return io.EOF
+	}
+
+	if _, err := b.advanceBuffer.WriteRune(r); err != nil {
+		return err
+	}
+
+	if err := b.advanceLogUnsafe(); err != nil {
+		return err
+	}
+
+	// under trace limit
+	if b.logSize < b.bytesLimit {
+		return nil
+	}
+
+	b.advanceBuffer.Reset()
+	b.advanceBuffer.WriteString(b.limitExceededMessage())
+	return b.advanceAllUnsafe()
 }
 
 func New() (*Buffer, error) {
@@ -166,10 +168,13 @@ func New() (*Buffer, error) {
 		return nil, err
 	}
 
+	checksum := crc32.NewIEEE()
+
 	buffer := &Buffer{
 		bytesLimit: defaultBytesLimit,
 		logFile:    logFile,
-		checksum:   crc32.NewIEEE(),
+		checksum:   checksum,
+		logWriter:  bufio.NewWriter(io.MultiWriter(logFile, checksum)),
 	}
 
 	return buffer, nil

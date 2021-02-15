@@ -2,7 +2,6 @@ package trace
 
 import (
 	"math"
-	"sync"
 	"testing"
 
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
@@ -12,14 +11,13 @@ import (
 )
 
 func TestVariablesMasking(t *testing.T) {
-	traceMessage := "This is the secret message cont@ining :secret duplicateValues ffixx"
+	traceMessage := "This is the secret message cont@ining :secret duplicateValues"
 	maskedValues := []string{
 		"is",
 		"duplicateValue",
 		"duplicateValue",
 		":secret",
 		"cont@ining",
-		"fix",
 	}
 
 	buffer, err := New()
@@ -36,7 +34,7 @@ func TestVariablesMasking(t *testing.T) {
 	content, err := buffer.Bytes(0, 1000)
 	require.NoError(t, err)
 
-	assert.Equal(t, "Th[MASKED] [MASKED] the secret message [MASKED] [MASKED] [MASKED]s f[MASKED]x", string(content))
+	assert.Equal(t, "Th[MASKED] [MASKED] the secret message [MASKED] [MASKED] [MASKED]s", string(content))
 }
 
 func TestTraceLimit(t *testing.T) {
@@ -63,40 +61,6 @@ func TestTraceLimit(t *testing.T) {
 	assert.Equal(t, len(expectedContent), buffer.Size(), "unexpected buffer size")
 	assert.Equal(t, "crc32:597f1ee1", buffer.Checksum())
 	assert.Equal(t, expectedContent, string(content))
-}
-
-func TestTraceRace(t *testing.T) {
-	buffer, err := New()
-	require.NoError(t, err)
-	defer buffer.Close()
-
-	buffer.SetLimit(1000)
-
-	load := []func(){
-		func() { _, _ = buffer.Write([]byte("x")) },
-		func() { buffer.SetMasked([]string{"x"}) },
-		func() { buffer.SetLimit(1000) },
-		func() { buffer.Checksum() },
-	}
-
-	var wg sync.WaitGroup
-	for _, fn := range load {
-		wg.Add(1)
-		go func(fn func()) {
-			defer wg.Done()
-
-			for i := 0; i < 100; i++ {
-				fn()
-			}
-		}(fn)
-	}
-
-	wg.Wait()
-
-	buffer.Finish()
-
-	_, err = buffer.Bytes(0, 1000)
-	require.NoError(t, err)
 }
 
 const logLineStr = "hello world, this is a lengthy log line including secrets such as 'hello', and " +
