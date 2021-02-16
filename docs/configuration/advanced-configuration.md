@@ -579,7 +579,7 @@ Example:
       # https://docs.docker.com/machine/drivers/gce/
       "google-project=GOOGLE-PROJECT-ID",
       "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
-    ]
+  ]
   [[runners.machine.autoscaling]]
     Periods = ["* * 9-17 * * mon-fri *"]
     IdleCount = 50
