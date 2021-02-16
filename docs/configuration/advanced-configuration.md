@@ -591,6 +591,7 @@ Example:
     IdleTime = 60
     Timezone = "UTC"
 ```
+
 ### Periods syntax
 
 The `Periods` setting contains an array of string patterns of
