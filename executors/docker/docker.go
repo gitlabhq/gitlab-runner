@@ -802,7 +802,7 @@ func (e *executor) verifyAllowedImage(image, optionName string, allowedImages, i
 
 	if len(allowedImages) != 0 {
 		e.Println()
-		e.Errorln(fmt.Sprintf("The %q image is not present on list of allowed %s", image, optionName))
+		e.Errorln(fmt.Sprintf("The %q image is not present on list of allowed %s:", image, optionName))
 		for _, allowedImage := range allowedImages {
 			e.Errorln("-", allowedImage)
 		}
