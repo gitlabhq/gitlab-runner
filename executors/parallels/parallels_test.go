@@ -169,3 +169,20 @@ func TestParallelsBuildCancel(t *testing.T) {
 
 	buildtest.RunBuildWithCancel(t, config, nil)
 }
+
+func TestBuildLogLimitExceeded(t *testing.T) {
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "parallels",
+			Parallels: &common.ParallelsConfig{
+				BaseName:         prlImage,
+				DisableSnapshots: true,
+			},
+			SSH: prlSSHConfig,
+		},
+	}
+
+	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, config, nil)
+}
