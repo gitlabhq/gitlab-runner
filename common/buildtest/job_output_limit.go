@@ -126,6 +126,7 @@ func runBuildWithJobOutputLimitExceededCase(t *testing.T, tt jobOutputLimitExcee
 	assert.Contains(t, log, "Running")
 	assert.NotContains(t, log, "with gitlab-runner")
 	assert.Contains(t, log, "Job's log exceeded limit of 12 bytes.")
+	assert.Contains(t, log, "Job execution will continue but no more output will be collected.")
 
 	tt.assertError(t, err)
 }

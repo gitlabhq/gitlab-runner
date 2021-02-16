@@ -190,7 +190,8 @@ func TestJobOutputLimit(t *testing.T) {
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
 	expectedLogLimitExceededMsg := fmt.Sprintf(
-		"\n\x1b[33;1mJob's log exceeded limit of %v bytes.\x1b[0;m\n",
+		"\n\x1b[33;1mJob's log exceeded limit of %v bytes.\n"+
+			"Job execution will continue but no more output will be collected.\x1b[0;m\n",
 		traceMessageSize,
 	)
 	expectedLogLength := jobOutputLimit.OutputLimit*traceMessageSize + len(expectedLogLimitExceededMsg)
