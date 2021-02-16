@@ -48,8 +48,9 @@ func TestTraceLimit(t *testing.T) {
 	assert.Equal(t, 0, buffer.Size())
 
 	for i := 0; i < 100; i++ {
-		_, err = buffer.Write([]byte(traceMessage))
+		n, err := buffer.Write([]byte(traceMessage))
 		require.NoError(t, err)
+		require.Greater(t, n, 0)
 	}
 
 	buffer.Finish()
