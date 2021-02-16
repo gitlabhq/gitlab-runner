@@ -132,7 +132,7 @@ func (b *Buffer) advanceLogUnsafe() error {
 func (b *Buffer) limitExceededMessage() string {
 	return fmt.Sprintf(
 		"\n%sJob's log exceeded limit of %v bytes.%s\n",
-		helpers.ANSI_BOLD_RED,
+		helpers.ANSI_BOLD_YELLOW,
 		b.bytesLimit,
 		helpers.ANSI_RESET,
 	)
