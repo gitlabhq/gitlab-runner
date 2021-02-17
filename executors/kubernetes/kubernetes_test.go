@@ -3511,7 +3511,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 	assert.Equal(t, pod.Name, s.pod)
 	assert.Equal(t, pod.Namespace, s.namespace)
 
-	err := s.Stream(context.Background(), int64(offset), output)
+	err := s.Stream(int64(offset), output)
 	assert.ErrorIs(t, err, abortErr)
 }
 

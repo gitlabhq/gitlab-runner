@@ -178,17 +178,16 @@ func (p *ExecOptions) Run() error {
 		p.ContainerName = pod.Spec.Containers[0].Name
 	}
 
-	return p.executeRequest(context.Background())
+	return p.executeRequest()
 }
 
-func (p *ExecOptions) executeRequest(ctx context.Context) error {
+func (p *ExecOptions) executeRequest() error {
 	req := p.Client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.PodName).
 		Namespace(p.Namespace).
 		SubResource("exec").
-		Param("container", p.ContainerName).
-		Context(ctx)
+		Param("container", p.ContainerName)
 
 	var stdin io.Reader
 	if p.Stdin {
