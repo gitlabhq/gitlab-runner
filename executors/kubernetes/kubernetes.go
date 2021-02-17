@@ -468,7 +468,11 @@ func (s *executor) setupScriptsConfigMap() error {
 		Data: scripts,
 	}
 
-	s.configMap, err = s.kubeClient.CoreV1().ConfigMaps(s.configurationOverwrites.namespace).Create(configMap)
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	s.configMap, err = s.kubeClient.
+		CoreV1().
+		ConfigMaps(s.configurationOverwrites.namespace).
+		Create(context.TODO(), configMap, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("generating scripts config map: %w", err)
 	}
@@ -534,31 +538,38 @@ func (s *executor) cleanupServices() {
 func (s *executor) deleteKubernetesService(serviceName string, ch chan<- serviceDeleteResponse, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 	err := s.kubeClient.CoreV1().
 		Services(s.configurationOverwrites.namespace).
-		Delete(serviceName, &metav1.DeleteOptions{})
+		Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 	ch <- serviceDeleteResponse{serviceName: serviceName, err: err}
 }
 
 func (s *executor) cleanupResources() {
 	if s.pod != nil {
-		err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Delete(s.pod.Name, &metav1.DeleteOptions{})
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+		err := s.kubeClient.
+			CoreV1().
+			Pods(s.pod.Namespace).
+			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
 		}
 	}
 	if s.credentials != nil {
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			Secrets(s.configurationOverwrites.namespace).
-			Delete(s.credentials.Name, &metav1.DeleteOptions{})
+			Delete(context.TODO(), s.credentials.Name, metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
 	if s.configMap != nil {
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			ConfigMaps(s.configurationOverwrites.namespace).
-			Delete(s.configMap.Name, &metav1.DeleteOptions{})
+			Delete(context.TODO(), s.configMap.Name, metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
@@ -989,7 +1000,11 @@ func (s *executor) setupCredentials() error {
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	creds, err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Create(&secret)
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	creds, err := s.kubeClient.
+		CoreV1().
+		Secrets(s.configurationOverwrites.namespace).
+		Create(context.TODO(), &secret, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -1067,7 +1082,12 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	}
 
 	s.Debugln("Creating build pod")
-	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
+
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := s.kubeClient.
+		CoreV1().
+		Pods(s.configurationOverwrites.namespace).
+		Create(context.TODO(), &podConfig, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -1232,7 +1252,11 @@ func (s *executor) createKubernetesService(
 ) {
 	defer wg.Done()
 
-	service, err := s.kubeClient.CoreV1().Services(s.pod.Namespace).Create(service)
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	service, err := s.kubeClient.
+		CoreV1().
+		Services(s.pod.Namespace).
+		Create(context.TODO(), service, metav1.CreateOptions{})
 	if err == nil {
 		// Updating the internal service name reference and activating the proxy
 		proxySettings.ServiceName = service.Name
@@ -1270,7 +1294,11 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 }
 
 func (s *executor) checkPodStatus() error {
-	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(s.pod.Name, metav1.GetOptions{})
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := s.kubeClient.
+		CoreV1().
+		Pods(s.pod.Namespace).
+		Get(context.TODO(), s.pod.Name, metav1.GetOptions{})
 	if IsKubernetesPodNotFoundError(err) {
 		return err
 	}

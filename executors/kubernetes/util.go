@@ -142,13 +142,13 @@ type podPhaseResponse struct {
 }
 
 func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseResponse {
-	pod, err := c.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := c.CoreV1().Pods(pod.Namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
 	ready, err := isRunning(pod)
-
 	if err != nil {
 		return podPhaseResponse{true, pod.Status.Phase, err}
 	}

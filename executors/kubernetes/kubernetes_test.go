@@ -1633,6 +1633,7 @@ func TestPrepare(t *testing.T) {
 				},
 			}
 
+			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
 				Config:  test.RunnerConfig,
 				Build:   test.Build,

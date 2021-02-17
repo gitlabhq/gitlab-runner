@@ -93,7 +93,8 @@ type AttachOptions struct {
 
 // Run executes a validated remote execution against a pod.
 func (p *AttachOptions) Run() error {
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.PodName, metav1.GetOptions{})
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(context.TODO(), p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
@@ -159,7 +160,8 @@ type ExecOptions struct {
 
 // Run executes a validated remote execution against a pod.
 func (p *ExecOptions) Run() error {
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.PodName, metav1.GetOptions{})
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(context.TODO(), p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
