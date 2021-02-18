@@ -157,6 +157,32 @@ GitLab Runner has the following features.
 - Embedded Prometheus metrics HTTP server.
 - Referee workers to monitor and pass Prometheus metrics and other job-specific data to GitLab.
 
+## Runner execution flow
+
+This diagram shows how runners are registered and how jobs are requested and handled. It also shows which actions use [registration, authentication](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens), and [job tokens](https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html#job-token).
+
+```mermaid
+sequenceDiagram
+    participant GitLab
+    participant GitLabRunner
+    participant Executor
+
+    opt registration
+      GitLabRunner ->>+ GitLab: POST /api/v4/runners with registration_token
+      GitLab -->>- GitLabRunner: Registered with runner_token 
+    end
+
+    loop job requesting and handling
+      GitLabRunner ->>+ GitLab: POST /api/v4/jobs/request with runner_token
+      GitLab -->>+ GitLabRunner: job payload with job_token
+      GitLabRunner ->>+ Executor: Job payload
+      Executor ->>+ GitLab: clone sources with job_token
+      Executor ->>+ GitLab: download artifacts with job_token
+      Executor -->>- GitLabRunner: return job output and status
+      GitLabRunner -->>- GitLab: updating job output and status with job_token
+    end
+```
+
 ## Troubleshooting
 
 Learn how to [troubleshoot](faq/README.md) common issues.
