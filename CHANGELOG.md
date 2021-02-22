@@ -1,4 +1,4 @@
-## v13.9.0-rc1 (2021-02-08)
+## v13.9.0 (2021-02-22)
 
 ### New features
 
@@ -49,6 +49,9 @@
 - Fix incorrect path/filepath use !2313
 - Improve docker cleanup script to also include old builds and images !2310
 - Output coverage to Cobertura report !2252
+- Version pin pwsh version inside of our CI tests !2748
+- Add integration tests for trace limit handling !2758
+- Add integration tests for build trace masking !2754
 
 ### Documentation changes
 
@@ -86,6 +89,7 @@
 ### Other changes
 
 - Add CODEOWNERS for 3 files at repo root !2667
+- Revert "Improve trace secret masking with x/text/transform" !2752
 
 ## v13.8.0 (2021-01-20)
 
