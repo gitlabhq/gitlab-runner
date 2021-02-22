@@ -109,6 +109,10 @@ func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
 	return jobResponse, err
 }
 
+func GetRemoteSuccessfulBuildWithEnvs(shell string, fail bool) (JobResponse, error) {
+	return GetRemoteBuildResponse(getShellEnvCommand(shell))
+}
+
 func GetRemoteSuccessfulMultistepBuild() (JobResponse, error) {
 	jobResponse, err := GetRemoteBuildResponse("echo Hello World")
 	if err != nil {
@@ -153,15 +157,7 @@ func GetRemoteFailingMultistepBuildWithEnvs(shell string, fail bool) (JobRespons
 		return JobResponse{}, err
 	}
 
-	var envCommand string
-	switch shell {
-	case "cmd":
-		envCommand = "set"
-	case "powershell", "pwsh":
-		envCommand = `dir env: | %{"{0}={1}" -f $_.Name,$_.Value}`
-	default:
-		envCommand = "env"
-	}
+	envCommand := getShellEnvCommand(shell)
 
 	exitCommand := "exit 0"
 	if fail {
@@ -183,6 +179,20 @@ func GetRemoteFailingMultistepBuildWithEnvs(shell string, fail bool) (JobRespons
 	)
 
 	return jobResponse, nil
+}
+
+func getShellEnvCommand(shell string) string {
+	var envCommand string
+	switch shell {
+	case "cmd":
+		envCommand = "set"
+	case "powershell", "pwsh":
+		envCommand = `dir env: | %{"{0}={1}" -f $_.Name,$_.Value}`
+	default:
+		envCommand = "env"
+	}
+
+	return envCommand
 }
 
 func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
