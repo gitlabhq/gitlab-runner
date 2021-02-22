@@ -6,7 +6,6 @@ package user
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -136,26 +135,29 @@ func testDefaultInspectUIDandGID(
 	containerID := "container-id"
 
 	assertCommand := func(t *testing.T, args mock.Arguments) {
-		input, ok := args.Get(2).(io.Reader)
+		streams, ok := args.Get(2).(exec.IOStreams)
 		require.True(t, ok)
 
-		data, err := ioutil.ReadAll(input)
+		data, err := ioutil.ReadAll(streams.Input)
 		require.NoError(t, err)
 
 		assert.Equal(t, expectedCommand, string(data))
 	}
-	mockOutput := func(t *testing.T, args mock.Arguments, data string) {
-		output, ok := args.Get(3).(io.Writer)
+	mockOutput := func(t *testing.T, args mock.Arguments, stdOut string, stdErr string) {
+		streams, ok := args.Get(2).(exec.IOStreams)
 		require.True(t, ok)
 
-		_, err := fmt.Fprintln(output, data)
+		_, err := fmt.Fprintln(streams.Out, stdOut)
+		require.NoError(t, err)
+
+		_, err = fmt.Fprintln(streams.Err, stdErr)
 		require.NoError(t, err)
 	}
 
 	tests := map[string]uidAndGidTestCase{
 		"Exec error": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
 					}).
@@ -169,10 +171,10 @@ func testDefaultInspectUIDandGID(
 		},
 		"ID parsing error": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
-						mockOutput(t, args, "\n\ntest\n\n")
+						mockOutput(t, args, "\n\ntest\n\n", "")
 					}).
 					Return(nil).
 					Once()
@@ -183,12 +185,40 @@ func testDefaultInspectUIDandGID(
 				assert.ErrorAs(t, err, &e)
 			},
 		},
-		"proper ID received from output": {
+		"err output mixed with expected stdout output": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
-						mockOutput(t, args, "\n\n123\n\n")
+						mockOutput(t, args, "\n\n123\n\n", "Some mixed error output")
+					}).
+					Return(nil).
+					Once()
+			},
+			expectedID:  123,
+			assertError: nil,
+		},
+		"empty output of the id command": {
+			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
+					Run(func(args mock.Arguments) {
+						assertCommand(t, args)
+						mockOutput(t, args, "\n\n\n\n", "")
+					}).
+					Return(nil).
+					Once()
+			},
+			expectedID: 0,
+			assertError: func(t *testing.T, err error) {
+				assert.ErrorIs(t, err, errIDNoOutput)
+			},
+		},
+		"proper ID received from output": {
+			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
+					Run(func(args mock.Arguments) {
+						assertCommand(t, args)
+						mockOutput(t, args, "\n\n123\n\n", "")
 					}).
 					Return(nil).
 					Once()

@@ -229,7 +229,7 @@ func getUIDandGID(
 
 	uid, err := inspect.UID(ctx, buildContainerID)
 	if err != nil {
-		return 0, 0, fmt.Errorf("checking %q image's UID: %w", imageSHA, err)
+		return 0, 0, fmt.Errorf("checking %q image UID: %w", imageSHA, err)
 	}
 
 	containerLog.Debugf("Container UID=%d", uid)
@@ -237,7 +237,7 @@ func getUIDandGID(
 
 	gid, err := inspect.GID(ctx, buildContainerID)
 	if err != nil {
-		return 0, 0, fmt.Errorf("checking %q image's GID: %w", imageSHA, err)
+		return 0, 0, fmt.Errorf("checking %q image GID: %w", imageSHA, err)
 	}
 
 	containerLog.Debugf("Container GID=%d", gid)
@@ -274,15 +274,16 @@ func (s *commandExecutor) executeChownOnDir(
 	s.Println(fmt.Sprintf("Changing ownership of files at %q to %d:%d", dir, uid, gid))
 
 	output := new(bytes.Buffer)
+	// limit how much data we read from the container log to
+	// avoid memory exhaustion
+	lw := limitwriter.New(output, 1024)
+	streams := exec.IOStreams{
+		Input: strings.NewReader(fmt.Sprintf("chown -RP -- %d:%d %q", uid, gid, dir)),
+		Err:   lw,
+		Out:   lw,
+	}
 
-	err := dockerExec.Exec(
-		s.Context,
-		c.ID,
-		strings.NewReader(fmt.Sprintf("chown -RP -- %d:%d %q", uid, gid, dir)),
-		// limit how much data we read from the container log to
-		// avoid memory exhaustion
-		limitwriter.New(output, 1024),
-	)
+	err := dockerExec.Exec(s.Context, c.ID, streams)
 
 	log := s.Build.Log().WithField("updatedDir", dir)
 	log.WithField("output", output.String()).Debug("Changing ownership of files")

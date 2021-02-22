@@ -4,7 +4,6 @@ package exec
 
 import (
 	context "context"
-	io "io"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -14,13 +13,13 @@ type MockDocker struct {
 	mock.Mock
 }
 
-// Exec provides a mock function with given fields: ctx, containerID, input, output
-func (_m *MockDocker) Exec(ctx context.Context, containerID string, input io.Reader, output io.Writer) error {
-	ret := _m.Called(ctx, containerID, input, output)
+// Exec provides a mock function with given fields: ctx, containerID, streams
+func (_m *MockDocker) Exec(ctx context.Context, containerID string, streams IOStreams) error {
+	ret := _m.Called(ctx, containerID, streams)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader, io.Writer) error); ok {
-		r0 = rf(ctx, containerID, input, output)
+	if rf, ok := ret.Get(0).(func(context.Context, string, IOStreams) error); ok {
+		r0 = rf(ctx, containerID, streams)
 	} else {
 		r0 = ret.Error(0)
 	}
