@@ -1560,3 +1560,9 @@ func TestChownAndUmaskUsage(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildLogLimitExceeded(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, getRunnerConfigForOS(t), nil)
+}

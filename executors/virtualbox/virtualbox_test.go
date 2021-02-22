@@ -169,3 +169,20 @@ func TestVirtualBoxBuildCancel(t *testing.T) {
 
 	buildtest.RunBuildWithCancel(t, config, nil)
 }
+
+func TestBuildLogLimitExceeded(t *testing.T) {
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "virtualbox",
+			VirtualBox: &common.VirtualBoxConfig{
+				BaseName:         vboxImage,
+				DisableSnapshots: true,
+			},
+			SSH: vboxSSHConfig,
+		},
+	}
+
+	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, config, nil)
+}
