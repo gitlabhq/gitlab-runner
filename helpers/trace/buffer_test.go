@@ -64,6 +64,58 @@ func TestTraceLimit(t *testing.T) {
 	assert.Equal(t, expectedContent, string(content))
 }
 
+func TestDelayedMask(t *testing.T) {
+	buffer, err := New()
+	require.NoError(t, err)
+	defer buffer.Close()
+
+	n, err := buffer.Write([]byte("data before mask\n"))
+	assert.NoError(t, err)
+	assert.Greater(t, n, 0)
+
+	buffer.SetMasked([]string{"mask_me"})
+
+	n, err = buffer.Write([]byte("data mask_me masked\n"))
+	assert.NoError(t, err)
+	assert.Greater(t, n, 0)
+
+	buffer.Finish()
+
+	content, err := buffer.Bytes(0, 1000)
+	require.NoError(t, err)
+
+	expectedContent := "data before mask\ndata [MASKED] masked\n"
+	assert.Equal(t, len(expectedContent), buffer.Size(), "unexpected buffer size")
+	assert.Equal(t, "crc32:690f62e1", buffer.Checksum())
+	assert.Equal(t, expectedContent, string(content))
+}
+
+func TestDelayedLimit(t *testing.T) {
+	buffer, err := New()
+	require.NoError(t, err)
+	defer buffer.Close()
+
+	n, err := buffer.Write([]byte("data before limit\n"))
+	assert.NoError(t, err)
+	assert.Greater(t, n, 0)
+
+	buffer.SetLimit(20)
+
+	n, err = buffer.Write([]byte("data after limit\n"))
+	assert.NoError(t, err)
+	assert.Greater(t, n, 0)
+
+	buffer.Finish()
+
+	content, err := buffer.Bytes(0, 1000)
+	require.NoError(t, err)
+
+	expectedContent := "data before limit\nda\n\x1b[31;1mJob's log exceeded limit of 20 bytes.\x1b[0;m\n"
+	assert.Equal(t, len(expectedContent), buffer.Size(), "unexpected buffer size")
+	assert.Equal(t, "crc32:faa63b66", buffer.Checksum())
+	assert.Equal(t, expectedContent, string(content))
+}
+
 const logLineStr = "hello world, this is a lengthy log line including secrets such as 'hello', and " +
 	"https://example.com/?rss_token=foo&rss_token=bar and http://example.com/?authenticity_token=deadbeef and " +
 	"https://example.com/?rss_token=foobar. it's longer than most log lines, but probably a good test for " +
