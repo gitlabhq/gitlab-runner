@@ -466,6 +466,12 @@ func TestDockerCommandBuildCancel(t *testing.T) {
 	buildtest.RunBuildWithCancel(t, getRunnerConfigForOS(t), nil)
 }
 
+func TestBuildMasking(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	buildtest.RunBuildWithMasking(t, getRunnerConfigForOS(t), nil)
+}
+
 func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")

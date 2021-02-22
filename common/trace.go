@@ -14,6 +14,10 @@ type Trace struct {
 	mutex      sync.Mutex
 }
 
+type masker interface {
+	SetMasked([]string)
+}
+
 type JobFailureData struct {
 	Reason   JobFailureReason
 	ExitCode int
@@ -30,6 +34,10 @@ func (s *Trace) Write(p []byte) (n int, err error) {
 }
 
 func (s *Trace) SetMasked(values []string) {
+	masker, ok := s.Writer.(masker)
+	if ok {
+		masker.SetMasked(values)
+	}
 }
 
 func (s *Trace) Success() {

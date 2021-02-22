@@ -186,3 +186,20 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 
 	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, config, nil)
 }
+
+func TestVirtualBoxBuildMasking(t *testing.T) {
+	helpers.SkipIntegrationTests(t, vboxManage, "--version")
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "virtualbox",
+			VirtualBox: &common.VirtualBoxConfig{
+				BaseName:         vboxImage,
+				DisableSnapshots: true,
+			},
+			SSH: vboxSSHConfig,
+		},
+	}
+
+	buildtest.RunBuildWithMasking(t, config, nil)
+}

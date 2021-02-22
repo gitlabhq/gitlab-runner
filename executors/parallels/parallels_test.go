@@ -186,3 +186,20 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 
 	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, config, nil)
 }
+
+func TestParallelsBuildMasking(t *testing.T) {
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
+
+	config := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Executor: "parallels",
+			Parallels: &common.ParallelsConfig{
+				BaseName:         prlImage,
+				DisableSnapshots: true,
+			},
+			SSH: prlSSHConfig,
+		},
+	}
+
+	buildtest.RunBuildWithMasking(t, config, nil)
+}
