@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -200,29 +201,44 @@ func (s *commandExecutor) changeFilesOwnership() error {
 
 	log.Debug("Image doesn't use root user")
 
-	containerLog := log.WithField("container", s.buildContainer.ID)
-	containerLog.Debug("Getting the UID of the container")
-
-	uid, err := inspect.UID(s.Context, s.buildContainer.ID)
+	uid, gid, err := getUIDandGID(s.Context, log, inspect, s.buildContainer.ID, imageSHA)
 	if err != nil {
-		return fmt.Errorf("checking %q image's UID: %w", imageSHA, err)
+		return err
 	}
-
-	containerLog.Debugf("Container UID=%d", uid)
-	containerLog.Debug("Getting the GID of the container")
-
-	gid, err := inspect.UID(s.Context, s.buildContainer.ID)
-	if err != nil {
-		return fmt.Errorf("checking %q image's GID: %w", imageSHA, err)
-	}
-
-	containerLog.Debugf("Container GID=%d", gid)
 
 	if uid == 0 {
 		return nil
 	}
 
 	return s.executeChown(dockerExec, uid, gid)
+}
+
+func getUIDandGID(
+	ctx context.Context,
+	log logrus.FieldLogger,
+	inspect user.Inspect,
+	buildContainerID string,
+	imageSHA string,
+) (int, int, error) {
+	containerLog := log.WithField("container", buildContainerID)
+	containerLog.Debug("Getting the UID of the container")
+
+	uid, err := inspect.UID(ctx, buildContainerID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("checking %q image's UID: %w", imageSHA, err)
+	}
+
+	containerLog.Debugf("Container UID=%d", uid)
+	containerLog.Debug("Getting the GID of the container")
+
+	gid, err := inspect.GID(ctx, buildContainerID)
+	if err != nil {
+		return 0, 0, fmt.Errorf("checking %q image's GID: %w", imageSHA, err)
+	}
+
+	containerLog.Debugf("Container GID=%d", gid)
+
+	return uid, gid, err
 }
 
 func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int) error {
