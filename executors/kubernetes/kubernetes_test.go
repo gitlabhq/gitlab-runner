@@ -59,6 +59,7 @@ func TestRunTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesTimeoutRun":              testKubernetesTimeoutRunFeatureFlag,
 		"testKubernetesBuildFail":               testKubernetesBuildFailFeatureFlag,
 		"testKubernetesBuildCancel":             testKubernetesBuildCancelFeatureFlag,
+		"testKubernetesBuildLogLimitExceeded":   testKubernetesBuildLogLimitExceededFeatureFlag,
 		"testVolumeMounts":                      testVolumeMountsFeatureFlag,
 		"testVolumes":                           testVolumesFeatureFlag,
 		"testSetupBuildPodServiceCreationError": testSetupBuildPodServiceCreationErrorFeatureFlag,
@@ -218,6 +219,21 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 		return common.JobResponse{}, nil
 	})
 	buildtest.RunBuildWithCancel(
+		t,
+		build.Runner,
+		func(build *common.Build) {
+			setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+		},
+	)
+}
+
+func testKubernetesBuildLogLimitExceededFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.JobResponse{}, nil
+	})
+	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(
 		t,
 		build.Runner,
 		func(build *common.Build) {

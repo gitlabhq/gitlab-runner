@@ -1336,3 +1336,12 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildLogLimitExceeded(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.JobResponse{}, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
+	})
+}
