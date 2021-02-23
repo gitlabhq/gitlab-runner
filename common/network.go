@@ -400,21 +400,11 @@ func (s Secret) expandVariables(vars JobVariables) {
 }
 
 func (s *VaultSecret) expandVariables(vars JobVariables) {
-	if len(s.Server.Auth.Data) < 1 {
-		return
-	}
+	s.Server.expandVariables(vars)
+	s.Engine.expandVariables(vars)
 
-	s.Server.Auth.Path = vars.ExpandValue(s.Server.Auth.Path)
-
-	jwt, ok := s.Server.Auth.Data["jwt"]
-	if ok {
-		s.Server.Auth.Data["jwt"] = vars.ExpandValue(fmt.Sprintf("%s", jwt))
-	}
-
-	role, ok := s.Server.Auth.Data["role"]
-	if ok {
-		s.Server.Auth.Data["role"] = vars.ExpandValue(fmt.Sprintf("%s", role))
-	}
+	s.Path = vars.ExpandValue(s.Path)
+	s.Field = vars.ExpandValue(s.Field)
 }
 
 func (s *VaultSecret) AuthName() string {
@@ -443,6 +433,26 @@ func (s *VaultSecret) SecretPath() string {
 
 func (s *VaultSecret) SecretField() string {
 	return s.Field
+}
+
+func (s *VaultServer) expandVariables(vars JobVariables) {
+	s.URL = vars.ExpandValue(s.URL)
+
+	s.Auth.expandVariables(vars)
+}
+
+func (a *VaultAuth) expandVariables(vars JobVariables) {
+	a.Name = vars.ExpandValue(a.Name)
+	a.Path = vars.ExpandValue(a.Path)
+
+	for field, value := range a.Data {
+		a.Data[field] = vars.ExpandValue(fmt.Sprintf("%s", value))
+	}
+}
+
+func (e *VaultEngine) expandVariables(vars JobVariables) {
+	e.Name = vars.ExpandValue(e.Name)
+	e.Path = vars.ExpandValue(e.Path)
 }
 
 func (j *JobResponse) RepoCleanURL() string {
