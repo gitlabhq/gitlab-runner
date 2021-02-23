@@ -574,13 +574,12 @@ Example:
   MachineName = "auto-scale-%s"
   MachineDriver = "google" # Refer to Docker Machine docs on how to authenticate: https://docs.docker.com/machine/drivers/gce/#credentials
   MachineOptions = [
+      # Additional machine options can be added using the Google Compute Engine driver.
+      # If you experience problems with an unreachable host (ex. "Waiting for SSH"), 
+      # you should remove optional parameters to help with debugging.
+      # https://docs.docker.com/machine/drivers/gce/
       "google-project=GOOGLE-PROJECT-ID",
       "google-zone=GOOGLE-ZONE", # e.g. 'us-central-1'
-      "google-machine-type=GOOGLE-MACHINE-TYPE", # e.g. 'n1-standard-8'
-      "google-machine-image=ubuntu-os-cloud/global/images/family/ubuntu-1804-lts",
-      "google-username=root",
-      "google-use-internal-ip",
-      "engine-registry-mirror=https://mirror.gcr.io"
   ]
   [[runners.machine.autoscaling]]
     Periods = ["* * 9-17 * * mon-fri *"]
