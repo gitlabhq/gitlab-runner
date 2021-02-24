@@ -157,7 +157,14 @@ for more details.
 
 To prepare your system and test that GPUs can be created with Google Compute Engine:
 
-1. [Set up the Google Compute Engine driver credentials](https://docs.docker.com/machine/drivers/gce#credentials) for Docker Machine.
+1. [Set up the Google Compute Engine driver credentials](https://docs.docker.com/machine/drivers/gce#credentials)
+for Docker Machine. You may need to export environment variables to the
+runner if your VM does not have a default service account. How
+this is done depends on how the runner is launched. For example:
+
+    - Via `systemd` or `upstart`: See the [documentation on setting custom environment variables](../configuration/init.md#setting-custom-environment-variables).
+    - Via Kubernetes with the Helm Chart: Update [the `values.yaml` entry](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/5e7c5c0d6e1159647d65f04ff2cc1f45bb2d5efc/values.yaml#L431-438).
+    - Via Docker: Use the `-e` option (for example, `docker run -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json gitlab/gitlab-runner`).
 
 1. Verify that `docker-machine` can create a virtual machine with your
    desired options. For example, to create an `n1-standard-1` machine
@@ -224,5 +231,5 @@ Then add the Docker Machine options to your [`MachineOptions` settings in the Gi
        "google-maintenance-policy=TERMINATE",
        "google-machine-image=https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110",
        "google-metadata=install-nvidia-driver=True"
-   ]
+     ]
    ```
