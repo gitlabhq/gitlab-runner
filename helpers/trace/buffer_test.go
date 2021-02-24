@@ -58,9 +58,11 @@ func TestTraceLimit(t *testing.T) {
 	content, err := buffer.Bytes(0, 1000)
 	require.NoError(t, err)
 
-	expectedContent := "This is th\n\x1b[31;1mJob's log exceeded limit of 10 bytes.\x1b[0;m\n"
+	expectedContent := "This is th\n" +
+		"\x1b[33;1mJob's log exceeded limit of 10 bytes.\n" +
+		"Job execution will continue but no more output will be collected.\x1b[0;m\n"
 	assert.Equal(t, len(expectedContent), buffer.Size(), "unexpected buffer size")
-	assert.Equal(t, "crc32:597f1ee1", buffer.Checksum())
+	assert.Equal(t, "crc32:295921ca", buffer.Checksum())
 	assert.Equal(t, expectedContent, string(content))
 }
 
@@ -110,9 +112,10 @@ func TestDelayedLimit(t *testing.T) {
 	content, err := buffer.Bytes(0, 1000)
 	require.NoError(t, err)
 
-	expectedContent := "data before limit\nda\n\x1b[31;1mJob's log exceeded limit of 20 bytes.\x1b[0;m\n"
+	expectedContent := "data before limit\nda\n\x1b[33;1mJob's log exceeded limit of 20 bytes.\n" +
+		"Job execution will continue but no more output will be collected.\x1b[0;m\n"
 	assert.Equal(t, len(expectedContent), buffer.Size(), "unexpected buffer size")
-	assert.Equal(t, "crc32:faa63b66", buffer.Checksum())
+	assert.Equal(t, "crc32:559aa46f", buffer.Checksum())
 	assert.Equal(t, expectedContent, string(content))
 }
 
