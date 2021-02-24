@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -12,9 +11,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -31,7 +28,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	service_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -889,82 +885,6 @@ func TestCreateDependencies(t *testing.T) {
 
 	err = e.createDependencies()
 	assert.Equal(t, testError, err)
-}
-
-func TestDockerWatchOn_1_12_4(t *testing.T) {
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	helpers.SkipIntegrationTests(t, "docker", "info")
-
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			ExecutorOptions: executors.ExecutorOptions{
-				Metadata: map[string]string{
-					metadataOSType: osTypeLinux,
-				},
-			},
-		},
-		volumeParser: parser.NewLinuxParser(),
-	}
-	e.Context = context.Background()
-	e.Build = &common.Build{
-		Runner: &common.RunnerConfig{},
-	}
-	e.Build.Token = "abcd123456"
-	e.BuildShell = &common.ShellConfiguration{
-		Environment: []string{},
-	}
-
-	e.Config = common.RunnerConfig{}
-	e.Config.Docker = &common.DockerConfig{
-		PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
-	}
-
-	output := bytes.NewBufferString("")
-	e.Trace = &common.Trace{Writer: output}
-
-	err := e.connectDocker()
-	require.NoError(t, err)
-
-	err = e.createVolumesManager()
-	require.NoError(t, err)
-
-	err = e.createLabeler()
-	require.NoError(t, err)
-
-	err = e.createPullManager()
-	require.NoError(t, err)
-
-	container, err := e.createContainer(
-		"build",
-		common.Image{Name: common.TestAlpineImage},
-		[]string{"/bin/sh"},
-		[]string{},
-	)
-	assert.NoError(t, err)
-	assert.NotNil(t, container)
-
-	input := bytes.NewBufferString("echo 'script'")
-
-	finished := make(chan bool, 1)
-	wg := &sync.WaitGroup{}
-	wg.Add(1) // Avoid a race where assert.NoError() is called too late in the goroutine
-	go func() {
-		err = e.startAndWatchContainer(e.Context, container.ID, input)
-		assert.NoError(t, err)
-		finished <- true
-		wg.Done()
-	}()
-
-	select {
-	case <-finished:
-		assert.Equal(t, "script\n", output.String())
-	case <-time.After(15 * time.Second):
-		t.Error("Container script not finished")
-	}
-
-	err = e.removeContainer(e.Context, container.ID)
-	assert.NoError(t, err)
-	wg.Wait()
 }
 
 type containerConfigExpectations func(*testing.T, *container.Config, *container.HostConfig)
