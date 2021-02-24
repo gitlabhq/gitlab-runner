@@ -129,6 +129,16 @@ type serviceCreateResponse struct {
 	err     error
 }
 
+func (s *executor) expandImageName(imageName string) string {
+	image := imageName
+
+	if imageName != "" {
+		image = s.Build.GetAllVariables().ExpandValue(imageName)
+	}
+
+	return image
+}
+
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.AbstractExecutor.Prepare(options); err != nil {
 		return fmt.Errorf("prepare AbstractExecutor: %w", err)
@@ -169,7 +179,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
-	s.Println("Using Kubernetes executor with image", s.options.Image.Name, "...")
+	// Check if the image can be expanded through the variables
+	imageName := s.expandImageName(s.options.Image.Name)
+
+	s.Println("Using Kubernetes executor with image", imageName, "...")
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		s.Println("Using attach strategy to execute scripts...")
 	}
