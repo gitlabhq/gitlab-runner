@@ -136,22 +136,32 @@ code_quality:
     when: always
     expire_in: 7d
 
-unit test:
+.linux test:
   extends:
   - .merge_request_pipelines
   - .docker
   - .go-cache
   stage: test
-  parallel: 8
   script:
   - source ci/touch_make_dependencies
   - make parallel_test_execute
   artifacts:
     paths:
-    - .cover/*
-    - .testoutput/*
+    - .cover/
+    - .testoutput/
     when: always
     expire_in: 7d
+
+unit test:
+  extends:
+  - .linux test
+  needs:
+  - 'unit test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  parallel: 2
+  variables:
+    TESTFLAGS: -cover
 
 unit test with race:
   extends:
@@ -160,7 +170,19 @@ unit test with race:
   allow_failure: true
   variables:
     CGO_ENABLED: "1"
-    TESTFLAGS: "-cover -race"
+    TESTFLAGS: -cover -race
+
+integration test:
+  extends:
+  - .linux test
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'helper images'
+  - 'prepare done'
+  parallel: 4
+  variables:
+    TESTFLAGS: -cover -tags=integration
 
 fuzz variable mask:
   extends:
@@ -183,12 +205,10 @@ fuzz variable mask:
   - .rules:default-branch-only
   - .go-cache-windows
   stage: test
-  needs:
-  - 'tests definitions'
-  - 'clone test repo'
-  parallel: 10
+  parallel: 6
   variables:
     GOROOT: "C:\\Go"
+    TESTFLAGS: '-tags=!integration'
   before_script:
   - *go-cache-windows_before_script
   - if (Test-Path $GOPATH) { Remove-Item -Force -Recurse $GOPATH }
@@ -201,32 +221,56 @@ fuzz variable mask:
   - if (Test-Path $PKG_BUILD_DIR) { $(Get-Item $PKG_BUILD_DIR).Delete() }
   artifacts:
     paths:
-    - .testoutput/*
+    - .testoutput/
     when: always
     expire_in: 7d
   allow_failure: true
 
-# Only test the oldest supported version in merge requests,
-# but test all versions in the default branch.
-windows 1809 tests:
+.windows unit test:
   extends:
   - .windows test
+  needs:
+  - 'unit test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+
+.windows integration test:
+  extends:
+  - .windows test
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  variables:
+    TESTFLAGS: '-tags=integration'
+
+# Only test the oldest supported version in merge requests,
+# but test all versions in the default branch.
+windows 1809 unit tests:
+  extends:
+  - .windows unit test
   - .windows1809
   - .rules:merge_request_pipelines:no_docs
 
-windows 1903 tests:
+windows 1809 integration tests:
   extends:
-  - .windows test
+  - .windows integration test
+  - .windows1809
+  - .rules:merge_request_pipelines:no_docs
+
+windows 1903 integration tests:
+  extends:
+  - .windows integration test
   - .windows1903
 
-windows 1909 tests:
+windows 1909 integration tests:
   extends:
-  - .windows test
+  - .windows integration test
   - .windows1909
 
-windows 2004 tests:
+windows 2004 integration tests:
   extends:
-  - .windows test
+  - .windows integration test
   - .windows2004
 
 git 1.8.3.1:
@@ -239,6 +283,7 @@ git 1.8.3.1:
     GOROOT: /usr/local/go
     GOPATH: /go
     CGO_ENABLED: 0
+    TESTFLAGS: '-tags=integration'
   before_script:
   - unset GPG_KEY
   - yum install -y -q git make && git version
@@ -266,4 +311,4 @@ integration_k8s:
   - kubectl version
   - kubectl cluster-info
   script:
-  - go test -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes
+  - go test -tags=integration -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes

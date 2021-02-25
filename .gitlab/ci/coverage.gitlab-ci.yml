@@ -9,6 +9,7 @@ test coverage report:
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   needs:
   - unit test
+  - integration test
   script:
   - source ci/touch_make_dependencies
   - make parallel_test_coverage_report cobertura_report
@@ -20,12 +21,27 @@ test coverage report:
     expire_in: 7d
     expose_as: 'Code Coverage'
 
+integration test coverage report:
+  extends:
+  - .coverage_job
+  needs:
+  - integration test
+  script:
+  - source ci/touch_make_dependencies
+  - make parallel_test_coverage_report
+  artifacts:
+    paths:
+    - out/coverage/
+    expire_in: 7d
+    expose_as: 'Integration Test Code Coverage'
+
 test junit report:
   extends:
   - .coverage_job
   image: $CI_IMAGE
   needs:
   - unit test
+  - integration test
   script:
   - source ci/touch_make_dependencies
   - make parallel_test_junit_report
@@ -64,12 +80,21 @@ check race unexpected test failures:
   script:
   - ./scripts/check_unexpected_test_failures
 
-check windows 1809 unexpected test failures:
+check windows 1809 unexpected unit test failures:
   extends:
   - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
   needs:
-  - windows 1809 tests
+  - windows 1809 unit tests
+  script:
+  - ./scripts/check_unexpected_test_failures
+
+check windows 1809 unexpected integration test failures:
+  extends:
+  - .rules:merge_request_pipelines:no_docs:always
+  stage: coverage
+  needs:
+  - windows 1809 integration tests
   script:
   - ./scripts/check_unexpected_test_failures
 
@@ -86,31 +111,38 @@ check windows 1809 unexpected test failures:
 
 # Only test the oldest supported version in merge requests,
 # but test all versions in the default branch.
-check windows 1809 test failures:
+check windows 1809 unit test failures:
+  extends:
+  - .check windows test failures
+  - .windows1809_variables
+  needs:
+  - windows 1809 unit tests
+
+check windows 1809 integration test failures:
   extends:
   - .check windows test failures
   - .windows1809_variables
   - .rules:merge_request_pipelines:no_docs
   needs:
-  - windows 1809 tests
+  - windows 1809 integration tests
 
-check windows 1903 test failures:
+check windows 1903 integration test failures:
   extends:
   - .check windows test failures
   - .windows1903_variables
   needs:
-  - windows 1903 tests
+  - windows 1903 integration tests
 
-check windows 1909 test failures:
+check windows 1909 integration test failures:
   extends:
   - .check windows test failures
   - .windows1909_variables
   needs:
-  - windows 1909 tests
+  - windows 1909 integration tests
 
-check windows 2004 test failures:
+check windows 2004 integration test failures:
   extends:
   - .check windows test failures
   - .windows2004_variables
   needs:
-  - windows 2004 tests
+  - windows 2004 integration tests

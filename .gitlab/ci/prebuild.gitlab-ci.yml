@@ -34,7 +34,7 @@ clone test repo:
     - tmp/gitlab-test
     expire_in: 7d
 
-tests definitions:
+.test definitions:
   extends:
   - .rules:merge_request_pipelines:no_docs
   - .go-cache
@@ -48,6 +48,18 @@ tests definitions:
     paths:
     - testsdefinitions.txt
     expire_in: 7d
+
+unit test definitions:
+  extends:
+  - .test definitions
+  variables:
+    TESTFLAGS: -cover
+
+integration test definitions:
+  extends:
+  - .test definitions
+  variables:
+    TESTFLAGS: -cover -tags=integration
 
 ecr public token:
   extends:

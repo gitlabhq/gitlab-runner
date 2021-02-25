@@ -133,11 +133,16 @@ check_race_conditions:
 .PHONY: test
 test: helper-dockerarchive-host development_setup simple-test
 
+.PHONY: unit-test
+unit-test: export TESTFLAGS = ''
+unit-test: simple-test
+
 simple-test: TEST_PKG ?= $(shell go list ./...)
 simple-test:
 	go test $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
 
 git1.8-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
+git1.8-test: export TESTFLAGS = -cover -tags=integration
 git1.8-test:
 	$(MAKE) simple-test
 
