@@ -50,6 +50,16 @@ func newDefaultManager() *manager {
 	return m
 }
 
+// NewDefaultManagerForTest is used to expose a new manager to the integration tests package
+func NewDefaultManagerForTest(c docker.Client, vars common.JobVariables, jobResponse common.JobResponse) Manager {
+	m := newDefaultManager()
+	m.client = c
+	m.build.JobResponse = jobResponse
+	m.build.Variables = append(m.build.Variables, vars...)
+
+	return m
+}
+
 func addClient(manager *manager) *docker.MockClient {
 	client := new(docker.MockClient)
 

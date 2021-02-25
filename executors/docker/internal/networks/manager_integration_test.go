@@ -1,4 +1,4 @@
-package networks
+package networks_test
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -21,19 +22,18 @@ func TestCreateNetworkLabels(t *testing.T) {
 	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
 
-	manager := newDefaultManager()
-	manager.build.JobResponse = successfulJobResponse
-	manager.build.Variables = append(
-		manager.build.Variables,
-		common.JobVariable{Key: featureflags.NetworkPerBuild, Value: "true"},
-		common.JobVariable{Key: "CI_PIPELINE_ID", Value: "1"},
-	)
-
 	client, err := docker.New(docker.Credentials{}, "")
 	require.NoError(t, err, "should be able to connect to docker")
 	defer client.Close()
 
-	manager.client = client
+	manager := networks.NewDefaultManagerForTest(
+		client,
+		common.JobVariables{
+			{Key: featureflags.NetworkPerBuild, Value: "true"},
+			{Key: "CI_PIPELINE_ID", Value: "1"},
+		},
+		successfulJobResponse,
+	)
 
 	ctx := context.Background()
 
