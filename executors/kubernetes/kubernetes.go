@@ -129,16 +129,6 @@ type serviceCreateResponse struct {
 	err     error
 }
 
-func (s *executor) expandImageName(imageName string) string {
-	image := imageName
-
-	if imageName != "" {
-		image = s.Build.GetAllVariables().ExpandValue(imageName)
-	}
-
-	return image
-}
-
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	if err = s.AbstractExecutor.Prepare(options); err != nil {
 		return fmt.Errorf("prepare AbstractExecutor: %w", err)
@@ -188,6 +178,16 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	return nil
+}
+
+func (s *executor) expandImageName(imageName string) string {
+	image := imageName
+
+	if imageName != "" {
+		image = s.Build.GetAllVariables().ExpandValue(imageName)
+	}
+
+	return image
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
