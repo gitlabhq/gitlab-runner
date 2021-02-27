@@ -399,7 +399,7 @@ type KubernetesEmptyDir struct {
 type KubernetesCSI struct {
 	Name             string            `toml:"name" json:"name" description:"The name of the CSI volume and volumeMount to use"`
 	MountPath        string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
-	Driver           string            `toml:"driver" description:"Path where volume should be mounted inside of container"`
+	Driver           string            `toml:"driver" description:"A string value that specifies the name of the volume driver to use."`
 	SubPath          string            `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	ReadOnly         bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	VolumeAttributes map[string]string `toml:"volume_attributes,omitempty" description:"Key-value pair mapping for attributes of the CSI volume."`
