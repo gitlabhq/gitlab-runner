@@ -361,7 +361,7 @@ concurrent = 4
       mount_path = "/path/to/csi/volume"
       driver = "my-csi-driver"
       [runners.kubernetes.volumes.csi.volume_attributes]
-	      "size" = "2Gi"
+        "size" = "2Gi"
 ```
 
 ### Host Path volumes
