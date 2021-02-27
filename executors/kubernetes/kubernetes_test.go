@@ -328,6 +328,15 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 									SubPath:   "empty-subpath",
 								},
 							},
+							CSIs: []common.KubernetesCSI{
+								{Name: "csi", MountPath: "/path/to/csi/volume", Driver: "some-driver"},
+								{
+									Name:      "csi-subpath",
+									MountPath: "/path/to/csi/volume",
+									Driver:    "some-driver",
+									SubPath:   "subpath",
+								},
+							},
 						},
 					},
 				},
@@ -348,6 +357,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
 				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
 				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
+				{Name: "csi", MountPath: "/path/to/csi/volume"},
+				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
 			},
 		},
 		"custom volumes with read-only settings": {
@@ -371,6 +382,9 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 							Secrets: []common.KubernetesSecret{
 								{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
 							},
+							CSIs: []common.KubernetesCSI{
+								{Name: "csi", MountPath: "/path/to/csi/volume", Driver: "some-driver", ReadOnly: true},
+							},
 						},
 					},
 				},
@@ -384,6 +398,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
 				{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
+				{Name: "csi", MountPath: "/path/to/csi/volume", ReadOnly: true},
 			},
 		},
 	}
@@ -489,6 +504,14 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 									SubPath:   "subpath",
 								},
 							},
+							CSIs: []common.KubernetesCSI{
+								{
+									Name:             "csi",
+									MountPath:        "/path/to/csi/volume",
+									Driver:           "some-driver",
+									VolumeAttributes: map[string]string{"key": "value"},
+								},
+							},
 						},
 					},
 				},
@@ -538,6 +561,15 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 						Secret: &api.SecretVolumeSource{
 							SecretName: "secret-subpath",
 							Items:      []api.KeyToPath{{Key: "secret_1", Path: "/path/to/secret_1"}},
+						},
+					},
+				},
+				{
+					Name: "csi",
+					VolumeSource: api.VolumeSource{
+						CSI: &api.CSIVolumeSource{
+							Driver:           "some-driver",
+							VolumeAttributes: map[string]string{"key": "value"},
 						},
 					},
 				},
