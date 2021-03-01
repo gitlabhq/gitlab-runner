@@ -210,9 +210,11 @@ Ruby you can see the supported tags at <https://hub.docker.com/_/ruby/>. If you
 don't specify a tag (like `image: ruby`), `latest` is implied.
 
 The image you choose to run your build in via `image` directive must have a
-working shell in its operating system `PATH`. Supported shells are `sh` or
-`bash` for Linux, and PowerShell for Windows. GitLab Runner cannot
-execute a command using the underlying OS system calls (like `exec`).
+working shell in its operating system `PATH`. Supported shells are `sh`,
+`bash`, and `pwsh` ([since 13.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4021))
+for Linux, and PowerShell for Windows.
+GitLab Runner cannot execute a command using the underlying OS system calls
+(such as `exec`).
 
 ## The `services` keyword
 
