@@ -838,7 +838,9 @@ func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, f
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 	build.Image.Name = "$IMAGE:$VERSION"
-	build.JobResponse.Variables = append(build.JobResponse.Variables, common.JobVariable{Key: "IMAGE", Value: "alpine"}, common.JobVariable{Key: "VERSION", Value: "latest"})
+	build.JobResponse.Variables = append(build.JobResponse.Variables,
+		common.JobVariable{Key: "IMAGE", Value: "alpine"},
+		common.JobVariable{Key: "VERSION", Value: "latest"})
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 	out, _ := buildtest.RunBuildReturningOutput(t, build)
 	assert.Contains(t, out, "alpine:latest")
@@ -853,7 +855,6 @@ func TestCleanup(t *testing.T) {
 	configMapsEndpointURI :=
 		"/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
 
-	//nolint:lll
 	tests := []struct {
 		Name        string
 		Pod         *api.Pod
