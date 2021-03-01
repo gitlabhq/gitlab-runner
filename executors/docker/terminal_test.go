@@ -75,6 +75,7 @@ func TestCommandExecutor_Connect(t *testing.T) {
 					},
 					client: c,
 				},
+				waitForContainerTimeout: 1 * time.Second,
 			}
 
 			if test.hasBuildContainer {

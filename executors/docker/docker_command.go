@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
@@ -21,8 +22,9 @@ import (
 
 type commandExecutor struct {
 	executor
-	buildContainer *types.ContainerJSON
-	lock           sync.Mutex
+	buildContainer          *types.ContainerJSON
+	lock                    sync.Mutex
+	waitForContainerTimeout time.Duration
 }
 
 func (s *commandExecutor) getBuildContainer() *types.ContainerJSON {
