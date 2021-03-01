@@ -69,6 +69,7 @@ func TestRunTestsWithFeatureFlag(t *testing.T) {
 		"testOverwriteNamespaceNotMatch":        testOverwriteNamespaceNotMatchFeatureFlag,
 		"testOverwriteServiceAccountNotMatch":   testOverwriteServiceAccountNotMatchFeatureFlag,
 		"testInteractiveTerminal":               testInteractiveTerminalFeatureFlag,
+		"testKubernetesReplaceEnvFeatureFlag":   testKubernetesReplaceEnvFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -831,6 +832,16 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	t.Log(out)
 
 	assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
+}
+
+func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = "$IMAGE:$VERSION"
+	build.JobResponse.Variables = append(build.JobResponse.Variables, common.JobVariable{Key: "IMAGE", Value: "alpine"}, common.JobVariable{Key: "VERSION", Value: "latest"})
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	out, _ := buildtest.RunBuildReturningOutput(t, build)
+	assert.Contains(t, out, "alpine:latest")
 }
 
 func TestCleanup(t *testing.T) {
