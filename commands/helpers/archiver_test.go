@@ -47,7 +47,7 @@ func TestCompressionLevel(t *testing.T) {
 
 	for name, level := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, level, getCompressionLevel(name))
+			assert.Equal(t, level, GetCompressionLevel(name))
 		})
 	}
 }

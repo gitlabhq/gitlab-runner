@@ -73,7 +73,7 @@ func (c *ArtifactsUploaderCommand) createReadStream() (string, io.ReadCloser, er
 	filename := c.artifactFilename(c.Name, format)
 	pr, pw := io.Pipe()
 
-	archiver, err := archive.NewArchiver(archive.Format(format), pw, c.wd, getCompressionLevel(c.CompressionLevel))
+	archiver, err := archive.NewArchiver(archive.Format(format), pw, c.wd, GetCompressionLevel(c.CompressionLevel))
 	if err != nil {
 		_ = pr.CloseWithError(err)
 		return filename, nil, err

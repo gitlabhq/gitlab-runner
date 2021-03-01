@@ -157,7 +157,7 @@ func (c *CacheArchiverCommand) createZipFile(filename string) error {
 
 	logrus.Debugln("Temporary file:", f.Name())
 
-	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, getCompressionLevel(c.CompressionLevel))
+	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, GetCompressionLevel(c.CompressionLevel))
 	if err != nil {
 		return err
 	}
