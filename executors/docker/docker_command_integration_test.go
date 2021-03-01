@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -26,6 +27,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	execDocker "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -36,6 +38,14 @@ import (
 
 var getWindowsImageOnce sync.Once
 var windowsImage string
+
+func init() {
+	// Ensure we look at the root of the project so that out/helper-images is found
+	execDocker.PrebuiltImagesPaths = append(
+		[]string{filepath.Join(helpers.GetCurrentWorkingDirectory(), "../../out/helper-images")},
+		execDocker.PrebuiltImagesPaths...,
+	)
+}
 
 // safeBuffer is used for tests that are writing build logs to a buffer and
 // reading the build logs waiting for a log line.
