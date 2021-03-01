@@ -853,6 +853,7 @@ func TestCleanup(t *testing.T) {
 	configMapsEndpointURI :=
 		"/api/" + version + "/namespaces/" + objectMeta.Namespace + "/configmaps/" + objectMeta.Name
 
+	//nolint:lll
 	tests := []struct {
 		Name        string
 		Pod         *api.Pod
