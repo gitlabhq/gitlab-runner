@@ -44,14 +44,14 @@ race conditions detector:
   - source ci/touch_make_dependencies
   - make check_race_conditions
 
-code navigation:
+code navigation: # See https://docs.gitlab.com/ee/user/project/code_intelligence.html#configuration
   extends:
   - .coverage_job
-  allow_failure: true
+  allow_failure: true # recommended
   needs:
   - prepare done
+  image: sourcegraph/lsif-go:v1
   script:
-  - go get github.com/sourcegraph/lsif-go/cmd/lsif-go
   - lsif-go
   artifacts:
     reports:
