@@ -241,6 +241,29 @@ its dependencies - they get checked into the repository under the `vendor/` dire
 
 Don't add dependency from upstream master branch when version tags are available.
 
+## Tests
+
+The Runner codebase makes a distinction between [unit](https://en.wikipedia.org/wiki/Unit_testing)
+and [integration tests](https://en.wikipedia.org/wiki/Integration_testing) in the following way:
+
+- unit test files have a suffix of `_test.go`, and contain the following build directive in the header:
+
+    ```golang
+    // +build !integration
+    
+    ```
+
+- integration test files have a suffix of `_integration_test.go`, and contain the following build directive in the header:
+
+    ```golang
+    // +build integration
+    
+    ```
+
+  They can be run by adding `-tags=integration` to the `go test` command.
+
+To test the state of the build directives in test files, `make check_test_directives` can be used.
+
 ## Developing for Windows on a non-windows environment
 
 We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/Vagrantfile)
