@@ -112,10 +112,15 @@ version:
 .PHONY: deps
 deps: $(DEVELOPMENT_TOOLS)
 
+.PHONY: check_test_directives
+check_test_directives:
+	@scripts/check_test_directives
+
 .PHONY: lint
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
 lint: $(GOLANGLINT)
+	@$(MAKE) check_test_directives >/dev/stderr
 	@$(GOLANGLINT) run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
 .PHONY: lint-docs
