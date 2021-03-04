@@ -431,6 +431,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 
 func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	csiVolFSType := "ext4"
+	csiVolReadOnly := false
 	//nolint:lll
 	tests := map[string]struct {
 		GlobalConfig *common.Config
@@ -511,6 +512,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 									MountPath:        "/path/to/csi/volume",
 									Driver:           "some-driver",
 									FSType:           csiVolFSType,
+									ReadOnly:         csiVolReadOnly,
 									VolumeAttributes: map[string]string{"key": "value"},
 								},
 							},
@@ -572,6 +574,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 						CSI: &api.CSIVolumeSource{
 							Driver:           "some-driver",
 							FSType:           &csiVolFSType,
+							ReadOnly:         &csiVolReadOnly,
 							VolumeAttributes: map[string]string{"key": "value"},
 						},
 					},
