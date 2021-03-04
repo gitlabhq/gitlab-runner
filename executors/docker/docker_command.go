@@ -22,9 +22,9 @@ import (
 
 type commandExecutor struct {
 	executor
-	buildContainer          *types.ContainerJSON
-	lock                    sync.Mutex
-	waitForContainerTimeout time.Duration
+	buildContainer                  *types.ContainerJSON
+	lock                            sync.Mutex
+	terminalWaitForContainerTimeout time.Duration
 }
 
 func (s *commandExecutor) getBuildContainer() *types.ContainerJSON {

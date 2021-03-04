@@ -5,11 +5,13 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -26,14 +28,21 @@ func TestCreateNetworkLabels(t *testing.T) {
 	require.NoError(t, err, "should be able to connect to docker")
 	defer client.Close()
 
-	manager := networks.NewDefaultManagerForTest(
-		client,
-		common.JobVariables{
-			{Key: featureflags.NetworkPerBuild, Value: "true"},
-			{Key: "CI_PIPELINE_ID", Value: "1"},
+	build := &common.Build{
+		ProjectRunnerID: 0,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{Token: "test-token"},
 		},
-		successfulJobResponse,
-	)
+		JobResponse: successfulJobResponse,
+	}
+	build.Variables = common.JobVariables{
+		{Key: featureflags.NetworkPerBuild, Value: "true"},
+		{Key: "CI_PIPELINE_ID", Value: "1"},
+	}
+
+	logger, _ := logrustest.NewNullLogger()
+
+	manager := networks.NewManager(logger, client, build, labels.NewLabeler(build))
 
 	ctx := context.Background()
 
