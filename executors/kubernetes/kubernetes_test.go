@@ -509,6 +509,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 									Name:             "csi",
 									MountPath:        "/path/to/csi/volume",
 									Driver:           "some-driver",
+									FSType:           "ext4",
 									VolumeAttributes: map[string]string{"key": "value"},
 								},
 							},
@@ -569,6 +570,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 					VolumeSource: api.VolumeSource{
 						CSI: &api.CSIVolumeSource{
 							Driver:           "some-driver",
+							FSType:           "ext4",
 							VolumeAttributes: map[string]string{"key": "value"},
 						},
 					},
