@@ -841,6 +841,8 @@ func (s *executor) getVolumesForCSIs() []api.Volume {
 			VolumeSource: api.VolumeSource{
 				CSI: &api.CSIVolumeSource{
 					Driver:           volume.Driver,
+					FSType:           volume.FStype,
+					ReadOnly:         volume.ReadOnly,
 					VolumeAttributes: volume.VolumeAttributes,
 				},
 			},
