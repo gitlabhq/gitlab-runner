@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 The Shell executor is a simple executor that you use to execute builds
 locally on the machine where GitLab Runner is installed. It supports all systems on
 which the Runner can be installed. That means that it's possible to use scripts
-generated for Bash, Windows PowerShell and Windows Batch (deprecated).
+generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
 
 NOTE:
 Always use the latest version of Git available. Additionally, GitLab Runner will use
