@@ -361,7 +361,7 @@ concurrent = 4
       mount_path = "/path/to/csi/volume"
       driver = "my-csi-driver"
       [runners.kubernetes.volumes.csi.volume_attributes]
-        "size" = "2Gi"
+        size = "2Gi"
 ```
 
 ### Host Path volumes
@@ -459,7 +459,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | name              | string              | yes      | The name of the volume |
 | mount_path        | string              | yes      | Path inside of container where the volume should be mounted |
 | driver            | string              | yes      | A string value that specifies the name of the volume driver to use. |
-| fs_type           | string              | noc      | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".) |
+| fs_type           | string              | no       | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".) |
 | volume_attributes | `map[string]string` | no       | Key-value pair mapping for attributes of the CSI volume. |
 | sub_path          | string              | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | read_only         | boolean             | no       | Sets the volume in read-only mode (defaults to false) |
