@@ -401,7 +401,7 @@ type KubernetesCSI struct {
 	MountPath        string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	SubPath          string            `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	Driver           string            `toml:"driver" description:"A string value that specifies the name of the volume driver to use."`
-	FSType           string            `toml:"fs_type" description:"Filesystem type to mount. Ex. "ext4", "xfs", "ntfs". If not provided, the empty value is passed to the associated CSI driver which will determine the default filesystem to apply."`
+	FSType           string            `toml:"fs_type" description:"Filesystem type to mount. If not provided, the empty value is passed to the associated CSI driver which will determine the default filesystem to apply."`
 	ReadOnly         bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 	VolumeAttributes map[string]string `toml:"volume_attributes,omitempty" description:"Key-value pair mapping for attributes of the CSI volume."`
 }
