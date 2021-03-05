@@ -39,7 +39,8 @@ export MAIN_PACKAGE ?= gitlab.com/gitlab-org/gitlab-runner
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
-              -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH)
+              -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
+              -w
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED ?= 0
 
