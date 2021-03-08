@@ -139,8 +139,8 @@ skipped.
 
 These are the binaries that you can install:
 
-1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads.html); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
-1. [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) with
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
+1. [kubectl](https://kubernetes.io/docs/tasks/tools/) with
    [Minikube](https://github.com/kubernetes/minikube)
 1. [Parallels](https://www.parallels.com/products/desktop/)
 1. [PowerShell](https://docs.microsoft.com/en-us/powershell/)
