@@ -178,10 +178,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
-	if !s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
-		s.Warningln(helperimage.DockerHubWarningMessage)
-	}
-
 	return helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:         helperimage.OSTypeLinux,
 		Architecture:   "amd64",
@@ -1000,6 +996,10 @@ func (s *executor) getDNSPolicy() api.DNSPolicy {
 func (s *executor) getHelperImage() string {
 	if len(s.Config.Kubernetes.HelperImage) > 0 {
 		return common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.HelperImage)
+	}
+
+	if !s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
+		s.Warningln(helperimage.DockerHubWarningMessage)
 	}
 
 	return s.helperImageInfo.String()
