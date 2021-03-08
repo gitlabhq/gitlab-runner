@@ -17,6 +17,7 @@ const (
 	GitLabRegistryHelperImage            string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
 	DisableUmaskForDockerExecutor        string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
 	EnableBashExitCodeCheck              string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
+	UseWindowsLegacyProcessStrategy      string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
 )
 
 type FeatureFlag struct {
@@ -134,6 +135,17 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "If enabled, bash scripts don't rely solely on `set -e`, but check for a non-zero exit code " +
 			"after each script command is executed.",
+	},
+	{
+		Name:            UseWindowsLegacyProcessStrategy,
+		DefaultValue:    "true",
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When disabled, processes that Runner creates on Windows (shell and custom executor) will be " +
+			"created with additional setup that should improve process termination. This is currently experimental " +
+			"and how we setup these processes may change as we continue to improve this. When set to `true`, legacy " +
+			"process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag should" +
+			"be set to `false`.",
 	},
 }
 

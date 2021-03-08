@@ -713,6 +713,21 @@ func (mr *RunCommand) Stop(_ service.Service) error {
 		}
 	}()
 
+	// On Windows, we convert SIGTERM and SIGINT signals into a SIGQUIT.
+	//
+	// This enforces *graceful* termination on the first signal received, and a forceful shutdown
+	// on the second.
+	//
+	// This slightly differs from other operating systems. On other systems, receiving a SIGQUIT
+	// works the same way (gracefully) but receiving a SIGTERM and SIGQUIT always results
+	// in an immediate forceful shutdown.
+	//
+	// This handling has to be different as SIGQUIT is not a signal the os/signal package translates
+	// any Windows control concepts to.
+	if runtime.GOOS == "windows" {
+		mr.stopSignal = syscall.SIGQUIT
+	}
+
 	err := mr.handleGracefulShutdown()
 	if err == nil {
 		return nil

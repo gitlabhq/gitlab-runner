@@ -3,6 +3,7 @@
 package process
 
 import (
+	"fmt"
 	"os/exec"
 	"testing"
 
@@ -11,8 +12,12 @@ import (
 )
 
 func TestSetProcessGroup(t *testing.T) {
-	cmd := exec.Command("sleep", "1")
-	require.Nil(t, cmd.SysProcAttr)
-	setProcessGroup(cmd)
-	assert.True(t, cmd.SysProcAttr.Setpgid)
+	for _, pg := range []bool{true, false} {
+		t.Run(fmt.Sprintf("process_%t", pg), func(t *testing.T) {
+			cmd := exec.Command("sleep", "1")
+			require.Nil(t, cmd.SysProcAttr)
+			setProcessGroup(cmd, pg)
+			assert.True(t, cmd.SysProcAttr.Setpgid)
+		})
+	}
 }
