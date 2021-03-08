@@ -846,6 +846,13 @@ func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, f
 	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 	out, _ := buildtest.RunBuildReturningOutput(t, build)
 	assert.Contains(t, out, "alpine:latest")
+
+	build.Image.Name = "$IMAGE:$VERSIONING"
+	setBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "could not be expanded")
 }
 
 func TestCleanup(t *testing.T) {

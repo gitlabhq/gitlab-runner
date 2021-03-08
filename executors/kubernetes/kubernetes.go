@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +58,7 @@ var (
 	}
 
 	detectShellScript = shells.BashDetectShellScript
+	re                = regexp.MustCompile(`(?m)\$[a-zA-Z0-9_]*`)
 )
 
 // GetDefaultCapDrop returns the default capabilities that should be dropped
@@ -170,7 +172,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
 	// Check if the image can be expanded through the variables
-	imageName := s.expandImageName(s.options.Image.Name)
+	imageName, err := s.expandImageName(s.options.Image.Name)
+	if err != nil {
+		return fmt.Errorf("prepare helper image: %w", err)
+	}
 
 	s.Println("Using Kubernetes executor with image", imageName, "...")
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
@@ -180,14 +185,20 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	return nil
 }
 
-func (s *executor) expandImageName(imageName string) string {
+// expandImageName ties to find the corresponding value for each variable found in the image name
+// When no value is found, an error is triggered
+func (s *executor) expandImageName(imageName string) (string, error) {
 	image := imageName
 
-	if imageName != "" {
-		image = s.Build.GetAllVariables().ExpandValue(imageName)
+	for _, match := range re.FindAllString(imageName, -1) {
+		tmp := s.Build.GetAllVariables().ExpandValue(match)
+		if tmp == "" {
+			return "", fmt.Errorf("variable %s could not be expanded", match)
+		}
+		image = strings.Replace(image, match, tmp, 1)
 	}
 
-	return image
+	return image, nil
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
