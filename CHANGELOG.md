@@ -1,3 +1,44 @@
+## v13.10.0-rc1 (2021-03-08)
+
+### Bug fixes
+
+- Don't print DockerHub helper image warning when custom image is defined !2761
+- Allow graceful termination on Windows !2739
+
+### Maintenance
+
+- Include symbols in gitlab-runner binary !2800
+- Move process package integration tests to own files !2794
+- Update `code navigation` job definition !2792
+- Rename shell_writer_test.go to reflect use !2782
+- Move virtualbox executor integration tests to own file !2781
+- Move parallels executor integration tests to own file !2780
+- Update trace limit wording !2765
+- Update of docker error message !2759
+- Add integration tests for trace limit handling !2758
+- Add integration tests for build trace masking !2754
+- Version pin pwsh version inside of our CI tests !2748
+- Update hashicorp/go-version dependency to v1.2.1 !2746
+- Removal of unused replace from go.mod !2745
+- Start updating runner pipeline to rules !2728
+
+### Documentation changes
+
+- Add mentions to pwsh to documentation !2797
+- Update Vale rules !2789
+- Add mention to pwsh support in Docker executor docs !2786
+- Fix example gcp zone for docker+machine config !2771
+- Runner: Update spelling exceptions list !2770
+- Docs for installing runner on a separate machine !2767
+- Update docs/monitoring/README.md !2766
+- Fix misspelling of "Force" in Powershell examples !2764 (Gabriel Smith @yodal_)
+- Add runner execution flow diagram !2760
+- Fix duplicate labels in CONTRIBUTING.md !2747 (h.yoshida @hirokiyoshida837)
+- Add backticks around --google-accelerator docs !2742
+- Update documented check internal for config changes !2741
+- Add documentation for using GPUs with Docker Machine !2736
+- Update MachineOptions to only mandatory configuration. !2673
+
 ## v13.9.0 (2021-02-22)
 
 ### New features
