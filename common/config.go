@@ -349,6 +349,7 @@ type KubernetesVolumes struct {
 	ConfigMaps []KubernetesConfigMap `toml:"config_map" description:"The config maps which will be mounted as volumes"`
 	Secrets    []KubernetesSecret    `toml:"secret" description:"The secret maps which will be mounted"`
 	EmptyDirs  []KubernetesEmptyDir  `toml:"empty_dir" description:"The empty dirs which will be mounted"`
+	CSIs       []KubernetesCSI       `toml:"csi" description:"The CSI volumes which will be mounted"`
 }
 
 //nolint:lll
@@ -392,6 +393,17 @@ type KubernetesEmptyDir struct {
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	SubPath   string `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	Medium    string `toml:"medium,omitempty" description:"Set to 'Memory' to have a tmpfs"`
+}
+
+//nolint:lll
+type KubernetesCSI struct {
+	Name             string            `toml:"name" json:"name" description:"The name of the CSI volume and volumeMount to use"`
+	MountPath        string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
+	SubPath          string            `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
+	Driver           string            `toml:"driver" description:"A string value that specifies the name of the volume driver to use."`
+	FSType           string            `toml:"fs_type" description:"Filesystem type to mount. If not provided, the empty value is passed to the associated CSI driver which will determine the default filesystem to apply."`
+	ReadOnly         bool              `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
+	VolumeAttributes map[string]string `toml:"volume_attributes,omitempty" description:"Key-value pair mapping for attributes of the CSI volume."`
 }
 
 //nolint:lll

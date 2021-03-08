@@ -658,6 +658,15 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		})
 	}
 
+	for _, mount := range s.Config.Kubernetes.Volumes.CSIs {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+			ReadOnly:  mount.ReadOnly,
+		})
+	}
+
 	return mounts
 }
 
@@ -709,6 +718,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	volumes = append(volumes, s.getVolumesForPVCs()...)
 	volumes = append(volumes, s.getVolumesForConfigMaps()...)
 	volumes = append(volumes, s.getVolumesForEmptyDirs()...)
+	volumes = append(volumes, s.getVolumesForCSIs()...)
 
 	return volumes
 }
@@ -811,6 +821,25 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 			VolumeSource: api.VolumeSource{
 				EmptyDir: &api.EmptyDirVolumeSource{
 					Medium: api.StorageMedium(volume.Medium),
+				},
+			},
+		})
+	}
+	return volumes
+}
+
+func (s *executor) getVolumesForCSIs() []api.Volume {
+	var volumes []api.Volume
+
+	for _, volume := range s.Config.Kubernetes.Volumes.CSIs {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				CSI: &api.CSIVolumeSource{
+					Driver:           volume.Driver,
+					FSType:           &volume.FSType,
+					ReadOnly:         &volume.ReadOnly,
+					VolumeAttributes: volume.VolumeAttributes,
 				},
 			},
 		})
