@@ -1,4 +1,6 @@
-package process
+// +build windows
+
+package process_test
 
 // Cases for Windows that are used in `filler.go#TestKiller`.
 func testKillerTestCases() map[string]testKillerTestCase {

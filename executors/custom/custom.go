@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
@@ -206,13 +207,14 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 	logger := common.NewProcessLoggerAdapter(e.BuildLogger)
 
 	cmdOpts := process.CommandOptions{
-		Dir:                 e.tempDir,
-		Env:                 make([]string, 0),
-		Stdout:              opts.out.stdout,
-		Stderr:              opts.out.stderr,
-		Logger:              logger,
-		GracefulKillTimeout: e.config.GetGracefulKillTimeout(),
-		ForceKillTimeout:    e.config.GetForceKillTimeout(),
+		Dir:                             e.tempDir,
+		Env:                             make([]string, 0),
+		Stdout:                          opts.out.stdout,
+		Stderr:                          opts.out.stderr,
+		Logger:                          logger,
+		GracefulKillTimeout:             e.config.GetGracefulKillTimeout(),
+		ForceKillTimeout:                e.config.GetForceKillTimeout(),
+		UseWindowsLegacyProcessStrategy: e.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
 	}
 
 	// Append job_env defined variable first to avoid overwriting any CI/CD or predefined variables.

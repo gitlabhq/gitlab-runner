@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-func setProcessGroup(c *exec.Cmd) {
+func setProcessGroup(c *exec.Cmd, _ bool) {
 	c.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}

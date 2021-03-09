@@ -164,9 +164,10 @@ func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (i
 func (s *executor) run(cmd common.ExecutorCommand) error {
 	s.BuildLogger.Debugln("Using new shell command execution")
 	cmdOpts := process.CommandOptions{
-		Env:    append(os.Environ(), s.BuildShell.Environment...),
-		Stdout: s.Trace,
-		Stderr: s.Trace,
+		Env:                             append(os.Environ(), s.BuildShell.Environment...),
+		Stdout:                          s.Trace,
+		Stderr:                          s.Trace,
+		UseWindowsLegacyProcessStrategy: s.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
 	}
 
 	args := s.BuildShell.Arguments

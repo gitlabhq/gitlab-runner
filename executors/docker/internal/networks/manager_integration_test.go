@@ -1,15 +1,18 @@
-package networks
+package networks_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -21,19 +24,25 @@ func TestCreateNetworkLabels(t *testing.T) {
 	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
 
-	manager := newDefaultManager()
-	manager.build.JobResponse = successfulJobResponse
-	manager.build.Variables = append(
-		manager.build.Variables,
-		common.JobVariable{Key: featureflags.NetworkPerBuild, Value: "true"},
-		common.JobVariable{Key: "CI_PIPELINE_ID", Value: "1"},
-	)
-
 	client, err := docker.New(docker.Credentials{}, "")
 	require.NoError(t, err, "should be able to connect to docker")
 	defer client.Close()
 
-	manager.client = client
+	build := &common.Build{
+		ProjectRunnerID: 0,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{Token: "test-token"},
+		},
+		JobResponse: successfulJobResponse,
+	}
+	build.Variables = common.JobVariables{
+		{Key: featureflags.NetworkPerBuild, Value: "true"},
+		{Key: "CI_PIPELINE_ID", Value: "1"},
+	}
+
+	logger, _ := logrustest.NewNullLogger()
+
+	manager := networks.NewManager(logger, client, build, labels.NewLabeler(build))
 
 	ctx := context.Background()
 

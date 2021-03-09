@@ -11,7 +11,9 @@ GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pi
 
 You can choose to [**install**](install/index.md) the GitLab Runner application
 on infrastructure that you own or manage. If you do, you should install
-GitLab Runner on a machine that's separate from the one that hosts the GitLab instance.
+GitLab Runner on a machine that's separate from the one that hosts the GitLab instance
+for security and performance reasons. When you use separate machines, you can have
+different operating systems and tools, like Kubernetes or Docker, on each.
 
 GitLab Runner is open-source and written in [Go](https://golang.org). It can be run
 as a single binary; no language-specific requirements are needed.
@@ -147,7 +149,7 @@ GitLab Runner has the following features.
   - Using Docker containers with autoscaling on different clouds and virtualization hypervisors.
   - Connecting to a remote SSH server.
 - Is written in Go and distributed as single binary without any other requirements.
-- Supports Bash and Windows PowerShell.
+- Supports Bash, PowerShell Core, and Windows PowerShell.
 - Works on GNU/Linux, macOS, and Windows (pretty much anywhere you can run Docker).
 - Allows customization of the job running environment.
 - Automatic configuration reload without restart.

@@ -315,7 +315,7 @@ concurrent = 4
 ## Using volumes
 
 As described earlier, volumes can be mounted in the build container.
-At this time _hostPath_, _PVC_, _configMap_, and _secret_ volume types
+At this time _hostPath_, _PVC_, _configMap_, _secret_, and _CSI_ volume types
 are supported. Users can configure any number of volumes for each of
 mentioned types.
 
@@ -356,6 +356,12 @@ concurrent = 4
       name = "empty-dir"
       mount_path = "/path/to/empty_dir"
       medium = "Memory"
+    [[runners.kubernetes.volumes.csi]]
+      name = "csi-volume"
+      mount_path = "/path/to/csi/volume"
+      driver = "my-csi-driver"
+      [runners.kubernetes.volumes.csi.volume_attributes]
+        size = "2Gi"
 ```
 
 ### Host Path volumes
@@ -443,6 +449,20 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | mount_path | string  | yes      | Path inside of container where the volume should be mounted |
 | sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | medium     | string  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
+
+### CSI volumes
+
+[_CSI_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#csi) configuration instructs Kubernetes to use a custom CSI driver to mount an arbitrary storage system inside of the container.
+
+| Option            | Type                | Required | Description |
+|-------------------|---------------------|----------|-------------|
+| name              | string              | yes      | The name of the volume |
+| mount_path        | string              | yes      | Path inside of container where the volume should be mounted |
+| driver            | string              | yes      | A string value that specifies the name of the volume driver to use. |
+| fs_type           | string              | no       | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".) |
+| volume_attributes | `map[string]string` | no       | Key-value pair mapping for attributes of the CSI volume. |
+| sub_path          | string              | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| read_only         | boolean             | no       | Sets the volume in read-only mode (defaults to false) |
 
 ## Using Security Context
 

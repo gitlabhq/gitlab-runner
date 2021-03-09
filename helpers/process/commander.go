@@ -25,10 +25,13 @@ type CommandOptions struct {
 
 	GracefulKillTimeout time.Duration
 	ForceKillTimeout    time.Duration
+
+	UseWindowsLegacyProcessStrategy bool
 }
 
 type osCmd struct {
 	internal *exec.Cmd
+	options  CommandOptions
 }
 
 // NewOSCmd creates a new implementation of Commander using the os.Cmd from
@@ -41,11 +44,14 @@ func NewOSCmd(executable string, args []string, options CommandOptions) Commande
 	c.Stdout = options.Stdout
 	c.Stderr = options.Stderr
 
-	return &osCmd{internal: c}
+	return &osCmd{
+		internal: c,
+		options:  options,
+	}
 }
 
 func (c *osCmd) Start() error {
-	setProcessGroup(c.internal)
+	setProcessGroup(c.internal, c.options.UseWindowsLegacyProcessStrategy)
 
 	return c.internal.Start()
 }

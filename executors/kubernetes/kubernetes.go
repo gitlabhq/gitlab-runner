@@ -202,10 +202,6 @@ func (s *executor) expandImageName(imageName string) (string, error) {
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
-	if !s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
-		s.Warningln(helperimage.DockerHubWarningMessage)
-	}
-
 	return helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:         helperimage.OSTypeLinux,
 		Architecture:   "amd64",
@@ -686,6 +682,15 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 		})
 	}
 
+	for _, mount := range s.Config.Kubernetes.Volumes.CSIs {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+			ReadOnly:  mount.ReadOnly,
+		})
+	}
+
 	return mounts
 }
 
@@ -737,6 +742,7 @@ func (s *executor) getVolumesForConfig() []api.Volume {
 	volumes = append(volumes, s.getVolumesForPVCs()...)
 	volumes = append(volumes, s.getVolumesForConfigMaps()...)
 	volumes = append(volumes, s.getVolumesForEmptyDirs()...)
+	volumes = append(volumes, s.getVolumesForCSIs()...)
 
 	return volumes
 }
@@ -839,6 +845,25 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 			VolumeSource: api.VolumeSource{
 				EmptyDir: &api.EmptyDirVolumeSource{
 					Medium: api.StorageMedium(volume.Medium),
+				},
+			},
+		})
+	}
+	return volumes
+}
+
+func (s *executor) getVolumesForCSIs() []api.Volume {
+	var volumes []api.Volume
+
+	for _, volume := range s.Config.Kubernetes.Volumes.CSIs {
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				CSI: &api.CSIVolumeSource{
+					Driver:           volume.Driver,
+					FSType:           &volume.FSType,
+					ReadOnly:         &volume.ReadOnly,
+					VolumeAttributes: volume.VolumeAttributes,
 				},
 			},
 		})
@@ -1024,6 +1049,10 @@ func (s *executor) getDNSPolicy() api.DNSPolicy {
 func (s *executor) getHelperImage() string {
 	if len(s.Config.Kubernetes.HelperImage) > 0 {
 		return common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.HelperImage)
+	}
+
+	if !s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
+		s.Warningln(helperimage.DockerHubWarningMessage)
 	}
 
 	return s.helperImageInfo.String()

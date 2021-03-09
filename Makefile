@@ -6,7 +6,7 @@ BRANCH := $(shell git show-ref | grep "$(REVISION)" | grep -v HEAD | awk '{print
 BUILT := $(shell date -u +%Y-%m-%dT%H:%M:%S%z)
 export TESTFLAGS ?= -cover
 
-LATEST_STABLE_TAG := $(shell git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" --sort=-v:refname | awk '!/rc/' | head -n 1)
+LATEST_STABLE_TAG := $(shell git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" | sort -rV | awk '!/rc/' | head -n 1)
 export IS_LATEST :=
 ifeq ($(shell git describe --exact-match --match $(LATEST_STABLE_TAG) >/dev/null 2>&1; echo $$?), 0)
 export IS_LATEST := true
@@ -40,7 +40,7 @@ export MAIN_PACKAGE ?= gitlab.com/gitlab-org/gitlab-runner
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(PACKAGE_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
-              -s -w
+              -w
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED ?= 0
 

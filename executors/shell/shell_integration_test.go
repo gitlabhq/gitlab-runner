@@ -300,6 +300,15 @@ func TestBuildCancel(t *testing.T) {
 	})
 }
 
+func TestBuildMasking(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.JobResponse{}, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithMasking(t, build.Runner, nil)
+	})
+}
+
 func TestBuildWithIndexLock(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
@@ -1335,4 +1344,13 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestBuildLogLimitExceeded(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build, cleanup := newBuild(t, common.JobResponse{}, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
+	})
 }
