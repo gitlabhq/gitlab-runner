@@ -36,7 +36,7 @@ func (r *resourceQuantityError) Is(err error) bool {
 }
 
 var (
-	// inClusterConfig parses kubernets configuration reading in cluster values
+	// inClusterConfig parses kubernetes configuration reading in cluster values
 	inClusterConfig kubeConfigProvider = restclient.InClusterConfig
 	// defaultKubectlConfig parses kubectl configuration ad loads the default cluster
 	defaultKubectlConfig kubeConfigProvider = loadDefaultKubectlConfig
