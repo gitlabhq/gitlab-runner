@@ -2,6 +2,7 @@ package buildtest
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -74,6 +75,20 @@ func OnStage(build *common.Build, stage string, fn func()) func() {
 // a non-predefined stage.
 func OnUserStage(build *common.Build, fn func()) func() {
 	return OnStage(build, "step_", fn)
+}
+
+func SetBuildFeatureFlag(build *common.Build, flag string, value bool) {
+	for _, v := range build.Variables {
+		if v.Key == flag {
+			v.Value = fmt.Sprint(value)
+			return
+		}
+	}
+
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   flag,
+		Value: fmt.Sprint(value),
+	})
 }
 
 type baseJobGetter func() (common.JobResponse, error)
