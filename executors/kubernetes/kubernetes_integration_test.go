@@ -45,6 +45,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testOverwriteNamespaceNotMatch":      testOverwriteNamespaceNotMatchFeatureFlag,
 		"testOverwriteServiceAccountNotMatch": testOverwriteServiceAccountNotMatchFeatureFlag,
 		"testInteractiveTerminal":             testInteractiveTerminalFeatureFlag,
+		"testKubernetesReplaceEnvFeatureFlag": testKubernetesReplaceEnvFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -436,6 +437,27 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	t.Log(out)
 
 	assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
+}
+
+func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = "$IMAGE:$VERSION"
+	build.JobResponse.Variables = append(
+		build.JobResponse.Variables,
+		common.JobVariable{Key: "IMAGE", Value: "alpine"},
+		common.JobVariable{Key: "VERSION", Value: "latest"},
+	)
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	out, _ := buildtest.RunBuildReturningOutput(t, build)
+	assert.Contains(t, out, "alpine:latest")
+
+	build.Image.Name = "$IMAGE:$VERSIONING"
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "could not be expanded")
 }
 
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
