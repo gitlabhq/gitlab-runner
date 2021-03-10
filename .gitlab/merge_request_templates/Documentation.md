@@ -15,7 +15,7 @@
 
 ## Author's checklist (required)
 
-- [ ] Follow the [Documentation Guidelines](https://docs.gitlab.com/ee/development/documentation/) and [Style Guide](https://docs.gitlab.com/ee/development/documentation/styleguide.html).
+- [ ] Follow the [Documentation Guidelines](https://docs.gitlab.com/ee/development/documentation/) and [Style Guide](https://docs.gitlab.com/ee/development/documentation/styleguide/index.html).
 - If you have `developer` access or higher (for example, GitLab team members or [Core Team](https://about.gitlab.com/community/core-team/) members)
   - [ ] Apply the ~documentation label.
   - [ ] Assign the [designated Technical Writer](https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments).
@@ -25,13 +25,13 @@ When applicable:
 
 - [ ] Update the [permissions table](https://docs.gitlab.com/ee/user/permissions.html).
 - [ ] Link docs to and from the higher-level index page, plus other related docs where helpful.
-- [ ] Add [GitLab's version history note(s)](https://docs.gitlab.com/ee/development/documentation/styleguide.html#text-for-documentation-requiring-version-text).
+- [ ] Add [GitLab's version history note(s)](https://docs.gitlab.com/ee/development/documentation/styleguide/index.html#gitlab-versions).
 - [ ] Add/update the [feature flag section](https://docs.gitlab.com/runner/configuration/feature-flags.html).
-- [ ] If you're changing document headings, search `docs/*` for old headings and replace them with the new ones to [avoid broken anchors](https://docs.gitlab.com/ee/development/documentation/styleguide.html#anchor-links).
+- [ ] If you're changing document headings, search `docs/*` for old headings and replace them with the new ones to [avoid broken anchors](https://docs.gitlab.com/ee/development/documentation/styleguide/index.html#anchor-links).
 
 ## Review checklist
 
-All reviewers can help ensure accuracy, clarity, completeness, and adherence to the [Documentation Guidelines](https://docs.gitlab.com/ee/development/documentation/) and [Style Guide](https://docs.gitlab.com/ee/development/documentation/styleguide.html).
+All reviewers can help ensure accuracy, clarity, completeness, and adherence to the [Documentation Guidelines](https://docs.gitlab.com/ee/development/documentation/) and [Style Guide](https://docs.gitlab.com/ee/development/documentation/styleguide/index.html).
 
 **1. Primary Reviewer**
 
