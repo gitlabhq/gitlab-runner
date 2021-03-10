@@ -340,7 +340,7 @@ You can read more about this policy in our
 ```
 Please enclose console output, logs, and code in backticks (`` ` ``), as it's
 very hard to read otherwise. For more information, read our
-[guide on code and codeblocks in markdown](https://docs.gitlab.com/ee/development/documentation/styleguide.html#code-blocks)
+[guide on code and codeblocks in markdown](https://docs.gitlab.com/ee/development/documentation/styleguide/index.html#code-blocks)
 ```
 
 ### Issue fixed in newer version
