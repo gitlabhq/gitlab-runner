@@ -449,10 +449,11 @@ func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, f
 		common.JobVariable{Key: "VERSION", Value: "latest"},
 	)
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-	out, _ := buildtest.RunBuildReturningOutput(t, build)
-	assert.Contains(t, out, "alpine:latest")
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
+        assert.Contains(t, out, "alpine:latest")
 
-	build.Image.Name = "$IMAGE:$VERSIONING"
+	build.Image.Name = "$IMAGE:$NOT_EXISTING_VARIABLE"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})

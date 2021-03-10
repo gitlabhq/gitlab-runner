@@ -186,7 +186,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 }
 
 // expandImageName ties to find the corresponding value for each variable found in the image name
-// When no value is found, an error is triggered
+// When no value is found, an error is returned
 func (s *executor) expandImageName(imageName string) (string, error) {
 	image := imageName
 
