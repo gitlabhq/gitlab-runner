@@ -7,32 +7,37 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Advanced configuration
 
-GitLab Runner configuration uses the [TOML](https://github.com/toml-lang/toml) format.
+You can change the behavior of GitLab Runner and of individual registered runners.
 
-The file to be edited can be found in:
+To do this, you modify a file called `config.toml`, which uses the [TOML](https://github.com/toml-lang/toml) format.
 
-1. `/etc/gitlab-runner/config.toml` on \*nix systems when GitLab Runner is
-   executed as root (**this is also path for service configuration**)
-1. `~/.gitlab-runner/config.toml` on \*nix systems when GitLab Runner is
+GitLab Runner does not require a restart when you change most options. This includes parameters
+in the `[[runners]]` section and most parameters in the global section, except for `listen_address`.
+If a runner was already registered, you don't need to register it again.
+
+GitLab Runner checks for configuration modifications every 3 seconds and reloads if necessary.
+GitLab Runner also reloads the configuration in response to the `SIGHUP` signal.
+
+You can find the `config.toml` file in:
+
+- `/etc/gitlab-runner/` on \*nix systems when GitLab Runner is
+   executed as root (**this is also the path for service configuration**)
+- `~/.gitlab-runner/` on \*nix systems when GitLab Runner is
    executed as non-root
-1. `./config.toml` on other systems
-
-If you edit `config.toml`, then for most options, GitLab Runner does not require a restart. This includes any parameters that are defined in the `[[runners]]` section and most parameters in the global section, except for `listen_address`. Runner checks for config modifications every 3 seconds and reloads if necessary. Configuration is also reloaded in response to the `SIGHUP` signal.
-
-If a runner has been previously registered, you can also modify the `config.toml` file directly. In this instance, you do not have to run the `register` command again.
+- `./` on other systems
 
 ## The global section
 
-This defines global settings of GitLab Runner.
+These settings are global. They apply to all runners.
 
 | Setting | Description |
 | ------- | ----------- |
-| `concurrent`     | limits how many jobs globally can be run concurrently. The most upper limit of jobs using all defined runners. `0` **does not** mean unlimited |
-| `log_level`      | Log level (options: `debug`, `info`, `warn`, `error`, `fatal`, `panic`). This setting has lower priority than level set by command line argument `--debug`, `-l`, or `--log-level` |
-| `log_format`     | Log format (options: `runner`, `text`, `json`). This setting has lower priority than format set by command line argument `--log-format` The default value is `runner`. |
-| `check_interval` | defines the interval length, in seconds, between new jobs check. The default value is `3`; if set to `0` or lower, the default value will be used. |
-| `sentry_dsn`     | enable tracking of all system level errors to Sentry |
-| `listen_address` | address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
+| `concurrent`     | Limits how many jobs can run concurrently. The maximum number is all defined runners. `0` **does not** mean unlimited. |
+| `log_level`      | Defines the log level. Options are `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. This setting has lower priority than the level set by the command-line arguments `--debug`, `-l`, or `--log-level`. |
+| `log_format`     | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`. |
+| `check_interval` | Defines the interval length, in seconds, between new jobs check. The default value is `3`. If set to `0` or lower, the default value is used. |
+| `sentry_dsn`     | Enables tracking of all system level errors to Sentry. |
+| `listen_address` | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
 
 Configuration example:
 
@@ -87,22 +92,21 @@ INFO[0000] [session_server].listen_address not defined, session endpoints disabl
 
 ### How `check_interval` works
 
-If there is more than one `[[runners]]` section in `config.toml` (let's call them workers),
-the interval between requests to GitLab are more frequent than one could expect. GitLab Runner
-contains a loop that constantly schedules a request that should be made for a worker against
-the GitLab instance it's configured for.
+If more than one `[[runners]]` section exists in `config.toml`,
+the interval between requests to GitLab are more frequent than you might expect. GitLab Runner
+contains a loop that constantly schedules a request to the GitLab instance it's configured for.
 
-GitLab Runner tries to ensure that subsequent requests for one worker will be done in the specified interval,
-so the value of `check_interval` is divided by the number of the `[[runners]]` sections. The loop will next
-iterate over all sections, schedule a request for each of them, and will sleep for the calculated amount
-of time. Things get interesting when the workers are tied to a different GitLab instance.
+GitLab Runner tries to ensure that subsequent requests for each runner are done in the specified interval.
+To do this, it divides the value of `check_interval` by the number of `[[runners]]` sections. The loop
+iterates over all sections, schedules a request for each, and sleeps for the calculated amount
+of time. Things get interesting when the runners are tied to a different GitLab instance.
 Consider the following example.
 
-If one would set `check_interval = 10`, and there were 2 workers in total (`runner-1` and `runner-2`),
-a subsequent request would be made each 10 seconds. The loop would look like:
+If you set `check_interval = 10`, and there are two runners (`runner-1` and `runner-2`),
+a request is made each 10 seconds. Here is an example of the loop in this case:
 
 1. Get `check_interval` value (`10s`).
-1. Get list of workers (`runner-1`, `runner-2`).
+1. Get list of runners (`runner-1`, `runner-2`).
 1. Calculate the sleep interval (`10s / 2 = 5s`).
 1. Start an infinite loop:
     1. Request a job for `runner-1`.
@@ -111,12 +115,12 @@ a subsequent request would be made each 10 seconds. The loop would look like:
     1. Sleep for `5s`.
     1. Repeat.
 
-So, a request from the runner's process is made each 5s. If `runner-1` and `runner-2` are connected to the same
-GitLab instance, it means that the request to this GitLab instance will receive a new request from this runner
-also each 5s. But as you can see, between the first request for `runner-1` and second request for `runner-1`
-there are two sleeps taking 5s, so finally it's ~10s between subsequent requests for `runner-1`. The same goes
-for `runner-2`. If you define more workers, the sleep interval will be smaller, but a request for a worker will
-be repeated after all requests for the other workers + their sleeps are called.
+In this example, a request from the runner's process is made every 5 seconds. If `runner-1` and `runner-2` are connected to the same
+GitLab instance, this GitLab instance also receives a new request from this runner
+every 5 seconds. But between the first request for `runner-1` and second request for `runner-1`
+there are two sleep periods. Each one takes 5 seconds, so it's approximately 10 seconds between subsequent requests for `runner-1`.
+The same applies for `runner-2`. If you define more runners, the sleep interval is smaller. However, a request for a runner is
+repeated after all requests for the other runners and their sleep periods are called.
 
 ## The `[session_server]` section
 
