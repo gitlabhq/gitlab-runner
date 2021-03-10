@@ -927,20 +927,9 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	s.Debugln("Setting up build pod")
 
-	podServices := make([]api.Container, len(s.options.Services))
-
-	for i, service := range s.options.Services {
-		resolvedImage, err := s.expandImageName(service.Name)
-		if err != nil {
-			return err
-		}
-		podServices[i] = s.buildContainer(
-			fmt.Sprintf("svc-%d", i),
-			resolvedImage,
-			service,
-			s.configurationOverwrites.serviceRequests,
-			s.configurationOverwrites.serviceLimits,
-		)
+	podServices, err := s.getPodServices()
+	if err != nil {
+		return err
 	}
 
 	// We set a default label to the pod. This label will be used later
@@ -969,7 +958,14 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		return err
 	}
 
-	podConfig, err := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
+	podConfig, err := s.preparePodConfig(
+		labels,
+		annotations,
+		podServices,
+		imagePullSecrets,
+		hostAliases,
+		initContainers,
+	)
 	if err != nil {
 		return err
 	}
@@ -987,6 +983,25 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	}
 
 	return nil
+}
+
+func (s *executor) getPodServices() ([]api.Container, error) {
+	podServices := make([]api.Container, len(s.options.Services))
+	for i, service := range s.options.Services {
+		resolvedImage, err := s.expandImageName(service.Name)
+		if err != nil {
+			return nil, err
+		}
+		podServices[i] = s.buildContainer(
+			fmt.Sprintf("svc-%d", i),
+			resolvedImage,
+			service,
+			s.configurationOverwrites.serviceRequests,
+			s.configurationOverwrites.serviceLimits,
+		)
+	}
+
+	return podServices, nil
 }
 
 func (s *executor) preparePodConfig(
