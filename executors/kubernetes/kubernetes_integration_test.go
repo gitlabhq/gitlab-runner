@@ -451,12 +451,12 @@ func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, f
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	require.NoError(t, err)
-        assert.Contains(t, out, "alpine:latest")
+	assert.Contains(t, out, "alpine:latest")
 
 	build.Image.Name = "$IMAGE:$NOT_EXISTING_VARIABLE"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not be expanded")
 }

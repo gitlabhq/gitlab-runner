@@ -930,7 +930,10 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	podServices := make([]api.Container, len(s.options.Services))
 
 	for i, service := range s.options.Services {
-		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
+		resolvedImage, err := s.expandImageName(service.Name)
+		if err != nil {
+			return err
+		}
 		podServices[i] = s.buildContainer(
 			fmt.Sprintf("svc-%d", i),
 			resolvedImage,
@@ -966,7 +969,10 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
+	podConfig, err := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
+	if err != nil {
+		return err
+	}
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -989,8 +995,11 @@ func (s *executor) preparePodConfig(
 	imagePullSecrets []api.LocalObjectReference,
 	hostAliases []api.HostAlias,
 	initContainers []api.Container,
-) api.Pod {
-	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
+) (api.Pod, error) {
+	buildImage, err := s.expandImageName(s.options.Image.Name)
+	if err != nil {
+		return api.Pod{}, err
+	}
 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1035,7 +1044,7 @@ func (s *executor) preparePodConfig(
 		},
 	}
 
-	return pod
+	return pod, nil
 }
 
 func (s *executor) getDNSPolicy() api.DNSPolicy {
