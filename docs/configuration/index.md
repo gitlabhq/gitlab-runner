@@ -19,6 +19,7 @@ Learn how to configure GitLab Runner.
 - [Autoscale GitLab Runner on AWS EC2](runner_autoscale_aws/index.md): Execute jobs on auto-scaled AWS EC2 instances.
 - [Autoscale GitLab CI on AWS Fargate](runner_autoscale_aws_fargate/index.md):
   Use the AWS Fargate driver with the GitLab custom executor to run jobs in AWS ECS.
+- [Graphical Processing Units](gpus.md): Use GPUs to execute jobs.
 - [The init system](init.md): GitLab Runner installs
   its init service files based on your operating system.
 - [Supported shells](../shells/index.md): Execute builds on different systems by
