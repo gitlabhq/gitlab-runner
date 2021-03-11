@@ -16,7 +16,7 @@ for various executors.
 
 No runner configuration is needed.
 
-### Docker executor
+## Docker executor
 
 Use the [`gpus` configuration option in the `runners.docker` section](advanced-configuration.md#the-runnersdocker-section).
 For example:
