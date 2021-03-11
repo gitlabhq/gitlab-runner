@@ -48,6 +48,7 @@ type BashWriter struct {
 	indent        int
 
 	checkForErrors bool
+	useNewEval     bool
 }
 
 func (b *BashWriter) GetTemporaryPath() string {
@@ -229,10 +230,19 @@ func (b *BashWriter) writeTrace(w io.Writer, trace bool) {
 	}
 }
 
+func (b *BashWriter) writeEval(w io.Writer) {
+	if b.useNewEval {
+		_, _ = io.WriteString(w, ": | (eval "+helpers.ShellEscape(b.String())+")\n")
+		return
+	}
+
+	_, _ = io.WriteString(w, ": | eval "+helpers.ShellEscape(b.String())+"\n")
+}
+
 func (b *BashWriter) writeScript(w io.Writer) {
 	_, _ = io.WriteString(w, "set -eo pipefail\n")
 	_, _ = io.WriteString(w, "set +o noclobber\n")
-	_, _ = io.WriteString(w, ": | eval "+helpers.ShellEscape(b.String())+"\n")
+	b.writeEval(w)
 	_, _ = io.WriteString(w, "exit 0\n")
 }
 
@@ -280,6 +290,7 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 		TemporaryPath:  info.Build.TmpProjectDir(),
 		Shell:          b.Shell,
 		checkForErrors: info.Build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
+		useNewEval:     info.Build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
 	}
 
 	return b.generateScript(w, buildStage, info)
