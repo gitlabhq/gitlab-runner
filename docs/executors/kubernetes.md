@@ -819,3 +819,13 @@ If you are experiencing this problem turn off the feature flag [`FF_USE_LEGACY_K
 to use `kube attach` for script execution, which is more stable.
 
 We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
+
+## Troubleshooting
+
+The following errors are commonly encountered when using the Kubernetes executor.
+
+### `Build failed (system failure): timedout waiting for pod to start`
+
+If the cluster cannot schedule the build pod before the timeout defined by `poll_timeout`, the build pod returns an error. The [Kubernetes Scheduler](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-lifetime) should be able to delete it.
+
+To fix this issue, increase the `poll_timeout` value in your `config.toml` file.
