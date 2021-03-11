@@ -455,11 +455,7 @@ func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, f
 	assert.Contains(t, out, "alpine:latest")
 }
 
-func testKubernetesReplaceMissingEnvVarFeatureFlag(
-	t *testing.T,
-	featureFlagName string,
-	featureFlagValue bool,
-) {
+func testKubernetesReplaceMissingEnvVarFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 	build.Image.Name = "alpine:$NOT_EXISTING_VARIABLE"
