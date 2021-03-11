@@ -31,21 +31,22 @@ type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 
 func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
-		"testKubernetesSuccessRun":            testKubernetesSuccessRunFeatureFlag,
-		"testKubernetesMultistepRun":          testKubernetesMultistepRunFeatureFlag,
-		"testKubernetesTimeoutRun":            testKubernetesTimeoutRunFeatureFlag,
-		"testKubernetesBuildFail":             testKubernetesBuildFailFeatureFlag,
-		"testKubernetesBuildCancel":           testKubernetesBuildCancelFeatureFlag,
-		"testKubernetesBuildLogLimitExceeded": testKubernetesBuildLogLimitExceededFeatureFlag,
-		"testKubernetesBuildMasking":          testKubernetesBuildMaskingFeatureFlag,
-		"testKubernetesCustomClonePath":       testKubernetesCustomClonePathFeatureFlag,
-		"testKubernetesNoRootImage":           testKubernetesNoRootImageFeatureFlag,
-		"testKubernetesMissingImage":          testKubernetesMissingImageFeatureFlag,
-		"testKubernetesMissingTag":            testKubernetesMissingTagFeatureFlag,
-		"testOverwriteNamespaceNotMatch":      testOverwriteNamespaceNotMatchFeatureFlag,
-		"testOverwriteServiceAccountNotMatch": testOverwriteServiceAccountNotMatchFeatureFlag,
-		"testInteractiveTerminal":             testInteractiveTerminalFeatureFlag,
-		"testKubernetesReplaceEnvFeatureFlag": testKubernetesReplaceEnvFeatureFlag,
+		"testKubernetesSuccessRun":                      testKubernetesSuccessRunFeatureFlag,
+		"testKubernetesMultistepRun":                    testKubernetesMultistepRunFeatureFlag,
+		"testKubernetesTimeoutRun":                      testKubernetesTimeoutRunFeatureFlag,
+		"testKubernetesBuildFail":                       testKubernetesBuildFailFeatureFlag,
+		"testKubernetesBuildCancel":                     testKubernetesBuildCancelFeatureFlag,
+		"testKubernetesBuildLogLimitExceeded":           testKubernetesBuildLogLimitExceededFeatureFlag,
+		"testKubernetesBuildMasking":                    testKubernetesBuildMaskingFeatureFlag,
+		"testKubernetesCustomClonePath":                 testKubernetesCustomClonePathFeatureFlag,
+		"testKubernetesNoRootImage":                     testKubernetesNoRootImageFeatureFlag,
+		"testKubernetesMissingImage":                    testKubernetesMissingImageFeatureFlag,
+		"testKubernetesMissingTag":                      testKubernetesMissingTagFeatureFlag,
+		"testOverwriteNamespaceNotMatch":                testOverwriteNamespaceNotMatchFeatureFlag,
+		"testOverwriteServiceAccountNotMatch":           testOverwriteServiceAccountNotMatchFeatureFlag,
+		"testInteractiveTerminal":                       testInteractiveTerminalFeatureFlag,
+		"testKubernetesReplaceEnvFeatureFlag":           testKubernetesReplaceEnvFeatureFlag,
+		"testKubernetesReplaceMissingEnvVarFeatureFlag": testKubernetesReplaceMissingEnvVarFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -452,11 +453,19 @@ func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, f
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	require.NoError(t, err)
 	assert.Contains(t, out, "alpine:latest")
+}
 
-	build.Image.Name = "$IMAGE:$NOT_EXISTING_VARIABLE"
+func testKubernetesReplaceMissingEnvVarFeatureFlag(
+	t *testing.T,
+	featureFlagName string,
+	featureFlagValue bool,
+) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = "alpine:$NOT_EXISTING_VARIABLE"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
-	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "could not be expanded")
 }
