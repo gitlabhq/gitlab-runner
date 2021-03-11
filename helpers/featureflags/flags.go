@@ -2,6 +2,8 @@ package featureflags
 
 import (
 	"strconv"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -153,15 +155,19 @@ func GetAll() []FeatureFlag {
 	return flags
 }
 
-func IsOn(value string) (bool, error) {
+func IsOn(logger logrus.FieldLogger, value string) bool {
 	if value == "" {
-		return false, nil
+		return false
 	}
 
 	on, err := strconv.ParseBool(value)
 	if err != nil {
-		return false, err
+		logger.WithError(err).
+			WithField("value", value).
+			Error("Error while parsing the value of feature flag")
+
+		return false
 	}
 
-	return on, nil
+	return on
 }

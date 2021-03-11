@@ -2073,6 +2073,7 @@ func TestLocalHelperImage(t *testing.T) {
 						JobResponse: common.JobResponse{
 							Variables: tt.jobVariables,
 						},
+						Runner: &common.RunnerConfig{},
 					},
 
 					Config: common.RunnerConfig{

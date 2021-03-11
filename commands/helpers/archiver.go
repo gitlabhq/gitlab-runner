@@ -17,7 +17,8 @@ import (
 
 func init() {
 	// enable fastzip archiver/extractor
-	if on, _ := featureflags.IsOn(os.Getenv(featureflags.UseFastzip)); on {
+	logger := logrus.WithField("name", featureflags.UseFastzip)
+	if on := featureflags.IsOn(logger, os.Getenv(featureflags.UseFastzip)); on {
 		archive.Register(archive.Zip, fastzip.NewArchiver, fastzip.NewExtractor)
 	}
 }
