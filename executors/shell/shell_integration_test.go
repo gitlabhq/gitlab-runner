@@ -21,11 +21,35 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/shell"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
+
+const integrationTestShellExecutor = "shell-integration-test"
+
+func TestMain(m *testing.M) {
+	code := 1
+	defer func() {
+		os.Exit(code)
+	}()
+
+	fmt.Println("Compiling gitlab-runner binary for tests")
+
+	targetDir, err := ioutil.TempDir("", "test_executor")
+	if err != nil {
+		panic("Error on preparing tmp directory for test executor binary")
+	}
+	defer os.RemoveAll(targetDir)
+
+	path := buildtest.MustBuildBinary("../..", filepath.Join(targetDir, "gitlab-runner-integration"))
+
+	shell.RegisterExecutor(integrationTestShellExecutor, path)
+
+	code = m.Run()
+}
 
 func gitInDir(dir string, args ...string) ([]byte, error) {
 	cmd := exec.Command("git", args...)
@@ -82,7 +106,7 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				BuildsDir:           dir,
-				Executor:            "shell",
+				Executor:            integrationTestShellExecutor,
 				Shell:               shell,
 				GracefulKillTimeout: func(i int) *int { return &i }(5),
 				ForceKillTimeout:    func(i int) *int { return &i }(1),
@@ -1352,5 +1376,34 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 		defer cleanup()
 
 		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
+	})
+}
+
+func TestBuildInvokeBinaryHelper(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		require.NoError(t, err)
+
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		dir, err := ioutil.TempDir("", "")
+		require.NoError(t, err)
+		defer os.RemoveAll(dir)
+
+		build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
+		build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
+
+		build.Cache = append(build.Cache, common.Cache{
+			Key:    "cache",
+			Paths:  []string{"*"},
+			Policy: common.CachePolicyPullPush,
+		})
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Extracting cache is disabled.")
+		assert.NotContains(t, out, "Creating cache is disabled.")
+		assert.Contains(t, out, "Created cache")
 	})
 }
