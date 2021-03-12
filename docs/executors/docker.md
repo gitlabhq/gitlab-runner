@@ -469,6 +469,8 @@ directory as persistent by defining it in `volumes = ["/my/cache/"]` under the
 
 ### Clearing Docker cache
 
+> Introduced in GitLab Runner 13.9, [all created runner resources cleaned up](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2310).
+
 GitLab Runner provides the [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/packaging/root/usr/share/gitlab-runner/clear-docker-cache)
 script to remove old containers and volumes that can unnecessarily consume disk space.
 
