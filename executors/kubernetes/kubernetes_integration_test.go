@@ -463,7 +463,7 @@ func testKubernetesReplaceMissingEnvVarFeatureFlag(t *testing.T, featureFlagName
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "could not be expanded")
+	assert.Contains(t, err.Error(), "image pull failed: Failed to apply default image tag \"alpine:\"")
 }
 
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583

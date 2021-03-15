@@ -3123,7 +3123,40 @@ func TestNewLogStreamerStream(t *testing.T) {
 }
 
 func TestExpandImageName(t *testing.T) {
-	tests := getTestExpandImageNameInputs()
+	tests := map[string]struct {
+		input    string
+		expected string
+		err      bool
+	}{
+		"Empty name": {
+			input:    "",
+			expected: "",
+		},
+		"Regular String": {
+			input:    "alpine:latest",
+			expected: "alpine:latest",
+		},
+		"Simple Variable": {
+			input:    "$IMAGE",
+			expected: "alpine",
+		},
+		"Complex Variables": {
+			input:    "$IMAGE:$VERSION",
+			expected: "alpine:latest",
+		},
+		"Complex Nested Variables": {
+			input:    "$IMAGE:$NESTED_VERSION",
+			expected: "alpine:3.11.0",
+		},
+		"Missing Variables": {
+			input:    "$IMAGE:$MISSING_VARIABLE",
+			expected: "alpine:",
+		},
+		"All Missing Variables": {
+			input:    "$MISSING_VARIABLE:$MISSING_VARIABLE_2",
+			expected: ":",
+		},
+	}
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			ex := &executor{
@@ -3143,57 +3176,9 @@ func TestExpandImageName(t *testing.T) {
 				},
 			}
 
-			name, err := ex.expandImageName(tt.input)
-			assert.Contains(t, name, tt.expected)
-			if tt.err {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
+			name := ex.expandImageName(tt.input)
+			assert.Equal(t, name, tt.expected)
 		})
-	}
-}
-
-func getTestExpandImageNameInputs() map[string]struct {
-	input    string
-	expected string
-	err      bool
-} {
-	return map[string]struct {
-		input    string
-		expected string
-		err      bool
-	}{
-		"Empty name": {
-			input:    "",
-			expected: "",
-			err:      false,
-		},
-		"Regular String": {
-			input:    "alpine:latest",
-			expected: "alpine:latest",
-			err:      false,
-		},
-		"Simple Variable": {
-			input:    "$IMAGE",
-			expected: "alpine",
-			err:      false,
-		},
-		"Complex Variables": {
-			input:    "$IMAGE:$VERSION",
-			expected: "alpine:latest",
-			err:      false,
-		},
-		"Complex Nested Variables": {
-			input:    "$IMAGE:$NESTED_VERSION",
-			expected: "alpine:3.11.0",
-			err:      false,
-		},
-		"Missing Variables": {
-			input:    "$IMAGE:$MISSING_VARIABLE",
-			expected: "",
-			err:      true,
-		},
 	}
 }
 
