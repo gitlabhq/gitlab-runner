@@ -464,6 +464,25 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | sub_path          | string              | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | read_only         | boolean             | no       | Sets the volume in read-only mode (defaults to false) |
 
+## Custom builds directory mount
+
+To define a custom volume and mount for a job pod's builds directory, you can use the `builds_dir` specification. Supported volume sources are _hostPath_, _PVC_, and _CSI_.
+
+Here is an example configuration:
+
+```toml
+concurrent = 4
+
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [runners.kubernetes.volumes.empty_dir]
+      name = "repo"
+      mount_path = "/builds"
+      medium = "Memory"
+```
+
 ## Using Security Context
 
 [Pod security context](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) configuration instructs executor to set a pod security policy on the build pod.

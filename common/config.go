@@ -360,6 +360,7 @@ type KubernetesDNSConfigOption struct {
 	Value *string `toml:"value,omitempty"`
 }
 
+//nolint:lll
 type KubernetesBuildsDirVolume struct {
 	HostPath KubernetesHostPath `toml:"host_path" description:"The host path which will be mounted for the builds dir."`
 	PVC      KubernetesPVC      `toml:"pvc" description:"The persistent volume claim that will be mounted for the builds dir."`
