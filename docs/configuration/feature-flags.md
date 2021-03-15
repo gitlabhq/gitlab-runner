@@ -78,7 +78,7 @@ enable feature flags:
     - echo "Hello"
   ```
 
-## Enable feature flag for Runner
+## Enable feature flag in runner environment variables
 
 To enable the feature for every job a Runner runs, specify the feature
 flag as an
@@ -95,4 +95,22 @@ in the [Runner configuration](advanced-configuration.md):
   builds_dir = ""
   shell = ""
   environment = ["FEATURE_FLAG_NAME=1"]
+```
+
+## Enable feature flag in runner configuration
+
+You can enable feature flags by specifying them under `[runners.feature_flag]`. This
+setting prevents any job from overriding the feature flag values.
+
+Some feature flags are also only usable when you configure this setting, because
+they don't deal with how the job is executed.
+
+```toml
+[[runners]]
+  name = "ruby-2.6-docker"
+  url = "https://CI/"
+  token = "TOKEN"
+  executor = "docker"
+  [runners.feature_flags]
+    FF_USE_DIRECT_DOWNLOAD = true
 ```

@@ -19,6 +19,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
@@ -553,6 +554,8 @@ type RunnerSettings struct {
 	GracefulKillTimeout *int `toml:"-"`
 	ForceKillTimeout    *int `toml:"-"`
 
+	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags.html"`
+
 	SSH        *ssh.Config       `toml:"ssh,omitempty" json:"ssh" group:"ssh executor" namespace:"ssh"`
 	Docker     *DockerConfig     `toml:"docker,omitempty" json:"docker" group:"docker executor" namespace:"docker"`
 	Parallels  *ParallelsConfig  `toml:"parallels,omitempty" json:"parallels" group:"parallels executor" namespace:"parallels"`
@@ -619,6 +622,30 @@ func (r *RunnerSettings) GetGracefulKillTimeout() time.Duration {
 
 func (r *RunnerSettings) GetForceKillTimeout() time.Duration {
 	return getDuration(r.ForceKillTimeout, process.KillTimeout)
+}
+
+// IsFeatureFlagOn check if the specified feature flag is on. If the feature
+// flag is not configured it will return the default value.
+func (r *RunnerSettings) IsFeatureFlagOn(name string) bool {
+	if r.IsFeatureFlagDefined(name) {
+		return r.FeatureFlags[name]
+	}
+
+	for _, ff := range featureflags.GetAll() {
+		if ff.Name == name {
+			return ff.DefaultValue
+		}
+	}
+
+	return false
+}
+
+// IsFeatureFlagDefined checks if the feature flag is defined in the runner
+// configuration.
+func (r *RunnerSettings) IsFeatureFlagDefined(name string) bool {
+	_, ok := r.FeatureFlags[name]
+
+	return ok
 }
 
 func getDuration(source *int, defaultValue time.Duration) time.Duration {

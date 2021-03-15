@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
@@ -856,6 +857,52 @@ func TestDockerConfig_PullPolicies_UnmarshalTOML(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedResult, result.PullPolicy)
+		})
+	}
+}
+
+func TestRunnerSettings_IsFeatureFlagOn(t *testing.T) {
+	tests := map[string]struct {
+		featureFlags  map[string]bool
+		name          string
+		expectedValue bool
+	}{
+		"feature flag not configured": {
+			featureFlags:  map[string]bool{},
+			name:          t.Name(),
+			expectedValue: false,
+		},
+		"feature flag not configured but feature flag default is true": {
+			featureFlags:  map[string]bool{},
+			name:          featureflags.UseDirectDownload,
+			expectedValue: true,
+		},
+		"feature flag on": {
+			featureFlags: map[string]bool{
+				t.Name(): true,
+			},
+			name:          t.Name(),
+			expectedValue: true,
+		},
+		"feature flag off": {
+			featureFlags: map[string]bool{
+				featureflags.UseDirectDownload: false,
+			},
+			name:          t.Name(),
+			expectedValue: false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			cfg := RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					FeatureFlags: tt.featureFlags,
+				},
+			}
+
+			on := cfg.IsFeatureFlagOn(tt.name)
+			assert.Equal(t, tt.expectedValue, on)
 		})
 	}
 }

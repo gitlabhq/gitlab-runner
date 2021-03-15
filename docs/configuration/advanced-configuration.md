@@ -855,10 +855,14 @@ By default, the helper image is pulled from Docker Hub. If the
 `FF_GITLAB_REGISTRY_HELPER_IMAGE` [feature flag](feature-flags.md) is enabled
 the runner pulls the image from
 [`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754)
-where the limits don't apply. You can enable the feature flag for a [specific
-pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration) or in
-the [runner](feature-flags.md#enable-feature-flag-for-runner), which enables
-the behavior for every job that runner executes.
+where the limits don't apply. You can enable the feature flag for:
+
+- A [specific pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration).
+- [Every job](feature-flags.md#enable-feature-flag-in-runner-environment-variables).
+
+If you are a runner administrator and don't want users to override it, you can set this
+feature flag by specifying
+[`[runners.feature_flags]`](feature-flags.md#enable-feature-flag-in-runner-configuration).
 
 ### Override the helper image
 

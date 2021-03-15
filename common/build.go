@@ -1326,11 +1326,14 @@ func NewBuild(
 }
 
 func (b *Build) IsFeatureFlagOn(name string) bool {
-	value := b.GetAllVariables().Get(name)
+	if b.Runner.IsFeatureFlagDefined(name) {
+		return b.Runner.IsFeatureFlagOn(name)
+	}
 
-	logger := b.Log().WithField("name", name)
-
-	return featureflags.IsOn(logger, value)
+	return featureflags.IsOn(
+		b.Log().WithField("name", name),
+		b.GetAllVariables().Get(name),
+	)
 }
 
 // getFeatureFlagInfo returns the status of feature flags that differ
