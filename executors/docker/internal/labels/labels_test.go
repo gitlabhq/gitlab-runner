@@ -22,6 +22,7 @@ func TestLabels(t *testing.T) {
 				Sha:       "sha",
 				BeforeSha: "before-sha",
 				Ref:       "ref",
+				RepoURL:   "https://ci-job-token:ToKeN123@gitlab.example.com/namespace/project.git",
 			},
 			JobInfo: common.JobInfo{
 				ProjectID: 123456,
@@ -39,6 +40,7 @@ func TestLabels(t *testing.T) {
 
 	expected := map[string]string{
 		"com.gitlab.gitlab-runner.job.id":          "12345",
+		"com.gitlab.gitlab-runner.job.url":         "https://gitlab.example.com/namespace/project/-/jobs/12345",
 		"com.gitlab.gitlab-runner.job.sha":         "sha",
 		"com.gitlab.gitlab-runner.job.before_sha":  "before-sha",
 		"com.gitlab.gitlab-runner.job.ref":         "ref",

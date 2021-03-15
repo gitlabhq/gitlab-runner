@@ -1,24 +1,24 @@
-package networks_test
+package volumes_test
 
 import (
 	"context"
+	"crypto/md5"
+	"fmt"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
-func TestCreateNetworkLabels(t *testing.T) {
+func testCreateVolumesLabels(t *testing.T, p parser.Parser) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
@@ -38,22 +38,34 @@ func TestCreateNetworkLabels(t *testing.T) {
 		JobResponse: successfulJobResponse,
 	}
 	build.Variables = common.JobVariables{
-		{Key: featureflags.NetworkPerBuild, Value: "true"},
 		{Key: "CI_PIPELINE_ID", Value: "1"},
 	}
 
 	logger, _ := logrustest.NewNullLogger()
 
-	manager := networks.NewManager(logger, client, build, labels.NewLabeler(build))
+	cfg := volumes.ManagerConfig{
+		CacheDir:     "",
+		BasePath:     "",
+		UniqueName:   t.Name(),
+		DisableCache: false,
+	}
+
+	manager := volumes.NewManager(logger, p, client, cfg, labels.NewLabeler(build))
 
 	ctx := context.Background()
 
-	networkMode, err := manager.Create(ctx, "")
+	err = manager.Create(ctx, testCreateVolumesLabelsDestinationPath)
 	assert.NoError(t, err)
-	assert.Equal(t, container.NetworkMode("runner-test-tok-project-0-concurrent-0-job-0-network"), networkMode)
 
-	network, err := manager.Inspect(ctx)
-	assert.NoError(t, err)
+	name := fmt.Sprintf("%s-cache-%x", t.Name(), md5.Sum([]byte(testCreateVolumesLabelsDestinationPath)))
+	defer func() {
+		err = client.VolumeRemove(ctx, name, true)
+		assert.NoError(t, err)
+	}()
+
+	volume, err := client.VolumeInspect(ctx, name)
+	require.NoError(t, err)
+
 	assert.Equal(t, map[string]string{
 		"com.gitlab.gitlab-runner.job.before_sha":  "ca50079dac5293292f83a4d454922ba8db44e7a3",
 		"com.gitlab.gitlab-runner.job.id":          "0",
@@ -65,8 +77,6 @@ func TestCreateNetworkLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.project.id":      "0",
 		"com.gitlab.gitlab-runner.runner.id":       "test-tok",
 		"com.gitlab.gitlab-runner.runner.local_id": "0",
-	}, network.Labels)
-
-	err = manager.Cleanup(ctx)
-	assert.NoError(t, err)
+		"com.gitlab.gitlab-runner.type":            "cache",
+	}, volume.Labels)
 }

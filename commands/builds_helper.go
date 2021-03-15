@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -305,25 +304,16 @@ func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	for _, job := range b.builds {
-		url := CreateJobURL(job.RepoCleanURL(), job.ID)
-
 		_, _ = fmt.Fprintf(
 			w,
 			"url=%s state=%s stage=%s executor_stage=%s duration=%s\n",
-			url,
+			job.JobURL(),
 			job.CurrentState(),
 			job.CurrentStage(),
 			job.CurrentExecutorStage(),
 			job.Duration(),
 		)
 	}
-}
-
-func CreateJobURL(projectURL string, jobID int) string {
-	r := regexp.MustCompile(`(\.git$)?`)
-	URL := r.ReplaceAllString(projectURL, "")
-
-	return fmt.Sprintf("%s/-/jobs/%d", URL, jobID)
 }
 
 func newBuildsHelper() buildsHelper {

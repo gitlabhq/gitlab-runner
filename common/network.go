@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
@@ -447,6 +448,12 @@ func (s *VaultSecret) SecretField() string {
 
 func (j *JobResponse) RepoCleanURL() string {
 	return url_helpers.CleanURL(j.GitInfo.RepoURL)
+}
+
+func (j *JobResponse) JobURL() string {
+	url := strings.TrimSuffix(j.RepoCleanURL(), ".git")
+
+	return fmt.Sprintf("%s/-/jobs/%d", url, j.ID)
 }
 
 type UpdateJobRequest struct {

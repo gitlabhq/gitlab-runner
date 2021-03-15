@@ -245,18 +245,3 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 		})
 	}
 }
-
-func TestCreateJobURL(t *testing.T) {
-	//nolint:lll
-	testCases := map[string]string{
-		"http://gitlab.example.com/my-namespace/my-project.git":     "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
-		"http://gitlab.example.com/my-namespace/my-project":         "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
-		"http://gitlab.example.com/my-namespace/my.git.project.git": "http://gitlab.example.com/my-namespace/my.git.project/-/jobs/1",
-		"http://gitlab.example.com/my-namespace/my.git.project":     "http://gitlab.example.com/my-namespace/my.git.project/-/jobs/1",
-	}
-
-	for URL, expectedURL := range testCases {
-		jobURL := CreateJobURL(URL, 1)
-		assert.Equal(t, expectedURL, jobURL)
-	}
-}

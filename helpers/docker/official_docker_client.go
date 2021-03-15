@@ -253,6 +253,12 @@ func (c *officialDockerClient) VolumeRemove(ctx context.Context, volumeID string
 	return wrapError("VolumeRemove", err, started)
 }
 
+func (c *officialDockerClient) VolumeInspect(ctx context.Context, volumeID string) (types.Volume, error) {
+	started := time.Now()
+	v, err := c.client.VolumeInspect(ctx, volumeID)
+	return v, wrapError("VolumeInspect", err, started)
+}
+
 func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {
 	started := time.Now()
 	info, err := c.client.Info(ctx)
