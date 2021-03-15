@@ -24,7 +24,7 @@ var ffTableTemplate = `{{ placeholder "start" }}
 | Feature flag | Default value | Deprecated | To be removed with | Description |
 |--------------|---------------|------------|--------------------|-------------|
 {{ range $_, $flag := . -}}
-| {{ $flag.Name | raw }} | {{ $flag.DefaultValue | raw }} | {{ $flag.Deprecated | tick }} | {{ $flag.ToBeRemovedWith }} | {{ $flag.Description }} |
+| {{ $flag.Name | raw }} | {{ $flag.DefaultValue | bool }} | {{ $flag.Deprecated | tick }} | {{ $flag.ToBeRemovedWith }} | {{ $flag.Description }} |
 {{ end }}
 {{ placeholder "end" }}
 `
@@ -62,6 +62,9 @@ func prepareTable() string {
 		},
 		"raw": func(input string) string {
 			return fmt.Sprintf("`%s`", input)
+		},
+		"bool": func(input bool) string {
+			return fmt.Sprintf("`%t`", input)
 		},
 		"tick": func(input bool) string {
 			if input {
