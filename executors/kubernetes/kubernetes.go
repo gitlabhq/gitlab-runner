@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -58,7 +57,6 @@ var (
 	}
 
 	detectShellScript = shells.BashDetectShellScript
-	re                = regexp.MustCompile(`(?m)\$[a-zA-Z0-9_]*`)
 )
 
 // GetDefaultCapDrop returns the default capabilities that should be dropped
@@ -911,10 +909,7 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	s.Debugln("Setting up build pod")
 
-	podServices, err := s.getPodServices()
-	if err != nil {
-		return err
-	}
+	podServices := s.getPodServices()
 
 	// We set a default label to the pod. This label will be used later
 	// by the services, to link each service to the pod
@@ -942,7 +937,7 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		return err
 	}
 
-	podConfig, err := s.preparePodConfig(
+	podConfig := s.preparePodConfig(
 		labels,
 		annotations,
 		podServices,
@@ -950,9 +945,6 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		hostAliases,
 		initContainers,
 	)
-	if err != nil {
-		return err
-	}
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -969,7 +961,7 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	return nil
 }
 
-func (s *executor) getPodServices() ([]api.Container, error) {
+func (s *executor) getPodServices() []api.Container {
 	podServices := make([]api.Container, len(s.options.Services))
 	for i, service := range s.options.Services {
 		resolvedImage := s.expandImageName(service.Name)
@@ -982,7 +974,7 @@ func (s *executor) getPodServices() ([]api.Container, error) {
 		)
 	}
 
-	return podServices, nil
+	return podServices
 }
 
 func (s *executor) preparePodConfig(
@@ -991,7 +983,7 @@ func (s *executor) preparePodConfig(
 	imagePullSecrets []api.LocalObjectReference,
 	hostAliases []api.HostAlias,
 	initContainers []api.Container,
-) (api.Pod, error) {
+) api.Pod {
 	buildImage := s.expandImageName(s.options.Image.Name)
 
 	pod := api.Pod{
@@ -1037,7 +1029,7 @@ func (s *executor) preparePodConfig(
 		},
 	}
 
-	return pod, nil
+	return pod
 }
 
 func (s *executor) getDNSPolicy() api.DNSPolicy {
