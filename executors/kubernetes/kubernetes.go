@@ -171,11 +171,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
-	// Check if the image can be expanded through the variables
-	imageName, err := s.expandImageName(s.options.Image.Name)
-	if err != nil {
-		return fmt.Errorf("prepare helper image: %w", err)
-	}
+	imageName := s.expandImageName(s.options.Image.Name)
 
 	s.Println("Using Kubernetes executor with image", imageName, "...")
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
@@ -185,20 +181,8 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	return nil
 }
 
-// expandImageName ties to find the corresponding value for each variable found in the image name
-// When no value is found, an error is returned
-func (s *executor) expandImageName(imageName string) (string, error) {
-	image := imageName
-
-	for _, match := range re.FindAllString(imageName, -1) {
-		tmp := s.Build.GetAllVariables().ExpandValue(match)
-		if tmp == "" {
-			return "", fmt.Errorf("variable %s could not be expanded", match)
-		}
-		image = strings.Replace(image, match, tmp, 1)
-	}
-
-	return image, nil
+func (s *executor) expandImageName(imageName string) string {
+	return s.Build.GetAllVariables().ExpandValue(imageName)
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
@@ -988,10 +972,7 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 func (s *executor) getPodServices() ([]api.Container, error) {
 	podServices := make([]api.Container, len(s.options.Services))
 	for i, service := range s.options.Services {
-		resolvedImage, err := s.expandImageName(service.Name)
-		if err != nil {
-			return nil, err
-		}
+		resolvedImage := s.expandImageName(service.Name)
 		podServices[i] = s.buildContainer(
 			fmt.Sprintf("svc-%d", i),
 			resolvedImage,
@@ -1011,10 +992,7 @@ func (s *executor) preparePodConfig(
 	hostAliases []api.HostAlias,
 	initContainers []api.Container,
 ) (api.Pod, error) {
-	buildImage, err := s.expandImageName(s.options.Image.Name)
-	if err != nil {
-		return api.Pod{}, err
-	}
+	buildImage := s.expandImageName(s.options.Image.Name)
 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
