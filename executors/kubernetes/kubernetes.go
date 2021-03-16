@@ -169,7 +169,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
-	imageName := s.expandImageName(s.options.Image.Name)
+	imageName := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 
 	s.Println("Using Kubernetes executor with image", imageName, "...")
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
@@ -177,10 +177,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	return nil
-}
-
-func (s *executor) expandImageName(imageName string) string {
-	return s.Build.GetAllVariables().ExpandValue(imageName)
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
@@ -909,7 +905,18 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	s.Debugln("Setting up build pod")
 
-	podServices := s.getPodServices()
+	podServices := make([]api.Container, len(s.options.Services))
+
+	for i, service := range s.options.Services {
+		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
+		podServices[i] = s.buildContainer(
+			fmt.Sprintf("svc-%d", i),
+			resolvedImage,
+			service,
+			s.configurationOverwrites.serviceRequests,
+			s.configurationOverwrites.serviceLimits,
+		)
+	}
 
 	// We set a default label to the pod. This label will be used later
 	// by the services, to link each service to the pod
@@ -937,14 +944,7 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(
-		labels,
-		annotations,
-		podServices,
-		imagePullSecrets,
-		hostAliases,
-		initContainers,
-	)
+	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -961,22 +961,6 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	return nil
 }
 
-func (s *executor) getPodServices() []api.Container {
-	podServices := make([]api.Container, len(s.options.Services))
-	for i, service := range s.options.Services {
-		resolvedImage := s.expandImageName(service.Name)
-		podServices[i] = s.buildContainer(
-			fmt.Sprintf("svc-%d", i),
-			resolvedImage,
-			service,
-			s.configurationOverwrites.serviceRequests,
-			s.configurationOverwrites.serviceLimits,
-		)
-	}
-
-	return podServices
-}
-
 func (s *executor) preparePodConfig(
 	labels, annotations map[string]string,
 	services []api.Container,
@@ -984,7 +968,7 @@ func (s *executor) preparePodConfig(
 	hostAliases []api.HostAlias,
 	initContainers []api.Container,
 ) api.Pod {
-	buildImage := s.expandImageName(s.options.Image.Name)
+	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
