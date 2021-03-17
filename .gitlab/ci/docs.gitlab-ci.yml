@@ -16,6 +16,8 @@
   - chmod 755 trigger-build
   variables:
     GIT_STRATEGY: none
+    # By default, deploy the Review App using the `master` branch of the `gitlab-org/gitlab-docs` project
+    DOCS_BRANCH: master
   allow_failure: true
 
 # Trigger a docs build in gitlab-docs
@@ -25,10 +27,11 @@ review-docs-deploy:
   extends:
   - .review-docs
   environment:
-    name: review-docs/mr-$CI_MERGE_REQUEST_IID
-    # DOCS_REVIEW_APPS_DOMAIN and DOCS_GITLAB_REPO_SUFFIX are secret variables
-    # Discussion: https://gitlab.com/gitlab-org/gitlab-ce/merge_requests/14236/diffs#note_40140693
-    url: http://docs-preview-$DOCS_GITLAB_REPO_SUFFIX-$CI_MERGE_REQUEST_IID.$DOCS_REVIEW_APPS_DOMAIN/$DOCS_GITLAB_REPO_SUFFIX
+    name: review-docs/mr-${CI_MERGE_REQUEST_IID}
+    # DOCS_REVIEW_APPS_DOMAIN and DOCS_GITLAB_REPO_SUFFIX are CI variables
+    # Discussion: https://gitlab.com/gitlab-org/gitlab-foss/merge_requests/14236/diffs#note_40140693
+    auto_stop_in: 2 weeks
+    url: http://${DOCS_BRANCH}-${DOCS_GITLAB_REPO_SUFFIX}-${CI_MERGE_REQUEST_IID}.${DOCS_REVIEW_APPS_DOMAIN}/${DOCS_GITLAB_REPO_SUFFIX}
     on_stop: review-docs-cleanup
   script:
   - ./trigger-build docs deploy
@@ -38,7 +41,7 @@ review-docs-cleanup:
   extends:
   - .review-docs
   environment:
-    name: review-docs/mr-$CI_MERGE_REQUEST_IID
+    name: review-docs/mr-${CI_MERGE_REQUEST_IID}
     action: stop
   script:
   - ./trigger-build docs cleanup
