@@ -57,7 +57,7 @@ code navigation: # See https://docs.gitlab.com/ee/user/project/code_intelligence
     reports:
       lsif: dump.lsif
 
-check race panic test failures:
+check race unexpected test failures:
   extends:
   - .merge_request_pipelines
   - .except_docs
@@ -65,10 +65,10 @@ check race panic test failures:
   needs:
   - unit test with race
   script:
-  - ./scripts/check_panic_test_failures
+  - ./scripts/check_unexpected_test_failures
   when: always
 
-check windows 1809 panic test failures:
+check windows 1809 unexpected test failures:
   extends:
   - .merge_request_pipelines
   - .except_docs
@@ -76,7 +76,7 @@ check windows 1809 panic test failures:
   needs:
   - windows 1809 tests
   script:
-  - ./scripts/check_panic_test_failures
+  - ./scripts/check_unexpected_test_failures
   when: always
 
 .check windows test failures:
