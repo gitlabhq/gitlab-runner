@@ -135,7 +135,7 @@ This error should contain the Windows Server version. If you get this error,
 with no version specified, upgrade Docker. Try a Docker version of similar age,
 or later, than the Windows Server release.
 
-[Read more about troubleshooting this](../faq/README.md#docker-executor-unsupported-windows-version).
+[Read more about troubleshooting this](../install/windows.md#docker-executor-unsupported-windows-version).
 
 ### Configuring a Windows Docker executor
 

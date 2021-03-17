@@ -50,7 +50,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    .\gitlab-runner.exe start
    ```
 
-   See the [troubleshooting section](#troubleshooting) if you encounter any
+   See the [troubleshooting section](#windows-troubleshooting) if you encounter any
    errors during the GitLab Runner installation.
 
 1. (Optional) Update the runner's `concurrent` value in `C:\GitLab-Runner\config.toml`
@@ -158,7 +158,7 @@ Server current versions by servicing option
 list](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
 for availability dates.
 
-## Troubleshooting
+## Windows troubleshooting
 
 Make sure that you read the [FAQ](../faq/README.md) section which describes
 some of the most common problems with GitLab Runner.
@@ -170,7 +170,7 @@ If you encounter an error like _The account name is invalid_ try to add `.\` bef
 ```
 
 If you encounter a _The service did not start due to a logon failure_ error
-while starting the service, please [look in the FAQ](../faq/README.md#the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service) to check how to resolve the problem.
+while starting the service, please [look in the FAQ](#the-service-did-not-start-due-to-a-logon-failure-error-when-starting-service) to check how to resolve the problem.
 
 If you don't have a Windows Password, the GitLab Runner service won't start but you can
 use the Built-in System Account.
@@ -200,3 +200,135 @@ TimeCreated                     Id LevelDisplayName Message
 2/4/2021 6:20:14 AM              1 Information      Configuration loaded                                builds=0...
 2/4/2021 6:20:14 AM              1 Information      Starting multi-runner from C:\config.toml...        builds=0...
 ```
+
+### I get a PathTooLongException during my builds on Windows
+
+This is caused by tools like `npm` which will sometimes generate directory structures
+with paths more than 260 characters in length. There are two possible fixes you can
+adopt to solve the problem.
+
+#### a) Use Git with core.longpaths enabled
+
+You can avoid the problem by using Git to clean your directory structure, first run
+`git config --system core.longpaths true` from the command line and then set your
+project to use `git fetch` from the GitLab CI project settings page.
+
+#### b) Use NTFSSecurity tools for PowerShell
+
+The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module provides
+a *Remove-Item2* method which supports long paths. GitLab Runner will
+detect it if it is available and automatically make use of it.
+
+### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
+
+You need to prepend `call` to your Batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
+is a more complete example:
+
+```yaml
+before_script:
+  - call C:\path\to\test.bat
+```
+
+Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1025).
+
+### How can I get colored output on the web terminal?
+
+**Short answer:**
+
+Make sure that you have the ANSI color codes in your program's output. For the purposes of text formatting, assume that you're
+running in a UNIX ANSI terminal emulator (because that's what the webUI's output is).
+
+**Long Answer:**
+
+The web interface for GitLab CI emulates a UNIX ANSI terminal (at least partially). The `gitlab-runner` pipes any output from the build
+directly to the web interface. That means that any ANSI color codes that are present will be honored.
+
+Older versions of Windows' CMD terminal (before Win10 version 1511) do not support
+ANSI color codes - they use win32 ([`ANSI.SYS`](https://en.wikipedia.org/wiki/ANSI.SYS)) calls instead which are **not** present in
+the string to be displayed. When writing cross-platform programs, a developer will typically use ANSI color codes by default and convert
+them to win32 calls when running on a Windows system (example: [Colorama](https://pypi.org/project/colorama/)).
+
+If your program is doing the above, then you need to disable that conversion for the CI builds so that the ANSI codes remain in the string.
+
+See [GitLab CI YAML docs](https://docs.gitlab.com/ee/ci/yaml/#coloring-script-output)
+for an example using PowerShell and issue [#332](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/332)
+for more information.
+
+### `The service did not start due to a logon failure` error when starting service
+
+When installing and starting the GitLab Runner service on Windows you can
+meet with such error:
+
+```shell
+gitlab-runner install --password WINDOWS_MACHINE_PASSWORD
+gitlab-runner start
+FATA[0000] Failed to start GitLab Runner: The service did not start due to a logon failure.
+```
+
+This error can occur when the user used to execute the service doesn't have
+the `SeServiceLogonRight` permission. In this case, you need to add this
+permission for the chosen user and then try to start the service again.
+
+1. Go to _Control Panel > System and Security > Administrative Tools_.
+1. Open the _Local Security Policy_ tool.
+1. Choose the _Security Settings > Local Policies > User Rights Assignment_ on the
+   list on the left.
+1. Open the _Log on as a service_ on the list on the right.
+1. Click the _Add User or Group..._ button.
+1. Add the user ("by hand" or using _Advanced..._ button) and apply the settings.
+
+According to [Microsoft's documentation](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))
+this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
+Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, and Windows 8.
+
+The _Local Security Policy_ tool may be not available in some
+Windows versions - for example in "Home Edition" variant of each version.
+
+After adding the `SeServiceLogonRight` for the user used in service configuration,
+the command `gitlab-runner start` should finish without failures
+and the service should be started properly.
+
+### Job marked as success and terminated midway using Kubernetes executor
+
+Please see [Job execution](../executors/kubernetes.md#job-execution).
+
+### Docker executor: `unsupported Windows Version`
+
+GitLab Runner checks the version of Windows Server to verify that it's supported.
+
+It does this by running `docker info`.
+
+If GitLab Runner fails to start with the following error, but with no Windows
+Server version specified, then the likely root cause is that the Docker
+version is too old.
+
+```plaintext
+Preparation failed: detecting base image: unsupported Windows Version: Windows Server Datacenter
+```
+
+The error should contain detailed information about the Windows Server
+version, which is then compared with the versions that GitLab Runner supports.
+
+```plaintext
+unsupported Windows Version: Windows Server Datacenter Version 1909 (OS Build 18363.720)
+```
+
+Docker 17.06.2 on Windows Server 1909 returns the following in the output
+of `docker info`.
+
+```plaintext
+Operating System: Windows Server Datacenter
+```
+
+The fix in this case is to upgrade the Docker version. [Read more about supported
+Docker versions](../executors/docker.md#supported-docker-versions).
+
+### I'm using a mapped network drive and my build cannot find the correct path
+
+If GitLab Runner is not being run under an administrator account and instead is using a
+standard user account, mapped network drives cannot be used and you'll receive an error stating
+`The system cannot find the path specified.`  This is because using a service logon session
+[creates some limitations](https://docs.microsoft.com/en-us/windows/win32/services/services-and-redirected-drives)
+on accessing resources for security. Use the
+[UNC path](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths)
+of your drive instead.
