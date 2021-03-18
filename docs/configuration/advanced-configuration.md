@@ -1,5 +1,4 @@
 ---
-table_display_block: true
 stage: Verify
 group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
@@ -115,40 +114,30 @@ a request is made each 10 seconds. Here is an example of the loop in this case:
     1. Sleep for `5s`.
     1. Repeat.
 
-In this example, a request from the runner's process is made every 5 seconds. If `runner-1` and `runner-2` are connected to the same
+In this example, a request from the runner's process is made every 5 seconds.
+If `runner-1` and `runner-2` are connected to the same
 GitLab instance, this GitLab instance also receives a new request from this runner
-every 5 seconds. But between the first request for `runner-1` and second request for `runner-1`
+every 5 seconds.
+
+Between the first request for `runner-1` and second request for `runner-1`
 there are two sleep periods. Each one takes 5 seconds, so it's approximately 10 seconds between subsequent requests for `runner-1`.
-The same applies for `runner-2`. If you define more runners, the sleep interval is smaller. However, a request for a runner is
+The same applies for `runner-2`.
+
+If you define more runners, the sleep interval is smaller. However, a request for a runner is
 repeated after all requests for the other runners and their sleep periods are called.
 
 ## The `[session_server]` section
 
 NOTE:
-`session_server` is not yet supported by
+The `session_server` section is not supported by
 [`gitlab-runner` Helm chart](https://docs.gitlab.com/charts/charts/gitlab/gitlab-runner/index.html),
-but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
+but [an issue exists to track this work](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
 
-The section `[session_server]` is a system runner level configuration, so it should be specified at the root level,
-not per executor i.e. it should be outside `[[runners]]` section. The session server allows the user to interact
-with jobs that the Runner is responsible for. A good example of this is the
+The `[session_server]` section lets users interact with jobs, for example, in the
 [interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/index.html).
 
-Both `listen_address` and `advertise_address` should be provided in the form
-of `host:port`, where `host` may be an IP address (e.g., `127.0.0.1:8093`)
-or a domain (e.g., `my-runner.example.com:8093`). The runner will create a
-TLS certificate automatically to have a secure connection.
-
-If you want to disable the session server, just delete the `[session_server]`
-section and terminal support will be disabled.
-
-| Setting | Description |
-| ------- | ----------- |
-| `listen_address` | An internal URL to be used for the session server. |
-| `advertise_address`| The URL that GitLab Runner will expose to GitLab to be used to access the session server. Fallbacks to `listen_address` if not defined.   |
-| `session_timeout` | How long in seconds the session can stay active after the job completes (which will block the job from finishing), defaults to `1800` (30 minutes). |
-
-Example:
+The `[session_server]` section should be specified at the root level, not per runner.
+It should be defined outside the `[[runners]]` section.
 
 ```toml
 [session_server]
@@ -157,35 +146,48 @@ Example:
   session_timeout = 1800
 ```
 
-If you are using the GitLab Runner Docker image, you must expose port 8093 by
+Both `listen_address` and `advertise_address` should be in the form
+of `host:port`, where `host` may be an IP address (`127.0.0.1:8093`)
+or a domain (`my-runner.example.com:8093`). The runner uses this information to create
+a TLS certificate, for a secure connection.
+
+| Setting | Description |
+| ------- | ----------- |
+| `listen_address` | An internal URL for the session server. |
+| `advertise_address`| The URL to access the session server. GitLab Runner exposes it to GitLab. If not defined, `listen_address` is used. |
+| `session_timeout` | Number of seconds the session can stay active after the job completes. The timeout blocks the job from finishing. Default is `1800` (30 minutes). |
+
+To disable the session server and terminal support, delete the `[session_server]` section.
+
+If you are using the GitLab Runner Docker image, you must expose port `8093` by
 adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
 
 ## The `[[runners]]` section
 
-This defines one runner entry.
+Each `[[runners]]` section defines one runner.
 
 | Setting | Description |
 | ------- | ----------- |
-| `name`               | The runner's description, just informational |
-| `url`                | URL of the GitLab instance |
-| `token`              | The runner's special token (not to be confused with the registration token) |
-| `tls-ca-file`        | File containing the certificates to verify the peer when using HTTPS (see [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md))|
-| `tls-cert-file`      | File containing the certificate to authenticate with the peer when using HTTPS |
-| `tls-key-file`       | File containing the private key to authenticate with the peer when using HTTPS |
-| `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) simply means don't limit |
-| `executor`           | Select how a project should be built, see next section |
+| `name`               | The runner's description. Informational only. |
+| `url`                | GitLab instance URL. |
+| `token`              | The runner's special token (not to be confused with the registration token). |
+| `tls-ca-file`        | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md). |
+| `tls-cert-file`      | When using HTTPS, file that contains the certificate to authenticate with the peer. |
+| `tls-key-file`       | When using HTTPS, file that contains the private key to authenticate with the peer. |
+| `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) means do not limit. |
+| `executor`           | Select how a project should be built. |
 | `shell`              | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md#overview). |
-| `builds_dir`         | Absolute path to a directory where builds will be stored in context of selected executor (Locally, Docker, SSH) |
-| `cache_dir`          | Absolute path to a directory where build caches will be stored in context of selected executor (locally, Docker, SSH). If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
-| `environment`        | Append or overwrite environment variables |
-| `request_concurrency` | Limit number of concurrent requests for new jobs from GitLab (default 1) |
-| `output_limit`       | Set maximum build log size in kilobytes, by default set to 4096 (4MB) |
-| `pre_clone_script`   | Commands to be executed on the runner before cloning the Git repository. This can be used to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `pre_build_script`   | Commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `post_build_script`  | Commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or "\n" character. |
-| `clone_url`          | Overwrite the URL for the GitLab instance. Used if the runner can't connect to GitLab on the URL GitLab exposes itself. |
-| `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to true, then debug log (trace) will remain disabled even if `CI_DEBUG_TRACE` will be set to `true` by the user. |
-| `referees` | Extra job monitoring workers that pass their results as job artifacts to GitLab |
+| `builds_dir`         | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH. |
+| `cache_dir`          | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
+| `environment`        | Append or overwrite environment variables. |
+| `request_concurrency` | Limit number of concurrent requests for new jobs from GitLab. Default is `1`. |
+| `output_limit`       | Maximum build log size in kilobytes. Default is `4096` (4MB). |
+| `pre_clone_script`   | Commands to be executed on the runner before cloning the Git repository. Use it to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
+| `pre_build_script`   | Commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
+| `post_build_script`  | Commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
+| `clone_url`          | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL. |
+| `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to `true`, then debug log (trace) remains disabled, even if `CI_DEBUG_TRACE` is set to `true` by the user. |
+| `referees` | Extra job monitoring workers that pass their results as job artifacts to GitLab. |
 
 Example:
 
@@ -204,42 +206,42 @@ Example:
 
 ### How `clone_url` works
 
-In cases where the GitLab instance is exposed to a URL which can't be used
-by the runner, a `clone_url` can be configured. For example; GitLab is exposed
-to `https://gitlab.example.com`, but the runner can't reach that because of
-a firewall setup. If the runner can reach the node on `192.168.1.23`,
-the `clone_url` should be set to `http://192.168.1.23`.
+When the GitLab instance is available at a URL that the runner can't use,
+you can configure a `clone_url`.
 
-Only if the `clone_url` is set, the runner will construct a clone URL in the form
+For example, a firewall might prevent the runner from reaching the URL.
+If the runner can reach the node on `192.168.1.23`, set the `clone_url` to `http://192.168.1.23`.
+
+If the `clone_url` is set, the runner constructs a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
-## The EXECUTORS
+## The executors
 
-There are a couple of available executors currently.
+The following executors are available.
 
-| Executor | Description |
-| -------- | ----------- |
-| `shell`       | run build locally, default |
-| `docker`      | run build using Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a system that the Runner will run the job on. |
-| `docker-windows` | run build using Windows Docker container. This requires the presence of `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) installed on a Windows system. |
-| `docker-ssh`  | run build using Docker container, but connect to it with SSH - this requires the presence of `[runners.docker]` , `[runners.ssh]` and [Docker Engine](https://docs.docker.com/engine/) installed on the system where the runner runs. **This will run the Docker container on the local machine, it just changes how the commands are run inside that container. If you want to run Docker commands on an external machine, then you should change the `host` parameter in the `runners.docker` section.**|
-| `ssh`         | run build remotely with SSH - this requires the presence of `[runners.ssh]` |
-| `parallels`   | run build using Parallels VM, but connect to it with SSH - this requires the presence of `[runners.parallels]` and `[runners.ssh]` |
-| `virtualbox`  | run build using VirtualBox VM, but connect to it with SSH - this requires the presence of `[runners.virtualbox]` and `[runners.ssh]` |
-| `docker+machine` | like `docker`, but uses [auto-scaled Docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
-| `docker-ssh+machine` | like `docker-ssh`, but uses [auto-scaled Docker machines](autoscale.md) - this requires the presence of `[runners.docker]` and `[runners.machine]` |
-| `kubernetes` | run build using Kubernetes Pods - this requires the presence of `[runners.kubernetes]` |
+| Executor | Where the build runs | Required |
+|-|-|-|
+| `shell` | Local shell. The default executor. |  |
+| `docker` | A Docker container.  | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) |
+| `docker-windows` | A Windows Docker container.  | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) |
+| `docker-ssh` | A Docker container, but connect with SSH. <br>**The Docker container runs on the local machine. This setting changes how the commands are run inside that container. If you want to run Docker commands on an external machine, change the  `host`  parameter in the  `runners.docker`  section.** | `[runners.docker]`, `[runners.ssh]`, and  [Docker Engine](https://docs.docker.com/engine/) |
+| `ssh` | SSH, remotely. | `[runners.ssh]` |
+| `parallels` | Parallels VM, but connect with SSH. | `[runners.parallels]` and `[runners.ssh]` |
+| `virtualbox` | VirtualBox VM, but connect with SSH. | `[runners.virtualbox]` and `[runners.ssh]` |
+| `docker+machine` | Like `docker`, but use [auto-scaled Docker machines](autoscale.md). | `[runners.docker]` and `[runners.machine]` |
+| `docker-ssh+machine` | Like `docker-ssh`, but use [auto-scaled Docker machines](autoscale.md). | `[runners.docker]` and `[runners.machine]` |
+| `kubernetes` | Kubernetes pods. | `[runners.kubernetes]` |
 
-## The SHELLS
+## The shells
 
-There are a couple of available shells that can be run on different platforms.
+The available shells can run on different platforms.
 
 | Shell | Description |
 | ----- | ----------- |
-| `bash`        | generate Bash (Bourne-shell) script. All commands executed in Bash context (default for all Unix systems) |
-| `sh`          | generate Sh (Bourne-shell) script. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `powershell`  | generate PowerShell script. All commands are executed in Windows PowerShell Desktop context (default for Windows) |
-| `pwsh`        | generate PowerShell script. All commands are executed in PowerShell Core context |
+| `bash`        | Generate Bash (Bourne-shell) script. All commands executed in Bash context. Default for all Unix systems. |
+| `sh`          | Generate Sh (Bourne-shell) script. All commands executed in Sh context. The fallback for `bash` for all Unix systems. |
+| `powershell`  | Generate PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default for Windows. |
+| `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. |
 
 ## The `[runners.docker]` section
 
