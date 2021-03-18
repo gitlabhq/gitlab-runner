@@ -448,6 +448,27 @@ func (_m *MockClient) VolumeCreate(ctx context.Context, options volume.VolumeCre
 	return r0, r1
 }
 
+// VolumeInspect provides a mock function with given fields: ctx, volumeID
+func (_m *MockClient) VolumeInspect(ctx context.Context, volumeID string) (types.Volume, error) {
+	ret := _m.Called(ctx, volumeID)
+
+	var r0 types.Volume
+	if rf, ok := ret.Get(0).(func(context.Context, string) types.Volume); ok {
+		r0 = rf(ctx, volumeID)
+	} else {
+		r0 = ret.Get(0).(types.Volume)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, volumeID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // VolumeRemove provides a mock function with given fields: ctx, volumeID, force
 func (_m *MockClient) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
 	ret := _m.Called(ctx, volumeID, force)

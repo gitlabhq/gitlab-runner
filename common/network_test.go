@@ -177,3 +177,25 @@ func TestSecrets_expandVariables(t *testing.T) {
 		})
 	}
 }
+
+func TestJobResponse_JobURL(t *testing.T) {
+	jobID := 1
+	//nolint:lll
+	testCases := map[string]string{
+		"http://user:pass@gitlab.example.com/my-namespace/my-project.git":     "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
+		"http://user:pass@gitlab.example.com/my-namespace/my-project":         "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
+		"http://user:pass@gitlab.example.com/my-namespace/my.git.project.git": "http://gitlab.example.com/my-namespace/my.git.project/-/jobs/1",
+		"http://user:pass@gitlab.example.com/my-namespace/my.git.project":     "http://gitlab.example.com/my-namespace/my.git.project/-/jobs/1",
+	}
+
+	for repoURL, expectedURL := range testCases {
+		job := JobResponse{
+			ID: jobID,
+			GitInfo: GitInfo{
+				RepoURL: repoURL,
+			},
+		}
+
+		assert.Equal(t, expectedURL, job.JobURL())
+	}
+}

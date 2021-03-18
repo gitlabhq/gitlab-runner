@@ -30,6 +30,7 @@ type labeler struct {
 func (l *labeler) Labels(otherLabels map[string]string) map[string]string {
 	labels := map[string]string{
 		dockerLabelPrefix + ".job.id":          strconv.Itoa(l.build.ID),
+		dockerLabelPrefix + ".job.url":         l.build.JobURL(),
 		dockerLabelPrefix + ".job.sha":         l.build.GitInfo.Sha,
 		dockerLabelPrefix + ".job.before_sha":  l.build.GitInfo.BeforeSha,
 		dockerLabelPrefix + ".job.ref":         l.build.GitInfo.Ref,

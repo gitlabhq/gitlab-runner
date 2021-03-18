@@ -58,6 +58,7 @@ type Client interface {
 
 	VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error)
 	VolumeRemove(ctx context.Context, volumeID string, force bool) error
+	VolumeInspect(ctx context.Context, volumeID string) (types.Volume, error)
 
 	Info(ctx context.Context) (types.Info, error)
 
