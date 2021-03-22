@@ -100,6 +100,7 @@ func TestExecutor_Run(t *testing.T) {
 					AbstractExecutor: executors.AbstractExecutor{
 						Build: &common.Build{
 							JobResponse: common.JobResponse{},
+							Runner:      &common.RunnerConfig{},
 						},
 						BuildShell: &common.ShellConfiguration{
 							Command: shell,
@@ -172,6 +173,7 @@ func TestProcessTermination_Legacy(t *testing.T) {
 							common.JobVariable{Key: featureflags.ShellExecutorUseLegacyProcessKill, Value: "true"},
 						},
 					},
+					Runner: &common.RunnerConfig{},
 				},
 				BuildShell: &common.ShellConfiguration{
 					Command: shell,

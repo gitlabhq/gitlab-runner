@@ -3,6 +3,7 @@ package featureflags
 import (
 	"testing"
 
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +30,7 @@ func TestIsOn(t *testing.T) {
 	testCases := map[string]struct {
 		testValue      string
 		expectedResult bool
-		expectedError  string
+		expectedLog    bool
 	}{
 		"empty value": {
 			testValue:      "",
@@ -38,7 +39,7 @@ func TestIsOn(t *testing.T) {
 		"non boolean value": {
 			testValue:      "a",
 			expectedResult: false,
-			expectedError:  `strconv.ParseBool: parsing "a": invalid syntax`,
+			expectedLog:    true,
 		},
 		"true value": {
 			testValue:      "1",
@@ -52,13 +53,16 @@ func TestIsOn(t *testing.T) {
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			result, err := IsOn(testCase.testValue)
+			logger, hook := logrustest.NewNullLogger()
+			result := IsOn(logger, testCase.testValue)
 			assert.Equal(t, testCase.expectedResult, result)
-			if testCase.expectedError != "" {
-				assert.EqualError(t, err, testCase.expectedError)
-			} else {
-				assert.NoError(t, err)
+			if testCase.expectedLog {
+				assert.NotNil(t, hook.LastEntry())
+				assert.Contains(t, "Error while parsing the value of feature flag", hook.LastEntry().Message)
+				return
 			}
+
+			assert.Nil(t, hook.LastEntry())
 		})
 	}
 }

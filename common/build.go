@@ -1328,17 +1328,9 @@ func NewBuild(
 func (b *Build) IsFeatureFlagOn(name string) bool {
 	value := b.GetAllVariables().Get(name)
 
-	on, err := featureflags.IsOn(value)
-	if err != nil {
-		logrus.WithError(err).
-			WithField("name", name).
-			WithField("value", value).
-			Error("Error while parsing the value of feature flag")
+	logger := b.Log().WithField("name", name)
 
-		return false
-	}
-
-	return on
+	return featureflags.IsOn(logger, value)
 }
 
 // getFeatureFlagInfo returns the status of feature flags that differ
@@ -1347,7 +1339,8 @@ func (b *Build) getFeatureFlagInfo() string {
 	var statuses []string
 	for _, ff := range featureflags.GetAll() {
 		isOn := b.IsFeatureFlagOn(ff.Name)
-		isOnByDefault, _ := featureflags.IsOn(ff.DefaultValue)
+		logger := b.Log().WithField("name", ff.Name)
+		isOnByDefault := featureflags.IsOn(logger, ff.DefaultValue)
 
 		if isOn != isOnByDefault {
 			statuses = append(statuses, fmt.Sprintf("%s:%t", ff.Name, isOn))
