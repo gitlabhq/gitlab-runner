@@ -3,6 +3,7 @@ package archives
 import (
 	"io/ioutil"
 	"os"
+	"runtime"
 	"testing"
 
 	"archive/zip"
@@ -21,10 +22,17 @@ func TestCreateZipExtra(t *testing.T) {
 	assert.NotNil(t, fi)
 
 	data := createZipExtra(fi)
-	assert.NotEmpty(t, data)
-	assert.Len(t, data, binary.Size(&ZipExtraField{})*2+
-		binary.Size(&ZipUIDGidField{})+
-		binary.Size(&ZipTimestampField{}))
+	size := binary.Size(&ZipExtraField{})*2 +
+		binary.Size(&ZipUIDGidField{}) +
+		binary.Size(&ZipTimestampField{})
+
+	// windows only support the timestamp extra field
+	if runtime.GOOS == "windows" {
+		size = binary.Size(&ZipExtraField{}) +
+			binary.Size(&ZipTimestampField{})
+	}
+
+	assert.Equal(t, len(data), size)
 }
 
 func TestProcessZipExtra(t *testing.T) {
