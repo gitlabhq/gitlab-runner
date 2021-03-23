@@ -9,7 +9,6 @@ import (
 const UnknownTotalSize = 0
 
 type TransferMeterCommand struct {
-	//nolint:lll
 	TransferMeterFrequency time.Duration `long:"transfer-meter-frequency" env:"TRANSFER_METER_FREQUENCY" description:"If set to more than 0s it enables an interactive transfer meter"`
 }
 

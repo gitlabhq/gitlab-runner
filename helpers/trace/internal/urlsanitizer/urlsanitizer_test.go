@@ -20,7 +20,6 @@ func (nopCloser) Close() error {
 	return nil
 }
 
-//nolint:lll
 func TestMasking(t *testing.T) {
 	tests := []struct {
 		input    string

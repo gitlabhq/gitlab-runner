@@ -59,7 +59,6 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		//nolint:lll
 		Description: "Enables creation of a Docker [network per build](../executors/docker.md#network-configurations) with " +
 			"the `docker` executor",
 	},
@@ -188,7 +187,6 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		//nolint:lll
 		Description: "When enabled, [POSIX shell escapes](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02) " +
 			"are used rather than [`bash`-style ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html). " +
 			"This should be enabled if the job environment uses a POSIX-compliant shell.",

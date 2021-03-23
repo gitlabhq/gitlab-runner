@@ -146,7 +146,6 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) error {
 	return nil
 }
 
-//nolint:lll
 func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) common.JobVariables {
 	return common.JobVariables{
 		{Key: "CI", Value: "true", Public: true, Internal: true, File: false},

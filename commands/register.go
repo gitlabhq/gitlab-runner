@@ -62,7 +62,6 @@ func (c *configTemplate) loadConfigTemplate() error {
 	return nil
 }
 
-//nolint:lll
 type RegisterCommand struct {
 	context    *cli.Context
 	network    common.Network

@@ -16,7 +16,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
-//nolint:lll
 type ArtifactsDownloaderCommand struct {
 	common.JobCredentials
 	retryHelper

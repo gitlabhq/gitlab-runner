@@ -120,7 +120,6 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 
 		w.Header().Set("Content-Type", "application/json")
 
-		//nolint:lll
 		mapResponseToBody := map[registerRunnerResponse]string{
 			registerRunnerResponseRunnerNamespacesLimitHit: `{"message":{"runner_namespaces.base":["Maximum number of ci registered group runners (3) exceeded"]}}`,
 			registerRunnerResponseRunnerProjectsLimitHit:   `{"message":{"runner_projects.base":["Maximum number of ci registered project runners (3) exceeded"]}}`,
@@ -282,7 +281,6 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 		expectedMessage string
 	}
 
-	//nolint:lll
 	testCases := map[string]testCase{
 		"namespace runner limit hit": {
 			response:        registerRunnerResponseRunnerNamespacesLimitHit,

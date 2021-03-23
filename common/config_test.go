@@ -315,7 +315,6 @@ func TestConfigParse(t *testing.T) {
                                                 5 = "TestContainerlabel-1"
                 `,
 		},
-		//nolint:lll
 		"check node affinities": {
 			config: `
 				[[runners]]
@@ -410,8 +409,6 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, []string{"e2e-az1"}, nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[1].MatchFields[0].Values)
 			},
 		},
-
-		//nolint:lll
 		"check pod affinities": {
 			config: `
 				[[runners]]
@@ -494,7 +491,6 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, []string{"S2"}, preferredMatchExp.Values)
 			},
 		},
-		//nolint:lll
 		"check pod anti affinities": {
 			config: `
 				[[runners]]

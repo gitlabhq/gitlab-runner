@@ -8,7 +8,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
-//nolint:lll
 type ResetTokenCommand struct {
 	configOptions
 	*common.RunnerCredentials

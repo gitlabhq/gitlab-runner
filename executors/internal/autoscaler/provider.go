@@ -43,7 +43,6 @@ type provider struct {
 	scalers map[string]scaler
 
 	// Testing hooks
-	//nolint:lll
 	taskscalerNew     func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error)
 	fleetingRunPlugin func(string, []byte) (fleetingPlugin, error)
 	generateUniqueID  func() (string, error)
@@ -316,7 +315,6 @@ func (p *provider) Collect(ch chan<- prometheus.Metric) {
 
 //nolint:gocognit
 func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscaler.UpFunc {
-	//nolint:lll
 	return func(id string, info fleetingprovider.ConnectInfo, cause fleeting.Cause) (keys []string, used int, err error) {
 		useExternalAddr := true
 		if config.Autoscaler != nil {
@@ -343,7 +341,6 @@ func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscale
 		}
 		defer dialer.Close()
 
-		//nolint:lll
 		conn, err := api.NewClientConn(config.Autoscaler.VMIsolation.NestingHost, func(ctx context.Context, network, address string) (net.Conn, error) {
 			return dialer.Dial(network, address)
 		})

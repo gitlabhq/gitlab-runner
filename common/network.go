@@ -562,7 +562,6 @@ type JobTraceOutput struct {
 	Bytesize int    `json:"bytesize,omitempty"`
 }
 
-//nolint:lll
 type JobCredentials struct {
 	ID          int64  `long:"id" env:"CI_JOB_ID" description:"The build ID to download and upload artifacts for"`
 	Token       string `long:"token" env:"CI_JOB_TOKEN" required:"true" description:"Build token"`

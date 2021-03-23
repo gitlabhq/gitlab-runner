@@ -69,9 +69,6 @@ linters-settings:
     min-complexity: 10
   govet:
     check-shadowing: false
-  lll:
-    line-length: 120
-    tab-width: 4
   nestif:
     min-complexity: 5
 
@@ -92,7 +89,6 @@ linters:
   - gosimple
   - govet
   - ineffassign
-  - lll
   - misspell
   - nakedret
   - staticcheck

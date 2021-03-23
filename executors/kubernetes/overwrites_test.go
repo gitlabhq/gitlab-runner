@@ -45,7 +45,6 @@ func stdoutLogger() common.BuildLogger {
 func TestOverwrites(t *testing.T) {
 	logger := stdoutLogger()
 
-	//nolint:lll
 	tests := []struct {
 		Name                                 string
 		Config                               *common.KubernetesConfig
@@ -542,7 +541,6 @@ func TestOverwrites(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			//nolint:lll
 			variables := buildOverwriteVariables(
 				variableOverwrites{
 					NamespaceOverwriteVariableName:                       test.NamespaceOverwriteVariableValue,

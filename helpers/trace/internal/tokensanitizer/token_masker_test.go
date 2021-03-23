@@ -19,7 +19,6 @@ func (nopCloser) Close() error {
 	return nil
 }
 
-//nolint:lll
 func TestTokenMasking(t *testing.T) {
 	tests := map[string]struct {
 		prefixes []string

@@ -809,7 +809,6 @@ func TestExecutor_Env(t *testing.T) {
 		CleanupExec: "bash",
 	})
 
-	//nolint:lll
 	assertCommandFactory := func(expectedImageName string) func(
 		t *testing.T,
 		tt executorTestCase,

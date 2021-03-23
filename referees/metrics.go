@@ -23,7 +23,6 @@ type MetricsReferee struct {
 	logger        logrus.FieldLogger
 }
 
-//nolint:lll
 type MetricsRefereeConfig struct {
 	PrometheusAddress string   `toml:"prometheus_address,omitempty" json:"prometheus_address" description:"A host:port to a prometheus metrics server"`
 	QueryInterval     int      `toml:"query_interval,omitempty" json:"query_interval" description:"Query interval (in seconds)"`

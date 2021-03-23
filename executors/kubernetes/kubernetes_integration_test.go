@@ -528,7 +528,6 @@ My nested nested here-string
 			shell: "pwsh",
 			getScript: func() common.StepScript {
 				return []string{
-					//nolint:lll
 					`& {$Calendar = Get-Date; If ($Calendar.Month -eq '0') {"This is wrong"} Else {echo "not happening" > test.txt}; ls; Get-Content test.txt;}`,
 				}
 			},

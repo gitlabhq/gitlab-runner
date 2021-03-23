@@ -134,7 +134,6 @@ var (
 )
 
 func TestConfigTemplate_MergeTo(t *testing.T) {
-	//nolint:lll
 	tests := map[string]struct {
 		templateContent string
 		config          *common.RunnerConfig

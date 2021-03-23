@@ -36,7 +36,6 @@ const (
 type shellEscaper struct {
 }
 
-//nolint:lll
 // ShellEscape is taken from
 // https://github.com/solidsnack/shell-escape/blob/056c7b308be32ffeafec815907699f6c27536b1e/Data/ByteString/ShellEscape/Bash.hs
 /*

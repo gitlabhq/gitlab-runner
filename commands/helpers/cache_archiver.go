@@ -25,7 +25,6 @@ import (
 	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
 )
 
-//nolint:lll
 type CacheArchiverCommand struct {
 	fileArchiver
 	retryHelper

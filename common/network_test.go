@@ -215,7 +215,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 
 func TestJobResponse_JobURL(t *testing.T) {
 	jobID := int64(1)
-	//nolint:lll
+
 	testCases := map[string]string{
 		"http://user:pass@gitlab.example.com/my-namespace/my-project.git":     "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
 		"http://user:pass@gitlab.example.com/my-namespace/my-project":         "http://gitlab.example.com/my-namespace/my-project/-/jobs/1",
