@@ -332,3 +332,9 @@ standard user account, mapped network drives cannot be used and you'll receive a
 on accessing resources for security. Use the
 [UNC path](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths)
 of your drive instead.
+
+### The build container is unable to connect to service containers
+
+[Network-per-build](../executors/docker.md#network-per-build)
+is required to use services with Windows containers. Ensure that the `FF_NETWORK_PER_BUILD`
+feature flag is set.
