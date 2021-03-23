@@ -367,7 +367,7 @@ In the example above, GitLab Runner will look at `my.registry.tld:5000` for the
 image `namespace/image:tag`.
 
 If the repository is private you need to authenticate your GitLab Runner in the
-registry. Read more on [using a private Docker registry](../configuration/advanced-configuration.md#using-a-private-container-registry).
+registry. Read more on [using a private Docker registry](../configuration/advanced-configuration.md#use-a-private-container-registry).
 
 ## Accessing the services
 

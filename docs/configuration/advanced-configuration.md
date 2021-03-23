@@ -129,7 +129,7 @@ repeated after all requests for the other runners and their sleep periods are ca
 ## The `[session_server]` section
 
 NOTE:
-The `session_server` section is not supported by
+The `session_server` section is not supported by the
 [`gitlab-runner` Helm chart](https://docs.gitlab.com/charts/charts/gitlab/gitlab-runner/index.html),
 but [an issue exists to track this work](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
 
@@ -219,18 +219,18 @@ of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
 The following executors are available.
 
-| Executor | Where the build runs | Required |
+| Executor | Required configuration | Where jobs run |
 |-|-|-|
-| `shell` | Local shell. The default executor. |  |
-| `docker` | A Docker container.  | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) |
-| `docker-windows` | A Windows Docker container.  | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) |
-| `docker-ssh` | A Docker container, but connect with SSH. <br>**The Docker container runs on the local machine. This setting changes how the commands are run inside that container. If you want to run Docker commands on an external machine, change the  `host`  parameter in the  `runners.docker`  section.** | `[runners.docker]`, `[runners.ssh]`, and  [Docker Engine](https://docs.docker.com/engine/) |
-| `ssh` | SSH, remotely. | `[runners.ssh]` |
-| `parallels` | Parallels VM, but connect with SSH. | `[runners.parallels]` and `[runners.ssh]` |
-| `virtualbox` | VirtualBox VM, but connect with SSH. | `[runners.virtualbox]` and `[runners.ssh]` |
-| `docker+machine` | Like `docker`, but use [auto-scaled Docker machines](autoscale.md). | `[runners.docker]` and `[runners.machine]` |
-| `docker-ssh+machine` | Like `docker-ssh`, but use [auto-scaled Docker machines](autoscale.md). | `[runners.docker]` and `[runners.machine]` |
-| `kubernetes` | Kubernetes pods. | `[runners.kubernetes]` |
+| `shell` |  | Local shell. The default executor. |
+| `docker` | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) | A Docker container. |
+| `docker-windows` | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) | A Windows Docker container. |
+| `docker-ssh` | `[runners.docker]`, `[runners.ssh]`, and  [Docker Engine](https://docs.docker.com/engine/) | A Docker container, but connect with SSH.  **The Docker container runs on the local machine. This setting changes how the commands are run inside that container. If you want to run Docker commands on an external machine, change the  `host`  parameter in the  `runners.docker`  section.** |
+| `ssh` | `[runners.ssh]` | SSH, remotely. |
+| `parallels` | `[runners.parallels]` and `[runners.ssh]` | Parallels VM, but connect with SSH. |
+| `virtualbox` | `[runners.virtualbox]` and `[runners.ssh]` | VirtualBox VM, but connect with SSH. |
+| `docker+machine` | `[runners.docker]` and `[runners.machine]` | Like `docker`, but use [auto-scaled Docker machines](autoscale.md). |
+| `docker-ssh+machine` | `[runners.docker]` and `[runners.machine]` | Like `docker-ssh`, but use [auto-scaled Docker machines](autoscale.md). |
+| `kubernetes` | `[runners.kubernetes]` | Kubernetes pods. |
 
 ## The shells
 
@@ -249,56 +249,56 @@ This defines the Docker Container parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `host`                         | Specify custom Docker endpoint, by default `DOCKER_HOST` environment is used or `unix:///var/run/docker.sock` |
-| `hostname`                     | Specify custom hostname for Docker container |
-| `runtime`                      | Specify a runtime for Docker container |
-| `tls_cert_path`                | When set it will use `ca.pem`, `cert.pem` and `key.pem` from that folder to make secure TLS connection to Docker (useful in boot2docker) |
+| `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
+| `hostname`                     | Custom hostname for the Docker container. |
+| `runtime`                      | The runtime for the Docker container. |
+| `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Useful in `boot2docker`. |
 | `tls_verify`                   | Enable or disable TLS verification of connections to Docker daemon. Disabled by default. |
-| `image`                        | Use this image to run builds |
-| `memory`                       | String value containing the memory limit |
-| `memory_swap`                  | String value containing the total memory limit |
-| `memory_reservation`           | String value containing the memory soft limit |
-| `oom_kill_disable`             | Do not kill processes in a container if an out-of-memory (OOM) error occurs |
-| `oom_score_adjust`             | OOM score adjustment, positive means kill earlier |
-| `cpuset_cpus`                  | String value containing the cgroups CpusetCpus to use |
-| `cpu_shares`                   | Number of CPU shares used to set relative cpu usage, default: 1024 |
-| `cpus`                         | String value of number of CPUs (available in Docker 1.13 or later) |
-| `dns`                          | A list of DNS servers for the container to use |
-| `dns_search`                   | A list of DNS search domains |
-| `privileged`                   | Make container run in Privileged mode (insecure) |
-| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting |
-| `userns_mode`                  | Sets the usernamespace mode for the container and Docker services when usernamespace remapping option is enabled. (available in Docker 1.10 or later) |
-| `cap_add`                      | Add additional Linux capabilities to the container |
-| `cap_drop`                     | Drop additional Linux capabilities from the container |
-| `security_opt`                 | Set security options (--security-opt in `docker run`), takes a list of ':' separated key/values |
-| `devices`                      | Share additional host devices with the container |
-| `gpus`                         | Specify GPU devices for Docker container, using the same format as the `docker` cli. Read more about the options in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu) |
-| `cache_dir`                    | Specify where Docker caches should be stored (this can be absolute or relative to current working directory). See `disable_cache` for more information. |
-| `disable_cache`                | The Docker executor has 2 levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
-| `network_mode`              | Add container to a custom network |
-| `wait_for_services_timeout` | Specify how long to wait for Docker services, set to 0 to disable, default: 30 |
-| `volumes`                   | Specify additional volumes that should be mounted (same syntax as Docker's `-v` flag) |
-| `extra_hosts`               | Specify hosts that should be defined in container environment |
-| `shm_size`                  | Specify shared memory size for images (in bytes) |
-| `volumes_from`              | Specify a list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
-| `volume_driver`             | Specify the volume driver to use for the container |
-| `links`                     | Specify containers which should be linked with building container |
-| `allowed_images`            | Specify wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `allowed_services`          | Specify wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`) |
-| `pull_policy`               | Specify the image pull policy: `never`, `if-not-present` or `always` (default); read more in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies) |
-| `sysctls`                   | specify the sysctl options |
-| `helper_image`              | (Advanced) [Override the default helper image](#helper-image) used to clone repos and upload artifacts. |
+| `image`                        | The image to run jobs with. |
+| `memory`                       | The memory limit. A string. |
+| `memory_swap`                  | The total memory limit. A string. |
+| `memory_reservation`           | The memory soft limit. A string. |
+| `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
+| `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
+| `cpuset_cpus`                  | The control group's `CpusetCpus`. A string. |
+| `cpu_shares`                   | Number of CPU shares used to set relative CPU usage. Default is `1024`. |
+| `cpus`                         | Number of CPUs (available in Docker 1.13 or later. A string.  |
+| `dns`                          | A list of DNS servers for the container to use. |
+| `dns_search`                   | A list of DNS search domains. |
+| `privileged`                   | Make the container run in privileged mode. Insecure. |
+| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting. |
+| `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
+| `cap_add`                      | Add additional Linux capabilities to the container. |
+| `cap_drop`                     | Drop additional Linux capabilities from the container. |
+| `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
+| `devices`                      | Share additional host devices with the container. |
+| `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
+| `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
+| `disable_cache`                | The Docker executor has two levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
+| `network_mode`              | Add container to a custom network. |
+| `wait_for_services_timeout` | How long to wait for Docker services. Set to `0` to disable. Default is `30`. |
+| `volumes`                   | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
+| `extra_hosts`               | Hosts that should be defined in container environment. |
+| `shm_size`                  | Shared memory size for images (in bytes). |
+| `volumes_from`              | A list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
+| `volume_driver`             | The volume driver to use for the container. |
+| `links`                     | Containers that should be linked with container that runs the job. |
+| `allowed_images`            | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
+| `allowed_services`          | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
+| `pull_policy`               | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies). |
+| `sysctls`                   | The `sysctl` options. |
+| `helper_image`              | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
 
 ### The `[[runners.docker.services]]` section
 
-Specify additional services that should be run with the build. Please visit the
+Specify additional services that should be run with the job. Visit the
 [Docker Registry](https://hub.docker.com) for the list of available applications.
-Each service will be run in a separate container and linked to the build.
+Each service runs in a separate container and is linked to the job.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `name`  | The name of the image to be run as a service |
-| `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service |
+| `name`  | The name of the image to be run as a service. |
+| `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service .|
 | `entrypoint` | Command or script that should be executed as the container’s entrypoint. The syntax is similar to [Dockerfile’s ENTRYPOINT](https://docs.docker.com/engine/reference/builder/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
 | `command` | Command or script that should be used as the container’s command. The syntax is similar to [Dockerfile’s CMD](https://docs.docker.com/engine/reference/builder/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
 
@@ -352,12 +352,11 @@ Example:
 
 [View the complete guide of Docker volume usage](https://docs.docker.com/userguide/dockervolumes/).
 
-Let's use some examples to explain how it work (assuming you have a working
-runner).
+The following examples show how to specify volumes in the `[runners.docker]` section.
 
-#### Example 1: adding a data volume
+#### Example 1: Add a data volume
 
-A data volume is a specially-designated directory within one or more containers
+A data volume is a specially-designated directory in one or more containers
 that bypasses the Union File System. Data volumes are designed to persist data,
 independent of the container's life cycle.
 
@@ -372,13 +371,12 @@ independent of the container's life cycle.
   volumes = ["/path/to/volume/in/container"]
 ```
 
-This will create a new volume inside the container at `/path/to/volume/in/container`.
+This example creates a new volume in the container at `/path/to/volume/in/container`.
 
-#### Example 2: mount a host directory as a data volume
+#### Example 2: Mount a host directory as a data volume
 
-In addition to creating a volume using a data volume, you can also mount
-a directory from your Docker daemon's host into a container. It's useful
-when you want to store directories outside the container.
+When you want to store directories outside the container, you can mount
+a directory from your Docker daemon's host into a container:
 
 ```toml
 [runners.docker]
@@ -391,82 +389,72 @@ when you want to store directories outside the container.
   volumes = ["/path/to/bind/from/host:/path/to/bind/in/container:rw"]
 ```
 
-This will use `/path/to/bind/from/host` of the CI host inside the container at
+This example uses `/path/to/bind/from/host` of the CI/CD host in the container at
 `/path/to/bind/in/container`.
 
-GitLab Runner 11.11 and later [will mount the host
-directory](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1261)
+GitLab Runner 11.11 and later [mount the host directory](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1261)
 for the defined [services](https://docs.gitlab.com/ee/ci/services/) as
 well.
 
-### Using a private container registry
+### Use a private container registry
 
-- This feature requires GitLab Runner **1.8** or later.
-- For GitLab Runner versions **>= 0.6, <1.8** there was a partial
-  support for using private registries, which required manual configuration
-  of credentials on runner's host. We recommend you upgrade GitLab Runner to
-  at least version **1.8** if you want to use private registries.
-- Using private registries with the `if-not-present` pull policy may introduce
-  [security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). To fully understand how pull policies work,
-  read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
+If you want to use private registries as a source of images for your jobs,
+you can set the authorization configuration in a [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/)
+named `DOCKER_AUTH_CONFIG`. You can set the variable in the project's CI/CD settings
+or in the `config.toml` file.
 
-If you want to use private registries as a source of images for your builds,
-you can set the authorization configuration in the `DOCKER_AUTH_CONFIG`
-[variable](https://docs.gitlab.com/ee/ci/variables/#variables). It can be set in both GitLab Variables section of
-a project and in the `config.toml` file.
+Using private registries with the `if-not-present` pull policy may introduce
+[security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+To fully understand how pull policies work,
+read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
 
 For a detailed example, visit the [Using Docker images documentation](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry).
 
 The steps performed by the runner can be summed up as:
 
 1. The registry name is found from the image name.
-1. If the value is not empty, the executor will search for the authentication
+1. If the value is not empty, the executor searches for the authentication
    configuration for this registry.
 1. Finally, if an authentication corresponding to the specified registry is
-   found, subsequent pulls will make use of it.
+   found, subsequent pulls makes use of it.
 
 Now that the runner is set up to authenticate against your private registry,
-learn [how to configure `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html#image-and-services) to use that
+learn [how to configure the `.gitlab-ci.yml` file](https://docs.gitlab.com/ee/ci/yaml/README.html#image) to use that
 registry.
 
 #### Support for GitLab integrated registry
 
-To work automatically with private/protected images from
-the GitLab integrated registry, you need at least GitLab CE/EE **8.14**
-and GitLab Runner **1.8**.
+GitLab sends credentials for its integrated
+registry along with the job's data. These credentials are automatically
+added to the registry's authorization parameters list.
 
-Starting with GitLab CE/EE 8.14, GitLab will send credentials for its integrated
-registry along with the build data. These credentials will be automatically
-added to registries authorization parameters list.
-
-After this, authorization against the registry will proceed similarly to
+After this step, authorization against the registry proceeds similarly to
 configuration added with the `DOCKER_AUTH_CONFIG` variable.
 
-Thanks to this, in your builds you can use any image from your GitLab integrated
-registry, even if the image is private/protected. To fully understand to
-which images the builds will have access, read the
-[New CI build permissions model](https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html) documentation.
+In your jobs, you can use any image from your GitLab integrated
+registry, even if the image is private or protected. For information on the images jobs have access to, read the
+[CI/CD job token documentation](https://docs.gitlab.com/ee/api/README.html#gitlab-cicd-job-token) documentation.
 
 #### Precedence of Docker authorization resolving
 
-As described above, GitLab Runner can authorize Docker against a registry by
+As described earlier, GitLab Runner can authorize Docker against a registry by
 using credentials sent in different way. To find a proper registry, the following
 precedence is taken into account:
 
 1. Credentials configured with `DOCKER_AUTH_CONFIG`.
 1. Credentials configured locally on the GitLab Runner host with `~/.docker/config.json`
-   or `~/.dockercfg` files (e.g., by running `docker login` on the host).
-1. Credentials sent by default with job's payload (e.g., credentials for _integrated
-   registry_ described above).
+   or `~/.dockercfg` files (for example, by running `docker login` on the host).
+1. Credentials sent by default with a job's payload (for example, credentials for the *integrated
+   registry* described earlier).
 
-The first found credentials for the registry will be used. So for example,
-if you add some credentials for the _integrated registry_ with the
-`DOCKER_AUTH_CONFIG` variable, then the default credentials will be overridden.
+The first credentials found for the registry are used. So for example,
+if you add credentials for the *integrated registry* with the
+`DOCKER_AUTH_CONFIG` variable, then the default credentials are overridden.
 
 #### Restrict `allowed_images` to private registry
 
-For certain setups you will restrict access of the build jobs to Docker images
-which comes from your private Docker registry. In that case set
+You can restrict access so that your jobs run on Docker images
+from your private Docker registry. For example:
 
 ```toml
 [runners.docker]
@@ -476,13 +464,13 @@ which comes from your private Docker registry. In that case set
 
 ## The `[runners.parallels]` section
 
-This defines the Parallels parameters.
+The following parameters are for Parallels.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `base_name`         | name of Parallels VM which will be cloned |
-| `template_name`     | custom name of Parallels VM linked template (optional) |
-| `disable_snapshots` | if disabled the VMs will be destroyed after build |
+| `base_name`         | Name of Parallels VM that is cloned. |
+| `template_name`     | Custom name of Parallels VM linked template. Optional. |
+| `disable_snapshots` | If disabled, the VMs are destroyed when the jobs are done. |
 
 Example:
 
@@ -495,17 +483,17 @@ Example:
 
 ## The `[runners.virtualbox]` section
 
-This defines the VirtualBox parameters. This executor relies on
-`vboxmanage` as executable to control VirtualBox machines so you have to adjust
+The following parameters are for VirtualBox. This executor relies on the
+`vboxmanage` executable to control VirtualBox machines, so you have to adjust
 your `PATH` environment variable on Windows hosts:
 `PATH=%PATH%;C:\Program Files\Oracle\VirtualBox`.
 
 | Parameter | Explanation |
 | --------- | ----------- |
-| `base_name`         | name of VirtualBox VM which will be cloned |
-| `base_snapshot`     | name or UUID of a specific snapshot of the VM from which to create a linked clone. If this is empty or omitted, the current snapshot will be used. If there is no current snapshot, one will be created unless `disable_snapshots` is true, in which case a full clone of the base VM will be made. |
-| `base_folder`       | folder in which to save the new VM. If this is empty or omitted, the default VM folder will be used. |
-| `disable_snapshots` | if disabled the VMs will be destroyed after build |
+| `base_name`         | Name of the VirtualBox VM that is cloned. |
+| `base_snapshot`     | Name or UUID of a specific snapshot of the VM to create a linked clone from. If this value is empty or omitted, the current snapshot is used. If no current snapshot exists, one is created. Unless `disable_snapshots` is true, in which case a full clone of the base VM is made. |
+| `base_folder`       | Folder to save the new VM in. If this value is empty or omitted, the default VM folder is used. |
+| `disable_snapshots` | If disabled, the VMs are destroyed when the jobs are done. |
 
 Example:
 
@@ -518,15 +506,15 @@ Example:
 
 ## The `[runners.ssh]` section
 
-This defines the SSH connection parameters.
+The following parameters define the SSH connection.
 
 | Parameter  | Description |
 | ---------- | ----------- |
-| `host`     | where to connect (overridden when using `docker-ssh`) |
-| `port`     | specify port, default: 22 |
-| `user`     | specify user |
-| `password` | specify password |
-| `identity_file` | specify file path to SSH private key (id_rsa, id_dsa or id_edcsa). The file needs to be stored unencrypted |
+| `host`     | Where to connect. Overridden when you use `docker-ssh`. |
+| `port`     | Port. Default is `22`. |
+| `user`     | Username. |
+| `password` | Password. |
+| `identity_file` | File path to SSH private key (`id_rsa`, `id_dsa`, or `id_edcsa`). The file must be stored unencrypted. |
 
 Example:
 
@@ -543,23 +531,23 @@ Example:
 
 > Added in GitLab Runner v1.1.0.
 
-This defines the Docker Machine based autoscaling feature. More details can be
+The following parameters define the Docker Machine-based autoscaling feature. More details can be
 found in the separate [runner autoscale documentation](autoscale.md).
 
 | Parameter           | Description |
 |---------------------|-------------|
-| `MaxGrowthRate`     | The maximum number of machines that can be added to the runner in parallel. Defaults to 0 (no limit) |
-| `IdleCount`         | Number of machines, that need to be created and waiting in _Idle_ state. |
+| `MaxGrowthRate`     | The maximum number of machines that can be added to the runner in parallel. Default is `0` (no limit). |
+| `IdleCount`         | Number of machines that need to be created and waiting in _Idle_ state. |
 | `IdleTime`          | Time (in seconds) for machine to be in _Idle_ state before it is removed. |
-| `[[runners.machine.autoscaling]]` | Multiple sections each containing overrides for autoscaling configuration. The last section with the expression matching the current time is selected. |
+| `[[runners.machine.autoscaling]]` | Multiple sections, each containing overrides for autoscaling configuration. The last section with an expression that matches the current time is selected. |
 | `OffPeakPeriods`    | Deprecated: Time periods when the scheduler is in the OffPeak mode. An array of cron-style patterns (described [below](#periods-syntax)). |
 | `OffPeakTimezone`   | Deprecated: Timezone for the times given in OffPeakPeriods. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
 | `OffPeakIdleCount`  | Deprecated: Like `IdleCount`, but for _Off Peak_ time periods. |
 | `OffPeakIdleTime`   | Deprecated: Like `IdleTime`, but for _Off Peak_ time periods. |
-| `MaxBuilds`         | Builds count after which machine will be removed. |
-| `MachineName`       | Name of the machine. It **must** contain `%s`, which will be replaced with a unique machine identifier. |
-| `MachineDriver`     | Docker Machine `driver` to use. More details can be found in the [Docker Machine configuration section](autoscale.md#supported-cloud-providers). |
-| `MachineOptions`    | Docker Machine options. More details can be found in the [Docker Machine configuration section](autoscale.md#supported-cloud-providers). |
+| `MaxBuilds`         | Maximum job (build) count before machine is removed. |
+| `MachineName`       | Name of the machine. It **must** contain `%s`, which is replaced with a unique machine identifier. |
+| `MachineDriver`     | Docker Machine `driver`. View details in the [Docker Machine configuration section](autoscale.md#supported-cloud-providers). |
+| `MachineOptions`    | Docker Machine options. View details in the [Docker Machine configuration section](autoscale.md#supported-cloud-providers). |
 
 ### The `[[runners.machine.autoscaling]]` sections
 
@@ -610,60 +598,59 @@ following fields:
 ```
 
 Like in the standard cron configuration file, the fields can contain single
-values, ranges, lists and asterisks. A detailed description of the syntax
-can be found [here](https://github.com/gorhill/cronexpr#implementation).
+values, ranges, lists, and asterisks. View [a detailed description of the syntax](https://github.com/gorhill/cronexpr#implementation).
 
 ## The `[runners.custom]` section
 
-Define configuration for the [custom executor](../executors/custom.md).
+The following parameters define configuration for the [custom executor](../executors/custom.md).
 
-| Parameter               | Type         | Required | Description                                                                                                                                                                                                                                                                                         |
-|-------------------------|--------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `config_exec`           | string       | ✗        | Path to an executable to allow the user to override some configuration settings before the build starts. These values will override the ones set inside of the [`[[runners]]`](#the-runners-section) section. [The custom executor documentation](../executors/custom.md#config) has the full list. |
-| `config_args`           | string array | ✗        | First set of arguments passed to the `config_exec` executable.                                                                                                                                                                                                                                      |
-| `config_exec_timeout`   | integer      | ✗        | Timeout in seconds for `config_exec` to finish execution. Default to 1 hour.                                                                                                                                                                                                                        |
-| `prepare_exec`          | string       | ✗        | Path to an executable to prepare the environment.                                                                                                                                                                                                                                                   |
-| `prepare_args`          | string array | ✗        | First set of arguments passed to the `prepare_exec` executable.                                                                                                                                                                                                                                     |
-| `prepare_exec_timeout`  | integer      | ✗        | Timeout in seconds for `prepare_exec` to finish execution. Default to 1 hour.                                                                                                                                                                                                                       |
-| `run_exec`              | string       | ✓        | Path to an executable to run scripts in the environments. For example, the clone and build script.                                                                                                                                                                                                  |
-| `run_args`              | string array | ✗        | First set of arguments passed to the `run_exec` executable.                                                                                                                                                                                                                                         |
-| `cleanup_exec`          | string       | ✗        | Path to an executable to clean up the environment.                                                                                                                                                                                                                                                  |
-| `cleanup_args`          | string array | ✗        | First set of arguments passed to the `cleanup_exec` executable.                                                                                                                                                                                                                                     |
-| `cleanup_exec_timeout`  | integer      | ✗        | Timeout in seconds for `cleanup_exec` to finish execution. Default to 1 hour.                                                                                                                                                                                                                       |
-| `graceful_kill_timeout` | integer      | ✗        | Time to wait in seconds for `prepare_exec` and `cleanup_exec` if they are terminated (for example, during build cancellation). After this timeout, the process is killed. Defaults to 10 minutes.                                                                                                   |
-| `force_kill_timeout`    | integer      | ✗        | Time to wait in seconds after the kill signal is sent to the script. Defaults to 10 minutes.                                                                                                                                                                                                        |
+| Parameter               | Type         | Description |
+|-------------------------|--------------|-------------|
+| `config_exec`           | string       | Path to an executable, so a user can override some configuration settings before the job starts. These values override the ones set in the [`[[runners]]`](#the-runners-section) section. [The custom executor documentation](../executors/custom.md#config) has the full list. |
+| `config_args`           | string array | First set of arguments passed to the `config_exec` executable. |
+| `config_exec_timeout`   | integer      | Timeout, in seconds, for `config_exec` to finish execution. Default is 3600 seconds (1 hour). |
+| `prepare_exec`          | string       | Path to an executable to prepare the environment. |
+| `prepare_args`          | string array | First set of arguments passed to the `prepare_exec` executable. |
+| `prepare_exec_timeout`  | integer      | Timeout, in seconds, for `prepare_exec` to finish execution. Default is 3600 seconds (1 hour). |
+| `run_exec`              | string       | **Required.** Path to an executable to run scripts in the environments. For example, the clone and build script. |
+| `run_args`              | string array | First set of arguments passed to the `run_exec` executable. |
+| `cleanup_exec`          | string       | Path to an executable to clean up the environment. |
+| `cleanup_args`          | string array | First set of arguments passed to the `cleanup_exec` executable. |
+| `cleanup_exec_timeout`  | integer      | Timeout, in seconds, for `cleanup_exec` to finish execution. Default is 3600 seconds (1 hour). |
+| `graceful_kill_timeout` | integer      | Time to wait, in seconds, for `prepare_exec` and `cleanup_exec` if they are terminated (for example, during job cancellation). After this timeout, the process is killed. Default is 600 seconds (10 minutes). |
+| `force_kill_timeout`    | integer      | Time to wait, in seconds, after the kill signal is sent to the script. Default is 600 seconds (10 minutes). |
 
 ## The `[runners.cache]` section
 
 > Introduced in GitLab Runner 1.1.0.
 
-This defines the distributed cache feature. More details can be found
+The following parameters define the distributed cache feature. View details
 in the [runner autoscale documentation](autoscale.md#distributed-runners-caching).
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
 | `Type`           | string           | One of: `s3`, `gcs`, `azure`. |
 | `Path`           | string           | Name of the path to prepend to the cache URL. |
-| `Shared`         | boolean          | Enables cache sharing between runners, `false` by default. |
+| `Shared`         | boolean          | Enables cache sharing between runners. Default is `false`. |
 
 WARNING:
-With GitLab Runner 11.3.0, the configuration parameters related to S3 were moved to a dedicated `[runners.cache.s3]` section.
-The old format of the configuration with S3 configured directly in `[runners.cache]` was deprecated with GitLab Runner 11.3.0.
-**With GitLab Runner 12.0.0 the old configuration syntax was removed and is no longer supported**.
+In GitLab Runner 11.3, the configuration parameters related to S3 were moved to a dedicated `[runners.cache.s3]` section.
+The configuration with S3 configured directly in `[runners.cache]` was deprecated.
+**In GitLab Runner 12.0, the configuration syntax was removed and is no longer supported**.
 
 The cache mechanism uses pre-signed URLs to upload and download cache. URLs are being signed by GitLab Runner on its **own instance**.
-No matter if the job's script - so also the cache upload/download script - are being executed on local or external
-machines (e.g. `shell` or `docker` executors are running their scripts on the same
-machine where GitLab Runner process is running, while `virtualbox` or `docker+machine`
-connects to a separate VM to execute the script). This is done for security reasons:
+It does not matter if the job's script (including the cache upload/download script) are being executed on local or external
+machines. For example, `shell` or `docker` executors run their scripts on the same
+machine where the GitLab Runner process is running. At the same time, `virtualbox` or `docker+machine`
+connects to a separate VM to execute the script. This process is for security reasons:
 minimizing the possibility of leaking the cache adapter's credentials.
 
-This implies [S3 cache adapter](#the-runnerscaches3-section), if configured to use
-IAM instance profile, will use the profile attached with the GitLab Runner machine.
+If the [S3 cache adapter](#the-runnerscaches3-section) is configured to use
+an IAM instance profile, the adapter uses the profile attached to the GitLab Runner machine.
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
 use the `CredentialsFile`, the file needs to be present on the GitLab Runner machine.
 
-Below is a table containing a summary of `config.toml`, cli options and ENV variables for `register`:
+This table lists `config.toml`, CLI options, and ENV variables for `register`.
 
 | Setting               | TOML field                               | CLI option for `register`      | ENV for `register`                | Before 12.0.0 TOML field            | Before 12.0.0 CLI option | Before 12.0.0 ENV         |
 |-----------------------|------------------------------------------|--------------------------------|-----------------------------------|-------------------------------------|--------------------------|---------------------------|
@@ -804,16 +791,16 @@ See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
-| `host`           | string  | Optional Kubernetes master host URL (auto-discovery attempted if not specified) |
-| `cert_file`      | string  | Optional Kubernetes master auth certificate |
-| `key_file`       | string  | Optional Kubernetes master auth private key |
-| `ca_file`        | string  | Optional Kubernetes master auth ca certificate |
-| `image`          | string  | Default Docker image to use for builds when none is specified |
-| `namespace`      | string  | Namespace to run Kubernetes jobs in |
-| `privileged`     | boolean | Run all containers with the privileged flag enabled |
-| `allow_privilege_escalation` | boolean | Optional runs all containers with the `allowPrivilegeEscalation` flag enabled |
-| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs |
-| `image_pull_secrets` | array | A list of secrets that are used to authenticate Docker image pulling |
+| `host`           | string  | Optional Kubernetes master host URL (auto-discovery attempted if not specified). |
+| `cert_file`      | string  | Optional Kubernetes master auth certificate. |
+| `key_file`       | string  | Optional Kubernetes master auth private key. |
+| `ca_file`        | string  | Optional Kubernetes master auth ca certificate. |
+| `image`          | string  | Default Docker image to use for jobs when none is specified. |
+| `namespace`      | string  | Namespace to run Kubernetes jobs in. |
+| `privileged`     | boolean | Run all containers with the privileged flag enabled. |
+| `allow_privilege_escalation` | boolean | Optional. Runs all containers with the `allowPrivilegeEscalation` flag enabled. |
+| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. |
+| `image_pull_secrets` | array | A list of secrets that are used to authenticate Docker image pulling. |
 
 Example:
 

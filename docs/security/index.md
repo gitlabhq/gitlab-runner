@@ -32,7 +32,7 @@ More granular permissions can be configured in non-privileged mode via the
 ## Usage of private Docker images with `if-not-present` pull policy
 
 When using the private Docker images support described in
-[advanced configuration: using a private container registry](../configuration/advanced-configuration.md#using-a-private-container-registry)
+[advanced configuration: using a private container registry](../configuration/advanced-configuration.md#use-a-private-container-registry)
 you should use `always` as the `pull_policy` value. Especially you should
 use `always` pull policy if you are hosting a public, shared Runner with the
 Docker or Kubernetes executors.
