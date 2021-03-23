@@ -15,11 +15,17 @@ TAR_XZ_ARGS ?= -f -0
 # Tar files that we want to generate from the Docker file system, this is
 # generally used for linux based Dockerfiles.
 BASE_TAR_PATH := out/helper-images/prebuilt
-TAR_XZ += ${BASE_TAR_PATH}-x86_64.tar.xz
-TAR_XZ += ${BASE_TAR_PATH}-x86_64-pwsh.tar.xz
-TAR_XZ += ${BASE_TAR_PATH}-arm.tar.xz
-TAR_XZ += ${BASE_TAR_PATH}-arm64.tar.xz
-TAR_XZ += ${BASE_TAR_PATH}-s390x.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-alpine-x86_64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-alpine-x86_64-pwsh.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-alpine-arm.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-alpine-arm64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-alpine-s390x.tar.xz
+
+TAR_XZ += ${BASE_TAR_PATH}-ubuntu-x86_64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-ubuntu-x86_64-pwsh.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-ubuntu-arm.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-ubuntu-arm64.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-ubuntu-s390x.tar.xz
 
 # Binaries that we support for the helper image. We are using the following
 # pattern match:
@@ -80,16 +86,33 @@ ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz $(TAR_XZ_ARGS) $<
 
-# See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
-${BASE_TAR_PATH}-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
-${BASE_TAR_PATH}-%-pwsh.tar: export PWSH_ALPINE_IMAGE_VERSION ?= 3.12
-${BASE_TAR_PATH}-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
-${BASE_TAR_PATH}-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-%-pwsh.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker $* $@
+helper-dockerarchive-%-pwsh-base: export PWSH_VERSION ?= 7.1.1
+helper-dockerarchive-%-pwsh-base: export PWSH_IMAGE_DATE ?= 20210114
+helper-dockerarchive-%-pwsh-base: export IMAGE_SHELL := pwsh
 
-${BASE_TAR_PATH}-%.tar: export ALPINE_IMAGE_VERSION ?= 3.12.0
-${BASE_TAR_PATH}-%.tar: ${BASE_BINARY_PATH}.%
+# See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: helper-dockerarchive-$*-pwsh-base
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_ALPINE_IMAGE_VERSION ?= 3.12
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_TARGET_FLAVOR_IMAGE_VERSION = ${PWSH_ALPINE_IMAGE_VERSION}
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker $* $@
+	@./ci/build_helper_docker alpine $* $@
+
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: helper-dockerarchive-$*-pwsh-base
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_UBUNTU_IMAGE_VERSION ?= 20.04
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_TARGET_FLAVOR_IMAGE_VERSION ?= ${PWSH_UBUNTU_IMAGE_VERSION}
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker ubuntu $* $@
+
+${BASE_TAR_PATH}-alpine-%.tar: export ALPINE_IMAGE_VERSION ?= 3.12.0
+${BASE_TAR_PATH}-alpine-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= ${ALPINE_IMAGE_VERSION}
+${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@
+
+${BASE_TAR_PATH}-ubuntu-%.tar: export UBUNTU_IMAGE_VERSION ?= 20.04
+${BASE_TAR_PATH}-ubuntu-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= ${UBUNTU_IMAGE_VERSION}
+${BASE_TAR_PATH}-ubuntu-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker ubuntu $* $@

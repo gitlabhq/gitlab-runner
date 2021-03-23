@@ -243,11 +243,13 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 }
 
 func getPrebuiltFileName(architecture, shell string) string {
+	flavor := "alpine"
+
 	if shell == shells.SNPwsh {
-		return fmt.Sprintf("prebuilt-%s-%s%s", architecture, shell, prebuiltImageExtension)
+		return fmt.Sprintf("prebuilt-%s-%s-%s%s", flavor, architecture, shell, prebuiltImageExtension)
 	}
 
-	return fmt.Sprintf("prebuilt-%s%s", architecture, prebuiltImageExtension)
+	return fmt.Sprintf("prebuilt-%s-%s%s", flavor, architecture, prebuiltImageExtension)
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {
