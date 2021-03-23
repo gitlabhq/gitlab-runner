@@ -54,6 +54,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY` | `true` | ✗ |  | When disabled, processes that Runner creates on Windows (shell and custom executor) will be created with additional setup that should improve process termination. This is currently experimental and how we setup these processes may change as we continue to improve this. When set to `true`, legacy process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag shouldbe set to `false`. |
 | `FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE` | `false` | ✗ |  | With the `docker+machine` executor, when a machine is not created, `docker-machine provision` runs for X amount of times. When this feature flag is set to `true`, it skips `docker-machine provision` removes the machine, and creates another machine instead. |
 | `FF_USE_NEW_BASH_EVAL_STRATEGY` | `false` | ✗ |  | When set to `true`, the Bash `eval` call is executed in a subshell to help with proper exit code detection of the script executed. |
+| `FF_USE_POWERSHELL_PATH_RESOLVER` | `false` | ✗ |  | When enabled, Powershell resolves pathnames rather than Runner using OS-specific filepath functions that are specific to where Runner is hosted. |
 
 <!-- feature_flags_list_end -->
 
