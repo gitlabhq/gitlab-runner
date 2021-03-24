@@ -28,7 +28,7 @@ View some [best practices](best_practice/index.md) for how to use and administer
 
 ## GitLab Runner versions
 
-GitLab Runner should be the same version as GitLab. Older runners may still work
+For compatibility reasons, the GitLab Runner [major.minor](https://en.wikipedia.org/wiki/Software_versioning) version should stay in sync with the GitLab major and minor version. Older runners may still work
 with newer GitLab versions, and vice versa. However, features may be not available or work properly
 if a version difference exists.
 
