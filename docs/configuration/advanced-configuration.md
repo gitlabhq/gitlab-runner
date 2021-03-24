@@ -398,7 +398,7 @@ well.
 
 ### Use a private container registry
 
-If you want to use private registries as a source of images for your jobs,
+To use private registries as a source of images for your jobs,
 you can set the authorization configuration in a [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/)
 named `DOCKER_AUTH_CONFIG`. You can set the variable in the project's CI/CD settings
 or in the `config.toml` file.
@@ -638,8 +638,8 @@ In GitLab Runner 11.3, the configuration parameters related to S3 were moved to 
 The configuration with S3 configured directly in `[runners.cache]` was deprecated.
 **In GitLab Runner 12.0, the configuration syntax was removed and is no longer supported**.
 
-The cache mechanism uses pre-signed URLs to upload and download cache. URLs are being signed by GitLab Runner on its **own instance**.
-It does not matter if the job's script (including the cache upload/download script) are being executed on local or external
+The cache mechanism uses pre-signed URLs to upload and download cache. URLs are signed by GitLab Runner on its own instance.
+It does not matter if the job's script (including the cache upload/download script) are executed on local or external
 machines. For example, `shell` or `docker` executors run their scripts on the same
 machine where the GitLab Runner process is running. At the same time, `virtualbox` or `docker+machine`
 connects to a separate VM to execute the script. This process is for security reasons:
@@ -648,7 +648,7 @@ minimizing the possibility of leaking the cache adapter's credentials.
 If the [S3 cache adapter](#the-runnerscaches3-section) is configured to use
 an IAM instance profile, the adapter uses the profile attached to the GitLab Runner machine.
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
-use the `CredentialsFile`, the file needs to be present on the GitLab Runner machine.
+use the `CredentialsFile`. The file needs to be present on the GitLab Runner machine.
 
 This table lists `config.toml`, CLI options, and ENV variables for `register`.
 
@@ -674,17 +674,18 @@ This table lists `config.toml`, CLI options, and ENV variables for `register`.
 
 ### The `[runners.cache.s3]` section
 
-Configure S3 storage for cache. This section contains settings related to S3 that were
-present globally in the `[runners.cache]` section in GitLab Runner 11.2 and earlier.
+The following parameters define S3 storage for cache.
+
+In GitLab Runner 11.2 and earlier, these settings were in the global `[runners.cache]` section.
 
 | Parameter        | Type             | Description |
 |------------------|------------------|-------------|
 | `ServerAddress`  | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
 | `AccessKey`      | string           | The access key specified for your S3 instance. |
 | `SecretKey`      | string           | The secret key specified for your S3 instance. |
-| `BucketName`     | string           | Name of the storage bucket where cache will be stored. |
+| `BucketName`     | string           | Name of the storage bucket where cache is stored. |
 | `BucketLocation` | string           | Name of S3 region. |
-| `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Set to `false` by default. |
+| `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
 
 Example:
 
@@ -702,28 +703,28 @@ Example:
     Insecure = false
 ```
 
-For Amazon's S3 service, the `ServerAddress` should always be `s3.amazonaws.com`. The MinIO S3 client will
-get bucket metadata and modify the URL to point to the valid region (eg. `s3-eu-west-1.amazonaws.com`) itself.
+For Amazon S3, the `ServerAddress` should always be `s3.amazonaws.com`. The MinIO S3 client
+gets bucket metadata and modifies the URL to point to the valid region, for example `s3-eu-west-1.amazonaws.com`.
 
-If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client will use the
+If `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client uses the
 IAM instance profile available to the `gitlab-runner` instance. In an
-[autoscale](autoscale.md) configuration, this is *NOT* the machine created on
-demand that jobs are executed on.
+[autoscale](autoscale.md) configuration, this is not the on-demand machine
+that jobs are executed on.
 
 ### The `[runners.cache.gcs]` section
 
 > Introduced in GitLab Runner 11.3.0.
 
-Configure native support for Google Cloud Storage. Read the
-[Google Cloud Storage Authentication documentation](https://cloud.google.com/storage/docs/authentication#service_accounts)
-to check where these values come from.
+The following parameters define native support for Google Cloud Storage. To view
+where these values come from, view the
+[Google Cloud Storage (GCS) Authentication documentation](https://cloud.google.com/storage/docs/authentication#service_accounts).
 
 | Parameter         | Type             | Description |
 |-------------------|------------------|-------------|
-| `CredentialsFile` | string           | Path to the Google JSON key file. Currently only the `service_account` type is supported. If configured, takes precedence over `AccessID` and `PrivateKey` configured directly in `config.toml`. |
+| `CredentialsFile` | string           | Path to the Google JSON key file. Only the `service_account` type is supported. If configured, this value takes precedence over the `AccessID` and `PrivateKey` configured directly in `config.toml`. |
 | `AccessID`        | string           | ID of GCP Service Account used to access the storage. |
 | `PrivateKey`      | string           | Private key used to sign GCS requests. |
-| `BucketName`      | string           | Name of the storage bucket where cache will be stored. |
+| `BucketName`      | string           | Name of the storage bucket where cache is stored. |
 
 Examples:
 
@@ -756,16 +757,16 @@ Examples:
 
 > Introduced in GitLab Runner 13.4.0.
 
-Configure native support for Azure Blob Storage. Read the
-[Azure Blob Storage documentation](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction)
-to learn more. While S3 and GCS use the word `bucket` for a collection of objects, Azure uses the word
+The following parameters define native support for Azure Blob Storage. To learn more, view the
+[Azure Blob Storage documentation](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
+While S3 and GCS use the word `bucket` for a collection of objects, Azure uses the word
 `container` to denote a collection of blobs.
 
 | Parameter         | Type             | Description |
 |-------------------|------------------|-------------|
 | `AccountName`     | string           | Name of the Azure Blob Storage account used to access the storage. |
 | `AccountKey`      | string           | Storage account access key used to access the container. |
-| `ContainerName`   | string           | Name of the [storage container](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers) in which to save cache data. |
+| `ContainerName`   | string           | Name of the [storage container](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers) to save cache data in. |
 | `StorageDomain`   | string           | Domain name [used to service Azure storage endpoints](https://docs.microsoft.com/en-us/azure/china/resources-developer-guide#check-endpoints-in-azure) (optional). Default is `blob.core.windows.net`. |
 
 Example:
@@ -786,20 +787,20 @@ Example:
 
 > Introduced in GitLab Runner v1.6.0.
 
-This defines the Kubernetes parameters.
-See [Kubernetes executor](../executors/kubernetes.md) for additional parameters.
+The following parameters define Kubernetes behavior.
+For more parameters, see the [Kubernetes executor documentation](../executors/kubernetes.md).
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
-| `host`           | string  | Optional Kubernetes master host URL (auto-discovery attempted if not specified). |
-| `cert_file`      | string  | Optional Kubernetes master auth certificate. |
-| `key_file`       | string  | Optional Kubernetes master auth private key. |
-| `ca_file`        | string  | Optional Kubernetes master auth ca certificate. |
+| `host`           | string  | Optional. Kubernetes master host URL. If not specified, the runner attempts to auto-discovery it. |
+| `cert_file`      | string  | Optional. Kubernetes master auth certificate. |
+| `key_file`       | string  | Optional. Kubernetes master auth private key. |
+| `ca_file`        | string  | Optional. Kubernetes master auth ca certificate. |
 | `image`          | string  | Default Docker image to use for jobs when none is specified. |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in. |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled. |
 | `allow_privilege_escalation` | boolean | Optional. Runs all containers with the `allowPrivilegeEscalation` flag enabled. |
-| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. |
+| `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Limits the creation of pods to Kubernetes nodes that match all the `key=value` pairs. |
 | `image_pull_secrets` | array | A list of secrets that are used to authenticate Docker image pulling. |
 
 Example:
@@ -820,63 +821,65 @@ Example:
 
 ## Helper image
 
-When one of `docker`, `docker+machine` or `kubernetes` executors is used, GitLab Runner uses a specific container
-to handle Git, artifacts and cache operations. This container is created from a special image, named `helper image`.
+When you use `docker`, `docker+machine`, or `kubernetes` executors, GitLab Runner uses a specific container
+to handle Git, artifacts, and cache operations. This container is created from an image named `helper image`.
 
-The helper image is based on Alpine Linux and it's provided for amd64, arm, arm64, and s390x architectures. It contains
-a `gitlab-runner-helper` binary which is a special compilation of GitLab Runner binary, that contains only a subset
+The helper image is based on Alpine Linux and is available for amd64, arm, arm64, and s390x architectures. It contains
+a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
 of available commands, as well as Git, Git LFS, SSL certificates store, and basic configuration of Alpine.
 
 When GitLab Runner is installed from the DEB/RPM packages, images for the supported architectures are installed on the host.
-When the runner prepares the environment for the job execution, if the image in specified version (based on the runner's Git
-revision) is not found on Docker Engine, it is automatically loaded. It works like that for both
-`docker` and `docker+machine` executors.
+When the runner prepares to execute the job, if the image in the specified version (based on the runner's Git
+revision) is not found on Docker Engine, it is automatically loaded. Both the
+`docker` and `docker+machine` executors work this way.
 
-Things work a little different for the `kubernetes` executor or when GitLab Runner is installed manually. For manual
-installations, the `gitlab-runner-helper` binary is not included and for the `kubernetes` executor, the API of Kubernetes
-doesn't allow loading the `gitlab-runner-helper` image from a local archive. In both cases, GitLab Runner will download
-the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper` by using the GitLab Runner
-revision and architecture for defining which tag should be downloaded.
+The `kubernetes` executor and manual installations of GitLab Runner work differently.
 
-### Migrating helper image to `registry.gitlab.com`
+- For manual installations, the `gitlab-runner-helper` binary is not included.
+- For the `kubernetes` executor, the Kubernetes API doesn't allow the `gitlab-runner-helper` image to be loaded from a local archive.
+
+In both cases, GitLab Runner downloads the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper`.
+The GitLab Runner revision and architecture define which tag to download.
+
+### Migrate helper image to `registry.gitlab.com`
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27196) in GitLab Runner 13.7.
 
 The helper image is currently hosted in [Docker
 Hub](https://hub.docker.com/r/gitlab/gitlab-runner-helper). With the new [Docker
-Hub limits](https://docs.docker.com/docker-hub/download-rate-limit/) we are
+Hub limits](https://docs.docker.com/docker-hub/download-rate-limit/), we are
 migrating the helper image to
 [`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754).
 
 By default, the helper image is pulled from Docker Hub. If the
 `FF_GITLAB_REGISTRY_HELPER_IMAGE` [feature flag](feature-flags.md) is enabled
-the runner will pull the image from
+the runner pulls the image from
 [`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754)
 where the limits don't apply. You can enable the feature flag for a [specific
 pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration) or in
-the [runner](feature-flags.md#enable-feature-flag-for-runner) which will enable
+the [runner](feature-flags.md#enable-feature-flag-for-runner), which enables
 the behavior for every job that runner executes.
 
-### Overriding the helper image
+### Override the helper image
 
 In some cases, you may need to override the helper image. There are many reasons for doing this:
 
-1. **To speed up jobs execution**: In environments with slower internet connection, downloading over and over again the
-   same image from Docker Hub may generate a significant increase of a job's timings. Downloading the helper image from
-   a local registry (where the exact copy of `gitlab/gitlab-runner-helper:XYZ` is stored) may speed things up.
+1. **To speed up jobs execution**: In environments with slower internet connection, downloading the
+   same image multiple times from Docker Hub can increase the time it takes to execute a job. Downloading the helper image from
+   a local registry, where the exact copy of `gitlab/gitlab-runner-helper:XYZ` is stored, can speed things up.
 
-1. **Security concerns**: Many people don't like to download external dependencies that were not checked before. There
+1. **Security concerns**: You may not want to download external dependencies that were not checked before. There
    might be a business rule to use only dependencies that were reviewed and stored in local repositories.
 
-1. **Build environments without internet access**: In some cases, jobs are being executed in an environment which has
-   a dedicated, closed network (this doesn't apply to the `kubernetes` executor where the image still needs to be downloaded
-   from an external registry that is available at least to the Kubernetes cluster).
+1. **Build environments without internet access**: In some cases, jobs are executed in an environment that has
+   a dedicated, closed network. This doesn't apply to the `kubernetes` executor, where the image still needs to be downloaded
+   from an external registry that is available to the Kubernetes cluster.
 
-1. **Additional software**: Some users may want to install some additional software to the helper image, like
-   `openssh` to support submodules accessible via `git+ssh` instead of `git+http`.
+1. **Additional software**: You may want to install some additional software to the helper image, like
+   `openssh` to support submodules accessible with `git+ssh` instead of `git+http`.
 
-In any of the cases described above, it's possible to configure a custom image using the `helper_image` configuration field,
-that is available for the `docker`, `docker+machine` and `kubernetes` executors:
+In these cases, you can configure a custom image by using the `helper_image` configuration field,
+which is available for the `docker`, `docker+machine`, and `kubernetes` executors:
 
 ```toml
 [[runners]]
@@ -887,14 +890,14 @@ that is available for the `docker`, `docker+machine` and `kubernetes` executors:
     helper_image = "my.registry.local/gitlab/gitlab-runner-helper:tag"
 ```
 
-The version of the helper image should be considered as strictly coupled with the version of GitLab Runner.
-As it was described above, one of the main reasons of providing such images is that GitLab Runner is using the
-`gitlab-runner-helper` binary, and this binary is compiled from part of GitLab Runner sources which is using an internal
+The version of the helper image should be considered to be strictly coupled with the version of GitLab Runner.
+One of the main reasons for providing these images is that GitLab Runner is using the
+`gitlab-runner-helper` binary. This binary is compiled from part of the GitLab Runner source. This binary uses an internal
 API that is expected to be the same in both binaries.
 
 By default, GitLab Runner references a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
-on the GitLab Runner architecture and Git revision. Starting with **GitLab Runner 11.3** it's possible to define the version
-of used image automatically, by using one of the
+on the GitLab Runner architecture and Git revision. In GitLab Runner 11.3 and later, you can define the
+image version by using one of the
 [version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/11-3-stable/common/version.go#L48-50):
 
 ```toml
@@ -906,10 +909,10 @@ of used image automatically, by using one of the
     helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-${CI_RUNNER_REVISION}"
 ```
 
-With that configuration, GitLab Runner will instruct the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
-which is based on its compilation data. After updating GitLab Runner to a new version, this will ensure that GitLab
-Runner will try to download the proper image. This of course means that the image should be uploaded to the registry
-before upgrading GitLab Runner, otherwise the jobs will start failing with a "No such image" error.
+With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
+which is based on its compilation data. After updating GitLab Runner to a new version, GitLab
+Runner tries to download the proper image. The image should be uploaded to the registry
+before upgrading GitLab Runner, otherwise the jobs start failing with a "No such image" error.
 
 In GitLab Runner 13.2 and later, the helper image is tagged by
 `$CI_RUNNER_VERSION` in addition to `$CI_RUNNER_REVISION`. Both tags are
@@ -924,12 +927,12 @@ valid and point to the same image.
     helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
 ```
 
-#### When using Powershell Core
+#### When using PowerShell Core
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27252) in GitLab 13.9.
 
-An additional version of the helper image for Linux
-containing Powershell Core is published under the `gitlab/gitlab-runner-helper:XYZ-pwsh` tag.
+An additional version of the helper image for Linux,
+which contains PowerShell Core, is published with the `gitlab/gitlab-runner-helper:XYZ-pwsh` tag.
 
 ## The `[runners.custom_build_dir]` section
 
@@ -937,23 +940,22 @@ containing Powershell Core is published under the `gitlab/gitlab-runner-helper:X
 
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories) parameters.
 
-Please notice, that the feature - if not configured explicitly - will be
-enabled by default for `kubernetes`, `docker`, `docker-ssh`, `docker+machine`
-and `docker-ssh+machine` executors. It will be disabled by default for all other
-executors.
+This feature, if not configured explicitly, is
+enabled by default for `kubernetes`, `docker`, `docker-ssh`, `docker+machine`,
+and `docker-ssh+machine` executors. For all other executors, it is disabled by default.
 
-This feature requires that `GIT_CLONE_PATH` is within a path defined
-within `runners.builds_dir`. For the ease of using `builds_dir` the
-`$CI_BUILDS_DIR` variable can be used.
+This feature requires that `GIT_CLONE_PATH` is in a path defined
+in `runners.builds_dir`. To use the `builds_dir`, use the
+`$CI_BUILDS_DIR` variable.
 
-The feature is by default enabled only for `docker` and `kubernetes` executors
-as they provide a good way to separate resources. This feature can be
-explicitly enabled for any executor, but special care should be taken when using
+By default, this feature is enabled only for `docker` and `kubernetes` executors,
+because they provide a good way to separate resources. This feature can be
+explicitly enabled for any executor, but use caution when you use it
 with executors that share `builds_dir` and have `concurrent > 1`.
 
 | Parameter | Type    | Description |
 |-----------|---------|-------------|
-| `enabled` | boolean | Allow user to define a custom build directory for a job |
+| `enabled` | boolean | Allow user to define a custom build directory for a job. |
 
 Example:
 
@@ -967,23 +969,24 @@ Example:
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
 > - Requires [GitLab v12.6](https://about.gitlab.com/releases/2019/12/22/gitlab-12-6-released/) or later.
 
-Use GitLab Runner referees to pass extra job monitoring data to GitLab. Referees are special workers within the Runner Manager that query and collect additional data related to a job and upload their results to GitLab as job artifacts.
+Use GitLab Runner referees to pass extra job monitoring data to GitLab. Referees are workers in the Runner Manager that query and collect additional data related to a job. The results
+are uploaded to GitLab as job artifacts.
 
-### Using the Metrics Runner referee
+### Use the Metrics Runner referee
 
-If the machine/container that is running the job exposes [Prometheus](https://prometheus.io) metrics that are gathered by a Prometheus server, GitLab Runner can query the Prometheus server for the entirety of the job duration. After the metrics are received, they are uploaded as a job artifact which can be used for analysis later.
+If the machine or container running the job exposes [Prometheus](https://prometheus.io) metrics, GitLab Runner can query the Prometheus server for the entirety of the job duration. After the metrics are received, they are uploaded as a job artifact that can be used for analysis later.
 
-Currently, only the [`docker-machine` executor](../executors/docker_machine.md) supports the referee.
+Only the [`docker-machine` executor](../executors/docker_machine.md) supports the referee.
 
-### Configuring the Metrics Runner Referee for GitLab Runner
+### Configure the Metrics Runner Referee for GitLab Runner
 
 Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml` file within a `[[runner]]` section and add the following fields:
 
 | Setting              | Description                                                                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `prometheus_address` | The server that collects metrics from GitLab Runner instances. It must be accessible by the Runner Manager when the job finishes.          |
+| `prometheus_address` | The server that collects metrics from GitLab Runner instances. It must be accessible by the Runner Manager when the job finishes.   |
 | `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
-| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that will be executed for each interval. |
+| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that are executed for each interval.    |
 
 Here is a complete configuration example for `node_exporter` metrics:
 
@@ -1018,13 +1021,13 @@ Metrics queries are in `canonical_name:query_string` format. The query string su
 
 | Setting      | Description                                                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `{selector}` | Replaced with a `label_name=label_value` pair that selects metrics generated by a specific Runner instance within Prometheus. |
+| `{selector}` | Replaced with a `label_name=label_value` pair that selects metrics generated in Prometheus by a specific GitLab Runner instance. |
 | `{interval}` | Replaced with the `query_interval` parameter from the `[runners.referees.metrics]` configuration for this referee.            |
 
-For example, a shared GitLab Runner environment using the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
+For example, a shared GitLab Runner environment that uses the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
 
-## Deploy to multiple servers using GitLab CI
+## Deploy to multiple servers using GitLab CI/CD
 
-If you'd like to deploy to multiple servers using GitLab CI, you can create a
-single script that deploys to multiple servers or you can create many scripts.
+To deploy to multiple servers by using GitLab CI/CD, create a
+single script that deploys to multiple servers, or create many scripts.
 It depends on what you'd like to do.
