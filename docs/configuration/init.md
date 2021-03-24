@@ -21,7 +21,44 @@ automatically created:
 - **systemd:** `/etc/systemd/system/gitlab-runner.service`
 - **upstart:** `/etc/init/gitlab-runner`
 
-## Overriding the default service files
+## Setting custom environment variables
+
+You may want to run GitLab Runner with custom environment variables. For
+example, suppose you want `GOOGLE_APPLICATION_CREDENTIALS` to be defined
+in the runner's environment. Note that this is different from the
+[`environment` configuration setting](advanced-configuration.md#the-runners-section),
+which defines the variables that are automatically added to all jobs
+executed by a runner.
+
+### Customizing systemd
+
+For runners that use systemd, create `/etc/systemd/system/gitlab-runner.service.d/env.conf`
+using one `Environment=key=value` line for each variable to export. For example:
+
+```toml
+[Service]
+Environment=GOOGLE_APPLICATION_CREDENTIALS=/etc/gitlab-runner/gce-credentials.json
+```
+
+Then reload the configuration:
+
+```shell
+systemctl daemon-reload
+systemctl restart gitlab-runner.service
+```
+
+### Customizing upstart
+
+For runners that use upstart, create `/etc/init/gitlab-runner.override` and export the
+desired variables. For example:
+
+```shell
+export GOOGLE_APPLICATION_CREDENTIALS="/etc/gitlab-runner/gce-credentials.json"
+```
+
+Restart the runner for this to take effect.
+
+## Overriding default stopping behavior
 
 In some cases, you might want to override the default behavior of the service.
 
@@ -53,7 +90,7 @@ kills the process by using `SIGKILL`.
 
 ### Overriding upstart
 
-For runners that use upstart create `/etc/init/gitlab-runner.override` with the
+For runners that use upstart, create `/etc/init/gitlab-runner.override` with the
 following content:
 
 ```shell
