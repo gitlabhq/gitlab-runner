@@ -31,20 +31,22 @@ type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 
 func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
-		"testKubernetesSuccessRun":            testKubernetesSuccessRunFeatureFlag,
-		"testKubernetesMultistepRun":          testKubernetesMultistepRunFeatureFlag,
-		"testKubernetesTimeoutRun":            testKubernetesTimeoutRunFeatureFlag,
-		"testKubernetesBuildFail":             testKubernetesBuildFailFeatureFlag,
-		"testKubernetesBuildCancel":           testKubernetesBuildCancelFeatureFlag,
-		"testKubernetesBuildLogLimitExceeded": testKubernetesBuildLogLimitExceededFeatureFlag,
-		"testKubernetesBuildMasking":          testKubernetesBuildMaskingFeatureFlag,
-		"testKubernetesCustomClonePath":       testKubernetesCustomClonePathFeatureFlag,
-		"testKubernetesNoRootImage":           testKubernetesNoRootImageFeatureFlag,
-		"testKubernetesMissingImage":          testKubernetesMissingImageFeatureFlag,
-		"testKubernetesMissingTag":            testKubernetesMissingTagFeatureFlag,
-		"testOverwriteNamespaceNotMatch":      testOverwriteNamespaceNotMatchFeatureFlag,
-		"testOverwriteServiceAccountNotMatch": testOverwriteServiceAccountNotMatchFeatureFlag,
-		"testInteractiveTerminal":             testInteractiveTerminalFeatureFlag,
+		"testKubernetesSuccessRun":                      testKubernetesSuccessRunFeatureFlag,
+		"testKubernetesMultistepRun":                    testKubernetesMultistepRunFeatureFlag,
+		"testKubernetesTimeoutRun":                      testKubernetesTimeoutRunFeatureFlag,
+		"testKubernetesBuildFail":                       testKubernetesBuildFailFeatureFlag,
+		"testKubernetesBuildCancel":                     testKubernetesBuildCancelFeatureFlag,
+		"testKubernetesBuildLogLimitExceeded":           testKubernetesBuildLogLimitExceededFeatureFlag,
+		"testKubernetesBuildMasking":                    testKubernetesBuildMaskingFeatureFlag,
+		"testKubernetesCustomClonePath":                 testKubernetesCustomClonePathFeatureFlag,
+		"testKubernetesNoRootImage":                     testKubernetesNoRootImageFeatureFlag,
+		"testKubernetesMissingImage":                    testKubernetesMissingImageFeatureFlag,
+		"testKubernetesMissingTag":                      testKubernetesMissingTagFeatureFlag,
+		"testOverwriteNamespaceNotMatch":                testOverwriteNamespaceNotMatchFeatureFlag,
+		"testOverwriteServiceAccountNotMatch":           testOverwriteServiceAccountNotMatchFeatureFlag,
+		"testInteractiveTerminal":                       testInteractiveTerminalFeatureFlag,
+		"testKubernetesReplaceEnvFeatureFlag":           testKubernetesReplaceEnvFeatureFlag,
+		"testKubernetesReplaceMissingEnvVarFeatureFlag": testKubernetesReplaceMissingEnvVarFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -436,6 +438,32 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	t.Log(out)
 
 	assert.Contains(t, out, "Terminal is connected, will time out in 2s...")
+}
+
+func testKubernetesReplaceEnvFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = "$IMAGE:$VERSION"
+	build.JobResponse.Variables = append(
+		build.JobResponse.Variables,
+		common.JobVariable{Key: "IMAGE", Value: "alpine"},
+		common.JobVariable{Key: "VERSION", Value: "latest"},
+	)
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
+	assert.Contains(t, out, "alpine:latest")
+}
+
+func testKubernetesReplaceMissingEnvVarFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = "alpine:$NOT_EXISTING_VARIABLE"
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "image pull failed: Failed to apply default image tag \"alpine:\"")
 }
 
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583

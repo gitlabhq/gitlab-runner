@@ -169,7 +169,9 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
-	s.Println("Using Kubernetes executor with image", s.options.Image.Name, "...")
+	imageName := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
+
+	s.Println("Using Kubernetes executor with image", imageName, "...")
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		s.Println("Using attach strategy to execute scripts...")
 	}
