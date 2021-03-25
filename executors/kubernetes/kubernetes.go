@@ -395,20 +395,41 @@ func (s *executor) buildCommandForStage(stage common.BuildStage) string {
 
 func (s *executor) processLogs(ctx context.Context) {
 	processor := s.newLogProcessor()
-	logsCh := processor.Process(ctx)
+	logsCh, errCh := processor.Process(ctx)
 
-	for line := range logsCh {
-		var status shells.TrapCommandExitStatus
-		if status.TryUnmarshal(line) {
-			s.remoteProcessTerminated <- status
-			continue
-		}
+	for {
+		select {
+		case line, ok := <-logsCh:
+			if !ok {
+				return
+			}
+			var status shells.TrapCommandExitStatus
+			if status.TryUnmarshal(line) {
+				s.remoteProcessTerminated <- status
+				continue
+			}
 
-		_, err := s.Trace.Write(append([]byte(line), '\n'))
-		if err != nil {
-			s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+			_, err := s.Trace.Write(append([]byte(line), '\n'))
+			if err != nil {
+				s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+			}
+		case err, ok := <-errCh:
+			if !ok {
+				continue
+			}
+			s.Warningln(fmt.Sprintf("Error returned from log processor: %v", err))
+
+			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: getExitCode(err)}
 		}
 	}
+}
+
+func getExitCode(err error) *int {
+	var exitErr exec.CodeExitError
+	if errors.As(err, &exitErr) {
+		return &exitErr.Code
+	}
+	return nil
 }
 
 func (s *executor) setupScriptsConfigMap() error {

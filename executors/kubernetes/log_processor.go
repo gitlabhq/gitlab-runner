@@ -62,7 +62,7 @@ func (s *kubernetesLogStreamer) String() string {
 type logProcessor interface {
 	// Process listens for log lines
 	// consumers must read from the channel until it's closed
-	Process(ctx context.Context) <-chan string
+	Process(ctx context.Context) (<-chan string, <-chan error)
 }
 
 type backoffCalculator interface {
@@ -108,23 +108,33 @@ func newKubernetesLogProcessor(
 	}
 }
 
-func (l *kubernetesLogProcessor) Process(ctx context.Context) <-chan string {
+func (l *kubernetesLogProcessor) Process(ctx context.Context) (<-chan string, <-chan error) {
 	outCh := make(chan string)
+	errCh := make(chan error)
 	go func() {
 		defer close(outCh)
-		l.attach(ctx, outCh)
+		defer close(errCh)
+		l.attach(ctx, outCh, errCh)
 	}()
 
-	return outCh
+	return outCh, errCh
 }
 
-func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string) {
-	var attempt float64 = -1
-	var backoffDuration time.Duration
+func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, errCh chan error) {
+	var (
+		attempt         float64 = -1
+		maxAttempts     float64 = 3
+		backoffDuration time.Duration
+		err             error
+	)
 
 	for {
 		attempt++
-		if attempt > 0 {
+		switch {
+		case attempt >= maxAttempts:
+			l.logsOffset = 0
+			errCh <- fmt.Errorf("giving up reattaching to log for %s: %w", l.logStreamer, err)
+		case attempt > 0:
 			backoffDuration = l.backoff.ForAttempt(attempt)
 			l.logger.Debugln(fmt.Sprintf(
 				"Backing off reattaching log for %s for %s (attempt %f)",
@@ -139,10 +149,12 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string) 
 			l.logger.Debugln(fmt.Sprintf("Detaching from log... %v", ctx.Err()))
 			return
 		case <-time.After(backoffDuration):
-			err := l.processStream(ctx, outCh)
-			if err != nil {
+			err = l.processStream(ctx, outCh)
+			switch {
+			case err != nil && attempt+1 < maxAttempts:
 				l.logger.Warningln(fmt.Sprintf("Error %v. Retrying...", err))
-			} else {
+			case err == nil:
+				attempt = -1
 				l.logger.Debug("processStream exited with no error")
 			}
 		}
