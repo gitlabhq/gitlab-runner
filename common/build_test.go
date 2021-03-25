@@ -850,7 +850,10 @@ func TestGetRemoteURL(t *testing.T) {
 }
 
 func TestIsFeatureFlagOn(t *testing.T) {
+	const testFF = "FF_TEST_FEATURE"
+
 	tests := map[string]struct {
+		featureFlagCfg map[string]bool
 		value          string
 		expectedStatus bool
 	}{
@@ -878,25 +881,34 @@ func TestIsFeatureFlagOn(t *testing.T) {
 			value:          "test",
 			expectedStatus: false,
 		},
+		"feature flag set inside config.toml take precedence": {
+			featureFlagCfg: map[string]bool{
+				testFF: true,
+			},
+			value:          "false",
+			expectedStatus: true,
+		},
 	}
 
 	for name, testCase := range tests {
 		t.Run(name, func(t *testing.T) {
 			build := new(Build)
 			build.Runner = &RunnerConfig{
-				RunnerSettings: RunnerSettings{},
+				RunnerSettings: RunnerSettings{
+					FeatureFlags: testCase.featureFlagCfg,
+				},
 			}
 			build.Variables = JobVariables{
-				{Key: "FF_TEST_FEATURE", Value: testCase.value},
+				{Key: testFF, Value: testCase.value},
 			}
 
-			status := build.IsFeatureFlagOn("FF_TEST_FEATURE")
+			status := build.IsFeatureFlagOn(testFF)
 			assert.Equal(t, testCase.expectedStatus, status)
 		})
 	}
 }
 
-func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
+func TestIsFeatureFlagOn_SetWithRunnerVariables(t *testing.T) {
 	tests := map[string]struct {
 		variable      string
 		expectedValue bool
@@ -928,6 +940,61 @@ func TestAllowToOverwriteFeatureFlagWithRunnerVariables(t *testing.T) {
 			assert.Equal(t, test.expectedValue, result)
 		})
 	}
+}
+
+func TestIsFeatureFlagOn_Precedence(t *testing.T) {
+	const testFF = "FF_TEST_FEATURE"
+
+	t.Run("config takes precedence over job variable", func(t *testing.T) {
+		b := &Build{
+			Runner: &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					FeatureFlags: map[string]bool{
+						testFF: true,
+					},
+				},
+			},
+			JobResponse: JobResponse{
+				Variables: JobVariables{
+					{Key: testFF, Value: "false"},
+				},
+			},
+		}
+
+		assert.True(t, b.IsFeatureFlagOn(testFF))
+	})
+
+	t.Run("config takes precedence over configured environments", func(t *testing.T) {
+		b := &Build{
+			Runner: &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					FeatureFlags: map[string]bool{
+						testFF: true,
+					},
+					Environment: []string{testFF + "=false"},
+				},
+			},
+		}
+
+		assert.True(t, b.IsFeatureFlagOn(testFF))
+	})
+
+	t.Run("variable defined at job take precedence over configured environments", func(t *testing.T) {
+		b := &Build{
+			Runner: &RunnerConfig{
+				RunnerSettings: RunnerSettings{
+					Environment: []string{testFF + "=false"},
+				},
+			},
+			JobResponse: JobResponse{
+				Variables: JobVariables{
+					{Key: testFF, Value: "true"},
+				},
+			},
+		}
+
+		assert.True(t, b.IsFeatureFlagOn(testFF))
+	})
 }
 
 func TestStartBuild(t *testing.T) {

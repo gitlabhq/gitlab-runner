@@ -1030,7 +1030,7 @@ func (b *Build) GetDefaultFeatureFlagsVariables() JobVariables {
 	for _, featureFlag := range featureflags.GetAll() {
 		variables = append(variables, JobVariable{
 			Key:      featureFlag.Name,
-			Value:    featureFlag.DefaultValue,
+			Value:    strconv.FormatBool(featureFlag.DefaultValue),
 			Public:   true,
 			Internal: true,
 			File:     false,
@@ -1326,11 +1326,14 @@ func NewBuild(
 }
 
 func (b *Build) IsFeatureFlagOn(name string) bool {
-	value := b.GetAllVariables().Get(name)
+	if b.Runner.IsFeatureFlagDefined(name) {
+		return b.Runner.IsFeatureFlagOn(name)
+	}
 
-	logger := b.Log().WithField("name", name)
-
-	return featureflags.IsOn(logger, value)
+	return featureflags.IsOn(
+		b.Log().WithField("name", name),
+		b.GetAllVariables().Get(name),
+	)
 }
 
 // getFeatureFlagInfo returns the status of feature flags that differ
@@ -1339,10 +1342,8 @@ func (b *Build) getFeatureFlagInfo() string {
 	var statuses []string
 	for _, ff := range featureflags.GetAll() {
 		isOn := b.IsFeatureFlagOn(ff.Name)
-		logger := b.Log().WithField("name", ff.Name)
-		isOnByDefault := featureflags.IsOn(logger, ff.DefaultValue)
 
-		if isOn != isOnByDefault {
+		if isOn != ff.DefaultValue {
 			statuses = append(statuses, fmt.Sprintf("%s:%t", ff.Name, isOn))
 		}
 	}

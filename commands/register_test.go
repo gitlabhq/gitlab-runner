@@ -830,3 +830,31 @@ func TestUnregisterOnFailure(t *testing.T) {
 		})
 	}
 }
+
+func TestRegisterCommand_FeatureFlag(t *testing.T) {
+	expectedConfig := `
+  [runners.feature_flags]
+    FF_TEST_1 = true
+    FF_TEST_2 = false
+`
+
+	network := new(common.MockNetwork)
+	defer network.AssertExpectations(t)
+
+	network.On("RegisterRunner", mock.Anything, mock.Anything).
+		Return(&common.RegisterRunnerResponse{
+			Token: "test-runner-token",
+		}).
+		Once()
+
+	arguments := []string{
+		"--name", "test-runner",
+		"--feature-flags", "FF_TEST_1:true",
+		"--feature-flags", "FF_TEST_2:false",
+	}
+
+	gotConfig, _, err := testRegisterCommandRun(t, network, arguments...)
+	require.NoError(t, err)
+
+	assert.Contains(t, gotConfig, expectedConfig)
+}
