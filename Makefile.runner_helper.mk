@@ -64,17 +64,19 @@ ${BASE_BINARY_PATH}.%: $(HELPER_GO_FILES) $(GOX)
 
 # Build the Runner Helper tar files for host platform.
 .PHONY: _helper-dockerarchive-host
-_helper-dockerarchive-host: ${BASE_TAR_PATH}-$(shell uname -m)$(IMAGE_VARIANT_SUFFIX).tar.xz
+_helper-dockerarchive-host: ${BASE_TAR_PATH}-$(IMAGE_TARGET_FLAVOUR)-$(shell uname -m)$(IMAGE_VARIANT_SUFFIX).tar.xz
 	@ # NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
 	@ # See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
-	docker import ${BASE_TAR_PATH}-$(shell uname -m)$(IMAGE_VARIANT_SUFFIX).tar.xz \
+	docker import ${BASE_TAR_PATH}-$(IMAGE_TARGET_FLAVOUR)-$(shell uname -m)$(IMAGE_VARIANT_SUFFIX).tar.xz \
 		--change "ENTRYPOINT [\"/usr/bin/dumb-init\", \"/entrypoint\"]" \
-		gitlab/gitlab-runner-helper:$(shell uname -m)-$(REVISION)$(IMAGE_VARIANT_SUFFIX)
+		gitlab/gitlab-runner-helper:$(IMAGE_VARIANT_PREFIX)$(shell uname -m)-$(REVISION)$(IMAGE_VARIANT_SUFFIX)
 
 .PHONY: helper-dockerarchive-host
 helper-dockerarchive-host:
-	@$(MAKE) _helper-dockerarchive-host IMAGE_VARIANT_SUFFIX=''
-	@$(MAKE) _helper-dockerarchive-host IMAGE_VARIANT_SUFFIX='-pwsh'
+	@$(MAKE) _helper-dockerarchive-host IMAGE_TARGET_FLAVOUR='alpine' IMAGE_VARIANT_PREFIX='' IMAGE_VARIANT_SUFFIX=''
+	@$(MAKE) _helper-dockerarchive-host IMAGE_TARGET_FLAVOUR='alpine' IMAGE_VARIANT_PREFIX='' IMAGE_VARIANT_SUFFIX='-pwsh'
+	@$(MAKE) _helper-dockerarchive-host IMAGE_TARGET_FLAVOUR='ubuntu' IMAGE_VARIANT_PREFIX='ubuntu-' IMAGE_VARIANT_SUFFIX=''
+	@$(MAKE) _helper-dockerarchive-host IMAGE_TARGET_FLAVOUR='ubuntu' IMAGE_VARIANT_PREFIX='ubuntu-' IMAGE_VARIANT_SUFFIX='-pwsh'
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive
@@ -86,19 +88,19 @@ ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz $(TAR_XZ_ARGS) $<
 
-helper-dockerarchive-%-pwsh-base: export PWSH_VERSION ?= 7.1.1
-helper-dockerarchive-%-pwsh-base: export PWSH_IMAGE_DATE ?= 20210114
-helper-dockerarchive-%-pwsh-base: export IMAGE_SHELL := pwsh
-
 # See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
-${BASE_TAR_PATH}-alpine-%-pwsh.tar: helper-dockerarchive-$*-pwsh-base
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_ALPINE_IMAGE_VERSION ?= 3.12
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_TARGET_FLAVOR_IMAGE_VERSION = ${PWSH_ALPINE_IMAGE_VERSION}
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: helper-dockerarchive-$*-pwsh-base
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_UBUNTU_IMAGE_VERSION ?= 20.04
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_TARGET_FLAVOR_IMAGE_VERSION ?= ${PWSH_UBUNTU_IMAGE_VERSION}
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%

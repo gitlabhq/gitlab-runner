@@ -24,9 +24,9 @@ fi
 DOCKERFILE="Dockerfile.${TARGET_FLAVOR}"
 
 if [[ $IMAGE_SHELL == 'pwsh' ]]; then
-    if [ -z "${TARGET_FLAVOR}" ] || [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_DATE}" ]; then
+    if [ -z "${TARGET_FLAVOR}" ] || [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" ] || [ -z "${PWSH_IMAGE_DATE}" ]; then
         echo -e "${RED}Missing required arguments. When IMAGE_SHELL is 'pwsh', PWSH_VERSION, " \
-        "TARGET_FLAVOR, PWSH_TARGET_FLAVOR_IMAGE_VERSION, and PWSH_TARGET_FLAVOR_IMAGE_DATE must be defined${RST}"
+        "TARGET_FLAVOR, PWSH_TARGET_FLAVOR_IMAGE_VERSION, and PWSH_IMAGE_DATE must be defined${RST}"
          exit 1
     fi
 

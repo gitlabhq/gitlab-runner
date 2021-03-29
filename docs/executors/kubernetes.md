@@ -151,6 +151,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
 | `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
 | `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
+| `helper_image_flavor` | Sets the helper image flavor (`alpine` or `ubuntu`). Defaults to `alpine`. |
 | `host_aliases` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases](#adding-extra-host-aliases). |
 | `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
@@ -892,3 +893,10 @@ The following errors are commonly encountered when using the Kubernetes executor
 If the cluster cannot schedule the build pod before the timeout defined by `poll_timeout`, the build pod returns an error. The [Kubernetes Scheduler](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-lifetime) should be able to delete it.
 
 To fix this issue, increase the `poll_timeout` value in your `config.toml` file.
+
+### `fatal: unable to access 'https://gitlab-ci-token:token@example.com/repo/proj.git/': Could not resolve host: example.com`
+
+If using the `alpine` flavor of the [helper image](../configuration/advanced-configuration.md#helper-image),
+there can be [DNS issues](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129) related to Alpine's `musl`'s DNS resolver.
+
+Using the `helper_image_flavor = "ubuntu"` option should resolve this.

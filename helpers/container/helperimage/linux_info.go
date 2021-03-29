@@ -24,13 +24,29 @@ type linuxInfo struct{}
 func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 	arch := l.architecture(cfg.Architecture)
 
+	if cfg.Flavor == "" {
+		cfg.Flavor = DefaultFlavor
+	}
+
+	// alpine is a special case: we don't add the flavor to the tag name
+	// for backwards compatibility purposes. It existed before flavors were
+	// introduced.
+	if cfg.Flavor == "alpine" {
+		cfg.Flavor = ""
+	}
+
+	prefix := ""
+	if cfg.Flavor != "" {
+		prefix = cfg.Flavor + "-"
+	}
+
 	shell := cfg.Shell
 	if shell == "" {
 		shell = "bash"
 	}
 
 	cmd := bashCmd
-	tag := fmt.Sprintf("%s-%s", arch, revision)
+	tag := fmt.Sprintf("%s%s-%s", prefix, arch, revision)
 	if shell == shells.SNPwsh {
 		cmd = getPowerShellCmd(shell)
 		tag = fmt.Sprintf("%s-%s", tag, shell)

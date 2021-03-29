@@ -25,6 +25,9 @@ const (
 	// GitLabRegistryName is the name of the helper image hosted in registry.gitlab.com.
 	GitLabRegistryName = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"
 
+	// DefaultFlavor is the default flavor of image we use for the helper.
+	DefaultFlavor = "alpine"
+
 	headRevision        = "HEAD"
 	latestImageRevision = "latest"
 )
@@ -49,6 +52,7 @@ type Config struct {
 	OperatingSystem string
 	Shell           string
 	GitLabRegistry  bool
+	Flavor          string
 }
 
 type creator interface {
