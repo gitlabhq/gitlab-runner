@@ -416,11 +416,9 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
-	if recursive {
-		w.Noticef("Updating/initializing submodules recursively...")
-	} else {
-		w.Noticef("Updating/initializing submodules...")
-	}
+	depth := build.GitInfo.Depth
+
+	b.writeSubmoduleUpdateNoticeMsg(w, recursive, depth)
 
 	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
 	args := []string{"submodule", "sync"}
@@ -436,6 +434,9 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 		updateArgs = append(updateArgs, "--recursive")
 		foreachArgs = append(foreachArgs, "--recursive")
 	}
+	if depth > 0 {
+		updateArgs = append(updateArgs, "--depth", strconv.Itoa(depth))
+	}
 
 	// Clean changed files in submodules
 	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
@@ -446,6 +447,19 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 		w.IfCmd("git", "lfs", "version")
 		w.Command("git", append(foreachArgs, "git lfs pull")...)
 		w.EndIf()
+	}
+}
+
+func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive bool, depth int) {
+	switch {
+	case recursive && depth > 0:
+		w.Noticef("Updating/initializing submodules recursively with git depth set to %d...", depth)
+	case recursive && depth == 0:
+		w.Noticef("Updating/initializing submodules recursively...")
+	case depth > 0:
+		w.Noticef("Updating/initializing submodules with git depth set to %d...", depth)
+	default:
+		w.Noticef("Updating/initializing submodules...")
 	}
 }
 

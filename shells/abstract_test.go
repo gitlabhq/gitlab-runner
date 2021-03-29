@@ -669,38 +669,86 @@ func TestGitFetchFlags(t *testing.T) {
 	}
 }
 
-func TestAbstractShell_writeSubmoduleUpdateCmdRecursive(t *testing.T) {
-	shell := AbstractShell{}
-	mockWriter := new(MockShellWriter)
-	defer mockWriter.AssertExpectations(t)
-
-	mockWriter.On("Noticef", "Updating/initializing submodules recursively...").Once()
-	mockWriter.On("Command", "git", "submodule", "sync", "--recursive").Once()
-	mockWriter.On("Command", "git", "submodule", "update", "--init", "--recursive").Once()
-	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git clean -ffxd").Once()
-	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git reset --hard").Once()
-	mockWriter.On("IfCmd", "git", "lfs", "version").Once()
-	mockWriter.On("Command", "git", "submodule", "foreach", "--recursive", "git lfs pull").Once()
-	mockWriter.On("EndIf").Once()
-
-	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, true)
-}
-
 func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
-	shell := AbstractShell{}
-	mockWriter := new(MockShellWriter)
-	defer mockWriter.AssertExpectations(t)
+	tests := map[string]struct {
+		Recursive               bool
+		Depth                   int
+		ExpectedNoticeArgs      []interface{}
+		ExpectedGitUpdateFlags  []interface{}
+		ExpectedGitForEachFlags []interface{}
+	}{
+		"no recursion, no depth limit": {
+			Recursive:          false,
+			Depth:              0,
+			ExpectedNoticeArgs: []interface{}{"Updating/initializing submodules..."},
+		},
+		"no recursion, depth limit 10": {
+			Recursive:               false,
+			Depth:                   10,
+			ExpectedNoticeArgs:      []interface{}{"Updating/initializing submodules with git depth set to %d...", 10},
+			ExpectedGitUpdateFlags:  []interface{}{"--depth", "10"},
+			ExpectedGitForEachFlags: []interface{}{},
+		},
+		"with recursion, no depth limit": {
+			Recursive:               true,
+			Depth:                   0,
+			ExpectedNoticeArgs:      []interface{}{"Updating/initializing submodules recursively..."},
+			ExpectedGitUpdateFlags:  []interface{}{"--recursive"},
+			ExpectedGitForEachFlags: []interface{}{"--recursive"},
+		},
+		"with recursion, depth limit 1": {
+			Recursive: true,
+			Depth:     1,
+			ExpectedNoticeArgs: []interface{}{
+				"Updating/initializing submodules recursively with git depth set to %d...",
+				1,
+			},
+			ExpectedGitUpdateFlags:  []interface{}{"--recursive", "--depth", "1"},
+			ExpectedGitForEachFlags: []interface{}{"--recursive"},
+		},
+	}
 
-	mockWriter.On("Noticef", "Updating/initializing submodules...").Once()
-	mockWriter.On("Command", "git", "submodule", "sync").Once()
-	mockWriter.On("Command", "git", "submodule", "update", "--init").Once()
-	mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
-	mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").Once()
-	mockWriter.On("IfCmd", "git", "lfs", "version").Once()
-	mockWriter.On("Command", "git", "submodule", "foreach", "git lfs pull").Once()
-	mockWriter.On("EndIf").Once()
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shell := AbstractShell{}
+			mockWriter := new(MockShellWriter)
+			defer mockWriter.AssertExpectations(t)
+			expectedGitForEachArgsFn := func() []interface{} {
+				return append(
+					[]interface{}{"git", "submodule", "foreach"},
+					tc.ExpectedGitForEachFlags...,
+				)
+			}
+			mockWriter.On("Noticef", tc.ExpectedNoticeArgs...).Once()
+			mockWriter.
+				On(
+					"Command",
+					append([]interface{}{"git", "submodule", "sync"}, tc.ExpectedGitForEachFlags...)...,
+				).Once()
+			mockWriter.
+				On(
+					"Command",
+					append([]interface{}{"git", "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...,
+				).Once()
+			mockWriter.
+				On("Command", append(expectedGitForEachArgsFn(), "git clean -ffxd")...).
+				Once()
+			mockWriter.On("Command", append(expectedGitForEachArgsFn(), "git reset --hard")...).Once()
+			mockWriter.On("IfCmd", "git", "lfs", "version").Once()
+			mockWriter.On("Command", append(expectedGitForEachArgsFn(), "git lfs pull")...).Once()
+			mockWriter.On("EndIf").Once()
 
-	shell.writeSubmoduleUpdateCmd(mockWriter, &common.Build{}, false)
+			shell.writeSubmoduleUpdateCmd(
+				mockWriter,
+				&common.Build{
+					JobResponse: common.JobResponse{
+						GitInfo: common.GitInfo{Depth: tc.Depth},
+					},
+				},
+				tc.Recursive,
+			)
+		})
+	}
 }
 
 func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
