@@ -89,6 +89,10 @@ type FeaturesInfo struct {
 	ReturnExitCode          bool `json:"return_exit_code"`
 }
 
+type ConfigInfo struct {
+	GpuEnabled bool `json:"gpu_enabled"`
+}
+
 type RegisterRunnerParameters struct {
 	Description    string `json:"description,omitempty"`
 	Tags           string `json:"tag_list,omitempty"`
@@ -126,6 +130,7 @@ type VersionInfo struct {
 	Executor     string       `json:"executor,omitempty"`
 	Shell        string       `json:"shell,omitempty"`
 	Features     FeaturesInfo `json:"features"`
+	Config       ConfigInfo   `json:"config,omitempty"`
 }
 
 type JobRequest struct {

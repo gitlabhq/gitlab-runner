@@ -9,6 +9,7 @@ import (
 type DefaultExecutorProvider struct {
 	Creator          func() common.Executor
 	FeaturesUpdater  func(features *common.FeaturesInfo)
+	ConfigUpdater    func(input *common.RunnerConfig, output *common.ConfigInfo)
 	DefaultShellName string
 }
 
@@ -36,6 +37,14 @@ func (e DefaultExecutorProvider) GetFeatures(features *common.FeaturesInfo) erro
 
 	e.FeaturesUpdater(features)
 	return nil
+}
+
+func (e DefaultExecutorProvider) GetConfigInfo(input *common.RunnerConfig, output *common.ConfigInfo) {
+	if e.ConfigUpdater == nil {
+		return
+	}
+
+	e.ConfigUpdater(input, output)
 }
 
 func (e DefaultExecutorProvider) GetDefaultShell() string {

@@ -157,6 +157,8 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 		if info.Shell == "" {
 			info.Shell = executorProvider.GetDefaultShell()
 		}
+
+		executorProvider.GetConfigInfo(&config, &info.Config)
 	}
 
 	if shell := common.GetShell(info.Shell); shell != nil {
