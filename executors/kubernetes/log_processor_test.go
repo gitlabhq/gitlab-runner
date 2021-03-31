@@ -266,7 +266,7 @@ func TestListenReadLines(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch := processor.Process(ctx)
+	ch, _ := processor.Process(ctx)
 	receivedLogs := make([]string, 0)
 	for log := range ch {
 		wg.Done()
@@ -328,13 +328,12 @@ func TestListenCancelContext(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch := processor.Process(ctx)
-	for range ch {
-	}
+	ch, errCh := processor.Process(ctx)
+	assert.NoError(t, drainProcessLogsChannels(ch, errCh), "No error should be returned!")
 }
 
 func TestAttachReconnectLogStream(t *testing.T) {
-	const expectedConnectCount = 3
+	const expectedConnectCount = 5
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockLogStreamer := newMockLogStreamer()
@@ -362,13 +361,12 @@ func TestAttachReconnectLogStream(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch := processor.Process(ctx)
-	for range ch {
-	}
+	ch, errCh := processor.Process(ctx)
+	_ = drainProcessLogsChannels(ch, errCh)
 }
 
 func TestAttachReconnectReadLogs(t *testing.T) {
-	const expectedConnectCount = 3
+	const expectedConnectCount = 5
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockLogStreamer := newMockLogStreamer()
@@ -398,8 +396,26 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch := processor.Process(ctx)
-	for range ch {
+	ch, errCh := processor.Process(ctx)
+	assert.NoError(t, drainProcessLogsChannels(ch, errCh), "No error should be returned!")
+}
+
+func drainProcessLogsChannels(ch <-chan string, errCh <-chan error) error {
+	var firstErr error
+	for {
+		select {
+		case _, ok := <-ch:
+			if !ok {
+				return firstErr
+			}
+		case err, ok := <-errCh:
+			if !ok {
+				continue
+			}
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
 	}
 }
 
@@ -451,7 +467,7 @@ func TestAttachCorrectOffset(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch := processor.Process(ctx)
+	ch, _ := processor.Process(ctx)
 	for range ch {
 		wg.Done()
 	}
