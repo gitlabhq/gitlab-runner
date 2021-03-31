@@ -8,6 +8,6 @@ import (
 
 func configUpdater(input *common.RunnerConfig, output *common.ConfigInfo) {
 	if input.RunnerSettings.Docker != nil {
-		output.GpuEnabled = strings.Trim(input.RunnerSettings.Docker.Gpus, " ") != ""
+		output.Gpus = strings.Trim(input.RunnerSettings.Docker.Gpus, " ")
 	}
 }

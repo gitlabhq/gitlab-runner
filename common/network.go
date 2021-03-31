@@ -90,7 +90,7 @@ type FeaturesInfo struct {
 }
 
 type ConfigInfo struct {
-	GpuEnabled bool `json:"gpu_enabled"`
+	Gpus string `json:"gpus"`
 }
 
 type RegisterRunnerParameters struct {

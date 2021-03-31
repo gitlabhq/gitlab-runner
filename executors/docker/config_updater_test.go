@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,19 +10,13 @@ import (
 
 func TestDockerConfigUpdate(t *testing.T) {
 	testCases := map[string]struct {
-		gpus     string
-		expected bool
+		gpus string
 	}{
 		"gpus set to all": {
-			gpus:     "all",
-			expected: true,
+			gpus: "all",
 		},
-		"gpus blank": {
-			expected: false,
-		},
-		"gpus set to whitepsace": {
-			gpus:     " ",
-			expected: false,
+		"gpus with trailing space": {
+			gpus: " ",
 		},
 	}
 
@@ -33,7 +28,7 @@ func TestDockerConfigUpdate(t *testing.T) {
 
 			info := common.ConfigInfo{}
 			configUpdater(&config, &info)
-			assert.Equal(t, tc.expected, info.GpuEnabled)
+			assert.Equal(t, strings.Trim(tc.gpus, " "), info.Gpus)
 		})
 	}
 }
