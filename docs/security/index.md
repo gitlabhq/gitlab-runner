@@ -96,7 +96,7 @@ attack vector to "steal" runner jobs.
 
 GitLab Runner is designed to run user-controlled scripts. To reduce the
 attack surface if a job is malicious, you can consider running them in their
-own network segement. This would provide network separation from other
+own network segment. This would provide network separation from other
 infrastructure and services.
 
 All needs are unique, but for a cloud environment, this could include:
@@ -109,5 +109,5 @@ All needs are unique, but for a cloud environment, this could include:
 NOTE:
 All runners will need outbound network connectivity to
 GitLab.com or your GitLab instance.
-Most of jobs will also require outbound network connectivity to
+Most jobs will also require outbound network connectivity to
 the Internet - for dependency pulling etc.
