@@ -217,6 +217,10 @@ func init() {
 		logrus.Warningln(err)
 	}
 
+	RegisterExecutor("shell", runnerCommand)
+}
+
+func RegisterExecutor(executorName string, runnerCommandPath string) {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
 		DefaultBuildsDir:              "$PWD/builds",
@@ -225,7 +229,7 @@ func init() {
 		Shell: common.ShellScriptInfo{
 			Shell:         common.GetDefaultShell(),
 			Type:          common.LoginShell,
-			RunnerCommand: runnerCommand,
+			RunnerCommand: runnerCommandPath,
 		},
 		ShowHostname: false,
 	}
@@ -248,7 +252,7 @@ func init() {
 		}
 	}
 
-	common.RegisterExecutorProvider("shell", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider(executorName, executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,

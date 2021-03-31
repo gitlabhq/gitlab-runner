@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -24,42 +23,23 @@ import (
 var testExecutorFile string
 
 func TestMain(m *testing.M) {
+	code := 1
+	defer func() {
+		os.Exit(code)
+	}()
+
 	fmt.Println("Compiling test executor")
-
-	curDir, err := os.Getwd()
-	if err != nil {
-		panic("Error on getting the working directory")
-	}
-
-	sourcesDir := filepath.Join(curDir, "testdata", "test_executor")
-	sourcesFile := filepath.Join(sourcesDir, "main.go")
 
 	targetDir, err := ioutil.TempDir("", "test_executor")
 	if err != nil {
 		panic("Error on preparing tmp directory for test executor binary")
 	}
+
 	testExecutorFile = filepath.Join(targetDir, "main")
+	testExecutorFile = buildtest.MustBuildBinary("testdata/test_executor/main.go", testExecutorFile)
+	defer os.RemoveAll(targetDir)
 
-	if runtime.GOOS == "windows" {
-		// Adding it here, explicitly, in if, to show that this OS
-		// requires a special treatment...
-		testExecutorFile += ".exe"
-	}
-
-	cmd := exec.Command("go", "build", "-o", testExecutorFile, sourcesFile)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	fmt.Printf("Executing: %v", cmd)
-	fmt.Println()
-
-	err = cmd.Run()
-	if err != nil {
-		panic("Error on executing go build to prepare test custom executor")
-	}
-
-	code := m.Run()
-	os.Exit(code)
+	code = m.Run()
 }
 
 func newBuild(t *testing.T, jobResponse common.JobResponse, shell string) (*common.Build, func()) {
