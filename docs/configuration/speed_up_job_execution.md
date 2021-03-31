@@ -110,8 +110,10 @@ Instead of using AWS S3, you can create your own cache storage.
 1. Start [MinIO](https://min.io), a simple S3-compatible server written in Go:
 
    ```shell
-   docker run -it --restart always -p 9005:9000 \
+   docker run -d --restart always -p 9005:9000 \
            -v /.minio:/root/.minio -v /export:/export \
+           -e "MINIO_ROOT_USER=<minio_root_username>" \
+           -e "MINIO_ROOT_PASSWORD=<minio_root_password>" \
            --name minio \
            minio/minio:latest server /export
    ```
@@ -136,11 +138,8 @@ Instead of using AWS S3, you can create your own cache storage.
    bucket, then it will be different. All caches will be stored in the
    `/export` directory.
 
-1. Read the Access and Secret Key of MinIO and use it to configure the runner:
-
-   ```shell
-   sudo cat /export/.minio.sys/config/config.json | grep Key
-   ```
+1. Use the `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` values (from above) as your
+   Access and Secret Keys when configuring your runner.
 
 You can now
 [configure `config.toml`](../configuration/autoscale.md#distributed-runners-caching)
