@@ -100,6 +100,8 @@ in the [Runner configuration](advanced-configuration.md):
 
 ## Enable feature flag in runner configuration
 
+> [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2811) GitLab Runner 13.11.
+
 You can enable feature flags by specifying them under `[runners.feature_flag]`. This
 setting prevents any job from overriding the feature flag values.
 
