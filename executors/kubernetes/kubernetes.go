@@ -666,38 +666,19 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 func (s *executor) getBuildsDirVolumeMount() api.VolumeMount {
 	var mount api.VolumeMount
 
+	if s.duplicateBuildsDirVolumes() {
+		s.Errorln(`Multiple builds_dir volumes were specified in the config. 
+		Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount`)
+	}
+
 	switch {
 	case s.Config.Kubernetes.BuildsDir.HostPath.Name != "":
-		if s.Config.Kubernetes.BuildsDir.PVC.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		mount = getVolumeMountForHostPath(s.Config.Kubernetes.BuildsDir.HostPath)
 	case s.Config.Kubernetes.BuildsDir.PVC.Name != "":
-		if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		mount = getVolumeMountForPVC(s.Config.Kubernetes.BuildsDir.PVC)
 	case s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "":
-		if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.PVC.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		mount = getVolumeMountForEmptyDir(s.Config.Kubernetes.BuildsDir.EmptyDir)
 	case s.Config.Kubernetes.BuildsDir.CSI.Name != "":
-		if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.PVC.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		mount = getVolumeMountForCSI(s.Config.Kubernetes.BuildsDir.CSI)
 	default:
 		mount = api.VolumeMount{
@@ -707,6 +688,28 @@ func (s *executor) getBuildsDirVolumeMount() api.VolumeMount {
 	}
 
 	return mount
+}
+
+func (s *executor) duplicateBuildsDirVolumes() bool {
+	var cnt int
+
+	if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" {
+		cnt++
+	}
+	if s.Config.Kubernetes.BuildsDir.PVC.Name != "" {
+		cnt++
+	}
+	if s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" {
+		cnt++
+	}
+	if s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
+		cnt++
+	}
+
+	if cnt > 1 {
+		return true
+	}
+	return false
 }
 
 func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
@@ -830,38 +833,19 @@ func (s *executor) getVolumes() []api.Volume {
 func (s *executor) getBuildsDirVolume() api.Volume {
 	var buildsVol api.Volume
 
+	if s.duplicateBuildsDirVolumes() {
+		s.Errorln(`Multiple builds_dir volumes were specified in the config. 
+		Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount`)
+	}
+
 	switch {
 	case s.Config.Kubernetes.BuildsDir.HostPath.Name != "":
-		if s.Config.Kubernetes.BuildsDir.PVC.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		buildsVol = getVolumeForHostPath(s.Config.Kubernetes.BuildsDir.HostPath)
 	case s.Config.Kubernetes.BuildsDir.PVC.Name != "":
-		if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		buildsVol = getVolumeForPVC(s.Config.Kubernetes.BuildsDir.PVC)
 	case s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "":
-		if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.PVC.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		buildsVol = getVolumeForEmptyDir(s.Config.Kubernetes.BuildsDir.EmptyDir)
 	case s.Config.Kubernetes.BuildsDir.CSI.Name != "":
-		if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.PVC.Name != "" &&
-			s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" {
-			s.Errorln("Multiple builds_dir volumes were specified in the config. Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount")
-		}
-
 		buildsVol = getVolumeForCSI(s.Config.Kubernetes.BuildsDir.CSI)
 	default:
 		buildsVol = api.Volume{
