@@ -26,6 +26,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -2114,6 +2115,63 @@ func createFakePrebuiltImages(t *testing.T, architecture string) func() {
 	return func() {
 		os.RemoveAll(tempImgDir)
 		PrebuiltImagesPaths = prevPrebuiltImagesPaths
+	}
+}
+
+func TestGetUIDandGID(t *testing.T) {
+	ctx := context.Background()
+	testContainerID := "test-ID"
+	testImageSHA := "test-SHA"
+	testUID := 456
+	testGID := 789
+
+	tests := map[string]struct {
+		mockInspect   func(t *testing.T, i *user.MockInspect)
+		expectedError error
+	}{
+		"UID check returns error": {
+			mockInspect: func(t *testing.T, i *user.MockInspect) {
+				i.On("UID", ctx, testContainerID).Return(0, assert.AnError).Once()
+			},
+			expectedError: assert.AnError,
+		},
+		"UID check succeeds, GID check returns error": {
+			mockInspect: func(t *testing.T, i *user.MockInspect) {
+				i.On("UID", ctx, testContainerID).Return(testUID, nil).Once()
+				i.On("GID", ctx, testContainerID).Return(0, assert.AnError).Once()
+			},
+			expectedError: assert.AnError,
+		},
+		"both checks succeed": {
+			mockInspect: func(t *testing.T, i *user.MockInspect) {
+				i.On("UID", ctx, testContainerID).Return(testUID, nil).Once()
+				i.On("GID", ctx, testContainerID).Return(testGID, nil).Once()
+			},
+			expectedError: nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			inspectMock := new(user.MockInspect)
+			defer inspectMock.AssertExpectations(t)
+
+			tt.mockInspect(t, inspectMock)
+
+			log, _ := logrustest.NewNullLogger()
+			uid, gid, err := getUIDandGID(ctx, log, inspectMock, testContainerID, testImageSHA)
+
+			if tt.expectedError != nil {
+				assert.Equal(t, 0, uid)
+				assert.Equal(t, 0, gid)
+				assert.ErrorIs(t, err, tt.expectedError)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, testUID, uid)
+			assert.Equal(t, testGID, gid)
+		})
 	}
 }
 
