@@ -792,10 +792,10 @@ For more parameters, see the [Kubernetes executor documentation](../executors/ku
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
-| `host`           | string  | Optional. Kubernetes master host URL. If not specified, the runner attempts to auto-discovery it. |
-| `cert_file`      | string  | Optional. Kubernetes master auth certificate. |
-| `key_file`       | string  | Optional. Kubernetes master auth private key. |
-| `ca_file`        | string  | Optional. Kubernetes master auth ca certificate. |
+| `host`           | string  | Optional. Kubernetes host URL. If not specified, the runner attempts to auto-discovery it. |
+| `cert_file`      | string  | Optional. Kubernetes auth certificate. |
+| `key_file`       | string  | Optional. Kubernetes auth private key. |
+| `ca_file`        | string  | Optional. Kubernetes auth ca certificate. |
 | `image`          | string  | Default Docker image to use for jobs when none is specified. |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in. |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled. |
