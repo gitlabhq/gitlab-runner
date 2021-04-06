@@ -585,11 +585,11 @@ func (s *executor) logFile() string {
 }
 
 func (s *executor) logsDir() string {
-	return "/runner-logs"
+	return fmt.Sprintf("/logs-%d-%d", s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
 }
 
 func (s *executor) scriptsDir() string {
-	return "/runner-scripts"
+	return fmt.Sprintf("/scripts-%d-%d", s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
 }
 
 func (s *executor) scriptPath(stage common.BuildStage) string {
