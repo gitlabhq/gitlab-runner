@@ -72,7 +72,7 @@ before_script:
   variables:
     GOCACHE: $CI_PROJECT_DIR/.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
-  - mkdir -p $GOCACHE
+  - mkdir -p "$GOCACHE"
   cache:
     paths:
     - $CI_PROJECT_DIR/.gocache-false/
@@ -83,13 +83,13 @@ before_script:
   - .go-cache
   before_script:
   - *docker_qemu-before_script
-  - mkdir -p $GOCACHE
+  - mkdir -p "$GOCACHE"
 
 .go-cache-windows:
   variables:
     GOCACHE: $CI_PROJECT_DIR\.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
-  - New-Item -Path $Env:GOCACHE -Type Directory -Force
+  - New-Item -Path "$Env:GOCACHE" -Type Directory -Force
   cache:
     paths:
     - $CI_PROJECT_DIR\.gocache-false\
