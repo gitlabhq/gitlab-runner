@@ -336,13 +336,23 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 }
 
 func (s *executor) buildLogPermissionsInitContainer() api.Container {
-	// Since we mount the logs an emptyDir volume, the directory is owned by root.
-	// This makes it impossible for other users to write to the shared log without
-	// explicitly giving them permissions. More info at https://github.com/kubernetes/kubernetes/issues/2630
-	chmod := fmt.Sprintf("touch %s && chmod -R 777 %s", s.logFile(), s.logsDir())
+	// We need to create the log file in which all scripts will append their output.
+	// The log file is created with the current user. There are 3 different scenarios for the user:
+	// 1. The user in all images and containers is root, in that case the chmod is redundant since they
+	// will all have permissions to the file.
+	// 2. The user of the helper image is root, however the build image's user is not root.
+	// In that case we need to allow the build user to write to the log file from inside the
+	// build container. That's where the chmod comes into play.
+	// 3. No user is root but all containers have the same user ID. In that case create the file.
+	// It will have the same user and group owner across all containers. This is the case for Kubernetes
+	// where the PodSecurityContext is set manually or for Openshift where each pod has a different user ID.
+	// *4. We don't allow setting different user IDs across containers, if that ever becomes the case
+	// we might need to try and chown the log file for the group only.
+	logFile := s.logFile()
+	chmod := fmt.Sprintf("touch %s && (chmod 777 %s || exit 0)", logFile, logFile)
 
 	return api.Container{
-		Name:            "change-logs-permissions",
+		Name:            "init-logs",
 		Image:           s.getHelperImage(),
 		Command:         []string{"sh", "-c", chmod},
 		VolumeMounts:    s.getVolumeMounts(),
@@ -575,11 +585,11 @@ func (s *executor) logFile() string {
 }
 
 func (s *executor) logsDir() string {
-	return path.Join(s.Build.TmpProjectDir(), "logs")
+	return fmt.Sprintf("/logs-%d-%d", s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
 }
 
 func (s *executor) scriptsDir() string {
-	return path.Join(s.Build.TmpProjectDir(), "scripts")
+	return fmt.Sprintf("/scripts-%d-%d", s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
 }
 
 func (s *executor) scriptPath(stage common.BuildStage) string {
@@ -596,6 +606,15 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 
 	// The configMap is nil when using legacy execution
 	if s.configMap != nil {
+		// These volume mounts **MUST NOT** be mounted inside another volume mount.
+		// E.g. mounting them inside the "repo" volume mount will cause the whole volume
+		// to be owned by root instead of the current user of the image. Something similar
+		// is explained here https://github.com/kubernetes/kubernetes/issues/2630#issuecomment-64679120
+		// where the first container determines the ownership of a volume. However, it seems like
+		// when mounting a volume inside another volume the first container or the first point of contact
+		// becomes root, regardless of SecurityContext or Image settings changing the user ID of the container.
+		// This causes builds to stop working in environments such as OpenShift where there's no root access
+		// resulting in an inability to modify anything inside the parent volume.
 		mounts = append(
 			mounts,
 			api.VolumeMount{
