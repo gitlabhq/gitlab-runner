@@ -786,7 +786,7 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	logger := b.logger.WithFields(logrus.Fields{
-		"duration": b.Duration(),
+		"duration_s": b.Duration().Seconds(),
 	})
 
 	if err == nil {
