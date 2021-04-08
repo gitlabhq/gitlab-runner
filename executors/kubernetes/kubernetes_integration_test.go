@@ -21,6 +21,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -31,23 +32,26 @@ type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 
 func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 	tests := map[string]featureFlagTest{
-		"testKubernetesSuccessRun":                      testKubernetesSuccessRunFeatureFlag,
-		"testKubernetesMultistepRun":                    testKubernetesMultistepRunFeatureFlag,
-		"testKubernetesTimeoutRun":                      testKubernetesTimeoutRunFeatureFlag,
-		"testKubernetesBuildFail":                       testKubernetesBuildFailFeatureFlag,
-		"testKubernetesBuildCancel":                     testKubernetesBuildCancelFeatureFlag,
-		"testKubernetesBuildLogLimitExceeded":           testKubernetesBuildLogLimitExceededFeatureFlag,
-		"testKubernetesBuildMasking":                    testKubernetesBuildMaskingFeatureFlag,
-		"testKubernetesCustomClonePath":                 testKubernetesCustomClonePathFeatureFlag,
-		"testKubernetesNoRootImage":                     testKubernetesNoRootImageFeatureFlag,
-		"testKubernetesMissingImage":                    testKubernetesMissingImageFeatureFlag,
-		"testKubernetesMissingTag":                      testKubernetesMissingTagFeatureFlag,
-		"testOverwriteNamespaceNotMatch":                testOverwriteNamespaceNotMatchFeatureFlag,
-		"testOverwriteServiceAccountNotMatch":           testOverwriteServiceAccountNotMatchFeatureFlag,
-		"testInteractiveTerminal":                       testInteractiveTerminalFeatureFlag,
-		"testKubernetesReplaceEnvFeatureFlag":           testKubernetesReplaceEnvFeatureFlag,
-		"testKubernetesReplaceMissingEnvVarFeatureFlag": testKubernetesReplaceMissingEnvVarFeatureFlag,
-		"testKubernetesWithNonRootSecurityContext":      testKubernetesWithNonRootSecurityContext,
+		"testKubernetesSuccessRun":                                testKubernetesSuccessRunFeatureFlag,
+		"testKubernetesMultistepRun":                              testKubernetesMultistepRunFeatureFlag,
+		"testKubernetesTimeoutRun":                                testKubernetesTimeoutRunFeatureFlag,
+		"testKubernetesBuildFail":                                 testKubernetesBuildFailFeatureFlag,
+		"testKubernetesBuildCancel":                               testKubernetesBuildCancelFeatureFlag,
+		"testKubernetesBuildLogLimitExceeded":                     testKubernetesBuildLogLimitExceededFeatureFlag,
+		"testKubernetesBuildMasking":                              testKubernetesBuildMaskingFeatureFlag,
+		"testKubernetesCustomClonePath":                           testKubernetesCustomClonePathFeatureFlag,
+		"testKubernetesNoRootImage":                               testKubernetesNoRootImageFeatureFlag,
+		"testKubernetesMissingImage":                              testKubernetesMissingImageFeatureFlag,
+		"testKubernetesMissingTag":                                testKubernetesMissingTagFeatureFlag,
+		"testKubernetesFailingToPullImageTwiceFeatureFlag":        testKubernetesFailingToPullImageTwiceFeatureFlag,
+		"testKubernetesFailingToPullServiceImageTwiceFeatureFlag": testKubernetesFailingToPullSvcImageTwiceFeatureFlag,
+		"testKubernetesFailingToPullHelperTwiceFeatureFlag":       testKubernetesFailingToPullHelperTwiceFeatureFlag,
+		"testOverwriteNamespaceNotMatch":                          testOverwriteNamespaceNotMatchFeatureFlag,
+		"testOverwriteServiceAccountNotMatch":                     testOverwriteServiceAccountNotMatchFeatureFlag,
+		"testInteractiveTerminal":                                 testInteractiveTerminalFeatureFlag,
+		"testKubernetesReplaceEnvFeatureFlag":                     testKubernetesReplaceEnvFeatureFlag,
+		"testKubernetesReplaceMissingEnvVarFeatureFlag":           testKubernetesReplaceMissingEnvVarFeatureFlag,
+		"testKubernetesWithNonRootSecurityContext":                testKubernetesWithNonRootSecurityContext,
 	}
 
 	featureFlags := []string{
@@ -318,6 +322,52 @@ func testKubernetesMissingTagFeatureFlag(t *testing.T, featureFlagName string, f
 	assert.Contains(t, err.Error(), "image pull failed")
 }
 
+func testKubernetesFailingToPullImageTwiceFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteFailedBuild)
+	build.Image.Name = "some/non-existing/image"
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := runMultiPullPolicyBuild(t, build)
+
+	var imagePullErr *pull.ImagePullError
+	require.ErrorAs(t, err, &imagePullErr)
+	assert.Equal(t, build.Image.Name, imagePullErr.Image)
+}
+
+func testKubernetesFailingToPullSvcImageTwiceFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteFailedBuild)
+	build.Services = common.Services{
+		{
+			Name: "some/non-existing/image",
+		},
+	}
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := runMultiPullPolicyBuild(t, build)
+
+	var imagePullErr *pull.ImagePullError
+	require.ErrorAs(t, err, &imagePullErr)
+	assert.Equal(t, build.Services[0].Name, imagePullErr.Image)
+}
+
+func testKubernetesFailingToPullHelperTwiceFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteFailedBuild)
+	build.Runner.Kubernetes.HelperImage = "some/non-existing/image"
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err := runMultiPullPolicyBuild(t, build)
+
+	var imagePullErr *pull.ImagePullError
+	require.ErrorAs(t, err, &imagePullErr)
+	assert.Equal(t, build.Runner.Kubernetes.HelperImage, imagePullErr.Image)
+}
+
 func testOverwriteNamespaceNotMatchFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
@@ -516,7 +566,7 @@ func TestHelperImageRegistryLogs(t *testing.T) {
 	for _, tt := range []bool{true, false} {
 		t.Run(fmt.Sprintf("%s is %t", featureflags.GitLabRegistryHelperImage, tt), func(t *testing.T) {
 			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
-			build.Runner.Kubernetes.PullPolicy = common.PullPolicyAlways
+			build.Runner.Kubernetes.PullPolicy = common.StringOrArray{common.PullPolicyAlways}
 			buildtest.SetBuildFeatureFlag(build, featureflags.GitLabRegistryHelperImage, tt)
 
 			trace := bytes.Buffer{}
@@ -641,7 +691,7 @@ func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.PullPolicyIfNotPresent,
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					PodLabels: map[string]string{
 						"test.k8s.gitlab.com/name": podUUID,
 					},
@@ -658,4 +708,29 @@ func getTestKubeClusterClient(t *testing.T) *k8s.Clientset {
 	require.NoError(t, err)
 
 	return client
+}
+
+func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
+	build.Runner.Kubernetes.PullPolicy = common.StringOrArray{
+		common.PullPolicyAlways,
+		common.PullPolicyIfNotPresent,
+	}
+
+	outBuffer := bytes.NewBuffer(nil)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+	require.Error(t, err)
+	var buildErr *common.BuildError
+	assert.ErrorAs(t, err, &buildErr)
+
+	assert.Regexp(
+		t,
+		`(?s).*WARNING: Failed to pull image with policy "Always": image pull failed:.*`+
+			`Attempt #2: Trying "IfNotPresent" pull policy for "some\/non-existing\/image" image.*`+
+			`WARNING: Failed to pull image with policy "IfNotPresent":.*`+
+			`image pull failed:.*`,
+		outBuffer.String(),
+	)
+
+	return err
 }

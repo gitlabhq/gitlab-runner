@@ -30,6 +30,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	dns_test "gitlab.com/gitlab-org/gitlab-runner/helpers/dns/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -51,6 +52,7 @@ func TestRunTestsWithFeatureFlag(t *testing.T) {
 		"testVolumeMounts":                      testVolumeMountsFeatureFlag,
 		"testVolumes":                           testVolumesFeatureFlag,
 		"testSetupBuildPodServiceCreationError": testSetupBuildPodServiceCreationErrorFeatureFlag,
+		"testSetupBuildPodFailureGetPullPolicy": testSetupBuildPodFailureGetPullPolicyFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -463,6 +465,8 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 
 	mockFc := &mockFeatureChecker{}
 	mockFc.On("IsHostAliasSupported").Return(true, nil)
+	mockPullManager := &pull.MockManager{}
+	defer mockPullManager.AssertExpectations(t)
 	ex := executor{
 		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
 		options: &kubernetesOptions{
@@ -498,8 +502,19 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 		helperImageInfo: helperImageInfo,
 		featureChecker:  mockFc,
 		configMap:       fakeConfigMap(),
+		pullManager:     mockPullManager,
 	}
 	buildtest.SetBuildFeatureFlag(ex.Build, featureFlagName, featureFlagValue)
+
+	mockPullManager.On("GetPullPolicyFor", ex.options.Services[0].Name).
+		Return(api.PullAlways, nil).
+		Once()
+	mockPullManager.On("GetPullPolicyFor", ex.options.Image.Name).
+		Return(api.PullAlways, nil).
+		Once()
+	mockPullManager.On("GetPullPolicyFor", runnerConfig.RunnerSettings.Kubernetes.HelperImage).
+		Return(api.PullAlways, nil).
+		Once()
 
 	err = ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
@@ -507,6 +522,70 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	err = ex.setupBuildPod(nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error creating the proxy service")
+}
+
+func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	for _, failOnImage := range []string{
+		"test-service",
+		"test-helper",
+		"test-build",
+	} {
+		t.Run(failOnImage, func(t *testing.T) {
+			runnerConfig := common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HelperImage: "test-helper",
+					},
+				},
+			}
+
+			mockFc := &mockFeatureChecker{}
+			defer mockFc.AssertExpectations(t)
+			mockFc.On("IsHostAliasSupported").Return(true, nil).Maybe()
+
+			mockPullManager := &pull.MockManager{}
+			defer mockPullManager.AssertExpectations(t)
+
+			e := executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-build",
+					},
+					Services: common.Services{
+						{
+							Name: "test-service",
+						},
+					},
+				},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config:     runnerConfig,
+					BuildShell: &common.ShellConfiguration{},
+					Build: &common.Build{
+						JobResponse: common.JobResponse{},
+						Runner:      &runnerConfig,
+					},
+				},
+				featureChecker: mockFc,
+				pullManager:    mockPullManager,
+			}
+			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
+
+			mockPullManager.On("GetPullPolicyFor", failOnImage).
+				Return(api.PullAlways, assert.AnError).
+				Once()
+
+			mockPullManager.On("GetPullPolicyFor", mock.Anything).
+				Return(api.PullAlways, nil).
+				Maybe()
+
+			err := e.prepareOverwrites(make(common.JobVariables, 0))
+			assert.NoError(t, err)
+
+			err = e.setupBuildPod(nil)
+			assert.ErrorIs(t, err, assert.AnError)
+			assert.Error(t, err)
+		})
+	}
 }
 
 func TestCleanup(t *testing.T) {
@@ -731,7 +810,8 @@ func TestPrepare(t *testing.T) {
 		RunnerConfig *common.RunnerConfig
 		Build        *common.Build
 
-		Expected *executor
+		Expected           *executor
+		ExpectedPullPolicy api.PullPolicy
 	}{
 		{
 			Name:         "all with limits",
@@ -750,7 +830,7 @@ func TestPrepare(t *testing.T) {
 						HelperMemoryLimit:            "100Mi",
 						HelperEphemeralStorageLimit:  "200Mi",
 						Privileged:                   true,
-						PullPolicy:                   "if-not-present",
+						PullPolicy:                   common.StringOrArray{"if-not-present"},
 					},
 				},
 			},
@@ -783,9 +863,9 @@ func TestPrepare(t *testing.T) {
 					serviceRequests: api.ResourceList{},
 					helperRequests:  api.ResourceList{},
 				},
-				pullPolicy:      "IfNotPresent",
 				helperImageInfo: defaultHelperImage,
 			},
+			ExpectedPullPolicy: api.PullIfNotPresent,
 		},
 		{
 			Name:         "all with limits and requests",
@@ -1359,9 +1439,14 @@ func TestPrepare(t *testing.T) {
 			// base AbstractExecutor's Prepare method
 			e.AbstractExecutor = executors.AbstractExecutor{}
 
+			pullPolicy, err := e.pullManager.GetPullPolicyFor(prepareOptions.Build.Image.Name)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ExpectedPullPolicy, pullPolicy)
+
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
+			e.pullManager = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
@@ -2825,6 +2910,9 @@ func TestSetupBuildPod(t *testing.T) {
 			mockFc := &mockFeatureChecker{}
 			mockFc.On("IsHostAliasSupported").Return(true, nil)
 
+			mockPullManager := &pull.MockManager{}
+			defer mockPullManager.AssertExpectations(t)
+
 			ex := executor{
 				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
 				options:    options,
@@ -2842,11 +2930,33 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 				helperImageInfo: helperImageInfo,
 				featureChecker:  mockFc,
+				pullManager:     mockPullManager,
+			}
+
+			if ex.options.Image.Name == "" {
+				// Ensure we have a valid Docker image name in the configuration,
+				// if nothing is specified in the test case
+				ex.options.Image.Name = "build-image"
 			}
 
 			if test.PrepareFn != nil {
 				test.PrepareFn(t, test, &ex)
 			}
+
+			if test.Options != nil && test.Options.Services != nil {
+				for _, service := range test.Options.Services {
+					mockPullManager.On("GetPullPolicyFor", service.Name).
+						Return(api.PullAlways, nil).
+						Once()
+				}
+			}
+
+			mockPullManager.On("GetPullPolicyFor", ex.getHelperImage()).
+				Return(api.PullAlways, nil).
+				Maybe()
+			mockPullManager.On("GetPullPolicyFor", ex.options.Image.Name).
+				Return(api.PullAlways, nil).
+				Maybe()
 
 			err = ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err, "error preparing overwrites")
@@ -3292,7 +3402,7 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Image:      "alpine:3.12",
-						PullPolicy: common.PullPolicyIfNotPresent,
+						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:       "127.0.0.1",
 					},
 				},
@@ -3311,7 +3421,7 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Image:      "alpine:3.12",
-						PullPolicy: common.PullPolicyIfNotPresent,
+						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:       "127.0.0.1",
 					},
 				},
@@ -3324,7 +3434,7 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 					Kubernetes: &common.KubernetesConfig{
 						HelperImage: "config-image",
 						Image:       "alpine:3.12",
-						PullPolicy:  common.PullPolicyIfNotPresent,
+						PullPolicy:  common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:        "127.0.0.1",
 					},
 				},
@@ -3356,11 +3466,39 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 			err := e.Prepare(prepareOptions)
 			require.NoError(t, err)
 
-			c := e.buildLogPermissionsInitContainer()
+			c, err := e.buildLogPermissionsInitContainer()
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedImage, c.Image)
 			assert.Equal(t, api.PullIfNotPresent, c.ImagePullPolicy)
 			assert.Len(t, c.VolumeMounts, 1)
 			assert.Len(t, c.Command, 3)
 		})
 	}
+}
+
+func TestExecutor_buildLogPermissionsInitContainer_FailPullPolicy(t *testing.T) {
+	mockPullManager := &pull.MockManager{}
+	defer mockPullManager.AssertExpectations(t)
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executorOptions,
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+			},
+		},
+		pullManager: mockPullManager,
+	}
+
+	mockPullManager.On("GetPullPolicyFor", mock.Anything).
+		Return(api.PullAlways, assert.AnError).
+		Once()
+
+	_, err := e.buildLogPermissionsInitContainer()
+	assert.ErrorIs(t, err, assert.AnError)
 }

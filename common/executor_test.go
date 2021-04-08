@@ -41,3 +41,22 @@ func TestBuildErrorIs(t *testing.T) {
 		})
 	}
 }
+
+func TestUnwrapBuildError(t *testing.T) {
+	err := &BuildError{Inner: assert.AnError}
+	// Unwraps inner error
+	assert.ErrorIs(t, err, assert.AnError)
+
+	// Stop unwrapping until BuildError is found.
+	assert.ErrorIs(t, err, &BuildError{})
+	var buildErr *BuildError
+	assert.ErrorAs(t, err, &buildErr)
+
+	err = &BuildError{}
+	// Unwraps inner error
+	assert.NotErrorIs(t, err, assert.AnError)
+
+	// Stop unwrapping until BuildError is found.
+	assert.ErrorIs(t, err, &BuildError{})
+	assert.ErrorAs(t, err, &buildErr)
+}

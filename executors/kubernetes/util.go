@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 )
 
 type kubeConfigProvider func() (*restclient.Config, error)
@@ -157,19 +158,23 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 	}
 
 	// check status of containers
-	for _, container := range pod.Status.ContainerStatuses {
+	for _, container := range append(pod.Status.ContainerStatuses, pod.Status.InitContainerStatuses...) {
 		if container.Ready {
 			continue
 		}
-		if container.State.Waiting == nil {
+		waiting := container.State.Waiting
+		if waiting == nil {
 			continue
 		}
 
-		switch container.State.Waiting.Reason {
-		case "ErrImagePull", "ImagePullBackOff", "InvalidImageName":
-			err = fmt.Errorf("image pull failed: %s", container.State.Waiting.Message)
-			err = &common.BuildError{Inner: err}
+		switch waiting.Reason {
+		case "InvalidImageName":
+			err = &common.BuildError{Inner: fmt.Errorf("image pull failed: %s", waiting.Message)}
 			return podPhaseResponse{true, api.PodUnknown, err}
+		case "ErrImagePull", "ImagePullBackOff":
+			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
+			imagePullErr := &pull.ImagePullError{Message: msg, Image: container.Image}
+			return podPhaseResponse{true, api.PodUnknown, &common.BuildError{Inner: imagePullErr}}
 		}
 	}
 

@@ -372,7 +372,7 @@ func newLoggerMock() *mockPullLogger {
 	return loggerMock
 }
 
-func newDefaultTestManager(client *docker.MockClient, pullPolicy ...common.DockerPullPolicy) *manager {
+func newDefaultTestManager(client *docker.MockClient, pullPolicy ...string) *manager {
 	// Create a unique context value that can be later compared with to ensure
 	// that the production code is passing it to the mocks
 	ctx := context.WithValue(context.Background(), new(struct{}), "unique context")

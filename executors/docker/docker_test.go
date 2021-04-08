@@ -329,17 +329,6 @@ func TestHelperImageWithVariable(t *testing.T) {
 	assert.Equal(t, "helper-image", img.ID)
 }
 
-// setPolicyMode is only meant to be used for tests. If called with an empty array, it will clear out the pull policies.
-func (e *executor) setPolicyMode(pullPolicies ...common.DockerPullPolicy) {
-	e.Config = common.RunnerConfig{
-		RunnerSettings: common.RunnerSettings{
-			Docker: &common.DockerConfig{
-				PullPolicy: pullPolicies,
-			},
-		},
-	}
-}
-
 func TestPrepareBuildsDir(t *testing.T) {
 	tests := map[string]struct {
 		parser                  parser.Parser
