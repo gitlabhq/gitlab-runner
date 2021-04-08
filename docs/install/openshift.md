@@ -22,13 +22,15 @@ First you must install the OpenShift Operator.
 
 1. Open the OpenShift UI and log in as a user with administrator privileges.
 1. In the left pane, click **Operators**, then **OperatorHub**.
-1. In the main pane, below **All Items**, search for the keyword `GitLab`.
+1. In the main pane, below **All Items**, search for the keyword `GitLab Runner`.
 
    ![GitLab Operator](img/openshift_allitems_v13_3.png)
 
 1. To install, click the GitLab Runner Operator.
 1. On the GitLab Runner Operator summary page, click **Install**.
-1. On the Install Operator page, under **Installed Namespace**, select the desired namespace and click **Install**.
+1. On the Install Operator page:
+    1. Under **Update Channel**, select **stable**.
+    1. Under **Installed Namespace**, select the desired namespace and click **Install**.
 
    ![GitLab Operator Install Page](img/openshift_installoperator_v13_3.png)
 
@@ -113,3 +115,41 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
    NAME                             READY   STATUS    RESTARTS   AGE
    gitlab-runner-bf9894bdb-wplxn    1/1     Running   0          5m
    ```
+   
+#### Install other versions of GitLab Runner
+
+If you do not want to use the version of GitLab Runner Operator that's available in the RedHat OperatorHub, you can install a different version.
+
+To find out the official currently-available Operator versions, view the [tags in the `gitlab-runner-operator` repository](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/tags).
+To find out which version of GitLab Runner the Operator is running, view the
+`APP_VERSION` variable in the `Makefile` of the commit/tag you are interested in, for example, [https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/v1.0.0/Makefile](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/v1.0.0/Makefile).
+
+To install a specific version, create this `catalogsource.yaml` file and replace `<VERSION>` with a tag or a specific commit:
+
+NOTE:
+When using an image for a specific commit, the tag format is `v0.0.1-<COMMIT>`. For example: `registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/gitlab-runner-operator-catalog-source:v0.0.1-f5a798af`.
+
+```yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: gitlab-runner-catalog
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/gitlab-runner-operator-catalog-source:<VERSION>
+  displayName: GitLab Runner Operators
+  publisher: GitLab Community
+```
+
+Create the `CatalogSource` with:
+
+```shell
+oc apply -f catalogsource.yaml
+```
+
+In a minute the new Runner should show up in the OpenShift cluster's OperatorHub section.
+   
+#### Configuration
+
+To configure GitLab Runner in OpenShift, see the [Configuring GitLab Runner on OpenShift](../configuration/configuring_runner_openshift.md) page.
