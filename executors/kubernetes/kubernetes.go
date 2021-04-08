@@ -24,6 +24,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
@@ -108,7 +109,7 @@ type executor struct {
 	services    []api.Service
 
 	configurationOverwrites *overwrites
-	pullPolicy              common.KubernetesPullPolicy
+	pullManager             pull.Manager
 
 	helperImageInfo helperimage.Info
 
@@ -142,9 +143,11 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 
-	if s.pullPolicy, err = s.Config.Kubernetes.PullPolicy.Get(); err != nil {
+	var pullPolicies []api.PullPolicy
+	if pullPolicies, err = s.Config.Kubernetes.GetPullPolicies(); err != nil {
 		return fmt.Errorf("couldn't get pull policy: %w", err)
 	}
+	s.pullManager = pull.NewPullManager(pullPolicies, &s.BuildLogger)
 
 	s.prepareOptions(options.Build)
 
@@ -189,13 +192,27 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
-		s.Debugln("Starting Kubernetes command...")
-		return s.runWithExecLegacy(cmd)
-	}
+	for attempt := 1; ; attempt++ {
+		var err error
 
-	s.Debugln("Starting Kubernetes command with attach...")
-	return s.runWithAttach(cmd)
+		if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+			s.Debugln("Starting Kubernetes command...")
+			err = s.runWithExecLegacy(cmd)
+		} else {
+			s.Debugln("Starting Kubernetes command with attach...")
+			err = s.runWithAttach(cmd)
+		}
+
+		var imagePullErr *pull.ImagePullError
+		if errors.As(err, &imagePullErr) {
+			if s.pullManager.UpdatePolicyForImage(attempt, imagePullErr) {
+				s.cleanupResources()
+				s.pod = nil
+				continue
+			}
+		}
+		return err
+	}
 }
 
 func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
@@ -316,7 +333,11 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up scripts configMap: %w", err)
 	}
 
-	err = s.setupBuildPod([]api.Container{s.buildLogPermissionsInitContainer()})
+	permissionsInitContainer, err := s.buildLogPermissionsInitContainer()
+	if err != nil {
+		return fmt.Errorf("building log permissions init container: %w", err)
+	}
+	err = s.setupBuildPod([]api.Container{permissionsInitContainer})
 	if err != nil {
 		return fmt.Errorf("setting up build pod: %w", err)
 	}
@@ -335,7 +356,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	return nil
 }
 
-func (s *executor) buildLogPermissionsInitContainer() api.Container {
+func (s *executor) buildLogPermissionsInitContainer() (api.Container, error) {
 	// We need to create the log file in which all scripts will append their output.
 	// The log file is created with the current user. There are 3 different scenarios for the user:
 	// 1. The user in all images and containers is root, in that case the chmod is redundant since they
@@ -351,13 +372,18 @@ func (s *executor) buildLogPermissionsInitContainer() api.Container {
 	logFile := s.logFile()
 	chmod := fmt.Sprintf("touch %s && (chmod 777 %s || exit 0)", logFile, logFile)
 
+	pullPolicy, err := s.pullManager.GetPullPolicyFor(s.getHelperImage())
+	if err != nil {
+		return api.Container{}, fmt.Errorf("getting pull policy for log permissions init container: %w", err)
+	}
+
 	return api.Container{
 		Name:            "init-logs",
 		Image:           s.getHelperImage(),
 		Command:         []string{"sh", "-c", chmod},
 		VolumeMounts:    s.getVolumeMounts(),
-		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
-	}
+		ImagePullPolicy: pullPolicy,
+	}, nil
 }
 
 func (s *executor) buildCommandForStage(stage common.BuildStage) string {
@@ -445,7 +471,6 @@ func (s *executor) Finish(err error) {
 
 func (s *executor) Cleanup() {
 	s.cleanupResources()
-	s.cleanupServices()
 	closeKubeClient(s.kubeClient)
 	s.AbstractExecutor.Cleanup()
 }
@@ -503,14 +528,17 @@ func (s *executor) cleanupResources() {
 			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
 	}
+
+	s.cleanupServices()
 }
 
+//nolint:funlen
 func (s *executor) buildContainer(
 	name, image string,
 	imageDefinition common.Image,
 	requests, limits api.ResourceList,
 	containerCommand ...string,
-) api.Container {
+) (api.Container, error) {
 	privileged := false
 	var allowPrivilegeEscalation *bool
 	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
@@ -539,32 +567,38 @@ func (s *executor) buildContainer(
 		allowPrivilegeEscalation = s.Config.Kubernetes.AllowPrivilegeEscalation
 	}
 
+	pullPolicy, err := s.pullManager.GetPullPolicyFor(image)
+	if err != nil {
+		return api.Container{}, err
+	}
+
 	command, args := s.getCommandAndArgs(imageDefinition, containerCommand...)
 
 	return api.Container{
-		Name:            name,
-		Image:           image,
-		ImagePullPolicy: api.PullPolicy(s.pullPolicy),
-		Command:         command,
-		Args:            args,
-		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
-		Resources: api.ResourceRequirements{
-			Limits:   limits,
-			Requests: requests,
+			Name:            name,
+			Image:           image,
+			ImagePullPolicy: pullPolicy,
+			Command:         command,
+			Args:            args,
+			Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
+			Resources: api.ResourceRequirements{
+				Limits:   limits,
+				Requests: requests,
+			},
+			Ports:        containerPorts,
+			VolumeMounts: s.getVolumeMounts(),
+			SecurityContext: &api.SecurityContext{
+				Privileged:               &privileged,
+				AllowPrivilegeEscalation: allowPrivilegeEscalation,
+				Capabilities: getCapabilities(
+					GetDefaultCapDrop(),
+					s.Config.Kubernetes.CapAdd,
+					s.Config.Kubernetes.CapDrop,
+				),
+			},
+			Stdin: true,
 		},
-		Ports:        containerPorts,
-		VolumeMounts: s.getVolumeMounts(),
-		SecurityContext: &api.SecurityContext{
-			Privileged:               &privileged,
-			AllowPrivilegeEscalation: allowPrivilegeEscalation,
-			Capabilities: getCapabilities(
-				GetDefaultCapDrop(),
-				s.Config.Kubernetes.CapAdd,
-				s.Config.Kubernetes.CapDrop,
-			),
-		},
-		Stdin: true,
-	}
+		nil
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
@@ -921,6 +955,7 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 	return createHostAliases(s.options.Services, s.Config.Kubernetes.GetHostAliases())
 }
 
+//nolint:funlen
 func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	s.Debugln("Setting up build pod")
 
@@ -928,13 +963,17 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
-		podServices[i] = s.buildContainer(
+		var err error
+		podServices[i], err = s.buildContainer(
 			fmt.Sprintf("svc-%d", i),
 			resolvedImage,
 			service,
 			s.configurationOverwrites.serviceRequests,
 			s.configurationOverwrites.serviceLimits,
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	// We set a default label to the pod. This label will be used later
@@ -963,7 +1002,11 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		return err
 	}
 
-	podConfig := s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
+	podConfig, err :=
+		s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
+	if err != nil {
+		return err
+	}
 
 	s.Debugln("Creating build pod")
 	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
@@ -980,14 +1023,39 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	return nil
 }
 
+//nolint:funlen
 func (s *executor) preparePodConfig(
 	labels, annotations map[string]string,
 	services []api.Container,
 	imagePullSecrets []api.LocalObjectReference,
 	hostAliases []api.HostAlias,
 	initContainers []api.Container,
-) api.Pod {
+) (api.Pod, error) {
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
+
+	buildContainer, err := s.buildContainer(
+		buildContainerName,
+		buildImage,
+		s.options.Image,
+		s.configurationOverwrites.buildRequests,
+		s.configurationOverwrites.buildLimits,
+		s.BuildShell.DockerCommand...,
+	)
+	if err != nil {
+		return api.Pod{}, fmt.Errorf("building build container: %w", err)
+	}
+
+	helperContainer, err := s.buildContainer(
+		helperContainerName,
+		s.getHelperImage(),
+		common.Image{},
+		s.configurationOverwrites.helperRequests,
+		s.configurationOverwrites.helperLimits,
+		s.BuildShell.DockerCommand...,
+	)
+	if err != nil {
+		return api.Pod{}, fmt.Errorf("building helper container: %w", err)
+	}
 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1004,23 +1072,8 @@ func (s *executor) preparePodConfig(
 			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
 			InitContainers:     initContainers,
 			Containers: append([]api.Container{
-				// TODO use the build and helper template here
-				s.buildContainer(
-					buildContainerName,
-					buildImage,
-					s.options.Image,
-					s.configurationOverwrites.buildRequests,
-					s.configurationOverwrites.buildLimits,
-					s.BuildShell.DockerCommand...,
-				),
-				s.buildContainer(
-					helperContainerName,
-					s.getHelperImage(),
-					common.Image{},
-					s.configurationOverwrites.helperRequests,
-					s.configurationOverwrites.helperLimits,
-					s.BuildShell.DockerCommand...,
-				),
+				buildContainer,
+				helperContainer,
 			}, services...),
 			TerminationGracePeriodSeconds: &s.Config.Kubernetes.TerminationGracePeriodSeconds,
 			ImagePullSecrets:              imagePullSecrets,
@@ -1032,7 +1085,7 @@ func (s *executor) preparePodConfig(
 		},
 	}
 
-	return pod
+	return pod, nil
 }
 
 func (s *executor) getDNSPolicy() api.DNSPolicy {
@@ -1225,7 +1278,6 @@ func (s *executor) runInContainerWithExecLegacy(
 		defer close(errCh)
 
 		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
-
 		if err != nil {
 			errCh <- err
 			return

@@ -756,31 +756,34 @@ func TestRunnerSettings_GetGracefulKillTimeout_GetForceKillTimeout(t *testing.T)
 }
 
 func TestDockerConfig_GetPullPolicies(t *testing.T) {
-	allPolicies := DockerPullPolicies{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever}
-	defaultPolicy := DockerPullPolicies{PullPolicyAlways}
-
 	tests := map[string]struct {
 		config               DockerConfig
-		expectedPullPolicies DockerPullPolicies
+		expectedPullPolicies []DockerPullPolicy
 		expectedErr          bool
 	}{
 		"nil pull_policy": {
 			config:               DockerConfig{},
-			expectedPullPolicies: defaultPolicy,
+			expectedPullPolicies: []DockerPullPolicy{PullPolicyAlways},
 			expectedErr:          false,
 		},
 		"empty pull_policy": {
-			config:               DockerConfig{PullPolicy: DockerPullPolicies{}},
-			expectedPullPolicies: defaultPolicy,
+			config:               DockerConfig{PullPolicy: StringOrArray{}},
+			expectedPullPolicies: []DockerPullPolicy{PullPolicyAlways},
 			expectedErr:          false,
 		},
+		"empty string pull_policy": {
+			config:      DockerConfig{PullPolicy: StringOrArray{""}},
+			expectedErr: true,
+		},
 		"known elements in pull_policy": {
-			config:               DockerConfig{PullPolicy: allPolicies},
-			expectedPullPolicies: allPolicies,
+			config: DockerConfig{
+				PullPolicy: StringOrArray{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
+			},
+			expectedPullPolicies: []DockerPullPolicy{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
 			expectedErr:          false,
 		},
 		"invalid pull_policy": {
-			config:      DockerConfig{PullPolicy: DockerPullPolicies{"invalid"}},
+			config:      DockerConfig{PullPolicy: StringOrArray{"invalid"}},
 			expectedErr: true,
 		},
 	}
@@ -800,54 +803,102 @@ func TestDockerConfig_GetPullPolicies(t *testing.T) {
 	}
 }
 
-func TestDockerConfig_PullPolicies_UnmarshalTOML(t *testing.T) {
+func TestKubernetesConfig_GetPullPolicies(t *testing.T) {
 	tests := map[string]struct {
-		toml           string
-		expectedResult DockerPullPolicies
-		expectedErr    bool
+		config               KubernetesConfig
+		expectedPullPolicies []api.PullPolicy
+		expectedErr          bool
 	}{
-		"no pull_policy element": {
-			toml:           "",
-			expectedResult: nil,
-			expectedErr:    false,
+		"nil pull_policy": {
+			config:               KubernetesConfig{},
+			expectedPullPolicies: []api.PullPolicy{""},
+			expectedErr:          false,
 		},
-		"single unknown policy in pull_policy": {
-			toml:           `pull_policy = "unknown"`,
-			expectedResult: DockerPullPolicies{"unknown"},
-			expectedErr:    false,
+		"empty pull_policy": {
+			config:               KubernetesConfig{PullPolicy: StringOrArray{}},
+			expectedPullPolicies: []api.PullPolicy{""},
+			expectedErr:          false,
 		},
-		"single invalid policy data type in pull_policy": {
-			toml:        `pull_policy = 10`,
+		"empty string pull_policy": {
+			config:               KubernetesConfig{PullPolicy: StringOrArray{""}},
+			expectedPullPolicies: []api.PullPolicy{""},
+			expectedErr:          false,
+		},
+		"known elements in pull_policy": {
+			config: KubernetesConfig{
+				PullPolicy: StringOrArray{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
+			},
+			expectedPullPolicies: []api.PullPolicy{api.PullAlways, api.PullIfNotPresent, api.PullNever},
+			expectedErr:          false,
+		},
+		"invalid pull_policy": {
+			config:      KubernetesConfig{PullPolicy: StringOrArray{"invalid"}},
 			expectedErr: true,
-		},
-		"valid policy and invalid policy in pull_policy": {
-			toml:           `pull_policy = ["unknown", "always"]`,
-			expectedResult: DockerPullPolicies{"unknown", "always"},
-			expectedErr:    false,
-		},
-		"valid policy and invalid type in pull_policy": {
-			toml:        `pull_policy = ["unknown", 10]`,
-			expectedErr: true,
-		},
-		"multiple policies with invalid data type in pull_policy": {
-			toml:        `pull_policy = [true, false]`,
-			expectedErr: true,
-		},
-		"single always policy in pull_policy": {
-			toml:           `pull_policy = "always"`,
-			expectedResult: DockerPullPolicies{PullPolicyAlways},
-			expectedErr:    false,
-		},
-		"all policies in pull_policy": {
-			toml:           `pull_policy = ["always", "if-not-present", "never"]`,
-			expectedResult: DockerPullPolicies{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
-			expectedErr:    false,
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			var result DockerConfig
+			policies, err := tt.config.GetPullPolicies()
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedPullPolicies, policies)
+		})
+	}
+}
+
+func TestStringOrArray_UnmarshalTOML(t *testing.T) {
+	tests := map[string]struct {
+		toml           string
+		expectedResult StringOrArray
+		expectedErr    bool
+	}{
+		"no fields": {
+			toml:           "",
+			expectedResult: nil,
+			expectedErr:    false,
+		},
+		"empty string_or_array": {
+			toml:           `string_or_array = ""`,
+			expectedResult: StringOrArray{""},
+			expectedErr:    false,
+		},
+		"string": {
+			toml:           `string_or_array = "always"`,
+			expectedResult: StringOrArray{"always"},
+			expectedErr:    false,
+		},
+		"slice with invalid single value": {
+			toml:        `string_or_array = 10`,
+			expectedErr: true,
+		},
+		"valid slice with multiple values": {
+			toml:           `string_or_array = ["unknown", "always"]`,
+			expectedResult: StringOrArray{"unknown", "always"},
+			expectedErr:    false,
+		},
+		"slice with mixed values": {
+			toml:        `string_or_array = ["unknown", 10]`,
+			expectedErr: true,
+		},
+		"slice with invalid values": {
+			toml:        `string_or_array = [true, false]`,
+			expectedErr: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			type Config struct {
+				StringOrArray StringOrArray `toml:"string_or_array"`
+			}
+
+			var result Config
 			_, err := toml.Decode(tt.toml, &result)
 
 			if tt.expectedErr {
@@ -856,7 +907,7 @@ func TestDockerConfig_PullPolicies_UnmarshalTOML(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedResult, result.PullPolicy)
+			assert.Equal(t, tt.expectedResult, result.StringOrArray)
 		})
 	}
 }

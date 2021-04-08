@@ -167,7 +167,7 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 			Shell:    shell,
 			Docker: &common.DockerConfig{
 				Image:      image,
-				PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+				PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 			},
 		},
 		RunnerCredentials: common.RunnerCredentials{
@@ -294,7 +294,7 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
 				Docker: &common.DockerConfig{
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
@@ -328,7 +328,7 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 					AllowedImages:   []string{common.TestAlpineImage},
 					AllowedServices: []string{common.TestDockerDindImage},
 					Privileged:      true,
-					PullPolicy:      common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy:      common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
@@ -389,7 +389,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 						Docker: &common.DockerConfig{
 							Privileged:                 true,
 							Image:                      common.TestAlpineImage,
-							PullPolicy:                 common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+							PullPolicy:                 common.StringOrArray{common.PullPolicyIfNotPresent},
 							DisableEntrypointOverwrite: test.disabled,
 						},
 					},
@@ -505,7 +505,7 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
@@ -540,7 +540,7 @@ func TestDockerCommandOutput(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
@@ -583,7 +583,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 					Executor: "docker",
 					Docker: &common.DockerConfig{
 						Image:      common.TestAlpineImage,
-						PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						Privileged: true,
 					},
 				},
@@ -627,7 +627,7 @@ func getTestDockerJob(t *testing.T) *common.Build {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					Privileged: true,
 				},
 			},
@@ -733,7 +733,7 @@ func TestCacheInContainer(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					Volumes:    []string{"/cache"},
 				},
 			},
@@ -822,7 +822,7 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:           common.TestAlpineImage,
-					PullPolicy:      common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy:      common.StringOrArray{common.PullPolicyIfNotPresent},
 					AllowedServices: []string{common.TestAlpineImage},
 				},
 			},
@@ -856,7 +856,7 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:           common.TestAlpineImage,
-					PullPolicy:      common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy:      common.StringOrArray{common.PullPolicyIfNotPresent},
 					AllowedServices: []string{common.TestAlpineImage},
 				},
 			},
@@ -1069,7 +1069,7 @@ func testDockerVersion(t *testing.T, version string) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:       common.TestAlpineImage,
-					PullPolicy:  common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy:  common.StringOrArray{common.PullPolicyIfNotPresent},
 					Credentials: credentials,
 					CPUS:        "0.1",
 				},
@@ -1139,7 +1139,7 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
@@ -1170,7 +1170,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestAlpineImage,
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
@@ -1201,7 +1201,7 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 				Docker: &common.DockerConfig{
 					Image:       common.TestAlpineImage,
 					HelperImage: helperImageConfig,
-					PullPolicy:  common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy:  common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
 		},
@@ -1271,7 +1271,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 				Executor: "docker",
 				Docker: &common.DockerConfig{
 					Image:      common.TestDockerGitImage,
-					PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					Volumes: []string{
 						"/var/run/docker.sock:/var/run/docker.sock",
 					},
@@ -1553,7 +1553,7 @@ func TestChownAndUmaskUsage(t *testing.T) {
 						Executor: "docker",
 						Docker: &common.DockerConfig{
 							Image:      tt.testImage,
-							PullPolicy: common.DockerPullPolicies{common.PullPolicyIfNotPresent},
+							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						},
 					},
 				},
