@@ -1,3 +1,63 @@
+## v13.11.0-rc1 (2021-04-08)
+
+### New features
+
+- Allow user to specify multiple pull policies for Kubernetes executor !2807
+
+### Bug fixes
+
+- Use inspect.GID() to collect GID value in Docker executor !2769
+- Fix Kubernetes attach strategy for non-root environments !2749
+
+### Maintenance
+
+- ci: wrap GOCACHE with double quotes !2859
+- Add bridge job to runner-incept !2845
+- Fix archives/zip tests on Windows !2832
+- Report CI test build failures !2829
+- Add job URL to container labels !2823
+- Compile gitlab-runner binary for shell integration tests !2820
+- Don't return error when checking feature flag !2812
+- Simplify the triggerring of 'gitlab-docs' Review App pipelines !2809
+- Fix git 1.8.3.1 job errors !2791
+- Fix job duration value when in log format is json !2787
+- Add support for CSI volumes !2784 (Brandon Butler @brandonbutler)
+- Move Kubernetes integration tests to separate file !2779
+- Support for env variables expansion for image name for kubernetes executor !2778
+- Segregate integration tests in docker executor !2776
+- Remove test with int overflow !2597 (Fábio Matavelli @fabiomatavelli)
+- Adding git depth for submodules !2107 (Nico Bollen @bollenn)
+
+### Documentation changes
+
+- Removed reference to master !2855
+- Fix pipeline configuration for docs branches !2853
+- Make clear when FF runner configuration syntax was introduced !2852
+- Roughly alphabetised Docker Container parms - docs !2851 (Raimund Hook @stingrayza)
+- Updated docs reference to MinIO !2850 (Raimund Hook @stingrayza)
+- Documentation Update/docs/security/index.md !2849 (Anshuman Singh @singhanshuman)
+- Add clarification on Runner and GitLab Version match !2841
+- Edited for style !2838
+- More edits for style !2834
+- Add services note to Windows container troubleshooting !2833
+- Edited for grammar and style !2830
+- Moved troubleshooting to OS topics !2819
+- Fix heading type in GPU documentation !2817
+- pWIP: Add configuration section to docs for runner Operator on OpenShift !2816
+- Add feature flags in config.toml !2811
+- Update links to redirected files !2808
+- Add a note to docs on usage of docker script from `13.9` !2806
+- Remove docker-machine provision on creation failure !2805
+- Improve documentation for GPUs for all executors !2804
+- Update redirected links in runner docs !2802
+- Add troubleshooting section in kubernetes executor documentation !2799 (Vincent Firmin @winkies)
+- Edited for style and consistency !2777
+- Document how to customize environment variables for Runner !2775
+
+### Other changes
+
+- Update warning message URL for DockerHub !2844
+
 ## v13.10.0 (2021-03-21)
 
 ### Bug fixes
