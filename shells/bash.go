@@ -231,12 +231,12 @@ func (b *BashWriter) writeTrace(w io.Writer, trace bool) {
 }
 
 func (b *BashWriter) writeEval(w io.Writer) {
+	command := ": | eval " + helpers.ShellEscape(b.String()) + "\n"
 	if b.useNewEval {
-		_, _ = io.WriteString(w, ": | (eval "+helpers.ShellEscape(b.String())+")\n")
-		return
+		command = ": | (eval " + helpers.ShellEscape(b.String()) + ")\n"
 	}
 
-	_, _ = io.WriteString(w, ": | eval "+helpers.ShellEscape(b.String())+"\n")
+	_, _ = io.WriteString(w, command)
 }
 
 func (b *BashWriter) writeScript(w io.Writer) {
