@@ -21,7 +21,7 @@ const (
 	EnableBashExitCodeCheck                     string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
 	UseWindowsLegacyProcessStrategy             string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
 	SkipDockerMachineProvisionOnCreationFailure string = "FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE"
-	UseNewEvalStrategy                          string = "FF_USE_NEW_EVAL_STRATEGY"
+	UseNewEvalStrategy                          string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
 )
 
 type FeatureFlag struct {
