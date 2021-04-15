@@ -24,39 +24,33 @@ type Buffer struct {
 	lw   *limitWriter
 	w    io.WriteCloser
 
-	logFile    *os.File
-	bytesLimit int
-	checksum   hash.Hash32
-
-	transformers []transform.Transformer
+	logFile  *os.File
+	checksum hash.Hash32
 }
 
 func (b *Buffer) SetMasked(values []string) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
-	// changes cannot be made after the first call to Write()
+	// close existing writer to flush data
 	if b.w != nil {
-		return
+		b.w.Close()
 	}
 
-	b.transformers = make([]transform.Transformer, 0, len(values))
+	transformers := make([]transform.Transformer, 0, len(values))
 
 	for _, value := range values {
-		b.transformers = append(b.transformers, NewPhraseTransform(value))
+		transformers = append(transformers, NewPhraseTransform(value))
 	}
+
+	b.w = transform.NewWriter(b.lw, transform.Chain(transformers...))
 }
 
 func (b *Buffer) SetLimit(size int) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
-	// changes cannot be made after the first call to Write()
-	if b.w != nil {
-		return
-	}
-
-	b.bytesLimit = size
+	b.lw.limit = int64(size)
 }
 
 func (b *Buffer) Size() int {
@@ -77,22 +71,12 @@ func (b *Buffer) Write(p []byte) (int, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if b.w == nil {
-		b.lw = &limitWriter{
-			w:       io.MultiWriter(b.logFile, b.checksum),
-			written: 0,
-			limit:   int64(b.bytesLimit),
-		}
-
-		b.w = transform.NewWriter(b.lw, transform.Chain(b.transformers...))
-	}
-
 	n, err := b.w.Write(p)
 	// if we get a log limit exceeded error, we've written the log limit
 	// notice out to the log and will now silently not write any additional
-	// data.
+	// data: we return len(p), nil so the caller continues as normal.
 	if err == errLogLimitExceeded {
-		return n, nil
+		return len(p), nil
 	}
 	return n, err
 }
@@ -155,8 +139,14 @@ func (w *limitWriter) Write(p []byte) (int, error) {
 }
 
 func (w *limitWriter) writeLimitExceededMessage() {
-	msg := "\n%sJob's log exceeded limit of %v bytes.%s\n"
-	n, _ := fmt.Fprintf(w.w, msg, helpers.ANSI_BOLD_RED, w.limit, helpers.ANSI_RESET)
+	n, _ := fmt.Fprintf(
+		w.w,
+		"\n%sJob's log exceeded limit of %v bytes.\n"+
+			"Job execution will continue but no more output will be collected.%s\n",
+		helpers.ANSI_BOLD_YELLOW,
+		w.limit,
+		helpers.ANSI_RESET,
+	)
 	w.written += int64(n)
 }
 
@@ -167,10 +157,17 @@ func New() (*Buffer, error) {
 	}
 
 	buffer := &Buffer{
-		bytesLimit: defaultBytesLimit,
-		logFile:    logFile,
-		checksum:   crc32.NewIEEE(),
+		logFile:  logFile,
+		checksum: crc32.NewIEEE(),
 	}
+
+	buffer.lw = &limitWriter{
+		w:       io.MultiWriter(buffer.logFile, buffer.checksum),
+		written: 0,
+		limit:   defaultBytesLimit,
+	}
+
+	buffer.SetMasked(nil)
 
 	return buffer, nil
 }
