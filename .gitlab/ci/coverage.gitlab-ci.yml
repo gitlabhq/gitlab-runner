@@ -1,9 +1,7 @@
 .coverage_job:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
-  when: always
 
 test coverage report:
   extends:
@@ -59,30 +57,25 @@ code navigation: # See https://docs.gitlab.com/ee/user/project/code_intelligence
 
 check race unexpected test failures:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
   needs:
   - unit test with race
   script:
   - ./scripts/check_unexpected_test_failures
-  when: always
 
 check windows 1809 unexpected test failures:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
   needs:
   - windows 1809 tests
   script:
   - ./scripts/check_unexpected_test_failures
-  when: always
 
 .check windows test failures:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:default-branch-only:always
   stage: coverage
   script:
   - ./scripts/check_windows_failures
@@ -90,12 +83,14 @@ check windows 1809 unexpected test failures:
     paths:
     - .test-failures.*.txt.updated
     expire_in: 7d
-  when: always
 
+# Only test the oldest supported version in merge requests,
+# but test all versions in the default branch.
 check windows 1809 test failures:
   extends:
   - .check windows test failures
   - .windows1809_variables
+  - .rules:merge_request_pipelines:no_docs
   needs:
   - windows 1809 tests
 
@@ -103,7 +98,6 @@ check windows 1903 test failures:
   extends:
   - .check windows test failures
   - .windows1903_variables
-  - .runner_master
   needs:
   - windows 1903 tests
 
@@ -111,7 +105,6 @@ check windows 1909 test failures:
   extends:
   - .check windows test failures
   - .windows1909_variables
-  - .runner_master
   needs:
   - windows 1909 tests
 
@@ -119,6 +112,5 @@ check windows 2004 test failures:
   extends:
   - .check windows test failures
   - .windows2004_variables
-  - .runner_master
   needs:
   - windows 2004 tests
