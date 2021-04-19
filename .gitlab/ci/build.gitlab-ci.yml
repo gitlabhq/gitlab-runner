@@ -1,6 +1,6 @@
 .binaries: &binaries
   extends:
-  #- .rules:merge_request_pipelines:no_docs
+  - .rules:merge_request_pipelines:no_docs
   - .go-cache
   stage: build
   needs:
@@ -14,10 +14,7 @@
     - out/binaries/gitlab-runner-*
     exclude:
     - out/binaries/gitlab-runner-helper/
-    expire_in: 7d
-  only:
-    refs:
-    - sonia-ppc    
+    expire_in: 7d    
 
 binaries darwin/amd64: *binaries
 binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
