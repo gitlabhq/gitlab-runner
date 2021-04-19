@@ -77,6 +77,3 @@ prepare done:
   stage: prebuild
   extends:
   - .stage_done
-  only:
-    refs:
-    - sonia-ppc
