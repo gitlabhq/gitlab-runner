@@ -4,9 +4,6 @@
   - .except_docs
   stage: coverage
   when: always
-  only:
-    refs:
-    - sonia-ppc
 
 test coverage report:
   extends:
