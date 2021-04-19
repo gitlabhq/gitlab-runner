@@ -14,7 +14,7 @@ endif
 
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
-BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x'
+BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x' -arch 'ppc64le'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= master
 
@@ -23,11 +23,11 @@ DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
     ubuntu/xenial ubuntu/bionic ubuntu/eoan ubuntu/focal \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
-DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x
+DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
 RPM_PLATFORMS ?= el/6 el/7 el/8 \
     ol/6 ol/7 \
     fedora/30
-RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x
+RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x ppc64le
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
 COMMON_PACKAGE_NAMESPACE = $(PKG)/common

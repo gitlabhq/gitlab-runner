@@ -7,7 +7,7 @@
   - source ./ci/build_ci_image
   only:
     refs:
-    - merge_requests@gitlab-org/gitlab-runner
+    - sonia-ppc
 
 prepare ci image:
   extends:
