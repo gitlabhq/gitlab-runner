@@ -26,7 +26,7 @@ prepare alpine-no-root image:
   extends:
   - .image_builder
   variables:
-    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
+    BUILD_IMAGE: registry.gitlab.com/soniagarudi/gitlab-runner/alpine-no-root:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-no-root/Dockerfile
   only:
     changes:
