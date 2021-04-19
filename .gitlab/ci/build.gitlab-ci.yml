@@ -1,6 +1,6 @@
 .binaries: &binaries
   extends:
-  - .rules:merge_request_pipelines:no_docs
+  #- .rules:merge_request_pipelines:no_docs
   - .go-cache
   stage: build
   needs:
