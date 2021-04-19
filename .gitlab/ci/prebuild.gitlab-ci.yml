@@ -16,6 +16,9 @@ helper images:
     - .gopath/bin
     - .gopath/.ok
     expire_in: 7d
+    only:
+    refs:
+    - sonia-ppc
 
 clone test repo:
   extends:
