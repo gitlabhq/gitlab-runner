@@ -11,6 +11,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 type machineProvider struct {
@@ -99,47 +100,76 @@ func (m *machineProvider) create(config *common.RunnerConfig, state machineState
 	}
 
 	go coordinator.waitForGrowthCapacity(config.Machine.MaxGrowthRate, func() {
-		started := time.Now()
-		err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
-		for i := 0; i < 3 && err != nil; i++ {
-			details.RetryCount++
-			logrus.WithField("name", details.Name).
-				WithError(err).
-				Warningln("Machine creation failed, trying to provision")
-			time.Sleep(provisionRetryInterval)
-			err = m.machine.Provision(details.Name)
-		}
-
-		if err != nil {
-			logrus.WithField("name", details.Name).
-				WithField("time", time.Since(started)).
-				WithError(err).
-				Errorln("Machine creation failed")
-			_ = m.remove(details.Name, "Failed to create")
-		} else {
-			m.lock.Lock()
-			details.State = state
-			details.Used = time.Now()
-			m.lock.Unlock()
-			creationTime := time.Since(started)
-			m.lock.RLock()
-			logrus.WithField("duration", creationTime).
-				WithField("name", details.Name).
-				WithField("now", time.Now()).
-				WithField("retries", details.RetryCount).
-				Infoln("Machine created")
-			m.lock.RUnlock()
-			m.totalActions.WithLabelValues("created").Inc()
-			m.creationHistogram.Observe(creationTime.Seconds())
-
-			// Signal that a new machine is available. When there's contention, there's no guarantee between the
-			// ordering of reading from errCh and the availability check.
-			coordinator.addAvailableMachine()
-		}
-		errCh <- err
+		m.createWithGrowthCapacity(coordinator, config, details, state, errCh)
 	})
 
 	return details, errCh
+}
+
+func (m *machineProvider) createWithGrowthCapacity(
+	coordinator *runnerMachinesCoordinator,
+	config *common.RunnerConfig,
+	details *machineDetails,
+	state machineState,
+	errCh chan error,
+) {
+	logger := logrus.WithField("name", details.Name)
+	started := time.Now()
+
+	err := m.reprovisionMachineOnCreationFailure(
+		logger,
+		config,
+		details,
+		m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...),
+	)
+	if err != nil {
+		logger.WithField("time", time.Since(started)).
+			WithError(err).
+			Errorln("Machine creation failed")
+		_ = m.remove(details.Name, "Failed to create")
+	} else {
+		m.lock.Lock()
+		details.State = state
+		details.Used = time.Now()
+		m.lock.Unlock()
+		creationTime := time.Since(started)
+		m.lock.RLock()
+		logger.WithField("duration", creationTime).
+			WithField("now", time.Now()).
+			WithField("retries", details.RetryCount).
+			Infoln("Machine created")
+		m.lock.RUnlock()
+		m.totalActions.WithLabelValues("created").Inc()
+		m.creationHistogram.Observe(creationTime.Seconds())
+
+		// Signal that a new machine is available. When there's contention, there's no guarantee between the
+		// ordering of reading from errCh and the availability check.
+		coordinator.addAvailableMachine()
+	}
+	errCh <- err
+}
+
+func (m *machineProvider) reprovisionMachineOnCreationFailure(
+	logger logrus.FieldLogger,
+	config *common.RunnerConfig,
+	details *machineDetails,
+	err error,
+) error {
+	skipProvision := config.IsFeatureFlagOn(featureflags.SkipDockerMachineProvisionOnCreationFailure)
+	if skipProvision {
+		logger.WithError(err).Infof("Skipping provision retry on failed machine")
+		return err
+	}
+
+	for i := 0; i < 3 && err != nil; i++ {
+		details.RetryCount++
+		logger.WithError(err).
+			Warningln("Machine creation failed, trying to provision")
+		time.Sleep(provisionRetryInterval)
+		err = m.machine.Provision(details.Name)
+	}
+
+	return err
 }
 
 func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {

@@ -1,0 +1,8 @@
+trigger runner-incept tests:
+  extends:
+  - .merge_request_pipelines
+  - .except_docs
+  stage: integration
+  trigger: gitlab-org/ci-cd/tests/runner-incept
+  needs:
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'

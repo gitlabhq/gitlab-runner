@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+borderTop() {
+    echo
+    echo "========================================================================================================================="
+}
+
+borderBottom() {
+    echo "========================================================================================================================="
+    echo
+}
+
+testOutputDir="./.testoutput"
+testOutputPattern="${testOutputDir}/*.output.txt"
+
+panicFailures=()
+buildFailures=()
+for file in ${testOutputPattern}; do
+    set +e
+    if [[ "${file}" == *".windows."* ]]; then
+      panicMsgs="$(iconv -f utf-16 -t utf-8 "${file}" | grep --fixed-strings 'panic:')"
+      buildFailureMsgs="$(iconv -f utf-16 -t utf-8 "${file}" | grep --fixed-strings '[build failed]')"
+    else
+      panicMsgs="$(grep --fixed-strings 'panic:' "${file}")"
+      buildFailureMsgs="$(grep --fixed-strings '[build failed]' "${file}")"
+    fi
+    set -e
+
+    if [ -n "${panicMsgs}" ]; then
+        panicFailures+=("${file}: ${panicMsgs}")
+    fi
+    if [ -n "${buildFailureMsgs}" ]; then
+        buildFailures+=("${file}: ${buildFailureMsgs}")
+    fi
+done
+
+if [ ${#panicFailures[@]} -gt 0 ] || [ ${#buildFailures[@]} -gt 0 ]; then
+    borderTop
+    if [ ${#buildFailures[@]} -gt 0 ]; then
+        echo "Build failures found:"
+        for failure in "${buildFailures[@]}"; do
+            echo "  ${failure}"
+        done
+    fi
+    if [ ${#panicFailures[@]} -gt 0 ]; then
+        echo "Panic failures found:"
+        for failure in "${panicFailures[@]}"; do
+            echo "  ${failure}"
+        done
+    fi
+    borderBottom
+    exit 1
+fi
+
+borderTop
+echo "No unexpected test failures found!"
+borderBottom

@@ -52,6 +52,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR` | `false` | ✗ |  | If enabled will remove the usage of `umask 0000` call for jobs executed with `docker` executor. Instead Runner will try to discover the UID and GID of the user configured for the image used by the build container and will change the ownership of the working directory and files by running the `chmod` command in the predefined container (after updating sources, restoring cache and downloading artifacts). POSIX utility `id` must be installed and operational in the build image for this feature flag. Runner will execute `id` with options `-u` and `-g` to retrieve the UID and GID. |
 | `FF_ENABLE_BASH_EXIT_CODE_CHECK` | `false` | ✗ |  | If enabled, bash scripts don't rely solely on `set -e`, but check for a non-zero exit code after each script command is executed. |
 | `FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY` | `true` | ✗ |  | When disabled, processes that Runner creates on Windows (shell and custom executor) will be created with additional setup that should improve process termination. This is currently experimental and how we setup these processes may change as we continue to improve this. When set to `true`, legacy process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag shouldbe set to `false`. |
+| `FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE` | `false` | ✗ |  | With the `docker+machine` executor, when a machine is not created, `docker-machine provision` runs for X amount of times. When this feature flag is set to `true`, it skips `docker-machine provision` removes the machine, and creates another machine instead. |
 
 <!-- feature_flags_list_end -->
 
@@ -78,7 +79,7 @@ enable feature flags:
     - echo "Hello"
   ```
 
-## Enable feature flag for Runner
+## Enable feature flag in runner environment variables
 
 To enable the feature for every job a Runner runs, specify the feature
 flag as an
@@ -95,4 +96,24 @@ in the [Runner configuration](advanced-configuration.md):
   builds_dir = ""
   shell = ""
   environment = ["FEATURE_FLAG_NAME=1"]
+```
+
+## Enable feature flag in runner configuration
+
+> [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2811) GitLab Runner 13.11.
+
+You can enable feature flags by specifying them under `[runners.feature_flag]`. This
+setting prevents any job from overriding the feature flag values.
+
+Some feature flags are also only usable when you configure this setting, because
+they don't deal with how the job is executed.
+
+```toml
+[[runners]]
+  name = "ruby-2.6-docker"
+  url = "https://CI/"
+  token = "TOKEN"
+  executor = "docker"
+  [runners.feature_flags]
+    FF_USE_DIRECT_DOWNLOAD = true
 ```

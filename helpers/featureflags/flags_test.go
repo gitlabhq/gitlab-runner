@@ -17,7 +17,7 @@ func mockFlags(newFlags ...FeatureFlag) func() {
 }
 
 func TestGetAll(t *testing.T) {
-	testFlag := FeatureFlag{Name: "TEST_FLAG", DefaultValue: "value"}
+	testFlag := FeatureFlag{Name: "TEST_FLAG", DefaultValue: true}
 
 	defer mockFlags(testFlag)()
 

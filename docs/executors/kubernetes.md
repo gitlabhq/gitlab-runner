@@ -164,7 +164,7 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 | `poll_interval` | How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3). |
 | `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180). |
 | `privileged` | Run containers with the privileged flag. |
-| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. The cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) will be used if not set. See also [`if-not-present` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). |
+| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#using-pull-policies). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). |
 | `service_account` | Default service account job/executor pods use to talk to Kubernetes API. |
 | `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
 | `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#using-services). |
@@ -537,6 +537,44 @@ check_interval = 30
         entrypoint = ["entrypoint.sh"]
         command = ["executable","param1","param2"]
 ```
+
+## Using pull policies
+
+Use the `pull_policy` parameter to specify a single or multiple pull policies.
+
+For a single pull policy:
+
+```toml
+[runners.kubernetes]
+  pull_policy = "never"
+```
+
+For multiple pull policies:
+
+```toml
+[runners.kubernetes]
+  # use multiple pull policies
+  pull_policy = ["always", "if-not-present"]
+```
+
+The policy applies to the build image, helper image, and any services. It controls how an image is fetched and updated.
+
+To determine when to use which policy, see
+[the documentation on Kubernetes pull policies](https://v1-17.docs.kubernetes.io/docs/concepts/configuration/overview/#container-images).
+
+The GitLab naming convention is slightly different than the Kubernetes one.
+
+| Runner pull policy | Kubernetes pull policy | Description |
+|--------------------|------------------------|-------------|
+| _blank_ | _blank_ | Uses the default policy, as specified by Kubernetes. |
+| `if-not-present` | `IfNotPresent` | The image is pulled only if it is not already present on the node that executes the job. See [security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). |
+| `always` | `Always` | The image is pulled every time the job is executed. |
+| `never` | `Never` | The image is never pulled and requires the node to already have it. |
+
+When multiple policies are defined, each policy is attempted until the image is obtained successfully.
+For example, when you use `[ always, if-not-present ]`, you can use the policy `if-not-present` if `always` fails due to a temporary registry problem.
+
+Beware of the [security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) when using `if-not-present`.
 
 ## Adding extra host aliases
 

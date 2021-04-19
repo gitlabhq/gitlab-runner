@@ -249,45 +249,45 @@ This defines the Docker Container parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
-| `hostname`                     | Custom hostname for the Docker container. |
-| `runtime`                      | The runtime for the Docker container. |
-| `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Useful in `boot2docker`. |
-| `tls_verify`                   | Enable or disable TLS verification of connections to Docker daemon. Disabled by default. |
-| `image`                        | The image to run jobs with. |
-| `memory`                       | The memory limit. A string. |
-| `memory_swap`                  | The total memory limit. A string. |
-| `memory_reservation`           | The memory soft limit. A string. |
-| `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
-| `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
+| `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
+| `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
+| `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
+| `cap_add`                      | Add additional Linux capabilities to the container. |
+| `cap_drop`                     | Drop additional Linux capabilities from the container. |
 | `cpuset_cpus`                  | The control group's `CpusetCpus`. A string. |
 | `cpu_shares`                   | Number of CPU shares used to set relative CPU usage. Default is `1024`. |
 | `cpus`                         | Number of CPUs (available in Docker 1.13 or later. A string.  |
+| `devices`                      | Share additional host devices with the container. |
+| `disable_cache`                | The Docker executor has two levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
+| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting. |
 | `dns`                          | A list of DNS servers for the container to use. |
 | `dns_search`                   | A list of DNS search domains. |
-| `privileged`                   | Make the container run in privileged mode. Insecure. |
-| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting. |
-| `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
-| `cap_add`                      | Add additional Linux capabilities to the container. |
-| `cap_drop`                     | Drop additional Linux capabilities from the container. |
-| `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
-| `devices`                      | Share additional host devices with the container. |
+| `extra_hosts`                  | Hosts that should be defined in container environment. |
 | `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
-| `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
-| `disable_cache`                | The Docker executor has two levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
-| `network_mode`              | Add container to a custom network. |
-| `wait_for_services_timeout` | How long to wait for Docker services. Set to `0` to disable. Default is `30`. |
-| `volumes`                   | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
-| `extra_hosts`               | Hosts that should be defined in container environment. |
-| `shm_size`                  | Shared memory size for images (in bytes). |
-| `volumes_from`              | A list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
-| `volume_driver`             | The volume driver to use for the container. |
-| `links`                     | Containers that should be linked with container that runs the job. |
-| `allowed_images`            | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
-| `allowed_services`          | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
-| `pull_policy`               | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies). |
-| `sysctls`                   | The `sysctl` options. |
-| `helper_image`              | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
+| `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
+| `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
+| `hostname`                     | Custom hostname for the Docker container. |
+| `image`                        | The image to run jobs with. |
+| `links`                        | Containers that should be linked with container that runs the job. |
+| `memory`                       | The memory limit. A string. |
+| `memory_swap`                  | The total memory limit. A string. |
+| `memory_reservation`           | The memory soft limit. A string. |
+| `network_mode`                 | Add container to a custom network. |
+| `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
+| `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
+| `privileged`                   | Make the container run in privileged mode. Insecure. |
+| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies). |
+| `runtime`                      | The runtime for the Docker container. |
+| `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
+| `shm_size`                     | Shared memory size for images (in bytes). |
+| `sysctls`                      | The `sysctl` options. |
+| `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Useful in `boot2docker`. |
+| `tls_verify`                   | Enable or disable TLS verification of connections to Docker daemon. Disabled by default. |
+| `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
+| `volumes`                      | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
+| `volumes_from`                 | A list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
+| `volume_driver`                | The volume driver to use for the container. |
+| `wait_for_services_timeout`    | How long to wait for Docker services. Set to `0` to disable. Default is `30`. |
 
 ### The `[[runners.docker.services]]` section
 
@@ -792,10 +792,10 @@ For more parameters, see the [Kubernetes executor documentation](../executors/ku
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
-| `host`           | string  | Optional. Kubernetes master host URL. If not specified, the runner attempts to auto-discovery it. |
-| `cert_file`      | string  | Optional. Kubernetes master auth certificate. |
-| `key_file`       | string  | Optional. Kubernetes master auth private key. |
-| `ca_file`        | string  | Optional. Kubernetes master auth ca certificate. |
+| `host`           | string  | Optional. Kubernetes host URL. If not specified, the runner attempts to auto-discovery it. |
+| `cert_file`      | string  | Optional. Kubernetes auth certificate. |
+| `key_file`       | string  | Optional. Kubernetes auth private key. |
+| `ca_file`        | string  | Optional. Kubernetes auth ca certificate. |
 | `image`          | string  | Default Docker image to use for jobs when none is specified. |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in. |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled. |
@@ -855,10 +855,14 @@ By default, the helper image is pulled from Docker Hub. If the
 `FF_GITLAB_REGISTRY_HELPER_IMAGE` [feature flag](feature-flags.md) is enabled
 the runner pulls the image from
 [`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754)
-where the limits don't apply. You can enable the feature flag for a [specific
-pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration) or in
-the [runner](feature-flags.md#enable-feature-flag-for-runner), which enables
-the behavior for every job that runner executes.
+where the limits don't apply. You can enable the feature flag for:
+
+- A [specific pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration).
+- [Every job](feature-flags.md#enable-feature-flag-in-runner-environment-variables).
+
+If you are a runner administrator and don't want users to override it, you can set this
+feature flag by specifying
+[`[runners.feature_flags]`](feature-flags.md#enable-feature-flag-in-runner-configuration).
 
 ### Override the helper image
 
