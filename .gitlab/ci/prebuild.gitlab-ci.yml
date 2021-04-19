@@ -36,9 +36,6 @@ clone test repo:
     paths:
     - tmp/gitlab-test
     expire_in: 7d
-  only:
-    refs:
-    - sonia-ppc
 
 tests definitions:
   extends:
@@ -54,9 +51,6 @@ tests definitions:
     paths:
     - testsdefinitions.txt
     expire_in: 7d
-  only:
-    refs:
-    - sonia-ppc
 
 ecr public token:
   extends:
