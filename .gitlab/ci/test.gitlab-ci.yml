@@ -180,8 +180,7 @@ fuzz variable mask:
 
 .windows test:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:default-branch-only
   - .go-cache-windows
   stage: test
   needs:
@@ -207,28 +206,28 @@ fuzz variable mask:
     expire_in: 7d
   allow_failure: true
 
+# Only test the oldest supported version in merge requests,
+# but test all versions in the default branch.
 windows 1809 tests:
   extends:
   - .windows test
   - .windows1809
+  - .rules:merge_request_pipelines:no_docs
 
 windows 1903 tests:
   extends:
   - .windows test
   - .windows1903
-  - .runner_master
 
 windows 1909 tests:
   extends:
   - .windows test
   - .windows1909
-  - .runner_master
 
 windows 2004 tests:
   extends:
   - .windows test
   - .windows2004
-  - .runner_master
 
 git 1.8.3.1:
   extends:
