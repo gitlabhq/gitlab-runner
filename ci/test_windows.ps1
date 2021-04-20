@@ -46,5 +46,5 @@ if ($failed.count -ne 0) {
     Write-Warning "Failed packages:"
     $failed | Out-String | Write-Warning
 
-    exit 1
+    exit 99
 }

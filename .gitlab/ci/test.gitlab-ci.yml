@@ -177,11 +177,11 @@ unit test with race:
   extends:
   - unit test
   - .go-cache
-  allow_failure:
-    exit_codes: 1
   variables:
     CGO_ENABLED: "1"
     TESTFLAGS: -cover -race
+  allow_failure:
+    exit_codes: 99
 
 integration test:
   extends:
@@ -199,10 +199,11 @@ integration test with race:
   extends:
   - integration test
   - .go-cache
-  allow_failure: true
   variables:
     CGO_ENABLED: "1"
     TESTFLAGS: -cover -tags=integration -race
+  allow_failure:
+    exit_codes: 99
 
 fuzz variable mask:
   extends:
@@ -245,7 +246,7 @@ fuzz variable mask:
     when: always
     expire_in: 7d
   allow_failure:
-    exit_codes: 1
+    exit_codes: 99
 
 .windows unit test:
   extends:

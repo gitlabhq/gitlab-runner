@@ -45,7 +45,7 @@ prepareTestCommands() {
 
         # use env -i to clear parent environment variables for go test
         # shellcheck disable=SC2086
-        ./scripts/go_test_no_env ${TESTFLAGS} -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
+        ./scripts/go_test_no_env ${TESTFLAGS} -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=99
 
         local tests
         tests=$(grep "^Test" "${tempFile}" || true)
@@ -120,7 +120,7 @@ executeTestCommand() {
 
     # use env -i to clear parent environment variables for go test
     # shellcheck disable=SC2086
-    ./scripts/go_test_no_env ${options} ${TESTFLAGS} -ldflags "${GO_LDFLAGS}" -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
+    ./scripts/go_test_no_env ${options} ${TESTFLAGS} -ldflags "${GO_LDFLAGS}" -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=99
 
     return ${exitCode}
 }
@@ -145,7 +145,7 @@ executeTestPart() {
 
     local exitCode=0
     while read -r pkg index tests; do
-        executeTestCommand "${pkg}" "${index}" "${tests}" || exitCode=1
+        executeTestCommand "${pkg}" "${index}" "${tests}" || exitCode=99
     done < <(tail -n +${executionOffset} ${testsDefinitions} | head -n ${executionSize})
 
     exit ${exitCode}
