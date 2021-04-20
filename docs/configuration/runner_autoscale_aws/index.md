@@ -32,7 +32,7 @@ We suggest a quick read through Docker machine [`amazonec2` driver
 documentation](https://docs.docker.com/machine/drivers/aws/) to familiarize
 yourself with the parameters we will set later in this article.
 
-Your GitLab instance is going to need to talk to the runners over the network,
+Your GitLab Runner is going to need to talk to your GitLab instance over the network,
 and that is something you need think about when configuring any AWS security
 groups or when setting up your DNS configuration.
 
