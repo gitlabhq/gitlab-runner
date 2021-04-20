@@ -18,5 +18,5 @@
 
 binaries darwin/amd64: *binaries
 binaries freebsd/386 freebsd/amd64 freebsd/arm: *binaries
-binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x: *binaries
+binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x linux/ppc64le: *binaries
 binaries windows/386 windows/amd64: *binaries
