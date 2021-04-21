@@ -183,3 +183,30 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 		})
 	}
 }
+
+func TestRestrictHTTPMethods(t *testing.T) {
+	tests := map[string]int{
+		http.MethodGet:  http.StatusOK,
+		http.MethodHead: http.StatusOK,
+		http.MethodPost: http.StatusMethodNotAllowed,
+		"FOOBAR":        http.StatusMethodNotAllowed,
+	}
+
+	for method, expectedStatusCode := range tests {
+		t.Run(method, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte("hello world"))
+			})
+
+			server := httptest.NewServer(restrictHTTPMethods(mux, http.MethodGet, http.MethodHead))
+
+			req, err := http.NewRequest(method, server.URL, nil)
+			require.NoError(t, err)
+
+			resp, err := server.Client().Do(req)
+			require.NoError(t, err)
+			require.Equal(t, expectedStatusCode, resp.StatusCode)
+		})
+	}
+}
