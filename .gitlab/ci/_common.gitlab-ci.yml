@@ -1,5 +1,5 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/soniagarudi/gitlab-runner/ci:1.13.8-12
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-12
   GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
