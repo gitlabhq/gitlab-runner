@@ -658,16 +658,16 @@ Pulling docker image local_image:latest ...
 ERROR: Build failed: Error: image local_image:latest not found
 ```
 
-**When to use this pull policy?**
+#### When to use the `never` pull policy
 
-This pull policy should be used if you want or need to have a full
+The `never` pull policy should be used if you want or need to have a full
 control on which images are used by the runner's users. It is a good choice
 for private runners that are dedicated to a project where only specific images
 can be used (not publicly available on any registries).
 
-**When not to use this pull policy?**
+#### When not to use the `never` pull policy
 
-This pull policy will not work properly with most of [auto-scaled](../configuration/autoscale.md)
+The `never` pull policy will not work properly with most of [auto-scaled](../configuration/autoscale.md)
 Docker executor use cases. Because of how auto-scaling works, the `never`
 pull policy may be usable only when using a pre-defined cloud instance
 images for chosen cloud provider. The image needs to contain installed
@@ -679,9 +679,9 @@ When the `if-not-present` pull policy is used, the runner will first check
 if the image is present locally. If it is, then the local version of
 image will be used. Otherwise, the runner will try to pull the image.
 
-**When to use this pull policy?**
+#### When to use the `if-not-present` pull policy
 
-This pull policy is a good choice if you want to use images pulled from
+The `if-not-present` pull policy is a good choice if you want to use images pulled from
 remote registries, but you want to reduce time spent on analyzing image
 layers difference when using heavy and rarely updated images.
 In that case, you will need once in a while to manually remove the image
@@ -691,9 +691,9 @@ It is also the good choice if you need to use images that are built
 and available only locally, but on the other hand, also need to allow to
 pull images from remote registries.
 
-**When not to use this pull policy?**
+#### When not to use the `if-not-present` pull policy
 
-This pull policy should not be used if your builds use images that
+The `if-not-present` pull policy should not be used if your builds use images that
 are updated frequently and need to be used in most recent versions.
 In such a situation, the network load reduction created by this policy may
 be less worthy than the necessity of the very frequent deletion of local
@@ -733,9 +733,9 @@ WARNING: Locally found image will be used instead.
 
 This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).
 
-**When to use this pull policy?**
+#### When to use the `always` pull policy
 
-This pull policy should be used if your runner is publicly available
+The `always` pull policy should be used if your runner is publicly available
 and configured as a shared runner in your GitLab instance. It is the
 only pull policy that can be considered as secure when the runner will
 be used with private images.
@@ -746,9 +746,9 @@ the newest images.
 Also, this will be the best solution for an [auto-scaled](../configuration/autoscale.md)
 configuration of the runner.
 
-**When not to use this pull policy?**
+#### When not to use the `always` pull policy
 
-This pull policy will definitely not work if you need to use locally
+The `always` pull policy will definitely not work if you need to use locally
 stored images. In this case, the runner will skip the local copy of the image
 and try to pull it from the remote registry. If the image was built locally
 and doesn't exist in any public registry (and especially in the default
@@ -766,8 +766,6 @@ ERROR: Build failed: Error: image local_image:latest not found
 The `pull_policy` parameter allows you to specify a list of pull policies.
 The policies in the list will be attempted in order from left to right until a pull attempt
 is successful, or the list is exhausted.
-
-**When to use multiple pull policies?**
 
 This functionality can be useful when the Docker registry is not available
 and you need to increase job resiliency.
