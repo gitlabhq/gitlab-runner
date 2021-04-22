@@ -32,8 +32,6 @@ github.com/Azure/go-autorest/tracing
 github.com/BurntSushi/toml
 # github.com/Microsoft/go-winio v0.4.12
 github.com/Microsoft/go-winio
-# github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
-github.com/ayufan/golang-kardianos-service
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/bmatcuk/doublestar v1.3.0
@@ -192,6 +190,8 @@ github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
 # github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
 github.com/kardianos/osext
+# github.com/kardianos/service v1.2.0
+github.com/kardianos/service
 # github.com/klauspost/compress v1.11.6
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/zip
