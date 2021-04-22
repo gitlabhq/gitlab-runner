@@ -13,7 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
-func getDefaultConfigFile() string {
+func GetDefaultConfigFile() string {
 	return filepath.Join(getDefaultConfigDirectory(), "config.toml")
 }
 
@@ -86,7 +86,7 @@ func (c *configOptionsWithListenAddress) listenAddress() (string, error) {
 func init() {
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile == "" {
-		err := os.Setenv("CONFIG_FILE", getDefaultConfigFile())
+		err := os.Setenv("CONFIG_FILE", GetDefaultConfigFile())
 		if err != nil {
 			logrus.WithError(err).Fatal("Couldn't set CONFIG_FILE environment variable")
 		}

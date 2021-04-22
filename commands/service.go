@@ -64,7 +64,7 @@ func runServiceStatus(displayName string, s service.Service) {
 	}
 }
 
-func getServiceArguments(c *cli.Context) (arguments []string) {
+func GetServiceArguments(c *cli.Context) (arguments []string) {
 	if wd := c.String("working-directory"); wd != "" {
 		arguments = append(arguments, "--working-directory", wd)
 	}
@@ -97,7 +97,7 @@ func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
 		Description: defaultDescription,
 		Arguments:   []string{"run"},
 	}
-	svcConfig.Arguments = append(svcConfig.Arguments, getServiceArguments(c)...)
+	svcConfig.Arguments = append(svcConfig.Arguments, GetServiceArguments(c)...)
 
 	switch runtime.GOOS {
 	case osTypeLinux:
@@ -155,7 +155,7 @@ func RunServiceControl(c *cli.Context) {
 	}
 }
 
-func getFlags() []cli.Flag {
+func GetFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:  "service, n",
@@ -165,8 +165,8 @@ func getFlags() []cli.Flag {
 	}
 }
 
-func getInstallFlags() []cli.Flag {
-	installFlags := getFlags()
+func GetInstallFlags() []cli.Flag {
+	installFlags := GetFlags()
 	installFlags = append(
 		installFlags,
 		cli.StringFlag{
@@ -176,7 +176,7 @@ func getInstallFlags() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  "config, c",
-			Value: getDefaultConfigFile(),
+			Value: GetDefaultConfigFile(),
 			Usage: "Specify custom config file",
 		},
 		cli.BoolFlag{
@@ -210,8 +210,8 @@ func getInstallFlags() []cli.Flag {
 }
 
 func init() {
-	flags := getFlags()
-	installFlags := getInstallFlags()
+	flags := GetFlags()
+	installFlags := GetInstallFlags()
 
 	common.RegisterCommand(cli.Command{
 		Name:   "install",
