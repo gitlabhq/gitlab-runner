@@ -13,7 +13,7 @@ import (
 )
 
 //nolint:funlen
-func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup buildSetupFn) {
+func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	cancelIncludeStages := []common.BuildStage{
 		common.BuildStagePrepare,
 		common.BuildStageGetSources,

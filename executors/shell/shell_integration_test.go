@@ -23,6 +23,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/shell"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
@@ -128,13 +129,17 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (
 
 func TestBuildSuccess(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		successfulBuild, err := common.GetSuccessfulBuild()
-		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+			successfulBuild, err := common.GetSuccessfulBuild()
+			assert.NoError(t, err)
+			build, cleanup := newBuild(t, successfulBuild, shell)
+			defer cleanup()
 
-		err = buildtest.RunBuild(t, build)
-		assert.NoError(t, err)
+			setup(build)
+
+			err = buildtest.RunBuild(t, build)
+			assert.NoError(t, err)
+		}, featureflags.UsePowershellPathResolver)
 	})
 }
 
@@ -1347,24 +1352,28 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-				build, cleanup := newBuild(t, tt.jobResponse, shell)
-				defer cleanup()
+				buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+					build, cleanup := newBuild(t, tt.jobResponse, shell)
+					defer cleanup()
 
-				testVariableName := "TEST_VARIABLE"
+					testVariableName := "TEST_VARIABLE"
 
-				build.Variables = append(
-					build.Variables,
-					common.JobVariable{Key: testVariableName, Value: "test", File: true},
-				)
+					build.Variables = append(
+						build.Variables,
+						common.JobVariable{Key: testVariableName, Value: "test", File: true},
+					)
 
-				_ = buildtest.RunBuild(t, build)
+					setup(build)
 
-				tmpDir := fmt.Sprintf("%s.tmp", build.BuildDir)
-				variableFile := filepath.Join(tmpDir, testVariableName)
+					_ = buildtest.RunBuild(t, build)
 
-				_, err := os.Stat(variableFile)
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, os.ErrNotExist)
+					tmpDir := fmt.Sprintf("%s.tmp", build.BuildDir)
+					variableFile := filepath.Join(tmpDir, testVariableName)
+
+					_, err := os.Stat(variableFile)
+					assert.Error(t, err)
+					assert.ErrorIs(t, err, os.ErrNotExist)
+				}, featureflags.UsePowershellPathResolver)
 			})
 		})
 	}
@@ -1381,29 +1390,33 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 
 func TestBuildInvokeBinaryHelper(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		successfulBuild, err := common.GetRemoteSuccessfulBuild()
-		require.NoError(t, err)
+		buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
+			successfulBuild, err := common.GetRemoteSuccessfulBuild()
+			require.NoError(t, err)
 
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+			build, cleanup := newBuild(t, successfulBuild, shell)
+			defer cleanup()
 
-		dir, err := ioutil.TempDir("", "")
-		require.NoError(t, err)
-		defer os.RemoveAll(dir)
+			setup(build)
 
-		build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
-		build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
+			dir, err := ioutil.TempDir("", "")
+			require.NoError(t, err)
+			defer os.RemoveAll(dir)
 
-		build.Cache = append(build.Cache, common.Cache{
-			Key:    "cache",
-			Paths:  []string{"*"},
-			Policy: common.CachePolicyPullPush,
-		})
+			build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
+			build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
 
-		out, err := buildtest.RunBuildReturningOutput(t, build)
-		assert.NoError(t, err)
-		assert.NotContains(t, out, "Extracting cache is disabled.")
-		assert.NotContains(t, out, "Creating cache is disabled.")
-		assert.Contains(t, out, "Created cache")
+			build.Cache = append(build.Cache, common.Cache{
+				Key:    "cache",
+				Paths:  []string{"*"},
+				Policy: common.CachePolicyPullPush,
+			})
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			assert.NoError(t, err)
+			assert.NotContains(t, out, "Extracting cache is disabled.")
+			assert.NotContains(t, out, "Creating cache is disabled.")
+			assert.Contains(t, out, "Created cache")
+		}, featureflags.UsePowershellPathResolver)
 	})
 }

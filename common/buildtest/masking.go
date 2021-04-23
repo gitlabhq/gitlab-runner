@@ -11,7 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
-func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup buildSetupFn) {
+func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	resp, err := common.GetRemoteSuccessfulBuildWithEnvs(config.Shell, false)
 	require.NoError(t, err)
 

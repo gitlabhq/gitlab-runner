@@ -131,7 +131,7 @@ func (p *PsWriter) buildCommand(command string, arguments ...string) string {
 	return "& " + strings.Join(list, " ")
 }
 
-func (p *PsWriter) resolveFunc(path string) string {
+func (p *PsWriter) resolvePath(path string) string {
 	if p.resolvePaths {
 		return fmt.Sprintf("$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%s)", psQuote(path))
 	}
@@ -170,10 +170,10 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 		p.MkDir(p.TemporaryPath)
 		p.Linef(
 			"[System.IO.File]::WriteAllText(%s, %s)",
-			p.resolveFunc(variableFile),
+			p.resolvePath(variableFile),
 			psQuoteVariable(variable.Value),
 		)
-		p.Linef("$%s=%s", variable.Key, p.resolveFunc(variableFile))
+		p.Linef("$%s=%s", variable.Key, p.resolvePath(variableFile))
 	} else {
 		p.Linef("$%s=%s", variable.Key, psQuoteVariable(variable.Value))
 	}
@@ -182,12 +182,12 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 }
 
 func (p *PsWriter) IfDirectory(path string) {
-	p.Linef("if(Test-Path %s -PathType Container) {", p.resolveFunc(path))
+	p.Linef("if(Test-Path %s -PathType Container) {", p.resolvePath(path))
 	p.Indent()
 }
 
 func (p *PsWriter) IfFile(path string) {
-	p.Linef("if(Test-Path %s -PathType Leaf) {", p.resolveFunc(path))
+	p.Linef("if(Test-Path %s -PathType Leaf) {", p.resolvePath(path))
 	p.Indent()
 }
 
@@ -227,12 +227,12 @@ func (p *PsWriter) EndIf() {
 }
 
 func (p *PsWriter) Cd(path string) {
-	p.Line("cd " + p.resolveFunc(path))
+	p.Line("cd " + p.resolvePath(path))
 	p.checkErrorLevel()
 }
 
 func (p *PsWriter) MkDir(path string) {
-	p.Linef("New-Item -ItemType directory -Force -Path %s | out-null", p.resolveFunc(path))
+	p.Linef("New-Item -ItemType directory -Force -Path %s | out-null", p.resolvePath(path))
 }
 
 func (p *PsWriter) MkTmpDir(name string) string {
@@ -243,7 +243,7 @@ func (p *PsWriter) MkTmpDir(name string) string {
 }
 
 func (p *PsWriter) RmDir(path string) {
-	path = p.resolveFunc(path)
+	path = p.resolvePath(path)
 	p.Linef(
 		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) "+
 			"-and (Test-Path %s -PathType Container) ) {",
@@ -261,7 +261,7 @@ func (p *PsWriter) RmDir(path string) {
 }
 
 func (p *PsWriter) RmFile(path string) {
-	path = p.resolveFunc(path)
+	path = p.resolvePath(path)
 	p.Line(
 		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) " +
 			"-and (Test-Path " + path + " -PathType Leaf) ) {")
