@@ -14,7 +14,7 @@ _docker_buildx() {
     # Run the command in a subshell so that we can safely unset DOCKER_HOST
     (
         unset DOCKER_HOST
-        _docker buildx "${@}"
+        DOCKER_CLI_EXPERIMENTAL=enabled _docker buildx "${@}"
     )
 }
 
