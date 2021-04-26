@@ -2,6 +2,7 @@ package shell_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -820,8 +821,6 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 }
 
 func TestBuildWithGitSubmodulePaths(t *testing.T) {
-	skipOnGit17x(t)
-
 	tests := map[string]struct {
 		paths                   string
 		expectedBuildError      error
