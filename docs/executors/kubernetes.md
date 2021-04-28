@@ -673,7 +673,7 @@ check_interval = 30
   executor = "kubernetes"
   [runners.kubernetes]
     image = "alpine:latest"
-    [dns_config]
+    [runners.kubernetes.dns_config]
       nameservers = [
         "1.2.3.4",
       ]
@@ -682,11 +682,11 @@ check_interval = 30
         "my.dns.search.suffix",
       ]
 
-      [[dns_config.options]]
+      [[runners.kubernetes.dns_config.options]]
         name = "ndots"
         value = "2"
 
-      [[dns_config.options]]
+      [[runners.kubernetes.dns_config.options]]
         name = "edns0"
 ```
 
