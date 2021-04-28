@@ -133,6 +133,7 @@ func TestTraceRace(t *testing.T) {
 		func() { buffer.SetMasked([]string{"x"}) },
 		func() { buffer.SetLimit(1000) },
 		func() { buffer.Checksum() },
+		func() { buffer.Size() },
 	}
 
 	var wg sync.WaitGroup

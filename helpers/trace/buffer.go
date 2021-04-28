@@ -40,7 +40,7 @@ func (b *Buffer) SetMasked(values []string) {
 	transformers := make([]transform.Transformer, 0, len(values))
 
 	for _, value := range values {
-		transformers = append(transformers, NewPhraseTransform(value))
+		transformers = append(transformers, newPhraseTransform(value))
 	}
 
 	b.w = transform.NewWriter(b.lw, transform.Chain(transformers...))

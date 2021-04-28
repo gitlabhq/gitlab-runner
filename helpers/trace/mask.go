@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	// Mask is the string that replaces any found sensitive information
-	Mask = "[MASKED]"
+	// mask is the string that replaces any found sensitive information
+	mask = "[MASKED]"
 
 	// safeTokens are tokens that cannot appear in secret phrases
 	// and allows calling writers to set a safe boundary at which data written
@@ -16,9 +16,9 @@ const (
 	safeTokens = "\r\n"
 )
 
-// NewPhaseTransform returns a transform.Transformer that replaces the `phrase`
+// newPhraseTransform returns a transform.Transformer that replaces the `phrase`
 // with [MASKED]
-func NewPhraseTransform(phrase string) transform.Transformer {
+func newPhraseTransform(phrase string) transform.Transformer {
 	return phraseTransform(phrase)
 }
 
@@ -40,7 +40,7 @@ func (t phraseTransform) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int,
 		}
 
 		// replace phrase
-		err = replace(dst, &nDst, &nSrc, []byte(Mask), len(t))
+		err = replace(dst, &nDst, &nSrc, []byte(mask), len(t))
 		if err != nil {
 			return nDst, nSrc, err
 		}

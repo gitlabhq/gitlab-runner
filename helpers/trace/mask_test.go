@@ -10,52 +10,61 @@ import (
 )
 
 func TestVariablesMaskingBoundary(t *testing.T) {
-	tests := map[string]struct {
+	tests := []struct {
+		input    string
 		values   []string
 		expected string
 	}{
-		"no escaping at all http://example.org/?test=foobar": {
+		{
+			input:    "no escaping at all http://example.org/?test=foobar",
 			expected: "no escaping at all http://example.org/?test=foobar",
 		},
-		"at the start of the buffer": {
+		{
+			input:    "at the start of the buffer",
 			values:   []string{"at"},
 			expected: "[MASKED] the start of the buffer",
 		},
-		"in the middle of the buffer": {
+		{
+			input:    "in the middle of the buffer",
 			values:   []string{"middle"},
 			expected: "in the [MASKED] of the buffer",
 		},
-		"at the end of the buffer": {
+		{
+			input:    "at the end of the buffer",
 			values:   []string{"buffer"},
 			expected: "at the end of the [MASKED]",
 		},
-		"all values are masked": {
+		{
+			input:    "all values are masked",
 			values:   []string{"all", "values", "are", "masked"},
 			expected: "[MASKED] [MASKED] [MASKED] [MASKED]",
 		},
-		"prefixed and suffixed: xfoox ybary ffoo barr ffooo bbarr": {
+		{
+			input:    "prefixed and suffixed: xfoox ybary ffoo barr ffooo bbarr",
 			values:   []string{"foo", "bar"},
 			expected: "prefixed and suffixed: x[MASKED]x y[MASKED]y f[MASKED] [MASKED]r f[MASKED]o b[MASKED]r",
 		},
-		"prefix|ed, su|ffi|xed |and split|:| xfo|ox y|bary ffo|o ba|rr ffooo b|barr": {
+		{
+			input:    "prefix|ed, su|ffi|xed |and split|:| xfo|ox y|bary ffo|o ba|rr ffooo b|barr",
 			values:   []string{"foo", "bar"},
 			expected: "prefixed, suffixed and split: x[MASKED]x y[MASKED]y f[MASKED] [MASKED]r f[MASKED]o b[MASKED]r",
 		},
-		"sp|lit al|l val|ues ar|e |mask|ed": {
+		{
+			input:    "sp|lit al|l val|ues ar|e |mask|ed",
 			values:   []string{"split", "all", "values", "are", "masked"},
 			expected: "[MASKED] [MASKED] [MASKED] [MASKED] [MASKED]",
 		},
 	}
 
-	for tn, tc := range tests {
-		t.Run(tn, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
 			buffer, err := New()
 			require.NoError(t, err)
 			defer buffer.Close()
 
 			buffer.SetMasked(tc.values)
 
-			parts := bytes.Split([]byte(tn), []byte{'|'})
+			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {
 				_, err = buffer.Write(part)
 				require.NoError(t, err)
@@ -88,8 +97,20 @@ func TestMaskNonEOFSafeBoundary(t *testing.T) {
 			expected: "cannot safely flush: [MASKED]",
 		},
 		{
+			input:    "cannot safely flush: secret secre\t",
+			expected: "cannot safely flush: [MASKED]",
+		},
+		{
+			input:    "can safely flush: secret secre\r",
+			expected: "can safely flush: [MASKED] secre\r",
+		},
+		{
 			input:    "can safely flush: secret secre\n",
 			expected: "can safely flush: [MASKED] secre\n",
+		},
+		{
+			input:    "can safely flush: secret secre\r\n",
+			expected: "can safely flush: [MASKED] secre\r\n",
 		},
 	}
 
@@ -124,7 +145,7 @@ func TestMaskShortWrites(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			var dst [10]byte
 
-			transformer := NewPhraseTransform("phrase")
+			transformer := newPhraseTransform("phrase")
 
 			_, _, err := transformer.Transform(dst[:], []byte(tn), true)
 			assert.ErrorIs(t, err, transform.ErrShortDst)
