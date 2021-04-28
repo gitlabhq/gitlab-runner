@@ -1,3 +1,5 @@
+// +build integration
+
 package permission_test
 
 import (
