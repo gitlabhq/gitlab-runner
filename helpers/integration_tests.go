@@ -1,28 +1,17 @@
 package helpers
 
 import (
-	"errors"
-	"fmt"
 	"os/exec"
 	"testing"
 )
 
-func ShouldSkipIntegrationTests(app ...string) error {
+func SkipIntegrationTests(t *testing.T, app ...string) {
 	if testing.Short() {
-		return errors.New("skipping long tests")
+		t.Skip("Skipping long tests")
 	}
 
 	if ok, err := ExecuteCommandSucceeded(app...); !ok {
-		return fmt.Errorf("%s failed: %v", app[0], err)
-	}
-
-	return nil
-}
-
-func SkipIntegrationTests(t *testing.T, app ...string) {
-	err := ShouldSkipIntegrationTests(app...)
-	if err != nil {
-		t.Skip(err.Error())
+		t.Skip(app[0], "failed", err)
 	}
 }
 
