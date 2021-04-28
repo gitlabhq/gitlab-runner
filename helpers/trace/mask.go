@@ -9,6 +9,11 @@ import (
 const (
 	// Mask is the string that replaces any found sensitive information
 	Mask = "[MASKED]"
+
+	// safeTokens are tokens that cannot appear in secret phrases
+	// and allows calling writers to set a safe boundary at which data written
+	// isn't buffered before being flushed to the underlying writer.
+	safeTokens = "\r\n"
 )
 
 // NewPhaseTransform returns a transform.Transformer that replaces the `phrase`
@@ -76,7 +81,15 @@ func safecopy(dst, src []byte, atEOF bool, nDst, nSrc int, tokenSize int) (int, 
 
 	remaining := len(src[nSrc:])
 	if !atEOF {
-		remaining -= tokenSize + 1
+		// copy up to the last safe token if any, otherwise don't copy
+		// until we have a buffer of at least tokenSize.
+		idx := bytes.LastIndexAny(src[nSrc:], safeTokens)
+		if idx < 0 {
+			remaining -= tokenSize + 1
+		} else {
+			remaining = idx + 1
+		}
+
 		err = transform.ErrShortSrc
 	}
 

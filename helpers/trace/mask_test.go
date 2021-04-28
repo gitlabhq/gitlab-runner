@@ -70,6 +70,48 @@ func TestVariablesMaskingBoundary(t *testing.T) {
 	}
 }
 
+func TestMaskNonEOFSafeBoundary(t *testing.T) {
+	// The truncated output from unflushed results depends on the max token
+	// size we're trying to find.
+	// If this test fails, it's likely it needs to be adjusted because the
+	// max token size has changed.
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "cannot safely flush: secret secre",
+			expected: "cannot safely flush: [MASKED]",
+		},
+		{
+			input:    "cannot safely flush: secret secre!",
+			expected: "cannot safely flush: [MASKED]",
+		},
+		{
+			input:    "can safely flush: secret secre\n",
+			expected: "can safely flush: [MASKED] secre\n",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			buffer, err := New()
+			require.NoError(t, err)
+			defer buffer.Close()
+
+			buffer.SetMasked([]string{"secret"})
+
+			_, err = buffer.Write([]byte(tc.input))
+			require.NoError(t, err)
+
+			content, err := buffer.Bytes(0, 1000)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.expected, string(content))
+		})
+	}
+}
+
 func TestMaskShortWrites(t *testing.T) {
 	tests := []string{
 		"the source is too long to copy to the destination",
