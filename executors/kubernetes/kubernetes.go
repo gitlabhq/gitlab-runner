@@ -48,7 +48,7 @@ var (
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultBuildsDir:              "/builds",
 		DefaultCacheDir:               "/cache",
-		SharedBuildsDir:               false,
+		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.NormalShell,
@@ -633,8 +633,6 @@ func (s *executor) scriptPath(stage common.BuildStage) string {
 func (s *executor) getVolumeMounts() []api.VolumeMount {
 	var mounts []api.VolumeMount
 
-	mounts = append(mounts, s.getBuildsDirVolumeMount())
-
 	// The configMap is nil when using legacy execution
 	if s.configMap != nil {
 		// These volume mounts **MUST NOT** be mounted inside another volume mount.
@@ -660,144 +658,95 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 
 	mounts = append(mounts, s.getVolumeMountsForConfig()...)
 
-	return mounts
-}
-
-func (s *executor) getBuildsDirVolumeMount() api.VolumeMount {
-	var mount api.VolumeMount
-
-	if s.duplicateBuildsDirVolumes() {
-		s.Errorln(`Multiple builds_dir volumes were specified in the config. 
-		Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount`)
-	}
-
-	switch {
-	case s.Config.Kubernetes.BuildsDir.HostPath.Name != "":
-		mount = getVolumeMountForHostPath(s.Config.Kubernetes.BuildsDir.HostPath)
-	case s.Config.Kubernetes.BuildsDir.PVC.Name != "":
-		mount = getVolumeMountForPVC(s.Config.Kubernetes.BuildsDir.PVC)
-	case s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "":
-		mount = getVolumeMountForEmptyDir(s.Config.Kubernetes.BuildsDir.EmptyDir)
-	case s.Config.Kubernetes.BuildsDir.CSI.Name != "":
-		mount = getVolumeMountForCSI(s.Config.Kubernetes.BuildsDir.CSI)
-	default:
-		mount = api.VolumeMount{
-			Name:      "repo",
-			MountPath: s.Build.RootDir,
+	// only mount repo mount if builds_dir doesn't already have a volume at that path
+	mountEmptyDir := true
+	for _, mount := range mounts {
+		if mount.MountPath == s.Build.RootDir {
+			mountEmptyDir = false
+			break
 		}
 	}
 
-	return mount
-}
-
-func (s *executor) duplicateBuildsDirVolumes() bool {
-	var cnt int
-
-	if s.Config.Kubernetes.BuildsDir.HostPath.Name != "" {
-		cnt++
-	}
-	if s.Config.Kubernetes.BuildsDir.PVC.Name != "" {
-		cnt++
-	}
-	if s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "" {
-		cnt++
-	}
-	if s.Config.Kubernetes.BuildsDir.CSI.Name != "" {
-		cnt++
+	if mountEmptyDir {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      "repo",
+			MountPath: s.Build.RootDir,
+		})
 	}
 
-	if cnt > 1 {
-		return true
-	}
-	return false
+	return mounts
 }
 
 func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 	var mounts []api.VolumeMount
 
 	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {
-		mounts = append(mounts, getVolumeMountForHostPath(mount))
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+			ReadOnly:  mount.ReadOnly,
+		})
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.Secrets {
-		mounts = append(mounts, getVolumeMountForSecret(mount))
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+			ReadOnly:  mount.ReadOnly,
+		})
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.PVCs {
-		mounts = append(mounts, getVolumeMountForPVC(mount))
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+			ReadOnly:  mount.ReadOnly,
+		})
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.ConfigMaps {
-		mounts = append(mounts, getVolumeMountForConfigMap(mount))
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+			ReadOnly:  mount.ReadOnly,
+		})
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.EmptyDirs {
-		mounts = append(mounts, getVolumeMountForEmptyDir(mount))
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+		})
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.CSIs {
-		mounts = append(mounts, getVolumeMountForCSI(mount))
+		mounts = append(mounts, api.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPath,
+			SubPath:   mount.SubPath,
+			ReadOnly:  mount.ReadOnly,
+		})
 	}
 
 	return mounts
 }
 
-func getVolumeMountForHostPath(mount common.KubernetesHostPath) api.VolumeMount {
-	return api.VolumeMount{
-		Name:      mount.Name,
-		MountPath: mount.MountPath,
-		SubPath:   mount.SubPath,
-		ReadOnly:  mount.ReadOnly,
-	}
-}
-
-func getVolumeMountForSecret(mount common.KubernetesSecret) api.VolumeMount {
-	return api.VolumeMount{
-		Name:      mount.Name,
-		MountPath: mount.MountPath,
-		SubPath:   mount.SubPath,
-		ReadOnly:  mount.ReadOnly,
-	}
-}
-
-func getVolumeMountForPVC(mount common.KubernetesPVC) api.VolumeMount {
-	return api.VolumeMount{
-		Name:      mount.Name,
-		MountPath: mount.MountPath,
-		SubPath:   mount.SubPath,
-		ReadOnly:  mount.ReadOnly,
-	}
-}
-
-func getVolumeMountForConfigMap(mount common.KubernetesConfigMap) api.VolumeMount {
-	return api.VolumeMount{
-		Name:      mount.Name,
-		MountPath: mount.MountPath,
-		SubPath:   mount.SubPath,
-		ReadOnly:  mount.ReadOnly,
-	}
-}
-
-func getVolumeMountForEmptyDir(mount common.KubernetesEmptyDir) api.VolumeMount {
-	return api.VolumeMount{
-		Name:      mount.Name,
-		MountPath: mount.MountPath,
-		SubPath:   mount.SubPath,
-	}
-}
-
-func getVolumeMountForCSI(mount common.KubernetesCSI) api.VolumeMount {
-	return api.VolumeMount{
-		Name:      mount.Name,
-		MountPath: mount.MountPath,
-		SubPath:   mount.SubPath,
-		ReadOnly:  mount.ReadOnly,
-	}
-}
-
 func (s *executor) getVolumes() []api.Volume {
 	volumes := s.getVolumesForConfig()
-	volumes = append(volumes, s.getBuildsDirVolume())
+
+	if s.isEmptyDirVolumeNeeded() {
+		volumes = append(volumes, api.Volume{
+			Name: "repo",
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{},
+			},
+		})
+	}
 
 	// The configMap is nil when using legacy execution
 	if s.configMap == nil {
@@ -830,35 +779,6 @@ func (s *executor) getVolumes() []api.Volume {
 	return volumes
 }
 
-func (s *executor) getBuildsDirVolume() api.Volume {
-	var buildsVol api.Volume
-
-	if s.duplicateBuildsDirVolumes() {
-		s.Errorln(`Multiple builds_dir volumes were specified in the config. 
-		Check the config.toml referencing the documentation at: https://docs.gitlab.com/runner/executors/kubernetes.html#custom-builds-directory-mount`)
-	}
-
-	switch {
-	case s.Config.Kubernetes.BuildsDir.HostPath.Name != "":
-		buildsVol = getVolumeForHostPath(s.Config.Kubernetes.BuildsDir.HostPath)
-	case s.Config.Kubernetes.BuildsDir.PVC.Name != "":
-		buildsVol = getVolumeForPVC(s.Config.Kubernetes.BuildsDir.PVC)
-	case s.Config.Kubernetes.BuildsDir.EmptyDir.Name != "":
-		buildsVol = getVolumeForEmptyDir(s.Config.Kubernetes.BuildsDir.EmptyDir)
-	case s.Config.Kubernetes.BuildsDir.CSI.Name != "":
-		buildsVol = getVolumeForCSI(s.Config.Kubernetes.BuildsDir.CSI)
-	default:
-		buildsVol = api.Volume{
-			Name: "repo",
-			VolumeSource: api.VolumeSource{
-				EmptyDir: &api.EmptyDirVolumeSource{},
-			},
-		}
-	}
-
-	return buildsVol
-}
-
 func (s *executor) getVolumesForConfig() []api.Volume {
 	var volumes []api.Volume
 
@@ -876,148 +796,136 @@ func (s *executor) getVolumesForHostPaths() []api.Volume {
 	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.HostPaths {
-		volumes = append(volumes, getVolumeForHostPath(volume))
+		path := volume.HostPath
+		// Make backward compatible with syntax introduced in version 9.3.0
+		if path == "" {
+			path = volume.MountPath
+		}
+
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				HostPath: &api.HostPathVolumeSource{
+					Path: path,
+				},
+			},
+		})
 	}
 
 	return volumes
-}
-
-func getVolumeForHostPath(volume common.KubernetesHostPath) api.Volume {
-	path := volume.HostPath
-	// Make backward compatible with syntax introduced in version 9.3.0
-	if path == "" {
-		path = volume.MountPath
-	}
-
-	return api.Volume{
-		Name: volume.Name,
-		VolumeSource: api.VolumeSource{
-			HostPath: &api.HostPathVolumeSource{
-				Path: path,
-			},
-		},
-	}
 }
 
 func (s *executor) getVolumesForSecrets() []api.Volume {
 	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.Secrets {
-		volumes = append(volumes, getVolumeForSecret(volume))
+		var items []api.KeyToPath
+		for key, path := range volume.Items {
+			items = append(items, api.KeyToPath{Key: key, Path: path})
+		}
+
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				Secret: &api.SecretVolumeSource{
+					SecretName: volume.Name,
+					Items:      items,
+				},
+			},
+		})
 	}
 
 	return volumes
-}
-
-func getVolumeForSecret(volume common.KubernetesSecret) api.Volume {
-	var items []api.KeyToPath
-	for key, path := range volume.Items {
-		items = append(items, api.KeyToPath{Key: key, Path: path})
-	}
-
-	return api.Volume{
-		Name: volume.Name,
-		VolumeSource: api.VolumeSource{
-			Secret: &api.SecretVolumeSource{
-				SecretName: volume.Name,
-				Items:      items,
-			},
-		},
-	}
 }
 
 func (s *executor) getVolumesForPVCs() []api.Volume {
 	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.PVCs {
-		volumes = append(volumes, getVolumeForPVC(volume))
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{
+					ClaimName: volume.Name,
+					ReadOnly:  volume.ReadOnly,
+				},
+			},
+		})
 	}
 
 	return volumes
-}
-
-func getVolumeForPVC(volume common.KubernetesPVC) api.Volume {
-	return api.Volume{
-		Name: volume.Name,
-		VolumeSource: api.VolumeSource{
-			PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{
-				ClaimName: volume.Name,
-				ReadOnly:  volume.ReadOnly,
-			},
-		},
-	}
 }
 
 func (s *executor) getVolumesForConfigMaps() []api.Volume {
 	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.ConfigMaps {
-		volumes = append(volumes, getVolumeForConfigMap(volume))
+		var items []api.KeyToPath
+		for key, path := range volume.Items {
+			items = append(items, api.KeyToPath{Key: key, Path: path})
+		}
+
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				ConfigMap: &api.ConfigMapVolumeSource{
+					LocalObjectReference: api.LocalObjectReference{
+						Name: volume.Name,
+					},
+					Items: items,
+				},
+			},
+		})
 	}
 
 	return volumes
-}
-
-func getVolumeForConfigMap(volume common.KubernetesConfigMap) api.Volume {
-	var items []api.KeyToPath
-	for key, path := range volume.Items {
-		items = append(items, api.KeyToPath{Key: key, Path: path})
-	}
-
-	return api.Volume{
-		Name: volume.Name,
-		VolumeSource: api.VolumeSource{
-			ConfigMap: &api.ConfigMapVolumeSource{
-				LocalObjectReference: api.LocalObjectReference{
-					Name: volume.Name,
-				},
-				Items: items,
-			},
-		},
-	}
 }
 
 func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.EmptyDirs {
-		volumes = append(volumes, getVolumeForEmptyDir(volume))
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{
+					Medium: api.StorageMedium(volume.Medium),
+				},
+			},
+		})
 	}
 	return volumes
-}
-
-func getVolumeForEmptyDir(volume common.KubernetesEmptyDir) api.Volume {
-	return api.Volume{
-		Name: volume.Name,
-		VolumeSource: api.VolumeSource{
-			EmptyDir: &api.EmptyDirVolumeSource{
-				Medium: api.StorageMedium(volume.Medium),
-			},
-		},
-	}
 }
 
 func (s *executor) getVolumesForCSIs() []api.Volume {
 	var volumes []api.Volume
 
 	for _, volume := range s.Config.Kubernetes.Volumes.CSIs {
-		volumes = append(volumes, getVolumeForCSI(volume))
+		volumes = append(volumes, api.Volume{
+			Name: volume.Name,
+			VolumeSource: api.VolumeSource{
+				CSI: &api.CSIVolumeSource{
+					Driver:           volume.Driver,
+					FSType:           &volume.FSType,
+					ReadOnly:         &volume.ReadOnly,
+					VolumeAttributes: volume.VolumeAttributes,
+				},
+			},
+		})
 	}
 	return volumes
 }
 
-func getVolumeForCSI(volume common.KubernetesCSI) api.Volume {
-	return api.Volume{
-		Name: volume.Name,
-		VolumeSource: api.VolumeSource{
-			CSI: &api.CSIVolumeSource{
-				Driver:           volume.Driver,
-				FSType:           &volume.FSType,
-				ReadOnly:         &volume.ReadOnly,
-				VolumeAttributes: volume.VolumeAttributes,
-			},
-		},
+func (s *executor) isEmptyDirVolumeNeeded() bool {
+	mounts := s.getVolumeMountsForConfig()
+
+	for _, mount := range mounts {
+		if mount.MountPath == s.Build.RootDir {
+			return false
+		}
 	}
+
+	return true
 }
 
 func (s *executor) setupCredentials() error {

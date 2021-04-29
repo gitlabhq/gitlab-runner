@@ -466,7 +466,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 ## Custom builds directory mount
 
-To define a custom volume and mount for a job pod's builds directory, you can use the `builds_dir` specification. Supported volume sources are _hostPath_, _PVC_, _emptyDir_, and _CSI_.
+To store the builds directory for the job define a custom volume mounts to the configured `builds_dir` (`/builds` by default). Learn more on how to define volumes in [using volumes](#using-volumes).
 
 Here is an example configuration:
 
@@ -476,12 +476,15 @@ concurrent = 4
 [[runners]]
   # usual configuration
   executor = "kubernetes"
+  builds_dir = "/builds"
   [runners.kubernetes]
-    [runners.kubernetes.builds_dir.empty_dir]
+    [[runners.kubernetes.volumes.empty_dir]]
       name = "repo"
       mount_path = "/builds"
       medium = "Memory"
 ```
+
+> **Notice**: If you want to use **PVC volumes** to host a custom build directory, you should make sure that all the jobs run from the same node or the suitable access mode for the PVC is set (*ReadOnlyMany* or *ReadWriteMany*).
 
 ## Using Security Context
 

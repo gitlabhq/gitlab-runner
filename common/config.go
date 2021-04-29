@@ -282,7 +282,6 @@ type KubernetesConfig struct {
 	CAFile                                            string                       `toml:"ca_file,omitempty" json:"ca_file" long:"ca-file" env:"KUBERNETES_CA_FILE" description:"Optional Kubernetes master auth ca certificate"`
 	BearerTokenOverwriteAllowed                       bool                         `toml:"bearer_token_overwrite_allowed" json:"bearer_token_overwrite_allowed" long:"bearer_token_overwrite_allowed" env:"KUBERNETES_BEARER_TOKEN_OVERWRITE_ALLOWED" description:"Bool to authorize builds to specify their own bearer token for creation."`
 	BearerToken                                       string                       `toml:"bearer_token,omitempty" json:"bearer_token" long:"bearer_token" env:"KUBERNETES_BEARER_TOKEN" description:"Optional Kubernetes service account token used to start build pods."`
-	BuildsDir                                         KubernetesBuildsDirVolume    `toml:"builds_dir" description:"A volume to use for the builds directory volume mount instead of the default EmptyDir."`
 	Image                                             string                       `toml:"image" json:"image" long:"image" env:"KUBERNETES_IMAGE" description:"Default docker image to use for builds when none is specified"`
 	Namespace                                         string                       `toml:"namespace" json:"namespace" long:"namespace" env:"KUBERNETES_NAMESPACE" description:"Namespace to run Kubernetes jobs in"`
 	NamespaceOverwriteAllowed                         string                       `toml:"namespace_overwrite_allowed" json:"namespace_overwrite_allowed" long:"namespace_overwrite_allowed" env:"KUBERNETES_NAMESPACE_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NAMESPACE_OVERWRITE' value"`
@@ -358,14 +357,6 @@ type KubernetesDNSConfig struct {
 type KubernetesDNSConfigOption struct {
 	Name  string  `toml:"name"`
 	Value *string `toml:"value,omitempty"`
-}
-
-//nolint:lll
-type KubernetesBuildsDirVolume struct {
-	HostPath KubernetesHostPath `toml:"host_path" description:"The host path which will be mounted for the builds dir."`
-	PVC      KubernetesPVC      `toml:"pvc" description:"The persistent volume claim that will be mounted for the builds dir."`
-	EmptyDir KubernetesEmptyDir `toml:"empty_dir" description:"The empty dir which will be mounted for the builds dir."`
-	CSI      KubernetesCSI      `toml:"csi" description:"The CSI volume which will be mounted for the builds dir."`
 }
 
 type KubernetesVolumes struct {
