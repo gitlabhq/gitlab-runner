@@ -159,7 +159,6 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				{Name: "repo"},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "host-path", MountPath: "/path/two"},
 				{Name: "host-subpath", MountPath: "/subpath", SubPath: "subpath"},
@@ -173,6 +172,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
 				{Name: "csi", MountPath: "/path/to/csi/volume"},
 				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
+				{Name: "repo"},
 			},
 		},
 		"custom volumes with read-only settings": {
@@ -207,12 +207,111 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				{Name: "repo"},
 				{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
 				{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 				{Name: "csi", MountPath: "/path/to/csi/volume", ReadOnly: true},
+				{Name: "repo"},
+			},
+		},
+		"custom volumes with specific build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							PVCs: []common.KubernetesPVC{
+								{Name: "PVC", MountPath: "/path/to/builds/dir"},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/path/to/whatever",
+									SubPath:   "PVC-subpath",
+								},
+							},
+							ConfigMaps: []common.KubernetesConfigMap{
+								{Name: "ConfigMap", MountPath: "/path/to/whatever"},
+								{
+									Name:      "ConfigMap-subpath",
+									MountPath: "/path/to/whatever",
+									SubPath:   "ConfigMap-subpath",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				{Name: "PVC", MountPath: "/path/to/builds/dir"},
+				{Name: "PVC-subpath", MountPath: "/path/to/whatever", SubPath: "PVC-subpath"},
+				{Name: "ConfigMap", MountPath: "/path/to/whatever"},
+				{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
+			},
+		},
+		"default volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				{
+					Name:      "repo",
+					MountPath: "/path/to/builds/dir",
+				},
+			},
+		},
+		"user-provided volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "user-provided", MountPath: "/path/to/builds/dir"},
+							},
+							EmptyDirs: []common.KubernetesEmptyDir{
+								{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
+								{
+									Name:      "emptyDir-subpath",
+									MountPath: "/subpath",
+									SubPath:   "empty-subpath",
+								},
+							},
+							CSIs: []common.KubernetesCSI{
+								{Name: "csi", MountPath: "/path/to/csi/volume", Driver: "some-driver"},
+								{
+									Name:      "csi-subpath",
+									MountPath: "/path/to/csi/volume",
+									Driver:    "some-driver",
+									SubPath:   "subpath",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				{Name: "user-provided", MountPath: "/path/to/builds/dir"},
+				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
+				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
+				{Name: "csi", MountPath: "/path/to/csi/volume"},
+				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
 			},
 		},
 	}
@@ -228,17 +327,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 			}
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
-
-			mounts := e.getVolumeMounts()
-			for _, expected := range tt.Expected {
-				assert.Contains(
-					t,
-					mounts,
-					expected,
-					"Expected volumeMount definition for %s was not found",
-					expected.Name,
-				)
-			}
+			assert.Equal(t, tt.Expected, e.getVolumeMounts())
 		})
 	}
 }
@@ -393,6 +482,71 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 						},
 					},
 				},
+			},
+		},
+		"custom volumes with specific build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							PVCs: []common.KubernetesPVC{
+								{Name: "PVC", MountPath: "/path/to/builds/dir"},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/path/to/whatever",
+									SubPath:   "PVC-subpath",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.Volume{
+				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				{Name: "PVC-subpath", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC-subpath"}}},
+			},
+		},
+		"default volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.Volume{
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+			},
+		},
+		"user-provided volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "user-provided", MountPath: "/path/to/builds/dir"},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.Volume{
+				{Name: "user-provided", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/to/builds/dir"}}},
 			},
 		},
 	}
