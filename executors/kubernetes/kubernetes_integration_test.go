@@ -52,6 +52,8 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesReplaceEnvFeatureFlag":                     testKubernetesReplaceEnvFeatureFlag,
 		"testKubernetesReplaceMissingEnvVarFeatureFlag":           testKubernetesReplaceMissingEnvVarFeatureFlag,
 		"testKubernetesWithNonRootSecurityContext":                testKubernetesWithNonRootSecurityContext,
+		"testConfiguredBuildDirVolumeMountFeatureFlag":            testBuildDirVolumeMountFeatureFlag,
+		"testUserConfiguredBuildDirVolumeMountFeatureFlag":        testUserConfiguredBuildDirVolumeMountFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -515,6 +517,47 @@ func testKubernetesReplaceMissingEnvVarFeatureFlag(t *testing.T, featureFlagName
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "image pull failed: Failed to apply default image tag \"alpine:\"")
+}
+
+func testBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestDockerGitImage
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+		EmptyDirs: []common.KubernetesEmptyDir{
+			{
+				Name:      "build",
+				MountPath: "/builds",
+				Medium:    "Memory",
+			},
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
+func testUserConfiguredBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestDockerGitImage
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	build.Runner.BuildsDir = "/some/path"
+	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+		EmptyDirs: []common.KubernetesEmptyDir{
+			{
+				Name:      "build",
+				MountPath: "/some/path",
+				Medium:    "Memory",
+			},
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
 }
 
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
