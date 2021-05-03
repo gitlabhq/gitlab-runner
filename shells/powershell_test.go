@@ -129,7 +129,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 		"pwsh on shell": {
 			shell:            SNPwsh,
 			executor:         "shell",
-			expectedPassFile: false,
+			expectedPassFile: true,
 		},
 	}
 

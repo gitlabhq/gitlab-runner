@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
@@ -1419,4 +1420,18 @@ func TestBuildInvokeBinaryHelper(t *testing.T) {
 			assert.Contains(t, out, "Created cache")
 		}, featureflags.UsePowershellPathResolver)
 	})
+}
+
+func TestBuildPwshHandlesSyntaxErrors(t *testing.T) {
+	helpers.SkipIntegrationTests(t, shells.SNPwsh)
+
+	successfulBuild, err := common.GetLocalBuildResponse("some syntax error\nWrite-Output $PSVersionTable")
+	require.NoError(t, err)
+
+	build, cleanup := newBuild(t, successfulBuild, shells.SNPwsh)
+	defer cleanup()
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	assert.Error(t, err)
+	assert.NotContains(t, out, "PSEdition")
 }
