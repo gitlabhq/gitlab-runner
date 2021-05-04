@@ -21,6 +21,7 @@ const (
 	EnableBashExitCodeCheck                     string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
 	UseWindowsLegacyProcessStrategy             string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
 	SkipDockerMachineProvisionOnCreationFailure string = "FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE"
+	UseNewEvalStrategy                          string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
 )
 
 type FeatureFlag struct {
@@ -159,6 +160,14 @@ var flags = []FeatureFlag{
 			"not created, `docker-machine provision` runs for X amount of times. When " +
 			"this feature flag is set to `true`, it skips `docker-machine provision` " +
 			"removes the machine, and creates another machine instead.",
+	},
+	{
+		Name:            UseNewEvalStrategy,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When set to `true`, the Bash `eval` call is executed in a subshell to help with proper exit " +
+			"code detection of the script executed.",
 	},
 }
 
