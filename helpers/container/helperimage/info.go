@@ -33,6 +33,7 @@ const (
 )
 
 type Info struct {
+	OSType                  string
 	Architecture            string
 	Name                    string
 	Tag                     string
@@ -70,7 +71,10 @@ func Get(revision string, cfg Config) (Info, error) {
 		return Info{}, errors.NewErrOSNotSupported(cfg.OSType)
 	}
 
-	return factory.Create(imageRevision(revision), cfg)
+	info, err := factory.Create(imageRevision(revision), cfg)
+	info.OSType = cfg.OSType
+
+	return info, err
 }
 
 func imageRevision(revision string) string {

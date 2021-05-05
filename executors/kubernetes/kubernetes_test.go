@@ -901,8 +901,19 @@ func TestPrepare(t *testing.T) {
 		helperImageTag = common.REVISION
 	}
 
+	defaultOverwrites := &overwrites{
+		namespace:       "default",
+		serviceLimits:   api.ResourceList{},
+		buildLimits:     api.ResourceList{},
+		helperLimits:    api.ResourceList{},
+		serviceRequests: api.ResourceList{},
+		buildRequests:   api.ResourceList{},
+		helperRequests:  api.ResourceList{},
+	}
+
 	defaultHelperImage := helperimage.Info{
 		Architecture:            "x86_64",
+		OSType:                  helperimage.OSTypeLinux,
 		Name:                    helperimage.GitLabRegistryName,
 		Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
 		IsSupportingLocalImport: true,
@@ -947,7 +958,7 @@ func TestPrepare(t *testing.T) {
 						HelperCPULimit:               "50m",
 						HelperMemoryLimit:            "100Mi",
 						HelperEphemeralStorageLimit:  "200Mi",
-						Privileged:                   true,
+						Privileged:                   func(b bool) *bool { return &b }(true),
 						PullPolicy:                   common.StringOrArray{"if-not-present"},
 					},
 				},
@@ -1013,7 +1024,7 @@ func TestPrepare(t *testing.T) {
 						HelperCPURequest:               "0.5m",
 						HelperMemoryRequest:            "42Mi",
 						HelperEphemeralStorageRequest:  "99Mi",
-						Privileged:                     false,
+						Privileged:                     func(b bool) *bool { return &b }(false),
 					},
 				},
 			},
@@ -1078,7 +1089,7 @@ func TestPrepare(t *testing.T) {
 						HelperCPURequest:               "0.5m",
 						HelperMemoryRequest:            "42Mi",
 						HelperEphemeralStorageRequest:  "52Mi",
-						Privileged:                     false,
+						Privileged:                     func(b bool) *bool { return &b }(false),
 					},
 				},
 			},
@@ -1126,7 +1137,7 @@ func TestPrepare(t *testing.T) {
 						HelperCPURequest:               "0.5m",
 						HelperMemoryRequest:            "42Mi",
 						HelperEphemeralStorageRequest:  "32Mi",
-						Privileged:                     false,
+						Privileged:                     func(b bool) *bool { return &b }(false),
 					},
 				},
 			},
@@ -1232,16 +1243,8 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
-				helperImageInfo: defaultHelperImage,
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
 			},
 		},
 		{
@@ -1270,16 +1273,8 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
-				helperImageInfo: pwshHelperImage,
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         pwshHelperImage,
 			},
 		},
 		{
@@ -1325,16 +1320,8 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
-				helperImageInfo: defaultHelperImage,
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
 			},
 		},
 		{
@@ -1425,16 +1412,8 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
-				helperImageInfo: defaultHelperImage,
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
 			},
 		},
 		{
@@ -1461,16 +1440,8 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				helperImageInfo: defaultHelperImage,
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
+				helperImageInfo:         defaultHelperImage,
+				configurationOverwrites: defaultOverwrites,
 			},
 		},
 		{
@@ -1509,21 +1480,14 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 				helperImageInfo: helperimage.Info{
+					OSType:                  os,
 					Architecture:            "x86_64",
 					Name:                    helperimage.DockerHubName,
 					Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
 					IsSupportingLocalImport: true,
 					Cmd:                     []string{"gitlab-runner-build"},
 				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
+				configurationOverwrites: defaultOverwrites,
 			},
 		},
 		{
@@ -1551,15 +1515,7 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
+				configurationOverwrites: defaultOverwrites,
 				helperImageInfo: helperimage.Info{
 					Architecture:            "x86_64",
 					Name:                    helperimage.GitLabRegistryName,
@@ -1615,6 +1571,7 @@ func TestPrepare(t *testing.T) {
 					helperRequests:  api.ResourceList{},
 				},
 				helperImageInfo: helperimage.Info{
+					OSType:                  os,
 					Architecture:            "x86_64",
 					Name:                    helperimage.DockerHubName,
 					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
@@ -1622,6 +1579,131 @@ func TestPrepare(t *testing.T) {
 					Cmd:                     []string{"gitlab-runner-build"},
 				},
 			},
+		},
+		{
+			Name:         "helper image from node selector (linux, arm)",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+						NodeSelector: map[string]string{
+							api.LabelArchStable: "arm64",
+							api.LabelOSStable:   "linux",
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo: helperimage.Info{
+					OSType:                  "linux",
+					Architecture:            "arm64",
+					Name:                    helperimage.GitLabRegistryName,
+					Tag:                     fmt.Sprintf("arm64-%s", helperImageTag),
+					IsSupportingLocalImport: true,
+					Cmd:                     []string{"gitlab-runner-build"},
+				},
+			},
+		},
+		{
+			Name:         "helper image from node selector (windows, amd64)",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+						NodeSelector: map[string]string{
+							api.LabelArchStable:           "amd64",
+							api.LabelOSStable:             "windows",
+							nodeSelectorWindowsBuildLabel: "10.0.19041",
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo: helperimage.Info{
+					OSType:                  "windows",
+					Architecture:            "x86_64",
+					Name:                    helperimage.GitLabRegistryName,
+					Tag:                     fmt.Sprintf("x86_64-%s-servercore2004", helperImageTag),
+					IsSupportingLocalImport: false,
+					Cmd: []string{
+						"powershell",
+						"-NoProfile",
+						"-NoLogo",
+						"-InputFormat",
+						"text",
+						"-OutputFormat",
+						"text",
+						"-NonInteractive",
+						"-ExecutionPolicy",
+						"Bypass",
+						"-Command",
+						"-",
+					},
+				},
+			},
+		},
+		{
+			Name:         "helper image from node selector (unknown)",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+						NodeSelector: map[string]string{
+							api.LabelArchStable: "riscv64",
+							api.LabelOSStable:   "freebsd",
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         helperimage.Info{},
+			},
+			Error: `prepare helper image: unsupported OSType "freebsd"`,
 		},
 	}
 
@@ -1666,6 +1748,32 @@ func TestPrepare(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
+		})
+	}
+}
+
+func TestSetupDefaultExecutorOptions(t *testing.T) {
+	tests := map[string]func(*testing.T, *executor){
+		"windows": func(t *testing.T, e *executor) {
+			assert.Equal(t, e.DefaultBuildsDir, `C:\builds`)
+			assert.Equal(t, e.DefaultCacheDir, `C:\cache`)
+		},
+		"linux": func(t *testing.T, e *executor) {
+			assert.Equal(t, e.DefaultBuildsDir, `/builds`)
+			assert.Equal(t, e.DefaultCacheDir, `/cache`)
+		},
+	}
+
+	for os, tc := range tests {
+		t.Run(os, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+				},
+			}
+
+			e.setupDefaultExecutorOptions(os)
+			tc(t, e)
 		})
 	}
 }
@@ -1940,7 +2048,7 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace:                "default",
-						Privileged:               false,
+						Privileged:               func(b bool) *bool { return &b }(false),
 						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(false),
 					},
 				},
@@ -1959,7 +2067,7 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						Namespace:                "default",
-						Privileged:               true,
+						Privileged:               func(b bool) *bool { return &b }(true),
 						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(true),
 					},
 				},
@@ -3096,6 +3204,22 @@ func TestSetupBuildPod(t *testing.T) {
 				require.NotNil(t, options[0].Value)
 				assert.Equal(t, ndotsValue, *options[0].Value)
 				assert.Nil(t, options[1].Value)
+			},
+		},
+		"windows mode has no default capabilities": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace: "default",
+					},
+				},
+			},
+			PrepareFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				e.helperImageInfo.OSType = helperimage.OSTypeWindows
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.NotEmpty(t, pod.Spec.Containers)
+				require.Nil(t, pod.Spec.Containers[0].SecurityContext.Capabilities)
 			},
 		},
 	}

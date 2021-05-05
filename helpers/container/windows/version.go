@@ -41,6 +41,13 @@ var supportedWindowsVersions = []string{
 	V20H2,
 }
 
+var supportedWindowsBuilds = map[string]string{
+	"10.0.17763": V1809,
+	"10.0.18362": V1903,
+	"10.0.18363": V1909,
+	"10.0.19041": V2004,
+}
+
 // Version checks the specified operatingSystem to see if it's one of the
 // supported Windows version. If true, it returns the os version.
 // UnsupportedWindowsVersionError is returned when no supported Windows version
@@ -50,6 +57,11 @@ func Version(operatingSystem string) (string, error) {
 		if strings.Contains(operatingSystem, fmt.Sprintf(" %s ", windowsVersion)) {
 			return windowsVersion, nil
 		}
+	}
+
+	windowsVersion, ok := supportedWindowsBuilds[operatingSystem]
+	if ok {
+		return windowsVersion, nil
 	}
 
 	return "", NewUnsupportedWindowsVersionError(operatingSystem)
