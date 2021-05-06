@@ -215,43 +215,6 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "repo"},
 			},
 		},
-		"custom volumes with specific build dir": {
-			GlobalConfig: &common.Config{},
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Volumes: common.KubernetesVolumes{
-							PVCs: []common.KubernetesPVC{
-								{Name: "PVC", MountPath: "/path/to/builds/dir"},
-								{
-									Name:      "PVC-subpath",
-									MountPath: "/path/to/whatever",
-									SubPath:   "PVC-subpath",
-								},
-							},
-							ConfigMaps: []common.KubernetesConfigMap{
-								{Name: "ConfigMap", MountPath: "/path/to/whatever"},
-								{
-									Name:      "ConfigMap-subpath",
-									MountPath: "/path/to/whatever",
-									SubPath:   "ConfigMap-subpath",
-								},
-							},
-						},
-					},
-				},
-			},
-			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
-			},
-			Expected: []api.VolumeMount{
-				{Name: "PVC", MountPath: "/path/to/builds/dir"},
-				{Name: "PVC-subpath", MountPath: "/path/to/whatever", SubPath: "PVC-subpath"},
-				{Name: "ConfigMap", MountPath: "/path/to/whatever"},
-				{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
-			},
-		},
 		"default volume with build dir": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
@@ -281,23 +244,6 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 							HostPaths: []common.KubernetesHostPath{
 								{Name: "user-provided", MountPath: "/path/to/builds/dir"},
 							},
-							EmptyDirs: []common.KubernetesEmptyDir{
-								{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
-								{
-									Name:      "emptyDir-subpath",
-									MountPath: "/subpath",
-									SubPath:   "empty-subpath",
-								},
-							},
-							CSIs: []common.KubernetesCSI{
-								{Name: "csi", MountPath: "/path/to/csi/volume", Driver: "some-driver"},
-								{
-									Name:      "csi-subpath",
-									MountPath: "/path/to/csi/volume",
-									Driver:    "some-driver",
-									SubPath:   "subpath",
-								},
-							},
 						},
 					},
 				},
@@ -308,10 +254,6 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 			},
 			Expected: []api.VolumeMount{
 				{Name: "user-provided", MountPath: "/path/to/builds/dir"},
-				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
-				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
-				{Name: "csi", MountPath: "/path/to/csi/volume"},
-				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
 			},
 		},
 	}
@@ -335,6 +277,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	csiVolFSType := "ext4"
 	csiVolReadOnly := false
+	mode := int32(0777)
+	optional := false
 	//nolint:lll
 	tests := map[string]struct {
 		GlobalConfig *common.Config
@@ -355,6 +299,18 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			},
 			Expected: []api.Volume{
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
+							},
+							DefaultMode: &mode,
+							Optional:    &optional,
+						},
+					},
+				},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 		"custom volumes": {
@@ -427,32 +383,9 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
-				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
 				{Name: "host-path", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
 				{Name: "host-subpath", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
-				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
-				{Name: "PVC-subpath", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC-subpath"}}},
-				{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
-				{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
-				{
-					Name: "ConfigMap",
-					VolumeSource: api.VolumeSource{
-						ConfigMap: &api.ConfigMapVolumeSource{
-							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"},
-							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
-						},
-					},
-				},
-				{
-					Name: "ConfigMap-subpath",
-					VolumeSource: api.VolumeSource{
-						ConfigMap: &api.ConfigMapVolumeSource{
-							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap-subpath"},
-							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
-						},
-					},
-				},
 				{
 					Name: "secret",
 					VolumeSource: api.VolumeSource{
@@ -471,6 +404,28 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 						},
 					},
 				},
+				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				{Name: "PVC-subpath", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC-subpath"}}},
+				{
+					Name: "ConfigMap",
+					VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"},
+							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
+						},
+					},
+				},
+				{
+					Name: "ConfigMap-subpath",
+					VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap-subpath"},
+							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
+						},
+					},
+				},
+				{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
+				{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
 				{
 					Name: "csi",
 					VolumeSource: api.VolumeSource{
@@ -482,33 +437,19 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 						},
 					},
 				},
-			},
-		},
-		"custom volumes with specific build dir": {
-			GlobalConfig: &common.Config{},
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Volumes: common.KubernetesVolumes{
-							PVCs: []common.KubernetesPVC{
-								{Name: "PVC", MountPath: "/path/to/builds/dir"},
-								{
-									Name:      "PVC-subpath",
-									MountPath: "/path/to/whatever",
-									SubPath:   "PVC-subpath",
-								},
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
 							},
+							DefaultMode: &mode,
+							Optional:    &optional,
 						},
 					},
 				},
-			},
-			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
-			},
-			Expected: []api.Volume{
-				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
-				{Name: "PVC-subpath", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC-subpath"}}},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 		"default volume with build dir": {
@@ -526,6 +467,18 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			},
 			Expected: []api.Volume{
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
+							},
+							DefaultMode: &mode,
+							Optional:    &optional,
+						},
+					},
+				},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 		"user-provided volume with build dir": {
@@ -547,6 +500,18 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			},
 			Expected: []api.Volume{
 				{Name: "user-provided", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/to/builds/dir"}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
+							},
+							DefaultMode: &mode,
+							Optional:    &optional,
+						},
+					},
+				},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 	}
@@ -563,11 +528,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			}
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
-
-			volumes := e.getVolumes()
-			for _, expected := range tt.Expected {
-				assert.Contains(t, volumes, expected, "Expected volume definition for %s was not found", expected.Name)
-			}
+			assert.Equal(t, tt.Expected, e.getVolumes())
 		})
 	}
 }

@@ -118,6 +118,9 @@ type executor struct {
 	newLogProcessor func() logProcessor
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
+
+	// Flag if a repo mount and emptyDir volume are needed
+	requireDefaultBuildsDirVolume *bool
 }
 
 type serviceDeleteResponse struct {
@@ -658,16 +661,7 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 
 	mounts = append(mounts, s.getVolumeMountsForConfig()...)
 
-	// only mount repo mount if builds_dir doesn't already have a volume at that path
-	mountEmptyDir := true
-	for _, mount := range mounts {
-		if mount.MountPath == s.Build.RootDir {
-			mountEmptyDir = false
-			break
-		}
-	}
-
-	if mountEmptyDir {
+	if s.isDefaultBuildsDirVolumeRequired() {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      "repo",
 			MountPath: s.Build.RootDir,
@@ -739,7 +733,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 func (s *executor) getVolumes() []api.Volume {
 	volumes := s.getVolumesForConfig()
 
-	if s.isEmptyDirVolumeNeeded() {
+	if s.isDefaultBuildsDirVolumeRequired() {
 		volumes = append(volumes, api.Volume{
 			Name: "repo",
 			VolumeSource: api.VolumeSource{
@@ -916,16 +910,22 @@ func (s *executor) getVolumesForCSIs() []api.Volume {
 	return volumes
 }
 
-func (s *executor) isEmptyDirVolumeNeeded() bool {
-	mounts := s.getVolumeMountsForConfig()
+func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
+	if s.requireDefaultBuildsDirVolume != nil {
+		return *s.requireDefaultBuildsDirVolume
+	}
 
-	for _, mount := range mounts {
+	var required = true
+	for _, mount := range s.getVolumeMountsForConfig() {
 		if mount.MountPath == s.Build.RootDir {
-			return false
+			required = false
+			break
 		}
 	}
 
-	return true
+	s.requireDefaultBuildsDirVolume = &required
+
+	return required
 }
 
 func (s *executor) setupCredentials() error {
