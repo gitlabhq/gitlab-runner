@@ -50,11 +50,6 @@ $imagesBasePath = "dockerfiles/runner-helper/Dockerfile.x86_64"
 
 function Main
 {
-    if (-not (Test-Path Env:IS_LATEST))
-    {
-        $Env:IS_LATEST = Is-Latest
-    }
-
     $tag = Get-Tag
 
     Build-Image $tag
@@ -113,31 +108,6 @@ function Get-Tag
     $revision = & 'git' rev-parse --short=8 HEAD
 
     return "x86_64-$revision-$Env:WINDOWS_VERSION"
-}
-
-function Get-Latest-Stable-Tag
-{
-    $versions = & git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" |
-        Where-Object { $_ -notlike "*-rc*" } |
-        %{[System.Version]$_.Substring(1)} |
-        sort -descending
-    $latestTag = $versions[0].ToString()
-
-    return "v$latestTag"
-}
-
-function Is-Latest
-{
-    $prevErrorPreference = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-
-    $latestTag = Get-Latest-Stable-Tag
-    & git describe --exact-match --match $latestTag 2>&1 | out-null
-    $isLatest = $LASTEXITCODE -eq 0
-
-    $ErrorActionPreference = $prevErrorPreference
-
-    return $isLatest
 }
 
 function Build-Image($tag)
