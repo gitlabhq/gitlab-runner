@@ -13,11 +13,11 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
-func RunRemoteBuildWithJobOutputLimitExceeded(t *testing.T, config *common.RunnerConfig, setup buildSetupFn) {
+func RunRemoteBuildWithJobOutputLimitExceeded(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	runBuildWithJobOutputLimitExceeded(t, config, setup, common.GetRemoteSuccessfulBuild)
 }
 
-func RunBuildWithJobOutputLimitExceeded(t *testing.T, config *common.RunnerConfig, setup buildSetupFn) {
+func RunBuildWithJobOutputLimitExceeded(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	runBuildWithJobOutputLimitExceeded(t, config, setup, common.GetSuccessfulBuild)
 }
 
@@ -84,7 +84,7 @@ var jobOutputLimitExceededTestCases = map[string]jobOutputLimitExceededTestCase{
 func runBuildWithJobOutputLimitExceeded(
 	t *testing.T,
 	config *common.RunnerConfig,
-	setup buildSetupFn,
+	setup BuildSetupFn,
 	baseJob func() (common.JobResponse, error),
 ) {
 	for tn, tt := range jobOutputLimitExceededTestCases {

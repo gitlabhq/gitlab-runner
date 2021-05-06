@@ -22,6 +22,7 @@ const (
 	UseWindowsLegacyProcessStrategy             string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
 	SkipDockerMachineProvisionOnCreationFailure string = "FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE"
 	UseNewEvalStrategy                          string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
+	UsePowershellPathResolver                   string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 )
 
 type FeatureFlag struct {
@@ -168,6 +169,14 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When set to `true`, the Bash `eval` call is executed in a subshell to help with proper exit " +
 			"code detection of the script executed.",
+	},
+	{
+		Name:            UsePowershellPathResolver,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, Powershell resolves pathnames rather than Runner using OS-specific filepath " +
+			"functions that are specific to where Runner is hosted.",
 	},
 }
 
