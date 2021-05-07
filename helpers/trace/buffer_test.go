@@ -4,6 +4,7 @@ import (
 	"math"
 	"sync"
 	"testing"
+	"unicode/utf8"
 
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 
@@ -154,6 +155,27 @@ func TestTraceRace(t *testing.T) {
 
 	_, err = buffer.Bytes(0, 1000)
 	require.NoError(t, err)
+}
+
+func TestFixupInvalidUTF8(t *testing.T) {
+	buffer, err := New()
+	require.NoError(t, err)
+	defer buffer.Close()
+
+	buffer.SetMasked([]string{"hello", "\xfe"})
+
+	// \xfe and \xff are both invalid
+	// \xfe we're masking though, so will be replaced with [MASKED]
+	// \xff will be replaced by the "unicode replacement character" \ufffd
+	// this ensures that masking happens prior to the utf8 fix
+	_, err = buffer.Write([]byte("hello a\xfeb a\xffb\n"))
+	require.NoError(t, err)
+
+	content, err := buffer.Bytes(0, 1000)
+	require.NoError(t, err)
+
+	assert.True(t, utf8.ValidString(string(content)))
+	assert.Equal(t, "[MASKED] a[MASKED]b a\ufffdb\n", string(content))
 }
 
 const logLineStr = "hello world, this is a lengthy log line including secrets such as 'hello', and " +
