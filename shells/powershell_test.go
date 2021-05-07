@@ -14,28 +14,25 @@ func TestPowershell_LineBreaks(t *testing.T) {
 	testCases := map[string]struct {
 		shell                   string
 		eol                     string
-		expectedEdition         string
 		expectedErrorPreference string
 	}{
 		"Windows newline on Desktop": {
 			shell:                   SNPowershell,
 			eol:                     "\r\n",
-			expectedEdition:         "Desktop",
 			expectedErrorPreference: "",
 		},
 		"Windows newline on Core": {
 			shell:                   SNPwsh,
 			eol:                     "\r\n",
-			expectedEdition:         "Core",
 			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\r\n\r\n",
 		},
 		"Linux newline on Core": {
 			shell:                   SNPwsh,
 			eol:                     "\n",
-			expectedEdition:         "Core",
 			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\n\n",
 		},
 	}
+
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
 			eol := tc.eol
