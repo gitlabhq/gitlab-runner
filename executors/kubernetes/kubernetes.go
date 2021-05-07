@@ -48,7 +48,7 @@ var (
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultBuildsDir:              "/builds",
 		DefaultCacheDir:               "/cache",
-		SharedBuildsDir:               false,
+		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.NormalShell,
@@ -118,6 +118,9 @@ type executor struct {
 	newLogProcessor func() logProcessor
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
+
+	// Flag if a repo mount and emptyDir volume are needed
+	requireDefaultBuildsDirVolume *bool
 }
 
 type serviceDeleteResponse struct {
@@ -633,11 +636,6 @@ func (s *executor) scriptPath(stage common.BuildStage) string {
 func (s *executor) getVolumeMounts() []api.VolumeMount {
 	var mounts []api.VolumeMount
 
-	mounts = append(mounts, api.VolumeMount{
-		Name:      "repo",
-		MountPath: s.Build.RootDir,
-	})
-
 	// The configMap is nil when using legacy execution
 	if s.configMap != nil {
 		// These volume mounts **MUST NOT** be mounted inside another volume mount.
@@ -662,6 +660,13 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 	}
 
 	mounts = append(mounts, s.getVolumeMountsForConfig()...)
+
+	if s.isDefaultBuildsDirVolumeRequired() {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      "repo",
+			MountPath: s.Build.RootDir,
+		})
+	}
 
 	return mounts
 }
@@ -727,12 +732,15 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 
 func (s *executor) getVolumes() []api.Volume {
 	volumes := s.getVolumesForConfig()
-	volumes = append(volumes, api.Volume{
-		Name: "repo",
-		VolumeSource: api.VolumeSource{
-			EmptyDir: &api.EmptyDirVolumeSource{},
-		},
-	})
+
+	if s.isDefaultBuildsDirVolumeRequired() {
+		volumes = append(volumes, api.Volume{
+			Name: "repo",
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{},
+			},
+		})
+	}
 
 	// The configMap is nil when using legacy execution
 	if s.configMap == nil {
@@ -900,6 +908,24 @@ func (s *executor) getVolumesForCSIs() []api.Volume {
 		})
 	}
 	return volumes
+}
+
+func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
+	if s.requireDefaultBuildsDirVolume != nil {
+		return *s.requireDefaultBuildsDirVolume
+	}
+
+	var required = true
+	for _, mount := range s.getVolumeMountsForConfig() {
+		if mount.MountPath == s.Build.RootDir {
+			required = false
+			break
+		}
+	}
+
+	s.requireDefaultBuildsDirVolume = &required
+
+	return required
 }
 
 func (s *executor) setupCredentials() error {

@@ -464,6 +464,31 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | sub_path          | string              | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | read_only         | boolean             | no       | Sets the volume in read-only mode (defaults to false) |
 
+## Custom builds directory mount
+
+To store the builds directory for the job, define custom volume mounts to the
+configured `builds_dir` (`/builds` by default).
+To use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
+be aware that depending on the
+[access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes),
+you might be limited to running jobs on 1 node.
+
+Here is an example configuration:
+
+```toml
+concurrent = 4
+
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  builds_dir = "/builds"
+  [runners.kubernetes]
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "repo"
+      mount_path = "/builds"
+      medium = "Memory"
+```
+
 ## Using Security Context
 
 [Pod security context](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) configuration instructs executor to set a pod security policy on the build pod.
