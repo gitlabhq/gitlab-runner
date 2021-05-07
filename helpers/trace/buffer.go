@@ -10,6 +10,7 @@ import (
 	"os"
 	"sync"
 
+	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -37,11 +38,17 @@ func (b *Buffer) SetMasked(values []string) {
 		b.w.Close()
 	}
 
-	transformers := make([]transform.Transformer, 0, len(values))
+	defaultTransformers := []transform.Transformer{
+		encoding.Replacement.NewEncoder(),
+	}
+
+	transformers := make([]transform.Transformer, 0, len(values)+len(defaultTransformers))
 
 	for _, value := range values {
 		transformers = append(transformers, newPhraseTransform(value))
 	}
+
+	transformers = append(transformers, defaultTransformers...)
 
 	b.w = transform.NewWriter(b.lw, transform.Chain(transformers...))
 }
