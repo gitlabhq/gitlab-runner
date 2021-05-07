@@ -157,7 +157,7 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 
 	if runtime.GOOS == "windows" {
 		executor = "docker-windows"
-		shell = "powershell"
+		shell = shells.SNPowershell
 		image = getWindowsImage(t)
 	}
 
@@ -1241,8 +1241,8 @@ func TestDockerCommand_Pwsh(t *testing.T) {
 
 	out, err := buildtest.RunBuildReturningOutput(t, &build)
 	assert.NoError(t, err)
-	assert.Contains(t, out, "PSVersion                      7.1.1")
-	assert.Contains(t, out, "PSEdition                      Core")
+	assert.Regexp(t, `PSVersion\s+7.1.1`, out)
+	assert.Regexp(t, `PSEdition\s+Core`, out)
 }
 
 func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {

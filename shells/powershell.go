@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	kubernetesExecutor    = "kubernetes"
+	dockerExecutor        = "docker"
 	dockerWindowsExecutor = "docker-windows"
 
 	SNPwsh       = "pwsh"
@@ -359,7 +361,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 	script := &common.ShellConfiguration{
 		Command:       b.Shell,
 		Arguments:     stdinCmdArgs(),
-		PassFile:      b.Shell != SNPwsh && info.Build.Runner.Executor != dockerWindowsExecutor,
+		PassFile:      !b.isStdinSupported(info),
 		Extension:     "ps1",
 		DockerCommand: PowershellDockerCmd(b.Shell),
 	}
@@ -369,6 +371,14 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 	}
 
 	return script, nil
+}
+
+func (b *PowerShell) isStdinSupported(info common.ShellScriptInfo) bool {
+	executor := info.Build.Runner.Executor
+
+	return executor == kubernetesExecutor ||
+		executor == dockerExecutor ||
+		executor == dockerWindowsExecutor
 }
 
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
