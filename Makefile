@@ -67,7 +67,6 @@ GITLAB_CHANGELOG = .tmp/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
 .PHONY: all
 all: deps runner-and-helper-bin
 
-include Makefile.deprecation.mk
 include Makefile.runner_helper.mk
 include Makefile.build.mk
 include Makefile.package.mk
