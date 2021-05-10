@@ -1,3 +1,36 @@
+## v13.12.0-rc1 (2021-05-10)
+
+### New features
+
+- Support git strategy with kubernetes executor !2862
+
+### Bug fixes
+
+- Add utf-8 invalid replacement encoder to trace transformers !2881
+- Pass Powershell scripts as a file to shell executor !2874
+- Add new eval execution strategy for capturing exit code !2818
+
+### Maintenance
+
+- Revert "Publish Windows helper image :latest tags" !2880
+- Use latest docs linting images for testing !2877
+- Ensure Docker client is in experimental mode !2870
+- Improve trace masking performance !2863
+- Use Powershell for resolving paths !2836
+- Move commands package integration tests to own files !2795
+- Allow whole Vault Secret configuration to be variable-expandable !2772
+- Update coverage and windows tests to rules !2756
+
+### Documentation changes
+
+- Changed ${arch} to $(arch) !2875
+- Fix TOML syntax in Kubernetes documentation !2872
+- Convert pull policies bolds into headers !2867
+- Update GitLab Runner connectivity !2866
+- Update Kubernetes pull policy documentation !2860
+- Document operator properties, custom installation and permissions !2847
+- Clarify, N-to-M relationship of Runners to GitLab instances !2788
+
 ## v13.11.0 (2021-04-20)
 
 ### New features
