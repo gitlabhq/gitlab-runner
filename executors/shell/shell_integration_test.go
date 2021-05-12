@@ -821,6 +821,10 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 }
 
 func TestBuildWithGitSubmodulePaths(t *testing.T) {
+	// Some of these fail on earlier versions of git
+	// We can just skip it since we pass them directly to git and don't care for version support
+	skipOnGit(t, "< 1.9")
+
 	tests := map[string]struct {
 		paths                   string
 		expectedBuildError      error
