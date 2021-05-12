@@ -135,7 +135,7 @@ docker run -d --name gitlab-runner --restart always \
 ```
 
 NOTE:
-You need to use the same method for mounting you data volume as you
+You need to use the same method for mounting your data volume as you
 did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 `--volumes-from gitlab-runner-config`).
 
