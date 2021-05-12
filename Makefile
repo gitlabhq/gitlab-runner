@@ -20,7 +20,7 @@ S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
 DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
-    ubuntu/xenial ubuntu/bionic ubuntu/eoan ubuntu/focal \
+    ubuntu/xenial ubuntu/bionic ubuntu/focal \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x
