@@ -13,7 +13,8 @@ import (
 )
 
 func TestVariablesMasking(t *testing.T) {
-	traceMessage := "This is the secret message cont@ining :secret duplicateValues ffixx"
+	input := "This is the secret message cont@ining :secret duplicateValues ffixx prefix_mask mask_suffix middle dd"
+
 	maskedValues := []string{
 		"is",
 		"duplicateValue",
@@ -21,6 +22,12 @@ func TestVariablesMasking(t *testing.T) {
 		":secret",
 		"cont@ining",
 		"fix",
+		"prefix",
+		"prefix_mask",
+		"suffix",
+		"mask_suffix",
+		"dd",
+		"middle",
 	}
 
 	buffer, err := New()
@@ -29,7 +36,7 @@ func TestVariablesMasking(t *testing.T) {
 
 	buffer.SetMasked(maskedValues)
 
-	_, err = buffer.Write([]byte(traceMessage))
+	_, err = buffer.Write([]byte(input))
 	require.NoError(t, err)
 
 	buffer.Finish()
@@ -37,7 +44,8 @@ func TestVariablesMasking(t *testing.T) {
 	content, err := buffer.Bytes(0, 1000)
 	require.NoError(t, err)
 
-	assert.Equal(t, "Th[MASKED] [MASKED] the secret message [MASKED] [MASKED] [MASKED]s f[MASKED]x", string(content))
+	//nolint:lll
+	assert.Equal(t, "Th[MASKED] [MASKED] the secret message [MASKED] [MASKED] [MASKED]s f[MASKED]x [MASKED] [MASKED] [MASKED] [MASKED]", string(content))
 }
 
 func TestTraceLimit(t *testing.T) {
