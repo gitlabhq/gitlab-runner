@@ -1621,6 +1621,10 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 		features := args[0].(*FeaturesInfo)
 		features.Shared = true
 	})
+	executorProvider.On("GetConfigInfo", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		info := args[1].(*ConfigInfo)
+		info.Gpus = "all"
+	})
 	RegisterExecutorProvider("my-test-executor", &executorProvider)
 
 	shell := MockShell{}
@@ -1645,4 +1649,5 @@ func TestRunnerVersionToGetExecutorAndShellFeaturesWithTheDefaultShell(t *testin
 	assert.False(t, info.Features.Artifacts, "dry-run that this is not enabled")
 	assert.True(t, info.Features.Shared, "feature is enabled by executor")
 	assert.True(t, info.Features.Variables, "feature is enabled by shell")
+	assert.Equal(t, "all", info.Config.Gpus)
 }

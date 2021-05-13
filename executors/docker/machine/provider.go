@@ -614,6 +614,10 @@ func (m *machineProvider) GetFeatures(features *common.FeaturesInfo) error {
 	return m.provider.GetFeatures(features)
 }
 
+func (m *machineProvider) GetConfigInfo(input *common.RunnerConfig, output *common.ConfigInfo) {
+	m.provider.GetConfigInfo(input, output)
+}
+
 func (m *machineProvider) GetDefaultShell() string {
 	return m.provider.GetDefaultShell()
 }
