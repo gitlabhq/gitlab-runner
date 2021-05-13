@@ -13,7 +13,8 @@ import (
 )
 
 func TestVariablesMasking(t *testing.T) {
-	input := "This is the secret message cont@ining :secret duplicateValues ffixx prefix_mask mask_suffix middle dd"
+	//nolint:lll
+	input := "This is the secret message cont@ining :secret duplicateValues ffixx prefix prefix_mask suffix mask_suffix middle dd"
 
 	maskedValues := []string{
 		"is",
@@ -45,7 +46,7 @@ func TestVariablesMasking(t *testing.T) {
 	require.NoError(t, err)
 
 	//nolint:lll
-	assert.Equal(t, "Th[MASKED] [MASKED] the secret message [MASKED] [MASKED] [MASKED]s f[MASKED]x [MASKED] [MASKED] [MASKED] [MASKED]", string(content))
+	assert.Equal(t, "Th[MASKED] [MASKED] the secret message [MASKED] [MASKED] [MASKED]s f[MASKED]x [MASKED] [MASKED] [MASKED] [MASKED] [MASKED] [MASKED]", string(content))
 }
 
 func TestTraceLimit(t *testing.T) {
