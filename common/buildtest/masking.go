@@ -12,12 +12,12 @@ import (
 )
 
 func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	const (
-		maskedKey    = "MASKED_KEY"
-		clearTextKey = "CLEARTEXT_KEY"
+	resp, err := common.GetRemoteSuccessfulBuildPrintVars(
+		config.Shell,
+		"MASKED_KEY",
+		"CLEARTEXT_KEY",
+		"MASKED_KEY_OTHER",
 	)
-
-	resp, err := common.GetRemoteSuccessfulBuildPrintVars(config.Shell, maskedKey, clearTextKey)
 	require.NoError(t, err)
 
 	build := &common.Build{
@@ -29,6 +29,7 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		build.Variables,
 		common.JobVariable{Key: "MASKED_KEY", Value: "MASKED_VALUE", Masked: true},
 		common.JobVariable{Key: "CLEARTEXT_KEY", Value: "CLEARTEXT_VALUE", Masked: false},
+		common.JobVariable{Key: "MASKED_KEY_OTHER", Value: "MASKED_VALUE_OTHER", Masked: true},
 	)
 
 	if setup != nil {
@@ -49,6 +50,10 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 
 	assert.NotContains(t, string(contents), "MASKED_KEY=MASKED_VALUE")
 	assert.Contains(t, string(contents), "MASKED_KEY=[MASKED]")
+
+	assert.NotContains(t, string(contents), "MASKED_KEY_OTHER=MASKED_VALUE_OTHER")
+	assert.NotContains(t, string(contents), "MASKED_KEY_OTHER=[MASKED]_OTHER")
+	assert.Contains(t, string(contents), "MASKED_KEY_OTHER=[MASKED]")
 
 	assert.NotContains(t, string(contents), "CLEARTEXT_KEY=[MASKED]")
 	assert.Contains(t, string(contents), "CLEARTEXT_KEY=CLEARTEXT_VALUE")

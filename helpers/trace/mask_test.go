@@ -58,6 +58,11 @@ func TestVariablesMaskingBoundary(t *testing.T) {
 			values:   []string{"split", "all", "values", "are", "masked"},
 			expected: "[MASKED] [MASKED] [MASKED] [MASKED] [MASKED]",
 		},
+		{
+			input:    "prefix_mask mask prefix_|mask prefix_ma|sk mas|k",
+			values:   []string{"mask", "prefix_mask"},
+			expected: "[MASKED] [MASKED] [MASKED] [MASKED] [MASKED]",
+		},
 
 		// data written at certain boundaries could cause short writes
 		// due to https://github.com/golang/go/issues/46892
