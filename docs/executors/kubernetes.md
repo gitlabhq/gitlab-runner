@@ -56,7 +56,7 @@ all of the above fields to have GitLab Runner auto-discover the Kubernetes API. 
 is the recommended approach.
 
 If you are running it externally to the Cluster then you will need to set each
-of these keywords and make sure that GitLab Runner has access to the Kubernetes API
+of these settings and make sure that GitLab Runner has access to the Kubernetes API
 on the cluster.
 
 ## Kubernetes executor interaction diagram
@@ -85,13 +85,13 @@ sequenceDiagram
     P->>+G: Job logs
 ```
 
-## The keywords
+## The available `config.toml` settings
 
-The following keywords help to define the behavior of GitLab Runner within Kubernetes.
+The following settings help to define the behavior of GitLab Runner within Kubernetes.
 
 ### CPU requests and limits
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `cpu_limit` | The CPU allocation given to build containers. |
 | `cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature. |
@@ -108,7 +108,7 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 
 ### Memory requests and limits
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `memory_limit` | The amount of memory allocated to build containers. |
 | `memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature. |
@@ -125,7 +125,7 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 
 ### Storage requests and limits
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `ephemeral_storage_limit` | The ephemeral storage limit for build containers. |
 | `ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature. |
@@ -140,9 +140,9 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 | `service_ephemeral_storage_request` | The ephemeral storage request given to service containers. |
 | `service_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
 
-### Other keywords
+### Other `config.toml` settings
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation) behavior. |
@@ -217,7 +217,7 @@ with an appropriate regular expression. When left empty the overwrite behavior i
 In conjunction with setting the namespace and service account as mentioned above, you may set the
 bearer token used when making API calls to create the build pods. This will allow project owners to
 use project secret variables to specify a bearer token. When specifying the bearer token, you must
-set the `Host` configuration keyword.
+set the `Host` configuration setting.
 
 ``` yaml
 variables:
@@ -236,7 +236,7 @@ variables:
 ```
 
 NOTE:
-You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file.
+You must specify [`pod_annotations_overwrite_allowed`](#the-available-configtoml-settings) to override pod annotations via the `.gitlab-ci.yml` file.
 
 ### Overwriting Container Resources
 
@@ -271,9 +271,9 @@ on the `.gitlab-ci.yml` file with the following variables:
 The values for these variables are restricted to what the max overwrite
 for that resource has been set to.
 
-## Define keywords in the configuration TOML
+## Define settings in the configuration TOML
 
-Each of the keywords can be defined in the `config.toml` file.
+Each of the settings can be defined in the `config.toml` file.
 
 Here is an example `config.toml`:
 
@@ -734,7 +734,7 @@ check_interval = 30
 to configure different [Linux capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) that should be
 added or dropped from a container.
 
-GitLab Runner supports configuration of capabilities with the `cap_add` and `cap_drop` keywords in the `[runners.kubernetes]`
+GitLab Runner supports configuration of capabilities with the `cap_add` and `cap_drop` settings in the `[runners.kubernetes]`
 section of the configuration file. By default, GitLab Runner provides
 a [list of capabilities](#default-list-of-dropped-capabilities) that should be dropped.
 
