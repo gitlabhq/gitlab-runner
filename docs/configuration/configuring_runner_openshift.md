@@ -184,7 +184,7 @@ You can customize the runner's `config.toml` file by using the [configuration te
       ca: custom-tls-ca
     ``` 
 
-## Configure the cpu and memory size of runner pods
+## Configure the CPU and memory size of runner pods
 
 To set [CPU limits](../executors/kubernetes.md#cpu-requests-and-limits) and [memory limits](../executors/kubernetes.md#memory-requests-and-limits) in a custom `config.toml` file, follow the instructions in [this topic](#customize-configtoml-with-a-configuration-template).
 
