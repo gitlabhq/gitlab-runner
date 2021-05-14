@@ -29,8 +29,8 @@ The currently supported shells are:
 | --------------| ------------------ |  ----------- |
 | `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `powershell`  | Fully Supported    | PowerShell script. All commands are executed in PowerShell Desktop context. Default when registering a new runner in versions 12.0 through 13.12. |
-| `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. Default when registering a new runner in version 14.0 or newer. |
+| `powershell`  | Fully Supported    | PowerShell script. All commands are executed in PowerShell Desktop context. In GitLab Runner 12.0-13.12, this is the default when registering a new runner. |
+| `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default when registering a new runner. |
 | `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Core. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. [Learn how to gain access to the CMD shell when PowerShell is the default shell](#access-cmd-shell-when-powershell-is-the-default). |
 
 If you want to select a particular shell to use other than the default, you need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
@@ -80,7 +80,7 @@ Executors that load shell profiles:
 ## PowerShell
 
 PowerShell Desktop Edition is the default shell when a new runner is registered on Windows using GitLab Runner
-for versions 12.0 through 13.12. Starting in version 14.0, the default is PowerShell Core Edition.
+12.0-13.12. In 14.0 and later, the default is PowerShell Core Edition.
 
 PowerShell doesn't support executing the build in context of another user.
 
