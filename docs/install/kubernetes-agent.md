@@ -14,7 +14,7 @@ These instructions to install GitLab Runner assume the
    your needs, such as:
 
    ```yaml
-   # The GitLab Server URL (with protocol) that want to register the runner against
+   # The GitLab Server URL (with protocol) that you want to register the runner against
    # ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register
    #
    gitlabUrl: https://gitlab.my.domain.example.com/
