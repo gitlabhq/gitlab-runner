@@ -41,6 +41,9 @@ const (
 	detectShellScriptName = "detect_shell_script"
 
 	waitLogFileTimeout = time.Minute
+
+	outputLogFileNotExistsExitCode = 100
+	unknownLogProcessorExitCode    = 1000
 )
 
 var (
@@ -417,19 +420,26 @@ func (s *executor) processLogs(ctx context.Context) {
 			if !ok {
 				continue
 			}
-			s.Warningln(fmt.Sprintf("Error returned from log processor: %v", err))
 
-			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: getExitCode(err)}
+			exitCode := getExitCode(err)
+			s.Warningln(fmt.Sprintf("%v", err))
+			// Script can be kept to nil as not being used after the exitStatus is received L1223
+			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: &exitCode}
 		}
 	}
 }
 
-func getExitCode(err error) *int {
+// getExitCode tries to extract the exit code from an inner exec.CodeExitError
+// This error may be returned by the underlying kubernetes connection stream
+// however it's not guaranteed to be.
+// getExitCode would return unknownLogProcessorExitCode if err isn't of type exec.CodeExitError
+// or if it's nil
+func getExitCode(err error) int {
 	var exitErr exec.CodeExitError
 	if errors.As(err, &exitErr) {
-		return &exitErr.Code
+		return exitErr.Code
 	}
-	return nil
+	return unknownLogProcessorExitCode
 }
 
 func (s *executor) setupScriptsConfigMap() error {

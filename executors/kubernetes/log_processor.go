@@ -62,6 +62,7 @@ func (s *kubernetesLogStreamer) String() string {
 type logProcessor interface {
 	// Process listens for log lines
 	// consumers must read from the channel until it's closed
+	// consumers are also notified in case of error through the error channel
 	Process(ctx context.Context) (<-chan string, <-chan error)
 }
 
@@ -123,18 +124,17 @@ func (l *kubernetesLogProcessor) Process(ctx context.Context) (<-chan string, <-
 func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, errCh chan error) {
 	var (
 		attempt         float64 = -1
-		maxAttempts     float64 = 3
 		backoffDuration time.Duration
-		err             error
 	)
 
 	for {
+		// We do not exit because we need the processLogs goroutine still running.
+		// Once the error message is sent, a new step cleanup variables is started.
+		// As the pod is still running, the processLogs goroutine is not launched anymore.
+		// This is why, even though the error is sent to fail the ongoing step,
+		// we keep trying to reconnect to the output log, as a new one is created for variables cleanup.
 		attempt++
-		switch {
-		case attempt >= maxAttempts:
-			l.logsOffset = 0
-			errCh <- fmt.Errorf("giving up reattaching to log for %s: %w", l.logStreamer, err)
-		case attempt > 0:
+		if attempt > 0 {
 			backoffDuration = l.backoff.ForAttempt(attempt)
 			l.logger.Debugln(fmt.Sprintf(
 				"Backing off reattaching log for %s for %s (attempt %f)",
@@ -149,11 +149,18 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, 
 			l.logger.Debugln(fmt.Sprintf("Detaching from log... %v", ctx.Err()))
 			return
 		case <-time.After(backoffDuration):
-			err = l.processStream(ctx, outCh)
+			err := l.processStream(ctx, outCh)
+			exitCode := getExitCode(err)
 			switch {
-			case err != nil && attempt+1 < maxAttempts:
+			case exitCode == outputLogFileNotExistsExitCode:
+				// The cleanup variables step recreates a new output.log file
+				// where the shells.TrapCommandExitStatus is written.
+				// To not miss this line, we need to have the offset reset when we reconnect to the newly created log
+				l.logsOffset = 0
+				errCh <- fmt.Errorf("output log file deleted, cannot continue %w", err)
+			case err != nil:
 				l.logger.Warningln(fmt.Sprintf("Error %v. Retrying...", err))
-			case err == nil:
+			default:
 				attempt = -1
 				l.logger.Debug("processStream exited with no error")
 			}

@@ -3111,7 +3111,7 @@ func TestProcessLogs(t *testing.T) {
 				ch <- string(b)
 			},
 		},
-		"Reattach failure": {
+		"Reattach failure with CodeExitError": {
 			lineCh:           make(chan string, 1),
 			errCh:            make(chan error, 1),
 			expectedExitCode: 2,
@@ -3121,6 +3121,24 @@ func TestProcessLogs(t *testing.T) {
 					Err:  fmt.Errorf("giving up reattaching to log"),
 					Code: 2,
 				}
+			},
+		},
+		"Reattach failure with EOF error": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: unknownLogProcessorExitCode,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- fmt.Errorf("Custom error for test with EOF %s", io.EOF)
+			},
+		},
+		"Reattach failure with custom error": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: unknownLogProcessorExitCode,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- errors.New("Custom error")
 			},
 		},
 		"Error channel closed before line channel": {

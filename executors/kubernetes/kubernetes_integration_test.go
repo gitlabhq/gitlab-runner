@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"testing"
 	"time"
@@ -563,9 +562,11 @@ func testUserConfiguredBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagN
 	assert.NoError(t, err)
 }
 
-// TestLogDeletionFeatureFlag tests the outcome when the log files are all deleted
-func TestLogDeletionFeatureFlag(t *testing.T) {
+// TestLogDeletionAttach tests the outcome when the log files are all deleted
+func TestLogDeletionAttach(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	t.Skip("Log deletion test temporary skipped: issue https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27755")
 
 	tests := []struct {
 		stage            string
@@ -577,7 +578,7 @@ func TestLogDeletionFeatureFlag(t *testing.T) {
 				assert.Contains(
 					t,
 					out,
-					"ERROR: Job failed: command terminated with exit code 1",
+					"ERROR: Job failed: command terminated with exit code 100",
 				)
 			},
 		},
@@ -587,7 +588,7 @@ func TestLogDeletionFeatureFlag(t *testing.T) {
 				assert.Contains(
 					t,
 					out,
-					"ERROR: Job failed: command terminated with exit code 1",
+					"ERROR: Job failed: command terminated with exit code 100",
 				)
 			},
 		},
@@ -613,7 +614,7 @@ func TestLogDeletionFeatureFlag(t *testing.T) {
 				pod := pods.Items[0]
 				config, err := kubernetes.GetKubeClientConfig(new(common.KubernetesConfig))
 				require.NoError(t, err)
-				logsPath := path.Join(build.TmpProjectDir(), "logs")
+				logsPath := fmt.Sprintf("/logs-%d-%d", build.JobInfo.ProjectID, build.JobResponse.ID)
 				opts := kubernetes.ExecOptions{
 					Namespace: pod.Namespace,
 					PodName:   pod.Name,
