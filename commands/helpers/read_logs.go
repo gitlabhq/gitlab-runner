@@ -19,6 +19,7 @@ const (
 	defaultReaderBufferSize        = 16 * 1024
 	defaultCheckFileExistsInterval = time.Second
 	pollFileContentsTimeout        = 500 * time.Millisecond
+	outputLogFileNotExistsExitCode = 100
 )
 
 var (
@@ -112,7 +113,11 @@ func newReadLogsCommand() *ReadLogsCommand {
 }
 
 func (c *ReadLogsCommand) Execute(*cli.Context) {
-	if err := c.execute(); err != nil {
+	err := c.execute()
+	switch {
+	case os.IsNotExist(err):
+		os.Exit(outputLogFileNotExistsExitCode)
+	case err != nil:
 		c.logOutputWriter.Write(fmt.Sprintf("error reading logs %v\n", err))
 		os.Exit(1)
 	}

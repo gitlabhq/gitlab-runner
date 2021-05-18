@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest/fake"
+	"k8s.io/client-go/util/exec"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
@@ -3092,43 +3093,110 @@ func TestSetupBuildPod(t *testing.T) {
 }
 
 func TestProcessLogs(t *testing.T) {
-	mockTrace := &common.MockJobTrace{}
-	defer mockTrace.AssertExpectations(t)
-	mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
+	tests := map[string]struct {
+		lineCh           chan string
+		errCh            chan error
+		expectedExitCode int
+		expectedScript   string
+		run              func(ch chan string, errCh chan error)
+	}{
+		"Successful Processing": {
+			lineCh:           make(chan string, 2),
+			errCh:            make(chan error, 1),
+			expectedExitCode: 1,
+			expectedScript:   "script",
+			run: func(ch chan string, errCh chan error) {
+				b, err := json.Marshal(getCommandExitStatus(1, "script"))
+				require.NoError(t, err)
+				ch <- string(b)
+			},
+		},
+		"Reattach failure with CodeExitError": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: 2,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- exec.CodeExitError{
+					Err:  fmt.Errorf("giving up reattaching to log"),
+					Code: 2,
+				}
+			},
+		},
+		"Reattach failure with EOF error": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: unknownLogProcessorExitCode,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- fmt.Errorf("Custom error for test with EOF %s", io.EOF)
+			},
+		},
+		"Reattach failure with custom error": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: unknownLogProcessorExitCode,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- errors.New("Custom error")
+			},
+		},
+		"Error channel closed before line channel": {
+			lineCh:           make(chan string, 2),
+			errCh:            make(chan error, 1),
+			expectedExitCode: 3,
+			expectedScript:   "script",
+			run: func(ch chan string, errCh chan error) {
+				close(errCh)
+				b, err := json.Marshal(getCommandExitStatus(3, "script"))
+				require.NoError(t, err)
+				ch <- string(b)
+				close(ch)
+			},
+		},
+	}
 
-	mockLogProcessor := new(mockLogProcessor)
-	defer mockLogProcessor.AssertExpectations(t)
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			mockTrace := &common.MockJobTrace{}
+			defer mockTrace.AssertExpectations(t)
+			mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
 
-	ch := make(chan string, 2)
-	ch <- "line"
-	exitCode := 1
-	script := "script"
-	status := shells.TrapCommandExitStatus{
+			mockLogProcessor := new(mockLogProcessor)
+			defer mockLogProcessor.AssertExpectations(t)
+
+			tc.lineCh <- "line"
+			mockLogProcessor.On("Process", mock.Anything).
+				Return((<-chan string)(tc.lineCh), (<-chan error)(tc.errCh)).
+				Once()
+
+			tc.run(tc.lineCh, tc.errCh)
+
+			e := newExecutor()
+			e.Trace = mockTrace
+			e.pod = &api.Pod{}
+			e.pod.Name = "pod_name"
+			e.pod.Namespace = "namespace"
+			e.newLogProcessor = func() logProcessor {
+				return mockLogProcessor
+			}
+
+			go e.processLogs(context.Background())
+
+			exitStatus := <-e.remoteProcessTerminated
+			assert.Equal(t, tc.expectedExitCode, *exitStatus.CommandExitCode)
+			if tc.expectedScript != "" {
+				assert.Equal(t, tc.expectedScript, *exitStatus.Script)
+			}
+		})
+	}
+}
+
+func getCommandExitStatus(exitCode int, script string) shells.TrapCommandExitStatus {
+	return shells.TrapCommandExitStatus{
 		CommandExitCode: &exitCode,
 		Script:          &script,
 	}
-
-	b, err := json.Marshal(status)
-	require.NoError(t, err)
-	ch <- string(b)
-	mockLogProcessor.On("Process", mock.Anything).
-		Return((<-chan string)(ch)).
-		Once()
-
-	e := newExecutor()
-	e.Trace = mockTrace
-	e.pod = &api.Pod{}
-	e.pod.Name = "pod_name"
-	e.pod.Namespace = "namespace"
-	e.newLogProcessor = func() logProcessor {
-		return mockLogProcessor
-	}
-
-	go e.processLogs(context.Background())
-
-	exitStatus := <-e.remoteProcessTerminated
-	assert.Equal(t, exitCode, *exitStatus.CommandExitCode)
-	assert.Equal(t, script, *exitStatus.Script)
 }
 
 func TestRunAttachCheckPodStatus(t *testing.T) {

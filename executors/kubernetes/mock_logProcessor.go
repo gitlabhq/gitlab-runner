@@ -14,7 +14,7 @@ type mockLogProcessor struct {
 }
 
 // Process provides a mock function with given fields: ctx
-func (_m *mockLogProcessor) Process(ctx context.Context) <-chan string {
+func (_m *mockLogProcessor) Process(ctx context.Context) (<-chan string, <-chan error) {
 	ret := _m.Called(ctx)
 
 	var r0 <-chan string
@@ -26,5 +26,14 @@ func (_m *mockLogProcessor) Process(ctx context.Context) <-chan string {
 		}
 	}
 
-	return r0
+	var r1 <-chan error
+	if rf, ok := ret.Get(1).(func(context.Context) <-chan error); ok {
+		r1 = rf(ctx)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(<-chan error)
+		}
+	}
+
+	return r0, r1
 }
