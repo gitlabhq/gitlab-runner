@@ -89,7 +89,7 @@ group](https://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
 
 GitLab Runner terminates processes when:
 
-- A job [times out](https://docs.gitlab.com/ee/user/project/pipelines/settings.html#timeout).
+- A job [times out](https://docs.gitlab.com/ee/ci/pipelines/settings.html#timeout).
 - A job is canceled.
 
 ### GitLab 13.0 and earlier

@@ -231,7 +231,7 @@ If you need an IDE to edit and debug code, there are a few free suggestions you 
 
 - [JetBrains GoLand IDE](https://www.jetbrains.com/go/).
 - Visual Studio Code using the
-  [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-gallery#_workspace-recommended-extensions),
+  [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions),
   located in `.vscode/extensions.json`.
 
 ## Managing build dependencies
