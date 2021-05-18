@@ -1204,3 +1204,137 @@ func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
 	err := shell.writeCleanupFileVariablesScript(mockShellWriter, info)
 	assert.NoError(t, err)
 }
+
+func BenchmarkScriptStage(b *testing.B) {
+	stages := []common.BuildStage{
+		common.BuildStagePrepare,
+		common.BuildStageGetSources,
+		common.BuildStageRestoreCache,
+		common.BuildStageDownloadArtifacts,
+		common.BuildStageAfterScript,
+		common.BuildStageArchiveOnSuccessCache,
+		common.BuildStageArchiveOnFailureCache,
+		common.BuildStageUploadOnSuccessArtifacts,
+		common.BuildStageUploadOnFailureArtifacts,
+		common.BuildStageCleanupFileVariables,
+		common.BuildStage("step_release"),
+	}
+
+	shells := []common.Shell{
+		&BashShell{Shell: "sh"},
+		&BashShell{Shell: "bash"},
+		&PowerShell{Shell: SNPwsh, EOL: "\n"},
+		&PowerShell{Shell: SNPowershell, EOL: "\r\n"},
+		&CmdShell{},
+	}
+
+	for _, shell := range shells {
+		for _, stage := range stages {
+			b.Run(fmt.Sprintf("%s-%s", shell.GetName(), stage), func(b *testing.B) {
+				benchmarkScriptStage(b, shell, stage)
+			})
+		}
+	}
+}
+
+func benchmarkScriptStage(b *testing.B, shell common.Shell, stage common.BuildStage) {
+	info := common.ShellScriptInfo{
+		RunnerCommand:  "runner-helper",
+		PreBuildScript: "echo prebuild",
+		Build: &common.Build{
+			CacheDir: "cache",
+			Runner: &common.RunnerConfig{
+				RunnerCredentials: common.RunnerCredentials{
+					URL: "https://example.com",
+				},
+				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "build",
+					CacheDir:  "cache",
+					Cache: &common.CacheConfig{
+						Type: "test",
+					},
+				},
+			},
+			JobResponse: common.JobResponse{
+				GitInfo: common.GitInfo{
+					Sha: "deadbeef",
+				},
+				Dependencies: []common.Dependency{{
+					ID: 1,
+					ArtifactsFile: common.DependencyArtifactsFile{
+						Filename: "artifact.zip",
+					},
+				}},
+				Artifacts: []common.Artifact{
+					{
+						Name:  "artifact",
+						Paths: []string{"*"},
+						When:  common.ArtifactWhenOnSuccess,
+					},
+					{
+						Name:  "artifact",
+						Paths: []string{"*"},
+						When:  common.ArtifactWhenOnFailure,
+					},
+				},
+				Cache: []common.Cache{
+					{
+						Key:    "cache",
+						Paths:  []string{"*"},
+						Policy: common.CachePolicyPullPush,
+						When:   common.CacheWhenOnSuccess,
+					},
+					{
+						Key:    "cache",
+						Paths:  []string{"*"},
+						Policy: common.CachePolicyPullPush,
+						When:   common.CacheWhenOnFailure,
+					},
+				},
+				Steps: common.Steps{
+					common.Step{
+						Name:   common.StepNameScript,
+						Script: common.StepScript{"echo script"},
+					},
+					common.Step{
+						Name:   common.StepNameAfterScript,
+						Script: common.StepScript{"echo after_script"},
+					},
+					common.Step{
+						Name:   "release",
+						Script: common.StepScript{"echo release"},
+					},
+					common.Step{
+						Name:   "a11y",
+						Script: common.StepScript{"echo a11y"},
+					},
+				},
+				Variables: []common.JobVariable{
+					{
+						Key:   "GIT_STRATEGY",
+						Value: "fetch",
+					},
+					{
+						Key:   "GIT_SUBMODULE_STRATEGY",
+						Value: "normal",
+					},
+					{
+						Key:   "file",
+						Value: "value",
+						File:  true,
+					},
+				},
+			},
+		},
+		PostBuildScript: "echo postbuild",
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		script, err := shell.GenerateScript(stage, info)
+		b.SetBytes(int64(len(script)))
+		assert.NoError(b, err, stage)
+	}
+}
