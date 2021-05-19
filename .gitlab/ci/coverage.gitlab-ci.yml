@@ -82,7 +82,7 @@ check race unexpected test failures:
   script:
   - ./scripts/check_unexpected_test_failures
 
-check windows 1809 unexpected unit test failures:
+.check windows unexpected unit test failures:
   extends:
   - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
@@ -91,14 +91,17 @@ check windows 1809 unexpected unit test failures:
   script:
   - ./scripts/check_unexpected_test_failures
 
+check windows 1809 unexpected unit test failures:
+  extends:
+  - .check windows unexpected unit test failures
+  needs:
+  - windows 1809 unit tests
+
 check windows 1809 unexpected integration test failures:
   extends:
-  - .rules:merge_request_pipelines:no_docs:always
-  stage: coverage
+  - .check windows unexpected unit test failures
   needs:
   - windows 1809 integration tests
-  script:
-  - ./scripts/check_unexpected_test_failures
 
 .check windows test failures:
   extends:

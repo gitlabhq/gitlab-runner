@@ -5,7 +5,6 @@ package docker
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -39,13 +38,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
-
-func TestMain(m *testing.M) {
-	PrebuiltImagesPaths = []string{"../../out/helper-images/"}
-
-	flag.Parse()
-	os.Exit(m.Run())
-}
 
 func TestParseDeviceStringOne(t *testing.T) {
 	e := new(executor)

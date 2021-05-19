@@ -246,14 +246,14 @@ Don't add dependency from upstream master branch when version tags are available
 The Runner codebase makes a distinction between [unit](https://en.wikipedia.org/wiki/Unit_testing)
 and [integration tests](https://en.wikipedia.org/wiki/Integration_testing) in the following way:
 
-- unit test files have a suffix of `_test.go`, and contain the following build directive in the header:
+- Unit test files have a suffix of `_test.go` and contain the following build directive in the header:
 
     ```golang
     // +build !integration
     
     ```
 
-- integration test files have a suffix of `_integration_test.go`, and contain the following build directive in the header:
+- Integration test files have a suffix of `_integration_test.go` and contain the following build directive in the header:
 
     ```golang
     // +build integration

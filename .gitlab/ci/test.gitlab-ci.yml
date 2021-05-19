@@ -226,7 +226,6 @@ fuzz variable mask:
   parallel: 6
   variables:
     GOROOT: "C:\\Go"
-    TESTFLAGS: '-tags=!integration'
   before_script:
   - *go-cache-windows_before_script
   - if (Test-Path $GOPATH) { Remove-Item -Force -Recurse $GOPATH }
@@ -251,6 +250,8 @@ fuzz variable mask:
   - 'unit test definitions'
   - 'clone test repo'
   - 'prepare done'
+  variables:
+    TESTFLAGS: '-tags=!integration'
 
 .windows integration test:
   extends:
