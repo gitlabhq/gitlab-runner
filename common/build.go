@@ -1203,6 +1203,12 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 	}
 }
 
+// GetSubmodulePaths https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-ltpathgt82308203
+func (b *Build) GetSubmodulePaths() string {
+	paths := b.GetAllVariables().Get("GIT_SUBMODULE_PATHS")
+	return paths
+}
+
 func (b *Build) GetGitCleanFlags() []string {
 	flags := b.GetAllVariables().Get("GIT_CLEAN_FLAGS")
 	if flags == "" {

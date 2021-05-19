@@ -420,11 +420,19 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	b.writeSubmoduleUpdateNoticeMsg(w, recursive, depth)
 
+	var pathArgs []string
+
+	submodulePaths := strings.TrimSpace(build.GetSubmodulePaths())
+	if submodulePaths != "" {
+		pathArgs = append(pathArgs, "--", submodulePaths)
+	}
+
 	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
 	args := []string{"submodule", "sync"}
 	if recursive {
 		args = append(args, "--recursive")
 	}
+	args = append(args, pathArgs...)
 	w.Command("git", args...)
 
 	// Update / initialize submodules
@@ -437,6 +445,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if depth > 0 {
 		updateArgs = append(updateArgs, "--depth", strconv.Itoa(depth))
 	}
+	updateArgs = append(updateArgs, pathArgs...)
 
 	// Clean changed files in submodules
 	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
