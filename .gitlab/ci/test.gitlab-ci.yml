@@ -102,12 +102,21 @@ check mocks:
   script:
   - make check_mocks
 
+check test directives:
+  stage: test
+  extends:
+  - .rules:merge_request_pipelines:no_docs
+  - .no_cache_and_dependencies
+  needs: []
+  script:
+  - make check_test_directives
+
 code_quality:
   stage: test
   extends:
   - .rules:merge_request_pipelines:no_docs
   - .no_dependencies
-    # Use GOCACHE instead of GOLANGCI_LINT_CACHE
+  # Use GOCACHE instead of GOLANGCI_LINT_CACHE
   # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
   - .go-cache
   image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:v1.27.0-alpine
