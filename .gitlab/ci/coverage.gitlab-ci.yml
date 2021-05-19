@@ -54,6 +54,7 @@ race conditions detector:
   - .coverage_job
   needs:
   - unit test with race
+  - integration test with race
   script:
   - source ci/touch_make_dependencies
   - make check_race_conditions
@@ -77,6 +78,7 @@ check race unexpected test failures:
   stage: coverage
   needs:
   - unit test with race
+  - integration test with race
   script:
   - ./scripts/check_unexpected_test_failures
 

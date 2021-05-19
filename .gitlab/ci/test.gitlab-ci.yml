@@ -193,6 +193,15 @@ integration test:
   variables:
     TESTFLAGS: -cover -tags=integration
 
+integration test with race:
+  extends:
+  - integration test
+  - .go-cache
+  allow_failure: true
+  variables:
+    CGO_ENABLED: "1"
+    TESTFLAGS: -cover -tags=integration -race
+
 fuzz variable mask:
   extends:
   - .fuzz_base
