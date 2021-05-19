@@ -85,6 +85,7 @@ _docker_buildx build \
     --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
     --output "type=tar,dest=$TARGET_FILE" \
     --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
+    --build-arg http_proxy="${http_proxy}" \
     dockerfiles/runner-helper
 
 trap - ERR SIGINT SIGTERM
