@@ -292,7 +292,6 @@ git 1.8.3.1:
     GOROOT: /usr/local/go
     GOPATH: /go
     CGO_ENABLED: 0
-    TESTFLAGS: '-tags=integration'
   before_script:
   - unset GPG_KEY
   - yum install -y -q git make && git version
