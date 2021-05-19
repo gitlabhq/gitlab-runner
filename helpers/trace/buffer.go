@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"sort"
 	"sync"
 
 	"golang.org/x/text/encoding"
@@ -29,6 +30,20 @@ type Buffer struct {
 	checksum hash.Hash32
 }
 
+type lengthSort []string
+
+func (s lengthSort) Len() int {
+	return len(s)
+}
+
+func (s lengthSort) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s lengthSort) Less(i, j int) bool {
+	return len(s[i]) > len(s[j])
+}
+
 func (b *Buffer) SetMasked(values []string) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -44,6 +59,7 @@ func (b *Buffer) SetMasked(values []string) {
 
 	transformers := make([]transform.Transformer, 0, len(values)+len(defaultTransformers))
 
+	sort.Sort(lengthSort(values))
 	for _, value := range values {
 		transformers = append(transformers, newPhraseTransform(value))
 	}
