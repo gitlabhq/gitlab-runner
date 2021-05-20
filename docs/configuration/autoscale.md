@@ -295,46 +295,47 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](ad
 
 ## Off Peak time mode configuration (Deprecated)
 
-> This setting is deprecated and will be removed in 14.0. Use autoscaling periods instead.
-> If both settings are used, the Off Peak settings will be ignored.
+> This setting is deprecated and was removed in GitLab Runner 14.0.
 
-Autoscale can be configured with the support for _Off Peak_ time mode periods.
+Autoscale **can no longer be configured** with _Off Peak_ time mode periods. Convert it into autoscaling periods instead.
 
-**What is _Off Peak_ time mode period?**
+**Converting an Off Peak configuration into an autoscaling one**
 
-Some organizations can select a regular time periods when no work is done.
-These time periods are called _Off Peak_.
+To convert an Off Peak Configuration into an autoscaling one, create a `[[runners.machine.autoscaling]]` section and populate it as follows:
 
-Organizations where _Off Peak_ time periods occur probably don't want
-to pay for the _Idle_ machines when jobs are going to be
-executed in this time. Especially when `IdleCount` is set to a big number.
+- `Periods` field takes the value from `OffpeakPeriods`
+- `IdleCount` field takes the value from `OffpeakIdleCount`
+- `IdleTime` field takes the value from `OffpeakIdleTime`
+- `Timezone` field takes the value from `OffpeakTimezone`
 
-**How it is working?**
-
-Configuration of _Off Peak_ is done by four parameters: `OffPeakPeriods`,
-`OffPeakTimezone`, `OffPeakIdleCount` and `OffPeakIdleTime`. The
-`OffPeakPeriods` setting contains an array of cron-style patterns defining
-when the _Off Peak_ time mode should be set on. For example:
+As an example, consider the conversion of the following **Offpeak configuration**: 
 
 ```toml
 [runners.machine]
-  OffPeakPeriods = [
-    "* * 0-8,18-23 * * mon-fri *",
-    "* * * * * sat,sun *"
-  ]
+  MachineName = "auto-scale-%s"
+  MachineDriver = "google"
+  IdleCount = 10
+  IdleTime = 1800
+  OffPeakPeriods = ["* * 9-17 * * mon-fri *"]
+  OffPeakIdleCount = 50
+  OffPeakIdleTime = 3600
+  OffPeakTimezone = "UTC"
 ```
 
-This example enables the _Off Peak_ periods described above, so on weekdays
-from 12:00am through 8:59am and 6:00pm through 11:59pm, plus all of Saturday and Sunday. Machines
-scheduler is checking all patterns from the array and if at least one of
-them describes current time, then the _Off Peak_ time mode is enabled.
+The conversion results in:
 
-When the _Off Peak_ time mode is enabled machines scheduler use
-`OffPeakIdleCount` instead of `IdleCount` setting and `OffPeakIdleTime`
-instead of `IdleTime` setting. The autoscaling algorithm is not changed,
-only the parameters. When machines scheduler discovers that none from
-the `OffPeakPeriods` pattern is fulfilled then it switches back to
-`IdleCount` and `IdleTime` settings.
+```toml
+[runners.machine]
+  MachineName = "auto-scale-%s"
+  MachineDriver = "google"
+  IdleCount = 10
+  IdleTime = 1800
+  [[runners.machine.autoscaling]]
+    Periods = ["* * 9-17 * * mon-fri *"]
+    IdleCount = 50
+    IdleTime = 3600
+    Timezone = "UTC"
+```
 
 ## Distributed runners caching
 
