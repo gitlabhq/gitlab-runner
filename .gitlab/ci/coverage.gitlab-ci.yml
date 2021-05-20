@@ -104,8 +104,6 @@ check windows 1809 unexpected integration test failures:
   - windows 1809 integration tests
 
 .check windows test failures:
-  extends:
-  - .rules:default-branch-only:always
   stage: coverage
   script:
   - ./scripts/check_windows_failures
@@ -120,6 +118,7 @@ check windows 1809 unit test failures:
   extends:
   - .check windows test failures
   - .windows1809_variables
+  - .rules:merge_request_pipelines:no_docs
   needs:
   - windows 1809 unit tests
 
@@ -135,6 +134,7 @@ check windows 1903 integration test failures:
   extends:
   - .check windows test failures
   - .windows1903_variables
+  - .rules:default-branch-only:always
   needs:
   - windows 1903 integration tests
 
@@ -142,6 +142,7 @@ check windows 1909 integration test failures:
   extends:
   - .check windows test failures
   - .windows1909_variables
+  - .rules:default-branch-only:always
   needs:
   - windows 1909 integration tests
 
@@ -149,5 +150,6 @@ check windows 2004 integration test failures:
   extends:
   - .check windows test failures
   - .windows2004_variables
+  - .rules:default-branch-only:always
   needs:
   - windows 2004 integration tests
