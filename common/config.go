@@ -164,14 +164,12 @@ type DockerMachine struct {
 	MachineName    string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
 	MachineOptions []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
 
-	OffPeakPeriods   []string `long:"off-peak-periods" env:"MACHINE_OFF_PEAK_PERIODS" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`                                    // DEPRECATED
-	OffPeakTimezone  string   `long:"off-peak-timezone" env:"MACHINE_OFF_PEAK_TIMEZONE" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                    // DEPRECATED
-	OffPeakIdleCount int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                     // DEPRECATED
-	OffPeakIdleTime  int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode. DEPRECATED"` // DEPRECATED
+	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`                                // DEPRECATED
+	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
+	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
+	OffPeakIdleTime  int      `toml:"OffPeakIdleTime,omitzero" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode. DEPRECATED"` // DEPRECATED
 
 	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
-
-	offPeakTimePeriods *timeperiod.TimePeriod // DEPRECATED
 }
 
 //nolint:lll
@@ -907,10 +905,6 @@ func (c *DockerMachine) GetIdleTime() int {
 // It goes through the [[docker.machine.autoscaling]] entries and returns the last one to match.
 // Returns nil on no matching entries.
 func (c *DockerMachine) getActiveAutoscalingConfig() *DockerMachineAutoscaling {
-	if len(c.AutoscalingConfigs) == 0 && len(c.OffPeakPeriods) > 0 {
-		return c.getLegacyAutoscalingConfigWithOffpeak()
-	}
-
 	var activeConf *DockerMachineAutoscaling
 	for _, conf := range c.AutoscalingConfigs {
 		if conf.compiledPeriods.InPeriod() {
@@ -921,23 +915,8 @@ func (c *DockerMachine) getActiveAutoscalingConfig() *DockerMachineAutoscaling {
 	return activeConf
 }
 
-// TODO: remove in 14.0: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555
-func (c *DockerMachine) getLegacyAutoscalingConfigWithOffpeak() *DockerMachineAutoscaling {
-	if c.offPeakTimePeriods.InPeriod() {
-		return &DockerMachineAutoscaling{
-			IdleCount: c.OffPeakIdleCount,
-			IdleTime:  c.OffPeakIdleTime,
-		}
-	}
-
-	return nil
-}
-
 func (c *DockerMachine) CompilePeriods() error {
-	err := c.legacyCompilePeriods()
-	if err != nil {
-		return err
-	}
+	var err error
 
 	for _, a := range c.AutoscalingConfigs {
 		err = a.compilePeriods()
@@ -950,20 +929,6 @@ func (c *DockerMachine) CompilePeriods() error {
 }
 
 var periodTimer = time.Now
-
-// TODO: remove in 14.0: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555
-func (c *DockerMachine) legacyCompilePeriods() error {
-	if len(c.OffPeakPeriods) != 0 {
-		periods, err := timeperiod.TimePeriodsWithTimer(c.OffPeakPeriods, c.OffPeakTimezone, periodTimer)
-		if err != nil {
-			return NewInvalidTimePeriodsError(c.OffPeakPeriods, err)
-		}
-
-		c.offPeakTimePeriods = periods
-	}
-
-	return nil
-}
 
 func (a *DockerMachineAutoscaling) compilePeriods() error {
 	periods, err := timeperiod.TimePeriodsWithTimer(a.Periods, a.Timezone, periodTimer)
@@ -978,14 +943,9 @@ func (a *DockerMachineAutoscaling) compilePeriods() error {
 
 func (c *DockerMachine) logDeprecationWarning() {
 	if len(c.OffPeakPeriods) != 0 {
-		logrus.Warning("OffPeak docker machine configuration is deprecated and will be removed in 14.0. " +
-			"Please use [[docker.machine.autoscaling]] configuration instead: " +
-			"https://docs.gitlab.com/runner/configuration/autoscale.html#autoscaling-periods-configuration")
-	}
-	if len(c.AutoscalingConfigs) != 0 && len(c.OffPeakPeriods) != 0 {
-		logrus.Warning("You are using both deprecated Offpeak config and [[docker.machine.autoscaling]] setting. " +
-			"The legacy configuration will be ignored. See: " +
-			"https://docs.gitlab.com/runner/configuration/autoscale.html#deprecated-off-peak-time-mode-configuration")
+		logrus.Warning("OffPeak docker machine configuration is deprecated and has been removed since 14.0. " +
+			"Please convert the setting into a [[docker.machine.autoscaling]] configuration instead: " +
+			"https://docs.gitlab.com/runner/configuration/autoscale.html#off-peak-time-mode-configuration-deprecated")
 	}
 }
 
