@@ -141,6 +141,16 @@ development servercore2004 helper docker image:
     PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
+development servercore20H2 helper docker image:
+  extends:
+  - .release_development
+  - .windows20H2
+  - .release_windows_docker_images
+  variables:
+    PUBLISH_IMAGES: "false"
+    PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+
 bleeding edge S3:
   extends:
   - .release_s3
@@ -181,6 +191,15 @@ bleeding edge servercore2004 docker images:
   - .release_windows_docker_images
   environment:
     name: bleeding_edge/docker_images/windows2004
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge servercore20H2 docker images:
+  extends:
+  - .release_bleeding_edge
+  - .windows20H2
+  - .release_windows_docker_images
+  environment:
+    name: bleeding_edge/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable S3:
@@ -237,6 +256,15 @@ stable servercore2004 docker images:
   - .release_windows_docker_images
   environment:
     name: stable/docker_images/windows2004
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore20H2 docker images:
+  extends:
+  - .release_stable
+  - .windows20H2
+  - .release_windows_docker_images
+  environment:
+    name: stable/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 static QA:

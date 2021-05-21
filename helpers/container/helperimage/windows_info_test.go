@@ -97,6 +97,22 @@ func Test_windowsInfo_create(t *testing.T) {
 				},
 				expectedErr: nil,
 			},
+			{
+				operatingSystem: "Windows Server Datacenter Version 2009 (OS Build 19042.985)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         DockerHubName,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage20H2,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
 
 			{
 				operatingSystem: "some random string",
