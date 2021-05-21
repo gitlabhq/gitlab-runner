@@ -1948,34 +1948,6 @@ func TestLocalHelperImage(t *testing.T) {
 			},
 			expectedImage: &types.ImageInspect{},
 		},
-		"entrypoint not added when feature flag turned off": {
-			jobVariables: common.JobVariables{
-				common.JobVariable{
-					Key:   featureflags.ResetHelperImageEntrypoint,
-					Value: "false",
-				},
-			},
-			helperImageInfo: defaultHelperImageInfo,
-			clientAssertions: func(c *docker.MockClient) {
-				c.On(
-					"ImageImportBlocking",
-					mock.Anything,
-					mock.Anything,
-					mock.Anything,
-					types.ImageImportOptions{
-						Tag:     "localimageimport",
-						Changes: nil,
-					},
-				).Return(nil)
-
-				c.On(
-					"ImageInspectWithRaw",
-					mock.Anything,
-					mock.Anything,
-				).Return(types.ImageInspect{}, []byte{}, nil)
-			},
-			expectedImage: &types.ImageInspect{},
-		},
 		"nil is returned if error on import": {
 			helperImageInfo: defaultHelperImageInfo,
 			clientAssertions: func(c *docker.MockClient) {

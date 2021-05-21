@@ -12,7 +12,6 @@ const (
 	UseLegacyKubernetesExecutionStrategy        string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 	UseDirectDownload                           string = "FF_USE_DIRECT_DOWNLOAD"
 	SkipNoOpBuildStages                         string = "FF_SKIP_NOOP_BUILD_STAGES"
-	ResetHelperImageEntrypoint                  string = "FF_RESET_HELPER_IMAGE_ENTRYPOINT"
 	UseFastzip                                  string = "FF_USE_FASTZIP"
 	GitLabRegistryHelperImage                   string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
 	DisableUmaskForDockerExecutor               string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
@@ -78,15 +77,6 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "When set to `false` all build stages are executed even if running them has no effect",
-	},
-	{
-		Name:            ResetHelperImageEntrypoint,
-		DefaultValue:    true,
-		Deprecated:      true,
-		ToBeRemovedWith: "14.0",
-		Description: "Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives " +
-			"by the `docker` executor, in order to enable [importing of user certificate roots]" +
-			"(tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)",
 	},
 	{
 		Name:            UseFastzip,
