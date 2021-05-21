@@ -1517,6 +1517,7 @@ func TestPrepare(t *testing.T) {
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo: helperimage.Info{
+					OSType:                  os,
 					Architecture:            "x86_64",
 					Name:                    helperimage.GitLabRegistryName,
 					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),

@@ -43,8 +43,6 @@ var supportedWindowsVersions = []string{
 
 var supportedWindowsBuilds = map[string]string{
 	"10.0.17763": V1809,
-	"10.0.18362": V1903,
-	"10.0.18363": V1909,
 	"10.0.19041": V2004,
 }
 
