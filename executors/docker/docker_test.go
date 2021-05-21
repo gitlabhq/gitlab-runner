@@ -1704,7 +1704,7 @@ func TestHelperImageRegistry(t *testing.T) {
 		// logic and leaking abstractions.
 		expectedHelperImageName string
 	}{
-		"Docker Hub helper image": {
+		"Default helper image": {
 			build: &common.Build{
 				JobResponse: common.JobResponse{
 					Image: common.Image{
@@ -1717,9 +1717,9 @@ func TestHelperImageRegistry(t *testing.T) {
 					},
 				},
 			},
-			expectedHelperImageName: helperimage.DockerHubName,
+			expectedHelperImageName: helperimage.GitLabRegistryName,
 		},
-		"GitLab Registry helper image": {
+		"DockerHub helper image": {
 			build: &common.Build{
 				JobResponse: common.JobResponse{
 					Image: common.Image{
@@ -1728,7 +1728,7 @@ func TestHelperImageRegistry(t *testing.T) {
 					Variables: common.JobVariables{
 						common.JobVariable{
 							Key:      featureflags.GitLabRegistryHelperImage,
-							Value:    "true",
+							Value:    "false",
 							Public:   false,
 							Internal: false,
 							File:     false,
@@ -1743,7 +1743,7 @@ func TestHelperImageRegistry(t *testing.T) {
 					},
 				},
 			},
-			expectedHelperImageName: helperimage.GitLabRegistryName,
+			expectedHelperImageName: helperimage.DockerHubName,
 		},
 		"helper image overridden still use default helper image in prepare": {
 			build: &common.Build{
@@ -1762,15 +1762,15 @@ func TestHelperImageRegistry(t *testing.T) {
 			},
 			// We expect the default image to still be chosen since the check of
 			// the override happens at a later stage.
-			expectedHelperImageName: helperimage.DockerHubName,
+			expectedHelperImageName: helperimage.GitLabRegistryName,
 		},
-		"helper image overridden still use registry.gitlab.com helper image in prepare": {
+		"helper image overridden still use DockerHub helper image in prepare": {
 			build: &common.Build{
 				JobResponse: common.JobResponse{
 					Variables: common.JobVariables{
 						common.JobVariable{
 							Key:   featureflags.GitLabRegistryHelperImage,
-							Value: "true",
+							Value: "false",
 						},
 					},
 					Image: common.Image{
@@ -1785,9 +1785,9 @@ func TestHelperImageRegistry(t *testing.T) {
 					},
 				},
 			},
-			// We expect the registry.gitlab.com image to still be chosen since
+			// We expect the DockerHub image to still be chosen since
 			// the check of the override happens at a later stage.
-			expectedHelperImageName: helperimage.GitLabRegistryName,
+			expectedHelperImageName: helperimage.DockerHubName,
 		},
 	}
 

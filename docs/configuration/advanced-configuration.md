@@ -846,28 +846,29 @@ The `kubernetes` executor and manual installations of GitLab Runner work differe
 In both cases, GitLab Runner downloads the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper`.
 The GitLab Runner revision and architecture define which tag to download.
 
-### Migrate helper image to `registry.gitlab.com`
+### Default registry
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27196) in GitLab Runner 13.7.
+The helper image is pulled from a specific registry location, based on your version of GitLab
+Runner and the `FF_GITLAB_REGISTRY_HELPER_IMAGE` [feature flag](feature-flags.md).
 
-The helper image is currently hosted in [Docker
-Hub](https://hub.docker.com/r/gitlab/gitlab-runner-helper). With the new [Docker
-Hub limits](https://docs.docker.com/docker-hub/download-rate-limit/), we are
-migrating the helper image to
-[`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754).
+In 14.0, `FF_GITLAB_REGISTRY_HELPER_IMAGE=true` [became the default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27218)
+and helper images are pulled from GitLab Registry unless this feature flag is
+disabled.
 
-By default, the helper image is pulled from Docker Hub. If the
-`FF_GITLAB_REGISTRY_HELPER_IMAGE` [feature flag](feature-flags.md) is enabled
-the runner pulls the image from
-[`registry.gitlab.com`](https://gitlab.com/gitlab-org/gitlab-runner/container_registry/1472754)
-where the limits don't apply. You can enable the feature flag for:
+In 13.7, `FF_GITLAB_REGISTRY_HELPER_IMAGE`
+was [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27196)
+but disabled by default.
+
+Prior to 13.7, the helper image was always pulled from
+[Docker Hub](https://hub.docker.com/r/gitlab/gitlab-runner-helper).
+
+This feature flag can be disabled for:
 
 - A [specific pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration).
 - [Every job](feature-flags.md#enable-feature-flag-in-runner-environment-variables).
-
-If you are a runner administrator and don't want users to override it, you can set this
-feature flag by specifying
-[`[runners.feature_flags]`](feature-flags.md#enable-feature-flag-in-runner-configuration).
+- If you are a runner administrator and don't want users to override it, you can set this
+  feature flag by specifying
+  [`[runners.feature_flags]`](feature-flags.md#enable-feature-flag-in-runner-configuration).
 
 ### Override the helper image
 
