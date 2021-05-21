@@ -225,7 +225,7 @@ func TestBuildJobStatusEnvVars(t *testing.T) {
 		fail   bool
 		assert func(t *testing.T, err error, build *common.Build, out string)
 	}{
-		"state and stage on failure": {
+		"state on failure": {
 			fail: true,
 			assert: func(t *testing.T, err error, build *common.Build, out string) {
 				assert.Error(t, err)
@@ -233,7 +233,7 @@ func TestBuildJobStatusEnvVars(t *testing.T) {
 				assert.Equal(t, common.BuildRunRuntimeFailed, build.CurrentState())
 			},
 		},
-		"state and stage on success": {
+		"state on success": {
 			fail: false,
 			assert: func(t *testing.T, err error, build *common.Build, out string) {
 				assert.NoError(t, err)
