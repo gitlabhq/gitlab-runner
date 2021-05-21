@@ -87,7 +87,6 @@ func imageName(gitlabRegistry bool) string {
 
 func getPowerShellCmd(shell string) []string {
 	if shell == "" {
-		// TODO: Replace with shells.SNPwsh in 14.0 in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26419
 		shell = shells.SNPowershell
 	}
 

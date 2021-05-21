@@ -240,8 +240,8 @@ The available shells can run on different platforms.
 | ----- | ----------- |
 | `bash`        | Generate Bash (Bourne-shell) script. All commands executed in Bash context. Default for all Unix systems. |
 | `sh`          | Generate Sh (Bourne-shell) script. All commands executed in Sh context. The fallback for `bash` for all Unix systems. |
-| `powershell`  | Generate PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default for Windows. |
-| `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. |
+| `powershell`  | Generate PowerShell script. All commands are executed in PowerShell Desktop context. In GitLab Runner 12.0-13.12, this is the default for Windows. |
+| `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default for Windows. |
 
 ## The `[runners.docker]` section
 

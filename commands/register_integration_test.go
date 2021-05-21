@@ -19,6 +19,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
@@ -146,8 +147,10 @@ func testRegisterCommandRun(
 		"--config", configFile.Name(),
 		"--url", "http://gitlab.example.com/",
 		"--registration-token", "test-registration-token",
-		"--executor", "shell",
 	}, args...)
+	if !contains(args, "--executor") {
+		args = append(args, "--executor", "shell")
+	}
 
 	comandErr := app.Run(args)
 
@@ -157,6 +160,15 @@ func testRegisterCommandRun(
 	err = comandErr
 
 	return string(fileContent), "", err
+}
+
+func contains(args []string, s string) bool {
+	for _, arg := range args {
+		if arg == s {
+			return true
+		}
+	}
+	return false
 }
 
 func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
@@ -605,30 +617,91 @@ func TestUnregisterOnFailure(t *testing.T) {
 	}
 }
 
-func TestRegisterCommand_FeatureFlag(t *testing.T) {
-	expectedConfig := `
+func TestRegisterCommand(t *testing.T) {
+	type testCase struct {
+		condition      func() bool
+		arguments      []string
+		expectedConfig string
+	}
+
+	testCases := map[string]testCase{
+		"feature flags are included in config": {
+			arguments: []string{
+				"--name", "test-runner",
+				"--feature-flags", "FF_TEST_1:true",
+				"--feature-flags", "FF_TEST_2:false",
+			},
+			expectedConfig: `
   [runners.feature_flags]
     FF_TEST_1 = true
     FF_TEST_2 = false
-`
-
-	network := new(common.MockNetwork)
-	defer network.AssertExpectations(t)
-
-	network.On("RegisterRunner", mock.Anything, mock.Anything).
-		Return(&common.RegisterRunnerResponse{
-			Token: "test-runner-token",
-		}).
-		Once()
-
-	arguments := []string{
-		"--name", "test-runner",
-		"--feature-flags", "FF_TEST_1:true",
-		"--feature-flags", "FF_TEST_2:false",
+`,
+		},
+		"shell defaults to pwsh on Windows with shell executor": {
+			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			arguments: []string{
+				"--name", "test-runner",
+				"--executor", "shell",
+			},
+			expectedConfig: `
+  shell = "pwsh"
+`,
+		},
+		"shell defaults to pwsh on Windows with docker-windows executor": {
+			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			arguments: []string{
+				"--name", "test-runner",
+				"--executor", "docker-windows",
+				"--docker-image", "abc",
+			},
+			expectedConfig: `
+  shell = "pwsh"
+`,
+		},
+		"shell can be overridden to powershell on Windows with shell executor": {
+			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			arguments: []string{
+				"--name", "test-runner",
+				"--executor", "shell",
+				"--shell", "powershell",
+			},
+			expectedConfig: `
+  shell = "powershell"
+`,
+		},
+		"shell can be overridden to powershell on Windows with docker-windows executor": {
+			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			arguments: []string{
+				"--name", "test-runner",
+				"--executor", "docker-windows",
+				"--shell", "powershell",
+				"--docker-image", "abc",
+			},
+			expectedConfig: `
+  shell = "powershell"
+`,
+		},
 	}
 
-	gotConfig, _, err := testRegisterCommandRun(t, network, arguments...)
-	require.NoError(t, err)
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			if tc.condition != nil && !tc.condition() {
+				t.Skip()
+			}
 
-	assert.Contains(t, gotConfig, expectedConfig)
+			network := new(common.MockNetwork)
+			defer network.AssertExpectations(t)
+
+			network.On("RegisterRunner", mock.Anything, mock.Anything).
+				Return(&common.RegisterRunnerResponse{
+					Token: "test-runner-token",
+				}).
+				Once()
+
+			gotConfig, _, err := testRegisterCommandRun(t, network, tc.arguments...)
+			require.NoError(t, err)
+
+			assert.Contains(t, gotConfig, tc.expectedConfig)
+		})
+	}
 }

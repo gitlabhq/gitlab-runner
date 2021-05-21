@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 type configTemplate struct {
@@ -311,6 +312,10 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.askDocker()
 		},
 		"docker-windows": func() {
+			if s.RunnerConfig.Shell == "" {
+				s.Shell = shells.SNPwsh
+			}
+
 			s.Docker = docker
 			s.askDockerWindows()
 		},
@@ -339,9 +344,7 @@ func (s *RegisterCommand) askExecutorOptions() {
 		},
 		"shell": func() {
 			if runtime.GOOS == osTypeWindows && s.RunnerConfig.Shell == "" {
-				// TODO: Replace with `pwsh` in 14.0.
-				//  For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26419
-				s.Shell = "powershell"
+				s.Shell = shells.SNPwsh
 			}
 		},
 		"custom": func() {
