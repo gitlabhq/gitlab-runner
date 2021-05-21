@@ -14,7 +14,6 @@ const (
 	SkipNoOpBuildStages                         string = "FF_SKIP_NOOP_BUILD_STAGES"
 	ShellExecutorUseLegacyProcessKill           string = "FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL"
 	ResetHelperImageEntrypoint                  string = "FF_RESET_HELPER_IMAGE_ENTRYPOINT"
-	UseGoCloudWithCacheArchiver                 string = "FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER"
 	UseFastzip                                  string = "FF_USE_FASTZIP"
 	GitLabRegistryHelperImage                   string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
 	DisableUmaskForDockerExecutor               string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
@@ -97,14 +96,6 @@ var flags = []FeatureFlag{
 		Description: "Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives " +
 			"by the `docker` executor, in order to enable [importing of user certificate roots]" +
 			"(tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)",
-	},
-	{
-		Name:            UseGoCloudWithCacheArchiver,
-		DefaultValue:    true,
-		Deprecated:      true,
-		ToBeRemovedWith: "14.0",
-		Description: "Enables the use of Go Cloud to write cache archives to object storage. " +
-			"This mode is only used by Azure Blob storage.",
 	},
 	{
 		Name:            UseFastzip,

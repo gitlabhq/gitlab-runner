@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
-
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
@@ -648,7 +646,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 func getCacheUploadURL(build *common.Build, cacheKey string) []string {
 	// Prefer Go Cloud URL if supported
 	goCloudURL := cache.GetCacheGoCloudURL(build, cacheKey)
-	if goCloudURL != nil && build.IsFeatureFlagOn(featureflags.UseGoCloudWithCacheArchiver) {
+	if goCloudURL != nil {
 		return []string{"--gocloud-url", goCloudURL.String()}
 	}
 
