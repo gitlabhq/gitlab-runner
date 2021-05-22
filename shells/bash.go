@@ -49,6 +49,7 @@ type BashWriter struct {
 
 	checkForErrors bool
 	useNewEval     bool
+	useNewEscape   bool
 }
 
 func (b *BashWriter) GetTemporaryPath() string {
@@ -261,6 +262,10 @@ func (b *BashWriter) writeScript(w io.Writer) {
 }
 
 func (b *BashWriter) escape(input string) string {
+	if b.useNewEscape {
+		return helpers.ShellEscape(input)
+	}
+
 	return helpers.ShellEscapeLegacy(input)
 }
 
@@ -309,6 +314,7 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 		Shell:          b.Shell,
 		checkForErrors: info.Build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 		useNewEval:     info.Build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
+		useNewEscape:   info.Build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
 	}
 
 	return b.generateScript(w, buildStage, info)
