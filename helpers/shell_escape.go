@@ -5,7 +5,6 @@ package helpers
 import (
 	"bytes"
 	"encoding/hex"
-	"strings"
 )
 
 /*
@@ -149,12 +148,4 @@ func (e *shellEscaper) processChar(char byte, out *bytes.Buffer) bool {
 	default:
 		return e.hex(char, out)
 	}
-}
-
-func ToBackslash(path string) string {
-	return strings.ReplaceAll(path, "/", "\\")
-}
-
-func ToSlash(path string) string {
-	return strings.ReplaceAll(path, "\\", "/")
 }
