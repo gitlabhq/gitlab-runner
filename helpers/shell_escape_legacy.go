@@ -46,7 +46,7 @@ Newlines and other control characters are represented as ANSI escape
 sequences. High bytes are represented as hex codes. Thus Bash escaped
 strings will always fit on one line and never contain non-ASCII bytes.
 */
-func ShellEscape(str string) string {
+func ShellEscapeLegacy(str string) string {
 	e := newShellEscaper()
 	outStr := e.getEscapedString(str)
 

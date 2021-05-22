@@ -17,11 +17,11 @@ func BenchmarkShellEscape(b *testing.B) {
 	dataStr := string(data)
 
 	for i := 0; i < b.N; i++ {
-		ShellEscape(dataStr)
+		ShellEscapeLegacy(dataStr)
 	}
 }
 
-func TestShellEscape(t *testing.T) {
+func TestShellEscapeLegacy(t *testing.T) {
 	var tests = []struct {
 		in  string
 		out string
@@ -32,7 +32,7 @@ func TestShellEscape(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := ShellEscape(test.in)
+		actual := ShellEscapeLegacy(test.in)
 		assert.Equal(t, test.out, actual, "src=%v", test.in)
 	}
 }
