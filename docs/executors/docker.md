@@ -96,7 +96,6 @@ follows our [support lifecycle for
 Windows](../install/windows.md#windows-version-support-policy):
 
 - Windows Server 2004.
-- Windows Server 1903.
 - Windows Server 1809.
 
 For future Windows Server versions, we have a [future version support
@@ -109,8 +108,6 @@ be used:
 
 - `mcr.microsoft.com/windows/servercore:2004`
 - `mcr.microsoft.com/windows/servercore:2004-amd64`
-- `mcr.microsoft.com/windows/servercore:1903`
-- `mcr.microsoft.com/windows/servercore:1903-amd64`
 - `mcr.microsoft.com/windows/servercore:1809`
 - `mcr.microsoft.com/windows/servercore:1809-amd64`
 - `mcr.microsoft.com/windows/servercore:ltsc2019`

@@ -9,8 +9,6 @@ const (
 	// V1809 is the Windows version that is 1809 and also known as Windows 2019
 	// ltsc.
 	V1809 = "1809"
-	// V1903 is the Windows version that is 1903 sac.
-	V1903 = "1903"
 	// V2004 is the Windows version that is 2004 sac.
 	V2004 = "2004"
 )
@@ -37,7 +35,6 @@ func (e *UnsupportedWindowsVersionError) Is(err error) bool {
 
 var supportedWindowsVersions = []string{
 	V1809,
-	V1903,
 	V2004,
 }
 

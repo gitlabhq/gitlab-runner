@@ -9,7 +9,7 @@ $InformationPreference = "Continue"
 #   used for building the Docker image. It is important for the version to match
 #   one of the mcr.microsoft.com/windows/servercore or https://hub.docker.com/_/microsoft-windows-nanoserver
 #   tag prefixes (discarding the architecture suffix).
-#   For example, `servercore1903` will build from mcr.microsoft.com/windows/servercore:1903-amd64.
+#   For example, `servercoreYYH1` will build from mcr.microsoft.com/windows/servercore:YYH1-amd64.
 # - $Env:GIT_VERSION - Specify which version of Git needs to be installed on
 #   the Docker image. This is done through Docker build args.
 # - $Env:GIT_VERSION_BUILD - Specify which build is needed to download for the

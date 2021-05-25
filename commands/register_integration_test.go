@@ -353,7 +353,7 @@ func assertExecutorDefaultValues(t *testing.T, executor string, s *commands.Regi
 		assert.Equal(t, "busybox:latest", s.RunnerSettings.Docker.Image)
 	case "docker-windows":
 		require.NotNil(t, s.RunnerSettings.Docker)
-		assert.Equal(t, "mcr.microsoft.com/windows/servercore:1809", s.RunnerSettings.Docker.Image)
+		assert.Equal(t, "mcr.microsoft.com/windows/servercore:YYH1", s.RunnerSettings.Docker.Image)
 	case "docker+machine":
 		assert.NotNil(t, s.RunnerSettings.Machine)
 		require.NotNil(t, s.RunnerSettings.Docker)
@@ -416,7 +416,7 @@ func assertExecutorOverridenValues(t *testing.T, executor string, s *commands.Re
 		assert.Equal(t, "nginx:latest", s.RunnerSettings.Docker.Image)
 	case "docker-windows":
 		require.NotNil(t, s.RunnerSettings.Docker)
-		assert.Equal(t, "mcr.microsoft.com/windows/servercore:1903", s.RunnerSettings.Docker.Image)
+		assert.Equal(t, "mcr.microsoft.com/windows/servercore:YYH2", s.RunnerSettings.Docker.Image)
 	case "docker+machine":
 		assert.NotNil(t, s.RunnerSettings.Machine)
 		require.NotNil(t, s.RunnerSettings.Docker)
@@ -465,7 +465,7 @@ func executorAnswers(t *testing.T, executor string) []string {
 		"custom":             {executor},
 		"shell":              {executor},
 		"docker":             {executor, "busybox:latest"},
-		"docker-windows":     {executor, "mcr.microsoft.com/windows/servercore:1809"},
+		"docker-windows":     {executor, "mcr.microsoft.com/windows/servercore:YYH1"},
 		"docker+machine":     {executor, "busybox:latest"},
 		"docker-ssh":         {executor, "busybox:latest", "user", "password", "/home/user/.ssh/id_rsa"},
 		"docker-ssh+machine": {executor, "busybox:latest", "user", "password", "/home/user/.ssh/id_rsa"},
@@ -487,7 +487,7 @@ func executorOverrideAnswers(t *testing.T, executor string) []string {
 		"custom":             {""},
 		"shell":              {""},
 		"docker":             {"nginx:latest"},
-		"docker-windows":     {"mcr.microsoft.com/windows/servercore:1903"},
+		"docker-windows":     {"mcr.microsoft.com/windows/servercore:YYH2"},
 		"docker+machine":     {"nginx:latest"},
 		"docker-ssh":         {"nginx:latest", "root", "admin", "/root/.ssh/id_rsa"},
 		"docker-ssh+machine": {"nginx:latest", "root", "admin", "/root/.ssh/id_rsa"},
@@ -509,7 +509,7 @@ func executorCmdLineArgs(t *testing.T, executor string) []string {
 		"custom":         {"--executor", executor},
 		"shell":          {"--executor", executor},
 		"docker":         {"--executor", executor, "--docker-image", "busybox:latest"},
-		"docker-windows": {"--executor", executor, "--docker-image", "mcr.microsoft.com/windows/servercore:1809"},
+		"docker-windows": {"--executor", executor, "--docker-image", "mcr.microsoft.com/windows/servercore:YYH1"},
 		"docker+machine": {"--executor", executor, "--docker-image", "busybox:latest"},
 		"docker-ssh": {
 			"--executor", executor, "--docker-image", "busybox:latest", "--ssh-user", "user",
