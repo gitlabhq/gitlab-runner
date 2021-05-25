@@ -86,8 +86,6 @@ check race unexpected test failures:
   extends:
   - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
-  needs:
-  - windows 1809 unit tests
   script:
   - ./scripts/check_unexpected_test_failures
 
