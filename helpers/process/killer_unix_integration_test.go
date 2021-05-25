@@ -1,3 +1,4 @@
+// +build integration
 // +build darwin dragonfly freebsd linux netbsd openbsd
 
 package process_test

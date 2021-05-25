@@ -1,3 +1,5 @@
+// +build !integration
+
 package kv_v2
 
 import (

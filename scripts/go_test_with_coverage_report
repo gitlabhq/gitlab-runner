@@ -43,7 +43,8 @@ prepareTestCommands() {
         tempFile=$(mktemp)
         local exitCode=0
 
-        go test -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
+        # shellcheck disable=SC2086
+        go test ${TESTFLAGS} -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
 
         local tests
         tests=$(grep "^Test" "${tempFile}" || true)
@@ -93,19 +94,26 @@ executeTestCommand() {
     local pkgSlug
     pkgSlug=$(echo "${pkg}" | tr "/" "-")
 
-    if [[ ${TESTFLAGS} = *"-cover"* ]]; then
-        mkdir -p ".cover"
-        mkdir -p ".testoutput"
-
-        printMessage "\\n\\n--- Starting part ${index} of go tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\\n"
-
-        local profileFile=".cover/${pkgSlug}.${index}.${coverMode}.cover.txt"
-        options="-covermode=${coverMode} -coverprofile=${profileFile} -coverpkg=${MAIN_PACKAGE}/..."
+    local type
+    if [[ ${TESTFLAGS} = *'tags=integration'* ]]; then
+        type="integration"
     else
-        echo "Starting go test"
+        type="unit"
     fi
 
-    local testOutputFile=".testoutput/${pkgSlug}.${index}.${output}.output.txt"
+    if [[ ${TESTFLAGS} = *'-cover'* ]]; then
+        mkdir -p ".cover/${type}"
+        mkdir -p ".testoutput/${type}"
+
+        printMessage "\\n\\n--- Starting part ${index} of go ${type} tests of '${pkg}' package with coverprofile in '${coverMode}' mode:\\n"
+
+        local profileFile=".cover/${type}/${pkgSlug}.${index}.${coverMode}.cover.txt"
+        options="-covermode=${coverMode} -coverprofile=${profileFile} -coverpkg=${MAIN_PACKAGE}/..."
+    else
+        echo "Starting go ${type} test"
+    fi
+
+    local testOutputFile=".testoutput/${type}/${pkgSlug}.${index}.${output}.output.txt"
 
     local exitCode=0
     # shellcheck disable=SC2086
@@ -115,8 +123,7 @@ executeTestCommand() {
 }
 
 executeTestPart() {
-    rm -rf ".cover/"
-    rm -rf ".testoutput/"
+    rm -rf .cover/ .testoutput/
 
     local numberOfDefinitions
     numberOfDefinitions=$(< "${testsDefinitions}" wc -l)
@@ -150,7 +157,7 @@ computeCoverageReport() {
     mkdir -p "${reportDirectory}"
 
     echo "mode: ${coverMode}" > ${sourceFile}
-    grep -h -v -E -e "^mode:" -e "\/mock_[^\.]+\.go" .cover/*.${coverMode}.cover.txt >> ${sourceFile}
+    grep -h -v -E -e "^mode:" -e "\/mock_[^\.]+\.go" .cover/*/*.${coverMode}.cover.txt >> ${sourceFile}
 
     printMessage "Generating HTML coverage report"
     go tool cover -o ${htmlReportFile} -html=${sourceFile}
@@ -172,7 +179,7 @@ computeJUnitReport() {
 
     mkdir -p "${reportDirectory}"
 
-    cat .testoutput/*.${output}.output.txt > "${concatenatedOutputFile}"
+    cat .testoutput/*/*.${output}.output.txt > "${concatenatedOutputFile}"
 
     go-junit-report < "${concatenatedOutputFile}" > "${reportDirectory}/report.xml"
 }

@@ -13,7 +13,7 @@ borderBottom() {
 }
 
 testOutputDir="./.testoutput"
-testOutputPattern="${testOutputDir}/*.output.txt"
+testOutputPattern="${testOutputDir}/*/*.output.txt"
 
 panicFailures=()
 buildFailures=()

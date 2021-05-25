@@ -314,7 +314,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if isKubernetesPodNotFoundError(err) {
+		if IsKubernetesPodNotFoundError(err) {
 			return err
 		}
 
@@ -494,7 +494,7 @@ func (s *executor) generateScripts(shell common.Shell) (map[string]string, error
 }
 
 func (s *executor) Finish(err error) {
-	if isKubernetesPodNotFoundError(err) {
+	if IsKubernetesPodNotFoundError(err) {
 		// Avoid an additional error message when trying to
 		// cleanup a pod that we know no longer exists
 		s.pod = nil
@@ -1270,7 +1270,7 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 
 func (s *executor) checkPodStatus() error {
 	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(s.pod.Name, metav1.GetOptions{})
-	if isKubernetesPodNotFoundError(err) {
+	if IsKubernetesPodNotFoundError(err) {
 		return err
 	}
 
@@ -1421,7 +1421,7 @@ func (s *executor) checkDefaults() error {
 	return nil
 }
 
-func isKubernetesPodNotFoundError(err error) bool {
+func IsKubernetesPodNotFoundError(err error) bool {
 	var statusErr *kubeerrors.StatusError
 	return errors.As(err, &statusErr) &&
 		statusErr.ErrStatus.Code == http.StatusNotFound &&

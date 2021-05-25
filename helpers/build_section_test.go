@@ -1,3 +1,5 @@
+// +build !integration
+
 package helpers_test
 
 import (
