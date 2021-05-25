@@ -175,27 +175,30 @@ push_latest() {
 # prefix for the image name, which is useful to push do a different registry.
 # For example `registry.gitlab.com/gitlab-org/gitlab-runner` and `gitlab`.
 release_docker_helper_images() {
-    helper_image_x86_64="${1}/gitlab-runner-helper:x86_64-${REVISION}"
-    helper_image_x86_64_pwsh="${1}/gitlab-runner-helper:x86_64-${REVISION}-pwsh"
-    helper_image_x86_64_version="${1}/gitlab-runner-helper:x86_64-${ref_tag}"
-    helper_image_x86_64_pwsh_version="${1}/gitlab-runner-helper:x86_64-${ref_tag}-pwsh"
-    helper_image_x86_64_latest="${1}/gitlab-runner-helper:x86_64-latest"
-    helper_image_x86_64_pwsh_latest="${1}/gitlab-runner-helper:x86_64-latest-pwsh"
-    helper_image_arm="${1}/gitlab-runner-helper:arm-${REVISION}"
-    helper_image_arm_version="${1}/gitlab-runner-helper:arm-${ref_tag}"
-    helper_image_arm_latest="${1}/gitlab-runner-helper:arm-latest"
-    helper_image_arm64="${1}/gitlab-runner-helper:arm64-${REVISION}"
-    helper_image_arm64_version="${1}/gitlab-runner-helper:arm64-${ref_tag}"
-    helper_image_arm64_latest="${1}/gitlab-runner-helper:arm64-latest"
-    helper_image_s390x="${1}/gitlab-runner-helper:s390x-${REVISION}"
-    helper_image_s390x_version="${1}/gitlab-runner-helper:s390x-${ref_tag}"
-    helper_image_s390x_latest="${1}/gitlab-runner-helper:s390x-latest"
+    FLAVOR=$2
+    PREFIX=$3
 
-    import out/helper-images/prebuilt-x86_64.tar.xz "${helper_image_x86_64}"
-    import out/helper-images/prebuilt-x86_64-pwsh.tar.xz "${helper_image_x86_64_pwsh}"
-    import out/helper-images/prebuilt-arm.tar.xz "${helper_image_arm}"
-    import out/helper-images/prebuilt-arm64.tar.xz "${helper_image_arm64}"
-    import out/helper-images/prebuilt-s390x.tar.xz "${helper_image_s390x}"
+    helper_image_x86_64="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
+    helper_image_x86_64_pwsh="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}-pwsh"
+    helper_image_x86_64_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
+    helper_image_x86_64_pwsh_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}-pwsh"
+    helper_image_x86_64_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest"
+    helper_image_x86_64_pwsh_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest-pwsh"
+    helper_image_arm="${1}/gitlab-runner-helper:${PREFIX}arm-${REVISION}"
+    helper_image_arm_version="${1}/gitlab-runner-helper:${PREFIX}arm-${ref_tag}"
+    helper_image_arm_latest="${1}/gitlab-runner-helper:${PREFIX}arm-latest"
+    helper_image_arm64="${1}/gitlab-runner-helper:${PREFIX}arm64-${REVISION}"
+    helper_image_arm64_version="${1}/gitlab-runner-helper:${PREFIX}arm64-${ref_tag}"
+    helper_image_arm64_latest="${1}/gitlab-runner-helper:${PREFIX}arm64-latest"
+    helper_image_s390x="${1}/gitlab-runner-helper:${PREFIX}s390x-${REVISION}"
+    helper_image_s390x_version="${1}/gitlab-runner-helper:${PREFIX}s390x-${ref_tag}"
+    helper_image_s390x_latest="${1}/gitlab-runner-helper:${PREFIX}s390x-latest"
+
+    import "out/helper-images/prebuilt-${FLAVOR}-x86_64.tar.xz" "${helper_image_x86_64}"
+    import "out/helper-images/prebuilt-${FLAVOR}-x86_64-pwsh.tar.xz" "${helper_image_x86_64_pwsh}"
+    import "out/helper-images/prebuilt-${FLAVOR}-arm.tar.xz" "${helper_image_arm}"
+    import "out/helper-images/prebuilt-${FLAVOR}-arm64.tar.xz" "${helper_image_arm64}"
+    import "out/helper-images/prebuilt-${FLAVOR}-s390x.tar.xz" "${helper_image_s390x}"
 
     tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
     tag_latest "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_latest}"
@@ -314,7 +317,8 @@ buildx "${runner_home_dir}/alpine" "${alpineTags[@]}"
 if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" && "${PUBLISH_IMAGES}" == "true" ]]; then
     login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
 
-    release_docker_helper_images "${CI_REGISTRY_IMAGE}"
+    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "alpine" ""
+    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "ubuntu" "ubuntu-"
 
     logout "${CI_REGISTRY}"
 fi
@@ -322,7 +326,8 @@ fi
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
     login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
 
-    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}"
+    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "alpine" ""
+    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "ubuntu" "ubuntu-"
 
     logout
 fi
@@ -330,7 +335,8 @@ fi
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
     login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
 
-    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}"
+    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "alpine" ""
+    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "ubuntu" "ubuntu-"
 
     logout "${ECR_PUBLIC_REGISTRY}"
 fi

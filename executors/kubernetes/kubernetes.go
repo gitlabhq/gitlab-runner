@@ -194,6 +194,7 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 		Architecture:   "amd64",
 		GitLabRegistry: s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
 		Shell:          s.Config.Shell,
+		Flavor:         s.Config.Kubernetes.HelperImageFlavor,
 	})
 }
 

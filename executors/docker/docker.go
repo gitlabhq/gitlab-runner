@@ -222,8 +222,13 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 		return nil
 	}
 
+	var flavor string
+	if e.Config.Docker != nil {
+		flavor = e.Config.Docker.HelperImageFlavor
+	}
+
 	architecture := e.helperImageInfo.Architecture
-	prebuiltFileName := getPrebuiltFileName(architecture, e.Config.Shell)
+	prebuiltFileName := getPrebuiltFileName(architecture, flavor, e.Config.Shell)
 	for _, dockerPrebuiltImagesPath := range PrebuiltImagesPaths {
 		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, prebuiltFileName)
 		image, err := e.loadPrebuiltImage(
@@ -242,12 +247,16 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 	return nil
 }
 
-func getPrebuiltFileName(architecture, shell string) string {
-	if shell == shells.SNPwsh {
-		return fmt.Sprintf("prebuilt-%s-%s%s", architecture, shell, prebuiltImageExtension)
+func getPrebuiltFileName(architecture, flavor string, shell string) string {
+	if flavor == "" {
+		flavor = helperimage.DefaultFlavor
 	}
 
-	return fmt.Sprintf("prebuilt-%s%s", architecture, prebuiltImageExtension)
+	if shell == shells.SNPwsh {
+		return fmt.Sprintf("prebuilt-%s-%s-%s%s", flavor, architecture, shell, prebuiltImageExtension)
+	}
+
+	return fmt.Sprintf("prebuilt-%s-%s%s", flavor, architecture, prebuiltImageExtension)
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {
@@ -1027,6 +1036,7 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 		OperatingSystem: e.info.OperatingSystem,
 		Shell:           e.Config.Shell,
 		GitLabRegistry:  e.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
+		Flavor:          e.Config.Docker.HelperImageFlavor,
 	})
 }
 
