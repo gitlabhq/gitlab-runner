@@ -247,3 +247,58 @@ service account, `gitlab-runner-sa`, which is used by the GitLab Runner containe
 ```shell
 oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa
 ```
+
+#### Register GitLab Runner by using a self-signed certificate
+
+When you use a self-signed certificate with your GitLab self-managed installation, you must create a secret that contains the CA certificate used to sign your private certificates.
+
+The name of the secret is then provided as the CA in the Runner spec section:
+
+```yaml
+KIND:     Runner
+VERSION:  apps.gitlab.com/v1beta2
+
+FIELD:    ca <string>
+
+DESCRIPTION:
+     Name of tls secret containing the custom certificate authority (CA)
+     certificates
+```  
+
+The secret can be created using the following command:
+
+```shell
+oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
+```
+
+#### Register GitLab Runner with an external URL that points to an IP address
+
+If the runner cannot match the self-signed certificate with the hostname, you might get an error message. This can happen when the GitLab self-managed instance is configured to be accessed from an IP address instead of a hostname (where ###.##.##.## is the IP address of the GitLab server):
+
+```shell
+[31;1mERROR: Registering runner... failed               [0;m  [31;1mrunner[0;m=A5abcdEF [31;1mstatus[0;m=couldn't execute POST against https://###.##.##.##/api/v4/runners: 
+Post https://###.##.##.##/api/v4/runners: x509: cannot validate certificate for ###.##.##.## because it doesn't contain any IP SANs
+[31;1mPANIC: Failed to register the runner. You may be having network problems.[0;m 
+```
+
+To fix this issue:
+
+1. On the GitLab self-managed server, modify the `openssl` to add the IP address to the `subjectAltName` parameter:
+ 
+   ```shell
+   # vim /etc/pki/tls/openssl.cnf
+
+   [ v3_ca ]
+   subjectAltName=IP:169.57.64.36 <---- Add this line. 169.57.64.36 is your GitLab server IP.
+    ```
+
+1. Then re-generate a self-signed CA with the commands below:
+  
+   ```shell
+   # cd /etc/gitlab/ssl
+   # openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout /etc/gitlab/ssl/169.57.64.36.key -out /etc/gitlab/ssl/169.57.64.36.crt
+   # openssl dhparam -out /etc/gitlab/ssl/dhparam.pem 4096
+   # gitlab-ctl restart
+   ```
+
+1. Use this new certificate to generate a new secret.
