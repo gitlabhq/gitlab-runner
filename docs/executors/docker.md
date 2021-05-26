@@ -96,7 +96,6 @@ follows our [support lifecycle for
 Windows](../install/windows.md#windows-version-support-policy):
 
 - Windows Server 2004.
-- Windows Server 1909.
 - Windows Server 1903.
 - Windows Server 1809.
 
@@ -110,8 +109,6 @@ be used:
 
 - `mcr.microsoft.com/windows/servercore:2004`
 - `mcr.microsoft.com/windows/servercore:2004-amd64`
-- `mcr.microsoft.com/windows/servercore:1909`
-- `mcr.microsoft.com/windows/servercore:1909-amd64`
 - `mcr.microsoft.com/windows/servercore:1903`
 - `mcr.microsoft.com/windows/servercore:1903-amd64`
 - `mcr.microsoft.com/windows/servercore:1809`

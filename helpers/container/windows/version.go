@@ -11,8 +11,6 @@ const (
 	V1809 = "1809"
 	// V1903 is the Windows version that is 1903 sac.
 	V1903 = "1903"
-	// V1909 is the Windows version that is 1903 sac.
-	V1909 = "1909"
 	// V2004 is the Windows version that is 2004 sac.
 	V2004 = "2004"
 )
@@ -40,7 +38,6 @@ func (e *UnsupportedWindowsVersionError) Is(err error) bool {
 var supportedWindowsVersions = []string{
 	V1809,
 	V1903,
-	V1909,
 	V2004,
 }
 

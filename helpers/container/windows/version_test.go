@@ -30,11 +30,6 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
-			operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
-			expectedVersion: V1909,
-			expectedErr:     nil,
-		},
-		{
 			operatingSystem: "Windows 10 Pro Version 2004 (OS Build 19041.329)",
 			expectedVersion: V2004,
 			expectedErr:     nil,
