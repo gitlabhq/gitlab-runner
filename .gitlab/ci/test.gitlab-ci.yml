@@ -227,6 +227,7 @@ fuzz variable mask:
   variables:
     GOROOT: "C:\\Go"
   before_script:
+  - Set-MpPreference -DisableRealtimeMonitoring $true
   - *go-cache-windows_before_script
   - if (Test-Path $GOPATH) { Remove-Item -Force -Recurse $GOPATH }
   - New-Item $PKG_BASE_DIR -ItemType directory -Force
