@@ -136,14 +136,6 @@ check windows 1903 integration test failures:
   needs:
   - windows 1903 integration tests
 
-check windows 1909 integration test failures:
-  extends:
-  - .check windows test failures
-  - .windows1909_variables
-  - .rules:default-branch-only:always
-  needs:
-  - windows 1909 integration tests
-
 check windows 2004 integration test failures:
   extends:
   - .check windows test failures

@@ -78,39 +78,6 @@ func Test_windowsInfo_create(t *testing.T) {
 				expectedErr: nil,
 			},
 			{
-				operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
-				expectedInfo: Info{
-					Architecture: windowsSupportedArchitecture,
-					Name:         DockerHubName,
-					Tag: fmt.Sprintf(
-						"%s-%s-%s",
-						windowsSupportedArchitecture,
-						revision,
-						baseImage1909,
-					),
-					IsSupportingLocalImport: false,
-					Cmd:                     expectedPowershellCmdLine,
-				},
-				expectedErr: nil,
-			},
-			{
-				operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
-				gitlabRegistry:  true,
-				expectedInfo: Info{
-					Architecture: windowsSupportedArchitecture,
-					Name:         GitLabRegistryName,
-					Tag: fmt.Sprintf(
-						"%s-%s-%s",
-						windowsSupportedArchitecture,
-						revision,
-						baseImage1909,
-					),
-					IsSupportingLocalImport: false,
-					Cmd:                     expectedPowershellCmdLine,
-				},
-				expectedErr: nil,
-			},
-			{
 				operatingSystem: "Windows 10 Pro Version 2004 (OS Build 19041.329)",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,

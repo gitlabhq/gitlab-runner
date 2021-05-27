@@ -283,11 +283,6 @@ windows 1903 integration tests:
   - .windows integration test
   - .windows1903
 
-windows 1909 integration tests:
-  extends:
-  - .windows integration test
-  - .windows1909
-
 windows 2004 integration tests:
   extends:
   - .windows integration test
