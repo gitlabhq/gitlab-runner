@@ -123,17 +123,13 @@ be used:
 A Windows Server running GitLab Runner must be running a recent version of Docker
 because GitLab Runner uses Docker to detect what version of Windows Server is running.
 
-A combination known not to work with GitLab Runner is Docker 17.06
-and Server 1909. Docker does not identify the version of Windows Server
-resulting in the following error:
+A known version of Docker that doesn't work with GitLab Runner is `Docker 17.06`
+since Docker does not identify the version of Windows Server resulting in the
+following error:
 
 ```plaintext
 unsupported Windows Version: Windows Server Datacenter
 ```
-
-This error should contain the Windows Server version. If you get this error,
-with no version specified, upgrade Docker. Try a Docker version of similar age,
-or later, than the Windows Server release.
 
 [Read more about troubleshooting this](../install/windows.md#docker-executor-unsupported-windows-version).
 
