@@ -278,11 +278,6 @@ windows 1809 integration tests:
   - .windows1809
   - .rules:merge_request_pipelines:no_docs
 
-windows 1903 integration tests:
-  extends:
-  - .windows integration test
-  - .windows1903
-
 windows 2004 integration tests:
   extends:
   - .windows integration test

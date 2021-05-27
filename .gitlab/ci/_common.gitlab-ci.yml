@@ -119,18 +119,6 @@ before_script:
   - windows
   - windows-1809
 
-.windows1903_variables:
-  variables:
-    WINDOWS_VERSION: servercore1903
-
-.windows1903:
-  extends:
-  - .windows_base
-  - .windows1903_variables
-  tags:
-  - windows
-  - windows-1903
-
 .windows2004_variables:
   variables:
     WINDOWS_VERSION: servercore2004
