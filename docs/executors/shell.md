@@ -105,11 +105,3 @@ child processes, and after 10 minutes sends `SIGKILL`. This allows for
 graceful termination for the process. Windows don't have a `SIGTERM`
 equivalent, so the kill process is sent twice. The second is sent after
 10 minutes.
-
-If for some reason this new termination process has problems with your
-scripts but works with the  [old method](#gitlab-130-and-earlier) you can
-set the feature flag
-[`FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL`](../configuration/feature-flags.md)
-to `true`, and it will use the old method. Keep in mind that this
-feature flag will be removed in GitLab Runner 14.0 so you still need to
-fix your script to handle the new termination.
