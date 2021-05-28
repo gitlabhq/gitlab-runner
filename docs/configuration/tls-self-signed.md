@@ -222,7 +222,7 @@ when performing operations like cloning and uploading artifacts, for example.
      executor = "docker"
 
      [runners.docker]
-       image = "mcr.microsoft.com/windows/servercore:1909"
+       image = "mcr.microsoft.com/windows/servercore:2004"
 
        # Add directory holding your ca.crt file in the volumes list
        volumes = ["c:\\cache", "c:\\path\\to-ca-cert-dir:C:\\GitLab-Runner\\certs:ro"]

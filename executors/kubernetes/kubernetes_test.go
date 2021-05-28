@@ -1,3 +1,5 @@
+// +build !integration
+
 package kubernetes
 
 import (
@@ -26,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest/fake"
+	"k8s.io/client-go/util/exec"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
@@ -159,7 +162,6 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				{Name: "repo"},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "host-path", MountPath: "/path/two"},
 				{Name: "host-subpath", MountPath: "/subpath", SubPath: "subpath"},
@@ -173,6 +175,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
 				{Name: "csi", MountPath: "/path/to/csi/volume"},
 				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
+				{Name: "repo"},
 			},
 		},
 		"custom volumes with read-only settings": {
@@ -207,12 +210,53 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				{Name: "repo"},
 				{Name: "test", MountPath: "/opt/test/readonly", ReadOnly: true},
 				{Name: "docker", MountPath: "/var/run/docker.sock"},
 				{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
 				{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 				{Name: "csi", MountPath: "/path/to/csi/volume", ReadOnly: true},
+				{Name: "repo"},
+			},
+		},
+		"default volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				{
+					Name:      "repo",
+					MountPath: "/path/to/builds/dir",
+				},
+			},
+		},
+		"user-provided volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "user-provided", MountPath: "/path/to/builds/dir"},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				{Name: "user-provided", MountPath: "/path/to/builds/dir"},
 			},
 		},
 	}
@@ -228,17 +272,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 			}
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
-
-			mounts := e.getVolumeMounts()
-			for _, expected := range tt.Expected {
-				assert.Contains(
-					t,
-					mounts,
-					expected,
-					"Expected volumeMount definition for %s was not found",
-					expected.Name,
-				)
-			}
+			assert.Equal(t, tt.Expected, e.getVolumeMounts())
 		})
 	}
 }
@@ -246,6 +280,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	csiVolFSType := "ext4"
 	csiVolReadOnly := false
+	mode := int32(0777)
+	optional := false
 	//nolint:lll
 	tests := map[string]struct {
 		GlobalConfig *common.Config
@@ -266,6 +302,18 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			},
 			Expected: []api.Volume{
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
+							},
+							DefaultMode: &mode,
+							Optional:    &optional,
+						},
+					},
+				},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 		"custom volumes": {
@@ -338,32 +386,9 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
-				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 				{Name: "docker", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/var/run/docker.sock"}}},
 				{Name: "host-path", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
 				{Name: "host-subpath", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/one"}}},
-				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
-				{Name: "PVC-subpath", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC-subpath"}}},
-				{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
-				{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
-				{
-					Name: "ConfigMap",
-					VolumeSource: api.VolumeSource{
-						ConfigMap: &api.ConfigMapVolumeSource{
-							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"},
-							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
-						},
-					},
-				},
-				{
-					Name: "ConfigMap-subpath",
-					VolumeSource: api.VolumeSource{
-						ConfigMap: &api.ConfigMapVolumeSource{
-							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap-subpath"},
-							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
-						},
-					},
-				},
 				{
 					Name: "secret",
 					VolumeSource: api.VolumeSource{
@@ -382,6 +407,28 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 						},
 					},
 				},
+				{Name: "PVC", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC"}}},
+				{Name: "PVC-subpath", VolumeSource: api.VolumeSource{PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{ClaimName: "PVC-subpath"}}},
+				{
+					Name: "ConfigMap",
+					VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap"},
+							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
+						},
+					},
+				},
+				{
+					Name: "ConfigMap-subpath",
+					VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{Name: "ConfigMap-subpath"},
+							Items:                []api.KeyToPath{{Key: "key_1", Path: "/path/to/key_1"}},
+						},
+					},
+				},
+				{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
+				{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
 				{
 					Name: "csi",
 					VolumeSource: api.VolumeSource{
@@ -393,6 +440,81 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 						},
 					},
 				},
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
+							},
+							DefaultMode: &mode,
+							Optional:    &optional,
+						},
+					},
+				},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+			},
+		},
+		"default volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.Volume{
+				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
+							},
+							DefaultMode: &mode,
+							Optional:    &optional,
+						},
+					},
+				},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
+			},
+		},
+		"user-provided volume with build dir": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "user-provided", MountPath: "/path/to/builds/dir"},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/path/to/builds/dir",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: []api.Volume{
+				{Name: "user-provided", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/to/builds/dir"}}},
+				{
+					Name: "scripts", VolumeSource: api.VolumeSource{
+						ConfigMap: &api.ConfigMapVolumeSource{
+							LocalObjectReference: api.LocalObjectReference{
+								Name: fakeConfigMap().Name,
+							},
+							DefaultMode: &mode,
+							Optional:    &optional,
+						},
+					},
+				},
+				{Name: "logs", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 			},
 		},
 	}
@@ -409,11 +531,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			}
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
-
-			volumes := e.getVolumes()
-			for _, expected := range tt.Expected {
-				assert.Contains(t, volumes, expected, "Expected volume definition for %s was not found", expected.Name)
-			}
+			assert.Equal(t, tt.Expected, e.getVolumes())
 		})
 	}
 }
@@ -1405,6 +1523,49 @@ func TestPrepare(t *testing.T) {
 					serviceRequests: api.ResourceList{},
 					buildRequests:   api.ResourceList{},
 					helperRequests:  api.ResourceList{},
+				},
+			},
+		},
+		{
+			Name:         "helper image with ubuntu flavour",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:              "test-server",
+						HelperImageFlavor: "ubuntu",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+				helperImageInfo: helperimage.Info{
+					Architecture:            "x86_64",
+					Name:                    helperimage.DockerHubName,
+					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
+					IsSupportingLocalImport: true,
+					Cmd:                     []string{"gitlab-runner-build"},
 				},
 			},
 		},
@@ -2977,43 +3138,110 @@ func TestSetupBuildPod(t *testing.T) {
 }
 
 func TestProcessLogs(t *testing.T) {
-	mockTrace := &common.MockJobTrace{}
-	defer mockTrace.AssertExpectations(t)
-	mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
+	tests := map[string]struct {
+		lineCh           chan string
+		errCh            chan error
+		expectedExitCode int
+		expectedScript   string
+		run              func(ch chan string, errCh chan error)
+	}{
+		"Successful Processing": {
+			lineCh:           make(chan string, 2),
+			errCh:            make(chan error, 1),
+			expectedExitCode: 1,
+			expectedScript:   "script",
+			run: func(ch chan string, errCh chan error) {
+				b, err := json.Marshal(getCommandExitStatus(1, "script"))
+				require.NoError(t, err)
+				ch <- string(b)
+			},
+		},
+		"Reattach failure with CodeExitError": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: 2,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- exec.CodeExitError{
+					Err:  fmt.Errorf("giving up reattaching to log"),
+					Code: 2,
+				}
+			},
+		},
+		"Reattach failure with EOF error": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: unknownLogProcessorExitCode,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- fmt.Errorf("Custom error for test with EOF %s", io.EOF)
+			},
+		},
+		"Reattach failure with custom error": {
+			lineCh:           make(chan string, 1),
+			errCh:            make(chan error, 1),
+			expectedExitCode: unknownLogProcessorExitCode,
+			expectedScript:   "",
+			run: func(ch chan string, errCh chan error) {
+				errCh <- errors.New("Custom error")
+			},
+		},
+		"Error channel closed before line channel": {
+			lineCh:           make(chan string, 2),
+			errCh:            make(chan error, 1),
+			expectedExitCode: 3,
+			expectedScript:   "script",
+			run: func(ch chan string, errCh chan error) {
+				close(errCh)
+				b, err := json.Marshal(getCommandExitStatus(3, "script"))
+				require.NoError(t, err)
+				ch <- string(b)
+				close(ch)
+			},
+		},
+	}
 
-	mockLogProcessor := new(mockLogProcessor)
-	defer mockLogProcessor.AssertExpectations(t)
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			mockTrace := &common.MockJobTrace{}
+			defer mockTrace.AssertExpectations(t)
+			mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
 
-	ch := make(chan string, 2)
-	ch <- "line"
-	exitCode := 1
-	script := "script"
-	status := shells.TrapCommandExitStatus{
+			mockLogProcessor := new(mockLogProcessor)
+			defer mockLogProcessor.AssertExpectations(t)
+
+			tc.lineCh <- "line"
+			mockLogProcessor.On("Process", mock.Anything).
+				Return((<-chan string)(tc.lineCh), (<-chan error)(tc.errCh)).
+				Once()
+
+			tc.run(tc.lineCh, tc.errCh)
+
+			e := newExecutor()
+			e.Trace = mockTrace
+			e.pod = &api.Pod{}
+			e.pod.Name = "pod_name"
+			e.pod.Namespace = "namespace"
+			e.newLogProcessor = func() logProcessor {
+				return mockLogProcessor
+			}
+
+			go e.processLogs(context.Background())
+
+			exitStatus := <-e.remoteProcessTerminated
+			assert.Equal(t, tc.expectedExitCode, *exitStatus.CommandExitCode)
+			if tc.expectedScript != "" {
+				assert.Equal(t, tc.expectedScript, *exitStatus.Script)
+			}
+		})
+	}
+}
+
+func getCommandExitStatus(exitCode int, script string) shells.TrapCommandExitStatus {
+	return shells.TrapCommandExitStatus{
 		CommandExitCode: &exitCode,
 		Script:          &script,
 	}
-
-	b, err := json.Marshal(status)
-	require.NoError(t, err)
-	ch <- string(b)
-	mockLogProcessor.On("Process", mock.Anything).
-		Return((<-chan string)(ch)).
-		Once()
-
-	e := newExecutor()
-	e.Trace = mockTrace
-	e.pod = &api.Pod{}
-	e.pod.Name = "pod_name"
-	e.pod.Namespace = "namespace"
-	e.newLogProcessor = func() logProcessor {
-		return mockLogProcessor
-	}
-
-	go e.processLogs(context.Background())
-
-	exitStatus := <-e.remoteProcessTerminated
-	assert.Equal(t, exitCode, *exitStatus.CommandExitCode)
-	assert.Equal(t, script, *exitStatus.Script)
 }
 
 func TestRunAttachCheckPodStatus(t *testing.T) {

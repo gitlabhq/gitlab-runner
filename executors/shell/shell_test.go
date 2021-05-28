@@ -1,3 +1,5 @@
+// +build !integration
+
 package shell
 
 import (
@@ -12,7 +14,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
@@ -153,46 +154,4 @@ func setupProcessMocks(t *testing.T) (*process.MockKillWaiter, *process.MockComm
 		newProcessKillWaiter = oldNewProcessKillWaiter
 		newCommander = oldCmd
 	}
-}
-
-// TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6413
-func TestProcessTermination_Legacy(t *testing.T) {
-	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		// cmd is deprecated and exec.Cmd#Wait does not propagate the correct
-		// error on batch so skip this test. batch is being deprecated in 13.0
-		// as well https://gitlab.com/gitlab-org/gitlab-runner/issues/6099
-		if shell == "cmd" {
-			return
-		}
-
-		executor := executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				Build: &common.Build{
-					JobResponse: common.JobResponse{
-						Variables: common.JobVariables{
-							common.JobVariable{Key: featureflags.ShellExecutorUseLegacyProcessKill, Value: "true"},
-						},
-					},
-					Runner: &common.RunnerConfig{},
-				},
-				BuildShell: &common.ShellConfiguration{
-					Command: shell,
-				},
-			},
-		}
-
-		ctx, cancelJob := context.WithCancel(context.Background())
-
-		cmd := common.ExecutorCommand{
-			Script:     "echo hello",
-			Predefined: false,
-			Context:    ctx,
-		}
-
-		cancelJob()
-
-		err := executor.Run(cmd)
-		var buildErr *common.BuildError
-		assert.ErrorAs(t, err, &buildErr)
-	})
 }

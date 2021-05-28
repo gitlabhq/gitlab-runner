@@ -7,7 +7,7 @@ comments: false
 
 # Shells supported by GitLab Runner
 
-GitLab Runner implements a few shell script generators that allow to execute
+GitLab Runner implements a few shell script generators that allow executing
 builds on different systems.
 
 ## Overview
@@ -29,9 +29,9 @@ The currently supported shells are:
 | --------------| ------------------ |  ----------- |
 | `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
 | `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
-| `powershell`  | Fully Supported    | PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default when registering a new runner in version 12.0 or newer. |
-| `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. |
-| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Desktop. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. [Learn how to gain access to the CMD shell when PowerShell is the default shell](#access-cmd-shell-when-powershell-is-the-default). |
+| `powershell`  | Fully Supported    | PowerShell script. All commands are executed in PowerShell Desktop context. In GitLab Runner 12.0-13.12, this is the default when registering a new runner. |
+| `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default when registering a new runner. |
+| `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Core. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. [Learn how to gain access to the CMD shell when PowerShell is the default shell](#access-cmd-shell-when-powershell-is-the-default). |
 
 If you want to select a particular shell to use other than the default, you need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
@@ -79,22 +79,30 @@ Executors that load shell profiles:
 
 ## PowerShell
 
-The default shell when a new runner is registered using GitLab Runner
-12.0 or newer.
+PowerShell Desktop Edition is the default shell when a new runner is registered on Windows using GitLab Runner
+12.0-13.12. In 14.0 and later, the default is PowerShell Core Edition.
 
 PowerShell doesn't support executing the build in context of another user.
 
 The generated PowerShell script is executed by saving its content to a file and
 passing the filename to the following command:
 
-```batch
-powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
-```
+- For PowerShell Desktop Edition:
+
+    ```batch
+    powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
+    ```
+
+- For PowerShell Core Edition:
+
+    ```batch
+    pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
+    ```
 
 This is how an example PowerShell script looks like:
 
 ```powershell
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Continue" # This will be set to 'Stop' when targetting PowerShell Core
 
 echo "Running on $([Environment]::MachineName)..."
 

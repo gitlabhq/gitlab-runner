@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
-
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
@@ -420,11 +418,19 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	b.writeSubmoduleUpdateNoticeMsg(w, recursive, depth)
 
+	var pathArgs []string
+
+	submodulePaths := strings.TrimSpace(build.GetSubmodulePaths())
+	if submodulePaths != "" {
+		pathArgs = append(pathArgs, "--", submodulePaths)
+	}
+
 	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
 	args := []string{"submodule", "sync"}
 	if recursive {
 		args = append(args, "--recursive")
 	}
+	args = append(args, pathArgs...)
 	w.Command("git", args...)
 
 	// Update / initialize submodules
@@ -437,6 +443,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if depth > 0 {
 		updateArgs = append(updateArgs, "--depth", strconv.Itoa(depth))
 	}
+	updateArgs = append(updateArgs, pathArgs...)
 
 	// Clean changed files in submodules
 	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
@@ -639,7 +646,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 func getCacheUploadURL(build *common.Build, cacheKey string) []string {
 	// Prefer Go Cloud URL if supported
 	goCloudURL := cache.GetCacheGoCloudURL(build, cacheKey)
-	if goCloudURL != nil && build.IsFeatureFlagOn(featureflags.UseGoCloudWithCacheArchiver) {
+	if goCloudURL != nil {
 		return []string{"--gocloud-url", goCloudURL.String()}
 	}
 

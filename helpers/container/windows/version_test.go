@@ -1,3 +1,5 @@
+// +build !integration
+
 package windows
 
 import (
@@ -20,16 +22,6 @@ func TestVersion(t *testing.T) {
 		{
 			operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
 			expectedVersion: V1809,
-			expectedErr:     nil,
-		},
-		{
-			operatingSystem: "Windows Server Datacenter Version 1903 (OS Build 18362.592)",
-			expectedVersion: V1903,
-			expectedErr:     nil,
-		},
-		{
-			operatingSystem: "Windows Server Datacenter Version 1909 (OS Build 18363.720)",
-			expectedVersion: V1909,
 			expectedErr:     nil,
 		},
 		{

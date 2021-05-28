@@ -12,39 +12,42 @@ source "${SCRIPTPATH}/docker_buildx_commands"
 # shellcheck source=ci/.colors
 source "${SCRIPTPATH}/.colors"
 
-TARGET_ARCH=$1
-TARGET_FILE=$2
+TARGET_FLAVOR=$1
+TARGET_ARCH=$2
+TARGET_FILE=$3
 
 if [ -z "${TARGET_ARCH}" ] || [ -z "${TARGET_FILE}" ]; then
     echo -e "${RED}Missing required arguments. Usage: build_helper_docker TARGET_ARCH TARGET_FILE${RST}"
     exit 1
 fi
 
+DOCKERFILE="Dockerfile.${TARGET_FLAVOR}"
+
 if [[ $IMAGE_SHELL == 'pwsh' ]]; then
-    if [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_ALPINE_IMAGE_VERSION}" ] || [ -z "${PWSH_IMAGE_DATE}" ]; then
+    if [ -z "${TARGET_FLAVOR}" ] || [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" ] || [ -z "${PWSH_IMAGE_DATE}" ]; then
         echo -e "${RED}Missing required arguments. When IMAGE_SHELL is 'pwsh', PWSH_VERSION, " \
-          "PWSH_ALPINE_IMAGE_VERSION, and PWSH_IMAGE_DATE must be defined${RST}"
-        exit 1
+        "TARGET_FLAVOR, PWSH_TARGET_FLAVOR_IMAGE_VERSION, and PWSH_IMAGE_DATE must be defined${RST}"
+         exit 1
     fi
 
     # NOTE: To find the most recent Powershell Core tag that supports the desired Powershell Core version on the
-    # desired Alpine version, run the following command:
+    # desired ${TARGET_FLAVOR} version, run the following command:
     # ```
     # export PWSH_VERSION="7.1.1"
-    # export PWSH_ALPINE_IMAGE_VERSION="3.12"
+    # export PWSH_TARGET_FLAVOR_IMAGE_VERSION="3.12"
     # curl -sL https://mcr.microsoft.com/v2/powershell/tags/list | \
     #   jq -r '.tags[]' | \
-    #   grep "${PWSH_VERSION}-alpine-${PWSH_ALPINE_IMAGE_VERSION}" | \
+    #   grep "${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" | \
     #   tail -n 1
     # ```
-    BASE_IMAGE="mcr.microsoft.com/powershell:${PWSH_VERSION}-alpine-${PWSH_ALPINE_IMAGE_VERSION}-${PWSH_IMAGE_DATE}"
+    BASE_IMAGE="mcr.microsoft.com/powershell:${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}-${PWSH_IMAGE_DATE}"
 else
-    if [ -z "${ALPINE_IMAGE_VERSION}" ]; then
-        echo -e "${RED}Missing required argument. ALPINE_IMAGE_VERSION must be defined${RST}"
+    if [ -z "${TARGET_FLAVOR}" ] || [ -z "${TARGET_FLAVOR_IMAGE_VERSION}" ]; then
+        echo -e "${RED}Missing required arguments. TARGET_FLAVOR and TARGET_FLAVOR_IMAGE_VERSION must be defined${RST}"
         exit 1
     fi
 
-    BASE_IMAGE="alpine:${ALPINE_IMAGE_VERSION}"
+    BASE_IMAGE="${TARGET_FLAVOR}:${TARGET_FLAVOR_IMAGE_VERSION}"
 fi
 
 REVISION=${REVISION:-}
@@ -85,6 +88,8 @@ _docker_buildx build \
     --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
     --output "type=tar,dest=$TARGET_FILE" \
     --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
+    --build-arg http_proxy="${http_proxy}" \
+    --file "dockerfiles/runner-helper/${DOCKERFILE}" \
     dockerfiles/runner-helper
 
 trap - ERR SIGINT SIGTERM

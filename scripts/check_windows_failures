@@ -15,7 +15,7 @@ borderBottom() {
 WINDOWS_VERSION=${WINDOWS_VERSION:-servercore1809}
 
 testOutputDir="./.testoutput"
-windowsTestOutputPattern="${testOutputDir}/*.windows.${WINDOWS_VERSION}.output.txt"
+windowsTestOutputPattern="${testOutputDir}/*/*.windows.${WINDOWS_VERSION}.output.txt"
 
 trackedFailuresFile="./ci/.test-failures.${WINDOWS_VERSION}.txt"
 if [[ ! -f "${trackedFailuresFile}" ]]; then

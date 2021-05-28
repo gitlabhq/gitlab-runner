@@ -231,7 +231,7 @@ If you need an IDE to edit and debug code, there are a few free suggestions you 
 
 - [JetBrains GoLand IDE](https://www.jetbrains.com/go/).
 - Visual Studio Code using the
-  [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-gallery#_workspace-recommended-extensions),
+  [workspace recommended extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions),
   located in `.vscode/extensions.json`.
 
 ## Managing build dependencies
@@ -240,6 +240,29 @@ GitLab Runner uses [Go Modules](https://github.com/golang/go/wiki/Modules) to ma
 its dependencies - they get checked into the repository under the `vendor/` directory
 
 Don't add dependency from upstream master branch when version tags are available.
+
+## Tests
+
+The Runner codebase makes a distinction between [unit](https://en.wikipedia.org/wiki/Unit_testing)
+and [integration tests](https://en.wikipedia.org/wiki/Integration_testing) in the following way:
+
+- Unit test files have a suffix of `_test.go` and contain the following build directive in the header:
+
+    ```golang
+    // +build !integration
+    
+    ```
+
+- Integration test files have a suffix of `_integration_test.go` and contain the following build directive in the header:
+
+    ```golang
+    // +build integration
+    
+    ```
+
+  They can be run by adding `-tags=integration` to the `go test` command.
+
+To test the state of the build directives in test files, `make check_test_directives` can be used.
 
 ## Developing for Windows on a non-windows environment
 

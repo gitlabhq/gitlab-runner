@@ -7,7 +7,7 @@ max=24
 
 find .testoutput/
 
-cnt=$(cat .testoutput/*.race.output.txt | grep -E "^WARNING: DATA RACE$" -c)
+cnt=$(cat .testoutput/*/*.race.output.txt | grep -E "^WARNING: DATA RACE$" -c)
 echo "Found ${cnt} race conditions. Maximum allowed value is ${max}"
 
 if [ "${cnt}" -gt "${max}" ]; then

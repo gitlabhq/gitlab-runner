@@ -1,3 +1,5 @@
+// +build !integration
+
 package common
 
 import (
@@ -574,7 +576,7 @@ func TestDockerMachine(t *testing.T) {
 			expectedIdleCount: 1,
 			expectedIdleTime:  1000,
 		},
-		"offpeak active": {
+		"offpeak active ignored": {
 			config: &DockerMachine{
 				IdleCount:        1,
 				IdleTime:         1000,
@@ -582,10 +584,10 @@ func TestDockerMachine(t *testing.T) {
 				OffPeakIdleCount: 2,
 				OffPeakIdleTime:  2000,
 			},
-			expectedIdleCount: 2,
-			expectedIdleTime:  2000,
+			expectedIdleCount: 1,
+			expectedIdleTime:  1000,
 		},
-		"offpeak inactive": {
+		"offpeak inactive ignored": {
 			config: &DockerMachine{
 				IdleCount:        1,
 				IdleTime:         1000,
@@ -596,17 +598,14 @@ func TestDockerMachine(t *testing.T) {
 			expectedIdleCount: 1,
 			expectedIdleTime:  1000,
 		},
-		"offpeak invalid format": {
+		"offpeak invalid format ignored": {
 			config: &DockerMachine{
-				IdleCount:        1,
-				IdleTime:         1000,
 				OffPeakPeriods:   invalidTimePeriod,
 				OffPeakIdleCount: 2,
 				OffPeakIdleTime:  2000,
 			},
 			expectedIdleCount: 0,
 			expectedIdleTime:  0,
-			expectedErr:       new(InvalidTimePeriodsError),
 		},
 		"autoscaling config active": {
 			config: &DockerMachine{

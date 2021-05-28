@@ -135,7 +135,7 @@ docker run -d --name gitlab-runner --restart always \
 ```
 
 NOTE:
-You need to use the same method for mounting you data volume as you
+You need to use the same method for mounting your data volume as you
 did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 `--volumes-from gitlab-runner-config`).
 
@@ -219,6 +219,3 @@ docker run -d --name gitlab-runner --restart always \
   -v /srv/gitlab-runner/config:/etc/gitlab-runner:Z \
   gitlab/gitlab-runner:latest
 ```
-
-More information about the cause and resolution can be found here:
-<http://www.projectatomic.io/blog/2015/06/using-volumes-with-docker-can-cause-problems-with-selinux/>

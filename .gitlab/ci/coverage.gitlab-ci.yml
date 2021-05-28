@@ -1,9 +1,7 @@
 .coverage_job:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
-  when: always
 
 test coverage report:
   extends:
@@ -11,6 +9,7 @@ test coverage report:
   coverage: /regular total:\s+\(statements\)\s+\d+.\d+\%/
   needs:
   - unit test
+  - integration test
   script:
   - source ci/touch_make_dependencies
   - make parallel_test_coverage_report cobertura_report
@@ -22,12 +21,27 @@ test coverage report:
     expire_in: 7d
     expose_as: 'Code Coverage'
 
+integration test coverage report:
+  extends:
+  - .coverage_job
+  needs:
+  - integration test
+  script:
+  - source ci/touch_make_dependencies
+  - make parallel_test_coverage_report
+  artifacts:
+    paths:
+    - out/coverage/
+    expire_in: 7d
+    expose_as: 'Integration Test Code Coverage'
+
 test junit report:
   extends:
   - .coverage_job
   image: $CI_IMAGE
   needs:
   - unit test
+  - integration test
   script:
   - source ci/touch_make_dependencies
   - make parallel_test_junit_report
@@ -40,6 +54,7 @@ race conditions detector:
   - .coverage_job
   needs:
   - unit test with race
+  - integration test with race
   script:
   - source ci/touch_make_dependencies
   - make check_race_conditions
@@ -59,30 +74,34 @@ code navigation: # See https://docs.gitlab.com/ee/user/project/code_intelligence
 
 check race unexpected test failures:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
   needs:
   - unit test with race
+  - integration test with race
   script:
   - ./scripts/check_unexpected_test_failures
-  when: always
 
-check windows 1809 unexpected test failures:
+.check windows unexpected test failures:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
-  needs:
-  - windows 1809 tests
   script:
   - ./scripts/check_unexpected_test_failures
-  when: always
+
+check windows 1809 unexpected unit test failures:
+  extends:
+  - .check windows unexpected test failures
+  needs:
+  - windows 1809 unit tests
+
+check windows 1809 unexpected integration test failures:
+  extends:
+  - .check windows unexpected test failures
+  needs:
+  - windows 1809 integration tests
 
 .check windows test failures:
-  extends:
-  - .merge_request_pipelines
-  - .except_docs
   stage: coverage
   script:
   - ./scripts/check_windows_failures
@@ -90,35 +109,29 @@ check windows 1809 unexpected test failures:
     paths:
     - .test-failures.*.txt.updated
     expire_in: 7d
-  when: always
 
-check windows 1809 test failures:
+# Only test the oldest supported version in merge requests,
+# but test all versions in the default branch.
+check windows 1809 unit test failures:
   extends:
   - .check windows test failures
   - .windows1809_variables
+  - .rules:merge_request_pipelines:no_docs
   needs:
-  - windows 1809 tests
+  - windows 1809 unit tests
 
-check windows 1903 test failures:
+check windows 1809 integration test failures:
   extends:
   - .check windows test failures
-  - .windows1903_variables
-  - .runner_master
+  - .windows1809_variables
+  - .rules:merge_request_pipelines:no_docs
   needs:
-  - windows 1903 tests
+  - windows 1809 integration tests
 
-check windows 1909 test failures:
-  extends:
-  - .check windows test failures
-  - .windows1909_variables
-  - .runner_master
-  needs:
-  - windows 1909 tests
-
-check windows 2004 test failures:
+check windows 2004 integration test failures:
   extends:
   - .check windows test failures
   - .windows2004_variables
-  - .runner_master
+  - .rules:default-branch-only:always
   needs:
-  - windows 2004 tests
+  - windows 2004 integration tests

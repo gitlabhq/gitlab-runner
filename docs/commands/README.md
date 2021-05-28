@@ -535,6 +535,7 @@ The following features are supported. If a feature is not listed in this table, 
 | GIT_STRATEGY               | yes                   |          |
 | GIT_CHECKOUT               | yes                   |          |
 | GIT_SUBMODULE_STRATEGY     | yes                   |          |
+| GIT_SUBMODULE_PATHS        | yes                   |          |
 | GET_SOURCES_ATTEMPTS       | yes                   |          |
 | ARTIFACT_DOWNLOAD_ATTEMPTS | no                    | Artifacts are not supported. |
 | RESTORE_CACHE_ATTEMPTS     | yes                   |          |

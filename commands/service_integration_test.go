@@ -1,4 +1,6 @@
-package commands
+// +build integration
+
+package commands_test
 
 import (
 	"fmt"
@@ -6,13 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli"
+	"gitlab.com/gitlab-org/gitlab-runner/commands"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 func newTestGetServiceArgumentsCommand(t *testing.T, expectedArgs []string) func(*cli.Context) {
 	return func(c *cli.Context) {
-		arguments := getServiceArguments(c)
+		arguments := commands.GetServiceArguments(c)
 
 		for _, arg := range expectedArgs {
 			assert.Contains(t, arguments, arg)
@@ -26,7 +29,7 @@ func testServiceCommandRun(command func(*cli.Context), args ...string) {
 		{
 			Name:   "test-command",
 			Action: command,
-			Flags:  getInstallFlags(),
+			Flags:  commands.GetInstallFlags(),
 		},
 	}
 
@@ -44,7 +47,7 @@ func TestGetServiceArguments(t *testing.T) {
 		{
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", getDefaultConfigFile(),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 				"--syslog",
 			},
@@ -66,7 +69,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", "/tmp",
-				"--config", getDefaultConfigFile(),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 				"--syslog",
 			},
@@ -77,7 +80,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", getDefaultConfigFile(),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner-service-name",
 				"--syslog",
 			},
@@ -88,7 +91,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", getDefaultConfigFile(),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 				"--syslog",
 			},
@@ -99,7 +102,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", getDefaultConfigFile(),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
 		},

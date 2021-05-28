@@ -20,7 +20,7 @@ S3_UPLOAD_PATH ?= master
 
 # Keep in sync with docs/install/linux-repository.md
 DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
-    ubuntu/xenial ubuntu/bionic ubuntu/eoan ubuntu/focal \
+    ubuntu/xenial ubuntu/bionic ubuntu/focal \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
@@ -67,7 +67,6 @@ GITLAB_CHANGELOG = .tmp/gitlab-changelog-$(GITLAB_CHANGELOG_VERSION)
 .PHONY: all
 all: deps runner-and-helper-bin
 
-include Makefile.deprecation.mk
 include Makefile.runner_helper.mk
 include Makefile.build.mk
 include Makefile.package.mk
@@ -113,10 +112,15 @@ version:
 .PHONY: deps
 deps: $(DEVELOPMENT_TOOLS)
 
+.PHONY: check_test_directives
+check_test_directives:
+	@scripts/check_test_directives
+
 .PHONY: lint
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
 lint: $(GOLANGLINT)
+	@$(MAKE) check_test_directives >/dev/stderr
 	@$(GOLANGLINT) run ./... --out-format $(OUT_FORMAT) $(LINT_FLAGS)
 
 .PHONY: lint-docs
@@ -135,6 +139,7 @@ simple-test:
 
 git1.8-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
 git1.8-test:
+	$(MAKE) simple-test TESTFLAGS='-cover -tags=integration'
 	$(MAKE) simple-test
 
 cobertura_report: $(GOCOVER_COBERTURA)

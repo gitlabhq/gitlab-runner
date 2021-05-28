@@ -15,7 +15,7 @@ import (
 
 const testTimeout = 30 * time.Minute
 
-type buildSetupFn func(build *common.Build)
+type BuildSetupFn func(build *common.Build)
 
 func RunBuildReturningOutput(t *testing.T, build *common.Build) (string, error) {
 	buf := new(bytes.Buffer)
@@ -102,4 +102,25 @@ func getJobResponseWithCommands(t *testing.T, baseJobGetter baseJobGetter, comma
 	jobResponse.Steps[0].Script = commands
 
 	return jobResponse
+}
+
+// WithFeatureFlags runs a subtest for the on/off value for each flag provided,
+// and allows a build object as part of the test to be decorated with the
+// feature flag variable.
+func WithEachFeatureFlag(t *testing.T, f func(t *testing.T, setup BuildSetupFn), flags ...string) {
+	if len(flags) == 0 {
+		t.Log("WithEachFeatureFlag: no feature flags provided. Running inner test with no feature flags.")
+		f(t, func(build *common.Build) {})
+		return
+	}
+
+	for _, flag := range flags {
+		for _, value := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%v=%v", flag, value), func(t *testing.T) {
+				f(t, func(build *common.Build) {
+					SetBuildFeatureFlag(build, flag, value)
+				})
+			})
+		}
+	}
 }

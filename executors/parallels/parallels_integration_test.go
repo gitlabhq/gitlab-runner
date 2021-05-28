@@ -1,3 +1,5 @@
+// +build integration
+
 package parallels_test
 
 import (

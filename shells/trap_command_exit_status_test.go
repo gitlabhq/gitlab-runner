@@ -1,3 +1,5 @@
+// +build !integration
+
 package shells
 
 import (
@@ -72,7 +74,7 @@ func TestTryDecode(t *testing.T) {
 		"TryUnmarshal missing scripts": {
 			from: string(missingScripts),
 			verifyFn: func(t *testing.T, decoded bool, c TrapCommandExitStatus) {
-				assert.False(t, decoded)
+				assert.True(t, decoded)
 				assert.Nil(t, c.Script)
 				assert.Equal(t, exitCode, *c.CommandExitCode)
 			},
@@ -104,7 +106,7 @@ func TestTryDecode(t *testing.T) {
 		"TryUnmarshal hand crafted json missing script": {
 			from: `{"command_exit_code": 0}`,
 			verifyFn: func(t *testing.T, decoded bool, c TrapCommandExitStatus) {
-				assert.False(t, decoded)
+				assert.True(t, decoded)
 				assert.Equal(t, exitCode, *c.CommandExitCode)
 				assert.Nil(t, c.Script)
 			},

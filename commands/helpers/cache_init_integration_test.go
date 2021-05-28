@@ -1,4 +1,6 @@
-package helpers
+// +build integration
+
+package helpers_test
 
 import (
 	"io/ioutil"
@@ -10,11 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
+	testHelpers "gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 func newCacheInitTestApp() *cli.App {
-	cmd := &CacheInitCommand{}
+	cmd := &helpers.CacheInitCommand{}
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Commands = append(app.Commands, cli.Command{
@@ -48,7 +51,7 @@ func TestCacheInit(t *testing.T) {
 }
 
 func TestCacheInit_NoArguments(t *testing.T) {
-	removeHook := helpers.MakeFatalToPanic()
+	removeHook := testHelpers.MakeFatalToPanic()
 	defer removeHook()
 
 	args := []string{os.Args[0], "cache-init"}

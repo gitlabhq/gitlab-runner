@@ -9,7 +9,7 @@ $InformationPreference = "Continue"
 #   used for building the Docker image. It is important for the version to match
 #   one of the mcr.microsoft.com/windows/servercore or https://hub.docker.com/_/microsoft-windows-nanoserver
 #   tag prefixes (discarding the architecture suffix).
-#   For example, `servercore1903` will build from mcr.microsoft.com/windows/servercore:1903-amd64.
+#   For example, `servercoreYYH1` will build from mcr.microsoft.com/windows/servercore:YYH1-amd64.
 # - $Env:GIT_VERSION - Specify which version of Git needs to be installed on
 #   the Docker image. This is done through Docker build args.
 # - $Env:GIT_VERSION_BUILD - Specify which build is needed to download for the
@@ -50,6 +50,11 @@ $imagesBasePath = "dockerfiles/runner-helper/Dockerfile.x86_64"
 
 function Main
 {
+    if (-not (Test-Path Env:IS_LATEST))
+    {
+        $Env:IS_LATEST = Is-Latest
+    }
+
     $tag = Get-Tag
 
     Build-Image $tag
@@ -108,6 +113,36 @@ function Get-Tag
     $revision = & 'git' rev-parse --short=8 HEAD
 
     return "x86_64-$revision-$Env:WINDOWS_VERSION"
+}
+
+function Get-Latest-Stable-Tag
+{
+    $versions = & git -c versionsort.prereleaseSuffix="-rc" -c versionsort.prereleaseSuffix="-RC" tag -l "v*.*.*" |
+        Where-Object { $_ -notlike "*-rc*" } |
+        %{[System.Version]$_.Substring(1)} |
+        sort -descending
+    $latestTag = $versions[0].ToString()
+
+    return "v$latestTag"
+}
+
+function Is-Latest
+{
+    $prevErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue' # We expect errors from `git describe`, so temporarily disable handling
+
+    try
+    {
+        $latestTag = Get-Latest-Stable-Tag
+        & git describe --exact-match --match $latestTag 2>&1 | out-null
+        $isLatest = $LASTEXITCODE -eq 0
+    }
+    finally
+    {
+        $ErrorActionPreference = $prevErrorPreference
+    }
+
+    return $isLatest
 }
 
 function Build-Image($tag)

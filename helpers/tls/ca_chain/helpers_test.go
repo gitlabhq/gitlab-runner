@@ -1,3 +1,5 @@
+// +build !integration
+
 package ca_chain
 
 import (

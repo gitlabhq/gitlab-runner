@@ -1,3 +1,5 @@
+// +build integration
+
 package docker_test
 
 import (
@@ -26,6 +28,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	execDocker "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -36,6 +39,12 @@ import (
 
 var getWindowsImageOnce sync.Once
 var windowsImage string
+
+func TestMain(m *testing.M) {
+	execDocker.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
+
+	os.Exit(m.Run())
+}
 
 // safeBuffer is used for tests that are writing build logs to a buffer and
 // reading the build logs waiting for a log line.
@@ -157,7 +166,7 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 
 	if runtime.GOOS == "windows" {
 		executor = "docker-windows"
-		shell = "powershell"
+		shell = shells.SNPowershell
 		image = getWindowsImage(t)
 	}
 
@@ -1241,8 +1250,8 @@ func TestDockerCommand_Pwsh(t *testing.T) {
 
 	out, err := buildtest.RunBuildReturningOutput(t, &build)
 	assert.NoError(t, err)
-	assert.Contains(t, out, "PSVersion                      7.1.1")
-	assert.Contains(t, out, "PSEdition                      Core")
+	assert.Regexp(t, `PSVersion\s+7.1.1`, out)
+	assert.Regexp(t, `PSEdition\s+Core`, out)
 }
 
 func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {

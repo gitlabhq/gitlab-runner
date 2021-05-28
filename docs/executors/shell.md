@@ -12,7 +12,7 @@ which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
 
 NOTE:
-Always use the latest version of Git available. Additionally, GitLab Runner will use
+Always use the [latest version of Git available](https://git-scm.com/download/). Additionally, GitLab Runner will use
 the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the machine,
 so ensure Git LFS is up-to-date when GitLab Runner will run using the shell executor.
 
@@ -89,7 +89,7 @@ group](https://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
 
 GitLab Runner terminates processes when:
 
-- A job [times out](https://docs.gitlab.com/ee/user/project/pipelines/settings.html#timeout).
+- A job [times out](https://docs.gitlab.com/ee/ci/pipelines/settings.html#timeout).
 - A job is canceled.
 
 ### GitLab 13.0 and earlier
@@ -105,11 +105,3 @@ child processes, and after 10 minutes sends `SIGKILL`. This allows for
 graceful termination for the process. Windows don't have a `SIGTERM`
 equivalent, so the kill process is sent twice. The second is sent after
 10 minutes.
-
-If for some reason this new termination process has problems with your
-scripts but works with the  [old method](#gitlab-130-and-earlier) you can
-set the feature flag
-[`FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL`](../configuration/feature-flags.md)
-to `true`, and it will use the old method. Keep in mind that this
-feature flag will be removed in GitLab Runner 14.0 so you still need to
-fix your script to handle the new termination.

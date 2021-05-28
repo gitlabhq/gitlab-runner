@@ -151,6 +151,7 @@ type DockerConfig struct {
 	ServicesTmpfs              map[string]string `toml:"services_tmpfs,omitempty" json:"services_tmpfs" long:"services-tmpfs" env:"DOCKER_SERVICES_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in all the service containers, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
 	SysCtls                    DockerSysCtls     `toml:"sysctls,omitempty" json:"sysctls" long:"sysctls" env:"DOCKER_SYSCTLS" description:"Sysctl options, a toml table/json object of key=value. Value is expected to be a string."`
 	HelperImage                string            `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"DOCKER_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
+	HelperImageFlavor          string            `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"DOCKER_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
 }
 
 //nolint:lll
@@ -164,14 +165,12 @@ type DockerMachine struct {
 	MachineName    string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
 	MachineOptions []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
 
-	OffPeakPeriods   []string `long:"off-peak-periods" env:"MACHINE_OFF_PEAK_PERIODS" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`                                    // DEPRECATED
-	OffPeakTimezone  string   `long:"off-peak-timezone" env:"MACHINE_OFF_PEAK_TIMEZONE" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                    // DEPRECATED
-	OffPeakIdleCount int      `long:"off-peak-idle-count" env:"MACHINE_OFF_PEAK_IDLE_COUNT" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                     // DEPRECATED
-	OffPeakIdleTime  int      `long:"off-peak-idle-time" env:"MACHINE_OFF_PEAK_IDLE_TIME" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode. DEPRECATED"` // DEPRECATED
+	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`                                // DEPRECATED
+	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
+	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
+	OffPeakIdleTime  int      `toml:"OffPeakIdleTime,omitzero" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode. DEPRECATED"` // DEPRECATED
 
 	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
-
-	offPeakTimePeriods *timeperiod.TimePeriod // DEPRECATED
 }
 
 //nolint:lll
@@ -329,6 +328,7 @@ type KubernetesConfig struct {
 	Affinity                                          KubernetesAffinity           `toml:"affinity,omitempty" json:"affinity" long:"affinity" description:"Kubernetes Affinity setting that is used to select the node that spawns a pod"`
 	ImagePullSecrets                                  []string                     `toml:"image_pull_secrets,omitempty" json:"image_pull_secrets" long:"image-pull-secrets" env:"KUBERNETES_IMAGE_PULL_SECRETS" description:"A list of image pull secrets that are used for pulling docker image"`
 	HelperImage                                       string                       `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
+	HelperImageFlavor                                 string                       `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"KUBERNETES_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
 	TerminationGracePeriodSeconds                     int64                        `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal."`
 	PollInterval                                      int                          `toml:"poll_interval,omitzero" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status"`
 	PollTimeout                                       int                          `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
@@ -907,10 +907,6 @@ func (c *DockerMachine) GetIdleTime() int {
 // It goes through the [[docker.machine.autoscaling]] entries and returns the last one to match.
 // Returns nil on no matching entries.
 func (c *DockerMachine) getActiveAutoscalingConfig() *DockerMachineAutoscaling {
-	if len(c.AutoscalingConfigs) == 0 && len(c.OffPeakPeriods) > 0 {
-		return c.getLegacyAutoscalingConfigWithOffpeak()
-	}
-
 	var activeConf *DockerMachineAutoscaling
 	for _, conf := range c.AutoscalingConfigs {
 		if conf.compiledPeriods.InPeriod() {
@@ -921,23 +917,8 @@ func (c *DockerMachine) getActiveAutoscalingConfig() *DockerMachineAutoscaling {
 	return activeConf
 }
 
-// TODO: remove in 14.0: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555
-func (c *DockerMachine) getLegacyAutoscalingConfigWithOffpeak() *DockerMachineAutoscaling {
-	if c.offPeakTimePeriods.InPeriod() {
-		return &DockerMachineAutoscaling{
-			IdleCount: c.OffPeakIdleCount,
-			IdleTime:  c.OffPeakIdleTime,
-		}
-	}
-
-	return nil
-}
-
 func (c *DockerMachine) CompilePeriods() error {
-	err := c.legacyCompilePeriods()
-	if err != nil {
-		return err
-	}
+	var err error
 
 	for _, a := range c.AutoscalingConfigs {
 		err = a.compilePeriods()
@@ -950,20 +931,6 @@ func (c *DockerMachine) CompilePeriods() error {
 }
 
 var periodTimer = time.Now
-
-// TODO: remove in 14.0: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555
-func (c *DockerMachine) legacyCompilePeriods() error {
-	if len(c.OffPeakPeriods) != 0 {
-		periods, err := timeperiod.TimePeriodsWithTimer(c.OffPeakPeriods, c.OffPeakTimezone, periodTimer)
-		if err != nil {
-			return NewInvalidTimePeriodsError(c.OffPeakPeriods, err)
-		}
-
-		c.offPeakTimePeriods = periods
-	}
-
-	return nil
-}
 
 func (a *DockerMachineAutoscaling) compilePeriods() error {
 	periods, err := timeperiod.TimePeriodsWithTimer(a.Periods, a.Timezone, periodTimer)
@@ -978,14 +945,9 @@ func (a *DockerMachineAutoscaling) compilePeriods() error {
 
 func (c *DockerMachine) logDeprecationWarning() {
 	if len(c.OffPeakPeriods) != 0 {
-		logrus.Warning("OffPeak docker machine configuration is deprecated and will be removed in 14.0. " +
-			"Please use [[docker.machine.autoscaling]] configuration instead: " +
-			"https://docs.gitlab.com/runner/configuration/autoscale.html#autoscaling-periods-configuration")
-	}
-	if len(c.AutoscalingConfigs) != 0 && len(c.OffPeakPeriods) != 0 {
-		logrus.Warning("You are using both deprecated Offpeak config and [[docker.machine.autoscaling]] setting. " +
-			"The legacy configuration will be ignored. See: " +
-			"https://docs.gitlab.com/runner/configuration/autoscale.html#deprecated-off-peak-time-mode-configuration")
+		logrus.Warning("OffPeak docker machine configuration is deprecated and has been removed since 14.0. " +
+			"Please convert the setting into a [[docker.machine.autoscaling]] configuration instead: " +
+			"https://docs.gitlab.com/runner/configuration/autoscale.html#off-peak-time-mode-configuration-deprecated")
 	}
 }
 

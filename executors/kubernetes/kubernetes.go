@@ -41,6 +41,9 @@ const (
 	detectShellScriptName = "detect_shell_script"
 
 	waitLogFileTimeout = time.Minute
+
+	outputLogFileNotExistsExitCode = 100
+	unknownLogProcessorExitCode    = 1000
 )
 
 var (
@@ -48,7 +51,7 @@ var (
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultBuildsDir:              "/builds",
 		DefaultCacheDir:               "/cache",
-		SharedBuildsDir:               false,
+		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.NormalShell,
@@ -118,6 +121,9 @@ type executor struct {
 	newLogProcessor func() logProcessor
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
+
+	// Flag if a repo mount and emptyDir volume are needed
+	requireDefaultBuildsDirVolume *bool
 }
 
 type serviceDeleteResponse struct {
@@ -188,6 +194,7 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 		Architecture:   "amd64",
 		GitLabRegistry: s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
 		Shell:          s.Config.Shell,
+		Flavor:         s.Config.Kubernetes.HelperImageFlavor,
 	})
 }
 
@@ -308,7 +315,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if isKubernetesPodNotFoundError(err) {
+		if IsKubernetesPodNotFoundError(err) {
 			return err
 		}
 
@@ -392,20 +399,48 @@ func (s *executor) buildCommandForStage(stage common.BuildStage) string {
 
 func (s *executor) processLogs(ctx context.Context) {
 	processor := s.newLogProcessor()
-	logsCh := processor.Process(ctx)
+	logsCh, errCh := processor.Process(ctx)
 
-	for line := range logsCh {
-		var status shells.TrapCommandExitStatus
-		if status.TryUnmarshal(line) {
-			s.remoteProcessTerminated <- status
-			continue
-		}
+	for {
+		select {
+		case line, ok := <-logsCh:
+			if !ok {
+				return
+			}
+			var status shells.TrapCommandExitStatus
+			if status.TryUnmarshal(line) {
+				s.remoteProcessTerminated <- status
+				continue
+			}
 
-		_, err := s.Trace.Write(append([]byte(line), '\n'))
-		if err != nil {
-			s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+			_, err := s.Trace.Write(append([]byte(line), '\n'))
+			if err != nil {
+				s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+			}
+		case err, ok := <-errCh:
+			if !ok {
+				continue
+			}
+
+			exitCode := getExitCode(err)
+			s.Warningln(fmt.Sprintf("%v", err))
+			// Script can be kept to nil as not being used after the exitStatus is received L1223
+			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: &exitCode}
 		}
 	}
+}
+
+// getExitCode tries to extract the exit code from an inner exec.CodeExitError
+// This error may be returned by the underlying kubernetes connection stream
+// however it's not guaranteed to be.
+// getExitCode would return unknownLogProcessorExitCode if err isn't of type exec.CodeExitError
+// or if it's nil
+func getExitCode(err error) int {
+	var exitErr exec.CodeExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.Code
+	}
+	return unknownLogProcessorExitCode
 }
 
 func (s *executor) setupScriptsConfigMap() error {
@@ -460,7 +495,7 @@ func (s *executor) generateScripts(shell common.Shell) (map[string]string, error
 }
 
 func (s *executor) Finish(err error) {
-	if isKubernetesPodNotFoundError(err) {
+	if IsKubernetesPodNotFoundError(err) {
 		// Avoid an additional error message when trying to
 		// cleanup a pod that we know no longer exists
 		s.pod = nil
@@ -633,11 +668,6 @@ func (s *executor) scriptPath(stage common.BuildStage) string {
 func (s *executor) getVolumeMounts() []api.VolumeMount {
 	var mounts []api.VolumeMount
 
-	mounts = append(mounts, api.VolumeMount{
-		Name:      "repo",
-		MountPath: s.Build.RootDir,
-	})
-
 	// The configMap is nil when using legacy execution
 	if s.configMap != nil {
 		// These volume mounts **MUST NOT** be mounted inside another volume mount.
@@ -662,6 +692,13 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 	}
 
 	mounts = append(mounts, s.getVolumeMountsForConfig()...)
+
+	if s.isDefaultBuildsDirVolumeRequired() {
+		mounts = append(mounts, api.VolumeMount{
+			Name:      "repo",
+			MountPath: s.Build.RootDir,
+		})
+	}
 
 	return mounts
 }
@@ -727,12 +764,15 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 
 func (s *executor) getVolumes() []api.Volume {
 	volumes := s.getVolumesForConfig()
-	volumes = append(volumes, api.Volume{
-		Name: "repo",
-		VolumeSource: api.VolumeSource{
-			EmptyDir: &api.EmptyDirVolumeSource{},
-		},
-	})
+
+	if s.isDefaultBuildsDirVolumeRequired() {
+		volumes = append(volumes, api.Volume{
+			Name: "repo",
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{},
+			},
+		})
+	}
 
 	// The configMap is nil when using legacy execution
 	if s.configMap == nil {
@@ -900,6 +940,24 @@ func (s *executor) getVolumesForCSIs() []api.Volume {
 		})
 	}
 	return volumes
+}
+
+func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
+	if s.requireDefaultBuildsDirVolume != nil {
+		return *s.requireDefaultBuildsDirVolume
+	}
+
+	var required = true
+	for _, mount := range s.getVolumeMountsForConfig() {
+		if mount.MountPath == s.Build.RootDir {
+			required = false
+			break
+		}
+	}
+
+	s.requireDefaultBuildsDirVolume = &required
+
+	return required
 }
 
 func (s *executor) setupCredentials() error {
@@ -1213,7 +1271,7 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 
 func (s *executor) checkPodStatus() error {
 	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(s.pod.Name, metav1.GetOptions{})
-	if isKubernetesPodNotFoundError(err) {
+	if IsKubernetesPodNotFoundError(err) {
 		return err
 	}
 
@@ -1364,7 +1422,7 @@ func (s *executor) checkDefaults() error {
 	return nil
 }
 
-func isKubernetesPodNotFoundError(err error) bool {
+func IsKubernetesPodNotFoundError(err error) bool {
 	var statusErr *kubeerrors.StatusError
 	return errors.As(err, &statusErr) &&
 		statusErr.ErrStatus.Code == http.StatusNotFound &&

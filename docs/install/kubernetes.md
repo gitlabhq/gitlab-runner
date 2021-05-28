@@ -161,8 +161,8 @@ Many of the fields accepted by the `values.yaml` file will be removed with the i
 Helm Chart version 1.0. We recommend migrating away from them as soon as possible.
 These fields are marked with a `DEPRECATED:` comment above them.
 
-All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#the-keywords).
-For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-keywords).
+All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#the-available-configtoml-settings).
+For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-available-configtoml-settings).
 For some, you must rename them. For example, if you are using `helpers` to set CPU limits:
 
 ```yaml

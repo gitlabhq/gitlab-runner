@@ -153,7 +153,7 @@ is released in the [Long-Term Servicing Channel
 
 GitLab aims to test and release new GitLab Runner helper images that
 include the latest Windows Server version (Semi-Annual Channel) within 1
-month of the official Microsoft release date. Refer to the [Windows
+month of the official Microsoft release date on the Google Cloud Platform. Refer to the [Windows
 Server current versions by servicing option
 list](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
 for availability dates.
@@ -310,18 +310,18 @@ The error should contain detailed information about the Windows Server
 version, which is then compared with the versions that GitLab Runner supports.
 
 ```plaintext
-unsupported Windows Version: Windows Server Datacenter Version 1909 (OS Build 18363.720)
+unsupported Windows Version: Windows Server Datacenter Version (OS Build 18363.720)
 ```
 
-Docker 17.06.2 on Windows Server 1909 returns the following in the output
+Docker 17.06.2 on Windows Server returns the following in the output
 of `docker info`.
 
 ```plaintext
 Operating System: Windows Server Datacenter
 ```
 
-The fix in this case is to upgrade the Docker version. [Read more about supported
-Docker versions](../executors/docker.md#supported-docker-versions).
+The fix in this case is to upgrade the Docker version of similar age, or later,
+than the Windows Server release.
 
 ### I'm using a mapped network drive and my build cannot find the correct path
 

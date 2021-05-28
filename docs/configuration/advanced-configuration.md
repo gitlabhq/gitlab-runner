@@ -240,8 +240,8 @@ The available shells can run on different platforms.
 | ----- | ----------- |
 | `bash`        | Generate Bash (Bourne-shell) script. All commands executed in Bash context. Default for all Unix systems. |
 | `sh`          | Generate Sh (Bourne-shell) script. All commands executed in Sh context. The fallback for `bash` for all Unix systems. |
-| `powershell`  | Generate PowerShell script. All commands are executed in Windows PowerShell Desktop context. Default for Windows. |
-| `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. |
+| `powershell`  | Generate PowerShell script. All commands are executed in PowerShell Desktop context. In GitLab Runner 12.0-13.12, this is the default for Windows. |
+| `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default for Windows. |
 
 ## The `[runners.docker]` section
 
@@ -265,6 +265,7 @@ This defines the Docker Container parameters.
 | `extra_hosts`                  | Hosts that should be defined in container environment. |
 | `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
 | `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
+| `helper_image_flavor`          | Sets the helper image flavor (`alpine` or `ubuntu`). Defaults to `alpine`. |
 | `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
 | `hostname`                     | Custom hostname for the Docker container. |
 | `image`                        | The image to run jobs with. |
@@ -824,9 +825,13 @@ Example:
 When you use `docker`, `docker+machine`, or `kubernetes` executors, GitLab Runner uses a specific container
 to handle Git, artifacts, and cache operations. This container is created from an image named `helper image`.
 
-The helper image is based on Alpine Linux and is available for amd64, arm, arm64, and s390x architectures. It contains
+The helper image is available for amd64, arm, arm64, and s390x architectures. It contains
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
-of available commands, as well as Git, Git LFS, SSL certificates store, and basic configuration of Alpine.
+of available commands, as well as Git, Git LFS, SSL certificates store.
+
+The helper image has two flavors: `alpine` and `ubuntu`. The `alpine` image is currently the default due to its small
+footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
+Using `helper_image_flavor = "ubuntu"` will select the `ubuntu` flavor of the helper image.
 
 When GitLab Runner is installed from the DEB/RPM packages, images for the supported architectures are installed on the host.
 When the runner prepares to execute the job, if the image in the specified version (based on the runner's Git

@@ -12,15 +12,15 @@ const (
 	UseLegacyKubernetesExecutionStrategy        string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 	UseDirectDownload                           string = "FF_USE_DIRECT_DOWNLOAD"
 	SkipNoOpBuildStages                         string = "FF_SKIP_NOOP_BUILD_STAGES"
-	ShellExecutorUseLegacyProcessKill           string = "FF_SHELL_EXECUTOR_USE_LEGACY_PROCESS_KILL"
 	ResetHelperImageEntrypoint                  string = "FF_RESET_HELPER_IMAGE_ENTRYPOINT"
-	UseGoCloudWithCacheArchiver                 string = "FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER"
 	UseFastzip                                  string = "FF_USE_FASTZIP"
 	GitLabRegistryHelperImage                   string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
 	DisableUmaskForDockerExecutor               string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
 	EnableBashExitCodeCheck                     string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
 	UseWindowsLegacyProcessStrategy             string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
 	SkipDockerMachineProvisionOnCreationFailure string = "FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE"
+	UseNewEvalStrategy                          string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
+	UsePowershellPathResolver                   string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 )
 
 type FeatureFlag struct {
@@ -80,14 +80,6 @@ var flags = []FeatureFlag{
 		Description:     "When set to `false` all build stages are executed even if running them has no effect",
 	},
 	{
-		Name:            ShellExecutorUseLegacyProcessKill,
-		DefaultValue:    false,
-		Deprecated:      true,
-		ToBeRemovedWith: "14.0",
-		Description: "Use the old process termination that was used prior to GitLab 13.1 where only `SIGKILL`" +
-			" was sent",
-	},
-	{
 		Name:            ResetHelperImageEntrypoint,
 		DefaultValue:    true,
 		Deprecated:      true,
@@ -95,14 +87,6 @@ var flags = []FeatureFlag{
 		Description: "Enables adding an ENTRYPOINT layer for Helper images imported from local Docker archives " +
 			"by the `docker` executor, in order to enable [importing of user certificate roots]" +
 			"(tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages)",
-	},
-	{
-		Name:            UseGoCloudWithCacheArchiver,
-		DefaultValue:    true,
-		Deprecated:      true,
-		ToBeRemovedWith: "14.0",
-		Description: "Enables the use of Go Cloud to write cache archives to object storage. " +
-			"This mode is only used by Azure Blob storage.",
 	},
 	{
 		Name:            UseFastzip,
@@ -159,6 +143,22 @@ var flags = []FeatureFlag{
 			"not created, `docker-machine provision` runs for X amount of times. When " +
 			"this feature flag is set to `true`, it skips `docker-machine provision` " +
 			"removes the machine, and creates another machine instead.",
+	},
+	{
+		Name:            UseNewEvalStrategy,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When set to `true`, the Bash `eval` call is executed in a subshell to help with proper exit " +
+			"code detection of the script executed.",
+	},
+	{
+		Name:            UsePowershellPathResolver,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, Powershell resolves pathnames rather than Runner using OS-specific filepath " +
+			"functions that are specific to where Runner is hosted.",
 	},
 }
 

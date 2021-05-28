@@ -5,6 +5,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 func init() {
@@ -14,7 +15,7 @@ func init() {
 		DefaultCacheDir:               `c:\cache`,
 		SharedBuildsDir:               false,
 		Shell: common.ShellScriptInfo{
-			Shell:         "powershell",
+			Shell:         shells.SNPowershell,
 			Type:          common.NormalShell,
 			RunnerCommand: "gitlab-runner-helper",
 		},
@@ -53,6 +54,7 @@ func init() {
 	common.RegisterExecutorProvider("docker-windows", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
+		ConfigUpdater:    configUpdater,
 		DefaultShellName: options.Shell.Shell,
 	})
 }

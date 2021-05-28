@@ -12,11 +12,6 @@ func GetKubeClientConfig(config *common.KubernetesConfig) (kubeConfig *restclien
 	return getKubeClientConfig(config, new(overwrites))
 }
 
-// IsKubernetesPodNotFoundError is used to export the isKubernetesPodNotFoundError function for integration tests
-func IsKubernetesPodNotFoundError(err error) bool {
-	return isKubernetesPodNotFoundError(err)
-}
-
 // NewDefaultExecutorForTest is used to expose the executor to integration tests
 func NewDefaultExecutorForTest() common.Executor {
 	return &executor{

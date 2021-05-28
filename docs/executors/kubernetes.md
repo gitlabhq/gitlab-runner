@@ -56,7 +56,7 @@ all of the above fields to have GitLab Runner auto-discover the Kubernetes API. 
 is the recommended approach.
 
 If you are running it externally to the Cluster then you will need to set each
-of these keywords and make sure that GitLab Runner has access to the Kubernetes API
+of these settings and make sure that GitLab Runner has access to the Kubernetes API
 on the cluster.
 
 ## Kubernetes executor interaction diagram
@@ -85,13 +85,13 @@ sequenceDiagram
     P->>+G: Job logs
 ```
 
-## The keywords
+## The available `config.toml` settings
 
-The following keywords help to define the behavior of GitLab Runner within Kubernetes.
+The following settings help to define the behavior of GitLab Runner within Kubernetes.
 
 ### CPU requests and limits
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `cpu_limit` | The CPU allocation given to build containers. |
 | `cpu_limit_overwrite_max_allowed` | The max amount the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature. |
@@ -108,7 +108,7 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 
 ### Memory requests and limits
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `memory_limit` | The amount of memory allocated to build containers. |
 | `memory_limit_overwrite_max_allowed` | The max amount the memory allocation can be written to for build containers. When empty, it disables the memory limit overwrite feature. |
@@ -125,7 +125,7 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 
 ### Storage requests and limits
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `ephemeral_storage_limit` | The ephemeral storage limit for build containers. |
 | `ephemeral_storage_limit_overwrite_max_allowed` | The max amount the ephemeral storage limit for build containers can be overwritten. When empty, it disables the ephemeral storage limit overwrite feature. |
@@ -140,9 +140,9 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 | `service_ephemeral_storage_request` | The ephemeral storage request given to service containers. |
 | `service_ephemeral_storage_request_overwrite_max_allowed` | The max amount the ephemeral storage request can be overwritten by for service containers. When empty, it disables the ephemeral storage request overwrite feature. |
 
-### Other keywords
+### Other `config.toml` settings
 
-| Keyword | Description |
+| Setting | Description |
 |---------|-------------|
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation) behavior. |
@@ -151,6 +151,7 @@ The following keywords help to define the behavior of GitLab Runner within Kuber
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
 | `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
 | `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
+| `helper_image_flavor` | Sets the helper image flavor (`alpine` or `ubuntu`). Defaults to `alpine`. |
 | `host_aliases` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases](#adding-extra-host-aliases). |
 | `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
@@ -217,7 +218,7 @@ with an appropriate regular expression. When left empty the overwrite behavior i
 In conjunction with setting the namespace and service account as mentioned above, you may set the
 bearer token used when making API calls to create the build pods. This will allow project owners to
 use project secret variables to specify a bearer token. When specifying the bearer token, you must
-set the `Host` configuration keyword.
+set the `Host` configuration setting.
 
 ``` yaml
 variables:
@@ -236,7 +237,7 @@ variables:
 ```
 
 NOTE:
-You must specify [`pod_annotations_overwrite_allowed`](#the-keywords) to override pod annotations via the `.gitlab-ci.yml` file.
+You must specify [`pod_annotations_overwrite_allowed`](#the-available-configtoml-settings) to override pod annotations via the `.gitlab-ci.yml` file.
 
 ### Overwriting Container Resources
 
@@ -271,9 +272,9 @@ on the `.gitlab-ci.yml` file with the following variables:
 The values for these variables are restricted to what the max overwrite
 for that resource has been set to.
 
-## Define keywords in the configuration TOML
+## Define settings in the configuration TOML
 
-Each of the keywords can be defined in the `config.toml` file.
+Each of the settings can be defined in the `config.toml` file.
 
 Here is an example `config.toml`:
 
@@ -463,6 +464,31 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | volume_attributes | `map[string]string` | no       | Key-value pair mapping for attributes of the CSI volume. |
 | sub_path          | string              | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | read_only         | boolean             | no       | Sets the volume in read-only mode (defaults to false) |
+
+## Custom builds directory mount
+
+To store the builds directory for the job, define custom volume mounts to the
+configured `builds_dir` (`/builds` by default).
+To use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
+be aware that depending on the
+[access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes),
+you might be limited to running jobs on 1 node.
+
+Here is an example configuration:
+
+```toml
+concurrent = 4
+
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  builds_dir = "/builds"
+  [runners.kubernetes]
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "repo"
+      mount_path = "/builds"
+      medium = "Memory"
+```
 
 ## Using Security Context
 
@@ -673,7 +699,7 @@ check_interval = 30
   executor = "kubernetes"
   [runners.kubernetes]
     image = "alpine:latest"
-    [dns_config]
+    [runners.kubernetes.dns_config]
       nameservers = [
         "1.2.3.4",
       ]
@@ -682,11 +708,11 @@ check_interval = 30
         "my.dns.search.suffix",
       ]
 
-      [[dns_config.options]]
+      [[runners.kubernetes.dns_config.options]]
         name = "ndots"
         value = "2"
 
-      [[dns_config.options]]
+      [[runners.kubernetes.dns_config.options]]
         name = "edns0"
 ```
 
@@ -709,7 +735,7 @@ check_interval = 30
 to configure different [Linux capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) that should be
 added or dropped from a container.
 
-GitLab Runner supports configuration of capabilities with the `cap_add` and `cap_drop` keywords in the `[runners.kubernetes]`
+GitLab Runner supports configuration of capabilities with the `cap_add` and `cap_drop` settings in the `[runners.kubernetes]`
 section of the configuration file. By default, GitLab Runner provides
 a [list of capabilities](#default-list-of-dropped-capabilities) that should be dropped.
 
@@ -867,3 +893,10 @@ The following errors are commonly encountered when using the Kubernetes executor
 If the cluster cannot schedule the build pod before the timeout defined by `poll_timeout`, the build pod returns an error. The [Kubernetes Scheduler](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-lifetime) should be able to delete it.
 
 To fix this issue, increase the `poll_timeout` value in your `config.toml` file.
+
+### `fatal: unable to access 'https://gitlab-ci-token:token@example.com/repo/proj.git/': Could not resolve host: example.com`
+
+If using the `alpine` flavor of the [helper image](../configuration/advanced-configuration.md#helper-image),
+there can be [DNS issues](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129) related to Alpine's `musl`'s DNS resolver.
+
+Using the `helper_image_flavor = "ubuntu"` option should resolve this.

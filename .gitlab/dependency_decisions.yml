@@ -21,13 +21,6 @@
     :versions: []
     :when: 2019-05-03 07:56:16.618717000 Z
 - - :license
-  - github.com/markelog/trie
-  - MIT
-  - :who: 
-    :why: 
-    :versions: []
-    :when: 2019-05-03 07:56:29.079395000 Z
-- - :license
   - github.com/howeyc/gopass
   - ISC
   - :who: 

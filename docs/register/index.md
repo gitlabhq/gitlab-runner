@@ -7,7 +7,10 @@ comments: false
 
 # Registering runners
 
-Registering a runner is the process that binds the runner with a GitLab instance.
+Registering a runner is the process that binds the runner with one or more GitLab instances.
+
+You can register multiple runners on the same host machine,
+each with a different configuration, by repeating the `register` command.
 
 ## Requirements
 
@@ -139,9 +142,6 @@ To register a runner under Windows:
    `docker`.
 1. If you entered `docker` as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
-
-If you'd like to register multiple runners on the same machine with different
-configurations repeat the `./gitlab-runner.exe register` command.
 
 ## FreeBSD
 

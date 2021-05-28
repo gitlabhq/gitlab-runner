@@ -1,13 +1,17 @@
+// +build integration
+
 package kubernetes_test
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,6 +56,8 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesReplaceEnvFeatureFlag":                     testKubernetesReplaceEnvFeatureFlag,
 		"testKubernetesReplaceMissingEnvVarFeatureFlag":           testKubernetesReplaceMissingEnvVarFeatureFlag,
 		"testKubernetesWithNonRootSecurityContext":                testKubernetesWithNonRootSecurityContext,
+		"testConfiguredBuildDirVolumeMountFeatureFlag":            testBuildDirVolumeMountFeatureFlag,
+		"testUserConfiguredBuildDirVolumeMountFeatureFlag":        testUserConfiguredBuildDirVolumeMountFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -517,6 +523,126 @@ func testKubernetesReplaceMissingEnvVarFeatureFlag(t *testing.T, featureFlagName
 	assert.Contains(t, err.Error(), "image pull failed: Failed to apply default image tag \"alpine:\"")
 }
 
+func testBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestDockerGitImage
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+		EmptyDirs: []common.KubernetesEmptyDir{
+			{
+				Name:      "build",
+				MountPath: "/builds",
+				Medium:    "Memory",
+			},
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
+func testUserConfiguredBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestDockerGitImage
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	build.Runner.BuildsDir = "/some/path"
+	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+		EmptyDirs: []common.KubernetesEmptyDir{
+			{
+				Name:      "build",
+				MountPath: "/some/path",
+				Medium:    "Memory",
+			},
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
+// TestLogDeletionAttach tests the outcome when the log files are all deleted
+func TestLogDeletionAttach(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	t.Skip("Log deletion test temporary skipped: issue https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27755")
+
+	tests := []struct {
+		stage            string
+		outputAssertions func(t *testing.T, out string, pod string)
+	}{
+		{
+			stage: "step_", // Any script the user defined
+			outputAssertions: func(t *testing.T, out string, pod string) {
+				assert.Contains(
+					t,
+					out,
+					"ERROR: Job failed: command terminated with exit code 100",
+				)
+			},
+		},
+		{
+			stage: string(common.BuildStagePrepare),
+			outputAssertions: func(t *testing.T, out string, pod string) {
+				assert.Contains(
+					t,
+					out,
+					"ERROR: Job failed: command terminated with exit code 100",
+				)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.stage, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(
+					"sleep 5000",
+				)
+			})
+			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
+
+			deletedPodNameCh := make(chan string)
+			defer buildtest.OnUserStage(build, func() {
+				client := getTestKubeClusterClient(t)
+				pods, err := client.CoreV1().Pods("default").List(metav1.ListOptions{
+					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+				})
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+				config, err := kubernetes.GetKubeClientConfig(new(common.KubernetesConfig))
+				require.NoError(t, err)
+				logsPath := fmt.Sprintf("/logs-%d-%d", build.JobInfo.ProjectID, build.JobResponse.ID)
+				opts := kubernetes.ExecOptions{
+					Namespace: pod.Namespace,
+					PodName:   pod.Name,
+					Client:    client,
+					Stdin:     true,
+					In:        strings.NewReader(fmt.Sprintf("rm -rf %s/*", logsPath)),
+					Out:       ioutil.Discard,
+					Command:   []string{"/bin/sh"},
+					Config:    config,
+					Executor:  &kubernetes.DefaultRemoteExecutor{},
+				}
+				err = opts.Run()
+				require.NoError(t, err)
+
+				deletedPodNameCh <- pod.Name
+			})()
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			require.Error(t, err)
+			assert.True(t, err != nil, "No error returned")
+
+			tt.outputAssertions(t, out, <-deletedPodNameCh)
+		})
+	}
+}
+
 // This test reproduces the bug reported in https://gitlab.com/gitlab-org/gitlab-runner/issues/2583
 func TestPrepareIssue2583(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
@@ -632,7 +758,7 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 			// It's not possible to get this kind of information on the legacy execution path.
 			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
 
-			deletedPodCh := make(chan string)
+			deletedPodNameCh := make(chan string)
 			defer buildtest.OnStage(build, tt.stage, func() {
 				client := getTestKubeClusterClient(t)
 				pods, err := client.CoreV1().Pods("default").List(metav1.ListOptions{
@@ -644,13 +770,13 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 				err = client.CoreV1().Pods("default").Delete(pod.Name, &metav1.DeleteOptions{})
 				require.NoError(t, err)
 
-				deletedPodCh <- pod.Name
+				deletedPodNameCh <- pod.Name
 			})()
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			assert.True(t, kubernetes.IsKubernetesPodNotFoundError(err), "expected err NotFound, but got %T", err)
 
-			tt.outputAssertions(t, out, <-deletedPodCh)
+			tt.outputAssertions(t, out, <-deletedPodNameCh)
 		})
 	}
 }

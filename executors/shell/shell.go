@@ -10,14 +10,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/kardianos/osext"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
@@ -62,106 +60,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	return nil
 }
 
-// TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6413
-func (s *executor) killAndWait(cmd *exec.Cmd, waitCh chan error) error {
-	for {
-		s.Debugln("Aborting command...")
-		helpers.KillProcessGroup(cmd)
-		select {
-		case <-time.After(time.Second):
-		case err := <-waitCh:
-			return err
-		}
-	}
-}
-
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	if s.Build.IsFeatureFlagOn(featureflags.ShellExecutorUseLegacyProcessKill) {
-		return s.runLegacy(cmd)
-	}
-
-	return s.run(cmd)
-}
-
-// TODO: Remove in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/issues/6413
-func (s *executor) runLegacy(cmd common.ExecutorCommand) error {
-	s.BuildLogger.Debugln("Using legacy command execution")
-	// Create execution command
-	c := exec.Command(s.BuildShell.Command, s.BuildShell.Arguments...)
-	if c == nil {
-		return errors.New("failed to generate execution command")
-	}
-
-	helpers.SetProcessGroup(c)
-	defer helpers.KillProcessGroup(c)
-
-	// Fill process environment variables
-	c.Env = append(os.Environ(), s.BuildShell.Environment...)
-	c.Stdout = s.Trace
-	c.Stderr = s.Trace
-
-	stdin, args, cleanup, err := s.shellScriptArgs(cmd, c.Args)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
-	c.Stdin = stdin
-	c.Args = args
-
-	// Start a process
-	err = c.Start()
-	if err != nil {
-		return fmt.Errorf("starting process: %w", err)
-	}
-
-	// Wait for process to finish
-	waitCh := make(chan error)
-	go func() {
-		err := c.Wait()
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			err = &common.BuildError{Inner: err, ExitCode: exitErr.ExitCode()}
-		}
-		waitCh <- err
-	}()
-
-	// Support process abort
-	select {
-	case err = <-waitCh:
-		return err
-	case <-cmd.Context.Done():
-		return s.killAndWait(c, waitCh)
-	}
-}
-
-func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (io.Reader, []string, func(), error) {
-	if !s.BuildShell.PassFile {
-		return strings.NewReader(cmd.Script), args, func() {}, nil
-	}
-
-	scriptDir, err := ioutil.TempDir("", "build_script")
-	if err != nil {
-		return nil, nil, func() {}, fmt.Errorf("creating tmp build script dir: %w", err)
-	}
-
-	cleanup := func() {
-		err := os.RemoveAll(scriptDir)
-		if err != nil {
-			s.BuildLogger.Warningln("Failed to remove build script directory", scriptDir, err)
-		}
-	}
-
-	scriptFile := filepath.Join(scriptDir, "script."+s.BuildShell.Extension)
-	err = ioutil.WriteFile(scriptFile, []byte(cmd.Script), 0700)
-	if err != nil {
-		return nil, nil, cleanup, fmt.Errorf("writing script file: %w", err)
-	}
-
-	return nil, append(args, scriptFile), cleanup, nil
-}
-
-func (s *executor) run(cmd common.ExecutorCommand) error {
 	s.BuildLogger.Debugln("Using new shell command execution")
 	cmdOpts := process.CommandOptions{
 		Env:                             append(os.Environ(), s.BuildShell.Environment...),
@@ -208,6 +107,32 @@ func (s *executor) run(cmd common.ExecutorCommand) error {
 		return newProcessKillWaiter(logger, s.Config.GetGracefulKillTimeout(), s.Config.GetForceKillTimeout()).
 			KillAndWait(c, waitCh)
 	}
+}
+
+func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (io.Reader, []string, func(), error) {
+	if !s.BuildShell.PassFile {
+		return strings.NewReader(cmd.Script), args, func() {}, nil
+	}
+
+	scriptDir, err := ioutil.TempDir("", "build_script")
+	if err != nil {
+		return nil, nil, func() {}, fmt.Errorf("creating tmp build script dir: %w", err)
+	}
+
+	cleanup := func() {
+		err := os.RemoveAll(scriptDir)
+		if err != nil {
+			s.BuildLogger.Warningln("Failed to remove build script directory", scriptDir, err)
+		}
+	}
+
+	scriptFile := filepath.Join(scriptDir, "script."+s.BuildShell.Extension)
+	err = ioutil.WriteFile(scriptFile, []byte(cmd.Script), 0700)
+	if err != nil {
+		return nil, nil, cleanup, fmt.Errorf("writing script file: %w", err)
+	}
+
+	return nil, append(args, scriptFile), cleanup, nil
 }
 
 func init() {

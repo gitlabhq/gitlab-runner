@@ -34,11 +34,11 @@ Is it possible to run GitLab Runner in debug/verbose mode. From a terminal, run:
 gitlab-runner --debug run
 ```
 
-## Enable debug mode logging in `config.toml`
+### Enable debug mode logging in `config.toml`
 
 Debug logging can be enabled in the [global section of the `config.toml`](../configuration/advanced-configuration.md#the-global-section) by setting the `log_level` setting to `debug`.
 
-## Enable debug mode logging for the Helm Chart
+### Enable debug mode logging for the Helm Chart
 
 If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configuring-gitlab-runner-using-the-helm-chart):
 
@@ -47,6 +47,29 @@ If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runn
 ## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-global-section
 ##
 logLevel: debug
+```
+
+## Configure DNS for a Docker executor runner
+
+When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container. 
+
+**Example:**
+
+GitLab service and GitLab Runner exist in two different networks that are bridged in two ways (for example, over the Internet and through a VPN). If the routing mechanism that the Runner uses to find the GitLab service queries DNS, the container's DNS configuration doesn't know to use the DNS service over the VPN and may default to the one provided over the Internet. This configuration would result in the following message:
+
+```shell
+Created fresh repository.
+++ echo 'Created fresh repository.'
+++ git -c 'http.userAgent=gitlab-runner 13.9.0 linux/amd64' fetch origin +da39a3ee5e6b4b0d3255bfef95601890afd80709:refs/pipelines/435345 +refs/heads/master:refs/remotes/origin/master --depth 50 --prune --quiet
+fatal: Authentication failed for 'https://gitlab.example.com/group/example-project.git/'
+```
+
+In this case, the authentication failure is caused by a service in between the Internet and the GitLab service. This service uses separate credentials, which the runner could circumvent if they used the DNS service over the VPN.
+
+You can tell Docker which DNS server to use by using the `dns` configuration in the `[runners.docker]` section of [the Runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnersdocker-section).
+
+```toml
+dns           = ["192.168.xxx.xxx","192.168.xxx.xxx"]
 ```
 
 ## I'm seeing `x509: certificate signed by unknown authority`

@@ -62,6 +62,11 @@ func (_m *MockExecutorProvider) Create() Executor {
 	return r0
 }
 
+// GetConfigInfo provides a mock function with given fields: input, output
+func (_m *MockExecutorProvider) GetConfigInfo(input *RunnerConfig, output *ConfigInfo) {
+	_m.Called(input, output)
+}
+
 // GetDefaultShell provides a mock function with given fields:
 func (_m *MockExecutorProvider) GetDefaultShell() string {
 	ret := _m.Called()

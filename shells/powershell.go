@@ -6,15 +6,19 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const (
+	kubernetesExecutor    = "kubernetes"
+	dockerExecutor        = "docker"
 	dockerWindowsExecutor = "docker-windows"
 
 	SNPwsh       = "pwsh"
@@ -33,6 +37,7 @@ type PsWriter struct {
 	indent        int
 	Shell         string
 	EOL           string
+	resolvePaths  bool
 }
 
 func stdinCmdArgs() []string {
@@ -128,12 +133,28 @@ func (p *PsWriter) buildCommand(command string, arguments ...string) string {
 	return "& " + strings.Join(list, " ")
 }
 
+func (p *PsWriter) resolvePath(path string) string {
+	if p.resolvePaths {
+		return fmt.Sprintf("$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%s)", psQuote(path))
+	}
+
+	return psQuote(p.fromSlash(path))
+}
+
 func (p *PsWriter) TmpFile(name string) string {
-	filePath := p.Absolute(filepath.Join(p.TemporaryPath, name))
+	if p.resolvePaths {
+		return p.Join(p.TemporaryPath, name)
+	}
+
+	filePath := p.Absolute(p.Join(p.TemporaryPath, name))
 	return p.fromSlash(filePath)
 }
 
 func (p *PsWriter) fromSlash(path string) string {
+	if p.resolvePaths {
+		return path
+	}
+
 	if p.Shell == SNPwsh {
 		// pwsh wants OS slash style, not necessarily backslashes
 		return filepath.FromSlash(path)
@@ -148,16 +169,13 @@ func (p *PsWriter) EnvVariableKey(name string) string {
 func (p *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := p.TmpFile(variable.Key)
-		p.Linef(
-			"New-Item -ItemType directory -Force -Path %s | out-null",
-			psQuote(p.fromSlash(p.TemporaryPath)),
-		)
+		p.MkDir(p.TemporaryPath)
 		p.Linef(
 			"[System.IO.File]::WriteAllText(%s, %s)",
-			psQuote(variableFile),
+			p.resolvePath(variableFile),
 			psQuoteVariable(variable.Value),
 		)
-		p.Linef("$%s=%s", variable.Key, psQuote(variableFile))
+		p.Linef("$%s=%s", variable.Key, p.resolvePath(variableFile))
 	} else {
 		p.Linef("$%s=%s", variable.Key, psQuoteVariable(variable.Value))
 	}
@@ -166,12 +184,12 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 }
 
 func (p *PsWriter) IfDirectory(path string) {
-	p.Linef("if(Test-Path %s -PathType Container) {", psQuote(p.fromSlash(path)))
+	p.Linef("if(Test-Path %s -PathType Container) {", p.resolvePath(path))
 	p.Indent()
 }
 
 func (p *PsWriter) IfFile(path string) {
-	p.Linef("if(Test-Path %s -PathType Leaf) {", psQuote(p.fromSlash(path)))
+	p.Linef("if(Test-Path %s -PathType Leaf) {", p.resolvePath(path))
 	p.Indent()
 }
 
@@ -211,23 +229,23 @@ func (p *PsWriter) EndIf() {
 }
 
 func (p *PsWriter) Cd(path string) {
-	p.Line("cd " + psQuote(p.fromSlash(path)))
+	p.Line("cd " + p.resolvePath(path))
 	p.checkErrorLevel()
 }
 
 func (p *PsWriter) MkDir(path string) {
-	p.Linef("New-Item -ItemType directory -Force -Path %s | out-null", psQuote(p.fromSlash(path)))
+	p.Linef("New-Item -ItemType directory -Force -Path %s | out-null", p.resolvePath(path))
 }
 
 func (p *PsWriter) MkTmpDir(name string) string {
-	dirPath := filepath.Join(p.TemporaryPath, name)
+	dirPath := p.Join(p.TemporaryPath, name)
 	p.MkDir(dirPath)
 
 	return dirPath
 }
 
 func (p *PsWriter) RmDir(path string) {
-	path = psQuote(p.fromSlash(path))
+	path = p.resolvePath(path)
 	p.Linef(
 		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) "+
 			"-and (Test-Path %s -PathType Container) ) {",
@@ -245,7 +263,7 @@ func (p *PsWriter) RmDir(path string) {
 }
 
 func (p *PsWriter) RmFile(path string) {
-	path = psQuote(p.fromSlash(path))
+	path = p.resolvePath(path)
 	p.Line(
 		"if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) " +
 			"-and (Test-Path " + path + " -PathType Leaf) ) {")
@@ -285,17 +303,26 @@ func (p *PsWriter) EmptyLine() {
 }
 
 func (p *PsWriter) Absolute(dir string) string {
+	if p.resolvePaths {
+		return dir
+	}
+
 	if filepath.IsAbs(dir) {
 		return dir
 	}
 
 	p.Linef("$CurrentDirectory = (Resolve-Path .%s).Path", string(os.PathSeparator))
-	return filepath.Join("$CurrentDirectory", dir)
+	return p.Join("$CurrentDirectory", dir)
 }
 
 func (p *PsWriter) Join(elem ...string) string {
-	newPath := filepath.Join(elem...)
-	return newPath
+	if p.resolvePaths {
+		// We rely on the resolve function and always use forward slashes
+		// when joining paths.
+		return path.Join(elem...)
+	}
+
+	return filepath.Join(elem...)
 }
 
 func (p *PsWriter) Finish(trace bool) string {
@@ -334,7 +361,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 	script := &common.ShellConfiguration{
 		Command:       b.Shell,
 		Arguments:     stdinCmdArgs(),
-		PassFile:      b.Shell != SNPwsh && info.Build.Runner.Executor != dockerWindowsExecutor,
+		PassFile:      !b.isStdinSupported(info),
 		Extension:     "ps1",
 		DockerCommand: PowershellDockerCmd(b.Shell),
 	}
@@ -346,11 +373,20 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 	return script, nil
 }
 
+func (b *PowerShell) isStdinSupported(info common.ShellScriptInfo) bool {
+	executor := info.Build.Runner.Executor
+
+	return executor == kubernetesExecutor ||
+		executor == dockerExecutor ||
+		executor == dockerWindowsExecutor
+}
+
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
 	w := &PsWriter{
 		Shell:         b.Shell,
 		EOL:           b.EOL,
 		TemporaryPath: info.Build.TmpProjectDir(),
+		resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
 	}
 
 	if buildStage == common.BuildStagePrepare {
