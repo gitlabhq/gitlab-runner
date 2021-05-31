@@ -48,11 +48,11 @@ star, smile, etc.). Some good tips about code reviews can be found in our
 
 After 7th at 23:59 (Pacific Time Zone) of each month, stable branch and RC1
 of the upcoming release (to be shipped on the 22nd) is created and deployed to GitLab.com.
-The stable branch is frozen at the most recent "qualifying commit" on master.
+The stable branch is frozen at the most recent "qualifying commit" on `main`.
 A "qualifying commit" is one that is pushed before the feature freeze cutoff time
 and that passes all CI jobs (green pipeline).
 
-Merge requests may still be merged into master during this
+Merge requests may still be merged into `main` during this
 period, but they will go into the _next_ release, unless they are manually
 cherry-picked into the stable branch.
 
@@ -207,8 +207,7 @@ Regressions should be considered high priority issues that should be solved as s
 
 ### Managing bugs
 
-**Prioritization:** We give higher priority to regressions on features that worked in the last recent monthly release and the current release candidates.
-The two scenarios below can [bypass the exception request in the release process](https://gitlab.com/gitlab-org/release/docs/blob/master/general/exception-request/process.md#after-the-7th), where the affected regression version matches the current monthly release version:
+**Prioritization:** We give higher priority to regressions on features that worked in the last recent monthly release and the current release candidates, for example:
 
 - A regression which worked in the **Last monthly release**
   - **Example:** In 11.0 we released a new `feature X` that is verified as working. Then in release 11.1 the feature no longer works, this is regression for 11.1. The issue should have the `regression:11.1` label.
@@ -332,7 +331,7 @@ support options. Also, have a look at the [contribution guidelines](https://docs
 for more information.
 
 You can read more about this policy in our
-[README.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/README.md#closing-issues)
+[README.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/README.md#closing-issues)
 ```
 
 ### Code format
@@ -379,5 +378,5 @@ might not make it into GitLab.
 We can only accept a merge request if all the tests are green. I've just
 restarted the build. If the tests are still not green after this restart and
 you're sure that is does not have anything to do with your code changes, please
-rebase with master to see if that solves the issue.
+rebase with main to see if that solves the issue.
 ```

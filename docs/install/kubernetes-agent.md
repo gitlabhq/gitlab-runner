@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 These instructions to install GitLab Runner assume the
 [GitLab Kubernetes Agent](https://docs.gitlab.com/ee/user/clusters/agent/index.html) is already configured.
 
-1. Review the possible [GitLab Runner chart YAML values](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
+1. Review the possible [GitLab Runner chart YAML values](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 1. Create a `runner-chart-values.yaml` file with the configuration that fits
    your needs, such as:
 

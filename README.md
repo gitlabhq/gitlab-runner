@@ -6,7 +6,7 @@ It runs tests and sends the results to GitLab.
 continuous integration service included with GitLab that coordinates the testing.
 The old name of this project was GitLab CI Multi Runner but please use "GitLab Runner" (without CI) from now on.
 
-[![Pipeline Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/master/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/master)
+[![Pipeline Status](https://gitlab.com/gitlab-org/gitlab-runner/badges/main/pipeline.svg)](https://gitlab.com/gitlab-org/gitlab-runner/commits/main)
 [![Go Report Card](https://goreportcard.com/badge/gitlab.com/gitlab-org/gitlab-runner)](https://goreportcard.com/report/gitlab.com/gitlab-org/gitlab-runner)
 
 ## Runner and GitLab CE/EE compatibility
@@ -39,7 +39,7 @@ It is up to a project maintainer to decide if an issue is actually a
 support/configuration question. Before closing the issue the maintainer
 should leave a reason why this is a support/configuration question, to make
 it clear to the issue author. They should also leave a comment using
-[our template](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/PROCESS.md#support-requests-and-configuration-questions)
+[our template](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/PROCESS.md#support-requests-and-configuration-questions)
 before closing the issue. The issue author has every right to disagree and
 reopen the issue for further discussion.
 

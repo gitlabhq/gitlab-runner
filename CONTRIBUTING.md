@@ -69,7 +69,7 @@ don't have the ability to support and [we welcome contributions to that discussi
 #### Merge Request titles
 
 When submitting a Merge Request please remember that we use the Merge Request titles to generate entries
-for the [`CHANGELOG.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CHANGELOG.md) file.
+for the [`CHANGELOG.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CHANGELOG.md) file.
 This one line will be the only thing a Runner administrator will see when reviewing
 the changelog prior to deciding if an upgrade should be made or not. The administrator may not check the
 MR description, list of changes, or diff which would give more context.

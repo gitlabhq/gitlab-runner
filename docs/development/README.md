@@ -239,7 +239,7 @@ If you need an IDE to edit and debug code, there are a few free suggestions you 
 GitLab Runner uses [Go Modules](https://github.com/golang/go/wiki/Modules) to manage
 its dependencies - they get checked into the repository under the `vendor/` directory
 
-Don't add dependency from upstream master branch when version tags are available.
+Don't add dependency from upstream default branch when version tags are available.
 
 ## Tests
 
@@ -266,7 +266,7 @@ To test the state of the build directives in test files, `make check_test_direct
 
 ## Developing for Windows on a non-windows environment
 
-We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/Vagrantfile)
+We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/tree/main/Vagrantfile)
 to help you run a Windows Server 2019 or Windows 10 instance, since we
 are using [multiple machines](https://www.vagrantup.com/docs/multi-machine) inside of Vagrant.
 
@@ -316,6 +316,6 @@ Which is especially tricky on Windows.
 Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
 
 1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-x86_64.tar.xz> and save to `out/docker/prebuilt-x86_64.tar.xz`
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/master/docker/prebuilt-arm.tar.xz> and save to `out/docker/prebuilt-arm.tar.xz`
+1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/main/docker/prebuilt-x86_64.tar.xz> and save to `out/docker/prebuilt-x86_64.tar.xz`
+1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/main/docker/prebuilt-arm.tar.xz> and save to `out/docker/prebuilt-arm.tar.xz`
 1. Execute `make docker` or check the Makefile how this command looks like
