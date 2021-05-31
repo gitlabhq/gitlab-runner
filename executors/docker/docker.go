@@ -161,13 +161,11 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 		Source:     file,
 		SourceName: "-",
 	}
-	options := types.ImageImportOptions{Tag: tag}
-
-	// TODO: Remove check in 14.0 https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26679
-	if e.Build.IsFeatureFlagOn(featureflags.ResetHelperImageEntrypoint) {
+	options := types.ImageImportOptions{
+		Tag: tag,
 		// NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
 		// See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
-		options.Changes = append(options.Changes, `ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`)
+		Changes: []string{`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`},
 	}
 
 	if err = e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
