@@ -42,23 +42,9 @@ type statePermutation struct {
 }
 
 func newStatePermutationFromBuild(build *common.Build) statePermutation {
-	state := build.CurrentState()
-
-	// the "finished" state was broken out into "success" and "failed",
-	// but our metrics are a public API, so to maintain backwards compatibility
-	// for now we convert these states back to "finished".
-	//
-	// DEPRECATED
-	// TODO: Remove in 14.0. For more details read
-	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26900
-	switch state {
-	case common.BuildRunRuntimeFailed, common.BuildRunRuntimeCanceled:
-		state = common.BuildRuntimeState("finished")
-	}
-
 	return statePermutation{
 		runner:        build.Runner.ShortDescription(),
-		buildState:    state,
+		buildState:    build.CurrentState(),
 		buildStage:    build.CurrentStage(),
 		executorStage: build.CurrentExecutorStage(),
 	}
