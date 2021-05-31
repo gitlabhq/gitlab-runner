@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This is the number of race conditions detected on master.
+# This is the number of race conditions detected on default branch.
 # This number is not allowed to increase, and it has to be lowered when we
 # fix existing race conditions
 max=24

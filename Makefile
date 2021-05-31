@@ -16,7 +16,7 @@ PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
-S3_UPLOAD_PATH ?= master
+S3_UPLOAD_PATH ?= main
 
 # Keep in sync with docs/install/linux-repository.md
 DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
@@ -328,7 +328,7 @@ generate_changelog: $(GITLAB_CHANGELOG)
 
 check-tags-in-changelog:
 	# Looking for tags in CHANGELOG
-	@git status | grep "On branch master" 2>&1 >/dev/null || echo "Check should be done on master branch only. Skipping."
+	@git status | grep "On branch main" 2>&1 >/dev/null || echo "Check should be done on main branch only. Skipping."
 	@for tag in $$(git tag | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | sed 's|v||' | sort -g); do \
 		state="MISSING"; \
 		grep "^v $$tag" CHANGELOG.md 2>&1 >/dev/null; \

@@ -26,7 +26,7 @@ const (
 
 	repoSHA       = "91956efe32fb7bef54f378d90c9bd74c19025872"
 	repoBeforeSHA = "ca50079dac5293292f83a4d454922ba8db44e7a3"
-	repoRefName   = "master"
+	repoRefName   = "main"
 
 	repoLFSSHA       = "2371dd05e426fca09b0d2ec5d9ed757559035e2f"
 	repoLFSBeforeSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"

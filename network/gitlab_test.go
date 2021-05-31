@@ -363,7 +363,7 @@ func getRequestJobResponse() map[string]interface{} {
 
 	gitInfo := make(map[string]interface{})
 	gitInfo["repo_url"] = "https://gitlab-ci-token:testTokenHere1234@gitlab.example.com/test/test-project.git"
-	gitInfo["ref"] = "master"
+	gitInfo["ref"] = "main"
 	gitInfo["sha"] = "abcdef123456"
 	gitInfo["before_sha"] = "654321fedcba"
 	gitInfo["ref_type"] = "branch"
@@ -376,7 +376,7 @@ func getRequestJobResponse() map[string]interface{} {
 	variables := make([]map[string]interface{}, 1)
 	variables[0] = make(map[string]interface{})
 	variables[0]["key"] = "CI_REF_NAME"
-	variables[0]["value"] = "master"
+	variables[0]["value"] = "main"
 	variables[0]["public"] = true
 	variables[0]["file"] = true
 	variables[0]["raw"] = true
@@ -548,7 +548,7 @@ func TestRequestJob(t *testing.T) {
 
 	require.Len(t, res.Variables, 1)
 	assert.Equal(t, "CI_REF_NAME", res.Variables[0].Key)
-	assert.Equal(t, "master", res.Variables[0].Value)
+	assert.Equal(t, "main", res.Variables[0].Value)
 	assert.True(t, res.Variables[0].Public)
 	assert.True(t, res.Variables[0].File)
 	assert.True(t, res.Variables[0].Raw)

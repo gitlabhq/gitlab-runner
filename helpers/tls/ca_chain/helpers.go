@@ -1,4 +1,4 @@
-// Inspired by https://github.com/zakjan/cert-chain-resolver/blob/master/certUtil/io.go
+// Inspired by https://github.com/zakjan/cert-chain-resolver/blob/1.0.3/certUtil/io.go
 // which is licensed on a MIT license.
 //
 // Shout out to Jan Žák (http://zakjan.cz) original author of `certUtil` package and other

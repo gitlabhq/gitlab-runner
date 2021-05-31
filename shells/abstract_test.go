@@ -578,7 +578,7 @@ func TestGitCleanFlags(t *testing.T) {
 			shell := AbstractShell{}
 
 			const dummySha = "01234567abcdef"
-			const dummyRef = "master"
+			const dummyRef = "main"
 
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
@@ -631,7 +631,7 @@ func TestGitFetchFlags(t *testing.T) {
 			shell := AbstractShell{}
 
 			const dummySha = "01234567abcdef"
-			const dummyRef = "master"
+			const dummyRef = "main"
 			const dummyProjectDir = "./"
 
 			build := &common.Build{

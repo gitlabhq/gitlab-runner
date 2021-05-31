@@ -1502,7 +1502,7 @@ func TestChownAndUmaskUsage(t *testing.T) {
 		RepoURL:   "https://gitlab.com/gitlab-org/ci-cd/tests/file-permissions.git",
 		Sha:       "050d238e16c5962fc16e49ab1b6be1be39778b6c",
 		BeforeSha: "0000000000000000000000000000000000000000",
-		Ref:       "master",
+		Ref:       "main",
 		RefType:   common.RefTypeBranch,
 		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
 	}

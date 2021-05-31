@@ -1,8 +1,5 @@
 package parallels
 
-// Large part of this source is taken from
-// https://github.com/mitchellh/packer/blob/master/builder/parallels/common
-
 import (
 	"bytes"
 	"errors"

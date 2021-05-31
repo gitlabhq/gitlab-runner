@@ -46,10 +46,10 @@ PUSH_TO_ECR_PUBLIC=${PUSH_TO_ECR_PUBLIC:-false}
 
 ref_tag="${CI_COMMIT_TAG}"
 if [[ -z "${ref_tag}" ]]; then
-    ref_tag=${CI_COMMIT_REF_SLUG:-master}
+    ref_tag=${CI_COMMIT_REF_SLUG:-main}
 fi
 
-if [[ "${ref_tag}" == "master" ]]; then
+if [[ "${ref_tag}" == "main" ]]; then
     ref_tag=bleeding
 fi
 
