@@ -41,7 +41,7 @@ installed in the same machine:
 1. [Install GitLab Runner](../install/index.md)
 1. [Install Docker Machine](https://docs.docker.com/machine/install-machine/)
 1. Optionally but recommended, prepare a
-   [proxy container registry and a cache server](../install/registry_and_cache_servers.md)
+   [proxy container registry and a cache server](../configuration/speed_up_job_execution.md)
    to be used with the autoscaled runners
 
 If you need to use any virtualization/cloud providers that aren't handled by

@@ -53,4 +53,4 @@ You can also view installation instructions in GitLab by going to your project's
 ## Autoscale
 
 - [Install in autoscaling mode using Docker machine](../executors/docker_machine.md)
-- [Install the registry and cache servers](registry_and_cache_servers.md)
+- [Install the registry and cache servers](../configuration/speed_up_job_execution.md)
