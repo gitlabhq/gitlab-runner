@@ -44,7 +44,7 @@ RUN mkdir -p ~/.docker/cli-plugins && \
     chmod a+x ~/.docker/cli-plugins/docker-buildx
 
 ARG GIT_LFS_VERSION
-ARG GIT_LFS_256_CHECKSUM
+ARG GIT_LFS_AMD64_CHECKSUM
 
 COPY dockerfiles/ci/install_git_lfs /tmp/
 RUN /tmp/install_git_lfs
