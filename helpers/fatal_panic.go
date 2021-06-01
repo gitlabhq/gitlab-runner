@@ -18,7 +18,7 @@ func (s *fatalLogHook) Levels() []logrus.Level {
 }
 
 func (s *fatalLogHook) Fire(e *logrus.Entry) error {
-	_, _ = fmt.Fprint(s.output, e.Message)
+	_, _ = fmt.Fprintln(s.output, e.Message)
 
 	panic(e)
 }
