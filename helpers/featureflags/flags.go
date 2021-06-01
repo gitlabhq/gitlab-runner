@@ -87,7 +87,7 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            GitLabRegistryHelperImage,
-		DefaultValue:    false,
+		DefaultValue:    true,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "Use GitLab Runner helper image for the Docker and " +
