@@ -1882,3 +1882,71 @@ func TestSecretsResolving(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildSupportedFailureReasons(t *testing.T) {
+	supportedReason := JobFailureReason("supported")
+	unsupportedReason := JobFailureReason("unsupported")
+
+	tests := map[string]struct {
+		supported      []JobFailureReason
+		reason         JobFailureReason
+		expectedReason JobFailureReason
+	}{
+		"empty list with widely supported reason": {
+			supported:      nil,
+			reason:         ScriptFailure,
+			expectedReason: ScriptFailure,
+		},
+		"empty list with unsupported reason": {
+			supported:      nil,
+			reason:         unsupportedReason,
+			expectedReason: UnknownFailure,
+		},
+		"populated list with widely supported reason": {
+			supported:      []JobFailureReason{supportedReason},
+			reason:         ScriptFailure,
+			expectedReason: ScriptFailure,
+		},
+		"populated list with supported reason": {
+			supported:      []JobFailureReason{supportedReason},
+			reason:         supportedReason,
+			expectedReason: supportedReason,
+		},
+		"populated list with unsupported reason": {
+			supported:      []JobFailureReason{supportedReason},
+			reason:         unsupportedReason,
+			expectedReason: UnknownFailure,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			b := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Features: GitlabFeatures{
+						FailureReasons: tc.supported,
+					},
+				},
+			}
+			b.logger = NewBuildLogger(nil, b.Log())
+
+			err := &BuildError{
+				FailureReason: tc.reason,
+			}
+
+			trace := new(MockJobTrace)
+			defer trace.AssertExpectations(t)
+			trace.On(
+				"Fail",
+				err,
+				JobFailureData{
+					Reason:   tc.expectedReason,
+					ExitCode: 0,
+				},
+			).Once()
+
+			b.setTraceStatus(trace, err)
+		})
+	}
+}

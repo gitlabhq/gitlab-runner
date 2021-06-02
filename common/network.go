@@ -29,6 +29,7 @@ const (
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
+	UnknownFailure      JobFailureReason = "unknown_failure"
 	// JobCanceled is only internal to runner, and not used inside of rails.
 	JobCanceled JobFailureReason = "job_canceled"
 )
@@ -336,7 +337,8 @@ type Dependency struct {
 type Dependencies []Dependency
 
 type GitlabFeatures struct {
-	TraceSections bool `json:"trace_sections"`
+	TraceSections  bool               `json:"trace_sections"`
+	FailureReasons []JobFailureReason `json:"failure_reasons"`
 }
 
 type JobResponse struct {
