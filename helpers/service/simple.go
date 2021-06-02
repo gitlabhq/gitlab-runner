@@ -6,13 +6,19 @@ import (
 	"os/signal"
 	"syscall"
 
-	service "github.com/ayufan/golang-kardianos-service"
+	"github.com/kardianos/service"
 )
 
 var (
 	// ErrNotSupported is returned when specific feature is not supported.
 	ErrNotSupported = errors.New("not supported")
 )
+
+//nolint:deadcode
+type stopStarter interface {
+	Start(service.Service) error
+	Stop(service.Service) error
+}
 
 type SimpleService struct {
 	i service.Interface
@@ -65,8 +71,8 @@ func (s *SimpleService) Uninstall() error {
 
 // Status returns nil if the given service is running.
 // Will return an error if the service is not running or is not present.
-func (s *SimpleService) Status() error {
-	return ErrNotSupported
+func (s *SimpleService) Status() (service.Status, error) {
+	return service.StatusUnknown, ErrNotSupported
 }
 
 // Logger opens and returns a system logger. If the user program is running
@@ -87,4 +93,10 @@ func (s *SimpleService) SystemLogger(errs chan<- error) (service.Logger, error) 
 // otherwise the name.
 func (s *SimpleService) String() string {
 	return "SimpleService"
+}
+
+// Platform displays the name of the system that manages the service.
+// In most cases this will be the same as service.Platform().
+func (s *SimpleService) Platform() string {
+	return service.Platform()
 }

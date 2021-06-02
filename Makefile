@@ -178,7 +178,6 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
-	$(MOCKERY) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
 	$(MOCKERY) -dir=./network -name='requester' -inpkg
 	$(MOCKERY) -dir=./helpers -all -inpkg
 	$(MOCKERY) -dir=./executors/docker -all -inpkg

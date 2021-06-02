@@ -59,14 +59,11 @@
 //			logger.Error(err)
 //		}
 //	}
-package service
+package service // import "github.com/kardianos/service"
 
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-
-	"github.com/kardianos/osext"
 )
 
 const (
@@ -78,10 +75,34 @@ const (
 	optionUserServiceDefault   = false
 	optionSessionCreate        = "SessionCreate"
 	optionSessionCreateDefault = false
+	optionLogOutput            = "LogOutput"
+	optionLogOutputDefault     = false
+	optionPrefix               = "Prefix"
+	optionPrefixDefault        = "application"
 
-	optionRunWait      = "RunWait"
-	optionReloadSignal = "ReloadSignal"
-	optionPIDFile      = "PIDFile"
+	optionRunWait            = "RunWait"
+	optionReloadSignal       = "ReloadSignal"
+	optionPIDFile            = "PIDFile"
+	optionLimitNOFILE        = "LimitNOFILE"
+	optionLimitNOFILEDefault = -1 // -1 = don't set in configuration
+	optionRestart            = "Restart"
+
+	optionSuccessExitStatus = "SuccessExitStatus"
+
+	optionSystemdScript = "SystemdScript"
+	optionSysvScript    = "SysvScript"
+	optionUpstartScript = "UpstartScript"
+	optionLaunchdConfig = "LaunchdConfig"
+)
+
+// Status represents service status as an byte value
+type Status byte
+
+// Status of service represented as an byte
+const (
+	StatusUnknown Status = iota // Status is unable to be determined due to an error or it was not installed.
+	StatusRunning
+	StatusStopped
 )
 
 // Config provides the setup for a Service. The Name field is required.
@@ -97,7 +118,13 @@ type Config struct {
 	Executable string
 
 	// Array of service dependencies.
-	// Not yet implemented on Linux or OS X.
+	// Not yet fully implemented on Linux or OS X:
+	//  1. Support linux-systemd dependencies, just put each full line as the
+	//     element of the string array, such as
+	//     "After=network.target syslog.target"
+	//     "Requires=syslog.target"
+	//     Note, such lines will be directly appended into the [Unit] of
+	//     the generated service config file, will not check their correctness.
 	Dependencies []string
 
 	// The following fields are not supported on Windows.
@@ -106,22 +133,28 @@ type Config struct {
 
 	// System specific options.
 	//  * OS X
-	//    - KeepAlive     bool (true)
-	//    - RunAtLoad     bool (false)
-	//    - UserService   bool (false) - Install as a current user service.
-	//    - SessionCreate bool (false) - Create a full user session.
+	//    - LaunchdConfig string ()      - Use custom launchd config
+	//    - KeepAlive     bool   (true)
+	//    - RunAtLoad     bool   (false)
+	//    - UserService   bool   (false) - Install as a current user service.
+	//    - SessionCreate bool   (false) - Create a full user session.
 	//  * POSIX
-	//    - RunWait      func() (wait for SIGNAL) - Do not install signal but wait for this function to return.
-	//    - ReloadSignal string () [USR1, ...] - Signal to send on reaload.
-	//    - PIDFile     string () [/run/prog.pid] - Location of the PID file.
-	Option KeyValue
-}
+	//    - SystemdScript string ()                 - Use custom systemd script
+	//    - UpstartScript string ()                 - Use custom upstart script
+	//    - SysvScript    string ()                 - Use custom sysv script
+	//    - RunWait       func() (wait for SIGNAL)  - Do not install signal but wait for this function to return.
+	//    - ReloadSignal  string () [USR1, ...]     - Signal to send on reaload.
+	//    - PIDFile       string () [/run/prog.pid] - Location of the PID file.
+	//    - LogOutput     bool   (false)            - Redirect StdErr & StandardOutPath to files.
+	//    - Restart       string (always)           - How shall service be restarted.
+	//    - SuccessExitStatus string ()             - The list of exit status that shall be considered as successful,
+	//                                                in addition to the default ones.
+	//  * Linux (systemd)
+	//    - LimitNOFILE	 int - Maximum open files (ulimit -n) (https://serverfault.com/questions/628610/increasing-nproc-for-processes-launched-by-systemd-on-centos-7)
+	//  * Windows
+	//    - DelayedAutoStart  bool (false) - after booting start this service after some delay
 
-func (c *Config) execPath() (string, error) {
-	if len(c.Executable) != 0 {
-		return filepath.Abs(c.Executable)
-	}
-	return osext.Executable()
+	Option KeyValue
 }
 
 var (
@@ -130,14 +163,12 @@ var (
 )
 
 var (
-	// ErrNameFieldRequired is returned when Conifg.Name is empty.
+	// ErrNameFieldRequired is returned when Config.Name is empty.
 	ErrNameFieldRequired = errors.New("Config.Name field is required.")
 	// ErrNoServiceSystemDetected is returned when no system was detected.
 	ErrNoServiceSystemDetected = errors.New("No service system detected.")
-	// ErrServiceIsNotInstalled is returned when the service is not installed
-	ErrServiceIsNotInstalled = errors.New("Service is not installed.")
-	// ErrServiceIsNotRunning is returned when the service is not running
-	ErrServiceIsNotRunning = errors.New("Service is not running.")
+	// ErrNotInstalled is returned when the service is not installed
+	ErrNotInstalled = errors.New("the service is not installed")
 )
 
 // New creates a new service based on a service interface and configuration.
@@ -199,7 +230,7 @@ func (kv KeyValue) float64(name string, defaultValue float64) float64 {
 	return defaultValue
 }
 
-// funcSingle returns the value of the given name, assuming the value is a float64.
+// funcSingle returns the value of the given name, assuming the value is a func().
 // If the value isn't found or is not of the type, the defaultValue is returned.
 func (kv KeyValue) funcSingle(name string, defaultValue func()) func() {
 	if v, found := kv[name]; found {
@@ -286,7 +317,7 @@ type System interface {
 //   8. Service.Run returns.
 //   9. User program should quickly exit.
 type Interface interface {
-	// Start provides a place to initiate the service. The service doesn't not
+	// Start provides a place to initiate the service. The service doesn't
 	// signal a completed start until after this function returns, so the
 	// Start function must not take more then a few seconds at most.
 	Start(s Service) error
@@ -295,6 +326,16 @@ type Interface interface {
 	// It should not take more then a few seconds to execute.
 	// Stop should not call os.Exit directly in the function.
 	Stop(s Service) error
+}
+
+// Shutdowner represents a service interface for a program that differentiates between "stop" and
+// "shutdown". A shutdown is triggered when the whole box (not just the service) is stopped.
+type Shutdowner interface {
+	Interface
+	// Shutdown provides a place to clean up program execution when the system is being shutdown.
+	// It is essentially the same as Stop but for the case where machine is being shutdown/restarted
+	// instead of just normally stopping the service. Stop won't be called when Shutdown is.
+	Shutdown(s Service) error
 }
 
 // TODO: Add Configure to Service interface.
@@ -323,10 +364,6 @@ type Service interface {
 	// greater rights. Will return an error if the service is not present.
 	Uninstall() error
 
-	// Status returns nil if the given service is running.
-	// Will return an error if the service is not running or is not present.
-	Status() error
-
 	// Opens and returns a system logger. If the user program is running
 	// interactively rather then as a service, the returned logger will write to
 	// os.Stderr. If errs is non-nil errors will be sent on errs as well as
@@ -340,10 +377,17 @@ type Service interface {
 	// String displays the name of the service. The display name if present,
 	// otherwise the name.
 	String() string
+
+	// Platform displays the name of the system that manages the service.
+	// In most cases this will be the same as service.Platform().
+	Platform() string
+
+	// Status returns the current service status.
+	Status() (Status, error)
 }
 
 // ControlAction list valid string texts to use in Control.
-var ControlAction = [6]string{"start", "stop", "restart", "install", "uninstall", "status"}
+var ControlAction = [5]string{"start", "stop", "restart", "install", "uninstall"}
 
 // Control issues control functions to the service from a given action string.
 func Control(s Service, action string) error {
@@ -359,8 +403,6 @@ func Control(s Service, action string) error {
 		err = s.Install()
 	case ControlAction[4]:
 		err = s.Uninstall()
-	case ControlAction[5]:
-		err = s.Status()
 	default:
 		err = fmt.Errorf("Unknown action %s", action)
 	}

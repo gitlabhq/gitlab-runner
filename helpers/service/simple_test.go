@@ -8,8 +8,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/service/mocks"
 )
 
 var errExample = errors.New("example error")
@@ -18,7 +16,7 @@ func TestStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mi := &mocks.Interface{}
+	mi := &mockStopStarter{}
 	s := &SimpleService{i: mi}
 
 	mi.On("Start", s).Return(errExample)

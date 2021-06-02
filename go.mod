@@ -7,7 +7,6 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.11.1-0.20201209121048-6df5d9af221d
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/go-winio v0.4.12 // indirect
-	github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
 	github.com/bmatcuk/doublestar v1.3.0
 	github.com/boumenot/gocover-cobertura v1.1.0
 	github.com/containerd/containerd v1.4.3 // indirect
@@ -35,6 +34,7 @@ require (
 	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
+	github.com/kardianos/service v1.2.0
 	github.com/klauspost/compress v1.11.6 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/klauspost/pgzip v1.2.5
