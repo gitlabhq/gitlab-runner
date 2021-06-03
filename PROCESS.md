@@ -262,7 +262,7 @@ them - they will be planned for one of the upcoming releases.
 
 All the technical details of how the Runner is released can be found in
 the [Release
-Checklist](https://gitlab.com/gitlab-org/ci-cd/runner-release-helper/tree/master/templates/issues)
+Checklist](https://gitlab.com/gitlab-org/ci-cd/runner-release-helper/-/tree/main/templates/issues)
 which is split into multiple templates.
 
 ### Security release
