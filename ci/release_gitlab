@@ -31,6 +31,7 @@ release=$(cat <<EOS
       { "name": "linux amd64", "url": "$s3/binaries/gitlab-runner-linux-amd64" },
       { "name": "linux arm", "url": "$s3/binaries/gitlab-runner-linux-arm" },
       { "name": "linux s390x", "url": "$s3/binaries/gitlab-runner-linux-s390x" },
+      { "name": "linux ppc64le", "url": "$s3/binaries/gitlab-runner-linux-ppc64le" },
       { "name": "macOS", "url": "$s3/binaries/gitlab-runner-darwin-amd64" },
       { "name": "Windows 64 bits", "url": "$s3/binaries/gitlab-runner-windows-amd64.zip" },
       { "name": "Windows 32 bits", "url": "$s3/binaries/gitlab-runner-windows-386.zip" },
@@ -40,12 +41,14 @@ release=$(cat <<EOS
       { "name": "deb armhf", "url": "$s3/deb/gitlab-runner_armhf.deb" },
       { "name": "deb aarch64", "url": "$s3/deb/gitlab-runner_aarch64.deb" },
       { "name": "deb arm64", "url": "$s3/deb/gitlab-runner_arm64.deb" },
+      { "name": "deb ppc64le", "url": "$s3/deb/gitlab-runner_ppc64le.deb" },
       { "name": "rpm amd64", "url": "$s3/rpm/gitlab-runner_amd64.rpm" },
       { "name": "rpm i686", "url": "$s3/rpm/gitlab-runner_i686.rpm" },
       { "name": "rpm arm", "url": "$s3/rpm/gitlab-runner_arm.rpm" },
       { "name": "rpm armhf", "url": "$s3/rpm/gitlab-runner_armhf.rpm" },
       { "name": "rpm arm64", "url": "$s3/rpm/gitlab-runner_arm64.rpm" },
       { "name": "rpm aarch64", "url": "$s3/rpm/gitlab-runner_aarch64.rpm" },
+      { "name": "rpm ppc64le", "url": "$s3/rpm/gitlab-runner_ppc64le.rpm" },
       { "name": "others", "url": "$s3/index.html" },
       { "name": "docs", "url": "https://docs.gitlab.com/runner/" }
     ]
