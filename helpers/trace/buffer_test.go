@@ -8,8 +8,6 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -211,27 +209,6 @@ func BenchmarkBuffer10k(b *testing.B) {
 			b.SetBytes(int64(len(logLineByte) * N))
 			for i := 0; i < N; i++ {
 				_, _ = buffer.Write(logLineByte)
-			}
-			buffer.Finish()
-		}()
-	}
-}
-
-func BenchmarkBuffer10kWithURLScrub(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		func() {
-			buffer, err := New()
-			require.NoError(b, err)
-			defer buffer.Close()
-
-			buffer.SetLimit(math.MaxInt64)
-			buffer.SetMasked([]string{"hello"})
-
-			const N = 10000
-			b.ReportAllocs()
-			b.SetBytes(int64(len(logLineByte) * N))
-			for i := 0; i < N; i++ {
-				_, _ = buffer.Write([]byte(url_helpers.ScrubSecrets(logLineStr)))
 			}
 			buffer.Finish()
 		}()

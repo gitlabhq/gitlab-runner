@@ -54,6 +54,7 @@ func (b *Buffer) SetMasked(values []string) {
 	}
 
 	defaultTransformers := []transform.Transformer{
+		newSensitiveURLParamTransform(),
 		encoding.Replacement.NewEncoder(),
 	}
 
