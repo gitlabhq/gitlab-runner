@@ -55,16 +55,16 @@ To install GitLab Runner:
    install a specific version:
 
    NOTE:
-   Debian buster users should [disable skel](#disable-skel) to prevent
-   [No such file or directory Job
-   failures](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)
+   [Starting with GitLab Runner 14.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4845)
+   the `skel` directory usage is [disabled](#disable-skel) by default to prevent
+   [`No such file or directory` job failures](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)
 
    ```shell
    # For Debian/Ubuntu/Mint
-   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E apt-get install gitlab-runner
+   sudo -E apt-get install gitlab-runner
 
    # For RHEL/CentOS/Fedora
-   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E yum install gitlab-runner
+   sudo -E yum install gitlab-runner
    ```
 
 1. To install a specific version of GitLab Runner:
@@ -72,11 +72,11 @@ To install GitLab Runner:
    ```shell
    # for DEB based systems
    apt-cache madison gitlab-runner
-   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E apt-get install gitlab-runner=10.0.0
+   sudo -E apt-get install gitlab-runner=10.0.0
 
    # for RPM based systems
    yum list gitlab-runner --showduplicates | sort -r
-   export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E yum install gitlab-runner-10.0.0-1
+   sudo -E yum install gitlab-runner-10.0.0-1
    ```
 
 1. [Register a runner](../register/index.md)
@@ -129,23 +129,33 @@ packages](linux-manually.md#using-debrpm-package) if necessary.
 
 ## Disable `skel`
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379) in GitLab 12.10.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379) in GitLab Runner 12.10.
+> - [Set to `true` by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4845) in GitLab Runner 14.0.
 
 Sometimes the default [skeleton (`skel`) directory](https://www.thegeekdiary.com/understanding-the-etc-skel-directory-in-linux/)
 causes [issues for GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449),
-and it fails to run a job. When installing GitLab Runner, set the environment variable
-`GITLAB_RUNNER_DISABLE_SKEL` to `true` before you install the package. This will create
-the `$HOME` directory without the files inside of `skel`:
+and it fails to run a job.
 
-For example:
+In GitLab Runner 12.10 we've added support for a special
+variable - `GITLAB_RUNNER_DISABLE_SKEL` - that when set to `true` is preventing usage of `skel`
+when creating the `$HOME` directory of the newly created user.
+
+Starting with GitLab Runner 14.0 `GITLAB_RUNNER_DISABLE_SKEL` is being set to `true` by default.
+
+If for any reason it's needed that `skel` directory will be used to populate the newly
+created `$HOME` directory, the `GITLAB_RUNNER_DISABLE_SKEL` variable should be set explicitly
+to `false` before package installation. For example:
 
 ```shell
 # For Debian/Ubuntu/Mint
-export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E apt-get install gitlab-runner
+export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E apt-get install gitlab-runner
 
 # For RHEL/CentOS/Fedora
-export GITLAB_RUNNER_DISABLE_SKEL=true; sudo -E yum install gitlab-runner
+export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner
 ```
+
+Please note, that shell configuration added to the `$HOME` directory with the usage of `skel` may
+interfere with the job execution and introduce unexpected problems like the ones mentioned above.
 
 ## Upgrading to GitLab Runner 10
 
