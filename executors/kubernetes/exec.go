@@ -93,7 +93,8 @@ type AttachOptions struct {
 
 // Run executes a validated remote execution against a pod.
 func (p *AttachOptions) Run() error {
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.PodName, metav1.GetOptions{})
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(context.TODO(), p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
@@ -159,7 +160,8 @@ type ExecOptions struct {
 
 // Run executes a validated remote execution against a pod.
 func (p *ExecOptions) Run() error {
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.PodName, metav1.GetOptions{})
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(context.TODO(), p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
@@ -176,17 +178,16 @@ func (p *ExecOptions) Run() error {
 		p.ContainerName = pod.Spec.Containers[0].Name
 	}
 
-	return p.executeRequest(context.Background())
+	return p.executeRequest()
 }
 
-func (p *ExecOptions) executeRequest(ctx context.Context) error {
+func (p *ExecOptions) executeRequest() error {
 	req := p.Client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.PodName).
 		Namespace(p.Namespace).
 		SubResource("exec").
-		Param("container", p.ContainerName).
-		Context(ctx)
+		Param("container", p.ContainerName)
 
 	var stdin io.Reader
 	if p.Stdin {

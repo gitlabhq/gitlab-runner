@@ -1633,6 +1633,7 @@ func TestPrepare(t *testing.T) {
 				},
 			}
 
+			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
 				Config:  test.RunnerConfig,
 				Build:   test.Build,
@@ -3510,7 +3511,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 	assert.Equal(t, pod.Name, s.pod)
 	assert.Equal(t, pod.Namespace, s.namespace)
 
-	err := s.Stream(context.Background(), int64(offset), output)
+	err := s.Stream(int64(offset), output)
 	assert.ErrorIs(t, err, abortErr)
 }
 

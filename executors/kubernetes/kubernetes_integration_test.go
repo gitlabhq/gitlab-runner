@@ -434,7 +434,7 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	}
 
 	client := getTestKubeClusterClient(t)
-	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
+	secrets, err := client.CoreV1().Secrets("default").List(context.Background(), metav1.ListOptions{})
 	require.NoError(t, err)
 
 	build := getTestBuild(t, func() (common.JobResponse, error) {
@@ -608,9 +608,12 @@ func TestLogDeletionAttach(t *testing.T) {
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
 				client := getTestKubeClusterClient(t)
-				pods, err := client.CoreV1().Pods("default").List(metav1.ListOptions{
-					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-				})
+				pods, err := client.
+					CoreV1().
+					Pods("default").
+					List(context.Background(), metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					})
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
@@ -674,6 +677,7 @@ func TestPrepareIssue2583(t *testing.T) {
 
 	e := kubernetes.NewDefaultExecutorForTest()
 
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 	prepareOptions := common.ExecutorPrepareOptions{
 		Config:  runnerConfig,
 		Build:   build,
@@ -761,13 +765,19 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnStage(build, tt.stage, func() {
 				client := getTestKubeClusterClient(t)
-				pods, err := client.CoreV1().Pods("default").List(metav1.ListOptions{
-					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-				})
+				pods, err := client.CoreV1().Pods("default").List(
+					context.Background(),
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
-				err = client.CoreV1().Pods("default").Delete(pod.Name, &metav1.DeleteOptions{})
+				err = client.
+					CoreV1().
+					Pods("default").
+					Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
 				require.NoError(t, err)
 
 				deletedPodNameCh <- pod.Name
