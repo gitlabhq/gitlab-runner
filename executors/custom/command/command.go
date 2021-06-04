@@ -25,6 +25,10 @@ type Command interface {
 var newProcessKillWaiter = process.NewOSKillWait
 var newCommander = process.NewOSCmd
 
+type Options struct {
+	JobResponseFile string
+}
+
 type command struct {
 	context context.Context
 	cmd     process.Commander
@@ -37,26 +41,33 @@ type command struct {
 	forceKillTimeout    time.Duration
 }
 
-func New(ctx context.Context, executable string, args []string, options process.CommandOptions) Command {
+func New(
+	ctx context.Context,
+	executable string,
+	args []string,
+	cmdOpts process.CommandOptions,
+	options Options,
+) Command {
 	defaultVariables := map[string]string{
-		"TMPDIR":                          options.Dir,
+		"TMPDIR":                          cmdOpts.Dir,
 		api.BuildFailureExitCodeVariable:  strconv.Itoa(BuildFailureExitCode),
 		api.SystemFailureExitCodeVariable: strconv.Itoa(SystemFailureExitCode),
+		api.JobResponseFileVariable:       options.JobResponseFile,
 	}
 
 	env := os.Environ()
 	for key, value := range defaultVariables {
 		env = append(env, fmt.Sprintf("%s=%s", key, value))
 	}
-	options.Env = append(env, options.Env...)
+	cmdOpts.Env = append(env, cmdOpts.Env...)
 
 	return &command{
 		context:             ctx,
-		cmd:                 newCommander(executable, args, options),
+		cmd:                 newCommander(executable, args, cmdOpts),
 		waitCh:              make(chan error),
-		logger:              options.Logger,
-		gracefulKillTimeout: options.GracefulKillTimeout,
-		forceKillTimeout:    options.ForceKillTimeout,
+		logger:              cmdOpts.Logger,
+		gracefulKillTimeout: cmdOpts.GracefulKillTimeout,
+		forceKillTimeout:    cmdOpts.ForceKillTimeout,
 	}
 }
 
