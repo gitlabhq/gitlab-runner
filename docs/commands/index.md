@@ -232,7 +232,6 @@ Or by configuring the environment variable before the `register` command:
 export CI_SERVER_URL=http://gitlab.example.com
 export RUNNER_NAME=my-runner
 export REGISTRATION_TOKEN=my-registration-token
-export REGISTER_NON_INTERACTIVE=true
 gitlab-runner register
 ```
 
