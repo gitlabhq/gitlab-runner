@@ -54,7 +54,7 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            UseLegacyKubernetesExecutionStrategy,
-		DefaultValue:    true,
+		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "When set to `false` disables execution of remote Kubernetes commands through `exec` in " +
