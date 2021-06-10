@@ -281,6 +281,9 @@ runners:
 
   cache:
       secretName: google-application-credentials
+
+secrets:
+  - name: google-application-credentials
 ```
 
 Next, create a Kubernetes secret `google-application-credentials` and
