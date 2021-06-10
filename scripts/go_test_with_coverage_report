@@ -43,8 +43,9 @@ prepareTestCommands() {
         tempFile=$(mktemp)
         local exitCode=0
 
+        # use env -i to clear parent environment variables for go test
         # shellcheck disable=SC2086
-        go test ${TESTFLAGS} -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
+        ./scripts/go_test_no_env ${TESTFLAGS} -list "Test.*" "${pkg}" > "${tempFile}" || exitCode=1
 
         local tests
         tests=$(grep "^Test" "${tempFile}" || true)
@@ -116,8 +117,10 @@ executeTestCommand() {
     local testOutputFile=".testoutput/${type}/${pkgSlug}.${index}.${output}.output.txt"
 
     local exitCode=0
+
+    # use env -i to clear parent environment variables for go test
     # shellcheck disable=SC2086
-    go test ${options} ${TESTFLAGS} -ldflags "${GO_LDFLAGS}" -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
+    ./scripts/go_test_no_env ${options} ${TESTFLAGS} -ldflags "${GO_LDFLAGS}" -v "${pkg}" -run "${runTestsList}" 2>&1 | tee "${testOutputFile}" || exitCode=1
 
     return ${exitCode}
 }

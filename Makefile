@@ -135,7 +135,8 @@ test: helper-dockerarchive-host development_setup simple-test
 
 simple-test: TEST_PKG ?= $(shell go list ./...)
 simple-test:
-	go test $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
+	# use env -i to clear parent environment variables for go test
+	./scripts/go_test_no_env $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
 
 git1.8-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
 git1.8-test:

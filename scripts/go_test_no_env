@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+env -i \
+    PATH="$PATH" \
+    HOME="$HOME" \
+    CI="$CI" \
+    DOCKER_HOST="$DOCKER_HOST" \
+    DOCKER_TLS_VERIFY="$DOCKER_TLS_VERIFY" \
+    DOCKER_TLS_CERTDIR="$DOCKER_TLS_CERTDIR" \
+    DOCKER_CERT_PATH="$DOCKER_CERT_PATH" \
+    GOROOT="$GOROOT" \
+    GOPATH="$GOPATH" \
+    CGO_ENABLED="$CGO_ENABLED" \
+    go test "$@"
