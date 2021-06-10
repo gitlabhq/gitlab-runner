@@ -2,15 +2,14 @@
 
 set -eo pipefail
 
-env -i \
-    PATH="$PATH" \
-    HOME="$HOME" \
-    CI="$CI" \
-    DOCKER_HOST="$DOCKER_HOST" \
-    DOCKER_TLS_VERIFY="$DOCKER_TLS_VERIFY" \
-    DOCKER_TLS_CERTDIR="$DOCKER_TLS_CERTDIR" \
-    DOCKER_CERT_PATH="$DOCKER_CERT_PATH" \
-    GOROOT="$GOROOT" \
-    GOPATH="$GOPATH" \
-    CGO_ENABLED="$CGO_ENABLED" \
-    go test "$@"
+ENV=""
+EOL=$'\n'
+while read -r name; do
+    if [[ -n "$name" ]]; then
+      ENV+="$name=${!name}${EOL}"
+    fi
+done <<<"$(cat ./scripts/envs/allowlist_common.env ./scripts/envs/allowlist_unix.env)"
+
+# shellcheck disable=SC2046
+# disable word splitting warning as we actually need it here
+env -i $ENV go test "$@"

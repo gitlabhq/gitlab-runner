@@ -1,23 +1,14 @@
 foreach ($var in get-childitem env:*) {
-    switch ($var.name) {
-        "SystemRoot" {}
-        "HOMEPATH" {}
-        "COMPUTERNAME" {}
-        "ALLUSERSPROFILE" {}
-        "SystemDrive" {}
-        "HOMEDRIVE" {}
-        "APPDATA" {}
-        "USERDOMAIN" {}
-        "LOCALAPPDATA" {}
-        default {
-            $value = [Environment]::GetEnvironmentVariable($var.name, 'User')
-            if (!$value) {
-                $value = [Environment]::GetEnvironmentVariable($var.name, 'Machine')
-                if (!$value) {
-                    remove-item "env:$($var.name)"
-                }
-            }
+    [bool] $found = $false
+    foreach ($name in get-content ./scripts/envs/allowlist_common.env, ./scripts/envs/allowlist_windows.env) {
+        if ($var.name -eq $name) {
+            $found = $true
+            break
         }
+    }
+
+    if (!$found) {
+        remove-item "env:$($var.name)"
     }
 }
 
