@@ -1,4 +1,4 @@
-Whitelisted environment variables that are allowed to be passed to tests.
+List of environment variables that are allowed to be passed to tests.
 The variables are used in `go_test_no_env` and `go_test_no_env.ps1`.
 
 ### allowlist_common
