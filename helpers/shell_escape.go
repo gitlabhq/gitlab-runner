@@ -37,7 +37,9 @@ const (
 type shellEscaper struct {
 }
 
-// ShellEscape is taken from https://github.com/solidsnack/shell-escape/blob/master/Text/ShellEscape/Bash.hs
+//nolint:lll
+// ShellEscape is taken from
+// https://github.com/solidsnack/shell-escape/blob/056c7b308be32ffeafec815907699f6c27536b1e/Data/ByteString/ShellEscape/Bash.hs
 /*
 A Bash escaped string. The strings are wrapped in @$\'...\'@ if any
 bytes within them must be escaped; otherwise, they are left as is.
