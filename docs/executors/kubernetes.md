@@ -878,7 +878,7 @@ For more information, see [Building images with kaniko and GitLab CI/CD](https:/
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
 
-GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems such as This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
+GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems such as [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
 in environments with unstable network.
 
 If you are experiencing problems since updating to GitLab Runner 14.0, toggle the feature flag [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags)
