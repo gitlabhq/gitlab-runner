@@ -3578,16 +3578,7 @@ func TestGenerateScripts(t *testing.T) {
 	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
 	require.NoError(t, err)
 
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Build: &common.Build{
-				JobResponse: successfulResponse,
-			},
-		},
-	}
-	buildStages := e.Build.BuildStages()
-
-	setupMockShellGenerateScript := func(m *common.MockShell, stages []common.BuildStage) {
+	setupMockShellGenerateScript := func(m *common.MockShell, e *executor, stages []common.BuildStage) {
 		for _, s := range stages {
 			m.On("GenerateScript", s, e.ExecutorOptions.Shell).
 				Return("OK", nil).
@@ -3595,9 +3586,14 @@ func TestGenerateScripts(t *testing.T) {
 		}
 	}
 
-	setupScripts := func(stages []common.BuildStage) map[string]string {
+	setupScripts := func(e *executor, stages []common.BuildStage) map[string]string {
 		scripts := map[string]string{}
-		scripts[detectShellScriptName] = detectShellScript
+		switch e.Shell().Shell {
+		case shells.SNPwsh:
+			scripts[parsePwshScriptName] = shells.PwshValidationScript
+		default:
+			scripts[detectShellScriptName] = shells.BashDetectShellScript
+		}
 
 		for _, s := range stages {
 			scripts[string(s)] = "OK"
@@ -3607,35 +3603,72 @@ func TestGenerateScripts(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		setupMockShell  func() *common.MockShell
-		expectedScripts map[string]string
-		expectedErr     error
+		getExecutor        func() *executor
+		setupMockShell     func(e *executor) *common.MockShell
+		getExpectedScripts func(e *executor) map[string]string
+		expectedErr        error
 	}{
 		"all stages OK": {
-			setupMockShell: func() *common.MockShell {
+			getExecutor: func() *executor {
+				return setupExecutor("bash", successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
 				m := new(common.MockShell)
-				setupMockShellGenerateScript(m, buildStages)
+				setupMockShellGenerateScript(m, e, buildStages)
 
 				return m
 			},
-			expectedScripts: setupScripts(buildStages),
-			expectedErr:     nil,
+			getExpectedScripts: func(e *executor) map[string]string {
+				buildStages := e.Build.BuildStages()
+				return setupScripts(e, buildStages)
+			},
+			expectedErr: nil,
+		},
+		"all stages OK with pwsh": {
+			getExecutor: func() *executor {
+				return setupExecutor(shells.SNPwsh, successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
+				m := new(common.MockShell)
+				setupMockShellGenerateScript(m, e, buildStages)
+
+				return m
+			},
+			getExpectedScripts: func(e *executor) map[string]string {
+				buildStages := e.Build.BuildStages()
+				return setupScripts(e, buildStages)
+			},
+			expectedErr: nil,
 		},
 		"stage returns skip build stage error": {
-			setupMockShell: func() *common.MockShell {
+			getExecutor: func() *executor {
+				return setupExecutor("bash", successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
 				m := new(common.MockShell)
 				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", common.ErrSkipBuildStage).
 					Once()
-				setupMockShellGenerateScript(m, buildStages[1:])
+
+				setupMockShellGenerateScript(m, e, buildStages[1:])
 
 				return m
 			},
-			expectedScripts: setupScripts(buildStages[1:]),
-			expectedErr:     nil,
+			getExpectedScripts: func(e *executor) map[string]string {
+				buildStages := e.Build.BuildStages()
+				return setupScripts(e, buildStages[1:])
+			},
+			expectedErr: nil,
 		},
 		"stage returns error": {
-			setupMockShell: func() *common.MockShell {
+			getExecutor: func() *executor {
+				return setupExecutor("bash", successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
 				m := new(common.MockShell)
 				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", testErr).
@@ -3643,19 +3676,23 @@ func TestGenerateScripts(t *testing.T) {
 
 				return m
 			},
-			expectedScripts: nil,
-			expectedErr:     testErr,
+			getExpectedScripts: func(e *executor) map[string]string {
+				return nil
+			},
+			expectedErr: testErr,
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			m := tt.setupMockShell()
+			e := tt.getExecutor()
+			expectedScripts := tt.getExpectedScripts(e)
+			m := tt.setupMockShell(e)
 			defer m.AssertExpectations(t)
 
 			scripts, err := e.generateScripts(m)
 			assert.ErrorIs(t, err, tt.expectedErr)
-			assert.Equal(t, tt.expectedScripts, scripts)
+			assert.Equal(t, expectedScripts, scripts)
 		})
 	}
 }
@@ -3784,4 +3821,139 @@ func TestExecutor_buildLogPermissionsInitContainer_FailPullPolicy(t *testing.T) 
 
 	_, err := e.buildLogPermissionsInitContainer()
 	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestShellRetrieval(t *testing.T) {
+	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		executor     *executor
+		expectedName string
+		expectedErr  error
+	}{
+		"retrieve bash": {
+			executor:     setupExecutor("bash", successfulResponse),
+			expectedName: "bash",
+		},
+		"retrieve pwsh": {
+			executor:     setupExecutor(shells.SNPwsh, successfulResponse),
+			expectedName: shells.SNPwsh,
+		},
+		"failure for no shell": {
+			executor:    setupExecutor("no shell", successfulResponse),
+			expectedErr: errIncorrectShellType,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shell, err := tt.executor.retrieveShell()
+			assert.Equal(t, err, tt.expectedErr, "The retrievalShell error and the expected one should be the same")
+			if tt.expectedErr == nil {
+				assert.Equal(t, tt.expectedName, shell.GetName())
+			}
+		})
+	}
+}
+
+func TestGetContainerInfo(t *testing.T) {
+	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		executor              *executor
+		command               common.ExecutorCommand
+		expectedContainerName string
+		getExpectedCommand    func(e *executor, cmd common.ExecutorCommand) []string
+	}{
+		"bash container info": {
+			executor: setupExecutor("bash", successfulResponse),
+			command: common.ExecutorCommand{
+				Stage: common.BuildStagePrepare,
+			},
+			expectedContainerName: buildContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				return []string{
+					"sh",
+					e.scriptPath(detectShellScriptName),
+					e.scriptPath(cmd.Stage),
+					e.buildRedirectionCmd(),
+				}
+			},
+		},
+		"predefined bash container info": {
+			executor: setupExecutor("bash", successfulResponse),
+			command: common.ExecutorCommand{
+				Stage:      common.BuildStagePrepare,
+				Predefined: true,
+			},
+			expectedContainerName: helperContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				return append(
+					e.helperImageInfo.Cmd,
+					"<<<",
+					e.scriptPath(cmd.Stage),
+					e.buildRedirectionCmd(),
+				)
+			},
+		},
+		"pwsh container info": {
+			executor: setupExecutor(shells.SNPwsh, successfulResponse),
+			command: common.ExecutorCommand{
+				Stage: common.BuildStagePrepare,
+			},
+			expectedContainerName: buildContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				return []string{
+					e.scriptPath(parsePwshScriptName),
+					e.scriptPath(cmd.Stage),
+					e.logFile(),
+					e.buildRedirectionCmd(),
+				}
+			},
+		},
+		"predefined pwsh container info": {
+			executor: setupExecutor(shells.SNPwsh, successfulResponse),
+			command: common.ExecutorCommand{
+				Stage:      common.BuildStagePrepare,
+				Predefined: true,
+			},
+			expectedContainerName: helperContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				commands := append([]string(nil), fmt.Sprintf("Get-Content -Path %s | ", e.scriptPath(cmd.Stage)))
+				commands = append(commands, e.helperImageInfo.Cmd...)
+				commands = append(commands, e.buildRedirectionCmd())
+				return commands
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			containerName, containerCommand := tt.executor.getContainerInfo(tt.command)
+			assert.Equal(t, tt.expectedContainerName, containerName)
+			assert.Equal(t, tt.getExpectedCommand(tt.executor, tt.command), containerCommand)
+		})
+	}
+}
+
+func setupExecutor(shell string, successfulResponse common.JobResponse) *executor {
+	return &executor{
+		helperImageInfo: helperimage.Info{
+			Cmd: []string{"custom", "command"},
+		},
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executors.ExecutorOptions{
+				DefaultBuildsDir: "/builds",
+				DefaultCacheDir:  "/cache",
+				Shell: common.ShellScriptInfo{
+					Shell: shell,
+				},
+			},
+			Build: &common.Build{
+				JobResponse: successfulResponse,
+			},
+		},
+	}
 }

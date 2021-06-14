@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
@@ -58,6 +60,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesWithNonRootSecurityContext":                testKubernetesWithNonRootSecurityContext,
 		"testConfiguredBuildDirVolumeMountFeatureFlag":            testBuildDirVolumeMountFeatureFlag,
 		"testUserConfiguredBuildDirVolumeMountFeatureFlag":        testUserConfiguredBuildDirVolumeMountFeatureFlag,
+		"testKubernetesPwshFeatureFlag":                           testKubernetesPwshFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -811,6 +814,28 @@ func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName stri
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.Contains(t, out, fmt.Sprintf("uid=%d gid=0(root)", runAsUser))
+}
+
+func testKubernetesPwshFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	build.Image.Name = common.TestPwshImage
+	build.Runner.Shell = shells.SNPwsh
+	build.JobResponse.Steps = common.Steps{
+		common.Step{
+			Name: common.StepNameScript,
+			Script: []string{
+				"Write-Output $PSVersionTable",
+			},
+		},
+	}
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.Regexp(t, regexp.MustCompile("PSEdition +Core"), out)
 }
 
 func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
