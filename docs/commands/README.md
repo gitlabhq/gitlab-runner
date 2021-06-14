@@ -593,3 +593,15 @@ administrator privileges:
   The simplest way is to write `Command Prompt` in the Windows search field,
   right click and select `Run as administrator`. You are asked to confirm
   that you want to execute the elevated command prompt.
+
+### `/usr/lib/gitlab-runner: No such file or directory`
+
+The `gitlab-runner` executable was moved from `/usr/lib/` to `/usr/bin/` in 
+GitLab 13.3. A symlink pointing `/usr/lib/gitlab-runner` to 
+`/usr/bin/gitlab-runner` was added for backwards compatibility. In GitLab 14.0,
+the [symlink was removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26651). 
+To resolve the `/usr/lib/gitlab-runner: No such file or directory` error, you 
+should do either of the following:
+
+- Call `gitlab-runner` directly (assuming `/usr/bin` is in your `$PATH`).
+- Call `/usr/bin/gitlab-runner`.
