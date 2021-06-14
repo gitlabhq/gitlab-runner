@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+ENV=""
+EOL=$'\n'
+while read -r name; do
+    if [[ -n "$name" ]]; then
+      ENV+="$name=${!name}${EOL}"
+    fi
+done <<<"$(cat ./scripts/envs/allowlist_common.env ./scripts/envs/allowlist_unix.env)"
+
+# shellcheck disable=SC2046
+# disable word splitting warning as we actually need it here
+env -i $ENV go test "$@"

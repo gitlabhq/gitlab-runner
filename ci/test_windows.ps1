@@ -34,7 +34,7 @@ Get-Content $testsDefinitionsFile | Select-Object -skip $executionOffset -first 
 
     Write-Information "`r`n`r`n--- Starting part $index of go $type tests of '$pkg' package:`r`n`r`n"
 
-    go test $env:TESTFLAGS -timeout 30m -v $pkg -run "$tests" | Tee ".testoutput/${type}/${pkgSlug}.${index}.windows.${WINDOWS_VERSION}.output.txt"
+    powershell -File .\scripts\go_test_no_env.ps1 $env:TESTFLAGS -timeout 30m -v $pkg -run "$tests" | Tee ".testoutput/${type}/${pkgSlug}.${index}.windows.${WINDOWS_VERSION}.output.txt"
 
     if ($LASTEXITCODE -ne 0) {
         $failed += "$pkg-$index"

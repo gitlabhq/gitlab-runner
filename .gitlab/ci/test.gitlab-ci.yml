@@ -320,4 +320,5 @@ integration_k8s:
   - kubectl version
   - kubectl cluster-info
   script:
-  - go test -tags=integration -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes
+  # use env -i to clear parent environment variables for go test
+  - ./scripts/go_test_no_env -tags=integration -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes
