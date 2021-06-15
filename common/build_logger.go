@@ -8,6 +8,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 type BuildLogger struct {
@@ -34,7 +35,8 @@ func (e *BuildLogger) SendRawLog(args ...interface{}) {
 
 func (e *BuildLogger) sendLog(logger func(args ...interface{}), logPrefix string, args ...interface{}) {
 	if e.log != nil {
-		e.SendRawLog(logPrefix + fmt.Sprintln(args...))
+		logLine := url_helpers.ScrubSecrets(logPrefix + fmt.Sprintln(args...))
+		e.SendRawLog(logLine)
 		e.SendRawLog(helpers.ANSI_RESET)
 
 		if e.log.IsStdout() {

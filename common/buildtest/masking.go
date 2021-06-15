@@ -25,7 +25,6 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		common.JobVariable{Key: "MASKED_KEY", Value: "MASKED_VALUE", Masked: true},
 		common.JobVariable{Key: "CLEARTEXT_KEY", Value: "CLEARTEXT_VALUE", Masked: false},
 		common.JobVariable{Key: "MASKED_KEY_OTHER", Value: "MASKED_VALUE_OTHER", Masked: true},
-		common.JobVariable{Key: "URL_MASKED_PARAM", Value: "https://example.com/?x-amz-credential=foobar"},
 	)
 
 	if setup != nil {
@@ -53,7 +52,4 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 
 	assert.NotContains(t, string(contents), "CLEARTEXT_KEY=[MASKED]")
 	assert.Contains(t, string(contents), "CLEARTEXT_KEY=CLEARTEXT_VALUE")
-
-	assert.NotContains(t, string(contents), "x-amz-credential=foobar")
-	assert.Contains(t, string(contents), "x-amz-credential=[MASKED]")
 }
