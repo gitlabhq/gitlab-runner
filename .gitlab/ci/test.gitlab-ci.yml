@@ -107,7 +107,8 @@ check test directives:
   extends:
   - .rules:merge_request_pipelines:no_docs
   - .no_cache_and_dependencies
-  needs: []
+  needs:
+    - 'prepare done'
   script:
   - make check_test_directives
 
