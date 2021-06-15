@@ -876,13 +876,17 @@ For more information, see [Building images with kaniko and GitLab CI/CD](https:/
 
 ## Job execution
 
-At the moment we are using `kube exec` to run the scripts, which relies on
-having a stable network connection between the Runner and the pod for the duration of the command.
-This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
-If you are experiencing this problem turn off the feature flag [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags)
-to use `kube attach` for script execution, which is more stable.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1775) in GitLab Runner 12.9.
+> - [Behind a feature flag `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags), enabled by default.
+> - [Using attach by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
 
-We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
+GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems such as [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
+in environments with unstable network.
+
+If you are experiencing problems since updating to GitLab Runner 14.0, toggle the feature flag [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags)
+to `true` and [submit an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/new).
+
+Follow [#27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress regarding legacy execution strategy removal.
 
 ## Troubleshooting
 
