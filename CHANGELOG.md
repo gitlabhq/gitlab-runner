@@ -1,3 +1,77 @@
+## v14.0.0-rc1 (2021-06-16)
+
+### New features
+
+- Send GPU config string !2848
+- Add support for selective git submodule paths inclusion/exclusion !2249
+
+### Bug fixes
+
+- Fix race blocking goroutine in shell executor !2910
+- Order masked values by length to prevent longer values being partially revealed !2892
+- Kubernetes attach strategy hangs when log file is deleted !2824
+
+### Maintenance
+
+- Enable kubernetes attach strategy by default !2955
+- Add ASDF .tool-versions file !2948
+- Make check test directives depend on prepare_done !2947
+- Fix broken test output produced by MakeFatalToPanic !2929
+- Use main branch for docs reviews !2925
+- Disable windows anti-malware monitoring !2920
+- Remove FF_RESET_HELPER_IMAGE_ENTRYPOINT feature flag !2906
+- Remove legacy process termination for shell executor !2905
+- Pull helper image from GitLab registry by default !2904
+- Pwsh shell support for kubernetes when legacy execution strategy ff is set to false !2902
+- Remove offpeak settings docker autoscaling !2897
+- Add shell benchmarks !2894
+- Make pwsh the default shell for new registrations !2889
+- Remove FF_USE_GO_CLOUD_WITH_CACHE_ARCHIVER feature flag !2887
+- Remove deprecated Makefile targets !2885
+- Update Kubernetes client-go library to 0.21.1 !2878
+- Segregate `unit test` job into a separate `integration test` job !2783
+- Add supported failure reasons for build errors !2744
+- Upgrade kardianos service !2729
+- Enable fastzip & progress meter !2565
+- Allow building behind a proxy !2168 (dHannasch1 @dHannasch1)
+
+### GitLab Runner distribution
+
+- Remove support for Windows 1909 !2924
+- Remove support for Windows 1903 !2915
+- Remove ubuntu/eoan package !2888
+- Publish Windows helper image :latest tags !2879
+- Add Ubuntu-based runner-helper image !2835
+
+### Documentation changes
+
+- Add troubleshooting note on gitlab-runner symlink removal !2953
+- Disable skel directory usage by default for DEB/RPM installation !2942
+- Update PROCESS.md referencing runner release helper templates !2939
+- Add tlsctl to runner docs !2937
+- Remove old redirects !2933
+- Update troubleshooting documentation for old Docker versions on Windows Server !2927
+- Add remove_date to YAML frontmatter !2922
+- Revert (arch) change !2918
+- Shell executor: Link to latest available Git version !2917
+- Be more specific about Windows version support !2916
+- Made images smaller !2909
+- Add troubleshooting steps to gitlab runner operator !2901
+- Fix external links !2895
+- Fixed typo in docker runner documentation !2891
+- Use DNS option in TOML to avoid proxy and route in docs !2815
+- Change order of steps to configure autoscaling !2665
+- Update docs/executors/kubernetes.md !1903
+
+### Other changes
+
+- Remove conversion between failed and cancelled buildStage for prometheus metrics !2932
+- Delete unused 1909 allowed test failures !2928
+- Updated test case names for TestBuildJobStatusEnvVars !2907 (listout @listout)
+- Specify the working version for lsif-go image !2898
+- Remove /usr/lib/gitlab-runner symlink from packages !2890
+- Make git-lfs tar checksum usage coherent !2268
+
 ## v13.12.0 (2021-05-20)
 
 ### New features
