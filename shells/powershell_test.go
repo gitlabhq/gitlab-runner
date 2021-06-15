@@ -269,3 +269,56 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 		}
 	}
 }
+
+func TestPowershell_GenerateScript(t *testing.T) {
+	shellInfo := common.ShellScriptInfo{
+		Shell:         "pwsh",
+		Type:          common.NormalShell,
+		RunnerCommand: "/usr/bin/gitlab-runner-helper",
+		Build: &common.Build{
+			Runner: &common.RunnerConfig{},
+		},
+	}
+	shellInfo.Build.Runner.Executor = "kubernetes"
+	shellInfo.Build.Hostname = "Test Hostname"
+
+	pwshShell := common.GetShell("pwsh").(*PowerShell)
+
+	testCases := map[string]struct {
+		stage           common.BuildStage
+		info            common.ShellScriptInfo
+		expectedFailure bool
+		expectedScript  string
+	}{
+		"prepare script": {
+			stage:           common.BuildStagePrepare,
+			info:            shellInfo,
+			expectedFailure: false,
+			expectedScript: `$ErrorActionPreference = "Stop"` + pwshShell.EOL + pwshShell.EOL +
+				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` +
+				pwshShell.EOL + pwshShell.EOL,
+		},
+		"cleanup variables": {
+			stage:           common.BuildStageCleanupFileVariables,
+			info:            shellInfo,
+			expectedFailure: false,
+			expectedScript:  ``,
+		},
+		"no script": {
+			stage:           "no_script",
+			info:            shellInfo,
+			expectedFailure: true,
+			expectedScript:  "",
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			script, err := pwshShell.GenerateScript(tc.stage, tc.info)
+			assert.Equal(t, tc.expectedScript, script)
+			if tc.expectedFailure {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
