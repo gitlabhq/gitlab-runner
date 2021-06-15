@@ -205,7 +205,7 @@ integration test with race:
 fuzz variable mask:
   extends:
   - .fuzz_base
-  - .rules:merge_request_pipelines
+  - .rules:merge_request_pipelines:no_docs
   image: golang:1.13
   stage: test
   script:
