@@ -122,6 +122,143 @@ sudo yum update
 sudo yum install gitlab-runner
 ```
 
+## GPG signatures for package installation
+
+To increase user's confidence about installed software, the GitLab Runner project provides
+two types of GPG signatures for the package installation method: repository metadata
+signing and package signing.
+
+### Repository metadata signing
+
+To verify that the package information downloaded from the remote repository can be trusted,
+the package manager uses repository metadata signing.
+
+The signature is verified when you use a command like `apt-get update`, so the
+information about available packages is updated **before any package is downloaded and
+installed**. Verification failure should also cause the package manager to reject the
+metadata. This means that you cannot download and install any package from the repository
+until the problem that caused the signature mismatch is found and resolved.
+
+GPG public keys used for package metadata signature verification are installed automatically
+on first installation done with the instructions above. For key updates in the future,
+existing users need to manually download and install the new keys.
+
+We use one key for all our projects hosted under <https://packages.gitlab.com>. You can find
+the details about the currently used key and technical description of how to update the key when
+needed [in Omnibus GitLab documentation](https://docs.gitlab.com/omnibus/update/package_signatures#package-repository-metadata-signing-keys).
+This documentation page lists also
+[all keys used in the past](https://docs.gitlab.com/omnibus/update/package_signatures#previous-keys).
+
+### Packages signing
+
+Repository metadata signing proves that the downloaded version information originates
+at <https://packages.gitlab.com>. It does not prove the integrity of the packages themselves.
+Whatever was uploaded to <https://packages.gitlab.com> - authorized or not - will be properly
+verified until the metadata transfer from repository to the user was not affected.
+
+This is where packages signing comes in.
+
+With package signing, each package is signed when it's built. So until you can trust
+the build environment and the secrecy of the used GPG key, the valid signature on the package
+will prove that its origin is authenticated and its integrity was not violated.
+
+Packages signing verification is enabled by default only in some of the DEB/RPM based distributions,
+so users wanting to have this kind of verification may need to adjust the configuration.
+
+GPG keys used for packages signature verification can be different for each of the repositories
+hosted at <https://packages.gitlab.com>. The GitLab Runner project uses its own key pair for this
+type of the signature.
+
+#### RPM-based distributions
+
+The RPM format contains a full implementation of GPG signing functionality, and thus is fully
+integrated with the package management systems based upon that format.
+
+You can find the technical description of how to configure package signature
+verification for RPM-based distributions in [the Omnibus GitLab documentation](https://docs.gitlab.com/omnibus/update/package_signatures#rpm-based-distributions).
+The GitLab Runner differences are:
+
+- The public key package that should be installed is named `gpg-pubkey-35dfa027-60ba0235`.
+
+- The repository file for RPM based distributions will be named `/etc/yum.repos.d/runner_gitlab-runner.repo`
+  (for the stable release) or `/etc/yum.repos.d/runner_unstable.repo` (for the unstable releases).
+
+- The [package signing public key](#current-gpg-public-key) can be imported from
+  <https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-4C80FB51394521E9.pub.gpg>.
+
+#### DEB-based distributions
+
+The DEB format does not officially contain a default and included method for signing packages.
+The GitLab Runner project uses `dpkg-sig` tool for signing and verifying signatures on packages. This
+method supports only manual verification of packages.
+
+1. Install `dpkg-sig`
+
+    ```shell
+    apt-get update && apt-get install dpkg-sig
+    ```
+
+1. Download and import the [package signing public key](#current-gpg-public-key)
+
+    ```shell
+    curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-4C80FB51394521E9.pub.gpg"
+    gpg --import runner-gitlab-runner-4C80FB51394521E9.pub.gpg
+    ```
+
+1. Verify downloaded package with `dpkg-sig`
+
+    ```shell
+    dpkg-sig --verify gitlab-runner_amd64.deb
+    Processing gitlab-runner_amd64.deb...
+    GOODSIG _gpgbuilder 09E57083F34CCA94D541BC58A674BF8135DFA027 1623755049
+    ```
+
+   Verification of package with invalid signature or signed with an invalid key (for example
+   a revoked one) will generate an output similar to:
+
+    ```shell
+    dpkg-sig --verify gitlab-runner_amd64.deb
+    Processing gitlab-runner_amd64.deb...
+    BADSIG _gpgbuilder
+    ```
+
+    If the key is not present in the user's keyring, the output will be similar to:
+
+    ```shell
+    dpkg-sig --verify gitlab-runner_amd64.v13.1.0.deb
+    Processing gitlab-runner_amd64.v13.1.0.deb...
+    UNKNOWNSIG _gpgbuilder 880721D4
+    ```
+
+#### Current GPG public key
+
+The current public GPG key used for packages signing can be downloaded from
+<https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-4C80FB51394521E9.pub.gpg>.
+
+| Key Attribute | Value                                                |
+|---------------|------------------------------------------------------|
+| Name          | `GitLab, Inc.`                                       |
+| EMail         | `support@gitlab.com`                                 |
+| Fingerprint   | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` |
+| Expiry        | `2023-06-04`                                         |
+
+NOTE:
+The same key is used by the GitLab Runner project to sign `release.sha256` files for the S3 releases
+available in the <https://gitlab-runner-downloads.s3.amazonaws.com/> bucket.
+
+#### Previous GPG public keys
+
+Keys used in the past can be found in the table below.
+
+For keys that were revoked it's highly recommended to remove them from package signing
+verification configuration.
+
+Signatures made by these keys should not be trusted anymore.
+
+| Sl. No. | Key Fingerprint                                      | Status    | Expiry Date  | Download (revoked keys only)                     |
+|---------|------------------------------------------------------|-----------|--------------|--------------------------------------------------|
+| 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [revoked key](gpg-keys/9CE45ABC880721D4.pub.gpg) |
+
 ## Manually download packages
 
 You can [manually download and install the
