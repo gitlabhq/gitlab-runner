@@ -876,7 +876,9 @@ For more information, see [Building images with kaniko and GitLab CI/CD](https:/
 
 ## Job execution
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1775) in GitLab Runner 12.9.
+> [Behind a feature flag `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags), enabled by default.
+> [Using attach by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
 
 GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems such as [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
 in environments with unstable network.
