@@ -294,7 +294,6 @@ git 1.8.3.1:
     GOPATH: /go
     CGO_ENABLED: 0
   before_script:
-  - unset GPG_KEY
   - yum install -y -q git make && git version
   - curl https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
   - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx -C /usr/bin
