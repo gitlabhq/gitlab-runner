@@ -158,7 +158,7 @@ bleeding edge docker images:
   - .release_docker_images
   - .release_bleeding_edge
   environment:
-    name: bleeding_edge/docker_images
+    name: bleeding_edge/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore1809 docker images:
@@ -214,7 +214,7 @@ stable docker images:
   - .release_docker_images
   - .release_stable
   environment:
-    name: stable/docker_images
+    name: stable/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore1809 docker images:
