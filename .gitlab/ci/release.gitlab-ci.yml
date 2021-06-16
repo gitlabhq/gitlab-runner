@@ -190,6 +190,9 @@ stable S3:
 stable gitlab release:
   extends:
   - .release:with-rules
+  environment:
+    name: stable/gitlab
+    url: https://gitlab.com/gitlab-org/gitlab-runner/-/releases
   script:
   - ./ci/release_gitlab
   rules:
