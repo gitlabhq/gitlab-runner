@@ -12,7 +12,7 @@
   dependencies:
   - 'helper images'
   - 'ecr public token'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x linux/ppc64le'
   - 'package-deb'
   script:
   - source ci/touch_make_dependencies
@@ -62,7 +62,7 @@
   - 'test coverage report'
   - 'binaries darwin/amd64'
   - 'binaries freebsd/386 freebsd/amd64 freebsd/arm'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x linux/ppc64le'
   - 'binaries windows/386 windows/amd64'
   - 'package-deb'
   - 'package-rpm'
