@@ -5,7 +5,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 comments: false
 ---
 
-# Shells supported by GitLab Runner
+# Types of shells supported by GitLab Runner
 
 GitLab Runner implements a few shell script generators that allow executing
 builds on different systems.
