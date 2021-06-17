@@ -82,8 +82,17 @@ Managers the following:
 1. `windows-2004-private-runner-manager-2`
 
 Once registered, make sure you safely store the runner tokens found in
-the `config.toml` file since we are going to need these for the next
+the `config.toml` file since we are going to need these for the [installation](#install)
 step.
+
+Finally, we'll need to assign the new Runner Managers to the [security](https://gitlab.com/gitlab-org/security/gitlab-runner)
+fork project. So for each of the new Runner Managers:
+
+1. Go to the Runners section of the [Runner project CI/CD settings page](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd);
+1. Unlock the new Runner by editing its properties and unchecking `Lock to current projects`;
+1. Go to the Runners section of the [security fork project's CI/CD settings page](https://gitlab.com/gitlab-org/security/gitlab-runner/-/settings/ci_cd);
+1. Scroll down to the `Other available runners` section and enable the runner for this project;
+1. Lock back again the Runner in the [Runner project CI/CD settings page](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd).
 
 #### Install
 
