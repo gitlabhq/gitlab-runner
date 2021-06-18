@@ -2,7 +2,7 @@
 
 set -eo pipefail
 
-testsDefinitions="testsdefinitions.txt"
+testsDefinitions=${TESTSDEFINITIONSPATH:-"testsdefinitions.txt"}
 
 TESTFLAGS=${TESTFLAGS:-"-cover"}
 PARALLEL_TESTS_LIMIT=${PARALLEL_TESTS_LIMIT:-10}
