@@ -172,6 +172,10 @@ parallel_test_junit_report:
 	# Preparing jUnit test report
 	@./scripts/go_test_with_coverage_report junit
 
+check_windows_test_ignore_list:
+	# Checking for orphaned test names in ignore file
+	@./scripts/check_windows_test_ignore_list
+
 pull_images_for_tests:
 	# Pulling images required for some tests
 	@go run ./scripts/pull-images-for-tests/main.go
