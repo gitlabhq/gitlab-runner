@@ -35,9 +35,18 @@ func (e *BuildLogger) SendRawLog(args ...interface{}) {
 
 func (e *BuildLogger) sendLog(logger func(args ...interface{}), logPrefix string, args ...interface{}) {
 	if e.log != nil {
-		logLine := url_helpers.ScrubSecrets(logPrefix + fmt.Sprintln(args...))
-		e.SendRawLog(logLine)
-		e.SendRawLog(helpers.ANSI_RESET)
+		// log lines have spaces between each argument, followed by an ANSI Reset and *then* a new-line.
+		//
+		// To achieve this, we use fmt.Sprintln and remove the newline, add the ANSI Reset and then
+		// append the newline again. The reason we don't use fmt.Sprint is that there's a greater
+		// difference between that and fmt.Sprintln than just the newline character being added
+		// (fmt.Sprintln consistently adds a space between arguments).
+		logLine := fmt.Sprintln(args...)
+		logLine = logLine[:len(logLine)-1]
+		logLine = url_helpers.ScrubSecrets(logLine)
+		logLine += helpers.ANSI_RESET + "\n"
+
+		e.SendRawLog(logPrefix + logLine)
 
 		if e.log.IsStdout() {
 			return
