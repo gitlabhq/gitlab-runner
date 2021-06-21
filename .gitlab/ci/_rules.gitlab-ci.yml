@@ -1,3 +1,25 @@
+####################
+# Changes patterns #
+####################
+
+.code-backstage-patterns: &code-backstage-patterns
+  - ".gitlab-ci.yml"
+  - ".golangci.yml"
+  - ".gitlab/ci/**/*"
+  - ".gitattributes"
+  - "Makefile*"
+  - "**/*.go"
+  - "{ci,dockerfiles,packaging,scripts,tests,vendor}/**/*"
+  - "**/testdata/**/*"
+  - "go.*"
+
+.docs-patterns: &docs-patterns
+  - ".vale.ini"
+  - ".markdownlint.yml"
+  - "docs/**/*"
+  - "scripts/lint-docs"
+
+
 ##############
 # Conditions #
 ##############
@@ -13,9 +35,6 @@
 
 .if-stable-release-tag: &if-stable-release-tag
   if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
-
-.if-docs-branch: &if-docs-branch
-  if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
 
 .if-merge-request-pipeline: &if-merge-request-pipeline
   if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -74,27 +93,33 @@
 
 .rules:merge_request_pipelines:no_docs:
   rules:
-  - <<: *if-docs-branch
-    when: never
   - <<: *if-merge-request-pipeline
+    changes: *code-backstage-patterns
   - <<: *if-runner-or-security-runner-default-branch
+    changes: *code-backstage-patterns
   - <<: *if-runner-or-security-runner-stable-ref
+    changes: *code-backstage-patterns
   - <<: *if-runner-release-ref
+    changes: *code-backstage-patterns
   - <<: *if-security-runner-release-ref
+    changes: *code-backstage-patterns
 
 .rules:merge_request_pipelines:no_docs:always:
   rules:
-  - <<: *if-docs-branch
-    when: never
   - <<: *if-merge-request-pipeline
+    changes: *code-backstage-patterns
     when: always
   - <<: *if-runner-or-security-runner-default-branch
+    changes: *code-backstage-patterns
     when: always
   - <<: *if-runner-or-security-runner-stable-ref
+    changes: *code-backstage-patterns
     when: always
   - <<: *if-runner-release-ref
+    changes: *code-backstage-patterns
     when: always
   - <<: *if-security-runner-release-ref
+    changes: *code-backstage-patterns
     when: always
 
 #################
@@ -111,39 +136,53 @@
 
 .rules:release:bleeding-edge:
   rules:
-  - <<: *if-docs-branch
-    when: never
   - <<: *if-runner-default-branch
+    changes: *code-backstage-patterns
   - <<: *if-runner-bleeding-edge-release-ref
+    changes: *code-backstage-patterns
 
 .rules:release:stable-or-rc:
   rules:
-  - <<: *if-docs-branch
-    when: never
   - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
+    changes: *code-backstage-patterns
     when: on_success
   - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+    changes: *code-backstage-patterns
     when: manual
 
 .rules:release:stable:branch:
   rules:
-  - <<: *if-docs-branch
-    when: never
   - <<: *if-runner-stable-release-ref
+    changes: *code-backstage-patterns
   - <<: *if-security-runner-release-ref
+    changes: *code-backstage-patterns
 
 .rules:release:development:merge-requests:
   rules:
-  - <<: *if-docs-branch
-    when: never
   - <<: *if-runner-merge-request-pipeline
+    changes: *code-backstage-patterns
   - <<: *if-runner-security-merge-request-pipeline
+    changes: *code-backstage-patterns
 
 .rules:runner-only:release:development:merge-requests:
   rules:
-  - <<: *if-docs-branch
-    when: never
   - <<: *if-runner-merge-request-pipeline
+    changes: *code-backstage-patterns
+
+.rules:prepare:ci:image:merge-requests:
+  rules:
+  - <<: *if-runner-merge-request-pipeline
+    changes:
+    - dockerfiles/ci/*
+    - .gitlab/ci/_common.gitlab-ci.yml
+    - .gitlab/ci/prepare.gitlab-ci.yml
+
+.rules:prepare:alpine-no-root:image:merge-requests:
+  rules:
+  - <<: *if-runner-merge-request-pipeline
+    changes:
+    - tests/dockerfiles/alpine-no-root/*
+    - .gitlab/ci/prepare.gitlab-ci.yml
 
 ##############
 # Docs rules #
@@ -151,7 +190,7 @@
 
 .rules:docs:skip:
   rules:
-  - <<: *if-docs-branch
+  - changes: *docs-patterns
     when: never
   - when: on_success
 
