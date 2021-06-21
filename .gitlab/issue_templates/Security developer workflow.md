@@ -18,7 +18,7 @@ Set the title to: `Description of the original issue`
 
 - [ ] Run `scripts/security-harness` in your local repository to prevent accidentally pushing to any remote branch besides `gitlab.com/gitlab-org/security`.
 - [ ] Create a new branch prefixing it with `security-`.
-- [ ] Create a merge request targeting `master` on `gitlab.com/gitlab-org/security/gitlab-runner` and use the [Security Release merge request template].
+- [ ] Create a merge request targeting `main` on `gitlab.com/gitlab-org/security/gitlab-runner` and use the [Security Release merge request template].
 
 After your merge request has been approved according to our [approval guidelines] and by a team member of the AppSec team, you're ready to prepare the backports.
 
@@ -29,7 +29,7 @@ After your merge request has been approved according to our [approval guidelines
 - [ ] Create each MR targeting the stable branch `X-Y-stable`, using the [Security Release merge request template].
    * Every merge request will have its own set of TODOs, so make sure to complete those.
 - [ ] On the "Related merge requests" section, ensure all MRs are linked to this issue.
-   * This section should only list the merge requests created for this issue: One targeting `master` and the 3 backports.
+   * This section should only list the merge requests created for this issue: One targeting `main` and the 3 backports.
 
 ## Documentation and final details
 
@@ -58,7 +58,7 @@ After your merge request has been approved according to our [approval guidelines
 | Thanks | | |
 
 [security process for developers]: https://gitlab.com/gitlab-org/release/docs/blob/master/general/security/developer.md
-[security Release merge request template]: https://gitlab.com/gitlab-org/security/gitlab-runner/blob/master/.gitlab/merge_request_templates/Security%20Release.md
+[security Release merge request template]: https://gitlab.com/gitlab-org/security/gitlab-runner/blob/main/.gitlab/merge_request_templates/Security%20Release.md
 [approval guidelines]: https://docs.gitlab.com/ee/development/code_review.html#approval-guidelines
 [issue as related]: https://docs.gitlab.com/ee/user/project/issues/related_issues.html#adding-a-related-issue
 

@@ -119,7 +119,7 @@ Create a `values.yaml` file for your GitLab Runner configuration. See
 for information on how your values file will override the defaults.
 
 The default configuration can always be found in the
-[`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml)
+[`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml)
 in the chart repository.
 
 ### Required configuration
@@ -141,7 +141,7 @@ You can use a [configuration template file](../register/index.md#runners-configu
 to configure the runner. You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
-Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml) in the chart repository. It is important to note that, for the `config:` section, the format should be `toml` (`<parameter> = <value>` instead of `<parameter>: <value>`), as we are embedding `config.toml` in `values.yaml`.
+Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) in the chart repository. It is important to note that, for the `config:` section, the format should be `toml` (`<parameter> = <value>` instead of `<parameter>: <value>`), as we are embedding `config.toml` in `values.yaml`.
 
 ```yaml
 runners:
@@ -151,7 +151,7 @@ runners:
         image = "ubuntu:16.04"
 ```
 
-The rest of the configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
+The rest of the configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
 ### Migrating to the new configuration template
 
@@ -322,7 +322,7 @@ kubectl create secret generic azureaccess \
     --from-literal=azure-account-key="YourAccountKey"
 ```
 
-Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/master/values.yaml).
+Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
 ### Enabling RBAC support
 

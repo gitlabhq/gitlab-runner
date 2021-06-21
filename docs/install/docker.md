@@ -194,7 +194,7 @@ The following multi-platform Docker images are available:
 - `gitlab/gitlab-runner:alpine` based on Alpine with much a smaller footprint
   (~160/350 MB Ubuntu vs ~45/130 MB Alpine compressed/decompressed).
 
-See [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles)
+See [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/main/dockerfiles)
 source for possible build instructions for both Ubuntu and Alpine images.
 
 NOTE:

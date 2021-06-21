@@ -474,7 +474,7 @@ func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.Shell
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
-	// Try to restore from main cache, if not found cache for master
+	// Try to restore from main cache, if not found cache for default branch
 	return b.cacheExtractor(w, info)
 }
 

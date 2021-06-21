@@ -17,7 +17,7 @@ Because `docker-machine` is in [maintenance
 mode](https://github.com/docker/machine/issues/4537), GitLab is
 providing it's [own fork of
 `docker-machine`](https://gitlab.com/gitlab-org/ci-cd/docker-machine),
-which is based on the latest `master` branch of `docker-machine` with
+which is based on the latest `main` branch of `docker-machine` with
 some additional patches for the following bugs:
 
 - [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/2)
