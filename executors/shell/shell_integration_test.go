@@ -254,7 +254,7 @@ func TestBuildJobStatusEnvVars(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-				multistepBuildScript, err := common.GetRemoteFailingMultistepBuildWithEnvs(shell, tc.fail)
+				multistepBuildScript, err := common.GetRemoteFailingMultistepBuildPrintVars(shell, tc.fail, "CI_JOB_STATUS")
 				require.NoError(t, err)
 
 				build, cleanup := newBuild(t, multistepBuildScript, shell)

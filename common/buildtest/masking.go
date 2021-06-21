@@ -12,7 +12,13 @@ import (
 )
 
 func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	resp, err := common.GetRemoteSuccessfulBuildWithEnvs(config.Shell, false)
+	const (
+		maskedKey      = "MASKED_KEY"
+		clearTextKey   = "CLEARTEXT_KEY"
+		maskedKeyOther = "MASKED_KEY_OTHER"
+	)
+
+	resp, err := common.GetRemoteSuccessfulBuildPrintVars(config.Shell, maskedKey, clearTextKey, maskedKeyOther)
 	require.NoError(t, err)
 
 	build := &common.Build{
@@ -22,9 +28,9 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 
 	build.Variables = append(
 		build.Variables,
-		common.JobVariable{Key: "MASKED_KEY", Value: "MASKED_VALUE", Masked: true},
-		common.JobVariable{Key: "CLEARTEXT_KEY", Value: "CLEARTEXT_VALUE", Masked: false},
-		common.JobVariable{Key: "MASKED_KEY_OTHER", Value: "MASKED_VALUE_OTHER", Masked: true},
+		common.JobVariable{Key: maskedKey, Value: "MASKED_VALUE", Masked: true},
+		common.JobVariable{Key: clearTextKey, Value: "CLEARTEXT_VALUE", Masked: false},
+		common.JobVariable{Key: maskedKeyOther, Value: "MASKED_VALUE_OTHER", Masked: true},
 	)
 
 	if setup != nil {
