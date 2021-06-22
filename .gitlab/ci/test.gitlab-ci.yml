@@ -249,8 +249,7 @@ fuzz variable mask:
     - .testoutput/
     when: always
     expire_in: 7d
-  allow_failure:
-    exit_codes: 99
+  allow_failure: true
 
 .windows unit test:
   extends:
