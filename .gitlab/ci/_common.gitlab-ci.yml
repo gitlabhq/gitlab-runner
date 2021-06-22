@@ -36,9 +36,6 @@ default:
     when:
     - runner_system_failure
 
-before_script:
-- unset GPG_KEY
-
 .no_cache:
   cache: {}
 

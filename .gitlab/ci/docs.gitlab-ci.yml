@@ -6,7 +6,6 @@
   image: ruby:2.6-alpine
   needs: []
   before_script:
-  - unset GPG_KEY
   - gem install gitlab --no-doc
   # We need to download the script rather than clone the repo since the
   # review-docs-cleanup job will not be able to run when the branch gets
