@@ -81,12 +81,13 @@ func safecopy(dst, src []byte, atEOF bool, nDst, nSrc int, tokenSize int) (int, 
 
 	remaining := len(src[nSrc:])
 	if !atEOF {
-		// copy up to the last safe token if any, otherwise don't copy
-		// until we have a buffer of at least tokenSize.
+		// copy either:
+		// - up until the last safe token if any, or
+		// - up to our data length minus tokenSize,
+		// whichever has the higher index position.
 		idx := bytes.LastIndexAny(src[nSrc:], safeTokens)
-		if idx < 0 {
-			remaining -= tokenSize + 1
-		} else {
+		remaining -= tokenSize
+		if idx+1 > remaining {
 			remaining = idx + 1
 		}
 

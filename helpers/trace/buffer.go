@@ -78,14 +78,33 @@ func (b *Buffer) Write(p []byte) (int, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	n, err := b.w.Write(p)
-	// if we get a log limit exceeded error, we've written the log limit
-	// notice out to the log and will now silently not write any additional
-	// data: we return len(p), nil so the caller continues as normal.
-	if err == errLogLimitExceeded {
-		return len(p), nil
+	src := p
+	var n int
+	for len(src) > 0 {
+		written, err := b.w.Write(src)
+		// if we get a log limit exceeded error, we've written the log limit
+		// notice out to the log and will now silently not write any additional
+		// data: we return len(p), nil so the caller continues as normal.
+		if err == errLogLimitExceeded {
+			return len(p), nil
+		}
+		if err != nil {
+			return n, err
+		}
+
+		// the text/transformer implementation can return n < len(p) without an
+		// error. For this reason, we continue writing whatever data is left
+		// unless nothing was written (therefore zero progress) on our call to
+		// Write().
+		if written == 0 {
+			return n, io.ErrShortWrite
+		}
+
+		src = src[written:]
+		n += written
 	}
-	return n, err
+
+	return n, nil
 }
 
 func (b *Buffer) Finish() {
