@@ -419,3 +419,7 @@ clean:
 
 print_ldflags:
 	@echo $(GO_LDFLAGS)
+
+export_env:
+	@echo "export GO_LDFLAGS='$(GO_LDFLAGS)'"
+	@echo "export MAIN_PACKAGE='$(MAIN_PACKAGE)'"
