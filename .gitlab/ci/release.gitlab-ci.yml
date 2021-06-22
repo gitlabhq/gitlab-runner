@@ -32,8 +32,6 @@
   - 'helper images'
   - 'ecr public token'
   - 'binaries windows/386 windows/amd64'
-  before_script:
-  - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
   script:
   - .\ci\build_release_windows_images.ps1
   retry: 2
@@ -43,7 +41,6 @@
   - .except_docs
   stage: release
   before_script:
-  - unset GPG_KEY
   - source ci/touch_make_dependencies
 
 .release:with-rules:
@@ -51,7 +48,6 @@
   - .rules:docs:skip
   stage: release
   before_script:
-  - unset GPG_KEY
   - source ci/touch_make_dependencies
 
 .release_s3:
