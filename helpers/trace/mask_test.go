@@ -56,11 +56,6 @@ func TestVariablesMaskingBoundary(t *testing.T) {
 			values:   []string{"split", "all", "values", "are", "masked"},
 			expected: "[MASKED] [MASKED] [MASKED] [MASKED] [MASKED]",
 		},
-		{
-			input:    "prefix_mask mask prefix_|mask prefix_ma|sk mas|k",
-			values:   []string{"mask", "prefix_mask"},
-			expected: "[MASKED] [MASKED] [MASKED] [MASKED] [MASKED]",
-		},
 	}
 
 	for _, tc := range tests {
