@@ -8,6 +8,10 @@
 IFS=$'\n\t'
 set -euo pipefail
 
+if ! [ -x "$(command -v docker)" ]; then
+    echo -e "INFO: Docker installation not found, skipping clear-docker-cache"
+    exit 0
+fi
 
 DOCKER_VERSION=$(docker version --format '{{.Server.Version}}') #get docker version
 REQUIRED_DOCKER_VERSION=1.13
