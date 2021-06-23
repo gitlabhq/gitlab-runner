@@ -1,3 +1,13 @@
+## v14.0.1 (2021-06-23)
+
+### Bug fixes
+
+- Revert masked variable sorting !2980
+
+### Maintenance
+
+- Use file based variables for GPG_KEY !2958
+
 ## v14.0.0 (2021-06-19)
 
 ### New features
