@@ -64,6 +64,14 @@
   - 'package-rpm'
   before_script:
   - source ci/touch_make_dependencies
+  - |
+    # checking GPG signing support
+    if [ -f "$GPG_KEY_PATH" ]; then
+      export GPG_KEY=$(cat ${GPG_KEY_PATH})
+      export GPG_PASSPHRASE=$(cat ${GPG_PASSPHRASE_PATH})
+    else
+      echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
+    fi
   script:
   - make release_s3
 
