@@ -307,6 +307,10 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	assert.Equal(t, 0, d.UsedCount)
 	assert.NotNil(t, p.details[d.Name])
 
+	err := p.remove(d.Name)
+	assert.NoError(t, err)
+	assert.Equal(t, machineStateRemoving, d.State)
+
 	d2, errCh := p.create(machineProvisionFail, machineStateUsed)
 	assert.NotNil(t, d2)
 	assert.Error(t, <-errCh, "Fails, because it fails to provision machine")
@@ -314,12 +318,8 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 
 	d3, errCh := p.create(machineCreateFail, machineStateUsed)
 	assert.NotNil(t, d3)
-	assert.NoError(t, <-errCh)
-	assert.Equal(t, machineStateUsed, d3.State)
-
-	err := p.remove(d.Name)
-	assert.NoError(t, err)
-	assert.Equal(t, machineStateRemoving, d.State)
+	assert.Error(t, <-errCh)
+	assert.Equal(t, machineStateRemoving, d3.State)
 }
 
 func TestMachineCreation_SkipProvisionOnFailure(t *testing.T) {

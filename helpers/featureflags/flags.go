@@ -126,7 +126,7 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            SkipDockerMachineProvisionOnCreationFailure,
-		DefaultValue:    false,
+		DefaultValue:    true,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "With the `docker+machine` executor, when a machine is " +
