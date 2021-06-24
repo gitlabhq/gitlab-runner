@@ -30,17 +30,17 @@ type Buffer struct {
 	checksum hash.Hash32
 }
 
-type lengthSort []string
+type inverseLengthSort []string
 
-func (s lengthSort) Len() int {
+func (s inverseLengthSort) Len() int {
 	return len(s)
 }
 
-func (s lengthSort) Swap(i, j int) {
+func (s inverseLengthSort) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func (s lengthSort) Less(i, j int) bool {
+func (s inverseLengthSort) Less(i, j int) bool {
 	return len(s[i]) > len(s[j])
 }
 
@@ -59,8 +59,14 @@ func (b *Buffer) SetMasked(values []string) {
 
 	transformers := make([]transform.Transformer, 0, len(values)+len(defaultTransformers))
 
-	sort.Sort(lengthSort(values))
+	sort.Sort(inverseLengthSort(values))
+	seen := make(map[string]struct{})
 	for _, value := range values {
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+
 		transformers = append(transformers, newPhraseTransform(value))
 	}
 
