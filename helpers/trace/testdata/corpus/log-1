@@ -1,0 +1,2591 @@
+[0KRunning with gitlab-runner 13.12.0-rc1 (b21d5c5b)
+[0;m[0K  on gitlab-org-docker ih9XD9p3
+[0;m[0K  feature flags: FF_GITLAB_REGISTRY_HELPER_IMAGE:true, FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE:true
+[0;msection_start:1621524382:resolve_secrets
+[0K[0K[36;1mResolving secrets[0;m
+[0;msection_end:1621524382:resolve_secrets
+[0Ksection_start:1621524382:prepare_executor
+[0K[0K[36;1mPreparing the "docker+machine" executor[0;m
+[0;m[0KUsing Docker executor with image registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-12 ...
+[0;m[0KStarting service docker:20.10.2-dind ...
+[0;m[0KPulling docker image docker:20.10.2-dind ...
+[0;m[0KUsing docker image sha256:7569a61fe0d5af655280b516bb2654a1ef03f7a3d67549543b65d81dbeea372e for docker:20.10.2-dind with digest docker@sha256:8f4e9ddda1049e6935f9fc7f5cad0bd1001fbf59188616f19b620fd7b6e95ba2 ...
+[0;m[0KWaiting for services to be up and running...
+[0;m[0KAuthenticating with credentials from job payload (GitLab Registry)
+[0;m[0KPulling docker image registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-12 ...
+[0;m[0KUsing docker image sha256:ae3c432ccac98231f52393c158c545eb689584defed228600b87e2fe4e4fa1e9 for registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-12 with digest registry.gitlab.com/gitlab-org/gitlab-runner/ci@sha256:0436a4d75851db641f3c704688e0e27a3e208f4bc948503c1b35b7e1691b5cf6 ...
+[0;msection_end:1621524429:prepare_executor
+[0Ksection_start:1621524429:prepare_script
+[0K[0K[36;1mPreparing environment[0;m
+[0;mRunning on runner-ih9xd9p3-project-250833-concurrent-0 via runner-ih9xd9p3-org-ci-1621524292-bb661501...
+section_end:1621524456:prepare_script
+[0Ksection_start:1621524456:get_sources
+[0K[0K[36;1mGetting source from Git repository[0;m
+[0;m[32;1m$ eval "$CI_PRE_CLONE_SCRIPT"[0;m
+[32;1mFetching changes...[0;m
+Initialized empty Git repository in /builds/gitlab-org/gitlab-runner/.git/
+[32;1mCreated fresh repository.[0;m
+[32;1mChecking out 7a6612da as v13.12.0...[0;m
+
+[32;1mSkipping Git submodules setup[0;m
+section_end:1621524510:get_sources
+[0Ksection_start:1621524510:restore_cache
+[0K[0K[36;1mRestoring cache[0;m
+[0;m[32;1mChecking cache for unit test 1/8-v13-12-0-2...[0;m
+[31;1mFATAL: file does not exist                        [0;m 
+[0;33mFailed to extract cache[0;m
+section_end:1621524511:restore_cache
+[0Ksection_start:1621524511:download_artifacts
+[0K[0K[36;1mDownloading artifacts[0;m
+[0;m[32;1mDownloading artifacts for helper images (1280281190)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281190 responseStatus[0;m=200 OK token[0;m=zaM3ywFV
+[32;1mDownloading artifacts for clone test repo (1280281192)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281192 responseStatus[0;m=200 OK token[0;m=xzA1hsVL
+[32;1mDownloading artifacts for tests definitions (1280281194)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=1280281194 responseStatus[0;m=200 OK token[0;m=kQK1ELdZ
+section_end:1621524516:download_artifacts
+[0Ksection_start:1621524516:step_script
+[0K[0K[36;1mExecuting "step_script" stage of the job script[0;m
+[0;m[0KUsing docker image sha256:ae3c432ccac98231f52393c158c545eb689584defed228600b87e2fe4e4fa1e9 for registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-12 with digest registry.gitlab.com/gitlab-org/gitlab-runner/ci@sha256:0436a4d75851db641f3c704688e0e27a3e208f4bc948503c1b35b7e1691b5cf6 ...
+[0;m[32;1m$ mkdir -p "$GOCACHE"[0;m
+[32;1m$ source ci/touch_make_dependencies[0;m
+touching out/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64-windows.exe
+touching out/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64
+touching out/binaries/gitlab-runner-helper/gitlab-runner-helper.s390x
+touching out/binaries/gitlab-runner-helper/gitlab-runner-helper.arm
+touching out/binaries/gitlab-runner-helper/gitlab-runner-helper.arm64
+touching out/helper-images/prebuilt-arm64.tar.xz
+touching out/helper-images/prebuilt-arm.tar.xz
+touching out/helper-images/prebuilt-s390x.tar.xz
+touching out/helper-images/prebuilt-x86_64.tar.xz
+touching out/helper-images/prebuilt-x86_64-pwsh.tar.xz
+[32;1m$ make parallel_test_execute[0;m
+# Pulling images required for some tests
+go: downloading github.com/stretchr/testify v1.6.2-0.20200720104044-95a9d909e987
+go: downloading github.com/BurntSushi/toml v0.3.1
+go: downloading github.com/docker/docker v20.10.2+incompatible
+go: downloading github.com/sirupsen/logrus v1.7.0
+go: downloading k8s.io/api v0.0.0-20191004102349-159aefb8556b
+go: downloading github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
+go: downloading github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
+go: downloading github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
+go: downloading gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
+go: extracting gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
+go: downloading github.com/prometheus/client_golang v1.1.0
+go: extracting github.com/BurntSushi/toml v0.3.1
+go: extracting github.com/stretchr/testify v1.6.2-0.20200720104044-95a9d909e987
+go: downloading gopkg.in/yaml.v2 v2.3.0
+go: downloading github.com/urfave/cli v1.20.0
+go: extracting gopkg.in/yaml.v2 v2.3.0
+go: extracting github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
+go: extracting github.com/sirupsen/logrus v1.7.0
+go: downloading github.com/pmezard/go-difflib v1.0.0
+go: downloading k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
+go: downloading golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+go: extracting github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
+go: downloading github.com/davecgh/go-spew v1.1.1
+go: extracting github.com/urfave/cli v1.20.0
+go: extracting github.com/pmezard/go-difflib v1.0.0
+go: downloading github.com/gorilla/websocket v1.4.2
+go: extracting github.com/prometheus/client_golang v1.1.0
+go: extracting github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
+go: downloading github.com/stretchr/objx v0.3.0
+go: extracting k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
+go: extracting github.com/gorilla/websocket v1.4.2
+go: extracting github.com/stretchr/objx v0.3.0
+go: downloading github.com/prometheus/common v0.6.0
+go: downloading github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
+go: downloading github.com/docker/go-connections v0.3.0
+go: downloading github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
+go: extracting github.com/davecgh/go-spew v1.1.1
+go: downloading github.com/json-iterator/go v1.1.10
+go: extracting github.com/json-iterator/go v1.1.10
+go: extracting github.com/docker/go-connections v0.3.0
+go: downloading github.com/golang/protobuf v1.4.3
+go: extracting github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
+go: downloading github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
+go: extracting github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
+go: extracting github.com/prometheus/common v0.6.0
+go: extracting k8s.io/api v0.0.0-20191004102349-159aefb8556b
+go: extracting golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+go: extracting github.com/golang/protobuf v1.4.3
+go: downloading golang.org/x/net v0.0.0-20201224014010-6772e930b67b
+go: extracting github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
+go: downloading github.com/pkg/errors v0.9.1
+go: downloading google.golang.org/protobuf v1.25.0
+go: downloading github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+go: extracting github.com/pkg/errors v0.9.1
+go: downloading github.com/gogo/protobuf v1.1.1
+go: extracting github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+go: downloading gopkg.in/inf.v0 v0.9.0
+go: extracting gopkg.in/inf.v0 v0.9.0
+go: extracting golang.org/x/net v0.0.0-20201224014010-6772e930b67b
+go: extracting google.golang.org/protobuf v1.25.0
+go: extracting github.com/docker/docker v20.10.2+incompatible
+go: downloading github.com/beorn7/perks v1.0.1
+go: downloading gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+go: extracting github.com/gogo/protobuf v1.1.1
+go: extracting gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+go: extracting github.com/beorn7/perks v1.0.1
+go: downloading github.com/prometheus/procfs v0.0.5
+go: downloading github.com/google/gofuzz v1.0.0
+go: extracting github.com/google/gofuzz v1.0.0
+go: downloading golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
+go: extracting github.com/prometheus/procfs v0.0.5
+go: downloading github.com/hashicorp/vault/api v1.0.4
+go: extracting github.com/hashicorp/vault/api v1.0.4
+go: downloading github.com/hashicorp/go-multierror v1.0.0
+go: extracting github.com/hashicorp/go-multierror v1.0.0
+go: downloading github.com/hashicorp/vault/sdk v0.1.13
+go: extracting golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
+go: extracting github.com/hashicorp/vault/sdk v0.1.13
+go: downloading github.com/hashicorp/hcl v1.0.0
+go: downloading gopkg.in/square/go-jose.v2 v2.3.1
+go: downloading k8s.io/klog v1.0.0
+go: extracting gopkg.in/square/go-jose.v2 v2.3.1
+go: extracting k8s.io/klog v1.0.0
+go: downloading github.com/mitchellh/mapstructure v1.4.0
+go: extracting github.com/hashicorp/hcl v1.0.0
+go: extracting github.com/mitchellh/mapstructure v1.4.0
+go: downloading github.com/hashicorp/go-sockaddr v1.0.2
+go: downloading github.com/hashicorp/go-cleanhttp v0.5.1
+go: extracting github.com/hashicorp/go-sockaddr v1.0.2
+go: extracting github.com/hashicorp/go-cleanhttp v0.5.1
+go: downloading github.com/hashicorp/errwrap v1.0.0
+go: downloading github.com/pierrec/lz4 v2.0.5+incompatible
+go: extracting github.com/hashicorp/errwrap v1.0.0
+go: downloading github.com/hashicorp/go-rootcerts v1.0.1
+go: downloading github.com/hashicorp/go-retryablehttp v0.5.4
+go: extracting github.com/hashicorp/go-retryablehttp v0.5.4
+go: downloading github.com/modern-go/reflect2 v1.0.1
+go: extracting github.com/hashicorp/go-rootcerts v1.0.1
+go: extracting github.com/modern-go/reflect2 v1.0.1
+go: downloading golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+go: downloading github.com/golang/snappy v0.0.1
+go: extracting github.com/golang/snappy v0.0.1
+go: downloading github.com/ryanuber/go-glob v1.0.0
+go: extracting golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+go: downloading golang.org/x/text v0.3.6
+go: extracting github.com/ryanuber/go-glob v1.0.0
+go: downloading github.com/opencontainers/image-spec v1.0.1
+go: extracting github.com/opencontainers/image-spec v1.0.1
+go: downloading github.com/opencontainers/go-digest v1.0.0-rc1
+go: downloading github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
+go: downloading github.com/containerd/containerd v1.4.3
+go: downloading github.com/morikuni/aec v1.0.0
+go: downloading github.com/docker/distribution v2.7.0+incompatible
+go: downloading google.golang.org/grpc v1.34.0
+go: extracting github.com/pierrec/lz4 v2.0.5+incompatible
+go: extracting github.com/opencontainers/go-digest v1.0.0-rc1
+go: extracting github.com/morikuni/aec v1.0.0
+go: extracting github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
+go: extracting github.com/docker/distribution v2.7.0+incompatible
+go: extracting google.golang.org/grpc v1.34.0
+go: extracting github.com/containerd/containerd v1.4.3
+go: downloading github.com/matttproud/golang_protobuf_extensions v1.0.1
+go: extracting github.com/matttproud/golang_protobuf_extensions v1.0.1
+go: downloading google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497
+go: extracting golang.org/x/text v0.3.6
+go: extracting google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497
+go: finding github.com/BurntSushi/toml v0.3.1
+go: finding github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
+go: finding github.com/prometheus/client_golang v1.1.0
+go: finding github.com/beorn7/perks v1.0.1
+go: finding github.com/golang/protobuf v1.4.3
+go: finding google.golang.org/protobuf v1.25.0
+go: finding github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
+go: finding github.com/prometheus/common v0.6.0
+go: finding github.com/matttproud/golang_protobuf_extensions v1.0.1
+go: finding github.com/prometheus/procfs v0.0.5
+go: finding github.com/sirupsen/logrus v1.7.0
+go: finding golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
+go: finding github.com/stretchr/testify v1.6.2-0.20200720104044-95a9d909e987
+go: finding github.com/davecgh/go-spew v1.1.1
+go: finding github.com/pmezard/go-difflib v1.0.0
+go: finding github.com/stretchr/objx v0.3.0
+go: finding gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+go: finding github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
+go: finding github.com/urfave/cli v1.20.0
+go: finding gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd
+go: finding github.com/docker/docker v20.10.2+incompatible
+go: finding gopkg.in/yaml.v2 v2.3.0
+go: finding k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
+go: finding github.com/docker/go-connections v0.3.0
+go: finding github.com/opencontainers/image-spec v1.0.1
+go: finding github.com/opencontainers/go-digest v1.0.0-rc1
+go: finding github.com/gogo/protobuf v1.1.1
+go: finding github.com/containerd/containerd v1.4.3
+go: finding github.com/pkg/errors v0.9.1
+go: finding google.golang.org/grpc v1.34.0
+go: finding google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497
+go: finding github.com/docker/distribution v2.7.0+incompatible
+go: finding golang.org/x/net v0.0.0-20201224014010-6772e930b67b
+go: finding github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
+go: finding github.com/morikuni/aec v1.0.0
+go: finding github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
+go: finding golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+go: finding github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
+go: finding github.com/hashicorp/vault/api v1.0.4
+go: finding github.com/hashicorp/errwrap v1.0.0
+go: finding github.com/hashicorp/go-cleanhttp v0.5.1
+go: finding github.com/hashicorp/go-multierror v1.0.0
+go: finding github.com/hashicorp/go-retryablehttp v0.5.4
+go: finding github.com/hashicorp/go-rootcerts v1.0.1
+go: finding github.com/hashicorp/hcl v1.0.0
+go: finding github.com/hashicorp/vault/sdk v0.1.13
+go: finding github.com/golang/snappy v0.0.1
+go: finding github.com/pierrec/lz4 v2.0.5+incompatible
+go: finding github.com/hashicorp/go-sockaddr v1.0.2
+go: finding github.com/ryanuber/go-glob v1.0.0
+go: finding github.com/mitchellh/mapstructure v1.4.0
+go: finding golang.org/x/text v0.3.6
+go: finding golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+go: finding gopkg.in/square/go-jose.v2 v2.3.1
+go: finding github.com/json-iterator/go v1.1.10
+go: finding github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+go: finding github.com/modern-go/reflect2 v1.0.1
+go: finding github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
+go: finding github.com/gorilla/websocket v1.4.2
+go: finding k8s.io/api v0.0.0-20191004102349-159aefb8556b
+go: finding gopkg.in/inf.v0 v0.9.0
+go: finding github.com/google/gofuzz v1.0.0
+go: finding k8s.io/klog v1.0.0
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m latest: Pulling from gitlab-org/gitlab-runner/alpine-no-root
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m df20fa9351a1: Pulling fs layer
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m c7e9d654d1d6: Pulling fs layer
+[0;33m[docker:18-git][0;m 18-git: Pulling from library/docker
+[0;33m[docker:18-dind][0;m 18-dind: Pulling from library/docker
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m df20fa9351a1: Verifying Checksum
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m df20fa9351a1: Download complete
+[0;33m[alpine:3.12.0][0;m 3.12.0: Pulling from library/alpine
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m c7e9d654d1d6: Verifying Checksum
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m c7e9d654d1d6: Download complete
+[0;33m[docker:18-dind][0;m 9d48c3bd43c5: Pulling fs layer
+[0;33m[docker:18-dind][0;m 7f94eaf8af20: Pulling fs layer
+[0;33m[docker:18-dind][0;m 9fe9984849c1: Pulling fs layer
+[0;33m[docker:18-dind][0;m 3091f1b4f1aa: Pulling fs layer
+[0;33m[docker:18-dind][0;m 6ef266ac0949: Pulling fs layer
+[0;33m[docker:18-dind][0;m b2c2c13f4c08: Pulling fs layer
+[0;33m[docker:18-dind][0;m f354b3ae6d74: Pulling fs layer
+[0;33m[docker:18-dind][0;m 8f4a6170836f: Pulling fs layer
+[0;33m[docker:18-dind][0;m 853fedec02a1: Pulling fs layer
+[0;33m[docker:18-dind][0;m a57a377d7e5d: Pulling fs layer
+[0;33m[docker:18-dind][0;m ac4bc61da695: Pulling fs layer
+[0;33m[docker:18-dind][0;m 3091f1b4f1aa: Waiting
+[0;33m[docker:18-dind][0;m 6ef266ac0949: Waiting
+[0;33m[docker:18-dind][0;m b2c2c13f4c08: Waiting
+[0;33m[docker:18-dind][0;m f354b3ae6d74: Waiting
+[0;33m[docker:18-dind][0;m 8f4a6170836f: Waiting
+[0;33m[docker:18-dind][0;m 853fedec02a1: Waiting
+[0;33m[docker:18-dind][0;m a57a377d7e5d: Waiting
+[0;33m[docker:18-dind][0;m ac4bc61da695: Waiting
+[0;33m[alpine:3.12.0][0;m df20fa9351a1: Pulling fs layer
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m df20fa9351a1: Pull complete
+[0;33m[alpine:3.12.0][0;m df20fa9351a1: Pull complete
+[0;33m[docker:18-git][0;m 9d48c3bd43c5: Pulling fs layer
+[0;33m[docker:18-git][0;m 7f94eaf8af20: Pulling fs layer
+[0;33m[docker:18-git][0;m 9fe9984849c1: Pulling fs layer
+[0;33m[docker:18-git][0;m 3091f1b4f1aa: Pulling fs layer
+[0;33m[docker:18-git][0;m 6ef266ac0949: Pulling fs layer
+[0;33m[docker:18-git][0;m b2c2c13f4c08: Pulling fs layer
+[0;33m[docker:18-git][0;m f354b3ae6d74: Pulling fs layer
+[0;33m[docker:18-git][0;m 6ab2580d9dce: Pulling fs layer
+[0;33m[docker:18-git][0;m 3091f1b4f1aa: Waiting
+[0;33m[docker:18-git][0;m 6ef266ac0949: Waiting
+[0;33m[docker:18-git][0;m b2c2c13f4c08: Waiting
+[0;33m[docker:18-git][0;m f354b3ae6d74: Waiting
+[0;33m[docker:18-git][0;m 6ab2580d9dce: Waiting
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m c7e9d654d1d6: Pull complete
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m Digest: sha256:034971042d77defbcd01dbc1c163b5cf03397bc3ab5228b0943e019eb9f5f824
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m Status: Downloaded newer image for registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
+[0;33m[registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest][0;m registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
+[0;33m[docker:18-dind][0;m 9fe9984849c1: Verifying Checksum
+[0;33m[docker:18-dind][0;m 9fe9984849c1: Download complete
+[0;33m[docker:18-git][0;m 9fe9984849c1: Verifying Checksum
+[0;33m[docker:18-git][0;m 9fe9984849c1: Download complete
+[0;33m[alpine:3.12.0][0;m Digest: sha256:185518070891758909c9f839cf4ca393ee977ac378609f700f60a771a2dfe321
+[0;33m[alpine:3.12.0][0;m Status: Downloaded newer image for alpine:3.12.0
+[0;33m[alpine:3.12.0][0;m docker.io/library/alpine:3.12.0
+[0;33m[docker:18-dind][0;m 7f94eaf8af20: Verifying Checksum
+[0;33m[docker:18-dind][0;m 7f94eaf8af20: Download complete
+[0;33m[docker:18-git][0;m 7f94eaf8af20: Verifying Checksum
+[0;33m[docker:18-git][0;m 7f94eaf8af20: Download complete
+[0;33m[docker:18-dind][0;m 9d48c3bd43c5: Verifying Checksum
+[0;33m[docker:18-git][0;m 9d48c3bd43c5: Download complete
+[0;33m[docker:18-dind][0;m 9d48c3bd43c5: Download complete
+[0;33m[docker:18-dind][0;m 6ef266ac0949: Verifying Checksum
+[0;33m[docker:18-dind][0;m 6ef266ac0949: Download complete
+[0;33m[docker:18-git][0;m 6ef266ac0949: Verifying Checksum
+[0;33m[docker:18-git][0;m 6ef266ac0949: Download complete
+[0;33m[docker:18-dind][0;m 9d48c3bd43c5: Pull complete
+[0;33m[docker:18-git][0;m 9d48c3bd43c5: Pull complete
+[0;33m[docker:18-dind][0;m b2c2c13f4c08: Verifying Checksum
+[0;33m[docker:18-dind][0;m b2c2c13f4c08: Download complete
+[0;33m[docker:18-git][0;m b2c2c13f4c08: Verifying Checksum
+[0;33m[docker:18-git][0;m b2c2c13f4c08: Download complete
+[0;33m[docker:18-dind][0;m 7f94eaf8af20: Pull complete
+[0;33m[docker:18-git][0;m 7f94eaf8af20: Pull complete
+[0;33m[docker:18-dind][0;m f354b3ae6d74: Verifying Checksum
+[0;33m[docker:18-dind][0;m f354b3ae6d74: Download complete
+[0;33m[docker:18-git][0;m f354b3ae6d74: Verifying Checksum
+[0;33m[docker:18-git][0;m f354b3ae6d74: Download complete
+[0;33m[docker:18-dind][0;m 9fe9984849c1: Pull complete
+[0;33m[docker:18-git][0;m 9fe9984849c1: Pull complete
+[0;33m[docker:18-dind][0;m 853fedec02a1: Verifying Checksum
+[0;33m[docker:18-dind][0;m 853fedec02a1: Download complete
+[0;33m[docker:18-dind][0;m 8f4a6170836f: Verifying Checksum
+[0;33m[docker:18-dind][0;m 8f4a6170836f: Download complete
+[0;33m[docker:18-dind][0;m a57a377d7e5d: Verifying Checksum
+[0;33m[docker:18-dind][0;m a57a377d7e5d: Download complete
+[0;33m[docker:18-dind][0;m ac4bc61da695: Verifying Checksum
+[0;33m[docker:18-dind][0;m ac4bc61da695: Download complete
+[0;33m[docker:18-dind][0;m 3091f1b4f1aa: Verifying Checksum
+[0;33m[docker:18-git][0;m 3091f1b4f1aa: Verifying Checksum
+[0;33m[docker:18-git][0;m 3091f1b4f1aa: Download complete
+[0;33m[docker:18-dind][0;m 3091f1b4f1aa: Download complete
+[0;33m[docker:18-git][0;m 6ab2580d9dce: Verifying Checksum
+[0;33m[docker:18-git][0;m 6ab2580d9dce: Download complete
+[0;33m[docker:18-git][0;m 3091f1b4f1aa: Pull complete
+[0;33m[docker:18-dind][0;m 3091f1b4f1aa: Pull complete
+[0;33m[docker:18-dind][0;m 6ef266ac0949: Pull complete
+[0;33m[docker:18-git][0;m 6ef266ac0949: Pull complete
+[0;33m[docker:18-dind][0;m b2c2c13f4c08: Pull complete
+[0;33m[docker:18-git][0;m b2c2c13f4c08: Pull complete
+[0;33m[docker:18-git][0;m f354b3ae6d74: Pull complete
+[0;33m[docker:18-dind][0;m f354b3ae6d74: Pull complete
+[0;33m[docker:18-dind][0;m 8f4a6170836f: Pull complete
+[0;33m[docker:18-dind][0;m 853fedec02a1: Pull complete
+[0;33m[docker:18-dind][0;m a57a377d7e5d: Pull complete
+[0;33m[docker:18-git][0;m 6ab2580d9dce: Pull complete
+[0;33m[docker:18-git][0;m Digest: sha256:5fafa7fc518da8990feb9983a6f0d5069b8e4717e3f922e23e445a50e6c731ec
+[0;33m[docker:18-git][0;m Status: Downloaded newer image for docker:18-git
+[0;33m[docker:18-git][0;m docker.io/library/docker:18-git
+[0;33m[docker:18-dind][0;m ac4bc61da695: Pull complete
+[0;33m[docker:18-dind][0;m Digest: sha256:86df3c3573065f2c6f24cd925fd5bc3a0aff899bdf664ff4d2e3ebab26d96bed
+[0;33m[docker:18-dind][0;m Status: Downloaded newer image for docker:18-dind
+[0;33m[docker:18-dind][0;m docker.io/library/docker:18-dind
+# Executing tests
+[1mNumber of definitions: 112[0m
+[1mSuite size: 8[0m
+[1mSuite index: 1[0m
+[1mExecution size: 15[0m
+[1mExecution offset: 1[0m
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/cache' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestCreateAdapter
+=== RUN   TestCreateAdapter/adapter_exists
+=== RUN   TestCreateAdapter/adapter_errors_on_factorize
+=== RUN   TestCreateAdapter/adapter_doesn't_exist
+--- PASS: TestCreateAdapter (0.00s)
+    --- PASS: TestCreateAdapter/adapter_exists (0.00s)
+    --- PASS: TestCreateAdapter/adapter_errors_on_factorize (0.00s)
+    --- PASS: TestCreateAdapter/adapter_doesn't_exist (0.00s)
+=== RUN   TestDoubledRegistration
+--- PASS: TestDoubledRegistration (0.00s)
+=== RUN   TestCacheOperations
+=== RUN   TestCacheOperations/adapter-exists
+=== RUN   TestCacheOperations/adapter-exists/GetDownloadURL
+=== RUN   TestCacheOperations/adapter-exists/GetUploadURL
+=== RUN   TestCacheOperations/adapter-exists/GetGoCloudURL
+=== RUN   TestCacheOperations/no-config
+=== RUN   TestCacheOperations/no-config/GetDownloadURL
+time="2021-05-20T15:29:22Z" level=warning msg="Cache config not defined. Skipping cache operation."
+=== RUN   TestCacheOperations/no-config/GetUploadURL
+time="2021-05-20T15:29:22Z" level=warning msg="Cache config not defined. Skipping cache operation."
+=== RUN   TestCacheOperations/no-config/GetGoCloudURL
+time="2021-05-20T15:29:22Z" level=warning msg="Cache config not defined. Skipping cache operation."
+=== RUN   TestCacheOperations/key-not-specified
+=== RUN   TestCacheOperations/key-not-specified/GetDownloadURL
+time="2021-05-20T15:29:22Z" level=warning msg="Empty cache key. Skipping adapter selection."
+=== RUN   TestCacheOperations/key-not-specified/GetUploadURL
+time="2021-05-20T15:29:22Z" level=warning msg="Empty cache key. Skipping adapter selection."
+=== RUN   TestCacheOperations/key-not-specified/GetGoCloudURL
+time="2021-05-20T15:29:22Z" level=warning msg="Empty cache key. Skipping adapter selection."
+=== RUN   TestCacheOperations/adapter-doesnt-exists
+=== RUN   TestCacheOperations/adapter-doesnt-exists/GetDownloadURL
+=== RUN   TestCacheOperations/adapter-doesnt-exists/GetUploadURL
+=== RUN   TestCacheOperations/adapter-doesnt-exists/GetGoCloudURL
+=== RUN   TestCacheOperations/adapter-error-on-factorization
+=== RUN   TestCacheOperations/adapter-error-on-factorization/GetDownloadURL
+time="2021-05-20T15:29:22Z" level=error msg="Could not create cache adapter" error="test error"
+=== RUN   TestCacheOperations/adapter-error-on-factorization/GetUploadURL
+time="2021-05-20T15:29:22Z" level=error msg="Could not create cache adapter" error="test error"
+=== RUN   TestCacheOperations/adapter-error-on-factorization/GetGoCloudURL
+time="2021-05-20T15:29:22Z" level=error msg="Could not create cache adapter" error="test error"
+--- PASS: TestCacheOperations (0.00s)
+    --- PASS: TestCacheOperations/adapter-exists (0.00s)
+        --- PASS: TestCacheOperations/adapter-exists/GetDownloadURL (0.00s)
+            cache_test.go:55: PASS:	GetDownloadURL()
+        --- PASS: TestCacheOperations/adapter-exists/GetUploadURL (0.00s)
+            cache_test.go:55: PASS:	GetUploadURL()
+        --- PASS: TestCacheOperations/adapter-exists/GetGoCloudURL (0.00s)
+            cache_test.go:55: PASS:	GetGoCloudURL()
+    --- PASS: TestCacheOperations/no-config (0.00s)
+        --- PASS: TestCacheOperations/no-config/GetDownloadURL (0.00s)
+        --- PASS: TestCacheOperations/no-config/GetUploadURL (0.00s)
+        --- PASS: TestCacheOperations/no-config/GetGoCloudURL (0.00s)
+    --- PASS: TestCacheOperations/key-not-specified (0.00s)
+        --- PASS: TestCacheOperations/key-not-specified/GetDownloadURL (0.00s)
+        --- PASS: TestCacheOperations/key-not-specified/GetUploadURL (0.00s)
+        --- PASS: TestCacheOperations/key-not-specified/GetGoCloudURL (0.00s)
+    --- PASS: TestCacheOperations/adapter-doesnt-exists (0.00s)
+        --- PASS: TestCacheOperations/adapter-doesnt-exists/GetDownloadURL (0.00s)
+        --- PASS: TestCacheOperations/adapter-doesnt-exists/GetUploadURL (0.00s)
+        --- PASS: TestCacheOperations/adapter-doesnt-exists/GetGoCloudURL (0.00s)
+    --- PASS: TestCacheOperations/adapter-error-on-factorization (0.00s)
+        --- PASS: TestCacheOperations/adapter-error-on-factorization/GetDownloadURL (0.00s)
+        --- PASS: TestCacheOperations/adapter-error-on-factorization/GetUploadURL (0.00s)
+        --- PASS: TestCacheOperations/adapter-error-on-factorization/GetGoCloudURL (0.00s)
+=== RUN   TestGenerateObjectName
+=== RUN   TestGenerateObjectName/empty_key
+=== RUN   TestGenerateObjectName/short_path_is_set
+=== RUN   TestGenerateObjectName/multiple_segment_path_is_set
+=== RUN   TestGenerateObjectName/path_traversal_escapes_project_namespace
+=== RUN   TestGenerateObjectName/default_usage
+=== RUN   TestGenerateObjectName/path_is_empty
+=== RUN   TestGenerateObjectName/shared_flag_is_set_to_true
+=== RUN   TestGenerateObjectName/shared_flag_is_set_to_false
+=== RUN   TestGenerateObjectName/path_traversal_but_within_base_path
+=== RUN   TestGenerateObjectName/path_traversal_resolves_to_empty_key
+--- PASS: TestGenerateObjectName (0.00s)
+    --- PASS: TestGenerateObjectName/empty_key (0.00s)
+    --- PASS: TestGenerateObjectName/short_path_is_set (0.00s)
+    --- PASS: TestGenerateObjectName/multiple_segment_path_is_set (0.00s)
+    --- PASS: TestGenerateObjectName/path_traversal_escapes_project_namespace (0.00s)
+    --- PASS: TestGenerateObjectName/default_usage (0.00s)
+    --- PASS: TestGenerateObjectName/path_is_empty (0.00s)
+    --- PASS: TestGenerateObjectName/shared_flag_is_set_to_true (0.00s)
+    --- PASS: TestGenerateObjectName/shared_flag_is_set_to_false (0.00s)
+    --- PASS: TestGenerateObjectName/path_traversal_but_within_base_path (0.00s)
+    --- PASS: TestGenerateObjectName/path_traversal_resolves_to_empty_key (0.00s)
+=== RUN   TestCacheUploadEnv
+=== RUN   TestCacheUploadEnv/adapter_not_exists
+=== RUN   TestCacheUploadEnv/adapter_creation_error
+time="2021-05-20T15:29:22Z" level=error msg="Could not create cache adapter" error="test error"
+=== RUN   TestCacheUploadEnv/no_cache_config
+time="2021-05-20T15:29:22Z" level=warning msg="Cache config not defined. Skipping cache operation."
+=== RUN   TestCacheUploadEnv/full_map
+=== RUN   TestCacheUploadEnv/nil
+=== RUN   TestCacheUploadEnv/no_key
+--- PASS: TestCacheUploadEnv (0.00s)
+    --- PASS: TestCacheUploadEnv/adapter_not_exists (0.00s)
+    --- PASS: TestCacheUploadEnv/adapter_creation_error (0.00s)
+        cache_test.go:379: PASS:	GetUploadEnv()
+    --- PASS: TestCacheUploadEnv/no_cache_config (0.00s)
+    --- PASS: TestCacheUploadEnv/full_map (0.00s)
+        cache_test.go:379: PASS:	GetUploadEnv()
+    --- PASS: TestCacheUploadEnv/nil (0.00s)
+        cache_test.go:379: PASS:	GetUploadEnv()
+    --- PASS: TestCacheUploadEnv/no_key (0.00s)
+        cache_test.go:379: PASS:	GetUploadEnv()
+=== RUN   TestCreateCredentialsAdapter
+=== RUN   TestCreateCredentialsAdapter/adapter_exists
+=== RUN   TestCreateCredentialsAdapter/adapter_errors_on_factorize
+=== RUN   TestCreateCredentialsAdapter/adapter_doesn't_exist
+--- PASS: TestCreateCredentialsAdapter (0.00s)
+    --- PASS: TestCreateCredentialsAdapter/adapter_exists (0.00s)
+    --- PASS: TestCreateCredentialsAdapter/adapter_errors_on_factorize (0.00s)
+    --- PASS: TestCreateCredentialsAdapter/adapter_doesn't_exist (0.00s)
+=== RUN   TestCredentialsFactoryDoubledRegistration
+--- PASS: TestCredentialsFactoryDoubledRegistration (0.00s)
+PASS
+coverage: 4.4% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/cache	0.021s	coverage: 4.4% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/cache/azure' package with coverprofile in 'count' mode:
+[0m
+go: downloading github.com/Azure/azure-storage-blob-go v0.11.1-0.20201209121048-6df5d9af221d
+go: extracting github.com/Azure/azure-storage-blob-go v0.11.1-0.20201209121048-6df5d9af221d
+go: downloading github.com/google/uuid v1.1.2
+go: downloading github.com/Azure/azure-pipeline-go v0.2.3
+go: extracting github.com/google/uuid v1.1.2
+go: extracting github.com/Azure/azure-pipeline-go v0.2.3
+go: downloading github.com/mattn/go-ieproxy v0.0.1
+go: extracting github.com/mattn/go-ieproxy v0.0.1
+go: finding github.com/Azure/azure-storage-blob-go v0.11.1-0.20201209121048-6df5d9af221d
+go: finding github.com/Azure/azure-pipeline-go v0.2.3
+go: finding github.com/google/uuid v1.1.2
+go: finding github.com/mattn/go-ieproxy v0.0.1
+=== RUN   TestAdapterOperation_InvalidConfig
+=== RUN   TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key
+=== RUN   TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account key"
+=== RUN   TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account key"
+=== RUN   TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetGoCloudURL
+time="2021-05-20T15:29:26Z" level=error msg="error parsing blob URL" error="parse azblob://\x00/key: net/url: invalid control character in URL" url="azblob://\x00/key"
+=== RUN   TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetUploadEnv
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure SAS token" error="missing Azure storage account key"
+=== RUN   TestAdapterOperation_InvalidConfig/container-not-specified
+=== RUN   TestAdapterOperation_InvalidConfig/container-not-specified/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="ContainerName can't be empty"
+=== RUN   TestAdapterOperation_InvalidConfig/container-not-specified/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="ContainerName can't be empty"
+=== RUN   TestAdapterOperation_InvalidConfig/container-not-specified/GetGoCloudURL
+time="2021-05-20T15:29:26Z" level=error msg="ContainerName can't be empty"
+=== RUN   TestAdapterOperation_InvalidConfig/container-not-specified/GetUploadEnv
+time="2021-05-20T15:29:26Z" level=error msg="ContainerName can't be empty"
+=== RUN   TestAdapterOperation_InvalidConfig/error-on-credentials-resolver-initialization
+=== RUN   TestAdapterOperation_InvalidConfig/no-azure-config
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="error resolving Azure credentials" error="test error"
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="error resolving Azure credentials" error="test error"
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetGoCloudURL
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetUploadEnv
+time="2021-05-20T15:29:26Z" level=error msg="error resolving Azure credentials" error="test error"
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account name"
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account name"
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials/GetGoCloudURL
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials/GetUploadEnv
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure SAS token" error="missing Azure storage account name"
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-name
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-name/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account name"
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-name/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account name"
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-name/GetGoCloudURL
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-name/GetUploadEnv
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure SAS token" error="missing Azure storage account name"
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-key
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-key/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account key"
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-key/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="missing Azure storage account key"
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-key/GetGoCloudURL
+=== RUN   TestAdapterOperation_InvalidConfig/no-account-key/GetUploadEnv
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure SAS token" error="missing Azure storage account key"
+--- PASS: TestAdapterOperation_InvalidConfig (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetUploadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetGoCloudURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/invalid-container-name-and-no-account-key/GetUploadEnv (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/container-not-specified (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/container-not-specified/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/container-not-specified/GetUploadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/container-not-specified/GetGoCloudURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/container-not-specified/GetUploadEnv (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/error-on-credentials-resolver-initialization (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-azure-config (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetUploadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetGoCloudURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetUploadEnv (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-credentials (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-credentials/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-credentials/GetUploadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-credentials/GetGoCloudURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-credentials/GetUploadEnv (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-account-name (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-name/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-name/GetUploadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-name/GetGoCloudURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-name/GetUploadEnv (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-account-key (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-key/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-key/GetUploadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-key/GetGoCloudURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-account-key/GetUploadEnv (0.00s)
+=== RUN   TestAdapterOperation
+=== RUN   TestAdapterOperation/valid-configuration
+=== RUN   TestAdapterOperation/valid-configuration/GetDownloadURL
+=== RUN   TestAdapterOperation/valid-configuration/GetUploadURL
+=== RUN   TestAdapterOperation/valid-configuration-with-leading-slash
+=== RUN   TestAdapterOperation/valid-configuration-with-leading-slash/GetDownloadURL
+=== RUN   TestAdapterOperation/valid-configuration-with-leading-slash/GetUploadURL
+=== RUN   TestAdapterOperation/error-on-URL-signing
+=== RUN   TestAdapterOperation/error-on-URL-signing/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="test error"
+=== RUN   TestAdapterOperation/error-on-URL-signing/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="test error"
+=== RUN   TestAdapterOperation/invalid-URL-returned
+=== RUN   TestAdapterOperation/invalid-URL-returned/GetDownloadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="parse ://test: missing protocol scheme"
+=== RUN   TestAdapterOperation/invalid-URL-returned/GetUploadURL
+time="2021-05-20T15:29:26Z" level=error msg="error generating Azure pre-signed URL" error="parse ://test: missing protocol scheme"
+--- PASS: TestAdapterOperation (0.00s)
+    --- PASS: TestAdapterOperation/valid-configuration (0.00s)
+        --- PASS: TestAdapterOperation/valid-configuration/GetDownloadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+        --- PASS: TestAdapterOperation/valid-configuration/GetUploadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+    --- PASS: TestAdapterOperation/valid-configuration-with-leading-slash (0.00s)
+        --- PASS: TestAdapterOperation/valid-configuration-with-leading-slash/GetDownloadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+        --- PASS: TestAdapterOperation/valid-configuration-with-leading-slash/GetUploadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+    --- PASS: TestAdapterOperation/error-on-URL-signing (0.00s)
+        --- PASS: TestAdapterOperation/error-on-URL-signing/GetDownloadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+        --- PASS: TestAdapterOperation/error-on-URL-signing/GetUploadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+    --- PASS: TestAdapterOperation/invalid-URL-returned (0.00s)
+        --- PASS: TestAdapterOperation/invalid-URL-returned/GetDownloadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+        --- PASS: TestAdapterOperation/invalid-URL-returned/GetUploadURL (0.00s)
+            adapter_test.go:250: PASS:	Resolve()
+            adapter_test.go:250: PASS:	Credentials()
+=== RUN   TestAzureClientURLGeneration
+=== RUN   TestAzureClientURLGeneration/missing_account_name
+=== RUN   TestAzureClientURLGeneration/missing_account_key
+=== RUN   TestAzureClientURLGeneration/GET_request
+=== RUN   TestAzureClientURLGeneration/GET_request_in_custom_storage_domain
+=== RUN   TestAzureClientURLGeneration/PUT_request
+--- PASS: TestAzureClientURLGeneration (0.00s)
+    --- PASS: TestAzureClientURLGeneration/missing_account_name (0.00s)
+    --- PASS: TestAzureClientURLGeneration/missing_account_key (0.00s)
+    --- PASS: TestAzureClientURLGeneration/GET_request (0.00s)
+    --- PASS: TestAzureClientURLGeneration/GET_request_in_custom_storage_domain (0.00s)
+    --- PASS: TestAzureClientURLGeneration/PUT_request (0.00s)
+=== RUN   TestDefaultCredentialsResolver
+=== RUN   TestDefaultCredentialsResolver/config_is_nil
+=== RUN   TestDefaultCredentialsResolver/credentials_not_set
+=== RUN   TestDefaultCredentialsResolver/credentials_direct_in_config
+--- PASS: TestDefaultCredentialsResolver (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/config_is_nil (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_not_set (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_direct_in_config (0.00s)
+PASS
+coverage: 3.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/cache/azure	0.025s	coverage: 3.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/cache/gcs' package with coverprofile in 'count' mode:
+[0m
+go: downloading cloud.google.com/go v0.72.0
+go: extracting cloud.google.com/go v0.72.0
+go: downloading cloud.google.com/go/storage v1.12.0
+go: extracting cloud.google.com/go/storage v1.12.0
+go: downloading google.golang.org/api v0.36.0
+go: downloading github.com/googleapis/gax-go v2.0.2+incompatible
+go: downloading go.opencensus.io v0.22.5
+go: extracting github.com/googleapis/gax-go v2.0.2+incompatible
+go: downloading github.com/googleapis/gax-go/v2 v2.0.5
+go: extracting github.com/googleapis/gax-go/v2 v2.0.5
+go: extracting go.opencensus.io v0.22.5
+go: downloading github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
+go: extracting github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
+go: extracting google.golang.org/api v0.36.0
+go: downloading golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19
+go: extracting golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19
+go: finding cloud.google.com/go/storage v1.12.0
+go: finding cloud.google.com/go v0.72.0
+go: finding github.com/googleapis/gax-go/v2 v2.0.5
+go: finding google.golang.org/api v0.36.0
+go: finding go.opencensus.io v0.22.5
+go: finding github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
+go: finding golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19
+=== RUN   TestAdapterOperation_InvalidConfig
+=== RUN   TestAdapterOperation_InvalidConfig/error-on-credentials-resolver-initialization
+=== RUN   TestAdapterOperation_InvalidConfig/no-gcs-config
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetDownloadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while resolving GCS credentials: test error"
+=== RUN   TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetUploadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while resolving GCS credentials: test error"
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials/GetDownloadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: storage: missing required GoogleAccessID"
+=== RUN   TestAdapterOperation_InvalidConfig/no-credentials/GetUploadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: storage: missing required GoogleAccessID"
+=== RUN   TestAdapterOperation_InvalidConfig/no-access-id
+=== RUN   TestAdapterOperation_InvalidConfig/no-access-id/GetDownloadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: storage: missing required GoogleAccessID"
+=== RUN   TestAdapterOperation_InvalidConfig/no-access-id/GetUploadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: storage: missing required GoogleAccessID"
+=== RUN   TestAdapterOperation_InvalidConfig/no-private-key
+=== RUN   TestAdapterOperation_InvalidConfig/no-private-key/GetDownloadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: storage: exactly one of PrivateKey or SignedBytes must be set"
+=== RUN   TestAdapterOperation_InvalidConfig/no-private-key/GetUploadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: storage: exactly one of PrivateKey or SignedBytes must be set"
+=== RUN   TestAdapterOperation_InvalidConfig/bucket-not-specified
+=== RUN   TestAdapterOperation_InvalidConfig/bucket-not-specified/GetDownloadURL
+time="2021-05-20T15:29:37Z" level=error msg="BucketName can't be empty"
+=== RUN   TestAdapterOperation_InvalidConfig/bucket-not-specified/GetUploadURL
+time="2021-05-20T15:29:37Z" level=error msg="BucketName can't be empty"
+--- PASS: TestAdapterOperation_InvalidConfig (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/error-on-credentials-resolver-initialization (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-gcs-config (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/credentials-resolver-resolve-error/GetUploadURL (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-credentials (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-credentials/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-credentials/GetUploadURL (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-access-id (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-access-id/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-access-id/GetUploadURL (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/no-private-key (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-private-key/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/no-private-key/GetUploadURL (0.00s)
+    --- PASS: TestAdapterOperation_InvalidConfig/bucket-not-specified (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/bucket-not-specified/GetDownloadURL (0.00s)
+        --- PASS: TestAdapterOperation_InvalidConfig/bucket-not-specified/GetUploadURL (0.00s)
+=== RUN   TestAdapterOperation
+=== RUN   TestAdapterOperation/valid-configuration
+=== RUN   TestAdapterOperation/valid-configuration/GetDownloadURL
+=== RUN   TestAdapterOperation/valid-configuration/GetUploadURL
+=== RUN   TestAdapterOperation/error-on-URL-signing
+=== RUN   TestAdapterOperation/error-on-URL-signing/GetDownloadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: test error"
+=== RUN   TestAdapterOperation/error-on-URL-signing/GetUploadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while generating GCS pre-signed URL: test error"
+=== RUN   TestAdapterOperation/invalid-URL-returned
+=== RUN   TestAdapterOperation/invalid-URL-returned/GetDownloadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while parsing generated URL: parse ://test: missing protocol scheme"
+=== RUN   TestAdapterOperation/invalid-URL-returned/GetUploadURL
+time="2021-05-20T15:29:37Z" level=error msg="error while parsing generated URL: parse ://test: missing protocol scheme"
+--- PASS: TestAdapterOperation (0.00s)
+    --- PASS: TestAdapterOperation/valid-configuration (0.00s)
+        --- PASS: TestAdapterOperation/valid-configuration/GetDownloadURL (0.00s)
+            adapter_test.go:218: PASS:	Resolve()
+            adapter_test.go:218: PASS:	Credentials()
+        --- PASS: TestAdapterOperation/valid-configuration/GetUploadURL (0.00s)
+            adapter_test.go:218: PASS:	Resolve()
+            adapter_test.go:218: PASS:	Credentials()
+    --- PASS: TestAdapterOperation/error-on-URL-signing (0.00s)
+        --- PASS: TestAdapterOperation/error-on-URL-signing/GetDownloadURL (0.00s)
+            adapter_test.go:218: PASS:	Resolve()
+            adapter_test.go:218: PASS:	Credentials()
+        --- PASS: TestAdapterOperation/error-on-URL-signing/GetUploadURL (0.00s)
+            adapter_test.go:218: PASS:	Resolve()
+            adapter_test.go:218: PASS:	Credentials()
+    --- PASS: TestAdapterOperation/invalid-URL-returned (0.00s)
+        --- PASS: TestAdapterOperation/invalid-URL-returned/GetDownloadURL (0.00s)
+            adapter_test.go:218: PASS:	Resolve()
+            adapter_test.go:218: PASS:	Credentials()
+        --- PASS: TestAdapterOperation/invalid-URL-returned/GetUploadURL (0.00s)
+            adapter_test.go:218: PASS:	Resolve()
+            adapter_test.go:218: PASS:	Credentials()
+=== RUN   TestDefaultCredentialsResolver
+=== RUN   TestDefaultCredentialsResolver/credentials_in_both_places_-_credentials_file_takes_precedence
+=== RUN   TestDefaultCredentialsResolver/credentials_in_non-existing_credentials_file
+=== RUN   TestDefaultCredentialsResolver/credentials_in_credentials_file_-_invalid_JSON
+=== RUN   TestDefaultCredentialsResolver/config_is_nil
+=== RUN   TestDefaultCredentialsResolver/credentials_not_set
+=== RUN   TestDefaultCredentialsResolver/credentials_direct_in_config
+=== RUN   TestDefaultCredentialsResolver/credentials_in_credentials_file_-_service_account_file
+=== RUN   TestDefaultCredentialsResolver/credentials_in_credentials_file_-_unsupported_type_credentials_file
+--- PASS: TestDefaultCredentialsResolver (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_in_both_places_-_credentials_file_takes_precedence (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_in_non-existing_credentials_file (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_in_credentials_file_-_invalid_JSON (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/config_is_nil (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_not_set (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_direct_in_config (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_in_credentials_file_-_service_account_file (0.00s)
+    --- PASS: TestDefaultCredentialsResolver/credentials_in_credentials_file_-_unsupported_type_credentials_file (0.00s)
+PASS
+coverage: 2.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/cache/gcs	0.021s	coverage: 2.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/cache/s3' package with coverprofile in 'count' mode:
+[0m
+go: downloading github.com/minio/minio-go/v6 v6.0.57
+go: extracting github.com/minio/minio-go/v6 v6.0.57
+go: downloading github.com/minio/sha256-simd v0.1.1
+go: downloading github.com/minio/md5-simd v1.1.1
+go: downloading github.com/mitchellh/go-homedir v1.1.0
+go: downloading gopkg.in/ini.v1 v1.62.0
+go: extracting github.com/mitchellh/go-homedir v1.1.0
+go: extracting github.com/minio/sha256-simd v0.1.1
+go: extracting gopkg.in/ini.v1 v1.62.0
+go: extracting github.com/minio/md5-simd v1.1.1
+go: downloading github.com/klauspost/cpuid v1.3.1
+go: extracting github.com/klauspost/cpuid v1.3.1
+go: finding github.com/minio/minio-go/v6 v6.0.57
+go: finding github.com/minio/sha256-simd v0.1.1
+go: finding github.com/mitchellh/go-homedir v1.1.0
+go: finding gopkg.in/ini.v1 v1.62.0
+go: finding github.com/minio/md5-simd v1.1.1
+go: finding github.com/klauspost/cpuid v1.3.1
+=== RUN   TestCacheOperation
+=== RUN   TestCacheOperation/error-on-presigning-url
+=== RUN   TestCacheOperation/error-on-presigning-url/GetDownloadURL
+time="2021-05-20T15:29:41Z" level=error msg="error while generating S3 pre-signed URL" error="test error"
+=== RUN   TestCacheOperation/error-on-presigning-url/GetUploadURL
+time="2021-05-20T15:29:41Z" level=error msg="error while generating S3 pre-signed URL" error="test error"
+=== RUN   TestCacheOperation/presigned-url
+=== RUN   TestCacheOperation/presigned-url/GetDownloadURL
+=== RUN   TestCacheOperation/presigned-url/GetUploadURL
+=== RUN   TestCacheOperation/error-on-minio-client-initialization
+=== RUN   TestCacheOperation/error-on-minio-client-initialization/GetDownloadURL
+=== RUN   TestCacheOperation/error-on-minio-client-initialization/GetUploadURL
+--- PASS: TestCacheOperation (0.00s)
+    --- PASS: TestCacheOperation/error-on-presigning-url (0.00s)
+        --- PASS: TestCacheOperation/error-on-presigning-url/GetDownloadURL (0.00s)
+        --- PASS: TestCacheOperation/error-on-presigning-url/GetUploadURL (0.00s)
+    --- PASS: TestCacheOperation/presigned-url (0.00s)
+        --- PASS: TestCacheOperation/presigned-url/GetDownloadURL (0.00s)
+        --- PASS: TestCacheOperation/presigned-url/GetUploadURL (0.00s)
+    --- PASS: TestCacheOperation/error-on-minio-client-initialization (0.00s)
+        --- PASS: TestCacheOperation/error-on-minio-client-initialization/GetDownloadURL (0.00s)
+        --- PASS: TestCacheOperation/error-on-minio-client-initialization/GetUploadURL (0.00s)
+=== RUN   TestNoConfiguration
+--- PASS: TestNoConfiguration (0.00s)
+=== RUN   TestGetCredentials
+=== RUN   TestGetCredentials/empty_access_key
+=== RUN   TestGetCredentials/empty_secret_key
+=== RUN   TestGetCredentials/no_S3_credentials
+=== RUN   TestGetCredentials/static_credentials
+=== RUN   TestGetCredentials/empty_access_and_secret_key
+--- PASS: TestGetCredentials (0.00s)
+    --- PASS: TestGetCredentials/empty_access_key (0.00s)
+    --- PASS: TestGetCredentials/empty_secret_key (0.00s)
+    --- PASS: TestGetCredentials/no_S3_credentials (0.00s)
+    --- PASS: TestGetCredentials/static_credentials (0.00s)
+    --- PASS: TestGetCredentials/empty_access_and_secret_key (0.00s)
+=== RUN   TestMinioClientInitialization
+=== RUN   TestMinioClientInitialization/serverAddress-empty
+=== RUN   TestMinioClientInitialization/secretKey-empty
+=== RUN   TestMinioClientInitialization/only-AccessKey-defined
+=== RUN   TestMinioClientInitialization/should-use-explicit-credentials
+=== RUN   TestMinioClientInitialization/should-use-explicit-credentials-with-insecure
+=== RUN   TestMinioClientInitialization/error-on-initialization
+=== RUN   TestMinioClientInitialization/all-credentials-empty
+=== RUN   TestMinioClientInitialization/accessKey-empty
+=== RUN   TestMinioClientInitialization/only-ServerAddress-defined
+=== RUN   TestMinioClientInitialization/only-SecretKey-defined
+--- PASS: TestMinioClientInitialization (0.00s)
+    --- PASS: TestMinioClientInitialization/serverAddress-empty (0.00s)
+    --- PASS: TestMinioClientInitialization/secretKey-empty (0.00s)
+    --- PASS: TestMinioClientInitialization/only-AccessKey-defined (0.00s)
+    --- PASS: TestMinioClientInitialization/should-use-explicit-credentials (0.00s)
+    --- PASS: TestMinioClientInitialization/should-use-explicit-credentials-with-insecure (0.00s)
+    --- PASS: TestMinioClientInitialization/error-on-initialization (0.00s)
+    --- PASS: TestMinioClientInitialization/all-credentials-empty (0.00s)
+    --- PASS: TestMinioClientInitialization/accessKey-empty (0.00s)
+    --- PASS: TestMinioClientInitialization/only-ServerAddress-defined (0.00s)
+    --- PASS: TestMinioClientInitialization/only-SecretKey-defined (0.00s)
+PASS
+coverage: 2.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/cache/s3	0.020s	coverage: 2.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands' package with coverprofile in 'count' mode:
+[0m
+go: downloading github.com/imdario/mergo v0.3.7
+go: downloading github.com/docker/cli v20.10.2+incompatible
+go: downloading github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
+go: downloading github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
+go: downloading gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
+go: downloading github.com/kr/pty v1.1.1
+go: downloading github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
+go: extracting github.com/imdario/mergo v0.3.7
+go: extracting github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
+go: extracting github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
+go: extracting github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
+go: downloading github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
+go: downloading k8s.io/client-go v11.0.1-0.20191004102930-01520b8320fc+incompatible
+go: extracting github.com/kr/pty v1.1.1
+go: downloading github.com/bmatcuk/doublestar v1.3.0
+go: extracting gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
+go: downloading github.com/hashicorp/go-version v1.2.1
+go: downloading github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
+go: extracting github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
+go: extracting github.com/hashicorp/go-version v1.2.1
+go: extracting github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
+go: extracting github.com/bmatcuk/doublestar v1.3.0
+go: extracting github.com/docker/cli v20.10.2+incompatible
+go: extracting k8s.io/client-go v11.0.1-0.20191004102930-01520b8320fc+incompatible
+go: downloading golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+go: downloading github.com/Azure/go-autorest v14.2.0+incompatible
+go: downloading k8s.io/utils v0.0.0-20190923111123-69764acb6e8e
+go: extracting github.com/Azure/go-autorest v14.2.0+incompatible
+go: downloading golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
+go: downloading github.com/Azure/go-autorest/autorest v0.11.12
+go: extracting golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+go: downloading github.com/gophercloud/gophercloud v0.0.0-20180425001159-e25975f29734
+go: extracting k8s.io/utils v0.0.0-20190923111123-69764acb6e8e
+go: extracting github.com/Azure/go-autorest/autorest v0.11.12
+go: extracting golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
+go: downloading github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
+go: downloading github.com/Azure/go-autorest/autorest/adal v0.9.6
+go: downloading github.com/Azure/go-autorest/tracing v0.6.0
+go: downloading github.com/googleapis/gnostic v0.1.0
+go: downloading github.com/spf13/pflag v1.0.3
+go: downloading sigs.k8s.io/yaml v1.1.0
+go: downloading github.com/Azure/go-autorest/logger v0.2.0
+go: downloading github.com/docker/docker-credential-helpers v0.4.1
+go: extracting github.com/Azure/go-autorest/autorest/adal v0.9.6
+go: extracting github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
+go: downloading github.com/form3tech-oss/jwt-go v3.2.2+incompatible
+go: extracting github.com/Azure/go-autorest/tracing v0.6.0
+go: downloading github.com/Azure/go-autorest/autorest/date v0.3.0
+go: extracting github.com/Azure/go-autorest/autorest/date v0.3.0
+go: extracting github.com/spf13/pflag v1.0.3
+go: extracting github.com/googleapis/gnostic v0.1.0
+go: extracting github.com/docker/docker-credential-helpers v0.4.1
+go: extracting github.com/Azure/go-autorest/logger v0.2.0
+go: extracting sigs.k8s.io/yaml v1.1.0
+go: extracting github.com/form3tech-oss/jwt-go v3.2.2+incompatible
+go: extracting github.com/gophercloud/gophercloud v0.0.0-20180425001159-e25975f29734
+go: finding github.com/ayufan/golang-kardianos-service v0.0.0-20160429143213-0c8eb6d8fff2
+go: finding github.com/imdario/mergo v0.3.7
+go: finding github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
+go: finding github.com/bmatcuk/doublestar v1.3.0
+go: finding github.com/kr/pty v1.1.1
+go: finding github.com/docker/cli v20.10.2+incompatible
+go: finding github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
+go: finding gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
+go: finding github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
+go: finding github.com/docker/docker-credential-helpers v0.4.1
+go: finding github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
+go: finding github.com/hashicorp/go-version v1.2.1
+go: finding golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+go: finding k8s.io/client-go v11.0.1-0.20191004102930-01520b8320fc+incompatible
+go: finding github.com/googleapis/gnostic v0.1.0
+go: finding sigs.k8s.io/yaml v1.1.0
+go: finding golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
+go: finding k8s.io/utils v0.0.0-20190923111123-69764acb6e8e
+go: finding github.com/Azure/go-autorest/autorest v0.11.12
+go: finding github.com/Azure/go-autorest/autorest/adal v0.9.6
+go: finding github.com/Azure/go-autorest/autorest/date v0.3.0
+go: finding github.com/Azure/go-autorest/tracing v0.6.0
+go: finding github.com/form3tech-oss/jwt-go v3.2.2+incompatible
+go: finding github.com/Azure/go-autorest/logger v0.2.0
+go: finding github.com/gophercloud/gophercloud v0.0.0-20180425001159-e25975f29734
+go: finding github.com/spf13/pflag v1.0.3
+go: finding github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
+=== RUN   TestBuildsHelperCollect
+time="2021-05-20T15:30:11Z" level=warning msg="Error while executing file based variables removal script" error="context canceled" job=0 project=0
+--- PASS: TestBuildsHelperCollect (0.01s)
+=== RUN   TestBuildsHelperAcquireRequestWithLimit
+--- PASS: TestBuildsHelperAcquireRequestWithLimit (0.00s)
+=== RUN   TestBuildsHelperAcquireRequestWithDefault
+--- PASS: TestBuildsHelperAcquireRequestWithDefault (0.00s)
+=== RUN   TestBuildsHelperAcquireBuildWithLimit
+--- PASS: TestBuildsHelperAcquireBuildWithLimit (0.00s)
+=== RUN   TestBuildsHelperAcquireBuildUnlimited
+--- PASS: TestBuildsHelperAcquireBuildUnlimited (0.00s)
+=== RUN   TestBuildsHelperFindSessionByURL
+--- PASS: TestBuildsHelperFindSessionByURL (0.00s)
+=== RUN   TestBuildsHelper_ListJobsHandler
+=== RUN   TestBuildsHelper_ListJobsHandler/no_jobs
+=== RUN   TestBuildsHelper_ListJobsHandler/job_exists
+--- PASS: TestBuildsHelper_ListJobsHandler (0.00s)
+    --- PASS: TestBuildsHelper_ListJobsHandler/no_jobs (0.00s)
+    --- PASS: TestBuildsHelper_ListJobsHandler/job_exists (0.00s)
+=== RUN   TestMetricsServer
+=== RUN   TestMetricsServer/address-set-with-port-from-cli
+=== RUN   TestMetricsServer/address-set-with-port-from-config
+=== RUN   TestMetricsServer/address-is-empty-from-cli
+=== RUN   TestMetricsServer/address-is-empty-from-config
+=== RUN   TestMetricsServer/address-is-invalid-from-cli
+=== RUN   TestMetricsServer/address-is-invalid-from-config
+=== RUN   TestMetricsServer/address-not-set-from-cli
+=== RUN   TestMetricsServer/address-not-set-from-config
+=== RUN   TestMetricsServer/address-set-without-port-from-cli
+=== RUN   TestMetricsServer/address-set-without-port-from-config
+=== RUN   TestMetricsServer/port-set-without-address-from-cli
+=== RUN   TestMetricsServer/port-set-without-address-from-config
+--- PASS: TestMetricsServer (0.00s)
+    --- PASS: TestMetricsServer/address-set-with-port-from-cli (0.00s)
+    --- PASS: TestMetricsServer/address-set-with-port-from-config (0.00s)
+    --- PASS: TestMetricsServer/address-is-empty-from-cli (0.00s)
+    --- PASS: TestMetricsServer/address-is-empty-from-config (0.00s)
+    --- PASS: TestMetricsServer/address-is-invalid-from-cli (0.00s)
+    --- PASS: TestMetricsServer/address-is-invalid-from-config (0.00s)
+    --- PASS: TestMetricsServer/address-not-set-from-cli (0.00s)
+    --- PASS: TestMetricsServer/address-not-set-from-config (0.00s)
+    --- PASS: TestMetricsServer/address-set-without-port-from-cli (0.00s)
+    --- PASS: TestMetricsServer/address-set-without-port-from-config (0.00s)
+    --- PASS: TestMetricsServer/port-set-without-address-from-cli (0.00s)
+    --- PASS: TestMetricsServer/port-set-without-address-from-config (0.00s)
+=== RUN   TestProcessRunner_BuildLimit
+--- PASS: TestProcessRunner_BuildLimit (9.01s)
+    multi_test.go:132: PASS:	Acquire(string)
+    multi_test.go:132: PASS:	Release(string,string)
+    multi_test.go:132: PASS:	CanCreate()
+    multi_test.go:132: PASS:	GetDefaultShell()
+    multi_test.go:132: PASS:	GetFeatures(string)
+    multi_test.go:132: PASS:	Create()
+    multi_test.go:132: PASS:	Prepare(string,string,string)
+    multi_test.go:132: PASS:	Cleanup()
+    multi_test.go:132: PASS:	Shell()
+    multi_test.go:132: PASS:	Finish(string)
+    multi_test.go:132: PASS:	Run(string)
+    multi_test.go:132: PASS:	RequestJob(string,string,string)
+    multi_test.go:132: PASS:	ProcessJob(string,string)
+    multi_test.go:132: PASS:	SetFailuresCollector(string)
+    multi_test.go:132: PASS:	Write(string)
+    multi_test.go:132: PASS:	IsStdout()
+    multi_test.go:132: PASS:	SetCancelFunc(string)
+    multi_test.go:132: PASS:	SetAbortFunc(string)
+    multi_test.go:132: PASS:	SetMasked(string)
+    multi_test.go:132: PASS:	Success()
+=== RUN   TestRunCommand_doJobRequest
+=== RUN   TestRunCommand_doJobRequest/requestJob_returns_immediately
+=== RUN   TestRunCommand_doJobRequest/requestJob_hangs_indefinitely
+=== RUN   TestRunCommand_doJobRequest/requestJob_interrupted_by_interrupt_signal
+=== RUN   TestRunCommand_doJobRequest/runFinished_signal_is_passed
+--- PASS: TestRunCommand_doJobRequest (1.00s)
+    --- PASS: TestRunCommand_doJobRequest/requestJob_returns_immediately (0.00s)
+        multi_test.go:209: PASS:	RequestJob(string,common.RunnerConfig,string)
+    --- PASS: TestRunCommand_doJobRequest/requestJob_hangs_indefinitely (1.00s)
+        multi_test.go:206: PASS:	RequestJob(string,common.RunnerConfig,string)
+    --- PASS: TestRunCommand_doJobRequest/requestJob_interrupted_by_interrupt_signal (0.00s)
+        multi_test.go:209: PASS:	RequestJob(string,common.RunnerConfig,string)
+    --- PASS: TestRunCommand_doJobRequest/runFinished_signal_is_passed (0.00s)
+        multi_test.go:209: PASS:	RequestJob(string,common.RunnerConfig,string)
+PASS
+coverage: 11.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands	10.062s	coverage: 11.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 1 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestRegisterDefaultDockerCacheVolume
+--- PASS: TestRegisterDefaultDockerCacheVolume (0.00s)
+=== RUN   TestDoNotRegisterDefaultDockerCacheVolumeWhenDisableCache
+--- PASS: TestDoNotRegisterDefaultDockerCacheVolumeWhenDisableCache (0.00s)
+=== RUN   TestRegisterCustomDockerCacheVolume
+--- PASS: TestRegisterCustomDockerCacheVolume (0.00s)
+=== RUN   TestRegisterCustomMappedDockerCacheVolume
+--- PASS: TestRegisterCustomMappedDockerCacheVolume (0.00s)
+=== RUN   TestConfigTemplate_Enabled
+=== RUN   TestConfigTemplate_Enabled/configuration_file_defined
+=== RUN   TestConfigTemplate_Enabled/configuration_file_not_defined
+--- PASS: TestConfigTemplate_Enabled (0.00s)
+    --- PASS: TestConfigTemplate_Enabled/configuration_file_defined (0.00s)
+    --- PASS: TestConfigTemplate_Enabled/configuration_file_not_defined (0.00s)
+=== RUN   TestConfigTemplate_MergeTo
+=== RUN   TestConfigTemplate_MergeTo/invalid_template_file
+=== RUN   TestConfigTemplate_MergeTo/no_runners_in_template
+=== RUN   TestConfigTemplate_MergeTo/multiple_runners_in_template
+=== RUN   TestConfigTemplate_MergeTo/template_doesn't_overwrite_existing_settings
+=== RUN   TestConfigTemplate_MergeTo/template_adds_additional_content
+=== RUN   TestConfigTemplate_MergeTo/error_on_merging
+--- PASS: TestConfigTemplate_MergeTo (0.00s)
+    --- PASS: TestConfigTemplate_MergeTo/invalid_template_file (0.00s)
+    --- PASS: TestConfigTemplate_MergeTo/no_runners_in_template (0.00s)
+    --- PASS: TestConfigTemplate_MergeTo/multiple_runners_in_template (0.00s)
+    --- PASS: TestConfigTemplate_MergeTo/template_doesn't_overwrite_existing_settings (0.00s)
+    --- PASS: TestConfigTemplate_MergeTo/template_adds_additional_content (0.00s)
+    --- PASS: TestConfigTemplate_MergeTo/error_on_merging (0.00s)
+=== RUN   TestSingleRunnerSigquit
+time="2021-05-20T15:30:24Z" level=info msg="Starting runner for http://example.com with token _test_to ..."
+time="2021-05-20T15:30:24Z" level=warning msg="Requested quit, waiting for builds to finish"
+time="2021-05-20T15:30:25Z" level=info msg="This runner has processed its build limit, so now exiting"
+--- PASS: TestSingleRunnerSigquit (1.01s)
+    single_test.go:115: PASS:	Prepare(string,string,string)
+    single_test.go:115: PASS:	Finish(<nil>)
+    single_test.go:115: PASS:	Cleanup()
+    single_test.go:115: PASS:	Shell()
+    single_test.go:115: PASS:	Run(string)
+    single_test.go:116: PASS:	CanCreate()
+    single_test.go:116: PASS:	GetDefaultShell()
+    single_test.go:116: PASS:	GetFeatures(string)
+    single_test.go:116: PASS:	Create()
+    single_test.go:116: PASS:	Acquire(string)
+    single_test.go:116: PASS:	Release(string,string)
+    single_test.go:117: PASS:	RequestJob(string,string,string)
+    single_test.go:117: PASS:	ProcessJob(string,string)
+=== RUN   TestSingleRunnerMaxBuilds
+time="2021-05-20T15:30:25Z" level=info msg="Starting runner for http://example.com with token _test_to ..."
+time="2021-05-20T15:30:25Z" level=info msg="This runner has processed its build limit, so now exiting"
+--- PASS: TestSingleRunnerMaxBuilds (0.02s)
+    single_test.go:115: PASS:	Prepare(string,string,string)
+    single_test.go:115: PASS:	Finish(<nil>)
+    single_test.go:115: PASS:	Cleanup()
+    single_test.go:115: PASS:	Shell()
+    single_test.go:115: PASS:	Run(string)
+    single_test.go:116: PASS:	CanCreate()
+    single_test.go:116: PASS:	GetDefaultShell()
+    single_test.go:116: PASS:	GetFeatures(string)
+    single_test.go:116: PASS:	Create()
+    single_test.go:116: PASS:	Acquire(string)
+    single_test.go:116: PASS:	Release(string,string)
+    single_test.go:117: PASS:	RequestJob(string,string,string)
+    single_test.go:117: PASS:	ProcessJob(string,string)
+=== RUN   TestAccessLevelSetting
+=== RUN   TestAccessLevelSetting/access_level_not_defined
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAccessLevelSetting/ref_protected_used
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAccessLevelSetting/not_protected_used
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAccessLevelSetting/unknown_access_level
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+time="2021-05-20T15:30:25Z" level=panic msg="Given access-level is not valid. Refer to gitlab-runner register -h for the correct options."
+--- PASS: TestAccessLevelSetting (0.01s)
+    --- PASS: TestAccessLevelSetting/access_level_not_defined (0.00s)
+        register_integration_test.go:80: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAccessLevelSetting/ref_protected_used (0.00s)
+        register_integration_test.go:80: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAccessLevelSetting/not_protected_used (0.00s)
+        register_integration_test.go:80: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAccessLevelSetting/unknown_access_level (0.00s)
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/kubernetes
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/kubernetes/basic_answers
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: ssh, virtualbox, kubernetes, test-max-build, docker, docker-ssh, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels:
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/kubernetes/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: ssh, virtualbox, kubernetes, test-max-build, docker, docker-ssh, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels:
+[kubernetes]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/kubernetes/basic_arguments_override
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, docker:
+[kubernetes]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/kubernetes/untagged_implicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes, test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine:
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/kubernetes/untagged_explicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/kubernetes/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine, kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox:
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker+machine
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker+machine/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine, kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker+machine/basic_answers
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell, virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker+machine/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: shell, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, ssh, virtualbox, kubernetes, test-max-build, docker, docker-ssh:
+[docker+machine]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker+machine/basic_arguments_override
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell:
+[docker+machine]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker+machine/untagged_implicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker+machine/untagged_explicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox, docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+[docker-ssh+machine]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/basic_arguments_override
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+[docker-ssh+machine]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/untagged_implicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker-ssh, ssh, virtualbox, kubernetes, test-max-build, docker, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, custom:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/untagged_explicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/basic_answers
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker/basic_arguments_override
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: shell, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, ssh, virtualbox, kubernetes, test-max-build, docker, docker-ssh:
+[docker]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker/untagged_implicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker/untagged_explicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes, test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes, test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker/basic_answers
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+Enter the default Docker image (for example, ruby:2.6):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell, virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh:
+[docker]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/basic_arguments_override
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine, test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes:
+[docker-ssh]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/untagged_implicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox, docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/untagged_explicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell, virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/basic_answers
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+Enter the default Docker image (for example, ruby:2.6):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox, docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine:
+[docker-ssh]: Enter the default Docker image (for example, ruby:2.6):
+[busybox:latest]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/ssh
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/ssh/basic_answers
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/ssh/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+[ssh]: Enter the SSH server address (for example, my.server.com):
+[gitlab.example.com]: Enter the SSH server port (for example, 22):
+[22]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/ssh/basic_arguments_override
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes, test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine:
+[ssh]: Enter the SSH server address (for example, my.server.com):
+[gitlab.example.com]: Enter the SSH server port (for example, 22):
+[22]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/ssh/untagged_implicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, docker:
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/ssh/untagged_explicit
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:25Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/ssh/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:25Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:25Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: shell, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, ssh, virtualbox, kubernetes, test-max-build, docker, docker-ssh:
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/custom
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/custom/basic_arguments_override
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox, docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine:
+[custom]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/custom/untagged_implicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: ssh, virtualbox, kubernetes, test-max-build, docker, docker-ssh, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/custom/untagged_explicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/custom/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker-ssh, ssh, virtualbox, kubernetes, test-max-build, docker, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, custom:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/custom/basic_answers
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine, kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/custom/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+[custom]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/parallels
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/parallels/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine, kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox:
+[parallels]: Enter the Parallels VM (for example, my-vm):
+[parallels-vm-name]: Enter the SSH server address (for example, my.server.com):
+[gitlab.example.com]: Enter the SSH server port (for example, 22):
+[22]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/parallels/basic_arguments_override
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker-ssh+machine, test-sigquit, custom, parallels, shell, docker+machine, kubernetes, test-max-build, docker, docker-ssh, ssh, virtualbox:
+[parallels]: Enter the Parallels VM (for example, my-vm):
+[parallels-vm-name]: Enter the SSH server address (for example, my.server.com):
+[gitlab.example.com]: Enter the SSH server port (for example, 22):
+[22]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/parallels/untagged_implicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine, test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes:
+Enter the Parallels VM (for example, my-vm):
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/parallels/untagged_explicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, docker:
+Enter the Parallels VM (for example, my-vm):
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/parallels/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, docker:
+Enter the Parallels VM (for example, my-vm):
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/parallels/basic_answers
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell:
+Enter the Parallels VM (for example, my-vm):
+Enter the SSH server address (for example, my.server.com):
+Enter the SSH server port (for example, 22):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/virtualbox
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/virtualbox/untagged_explicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+Enter the VirtualBox VM (for example, my-vm):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/virtualbox/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell, virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh:
+Enter the VirtualBox VM (for example, my-vm):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/virtualbox/basic_answers
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+Enter the VirtualBox VM (for example, my-vm):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/virtualbox/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+[virtualbox]: Enter the VirtualBox VM (for example, my-vm):
+[virtualbox-vm-name]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/virtualbox/basic_arguments_override
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+[virtualbox]: Enter the VirtualBox VM (for example, my-vm):
+[virtualbox-vm-name]: Enter the SSH user (for example, root):
+[user]: Enter the SSH password (for example, docker.io):
+[password]: Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+[/home/user/.ssh/id_rsa]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/virtualbox/untagged_implicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build:
+Enter the VirtualBox VM (for example, my-vm):
+Enter the SSH user (for example, root):
+Enter the SSH password (for example, docker.io):
+Enter the path to the SSH identity file (for example, /home/user/.ssh/id_rsa):
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/shell
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/shell/untagged_implicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes, test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/shell/untagged_explicit
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, custom, parallels, shell, docker+machine, docker-ssh+machine, test-sigquit:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/shell/untagged_explicit_with_tags_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh, docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/shell/basic_answers
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: parallels, shell, docker+machine, docker-ssh+machine, test-sigquit, custom, docker-ssh, ssh, virtualbox, kubernetes, test-max-build, docker:
+time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/shell/basic_arguments,_accepting_provided
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: docker+machine, docker-ssh+machine, test-sigquit, custom, parallels, shell, virtualbox, kubernetes, test-max-build, docker, docker-ssh, ssh:
+[shell]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestAskRunnerOverrideDefaultsForExecutors/shell/basic_arguments_override
+time="2021-05-20T15:30:26Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:26Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[http://gitlab.example.com/]: Enter the registration token:
+[test-registration-token]: Enter a description for the runner:
+[name]: Enter tags for the runner (comma-separated):
+[tag,list]: Enter an executor: test-max-build, docker, docker-ssh, ssh, virtualbox, kubernetes, test-sigquit, custom, parallels, shell, docker+machine, docker-ssh+machine:
+[shell]: time="2021-05-20T15:30:26Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+--- PASS: TestAskRunnerOverrideDefaultsForExecutors (0.51s)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/kubernetes (0.02s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/kubernetes/basic_answers (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/kubernetes/basic_arguments,_accepting_provided (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/kubernetes/basic_arguments_override (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/kubernetes/untagged_implicit (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/kubernetes/untagged_explicit (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/kubernetes/untagged_explicit_with_tags_provided (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker+machine (0.03s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker+machine/untagged_explicit_with_tags_provided (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker+machine/basic_answers (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker+machine/basic_arguments,_accepting_provided (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker+machine/basic_arguments_override (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker+machine/untagged_implicit (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker+machine/untagged_explicit (0.00s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine (0.03s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/untagged_implicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/untagged_explicit_with_tags_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh+machine/basic_answers (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker (0.05s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker/untagged_implicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker/untagged_explicit_with_tags_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker/basic_answers (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh (0.05s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/untagged_implicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/untagged_explicit_with_tags_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/basic_answers (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/docker-ssh/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/ssh (0.06s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/ssh/basic_answers (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/ssh/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/ssh/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/ssh/untagged_implicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/ssh/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/ssh/untagged_explicit_with_tags_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/custom (0.06s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/custom/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/custom/untagged_implicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/custom/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/custom/untagged_explicit_with_tags_provided (0.02s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/custom/basic_answers (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/custom/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/parallels (0.06s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/parallels/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/parallels/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/parallels/untagged_implicit (0.02s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/parallels/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/parallels/untagged_explicit_with_tags_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/parallels/basic_answers (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/virtualbox (0.08s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/virtualbox/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/virtualbox/untagged_explicit_with_tags_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/virtualbox/basic_answers (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/virtualbox/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/virtualbox/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/virtualbox/untagged_implicit (0.02s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+    --- PASS: TestAskRunnerOverrideDefaultsForExecutors/shell (0.07s)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/shell/untagged_implicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/shell/untagged_explicit (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/shell/untagged_explicit_with_tags_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/shell/basic_answers (0.02s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/shell/basic_arguments,_accepting_provided (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+        --- PASS: TestAskRunnerOverrideDefaultsForExecutors/shell/basic_arguments_override (0.01s)
+            register_integration_test.go:318: PASS:	RegisterRunner(string,mock.argumentMatcher)
+PASS
+coverage: 7.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands	1.575s	coverage: 7.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 2 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestUnregisterOnFailure
+=== RUN   TestUnregisterOnFailure/registration_succeeds,_runner_left_registered
+time="2021-05-20T15:30:29Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:29Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: ssh, virtualbox, custom, shell, parallels, docker+machine, docker-ssh+machine, kubernetes, docker, docker-ssh:
+time="2021-05-20T15:30:29Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+=== RUN   TestUnregisterOnFailure/registration_fails,_LeaveRunner_is_false,_runner_is_unregistered
+time="2021-05-20T15:30:29Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:29Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: custom, shell, ssh, virtualbox, docker, docker-ssh, parallels, docker+machine, docker-ssh+machine, kubernetes:
+=== RUN   TestUnregisterOnFailure/registration_fails,_LeaveRunner_is_true,_runner_left_registered
+time="2021-05-20T15:30:29Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:29Z" level=info
+Enter the GitLab instance URL (for example, https://gitlab.com/):
+[https://gitlab.com]: Enter the registration token:
+Enter a description for the runner:
+[runner-ih9xd9p3-project-250833-concurrent-0]: Enter tags for the runner (comma-separated):
+Enter an executor: docker-ssh+machine, kubernetes, docker, docker-ssh, parallels, docker+machine, custom, shell, ssh, virtualbox:
+--- PASS: TestUnregisterOnFailure (0.03s)
+    --- PASS: TestUnregisterOnFailure/registration_succeeds,_runner_left_registered (0.01s)
+        register_integration_test.go:604: PASS:	RegisterRunner(string,string)
+    --- PASS: TestUnregisterOnFailure/registration_fails,_LeaveRunner_is_false,_runner_is_unregistered (0.01s)
+        register_integration_test.go:582: PASS:	RegisterRunner(string,string)
+        register_integration_test.go:582: PASS:	UnregisterRunner(mock.argumentMatcher)
+    --- PASS: TestUnregisterOnFailure/registration_fails,_LeaveRunner_is_true,_runner_left_registered (0.01s)
+        register_integration_test.go:582: PASS:	RegisterRunner(string,string)
+=== RUN   TestRegisterCommand_FeatureFlag
+time="2021-05-20T15:30:29Z" level=info msg="Running in system-mode."
+time="2021-05-20T15:30:29Z" level=info
+time="2021-05-20T15:30:29Z" level=info msg="Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!"
+--- PASS: TestRegisterCommand_FeatureFlag (0.00s)
+    register_integration_test.go:634: PASS:	RegisterRunner(string,string)
+=== RUN   TestGetServiceArguments
+=== RUN   TestGetServiceArguments/case-0
+=== RUN   TestGetServiceArguments/case-1
+=== RUN   TestGetServiceArguments/case-2
+=== RUN   TestGetServiceArguments/case-3
+=== RUN   TestGetServiceArguments/case-4
+=== RUN   TestGetServiceArguments/case-5
+--- PASS: TestGetServiceArguments (0.00s)
+    --- PASS: TestGetServiceArguments/case-0 (0.00s)
+    --- PASS: TestGetServiceArguments/case-1 (0.00s)
+    --- PASS: TestGetServiceArguments/case-2 (0.00s)
+    --- PASS: TestGetServiceArguments/case-3 (0.00s)
+    --- PASS: TestGetServiceArguments/case-4 (0.00s)
+    --- PASS: TestGetServiceArguments/case-5 (0.00s)
+PASS
+coverage: 3.3% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands	0.064s	coverage: 3.3% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers' package with coverprofile in 'count' mode:
+[0m
+go: downloading gocloud.dev v0.21.1-0.20201223184910-5094f54ed8bb
+go: downloading github.com/saracen/fastzip v0.1.5
+go: downloading github.com/klauspost/pgzip v1.2.5
+go: extracting github.com/saracen/fastzip v0.1.5
+go: extracting github.com/klauspost/pgzip v1.2.5
+go: downloading github.com/klauspost/compress v1.11.6
+go: downloading github.com/saracen/zipextra v0.0.0-20201205103923-7347a2ee3f10
+go: extracting github.com/saracen/zipextra v0.0.0-20201205103923-7347a2ee3f10
+go: extracting gocloud.dev v0.21.1-0.20201223184910-5094f54ed8bb
+go: downloading golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+go: downloading github.com/google/wire v0.4.0
+go: extracting golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+go: extracting github.com/google/wire v0.4.0
+go: extracting github.com/klauspost/compress v1.11.6
+go: finding github.com/saracen/fastzip v0.1.5
+go: finding github.com/klauspost/pgzip v1.2.5
+go: finding github.com/klauspost/compress v1.11.6
+go: finding gocloud.dev v0.21.1-0.20201223184910-5094f54ed8bb
+go: finding github.com/saracen/zipextra v0.0.0-20201205103923-7347a2ee3f10
+go: finding github.com/google/wire v0.4.0
+go: finding golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+go: finding github.com/googleapis/gax-go v2.0.2+incompatible
+=== RUN   TestCompressionLevel
+=== RUN   TestCompressionLevel/default
+=== RUN   TestCompressionLevel/#00
+=== RUN   TestCompressionLevel/invalid
+time="2021-05-20T15:30:34Z" level=warning msg="compression level \"invalid\" is invalid, falling back to default"
+=== RUN   TestCompressionLevel/fastest
+=== RUN   TestCompressionLevel/fast
+=== RUN   TestCompressionLevel/slow
+=== RUN   TestCompressionLevel/slowest
+--- PASS: TestCompressionLevel (0.00s)
+    --- PASS: TestCompressionLevel/default (0.00s)
+    --- PASS: TestCompressionLevel/#00 (0.00s)
+    --- PASS: TestCompressionLevel/invalid (0.00s)
+    --- PASS: TestCompressionLevel/fastest (0.00s)
+    --- PASS: TestCompressionLevel/fast (0.00s)
+    --- PASS: TestCompressionLevel/slow (0.00s)
+    --- PASS: TestCompressionLevel/slowest (0.00s)
+=== RUN   TestArtifactsDownloaderRequirements
+Missing runner credentials--- PASS: TestArtifactsDownloaderRequirements (0.00s)
+=== RUN   TestArtifactsDownloader
+=== RUN   TestArtifactsDownloader/legacy
+=== RUN   TestArtifactsDownloader/legacy/download_forbidden
+permission denied=== RUN   TestArtifactsDownloader/fastzip
+=== RUN   TestArtifactsDownloader/fastzip/download_forbidden
+permission denied=== RUN   TestArtifactsDownloader/legacy#01
+=== RUN   TestArtifactsDownloader/legacy#01/retries_are_called
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+invalid argument=== RUN   TestArtifactsDownloader/fastzip#01
+=== RUN   TestArtifactsDownloader/fastzip#01/retries_are_called
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+invalid argument=== RUN   TestArtifactsDownloader/legacy#02
+=== RUN   TestArtifactsDownloader/legacy#02/first_try_is_always_direct_download
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+invalid argument=== RUN   TestArtifactsDownloader/fastzip#02
+=== RUN   TestArtifactsDownloader/fastzip#02/first_try_is_always_direct_download
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+[0;33mWARNING: Retrying...                              [0;m  [0;33merror[0;m=invalid argument
+invalid argument=== RUN   TestArtifactsDownloader/legacy#03
+=== RUN   TestArtifactsDownloader/legacy#03/downloads_artifact_without_direct_download_if_requested
+=== RUN   TestArtifactsDownloader/fastzip#03
+=== RUN   TestArtifactsDownloader/fastzip#03/downloads_artifact_without_direct_download_if_requested
+=== RUN   TestArtifactsDownloader/legacy#04
+=== RUN   TestArtifactsDownloader/legacy#04/downloads_artifact_with_direct_download_if_requested
+=== RUN   TestArtifactsDownloader/fastzip#04
+=== RUN   TestArtifactsDownloader/fastzip#04/downloads_artifact_with_direct_download_if_requested
+=== RUN   TestArtifactsDownloader/legacy#05
+=== RUN   TestArtifactsDownloader/legacy#05/download_not_found
+file does not exist=== RUN   TestArtifactsDownloader/fastzip#05
+=== RUN   TestArtifactsDownloader/fastzip#05/download_not_found
+file does not exist--- PASS: TestArtifactsDownloader (0.01s)
+    --- PASS: TestArtifactsDownloader/legacy (0.00s)
+        --- PASS: TestArtifactsDownloader/legacy/download_forbidden (0.00s)
+    --- PASS: TestArtifactsDownloader/fastzip (0.00s)
+        --- PASS: TestArtifactsDownloader/fastzip/download_forbidden (0.00s)
+    --- PASS: TestArtifactsDownloader/legacy#01 (0.00s)
+        --- PASS: TestArtifactsDownloader/legacy#01/retries_are_called (0.00s)
+    --- PASS: TestArtifactsDownloader/fastzip#01 (0.00s)
+        --- PASS: TestArtifactsDownloader/fastzip#01/retries_are_called (0.00s)
+    --- PASS: TestArtifactsDownloader/legacy#02 (0.00s)
+        --- PASS: TestArtifactsDownloader/legacy#02/first_try_is_always_direct_download (0.00s)
+    --- PASS: TestArtifactsDownloader/fastzip#02 (0.00s)
+        --- PASS: TestArtifactsDownloader/fastzip#02/first_try_is_always_direct_download (0.00s)
+    --- PASS: TestArtifactsDownloader/legacy#03 (0.00s)
+        --- PASS: TestArtifactsDownloader/legacy#03/downloads_artifact_without_direct_download_if_requested (0.00s)
+    --- PASS: TestArtifactsDownloader/fastzip#03 (0.00s)
+        --- PASS: TestArtifactsDownloader/fastzip#03/downloads_artifact_without_direct_download_if_requested (0.00s)
+    --- PASS: TestArtifactsDownloader/legacy#04 (0.00s)
+        --- PASS: TestArtifactsDownloader/legacy#04/downloads_artifact_with_direct_download_if_requested (0.00s)
+    --- PASS: TestArtifactsDownloader/fastzip#04 (0.00s)
+        --- PASS: TestArtifactsDownloader/fastzip#04/downloads_artifact_with_direct_download_if_requested (0.00s)
+    --- PASS: TestArtifactsDownloader/legacy#05 (0.00s)
+        --- PASS: TestArtifactsDownloader/legacy#05/download_not_found (0.00s)
+    --- PASS: TestArtifactsDownloader/fastzip#05 (0.00s)
+        --- PASS: TestArtifactsDownloader/fastzip#05/download_not_found (0.00s)
+=== RUN   TestArtifactsUploaderRequirements
+Missing runner credentials--- PASS: TestArtifactsUploaderRequirements (0.00s)
+=== RUN   TestArtifactsUploaderTooLarge
+archive_file: found 1 matching files and directories[0;m 
+too large--- PASS: TestArtifactsUploaderTooLarge (0.00s)
+=== RUN   TestArtifactsUploaderForbidden
+archive_file: found 1 matching files and directories[0;m 
+permission denied--- PASS: TestArtifactsUploaderForbidden (0.00s)
+=== RUN   TestArtifactsUploaderRetry
+=== RUN   TestArtifactsUploaderRetry/legacy
+archive_file: found 1 matching files and directories[0;m 
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=invalid argument
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=invalid argument
+invalid argument=== RUN   TestArtifactsUploaderRetry/fastzip
+archive_file: found 1 matching files and directories[0;m 
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=invalid argument
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=invalid argument
+invalid argument--- PASS: TestArtifactsUploaderRetry (6.00s)
+    --- PASS: TestArtifactsUploaderRetry/legacy (3.00s)
+    --- PASS: TestArtifactsUploaderRetry/fastzip (3.00s)
+=== RUN   TestArtifactsUploaderDefaultSucceeded
+=== RUN   TestArtifactsUploaderDefaultSucceeded/legacy
+archive_file: found 1 matching files and directories[0;m 
+=== RUN   TestArtifactsUploaderDefaultSucceeded/fastzip
+archive_file: found 1 matching files and directories[0;m 
+--- PASS: TestArtifactsUploaderDefaultSucceeded (0.00s)
+    --- PASS: TestArtifactsUploaderDefaultSucceeded/legacy (0.00s)
+    --- PASS: TestArtifactsUploaderDefaultSucceeded/fastzip (0.00s)
+=== RUN   TestArtifactsUploaderZipSucceeded
+=== RUN   TestArtifactsUploaderZipSucceeded/legacy
+archive_file: found 1 matching files and directories[0;m 
+=== RUN   TestArtifactsUploaderZipSucceeded/fastzip
+archive_file: found 1 matching files and directories[0;m 
+--- PASS: TestArtifactsUploaderZipSucceeded (0.00s)
+    --- PASS: TestArtifactsUploaderZipSucceeded/legacy (0.00s)
+    --- PASS: TestArtifactsUploaderZipSucceeded/fastzip (0.00s)
+=== RUN   TestArtifactsUploaderGzipSendsMultipleFiles
+archive_file: found 1 matching files and directories[0;m 
+archive_file2: found 1 matching files and directories[0;m 
+--- PASS: TestArtifactsUploaderGzipSendsMultipleFiles (0.00s)
+PASS
+coverage: 7.4% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers	6.041s	coverage: 7.4% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 1 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestArtifactsUploaderRawSucceeded
+archive_file: found 1 matching files and directories[0;m 
+--- PASS: TestArtifactsUploaderRawSucceeded (0.00s)
+=== RUN   TestArtifactsUploaderRawDoesNotSendMultipleFiles
+archive_file: found 1 matching files and directories[0;m 
+archive_file2: found 1 matching files and directories[0;m 
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=invalid argument
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=invalid argument
+invalid argument--- PASS: TestArtifactsUploaderRawDoesNotSendMultipleFiles (3.00s)
+=== RUN   TestArtifactsUploaderNoFilesDoNotGenerateError
+[31;1mERROR: No files to upload                         [0;m 
+--- PASS: TestArtifactsUploaderNoFilesDoNotGenerateError (0.00s)
+=== RUN   TestArtifactsUploaderServiceUnavailable
+archive_file: found 1 matching files and directories[0;m 
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=service unavailable
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=service unavailable
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=service unavailable
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=service unavailable
+[0;33mWARNING: Retrying...                              [0;m  [0;33mcontext[0;m=artifacts-uploader [0;33merror[0;m=service unavailable
+service unavailable--- PASS: TestArtifactsUploaderServiceUnavailable (17.00s)
+=== RUN   TestArtifactsExcludedPaths
+archive_file: found 1 matching files and directories[0;m 
+--- PASS: TestArtifactsExcludedPaths (0.00s)
+=== RUN   TestFileArchiverCompressionLevel
+=== RUN   TestFileArchiverCompressionLevel/fastest
+archive_file: found 1 matching files and directories[0;m 
+=== RUN   TestFileArchiverCompressionLevel/fast
+archive_file: found 1 matching files and directories[0;m 
+=== RUN   TestFileArchiverCompressionLevel/default
+archive_file: found 1 matching files and directories[0;m 
+=== RUN   TestFileArchiverCompressionLevel/slow
+archive_file: found 1 matching files and directories[0;m 
+=== RUN   TestFileArchiverCompressionLevel/slowest
+archive_file: found 1 matching files and directories[0;m 
+--- PASS: TestFileArchiverCompressionLevel (0.00s)
+    --- PASS: TestFileArchiverCompressionLevel/fastest (0.00s)
+        artifacts_uploader_test.go:353: PASS:	Archive(string,string)
+    --- PASS: TestFileArchiverCompressionLevel/fast (0.00s)
+        artifacts_uploader_test.go:353: PASS:	Archive(string,string)
+    --- PASS: TestFileArchiverCompressionLevel/default (0.00s)
+        artifacts_uploader_test.go:353: PASS:	Archive(string,string)
+    --- PASS: TestFileArchiverCompressionLevel/slow (0.00s)
+        artifacts_uploader_test.go:353: PASS:	Archive(string,string)
+    --- PASS: TestFileArchiverCompressionLevel/slowest (0.00s)
+        artifacts_uploader_test.go:353: PASS:	Archive(string,string)
+=== RUN   TestArtifactUploaderCommandShouldRetry
+=== RUN   TestArtifactUploaderCommandShouldRetry/retryable_error_service_unavailable,_over_max_errors_limit
+=== RUN   TestArtifactUploaderCommandShouldRetry/no_error,_first_try
+=== RUN   TestArtifactUploaderCommandShouldRetry/random_error,_first_try
+=== RUN   TestArtifactUploaderCommandShouldRetry/retryable_error,_first_try
+=== RUN   TestArtifactUploaderCommandShouldRetry/retryable_error,_max_tries
+=== RUN   TestArtifactUploaderCommandShouldRetry/retryable_error,_over_max_tries_limit
+=== RUN   TestArtifactUploaderCommandShouldRetry/retryable_error,_before_reaching_service_unavailable_tries
+=== RUN   TestArtifactUploaderCommandShouldRetry/retryable_error_service_unavailable,_max_tries
+--- PASS: TestArtifactUploaderCommandShouldRetry (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/retryable_error_service_unavailable,_over_max_errors_limit (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/no_error,_first_try (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/random_error,_first_try (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/retryable_error,_first_try (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/retryable_error,_max_tries (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/retryable_error,_over_max_tries_limit (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/retryable_error,_before_reaching_service_unavailable_tries (0.00s)
+    --- PASS: TestArtifactUploaderCommandShouldRetry/retryable_error_service_unavailable,_max_tries (0.00s)
+=== RUN   TestCacheExtractorValidArchive
+=== RUN   TestCacheExtractorValidArchive/legacy
+No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.[0;m 
+=== RUN   TestCacheExtractorValidArchive/fastzip
+No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.[0;m 
+--- PASS: TestCacheExtractorValidArchive (0.00s)
+    --- PASS: TestCacheExtractorValidArchive/legacy (0.00s)
+    --- PASS: TestCacheExtractorValidArchive/fastzip (0.00s)
+=== RUN   TestCacheExtractorForInvalidArchive
+=== RUN   TestCacheExtractorForInvalidArchive/legacy
+No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.[0;m 
+zip: not a valid zip file=== RUN   TestCacheExtractorForInvalidArchive/fastzip
+No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.[0;m 
+zip: not a valid zip file--- PASS: TestCacheExtractorForInvalidArchive (0.00s)
+    --- PASS: TestCacheExtractorForInvalidArchive/legacy (0.00s)
+    --- PASS: TestCacheExtractorForInvalidArchive/fastzip (0.00s)
+=== RUN   TestCacheExtractorForIfNoFileDefined
+Missing cache file--- PASS: TestCacheExtractorForIfNoFileDefined (0.00s)
+PASS
+coverage: 6.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers	20.031s	coverage: 6.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 2 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestCacheExtractorForNotExistingFile
+No URL provided, cache will not be downloaded from shared cache server. Instead a local version of cache will be extracted.[0;m 
+--- PASS: TestCacheExtractorForNotExistingFile (0.00s)
+=== RUN   TestCacheExtractorRemoteServerNotFound
+file does not exist--- PASS: TestCacheExtractorRemoteServerNotFound (0.00s)
+=== RUN   TestCacheExtractorRemoteServerTimedOut
+--- PASS: TestCacheExtractorRemoteServerTimedOut (0.05s)
+=== RUN   TestCacheExtractorRemoteServer
+Downloading archive.zip from http://127.0.0.1:34093/cache.zip[0;m 
+archive.zip is up to date                         [0;m 
+--- PASS: TestCacheExtractorRemoteServer (0.00s)
+=== RUN   TestCacheExtractorRemoteServerFailOnInvalidServer
+Get http://localhost:65333/cache.zip: dial tcp [::1]:65333: connect: connection refused--- PASS: TestCacheExtractorRemoteServerFailOnInvalidServer (0.00s)
+=== RUN   TestGlobbedFilePaths
+foo/**/*.txt: found 3 matching files and directories[0;m 
+--- PASS: TestGlobbedFilePaths (0.00s)
+=== RUN   TestExcludedFilePaths
+foo/test/: found 5 matching files and directories [0;m 
+foo/**/*.md: excluded 2 files                     [0;m 
+foo/test/bar/baz/3.txt: excluded 1 files          [0;m 
+--- PASS: TestExcludedFilePaths (0.00s)
+=== RUN   TestCacheArchiverAddingUntrackedFiles
+untracked: found 2 files                          [0;m 
+--- PASS: TestCacheArchiverAddingUntrackedFiles (0.00s)
+=== RUN   TestCacheArchiverAddingUntrackedUnicodeFiles
+untracked: found 1 files                          [0;m 
+--- PASS: TestCacheArchiverAddingUntrackedUnicodeFiles (0.00s)
+=== RUN   TestCacheArchiverAddingFile
+untracked_test_file.txt: found 1 matching files and directories[0;m 
+--- PASS: TestCacheArchiverAddingFile (0.00s)
+PASS
+coverage: 5.2% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers	0.082s	coverage: 5.2% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 3 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestFileArchiverToFailOnAbsoluteFile
+time="2021-05-20T15:31:08Z" level=warning msg="/absolute.txt: no matching files"
+--- PASS: TestFileArchiverToFailOnAbsoluteFile (0.00s)
+=== RUN   TestFileArchiverToFailOnRelativeFile
+time="2021-05-20T15:31:08Z" level=warning msg="../../../relative.txt: no matching files"
+--- PASS: TestFileArchiverToFailOnRelativeFile (0.00s)
+=== RUN   TestFileArchiverToAddNotExistingFile
+time="2021-05-20T15:31:08Z" level=warning msg="not_existing_file.txt: no matching files"
+--- PASS: TestFileArchiverToAddNotExistingFile (0.00s)
+=== RUN   TestFileArchiverChanged
+time="2021-05-20T15:31:08Z" level=info msg="untracked_test_file.txt: found 1 matching files and directories"
+--- PASS: TestFileArchiverChanged (0.00s)
+=== RUN   TestFileArchiverFileIsNotChanged
+time="2021-05-20T15:31:08Z" level=info msg="untracked_test_file.txt: found 1 matching files and directories"
+--- PASS: TestFileArchiverFileIsNotChanged (0.00s)
+=== RUN   TestFileArchiverFileIsChanged
+time="2021-05-20T15:31:08Z" level=info msg="untracked_test_file.txt: found 1 matching files and directories"
+--- PASS: TestFileArchiverFileIsChanged (0.00s)
+=== RUN   TestFileArchiverFileDoesNotExist
+time="2021-05-20T15:31:08Z" level=info msg="untracked_test_file.txt: found 1 matching files and directories"
+--- PASS: TestFileArchiverFileDoesNotExist (0.00s)
+=== RUN   TestServiceWaiterCommand_NoEnvironmentVariables
+No HOST or PORT found--- PASS: TestServiceWaiterCommand_NoEnvironmentVariables (0.00s)
+=== RUN   TestHealthCheckCommand_Execute
+=== RUN   TestHealthCheckCommand_Execute/Successful_connect
+waiting for TCP connection to 127.0.0.1:42173...=== RUN   TestHealthCheckCommand_Execute/Unsuccessful_connect_because_service_is_down
+waiting for TCP connection to 127.0.0.1:44437...--- PASS: TestHealthCheckCommand_Execute (2.00s)
+    --- PASS: TestHealthCheckCommand_Execute/Successful_connect (0.00s)
+    --- PASS: TestHealthCheckCommand_Execute/Unsuccessful_connect_because_service_is_down (2.00s)
+=== RUN   TestNewReadLogsCommandFileNotExist
+--- PASS: TestNewReadLogsCommandFileNotExist (2.00s)
+PASS
+coverage: 2.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers	4.025s	coverage: 2.5% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 4 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestNewReadLogsCommandNoAttempts
+--- PASS: TestNewReadLogsCommandNoAttempts (0.00s)
+=== RUN   TestNewReadLogsCommandFileSeekToInvalidLocation
+--- PASS: TestNewReadLogsCommandFileSeekToInvalidLocation (0.00s)
+=== RUN   TestNewReadLogsCommandFileLogStreamProviderCorrect
+--- PASS: TestNewReadLogsCommandFileLogStreamProviderCorrect (1.00s)
+=== RUN   TestNewReadLogsCommandLines
+--- PASS: TestNewReadLogsCommandLines (0.50s)
+    read_logs_test.go:107: PASS:	Open()
+    read_logs_test.go:107: PASS:	Write(string)
+    read_logs_test.go:107: PASS:	Write(string)
+    read_logs_test.go:107: PASS:	Write(string)
+=== RUN   TestNewReadLogsCommandWriteLinesWithDelay
+--- PASS: TestNewReadLogsCommandWriteLinesWithDelay (5.50s)
+    read_logs_test.go:171: PASS:	Open()
+    read_logs_test.go:171: PASS:	Write(string)
+    read_logs_test.go:171: PASS:	Write(string)
+    read_logs_test.go:171: PASS:	Write(string)
+    read_logs_test.go:171: PASS:	Write(string)
+    read_logs_test.go:171: PASS:	Write(string)
+    read_logs_test.go:171: PASS:	Write(string)
+=== RUN   TestSplitLinesAccordingToBufferSize
+--- PASS: TestSplitLinesAccordingToBufferSize (0.50s)
+    read_logs_test.go:211: PASS:	Open()
+    read_logs_test.go:211: PASS:	Write(string)
+    read_logs_test.go:211: PASS:	Write(string)
+    read_logs_test.go:211: PASS:	Write(string)
+    read_logs_test.go:211: PASS:	Write(string)
+    read_logs_test.go:211: PASS:	Write(string)
+=== RUN   TestSeek
+--- PASS: TestSeek (0.50s)
+    read_logs_test.go:247: PASS:	Open()
+    read_logs_test.go:247: PASS:	Write(string)
+=== RUN   TestDoRetry
+=== RUN   TestDoRetry/Error_is_of_type_retryableErr
+time="2021-05-20T15:31:22Z" level=warning msg=Retrying... error=error
+time="2021-05-20T15:31:22Z" level=warning msg=Retrying... error=error
+time="2021-05-20T15:31:22Z" level=warning msg=Retrying... error=error
+=== RUN   TestDoRetry/Error_is_not_type_of_retryableErr
+=== RUN   TestDoRetry/Error_is_nil
+--- PASS: TestDoRetry (0.00s)
+    --- PASS: TestDoRetry/Error_is_of_type_retryableErr (0.00s)
+    --- PASS: TestDoRetry/Error_is_not_type_of_retryableErr (0.00s)
+    --- PASS: TestDoRetry/Error_is_nil (0.00s)
+=== RUN   TestCacheArchiverIsUpToDate
+=== RUN   TestCacheArchiverIsUpToDate/legacy
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+archive_file: found 1 matching files and directories[0;m 
+Archive is up to date!                            [0;m 
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+=== RUN   TestCacheArchiverIsUpToDate/fastzip
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+archive_file: found 1 matching files and directories[0;m 
+Archive is up to date!                            [0;m 
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+--- PASS: TestCacheArchiverIsUpToDate (2.01s)
+    --- PASS: TestCacheArchiverIsUpToDate/legacy (1.00s)
+    --- PASS: TestCacheArchiverIsUpToDate/fastzip (1.00s)
+=== RUN   TestCacheArchiverForIfNoFileDefined
+Missing --file--- PASS: TestCacheArchiverForIfNoFileDefined (0.00s)
+PASS
+coverage: 5.4% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers	10.034s	coverage: 5.4% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 5 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestCacheArchiverRemoteServerNotFound
+Uploading archive.zip to http://127.0.0.1:41011/invalid-file.zip[0;m 
+received: 404 Not Found--- PASS: TestCacheArchiverRemoteServerNotFound (0.00s)
+=== RUN   TestCacheArchiverRemoteServer
+Uploading archive.zip to http://127.0.0.1:44209/cache.zip[0;m 
+--- PASS: TestCacheArchiverRemoteServer (0.00s)
+=== RUN   TestCacheArchiverGoCloudRemoteServer
+Uploading archive.zip to testblob://bucket/path/to/cache.zip[0;m 
+--- PASS: TestCacheArchiverGoCloudRemoteServer (0.00s)
+=== RUN   TestCacheArchiverRemoteServerWithHeaders
+Uploading archive.zip to http://127.0.0.1:33063/cache.zip[0;m 
+--- PASS: TestCacheArchiverRemoteServerWithHeaders (0.00s)
+=== RUN   TestCacheArchiverRemoteServerTimedOut
+--- PASS: TestCacheArchiverRemoteServerTimedOut (0.05s)
+=== RUN   TestCacheArchiverRemoteServerFailOnInvalidServer
+Uploading archive.zip to http://localhost:65333/cache.zip[0;m 
+Put http://localhost:65333/cache.zip: dial tcp [::1]:65333: connect: connection refused--- PASS: TestCacheArchiverRemoteServerFailOnInvalidServer (0.00s)
+=== RUN   TestCacheArchiverCompressionLevel
+=== RUN   TestCacheArchiverCompressionLevel/fastest
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+=== RUN   TestCacheArchiverCompressionLevel/fast
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+=== RUN   TestCacheArchiverCompressionLevel/default
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+=== RUN   TestCacheArchiverCompressionLevel/slow
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+=== RUN   TestCacheArchiverCompressionLevel/slowest
+archive_file: found 1 matching files and directories[0;m 
+No URL provided, cache will be not uploaded to shared cache server. Cache will be stored only locally.[0;m 
+--- PASS: TestCacheArchiverCompressionLevel (0.00s)
+    --- PASS: TestCacheArchiverCompressionLevel/fastest (0.00s)
+        cache_archiver_integration_test.go:205: PASS:	Archive(string,string)
+    --- PASS: TestCacheArchiverCompressionLevel/fast (0.00s)
+        cache_archiver_integration_test.go:205: PASS:	Archive(string,string)
+    --- PASS: TestCacheArchiverCompressionLevel/default (0.00s)
+        cache_archiver_integration_test.go:205: PASS:	Archive(string,string)
+    --- PASS: TestCacheArchiverCompressionLevel/slow (0.00s)
+        cache_archiver_integration_test.go:205: PASS:	Archive(string,string)
+    --- PASS: TestCacheArchiverCompressionLevel/slowest (0.00s)
+        cache_archiver_integration_test.go:205: PASS:	Archive(string,string)
+=== RUN   TestCacheInit
+--- PASS: TestCacheInit (0.00s)
+=== RUN   TestCacheInit_NoArguments
+No arguments passed, at least 1 path is required.--- PASS: TestCacheInit_NoArguments (0.00s)
+PASS
+coverage: 4.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers	0.080s	coverage: 4.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestDefaultRegistration
+=== RUN   TestDefaultRegistration/raw
+=== RUN   TestDefaultRegistration/gzip
+=== RUN   TestDefaultRegistration/zip
+--- PASS: TestDefaultRegistration (0.00s)
+    --- PASS: TestDefaultRegistration/raw (0.00s)
+    --- PASS: TestDefaultRegistration/gzip (0.00s)
+    --- PASS: TestDefaultRegistration/zip (0.00s)
+=== RUN   TestRegister
+--- PASS: TestRegister (0.00s)
+=== RUN   TestRegisterOverride
+--- PASS: TestRegisterOverride (0.00s)
+PASS
+coverage: 6.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive	0.003s	coverage: 6.6% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+[1m
+
+--- Starting part 0 of go tests of 'gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter' package with coverprofile in 'count' mode:
+[0m
+=== RUN   TestFormatByteRate
+=== RUN   TestFormatByteRate/format_megabytes
+=== RUN   TestFormatByteRate/format_kilobytes_exact
+=== RUN   TestFormatByteRate/format_terabytes_over
+=== RUN   TestFormatByteRate/format_exabytes_exact
+=== RUN   TestFormatByteRate/format_terabytes_under
+=== RUN   TestFormatByteRate/format_gigabytes_over
+=== RUN   TestFormatByteRate/format_megabytes_exact
+=== RUN   TestFormatByteRate/format_bytes
+=== RUN   TestFormatByteRate/format_megabytes_over
+=== RUN   TestFormatByteRate/format_terabytes_exact
+=== RUN   TestFormatByteRate/format_bytes_(non-second)
+=== RUN   TestFormatByteRate/format_kilobytes_over
+=== RUN   TestFormatByteRate/format_exabytes_over
+=== RUN   TestFormatByteRate/format_exabytes
+=== RUN   TestFormatByteRate/format_kilobytes_under
+=== RUN   TestFormatByteRate/format_megabytes_under
+=== RUN   TestFormatByteRate/format_kilobytes
+=== RUN   TestFormatByteRate/format_gigabytes
+=== RUN   TestFormatByteRate/format_petabytes_exact
+=== RUN   TestFormatByteRate/format_petabytes_over
+=== RUN   TestFormatByteRate/format_gigabytes_exact
+=== RUN   TestFormatByteRate/format_gigabytes_under
+=== RUN   TestFormatByteRate/format_petabytes_under
+=== RUN   TestFormatByteRate/format_exabytes_under
+=== RUN   TestFormatByteRate/format_bytes_(zero-second)
+=== RUN   TestFormatByteRate/format_terabytes
+=== RUN   TestFormatByteRate/format_petabytes
+--- PASS: TestFormatByteRate (0.00s)
+    --- PASS: TestFormatByteRate/format_megabytes (0.00s)
+    --- PASS: TestFormatByteRate/format_kilobytes_exact (0.00s)
+    --- PASS: TestFormatByteRate/format_terabytes_over (0.00s)
+    --- PASS: TestFormatByteRate/format_exabytes_exact (0.00s)
+    --- PASS: TestFormatByteRate/format_terabytes_under (0.00s)
+    --- PASS: TestFormatByteRate/format_gigabytes_over (0.00s)
+    --- PASS: TestFormatByteRate/format_megabytes_exact (0.00s)
+    --- PASS: TestFormatByteRate/format_bytes (0.00s)
+    --- PASS: TestFormatByteRate/format_megabytes_over (0.00s)
+    --- PASS: TestFormatByteRate/format_terabytes_exact (0.00s)
+    --- PASS: TestFormatByteRate/format_bytes_(non-second) (0.00s)
+    --- PASS: TestFormatByteRate/format_kilobytes_over (0.00s)
+    --- PASS: TestFormatByteRate/format_exabytes_over (0.00s)
+    --- PASS: TestFormatByteRate/format_exabytes (0.00s)
+    --- PASS: TestFormatByteRate/format_kilobytes_under (0.00s)
+    --- PASS: TestFormatByteRate/format_megabytes_under (0.00s)
+    --- PASS: TestFormatByteRate/format_kilobytes (0.00s)
+    --- PASS: TestFormatByteRate/format_gigabytes (0.00s)
+    --- PASS: TestFormatByteRate/format_petabytes_exact (0.00s)
+    --- PASS: TestFormatByteRate/format_petabytes_over (0.00s)
+    --- PASS: TestFormatByteRate/format_gigabytes_exact (0.00s)
+    --- PASS: TestFormatByteRate/format_gigabytes_under (0.00s)
+    --- PASS: TestFormatByteRate/format_petabytes_under (0.00s)
+    --- PASS: TestFormatByteRate/format_exabytes_under (0.00s)
+    --- PASS: TestFormatByteRate/format_bytes_(zero-second) (0.00s)
+    --- PASS: TestFormatByteRate/format_terabytes (0.00s)
+    --- PASS: TestFormatByteRate/format_petabytes (0.00s)
+=== RUN   TestFormatBytes
+=== RUN   TestFormatBytes/format_bytes
+=== RUN   TestFormatBytes/format_kilobytes
+=== RUN   TestFormatBytes/format_megabytes
+=== RUN   TestFormatBytes/format_gigabytes
+=== RUN   TestFormatBytes/format_terabytes
+=== RUN   TestFormatBytes/format_petabytes
+=== RUN   TestFormatBytes/format_exabytes
+--- PASS: TestFormatBytes (0.00s)
+    --- PASS: TestFormatBytes/format_bytes (0.00s)
+    --- PASS: TestFormatBytes/format_kilobytes (0.00s)
+    --- PASS: TestFormatBytes/format_megabytes (0.00s)
+    --- PASS: TestFormatBytes/format_gigabytes (0.00s)
+    --- PASS: TestFormatBytes/format_terabytes (0.00s)
+    --- PASS: TestFormatBytes/format_petabytes (0.00s)
+    --- PASS: TestFormatBytes/format_exabytes (0.00s)
+=== RUN   TestLabelledRateFormat
+=== RUN   TestLabelledRateFormat/unknown_total_size_undone
+=== RUN   TestLabelledRateFormat/unknown_total_size_done
+=== RUN   TestLabelledRateFormat/known_total_size_undone
+=== RUN   TestLabelledRateFormat/known_total_size_done
+--- PASS: TestLabelledRateFormat (0.00s)
+    --- PASS: TestLabelledRateFormat/unknown_total_size_undone (0.00s)
+    --- PASS: TestLabelledRateFormat/unknown_total_size_done (0.00s)
+    --- PASS: TestLabelledRateFormat/known_total_size_undone (0.00s)
+    --- PASS: TestLabelledRateFormat/known_total_size_done (0.00s)
+=== RUN   TestReader_New_NoUpdateFrequency
+--- PASS: TestReader_New_NoUpdateFrequency (0.00s)
+=== RUN   TestReader_New
+--- PASS: TestReader_New (0.00s)
+=== RUN   TestWriter_New_NoUpdateFrequency
+--- PASS: TestWriter_New_NoUpdateFrequency (0.00s)
+=== RUN   TestWriter_New
+--- PASS: TestWriter_New (0.00s)
+PASS
+coverage: 100.0% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+ok  	gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter	0.005s	coverage: 100.0% of statements in gitlab.com/gitlab-org/gitlab-runner/...
+section_end:1621524688:step_script
+[0Ksection_start:1621524688:archive_cache
+[0K[0K[36;1mSaving cache for successful job[0;m
+[0;m[32;1mCreating cache unit test 1/8-v13-12-0-2...[0;m
+[0;33mWARNING: /builds/gitlab-org/gitlab-runner/.gocache-false/: no matching files[0;m 
+Uploading cache.zip to https://storage.googleapis.com/gitlab-org-ci-runners-cache/project/250833/unit%20test%201/8-v13-12-0-2[0;m 
+[32;1mCreated cache[0;m
+section_end:1621524689:archive_cache
+[0Ksection_start:1621524689:upload_artifacts_on_success
+[0K[0K[36;1mUploading artifacts for successful job[0;m
+[0;m[32;1mUploading artifacts...[0;m
+.cover/*: found 15 matching files and directories [0;m 
+.testoutput/*: found 15 matching files and directories[0;m 
+Uploading artifacts as "archive" to coordinator... ok[0;m  id[0;m=1280281226 responseStatus[0;m=201 Created token[0;m=LzAr9-as
+section_end:1621524691:upload_artifacts_on_success
+[0Ksection_start:1621524691:cleanup_file_variables
+[0K[0K[36;1mCleaning up file based variables[0;m
+[0;msection_end:1621524692:cleanup_file_variables
+[0K[32;1mJob succeeded
+[0;m

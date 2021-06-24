@@ -143,6 +143,7 @@ func TestMaskNonEOFSafeBoundary(t *testing.T) {
 			input:    "can safely flush: secret secre\r\n",
 			expected: "can safely flush: [MASKED] secre\r\n",
 		},
+		//nolint:lll
 		{
 			input:    "can safely flush: \n: but doesn't use the last safe token if the input is much greater than the token being indexed",
 			expected: "can safely flush: \n: but doesn't use the last safe token if the input is much greater than the token being i",

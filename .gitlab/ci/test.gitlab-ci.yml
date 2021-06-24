@@ -215,6 +215,8 @@ fuzz variable mask:
   - .rules:merge_request_pipelines:no_docs
   image: golang:1.13
   stage: test
+  variables:
+    COVFUZZ_SEED_CORPUS: './helpers/trace/testdata/corpus'
   script:
   - apt update && apt install -y clang
   - go get github.com/dvyukov/go-fuzz/go-fuzz && go get github.com/dvyukov/go-fuzz/go-fuzz-build
