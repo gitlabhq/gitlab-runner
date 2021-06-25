@@ -196,6 +196,19 @@ Furthermore, to ensure only designated namespaces will be used during CI runs, s
 `namespace_overwrite_allowed` with an appropriate regular expression. When left empty the overwrite behavior is
 disabled.
 
+When you overwrite the Kubernetes namespace, make sure that:
+
+- In the `values.yml` file for GitLab Runner Helm charts, this value is set: `rbac.clusterWideAccess: true`.
+- The runner has these permissions in the core API group:
+
+  | Resource   | Permissions |
+  |------------|-------------|
+  | pods/exec  | create, patch, delete |
+  | pods       | get, list, watch, create, patch, delete |
+  | secrets    | get, list, watch, create, patch, delete |
+
+This can be achieved by setting `rbac.create: true` or by specifying a service account `rbac.serviceAccountName: <service_account_name>` with the above permissions in the `values.yml` file.
+
 ### Overwriting Kubernetes Default Service Account
 
 Additionally, the Kubernetes service account can be overwritten in the `.gitlab-ci.yml` file by using the variable
