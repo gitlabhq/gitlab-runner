@@ -24,6 +24,7 @@ const DefaultCacheRequestTimeout = 10
 const DefaultNetworkClientTimeout = 60 * time.Minute
 const DefaultSessionTimeout = 30 * time.Minute
 const WaitForBuildFinishTimeout = 5 * time.Minute
+const SecretVariableDefaultsToFile = true
 
 const (
 	DefaultTraceOutputLimit = 4 * 1024 * 1024 // in bytes
