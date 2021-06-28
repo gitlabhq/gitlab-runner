@@ -64,7 +64,7 @@ dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_
 is executed in your job.
 
 If a [job fails on the `Prepare
-environment`](../faq/README.md#job-failed-system-failure-preparing-environment) stage, it
+environment`](../faq/index.md#job-failed-system-failure-preparing-environment) stage, it
 is likely that something in the shell profile is causing the failure. A common
 failure is when you have a `.bash_logout` that tries to clear the console.
 

@@ -77,7 +77,7 @@ out of the scope of this documentation. For more details please read the
    very first time you set up GitLab Runner with Docker Machine.
 1. [Register a runner](../register/index.md#linux) and select the
    `docker+machine` executor when asked.
-1. Edit [`config.toml`](../commands/README.md#configuration-file) and configure
+1. Edit [`config.toml`](../commands/index.md#configuration-file) and configure
    the runner to use Docker machine. Visit the dedicated page covering detailed
    information about [GitLab Runner Autoscaling](../configuration/autoscale.md).
 1. Now, you can try and start a new pipeline in your project. In a few seconds,
@@ -105,7 +105,7 @@ out of the scope of this documentation. For more details please read the
      ```
 
    NOTE:
-   Sending the [`SIGQUIT` signal](../commands/README.md#signals) will make the
+   Sending the [`SIGQUIT` signal](../commands/index.md#signals) will make the
    process stop gracefully. The process will stop accepting new jobs, and will exit
    as soon as the current jobs are finished.
 

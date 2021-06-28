@@ -84,7 +84,7 @@ To install GitLab Runner:
 After completing the step above, a runner should be started and be
 ready to be used by your projects!
 
-Make sure that you read the [FAQ](../faq/README.md) section which describes
+Make sure that you read the [FAQ](../faq/index.md) section which describes
 some of the most common problems with GitLab Runner.
 
 ### APT pinning

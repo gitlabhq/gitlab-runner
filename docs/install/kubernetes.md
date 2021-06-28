@@ -65,7 +65,7 @@ to your `helm install` command.
 
 Before upgrading GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.
 Pausing the runner prevents problems arising with the jobs, such as
-[authorization errors when they complete](../faq/README.md#helm-chart-error--unauthorized).
+[authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
 
 Once your GitLab Runner Chart is installed, configuration changes and chart updates should be done using `helm upgrade`:
 
@@ -550,7 +550,7 @@ securityContext:
 
 Before uninstalling GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.
 Pausing the runner prevents problems arising with the jobs, such as
-[authorization errors when they complete](../faq/README.md#helm-chart-error--unauthorized).
+[authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
 
 To uninstall the GitLab Runner Chart, run the following:
 

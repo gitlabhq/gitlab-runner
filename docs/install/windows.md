@@ -160,7 +160,7 @@ for availability dates.
 
 ## Windows troubleshooting
 
-Make sure that you read the [FAQ](../faq/README.md) section which describes
+Make sure that you read the [FAQ](../faq/index.md) section which describes
 some of the most common problems with GitLab Runner.
 
 If you encounter an error like _The account name is invalid_ try to add `.\` before the username:
