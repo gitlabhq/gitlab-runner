@@ -26,7 +26,7 @@ Learn how to configure GitLab Runner.
   using shell script generators.
 - [Security considerations](../security/index.md): Be aware of potential
   security implications when running your jobs with GitLab Runner.
-- [Runner monitoring](../monitoring/README.md): Monitor the behavior of your
+- [Runner monitoring](../monitoring/index.md): Monitor the behavior of your
   runners.
 - [Clean up Docker cache automatically](../executors/docker.md#clearing-docker-cache):
   If you are running low on disk space, use a cron job to clean old containers and volumes.

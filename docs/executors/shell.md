@@ -19,7 +19,7 @@ so ensure Git LFS is up-to-date when GitLab Runner will run using the shell exec
 ## Overview
 
 The scripts can be run as unprivileged user if the `--user` is added to the
-[`gitlab-runner run` command](../commands/README.md#gitlab-runner-run). This feature is only supported by Bash.
+[`gitlab-runner run` command](../commands/index.md#gitlab-runner-run). This feature is only supported by Bash.
 
 The source project is checked out to:
 `<working-directory>/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`.

@@ -68,7 +68,7 @@ To register a runner using a Docker container:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
    separated by commas. You can change this value later in the GitLab user
    interface.
-1. Provide the [runner executor](../executors/README.md). For most use cases, enter
+1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
@@ -90,7 +90,7 @@ To register a runner under Linux:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
    separated by commas. You can change this value later in the GitLab user
    interface.
-1. Provide the [runner executor](../executors/README.md). For most use cases, enter
+1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
@@ -116,7 +116,7 @@ To register a runner under macOS:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
    separated by commas. You can change this value later in the GitLab user
    interface.
-1. Provide the [runner executor](../executors/README.md). For most use cases, enter
+1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
@@ -138,7 +138,7 @@ To register a runner under Windows:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
    separated by commas. You can change this value later in the GitLab user
    interface.
-1. Provide the [runner executor](../executors/README.md). For most use cases, enter
+1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
@@ -160,7 +160,7 @@ To register a runner under FreeBSD:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
    separated by commas. You can change this value later in the GitLab user
    interface.
-1. Provide the [runner executor](../executors/README.md). For most use cases, enter
+1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you'll be asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
