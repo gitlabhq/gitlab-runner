@@ -14,6 +14,11 @@ const (
 	// and allows calling writers to set a safe boundary at which data written
 	// isn't buffered before being flushed to the underlying writer.
 	safeTokens = "\r\n"
+
+	// maxPhraseSize is the maximum sized phrase supported. This should be equal
+	// to text/transform's internal buffer.
+	// https://cs.opensource.google/go/x/text/+/refs/tags/v0.3.6:transform/transform.go;l=130
+	maxPhraseSize = 4096
 )
 
 // newPhraseTransform returns a transform.Transformer that replaces the `phrase`
@@ -26,27 +31,74 @@ type phraseTransform []byte
 
 func (phraseTransform) Reset() {}
 
+type matchType int
+
+const (
+	noPossibleMatch matchType = iota
+	partialMatch
+	fullMatch
+)
+
+//nolint:gocognit
 func (t phraseTransform) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
 	for {
-		// copy up until phrase
-		i := bytes.Index(src[nSrc:], t)
-		if i == -1 {
-			break
-		}
-
-		err = copyn(dst, src, &nDst, &nSrc, i)
+		match, index := find(src[nSrc:], t)
+		// copy up to the index where we either found or skipped data
+		err = copyn(dst, src, &nDst, &nSrc, index)
 		if err != nil {
 			return nDst, nSrc, err
 		}
 
-		// replace phrase
-		err = replace(dst, &nDst, &nSrc, []byte(mask), len(t))
-		if err != nil {
-			return nDst, nSrc, err
+		if match == fullMatch {
+			// replace phrase
+			err = replace(dst, &nDst, &nSrc, []byte(mask), len(t))
+			if err != nil {
+				return nDst, nSrc, err
+			}
+			continue
 		}
+
+		// If we matched at the beginning of the src buffer and the src and token are larger
+		// or equal to maxPhraseSize it means our buffer is entirely full of t[:maxPhraseSize].
+		//
+		// At this point, we mask data we have, but future writes will reveal the tail of any secret.
+		// This is done because we cannot match beyond maxPhraseSize without filling the internal
+		// text/transform buffer and returning an error.
+		if match == partialMatch && index == 0 && nSrc == 0 && len(src) >= maxPhraseSize && len(t) >= maxPhraseSize {
+			err = replace(dst, &nDst, &nSrc, []byte(mask), maxPhraseSize)
+			if err != nil {
+				return nDst, nSrc, err
+			}
+		}
+
+		break
 	}
 
 	return safecopy(dst, src, atEOF, nDst, nSrc, len(t))
+}
+
+func find(src []byte, phrase []byte) (matchType, int) {
+	n := 0
+	for {
+		i := bytes.IndexByte(src[n:], phrase[0])
+		if i == -1 {
+			return noPossibleMatch, len(src)
+		}
+
+		remaining := len(src[n+i:])
+		if remaining > len(phrase) {
+			remaining = len(phrase)
+		}
+
+		if bytes.Equal(src[n+i:n+i+remaining], phrase[:remaining]) {
+			if remaining == len(phrase) {
+				return fullMatch, n + i
+			}
+			return partialMatch, n + i
+		}
+
+		n += i + 1
+	}
 }
 
 // replace copies a replacement into the dst buffer and advances nDst and nSrc.
