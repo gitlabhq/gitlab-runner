@@ -314,7 +314,7 @@ buildx "${runner_home_dir}/ubuntu" "${ubuntuTags[@]}"
 buildx "${runner_home_dir}/alpine" "${alpineTags[@]}"
 
 # Release helper images
-if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" && "${PUBLISH_IMAGES}" == "true" ]]; then
+if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && [[ "${PUBLISH_IMAGES}" == "true" ]]; then
     login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
 
     release_docker_helper_images "${CI_REGISTRY_IMAGE}" "alpine" ""
