@@ -51,11 +51,12 @@ func (t phraseTransform) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int,
 
 // replace copies a replacement into the dst buffer and advances nDst and nSrc.
 func replace(dst []byte, nDst, nSrc *int, replacement []byte, advance int) error {
-	n := copy(dst[*nDst:], replacement)
-	*nDst += n
-	if n < len(replacement) {
+	if len(dst[*nDst:]) < len(replacement) {
 		return transform.ErrShortDst
 	}
+
+	n := copy(dst[*nDst:], replacement)
+	*nDst += n
 	*nSrc += advance
 
 	return nil
