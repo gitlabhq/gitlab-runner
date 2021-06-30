@@ -131,7 +131,7 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "With the `docker+machine` executor, when a machine is " +
 			"not created, `docker-machine provision` runs for X amount of times. When " +
-			"this feature flag is set to `true`, it skips `docker-machine provision` " +
+			"this feature flag is set to `true`, it skips `docker-machine provision`, " +
 			"removes the machine, and creates another machine instead.",
 	},
 	{
