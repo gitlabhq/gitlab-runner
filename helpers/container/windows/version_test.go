@@ -49,3 +49,45 @@ func TestVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestMcrDockerImageTag(t *testing.T) {
+	tests := []struct {
+		operatingSystem string
+		expectedTag     string
+		expectedErr     error
+	}{
+		{
+			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
+			expectedTag:     "1809",
+			expectedErr:     nil,
+		},
+		{
+			operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
+			expectedTag:     "1809",
+			expectedErr:     nil,
+		},
+		{
+			operatingSystem: "Windows 10 Pro Version 2004 (OS Build 19041.329)",
+			expectedTag:     "2004",
+			expectedErr:     nil,
+		},
+		{
+			operatingSystem: "Windows Server Datacenter Version 2009 (OS Build 19042.985)",
+			expectedTag:     "20H2",
+			expectedErr:     nil,
+		},
+		{
+			operatingSystem: "some random string",
+			expectedErr:     NewUnsupportedWindowsVersionError("some random string"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.operatingSystem, func(t *testing.T) {
+			version, err := McrDockerImageTag(tt.operatingSystem)
+
+			assert.Equal(t, tt.expectedTag, version)
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}

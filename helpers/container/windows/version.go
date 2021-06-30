@@ -41,6 +41,10 @@ var supportedWindowsVersions = []string{
 	V20H2,
 }
 
+var dockerImageTagMappings = map[string]string{
+	V20H2: "20H2",
+}
+
 // Version checks the specified operatingSystem to see if it's one of the
 // supported Windows version. If true, it returns the os version.
 // UnsupportedWindowsVersionError is returned when no supported Windows version
@@ -53,4 +57,22 @@ func Version(operatingSystem string) (string, error) {
 	}
 
 	return "", NewUnsupportedWindowsVersionError(operatingSystem)
+}
+
+// McrDockerImageTag checks the specified operatingSystem to see if it's one of the
+// supported Windows version. If true, it maps the os version to the corresponding mcr.microsoft.com Docker image tag.
+// UnsupportedWindowsVersionError is returned when no supported Windows version
+// is found in the string.
+func McrDockerImageTag(operatingSystem string) (string, error) {
+	version, err := Version(operatingSystem)
+	if err != nil {
+		return "", err
+	}
+
+	dockerTag, ok := dockerImageTagMappings[version]
+	if !ok {
+		dockerTag = version
+	}
+
+	return dockerTag, nil
 }

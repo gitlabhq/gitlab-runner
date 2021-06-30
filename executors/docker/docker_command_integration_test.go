@@ -194,9 +194,9 @@ func getWindowsImage(t *testing.T) string {
 		info, err := client.Info(context.Background())
 		require.NoError(t, err, "docker info")
 
-		windowsVersion, err := windows.Version(info.OperatingSystem)
+		dockerImageTag, err := windows.McrDockerImageTag(info.OperatingSystem)
 		require.NoError(t, err)
-		windowsImage = fmt.Sprintf(common.TestWindowsImage, windowsVersion)
+		windowsImage = fmt.Sprintf(common.TestWindowsImage, dockerImageTag)
 	})
 
 	return windowsImage
