@@ -4,8 +4,6 @@ package commands
 
 import (
 	"flag"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/imdario/mergo"
@@ -98,25 +96,6 @@ func TestConfigTemplate_Enabled(t *testing.T) {
 			assert.Equal(t, tc.expectedValue, configTemplate.Enabled())
 		})
 	}
-}
-
-func prepareConfigurationTemplateFile(t *testing.T, content string) (string, func()) {
-	file, err := ioutil.TempFile("", "config.template.toml")
-	require.NoError(t, err)
-
-	defer func() {
-		err = file.Close()
-		require.NoError(t, err)
-	}()
-
-	_, err = file.WriteString(content)
-	require.NoError(t, err)
-
-	cleanup := func() {
-		_ = os.Remove(file.Name())
-	}
-
-	return file.Name(), cleanup
 }
 
 var (
@@ -215,7 +194,7 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			file, cleanup := prepareConfigurationTemplateFile(t, tc.templateContent)
+			file, cleanup := PrepareConfigurationTemplateFile(t, tc.templateContent)
 			defer cleanup()
 
 			configTemplate := &configTemplate{ConfigFile: file}
