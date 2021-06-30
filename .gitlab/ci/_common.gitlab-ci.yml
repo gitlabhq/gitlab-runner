@@ -1,6 +1,5 @@
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-12
-  GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 20.10.2
@@ -27,6 +26,7 @@ variables:
   FF_USE_FASTZIP: "true"
   TRANSFER_METER_FREQUENCY: "5s"
   FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
+  GO111MODULE: "on"
 
 default:
   image: $CI_IMAGE
@@ -113,21 +113,12 @@ default:
     GIT_LFS_WINDOWS_AMD64_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
     PWSH_WINDOWS_AMD64_CHECKSUM: "D234CFD6E9DD4A2CA68BFBC64C416DE42F31760E954812E8ADE02B6D57FE243F"
 
-.windows_base:
-  variables:
-    PKG_NAMESPACE: gitlab.com\gitlab-org
-    PKG_NAME: gitlab-runner
-    GOPATH: "$CI_PROJECT_DIR\\.gopath"
-    PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
-    PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
-
 .windows1809_variables:
   variables:
     WINDOWS_VERSION: servercore1809
 
 .windows1809:
   extends:
-  - .windows_base
   - .windows1809_variables
   tags:
   - shared-windows
@@ -140,7 +131,6 @@ default:
 
 .windows2004:
   extends:
-  - .windows_base
   - .windows2004_variables
   tags:
   - windows

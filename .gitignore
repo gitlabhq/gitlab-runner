@@ -15,7 +15,6 @@ dockerfiles/runner-helper/binaries/
 tests/ubuntu/.vagrant
 artifacts
 tmp/gitlab-test
-/.gopath/
 /.tmp/
 
 # Ignore all editorconfig files except the root one

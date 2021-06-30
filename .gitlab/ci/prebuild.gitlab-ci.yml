@@ -13,8 +13,6 @@ helper images:
     paths:
     - out/helper-images/
     - out/binaries/gitlab-runner-helper/gitlab-runner-helper*
-    - .gopath/bin
-    - .gopath/.ok
     expire_in: 7d
 
 clone test repo:
