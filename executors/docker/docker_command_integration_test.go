@@ -943,31 +943,9 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			}
 
 			if runtime.GOOS == "windows" {
-				build.Runner.RunnerSettings.Shell = "powershell"
+				build.Runner.RunnerSettings.Shell = shells.SNPwsh
 				build.Runner.RunnerSettings.Executor = "docker-windows"
-
-				// HACK: Runner's PowerShell Core shell is not yet fully
-				// supported: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139
-				//
-				// `liveness` only contains powershell core to keep the image
-				// small. Until there's full support, we perform this hack
-				// whereby we copy pwsh to powershell.exe. This is safe as this
-				// only occurs on the build container, which only executes the
-				// `liveness client` commands above.
-				//
-				// This entrypoint can be nullified with:
-				//   build.Image.Entrypoint = []string{""}
-				// once PowerShell Core is supported. Note that it cannot be
-				// set to nil, as that indicates that Runner should use the
-				// default image entrypoint.
-				build.Image.Entrypoint = []string{
-					"pwsh",
-					"-Command",
-					"cp $env:ProgramFiles\\PowerShell\\pwsh.exe $env:ProgramFiles\\PowerShell\\powershell.exe",
-					"&&",
-					"pwsh",
-					"-Command",
-				}
+				build.Image.Entrypoint = []string{""}
 			}
 
 			build.Services = append(build.Services, common.Image{
