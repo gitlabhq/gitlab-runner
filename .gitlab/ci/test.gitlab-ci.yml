@@ -157,7 +157,7 @@ code_quality:
   - make pull_images_for_tests
   # Workaround: We call the go_test_with_coverage_report script directly instead of `make parallel_test_execute`
   #   in order to preserve the script exit code (which would otherwise be returned as make error code 2)
-  - eval $(make export_env)
+  - eval $(make export_test_env)
   - ./scripts/go_test_with_coverage_report execute
   artifacts:
     paths:

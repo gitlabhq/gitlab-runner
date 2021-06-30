@@ -151,6 +151,10 @@ cobertura_report: $(GOCOVER_COBERTURA)
 	sed 's;filename=\"gitlab.com/gitlab-org/gitlab-runner/;filename=\";g' out/cobertura/cobertura-coverage-raw.xml > \
 	  out/cobertura/cobertura-coverage.xml
 
+export_test_env:
+	@echo "export GO_LDFLAGS='$(GO_LDFLAGS)'"
+	@echo "export MAIN_PACKAGE='$(MAIN_PACKAGE)'"
+
 parallel_test_prepare:
 	# Preparing test commands
 	@./scripts/go_test_with_coverage_report prepare
@@ -419,7 +423,3 @@ clean:
 
 print_ldflags:
 	@echo $(GO_LDFLAGS)
-
-export_env:
-	@echo "export GO_LDFLAGS='$(GO_LDFLAGS)'"
-	@echo "export MAIN_PACKAGE='$(MAIN_PACKAGE)'"
