@@ -695,7 +695,6 @@ check_interval = 0
 			defer network.AssertExpectations(t)
 
 			args := []string{
-				"--tls-ca-file", "",
 				"--shell", shells.SNPwsh,
 			}
 
