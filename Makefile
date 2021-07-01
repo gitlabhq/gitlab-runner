@@ -302,7 +302,7 @@ prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/git
 
 prepare_zoneinfo:
 	# preparing the zoneinfo file
-	@cp $$GOROOT/lib/time/zoneinfo.zip out/
+	@cp $(shell go env GOROOT)/lib/time/zoneinfo.zip out/
 
 prepare_index: export CI_COMMIT_REF_NAME ?= $(BRANCH)
 prepare_index: export CI_COMMIT_SHA ?= $(REVISION)
