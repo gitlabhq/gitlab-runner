@@ -142,7 +142,7 @@ executable. For example, to download and install `v0.16.2-gitlab.11`:
 NOTE:
 GPUs are [supported on every executor](../configuration/gpus.md). It is
 not necessary to use Docker Machine just for GPU support. The Docker
-Machine executor makes it easy to scale the GPU nodes up and down, but 
+Machine executor makes it easy to scale the GPU nodes up and down, but
 this can also be done with the [Kubernetes executor](kubernetes.md).
 
 You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create [Google Compute Engine instances
@@ -157,7 +157,7 @@ To create an instance with GPUs, use these Docker Machine options:
 |------|-------|-----------|
 |`--google-accelerator`|`type=nvidia-tesla-p4,count=1`|Specifies the type and number of GPU accelerators to attach to the instance (`type=TYPE,count=N` format)|
 |`--google-maintenance-policy`|`TERMINATE`|Always use `TERMINATE` because [Google Cloud does not allow GPU instances to be live migrated](https://cloud.google.com/compute/docs/instances/live-migration).|
-|`--google-machine-image`|`https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110`|The URL of a GPU-enabled operating system. See the [list of available images](https://cloud.google.com/ai-platform/deep-learning-vm/docs/images).|
+|`--google-machine-image`|`https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110`|The URL of a GPU-enabled operating system. See the [list of available images](https://cloud.google.com/deep-learning-vm/docs/images).|
 |`--google-metadata`|`install-nvidia-driver=True`|This flag tells the image to install the NVIDIA GPU driver.|
 
 These arguments map to [command-line arguments for `gcloud compute`](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus#gcloud_1).

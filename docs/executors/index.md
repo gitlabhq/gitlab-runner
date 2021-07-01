@@ -79,7 +79,7 @@ infrastructure costs.
 A great option is to use **Docker** as it allows a clean build environment,
 with easy dependency management (all dependencies for building the project can
 be put in the Docker image). The Docker executor allows you to easily create
-a build environment with dependent [services](https://docs.gitlab.com/ee/ci/services/README.html),
+a build environment with dependent [services](https://docs.gitlab.com/ee/ci/services/index.html),
 like MySQL.
 
 #### Docker Machine executor

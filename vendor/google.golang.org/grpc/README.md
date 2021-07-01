@@ -138,4 +138,4 @@ errors.
 [Go gRPC docs]: https://grpc.io/docs/languages/go
 [Performance benchmark]: https://performance-dot-grpc-testing.appspot.com/explore?dashboard=5652536396611584&widget=490377658&container=1286539696
 [quick start]: https://grpc.io/docs/languages/go/quickstart
-[go-releases]: https://golang.org/doc/devel/release.html
+[go-releases]: https://golang.org/doc/devel/release
