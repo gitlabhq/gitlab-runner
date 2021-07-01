@@ -26,6 +26,7 @@ variables:
   DEPENDENCY_SCANNING_DISABLED: "true"
   FF_USE_FASTZIP: "true"
   TRANSFER_METER_FREQUENCY: "5s"
+  FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
 
 default:
   image: $CI_IMAGE

@@ -154,7 +154,11 @@ code_quality:
   stage: test
   script:
   - source ci/touch_make_dependencies
-  - make parallel_test_execute
+  - make pull_images_for_tests
+  # Workaround: We call the go_test_with_coverage_report script directly instead of `make parallel_test_execute`
+  #   in order to preserve the script exit code (which would otherwise be returned as make error code 2)
+  - eval $(make export_test_env)
+  - ./scripts/go_test_with_coverage_report execute
   artifacts:
     paths:
     - .cover/
@@ -177,10 +181,11 @@ unit test with race:
   extends:
   - unit test
   - .go-cache
-  allow_failure: true
   variables:
     CGO_ENABLED: "1"
     TESTFLAGS: -cover -race
+  allow_failure:
+    exit_codes: 99
 
 integration test:
   extends:
@@ -198,10 +203,11 @@ integration test with race:
   extends:
   - integration test
   - .go-cache
-  allow_failure: true
   variables:
     CGO_ENABLED: "1"
     TESTFLAGS: -cover -tags=integration -race
+  allow_failure:
+    exit_codes: 99
 
 fuzz variable mask:
   extends:
