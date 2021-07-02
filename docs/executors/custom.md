@@ -467,3 +467,18 @@ NOTE:
 We strongly suggest using `SYSTEM_FAILURE_EXIT_CODE` to exit
 instead of a hard coded value since it can change in any release, making
 your binary/script future proof.
+
+## Job response
+
+You can change job-level `CUSTOM_ENV_` variables as they observe the documented
+[CI/CD variable precedence](https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence).
+Though this functionality can be desirable, when the trusted job context
+is required, the full JSON job response is provided automatically. The runner
+generates a temporary file, which is referenced in the `JOB_RESPONSE_FILE`
+environment variable. This file exists in every stage and is automatically
+removed during cleanup.
+
+```shell
+$ cat ${JOB_RESPONSE_FILE}
+{"id": 123456, "token": "jobT0ken",...}
+```

@@ -66,6 +66,45 @@ func setFailure(failureType string, msg string, args ...interface{}) {
 	os.Exit(code)
 }
 
+func printJobResponseDetails() {
+	type fakeJobInfo struct {
+		Name        string `json:"name"`
+		Stage       string `json:"stage"`
+		ProjectID   int    `json:"project_id"`
+		ProjectName string `json:"project_name"`
+	}
+
+	type fakeJobResponse struct {
+		ID      int         `json:"id"`
+		JobInfo fakeJobInfo `json:"job_info"`
+	}
+
+	jobResponseFile := os.Getenv(api.JobResponseFileVariable)
+
+	file, err := os.Open(jobResponseFile)
+	if err != nil {
+		panic(fmt.Sprintf("Error while opening job response file %q: %v", jobResponseFile, err))
+	}
+
+	defer func() { _ = file.Close() }()
+
+	var jobResponse fakeJobResponse
+
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&jobResponse)
+	if err != nil {
+		panic(fmt.Sprintf("Error while decoding job response file %q: %v", jobResponseFile, err))
+	}
+
+	fmt.Println("Reading job response data:")
+	fmt.Printf("job ID           => %d\n", jobResponse.ID)
+	fmt.Printf("job name         => %s\n", jobResponse.JobInfo.Name)
+	fmt.Printf("job stage        => %s\n", jobResponse.JobInfo.Stage)
+	fmt.Printf("job project ID   => %d\n", jobResponse.JobInfo.ProjectID)
+	fmt.Printf("job project name => %s\n", jobResponse.JobInfo.ProjectName)
+	fmt.Println()
+}
+
 type stageFunc func(shell string, args []string)
 
 func main() {
@@ -131,6 +170,7 @@ func config(shell string, args []string) {
 func prepare(shell string, args []string) {
 	fmt.Println("PREPARE doesn't accept any arguments. It just does its job")
 	fmt.Println()
+	printJobResponseDetails()
 }
 
 func run(shell string, args []string) {

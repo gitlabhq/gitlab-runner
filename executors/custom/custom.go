@@ -69,8 +69,9 @@ func (c *ConfigExecOutput) InjectInto(executor *executor) {
 type executor struct {
 	executors.AbstractExecutor
 
-	config  *config
-	tempDir string
+	config          *config
+	tempDir         string
+	jobResponseFile string
 
 	driverInfo *api.DriverInfo
 
@@ -86,6 +87,11 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	e.tempDir, err = ioutil.TempDir("", "custom-executor")
+	if err != nil {
+		return err
+	}
+
+	e.jobResponseFile, err = e.createJobResponseFile()
 	if err != nil {
 		return err
 	}
@@ -133,6 +139,23 @@ func (e *executor) prepareConfig() error {
 	}
 
 	return nil
+}
+
+func (e *executor) createJobResponseFile() (string, error) {
+	responseFile := filepath.Join(e.tempDir, "response.json")
+	file, err := os.OpenFile(responseFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return "", fmt.Errorf("creating job response file %q: %w", responseFile, err)
+	}
+	defer func() { _ = file.Close() }()
+
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(e.Build.JobResponse)
+	if err != nil {
+		return "", fmt.Errorf("encoding job response file: %w", err)
+	}
+
+	return responseFile, nil
 }
 
 func (e *executor) dynamicConfig() error {
@@ -227,7 +250,11 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		cmdOpts.Env = append(cmdOpts.Env, fmt.Sprintf("CUSTOM_ENV_%s=%s", variable.Key, variable.Value))
 	}
 
-	return commandFactory(ctx, opts.executable, opts.args, cmdOpts)
+	options := command.Options{
+		JobResponseFile: e.jobResponseFile,
+	}
+
+	return commandFactory(ctx, opts.executable, opts.args, cmdOpts, options)
 }
 
 func (e *executor) getCIJobServicesEnv() common.JobVariable {

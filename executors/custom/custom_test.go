@@ -42,7 +42,8 @@ type executorTestCase struct {
 		ctx context.Context,
 		executable string,
 		args []string,
-		options process.CommandOptions,
+		cmdOpts process.CommandOptions,
+		options command.Options,
 	)
 	assertOutput   func(t *testing.T, output string)
 	assertExecutor func(t *testing.T, e *executor)
@@ -160,13 +161,19 @@ func mockCommandFactory(t *testing.T, tt executorTestCase) func() {
 
 	oldFactory := commandFactory
 	commandFactory =
-		func(ctx context.Context, executable string, args []string, options process.CommandOptions) command.Command {
+		func(
+			ctx context.Context,
+			executable string,
+			args []string,
+			cmdOpts process.CommandOptions,
+			options command.Options,
+		) command.Command {
 			if tt.assertCommandFactory != nil {
-				tt.assertCommandFactory(t, tt, ctx, executable, args, options)
+				tt.assertCommandFactory(t, tt, ctx, executable, args, cmdOpts, options)
 			}
 
-			outputs.stdout = options.Stdout
-			outputs.stderr = options.Stderr
+			outputs.stdout = cmdOpts.Stdout
+			outputs.stderr = cmdOpts.Stderr
 
 			return cmd
 		}
@@ -216,7 +223,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 				assert.Equal(t, tt.config.Custom.ConfigArgs, args)
@@ -239,7 +247,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -261,7 +270,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -289,7 +299,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -315,7 +326,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -340,7 +352,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -370,7 +383,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -395,7 +409,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.PrepareExec, executable)
 				assert.Equal(t, tt.config.Custom.PrepareArgs, args)
@@ -417,7 +432,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.PrepareExec, executable)
 				assert.Equal(t, tt.config.Custom.PrepareArgs, args)
@@ -446,7 +462,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.ConfigExec, executable)
 			},
@@ -481,19 +498,43 @@ func TestExecutor_Prepare(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				if executable != "prepare-executable" {
 					return
 				}
 
-				require.True(t, len(options.Env) >= 2, "options.Env must contain 2 elements or more")
-				assert.Equal(t, "FOO=Hello", options.Env[0], "first env var must be FOO")
+				require.True(t, len(cmdOpts.Env) >= 2, "cmdOpts.Env must contain 2 elements or more")
+				assert.Equal(t, "FOO=Hello", cmdOpts.Env[0], "first env var must be FOO")
 				assert.True(
 					t,
-					strings.HasPrefix(options.Env[1], "CUSTOM_ENV_"),
+					strings.HasPrefix(cmdOpts.Env[1], "CUSTOM_ENV_"),
 					"must be followed by CUSTOM_ENV_* variables",
 				)
+			},
+		},
+		"job response file specified in file": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:     "run-executable",
+				ConfigExec:  "config-executable",
+				PrepareExec: "prepare-executable",
+				PrepareArgs: []string{"test"},
+			}),
+			commandStdoutContent: `{
+				"builds_dir": "/some/build/directory"
+			}`,
+			commandErr: nil,
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				cmdOpts process.CommandOptions,
+				options command.Options,
+			) {
+				assert.NotEmpty(t, options.JobResponseFile)
 			},
 		},
 	}
@@ -560,7 +601,8 @@ func TestExecutor_Cleanup(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.CleanupExec, executable)
 				assert.Equal(t, tt.config.Custom.CleanupArgs, args)
@@ -583,7 +625,8 @@ func TestExecutor_Cleanup(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.CleanupExec, executable)
 			},
@@ -606,13 +649,14 @@ func TestExecutor_Cleanup(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
-				require.True(t, len(options.Env) >= 2, "options.Env must contain 2 elements or more")
-				assert.Equal(t, "FOO=Hello", options.Env[0], "first env var must be FOO")
+				require.True(t, len(cmdOpts.Env) >= 2, "cmdOpts.Env must contain 2 elements or more")
+				assert.Equal(t, "FOO=Hello", cmdOpts.Env[0], "first env var must be FOO")
 				assert.True(
 					t,
-					strings.HasPrefix(options.Env[1], "CUSTOM_ENV_"),
+					strings.HasPrefix(cmdOpts.Env[1], "CUSTOM_ENV_"),
 					"must be followed by CUSTOM_ENV_* variables",
 				)
 			},
@@ -666,7 +710,8 @@ func TestExecutor_Run(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.RunExec, executable)
 				assert.Len(t, args, 2)
@@ -685,7 +730,8 @@ func TestExecutor_Run(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
 				assert.Equal(t, tt.config.Custom.RunExec, executable)
 			},
@@ -704,13 +750,14 @@ func TestExecutor_Run(t *testing.T) {
 				ctx context.Context,
 				executable string,
 				args []string,
-				options process.CommandOptions,
+				cmdOpts process.CommandOptions,
+				options command.Options,
 			) {
-				require.True(t, len(options.Env) >= 2, "options.Env must contain 2 elements or more")
-				assert.Equal(t, "FOO=Hello", options.Env[0], "first env var must be FOO")
+				require.True(t, len(cmdOpts.Env) >= 2, "cmdOpts.Env must contain 2 elements or more")
+				assert.Equal(t, "FOO=Hello", cmdOpts.Env[0], "first env var must be FOO")
 				assert.True(
 					t,
-					strings.HasPrefix(options.Env[1], "CUSTOM_ENV_"),
+					strings.HasPrefix(cmdOpts.Env[1], "CUSTOM_ENV_"),
 					"must be followed by CUSTOM_ENV_* variables",
 				)
 			},
@@ -765,7 +812,8 @@ func TestExecutor_Env(t *testing.T) {
 		ctx context.Context,
 		executable string,
 		args []string,
-		options process.CommandOptions,
+		cmdOpts process.CommandOptions,
+		options command.Options,
 	) {
 		return func(
 			t *testing.T,
@@ -773,9 +821,10 @@ func TestExecutor_Env(t *testing.T) {
 			ctx context.Context,
 			executable string,
 			args []string,
-			options process.CommandOptions,
+			cmdOpts process.CommandOptions,
+			options command.Options,
 		) {
-			for _, env := range options.Env {
+			for _, env := range cmdOpts.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == ciJobImageEnv {
 					assert.Equal(t, expectedImageName, pair[1])
@@ -868,7 +917,8 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		ctx context.Context,
 		executable string,
 		args []string,
-		options process.CommandOptions,
+		cmdOpts process.CommandOptions,
+		options command.Options,
 	) {
 		return func(
 			t *testing.T,
@@ -876,9 +926,10 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 			ctx context.Context,
 			executable string,
 			args []string,
-			options process.CommandOptions,
+			cmdOpts process.CommandOptions,
+			options command.Options,
 		) {
-			for _, env := range options.Env {
+			for _, env := range cmdOpts.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == CIJobServicesEnv {
 					expectedServicesSerialized, _ := json.Marshal(expectedServices)
@@ -896,7 +947,8 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 		ctx context.Context,
 		executable string,
 		args []string,
-		options process.CommandOptions,
+		cmdOpts process.CommandOptions,
+		options command.Options,
 	) {
 		return func(
 			t *testing.T,
@@ -904,9 +956,10 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 			ctx context.Context,
 			executable string,
 			args []string,
-			options process.CommandOptions,
+			cmdOpts process.CommandOptions,
+			options command.Options,
 		) {
-			for _, env := range options.Env {
+			for _, env := range cmdOpts.Env {
 				pair := strings.Split(env, "=")
 				if pair[0] == CIJobServicesEnv {
 					assert.Equal(t, "", pair[1])
