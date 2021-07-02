@@ -282,6 +282,11 @@ windows 2004 integration tests:
   - .windows integration test
   - .windows2004
 
+windows 20H2 integration tests:
+  extends:
+  - .windows integration test
+  - .windows20H2
+
 git 1.8.3.1:
   extends:
   - .rules:merge_request_pipelines:no_docs

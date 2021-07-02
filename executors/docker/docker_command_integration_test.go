@@ -40,6 +40,10 @@ import (
 var getWindowsImageOnce sync.Once
 var windowsImage string
 
+var windowsDockerImageTagMappings = map[string]string{
+	windows.V20H2: "20H2",
+}
+
 func TestMain(m *testing.M) {
 	execDocker.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
 
@@ -185,6 +189,24 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 	}
 }
 
+// windowsDockerImageTag checks the specified operatingSystem to see if it's one of the
+// supported Windows version. If true, it maps the os version to the corresponding mcr.microsoft.com Docker image tag.
+// UnsupportedWindowsVersionError is returned when no supported Windows version
+// is found in the string.
+func windowsDockerImageTag(operatingSystem string) (string, error) {
+	version, err := windows.Version(operatingSystem)
+	if err != nil {
+		return "", err
+	}
+
+	dockerTag, ok := windowsDockerImageTagMappings[version]
+	if !ok {
+		dockerTag = version
+	}
+
+	return dockerTag, nil
+}
+
 func getWindowsImage(t *testing.T) string {
 	getWindowsImageOnce.Do(func() {
 		client, err := docker.New(docker.Credentials{}, "")
@@ -194,9 +216,9 @@ func getWindowsImage(t *testing.T) string {
 		info, err := client.Info(context.Background())
 		require.NoError(t, err, "docker info")
 
-		windowsVersion, err := windows.Version(info.OperatingSystem)
+		dockerImageTag, err := windowsDockerImageTag(info.OperatingSystem)
 		require.NoError(t, err)
-		windowsImage = fmt.Sprintf(common.TestWindowsImage, windowsVersion)
+		windowsImage = fmt.Sprintf(common.TestWindowsImage, dockerImageTag)
 	})
 
 	return windowsImage

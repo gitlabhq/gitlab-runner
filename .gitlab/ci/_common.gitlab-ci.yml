@@ -136,6 +136,17 @@ default:
   - windows
   - windows-2004
 
+.windows20H2_variables:
+  variables:
+    WINDOWS_VERSION: servercore20H2
+
+.windows20H2:
+  extends:
+  - .windows20H2_variables
+  tags:
+  - windows
+  - windows-20h2
+
 # .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:
