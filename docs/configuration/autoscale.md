@@ -85,6 +85,11 @@ The machine is waiting for the next jobs, and if no one is executed, after
 the `IdleTime` period, the machine is removed. If there are no jobs, there
 are no machines in _Idle_ state.
 
+If the `IdleCount` is set to a value greater than `0`, then idle VMs are created in the background. The runner acquires an existing idle VM before asking for a new job.
+
+- If the job is assigned to the runner, then that job is sent to the previously acquired VM.
+- If the job is not assigned to the runner, then the lock on the idle VM is released and the VM is returned back to the pool.
+
 ## Autoscaling algorithm and parameters
 
 The autoscaling algorithm is based on these parameters:
