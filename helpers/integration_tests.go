@@ -23,7 +23,7 @@ func SkipIntegrationTests(t *testing.T, cmd ...string) {
 	}
 
 	if err := executeCommandSucceeded(executable, cmd[1:]); err != nil {
-		assert.FailNow(t, "failed integration test command", "%s failed with error: %v", executable, err)
+		assert.FailNow(t, "failed integration test command", "%q failed with error: %v", executable, err)
 	}
 }
 
@@ -33,7 +33,7 @@ func executeCommandSucceeded(executable string, args []string) error {
 	cmd := exec.Command(executable, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s - %w", string(out), err)
+		return fmt.Errorf("%w - %s", err, string(out))
 	}
 
 	return nil
