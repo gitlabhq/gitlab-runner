@@ -108,9 +108,30 @@ check test directives:
   - .rules:merge_request_pipelines:no_docs
   - .no_cache_and_dependencies
   needs:
-    - 'prepare done'
+  - 'prepare done'
   script:
   - make check_test_directives
+
+.check windows test ignore list:
+  stage: test
+  extends:
+  - .rules:merge_request_pipelines:no_docs
+  script:
+  - ./scripts/check_windows_test_ignore_list
+  needs:
+  - 'prepare done'
+  - 'unit test definitions'
+  - 'integration test definitions'
+
+check windows 1809 test ignore list:
+  extends:
+  - .check windows test ignore list
+  - .windows1809_variables
+
+check windows 2004 test ignore list:
+  extends:
+  - .check windows test ignore list
+  - .windows2004_variables
 
 code_quality:
   stage: test
@@ -176,6 +197,7 @@ unit test:
   parallel: 2
   variables:
     TESTFLAGS: -cover
+    TESTSDEFINITIONSPATH: unit/testsdefinitions.txt
 
 unit test with race:
   extends:
@@ -198,6 +220,7 @@ integration test:
   parallel: 4
   variables:
     TESTFLAGS: -cover -tags=integration
+    TESTSDEFINITIONSPATH: integration/testsdefinitions.txt
 
 integration test with race:
   extends:
@@ -237,7 +260,7 @@ fuzz variable mask:
   - Set-MpPreference -DisableRealtimeMonitoring $true
   - *go-cache-windows_before_script
   script:
-  - .\ci\test_windows.ps1
+  - .\ci\test_windows.ps1 $TESTSDEFINITIONSPATH
   artifacts:
     paths:
     - .testoutput/
@@ -254,6 +277,7 @@ fuzz variable mask:
   - 'prepare done'
   variables:
     TESTFLAGS: '-tags=!integration'
+    TESTSDEFINITIONSPATH: unit\testsdefinitions.txt
 
 .windows integration test:
   extends:
@@ -264,6 +288,7 @@ fuzz variable mask:
   - 'prepare done'
   variables:
     TESTFLAGS: '-tags=integration'
+    TESTSDEFINITIONSPATH: integration\testsdefinitions.txt
 
 # Only test the oldest supported version in merge requests,
 # but test all versions in the default branch.
