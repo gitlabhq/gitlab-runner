@@ -1,4 +1,4 @@
-// +build integration
+// +build integration,kubernetes
 
 package kubernetes_test
 

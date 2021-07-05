@@ -1,29 +1,40 @@
 package helpers
 
 import (
+	"fmt"
 	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func SkipIntegrationTests(t *testing.T, app ...string) {
+func SkipIntegrationTests(t *testing.T, cmd ...string) {
 	if testing.Short() {
 		t.Skip("Skipping long tests")
 	}
 
-	if ok, err := ExecuteCommandSucceeded(app...); !ok {
-		t.Skip(app[0], "failed", err)
+	if len(cmd) == 0 {
+		return
+	}
+
+	executable, err := exec.LookPath(cmd[0])
+	if err != nil {
+		t.Skip(cmd[0], "doesn't exist", err)
+	}
+
+	if err := executeCommandSucceeded(executable, cmd[1:]); err != nil {
+		assert.FailNow(t, "failed integration test command", "%q failed with error: %v", executable, err)
 	}
 }
 
-// ExecuteCommandSucceeded tests whether a particular command execution successfully
+// executeCommandSucceeded tests whether a particular command execution successfully
 // completes. If it does not, it returns the error produced.
-func ExecuteCommandSucceeded(app ...string) (bool, error) {
-	if len(app) > 0 {
-		cmd := exec.Command(app[0], app[1:]...)
-		err := cmd.Run()
-		if err != nil {
-			return false, err
-		}
+func executeCommandSucceeded(executable string, args []string) error {
+	cmd := exec.Command(executable, args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w - %s", err, string(out))
 	}
-	return true, nil
+
+	return nil
 }
