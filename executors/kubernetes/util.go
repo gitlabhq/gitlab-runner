@@ -149,12 +149,8 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 	}
 
 	ready, err := isRunning(pod)
-	if err != nil {
+	if err != nil || ready {
 		return podPhaseResponse{true, pod.Status.Phase, err}
-	}
-
-	if ready {
-		return podPhaseResponse{true, pod.Status.Phase, nil}
 	}
 
 	// check status of containers
@@ -174,7 +170,11 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 		case "ErrImagePull", "ImagePullBackOff":
 			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
 			imagePullErr := &pull.ImagePullError{Message: msg, Image: container.Image}
-			return podPhaseResponse{true, api.PodUnknown, &common.BuildError{Inner: imagePullErr}}
+			return podPhaseResponse{
+				true,
+				api.PodUnknown,
+				&common.BuildError{Inner: imagePullErr, FailureReason: common.ScriptFailure},
+			}
 		}
 	}
 
@@ -187,8 +187,7 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 	)
 
 	for _, condition := range pod.Status.Conditions {
-		// skip conditions with no reason, these are typically expected pod
-		// conditions
+		// skip conditions with no reason, these are typically expected pod conditions
 		if condition.Reason == "" {
 			continue
 		}
