@@ -74,7 +74,7 @@ dns           = ["192.168.xxx.xxx","192.168.xxx.xxx"]
 
 ## I'm seeing `x509: certificate signed by unknown authority`
 
-Please see [the self-signed certificates](../configuration/tls-self-signed.md).
+Please see [the self-signed certificates](../configuration/tls-self-signed.md) documentation and [general SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl.html#troubleshooting) information.
 
 ## I get `Permission Denied` when accessing the `/var/run/docker.sock`
 
