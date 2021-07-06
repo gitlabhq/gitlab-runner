@@ -89,15 +89,15 @@ passing the filename to the following command:
 
 - For PowerShell Desktop Edition:
 
-    ```batch
-    powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
-    ```
+  ```batch
+  powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
+  ```
 
 - For PowerShell Core Edition:
 
-    ```batch
-    pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
-    ```
+  ```batch
+  pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
+  ```
 
 This is how an example PowerShell script looks like:
 
