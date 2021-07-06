@@ -1950,3 +1950,50 @@ func TestBuildSupportedFailureReasons(t *testing.T) {
 		})
 	}
 }
+
+func TestSetTraceStatus(t *testing.T) {
+	tests := map[string]struct {
+		err    error
+		assert func(*testing.T, *MockJobTrace, error)
+	}{
+		"nil error is successful": {
+			err: nil,
+			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+				mt.On("Success").Once()
+			},
+		},
+		"build error, script failure": {
+			err: &BuildError{FailureReason: ScriptFailure},
+			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Once()
+			},
+		},
+		"build error, wrapped script failure": {
+			err: fmt.Errorf("wrapped: %w", &BuildError{FailureReason: ScriptFailure}),
+			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Once()
+			},
+		},
+		"non-build error": {
+			err: fmt.Errorf("some error"),
+			assert: func(t *testing.T, mt *MockJobTrace, err error) {
+				mt.On("Fail", err, JobFailureData{Reason: RunnerSystemFailure}).Once()
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			b := &Build{
+				Runner: &RunnerConfig{},
+			}
+			b.logger = NewBuildLogger(nil, b.Log())
+
+			trace := new(MockJobTrace)
+			defer trace.AssertExpectations(t)
+
+			tc.assert(t, trace, tc.err)
+			b.setTraceStatus(trace, tc.err)
+		})
+	}
+}

@@ -469,7 +469,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
 
 	contains := "repository does not exist"
 	if isDockerOlderThan17_07(t) {
@@ -487,8 +487,30 @@ func TestDockerCommandMissingTag(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
 	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestDockerCommandMissingServiceImage(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, common.GetSuccessfulBuild)
+	build.Services = common.Services{
+		{
+			Name: "some/non-existing/image",
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
+
+	contains := "repository does not exist"
+	if isDockerOlderThan17_07(t) {
+		contains = "not found"
+	}
+
+	assert.Contains(t, err.Error(), contains)
 }
 
 func TestDockerCommandBuildCancel(t *testing.T) {

@@ -784,6 +784,19 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 	return timeout
 }
 
+// setTraceStatus sets the final status of a job. If the err
+// is nil, the job is successful.
+//
+// What we send back to GitLab for a failure reason when the err
+// is not nil depends:
+//
+// If the error can be unwrapped to `BuildError`, the BuildError's
+// failure reason is given. If the failure reason is not supported
+// by GitLab, it's converted to an `UnknownFailure`. If the failure
+// reason is not specified, `ScriptFailure` is used.
+//
+// If an error cannot be unwrapped to `BuildError`, `SystemFailure`
+// is used as the failure reason.
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	logger := b.logger.WithFields(logrus.Fields{
 		"duration_s": b.Duration().Seconds(),
@@ -796,7 +809,8 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		return
 	}
 
-	if buildError, ok := err.(*BuildError); ok {
+	var buildError *BuildError
+	if errors.As(err, &buildError) {
 		logger.SoftErrorln("Job failed:", err)
 
 		trace.Fail(err, JobFailureData{
