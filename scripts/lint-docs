@@ -19,7 +19,7 @@ fi
 
 echo "Lint Markdown"
 if command -v markdownlint >/dev/null 2>&1; then
-    markdownlint --config "${GIT_ROOT}/.markdownlint.json" 'docs/**/*.md' || ((ERROR_RESULTS++))
+    markdownlint --config "${GIT_ROOT}/.markdownlint.yml" 'docs/**/*.md' || ((ERROR_RESULTS++))
 else
     echo "markdownlint is missing, please install it from https://github.com/igorshubovych/markdownlint-cli#installation"
 fi
