@@ -9,5 +9,5 @@
 
 [Documentation]
 .markdownlint.yml @marcel.amirault @eread @aqualls @cnorris
-/doc/.vale/ @marcel.amirault @eread @aqualls @cnorris
-/doc/ @sselhorn @ngaskill
+/docs/.vale/ @marcel.amirault @eread @aqualls @cnorris
+/docs/ @sselhorn @ngaskill
