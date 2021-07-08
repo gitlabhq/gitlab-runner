@@ -1,3 +1,61 @@
+## v14.1.0-rc1 (2021-07-08)
+
+### Bug fixes
+
+- Fix trace short writes for large log lines !2993
+- Confirm if docker is installed in `clear-docker-cache` !2961
+
+### Maintenance
+
+- Add CODEOWNERS for docs !3017 (Ben Bodenmiller @bbodenmiller)
+- Add TestBuildOnCustomDirectory/pwsh as test failure on windows 20h2 and 2004 and TestMachineIdleLimits on 1809 !3011
+- Allow KUBECONFIG and GITLAB_CI env in integration tests !3010
+- Fix vendor out of sync !3008
+- Use image's Powershell Core for Windows tests !3005
+- Remove explicit use of GOROOT/GOPATH now that we're using Go modules !3002
+- Remove unneeded test configuration !3001
+- Fail k8s integration tests when the check command fails !2999
+- Fix on-demand releasing of helper images !2998
+- Stop considering docker pull image as runner system failure !2995
+- Skip docker-machine provision on failure by default !2986
+- Fix make prepare_index read GPG_KEY from file !2985
+- Fail CI build if test failures not updated !2976
+- Only print necessary env vars in tests !2971
+- Update environment name for Linux docker images !2970
+- Don't run fuzz variable mask test for docs !2965
+- Add environment for gitlab stable release !2962
+- Add environment name for package jobs !2959
+- Use file based variables for GPG_KEY !2958
+- Update default branch from master to main !2930
+- Only allow failures with exit code 99 in Linux tests !2704
+- Test passing a config template to the RegisterCommand !2451
+- Make the variable type for the GitLab CI secret configurable !2414
+
+### GitLab Runner distribution
+
+- Add support for Windows Server core, version 20H2 [Semi-Annual Channel release] !2908
+
+### Documentation changes
+
+- Restructure markdownlint configuration !3012
+- Update sudo command for linux repository install !3009
+- Fix broken links in Runner docs !3007
+- Add note on IdleCount to autoscaling docs !3004
+- Update feature flag FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE grammar !3000
+- Docs: Complete sentence, link to general SSL troubleshooting info !2994
+- Update runner readmes to index !2990
+- Added note for Overwriting Kubernetes Namespace section !2984
+- Mention liveness project when adding Windows runners !2981
+- Add details on how to assign Runner Manager to security fork project !2974
+- Docs: Updated Shell topic titles to be more clear !2972
+- Update kubernetes execution strategy documentation !2966
+- Fix outdated VS Code package recommendation !2964
+- Add docs about DEB/RPM packages signature verification !2963
+- Docs: Specify exact Parallels product names !2960
+- Provide JSON job response file for custom executor. !2912 (Paul Bryant @paulbry)
+- Add instructions for proxying the GitLab registry !2865
+- Fix typo/incorrect grammar !2842 (Per Lundberg @perlun)
+
 ## v14.0.0 (2021-06-19)
 
 ### New features
