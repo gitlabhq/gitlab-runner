@@ -110,6 +110,9 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
    # Linux s390x
    sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-s390x"
+
+   # Linux ppc64le
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-ppc64le"
    ```
 
    You can download a binary for every available version as described in

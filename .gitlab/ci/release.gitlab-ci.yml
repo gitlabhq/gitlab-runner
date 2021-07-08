@@ -8,7 +8,7 @@
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
-    TARGET_ARCHS: "amd64,arm64,s390x"
+    TARGET_ARCHS: "amd64,arm64,s390x,ppc64le"
   dependencies:
   - 'helper images'
   - 'ecr public token'
