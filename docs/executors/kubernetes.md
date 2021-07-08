@@ -480,6 +480,8 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 ## Custom builds directory mount
 
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2862) in GitLab Runner 13.12.
+
 To store the builds directory for the job, define custom volume mounts to the
 configured `builds_dir` (`/builds` by default).
 To use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
@@ -617,7 +619,7 @@ Beware of the [security considerations](../security/index.md#usage-of-private-do
 
 ## Adding extra host aliases
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab 13.7.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab Runner 13.7.
 
 This feature is available in Kubernetes 1.7+.
 
