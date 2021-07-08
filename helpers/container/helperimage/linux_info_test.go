@@ -93,6 +93,7 @@ func Test_linuxInfo_create(t *testing.T) {
 					IsSupportingLocalImport: true,
 					Cmd:                     expectedCmd,
 				},
+			},
 			"Docker runs on ppc64le": {
 				shell:          shell,
 				dockerArch:     "ppc64le",
