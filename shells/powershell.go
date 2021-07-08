@@ -23,6 +23,35 @@ const (
 
 	SNPwsh       = "pwsh"
 	SNPowershell = "powershell"
+
+	// Before executing a script, powershell parses it.
+	// A `ParserError` can then be thrown if a parsing error is found.
+	// Those errors are not catched by the powershell_trap_script thus causing the job to hang
+	// To avoid this problem, the PwshValidationScript is used to validate the given script and eventually to cause
+	// the job to fail if a `ParserError` is thrown
+	PwshValidationScript = `
+param (
+	[Parameter(Mandatory=$true,Position=1)]
+	[string]$Path,
+	[Parameter(Mandatory=$true,Position=2)]
+	[string]$LogFile
+)
+
+# Empty collection for errors
+$Errors = @()
+$input = [IO.File]::ReadAllText($Path)
+[void][System.Management.Automation.Language.Parser]::ParseInput($input,[ref]$null,[ref]$Errors)
+if($Errors.Count -gt 0){
+	foreach ($err in $Errors) { Write-Error $err.toString() }
+	$out_json= '{"command_exit_code":1, "script": "' + $MyInvocation.MyCommand.Name + '"}'
+	Add-Content $LogFile @"
+
+$out_json
+"@
+	exit 0
+}
+pwsh -File $Path
+`
 )
 
 type PowerShell struct {
@@ -84,6 +113,7 @@ func psQuote(text string) string {
 func psQuoteVariable(text string) string {
 	text = psQuote(text)
 	text = strings.ReplaceAll(text, "$", "`$")
+	text = strings.ReplaceAll(text, "``e", "`e")
 	return text
 }
 
@@ -347,10 +377,22 @@ func (p *PsWriter) Finish(trace bool) string {
 	return buffer.String()
 }
 
+func (p *PsWriter) writeShebang(w io.Writer) {
+	if p.Shell != "" {
+		_, _ = io.WriteString(w, "#!/usr/bin/env "+p.Shell+p.EOL+p.EOL)
+	}
+}
+
 func (p *PsWriter) writeTrace(w io.Writer, trace bool) {
 	if trace {
 		_, _ = io.WriteString(w, "Set-PSDebug -Trace 2"+p.EOL)
 	}
+}
+
+func (p *PsWriter) writeScript(w io.Writer) {
+	lines := strings.Split(p.String(), p.EOL)
+	_, _ = io.WriteString(w, strings.Join(lines, p.EOL))
+	_, _ = io.WriteString(w, p.EOL+p.EOL+"trap {runner_script_trap} runner_script_trap"+p.EOL+p.EOL+"exit 0"+p.EOL)
 }
 
 func (b *PowerShell) GetName() string {
@@ -389,29 +431,41 @@ func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.Sh
 		resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
 	}
 
-	if buildStage == common.BuildStagePrepare {
-		if info.Build.Hostname != "" {
-			w.Linef(
-				`echo "Running on $([Environment]::MachineName) via %s..."`,
-				psQuoteVariable(info.Build.Hostname),
-			)
-		} else {
-			w.Line(`echo "Running on $([Environment]::MachineName)..."`)
-		}
-	}
+	return b.generateScript(w, buildStage, info)
+}
 
+func (b *PowerShell) generateScript(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (string, error) {
+	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
 	err := b.writeScript(w, buildStage, info)
 	if err != nil {
 		return "", err
 	}
 
-	// No need to set up BOM or tracing since no script was generated.
-	if w.Buffer.Len() > 0 {
-		script := w.Finish(info.Build.IsDebugTraceEnabled())
-		return script, nil
-	}
+	script := w.Finish(info.Build.IsDebugTraceEnabled())
+	return script, nil
+}
 
-	return "", nil
+func (b *PowerShell) ensurePrepareStageHostnameMessage(
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) {
+	if buildStage == common.BuildStagePrepare {
+		if info.Build.Hostname != "" {
+			w.Line(
+				fmt.Sprintf(
+					`echo "Running on $([Environment]::MachineName) via %s..."`,
+					psQuoteVariable(info.Build.Hostname),
+				),
+			)
+		} else {
+			w.Line(`echo "Running on $([Environment]::MachineName)..."`)
+		}
+	}
 }
 
 func (b *PowerShell) IsDefault() bool {

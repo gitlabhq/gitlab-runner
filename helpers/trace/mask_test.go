@@ -4,7 +4,12 @@ package trace
 
 import (
 	"bytes"
+	"io"
+	"math"
+	"math/rand"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,6 +66,26 @@ func TestVariablesMaskingBoundary(t *testing.T) {
 			values:   []string{"mask", "prefix_mask"},
 			expected: "[MASKED] [MASKED] [MASKED] [MASKED] [MASKED]",
 		},
+
+		// data written at certain boundaries could cause short writes
+		// due to https://github.com/golang/go/issues/46892
+		//
+		// issue: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28001
+		//
+		// These tests are scenarios that would cause this to occur:
+		//nolint:lll
+		{
+			input:    "buffered writes due to large secret: " + strings.Repeat("_", 2500) + "|" + strings.Repeat("+", 3000),
+			values:   []string{strings.Repeat("+", 3000)},
+			expected: "buffered writes due to large secret: " + strings.Repeat("_", 2500) + "[MASKED]",
+		},
+		{
+			// a previous bug in safecopy always used the last index of a "safe token"
+			// even when a better option was a available to safely copy more data.
+			input:    "head slice\n" + strings.Repeat(".", 4095) + "|tail slice",
+			values:   []string{"zzz"},
+			expected: "head slice\n" + strings.Repeat(".", 4095) + "tail slice",
+		},
 	}
 
 	for _, tc := range tests {
@@ -73,13 +98,15 @@ func TestVariablesMaskingBoundary(t *testing.T) {
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {
-				_, err = buffer.Write(part)
+				n, err := buffer.Write(part)
 				require.NoError(t, err)
+
+				assert.Equal(t, len(part), n)
 			}
 
 			buffer.Finish()
 
-			content, err := buffer.Bytes(0, 1000)
+			content, err := buffer.Bytes(0, math.MaxInt64)
 			require.NoError(t, err)
 			assert.Equal(t, tc.expected, string(content))
 		})
@@ -101,11 +128,11 @@ func TestMaskNonEOFSafeBoundary(t *testing.T) {
 		},
 		{
 			input:    "cannot safely flush: secret secre!",
-			expected: "cannot safely flush: [MASKED]",
+			expected: "cannot safely flush: [MASKED] ",
 		},
 		{
 			input:    "cannot safely flush: secret secre\t",
-			expected: "cannot safely flush: [MASKED]",
+			expected: "cannot safely flush: [MASKED] ",
 		},
 		{
 			input:    "can safely flush: secret secre\r",
@@ -118,6 +145,15 @@ func TestMaskNonEOFSafeBoundary(t *testing.T) {
 		{
 			input:    "can safely flush: secret secre\r\n",
 			expected: "can safely flush: [MASKED] secre\r\n",
+		},
+		//nolint:lll
+		{
+			input:    "can safely flush: \n: but doesn't use the last safe token if the input is much greater than the token being indexed",
+			expected: "can safely flush: \n: but doesn't use the last safe token if the input is much greater than the token being i",
+		},
+		{
+			input:    "can safely flush: \n: and always uses the last safe token even on long inputs\n",
+			expected: "can safely flush: \n: and always uses the last safe token even on long inputs\n",
 		},
 	}
 
@@ -161,4 +197,32 @@ func TestMaskShortWrites(t *testing.T) {
 			assert.ErrorIs(t, err, transform.ErrShortDst)
 		})
 	}
+}
+
+func TestRandomCopyReadback(t *testing.T) {
+	input := make([]byte, 1*1024*1024)
+	_, err := rand.Read(input)
+	require.NoError(t, err)
+
+	input = bytes.ToValidUTF8(input, []byte(string(utf8.RuneError)))
+
+	buffer, err := New()
+	require.NoError(t, err)
+	defer buffer.Close()
+
+	buffer.SetLimit(math.MaxInt64)
+	buffer.SetMasked([]string{"a"})
+
+	n, err := io.Copy(buffer, bytes.NewReader(input))
+	require.NoError(t, err)
+	require.Equal(t, n, int64(len(input)))
+
+	buffer.Finish()
+
+	content, err := buffer.Bytes(0, math.MaxInt64)
+	require.NoError(t, err)
+
+	expected := strings.ReplaceAll(string(input), "a", "[MASKED]")
+
+	assert.Equal(t, []byte(expected), content)
 }

@@ -1,0 +1,32 @@
+[0KRunning with gitlab-runner 11.4.0-rc1 (1ff344e1)
+[0;m[0K  on docker-auto-scale ed2dce3a
+[0;m[0KUsing Docker executor with image alpine:3.7 ...
+[0;m[0KPulling docker image alpine:3.7 ...
+[0;m[0KUsing docker image sha256:34ea7509dcad10aa92310f2b41e3afbabed0811ee3a902d6d49cb90f075fe444 for alpine:3.7 ...
+[0;msection_start:1540587289:prepare_script
+[0KRunning on runner-ed2dce3a-project-250833-concurrent-0 via runner-ed2dce3a-srm-1540587233-a2720091...
+section_end:1540587291:prepare_script
+[0Ksection_start:1540587291:get_sources
+[0K[32;1mCloning repository...[0;m
+Cloning into '/builds/gitlab-org/gitlab-runner'...
+[32;1mChecking out cf91d5e1 as v11.4.2...[0;m
+[32;1mSkipping Git submodules setup[0;m
+section_end:1540587303:get_sources
+[0Ksection_start:1540587303:restore_cache
+[0Ksection_end:1540587305:restore_cache
+[0Ksection_start:1540587305:download_artifacts
+[0K[32;1mDownloading artifacts for code_quality (113296602)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296602 responseStatus[0;m=200 OK token[0;m=9voFyq8b
+section_end:1540587306:download_artifacts
+[0Ksection_start:1540587306:build_script
+[0K[32;1m$ unset GPG_KEY[0;m
+[32;1m$ if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then # collapsed multi-line command[0;m
+section_end:1540587308:build_script
+[0Ksection_start:1540587308:after_script
+[0Ksection_end:1540587309:after_script
+[0Ksection_start:1540587309:archive_cache
+[0Ksection_end:1540587311:archive_cache
+[0Ksection_start:1540587311:upload_artifacts_on_success
+[0Ksection_end:1540587312:upload_artifacts_on_success
+[0K[32;1mJob succeeded
+[0;m

@@ -196,6 +196,19 @@ Furthermore, to ensure only designated namespaces will be used during CI runs, s
 `namespace_overwrite_allowed` with an appropriate regular expression. When left empty the overwrite behavior is
 disabled.
 
+When you overwrite the Kubernetes namespace, make sure that:
+
+- In the `values.yml` file for GitLab Runner Helm charts, this value is set: `rbac.clusterWideAccess: true`.
+- The runner has these permissions in the core API group:
+
+  | Resource   | Permissions |
+  |------------|-------------|
+  | pods/exec  | create, patch, delete |
+  | pods       | get, list, watch, create, patch, delete |
+  | secrets    | get, list, watch, create, patch, delete |
+
+This can be achieved by setting `rbac.create: true` or by specifying a service account `rbac.serviceAccountName: <service_account_name>` with the above permissions in the `values.yml` file.
+
 ### Overwriting Kubernetes Default Service Account
 
 Additionally, the Kubernetes service account can be overwritten in the `.gitlab-ci.yml` file by using the variable
@@ -876,13 +889,17 @@ For more information, see [Building images with kaniko and GitLab CI/CD](https:/
 
 ## Job execution
 
-At the moment we are using `kube exec` to run the scripts, which relies on
-having a stable network connection between the Runner and the pod for the duration of the command.
-This leads to problems like [Job marked as success midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119).
-If you are experiencing this problem turn off the feature flag [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags)
-to use `kube attach` for script execution, which is more stable.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1775) in GitLab Runner 12.9.
+> - [Behind a feature flag `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags), enabled by default.
+> - [Using attach by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) in GitLab Runner 14.0.
 
-We are rolling this out slowly and have plans to enable the `kube attach` behavior by default in future release, please follow [#10341](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/10341) for updates.
+GitLab Runner uses `kube attach` instead of `kube exec` by default. This should avoid problems like when a [job is marked successful midway](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4119)
+in environments with an unstable network.
+
+If you experience problems after updating to GitLab Runner 14.0, toggle the feature flag [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY`](../configuration/feature-flags.md#available-feature-flags)
+to `true` and [submit an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/new).
+
+Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress on legacy execution strategy removal.
 
 ## Troubleshooting
 

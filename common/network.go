@@ -29,6 +29,7 @@ const (
 	ScriptFailure       JobFailureReason = "script_failure"
 	RunnerSystemFailure JobFailureReason = "runner_system_failure"
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
+	UnknownFailure      JobFailureReason = "unknown_failure"
 	// JobCanceled is only internal to runner, and not used inside of rails.
 	JobCanceled JobFailureReason = "job_canceled"
 )
@@ -336,7 +337,8 @@ type Dependency struct {
 type Dependencies []Dependency
 
 type GitlabFeatures struct {
-	TraceSections bool `json:"trace_sections"`
+	TraceSections  bool               `json:"trace_sections"`
+	FailureReasons []JobFailureReason `json:"failure_reasons"`
 }
 
 type JobResponse struct {
@@ -366,6 +368,8 @@ type Secrets map[string]Secret
 
 type Secret struct {
 	Vault *VaultSecret `json:"vault,omitempty"`
+
+	File *bool `json:"file,omitempty"`
 }
 
 type VaultSecret struct {
@@ -403,6 +407,18 @@ func (s Secret) expandVariables(vars JobVariables) {
 	if s.Vault != nil {
 		s.Vault.expandVariables(vars)
 	}
+}
+
+// IsFile defines whether the variable should be of type FILE or no.
+//
+// The default behavior is to represent the variable as FILE type.
+// If defined by the user - set to whatever was chosen.
+func (s Secret) IsFile() bool {
+	if s.File == nil {
+		return SecretVariableDefaultsToFile
+	}
+
+	return *s.File
 }
 
 func (s *VaultSecret) expandVariables(vars JobVariables) {

@@ -9,6 +9,7 @@ import (
 const (
 	baseImage1809 = "servercore1809"
 	baseImage2004 = "servercore2004"
+	baseImage20H2 = "servercore20H2"
 
 	windowsSupportedArchitecture = "x86_64"
 )
@@ -16,6 +17,7 @@ const (
 var helperImages = map[string]string{
 	windows.V1809: baseImage1809,
 	windows.V2004: baseImage2004,
+	windows.V20H2: baseImage20H2,
 }
 
 type windowsInfo struct{}

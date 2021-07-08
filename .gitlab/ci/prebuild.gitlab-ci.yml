@@ -13,8 +13,6 @@ helper images:
     paths:
     - out/helper-images/
     - out/binaries/gitlab-runner-helper/gitlab-runner-helper*
-    - .gopath/bin
-    - .gopath/.ok
     expire_in: 7d
 
 clone test repo:
@@ -43,10 +41,11 @@ clone test repo:
   - apt-get update
   - apt-get install -y make
   - source ci/touch_make_dependencies
+  - mkdir -p $(dirname $TESTSDEFINITIONSPATH)
   - make parallel_test_prepare
   artifacts:
     paths:
-    - testsdefinitions.txt
+    - $TESTSDEFINITIONSPATH
     expire_in: 7d
 
 unit test definitions:
@@ -54,12 +53,14 @@ unit test definitions:
   - .test definitions
   variables:
     TESTFLAGS: -cover
+    TESTSDEFINITIONSPATH: unit/testsdefinitions.txt
 
 integration test definitions:
   extends:
   - .test definitions
   variables:
     TESTFLAGS: -cover -tags=integration
+    TESTSDEFINITIONSPATH: integration/testsdefinitions.txt
 
 ecr public token:
   extends:

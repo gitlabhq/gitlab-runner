@@ -16,7 +16,7 @@ PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x' -arch 'ppc64le'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
-S3_UPLOAD_PATH ?= master
+S3_UPLOAD_PATH ?= main
 
 # Keep in sync with docs/install/linux-repository.md
 DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
@@ -135,7 +135,8 @@ test: helper-dockerarchive-host development_setup simple-test
 
 simple-test: TEST_PKG ?= $(shell go list ./...)
 simple-test:
-	go test $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
+	# use env -i to clear parent environment variables for go test
+	./scripts/go_test_no_env $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
 
 git1.8-test: export TEST_PKG = gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells
 git1.8-test:
@@ -149,6 +150,10 @@ cobertura_report: $(GOCOVER_COBERTURA)
 	@ # See https://gitlab.com/gitlab-org/gitlab/-/issues/217664
 	sed 's;filename=\"gitlab.com/gitlab-org/gitlab-runner/;filename=\";g' out/cobertura/cobertura-coverage-raw.xml > \
 	  out/cobertura/cobertura-coverage.xml
+
+export_test_env:
+	@echo "export GO_LDFLAGS='$(GO_LDFLAGS)'"
+	@echo "export MAIN_PACKAGE='$(MAIN_PACKAGE)'"
 
 parallel_test_prepare:
 	# Preparing test commands
@@ -167,6 +172,10 @@ parallel_test_junit_report:
 	# Preparing jUnit test report
 	@./scripts/go_test_with_coverage_report junit
 
+check_windows_test_ignore_list:
+	# Checking for orphaned test names in ignore file
+	@./scripts/check_windows_test_ignore_list
+
 pull_images_for_tests:
 	# Pulling images required for some tests
 	@go run ./scripts/pull-images-for-tests/main.go
@@ -178,7 +187,6 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
-	$(MOCKERY) -dir=./vendor/github.com/ayufan/golang-kardianos-service -output=./helpers/service/mocks -name='(Interface)'
 	$(MOCKERY) -dir=./network -name='requester' -inpkg
 	$(MOCKERY) -dir=./helpers -all -inpkg
 	$(MOCKERY) -dir=./executors/docker -all -inpkg
@@ -298,7 +306,7 @@ prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/git
 
 prepare_zoneinfo:
 	# preparing the zoneinfo file
-	@cp $$GOROOT/lib/time/zoneinfo.zip out/
+	@cp $(shell go env GOROOT)/lib/time/zoneinfo.zip out/
 
 prepare_index: export CI_COMMIT_REF_NAME ?= $(BRANCH)
 prepare_index: export CI_COMMIT_SHA ?= $(REVISION)
@@ -328,7 +336,7 @@ generate_changelog: $(GITLAB_CHANGELOG)
 
 check-tags-in-changelog:
 	# Looking for tags in CHANGELOG
-	@git status | grep "On branch master" 2>&1 >/dev/null || echo "Check should be done on master branch only. Skipping."
+	@git status | grep "On branch main" 2>&1 >/dev/null || echo "Check should be done on main branch only. Skipping."
 	@for tag in $$(git tag | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | sed 's|v||' | sort -g); do \
 		state="MISSING"; \
 		grep "^v $$tag" CHANGELOG.md 2>&1 >/dev/null; \

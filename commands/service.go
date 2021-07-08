@@ -5,7 +5,7 @@ import (
 	"os"
 	"runtime"
 
-	service "github.com/ayufan/golang-kardianos-service"
+	"github.com/kardianos/service"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
@@ -55,13 +55,27 @@ func runServiceInstall(s service.Service, c *cli.Context) error {
 }
 
 func runServiceStatus(displayName string, s service.Service) {
-	err := s.Status()
-	if err == nil {
-		fmt.Println(displayName+":", "Service is running!")
-	} else {
-		fmt.Fprintln(os.Stderr, displayName+":", err)
+	status, err := s.Status()
+
+	description := ""
+	switch status {
+	case service.StatusRunning:
+		description = "Service is running"
+	case service.StatusStopped:
+		description = "Service has stopped"
+	default:
+		description = "Service status unknown"
+		if err != nil {
+			description = err.Error()
+		}
+	}
+
+	if status != service.StatusRunning {
+		fmt.Fprintf(os.Stderr, "%s: %s\n", displayName, description)
 		os.Exit(1)
 	}
+
+	fmt.Printf("%s: %s\n", displayName, description)
 }
 
 func GetServiceArguments(c *cli.Context) (arguments []string) {
@@ -90,47 +104,18 @@ func GetServiceArguments(c *cli.Context) (arguments []string) {
 	return
 }
 
-func createServiceConfig(c *cli.Context) (svcConfig *service.Config) {
-	svcConfig = &service.Config{
+func createServiceConfig(c *cli.Context) *service.Config {
+	config := &service.Config{
 		Name:        c.String("service"),
 		DisplayName: c.String("service"),
 		Description: defaultDescription,
-		Arguments:   []string{"run"},
-	}
-	svcConfig.Arguments = append(svcConfig.Arguments, GetServiceArguments(c)...)
-
-	switch runtime.GOOS {
-	case osTypeLinux:
-		if os.Getuid() != 0 {
-			logrus.Fatal("Please run the commands as root")
-		}
-		if user := c.String("user"); user != "" {
-			svcConfig.Arguments = append(svcConfig.Arguments, "--user", user)
-		}
-
-	case osTypeDarwin:
-		svcConfig.Option = service.KeyValue{
-			"KeepAlive":   true,
-			"RunAtLoad":   true,
-			"UserService": os.Getuid() != 0,
-		}
-
-		if user := c.String("user"); user != "" {
-			if os.Getuid() == 0 {
-				svcConfig.Arguments = append(svcConfig.Arguments, "--user", user)
-			} else {
-				logrus.Fatalln("The --user is not supported for non-root users")
-			}
-		}
-
-	case osTypeWindows:
-		svcConfig.Option = service.KeyValue{
-			"Password": c.String("password"),
-		}
-		svcConfig.UserName = c.String("user")
+		Arguments:   append([]string{"run"}, GetServiceArguments(c)...),
 	}
 
-	return svcConfig
+	// setup os specific service config
+	setupOSServiceConfig(c, config)
+
+	return config
 }
 
 func RunServiceControl(c *cli.Context) {

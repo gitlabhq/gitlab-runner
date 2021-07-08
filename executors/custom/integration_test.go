@@ -22,7 +22,15 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
-var testExecutorFile string
+var (
+	testExecutorFile string
+	testJobInfo      = common.JobInfo{
+		Name:        "test job",
+		Stage:       "test",
+		ProjectID:   0,
+		ProjectName: "test project",
+	}
+)
 
 func TestMain(m *testing.M) {
 	code := 1
@@ -49,6 +57,8 @@ func newBuild(t *testing.T, jobResponse common.JobResponse, shell string) (*comm
 	require.NoError(t, err)
 
 	t.Log("Build directory:", dir)
+
+	jobResponse.JobInfo = testJobInfo
 
 	build := &common.Build{
 		JobResponse: jobResponse,
@@ -547,5 +557,24 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 		defer cleanup()
 
 		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
+	})
+}
+
+func TestBuildWithAccessToJobResponseFile(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		require.NoError(t, err)
+
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		output, err := buildtest.RunBuildReturningOutput(t, build)
+		require.NoError(t, err)
+
+		assert.Contains(t, output, "job ID           => 0")
+		assert.Contains(t, output, fmt.Sprintf("job name         => %s", testJobInfo.Name))
+		assert.Contains(t, output, fmt.Sprintf("job stage        => %s", testJobInfo.Stage))
+		assert.Contains(t, output, fmt.Sprintf("job project ID   => %d", testJobInfo.ProjectID))
+		assert.Contains(t, output, fmt.Sprintf("job project name => %s", testJobInfo.ProjectName))
 	})
 }

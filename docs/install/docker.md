@@ -57,7 +57,7 @@ Before you begin, ensure [Docker is installed](https://docs.docker.com/get-docke
 
 To run `gitlab-runner` inside a Docker container, you need to make sure that the configuration is not lost when the container is restarted. To do this, there are two options, which are described below.
 
-Make sure that you read the [FAQ](../faq/README.md) section which describes some of the most common problems with GitLab Runner.
+Make sure that you read the [FAQ](../faq/index.md) section which describes some of the most common problems with GitLab Runner.
 
 NOTE:
 If you are using a [`session_server`](../configuration/advanced-configuration.md), you will also need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
@@ -194,7 +194,7 @@ The following multi-platform Docker images are available:
 - `gitlab/gitlab-runner:alpine` based on Alpine with much a smaller footprint
   (~160/350 MB Ubuntu vs ~45/130 MB Alpine compressed/decompressed).
 
-See [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/master/dockerfiles)
+See [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/main/dockerfiles)
 source for possible build instructions for both Ubuntu and Alpine images.
 
 NOTE:

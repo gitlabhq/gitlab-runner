@@ -13,7 +13,7 @@ caching feature is currently not supported.
 VirtualBox allows you to use VirtualBox's virtualization to provide a clean
 build environment for every build. This executor supports all systems that can
 be run on VirtualBox. The only requirement is that the virtual machine exposes
-its SSH server and provide a bash-compatible shell.
+an SSH server and provides a bash-compatible shell.
 
 NOTE:
 GitLab Runner will use the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the virtual machine.

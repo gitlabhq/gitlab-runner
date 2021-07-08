@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Shell
+# The Shell executor
 
 The Shell executor is a simple executor that you use to execute builds
 locally on the machine where GitLab Runner is installed. It supports all systems on
@@ -19,7 +19,7 @@ so ensure Git LFS is up-to-date when GitLab Runner will run using the shell exec
 ## Overview
 
 The scripts can be run as unprivileged user if the `--user` is added to the
-[`gitlab-runner run` command](../commands/README.md#gitlab-runner-run). This feature is only supported by Bash.
+[`gitlab-runner run` command](../commands/index.md#gitlab-runner-run). This feature is only supported by Bash.
 
 The source project is checked out to:
 `<working-directory>/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`.

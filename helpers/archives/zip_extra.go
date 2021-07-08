@@ -12,7 +12,7 @@ import (
 const ZipUIDGidFieldType = 0x7875
 const ZipTimestampFieldType = 0x5455
 
-// ZipExtraField is taken from https://github.com/LuaDist/zip/blob/master/proginfo/extrafld.txt
+// ZipExtraField is taken from https://github.com/LuaDist/zip/blob/3.0/proginfo/extrafld.txt
 type ZipExtraField struct {
 	Type uint16
 	Size uint16

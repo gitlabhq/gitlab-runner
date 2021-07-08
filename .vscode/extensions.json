@@ -1,6 +1,6 @@
 {
   "recommendations": [
-    "ms-vscode.go",
+    "golang.go",
     "766b.go-outliner",
     "bungcip.better-toml",
     "davidanson.vscode-markdownlint",

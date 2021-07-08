@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+borderTop() {
+    echo
+    echo "========================================================================================================================="
+}
+
+borderBottom() {
+    echo "========================================================================================================================="
+    echo
+}
+
+WINDOWS_VERSION=${WINDOWS_VERSION:-servercore1809}
+TESTDEFINITIONFILES=${TESTDEFINITIONFILES:-$(ls -1 */testsdefinitions.txt)}
+
+effectiveTestNamesFile="$(mktemp)"
+ignoredTestNamesFile="$(mktemp)"
+diffsFile="$(mktemp)"
+
+cleanup_trap() {
+  local error_code=$?
+
+  rm -f "${effectiveTestNamesFile}" "${ignoredTestNamesFile}" "${diffsFile}"
+
+  exit "${error_code}"
+}
+
+trap cleanup_trap ERR SIGINT SIGTERM
+
+# Massage the files into files that are sorted and contain only root test names so they can be compared
+grep --no-filename -oP 'Test[a-zA-Z_0-9]+' ${TESTDEFINITIONFILES} | sort | uniq > "${effectiveTestNamesFile}"
+grep --no-filename -v '/' "ci/.test-failures.${WINDOWS_VERSION}.txt" | sort | uniq > "${ignoredTestNamesFile}"
+# Check for lines in ignoredTestNamesFile which are not in effectiveTestNamesFile
+comm -23 "${ignoredTestNamesFile}" "${effectiveTestNamesFile}" > "${diffsFile}"
+if [[ $(wc -l < "${diffsFile}") -ne 0 ]]; then
+  borderTop
+  echo "Please remove the following test names from ci/.test-failures.${WINDOWS_VERSION}.txt. They no longer exist in the codebase:"
+  echo
+  cat "${diffsFile}"
+  borderBottom
+
+  exit 1
+fi

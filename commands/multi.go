@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	service "github.com/ayufan/golang-kardianos-service"
+	"github.com/kardianos/service"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -93,7 +93,7 @@ func (mr *RunCommand) log() *logrus.Entry {
 	return logrus.WithField("builds", mr.buildsHelper.buildsCount())
 }
 
-// Start is the method implementing `github.com/ayufan/golang-kardianos-service`.`Interface`
+// Start is the method implementing `github.com/kardianos/service`.`Interface`
 // interface. It's responsible for a non-blocking initialization of the process. When it exits,
 // the main control flow is passed to runWait() configured as service's RunWait method. Take a look
 // into Execute() for details.
@@ -694,7 +694,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 	return nil
 }
 
-// Stop is the method implementing `github.com/ayufan/golang-kardianos-service`.`Interface`
+// Stop is the method implementing `github.com/kardianos/service`.`Interface`
 // interface. It's responsible for triggering the process stop.
 // First it starts a goroutine that starts broadcasting the interrupt signal (used to stop
 // workers scaling goroutine).
@@ -805,7 +805,7 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 //    properly.
 //
 // After this method exits, Stop returns it error and finally the
-// `github.com/ayufan/golang-kardianos-service` service mechanism will finish
+// `github.com/kardianos/service` service mechanism will finish
 // process execution.
 func (mr *RunCommand) handleForcefulShutdown() error {
 	mr.log().
@@ -873,7 +873,7 @@ func (mr *RunCommand) Execute(_ *cli.Context) {
 	}
 }
 
-// runWait is the blocking mechanism for `github.com/ayufan/golang-kardianos-service`
+// runWait is the blocking mechanism for `github.com/kardianos/service`
 // service. It's started after Start exited and should block the control flow. When it exits,
 // then the Stop is executed and service shutdown should be handled.
 // For Runner it waits for the stopSignal to be received by the process. When it will happen,

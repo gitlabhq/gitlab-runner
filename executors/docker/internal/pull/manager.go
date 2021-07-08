@@ -204,7 +204,7 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
 	if err := m.client.ImagePullBlocking(m.context, ref, options); err != nil {
 		if errorRegexp.MatchString(err.Error()) {
-			return nil, &common.BuildError{Inner: err}
+			return nil, &common.BuildError{Inner: err, FailureReason: common.ScriptFailure}
 		}
 		return nil, err
 	}

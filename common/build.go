@@ -784,6 +784,19 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 	return timeout
 }
 
+// setTraceStatus sets the final status of a job. If the err
+// is nil, the job is successful.
+//
+// What we send back to GitLab for a failure reason when the err
+// is not nil depends:
+//
+// If the error can be unwrapped to `BuildError`, the BuildError's
+// failure reason is given. If the failure reason is not supported
+// by GitLab, it's converted to an `UnknownFailure`. If the failure
+// reason is not specified, `ScriptFailure` is used.
+//
+// If an error cannot be unwrapped to `BuildError`, `SystemFailure`
+// is used as the failure reason.
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	logger := b.logger.WithFields(logrus.Fields{
 		"duration_s": b.Duration().Seconds(),
@@ -796,21 +809,41 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		return
 	}
 
-	if buildError, ok := err.(*BuildError); ok {
+	var buildError *BuildError
+	if errors.As(err, &buildError) {
 		logger.SoftErrorln("Job failed:", err)
 
-		failureReason := buildError.FailureReason
-		if failureReason == "" {
-			failureReason = ScriptFailure
-		}
-
-		trace.Fail(err, JobFailureData{Reason: failureReason, ExitCode: buildError.ExitCode})
+		trace.Fail(err, JobFailureData{
+			Reason:   b.ensureSupportedFailureReason(buildError.FailureReason),
+			ExitCode: buildError.ExitCode,
+		})
 
 		return
 	}
 
 	logger.Errorln("Job failed (system failure):", err)
 	trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure})
+}
+
+func (b *Build) ensureSupportedFailureReason(reason JobFailureReason) JobFailureReason {
+	if reason == "" {
+		return ScriptFailure
+	}
+
+	// GitLab provides a list of supported failure reasons with the job. Should the list be empty, we use
+	// the minmum subset of failure reasons we know all GitLab instances support.
+	for _, supported := range append(
+		b.Features.FailureReasons,
+		ScriptFailure,
+		RunnerSystemFailure,
+		JobExecutionTimeout,
+	) {
+		if reason == supported {
+			return reason
+		}
+	}
+
+	return UnknownFailure
 }
 
 func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {

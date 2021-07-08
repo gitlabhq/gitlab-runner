@@ -3,7 +3,7 @@
 package log
 
 import (
-	service "github.com/ayufan/golang-kardianos-service"
+	service "github.com/kardianos/service"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -49,6 +49,20 @@ func (_m *mockSystemService) Logger(errs chan<- error) (service.Logger, error) {
 	return r0, r1
 }
 
+// Platform provides a mock function with given fields:
+func (_m *mockSystemService) Platform() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // Restart provides a mock function with given fields:
 func (_m *mockSystemService) Restart() error {
 	ret := _m.Called()
@@ -92,17 +106,24 @@ func (_m *mockSystemService) Start() error {
 }
 
 // Status provides a mock function with given fields:
-func (_m *mockSystemService) Status() error {
+func (_m *mockSystemService) Status() (service.Status, error) {
 	ret := _m.Called()
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
+	var r0 service.Status
+	if rf, ok := ret.Get(0).(func() service.Status); ok {
 		r0 = rf()
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(service.Status)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Stop provides a mock function with given fields:

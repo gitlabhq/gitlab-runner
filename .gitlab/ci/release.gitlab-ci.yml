@@ -2,20 +2,13 @@
   extends:
   - .docker
   - .docker_qemu
+  - .linux-dependency-checksums
   stage: release
   variables:
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
     TARGET_ARCHS: "amd64,arm64,s390x"
-    DOCKER_MACHINE_AMD64_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
-    DOCKER_MACHINE_ARM64_CHECKSUM: "109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac"
-    DUMB_INIT_AMD64_CHECKSUM: "37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9"
-    DUMB_INIT_ARM64_CHECKSUM: "45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3"
-    DUMB_INIT_S390X_CHECKSUM: "8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d"
-    GIT_LFS_AMD64_CHECKSUM: "f48f45cf8ca600cdde4a8f27b16faf761e2ab944eaf1b0d9a38f66e9979b7df0"
-    GIT_LFS_ARM64_CHECKSUM: "b7e65e7f336c465c7049b538f1bc829146f511237f83a55b5d27e51e2e2fcbf7"
-    GIT_LFS_S390X_CHECKSUM: "8d3d5bb5ed98fe8df788011e890e2d47351ccec8bf47b679576b375840eb0610"
   dependencies:
   - 'helper images'
   - 'ecr public token'
@@ -29,20 +22,16 @@
 .release_windows_docker_images:
   extends:
   - .except_docs
+  - .windows-dependency-checksums
   stage: release
   variables:
     PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
     PUBLISH_IMAGES: "true"
-    GIT_256_CHECKSUM: "bdb8c1560eca39f4d99b07705006c00d94a3f8612501046a0f89353afc5307fa"
-    GIT_LFS_256_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
-    PWSH_256_CHECKSUM: "D234CFD6E9DD4A2CA68BFBC64C416DE42F31760E954812E8ADE02B6D57FE243F"
   dependencies:
   - 'helper images'
   - 'ecr public token'
   - 'binaries windows/386 windows/amd64'
-  before_script:
-  - if (Test-Path env:GPG_KEY) { Remove-Item Env:GPG_KEY }
   script:
   - .\ci\build_release_windows_images.ps1
   retry: 2
@@ -52,7 +41,6 @@
   - .except_docs
   stage: release
   before_script:
-  - unset GPG_KEY
   - source ci/touch_make_dependencies
 
 .release:with-rules:
@@ -60,7 +48,6 @@
   - .rules:docs:skip
   stage: release
   before_script:
-  - unset GPG_KEY
   - source ci/touch_make_dependencies
 
 .release_s3:
@@ -77,6 +64,14 @@
   - 'package-rpm'
   before_script:
   - source ci/touch_make_dependencies
+  - |
+    # checking GPG signing support
+    if [ -f "$GPG_KEY_PATH" ]; then
+      export GPG_KEY=$(cat ${GPG_KEY_PATH})
+      export GPG_PASSPHRASE=$(cat ${GPG_PASSPHRASE_PATH})
+    else
+      echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
+    fi
   script:
   - make release_s3
 
@@ -99,7 +94,7 @@
 
 .release_bleeding_edge:
   only:
-  - master@gitlab-org/gitlab-runner
+  - main@gitlab-org/gitlab-runner
   - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+\Z/@gitlab-org/gitlab-runner
 
 .release_stable:
@@ -146,6 +141,16 @@ development servercore2004 helper docker image:
     PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
+development servercore20H2 helper docker image:
+  extends:
+  - .release_development
+  - .windows20H2
+  - .release_windows_docker_images
+  variables:
+    PUBLISH_IMAGES: "false"
+    PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+
 bleeding edge S3:
   extends:
   - .release_s3
@@ -167,7 +172,7 @@ bleeding edge docker images:
   - .release_docker_images
   - .release_bleeding_edge
   environment:
-    name: bleeding_edge/docker_images
+    name: bleeding_edge/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore1809 docker images:
@@ -188,6 +193,15 @@ bleeding edge servercore2004 docker images:
     name: bleeding_edge/docker_images/windows2004
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
+bleeding edge servercore20H2 docker images:
+  extends:
+  - .release_bleeding_edge
+  - .windows20H2
+  - .release_windows_docker_images
+  environment:
+    name: bleeding_edge/docker_images/windows20H2
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
 stable S3:
   extends:
   - .release_s3
@@ -199,6 +213,9 @@ stable S3:
 stable gitlab release:
   extends:
   - .release:with-rules
+  environment:
+    name: stable/gitlab
+    url: https://gitlab.com/gitlab-org/gitlab-runner/-/releases
   script:
   - ./ci/release_gitlab
   rules:
@@ -220,7 +237,7 @@ stable docker images:
   - .release_docker_images
   - .release_stable
   environment:
-    name: stable/docker_images
+    name: stable/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore1809 docker images:
@@ -239,6 +256,15 @@ stable servercore2004 docker images:
   - .release_windows_docker_images
   environment:
     name: stable/docker_images/windows2004
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore20H2 docker images:
+  extends:
+  - .release_stable
+  - .windows20H2
+  - .release_windows_docker_images
+  environment:
+    name: stable/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 static QA:

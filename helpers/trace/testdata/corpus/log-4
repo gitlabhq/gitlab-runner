@@ -1,0 +1,226 @@
+[0KRunning with gitlab-runner 11.4.0-rc1 (1ff344e1)
+[0;m[0K  on prm-com-gitlab-org bd091556
+[0;m[0KUsing Docker executor with image registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0 ...
+[0;m[0KPulling docker image registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0 ...
+[0;m[0KUsing docker image sha256:e04a22ede88d35b514bbdc50de3a5aad24756703c4df5a6ca8d114eff85b82a5 for registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.8.7-0 ...
+[0;msection_start:1540587170:prepare_script
+[0KRunning on runner-bd091556-project-250833-concurrent-0 via runner-bd091556-prm-1540584797-bdf1c4f9...
+section_end:1540587171:prepare_script
+[0Ksection_start:1540587171:get_sources
+[0K[32;1mCloning repository...[0;m
+Cloning into '/builds/gitlab-org/gitlab-runner'...
+[32;1mChecking out cf91d5e1 as v11.4.2...[0;m
+[32;1mSkipping Git submodules setup[0;m
+section_end:1540587184:get_sources
+[0Ksection_start:1540587184:restore_cache
+[0Ksection_end:1540587186:restore_cache
+[0Ksection_start:1540587186:download_artifacts
+[0K[32;1mDownloading artifacts for helper images (113296599)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296599 responseStatus[0;m=200 OK token[0;m=zjyCZm9o
+[32;1mDownloading artifacts for clone test repo (113296600)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296600 responseStatus[0;m=200 OK token[0;m=W4uUQz5z
+[32;1mDownloading artifacts for tests definitions (113296601)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296601 responseStatus[0;m=200 OK token[0;m=PuzvTPai
+[32;1mDownloading artifacts for code_quality (113296602)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296602 responseStatus[0;m=200 OK token[0;m=9voFyq8b
+[32;1mDownloading artifacts for unit tests 0 5 (113296603)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296603 responseStatus[0;m=200 OK token[0;m=WbgGVQ7y
+[32;1mDownloading artifacts for unit tests 1 5 (113296604)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296604 responseStatus[0;m=200 OK token[0;m=3sppSbYF
+[32;1mDownloading artifacts for unit tests 2 5 (113296606)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296606 responseStatus[0;m=200 OK token[0;m=ha8-ST6q
+[32;1mDownloading artifacts for unit tests 3 5 (113296607)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296607 responseStatus[0;m=200 OK token[0;m=2kD26N4_
+[32;1mDownloading artifacts for unit tests 4 5 (113296608)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296608 responseStatus[0;m=200 OK token[0;m=7zGWebqN
+[32;1mDownloading artifacts for unit tests with race 0 5 (113296609)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296609 responseStatus[0;m=200 OK token[0;m=RFKyWzzG
+[32;1mDownloading artifacts for unit tests with race 1 5 (113296610)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296610 responseStatus[0;m=200 OK token[0;m=sTpwBPdi
+[32;1mDownloading artifacts for unit tests with race 2 5 (113296611)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296611 responseStatus[0;m=200 OK token[0;m=ZCr_6jyj
+[32;1mDownloading artifacts for unit tests with race 3 5 (113296612)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296612 responseStatus[0;m=200 OK token[0;m=AoQ_6DGW
+[32;1mDownloading artifacts for unit tests with race 4 5 (113296613)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296613 responseStatus[0;m=200 OK token[0;m=AXxXnz1V
+[32;1mDownloading artifacts for test coverage report (113296617)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296617 responseStatus[0;m=200 OK token[0;m=apWZwUpg
+[32;1mDownloading artifacts for binaries darwin/386 darwin/amd64 (113296619)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296619 responseStatus[0;m=200 OK token[0;m=DuzTynpN
+[32;1mDownloading artifacts for binaries freebsd/386 freebsd/amd64 freebsd/arm (113296620)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296620 responseStatus[0;m=200 OK token[0;m=8cf5c4mN
+[32;1mDownloading artifacts for binaries linux/386 linux/amd64 linux/arm (113296621)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296621 responseStatus[0;m=200 OK token[0;m=HyURPmox
+[32;1mDownloading artifacts for binaries windows/386 windows/amd64 (113296623)...[0;m
+Downloading artifacts from coordinator... ok      [0;m  id[0;m=113296623 responseStatus[0;m=200 OK token[0;m=VAjCaS7j
+section_end:1540587195:download_artifacts
+[0Ksection_start:1540587195:build_script
+[0K[32;1m$ # checking GPG signing support # collapsed multi-line command[0;m
+gpg: directory `/root/.gnupg' created
+gpg: new configuration file `/root/.gnupg/gpg.conf' created
+gpg: WARNING: options in `/root/.gnupg/gpg.conf' are not yet active during this run
+gpg: keyring `/root/.gnupg/secring.gpg' created
+gpg: keyring `/root/.gnupg/pubring.gpg' created
+gpg: key 880721D4: secret key imported
+gpg: /root/.gnupg/trustdb.gpg: trustdb created
+gpg: key 880721D4: public key "GitLab, Inc. <support@gitlab.com>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1  (RSA: 1)
+gpg:       secret keys read: 1
+gpg:   secret keys imported: 1
+[32;1m$ source ci/touch_make_dependencies[0;m
+[32;1m$ make ${CI_JOB_NAME}[0;m
+# Installing packaging dependencies...
+which fpm 1>/dev/null || gem install rake fpm --no-ri --no-rdoc
+chmod 755 packaging/root/usr/share/gitlab-runner/
+chmod 755 packaging/root/usr/share/gitlab-runner/*
+# Building Debian compatible packages...
+make package-deb-fpm ARCH=amd64 PACKAGE_ARCH=amd64
+make[1]: Entering directory '/builds/gitlab-org/gitlab-runner'
+fpm -s dir -t deb -n gitlab-runner -v 11.4.2 \
+	-p out/deb/gitlab-runner_amd64.deb \
+	--deb-priority optional --category admin \
+	--force \
+	--deb-compression bzip2 \
+	--after-install packaging/scripts/postinst.deb \
+	--before-remove packaging/scripts/prerm.deb \
+	--url https://gitlab.com/gitlab-org/gitlab-runner \
+	--description "GitLab Runner" \
+	-m "GitLab Inc. <support@gitlab.com>" \
+	--license "MIT" \
+	--vendor "GitLab Inc." \
+	--conflicts gitlab-runner-beta \
+	--conflicts gitlab-ci-multi-runner \
+	--conflicts gitlab-ci-multi-runner-beta \
+	--provides gitlab-ci-multi-runner \
+	--replaces gitlab-ci-multi-runner \
+	--depends ca-certificates \
+	--depends git \
+	--depends curl \
+	--depends tar \
+	--deb-suggests docker-engine \
+	-a amd64 \
+	packaging/root/=/ \
+	out/binaries/gitlab-runner-linux-amd64=/usr/lib/gitlab-runner/gitlab-runner \
+	out/helper-images/=/usr/lib/gitlab-runner/helper-images/
+{:timestamp=>"2018-10-26T20:53:23.535698+0000", :message=>"Debian packaging tools generally labels all files in /etc as config files, as mandated by policy, so fpm defaults to this behavior for deb packages. You can disable this default behavior with --deb-no-default-config-files flag", :level=>:warn}
+/var/lib/gems/2.1.0/gems/fpm-1.9.3/lib/fpm/util.rb:291: warning: Insecure world writable dir /builds/gitlab-org/gitlab-runner/.gopath in PATH, mode 040777
+{:timestamp=>"2018-10-26T20:53:31.545098+0000", :message=>"Created package", :path=>"out/deb/gitlab-runner_amd64.deb"}
+Processing out/deb/gitlab-runner_amd64.deb...
+Signed deb out/deb/gitlab-runner_amd64.deb
+make[1]: Leaving directory '/builds/gitlab-org/gitlab-runner'
+make package-deb-fpm ARCH=386 PACKAGE_ARCH=i386
+make[1]: Entering directory '/builds/gitlab-org/gitlab-runner'
+fpm -s dir -t deb -n gitlab-runner -v 11.4.2 \
+	-p out/deb/gitlab-runner_i386.deb \
+	--deb-priority optional --category admin \
+	--force \
+	--deb-compression bzip2 \
+	--after-install packaging/scripts/postinst.deb \
+	--before-remove packaging/scripts/prerm.deb \
+	--url https://gitlab.com/gitlab-org/gitlab-runner \
+	--description "GitLab Runner" \
+	-m "GitLab Inc. <support@gitlab.com>" \
+	--license "MIT" \
+	--vendor "GitLab Inc." \
+	--conflicts gitlab-runner-beta \
+	--conflicts gitlab-ci-multi-runner \
+	--conflicts gitlab-ci-multi-runner-beta \
+	--provides gitlab-ci-multi-runner \
+	--replaces gitlab-ci-multi-runner \
+	--depends ca-certificates \
+	--depends git \
+	--depends curl \
+	--depends tar \
+	--deb-suggests docker-engine \
+	-a i386 \
+	packaging/root/=/ \
+	out/binaries/gitlab-runner-linux-386=/usr/lib/gitlab-runner/gitlab-runner \
+	out/helper-images/=/usr/lib/gitlab-runner/helper-images/
+{:timestamp=>"2018-10-26T20:53:32.801667+0000", :message=>"Debian packaging tools generally labels all files in /etc as config files, as mandated by policy, so fpm defaults to this behavior for deb packages. You can disable this default behavior with --deb-no-default-config-files flag", :level=>:warn}
+/var/lib/gems/2.1.0/gems/fpm-1.9.3/lib/fpm/util.rb:291: warning: Insecure world writable dir /builds/gitlab-org/gitlab-runner/.gopath in PATH, mode 040777
+{:timestamp=>"2018-10-26T20:53:40.636303+0000", :message=>"Created package", :path=>"out/deb/gitlab-runner_i386.deb"}
+Processing out/deb/gitlab-runner_i386.deb...
+Signed deb out/deb/gitlab-runner_i386.deb
+make[1]: Leaving directory '/builds/gitlab-org/gitlab-runner'
+make package-deb-fpm ARCH=arm PACKAGE_ARCH=armel
+make[1]: Entering directory '/builds/gitlab-org/gitlab-runner'
+fpm -s dir -t deb -n gitlab-runner -v 11.4.2 \
+	-p out/deb/gitlab-runner_armel.deb \
+	--deb-priority optional --category admin \
+	--force \
+	--deb-compression bzip2 \
+	--after-install packaging/scripts/postinst.deb \
+	--before-remove packaging/scripts/prerm.deb \
+	--url https://gitlab.com/gitlab-org/gitlab-runner \
+	--description "GitLab Runner" \
+	-m "GitLab Inc. <support@gitlab.com>" \
+	--license "MIT" \
+	--vendor "GitLab Inc." \
+	--conflicts gitlab-runner-beta \
+	--conflicts gitlab-ci-multi-runner \
+	--conflicts gitlab-ci-multi-runner-beta \
+	--provides gitlab-ci-multi-runner \
+	--replaces gitlab-ci-multi-runner \
+	--depends ca-certificates \
+	--depends git \
+	--depends curl \
+	--depends tar \
+	--deb-suggests docker-engine \
+	-a armel \
+	packaging/root/=/ \
+	out/binaries/gitlab-runner-linux-arm=/usr/lib/gitlab-runner/gitlab-runner \
+	out/helper-images/=/usr/lib/gitlab-runner/helper-images/
+{:timestamp=>"2018-10-26T20:53:41.938538+0000", :message=>"Debian packaging tools generally labels all files in /etc as config files, as mandated by policy, so fpm defaults to this behavior for deb packages. You can disable this default behavior with --deb-no-default-config-files flag", :level=>:warn}
+/var/lib/gems/2.1.0/gems/fpm-1.9.3/lib/fpm/util.rb:291: warning: Insecure world writable dir /builds/gitlab-org/gitlab-runner/.gopath in PATH, mode 040777
+{:timestamp=>"2018-10-26T20:53:49.988319+0000", :message=>"Created package", :path=>"out/deb/gitlab-runner_armel.deb"}
+Processing out/deb/gitlab-runner_armel.deb...
+Signed deb out/deb/gitlab-runner_armel.deb
+make[1]: Leaving directory '/builds/gitlab-org/gitlab-runner'
+make package-deb-fpm ARCH=arm PACKAGE_ARCH=armhf
+make[1]: Entering directory '/builds/gitlab-org/gitlab-runner'
+fpm -s dir -t deb -n gitlab-runner -v 11.4.2 \
+	-p out/deb/gitlab-runner_armhf.deb \
+	--deb-priority optional --category admin \
+	--force \
+	--deb-compression bzip2 \
+	--after-install packaging/scripts/postinst.deb \
+	--before-remove packaging/scripts/prerm.deb \
+	--url https://gitlab.com/gitlab-org/gitlab-runner \
+	--description "GitLab Runner" \
+	-m "GitLab Inc. <support@gitlab.com>" \
+	--license "MIT" \
+	--vendor "GitLab Inc." \
+	--conflicts gitlab-runner-beta \
+	--conflicts gitlab-ci-multi-runner \
+	--conflicts gitlab-ci-multi-runner-beta \
+	--provides gitlab-ci-multi-runner \
+	--replaces gitlab-ci-multi-runner \
+	--depends ca-certificates \
+	--depends git \
+	--depends curl \
+	--depends tar \
+	--deb-suggests docker-engine \
+	-a armhf \
+	packaging/root/=/ \
+	out/binaries/gitlab-runner-linux-arm=/usr/lib/gitlab-runner/gitlab-runner \
+	out/helper-images/=/usr/lib/gitlab-runner/helper-images/
+{:timestamp=>"2018-10-26T20:53:51.235769+0000", :message=>"Debian packaging tools generally labels all files in /etc as config files, as mandated by policy, so fpm defaults to this behavior for deb packages. You can disable this default behavior with --deb-no-default-config-files flag", :level=>:warn}
+/var/lib/gems/2.1.0/gems/fpm-1.9.3/lib/fpm/util.rb:291: warning: Insecure world writable dir /builds/gitlab-org/gitlab-runner/.gopath in PATH, mode 040777
+{:timestamp=>"2018-10-26T20:53:59.078709+0000", :message=>"Created package", :path=>"out/deb/gitlab-runner_armhf.deb"}
+Processing out/deb/gitlab-runner_armhf.deb...
+Signed deb out/deb/gitlab-runner_armhf.deb
+make[1]: Leaving directory '/builds/gitlab-org/gitlab-runner'
+section_end:1540587240:build_script
+[0Ksection_start:1540587240:after_script
+[0Ksection_end:1540587242:after_script
+[0Ksection_start:1540587242:archive_cache
+[0Ksection_end:1540587243:archive_cache
+[0Ksection_start:1540587243:upload_artifacts_on_success
+[0K[32;1mUploading artifacts...[0;m
+out/deb/: found 5 matching files                  [0;m 
+[0;33mWARNING: out/rpm/: no matching files              [0;m 
+Uploading artifacts to coordinator... ok          [0;m  id[0;m=113296624 responseStatus[0;m=201 Created token[0;m=qQrjFYp3
+section_end:1540587262:upload_artifacts_on_success
+[0K[32;1mJob succeeded
+[0;m

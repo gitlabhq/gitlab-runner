@@ -15,10 +15,10 @@ See [the general developer security release guidelines](https://gitlab.com/gitla
 ## Developer checklist
 
 - [ ] **In the "Related issues" section, write down the [GitLab Runner Security] issue it belongs to (i.e. `Related to <issue_id>`).**
-- [ ] Merge request targets `master`, or a versioned stable branch (`X-Y-stable`).
+- [ ] Merge request targets `main`, or a versioned stable branch (`X-Y-stable`).
 - [ ] Milestone is set for the version this merge request applies to. A closed milestone can be assigned via [quick actions].
 - [ ] Title of this merge request is the same as for all backports.
-- [ ] For the MR targeting `master`:
+- [ ] For the MR targeting `main`:
   - [ ] Assign to a reviewer and maintainer, per our [Code Review process].
   - [ ] Ensure it's approved according to our [Approval Guidelines].
   - [ ] Ensure it's approved by an AppSec engineer.
@@ -35,7 +35,7 @@ See [the general developer security release guidelines](https://gitlab.com/gitla
   security
   release](https://gitlab.com/gitlab-org/gitlab-runner/-/issues?scope=all&utf8=%E2%9C%93&state=opened&label_name[]=security&label_name[]=upcoming%20security%20release)
   with passing CI pipelines and **when all backports including the MR
-  targeting master are ready.**
+  targeting main are ready.**
 
 /label ~security ~"Category:Runner" ~"devops::verify" ~"group::runner"
 

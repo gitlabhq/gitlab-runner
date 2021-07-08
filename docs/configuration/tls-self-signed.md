@@ -44,7 +44,7 @@ GitLab Runner supports the following options:
   GitLab server against the certificate authorities (CA) stored in the system. Note that reading from
   the system certificate store is [not supported in Windows](https://github.com/golang/go/issues/16736).
 
-- **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/README.md#gitlab-runner-register)
+- **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/index.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
   This file will be read every time the runner tries to access the GitLab server.
@@ -84,7 +84,7 @@ Notes:
     -----END CERTIFICATE-----
     ```
 
-- If you are updating the certificate for an existing Runner, [restart it](../commands/README.md#gitlab-runner-restart).
+- If you are updating the certificate for an existing Runner, [restart it](../commands/index.md#gitlab-runner-restart).
 - As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
 - If you are using GitLab Runner Helm chart, you will need to configure certificates according to the doc [Providing a custom certificate for accessing GitLab](../install/kubernetes.md#providing-a-custom-certificate-for-accessing-gitlab).
@@ -233,3 +233,10 @@ when performing operations like cloning and uploading artifacts, for example.
 Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4125) in the Kubernetes executor's
 handling of the helper image's `ENTRYPOINT`, the mapped certificate file isn't automatically installed
 to the system certificate store.
+
+## Troubleshooting
+
+Refer to the general [SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl.html#troubleshooting)
+documentation.
+
+In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/tlsctl) tool to debug GitLab certificates from the runner's end.

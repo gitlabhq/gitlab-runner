@@ -161,7 +161,7 @@ git config credential.helper
    gitlab-runner start
    ```
 
-Make sure that you read the [FAQ](../faq/README.md) section which describes
+Make sure that you read the [FAQ](../faq/index.md) section which describes
 some of the most common problems with GitLab Runner.
 
 ## Upgrade the service file

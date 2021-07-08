@@ -3,7 +3,6 @@
 package kubernetes
 
 import (
-	context "context"
 	io "io"
 
 	mock "github.com/stretchr/testify/mock"
@@ -14,13 +13,13 @@ type mockLogStreamer struct {
 	mock.Mock
 }
 
-// Stream provides a mock function with given fields: ctx, offset, output
-func (_m *mockLogStreamer) Stream(ctx context.Context, offset int64, output io.Writer) error {
-	ret := _m.Called(ctx, offset, output)
+// Stream provides a mock function with given fields: offset, output
+func (_m *mockLogStreamer) Stream(offset int64, output io.Writer) error {
+	ret := _m.Called(offset, output)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, io.Writer) error); ok {
-		r0 = rf(ctx, offset, output)
+	if rf, ok := ret.Get(0).(func(int64, io.Writer) error); ok {
+		r0 = rf(offset, output)
 	} else {
 		r0 = ret.Error(0)
 	}

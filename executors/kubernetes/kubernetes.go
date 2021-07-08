@@ -40,6 +40,10 @@ const (
 
 	detectShellScriptName = "detect_shell_script"
 
+	// The `.ps1` extension is added to the script name to fix a strange behavior
+	// where stage scripts wouldn't be executed otherwise
+	parsePwshScriptName = "parse_pwsh_script.ps1"
+
 	waitLogFileTimeout = time.Minute
 
 	outputLogFileNotExistsExitCode = 100
@@ -60,7 +64,7 @@ var (
 		ShowHostname: true,
 	}
 
-	detectShellScript = shells.BashDetectShellScript
+	errIncorrectShellType = fmt.Errorf("kubernetes executor incorrect shell type")
 )
 
 // GetDefaultCapDrop returns the default capabilities that should be dropped
@@ -275,26 +279,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	ctx, cancel := context.WithCancel(cmd.Context)
 	defer cancel()
 
-	containerName := buildContainerName
-	// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
-	// which when the detect shell exits becomes something like "bash /stage/script/path.sh".
-	// This works unlike "gitlab-runner-build" since the detect shell passes arguments with "$@"
-	containerCommand := []string{
-		"sh",
-		s.scriptPath(detectShellScriptName),
-		s.buildCommandForStage(cmd.Stage),
-	}
-	if cmd.Predefined {
-		containerName = helperContainerName
-		// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
-		// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
-		// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
-		containerCommand = append(
-			s.helperImageInfo.Cmd,
-			"<<<",
-			s.buildCommandForStage(cmd.Stage),
-		)
-	}
+	containerName, containerCommand := s.getContainerInfo(cmd)
 
 	s.Debugln(fmt.Sprintf(
 		"Starting in container %q the command %q with script: %s",
@@ -363,6 +348,52 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	return nil
 }
 
+func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []string) {
+	var containerCommand []string
+	containerName := buildContainerName
+
+	switch s.Shell().Shell {
+	case shells.SNPwsh:
+		// Translates to roughly "/path/to/parse_pwsh_script.ps1 /path/to/stage_script /path/to/logFile"
+		containerCommand = []string{
+			s.scriptPath(parsePwshScriptName),
+			s.scriptPath(cmd.Stage),
+			s.logFile(),
+			s.buildRedirectionCmd(),
+		}
+		if cmd.Predefined {
+			containerName = helperContainerName
+			containerCommand = []string{fmt.Sprintf("Get-Content -Path %s | ", s.scriptPath(cmd.Stage))}
+			containerCommand = append(containerCommand, s.helperImageInfo.Cmd...)
+			containerCommand = append(containerCommand, s.buildRedirectionCmd())
+		}
+	default:
+		// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
+		// which when the detect shell exits becomes something like "bash /stage/script/path.sh".
+		// This works unlike "gitlab-runner-build" since the detect shell passes arguments with "$@"
+		containerCommand = []string{
+			"sh",
+			s.scriptPath(detectShellScriptName),
+			s.scriptPath(cmd.Stage),
+			s.buildRedirectionCmd(),
+		}
+		if cmd.Predefined {
+			containerName = helperContainerName
+			// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
+			// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
+			// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
+			containerCommand = append(
+				s.helperImageInfo.Cmd,
+				"<<<",
+				s.scriptPath(cmd.Stage),
+				s.buildRedirectionCmd(),
+			)
+		}
+	}
+
+	return containerName, containerCommand
+}
+
 func (s *executor) buildLogPermissionsInitContainer() (api.Container, error) {
 	// We need to create the log file in which all scripts will append their output.
 	// The log file is created with the current user. There are 3 different scenarios for the user:
@@ -393,8 +424,8 @@ func (s *executor) buildLogPermissionsInitContainer() (api.Container, error) {
 	}, nil
 }
 
-func (s *executor) buildCommandForStage(stage common.BuildStage) string {
-	return fmt.Sprintf("%s 2>&1 | tee -a %s", s.scriptPath(stage), s.logFile())
+func (s *executor) buildRedirectionCmd() string {
+	return fmt.Sprintf("2>&1 | tee -a %s", s.logFile())
 }
 
 func (s *executor) processLogs(ctx context.Context) {
@@ -449,13 +480,12 @@ func (s *executor) setupScriptsConfigMap() error {
 	// After issue https://gitlab.com/gitlab-org/gitlab-runner/issues/10342 is resolved and
 	// the legacy execution mode is removed we can remove the manual construction of trapShell and just use "bash+trap"
 	// in the exec options
-	bashShell, ok := common.GetShell(s.Shell().Shell).(*shells.BashShell)
-	if !ok {
-		return fmt.Errorf("kubernetes executor incorrect shell type")
+	shell, err := s.retrieveShell()
+	if err != nil {
+		return err
 	}
 
-	trapShell := &shells.BashTrapShell{BashShell: bashShell, LogFile: s.logFile()}
-	scripts, err := s.generateScripts(trapShell)
+	scripts, err := s.generateScripts(shell)
 	if err != nil {
 		return err
 	}
@@ -468,7 +498,11 @@ func (s *executor) setupScriptsConfigMap() error {
 		Data: scripts,
 	}
 
-	s.configMap, err = s.kubeClient.CoreV1().ConfigMaps(s.configurationOverwrites.namespace).Create(configMap)
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	s.configMap, err = s.kubeClient.
+		CoreV1().
+		ConfigMaps(s.configurationOverwrites.namespace).
+		Create(context.TODO(), configMap, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("generating scripts config map: %w", err)
 	}
@@ -476,9 +510,28 @@ func (s *executor) setupScriptsConfigMap() error {
 	return nil
 }
 
+func (s *executor) retrieveShell() (common.Shell, error) {
+	bashShell, ok := common.GetShell(s.Shell().Shell).(*shells.BashShell)
+	if ok {
+		return &shells.BashTrapShell{BashShell: bashShell, LogFile: s.logFile()}, nil
+	}
+
+	pwshShell, ok := common.GetShell(s.Shell().Shell).(*shells.PowerShell)
+	if ok {
+		return &shells.PwshTrapShell{PowerShell: pwshShell, LogFile: s.logFile()}, nil
+	}
+
+	return nil, errIncorrectShellType
+}
+
 func (s *executor) generateScripts(shell common.Shell) (map[string]string, error) {
 	scripts := map[string]string{}
-	scripts[detectShellScriptName] = detectShellScript
+	switch s.Shell().Shell {
+	case shells.SNPwsh:
+		scripts[parsePwshScriptName] = shells.PwshValidationScript
+	default:
+		scripts[detectShellScriptName] = shells.BashDetectShellScript
+	}
 
 	for _, stage := range s.Build.BuildStages() {
 		script, err := shell.GenerateScript(stage, *s.Shell())
@@ -534,31 +587,38 @@ func (s *executor) cleanupServices() {
 func (s *executor) deleteKubernetesService(serviceName string, ch chan<- serviceDeleteResponse, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 	err := s.kubeClient.CoreV1().
 		Services(s.configurationOverwrites.namespace).
-		Delete(serviceName, &metav1.DeleteOptions{})
+		Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
 	ch <- serviceDeleteResponse{serviceName: serviceName, err: err}
 }
 
 func (s *executor) cleanupResources() {
 	if s.pod != nil {
-		err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Delete(s.pod.Name, &metav1.DeleteOptions{})
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+		err := s.kubeClient.
+			CoreV1().
+			Pods(s.pod.Namespace).
+			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
 		}
 	}
 	if s.credentials != nil {
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			Secrets(s.configurationOverwrites.namespace).
-			Delete(s.credentials.Name, &metav1.DeleteOptions{})
+			Delete(context.TODO(), s.credentials.Name, metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
 	if s.configMap != nil {
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			ConfigMaps(s.configurationOverwrites.namespace).
-			Delete(s.configMap.Name, &metav1.DeleteOptions{})
+			Delete(context.TODO(), s.configMap.Name, metav1.DeleteOptions{})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
@@ -989,7 +1049,11 @@ func (s *executor) setupCredentials() error {
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	creds, err := s.kubeClient.CoreV1().Secrets(s.configurationOverwrites.namespace).Create(&secret)
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	creds, err := s.kubeClient.
+		CoreV1().
+		Secrets(s.configurationOverwrites.namespace).
+		Create(context.TODO(), &secret, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -1067,7 +1131,12 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	}
 
 	s.Debugln("Creating build pod")
-	pod, err := s.kubeClient.CoreV1().Pods(s.configurationOverwrites.namespace).Create(&podConfig)
+
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := s.kubeClient.
+		CoreV1().
+		Pods(s.configurationOverwrites.namespace).
+		Create(context.TODO(), &podConfig, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -1232,7 +1301,11 @@ func (s *executor) createKubernetesService(
 ) {
 	defer wg.Done()
 
-	service, err := s.kubeClient.CoreV1().Services(s.pod.Namespace).Create(service)
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	service, err := s.kubeClient.
+		CoreV1().
+		Services(s.pod.Namespace).
+		Create(context.TODO(), service, metav1.CreateOptions{})
 	if err == nil {
 		// Updating the internal service name reference and activating the proxy
 		proxySettings.ServiceName = service.Name
@@ -1270,7 +1343,11 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 }
 
 func (s *executor) checkPodStatus() error {
-	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(s.pod.Name, metav1.GetOptions{})
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	pod, err := s.kubeClient.
+		CoreV1().
+		Pods(s.pod.Namespace).
+		Get(context.TODO(), s.pod.Name, metav1.GetOptions{})
 	if IsKubernetesPodNotFoundError(err) {
 		return err
 	}

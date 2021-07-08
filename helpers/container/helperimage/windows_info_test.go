@@ -8,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/shells"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 func Test_windowsInfo_create(t *testing.T) {
@@ -31,6 +31,24 @@ func Test_windowsInfo_create(t *testing.T) {
 		}{
 			{
 				operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
+				gitlabRegistry:  true,
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         GitLabRegistryName,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage1809,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
+				operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
+				gitlabRegistry:  false,
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
 					Name:         DockerHubName,
@@ -47,9 +65,10 @@ func Test_windowsInfo_create(t *testing.T) {
 			},
 			{
 				operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
+				gitlabRegistry:  true,
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
-					Name:         DockerHubName,
+					Name:         GitLabRegistryName,
 					Tag: fmt.Sprintf(
 						"%s-%s-%s",
 						windowsSupportedArchitecture,
@@ -63,6 +82,23 @@ func Test_windowsInfo_create(t *testing.T) {
 			},
 			{
 				operatingSystem: "Windows 10 Pro Version 2004 (OS Build 19041.329)",
+				gitlabRegistry:  true,
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         GitLabRegistryName,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage2004,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
+				operatingSystem: "Windows Server Datacenter Version 2009 (OS Build 19042.985)",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
 					Name:         DockerHubName,
@@ -70,7 +106,7 @@ func Test_windowsInfo_create(t *testing.T) {
 						"%s-%s-%s",
 						windowsSupportedArchitecture,
 						revision,
-						baseImage2004,
+						baseImage20H2,
 					),
 					IsSupportingLocalImport: false,
 					Cmd:                     expectedPowershellCmdLine,

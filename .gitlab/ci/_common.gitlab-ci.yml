@@ -1,6 +1,5 @@
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-12
-  GOROOT: /usr/local/go
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 20.10.2
@@ -26,6 +25,8 @@ variables:
   DEPENDENCY_SCANNING_DISABLED: "true"
   FF_USE_FASTZIP: "true"
   TRANSFER_METER_FREQUENCY: "5s"
+  FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
+  GO111MODULE: "on"
 
 default:
   image: $CI_IMAGE
@@ -35,9 +36,6 @@ default:
     max: 2
     when:
     - runner_system_failure
-
-before_script:
-- unset GPG_KEY
 
 .no_cache:
   cache: {}
@@ -98,13 +96,22 @@ before_script:
     - $CI_PROJECT_DIR\.gocache-false\
     key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
 
-.windows_base:
+.linux-dependency-checksums:
   variables:
-    PKG_NAMESPACE: gitlab.com\gitlab-org
-    PKG_NAME: gitlab-runner
-    GOPATH: "$CI_PROJECT_DIR\\.gopath"
-    PKG_BASE_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE"
-    PKG_BUILD_DIR: "$CI_PROJECT_DIR\\.gopath\\src\\$PKG_NAMESPACE\\$PKG_NAME"
+    DOCKER_MACHINE_LINUX_AMD64_CHECKSUM: "a7f7cbb842752b12123c5a5447d8039bf8dccf62ec2328853583e68eb4ffb097"
+    DOCKER_MACHINE_LINUX_ARM64_CHECKSUM: "109f534bfb8b9b852c938cad978e60a86b13f5ecf92da5e24320dacd2a7216ac"
+    DUMB_INIT_LINUX_AMD64_CHECKSUM: "37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9"
+    DUMB_INIT_LINUX_ARM64_CHECKSUM: "45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3"
+    DUMB_INIT_LINUX_S390X_CHECKSUM: "8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d"
+    GIT_LFS_LINUX_AMD64_CHECKSUM: "46508eb932c2ec0003a940f179246708d4ddc2fec439dcacbf20ff9e98b957c9"
+    GIT_LFS_LINUX_ARM64_CHECKSUM: "ba6a2820d6afcdf94a83c9307bfbabcc2f8146b27404b450c673567798a81f67"
+    GIT_LFS_LINUX_S390X_CHECKSUM: "ca73776cb1cdc855aaf743c09ae70caae97f67d8d5e4147f19dcc4f959f9fc4d"
+
+.windows-dependency-checksums:
+  variables:
+    GIT_WINDOWS_AMD64_CHECKSUM: "bdb8c1560eca39f4d99b07705006c00d94a3f8612501046a0f89353afc5307fa"
+    GIT_LFS_WINDOWS_AMD64_CHECKSUM: "ca05b0b9bd39d99665045776a5d0d5c7bfa2605a6118c2f489bfd40c2c3e4f2c"
+    PWSH_WINDOWS_AMD64_CHECKSUM: "D234CFD6E9DD4A2CA68BFBC64C416DE42F31760E954812E8ADE02B6D57FE243F"
 
 .windows1809_variables:
   variables:
@@ -112,7 +119,6 @@ before_script:
 
 .windows1809:
   extends:
-  - .windows_base
   - .windows1809_variables
   tags:
   - shared-windows
@@ -125,11 +131,21 @@ before_script:
 
 .windows2004:
   extends:
-  - .windows_base
   - .windows2004_variables
   tags:
   - windows
   - windows-2004
+
+.windows20H2_variables:
+  variables:
+    WINDOWS_VERSION: servercore20H2
+
+.windows20H2:
+  extends:
+  - .windows20H2_variables
+  tags:
+  - windows
+  - windows-20h2
 
 # .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
 # without explicitly waiting for the completion of the n-1 stage

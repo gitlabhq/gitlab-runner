@@ -12,7 +12,12 @@ import (
 )
 
 func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	resp, err := common.GetRemoteSuccessfulBuildWithEnvs(config.Shell, false)
+	resp, err := common.GetRemoteSuccessfulBuildPrintVars(
+		config.Shell,
+		"MASKED_KEY",
+		"CLEARTEXT_KEY",
+		"MASKED_KEY_OTHER",
+	)
 	require.NoError(t, err)
 
 	build := &common.Build{

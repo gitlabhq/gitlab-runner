@@ -16,9 +16,9 @@ to add libvirt as a GitLab Runner executor.
 
 This document does not try to explain how to set up libvirt, since it's
 out of scope. However, this driver was tested using [GCP Nested
-Virtualization](https://cloud.google.com/compute/docs/instances/enable-nested-virtualization-vm-instances),
+Virtualization](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview),
 which also has [details on how to setup
-libvirt](https://cloud.google.com/compute/docs/instances/enable-nested-virtualization-vm-instances#starting_a_private_bridge_between_the_host_and_nested_vms)
+libvirt](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#starting_a_private_bridge_between_the_host_and_nested_vms)
 with bridge networking. This example will use the `default` network that
 comes with when installing libvirt so make sure it's running.
 

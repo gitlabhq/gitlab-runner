@@ -51,11 +51,12 @@ func (t phraseTransform) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int,
 
 // replace copies a replacement into the dst buffer and advances nDst and nSrc.
 func replace(dst []byte, nDst, nSrc *int, replacement []byte, advance int) error {
-	n := copy(dst[*nDst:], replacement)
-	*nDst += n
-	if n < len(replacement) {
+	if len(dst[*nDst:]) < len(replacement) {
 		return transform.ErrShortDst
 	}
+
+	n := copy(dst[*nDst:], replacement)
+	*nDst += n
 	*nSrc += advance
 
 	return nil
@@ -81,12 +82,13 @@ func safecopy(dst, src []byte, atEOF bool, nDst, nSrc int, tokenSize int) (int, 
 
 	remaining := len(src[nSrc:])
 	if !atEOF {
-		// copy up to the last safe token if any, otherwise don't copy
-		// until we have a buffer of at least tokenSize.
+		// copy either:
+		// - up until the last safe token if any, or
+		// - up to our data length minus tokenSize,
+		// whichever has the higher index position.
 		idx := bytes.LastIndexAny(src[nSrc:], safeTokens)
-		if idx < 0 {
-			remaining -= tokenSize + 1
-		} else {
+		remaining -= tokenSize
+		if idx+1 > remaining {
 			remaining = idx + 1
 		}
 

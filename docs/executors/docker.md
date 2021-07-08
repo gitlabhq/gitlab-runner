@@ -6,7 +6,7 @@ possible with the use of **Docker** executor.
 The **Docker** executor when used with GitLab CI, connects to [Docker Engine](https://www.docker.com/products/container-runtime)
 and runs each build in a separate and isolated container using the predefined
 image that is [set up in `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html) and in accordance in
-[`config.toml`](../commands/README.md#configuration-file).
+[`config.toml`](../commands/index.md#configuration-file).
 
 That way you can have a simple and reproducible build environment that can also
 run on your workstation. The added benefit is that you can test all the
@@ -95,6 +95,7 @@ GitLab Runner only supports the following versions of Windows which
 follows our [support lifecycle for
 Windows](../install/windows.md#windows-version-support-policy):
 
+- Windows Server 20H2.
 - Windows Server 2004.
 - Windows Server 1809.
 
@@ -106,6 +107,8 @@ daemon is running on. For example, the following [`Windows Server
 Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
 be used:
 
+- `mcr.microsoft.com/windows/servercore:20H2`
+- `mcr.microsoft.com/windows/servercore:20H2-amd64`
 - `mcr.microsoft.com/windows/servercore:2004`
 - `mcr.microsoft.com/windows/servercore:2004-amd64`
 - `mcr.microsoft.com/windows/servercore:1809`
@@ -218,7 +221,7 @@ existing image and run it as an additional container than install `mysql` every
 time the project is built.
 
 You can see some widely used services examples in the relevant documentation of
-[CI services examples](https://gitlab.com/gitlab-org/gitlab-ce/tree/master/doc/ci/services/README.md).
+[CI services examples](https://docs.gitlab.com/ee/ci/services/).
 
 If needed, you can [assign an alias](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services)
 to each service.
@@ -429,12 +432,12 @@ See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1520>.
 ### PostgreSQL service example
 
 See the specific documentation for
-[using PostgreSQL as a service](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/doc/ci/services/postgres.md).
+[using PostgreSQL as a service](https://docs.gitlab.com/ee/ci/services/postgres.html).
 
 ### MySQL service example
 
 See the specific documentation for
-[using MySQL as a service](https://gitlab.com/gitlab-org/gitlab-ce/blob/master/doc/ci/services/mysql.md).
+[using MySQL as a service](https://docs.gitlab.com/ee/ci/services/mysql.html).
 
 ### The services health check
 
@@ -442,7 +445,7 @@ After the service is started, GitLab Runner waits some time for the service to
 be responsive. Currently, the Docker executor tries to open a TCP connection to
 the first exposed service in the service container.
 
-You can see how it is implemented by checking this [Go command](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/commands/helpers/health_check.go).
+You can see how it is implemented by checking this [Go command](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/commands/helpers/health_check.go).
 
 ## The builds and cache storage
 
@@ -461,7 +464,7 @@ directory as persistent by defining it in `volumes = ["/my/cache/"]` under the
 
 > Introduced in GitLab Runner 13.9, [all created runner resources cleaned up](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2310).
 
-GitLab Runner provides the [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/packaging/root/usr/share/gitlab-runner/clear-docker-cache)
+GitLab Runner provides the [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache)
 script to remove old containers and volumes that can unnecessarily consume disk space.
 
 Run `clear-docker-cache` regularly (using `cron` once per week, for example),
@@ -480,7 +483,7 @@ The default option is `prune-volumes` which the script will remove all unused co
 
 ### Clearing old build images
 
-The [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/packaging/root/usr/share/gitlab-runner/clear-docker-cache) script will not remove the Docker images as they are not tagged by the GitLab Runner. You can however confirm the space that can be reclaimed by running the script with the `space` option as illustrated below:
+The [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) script will not remove the Docker images as they are not tagged by the GitLab Runner. You can however confirm the space that can be reclaimed by running the script with the `space` option as illustrated below:
 
 ```shell
 clear-docker-cache space

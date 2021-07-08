@@ -24,7 +24,9 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 const osTypeWindows = "windows"
@@ -111,6 +113,15 @@ func testRegisterCommandRun(
 	network common.Network,
 	args ...string,
 ) (content, output string, err error) {
+	config := &common.RunnerConfig{
+		RunnerCredentials: common.RunnerCredentials{
+			Token: "test-runner-token",
+		},
+		RunnerSettings: common.RunnerSettings{
+			Executor: "shell",
+		},
+	}
+
 	hook := test.NewGlobal()
 
 	defer func() {
@@ -151,15 +162,15 @@ func testRegisterCommandRun(
 		"--registration-token", "test-registration-token",
 	}, args...)
 	if !contains(args, "--executor") {
-		args = append(args, "--executor", "shell")
+		args = append(args, "--executor", config.RunnerSettings.Executor)
 	}
 
-	comandErr := app.Run(args)
+	commandErr := app.Run(args)
 
 	fileContent, err := ioutil.ReadFile(configFile.Name())
 	require.NoError(t, err)
 
-	err = comandErr
+	err = commandErr
 
 	return string(fileContent), "", err
 }
@@ -541,6 +552,170 @@ func executorCmdLineArgs(t *testing.T, executor string) []string {
 		assert.FailNow(t, "No command line args found for executor", executor)
 	}
 	return args
+}
+
+func TestExecute_MergeConfigTemplate(t *testing.T) {
+	var (
+		configTemplateMergeInvalidConfiguration = `- , ;`
+
+		configTemplateMergeAdditionalConfiguration = `
+[[runners]]
+  [runners.kubernetes]
+    [runners.kubernetes.volumes]
+      [[runners.kubernetes.volumes.empty_dir]]
+        name = "empty_dir"
+	    mount_path = "/path/to/empty_dir"
+	    medium = "Memory"`
+
+		baseOutputConfigFmt = `concurrent = 1
+check_interval = 0
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = %q
+  url = "http://gitlab.example.com/"
+  token = "test-runner-token"
+  executor = "shell"
+  shell = "pwsh"
+  [runners.custom_build_dir]
+  [runners.cache]
+    [runners.cache.s3]
+    [runners.cache.gcs]
+    [runners.cache.azure]
+`
+	)
+
+	tests := map[string]struct {
+		configTemplate         string
+		networkAssertions      func(n *common.MockNetwork)
+		errExpected            bool
+		expectedFileContentFmt string
+	}{
+		"config template disabled": {
+			configTemplate: "",
+			networkAssertions: func(n *common.MockNetwork) {
+				n.On("RegisterRunner", mock.Anything, mock.Anything).
+					Return(&common.RegisterRunnerResponse{
+						Token: "test-runner-token",
+					}).
+					Once()
+			},
+			errExpected:            false,
+			expectedFileContentFmt: baseOutputConfigFmt,
+		},
+		"config template with no additional runner configuration": {
+			configTemplate: "[[runners]]",
+			networkAssertions: func(n *common.MockNetwork) {
+				n.On("RegisterRunner", mock.Anything, mock.Anything).
+					Return(&common.RegisterRunnerResponse{
+						Token: "test-runner-token",
+					}).
+					Once()
+			},
+			errExpected:            false,
+			expectedFileContentFmt: baseOutputConfigFmt,
+		},
+		"successful config template merge": {
+			configTemplate: configTemplateMergeAdditionalConfiguration,
+			networkAssertions: func(n *common.MockNetwork) {
+				n.On("RegisterRunner", mock.Anything, mock.Anything).
+					Return(&common.RegisterRunnerResponse{
+						Token: "test-runner-token",
+					}).
+					Once()
+			},
+			errExpected: false,
+			expectedFileContentFmt: `concurrent = 1
+check_interval = 0
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = %q
+  url = "http://gitlab.example.com/"
+  token = "test-runner-token"
+  executor = "shell"
+  shell = "pwsh"
+  [runners.custom_build_dir]
+  [runners.cache]
+    [runners.cache.s3]
+    [runners.cache.gcs]
+    [runners.cache.azure]
+  [runners.kubernetes]
+    host = ""
+    bearer_token_overwrite_allowed = false
+    image = ""
+    namespace = ""
+    namespace_overwrite_allowed = ""
+    privileged = false
+    service_account_overwrite_allowed = ""
+    pod_annotations_overwrite_allowed = ""
+    [runners.kubernetes.affinity]
+    [runners.kubernetes.pod_security_context]
+    [runners.kubernetes.volumes]
+
+      [[runners.kubernetes.volumes.empty_dir]]
+        name = "empty_dir"
+        mount_path = "/path/to/empty_dir"
+        medium = "Memory"
+    [runners.kubernetes.dns_config]
+`,
+		},
+		"incorrect config template merge": {
+			configTemplate: configTemplateMergeInvalidConfiguration,
+			networkAssertions: func(n *common.MockNetwork) {
+				n.On("RegisterRunner", mock.Anything, mock.Anything).
+					Return(&common.RegisterRunnerResponse{
+						Token: "test-runner-token",
+					}).
+					Once()
+				n.On("UnregisterRunner", mock.Anything).
+					Return(true).
+					Once()
+			},
+			errExpected: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			var err error
+
+			if tt.errExpected {
+				helpers.MakeFatalToPanic()
+			}
+
+			cfgTpl, cleanup := commands.PrepareConfigurationTemplateFile(t, tt.configTemplate)
+			defer cleanup()
+
+			network := new(common.MockNetwork)
+			defer network.AssertExpectations(t)
+
+			args := []string{
+				"--shell", shells.SNPwsh,
+			}
+
+			if tt.configTemplate != "" {
+				args = append(args, "--template-config", cfgTpl)
+			}
+
+			tt.networkAssertions(network)
+
+			fileContent, _, err := testRegisterCommandRun(t, network, args...)
+			if tt.errExpected {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			name, err := os.Hostname()
+			require.NoError(t, err)
+			assert.Equal(t, fmt.Sprintf(tt.expectedFileContentFmt, name), fileContent)
+		})
+	}
 }
 
 func TestUnregisterOnFailure(t *testing.T) {

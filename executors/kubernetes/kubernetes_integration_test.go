@@ -1,4 +1,4 @@
-// +build integration
+// +build integration,kubernetes
 
 package kubernetes_test
 
@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
@@ -58,6 +60,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesWithNonRootSecurityContext":                testKubernetesWithNonRootSecurityContext,
 		"testConfiguredBuildDirVolumeMountFeatureFlag":            testBuildDirVolumeMountFeatureFlag,
 		"testUserConfiguredBuildDirVolumeMountFeatureFlag":        testUserConfiguredBuildDirVolumeMountFeatureFlag,
+		"testKubernetesPwshFeatureFlag":                           testKubernetesPwshFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -434,7 +437,7 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	}
 
 	client := getTestKubeClusterClient(t)
-	secrets, err := client.CoreV1().Secrets("default").List(metav1.ListOptions{})
+	secrets, err := client.CoreV1().Secrets("default").List(context.Background(), metav1.ListOptions{})
 	require.NoError(t, err)
 
 	build := getTestBuild(t, func() (common.JobResponse, error) {
@@ -608,9 +611,12 @@ func TestLogDeletionAttach(t *testing.T) {
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
 				client := getTestKubeClusterClient(t)
-				pods, err := client.CoreV1().Pods("default").List(metav1.ListOptions{
-					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-				})
+				pods, err := client.
+					CoreV1().
+					Pods("default").
+					List(context.Background(), metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					})
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
@@ -674,6 +680,7 @@ func TestPrepareIssue2583(t *testing.T) {
 
 	e := kubernetes.NewDefaultExecutorForTest()
 
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 	prepareOptions := common.ExecutorPrepareOptions{
 		Config:  runnerConfig,
 		Build:   build,
@@ -761,13 +768,19 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnStage(build, tt.stage, func() {
 				client := getTestKubeClusterClient(t)
-				pods, err := client.CoreV1().Pods("default").List(metav1.ListOptions{
-					LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-				})
+				pods, err := client.CoreV1().Pods("default").List(
+					context.Background(),
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
 				require.NoError(t, err)
 				require.NotEmpty(t, pods.Items)
 				pod := pods.Items[0]
-				err = client.CoreV1().Pods("default").Delete(pod.Name, &metav1.DeleteOptions{})
+				err = client.
+					CoreV1().
+					Pods("default").
+					Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
 				require.NoError(t, err)
 
 				deletedPodNameCh <- pod.Name
@@ -801,6 +814,28 @@ func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName stri
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.Contains(t, out, fmt.Sprintf("uid=%d gid=0(root)", runAsUser))
+}
+
+func testKubernetesPwshFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	build.Image.Name = common.TestPwshImage
+	build.Runner.Shell = shells.SNPwsh
+	build.JobResponse.Steps = common.Steps{
+		common.Step{
+			Name: common.StepNameScript,
+			Script: []string{
+				"Write-Output $PSVersionTable",
+			},
+		},
+	}
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.Regexp(t, regexp.MustCompile("PSEdition +Core"), out)
 }
 
 func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {

@@ -26,7 +26,7 @@ const (
 
 	repoSHA       = "91956efe32fb7bef54f378d90c9bd74c19025872"
 	repoBeforeSHA = "ca50079dac5293292f83a4d454922ba8db44e7a3"
-	repoRefName   = "master"
+	repoRefName   = "main"
 
 	repoLFSSHA       = "2371dd05e426fca09b0d2ec5d9ed757559035e2f"
 	repoLFSBeforeSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
@@ -109,8 +109,10 @@ func GetRemoteSuccessfulBuildWithAfterScript() (JobResponse, error) {
 	return jobResponse, err
 }
 
-func GetRemoteSuccessfulBuildWithEnvs(shell string, fail bool) (JobResponse, error) {
-	return GetRemoteBuildResponse(getShellEnvCommand(shell))
+func GetRemoteSuccessfulBuildPrintVars(shell string, vars ...string) (JobResponse, error) {
+	printVarsCmd := getShellPrintVars(shell, vars...)
+
+	return GetRemoteBuildResponse(printVarsCmd...)
 }
 
 func GetRemoteSuccessfulMultistepBuild() (JobResponse, error) {
@@ -151,13 +153,13 @@ func GetRemoteFailingMultistepBuild(failingStepName StepName) (JobResponse, erro
 	return jobResponse, nil
 }
 
-func GetRemoteFailingMultistepBuildWithEnvs(shell string, fail bool) (JobResponse, error) {
+func GetRemoteFailingMultistepBuildPrintVars(shell string, fail bool, vars ...string) (JobResponse, error) {
 	jobResponse, err := GetRemoteBuildResponse("echo 'Hello World'")
 	if err != nil {
 		return JobResponse{}, err
 	}
 
-	envCommand := getShellEnvCommand(shell)
+	printVarsCmd := getShellPrintVars(shell, vars...)
 
 	exitCommand := "exit 0"
 	if fail {
@@ -168,12 +170,12 @@ func GetRemoteFailingMultistepBuildWithEnvs(shell string, fail bool) (JobRespons
 		jobResponse.Steps,
 		Step{
 			Name:   "env",
-			Script: []string{envCommand, exitCommand},
+			Script: append(printVarsCmd, exitCommand),
 			When:   StepWhenOnSuccess,
 		},
 		Step{
 			Name:   StepNameAfterScript,
-			Script: []string{envCommand},
+			Script: printVarsCmd,
 			When:   StepWhenAlways,
 		},
 	)
@@ -181,15 +183,22 @@ func GetRemoteFailingMultistepBuildWithEnvs(shell string, fail bool) (JobRespons
 	return jobResponse, nil
 }
 
-func getShellEnvCommand(shell string) string {
-	var envCommand string
+func getShellPrintVars(shell string, vars ...string) []string {
+	var envCommand []string
+	var fmtStr string
+
 	switch shell {
 	case "cmd":
-		envCommand = "set"
+		// Using double %% so % is escaped in fmt.
+		fmtStr = "echo %s=%%%s%%"
 	case "powershell", "pwsh":
-		envCommand = `dir env: | %{"{0}={1}" -f $_.Name,$_.Value}`
+		fmtStr = "echo %s=$env:%s"
 	default:
-		envCommand = "env"
+		fmtStr = "echo %s=$%s"
+	}
+
+	for _, v := range vars {
+		envCommand = append(envCommand, fmt.Sprintf(fmtStr, v, v))
 	}
 
 	return envCommand

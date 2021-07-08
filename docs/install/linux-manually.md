@@ -15,7 +15,7 @@ If you want to use the [Docker executor](../executors/docker.md),
 you must [install Docker](https://docs.docker.com/install/linux/docker-ce/centos/#install-docker-ce)
 before using GitLab Runner.
 
-Make sure that you read the [FAQ](../faq/README.md) section which describes
+Make sure that you read the [FAQ](../faq/index.md) section which describes
 some of the most common problems with GitLab Runner.
 
 ## Using deb/rpm package

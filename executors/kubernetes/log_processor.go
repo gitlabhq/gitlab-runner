@@ -17,7 +17,7 @@ import (
 )
 
 type logStreamer interface {
-	Stream(ctx context.Context, offset int64, output io.Writer) error
+	Stream(offset int64, output io.Writer) error
 	fmt.Stringer
 }
 
@@ -29,7 +29,7 @@ type kubernetesLogStreamer struct {
 	executor     RemoteExecutor
 }
 
-func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output io.Writer) error {
+func (s *kubernetesLogStreamer) Stream(offset int64, output io.Writer) error {
 	exec := ExecOptions{
 		Namespace:     s.namespace,
 		PodName:       s.pod,
@@ -52,7 +52,7 @@ func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output
 		Config:   s.clientConfig,
 	}
 
-	return exec.executeRequest(ctx)
+	return exec.executeRequest()
 }
 
 func (s *kubernetesLogStreamer) String() string {
@@ -185,7 +185,7 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan s
 	gr.Go(func() error {
 		defer cancel()
 
-		err := l.logStreamer.Stream(ctx, logsOffset, writer)
+		err := l.logStreamer.Stream(logsOffset, writer)
 		// prevent printing an error that the container exited
 		// when the context is already cancelled
 		if errors.Is(ctx.Err(), context.Canceled) {

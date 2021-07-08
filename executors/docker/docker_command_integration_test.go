@@ -40,6 +40,10 @@ import (
 var getWindowsImageOnce sync.Once
 var windowsImage string
 
+var windowsDockerImageTagMappings = map[string]string{
+	windows.V20H2: "20H2",
+}
+
 func TestMain(m *testing.M) {
 	execDocker.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
 
@@ -185,6 +189,24 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 	}
 }
 
+// windowsDockerImageTag checks the specified operatingSystem to see if it's one of the
+// supported Windows version. If true, it maps the os version to the corresponding mcr.microsoft.com Docker image tag.
+// UnsupportedWindowsVersionError is returned when no supported Windows version
+// is found in the string.
+func windowsDockerImageTag(operatingSystem string) (string, error) {
+	version, err := windows.Version(operatingSystem)
+	if err != nil {
+		return "", err
+	}
+
+	dockerTag, ok := windowsDockerImageTagMappings[version]
+	if !ok {
+		dockerTag = version
+	}
+
+	return dockerTag, nil
+}
+
 func getWindowsImage(t *testing.T) string {
 	getWindowsImageOnce.Do(func() {
 		client, err := docker.New(docker.Credentials{}, "")
@@ -194,9 +216,9 @@ func getWindowsImage(t *testing.T) string {
 		info, err := client.Info(context.Background())
 		require.NoError(t, err, "docker info")
 
-		windowsVersion, err := windows.Version(info.OperatingSystem)
+		dockerImageTag, err := windowsDockerImageTag(info.OperatingSystem)
 		require.NoError(t, err)
-		windowsImage = fmt.Sprintf(common.TestWindowsImage, windowsVersion)
+		windowsImage = fmt.Sprintf(common.TestWindowsImage, dockerImageTag)
 	})
 
 	return windowsImage
@@ -447,7 +469,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
 
 	contains := "repository does not exist"
 	if isDockerOlderThan17_07(t) {
@@ -465,8 +487,30 @@ func TestDockerCommandMissingTag(t *testing.T) {
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, &common.BuildError{})
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
 	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestDockerCommandMissingServiceImage(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, common.GetSuccessfulBuild)
+	build.Services = common.Services{
+		{
+			Name: "some/non-existing/image",
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
+
+	contains := "repository does not exist"
+	if isDockerOlderThan17_07(t) {
+		contains = "not found"
+	}
+
+	assert.Contains(t, err.Error(), contains)
 }
 
 func TestDockerCommandBuildCancel(t *testing.T) {
@@ -943,31 +987,9 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			}
 
 			if runtime.GOOS == "windows" {
-				build.Runner.RunnerSettings.Shell = "powershell"
+				build.Runner.RunnerSettings.Shell = shells.SNPwsh
 				build.Runner.RunnerSettings.Executor = "docker-windows"
-
-				// HACK: Runner's PowerShell Core shell is not yet fully
-				// supported: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139
-				//
-				// `liveness` only contains powershell core to keep the image
-				// small. Until there's full support, we perform this hack
-				// whereby we copy pwsh to powershell.exe. This is safe as this
-				// only occurs on the build container, which only executes the
-				// `liveness client` commands above.
-				//
-				// This entrypoint can be nullified with:
-				//   build.Image.Entrypoint = []string{""}
-				// once PowerShell Core is supported. Note that it cannot be
-				// set to nil, as that indicates that Runner should use the
-				// default image entrypoint.
-				build.Image.Entrypoint = []string{
-					"pwsh",
-					"-Command",
-					"cp $env:ProgramFiles\\PowerShell\\pwsh.exe $env:ProgramFiles\\PowerShell\\powershell.exe",
-					"&&",
-					"pwsh",
-					"-Command",
-				}
+				build.Image.Entrypoint = []string{""}
 			}
 
 			build.Services = append(build.Services, common.Image{
@@ -1502,7 +1524,7 @@ func TestChownAndUmaskUsage(t *testing.T) {
 		RepoURL:   "https://gitlab.com/gitlab-org/ci-cd/tests/file-permissions.git",
 		Sha:       "050d238e16c5962fc16e49ab1b6be1be39778b6c",
 		BeforeSha: "0000000000000000000000000000000000000000",
-		Ref:       "master",
+		Ref:       "main",
 		RefType:   common.RefTypeBranch,
 		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
 	}

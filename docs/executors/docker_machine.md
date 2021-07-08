@@ -17,7 +17,7 @@ Because `docker-machine` is in [maintenance
 mode](https://github.com/docker/machine/issues/4537), GitLab is
 providing it's [own fork of
 `docker-machine`](https://gitlab.com/gitlab-org/ci-cd/docker-machine),
-which is based on the latest `master` branch of `docker-machine` with
+which is based on the latest `main` branch of `docker-machine` with
 some additional patches for the following bugs:
 
 - [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/2)
@@ -41,7 +41,7 @@ installed in the same machine:
 1. [Install GitLab Runner](../install/index.md)
 1. [Install Docker Machine](https://docs.docker.com/machine/install-machine/)
 1. Optionally but recommended, prepare a
-   [proxy container registry and a cache server](../install/registry_and_cache_servers.md)
+   [proxy container registry and a cache server](../configuration/speed_up_job_execution.md)
    to be used with the autoscaled runners
 
 If you need to use any virtualization/cloud providers that aren't handled by
@@ -52,17 +52,18 @@ out of the scope of this documentation. For more details please read the
 
 ## Configuring GitLab Runner
 
-1. [Register a runner](../register/index.md#linux) and select the
-   `docker+machine` executor when asked.
-1. Edit [`config.toml`](../commands/README.md#configuration-file) and configure
-   the runner to use Docker machine. Visit the dedicated page covering detailed
-   information about [GitLab Runner Autoscaling](../configuration/autoscale.md).
-1. The **first time** you're using Docker Machine, it's best to execute manually
-   `docker-machine create ...` with your chosen driver and all options from the
-   `MachineOptions` section. This will set up the Docker Machine environment
-   properly and will also be a good validation of the specified options.
-   After this, you can destroy the machine with `docker-machine rm [machine_name]`
-   and start the runner.
+1. Familiarize yourself with the core concepts of using `docker-machine` together
+   with `gitlab-runner`:
+      - Read Docker's documentation about your [Docker Machine Driver](https://docs.docker.com/machine/drivers/)
+      - Read [GitLab Runner Autoscaling](../configuration/autoscale.md)
+      - Read [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)
+1. The **first time** you're using Docker Machine, it is best to manually execute the
+   `docker-machine create ...` command with your [Docker Machine Driver](https://docs.docker.com/machine/drivers/).
+   Run this command alongside with the options that you intend to configure in the
+   [MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section) section.
+   This will set up the Docker Machine environment properly and will also be a good
+   validation of the specified options. After this, you can destroy the machine with
+   `docker-machine rm [machine_name]` and start the runner.
 
    NOTE:
    Multiple concurrent requests to `docker-machine create` that are done
@@ -74,7 +75,11 @@ out of the scope of this documentation. For more details please read the
    concurrent processes are disturbing each other. This can end with a non-working
    environment. That's why it's important to create a test machine manually the
    very first time you set up GitLab Runner with Docker Machine.
-
+1. [Register a runner](../register/index.md#linux) and select the
+   `docker+machine` executor when asked.
+1. Edit [`config.toml`](../commands/index.md#configuration-file) and configure
+   the runner to use Docker machine. Visit the dedicated page covering detailed
+   information about [GitLab Runner Autoscaling](../configuration/autoscale.md).
 1. Now, you can try and start a new pipeline in your project. In a few seconds,
    if you run `docker-machine ls` you should see a new machine being created.
 
@@ -100,7 +105,7 @@ out of the scope of this documentation. For more details please read the
      ```
 
    NOTE:
-   Sending the [`SIGQUIT` signal](../commands/README.md#signals) will make the
+   Sending the [`SIGQUIT` signal](../commands/index.md#signals) will make the
    process stop gracefully. The process will stop accepting new jobs, and will exit
    as soon as the current jobs are finished.
 
@@ -137,7 +142,7 @@ executable. For example, to download and install `v0.16.2-gitlab.11`:
 NOTE:
 GPUs are [supported on every executor](../configuration/gpus.md). It is
 not necessary to use Docker Machine just for GPU support. The Docker
-Machine executor makes it easy to scale the GPU nodes up and down, but 
+Machine executor makes it easy to scale the GPU nodes up and down, but
 this can also be done with the [Kubernetes executor](kubernetes.md).
 
 You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create [Google Compute Engine instances
@@ -152,7 +157,7 @@ To create an instance with GPUs, use these Docker Machine options:
 |------|-------|-----------|
 |`--google-accelerator`|`type=nvidia-tesla-p4,count=1`|Specifies the type and number of GPU accelerators to attach to the instance (`type=TYPE,count=N` format)|
 |`--google-maintenance-policy`|`TERMINATE`|Always use `TERMINATE` because [Google Cloud does not allow GPU instances to be live migrated](https://cloud.google.com/compute/docs/instances/live-migration).|
-|`--google-machine-image`|`https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110`|The URL of a GPU-enabled operating system. See the [list of available images](https://cloud.google.com/ai-platform/deep-learning-vm/docs/images).|
+|`--google-machine-image`|`https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110`|The URL of a GPU-enabled operating system. See the [list of available images](https://cloud.google.com/deep-learning-vm/docs/images).|
 |`--google-metadata`|`install-nvidia-driver=True`|This flag tells the image to install the NVIDIA GPU driver.|
 
 These arguments map to [command-line arguments for `gcloud compute`](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus#gcloud_1).

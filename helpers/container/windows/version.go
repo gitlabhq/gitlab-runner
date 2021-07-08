@@ -11,6 +11,8 @@ const (
 	V1809 = "1809"
 	// V2004 is the Windows version that is 2004 sac.
 	V2004 = "2004"
+	// V20H2 is the Windows version that is 2009 sac.
+	V20H2 = "2009"
 )
 
 // UnsupportedWindowsVersionError represents that the version specified is not
@@ -36,6 +38,7 @@ func (e *UnsupportedWindowsVersionError) Is(err error) bool {
 var supportedWindowsVersions = []string{
 	V1809,
 	V2004,
+	V20H2,
 }
 
 // Version checks the specified operatingSystem to see if it's one of the

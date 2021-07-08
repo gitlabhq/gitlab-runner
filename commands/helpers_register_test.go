@@ -5,6 +5,8 @@ package commands
 import (
 	"bufio"
 	"bytes"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus/hooks/test"
@@ -32,4 +34,23 @@ func GetLogrusOutput(t *testing.T, hook *test.Hook) string {
 	}
 
 	return buf.String()
+}
+
+func PrepareConfigurationTemplateFile(t *testing.T, content string) (string, func()) {
+	file, err := ioutil.TempFile("", "config.template.toml")
+	require.NoError(t, err)
+
+	defer func() {
+		err = file.Close()
+		require.NoError(t, err)
+	}()
+
+	_, err = file.WriteString(content)
+	require.NoError(t, err)
+
+	cleanup := func() {
+		_ = os.Remove(file.Name())
+	}
+
+	return file.Name(), cleanup
 }

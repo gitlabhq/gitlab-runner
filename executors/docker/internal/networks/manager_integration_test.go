@@ -60,7 +60,7 @@ func TestCreateNetworkLabels(t *testing.T) {
 		"com.gitlab.gitlab-runner.job.before_sha":  "ca50079dac5293292f83a4d454922ba8db44e7a3",
 		"com.gitlab.gitlab-runner.job.id":          "0",
 		"com.gitlab.gitlab-runner.job.url":         "https://gitlab.example.com/namespace/project/-/jobs/0",
-		"com.gitlab.gitlab-runner.job.ref":         "master",
+		"com.gitlab.gitlab-runner.job.ref":         "main",
 		"com.gitlab.gitlab-runner.job.sha":         "91956efe32fb7bef54f378d90c9bd74c19025872",
 		"com.gitlab.gitlab-runner.managed":         "true",
 		"com.gitlab.gitlab-runner.pipeline.id":     "1",

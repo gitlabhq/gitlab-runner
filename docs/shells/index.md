@@ -5,7 +5,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 comments: false
 ---
 
-# Shells supported by GitLab Runner
+# Types of shells supported by GitLab Runner
 
 GitLab Runner implements a few shell script generators that allow executing
 builds on different systems.
@@ -64,7 +64,7 @@ dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_
 is executed in your job.
 
 If a [job fails on the `Prepare
-environment`](../faq/README.md#job-failed-system-failure-preparing-environment) stage, it
+environment`](../faq/index.md#job-failed-system-failure-preparing-environment) stage, it
 is likely that something in the shell profile is causing the failure. A common
 failure is when you have a `.bash_logout` that tries to clear the console.
 
@@ -89,15 +89,15 @@ passing the filename to the following command:
 
 - For PowerShell Desktop Edition:
 
-    ```batch
-    powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
-    ```
+  ```batch
+  powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
+  ```
 
 - For PowerShell Core Edition:
 
-    ```batch
-    pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
-    ```
+  ```batch
+  pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
+  ```
 
 This is how an example PowerShell script looks like:
 
@@ -113,7 +113,7 @@ echo "Running on $([Environment]::MachineName)..."
   $env:CI_COMMIT_SHA=$CI_COMMIT_SHA
   $CI_COMMIT_BEFORE_SHA="d63117656af6ff57d99e50cc270f854691f335ad"
   $env:CI_COMMIT_BEFORE_SHA=$CI_COMMIT_BEFORE_SHA
-  $CI_COMMIT_REF_NAME="master"
+  $CI_COMMIT_REF_NAME="main"
   $env:CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME
   $CI_JOB_ID="1"
   $env:CI_JOB_ID=$CI_JOB_ID
@@ -156,19 +156,19 @@ echo "Running on $([Environment]::MachineName)..."
   cd "C:\GitLab-Runner\builds\0\project-1"
   if(!$?) { Exit $LASTEXITCODE }
 
-  echo "Checking out db45ad9a as master..."
+  echo "Checking out db45ad9a as main..."
   & "git" "checkout" "db45ad9af9d7af5e61b829442fd893d96e31250c"
   if(!$?) { Exit $LASTEXITCODE }
 
-  if(Test-Path "..\..\..\cache\project-1\pages\master\cache.tgz" -PathType Leaf) {
+  if(Test-Path "..\..\..\cache\project-1\pages\main\cache.tgz" -PathType Leaf) {
     echo "Restoring cache..."
-    & "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+    & "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\main\cache.tgz"
     if(!$?) { Exit $LASTEXITCODE }
 
   } else {
-    if(Test-Path "..\..\..\cache\project-1\pages\master\cache.tgz" -PathType Leaf) {
+    if(Test-Path "..\..\..\cache\project-1\pages\main\cache.tgz" -PathType Leaf) {
       echo "Restoring cache..."
-      & "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+      & "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\main\cache.tgz"
       if(!$?) { Exit $LASTEXITCODE }
 
     }
@@ -183,7 +183,7 @@ if(!$?) { Exit $LASTEXITCODE }
   $env:CI_COMMIT_SHA=$CI_COMMIT_SHA
   $CI_COMMIT_BEFORE_SHA="d63117656af6ff57d99e50cc270f854691f335ad"
   $env:CI_COMMIT_BEFORE_SHA=$CI_COMMIT_BEFORE_SHA
-  $CI_COMMIT_REF_NAME="master"
+  $CI_COMMIT_REF_NAME="main"
   $env:CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME
   $CI_JOB_ID="1"
   $env:CI_JOB_ID=$CI_JOB_ID
@@ -228,7 +228,7 @@ if(!$?) { Exit $LASTEXITCODE }
   $env:CI_COMMIT_SHA=$CI_COMMIT_SHA
   $CI_COMMIT_BEFORE_SHA="d63117656af6ff57d99e50cc270f854691f335ad"
   $env:CI_COMMIT_BEFORE_SHA=$CI_COMMIT_BEFORE_SHA
-  $CI_COMMIT_REF_NAME="master"
+  $CI_COMMIT_REF_NAME="main"
   $env:CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME
   $CI_JOB_ID="1"
   $env:CI_JOB_ID=$CI_JOB_ID
@@ -262,7 +262,7 @@ if(!$?) { Exit $LASTEXITCODE }
   if(!$?) { Exit $LASTEXITCODE }
 
   echo "Archiving cache..."
-  & "gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
+  & "gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\main\cache.tgz" "--path" "vendor"
   if(!$?) { Exit $LASTEXITCODE }
 
 }
@@ -327,7 +327,7 @@ goto :EOF
 SET CI=true
 SET CI_COMMIT_SHA=db45ad9af9d7af5e61b829442fd893d96e31250c
 SET CI_COMMIT_BEFORE_SHA=d63117656af6ff57d99e50cc270f854691f335ad
-SET CI_COMMIT_REF_NAME=master
+SET CI_COMMIT_REF_NAME=main
 SET CI_JOB_ID=1
 SET CI_REPOSITORY_URL=http://gitlab.example.com/group/project.git
 SET CI_PROJECT_ID=1
@@ -351,19 +351,19 @@ IF !errorlevel! NEQ 0 exit /b !errorlevel!
 cd /D "C:\GitLab-Runner\builds\0\project-1"
 IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
-echo Checking out db45ad9a as master...
+echo Checking out db45ad9a as main...
 "git" "checkout" "db45ad9af9d7af5e61b829442fd893d96e31250c"
 IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
-IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
+IF EXIST "..\..\..\cache\project-1\pages\main\cache.tgz" (
   echo Restoring cache...
-  "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+  "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\main\cache.tgz"
   IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 ) ELSE (
-  IF EXIST "..\..\..\cache\project-1\pages\master\cache.tgz" (
+  IF EXIST "..\..\..\cache\project-1\pages\main\cache.tgz" (
     echo Restoring cache...
-    "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz"
+    "gitlab-runner-windows-amd64.exe" "extract" "--file" "..\..\..\cache\project-1\pages\main\cache.tgz"
     IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
   )
@@ -374,7 +374,7 @@ goto :EOF
 SET CI=true
 SET CI_COMMIT_SHA=db45ad9af9d7af5e61b829442fd893d96e31250c
 SET CI_COMMIT_BEFORE_SHA=d63117656af6ff57d99e50cc270f854691f335ad
-SET CI_COMMIT_REF_NAME=master
+SET CI_COMMIT_REF_NAME=main
 SET CI_JOB_ID=1
 SET CI_REPOSITORY_URL=Z:\Gitlab\tests\test
 SET CI_PROJECT_ID=1
@@ -401,7 +401,7 @@ goto :EOF
 SET CI=true
 SET CI_COMMIT_SHA=db45ad9af9d7af5e61b829442fd893d96e31250c
 SET CI_COMMIT_BEFORE_SHA=d63117656af6ff57d99e50cc270f854691f335ad
-SET CI_COMMIT_REF_NAME=master
+SET CI_COMMIT_REF_NAME=main
 SET CI_JOB_ID=1
 SET CI_REPOSITORY_URL=Z:\Gitlab\tests\test
 SET CI_PROJECT_ID=1
@@ -421,7 +421,7 @@ cd /D "C:\GitLab-Runner\builds\0\project-1"
 IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 echo Archiving cache...
-"gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\master\cache.tgz" "--path" "vendor"
+"gitlab-runner-windows-amd64.exe" "archive" "--file" "..\..\..\cache\project-1\pages\main\cache.tgz" "--path" "vendor"
 IF !errorlevel! NEQ 0 exit /b !errorlevel!
 
 goto :EOF

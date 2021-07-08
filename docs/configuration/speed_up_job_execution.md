@@ -14,6 +14,7 @@ You can speed up the time it takes to download Docker images by using:
 
 - The GitLab Dependency Proxy or
 - A mirror of the DockerHub Registry
+- Other open source solutions
 
 ### GitLab Dependency Proxy
 
@@ -73,6 +74,10 @@ The Docker Hub registry is accessible under `MY_REGISTRY_IP:6000`.
 
 You can now [configure `config.toml`](../configuration/autoscale.md#distributed-container-registry-mirroring)
 to use the new registry server.
+
+### Other open source solutions
+
+- [`rpardini/docker-registry-proxy`](https://github.com/rpardini/docker-registry-proxy) can proxy most container registries locally, including the GitLab Container Registry.
 
 ## Use a distributed cache
 

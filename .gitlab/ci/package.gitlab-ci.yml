@@ -5,13 +5,15 @@
   needs:
   - 'helper images'
   - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x linux/ppc64le'
+  environment:
+    name: package/$CI_JOB_NAME/$CI_COMMIT_REF_NAME
   before_script:
   - |
     # checking GPG signing support
-    if [ -n "$GPG_KEY" ]; then
-      echo "$GPG_KEY" | gpg --batch --no-tty --allow-secret-key-import --import -
-      unset GPG_KEY
+    if [ -f "$GPG_KEY_PATH" ]; then
+      cat ${GPG_KEY_PATH} | gpg --batch --no-tty --allow-secret-key-import --import -
       export GPG_KEYID=$(gpg --with-colon --list-secret-keys | head -n1 | cut -d : -f 5)
+      export GPG_PASSPHRASE=$(cat ${GPG_PASSPHRASE_PATH})
     else
       echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
     fi

@@ -903,7 +903,7 @@ func TestPrepare(t *testing.T) {
 
 	defaultHelperImage := helperimage.Info{
 		Architecture:            "x86_64",
-		Name:                    helperimage.DockerHubName,
+		Name:                    helperimage.GitLabRegistryName,
 		Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
 		IsSupportingLocalImport: true,
 		Cmd:                     []string{"gitlab-runner-build"},
@@ -916,7 +916,7 @@ func TestPrepare(t *testing.T) {
 		Architecture:   "x86_64",
 		OSType:         os,
 		Shell:          shells.SNPwsh,
-		GitLabRegistry: false,
+		GitLabRegistry: true,
 	})
 	require.NoError(t, err)
 
@@ -1438,7 +1438,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "Docker Hub helper image",
+			Name:         "Default helper image",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1474,7 +1474,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "GitLab registry helper image",
+			Name:         "DockerHub helper image",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1491,7 +1491,7 @@ func TestPrepare(t *testing.T) {
 					Variables: common.JobVariables{
 						common.JobVariable{
 							Key:      featureflags.GitLabRegistryHelperImage,
-							Value:    "true",
+							Value:    "false",
 							Public:   false,
 							Internal: false,
 							File:     false,
@@ -1510,7 +1510,7 @@ func TestPrepare(t *testing.T) {
 				},
 				helperImageInfo: helperimage.Info{
 					Architecture:            "x86_64",
-					Name:                    helperimage.GitLabRegistryName,
+					Name:                    helperimage.DockerHubName,
 					Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
 					IsSupportingLocalImport: true,
 					Cmd:                     []string{"gitlab-runner-build"},
@@ -1527,7 +1527,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image with ubuntu flavour",
+			Name:         "helper image with ubuntu flavour default registry",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -1541,6 +1541,60 @@ func TestPrepare(t *testing.T) {
 				JobResponse: common.JobResponse{
 					Image: common.Image{
 						Name: "test-image",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+				helperImageInfo: helperimage.Info{
+					Architecture:            "x86_64",
+					Name:                    helperimage.GitLabRegistryName,
+					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
+					IsSupportingLocalImport: true,
+					Cmd:                     []string{"gitlab-runner-build"},
+				},
+			},
+		},
+		{
+			Name:         "helper image with ubuntu flavour DockerHub registry",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:              "test-server",
+						HelperImageFlavor: "ubuntu",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: common.JobVariables{
+						common.JobVariable{
+							Key:      featureflags.GitLabRegistryHelperImage,
+							Value:    "false",
+							Public:   false,
+							Internal: false,
+							File:     false,
+							Masked:   false,
+							Raw:      false,
+						},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -1579,6 +1633,7 @@ func TestPrepare(t *testing.T) {
 				},
 			}
 
+			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
 				Config:  test.RunnerConfig,
 				Build:   test.Build,
@@ -3456,7 +3511,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 	assert.Equal(t, pod.Name, s.pod)
 	assert.Equal(t, pod.Namespace, s.namespace)
 
-	err := s.Stream(context.Background(), int64(offset), output)
+	err := s.Stream(int64(offset), output)
 	assert.ErrorIs(t, err, abortErr)
 }
 
@@ -3523,16 +3578,7 @@ func TestGenerateScripts(t *testing.T) {
 	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
 	require.NoError(t, err)
 
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Build: &common.Build{
-				JobResponse: successfulResponse,
-			},
-		},
-	}
-	buildStages := e.Build.BuildStages()
-
-	setupMockShellGenerateScript := func(m *common.MockShell, stages []common.BuildStage) {
+	setupMockShellGenerateScript := func(m *common.MockShell, e *executor, stages []common.BuildStage) {
 		for _, s := range stages {
 			m.On("GenerateScript", s, e.ExecutorOptions.Shell).
 				Return("OK", nil).
@@ -3540,9 +3586,14 @@ func TestGenerateScripts(t *testing.T) {
 		}
 	}
 
-	setupScripts := func(stages []common.BuildStage) map[string]string {
+	setupScripts := func(e *executor, stages []common.BuildStage) map[string]string {
 		scripts := map[string]string{}
-		scripts[detectShellScriptName] = detectShellScript
+		switch e.Shell().Shell {
+		case shells.SNPwsh:
+			scripts[parsePwshScriptName] = shells.PwshValidationScript
+		default:
+			scripts[detectShellScriptName] = shells.BashDetectShellScript
+		}
 
 		for _, s := range stages {
 			scripts[string(s)] = "OK"
@@ -3552,35 +3603,72 @@ func TestGenerateScripts(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		setupMockShell  func() *common.MockShell
-		expectedScripts map[string]string
-		expectedErr     error
+		getExecutor        func() *executor
+		setupMockShell     func(e *executor) *common.MockShell
+		getExpectedScripts func(e *executor) map[string]string
+		expectedErr        error
 	}{
 		"all stages OK": {
-			setupMockShell: func() *common.MockShell {
+			getExecutor: func() *executor {
+				return setupExecutor("bash", successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
 				m := new(common.MockShell)
-				setupMockShellGenerateScript(m, buildStages)
+				setupMockShellGenerateScript(m, e, buildStages)
 
 				return m
 			},
-			expectedScripts: setupScripts(buildStages),
-			expectedErr:     nil,
+			getExpectedScripts: func(e *executor) map[string]string {
+				buildStages := e.Build.BuildStages()
+				return setupScripts(e, buildStages)
+			},
+			expectedErr: nil,
+		},
+		"all stages OK with pwsh": {
+			getExecutor: func() *executor {
+				return setupExecutor(shells.SNPwsh, successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
+				m := new(common.MockShell)
+				setupMockShellGenerateScript(m, e, buildStages)
+
+				return m
+			},
+			getExpectedScripts: func(e *executor) map[string]string {
+				buildStages := e.Build.BuildStages()
+				return setupScripts(e, buildStages)
+			},
+			expectedErr: nil,
 		},
 		"stage returns skip build stage error": {
-			setupMockShell: func() *common.MockShell {
+			getExecutor: func() *executor {
+				return setupExecutor("bash", successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
 				m := new(common.MockShell)
 				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", common.ErrSkipBuildStage).
 					Once()
-				setupMockShellGenerateScript(m, buildStages[1:])
+
+				setupMockShellGenerateScript(m, e, buildStages[1:])
 
 				return m
 			},
-			expectedScripts: setupScripts(buildStages[1:]),
-			expectedErr:     nil,
+			getExpectedScripts: func(e *executor) map[string]string {
+				buildStages := e.Build.BuildStages()
+				return setupScripts(e, buildStages[1:])
+			},
+			expectedErr: nil,
 		},
 		"stage returns error": {
-			setupMockShell: func() *common.MockShell {
+			getExecutor: func() *executor {
+				return setupExecutor("bash", successfulResponse)
+			},
+			setupMockShell: func(e *executor) *common.MockShell {
+				buildStages := e.Build.BuildStages()
 				m := new(common.MockShell)
 				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", testErr).
@@ -3588,19 +3676,23 @@ func TestGenerateScripts(t *testing.T) {
 
 				return m
 			},
-			expectedScripts: nil,
-			expectedErr:     testErr,
+			getExpectedScripts: func(e *executor) map[string]string {
+				return nil
+			},
+			expectedErr: testErr,
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			m := tt.setupMockShell()
+			e := tt.getExecutor()
+			expectedScripts := tt.getExpectedScripts(e)
+			m := tt.setupMockShell(e)
 			defer m.AssertExpectations(t)
 
 			scripts, err := e.generateScripts(m)
 			assert.ErrorIs(t, err, tt.expectedErr)
-			assert.Equal(t, tt.expectedScripts, scripts)
+			assert.Equal(t, expectedScripts, scripts)
 		})
 	}
 }
@@ -3624,8 +3716,8 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 		jobVariables  common.JobVariables
 		config        common.RunnerConfig
 	}{
-		"default helper image from DockerHub": {
-			expectedImage: dockerHub.String(),
+		"default helper image": {
+			expectedImage: gitlabRegistry.String(),
 			config: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -3636,12 +3728,12 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 				},
 			},
 		},
-		"helper image from registry.gitlab.com": {
-			expectedImage: gitlabRegistry.String(),
+		"helper image from DockerHub": {
+			expectedImage: dockerHub.String(),
 			jobVariables: []common.JobVariable{
 				{
 					Key:    featureflags.GitLabRegistryHelperImage,
-					Value:  "true",
+					Value:  "false",
 					Public: true,
 				},
 			},
@@ -3729,4 +3821,139 @@ func TestExecutor_buildLogPermissionsInitContainer_FailPullPolicy(t *testing.T) 
 
 	_, err := e.buildLogPermissionsInitContainer()
 	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestShellRetrieval(t *testing.T) {
+	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		executor     *executor
+		expectedName string
+		expectedErr  error
+	}{
+		"retrieve bash": {
+			executor:     setupExecutor("bash", successfulResponse),
+			expectedName: "bash",
+		},
+		"retrieve pwsh": {
+			executor:     setupExecutor(shells.SNPwsh, successfulResponse),
+			expectedName: shells.SNPwsh,
+		},
+		"failure for no shell": {
+			executor:    setupExecutor("no shell", successfulResponse),
+			expectedErr: errIncorrectShellType,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shell, err := tt.executor.retrieveShell()
+			assert.Equal(t, err, tt.expectedErr, "The retrievalShell error and the expected one should be the same")
+			if tt.expectedErr == nil {
+				assert.Equal(t, tt.expectedName, shell.GetName())
+			}
+		})
+	}
+}
+
+func TestGetContainerInfo(t *testing.T) {
+	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
+	require.NoError(t, err)
+
+	tests := map[string]struct {
+		executor              *executor
+		command               common.ExecutorCommand
+		expectedContainerName string
+		getExpectedCommand    func(e *executor, cmd common.ExecutorCommand) []string
+	}{
+		"bash container info": {
+			executor: setupExecutor("bash", successfulResponse),
+			command: common.ExecutorCommand{
+				Stage: common.BuildStagePrepare,
+			},
+			expectedContainerName: buildContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				return []string{
+					"sh",
+					e.scriptPath(detectShellScriptName),
+					e.scriptPath(cmd.Stage),
+					e.buildRedirectionCmd(),
+				}
+			},
+		},
+		"predefined bash container info": {
+			executor: setupExecutor("bash", successfulResponse),
+			command: common.ExecutorCommand{
+				Stage:      common.BuildStagePrepare,
+				Predefined: true,
+			},
+			expectedContainerName: helperContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				return append(
+					e.helperImageInfo.Cmd,
+					"<<<",
+					e.scriptPath(cmd.Stage),
+					e.buildRedirectionCmd(),
+				)
+			},
+		},
+		"pwsh container info": {
+			executor: setupExecutor(shells.SNPwsh, successfulResponse),
+			command: common.ExecutorCommand{
+				Stage: common.BuildStagePrepare,
+			},
+			expectedContainerName: buildContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				return []string{
+					e.scriptPath(parsePwshScriptName),
+					e.scriptPath(cmd.Stage),
+					e.logFile(),
+					e.buildRedirectionCmd(),
+				}
+			},
+		},
+		"predefined pwsh container info": {
+			executor: setupExecutor(shells.SNPwsh, successfulResponse),
+			command: common.ExecutorCommand{
+				Stage:      common.BuildStagePrepare,
+				Predefined: true,
+			},
+			expectedContainerName: helperContainerName,
+			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
+				commands := append([]string(nil), fmt.Sprintf("Get-Content -Path %s | ", e.scriptPath(cmd.Stage)))
+				commands = append(commands, e.helperImageInfo.Cmd...)
+				commands = append(commands, e.buildRedirectionCmd())
+				return commands
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			containerName, containerCommand := tt.executor.getContainerInfo(tt.command)
+			assert.Equal(t, tt.expectedContainerName, containerName)
+			assert.Equal(t, tt.getExpectedCommand(tt.executor, tt.command), containerCommand)
+		})
+	}
+}
+
+func setupExecutor(shell string, successfulResponse common.JobResponse) *executor {
+	return &executor{
+		helperImageInfo: helperimage.Info{
+			Cmd: []string{"custom", "command"},
+		},
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executors.ExecutorOptions{
+				DefaultBuildsDir: "/builds",
+				DefaultCacheDir:  "/cache",
+				Shell: common.ShellScriptInfo{
+					Shell: shell,
+				},
+			},
+			Build: &common.Build{
+				JobResponse: successfulResponse,
+			},
+		},
+	}
 }

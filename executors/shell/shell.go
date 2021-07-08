@@ -88,7 +88,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 	}
 
 	// Wait for process to finish
-	waitCh := make(chan error)
+	waitCh := make(chan error, 1)
 	go func() {
 		waitErr := c.Wait()
 		var exitErr *exec.ExitError

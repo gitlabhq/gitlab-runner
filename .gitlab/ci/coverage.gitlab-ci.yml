@@ -65,7 +65,7 @@ code navigation: # See https://docs.gitlab.com/ee/user/project/code_intelligence
   allow_failure: true # recommended
   needs:
   - prepare done
-  image: sourcegraph/lsif-go:v1
+  image: sourcegraph/lsif-go:v1.3.1
   script:
   - lsif-go
   artifacts:
@@ -135,3 +135,11 @@ check windows 2004 integration test failures:
   - .rules:default-branch-only:always
   needs:
   - windows 2004 integration tests
+
+check windows 20H2 integration test failures:
+  extends:
+  - .check windows test failures
+  - .windows20H2_variables
+  - .rules:default-branch-only:always
+  needs:
+  - windows 20H2 integration tests

@@ -52,7 +52,7 @@ in a Kubernetes cluster, or in auto-scaled instances in the cloud.
 
 When you register a runner, you must choose an executor.
 
-An [**executor**](executors/README.md) determines the environment each job runs in.
+An [**executor**](executors/index.md) determines the environment each job runs in.
 
 For example:
 
@@ -112,7 +112,7 @@ memory, CPU limits, and more.
 
 ## Monitoring runners
 
-You can use Prometheus to [**monitor**](monitoring/README.md) your runners.
+You can use Prometheus to [**monitor**](monitoring/index.md) your runners.
 You can view things like the number of currently-running jobs and how
 much CPU your runners are using.
 
@@ -187,22 +187,22 @@ sequenceDiagram
 
 ## Troubleshooting
 
-Learn how to [troubleshoot](faq/README.md) common issues.
+Learn how to [troubleshoot](faq/index.md) common issues.
 
 ## Contributing
 
-Contributions are welcome. See [`CONTRIBUTING.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CONTRIBUTING.md)
-and the [development documentation](development/README.md) for details.
+Contributions are welcome. See [`CONTRIBUTING.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md)
+and the [development documentation](development/index.md) for details.
 
 If you're a reviewer of GitLab Runner project, take a moment to read the
 [Reviewing GitLab Runner](development/reviewing-gitlab-runner.md) document.
 
-You can also review [the release process for the GitLab Runner project](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/PROCESS.md).
+You can also review [the release process for the GitLab Runner project](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/PROCESS.md).
 
 ## Changelog
 
-See the [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/CHANGELOG.md) to view recent changes.
+See the [CHANGELOG](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CHANGELOG.md) to view recent changes.
 
 ## License
 
-This code is distributed under the MIT license. View the [LICENSE](https://gitlab.com/gitlab-org/gitlab-runner/blob/master/LICENSE) file.
+This code is distributed under the MIT license. View the [LICENSE](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/LICENSE) file.
