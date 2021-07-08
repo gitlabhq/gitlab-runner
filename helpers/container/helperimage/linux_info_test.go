@@ -93,6 +93,18 @@ func Test_linuxInfo_create(t *testing.T) {
 					IsSupportingLocalImport: true,
 					Cmd:                     expectedCmd,
 				},
+			"Docker runs on ppc64le": {
+				shell:          shell,
+				dockerArch:     "ppc64le",
+				revision:       "2923a43",
+				gitlabRegistry: true,
+				expectedInfo: Info{
+					Architecture:            "ppc64le",
+					Name:                    GitLabRegistryName,
+					Tag:                     "ppc64le-2923a43" + expectedTagSuffix,
+					IsSupportingLocalImport: true,
+					Cmd:                     expectedCmd,
+				},
 			},
 			"Configured architecture is unknown": {
 				shell:          shell,
