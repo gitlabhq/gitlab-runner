@@ -948,7 +948,7 @@ which contains PowerShell Core, is published with the `gitlab/gitlab-runner-help
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
 
-This section defines [custom build directories](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories) parameters.
+This section defines [custom build directories](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#custom-build-directories) parameters.
 
 This feature, if not configured explicitly, is
 enabled by default for `kubernetes`, `docker`, `docker-ssh`, `docker+machine`,
