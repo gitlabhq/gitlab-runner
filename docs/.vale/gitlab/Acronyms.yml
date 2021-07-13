@@ -23,18 +23,18 @@ exceptions:
   - AWS
   - BSD
   - CAS
+  - CDN
   - CLI
   - CNA
   - CNAME
   - CORE
-  - CVS
-  - FREE
   - CPU
   - CRIME
   - CSRF
   - CSS
   - CSV
   - CVE
+  - CVS
   - DAG
   - DAST
   - DHCP
@@ -43,14 +43,18 @@ exceptions:
   - DSA
   - DVCS
   - ECDSA
+  - ECS
   - EFS
   - EKS
   - EOL
   - EXIF
   - FAQ
+  - FIFO
+  - FIPS
   - FOSS
   - FQDN
   - FREE
+  - FTP
   - GCP
   - GDK
   - GDPR
@@ -60,8 +64,10 @@ exceptions:
   - GNU
   - GPG
   - GPL
+  - GPU
   - GUI
   - HAML
+  - HDD
   - HEAD
   - HIPAA
   - HTML
@@ -79,6 +85,7 @@ exceptions:
   - JPEG
   - JPG
   - JSON
+  - JVM
   - JWT
   - LAN
   - LDAP
@@ -91,12 +98,14 @@ exceptions:
   - MIT
   - MVC
   - NAT
+  - NDA
   - NFS
   - NGINX
   - NOTE
   - NPM
   - NTP
   - ONLY
+  - OSS
   - OWASP
   - PAT
   - PCI-DSS
@@ -106,8 +115,10 @@ exceptions:
   - PGP
   - PHP
   - PNG
+  - POSIX
   - POST
   - PUT
+  - RAID
   - RAM
   - RDP
   - REST
@@ -119,15 +130,17 @@ exceptions:
   - RSA
   - RSS
   - RVM
-  - SAML
   - SAAS
+  - SAML
   - SAST
+  - SATA
   - SCIM
   - SCP
   - SCSS
   - SDK
   - SELF
   - SEO
+  - SFTP
   - SHA
   - SLA
   - SMS
@@ -162,6 +175,7 @@ exceptions:
   - UUID
   - VCS
   - VPC
+  - VPN
   - WIP
   - WSL
   - XML

@@ -60,7 +60,8 @@ To run `gitlab-runner` inside a Docker container, you need to make sure that the
 Make sure that you read the [FAQ](../faq/index.md) section which describes some of the most common problems with GitLab Runner.
 
 NOTE:
-If you are using a [`session_server`](../configuration/advanced-configuration.md), you will also need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
+If you are using a [`session_server`](../configuration/advanced-configuration.md), you also
+need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
 
 ### Option 1: Use local system volume mounts to start the Runner container
 
@@ -143,7 +144,7 @@ did originally (`-v /srv/gitlab-runner/config:/etc/gitlab-runner` or
 
 When GitLab Runner is started as a foreground task (whether it's a locally installed binary or
 inside of a Docker Container), the logs are printed to the standard output. When
-GitLab Runner is started as a system service (e.g. with Systemd), the logs are in most
+GitLab Runner is started as a system service (for example, with Systemd), the logs are in most
 cases logged through Syslog or other system logging mechanism.
 
 With GitLab Runner started as a Docker based service, since the `gitlab-runner ...` command is
@@ -182,9 +183,8 @@ certificates at `/etc/gitlab-runner/certs/ca.crt`, this can however be changed u
 
 Copy the `ca.crt` file into the `certs` directory on the data volume (or container).
 The `ca.crt` file should contain the root certificates of all the servers you
-want GitLab Runner to trust. The GitLab Runner container will
-import the `ca.crt` file on startup so if your container is already running you
-may need to restart it for the changes to take effect.
+want GitLab Runner to trust. The GitLab Runner container imports the `ca.crt` file on startup so if
+your container is already running you may need to restart it for the changes to take effect.
 
 ## Docker images
 
@@ -207,8 +207,8 @@ Some distributions (CentOS, RedHat, Fedora) use SELinux by default to enhance th
 
 Special care must be taken when dealing with such a configuration.
 
-1. If you want to use the [Docker executor](../executors/docker.md) to run builds in containers, you'll need access to `/var/run/docker.sock`.
-   However, if SELinux is in enforcing mode, you will see a `Permission denied` error when you're accessing `/var/run/docker.sock`.
+1. If you want to use the [Docker executor](../executors/docker.md) to run builds in containers, you need access to `/var/run/docker.sock`.
+   However, if SELinux is in enforcing mode, you see a `Permission denied` error when you're accessing `/var/run/docker.sock`.
    Install [selinux-dockersock](https://github.com/dpw/selinux-dockersock) to resolve this issue.
 1. Make sure that a persistent directory is created on host: `mkdir -p /srv/gitlab-runner/config`.
 1. Run Docker with `:Z` on volumes:
