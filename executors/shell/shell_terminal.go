@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/kr/pty"
+	"github.com/creack/pty"
 
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	terminal "gitlab.com/gitlab-org/gitlab-terminal"

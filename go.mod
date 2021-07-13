@@ -10,6 +10,7 @@ require (
 	github.com/bmatcuk/doublestar v1.3.0
 	github.com/boumenot/gocover-cobertura v1.1.0
 	github.com/containerd/containerd v1.4.3 // indirect
+	github.com/creack/pty v1.1.11
 	github.com/docker/cli v20.10.2+incompatible
 	github.com/docker/distribution v2.7.0+incompatible
 	github.com/docker/docker v20.10.2+incompatible
@@ -35,7 +36,6 @@ require (
 	github.com/klauspost/compress v1.11.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/klauspost/pgzip v1.2.5
-	github.com/kr/pty v1.1.5
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.13
 	github.com/minio/sha256-simd v1.0.0 // indirect
