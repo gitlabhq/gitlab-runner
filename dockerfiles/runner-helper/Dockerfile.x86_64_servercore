@@ -22,9 +22,9 @@ RUN New-Item -ItemType directory -Path C:\Downloads; `
     Invoke-Webrequest "https://github.com/PowerShell/PowerShell/releases/download/v${Env:PWSH_VERSION}/PowerShell-${Env:PWSH_VERSION}-win-x64.msi" -OutFile C:\Downloads\pwsh.msi -UseBasicParsing
 
 COPY [".\\helpers\\checksum.ps1", ".\\"]
-RUN powershell -File .\checksum.ps1 -TargetFile git.zip -ExpectedHash ${Env:GIT_AMD64_CHECKSUM}; `
-    powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:GIT_LFS_AMD64_CHECKSUM}; `
-    powershell -File .\checksum.ps1 -TargetFile C:\Downloads\pwsh.msi -ExpectedHash ${Env:PWSH_AMD64_CHECKSUM}
+RUN powershell -File .\checksum.ps1 -TargetFile git.zip -ExpectedHash ${Env:GIT_AMD64_CHECKSUM}
+RUN powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:GIT_LFS_AMD64_CHECKSUM}
+RUN powershell -File .\checksum.ps1 -TargetFile C:\Downloads\pwsh.msi -ExpectedHash ${Env:PWSH_AMD64_CHECKSUM}
 
 RUN New-Item -ItemType directory -Path C:\Temp; `
     Expand-Archive -Path git.zip -DestinationPath C:\Temp\git; `
