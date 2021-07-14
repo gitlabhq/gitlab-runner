@@ -712,6 +712,21 @@ IAM instance profile available to the `gitlab-runner` instance. In an
 [autoscale](autoscale.md) configuration, this is not the on-demand machine
 that jobs are executed on.
 
+When you use Helm charts to install GitLab Runner, and `rbac.create` is set to true
+in the `values.yaml` file, a ServiceAccount is created. This ServiceAccount's annotations are retrieved from the
+`rbac.serviceAccountAnnotations` section.
+
+For runners on Amazon EKS, you can specify an IAM role to
+assign to the service account. The specific annotation needed is:
+`eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/<IAM_ROLE_NAME>`.
+
+The IAM policy for this role must have permissions to do the following actions for the specified bucket:
+
+- "s3:PutObject"
+- "s3:GetObjectVersion"
+- "s3:GetObject"
+- "s3:DeleteObject"
+
 ### The `[runners.cache.gcs]` section
 
 > Introduced in GitLab Runner 11.3.0.
