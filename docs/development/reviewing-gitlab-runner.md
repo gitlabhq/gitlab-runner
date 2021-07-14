@@ -133,7 +133,7 @@ To view a code coverage report for a merge request:
 1. At this moment, we can see the same file browser with coverage details as we seen with the S3 source.
    We can do the same. The only difference is that it will disappear in maximum of 7 days.
 
-## Reviewing the Merge Request title
+## Reviewing the merge request title
 
 Because we generate [`CHANGELOG.md`](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/CHANGELOG.md) entries
 from the merge request titles, making sure that the title is valid and informative is a part
@@ -154,7 +154,71 @@ behavior/features that were added? Keep these questions in mind when reviewing t
 
 Contributors may not be aware of the above information, and that their titles
 may not match our requirements. Try to educate the contributor about this.
+
 In the end, it's your responsibility to verify and update the title **before the merge request is merged**.
+
+## Reviewing the merge request labels
+
+We use labels assigned to merge requests to group changelog entries in different groups and define
+some special features of individual entries.
+
+For changelog generation we're using our own [Changelog generator](https://gitlab.com/gitlab-org/ci-cd/runner-tools/changelog-generator).
+The tool is using [a configuration file](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/.gitlab/changelog.yml)
+that is committed to the GitLab Runner repository.
+
+There are few important things that the reviewer should know about Changelog generator:
+
+- GitLab Changelog analyzes merge request labels in the order in which `label_matchers` are defined.
+  First matched scope is used for the analyzed merge request.
+
+  For example, if there would be two merge request - first one containing labels `security` and `bug`, second
+  one containing only the `bug` label - and there would be three matchers defined in this
+  order: `[security, bug] -> [security] -> [bug]`, then the first merge request would be added to the scope matched
+  by `[security, bug]` (so the first defined on the list) and the second merge request would be added to
+  the scope matched by `[bug]` (so the last defined scope on the list).
+
+- Merge requests labeled with labels defined at `authorship_labels` will be added to the changelog with the
+  author's username added at the end. All `authorship_labels` labels need to be added to the merge request
+  for it to be marked in this way.
+
+- Merge requests labeled with labels defined at `skip_changelog_labels` will be skipped in the changelog. All
+  `skip_changelog_labels` labels need to be added to the merge request for it to be skipped.
+
+- Merge request not matching any of the defined `label_matchers` are added to the `Other changes` scope
+  bucket.
+
+Having all of that in mind, please follow these few rules when merging the merge request:
+
+- Any merge request related to how GitLab Runner or its parts are distributed should be labeled with the
+  `runner-distribution` label.
+
+- Any merge request that touches security - no matter if it's a new feature or a bug fix - should have the
+  `security` label. All merge requests that are not `feature::addition` will be then added to the security
+  scope.
+
+- Any bug fix merge request should have the `bug` label.
+
+- In most merge requests that are not documentation update only or explicitly a bug fix, make sure that one of the
+  `feature::` or `tooling::` labels is added. This will help us sort the changelog entries properly.
+
+- `documentation` label is added automatically when the Technical Writing review is done. **Even when the merge
+  request updates more than only documentation**. If the merge request has only the `documentation` label and
+  doesn't have any other label matching any of the defined `label_matchers` - double check that the merge request
+  updates the documentation only. **Otherwise use one of the specific labels matching the type of the change
+  that is being added!**
+
+- When you revert a change that was merged during the same release cycle, label the original merge request and
+  the revert one with labels defined in `skip_changelog_labels`. This will reduce the manual work that release
+  manager needs to do when preparing the release. We should not add entries about adding a change and reverting
+  the change if both events happened in the same version.
+
+  If the revert merge request reverts something, that was merged to an already release version of GitLab Runner,
+  just make sure to label it with the right scope labels. In that case we want to mark the revert in the
+  changelog.
+
+- Please also take a moment to read through
+  [Engineering metrics data classification](https://about.gitlab.com/handbook/engineering/metrics/#data-classification)
+  page, which gives some guidance about when certain labels should be used.
 
 ## Summary
 
