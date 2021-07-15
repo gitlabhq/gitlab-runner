@@ -30,11 +30,11 @@ func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
 		case strings.HasSuffix(parts[0], "_TCP_ADDR"):
 			addr = parts[1]
 		case strings.HasSuffix(parts[0], "_TCP_PORT"):
-			portNum, err := strconv.Atoi(parts[1])
+			portNumber, err := strconv.Atoi(parts[1])
 			if err != nil {
 				continue
 			}
-			ports = append(ports, portNum)
+			ports = append(ports, portNumber)
 		}
 	}
 
