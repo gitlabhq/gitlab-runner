@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 type HealthCheckCommand struct{}
 
 func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
+	var ports []int
 	var addr, port string
 
 	for _, e := range os.Environ() {
@@ -27,8 +30,17 @@ func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
 		case strings.HasSuffix(parts[0], "_TCP_ADDR"):
 			addr = parts[1]
 		case strings.HasSuffix(parts[0], "_TCP_PORT"):
-			port = parts[1]
+			portNum, err := strconv.Atoi(parts[1])
+			if err != nil {
+				continue
+			}
+			ports = append(ports, portNum)
 		}
+	}
+
+	sort.Ints(ports)
+	if len(ports) > 0 {
+		port = strconv.Itoa(ports[0])
 	}
 
 	if addr == "" || port == "" {
