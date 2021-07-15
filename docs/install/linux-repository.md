@@ -23,6 +23,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | RHEL         | 8                           | [May 2029](https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux)         |
 | Fedora       | 32                          | approx. May 2021      |
 | Fedora       | 33                          | approx. Nov 2021      |
+| Fedora       | 34                          | approx. May 2022      |
 
 ## Prerequisites
 
