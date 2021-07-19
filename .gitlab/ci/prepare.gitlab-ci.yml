@@ -4,6 +4,7 @@
   stage: prepare
   image: docker:${DOCKER_VERSION}-git
   script:
+  - apk add --no-cache curl
   - source ./ci/build_ci_image
 
 prepare ci image:

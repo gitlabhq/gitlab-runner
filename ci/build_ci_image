@@ -50,8 +50,17 @@ build() {
            "${GIT_ROOT}"
 }
 
+scan() {
+    echo "Triggering container scan for ${BUILD_IMAGE}"
+    curl -X POST --form token="${CONTAINER_SCANNING_PIPELINE_TRIGGER_TOKEN}" \
+        --form ref=master  \
+        --form "variables[IMAGES]= ${BUILD_IMAGE}" \
+         https://gitlab.com/api/v4/projects/16505542/trigger/pipeline
+}
+
 login
 pull
 build
 push
 logout
+scan
