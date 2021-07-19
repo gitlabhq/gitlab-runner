@@ -1,7 +1,6 @@
 trigger runner-incept tests:
   extends:
-  - .merge_request_pipelines
-  - .except_docs
+  - .rules:merge_request_pipelines:no_docs
   stage: integration
   trigger: gitlab-org/ci-cd/tests/runner-incept
   needs:

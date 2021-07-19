@@ -1,8 +1,8 @@
 helper images:
   extends:
-  - .merge_request_pipelines
   - .docker
   - .go-cache-docker-qemu
+  - .rules:merge_request_pipelines:no_docs
   stage: prebuild
   variables:
     TAR_XZ_ARGS: -f -9
