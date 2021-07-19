@@ -5,9 +5,6 @@
   image: docker:${DOCKER_VERSION}-git
   script:
   - source ./ci/build_ci_image
-  only:
-    refs:
-    - merge_requests@gitlab-org/gitlab-runner
 
 prepare ci image:
   extends:
@@ -16,7 +13,10 @@ prepare ci image:
   variables:
     BUILD_IMAGE: $CI_IMAGE
     BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
-  only:
+  rules:
+  - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
+    when: never
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
     changes:
     - dockerfiles/ci/*
     - .gitlab/ci/_common.gitlab-ci.yml
@@ -28,7 +28,10 @@ prepare alpine-no-root image:
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-no-root/Dockerfile
-  only:
+  rules:
+  - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
+    when: never
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
     changes:
     - tests/dockerfiles/alpine-no-root/*
     - .gitlab/ci/prepare.gitlab-ci.yml

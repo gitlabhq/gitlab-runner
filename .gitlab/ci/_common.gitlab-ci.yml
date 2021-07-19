@@ -49,8 +49,6 @@ default:
   - .no_dependencies
 
 .docker:
-  extends:
-  - .except_docs
   services:
   - docker:${DOCKER_VERSION}-dind
   variables:
@@ -151,8 +149,8 @@ default:
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:
   extends:
-  - .merge_request_pipelines
   - .no_cache_and_dependencies
+  - .rules:merge_request_pipelines
   image: alpine:latest
   variables:
     GIT_STRATEGY: none

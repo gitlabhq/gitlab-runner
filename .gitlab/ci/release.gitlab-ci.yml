@@ -21,7 +21,6 @@
 
 .release_windows_docker_images:
   extends:
-  - .except_docs
   - .windows-dependency-checksums
   stage: release
   variables:
@@ -37,15 +36,6 @@
   retry: 2
 
 .release:
-  extends:
-  - .except_docs
-  stage: release
-  before_script:
-  - source ci/touch_make_dependencies
-
-.release:with-rules:
-  extends:
-  - .rules:docs:skip
   stage: release
   before_script:
   - source ci/touch_make_dependencies
@@ -84,38 +74,18 @@
   script:
   - make release_packagecloud
 
-.release_development:
-  only:
-  - merge_requests@gitlab-org/gitlab-runner
-  - merge_requests@gitlab-org/security/gitlab-runner
-  except:
-    variables:
-    - $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
-
-.release_bleeding_edge:
-  only:
-  - main@gitlab-org/gitlab-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+\Z/@gitlab-org/gitlab-runner
-
-.release_stable:
-  only:
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/gitlab-runner
-  - /\Av[0-9]+\.[0-9]+\.[0-9]+\Z/@gitlab-org/security/gitlab-runner
-
 development S3:
   extends:
   - .release_s3
-  - .release_development
+  - .rules:runner-only:release:development:merge-requests
   environment:
     name: development/s3/${CI_COMMIT_REF_NAME}
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
-  only:
-  - merge_requests@gitlab-org/gitlab-runner
 
 development docker images:
   extends:
   - .release_docker_images
-  - .release_development
+  - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
@@ -123,9 +93,9 @@ development docker images:
 
 development servercore1809 helper docker image:
   extends:
-  - .release_development
   - .windows1809
   - .release_windows_docker_images
+  - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
@@ -133,9 +103,9 @@ development servercore1809 helper docker image:
 
 development servercore2004 helper docker image:
   extends:
-  - .release_development
   - .windows2004
   - .release_windows_docker_images
+  - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
@@ -143,9 +113,9 @@ development servercore2004 helper docker image:
 
 development servercore20H2 helper docker image:
   extends:
-  - .release_development
   - .windows20H2
   - .release_windows_docker_images
+  - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
     PUSH_TO_DOCKER_HUB: "false"
@@ -154,7 +124,7 @@ development servercore20H2 helper docker image:
 bleeding edge S3:
   extends:
   - .release_s3
-  - .release_bleeding_edge
+  - .rules:release:bleeding-edge
   environment:
     name: bleeding_edge/s3
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
@@ -162,7 +132,7 @@ bleeding edge S3:
 bleeding edge packagecloud:
   extends:
   - .release_packagecloud
-  - .release_bleeding_edge
+  - .rules:release:bleeding-edge
   environment:
     name: bleeding_edge/packagecloud
     url: https://packages.gitlab.com/runner/unstable
@@ -170,34 +140,34 @@ bleeding edge packagecloud:
 bleeding edge docker images:
   extends:
   - .release_docker_images
-  - .release_bleeding_edge
+  - .rules:release:bleeding-edge
   environment:
     name: bleeding_edge/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore1809 docker images:
   extends:
-  - .release_bleeding_edge
   - .windows1809
   - .release_windows_docker_images
+  - .rules:release:bleeding-edge
   environment:
     name: bleeding_edge/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore2004 docker images:
   extends:
-  - .release_bleeding_edge
   - .windows2004
   - .release_windows_docker_images
+  - .rules:release:bleeding-edge
   environment:
     name: bleeding_edge/docker_images/windows2004
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 bleeding edge servercore20H2 docker images:
   extends:
-  - .release_bleeding_edge
   - .windows20H2
   - .release_windows_docker_images
+  - .rules:release:bleeding-edge
   environment:
     name: bleeding_edge/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
@@ -205,29 +175,25 @@ bleeding edge servercore20H2 docker images:
 stable S3:
   extends:
   - .release_s3
-  - .release_stable
+  - .rules:release:stable:branch
   environment:
     name: stable/s3
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 stable gitlab release:
   extends:
-  - .release:with-rules
+  - .release
+  - .rules:release:stable-or-rc
   environment:
     name: stable/gitlab
     url: https://gitlab.com/gitlab-org/gitlab-runner/-/releases
   script:
   - ./ci/release_gitlab
-  rules:
-  - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_URL == "https://gitlab.com/gitlab-org/gitlab-runner"'
-    when: on_success
-  - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/ && $CI_PROJECT_URL == "https://gitlab.com/gitlab-org/security/gitlab-runner"'
-    when: manual
 
 stable packagecloud:
   extends:
   - .release_packagecloud
-  - .release_stable
+  - .rules:release:stable:branch
   environment:
     name: stable/packagecloud
     url: https://packages.gitlab.com/runner/gitlab-runner
@@ -235,34 +201,34 @@ stable packagecloud:
 stable docker images:
   extends:
   - .release_docker_images
-  - .release_stable
+  - .rules:release:stable:branch
   environment:
     name: stable/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore1809 docker images:
   extends:
-  - .release_stable
   - .windows1809
   - .release_windows_docker_images
+  - .rules:release:stable:branch
   environment:
     name: stable/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore2004 docker images:
   extends:
-  - .release_stable
   - .windows2004
   - .release_windows_docker_images
+  - .rules:release:stable:branch
   environment:
     name: stable/docker_images/windows2004
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable servercore20H2 docker images:
   extends:
-  - .release_stable
   - .windows20H2
   - .release_windows_docker_images
+  - .rules:release:stable:branch
   environment:
     name: stable/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
