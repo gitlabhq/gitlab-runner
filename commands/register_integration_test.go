@@ -650,7 +650,6 @@ check_interval = 0
     image = ""
     namespace = ""
     namespace_overwrite_allowed = ""
-    privileged = false
     service_account_overwrite_allowed = ""
     pod_annotations_overwrite_allowed = ""
     [runners.kubernetes.affinity]
