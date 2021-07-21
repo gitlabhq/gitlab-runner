@@ -234,6 +234,10 @@ func (b *CmdWriter) Join(elem ...string) string {
 	return helpers.ToBackslash(newPath)
 }
 
+func (b *CmdWriter) SectionStart(id, command string) {}
+
+func (b *CmdWriter) SectionEnd(id string) {}
+
 func (b *CmdWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
