@@ -15,8 +15,7 @@
   - chmod 755 trigger-build
   variables:
     GIT_STRATEGY: none
-    # By default, deploy the Review App using the `main` branch of the `gitlab-org/gitlab-docs` project
-    DOCS_BRANCH: main
+    DOCS_REVIEW_APPS_DOMAIN: 178.62.207.141.nip.io
   allow_failure: true
 
 # Trigger a docs build in gitlab-docs
