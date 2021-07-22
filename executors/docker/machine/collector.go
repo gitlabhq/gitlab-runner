@@ -20,6 +20,8 @@ func (m *machineProvider) collectDetails() (data machinesData) {
 func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 	m.totalActions.Describe(ch)
 	m.creationHistogram.Describe(ch)
+	m.stoppingHistogram.Describe(ch)
+	m.removalHistogram.Describe(ch)
 	ch <- m.currentStatesDesc
 }
 
@@ -65,4 +67,6 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 
 	m.totalActions.Collect(ch)
 	m.creationHistogram.Collect(ch)
+	m.stoppingHistogram.Collect(ch)
+	m.removalHistogram.Collect(ch)
 }
