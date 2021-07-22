@@ -213,6 +213,9 @@ func (s *executor) setupDefaultExecutorOptions(os string) {
 	if os == helperimage.OSTypeWindows {
 		s.DefaultBuildsDir = `C:\builds`
 		s.DefaultCacheDir = `C:\cache`
+
+		s.ExecutorOptions.Shell.Shell = shells.SNPowershell
+		s.ExecutorOptions.Shell.RunnerCommand = "gitlab-runner-helper"
 	}
 }
 
