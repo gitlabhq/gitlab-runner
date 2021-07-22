@@ -156,7 +156,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
 | `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
-| `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. |
+| `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#using-node-selectors). |
 | `node_tolerations` | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
 | `pod_annotations` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
 | `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
@@ -480,6 +480,8 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 ## Custom builds directory mount
 
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2862) in GitLab Runner 13.12.
+
 To store the builds directory for the job, define custom volume mounts to the
 configured `builds_dir` (`/builds` by default).
 To use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
@@ -615,9 +617,51 @@ For example, when you use `[ always, if-not-present ]`, you can use the policy `
 
 Beware of the [security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) when using `if-not-present`.
 
+## Using node selectors
+
+The `node_selector` option can be used to specify which node in a Kubernetes cluster you want builds to be executed on.
+It is a table of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables).
+
+Runner additionally uses the information provided to determine the OS and architecture for the build. This ensures that
+the correct [helper image](../configuration/advanced-configuration.md#helper-image) is used. By default, the OS and
+architecture is assumed to be `linux/amd64`.
+
+By using certain labels, builds can be scheduled on nodes with different operating systems and architectures:
+
+### Example for `linux/arm64`
+
+```toml
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+
+    [runners.kubernetes.node_selector]
+      "kubernetes.io/arch" = "arm64"
+      "kubernetes.io/os" = "linux"
+```
+
+### Example for `windows/amd64`
+
+Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/setup/production-environment/windows/intro-windows-in-kubernetes/#supported-functionality-and-limitations),
+so if process-isolation is used, you must additionally provide the specific windows build version with the
+[`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
+
+```toml
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+
+    [runners.kubernetes.node_selector]
+      "kubernetes.io/arch" = "amd64"
+      "kubernetes.io/os" = "windows"
+      "node.kubernetes.io/windows-build" = "10.0.19041"
+```
+
 ## Adding extra host aliases
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab 13.7.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab Runner 13.7.
 
 This feature is available in Kubernetes 1.7+.
 

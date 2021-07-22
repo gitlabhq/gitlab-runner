@@ -2,8 +2,8 @@
 
 set -eo pipefail
 
-if [[ -z "${DEPLOY_TOKEN}" ]]; then
-    echo -e "\033[0;31mMissing DEPLOY_TOKEN, cannot release\033[0m"
+if [[ -z "${CI_JOB_TOKEN}" ]]; then
+    echo -e "\033[0;31mMissing CI_JOB_TOKEN, cannot release\033[0m"
 
     exit 1
 fi
@@ -21,7 +21,8 @@ runner_id=${CI_PROJECT_ID:-250833}
 
 changelog="https://gitlab.com/gitlab-org/gitlab-runner/blob/$tag/CHANGELOG.md"
 s3="https://gitlab-runner-downloads.s3.amazonaws.com/$tag"
-release=$(cat <<EOS
+release=$(
+    cat <<EOS
 {
   "name": "$tag",
   "tag_name": "$tag",
@@ -57,6 +58,5 @@ release=$(cat <<EOS
 EOS
 )
 
-curl -f --header 'Content-Type: application/json' --header "PRIVATE-TOKEN: $DEPLOY_TOKEN" \
+curl -f --header 'Content-Type: application/json' --header "PRIVATE-TOKEN: ${CI_JOB_TOKEN}" \
     --data "$release" --request POST "$api/projects/$runner_id/releases"
-

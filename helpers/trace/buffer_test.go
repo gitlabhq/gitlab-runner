@@ -80,6 +80,98 @@ func TestTraceLimit(t *testing.T) {
 	assert.Equal(t, expectedContent, string(content))
 }
 
+func TestTraceLimitEnsureValidUTF8(t *testing.T) {
+	tests := map[string]struct {
+		traceMessage     string
+		limit            int
+		expectedContent  string
+		expectedChecksum string
+	}{
+		"1-byte UTF-8 characters (ASCII text)": {
+			traceMessage: "0123456789",
+			limit:        10,
+			expectedContent: "0123456789\n" +
+				"\x1b[33;1mJob's log exceeded limit of 10 bytes.\n" +
+				"Job execution will continue but no more output will be collected.\x1b[0;m\n",
+			expectedChecksum: "crc32:d4b99d81",
+		},
+		"2-byte UTF-8 characters": {
+			traceMessage: "ǲ",
+			limit:        5,
+			expectedContent: "ǲǲ\n" +
+				"\x1b[33;1mJob's log exceeded limit of 5 bytes.\n" +
+				"Job execution will continue but no more output will be collected.\x1b[0;m\n",
+			expectedChecksum: "crc32:318d2180",
+		},
+		"2-byte UTF-8 characters on even boundary": {
+			traceMessage: "ǲ",
+			limit:        6,
+			expectedContent: "ǲǲǲ\n" +
+				"\x1b[33;1mJob's log exceeded limit of 6 bytes.\n" +
+				"Job execution will continue but no more output will be collected.\x1b[0;m\n",
+			expectedChecksum: "crc32:8c2a1eda",
+		},
+		"3-byte UTF-8 characters": {
+			traceMessage: "─",
+			limit:        20,
+			expectedContent: "──────\n" +
+				"\x1b[33;1mJob's log exceeded limit of 20 bytes.\n" +
+				"Job execution will continue but no more output will be collected.\x1b[0;m\n",
+			expectedChecksum: "crc32:f187099c",
+		},
+		"3-byte UTF-8 characters with a limit of 1 byte": {
+			traceMessage: "─",
+			limit:        1,
+			expectedContent: "\n" +
+				"\x1b[33;1mJob's log exceeded limit of 1 bytes.\n" +
+				"Job execution will continue but no more output will be collected.\x1b[0;m\n",
+			expectedChecksum: "crc32:9e261b5f",
+		},
+		"4-byte UTF-8 characters": {
+			traceMessage: "🐤",
+			limit:        23,
+			expectedContent: "🐤🐤🐤🐤🐤\n" +
+				"\x1b[33;1mJob's log exceeded limit of 23 bytes.\n" +
+				"Job execution will continue but no more output will be collected.\x1b[0;m\n",
+			expectedChecksum: "crc32:10e32ecd",
+		},
+		"4-byte UTF-8 characters on even boundary": {
+			traceMessage: "🐤",
+			limit:        24,
+			expectedContent: "🐤🐤🐤🐤🐤🐤\n" +
+				"\x1b[33;1mJob's log exceeded limit of 24 bytes.\n" +
+				"Job execution will continue but no more output will be collected.\x1b[0;m\n",
+			expectedChecksum: "crc32:26e43372",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			buffer, err := New()
+			require.NoError(t, err)
+			defer buffer.Close()
+
+			buffer.SetLimit(tc.limit)
+			assert.Equal(t, 0, buffer.Size())
+
+			for i := 0; i < 100; i++ {
+				n, err := buffer.Write([]byte(tc.traceMessage))
+				require.NoError(t, err)
+				require.Greater(t, n, 0)
+			}
+
+			buffer.Finish()
+
+			content, err := buffer.Bytes(0, 1000)
+			require.NoError(t, err)
+
+			assert.Equal(t, len(tc.expectedContent), buffer.Size(), "unexpected buffer size")
+			assert.Equal(t, tc.expectedChecksum, buffer.Checksum())
+			assert.Equal(t, tc.expectedContent, string(content))
+		})
+	}
+}
+
 func TestDelayedMask(t *testing.T) {
 	buffer, err := New()
 	require.NoError(t, err)

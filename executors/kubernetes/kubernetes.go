@@ -48,6 +48,10 @@ const (
 
 	outputLogFileNotExistsExitCode = 100
 	unknownLogProcessorExitCode    = 1000
+
+	// nodeSelectorWindowsBuildLabel is the label used to reference a specific Windows Version.
+	// https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build
+	nodeSelectorWindowsBuildLabel = "node.kubernetes.io/windows-build"
 )
 
 var (
@@ -69,7 +73,12 @@ var (
 
 // GetDefaultCapDrop returns the default capabilities that should be dropped
 // from a build container.
-func GetDefaultCapDrop() []string {
+func GetDefaultCapDrop(os string) []string {
+	// windows does not support security context capabilities
+	if os == helperimage.OSTypeWindows {
+		return nil
+	}
+
 	return []string{
 		// Reasons for disabling NET_RAW by default were
 		// discussed in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26833
@@ -141,13 +150,7 @@ type serviceCreateResponse struct {
 }
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
-	if err = s.AbstractExecutor.Prepare(options); err != nil {
-		return fmt.Errorf("prepare AbstractExecutor: %w", err)
-	}
-
-	if s.BuildShell.PassFile {
-		return fmt.Errorf("kubernetes doesn't support shells that require script file")
-	}
+	s.AbstractExecutor.PrepareConfiguration(options)
 
 	if err = s.prepareOverwrites(options.Build.GetAllVariables()); err != nil {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
@@ -180,6 +183,9 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("prepare helper image: %w", err)
 	}
 
+	// setup default executor options based on OS type
+	s.setupDefaultExecutorOptions(s.helperImageInfo.OSType)
+
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
 	imageName := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
@@ -189,17 +195,51 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		s.Println("Using attach strategy to execute scripts...")
 	}
 
-	return nil
+	s.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
+
+	err = s.AbstractExecutor.PrepareBuildAndShell()
+	if err != nil {
+		return fmt.Errorf("prepare build and shell: %w", err)
+	}
+
+	if s.BuildShell.PassFile {
+		return fmt.Errorf("kubernetes doesn't support shells that require script file")
+	}
+
+	return err
+}
+
+func (s *executor) setupDefaultExecutorOptions(os string) {
+	if os == helperimage.OSTypeWindows {
+		s.DefaultBuildsDir = `C:\builds`
+		s.DefaultCacheDir = `C:\cache`
+	}
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
-	return helperimage.Get(common.REVISION, helperimage.Config{
+	config := helperimage.Config{
 		OSType:         helperimage.OSTypeLinux,
 		Architecture:   "amd64",
 		GitLabRegistry: s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
 		Shell:          s.Config.Shell,
 		Flavor:         s.Config.Kubernetes.HelperImageFlavor,
-	})
+	}
+
+	// use node selector labels to better select the correct image
+	if s.Config.Kubernetes.NodeSelector != nil {
+		for label, option := range map[string]*string{
+			api.LabelArchStable:           &config.Architecture,
+			api.LabelOSStable:             &config.OSType,
+			nodeSelectorWindowsBuildLabel: &config.OperatingSystem,
+		} {
+			value := s.Config.Kubernetes.NodeSelector[label]
+			if value != "" {
+				*option = value
+			}
+		}
+	}
+
+	return helperimage.Get(common.REVISION, config)
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
@@ -634,8 +674,6 @@ func (s *executor) buildContainer(
 	requests, limits api.ResourceList,
 	containerCommand ...string,
 ) (api.Container, error) {
-	privileged := false
-	var allowPrivilegeEscalation *bool
 	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
 	proxyPorts := make([]proxy.Port, len(imageDefinition.Ports))
 
@@ -657,11 +695,6 @@ func (s *executor) buildContainer(
 		s.ProxyPool[serviceName] = s.newProxy(serviceName, proxyPorts)
 	}
 
-	if s.Config.Kubernetes != nil {
-		privileged = s.Config.Kubernetes.Privileged
-		allowPrivilegeEscalation = s.Config.Kubernetes.AllowPrivilegeEscalation
-	}
-
 	pullPolicy, err := s.pullManager.GetPullPolicyFor(image)
 	if err != nil {
 		return api.Container{}, err
@@ -669,31 +702,32 @@ func (s *executor) buildContainer(
 
 	command, args := s.getCommandAndArgs(imageDefinition, containerCommand...)
 
-	return api.Container{
-			Name:            name,
-			Image:           image,
-			ImagePullPolicy: pullPolicy,
-			Command:         command,
-			Args:            args,
-			Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
-			Resources: api.ResourceRequirements{
-				Limits:   limits,
-				Requests: requests,
-			},
-			Ports:        containerPorts,
-			VolumeMounts: s.getVolumeMounts(),
-			SecurityContext: &api.SecurityContext{
-				Privileged:               &privileged,
-				AllowPrivilegeEscalation: allowPrivilegeEscalation,
-				Capabilities: getCapabilities(
-					GetDefaultCapDrop(),
-					s.Config.Kubernetes.CapAdd,
-					s.Config.Kubernetes.CapDrop,
-				),
-			},
-			Stdin: true,
+	container := api.Container{
+		Name:            name,
+		Image:           image,
+		ImagePullPolicy: pullPolicy,
+		Command:         command,
+		Args:            args,
+		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
+		Resources: api.ResourceRequirements{
+			Limits:   limits,
+			Requests: requests,
 		},
-		nil
+		Ports:        containerPorts,
+		VolumeMounts: s.getVolumeMounts(),
+		SecurityContext: &api.SecurityContext{
+			Privileged:               s.Config.Kubernetes.Privileged,
+			AllowPrivilegeEscalation: s.Config.Kubernetes.AllowPrivilegeEscalation,
+			Capabilities: getCapabilities(
+				GetDefaultCapDrop(s.helperImageInfo.OSType),
+				s.Config.Kubernetes.CapAdd,
+				s.Config.Kubernetes.CapDrop,
+			),
+		},
+		Stdin: true,
+	}
+
+	return container, nil
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {

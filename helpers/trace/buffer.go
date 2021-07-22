@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"unicode/utf8"
 
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
@@ -164,7 +165,7 @@ func (w *limitWriter) Write(p []byte) (int, error) {
 	}
 
 	if int64(len(p)) >= capacity {
-		p = p[:capacity]
+		p = truncateSafeUTF8(p, capacity)
 		n, err := w.w.Write(p)
 		if err == nil {
 			err = errLogLimitExceeded
@@ -218,4 +219,19 @@ func New() (*Buffer, error) {
 	buffer.SetMasked(nil)
 
 	return buffer, nil
+}
+
+// truncateSafeUTF8 truncates a job log at the capacity but avoids
+// breaking up a multi-byte UTF-8 character.
+func truncateSafeUTF8(p []byte, capacity int64) []byte {
+	for i := 0; i < 4; i++ {
+		r, s := utf8.DecodeLastRune(p[:capacity])
+		if r == utf8.RuneError && s == 1 {
+			capacity--
+			continue
+		}
+		break
+	}
+
+	return p[:capacity]
 }

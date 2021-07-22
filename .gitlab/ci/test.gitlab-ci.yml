@@ -169,7 +169,7 @@ code_quality:
 
 .linux test:
   extends:
-  - .merge_request_pipelines
+  - .rules:merge_request_pipelines:no_docs
   - .docker
   - .go-cache
   stage: test
@@ -336,7 +336,7 @@ git 1.8.3.1:
 
 integration_k8s:
   extends:
-  - .merge_request_pipelines
+  - .rules:merge_request_pipelines:no_docs
   - .docker
   needs:
   - 'prepare done'
