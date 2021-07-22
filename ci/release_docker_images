@@ -298,7 +298,7 @@ done
 cp "${runner_home_dir}/install-deps" "${runner_home_dir}/ubuntu/"
 cp "${runner_home_dir}/install-deps" "${runner_home_dir}/alpine/"
 for arch in "${TARGET_ARCHS[@]}"; do
-    deb_arch=$(if [ ${arch} == "ppc64le" ]; then echo "ppc64el"; else echo ${arch}; fi)
+    deb_arch=$(if [ "${arch}" == "ppc64le" ]; then echo "ppc64el"; else echo "${arch}"; fi)
     cp "${runner_home_dir}/checksums-${arch}" "out/deb/gitlab-runner_${deb_arch}.deb" \
         "${runner_home_dir}/ubuntu/"
     cp "${runner_home_dir}/checksums-${arch}" "out/binaries/gitlab-runner-linux-${arch}" \
