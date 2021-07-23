@@ -677,6 +677,35 @@ func (s *executor) buildContainer(
 	requests, limits api.ResourceList,
 	containerCommand ...string,
 ) (api.Container, error) {
+	// check if the image/service is allowed
+	internalImages := []string{
+		s.Config.Kubernetes.Image,
+		s.helperImageInfo.Name,
+	}
+
+	var (
+		optionName    string
+		allowedImages []string
+	)
+	if strings.HasPrefix(name, "svc-") {
+		optionName = "services"
+		allowedImages = s.Config.Kubernetes.AllowedServices
+	} else if name == buildContainerName {
+		optionName = "images"
+		allowedImages = s.Config.Kubernetes.AllowedImages
+	}
+
+	verifyAllowedImageOptions := common.VerifyAllowedImageOptions{
+		Image:          image,
+		OptionName:     optionName,
+		AllowedImages:  allowedImages,
+		InternalImages: internalImages,
+	}
+	err := common.VerifyAllowedImage(verifyAllowedImageOptions, s.BuildLogger)
+	if err != nil {
+		return api.Container{}, err
+	}
+
 	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
 	proxyPorts := make([]proxy.Port, len(imageDefinition.Ports))
 

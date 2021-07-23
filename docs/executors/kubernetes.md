@@ -146,6 +146,8 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 |---------|-------------|
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation) behavior. |
+| `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](../configuration/advanced-configuration.md#restricting-docker-images-and-services). |
+| `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](../configuration/advanced-configuration.md#restricting-docker-images-and-services). |
 | `bearer_token` | Default bearer token used to launch build pods. |
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |

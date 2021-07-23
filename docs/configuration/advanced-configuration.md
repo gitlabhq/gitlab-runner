@@ -249,8 +249,8 @@ This defines the Docker Container parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
-| `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). |
+| `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](#restricting-docker-images-and-services). |
+| `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](#restricting-docker-images-and-services). |
 | `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
 | `cap_add`                      | Add additional Linux capabilities to the container. |
 | `cap_drop`                     | Drop additional Linux capabilities from the container. |
@@ -451,17 +451,6 @@ precedence is taken into account:
 The first credentials found for the registry are used. So for example,
 if you add credentials for the *integrated registry* with the
 `DOCKER_AUTH_CONFIG` variable, then the default credentials are overridden.
-
-#### Restrict `allowed_images` to private registry
-
-You can restrict access so that your jobs run on Docker images
-from your private Docker registry. For example:
-
-```toml
-[runners.docker]
-  ...
-  allowed_images = ["my.registry.tld:5000/*:*"]
-```
 
 ## The `[runners.parallels]` section
 
@@ -813,6 +802,8 @@ For more parameters, see the [Kubernetes executor documentation](../executors/ku
 | `key_file`       | string  | Optional. Kubernetes auth private key. |
 | `ca_file`        | string  | Optional. Kubernetes auth ca certificate. |
 | `image`          | string  | Default Docker image to use for jobs when none is specified. |
+| `allowed_images` | array   | Wildcard list of images that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](#restricting-docker-images-and-services). |
+| `allowed_services` | array | Wildcard list of services that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](#restricting-docker-images-and-services). |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in. |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled. |
 | `allow_privilege_escalation` | boolean | Optional. Runs all containers with the `allowPrivilegeEscalation` flag enabled. |
@@ -831,6 +822,8 @@ Example:
   privileged = true
   allow_privilege_escalation = true
   image_pull_secrets = ["docker-registry-credentials"]
+  allowed_images = ["ruby:*", "python:*", "php:*"]
+  allowed_services = ["postgres:9.4", "postgres:latest"]
   [runners.kubernetes.node_selector]
     gitlab = "true"
 ```
@@ -1050,6 +1043,38 @@ Metrics queries are in `canonical_name:query_string` format. The query string su
 | `{interval}` | Replaced with the `query_interval` parameter from the `[runners.referees.metrics]` configuration for this referee.            |
 
 For example, a shared GitLab Runner environment that uses the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
+
+## Restricting Docker images and services
+
+> Added for the Kubernetes executor in GitLab Runner 14.2.
+
+If you use the Docker or Kubernetes executors, you can restrict the Docker images which can
+be used to run your jobs. To do this, you specify wildcard patterns. For example, to allow images
+from your private Docker registry only:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_images = ["my.registry.tld:5000/*:*"]
+    allowed_services = ["my.registry.tld:5000/*:*"]
+```
+
+Or, to restrict to a specific list of images from this registry:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_images = ["my.registry.tld:5000/ruby:*", "my.registry.tld:5000/node:*"]
+    allowed_services = ["postgres:9.4", "postgres:latest"]
+```
+
+The allowed list also works with the Kubernetes executor (that is, if you use `[runners.kubernetes]` instead of `[runners.docker]`).
 
 ## Deploy to multiple servers using GitLab CI/CD
 
