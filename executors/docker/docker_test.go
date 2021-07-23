@@ -1532,7 +1532,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 				},
 			},
 			allowedServices: []string{"name"},
-			expectedErr:     "invalid image",
+			expectedErr:     "disallowed image",
 		},
 		"build service not in allowed services but in internal images": {
 			services: []common.Service{

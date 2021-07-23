@@ -892,3 +892,111 @@ func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
 
 	return err
 }
+
+func TestKubernetesAllowedImages(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	type testDef struct {
+		AllowedImages []string
+		Image         string
+		VerifyFn      func(*testing.T, error)
+	}
+	tests := map[string]testDef{
+		// allowed image case
+		"allowed image case": {
+			AllowedImages: []string{"alpine"},
+			Image:         "alpine",
+			VerifyFn: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		// disallowed image case
+		"disallowed image case": {
+			AllowedImages: []string{"alpine"},
+			Image:         "ubuntu",
+			VerifyFn: func(t *testing.T, err error) {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, common.ErrDisallowedImage)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteSuccessfulBuild()
+			assert.NoError(t, err)
+			build := &common.Build{
+				JobResponse: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "kubernetes",
+						Kubernetes: &common.KubernetesConfig{
+							AllowedImages: test.AllowedImages,
+						},
+					},
+				},
+			}
+			build.Image.Name = test.Image
+
+			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+
+			test.VerifyFn(t, err)
+		})
+	}
+}
+
+func TestKubernetesAllowedServices(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	type testDef struct {
+		AllowedServices []string
+		Services        common.Services
+		VerifyFn        func(*testing.T, error)
+	}
+	tests := map[string]testDef{
+		"allowed service case": {
+			AllowedServices: []string{"alpine", "debian"},
+			Services: common.Services{
+				common.Image{Name: "alpine"},
+			},
+			VerifyFn: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		"disallowed service case": {
+			AllowedServices: []string{"alpine", "debian"},
+			Services: common.Services{
+				common.Image{Name: "alpine"},
+				common.Image{Name: "ubuntu"},
+			},
+			VerifyFn: func(t *testing.T, err error) {
+				require.Error(t, err)
+				assert.ErrorIs(t, err, common.ErrDisallowedImage)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteSuccessfulBuild()
+			assert.NoError(t, err)
+			build := &common.Build{
+				JobResponse: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "kubernetes",
+						Kubernetes: &common.KubernetesConfig{
+							AllowedServices: test.AllowedServices,
+						},
+					},
+				},
+			}
+			build.Image.Name = "alpine"
+			build.Services = test.Services
+
+			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+
+			test.VerifyFn(t, err)
+		})
+	}
+}

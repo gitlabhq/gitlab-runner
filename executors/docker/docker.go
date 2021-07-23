@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bmatcuk/doublestar"
 	"github.com/docker/cli/opts"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -794,35 +793,13 @@ func (e *executor) disconnectNetwork(ctx context.Context, id string) {
 }
 
 func (e *executor) verifyAllowedImage(image, optionName string, allowedImages, internalImages []string) error {
-	for _, allowedImage := range allowedImages {
-		ok, _ := doublestar.Match(allowedImage, image)
-		if ok {
-			return nil
-		}
+	options := common.VerifyAllowedImageOptions{
+		Image:          image,
+		OptionName:     optionName,
+		AllowedImages:  allowedImages,
+		InternalImages: internalImages,
 	}
-
-	for _, internalImage := range internalImages {
-		if internalImage == image {
-			return nil
-		}
-	}
-
-	if len(allowedImages) != 0 {
-		e.Println()
-		e.Errorln(fmt.Sprintf("The %q image is not present on list of allowed %s:", image, optionName))
-		for _, allowedImage := range allowedImages {
-			e.Errorln("-", allowedImage)
-		}
-		e.Println()
-	} else {
-		// by default allow to override the image name
-		return nil
-	}
-
-	e.Println(
-		"Please check runner's configuration allowed_images and allowed_services: " +
-			"https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runnersdocker-section")
-	return errors.New("invalid image")
+	return common.VerifyAllowedImage(options, e.BuildLogger)
 }
 
 func (e *executor) expandImageName(imageName string, allowedInternalImages []string) (string, error) {
