@@ -364,7 +364,7 @@ func TestJobFailure(t *testing.T) {
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
 	executor.On("Run", mock.Anything).Return(thrownErr).Times(3)
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", thrownErr).Once()
 
 	RegisterExecutorProvider("build-run-job-failure", provider)
@@ -450,7 +450,7 @@ func TestRunFailureRunsAfterScriptAndArtifactsOnFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	RegisterExecutorProvider("build-run-run-failure", provider)
@@ -483,7 +483,7 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail")).Times(3)
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -508,7 +508,7 @@ func TestArtifactDownloadRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageDownloadArtifacts)).Return(errors.New("build fail")).Times(3)
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -535,7 +535,7 @@ func TestArtifactUploadRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(errors.New("upload fail")).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("upload fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -569,7 +569,7 @@ func TestArchiveCacheOnScriptFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("script failure")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -595,7 +595,7 @@ func TestUploadArtifactsOnArchiveCacheFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnSuccessCache)).Return(errors.New("cache failure")).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("cache failure")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -618,7 +618,7 @@ func TestRestoreCacheRunFailure(t *testing.T) {
 	executor.On("Run", matchBuildStage(BuildStageRestoreCache)).Return(errors.New("build fail")).Times(3)
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).Return(nil).Once()
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()
 	executor.On("Finish", errors.New("build fail")).Once()
 
 	build := registerExecutorWithSuccessfulBuild(t, provider, new(RunnerConfig))
@@ -1725,7 +1725,7 @@ func setupSuccessfulMockExecutor(
 	executor.On("Run", matchBuildStage(BuildStageUploadOnSuccessArtifacts)).
 		Return(nil).
 		Once()
-	executor.On("Run", matchBuildStage(BuildStageCleanupFileVariables)).
+	executor.On("Run", matchBuildStage(BuildStageCleanup)).
 		Return(nil).
 		Once()
 

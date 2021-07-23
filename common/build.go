@@ -80,7 +80,10 @@ const (
 	BuildStageArchiveOnFailureCache    BuildStage = "archive_cache_on_failure"
 	BuildStageUploadOnSuccessArtifacts BuildStage = "upload_artifacts_on_success"
 	BuildStageUploadOnFailureArtifacts BuildStage = "upload_artifacts_on_failure"
-	BuildStageCleanupFileVariables     BuildStage = "cleanup_file_variables"
+	// We only renamed the variable name here as a first step to renaming the stage.
+	// a separate issue will address changing the variable value, since it affects the
+	// contract with the custom executor: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28152.
+	BuildStageCleanup BuildStage = "cleanup_file_variables"
 )
 
 // staticBuildStages is a list of BuildStages which are executed on every build
@@ -95,7 +98,7 @@ var staticBuildStages = []BuildStage{
 	BuildStageArchiveOnFailureCache,
 	BuildStageUploadOnSuccessArtifacts,
 	BuildStageUploadOnFailureArtifacts,
-	BuildStageCleanupFileVariables,
+	BuildStageCleanup,
 }
 
 const (
@@ -387,7 +390,7 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 		BuildStageArchiveOnFailureCache:    true,
 		BuildStageUploadOnFailureArtifacts: true,
 		BuildStageUploadOnSuccessArtifacts: true,
-		BuildStageCleanupFileVariables:     true,
+		BuildStageCleanup:                  true,
 	}
 
 	predefined, ok := env[buildStage]
@@ -409,7 +412,7 @@ func GetStageDescription(stage BuildStage) string {
 		BuildStageArchiveOnFailureCache:    "Saving cache for failed job",
 		BuildStageUploadOnFailureArtifacts: "Uploading artifacts for failed job",
 		BuildStageUploadOnSuccessArtifacts: "Uploading artifacts for successful job",
-		BuildStageCleanupFileVariables:     "Cleaning up file based variables",
+		BuildStageCleanup:                  "Cleaning up project directory and file based variables",
 	}
 
 	description, ok := descriptions[stage]
@@ -525,7 +528,7 @@ func (b *Build) createReferees(executor Executor) {
 }
 
 func (b *Build) removeFileBasedVariables(ctx context.Context, executor Executor) {
-	err := b.executeStage(ctx, BuildStageCleanupFileVariables, executor)
+	err := b.executeStage(ctx, BuildStageCleanup, executor)
 	if err != nil {
 		b.Log().WithError(err).Warning("Error while executing file based variables removal script")
 	}

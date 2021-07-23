@@ -1639,3 +1639,64 @@ func TestBuildLogLimitExceeded(t *testing.T) {
 
 	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(t, getRunnerConfigForOS(t), nil)
 }
+
+func TestCleanupProjectGitClone(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	buildtest.RunBuildWithCleanupGitClone(t, &build)
+}
+
+func TestCleanupProjectGitFetch(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	untrackedFilename := "untracked"
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, "", "")...,
+		)
+	})
+
+	buildtest.RunBuildWithCleanupGitFetch(t, &build, untrackedFilename)
+}
+
+func TestCleanupProjectGitSubmoduleNormal(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	untrackedFile := "untracked"
+	untrackedSubmoduleFile := "untracked_submodule"
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFile, untrackedSubmoduleFile, "")...,
+		)
+	})
+
+	buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, &build, untrackedFile, untrackedSubmoduleFile)
+}
+
+func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	untrackedFile := "untracked"
+	untrackedSubmoduleFile := "untracked_submodule"
+	untrackedSubSubmoduleFile := "untracked_submodule_submodule"
+
+	build := getBuildForOS(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(
+				untrackedFile,
+				untrackedSubmoduleFile,
+				untrackedSubSubmoduleFile)...,
+		)
+	})
+
+	buildtest.RunBuildWithCleanupRecursiveSubmoduleStrategy(
+		t,
+		&build,
+		untrackedFile,
+		untrackedSubmoduleFile,
+		untrackedSubSubmoduleFile,
+	)
+}

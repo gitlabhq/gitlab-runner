@@ -993,6 +993,99 @@ func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
 	})
 }
 
+func TestBuildGitCloneStrategyCleanup(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Runner.RunnerSettings.Shell = shell
+
+		buildtest.RunBuildWithCleanupGitClone(t, build)
+
+		_, err = os.Stat(build.FullProjectDir())
+		assert.Error(t, err, "cleanup should have removed the entire build directory")
+	})
+}
+
+func TestBuildGitFetchStrategyCleanup(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		untrackedFilename := "untracked"
+		successfulBuild, err := common.GetLocalBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, "", "")...,
+		)
+
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+		build.Runner.RunnerSettings.Shell = shell
+
+		buildtest.RunBuildWithCleanupGitFetch(t, build, untrackedFilename)
+
+		_, err = os.Stat(build.BuildDir)
+		assert.NoError(t, err, "cleanup should not delete entire build directory")
+		_, err = os.Stat(filepath.Join(build.BuildDir, untrackedFilename))
+		assert.Error(t, err, "cleanup should have removed the untracked file")
+	})
+}
+
+func TestBuildGitFetchStrategySubmoduleNormalCleanup(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		untrackedFilename, untrackedFileInSubmodule := "untracked", "untracked_in_submodule"
+		successfulBuild, err := common.GetLocalBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, untrackedFileInSubmodule, "")...,
+		)
+
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, build, untrackedFilename, untrackedFileInSubmodule)
+
+		_, err = os.Stat(build.BuildDir)
+		assert.NoError(t, err, "cleanup should not delete entire build directory")
+		_, err = os.Stat(filepath.Join(build.BuildDir, untrackedFilename))
+		assert.Error(t, err, "cleanup should have removed untracked file in main repository")
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", untrackedFileInSubmodule))
+		assert.Error(t, err, "cleanup should have removed untracked file in submodule")
+	})
+}
+
+func TestBuildGitFetchStrategySubmoduleRecursiveCleanup(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		untrackedFile := "untracked_file"
+		untrackedFileInSubmodule := "untracked_file_in_submodule"
+		untrackedFileInSubSubmodule := "untracked_file_in_sub_submodule"
+
+		successfulBuild, err := common.GetLocalBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFile, untrackedFileInSubmodule, untrackedFileInSubSubmodule)...,
+		)
+
+		assert.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithCleanupRecursiveSubmoduleStrategy(
+			t,
+			build,
+			untrackedFile,
+			untrackedFileInSubmodule,
+			untrackedFileInSubSubmodule,
+		)
+
+		_, err = os.Stat(build.BuildDir)
+		assert.NoError(t, err, "cleanup should not delete entire build directory")
+		_, err = os.Stat(filepath.Join(build.BuildDir, untrackedFile))
+		assert.Error(t, err, "cleanup should have removed untracked file in main repository")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", untrackedFileInSubmodule))
+		assert.Error(t, err, "cleanup should have removed untracked file in submodule")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", untrackedFileInSubSubmodule))
+		assert.Error(t, err, "cleanup should have removed untracked file in submodule's submodule")
+	})
+}
+
 func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()

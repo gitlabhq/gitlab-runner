@@ -37,6 +37,7 @@ var knownBuildStages = map[string]struct{}{
 	"archive_cache_on_failure":    {},
 	"upload_artifacts_on_success": {},
 	"upload_artifacts_on_failure": {},
+	"cleanup_file_variables":      {},
 }
 
 func setBuildFailure(msg string, args ...interface{}) {

@@ -46,7 +46,7 @@ func TestPwshTrapScriptGeneration(t *testing.T) {
 			},
 		},
 		"cleanup variables": {
-			stage: common.BuildStageCleanupFileVariables,
+			stage: common.BuildStageCleanup,
 			info:  shellInfo,
 			assertExpectedScript: func(t *testing.T, s string) {
 				assert.Empty(t, s)

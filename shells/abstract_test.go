@@ -546,6 +546,128 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 	}
 }
 
+func TestAbstractShell_writeCleanupBuildDirectoryScript(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		buildDir             string
+		gitStrategy          string
+		gitCleanFlags        string
+		gitSubmoduleStrategy string
+		setupExpectations    func(*MockShellWriter)
+	}{
+		{
+			name:        "cloned repository",
+			buildDir:    "build/dir",
+			gitStrategy: "clone",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("RmDir", "build/dir")
+			},
+		},
+		{
+			name:        "no git strategy",
+			buildDir:    "build/dir",
+			gitStrategy: "none",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Noticef", "Skipping build directory cleanup step")
+			},
+		},
+		{
+			name:        "git fetch strategy",
+			buildDir:    "some/dir/to/the/repo",
+			gitStrategy: "fetch",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Cd", "some/dir/to/the/repo")
+				m.On("Command", "git", "clean", "-ffdx")
+				m.On("Command", "git", "reset", "--hard")
+			},
+		},
+		{
+			name:          "git fetch with git clean flags",
+			buildDir:      "/build/dir/for/project",
+			gitStrategy:   "fetch",
+			gitCleanFlags: "-x -d -f",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Cd", "/build/dir/for/project")
+				m.On("Command", "git", "clean", "-x", "-d", "-f")
+				m.On("Command", "git", "reset", "--hard")
+			},
+		},
+		{
+			name:                 "git fetch with recursive submodule strategy",
+			buildDir:             "/dir/for/project",
+			gitStrategy:          "fetch",
+			gitCleanFlags:        "-n -q",
+			gitSubmoduleStrategy: "recursive",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Cd", "/dir/for/project")
+				m.On("Command", "git", "clean", "-n", "-q")
+				m.On("Command", "git", "reset", "--hard")
+				m.On("Command", "git", "submodule", "foreach", "--recursive", "git", "clean", "-n", "-q")
+				m.On("Command", "git", "submodule", "foreach", "--recursive", "git", "reset", "--hard")
+			},
+		},
+		{
+			name:                 "git fetch with normal submodule strategy",
+			buildDir:             "/dir/for/project",
+			gitStrategy:          "fetch",
+			gitCleanFlags:        "-x",
+			gitSubmoduleStrategy: "normal",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Cd", "/dir/for/project")
+				m.On("Command", "git", "clean", "-x")
+				m.On("Command", "git", "reset", "--hard")
+				m.On("Command", "git", "submodule", "foreach", "git", "clean", "-x")
+				m.On("Command", "git", "submodule", "foreach", "git", "reset", "--hard")
+			},
+		},
+		{
+			name:        "invalid git strategy",
+			buildDir:    "/dir/for/project",
+			gitStrategy: "use-svn",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("RmDir", "/dir/for/project")
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Variables: common.JobVariables{
+							common.JobVariable{
+								Key:   "FF_ENABLE_CLEANUP",
+								Value: "true",
+							},
+							common.JobVariable{
+								Key:   "GIT_STRATEGY",
+								Value: tc.gitStrategy,
+							},
+							common.JobVariable{
+								Key:   "GIT_CLEAN_FLAGS",
+								Value: tc.gitCleanFlags,
+							},
+							common.JobVariable{
+								Key:   "GIT_SUBMODULE_STRATEGY",
+								Value: tc.gitSubmoduleStrategy,
+							},
+						},
+					},
+					BuildDir: tc.buildDir,
+				},
+			}
+			mockShellWriter := &MockShellWriter{}
+			defer mockShellWriter.AssertExpectations(t)
+
+			tc.setupExpectations(mockShellWriter)
+			shell := AbstractShell{}
+
+			assert.NoError(t, shell.writeCleanupBuildDirectoryScript(mockShellWriter, info))
+		})
+	}
+}
+
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
 		value string
@@ -1340,7 +1462,7 @@ func TestSkipBuildStage(t *testing.T) {
 				},
 			},
 		},
-		common.BuildStageCleanupFileVariables: {
+		common.BuildStageCleanup: {
 			"don't skip if file artifact defined": {
 				common.JobResponse{
 					Variables: common.JobVariables{
@@ -1416,6 +1538,7 @@ func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
 					{Key: testVar4, Value: "test", File: false},
 				},
 			},
+			Runner: &common.RunnerConfig{},
 		},
 	}
 
@@ -1429,7 +1552,7 @@ func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
 
 	shell := new(AbstractShell)
 
-	err := shell.writeCleanupFileVariablesScript(mockShellWriter, info)
+	err := shell.writeCleanupScript(mockShellWriter, info)
 	assert.NoError(t, err)
 }
 
@@ -1444,7 +1567,7 @@ func BenchmarkScriptStage(b *testing.B) {
 		common.BuildStageArchiveOnFailureCache,
 		common.BuildStageUploadOnSuccessArtifacts,
 		common.BuildStageUploadOnFailureArtifacts,
-		common.BuildStageCleanupFileVariables,
+		common.BuildStageCleanup,
 		common.BuildStage("step_release"),
 	}
 

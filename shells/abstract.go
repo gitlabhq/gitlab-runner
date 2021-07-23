@@ -15,6 +15,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
+var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
+
 type AbstractShell struct {
 }
 
@@ -321,7 +323,7 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
 	default:
-		return errors.New("unknown GIT_STRATEGY")
+		return errUnknownGitStrategy
 	}
 
 	return nil
@@ -823,20 +825,70 @@ func (b *AbstractShell) writeArchiveCacheOnFailureScript(w ShellWriter, info com
 	return b.cacheArchiver(w, info, false)
 }
 
-func (b *AbstractShell) writeCleanupFileVariablesScript(w ShellWriter, info common.ShellScriptInfo) error {
-	skipCleanupFileVariables := true
+func (b *AbstractShell) writeCleanupScript(w ShellWriter, info common.ShellScriptInfo) error {
+	skipCleanupStage := true
 
 	for _, variable := range info.Build.GetAllVariables() {
 		if !variable.File {
 			continue
 		}
 
-		skipCleanupFileVariables = false
+		skipCleanupStage = false
 		w.RmFile(w.TmpFile(variable.Key))
 	}
 
-	if skipCleanupFileVariables {
+	if info.Build.IsFeatureFlagOn(featureflags.EnableJobCleanup) {
+		skipCleanupStage = false
+
+		if err := b.writeCleanupBuildDirectoryScript(w, info); err != nil {
+			return err
+		}
+	}
+
+	if skipCleanupStage {
 		return common.ErrSkipBuildStage
+	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info common.ShellScriptInfo) error {
+	switch info.Build.GetGitStrategy() {
+	case common.GitClone:
+		w.RmDir(info.Build.FullProjectDir())
+	case common.GitFetch:
+		b.writeCdBuildDir(w, info)
+
+		var cleanArgs []string
+		cleanFlags := info.Build.GetGitCleanFlags()
+		if len(cleanFlags) > 0 {
+			cleanArgs = append([]string{"clean"}, cleanFlags...)
+			w.Command("git", cleanArgs...)
+		}
+
+		resetArgs := []string{"reset", "--hard"}
+		w.Command("git", resetArgs...)
+
+		if info.Build.GetSubmoduleStrategy() == common.SubmoduleNormal ||
+			info.Build.GetSubmoduleStrategy() == common.SubmoduleRecursive {
+			submoduleArgs := []string{"submodule", "foreach"}
+
+			if info.Build.GetSubmoduleStrategy() == common.SubmoduleRecursive {
+				submoduleArgs = append(submoduleArgs, "--recursive")
+			}
+
+			if len(cleanFlags) > 0 {
+				submoduleCleanArgs := append(submoduleArgs, append([]string{"git"}, cleanArgs...)...)
+				w.Command("git", submoduleCleanArgs...)
+			}
+
+			submoduleResetArgs := append(submoduleArgs, append([]string{"git"}, resetArgs...)...)
+			w.Command("git", submoduleResetArgs...)
+		}
+	case common.GitNone:
+		w.Noticef("Skipping build directory cleanup step")
+	default:
+		return errUnknownGitStrategy
 	}
 
 	return nil
@@ -853,7 +905,7 @@ func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage,
 		common.BuildStageArchiveOnFailureCache:    b.writeArchiveCacheOnFailureScript,
 		common.BuildStageUploadOnSuccessArtifacts: b.writeUploadArtifactsOnSuccessScript,
 		common.BuildStageUploadOnFailureArtifacts: b.writeUploadArtifactsOnFailureScript,
-		common.BuildStageCleanupFileVariables:     b.writeCleanupFileVariablesScript,
+		common.BuildStageCleanup:                  b.writeCleanupScript,
 	}
 
 	fn, ok := methods[buildStage]
