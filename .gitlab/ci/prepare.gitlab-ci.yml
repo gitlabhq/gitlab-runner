@@ -11,28 +11,15 @@ prepare ci image:
   extends:
   - .image_builder
   - .linux-dependency-checksums
+  - .rules:prepare:ci:image:merge-requests
   variables:
     BUILD_IMAGE: $CI_IMAGE
     BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
-  rules:
-  - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
-    when: never
-  - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
-    changes:
-    - dockerfiles/ci/*
-    - .gitlab/ci/_common.gitlab-ci.yml
-    - .gitlab/ci/prepare.gitlab-ci.yml
 
 prepare alpine-no-root image:
   extends:
   - .image_builder
+  - .rules:prepare:alpine-no-root:image:merge-requests
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-no-root/Dockerfile
-  rules:
-  - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /(^docs[\/-].*|.*-docs$)/
-    when: never
-  - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "gitlab-org/gitlab-runner"
-    changes:
-    - tests/dockerfiles/alpine-no-root/*
-    - .gitlab/ci/prepare.gitlab-ci.yml
