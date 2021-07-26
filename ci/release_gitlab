@@ -42,7 +42,7 @@ release=$(
       { "name": "deb armhf", "url": "$s3/deb/gitlab-runner_armhf.deb" },
       { "name": "deb aarch64", "url": "$s3/deb/gitlab-runner_aarch64.deb" },
       { "name": "deb arm64", "url": "$s3/deb/gitlab-runner_arm64.deb" },
-      { "name": "deb ppc64le", "url": "$s3/deb/gitlab-runner_ppc64el.deb" },
+      { "name": "deb ppc64el", "url": "$s3/deb/gitlab-runner_ppc64el.deb" },
       { "name": "rpm amd64", "url": "$s3/rpm/gitlab-runner_amd64.rpm" },
       { "name": "rpm i686", "url": "$s3/rpm/gitlab-runner_i686.rpm" },
       { "name": "rpm arm", "url": "$s3/rpm/gitlab-runner_arm.rpm" },
