@@ -367,9 +367,9 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up scripts configMap: %w", err)
 	}
 
-	permissionsInitContainer, err := s.buildLogPermissionsInitContainer()
+	permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
 	if err != nil {
-		return fmt.Errorf("building log permissions init container: %w", err)
+		return fmt.Errorf("building permissions init container: %w", err)
 	}
 	err = s.setupBuildPod([]api.Container{permissionsInitContainer})
 	if err != nil {
@@ -395,12 +395,11 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 	containerName := buildContainerName
 
 	switch s.Shell().Shell {
-	case shells.SNPwsh:
-		// Translates to roughly "/path/to/parse_pwsh_script.ps1 /path/to/stage_script /path/to/logFile"
+	case shells.SNPwsh, shells.SNPowershell:
+		// Translates to roughly "/path/to/parse_pwsh_script.ps1 /path/to/stage_script"
 		containerCommand = []string{
 			s.scriptPath(parsePwshScriptName),
 			s.scriptPath(cmd.Stage),
-			s.logFile(),
 			s.buildRedirectionCmd(),
 		}
 		if cmd.Predefined {
@@ -436,34 +435,60 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 	return containerName, containerCommand
 }
 
-func (s *executor) buildLogPermissionsInitContainer() (api.Container, error) {
-	// We need to create the log file in which all scripts will append their output.
-	// The log file is created with the current user. There are 3 different scenarios for the user:
-	// 1. The user in all images and containers is root, in that case the chmod is redundant since they
-	// will all have permissions to the file.
-	// 2. The user of the helper image is root, however the build image's user is not root.
-	// In that case we need to allow the build user to write to the log file from inside the
-	// build container. That's where the chmod comes into play.
-	// 3. No user is root but all containers have the same user ID. In that case create the file.
-	// It will have the same user and group owner across all containers. This is the case for Kubernetes
-	// where the PodSecurityContext is set manually or for Openshift where each pod has a different user ID.
-	// *4. We don't allow setting different user IDs across containers, if that ever becomes the case
-	// we might need to try and chown the log file for the group only.
-	logFile := s.logFile()
-	chmod := fmt.Sprintf("touch %s && (chmod 777 %s || exit 0)", logFile, logFile)
-
+func (s *executor) buildPermissionsInitContainer(os string) (api.Container, error) {
 	pullPolicy, err := s.pullManager.GetPullPolicyFor(s.getHelperImage())
 	if err != nil {
-		return api.Container{}, fmt.Errorf("getting pull policy for log permissions init container: %w", err)
+		return api.Container{}, fmt.Errorf("getting pull policy for permissions init container: %w", err)
 	}
 
-	return api.Container{
-		Name:            "init-logs",
+	container := api.Container{
+		Name:            "init-permissions",
 		Image:           s.getHelperImage(),
-		Command:         []string{"sh", "-c", chmod},
 		VolumeMounts:    s.getVolumeMounts(),
 		ImagePullPolicy: pullPolicy,
-	}, nil
+	}
+
+	// The kubernetes executor uses both a helper container (for predefined stages) and a build
+	// container (for user defined steps). When accessing files on a shared volume, permissions
+	// are resolved within the context of the individual container.
+	//
+	// For Linux, the helper container and build container can occasionally have the same user IDs
+	// and access is not a problem. This can occur when:
+	// - the image defines a user ID that is identical across both images
+	// - PodSecurityContext is used and the UIDs is set manually
+	// - Openshift is used and each pod is assigned a different user ID
+	// Due to UIDs being different in other scenarios, we explicitly open the permissions on the
+	// log shared volume so both containers have access.
+	//
+	// For Windows, the security identifiers are larger. Unlike Linux, its not likely to have
+	// containers share the same identifier. The Windows Security Access Manager is not shared
+	// between containers, so we need to open up permissions across more than just the logging
+	// shared volume. Fortunately, Windows allows us to set permissions that recursively affect
+	// future folders and files.
+	switch os {
+	case helperimage.OSTypeWindows:
+		//nolint:lll
+		chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /t /q | out-null"
+		commands := []string{
+			fmt.Sprintf(chmod, s.logsDir()),
+			fmt.Sprintf(chmod, s.Build.RootDir),
+		}
+		container.Command = []string{
+			"pwsh",
+			"-c",
+			strings.Join(commands, ";\n"),
+		}
+
+	default:
+		chmod := "touch %[1]s && (chmod 777 %[1]s || exit 0)"
+		container.Command = []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(chmod, s.logFile()),
+		}
+	}
+
+	return container, nil
 }
 
 func (s *executor) buildRedirectionCmd() string {
@@ -568,9 +593,10 @@ func (s *executor) retrieveShell() (common.Shell, error) {
 
 func (s *executor) generateScripts(shell common.Shell) (map[string]string, error) {
 	scripts := map[string]string{}
-	switch s.Shell().Shell {
-	case shells.SNPwsh:
-		scripts[parsePwshScriptName] = shells.PwshValidationScript
+	shellName := s.Shell().Shell
+	switch shellName {
+	case shells.SNPwsh, shells.SNPowershell:
+		scripts[parsePwshScriptName] = shells.PwshValidationScript(shellName)
 	default:
 		scripts[detectShellScriptName] = shells.BashDetectShellScript
 	}
@@ -880,7 +906,12 @@ func (s *executor) getVolumes() []api.Volume {
 		return volumes
 	}
 
-	mode := int32(0777)
+	var mode *int32
+	if s.helperImageInfo.OSType != helperimage.OSTypeWindows {
+		defaultLinuxMode := int32(0777)
+		mode = &defaultLinuxMode
+	}
+
 	optional := false
 	volumes = append(
 		volumes,
@@ -891,7 +922,7 @@ func (s *executor) getVolumes() []api.Volume {
 					LocalObjectReference: api.LocalObjectReference{
 						Name: s.configMap.Name,
 					},
-					DefaultMode: &mode,
+					DefaultMode: mode,
 					Optional:    &optional,
 				},
 			},

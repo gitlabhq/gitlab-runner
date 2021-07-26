@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 // pwshTrapShellScript is used to wrap a shell script in a trap that makes sure the script always exits
@@ -23,19 +24,10 @@ function runner_script_trap() {
 	$code = 1
 	If($lastExit -eq "True"){ $code = 0 }
 
-	$log_file=%q
 	$out_json= '{"command_exit_code": ' + $code + ', "script": "' + $MyInvocation.MyCommand.Name + '"}'
 
-	# Make sure the command status will always be printed on a new line 
-	if ( $((Get-Content -Path $log_file | Measure-Object -Line).Lines) -gt 0 )
-	{
-		Add-Content $log_file "$out_json"
-	}
-	else
-	{
-		Add-Content $log_file ""
-		Add-Content $log_file "$out_json"
-	}
+	echo ""
+	echo "$out_json"
 }
 
 trap {runner_script_trap}
@@ -65,7 +57,7 @@ func (b *PwshTrapShellWriter) writeTrap(w io.Writer) {
 	// For code readability purpose, the pwshTrapShellScript is written with \n as EOL within the script
 	// However when written into the generated script for a job, the \n used within the trap script is
 	// replaced by the shell EOL to avoid having multiple EOL within it and to keep it consistent
-	_, _ = fmt.Fprintf(w, strings.ReplaceAll(pwshTrapShellScript, "\n", b.EOL), b.logFile)
+	_, _ = fmt.Fprint(w, strings.ReplaceAll(pwshTrapShellScript, "\n", b.EOL))
 }
 
 type PwshTrapShell struct {
@@ -80,6 +72,7 @@ func (b *PwshTrapShell) GenerateScript(buildStage common.BuildStage, info common
 			TemporaryPath: info.Build.TmpProjectDir(),
 			Shell:         b.Shell,
 			EOL:           b.EOL,
+			resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
 		},
 		logFile: b.LogFile,
 	}
