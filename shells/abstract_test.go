@@ -733,10 +733,14 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					"Command",
 					append([]interface{}{"git", "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...,
 				).Once()
-			mockWriter.
+			cleanCmd := mockWriter.
 				On("Command", append(expectedGitForEachArgsFn(), "git clean -ffxd")...).
 				Once()
-			mockWriter.On("Command", append(expectedGitForEachArgsFn(), "git reset --hard")...).Once()
+			mockWriter.On("Command", append(expectedGitForEachArgsFn(), "git reset --hard")...).
+				Run(func(args mock.Arguments) {
+					cleanCmd.Once()
+				}).
+				Once()
 			mockWriter.On("IfCmd", "git", "lfs", "version").Once()
 			mockWriter.On("Command", append(expectedGitForEachArgsFn(), "git lfs pull")...).Once()
 			mockWriter.On("EndIf").Once()
@@ -897,8 +901,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 			mockWriter.On("Noticef", mock.Anything).Once()
 			mockWriter.On("Command", submoduleCommand(test.paths, "sync")...).Once()
 			mockWriter.On("Command", submoduleCommand(test.paths, "update", "--init")...).Once()
-			mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
-			mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").Once()
+			cleanCmd := mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
+			mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").
+				Run(func(args mock.Arguments) {
+					cleanCmd.Once()
+				}).
+				Once()
 			mockWriter.On("IfCmd", "git", "lfs", "version").Once()
 			mockWriter.On("Command", "git", "submodule", "foreach", "git lfs pull").Once()
 			mockWriter.On("EndIf").Once()
