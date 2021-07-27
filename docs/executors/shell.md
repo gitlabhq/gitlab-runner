@@ -103,5 +103,5 @@ group the signal is also sent to them. Windows sends a `taskkill /F /T`.
 On UNIX system `gitlab-runner` sends `SIGTERM` to the process and its
 child processes, and after 10 minutes sends `SIGKILL`. This allows for
 graceful termination for the process. Windows don't have a `SIGTERM`
-equivalent, so the kill process is sent twice. The second is sent after
+equivalent, so the kill signal is sent twice. The second is sent after
 10 minutes.
