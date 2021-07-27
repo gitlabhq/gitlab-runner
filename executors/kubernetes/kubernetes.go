@@ -52,9 +52,14 @@ const (
 	// nodeSelectorWindowsBuildLabel is the label used to reference a specific Windows Version.
 	// https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build
 	nodeSelectorWindowsBuildLabel = "node.kubernetes.io/windows-build"
+
+	apiVersion         = "v1"
+	ownerReferenceKind = "Pod"
 )
 
 var (
+	PropagationPolicy = metav1.DeletePropagationForeground
+
 	executorOptions = executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultBuildsDir:              "/builds",
@@ -137,11 +142,6 @@ type executor struct {
 
 	// Flag if a repo mount and emptyDir volume are needed
 	requireDefaultBuildsDirVolume *bool
-}
-
-type serviceDeleteResponse struct {
-	serviceName string
-	err         error
 }
 
 type serviceCreateResponse struct {
@@ -605,49 +605,26 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) cleanupServices() {
-	ch := make(chan serviceDeleteResponse)
-	var wg sync.WaitGroup
-	wg.Add(len(s.services))
-
-	for _, service := range s.services {
-		go s.deleteKubernetesService(service.ObjectMeta.Name, ch, &wg)
-	}
-
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-
-	for res := range ch {
-		if res.err != nil {
-			s.Errorln(fmt.Sprintf("Error cleaning up the pod service %q: %v", res.serviceName, res.err))
-		}
-	}
-}
-
-func (s *executor) deleteKubernetesService(serviceName string, ch chan<- serviceDeleteResponse, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	err := s.kubeClient.CoreV1().
-		Services(s.configurationOverwrites.namespace).
-		Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
-	ch <- serviceDeleteResponse{serviceName: serviceName, err: err}
-}
-
+// cleanupResources deletes the resources used during the runner job
+// Having a pod does not mean that the owner-dependent relationship exists as an error may occur during setting
+// We therefore explicitly delete the resources if no ownerReference is found on it
+// This does not apply for services as they are created with the owner from the start
+// thus deletion of the pod automatically means deletion of the services if any
 func (s *executor) cleanupResources() {
 	if s.pod != nil {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.
 			CoreV1().
 			Pods(s.pod.Namespace).
-			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{})
+			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{
+				PropagationPolicy: &PropagationPolicy,
+			})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
 		}
 	}
-	if s.credentials != nil {
+
+	if s.credentials != nil && len(s.credentials.OwnerReferences) == 0 {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			Secrets(s.configurationOverwrites.namespace).
@@ -656,7 +633,7 @@ func (s *executor) cleanupResources() {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
-	if s.configMap != nil {
+	if s.configMap != nil && len(s.configMap.OwnerReferences) == 0 {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			ConfigMaps(s.configurationOverwrites.namespace).
@@ -665,8 +642,6 @@ func (s *executor) cleanupResources() {
 			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
 	}
-
-	s.cleanupServices()
 }
 
 //nolint:funlen
@@ -1208,7 +1183,14 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	}
 
 	s.pod = pod
-	s.services, err = s.makePodProxyServices()
+
+	ownerReferences := s.buildPodReferences()
+	err = s.setOwnerReferencesForResources(ownerReferences)
+	if err != nil {
+		return fmt.Errorf("error setting ownerReferences: %w", err)
+	}
+
+	s.services, err = s.makePodProxyServices(ownerReferences)
 	if err != nil {
 		return err
 	}
@@ -1281,6 +1263,51 @@ func (s *executor) preparePodConfig(
 	return pod, nil
 }
 
+func (s *executor) setOwnerReferencesForResources(ownerReferences []metav1.OwnerReference) error {
+	if s.credentials != nil {
+		credentials := s.credentials.DeepCopy()
+		credentials.SetOwnerReferences(ownerReferences)
+
+		var err error
+		s.credentials, err = s.kubeClient.
+			CoreV1().
+			Secrets(s.configurationOverwrites.namespace).
+			Update(context.TODO(), credentials, metav1.UpdateOptions{})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if s.configMap != nil {
+		configMap := s.configMap.DeepCopy()
+		configMap.ObjectMeta.SetOwnerReferences(ownerReferences)
+
+		var err error
+		s.configMap, err = s.kubeClient.
+			CoreV1().
+			ConfigMaps(s.configurationOverwrites.namespace).
+			Update(context.TODO(), configMap, metav1.UpdateOptions{})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *executor) buildPodReferences() []metav1.OwnerReference {
+	return []metav1.OwnerReference{
+		{
+			APIVersion: apiVersion,
+			Kind:       ownerReferenceKind,
+			Name:       s.pod.GetName(),
+			UID:        s.pod.GetUID(),
+		},
+	}
+}
+
 func (s *executor) getDNSPolicy() api.DNSPolicy {
 	dnsPolicy, err := s.Config.Kubernetes.DNSPolicy.Get()
 	if err != nil {
@@ -1301,7 +1328,7 @@ func (s *executor) getHelperImage() string {
 	return s.helperImageInfo.String()
 }
 
-func (s *executor) makePodProxyServices() ([]api.Service, error) {
+func (s *executor) makePodProxyServices(ownerReferences []metav1.OwnerReference) ([]api.Service, error) {
 	s.Debugln("Creating pod proxy services")
 
 	ch := make(chan serviceCreateResponse)
@@ -1321,7 +1348,7 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 			}
 		}
 
-		serviceConfig := s.prepareServiceConfig(serviceName, servicePorts)
+		serviceConfig := s.prepareServiceConfig(serviceName, servicePorts, ownerReferences)
 		go s.createKubernetesService(&serviceConfig, serviceProxy.Settings, ch, &wg)
 	}
 
@@ -1345,11 +1372,16 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 	return proxyServices, nil
 }
 
-func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) api.Service {
+func (s *executor) prepareServiceConfig(
+	name string,
+	ports []api.ServicePort,
+	ownerReferences []metav1.OwnerReference,
+) api.Service {
 	return api.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: name,
-			Namespace:    s.configurationOverwrites.namespace,
+			GenerateName:    name,
+			Namespace:       s.configurationOverwrites.namespace,
+			OwnerReferences: ownerReferences,
 		},
 		Spec: api.ServiceSpec{
 			Ports:    ports,
