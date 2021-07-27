@@ -454,6 +454,8 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
 	w.Command("git", append(foreachArgs, "git reset --hard")...)
 	w.Command("git", updateArgs...)
+	// Clean changed files in sub-submodules
+	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
 
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
