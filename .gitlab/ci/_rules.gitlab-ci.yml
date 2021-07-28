@@ -70,9 +70,10 @@
 # Default branch rules #
 ########################
 
-.rules:default-branch-only:
+.rules:default-branch-only:no_docs:
   rules:
   - <<: *if-runner-or-security-runner-default-branch
+    changes: *code-backstage-patterns
 
 .rules:default-branch-only:always:
   rules:
