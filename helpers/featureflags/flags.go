@@ -20,6 +20,7 @@ const (
 	SkipDockerMachineProvisionOnCreationFailure string = "FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE"
 	UseNewEvalStrategy                          string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
 	UsePowershellPathResolver                   string = "FF_USE_POWERSHELL_PATH_RESOLVER"
+	UseDynamicTraceForceSendInterval            string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
 )
 
 type FeatureFlag struct {
@@ -149,6 +150,14 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When enabled, Powershell resolves pathnames rather than Runner using OS-specific filepath " +
 			"functions that are specific to where Runner is hosted.",
+	},
+	{
+		Name:            UseDynamicTraceForceSendInterval,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, the trace force send interval is dynamically adjusted based on the trace " +
+			"update interval.",
 	},
 }
 

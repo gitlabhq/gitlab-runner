@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 var (
@@ -871,4 +872,41 @@ func TestJobBytesize(t *testing.T) {
 	_, err = jobTrace.Write([]byte(traceMessage))
 	require.NoError(t, err)
 	jobTrace.Success()
+}
+
+func TestDynamicForceSendUpdate(t *testing.T) {
+	intervals := map[time.Duration]time.Duration{
+		common.DefaultUpdateInterval: common.MinTraceForceSendInterval,
+		5 * time.Second:              common.MinTraceForceSendInterval,
+		time.Minute:                  time.Minute * common.TraceForceSendUpdateIntervalMultiplier,
+		common.MaxUpdateInterval:     common.MaxTraceForceSendInterval,
+		common.MaxUpdateInterval * 2: common.MaxTraceForceSendInterval,
+	}
+
+	for _, enabled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL=%v", enabled), func(t *testing.T) {
+			config := common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					FeatureFlags: map[string]bool{
+						featureflags.UseDynamicTraceForceSendInterval: enabled,
+					},
+				},
+			}
+
+			trace, err := newJobTrace(nil, config, jobCredentials)
+			require.NoError(t, err)
+
+			for updateInterval, forceInterval := range intervals {
+				t.Run(fmt.Sprintf("%v => %v", updateInterval, forceInterval), func(t *testing.T) {
+					trace.setUpdateInterval(updateInterval)
+
+					if enabled {
+						assert.Equal(t, forceInterval, trace.forceSendInterval)
+					} else {
+						assert.Equal(t, common.MinTraceForceSendInterval, trace.forceSendInterval)
+					}
+				})
+			}
+		})
+	}
 }
