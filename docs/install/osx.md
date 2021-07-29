@@ -50,6 +50,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
    ```shell
    su - <username>
+   ```
 
 1. Install GitLab Runner as a service and start it:
 
