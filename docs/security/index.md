@@ -5,7 +5,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 comments: false
 ---
 
-# Security of running jobs
+# Security of running jobs **(FREE)**
 
 When using GitLab Runner you should be aware of potential security implications
 when running your jobs.

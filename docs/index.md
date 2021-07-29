@@ -5,7 +5,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# GitLab Runner
+# GitLab Runner **(FREE)**
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
