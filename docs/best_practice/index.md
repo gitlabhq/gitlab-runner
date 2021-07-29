@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Best practices
+# Best practices **(FREE)**
 
 Below are some guidelines you should follow when you use and administer
 GitLab Runner.

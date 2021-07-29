@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
 ---
 
-# Advanced configuration
+# Advanced configuration **(FREE)**
 
 You can change the behavior of GitLab Runner and of individual registered runners.
 

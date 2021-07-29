@@ -1,4 +1,10 @@
-# The Docker executor
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+---
+
+# The Docker executor **(FREE)**
 
 GitLab Runner can use Docker to run jobs on user provided images. This is
 possible with the use of **Docker** executor.
