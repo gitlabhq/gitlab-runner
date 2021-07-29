@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# The Kubernetes executor
+# The Kubernetes executor **(FREE)**
 
 GitLab Runner can use Kubernetes to run builds on a Kubernetes cluster. This is
 possible with the use of the **Kubernetes** executor.

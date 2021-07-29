@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# GitLab Runner commands
+# GitLab Runner commands **(FREE)**
 
 GitLab Runner contains a set of commands you use to register, manage, and
 run your builds.

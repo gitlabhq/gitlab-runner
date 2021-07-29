@@ -5,7 +5,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 comments: false
 ---
 
-# Configuring GitLab Runner
+# Configuring GitLab Runner **(FREE)**
 
 Learn how to configure GitLab Runner.
 
