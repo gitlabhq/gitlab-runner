@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Install GitLab Runner using the official GitLab repositories
+# Install GitLab Runner using the official GitLab repositories **(FREE)**
 
 We provide packages for the currently supported versions of Debian, Ubuntu, Mint, RHEL, Fedora, and CentOS. You may be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file) on other Linux distributions.
 

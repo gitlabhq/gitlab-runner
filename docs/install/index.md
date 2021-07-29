@@ -5,7 +5,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 comments: false
 ---
 
-# Install GitLab Runner
+# Install GitLab Runner **(FREE)**
 
 GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD, and Windows.
 You can install it:

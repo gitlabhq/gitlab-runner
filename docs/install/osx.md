@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Install GitLab Runner on macOS
+# Install GitLab Runner on macOS **(FREE)**
 
 GitLab Runner can be installed and updated on macOS.
 

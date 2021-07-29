@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Install GitLab Runner manually on GNU/Linux
+# Install GitLab Runner manually on GNU/Linux **(FREE)**
 
 If you can't use the [deb/rpm repository](linux-repository.md) to
 install GitLab Runner, or your GNU/Linux OS is not among the supported

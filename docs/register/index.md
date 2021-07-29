@@ -5,7 +5,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 comments: false
 ---
 
-# Registering runners
+# Registering runners **(FREE)**
 
 Registering a runner is the process that binds the runner with one or more GitLab instances.
 
