@@ -75,9 +75,10 @@
   - <<: *if-runner-or-security-runner-default-branch
     changes: *code-backstage-patterns
 
-.rules:default-branch-only:always:
+.rules:default-branch-only:no_docs:always:
   rules:
   - <<: *if-runner-or-security-runner-default-branch
+    changes: *code-backstage-patterns
     when: always
 
 #######################
