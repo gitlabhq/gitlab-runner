@@ -132,7 +132,7 @@ check windows 2004 integration test failures:
   extends:
   - .check windows test failures
   - .windows2004_variables
-  - .rules:default-branch-only:always
+  - .rules:default-branch-only:no_docs
   needs:
   - windows 2004 integration tests
 
@@ -140,6 +140,6 @@ check windows 20H2 integration test failures:
   extends:
   - .check windows test failures
   - .windows20H2_variables
-  - .rules:default-branch-only:always
+  - .rules:default-branch-only:no_docs
   needs:
   - windows 20H2 integration tests
