@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Old GitLab Runner URLs
+# Old GitLab Runner URLs **(FREE)**
 
 NOTE:
 Take a look at the [compatibility section](../index.md#gitlab-runner-versions) to check GitLab Runner compatibility

@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Using libvirt with the Custom executor
+# Using libvirt with the Custom executor **(FREE)**
 
 Using [libvirt](https://libvirt.org/), the Custom executor driver will
 create a new disk and VM for every job it executes, after which the disk

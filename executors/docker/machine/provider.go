@@ -30,6 +30,8 @@ type machineProvider struct {
 	totalActions      *prometheus.CounterVec
 	currentStatesDesc *prometheus.Desc
 	creationHistogram prometheus.Histogram
+	stoppingHistogram prometheus.Histogram
+	removalHistogram  prometheus.Histogram
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
@@ -294,18 +296,20 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 		defer m.stuckRemoveLock.Unlock()
 	}
 
-	details.logger().
-		Warningln("Stopping machine")
-	err = m.machine.Stop(details.Name, machineStopCommandTimeout)
+	details.logger().Warningln("Stopping machine")
+	err = runHistogramCountedOperation(m.stoppingHistogram, func() error {
+		return m.machine.Stop(details.Name, machineStopCommandTimeout)
+	})
 	if err != nil {
 		details.logger().
 			WithError(err).
 			Warningln("Error while stopping machine")
 	}
 
-	details.logger().
-		Warningln("Removing machine")
-	err = m.machine.Remove(details.Name)
+	details.logger().Warningln("Removing machine")
+	err = runHistogramCountedOperation(m.removalHistogram, func() error {
+		return m.machine.Remove(details.Name)
+	})
 	if err != nil {
 		details.RetryCount++
 		time.Sleep(removeRetryInterval)
@@ -313,6 +317,14 @@ func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
 	}
 
 	return nil
+}
+
+func runHistogramCountedOperation(histogram prometheus.Histogram, operation func() error) error {
+	startedAt := time.Now()
+	err := operation()
+	histogram.Observe(time.Since(startedAt).Seconds())
+
+	return err
 }
 
 func (m *machineProvider) finalizeRemoval(details *machineDetails) {
@@ -663,6 +675,26 @@ func newMachineProvider(name, executor string) *machineProvider {
 				Name:    "gitlab_runner_autoscaling_machine_creation_duration_seconds",
 				Help:    "Histogram of machine creation time.",
 				Buckets: prometheus.ExponentialBuckets(30, 1.25, 10),
+				ConstLabels: prometheus.Labels{
+					"executor": name,
+				},
+			},
+		),
+		stoppingHistogram: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "gitlab_runner_autoscaling_machine_stopping_duration_seconds",
+				Help:    "Histogram of machine stopping time.",
+				Buckets: []float64{1, 3, 5, 10, 30, 50, 60, 80, 90, 120},
+				ConstLabels: prometheus.Labels{
+					"executor": name,
+				},
+			},
+		),
+		removalHistogram: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "gitlab_runner_autoscaling_machine_removal_duration_seconds",
+				Help:    "Histogram of machine removal time.",
+				Buckets: []float64{1, 3, 5, 10, 30, 50, 60, 80, 90, 120},
 				ConstLabels: prometheus.Labels{
 					"executor": name,
 				},

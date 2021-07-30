@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Install GitLab Runner on macOS
+# Install GitLab Runner on macOS **(FREE)**
 
 GitLab Runner can be installed and updated on macOS.
 
@@ -46,6 +46,12 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    [security implications documentation](../security/index.md#usage-of-shell-executor)
    for additional detail on what to keep in mind in this scenario.
 
+1. Open a terminal and switch to the current user.
+
+   ```shell
+   su - <username>
+   ```
+
 1. Install GitLab Runner as a service and start it:
 
    ```shell
@@ -84,6 +90,8 @@ GitLab Runner is installed and running.
 NOTE:
 The service needs to be installed from a Terminal window logged in
 as your current user. Only then will you be able to manage the service.
+
+To sign in as your current user, run the command `su - <username>` in the terminal. You can obtain your username by running the command `ls /users`.
 
 Currently, the only proven way for it to work in macOS is by running the service in user-mode.
 

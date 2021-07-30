@@ -161,7 +161,6 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, 
 			case err != nil:
 				l.logger.Warningln(fmt.Sprintf("Error %v. Retrying...", err))
 			default:
-				attempt = -1
 				l.logger.Debug("processStream exited with no error")
 			}
 		}

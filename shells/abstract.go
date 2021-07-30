@@ -11,6 +11,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
@@ -52,6 +53,10 @@ func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, fil
 	}
 
 	file = path.Join(build.CacheDir, key, "cache.zip")
+	if build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver) {
+		return key, file
+	}
+
 	file, err := filepath.Rel(build.BuildDir, file)
 	if err != nil {
 		return "", ""
@@ -449,6 +454,8 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
 	w.Command("git", append(foreachArgs, "git reset --hard")...)
 	w.Command("git", updateArgs...)
+	// Clean changed files in sub-submodules
+	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
 
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
