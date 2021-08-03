@@ -61,6 +61,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testConfiguredBuildDirVolumeMountFeatureFlag":            testBuildDirVolumeMountFeatureFlag,
 		"testUserConfiguredBuildDirVolumeMountFeatureFlag":        testUserConfiguredBuildDirVolumeMountFeatureFlag,
 		"testKubernetesPwshFeatureFlag":                           testKubernetesPwshFeatureFlag,
+		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -834,6 +835,109 @@ func testKubernetesPwshFeatureFlag(t *testing.T, featureFlagName string, feature
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
 	assert.Regexp(t, regexp.MustCompile("PSEdition +Core"), out)
+}
+
+func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	build.Image.Name = common.TestAlpineImage
+
+	tests := map[string]struct {
+		image           string
+		shell           string
+		lifecycleCfg    common.KubernetesContainerLifecyle
+		steps           common.Steps
+		validateOutputs func(t *testing.T, out string, err error)
+	}{
+		"invalid hook configuration: more than one handler type": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PreStop: &common.KubernetesLifecycleHandler{
+					Exec: &common.KubernetesLifecycleExecAction{
+						Command: []string{"touch", "/builds/postStart.txt"},
+					},
+					HTTPGet: &common.KubernetesLifecycleHTTPGet{
+						Host: "localhost",
+						Port: 8080,
+					},
+				},
+			},
+			validateOutputs: func(t *testing.T, out string, err error) {
+				require.Error(t, err)
+				assert.Contains(t, out, "ERROR: Job failed (system failure):")
+				assert.Contains(t, out, "may not specify more than 1 handler type")
+			},
+		},
+		"postStart exec hook bash": {
+			steps: common.Steps{
+				common.Step{
+					Name: common.StepNameScript,
+					Script: []string{
+						"ls -l /builds",
+					},
+				},
+			},
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					Exec: &common.KubernetesLifecycleExecAction{
+						Command: []string{"touch", "/builds/postStart.txt"},
+					},
+				},
+			},
+			validateOutputs: func(t *testing.T, out string, err error) {
+				require.NoError(t, err)
+				assert.Contains(t, out, "Job succeeded")
+				assert.Contains(t, out, "postStart.txt")
+			},
+		},
+		"postStart exec hook pwsh": {
+			image: common.TestPwshImage,
+			shell: shells.SNPwsh,
+			steps: common.Steps{
+				common.Step{
+					Name: common.StepNameScript,
+					Script: []string{
+						"Get-ChildItem /builds",
+					},
+				},
+			},
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					Exec: &common.KubernetesLifecycleExecAction{
+						Command: []string{"touch", "/builds/postStart.txt"},
+					},
+				},
+			},
+			validateOutputs: func(t *testing.T, out string, err error) {
+				require.NoError(t, err)
+				assert.Contains(t, out, "Job succeeded")
+				assert.Contains(t, out, "postStart.txt")
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build.Runner.RunnerSettings.Kubernetes.ContainerLifecycle = tt.lifecycleCfg
+
+			if tt.image != "" {
+				build.Image.Name = tt.image
+			}
+
+			if tt.shell != "" {
+				build.Runner.Shell = tt.shell
+			}
+
+			if tt.steps != nil {
+				build.JobResponse.Steps = tt.steps
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			tt.validateOutputs(t, out, err)
+		})
+	}
 }
 
 func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
