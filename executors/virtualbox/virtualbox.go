@@ -7,12 +7,13 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/vm"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	vbox "gitlab.com/gitlab-org/gitlab-runner/helpers/virtualbox"
 )
 
 type executor struct {
-	executors.AbstractExecutor
+	vm.Executor
 	vmName          string
 	sshCommand      ssh.Client
 	sshPort         string
@@ -92,18 +93,13 @@ func (s *executor) determineBaseSnapshot(baseImage string) string {
 }
 
 // virtualbox doesn't support templates
-func (s *executor) createVM(vmName string) (err error) {
-	baseImage := s.Config.VirtualBox.BaseName
-	if baseImage == "" {
-		return errors.New("missing Image setting from VirtualBox configuration")
-	}
-
-	_, err = vbox.Status(vmName)
+func (s *executor) createVM(baseImage string) (err error) {
+	_, err = vbox.Status(s.vmName)
 	if err != nil {
-		_ = vbox.Unregister(vmName)
+		_ = vbox.Unregister(s.vmName)
 	}
 
-	if !vbox.Exist(vmName) {
+	if !vbox.Exist(s.vmName) {
 		baseSnapshot := s.determineBaseSnapshot(baseImage)
 		if baseSnapshot == "" {
 			s.Debugln("Creating testing VM from VM", baseImage, "...")
@@ -111,7 +107,7 @@ func (s *executor) createVM(vmName string) (err error) {
 			s.Debugln("Creating testing VM from VM", baseImage, "snapshot", baseSnapshot, "...")
 		}
 
-		err = vbox.CreateOsVM(baseImage, vmName, baseSnapshot, s.Config.VirtualBox.BaseFolder)
+		err = vbox.CreateOsVM(baseImage, s.vmName, baseSnapshot, s.Config.VirtualBox.BaseFolder)
 		if err != nil {
 			return err
 		}
@@ -125,7 +121,7 @@ func (s *executor) createVM(vmName string) (err error) {
 		if vmSSHPort == "" {
 			vmSSHPort = "22"
 		}
-		s.sshPort, err = vbox.ConfigureSSH(vmName, vmSSHPort)
+		s.sshPort, err = vbox.ConfigureSSH(s.vmName, vmSSHPort)
 		if err != nil {
 			return err
 		}
@@ -164,7 +160,13 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	s.vmName = s.getVMName()
+	var baseName string
+	baseName, err = s.Executor.GetBaseName(s.Config.VirtualBox.BaseName)
+	if err != nil {
+		return err
+	}
+
+	s.vmName = s.getVMName(baseName)
 
 	if s.Config.VirtualBox.DisableSnapshots && vbox.Exist(s.vmName) {
 		s.Debugln("Deleting old VM...")
@@ -175,7 +177,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	if !vbox.Exist(s.vmName) {
 		s.Println("Creating new VM...")
-		err = s.createVM(s.vmName)
+		err = s.createVM(baseName)
 		if err != nil {
 			return err
 		}
@@ -208,6 +210,10 @@ func (s *executor) printVersion() error {
 }
 
 func (s *executor) validateConfig() error {
+	if s.Config.VirtualBox.BaseName == "" {
+		return errors.New("missing BaseName setting from VirtualBox configuration")
+	}
+
 	if s.BuildShell.PassFile {
 		return errors.New("virtualbox doesn't support shells that require script file")
 	}
@@ -220,20 +226,17 @@ func (s *executor) validateConfig() error {
 		return errors.New("missing VirtualBox configuration")
 	}
 
-	if s.Config.VirtualBox.BaseName == "" {
-		return errors.New("missing BaseName setting from VirtualBox configuration")
-	}
-	return nil
+	return s.ValidateAllowedImages(s.Config.VirtualBox.AllowedImages)
 }
 
-func (s *executor) getVMName() string {
+func (s *executor) getVMName(baseName string) string {
 	if s.Config.VirtualBox.DisableSnapshots {
 		return s.Config.VirtualBox.BaseName + "-" + s.Build.ProjectUniqueName()
 	}
 
 	return fmt.Sprintf(
 		"%s-runner-%s-concurrent-%d",
-		s.Config.VirtualBox.BaseName,
+		baseName,
 		s.Build.Runner.ShortDescription(),
 		s.Build.RunnerID,
 	)
@@ -353,8 +356,10 @@ func init() {
 
 	creator := func() common.Executor {
 		return &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: options,
+			Executor: vm.Executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: options,
+				},
 			},
 		}
 	}

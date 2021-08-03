@@ -184,18 +184,20 @@ type DockerMachineAutoscaling struct {
 
 //nolint:lll
 type ParallelsConfig struct {
-	BaseName         string `toml:"base_name" json:"base_name" long:"base-name" env:"PARALLELS_BASE_NAME" description:"VM name to be used"`
-	TemplateName     string `toml:"template_name,omitempty" json:"template_name" long:"template-name" env:"PARALLELS_TEMPLATE_NAME" description:"VM template to be created"`
-	DisableSnapshots bool   `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"PARALLELS_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
-	TimeServer       string `toml:"time_server,omitempty" json:"time_server" long:"time-server" env:"PARALLELS_TIME_SERVER" description:"Timeserver to sync the guests time from. Defaults to time.apple.com"`
+	BaseName         string   `toml:"base_name" json:"base_name" long:"base-name" env:"PARALLELS_BASE_NAME" description:"VM name to be used"`
+	TemplateName     string   `toml:"template_name,omitempty" json:"template_name" long:"template-name" env:"PARALLELS_TEMPLATE_NAME" description:"VM template to be created"`
+	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"PARALLELS_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
+	TimeServer       string   `toml:"time_server,omitempty" json:"time_server" long:"time-server" env:"PARALLELS_TIME_SERVER" description:"Timeserver to sync the guests time from. Defaults to time.apple.com"`
+	AllowedImages    []string `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"PARALLELS_ALLOWED_IMAGES" description:"Image (base_name) allowlist"`
 }
 
 //nolint:lll
 type VirtualBoxConfig struct {
-	BaseName         string `toml:"base_name" json:"base_name" long:"base-name" env:"VIRTUALBOX_BASE_NAME" description:"VM name to be used"`
-	BaseSnapshot     string `toml:"base_snapshot,omitempty" json:"base_snapshot" long:"base-snapshot" env:"VIRTUALBOX_BASE_SNAPSHOT" description:"Name or UUID of a specific VM snapshot to clone"`
-	BaseFolder       string `toml:"base_folder" json:"base_folder" long:"base-folder" env:"VIRTUALBOX_BASE_FOLDER" description:"Folder in which to save the new VM. If empty, uses VirtualBox default"`
-	DisableSnapshots bool   `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
+	BaseName         string   `toml:"base_name" json:"base_name" long:"base-name" env:"VIRTUALBOX_BASE_NAME" description:"VM name to be used"`
+	BaseSnapshot     string   `toml:"base_snapshot,omitempty" json:"base_snapshot" long:"base-snapshot" env:"VIRTUALBOX_BASE_SNAPSHOT" description:"Name or UUID of a specific VM snapshot to clone"`
+	BaseFolder       string   `toml:"base_folder" json:"base_folder" long:"base-folder" env:"VIRTUALBOX_BASE_FOLDER" description:"Folder in which to save the new VM. If empty, uses VirtualBox default"`
+	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
+	AllowedImages    []string `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"VIRTUALBOX_ALLOWED_IMAGES" description:"Image allowlist"`
 }
 
 //nolint:lll
