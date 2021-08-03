@@ -16,6 +16,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -28,6 +29,8 @@ import (
 
 type DockerPullPolicy string
 type DockerSysCtls map[string]string
+
+type KubernetesHookHandlerType string
 
 const (
 	PullPolicyAlways       = "always"
@@ -349,6 +352,7 @@ type KubernetesConfig struct {
 	CapDrop                                           []string                     `toml:"cap_drop" json:"cap_drop" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
 	DNSPolicy                                         KubernetesDNSPolicy          `toml:"dns_policy,omitempty" json:"dns_policy" long:"dns-policy" env:"KUBERNETES_DNS_POLICY" description:"How Kubernetes should try to resolve DNS from the created pods. If unset, Kubernetes will use the default 'ClusterFirst'. Valid values are: none, default, cluster-first, cluster-first-with-host-net"`
 	DNSConfig                                         KubernetesDNSConfig          `toml:"dns_config" json:"dns_config" description:"Pod DNS config"`
+	ContainerLifecycle                                KubernetesContainerLifecyle  `toml:"container_lifecycle,omitempty" json:"container_lifecycle,omitempty" description:"Actions that the management system should take in response to container lifecycle events"`
 }
 
 //nolint:lll
@@ -450,6 +454,83 @@ type KubernetesNodeAffinity struct {
 type KubernetesHostAliases struct {
 	IP        string   `toml:"ip" json:"ip" long:"ip" description:"The IP address you want to attach hosts to"`
 	Hostnames []string `toml:"hostnames" json:"hostnames" long:"hostnames" description:"A list of hostnames that will be attached to the IP"`
+}
+
+//nolint:lll
+// https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#lifecycle-v1-core
+type KubernetesContainerLifecyle struct {
+	PostStart *KubernetesLifecycleHandler `toml:"post_start,omitempty" json:"post_start,omitempty" description:"PostStart is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes"`
+	PreStop   *KubernetesLifecycleHandler `toml:"pre_stop,omitempty" json:"pre_stop,omitempty" description:"PreStop is called immediately before a container is terminated due to an API request or management event such as liveness/startup probe failure, preemption, resource contention, etc. The handler is not called if the container crashes or exits. The reason for termination is passed to the handler. The Pod's termination grace period countdown begins before the PreStop hooked is executed. Regardless of the outcome of the handler, the container will eventually terminate within the Pod's termination grace period. Other management of the container blocks until the hook completes or until the termination grace period is reached"`
+}
+
+//nolint:lll
+type KubernetesLifecycleHandler struct {
+	Exec      *KubernetesLifecycleExecAction `toml:"exec"  json:"exec" description:"Exec specifies the action to take"`
+	HTTPGet   *KubernetesLifecycleHTTPGet    `toml:"http_get"  json:"http_get" description:"HTTPGet specifies the http request to perform."`
+	TCPSocket *KubernetesLifecycleTCPSocket  `toml:"tcp_socket"  json:"tcp_socket" description:"TCPSocket specifies an action involving a TCP port"`
+}
+
+//nolint:lll
+type KubernetesLifecycleExecAction struct {
+	Command []string `toml:"command" json:"command" description:"Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy"`
+}
+
+//nolint:lll
+type KubernetesLifecycleHTTPGet struct {
+	Host        string                             `toml:"host" json:"host" description:"Host name to connect to, defaults to the pod IP. You probably want to set \"Host\" in httpHeaders instead"`
+	HTTPHeaders []KubernetesLifecycleHTTPGetHeader `toml:"http_headers" json:"http_headers" description:"Custom headers to set in the request. HTTP allows repeated headers"`
+	Path        string                             `toml:"path" json:"path" description:"Path to access on the HTTP server"`
+	Port        int                                `toml:"port" json:"port" description:"Number of the port to access on the container. Number must be in the range 1 to 65535"`
+	Scheme      string                             `toml:"scheme" json:"scheme" description:"Scheme to use for connecting to the host. Defaults to HTTP"`
+}
+
+type KubernetesLifecycleHTTPGetHeader struct {
+	Name  string `toml:"name" json:"name" description:"The header field name"`
+	Value string `toml:"value" json:"value" description:"The header field value"`
+}
+
+//nolint:lll
+type KubernetesLifecycleTCPSocket struct {
+	Host string `toml:"host" json:"host" description:"Host name to connect to, defaults to the pod IP. You probably want to set \"Host\" in httpHeaders instead"`
+	Port int    `toml:"port" json:"port" description:"Number of the port to access on the container. Number must be in the range 1 to 65535"`
+}
+
+// ToKubernetesLifecycleHandler converts our lifecycle structs to the ones from the Kubernetes API.
+// We can't use them directly since they don't suppor toml.
+func (h *KubernetesLifecycleHandler) ToKubernetesLifecycleHandler() *api.Handler {
+	kubeHandler := &api.Handler{}
+
+	if h.Exec != nil {
+		kubeHandler.Exec = &api.ExecAction{
+			Command: h.Exec.Command,
+		}
+	}
+	if h.HTTPGet != nil {
+		httpHeaders := []api.HTTPHeader{}
+
+		for _, e := range h.HTTPGet.HTTPHeaders {
+			httpHeaders = append(httpHeaders, api.HTTPHeader{
+				Name:  e.Name,
+				Value: e.Value,
+			})
+		}
+
+		kubeHandler.HTTPGet = &api.HTTPGetAction{
+			Host:        h.HTTPGet.Host,
+			Port:        intstr.FromInt(h.HTTPGet.Port),
+			Path:        h.HTTPGet.Path,
+			Scheme:      api.URIScheme(h.HTTPGet.Scheme),
+			HTTPHeaders: httpHeaders,
+		}
+	}
+	if h.TCPSocket != nil {
+		kubeHandler.TCPSocket = &api.TCPSocketAction{
+			Host: h.TCPSocket.Host,
+			Port: intstr.FromInt(h.TCPSocket.Port),
+		}
+	}
+
+	return kubeHandler
 }
 
 type NodeSelector struct {
@@ -836,6 +917,11 @@ func (c *KubernetesConfig) GetNodeAffinity() *api.NodeAffinity {
 		nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, preferred.GetPreferredSchedulingTerm())
 	}
 	return &nodeAffinity
+}
+
+// GetContainerLifecycle returns the container lifecycle configuration
+func (c *KubernetesConfig) GetContainerLifecycle() KubernetesContainerLifecyle {
+	return c.ContainerLifecycle
 }
 
 func (c *NodeSelector) GetNodeSelector() *api.NodeSelector {
