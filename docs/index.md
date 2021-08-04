@@ -36,6 +36,11 @@ Backward compatibility is guaranteed between minor version updates. However, som
 version updates of GitLab can introduce new features that require GitLab Runner to be on the same minor
 version.
 
+If you host your own runners but host your repositories on GitLab.com,
+keep GitLab Runner [updated](install/index.md)
+to the latest version, as GitLab.com is
+[updated continuously](https://gitlab.com/gitlab-org/release/tasks/-/issues).
+
 ## Runner registration
 
 After you install the application, you [**register**](register/index.md)
