@@ -284,8 +284,8 @@ on the `.gitlab-ci.yml` file with the following variables:
    KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT: 1Gi
 ```
 
-The values for these variables are restricted to what the max overwrite
-for that resource has been set to.
+The values for these variables are restricted to the [max overwrite](#the-available-configtoml-settings)
+setting for that resource. If the max overwrite has not been set for a resource, the variable is ignored.
 
 ## Define settings in the configuration TOML
 
