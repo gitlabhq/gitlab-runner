@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	k8s "k8s.io/client-go/kubernetes"
@@ -62,6 +63,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testUserConfiguredBuildDirVolumeMountFeatureFlag":        testUserConfiguredBuildDirVolumeMountFeatureFlag,
 		"testKubernetesPwshFeatureFlag":                           testKubernetesPwshFeatureFlag,
 		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
+		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
 	}
 
 	featureFlags := []string{
@@ -566,6 +568,170 @@ func testUserConfiguredBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagN
 	assert.NoError(t, err)
 }
 
+// testKubernetesGarbageCollection tests the deletion of resources via garbage collector once the owning pod is deleted
+func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	ctxTimout := 1 * time.Minute
+	client := getTestKubeClusterClient(t)
+
+	validateResourcesCreated := func(
+		t *testing.T,
+		client *k8s.Clientset,
+		featureFlagValue bool,
+		namespace string,
+		podName string,
+	) {
+		credentials, err := getSecrets(client, namespace, podName)
+		require.NoError(t, err)
+		configMaps, err := getConfigMaps(client, namespace, podName)
+		require.NoError(t, err)
+
+		assert.NotEmpty(t, credentials)
+		if !featureFlagValue {
+			assert.NotEmpty(t, configMaps)
+		} else {
+			assert.Empty(t, configMaps)
+		}
+	}
+
+	validateResourcesDeleted := func(t *testing.T, client *k8s.Clientset, namespace string, podName string) {
+		credentials, err := getSecrets(client, namespace, podName)
+		require.NoError(t, err)
+		configMaps, err := getConfigMaps(client, namespace, podName)
+		require.NoError(t, err)
+
+		assert.Empty(t, credentials)
+		assert.Empty(t, configMaps)
+	}
+
+	tests := map[string]struct {
+		namespace string
+		init      func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string)
+		finalize  func(t *testing.T, client *k8s.Clientset, namespace string)
+	}{
+		"pod deletion during build step": {
+			namespace: "default",
+		},
+		"pod deletion during prepare step": {
+			namespace: "default",
+		},
+		"pod deletion during prepare stage in custom namespace": {
+			namespace: "garbage-collection-namespace",
+			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimout)
+				defer cancel()
+
+				k8sNamespace := &v1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:         namespace,
+						GenerateName: namespace,
+					},
+				}
+				k8sNamespace, err := client.CoreV1().Namespaces().Create(ctx, k8sNamespace, metav1.CreateOptions{})
+				require.NoError(t, err)
+
+				credentials, err := getSecrets(client, namespace, "")
+				require.NoError(t, err)
+				configMaps, err := getConfigMaps(client, namespace, "")
+				require.NoError(t, err)
+
+				assert.Empty(t, credentials)
+				assert.Empty(t, configMaps)
+			},
+			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimout)
+				defer cancel()
+
+				err := client.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+				require.NoError(t, err)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				jobResponse, err := common.GetRemoteBuildResponse(
+					"sleep 5000",
+				)
+				require.NoError(t, err)
+
+				jobResponse.Credentials = []common.Credentials{
+					{
+						Type:     "registry",
+						URL:      "http://example.com",
+						Username: "user",
+						Password: "password",
+					},
+				}
+
+				return jobResponse, nil
+			})
+			build.Runner.Kubernetes.Namespace = tc.namespace
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			if tc.init != nil {
+				tc.init(t, build, client, tc.namespace)
+			}
+
+			deletedPodNameCh := make(chan string)
+			defer buildtest.OnUserStage(build, func() {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimout)
+				defer cancel()
+				pods, err := client.CoreV1().Pods(tc.namespace).List(
+					ctx,
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+
+				validateResourcesCreated(t, client, featureFlagValue, tc.namespace, pod.Name)
+
+				err = client.
+					CoreV1().
+					Pods(tc.namespace).
+					Delete(ctx, pod.Name, metav1.DeleteOptions{
+						PropagationPolicy: &kubernetes.PropagationPolicy,
+					})
+				require.NoError(t, err)
+
+				deletedPodNameCh <- pod.Name
+			})()
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+
+			podName := <-deletedPodNameCh
+
+			if !featureFlagValue {
+				assert.True(t, kubernetes.IsKubernetesPodNotFoundError(err), "expected err NotFound, but got %T", err)
+				assert.Contains(
+					t,
+					out,
+					"ERROR: Job failed (system failure):",
+				)
+			} else {
+				assert.Errorf(t, err, "command terminated with exit code 137")
+			}
+
+			assert.Contains(
+				t,
+				out,
+				fmt.Sprintf("pods %q not found", podName),
+			)
+
+			validateResourcesDeleted(t, client, tc.namespace, podName)
+
+			if tc.finalize != nil {
+				tc.finalize(t, client, tc.namespace)
+			}
+		})
+	}
+}
+
 // TestLogDeletionAttach tests the outcome when the log files are all deleted
 func TestLogDeletionAttach(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
@@ -971,6 +1137,56 @@ func getTestKubeClusterClient(t *testing.T) *k8s.Clientset {
 	require.NoError(t, err)
 
 	return client
+}
+
+// getSecrets retrieves all the secrets found in the given namespace
+// with at least one ownerReference name matching the name given
+// If ownerName is an empty string, all the secrets resources found are returned
+func getSecrets(client *k8s.Clientset, namespace, ownerName string) ([]v1.Secret, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	credList, err := client.CoreV1().Secrets(namespace).List(
+		ctx,
+		metav1.ListOptions{},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	credentials := []v1.Secret{}
+	for _, cred := range credList.Items {
+		if len(cred.OwnerReferences) == 1 && cred.OwnerReferences[0].Name == ownerName {
+			credentials = append(credentials, cred)
+		}
+	}
+
+	return credentials, nil
+}
+
+// getConfigMaps retrieves all the configMaps found in the given namespace
+// with at least one ownerReference name matching the name given
+// If ownerName is an empty string, all the configMaps resources found are returned
+func getConfigMaps(client *k8s.Clientset, namespace, ownerName string) ([]v1.ConfigMap, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	configMapList, err := client.CoreV1().ConfigMaps(namespace).List(
+		ctx,
+		metav1.ListOptions{},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	configMaps := []v1.ConfigMap{}
+	for _, cfg := range configMapList.Items {
+		if len(cfg.OwnerReferences) == 1 && cfg.OwnerReferences[0].Name == ownerName {
+			configMaps = append(configMaps, cfg)
+		}
+	}
+
+	return configMaps, nil
 }
 
 func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
