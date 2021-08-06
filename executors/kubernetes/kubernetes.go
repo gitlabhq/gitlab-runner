@@ -1096,7 +1096,7 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 }
 
 func (s *executor) isSharedBuildsDirRequired() bool {
-	return true
+	return !s.isDefaultBuildsDirVolumeRequired()
 }
 
 func (s *executor) setupCredentials() error {
