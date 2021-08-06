@@ -1877,6 +1877,7 @@ func TestPrepare(t *testing.T) {
 			e.featureChecker = nil
 			e.pullManager = nil
 			e.requireDefaultBuildsDirVolume = nil
+			e.requireSharedBuildsDir = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)

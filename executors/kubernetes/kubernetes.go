@@ -139,6 +139,8 @@ type executor struct {
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
 
+	requireSharedBuildsDir *bool
+
 	// Flag if a repo mount and emptyDir volume are needed
 	requireDefaultBuildsDirVolume *bool
 }
@@ -1096,7 +1098,36 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 }
 
 func (s *executor) isSharedBuildsDirRequired() bool {
-	return !s.isDefaultBuildsDirVolumeRequired()
+	// Return quickly when default builds dir is used as job is
+	// isolated to pod, so no need for SharedBuildsDir behavior
+	if s.isDefaultBuildsDirVolumeRequired() {
+		return false
+	}
+
+	var required = true
+	if s.requireSharedBuildsDir != nil {
+		return *s.requireSharedBuildsDir
+	}
+
+	// Fetch name of the volume backing the builds volume mount
+	buildVolumeName := "repo"
+	for _, mount := range s.getVolumeMountsForConfig() {
+		if mount.MountPath == s.Build.RootDir {
+			buildVolumeName = mount.Name
+			break
+		}
+	}
+
+	// Require shared builds dir when builds dir volume is anything except an emptyDir
+	for _, volume := range s.getVolumes() {
+		if volume.Name == buildVolumeName && volume.VolumeSource.EmptyDir != nil {
+			required = false
+			break
+		}
+	}
+
+	s.requireSharedBuildsDir = &required
+	return required
 }
 
 func (s *executor) setupCredentials() error {
