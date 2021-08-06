@@ -951,11 +951,81 @@ Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976
 
 The following errors are commonly encountered when using the Kubernetes executor.
 
-### `Build failed (system failure): timedout waiting for pod to start`
+### `Job failed (system failure): timed out waiting for pod to start`
 
 If the cluster cannot schedule the build pod before the timeout defined by `poll_timeout`, the build pod returns an error. The [Kubernetes Scheduler](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-lifetime) should be able to delete it.
 
 To fix this issue, increase the `poll_timeout` value in your `config.toml` file.
+
+### `context deadline exceeded`
+
+The `context deadline exceeded` errors in job logs usually indicate that the Kubernetes API client hit a timeout for a given cluster API request.
+
+Check the [metrics of the `kube-apiserver` cluster component](https://kubernetes.io/docs/concepts/cluster-administration/system-metrics/) for any signs of:
+
+- Increased response latencies.
+- Error rates for common create or delete operations over pods, secrets, ConfigMaps, and other core (v1) resources.
+
+Logs for timeout-driven errors from the `kube-apiserver` operations may appear as:
+
+```plaintext
+Job failed (system failure): prepare environment: context deadline exceeded
+Job failed (system failure): prepare environment: setting up build pod: context deadline exceeded
+```
+
+In some cases, the `kube-apiserver` error response might provide additional details of its sub-components failing (such as the Kubernetes cluster's `etcdserver`):
+
+```plaintext
+Job failed (system failure): prepare environment: etcdserver: request timed out
+Job failed (system failure): prepare environment: etcdserver: leader changed
+Job failed (system failure): prepare environment: Internal error occurred: resource quota evaluates timeout
+```
+
+These `kube-apiserver` service failures can occur during the creation of the build pod and also during cleanup attempts after completion:
+
+```plaintext
+Error cleaning up secrets: etcdserver: request timed out
+Error cleaning up secrets: etcdserver: leader changed
+
+Error cleaning up pod: etcdserver: request timed out, possibly due to previous leader failure
+Error cleaning up pod: etcdserver: request timed out
+Error cleaning up pod: context deadline exceeded
+```
+
+### `request did not complete within requested timeout`
+
+The message `request did not complete within requested timeout` observed during build pod creation indicates that a configured [admission control webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) on the Kubernetes cluster is timing out.
+
+Admission control webhooks are a cluster-level administrative control intercept for all API requests they're scoped for, and can cause failures if they do not execute in time.
+
+Admission control webhooks support filters that can finely control which API requests and namespace sources it intercepts. If the GitLab Runner's Kubernetes API calls do not need to pass through an admission control webhook then you may alter the [webhook's selector/filter configuration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector) to ignore GitLab Runner's namespace, or apply exclusion labels/annotations over the GitLab Runner pod by configuring `podAnnotations` or `podLabels` in the [GitLab Runner Helm Chart `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/57e026d7f43f63adc32cdd2b21e6d450abcf0686/values.yaml#L490-500).
+
+For example, to avoid [DataDog Admission Controller webhook](https://docs.datadoghq.com/agent/cluster_agent/admission_controller/) from intercepting API requests made by the GitLab Runner manager pod, the following can be added:
+
+```yaml
+podLabels:
+  admission.datadoghq.com/enabled: false
+```
+
+To list a Kubernetes cluster's admission control webhooks, run:
+
+```shell
+kubectl get validatingwebhookconfiguration -o yaml
+kubectl get mutatingwebhookconfiguration -o yaml
+```
+
+The following forms of logs can be observed when an admission control webhook times out:
+
+```plaintext
+Job failed (system failure): prepare environment: Timeout: request did not complete within requested timeout
+Job failed (system failure): prepare environment: setting up credentials: Timeout: request did not complete within requested timeout
+```
+
+A failure from an admission control webhook may instead appear as:
+
+```plaintext
+Job failed (system failure): prepare environment: setting up credentials: Internal error occurred: failed calling webhook "example.webhook.service"
+```
 
 ### `fatal: unable to access 'https://gitlab-ci-token:token@example.com/repo/proj.git/': Could not resolve host: example.com`
 
