@@ -64,7 +64,6 @@ var (
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultBuildsDir:              "/builds",
 		DefaultCacheDir:               "/cache",
-		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.NormalShell,
@@ -163,6 +162,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.pullManager = pull.NewPullManager(pullPolicies, &s.BuildLogger)
 
 	s.prepareOptions(options.Build)
+
+	// Dynamically configure use of shared build dir allowing
+	// for static build dir when isolated volume is in use.
+	s.SharedBuildsDir = s.isSharedBuildsDirRequired()
 
 	if err = s.checkDefaults(); err != nil {
 		return fmt.Errorf("check defaults error: %w", err)
@@ -1090,6 +1093,10 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 	s.requireDefaultBuildsDirVolume = &required
 
 	return required
+}
+
+func (s *executor) isSharedBuildsDirRequired() bool {
+	return true
 }
 
 func (s *executor) setupCredentials() error {

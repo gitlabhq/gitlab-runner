@@ -935,8 +935,9 @@ func TestPrepare(t *testing.T) {
 		RunnerConfig *common.RunnerConfig
 		Build        *common.Build
 
-		Expected           *executor
-		ExpectedPullPolicy api.PullPolicy
+		Expected                *executor
+		ExpectedPullPolicy      api.PullPolicy
+		ExpectedSharedBuildsDir bool
 	}{
 		{
 			Name:         "all with limits",
@@ -1702,6 +1703,136 @@ func TestPrepare(t *testing.T) {
 			},
 			Error: `prepare helper image: unsupported OSType "freebsd"`,
 		},
+		{
+			Name:         "builds dir default",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/builds",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: false,
+		},
+		{
+			Name:         "builds dir user specified empty_dir",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+						Volumes: common.KubernetesVolumes{
+							EmptyDirs: []common.KubernetesEmptyDir{
+								{
+									Name:      "repo",
+									MountPath: "/builds",
+									Medium:    "Memory",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/builds",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: false,
+		},
+		{
+			Name:         "builds dir user specified host_path",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{
+									Name:      "repo-host",
+									MountPath: "/builds",
+									HostPath:  "/mnt/builds",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/builds",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: true,
+		},
+		{
+			Name:         "builds dir user specified pvc",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+						Volumes: common.KubernetesVolumes{
+							PVCs: []common.KubernetesPVC{
+								{
+									Name:      "repo-pvc",
+									MountPath: "/builds",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				RootDir: "/builds",
+				Runner:  &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -1738,10 +1869,14 @@ func TestPrepare(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, test.ExpectedPullPolicy, pullPolicy)
 
+			sharedBuildsDir := e.isSharedBuildsDirRequired()
+			assert.Equal(t, test.ExpectedSharedBuildsDir, sharedBuildsDir)
+
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
 			e.pullManager = nil
+			e.requireDefaultBuildsDirVolume = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
