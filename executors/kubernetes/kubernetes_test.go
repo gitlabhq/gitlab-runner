@@ -4082,3 +4082,164 @@ func setupExecutor(shell string, successfulResponse common.JobResponse) *executo
 		},
 	}
 }
+
+func TestLifecyclePrepare(t *testing.T) {
+	initExecutor := func(lifecycleCfg common.KubernetesContainerLifecyle) *executor {
+		return &executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				ExecutorOptions: executorOptions,
+				Build: &common.Build{
+					Runner: &common.RunnerConfig{},
+				},
+				Config: common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Kubernetes: &common.KubernetesConfig{
+							ContainerLifecycle: lifecycleCfg,
+						},
+					},
+				},
+			},
+		}
+	}
+
+	execHandler := &api.ExecAction{
+		Command: []string{"ls", "-alF"},
+	}
+
+	httpGetHandler := &api.HTTPGetAction{
+		Port:        intstr.FromInt(8080),
+		Path:        "/test",
+		Host:        "localhost",
+		HTTPHeaders: []api.HTTPHeader{},
+	}
+
+	tcpSocketHander := &api.TCPSocketAction{
+		Port: intstr.FromInt(8080),
+		Host: "localhost",
+	}
+
+	tests := map[string]struct {
+		lifecycleCfg        common.KubernetesContainerLifecyle
+		validateHookHandler func(*testing.T, *api.Lifecycle)
+	}{
+		"empty container lifecycle": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle)
+			},
+		},
+		"valid preStop exec hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PreStop: &common.KubernetesLifecycleHandler{
+					Exec: &common.KubernetesLifecycleExecAction{
+						Command: []string{"ls", "-alF"},
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PostStart)
+
+				assert.Equal(t, execHandler, lifecycle.PreStop.Exec)
+				assert.Nil(t, lifecycle.PreStop.HTTPGet)
+				assert.Nil(t, lifecycle.PreStop.TCPSocket)
+			},
+		},
+		"valid preStop httpGet hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PreStop: &common.KubernetesLifecycleHandler{
+					HTTPGet: &common.KubernetesLifecycleHTTPGet{
+						Port: 8080,
+						Host: "localhost",
+						Path: "/test",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PostStart)
+
+				assert.Equal(t, httpGetHandler, lifecycle.PreStop.HTTPGet)
+				assert.Nil(t, lifecycle.PreStop.Exec)
+				assert.Nil(t, lifecycle.PreStop.TCPSocket)
+			},
+		},
+		"valid preStop TCPSocket hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PreStop: &common.KubernetesLifecycleHandler{
+					TCPSocket: &common.KubernetesLifecycleTCPSocket{
+						Port: 8080,
+						Host: "localhost",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PostStart)
+
+				assert.Equal(t, tcpSocketHander, lifecycle.PreStop.TCPSocket)
+				assert.Nil(t, lifecycle.PreStop.Exec)
+				assert.Nil(t, lifecycle.PreStop.HTTPGet)
+			},
+		},
+		"valid postStart exec hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					Exec: &common.KubernetesLifecycleExecAction{
+						Command: []string{"ls", "-alF"},
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PreStop)
+
+				assert.Equal(t, execHandler, lifecycle.PostStart.Exec)
+				assert.Nil(t, lifecycle.PostStart.HTTPGet)
+				assert.Nil(t, lifecycle.PostStart.TCPSocket)
+			},
+		},
+		"valid postStart httpGet hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					HTTPGet: &common.KubernetesLifecycleHTTPGet{
+						Port: 8080,
+						Host: "localhost",
+						Path: "/test",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PreStop)
+
+				assert.Equal(t, httpGetHandler, lifecycle.PostStart.HTTPGet)
+				assert.Nil(t, lifecycle.PostStart.Exec)
+				assert.Nil(t, lifecycle.PostStart.TCPSocket)
+			},
+		},
+		"valid postStart TCPSocket hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					TCPSocket: &common.KubernetesLifecycleTCPSocket{
+						Port: 8080,
+						Host: "localhost",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PreStop)
+
+				assert.Equal(t, tcpSocketHander, lifecycle.PostStart.TCPSocket)
+				assert.Nil(t, lifecycle.PostStart.Exec)
+				assert.Nil(t, lifecycle.PostStart.HTTPGet)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			executor := initExecutor(tt.lifecycleCfg)
+			lifecycle := executor.prepareLifecycleHooks()
+
+			if tt.validateHookHandler != nil {
+				tt.validateHookHandler(t, lifecycle)
+			}
+		})
+	}
+}

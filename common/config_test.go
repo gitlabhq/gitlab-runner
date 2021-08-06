@@ -111,6 +111,11 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 }
 
 func TestConfigParse(t *testing.T) {
+	httpHeaders := []KubernetesLifecycleHTTPGetHeader{
+		{Name: "header_name_1", Value: "header_value_1"},
+		{Name: "header_name_2", Value: "header_value_2"},
+	}
+
 	tests := map[string]struct {
 		config         string
 		validateConfig func(t *testing.T, config *Config)
@@ -390,6 +395,152 @@ func TestConfigParse(t *testing.T) {
 				dnsPolicy, err := config.Runners[0].Kubernetes.DNSPolicy.Get()
 				assert.NoError(t, err)
 				assert.Equal(t, api.DNSClusterFirst, dnsPolicy)
+			},
+		},
+		"check empty container lifecycle": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						namespace = "default"
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				lifecycleCfg := config.Runners[0].Kubernetes.GetContainerLifecycle()
+				assert.Nil(t, lifecycleCfg.PostStart)
+				assert.Nil(t, lifecycleCfg.PreStop)
+			},
+		},
+		"check postStart execAction configuration": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						namespace = "default"
+						[runners.kubernetes.container_lifecycle.post_start.exec]
+							command = ["ls", "-l"]
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				lifecycleCfg := config.Runners[0].Kubernetes.GetContainerLifecycle()
+				assert.NotNil(t, lifecycleCfg.PostStart)
+
+				assert.Equal(t, []string{"ls", "-l"}, lifecycleCfg.PostStart.Exec.Command)
+				assert.Nil(t, nil, lifecycleCfg.PostStart.HTTPGet)
+				assert.Nil(t, nil, lifecycleCfg.PostStart.TCPSocket)
+			},
+		},
+		"check postStart httpGetAction configuration": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						namespace = "default"
+						[runners.kubernetes.container_lifecycle.post_start.http_get]
+							port = 8080
+							host = "localhost"
+							path = "/test"
+							[[runners.kubernetes.container_lifecycle.post_start.http_get.http_headers]]
+								name = "header_name_1"
+								value = "header_value_1"
+							[[runners.kubernetes.container_lifecycle.post_start.http_get.http_headers]]
+								name = "header_name_2"
+								value = "header_value_2"
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				lifecycleCfg := config.Runners[0].Kubernetes.GetContainerLifecycle()
+				assert.NotNil(t, lifecycleCfg.PostStart)
+
+				assert.Equal(t, 8080, lifecycleCfg.PostStart.HTTPGet.Port)
+				assert.Equal(t, "localhost", lifecycleCfg.PostStart.HTTPGet.Host)
+				assert.Equal(t, "/test", lifecycleCfg.PostStart.HTTPGet.Path)
+				assert.Equal(t, httpHeaders, lifecycleCfg.PostStart.HTTPGet.HTTPHeaders)
+			},
+		},
+		"check postStart tcpSocketAction configuration": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						namespace = "default"
+						[runners.kubernetes.container_lifecycle.post_start.tcp_socket]
+							port = 8080
+							host = "localhost"
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				lifecycleCfg := config.Runners[0].Kubernetes.GetContainerLifecycle()
+				assert.NotNil(t, lifecycleCfg.PostStart)
+
+				assert.Equal(t, 8080, lifecycleCfg.PostStart.TCPSocket.Port)
+				assert.Equal(t, "localhost", lifecycleCfg.PostStart.TCPSocket.Host)
+			},
+		},
+		"check preStop execAction configuration": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						namespace = "default"
+						[runners.kubernetes.container_lifecycle.pre_stop.exec]
+							command = ["ls", "-l"]
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				lifecycleCfg := config.Runners[0].Kubernetes.GetContainerLifecycle()
+				assert.NotNil(t, lifecycleCfg.PreStop)
+
+				assert.Equal(t, []string{"ls", "-l"}, lifecycleCfg.PreStop.Exec.Command)
+				assert.Nil(t, nil, lifecycleCfg.PreStop.HTTPGet)
+				assert.Nil(t, nil, lifecycleCfg.PreStop.TCPSocket)
+			},
+		},
+		"check preStop httpGetAction configuration": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						namespace = "default"
+						[runners.kubernetes.container_lifecycle.pre_stop.http_get]
+						port = 8080
+						host = "localhost"
+						path = "/test"
+						[[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+							name = "header_name_1"
+							value = "header_value_1"
+						[[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+							name = "header_name_2"
+							value = "header_value_2"
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				lifecycleCfg := config.Runners[0].Kubernetes.GetContainerLifecycle()
+				assert.NotNil(t, lifecycleCfg.PreStop)
+
+				assert.Equal(t, 8080, lifecycleCfg.PreStop.HTTPGet.Port)
+				assert.Equal(t, "localhost", lifecycleCfg.PreStop.HTTPGet.Host)
+				assert.Equal(t, "/test", lifecycleCfg.PreStop.HTTPGet.Path)
+				assert.Equal(t, httpHeaders, lifecycleCfg.PreStop.HTTPGet.HTTPHeaders)
+			},
+		},
+		"check preStop tcpSocketAction configuration": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						namespace = "default"
+						[runners.kubernetes.container_lifecycle.pre_stop.tcp_socket]
+							port = 8080
+							host = "localhost"
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				lifecycleCfg := config.Runners[0].Kubernetes.GetContainerLifecycle()
+				assert.NotNil(t, lifecycleCfg.PreStop)
+
+				assert.Equal(t, 8080, lifecycleCfg.PreStop.TCPSocket.Port)
+				assert.Equal(t, "localhost", lifecycleCfg.PreStop.TCPSocket.Host)
 			},
 		},
 	}

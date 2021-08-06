@@ -197,8 +197,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
 
-	err = s.AbstractExecutor.PrepareBuildAndShell()
-	if err != nil {
+	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
 		return fmt.Errorf("prepare build and shell: %w", err)
 	}
 
@@ -756,7 +755,8 @@ func (s *executor) buildContainer(
 				s.Config.Kubernetes.CapDrop,
 			),
 		},
-		Stdin: true,
+		Lifecycle: s.prepareLifecycleHooks(),
+		Stdin:     true,
 	}
 
 	return container, nil
@@ -1525,6 +1525,25 @@ func (s *executor) prepareOptions(build *common.Build) {
 	s.options.Image = build.Image
 
 	s.getServices(build)
+}
+
+func (s *executor) prepareLifecycleHooks() *api.Lifecycle {
+	lifecycleCfg := s.Config.Kubernetes.GetContainerLifecycle()
+
+	if lifecycleCfg.PostStart == nil && lifecycleCfg.PreStop == nil {
+		return nil
+	}
+
+	lifecycle := &api.Lifecycle{}
+
+	if lifecycleCfg.PostStart != nil {
+		lifecycle.PostStart = lifecycleCfg.PostStart.ToKubernetesLifecycleHandler()
+	}
+	if lifecycleCfg.PreStop != nil {
+		lifecycle.PreStop = lifecycleCfg.PreStop.ToKubernetesLifecycleHandler()
+	}
+
+	return lifecycle
 }
 
 func (s *executor) getServices(build *common.Build) {

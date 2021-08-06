@@ -386,13 +386,13 @@ concurrent = 4
 a specified host path inside of the container. The volume can be configured with
 following options:
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| host_path  | string  | no       | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes    | The name of the volume. |
+| `mount_path` | string    | Yes    | Path inside of container where the volume should be mounted. |
+| `sub_path`   | string    | No     | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `host_path`  | string    | No     | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
+| `read_only`  | boolean   | No     | Sets the volume in read-only mode (defaults to false). |
 
 ### PVC volumes
 
@@ -400,25 +400,25 @@ following options:
 that is defined in Kubernetes cluster and mount it inside of the container. The volume
 can be configured with following options:
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used. |
+| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
+| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 
 ### ConfigMap volumes
 
 _ConfigMap_ volume configuration instructs Kubernetes to use a [_configMap_](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
 that is defined in Kubernetes cluster and mount it inside of the container.
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume and at the same time the name of _configMap_ that should be used |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | The name of the volume and at the same time the name of _configMap_ that should be used. |
+| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
+| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `items`      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
 stored inside of the selected mount path. By default all keys are present, _configMap's_ key
@@ -436,13 +436,13 @@ to volume's mount path) where _configMap's_ value should be saved. When using `i
 [_Secret_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#secret) configuration instructs Kubernetes to use
 a _secret_ that is defined in Kubernetes cluster and mount it inside of the container.
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume and at the same time the name of _secret_ that should be used |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | The name of the volume and at the same time the name of _secret_ that should be used. |
+| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
+| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `items`      | `map[string]string` | No   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _secret_ volume each key from selected _secret_ will be changed into a file
 stored inside of the selected mount path. By default all keys are present, _secret's_ key
@@ -459,26 +459,26 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 [_emptyDir_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) configuration instructs Kubernetes to mount an empty directory inside of the container.
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| medium     | string  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
+| Option       | Type    | Required | Description |
+|--------------|---------|----------|-------------|
+| `name`       | string  | Yes      | The name of the volume. |
+| `mount_path` | string  | Yes      | Path inside of container where the volume should be mounted. |
+| `sub_path`   | string  | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `medium`     | string  | No       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to ""). |
 
 ### CSI volumes
 
 [_CSI_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#csi) configuration instructs Kubernetes to use a custom CSI driver to mount an arbitrary storage system inside of the container.
 
-| Option            | Type                | Required | Description |
-|-------------------|---------------------|----------|-------------|
-| name              | string              | yes      | The name of the volume |
-| mount_path        | string              | yes      | Path inside of container where the volume should be mounted |
-| driver            | string              | yes      | A string value that specifies the name of the volume driver to use. |
-| fs_type           | string              | no       | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".) |
-| volume_attributes | `map[string]string` | no       | Key-value pair mapping for attributes of the CSI volume. |
-| sub_path          | string              | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| read_only         | boolean             | no       | Sets the volume in read-only mode (defaults to false) |
+| Option              | Type                | Required | Description |
+|---------------------|---------------------|----------|-------------|
+| `name`              | string              | Yes      | The name of the volume. |
+| `mount_path`        | string              | Yes      | Path inside of container where the volume should be mounted. |
+| `driver`            | string              | Yes      | A string value that specifies the name of the volume driver to use. |
+| `fs_type`           | string              | No       | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".). |
+| `volume_attributes` | `map[string]string` | No       | Key-value pair mapping for attributes of the CSI volume. |
+| `sub_path`          | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `read_only`         | boolean             | No       | Sets the volume in read-only mode (defaults to false). |
 
 ## Custom builds directory mount
 
@@ -511,13 +511,13 @@ concurrent = 4
 
 [Pod security context](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) configuration instructs executor to set a pod security policy on the build pod.
 
-| Option              | Type     | Required | Description |
-|---------------------|----------|----------|-------------|
-| fs_group            | int      | no       | A special supplemental group that applies to all containers in a pod |
-| run_as_group        | int      | no       | The GID to run the entrypoint of the container process |
-| run_as_non_root     | boolean  | no       | Indicates that the container must run as a non-root user |
-| run_as_user         | int      | no       | The UID to run the entrypoint of the container process |
-| supplemental_groups | int list | no       | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
+| Option               | Type       | Required | Description |
+|----------------------|------------|----------|-------------|
+| `fs_group`           | `int`      | No       | A special supplemental group that applies to all containers in a pod. |
+| `run_as_group`       | `int`      | No       | The GID to run the entrypoint of the container process. |
+| `run_as_non_root`    | boolean    | No       | Indicates that the container must run as a non-root user. |
+| `run_as_user`        | `int`      | No       | The UID to run the entrypoint of the container process. |
+| `supplemental_groups`| `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
 
 Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
@@ -670,10 +670,10 @@ This feature is available in Kubernetes 1.7+.
 [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) configuration
 instructs Kubernetes to add entries to `/etc/hosts` file inside of the container. The host aliases can be configured with the following options:
 
-| Option     | Type     | Required | Description |
-|------------|----------|----------|-------------|
-| IP         | `string`   | yes      | The IP address you want to attach hosts too |
-| Hostnames  | `[]string` | yes      | A list of host name aliases that will be attached to the IP |
+| Option       | Type          | Required | Description |
+|--------------|---------------|----------|-------------|
+| `IP`         | string        | Yes      | The IP address you want to attach hosts too. |
+| `Hostnames`  | `string` list | Yes      | A list of host name aliases that will be attached to the IP. |
 
 Here is an example configuration:
 
@@ -742,6 +742,77 @@ concurrent = 1
               ]
 ```
 
+## Container lifecycle hooks
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
+
+Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run code configured for a handler when the corresponding lifecycle hook is executed.
+You can configure two types of hooks: `PreStop` and `PostStart`. Each of them allows only one type of handler to be set.
+
+Here is an example configuration:
+
+```toml
+[[runners]]
+  name = "kubernetes"
+  url = "https://gitlab.example.com/"
+  executor = "kubernetes"
+  token = "yrnZW46BrtBFqM7xDzE7dddd"
+  [runners.kubernetes]
+    image = "alpine:3.11"
+    privileged = true
+    namespace = "default"
+    [runners.kubernetes.container_lifecycle.post_start.exec]
+      command = ["touch", "/builds/postStart.txt"]
+    [runners.kubernetes.container_lifecycle.pre_stop.http_get]
+      port = 8080
+      host = "localhost"
+      path = "/test"
+      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+        name = "header_name_1"
+        value = "header_value_1"
+      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+        name = "header_name_2"
+        value = "header_value_2"
+```
+
+Each lifecycle hook is configured through the following settings:
+
+| Option       | Type                           | Required | Description |
+|--------------|--------------------------------|----------|-------------|
+| `exec`       | `KubernetesLifecycleExecAction`| No       | `Exec` specifies the action to take. |
+| `http_get`   | `KubernetesLifecycleHTTPGet`   | No       | `HTTPGet` specifies the http request to perform. |
+| `tcp_socket` | `KubernetesLifecycleTcpSocket` | No       | `TCPsocket` specifies an action involving a TCP port. |
+
+### KubernetesLifecycleExecAction
+
+| Option       | Type          | Required | Description |
+|--------------|---------------|----------|-------------|
+| `command`    | `string` list | Yes      | The command line to execute inside the container. |
+
+### KubernetesLifecycleHTTPGet
+
+| Option         | Type                                     | Required | Description |
+|----------------|------------------------------------------|----------|-------------|
+| `port`         | `int`                                    | Yes      | The number of the port to access on the container. |
+| `host`         | string                                   | No       | The host name to connect to, defaults to the pod IP (optional). |
+| `path`         | string                                   | No       | The path to access on the HTTP server (optional). |
+| `scheme`       | string                                   | No       | The scheme used for connecting to the host. Defaults to HTTP (optional). |
+| `http_headers` | `KubernetesLifecycleHTTPGetHeader` list  | No       | Custom headers to set in the request (optional). |
+
+### KubernetesLifecycleHTTPGetHeader
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | HTTP header name.  |
+| `value`      | string    | Yes      | HTTP header value. |
+
+### KubernetesLifecycleTcpSocket
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `port`       | `int`     | Yes      | The number of the port to access on the container. |
+| `host`       | string    | No       | The host name to connect to, defaults to the pod IP (optional). |
+
 ## Pod's DNS Config
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6562) in GitLab Runner 13.7.
@@ -777,16 +848,16 @@ check_interval = 30
 
 | Option       | Type                        | Required | Description |
 |--------------|-----------------------------|----------|-------------|
-| nameservers  | `string` list               | no       | A list of IP addresses that will be used as DNS servers for the Pod |
-| options      | `KubernetesDNSConfigOption` | no       | A optional list of objects where each object may have a name property (required) and a value property (optional) |
-| searches     | `string` list               | no       | A list of DNS search domains for hostname lookup in the Pod |
+| `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
+| `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
+| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
 
 ### KubernetesDNSConfigOption
 
 | Option       | Type      | Required | Description |
 |--------------|-----------|----------|-------------|
-| name         | `string`  | yes      | Configuration option name  |
-| value        | `*string` | no       | Configuration option value |
+| `name`       | string    | Yes      | Configuration option name.  |
+| `value`      | `*string` | No       | Configuration option value. |
 
 ## Capabilities configuration
 
