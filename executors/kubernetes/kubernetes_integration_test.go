@@ -572,7 +572,7 @@ func testUserConfiguredBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagN
 func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	ctxTimout := 1 * time.Minute
+	ctxTimeout := time.Minute
 	client := getTestKubeClusterClient(t)
 
 	validateResourcesCreated := func(
@@ -619,7 +619,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 		"pod deletion during prepare stage in custom namespace": {
 			namespace: "garbage-collection-namespace",
 			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimout)
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 				defer cancel()
 
 				k8sNamespace := &v1.Namespace{
@@ -640,7 +640,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 				assert.Empty(t, configMaps)
 			},
 			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimout)
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 				defer cancel()
 
 				err := client.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
@@ -677,7 +677,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimout)
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 				defer cancel()
 				pods, err := client.CoreV1().Pods(tc.namespace).List(
 					ctx,
