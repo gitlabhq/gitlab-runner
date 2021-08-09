@@ -23,3 +23,11 @@ prepare alpine-no-root image:
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-no-root/Dockerfile
+
+prepare alpine-entrypoint image:
+  extends:
+  - .image_builder
+  - .rules:prepare:alpine-entrypoint:image:merge-requests
+  variables:
+    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint:latest
+    BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile

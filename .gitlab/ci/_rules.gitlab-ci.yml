@@ -186,6 +186,13 @@
     - tests/dockerfiles/alpine-no-root/*
     - .gitlab/ci/prepare.gitlab-ci.yml
 
+.rules:prepare:alpine-entrypoint:image:merge-requests:
+  rules:
+  - <<: *if-runner-merge-request-pipeline
+    changes:
+    - tests/dockerfiles/alpine-entrypoint/*
+    - .gitlab/ci/prepare.gitlab-ci.yml
+
 ##############
 # Docs rules #
 ##############

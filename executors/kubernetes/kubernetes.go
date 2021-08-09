@@ -1244,13 +1244,19 @@ func (s *executor) preparePodConfig(
 ) (api.Pod, error) {
 	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
 
+	dockerCmdForBuildContainer := s.BuildShell.DockerCommand
+	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) &&
+		!s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		dockerCmdForBuildContainer = []string{}
+	}
+
 	buildContainer, err := s.buildContainer(
 		buildContainerName,
 		buildImage,
 		s.options.Image,
 		s.configurationOverwrites.buildRequests,
 		s.configurationOverwrites.buildLimits,
-		s.BuildShell.DockerCommand...,
+		dockerCmdForBuildContainer...,
 	)
 	if err != nil {
 		return api.Pod{}, fmt.Errorf("building build container: %w", err)

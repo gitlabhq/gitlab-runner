@@ -23,6 +23,7 @@ const (
 	ScriptSections                       string = "FF_SCRIPT_SECTIONS"
 	UseNewShellEscape                    string = "FF_USE_NEW_SHELL_ESCAPE"
 	EnableJobCleanup                     string = "FF_ENABLE_JOB_CLEANUP"
+	KubernetesHonorEntrypoint            string = "FF_KUBERNETES_HONOR_ENTRYPOINT"
 )
 
 type FeatureFlag struct {
@@ -174,6 +175,14 @@ var flags = []FeatureFlag{
 		Description: "When enabled, the project directory will be cleaned up at the end of the build. " +
 			"If `GIT_CLONE` is used, the whole project directory will be deleted. If `GIT_FETCH` is used, " +
 			"a series of Git `clean` commands will be issued.",
+	},
+	{
+		Name:            KubernetesHonorEntrypoint,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, the Docker entrypoint of an image will be honored if " +
+			"`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is not set to true",
 	},
 }
 

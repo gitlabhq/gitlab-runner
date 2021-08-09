@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -109,6 +110,59 @@ func TestBuildScriptSections(t *testing.T) {
 
 		buildtest.RunBuildWithSections(t, build)
 	})
+}
+
+func TestEntrypointNotIgnored(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	testCases := map[string]struct {
+		useHonorEntrypointFF bool
+		expectedOutputLines  []string
+	}{
+		"feature flag off": {
+			useHonorEntrypointFF: false,
+			expectedOutputLines:  []string{"I am now root", "file not found"},
+		},
+		"feature flag on": {
+			useHonorEntrypointFF: true,
+			expectedOutputLines:  []string{"I am now nobody", "this has been executed through a custom entrypoint"},
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuildWithImage(t, common.TestAlpineEntrypointImage, func() (common.JobResponse, error) {
+				job, err := common.GetRemoteBuildResponse(
+					"if [ -f /tmp/debug.log ]; then",
+					"cat /tmp/debug.log",
+					"else",
+					"echo 'file not found'",
+					"fi",
+					"echo \"I am now `whoami`\"",
+				)
+
+				job.Image = common.Image{
+					Name: common.TestAlpineEntrypointImage,
+				}
+
+				return job, err
+			})
+
+			build.Variables = append(
+				build.Variables,
+				common.JobVariable{Key: featureflags.KubernetesHonorEntrypoint, Value: strconv.FormatBool(tc.useHonorEntrypointFF)},
+			)
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			require.NoError(t, err)
+
+			t.Log(out)
+
+			for _, expectedLine := range tc.expectedOutputLines {
+				assert.Contains(t, out, expectedLine)
+			}
+		})
+	}
 }
 
 func testKubernetesMultistepRunFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -1123,7 +1177,7 @@ func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string
 	}
 }
 
-func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
+func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (common.JobResponse, error)) *common.Build {
 	jobResponse, err := getJobResponse()
 	assert.NoError(t, err)
 
@@ -1136,7 +1190,7 @@ func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error
 			RunnerSettings: common.RunnerSettings{
 				Executor: "kubernetes",
 				Kubernetes: &common.KubernetesConfig{
-					Image:      common.TestAlpineImage,
+					Image:      image,
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					PodLabels: map[string]string{
 						"test.k8s.gitlab.com/name": podUUID,
@@ -1145,6 +1199,11 @@ func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error
 			},
 		},
 	}
+
+}
+
+func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error)) *common.Build {
+	return getTestBuildWithImage(t, common.TestAlpineImage, getJobResponse)
 }
 
 func getTestKubeClusterClient(t *testing.T) *k8s.Clientset {
