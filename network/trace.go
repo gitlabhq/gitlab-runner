@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
@@ -289,6 +290,17 @@ func (c *clientJobTrace) setUpdateInterval(newUpdateInterval time.Duration) {
 	if c.updateInterval > common.MaxUpdateInterval {
 		c.updateInterval = common.MaxUpdateInterval
 	}
+
+	if c.config.IsFeatureFlagOn(featureflags.UseDynamicTraceForceSendInterval) {
+		c.forceSendInterval = c.updateInterval * common.TraceForceSendUpdateIntervalMultiplier
+
+		if c.forceSendInterval < common.MinTraceForceSendInterval {
+			c.forceSendInterval = common.MinTraceForceSendInterval
+		}
+		if c.forceSendInterval > common.MaxTraceForceSendInterval {
+			c.forceSendInterval = common.MaxTraceForceSendInterval
+		}
+	}
 }
 
 // Update Coordinator that the job is still running.
@@ -407,6 +419,6 @@ func newJobTrace(
 		id:                jobCredentials.ID,
 		maxTracePatchSize: common.DefaultTracePatchLimit,
 		updateInterval:    common.DefaultUpdateInterval,
-		forceSendInterval: common.TraceForceSendInterval,
+		forceSendInterval: common.MinTraceForceSendInterval,
 	}, nil
 }

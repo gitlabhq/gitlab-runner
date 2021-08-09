@@ -29,9 +29,13 @@ const SecretVariableDefaultsToFile = true
 const (
 	DefaultTraceOutputLimit = 4 * 1024 * 1024 // in bytes
 	DefaultTracePatchLimit  = 1024 * 1024     // in bytes
-	DefaultUpdateInterval   = 3 * time.Second
-	MaxUpdateInterval       = 3 * time.Minute
-	TraceForceSendInterval  = 30 * time.Second
+
+	DefaultUpdateInterval = 3 * time.Second
+	MaxUpdateInterval     = 15 * time.Minute
+
+	MinTraceForceSendInterval              = 30 * time.Second
+	MaxTraceForceSendInterval              = 30 * time.Minute
+	TraceForceSendUpdateIntervalMultiplier = 4
 )
 
 var PreparationRetryInterval = 3 * time.Second
