@@ -2807,7 +2807,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"e2e-az1", "e2e-az2"}, requiredNodeAffinity.NodeSelectorTerms[0].MatchExpressions[0].Values)
 			},
 		},
-		"supports pod pod affinities": {
+		"supports pod affinities": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2855,7 +2855,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"many", "high_count"}, preferredMatchExp[0].Values)
 			},
 		},
-		"supports pod pod anti-affinities": {
+		"supports pod anti-affinities": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
