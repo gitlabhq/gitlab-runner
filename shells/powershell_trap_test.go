@@ -3,7 +3,6 @@
 package shells
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -40,10 +39,7 @@ func TestPwshTrapScriptGeneration(t *testing.T) {
 			info:  shellInfo,
 			assertExpectedScript: func(t *testing.T, s string) {
 				assert.Contains(t, s, "#!/usr/bin/env pwsh")
-				assert.Contains(t, s, fmt.Sprintf(
-					strings.ReplaceAll(pwshTrapShellScript, "\n", pwshTrap.EOL),
-					pwshTrap.LogFile,
-				))
+				assert.Contains(t, s, strings.ReplaceAll(pwshTrapShellScript, "\n", pwshTrap.EOL))
 				assert.Contains(t, s, `echo "Running on $([Environment]::MachineName) via "Test Hostname"..."`)
 				assert.Contains(t, s, `trap {runner_script_trap} runner_script_trap`)
 				assert.Contains(t, s, `exit 0`)

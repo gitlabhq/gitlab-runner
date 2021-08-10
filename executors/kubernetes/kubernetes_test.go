@@ -3903,9 +3903,10 @@ func TestGenerateScripts(t *testing.T) {
 
 	setupScripts := func(e *executor, stages []common.BuildStage) map[string]string {
 		scripts := map[string]string{}
-		switch e.Shell().Shell {
-		case shells.SNPwsh:
-			scripts[parsePwshScriptName] = shells.PwshValidationScript
+		shell := e.Shell().Shell
+		switch shell {
+		case shells.SNPwsh, shells.SNPowershell:
+			scripts[parsePwshScriptName] = shells.PwshValidationScript(shell)
 		default:
 			scripts[detectShellScriptName] = shells.BashDetectShellScript
 		}
@@ -4012,7 +4013,7 @@ func TestGenerateScripts(t *testing.T) {
 	}
 }
 
-func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
+func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 	dockerHub, err := helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -4101,7 +4102,7 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 			err := e.Prepare(prepareOptions)
 			require.NoError(t, err)
 
-			c, err := e.buildLogPermissionsInitContainer()
+			c, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedImage, c.Image)
 			assert.Equal(t, api.PullIfNotPresent, c.ImagePullPolicy)
@@ -4111,7 +4112,7 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 	}
 }
 
-func TestExecutor_buildLogPermissionsInitContainer_FailPullPolicy(t *testing.T) {
+func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {
 	mockPullManager := &pull.MockManager{}
 	defer mockPullManager.AssertExpectations(t)
 
@@ -4134,7 +4135,7 @@ func TestExecutor_buildLogPermissionsInitContainer_FailPullPolicy(t *testing.T) 
 		Return(api.PullAlways, assert.AnError).
 		Once()
 
-	_, err := e.buildLogPermissionsInitContainer()
+	_, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
 	assert.ErrorIs(t, err, assert.AnError)
 }
 
@@ -4223,7 +4224,6 @@ func TestGetContainerInfo(t *testing.T) {
 				return []string{
 					e.scriptPath(parsePwshScriptName),
 					e.scriptPath(cmd.Stage),
-					e.logFile(),
 					e.buildRedirectionCmd(),
 				}
 			},

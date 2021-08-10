@@ -655,6 +655,11 @@ so if process-isolation is used, you must additionally provide the specific wind
     url = "gitlab.example.com"
     executor = "kubernetes"
 
+    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell 
+    # to resolve paths for Windows correctly when Runner is operating in a Linux environment
+    # but targeting Windows nodes.
+    environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=1"]
+
     [runners.kubernetes.node_selector]
       "kubernetes.io/arch" = "amd64"
       "kubernetes.io/os" = "windows"

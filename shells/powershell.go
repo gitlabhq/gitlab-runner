@@ -29,12 +29,10 @@ const (
 	// Those errors are not catched by the powershell_trap_script thus causing the job to hang
 	// To avoid this problem, the PwshValidationScript is used to validate the given script and eventually to cause
 	// the job to fail if a `ParserError` is thrown
-	PwshValidationScript = `
+	pwshValidationScript = `
 param (
 	[Parameter(Mandatory=$true,Position=1)]
-	[string]$Path,
-	[Parameter(Mandatory=$true,Position=2)]
-	[string]$LogFile
+	[string]$Path
 )
 
 # Empty collection for errors
@@ -44,13 +42,11 @@ $input = [IO.File]::ReadAllText($Path)
 if($Errors.Count -gt 0){
 	foreach ($err in $Errors) { Write-Error $err.toString() }
 	$out_json= '{"command_exit_code":1, "script": "' + $MyInvocation.MyCommand.Name + '"}'
-	Add-Content $LogFile @"
-
-$out_json
-"@
+	echo ""
+	echo "$out_json"
 	exit 0
 }
-pwsh -File $Path
+%s -File $Path
 `
 )
 
@@ -87,6 +83,10 @@ func stdinCmdArgs() []string {
 
 func fileCmdArgs() []string {
 	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
+}
+
+func PwshValidationScript(shell string) string {
+	return fmt.Sprintf(pwshValidationScript, shell)
 }
 
 func PowershellDockerCmd(shell string) []string {
