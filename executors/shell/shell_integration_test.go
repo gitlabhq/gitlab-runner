@@ -1539,3 +1539,20 @@ func TestBuildPwshHandlesScriptEncodingCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, out, "E2 88 85")
 }
+
+func TestBuildScriptSections(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" || shell == "pwsh" || shell == "powershell" {
+			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
+			t.Skip("CMD not supported")
+		}
+		build, cleanup := newBuild(t, common.JobResponse{}, shell)
+		defer cleanup()
+
+		successfulBuild, err := common.GetSuccessfulBuild()
+		require.NoError(t, err)
+		build.JobResponse = successfulBuild
+		build.Runner.RunnerSettings.Shell = shell
+		buildtest.RunBuildWithSections(t, build)
+	})
+}

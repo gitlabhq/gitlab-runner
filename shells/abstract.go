@@ -217,7 +217,7 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 	}
 
 	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
-		b.writeCommands(w, info.PreCloneScript)
+		b.writeCommands(w, info, "pre_clone_script", info.PreCloneScript)
 	}
 
 	if err := b.writeCloneFetchCmds(w, info); err != nil {
@@ -493,9 +493,16 @@ func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.
 }
 
 // Write the given string of commands using the provided ShellWriter object.
-func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
-	for _, command := range commands {
+func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo, prefix string, commands ...string) {
+	for i, command := range commands {
 		command = strings.TrimSpace(command)
+
+		if info.Build.IsFeatureFlagOn(featureflags.ScriptSections) &&
+			info.Build.JobResponse.Features.TraceSections {
+			b.writeCommandWithSection(w, fmt.Sprintf("%s_%d", prefix, i), command)
+			continue
+		}
+
 		if command != "" {
 			lines := strings.SplitN(command, "\n", 2)
 			if len(lines) > 1 {
@@ -510,6 +517,23 @@ func (b *AbstractShell) writeCommands(w ShellWriter, commands ...string) {
 		w.Line(command)
 		w.CheckForErrors()
 	}
+}
+
+func (b *AbstractShell) writeCommandWithSection(w ShellWriter, sectionName, command string) {
+	if command == "" {
+		w.EmptyLine()
+	}
+
+	lines := strings.SplitN(command, "\n", 2)
+	if len(lines) > 1 {
+		w.SectionStart(sectionName, fmt.Sprintf("$ %s # collapsed multi-line command", lines[0]))
+	} else {
+		w.SectionStart(sectionName, fmt.Sprintf("$ %s", lines[0]))
+	}
+
+	w.Line(command)
+	w.CheckForErrors()
+	w.SectionEnd(sectionName)
 }
 
 func (b *AbstractShell) writeUserScript(
@@ -533,13 +557,13 @@ func (b *AbstractShell) writeUserScript(
 	b.writeCdBuildDir(w, info)
 
 	if info.PreBuildScript != "" {
-		b.writeCommands(w, info.PreBuildScript)
+		b.writeCommands(w, info, "pre_build_script", info.PreBuildScript)
 	}
 
-	b.writeCommands(w, scriptStep.Script...)
+	b.writeCommands(w, info, "script_step", scriptStep.Script...)
 
 	if info.PostBuildScript != "" {
-		b.writeCommands(w, info.PostBuildScript)
+		b.writeCommands(w, info, "post_build_script", info.PostBuildScript)
 	}
 
 	return nil
@@ -777,7 +801,9 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 	b.writeCdBuildDir(w, info)
 
 	w.Noticef("Running after script...")
-	b.writeCommands(w, afterScriptStep.Script...)
+
+	b.writeCommands(w, info, "after_script_step", afterScriptStep.Script...)
+
 	return nil
 }
 

@@ -151,6 +151,10 @@ func (p *PsWriter) Command(command string, arguments ...string) {
 	p.checkErrorLevel()
 }
 
+func (p *PsWriter) SectionStart(id, command string) {}
+
+func (p *PsWriter) SectionEnd(id string) {}
+
 func (p *PsWriter) buildCommand(command string, arguments ...string) string {
 	list := []string{
 		psQuote(command),

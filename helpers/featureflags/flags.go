@@ -21,6 +21,7 @@ const (
 	UseNewEvalStrategy                          string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
 	UsePowershellPathResolver                   string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 	UseDynamicTraceForceSendInterval            string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
+	ScriptSections                              string = "FF_SCRIPT_SECTIONS"
 )
 
 type FeatureFlag struct {
@@ -158,6 +159,14 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When enabled, the trace force send interval is dynamically adjusted based on the trace " +
 			"update interval.",
+	},
+	{
+		Name:            ScriptSections,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, each script line from the `.gitlab-ci.yml` file will be in a collapsible " +
+			"section in the job output and show the duration of each line",
 	},
 }
 

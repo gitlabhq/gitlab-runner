@@ -206,6 +206,20 @@ func (b *BashWriter) EmptyLine() {
 	b.Line("echo")
 }
 
+func (b *BashWriter) SectionStart(id, command string) {
+	b.Line("echo -e " +
+		helpers.ANSI_CLEAR +
+		"section_start:`date +%s`:section_" + id +
+		"\r" + helpers.ANSI_CLEAR + helpers.ShellEscape(helpers.ANSI_BOLD_GREEN+command+helpers.ANSI_RESET))
+}
+
+func (b *BashWriter) SectionEnd(id string) {
+	b.Line("echo -e " +
+		helpers.ANSI_CLEAR +
+		"section_end:`date +%s`:section_" + id +
+		"\r" + helpers.ANSI_CLEAR)
+}
+
 func (b *BashWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
