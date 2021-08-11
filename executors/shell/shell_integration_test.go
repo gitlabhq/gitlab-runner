@@ -1508,6 +1508,72 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 	})
 }
 
+func TestSanitizeGitDirectory(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		jobResponse, err := common.GetLocalBuildResponse(
+			"mktemp $CI_PROJECT_DIR/.git/XXXX",
+			"mktemp -d $CI_PROJECT_DIR/.git/XXXX",
+			"mktemp $CI_PROJECT_DIR/.git/objects/XXXX",
+			"mktemp -d $CI_PROJECT_DIR/.git/objects/XXXX",
+		)
+
+		build, _ := newBuild(t, jobResponse, shell)
+		//		defer cleanup()
+
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			common.JobVariable{Key: featureflags.EnableJobCleanup, Value: "true"},
+		)
+
+		err = buildtest.RunBuild(t, build)
+		require.NoError(t, err)
+
+		whitelist := map[string]struct{}{
+			"packed-refs": struct{}{},
+			"HEAD":        struct{}{},
+			"ORIG_HEAD":   struct{}{},
+			"index":       struct{}{},
+		}
+
+		filepath.Walk(filepath.Join(build.FullProjectDir(), ".git"), func(path string, fi os.FileInfo, err error) error {
+			isObjectFile, err := filepath.Match(filepath.Join(build.FullProjectDir(), "/.git/objects/[0-9a-f]*/[0-9a-f]*"), path)
+			require.NoError(t, err)
+
+			isShardingDir, err := filepath.Match(filepath.Join(build.FullProjectDir(), "/.git/objects/[0-9a-f]*"), path)
+			require.NoError(t, err)
+
+			relPath, err := filepath.Rel(filepath.Join(build.FullProjectDir(), ".git"), path)
+			require.NoError(t, err)
+
+			if fi.IsDir() {
+				if relPath == "modules" || relPath == "refs" {
+					return filepath.SkipDir
+				}
+
+				if relPath == "." || relPath == "objects" || relPath == "refs" {
+					return nil
+				}
+			}
+
+			_, inWhitelist := whitelist[relPath]
+
+			assert.True(t, inWhitelist || isShardingDir || isObjectFile, fmt.Sprintf("%s should not be around...relpath %v", path, relPath))
+
+			return nil
+		})
+
+		out, err := gitInDir(build.BuildDir, "init", "--template", filepath.Join(build.BuildDir, "git-template"))
+		assert.NoError(t, err)
+		assert.Contains(t, string(out), "Reinitialized existing Git repository")
+
+		_, err = gitInDir(build.BuildDir, "fsck")
+		assert.NoError(t, err)
+	})
+}
+
 func TestBuildFileVariablesRemoval(t *testing.T) {
 	getJobResponse := func(t *testing.T, jobResponseRequester func() (common.JobResponse, error)) common.JobResponse {
 		jobResponse, err := jobResponseRequester()
@@ -1648,4 +1714,50 @@ func TestBuildScriptSections(t *testing.T) {
 		build.Runner.RunnerSettings.Shell = shell
 		buildtest.RunBuildWithSections(t, build)
 	})
+}
+
+func TestCommandArgExpansion(t *testing.T) {
+	executorProvider := common.GetExecutorProvider(integrationTestShellExecutor)
+	executor := executorProvider.Create()
+
+	var out bytes.Buffer
+	trace := common.Trace{Writer: &out}
+
+	executor.Prepare(common.ExecutorPrepareOptions{
+		Build: &common.Build{
+			SystemInterrupt:  nil,
+			RootDir:          "",
+			BuildDir:         "",
+			CacheDir:         "",
+			Hostname:         "",
+			Runner:           &common.RunnerConfig{},
+			ExecutorData:     nil,
+			ExecutorFeatures: common.FeaturesInfo{},
+			RunnerID:         0,
+			ProjectRunnerID:  0,
+			Session:          nil,
+			Referees:         nil,
+			ArtifactUploader: nil,
+		},
+		Config:  &common.RunnerConfig{},
+		Trace:   &trace,
+		User:    "",
+		Context: nil,
+	})
+
+	writer := &shells.BashWriter{}
+	writer.Line("a=apple")
+	writer.Line("b=bapple")
+	writer.Line("c=capple")
+	writer.Command("echo", "$a", "$b", "$c")
+	writer.Finish(false)
+
+	require.NoError(t, executor.Run(common.ExecutorCommand{
+		Script:     writer.String(),
+		Stage:      "step_script",
+		Predefined: false,
+		Context:    nil,
+	}))
+
+	t.Logf(out.String())
 }
