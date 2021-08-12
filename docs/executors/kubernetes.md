@@ -962,8 +962,11 @@ To overwrite this and make the client use TCP to contact the Docker daemon,
 in the other container, be sure to include the environment variables of
 the build container:
 
-- `DOCKER_HOST=tcp://localhost:2375` for no TLS connection.
-- `DOCKER_HOST=tcp://localhost:2376` for TLS connection.
+- `DOCKER_HOST=tcp://<hostname>:2375` for no TLS connection.
+- `DOCKER_HOST=tcp://<hostname>:2376` for TLS connection.
+
+If you are using GitLab Runner 12.7 or earlier and Kubernetes 1.6 or earlier, the value of 
+`hostname` must be set to `localhost`. Otherwise it should be set to `docker`.
 
 Make sure to configure those properly. As of Docker 19.03, TLS is enabled by
 default but it requires mapping
