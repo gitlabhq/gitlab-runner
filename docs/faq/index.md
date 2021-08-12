@@ -14,6 +14,21 @@ GitLab aims to [guarantee backward compatibility](../index.md#gitlab-runner-vers
 However, as a first troubleshooting step, you should ensure your version
 of GitLab Runner is the same as your GitLab version.
 
+- You can confirm your GitLab version by running the following Rake command:
+
+  ```shell
+  sudo gitlab-rake gitlab:env:info
+  ```
+
+- You can confirm your GitLab Runner version:
+
+  - On your GitLab instance by going to **Admin Area > Runners**.
+  - On your GitLab Runner instance, by running:
+
+    ```shell
+    sudo gitlab-runner status
+    ```
+
 ## What does `coordinator` mean?
 
 The `coordinator` is the GitLab installation from which a job is requested.
