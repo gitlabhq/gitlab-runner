@@ -1,3 +1,69 @@
+## v14.2.0-rc1 (2021-08-12)
+
+### Bug fixes
+
+- Do not execute checks for windows integration test in docs only default branch pipeline !3070
+- Limit job log to ensure it contains UTF-8 valid data !3037
+- Fix ubuntu helper image builds to use correct platform (not always amd64) !3032 (Sneha Kanekar @skanekar1)
+- Fix trace short writes when large masks are configured !2979
+- Fix cleaning of removed sub-submodules when using fetch strategy !2883 (DmtiryK @dkozlov)
+
+### Maintenance
+
+- Update trace force send interval to be dynamically adjusted based on update interval !3064
+- Update rules for windows tests to fix docs pipeline !3062
+- wrap each line in a script block as a section !3051
+- Add new histogram metrics to docker+machine executor !3050
+- Do not ignore failure in Windows jobs due to timeout !3042
+- Fix release job to use JOB-TOKEN !3041
+- Support of kubernetes lifecycle hooks !3036
+- Add all of gl-docsteam to docs CODEOWNERS !3026
+- Add Evan and Marcel to docs CODEOWNERS !3025
+- Use CI_JOB_TOKEN to create releases !3023
+- Explicitly set kubernetes pull image failure as script failure !3015
+- Implement changes rules for executing full and docs-only pipelines !2978
+- Move build log's ANSI Reset to before newline to fix test output  !2977
+- Update configuration of changelog generator !2968
+- Update remaining only except to rules in pipeline !2938
+- Add support for determining helper image from node selector information !2840
+- Upgrade specified Git version to 2.30.2 !2825
+- Add allowed images restriction to Kubernetes executor !2669 (Yi Wei Pang @pangyiwei)
+- Allow CI image option to override base image name (VirtualBox & Parallels) !1257 (Alexander Kutelev @kutelev)
+
+### Documentation changes
+
+- Modified the runner troubleshooting page for confirming the GitLab version and runner version !3081
+- Update docs with the correct link about runner scope !3077
+- Clarify the need for max overwrite definitions when overwriting via CI/CD script !3075
+- Add troubleshooting entries for k8s-caused faults !3073
+- Docs: Recommend to use latest self-managed runners with .com !3072
+- Docs: Addded FREE tier badge !3069
+- Docs: Addded FREE tier badge !3068
+- Docs: Addded FREE tier badge !3067
+- Docs: Added code block end tag that was missing !3066
+- Docs: Fixed typo, changed "process" to "signal" !3061 (Igor @igordata)
+- Docs: Add how to log in as current user in the Terminal so gitlab-runner installs properly !3055
+- Improve wording of docs/security/index.md !3031 (Ed Sabol @esabol)
+- Docs update advanced configuration !3028
+- Update Vale rules with latest settings from GitLab project !3024
+- Fix outdated link to custom build directories in runner advanced configuration docs !3022 (zertrin @zertrin)
+- Docs: Add version for Kubernetes custom builds directory mount option !3016 (Ben Bodenmiller @bbodenmiller)
+- Capitalize CPU on line 187 !2893
+- Create Enterprise guide for deploying and scaling a GitLab Runner Fleet !2755
+
+### Other changes
+
+- Improve testKubernetesGarbageCollection integration test !3080
+- Update the Kubernetes executor's attach strategy to work with Windows pods !3059
+- Fix missing end quote in packagecloud script !3049
+- Fix incorrect Kubernetes Windows paths for artifacts and caches !3046
+- Set DOCS_REVIEW_APPS_DOMAIN in the CI config directly !3044
+- Updated CODEOWNERS for docs team members who are maintainers !3035
+- Update build versions for Fedora !3034
+- Enable container scanning for gitlab runner !3027
+- Garbage collection supports for kubernetes executor !2983
+- Fix flakiness of the TestAttachReconnectReadLogs test !2954
+
 ## v14.1.0 (2021-07-20)
 
 ### Bug fixes
