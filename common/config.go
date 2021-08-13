@@ -16,8 +16,8 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -443,8 +443,8 @@ type KubernetesPodSecurityContext struct {
 //nolint:lll
 type KubernetesAffinity struct {
 	NodeAffinity    *KubernetesNodeAffinity    `toml:"node_affinity,omitempty" json:"node_affinity" long:"node-affinity" description:"Node affinity is conceptually similar to nodeSelector -- it allows you to constrain which nodes your pod is eligible to be scheduled on, based on labels on the node."`
-	PodAffinity     *KubernetesPodAffinity     `toml:"pod_affinity,omitempty" json:"pod_affinity"`
-	PodAntiAffinity *KubernetesPodAntiAffinity `toml:"pod_anti_affinity,omitempty" json:"pod_anti_affinity"`
+	PodAffinity     *KubernetesPodAffinity     `toml:"pod_affinity,omitempty" json:"pod_affinity" description:"Pod affinity allows to constrain which nodes your pod is eligible to be scheduled on based on the labels on other pods."`
+	PodAntiAffinity *KubernetesPodAntiAffinity `toml:"pod_anti_affinity,omitempty" json:"pod_anti_affinity" description:"Pod anti-affinity allows to constrain which nodes your pod is eligible to be scheduled on based on the labels on other pods."`
 }
 
 //nolint:lll
@@ -575,9 +575,10 @@ type NodeSelectorRequirement struct {
 }
 
 type PodAffinityTerm struct {
-	LabelSelector *LabelSelector `toml:"label_selector,omitempty" json:"label_selector"`
-	Namespaces    []string       `toml:"namespaces,omitempty" json:"namespaces"`
-	TopologyKey   string         `toml:"topology_key,omitempty" json:"topology_key"`
+	LabelSelector     *LabelSelector `toml:"label_selector,omitempty" json:"label_selector"`
+	Namespaces        []string       `toml:"namespaces,omitempty" json:"namespaces"`
+	TopologyKey       string         `toml:"topology_key,omitempty" json:"topology_key"`
+	NamespaceSelector *LabelSelector `toml:"namespace_selector,omitempty" json:"namespace_selector"`
 }
 
 type LabelSelector struct {
@@ -993,6 +994,7 @@ func (c *LabelSelector) GetLabelSelectorMatchExpressions() []metav1.LabelSelecto
 		}
 		labelSelectorRequirement = append(labelSelectorRequirement, expression)
 	}
+
 	return labelSelectorRequirement
 }
 
@@ -1012,33 +1014,36 @@ func (c *KubernetesConfig) GetPodAffinity() *api.PodAffinity {
 			preferred.GetWeightedPodAffinityTerm(),
 		)
 	}
+
 	return &podAffinity
 }
 
 func (c *KubernetesConfig) GetPodAntiAffinity() *api.PodAntiAffinity {
-	var PodAntiAffinity api.PodAntiAffinity
+	var podAntiAffinity api.PodAntiAffinity
 
 	for _, required := range c.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
-		PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
-			PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
 			required.GetPodAffinityTerm(),
 		)
 	}
 
 	for _, preferred := range c.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
-		PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
-			PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+		podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
 			preferred.GetWeightedPodAffinityTerm(),
 		)
 	}
-	return &PodAntiAffinity
+
+	return &podAntiAffinity
 }
 
 func (c *PodAffinityTerm) GetPodAffinityTerm() api.PodAffinityTerm {
 	return api.PodAffinityTerm{
-		LabelSelector: c.GetLabelSelector(),
-		Namespaces:    c.Namespaces,
-		TopologyKey:   c.TopologyKey,
+		LabelSelector:     c.GetLabelSelector(),
+		Namespaces:        c.Namespaces,
+		TopologyKey:       c.TopologyKey,
+		NamespaceSelector: c.GetNamespaceSelector(),
 	}
 }
 
@@ -1063,6 +1068,7 @@ func (c *NodeSelectorTerm) GetNodeSelectorTerm() api.NodeSelectorTerm {
 			fields.GetNodeSelectorRequirement(),
 		)
 	}
+
 	return nodeSelectorTerm
 }
 
@@ -1075,11 +1081,23 @@ func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSche
 
 func (c *PodAffinityTerm) GetLabelSelector() *metav1.LabelSelector {
 	if c.LabelSelector == nil {
-		return &metav1.LabelSelector{}
+		return nil
 	}
+
 	return &metav1.LabelSelector{
 		MatchLabels:      c.LabelSelector.MatchLabels,
 		MatchExpressions: c.LabelSelector.GetLabelSelectorMatchExpressions(),
+	}
+}
+
+func (c *PodAffinityTerm) GetNamespaceSelector() *metav1.LabelSelector {
+	if c.NamespaceSelector == nil {
+		return nil
+	}
+
+	return &metav1.LabelSelector{
+		MatchLabels:      c.NamespaceSelector.MatchLabels,
+		MatchExpressions: c.NamespaceSelector.GetLabelSelectorMatchExpressions(),
 	}
 }
 
