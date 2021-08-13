@@ -2828,6 +2828,16 @@ func TestSetupBuildPod(t *testing.T) {
 										},
 										Namespaces:  []string{"namespace_1", "namespace_2"},
 										TopologyKey: "topo_key",
+										NamespaceSelector: &common.LabelSelector{
+											MatchLabels: map[string]string{"key": "value"},
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "cores",
+													Operator: "In",
+													Values:   []string{"many", "high_count"},
+												},
+											},
+										},
 									},
 								},
 								PreferredDuringSchedulingIgnoredDuringExecution: nil,
@@ -2846,10 +2856,19 @@ func TestSetupBuildPod(t *testing.T) {
 
 				assert.Equal(t, []string{"namespace_1", "namespace_2"}, preferredNodeAffinity.Namespaces)
 				assert.Equal(t, "topo_key", preferredNodeAffinity.TopologyKey)
+
 				require.NotNil(t, preferredNodeAffinity.LabelSelector)
 				assert.Equal(t, map[string]string{"key": "value"}, preferredNodeAffinity.LabelSelector.MatchLabels)
 				require.Len(t, preferredNodeAffinity.LabelSelector.MatchExpressions, 1)
 				preferredMatchExp := preferredNodeAffinity.LabelSelector.MatchExpressions
+				assert.Equal(t, "cores", preferredMatchExp[0].Key)
+				assert.Equal(t, metav1.LabelSelectorOperator("In"), preferredMatchExp[0].Operator)
+				assert.Equal(t, []string{"many", "high_count"}, preferredMatchExp[0].Values)
+
+				require.NotNil(t, preferredNodeAffinity.NamespaceSelector)
+				assert.Equal(t, map[string]string{"key": "value"}, preferredNodeAffinity.NamespaceSelector.MatchLabels)
+				require.Len(t, preferredNodeAffinity.NamespaceSelector.MatchExpressions, 1)
+				preferredMatchExp = preferredNodeAffinity.NamespaceSelector.MatchExpressions
 				assert.Equal(t, "cores", preferredMatchExp[0].Key)
 				assert.Equal(t, metav1.LabelSelectorOperator("In"), preferredMatchExp[0].Operator)
 				assert.Equal(t, []string{"many", "high_count"}, preferredMatchExp[0].Values)
@@ -2876,6 +2895,16 @@ func TestSetupBuildPod(t *testing.T) {
 										},
 										Namespaces:  []string{"namespace_1", "namespace_2"},
 										TopologyKey: "topo_key",
+										NamespaceSelector: &common.LabelSelector{
+											MatchLabels: map[string]string{"key": "value"},
+											MatchExpressions: []common.NodeSelectorRequirement{
+												{
+													Key:      "cores",
+													Operator: "In",
+													Values:   []string{"many", "high_count"},
+												},
+											},
+										},
 									},
 								},
 								PreferredDuringSchedulingIgnoredDuringExecution: nil,
@@ -2894,10 +2923,19 @@ func TestSetupBuildPod(t *testing.T) {
 
 				assert.Equal(t, []string{"namespace_1", "namespace_2"}, preferredNodeAffinity.Namespaces)
 				assert.Equal(t, "topo_key", preferredNodeAffinity.TopologyKey)
+
 				require.NotNil(t, preferredNodeAffinity.LabelSelector)
 				assert.Equal(t, map[string]string{"key": "value"}, preferredNodeAffinity.LabelSelector.MatchLabels)
 				require.Len(t, preferredNodeAffinity.LabelSelector.MatchExpressions, 1)
 				preferredMatchExp := preferredNodeAffinity.LabelSelector.MatchExpressions
+				assert.Equal(t, "cores", preferredMatchExp[0].Key)
+				assert.Equal(t, metav1.LabelSelectorOperator("In"), preferredMatchExp[0].Operator)
+				assert.Equal(t, []string{"many", "high_count"}, preferredMatchExp[0].Values)
+
+				require.NotNil(t, preferredNodeAffinity.NamespaceSelector)
+				assert.Equal(t, map[string]string{"key": "value"}, preferredNodeAffinity.NamespaceSelector.MatchLabels)
+				require.Len(t, preferredNodeAffinity.NamespaceSelector.MatchExpressions, 1)
+				preferredMatchExp = preferredNodeAffinity.NamespaceSelector.MatchExpressions
 				assert.Equal(t, "cores", preferredMatchExp[0].Key)
 				assert.Equal(t, metav1.LabelSelectorOperator("In"), preferredMatchExp[0].Operator)
 				assert.Equal(t, []string{"many", "high_count"}, preferredMatchExp[0].Values)
