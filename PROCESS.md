@@ -277,7 +277,7 @@ We follow the GitLab Security process with the following exceptions.
 - [Developer](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/developer.md)
     - When the document specifies `gitlab-org/gitlab` and
       `gitlab-org/security/gitlab`, assume `gitlab-org/gitlab-runner` and
-      `gitlab-org/security/gitlab` respectively.
+      `gitlab-org/security/gitlab-runner` respectively.
     - We have our own [Security Implementation
       Issue](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/developer.md#security-implementation-issue)
       that can be found
