@@ -532,6 +532,23 @@ func TestDockerCommandMissingServiceImage(t *testing.T) {
 	assert.Contains(t, err.Error(), contains)
 }
 
+// TestDockerCommandPullingImageRequestTimeout tests if the request timeout cancelation
+// is categorized as a script failure. It also helps to monitor the eventual error message change in
+// future docker library versions
+func TestDockerCommandPullingImageRequestTimeout(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, common.GetSuccessfulBuild)
+	build.Runner.RunnerSettings.Docker.Image = "docker.repo.bogus.com.au/docker:18.09.7-dind"
+
+	var buildError *common.BuildError
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	require.ErrorAs(t, err, &buildError)
+
+	assert.True(t, docker.IsSystemError(err), "expected docker system error is missing in error chain")
+	assert.Contains(t, err.Error(), "request canceled while waiting for connection")
+}
+
 func TestDockerCommandBuildCancel(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
