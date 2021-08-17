@@ -284,8 +284,8 @@ on the `.gitlab-ci.yml` file with the following variables:
    KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT: 1Gi
 ```
 
-The values for these variables are restricted to what the max overwrite
-for that resource has been set to.
+The values for these variables are restricted to the [max overwrite](#the-available-configtoml-settings)
+setting for that resource. If the max overwrite has not been set for a resource, the variable is ignored.
 
 ## Define settings in the configuration TOML
 
@@ -386,13 +386,13 @@ concurrent = 4
 a specified host path inside of the container. The volume can be configured with
 following options:
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| host_path  | string  | no       | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes    | The name of the volume. |
+| `mount_path` | string    | Yes    | Path inside of container where the volume should be mounted. |
+| `sub_path`   | string    | No     | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `host_path`  | string    | No     | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
+| `read_only`  | boolean   | No     | Sets the volume in read-only mode (defaults to false). |
 
 ### PVC volumes
 
@@ -400,25 +400,25 @@ following options:
 that is defined in Kubernetes cluster and mount it inside of the container. The volume
 can be configured with following options:
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used. |
+| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
+| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 
 ### ConfigMap volumes
 
 _ConfigMap_ volume configuration instructs Kubernetes to use a [_configMap_](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
 that is defined in Kubernetes cluster and mount it inside of the container.
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume and at the same time the name of _configMap_ that should be used |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | The name of the volume and at the same time the name of _configMap_ that should be used. |
+| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
+| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `items`      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
 stored inside of the selected mount path. By default all keys are present, _configMap's_ key
@@ -436,13 +436,13 @@ to volume's mount path) where _configMap's_ value should be saved. When using `i
 [_Secret_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#secret) configuration instructs Kubernetes to use
 a _secret_ that is defined in Kubernetes cluster and mount it inside of the container.
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume and at the same time the name of _secret_ that should be used |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| read_only  | boolean | no       | Sets the volume in read-only mode (defaults to false) |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| items      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | The name of the volume and at the same time the name of _secret_ that should be used. |
+| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
+| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `items`      | `map[string]string` | No   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
 When using _secret_ volume each key from selected _secret_ will be changed into a file
 stored inside of the selected mount path. By default all keys are present, _secret's_ key
@@ -459,26 +459,26 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 [_emptyDir_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) configuration instructs Kubernetes to mount an empty directory inside of the container.
 
-| Option     | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| name       | string  | yes      | The name of the volume |
-| mount_path | string  | yes      | Path inside of container where the volume should be mounted |
-| sub_path   | string  | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| medium     | string  | no       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to "") |
+| Option       | Type    | Required | Description |
+|--------------|---------|----------|-------------|
+| `name`       | string  | Yes      | The name of the volume. |
+| `mount_path` | string  | Yes      | Path inside of container where the volume should be mounted. |
+| `sub_path`   | string  | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `medium`     | string  | No       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to ""). |
 
 ### CSI volumes
 
 [_CSI_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#csi) configuration instructs Kubernetes to use a custom CSI driver to mount an arbitrary storage system inside of the container.
 
-| Option            | Type                | Required | Description |
-|-------------------|---------------------|----------|-------------|
-| name              | string              | yes      | The name of the volume |
-| mount_path        | string              | yes      | Path inside of container where the volume should be mounted |
-| driver            | string              | yes      | A string value that specifies the name of the volume driver to use. |
-| fs_type           | string              | no       | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".) |
-| volume_attributes | `map[string]string` | no       | Key-value pair mapping for attributes of the CSI volume. |
-| sub_path          | string              | no       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| read_only         | boolean             | no       | Sets the volume in read-only mode (defaults to false) |
+| Option              | Type                | Required | Description |
+|---------------------|---------------------|----------|-------------|
+| `name`              | string              | Yes      | The name of the volume. |
+| `mount_path`        | string              | Yes      | Path inside of container where the volume should be mounted. |
+| `driver`            | string              | Yes      | A string value that specifies the name of the volume driver to use. |
+| `fs_type`           | string              | No       | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".). |
+| `volume_attributes` | `map[string]string` | No       | Key-value pair mapping for attributes of the CSI volume. |
+| `sub_path`          | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `read_only`         | boolean             | No       | Sets the volume in read-only mode (defaults to false). |
 
 ## Custom builds directory mount
 
@@ -511,13 +511,13 @@ concurrent = 4
 
 [Pod security context](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) configuration instructs executor to set a pod security policy on the build pod.
 
-| Option              | Type     | Required | Description |
-|---------------------|----------|----------|-------------|
-| fs_group            | int      | no       | A special supplemental group that applies to all containers in a pod |
-| run_as_group        | int      | no       | The GID to run the entrypoint of the container process |
-| run_as_non_root     | boolean  | no       | Indicates that the container must run as a non-root user |
-| run_as_user         | int      | no       | The UID to run the entrypoint of the container process |
-| supplemental_groups | int list | no       | A list of groups applied to the first process run in each container, in addition to the container's primary GID |
+| Option               | Type       | Required | Description |
+|----------------------|------------|----------|-------------|
+| `fs_group`           | `int`      | No       | A special supplemental group that applies to all containers in a pod. |
+| `run_as_group`       | `int`      | No       | The GID to run the entrypoint of the container process. |
+| `run_as_non_root`    | boolean    | No       | Indicates that the container must run as a non-root user. |
+| `run_as_user`        | `int`      | No       | The UID to run the entrypoint of the container process. |
+| `supplemental_groups`| `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
 
 Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
@@ -655,6 +655,11 @@ so if process-isolation is used, you must additionally provide the specific wind
     url = "gitlab.example.com"
     executor = "kubernetes"
 
+    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell 
+    # to resolve paths for Windows correctly when Runner is operating in a Linux environment
+    # but targeting Windows nodes.
+    environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=1"]
+
     [runners.kubernetes.node_selector]
       "kubernetes.io/arch" = "amd64"
       "kubernetes.io/os" = "windows"
@@ -670,10 +675,10 @@ This feature is available in Kubernetes 1.7+.
 [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) configuration
 instructs Kubernetes to add entries to `/etc/hosts` file inside of the container. The host aliases can be configured with the following options:
 
-| Option     | Type     | Required | Description |
-|------------|----------|----------|-------------|
-| IP         | `string`   | yes      | The IP address you want to attach hosts too |
-| Hostnames  | `[]string` | yes      | A list of host name aliases that will be attached to the IP |
+| Option       | Type          | Required | Description |
+|--------------|---------------|----------|-------------|
+| `IP`         | string        | Yes      | The IP address you want to attach hosts too. |
+| `Hostnames`  | `string` list | Yes      | A list of host name aliases that will be attached to the IP. |
 
 Here is an example configuration:
 
@@ -742,6 +747,77 @@ concurrent = 1
               ]
 ```
 
+## Container lifecycle hooks
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
+
+Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run code configured for a handler when the corresponding lifecycle hook is executed.
+You can configure two types of hooks: `PreStop` and `PostStart`. Each of them allows only one type of handler to be set.
+
+Here is an example configuration:
+
+```toml
+[[runners]]
+  name = "kubernetes"
+  url = "https://gitlab.example.com/"
+  executor = "kubernetes"
+  token = "yrnZW46BrtBFqM7xDzE7dddd"
+  [runners.kubernetes]
+    image = "alpine:3.11"
+    privileged = true
+    namespace = "default"
+    [runners.kubernetes.container_lifecycle.post_start.exec]
+      command = ["touch", "/builds/postStart.txt"]
+    [runners.kubernetes.container_lifecycle.pre_stop.http_get]
+      port = 8080
+      host = "localhost"
+      path = "/test"
+      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+        name = "header_name_1"
+        value = "header_value_1"
+      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+        name = "header_name_2"
+        value = "header_value_2"
+```
+
+Each lifecycle hook is configured through the following settings:
+
+| Option       | Type                           | Required | Description |
+|--------------|--------------------------------|----------|-------------|
+| `exec`       | `KubernetesLifecycleExecAction`| No       | `Exec` specifies the action to take. |
+| `http_get`   | `KubernetesLifecycleHTTPGet`   | No       | `HTTPGet` specifies the http request to perform. |
+| `tcp_socket` | `KubernetesLifecycleTcpSocket` | No       | `TCPsocket` specifies an action involving a TCP port. |
+
+### KubernetesLifecycleExecAction
+
+| Option       | Type          | Required | Description |
+|--------------|---------------|----------|-------------|
+| `command`    | `string` list | Yes      | The command line to execute inside the container. |
+
+### KubernetesLifecycleHTTPGet
+
+| Option         | Type                                     | Required | Description |
+|----------------|------------------------------------------|----------|-------------|
+| `port`         | `int`                                    | Yes      | The number of the port to access on the container. |
+| `host`         | string                                   | No       | The host name to connect to, defaults to the pod IP (optional). |
+| `path`         | string                                   | No       | The path to access on the HTTP server (optional). |
+| `scheme`       | string                                   | No       | The scheme used for connecting to the host. Defaults to HTTP (optional). |
+| `http_headers` | `KubernetesLifecycleHTTPGetHeader` list  | No       | Custom headers to set in the request (optional). |
+
+### KubernetesLifecycleHTTPGetHeader
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | HTTP header name.  |
+| `value`      | string    | Yes      | HTTP header value. |
+
+### KubernetesLifecycleTcpSocket
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `port`       | `int`     | Yes      | The number of the port to access on the container. |
+| `host`       | string    | No       | The host name to connect to, defaults to the pod IP (optional). |
+
 ## Pod's DNS Config
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6562) in GitLab Runner 13.7.
@@ -777,16 +853,16 @@ check_interval = 30
 
 | Option       | Type                        | Required | Description |
 |--------------|-----------------------------|----------|-------------|
-| nameservers  | `string` list               | no       | A list of IP addresses that will be used as DNS servers for the Pod |
-| options      | `KubernetesDNSConfigOption` | no       | A optional list of objects where each object may have a name property (required) and a value property (optional) |
-| searches     | `string` list               | no       | A list of DNS search domains for hostname lookup in the Pod |
+| `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
+| `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
+| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
 
 ### KubernetesDNSConfigOption
 
 | Option       | Type      | Required | Description |
 |--------------|-----------|----------|-------------|
-| name         | `string`  | yes      | Configuration option name  |
-| value        | `*string` | no       | Configuration option value |
+| `name`       | string    | Yes      | Configuration option name.  |
+| `value`      | `*string` | No       | Configuration option value. |
 
 ## Capabilities configuration
 
@@ -886,8 +962,11 @@ To overwrite this and make the client use TCP to contact the Docker daemon,
 in the other container, be sure to include the environment variables of
 the build container:
 
-- `DOCKER_HOST=tcp://localhost:2375` for no TLS connection.
-- `DOCKER_HOST=tcp://localhost:2376` for TLS connection.
+- `DOCKER_HOST=tcp://<hostname>:2375` for no TLS connection.
+- `DOCKER_HOST=tcp://<hostname>:2376` for TLS connection.
+
+If you are using GitLab Runner 12.7 or earlier and Kubernetes 1.6 or earlier, the value of 
+`hostname` must be set to `localhost`. Otherwise it should be set to `docker`.
 
 Make sure to configure those properly. As of Docker 19.03, TLS is enabled by
 default but it requires mapping
@@ -951,11 +1030,81 @@ Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976
 
 The following errors are commonly encountered when using the Kubernetes executor.
 
-### `Build failed (system failure): timedout waiting for pod to start`
+### `Job failed (system failure): timed out waiting for pod to start`
 
 If the cluster cannot schedule the build pod before the timeout defined by `poll_timeout`, the build pod returns an error. The [Kubernetes Scheduler](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-lifetime) should be able to delete it.
 
 To fix this issue, increase the `poll_timeout` value in your `config.toml` file.
+
+### `context deadline exceeded`
+
+The `context deadline exceeded` errors in job logs usually indicate that the Kubernetes API client hit a timeout for a given cluster API request.
+
+Check the [metrics of the `kube-apiserver` cluster component](https://kubernetes.io/docs/concepts/cluster-administration/system-metrics/) for any signs of:
+
+- Increased response latencies.
+- Error rates for common create or delete operations over pods, secrets, ConfigMaps, and other core (v1) resources.
+
+Logs for timeout-driven errors from the `kube-apiserver` operations may appear as:
+
+```plaintext
+Job failed (system failure): prepare environment: context deadline exceeded
+Job failed (system failure): prepare environment: setting up build pod: context deadline exceeded
+```
+
+In some cases, the `kube-apiserver` error response might provide additional details of its sub-components failing (such as the Kubernetes cluster's `etcdserver`):
+
+```plaintext
+Job failed (system failure): prepare environment: etcdserver: request timed out
+Job failed (system failure): prepare environment: etcdserver: leader changed
+Job failed (system failure): prepare environment: Internal error occurred: resource quota evaluates timeout
+```
+
+These `kube-apiserver` service failures can occur during the creation of the build pod and also during cleanup attempts after completion:
+
+```plaintext
+Error cleaning up secrets: etcdserver: request timed out
+Error cleaning up secrets: etcdserver: leader changed
+
+Error cleaning up pod: etcdserver: request timed out, possibly due to previous leader failure
+Error cleaning up pod: etcdserver: request timed out
+Error cleaning up pod: context deadline exceeded
+```
+
+### `request did not complete within requested timeout`
+
+The message `request did not complete within requested timeout` observed during build pod creation indicates that a configured [admission control webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) on the Kubernetes cluster is timing out.
+
+Admission control webhooks are a cluster-level administrative control intercept for all API requests they're scoped for, and can cause failures if they do not execute in time.
+
+Admission control webhooks support filters that can finely control which API requests and namespace sources it intercepts. If the GitLab Runner's Kubernetes API calls do not need to pass through an admission control webhook then you may alter the [webhook's selector/filter configuration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector) to ignore GitLab Runner's namespace, or apply exclusion labels/annotations over the GitLab Runner pod by configuring `podAnnotations` or `podLabels` in the [GitLab Runner Helm Chart `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/57e026d7f43f63adc32cdd2b21e6d450abcf0686/values.yaml#L490-500).
+
+For example, to avoid [DataDog Admission Controller webhook](https://docs.datadoghq.com/agent/cluster_agent/admission_controller/) from intercepting API requests made by the GitLab Runner manager pod, the following can be added:
+
+```yaml
+podLabels:
+  admission.datadoghq.com/enabled: false
+```
+
+To list a Kubernetes cluster's admission control webhooks, run:
+
+```shell
+kubectl get validatingwebhookconfiguration -o yaml
+kubectl get mutatingwebhookconfiguration -o yaml
+```
+
+The following forms of logs can be observed when an admission control webhook times out:
+
+```plaintext
+Job failed (system failure): prepare environment: Timeout: request did not complete within requested timeout
+Job failed (system failure): prepare environment: setting up credentials: Timeout: request did not complete within requested timeout
+```
+
+A failure from an admission control webhook may instead appear as:
+
+```plaintext
+Job failed (system failure): prepare environment: setting up credentials: Internal error occurred: failed calling webhook "example.webhook.service"
+```
 
 ### `fatal: unable to access 'https://gitlab-ci-token:token@example.com/repo/proj.git/': Could not resolve host: example.com`
 

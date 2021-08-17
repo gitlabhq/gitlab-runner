@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 
+	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -46,6 +48,37 @@ func TestParallelsSuccessRun(t *testing.T) {
 
 	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err, "Make sure that you have done 'make development_setup'")
+}
+
+func TestBuildScriptSections(t *testing.T) {
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" || shell == "pwsh" || shell == "powershell" {
+			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
+			t.Skip("CMD, pwsh, powershell not supported")
+		}
+
+		successfulBuild, err := common.GetRemoteBuildResponse("echo Hello World")
+
+		build := &common.Build{
+			JobResponse: successfulBuild,
+			Runner: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Executor: "parallels",
+					Parallels: &common.ParallelsConfig{
+						BaseName:         prlImage,
+						DisableSnapshots: true,
+					},
+					SSH:   prlSSHConfig,
+					Shell: shell,
+				},
+			},
+		}
+
+		require.NoError(t, err)
+		buildtest.RunBuildWithSections(t, build)
+	})
 }
 
 func TestParallelsSuccessRunRawVariable(t *testing.T) {

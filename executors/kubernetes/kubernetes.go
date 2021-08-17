@@ -52,9 +52,14 @@ const (
 	// nodeSelectorWindowsBuildLabel is the label used to reference a specific Windows Version.
 	// https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build
 	nodeSelectorWindowsBuildLabel = "node.kubernetes.io/windows-build"
+
+	apiVersion         = "v1"
+	ownerReferenceKind = "Pod"
 )
 
 var (
+	PropagationPolicy = metav1.DeletePropagationForeground
+
 	executorOptions = executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultBuildsDir:              "/builds",
@@ -139,11 +144,6 @@ type executor struct {
 	requireDefaultBuildsDirVolume *bool
 }
 
-type serviceDeleteResponse struct {
-	serviceName string
-	err         error
-}
-
 type serviceCreateResponse struct {
 	service *api.Service
 	err     error
@@ -197,8 +197,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
 
-	err = s.AbstractExecutor.PrepareBuildAndShell()
-	if err != nil {
+	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
 		return fmt.Errorf("prepare build and shell: %w", err)
 	}
 
@@ -368,9 +367,9 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up scripts configMap: %w", err)
 	}
 
-	permissionsInitContainer, err := s.buildLogPermissionsInitContainer()
+	permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
 	if err != nil {
-		return fmt.Errorf("building log permissions init container: %w", err)
+		return fmt.Errorf("building permissions init container: %w", err)
 	}
 	err = s.setupBuildPod([]api.Container{permissionsInitContainer})
 	if err != nil {
@@ -396,12 +395,11 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 	containerName := buildContainerName
 
 	switch s.Shell().Shell {
-	case shells.SNPwsh:
-		// Translates to roughly "/path/to/parse_pwsh_script.ps1 /path/to/stage_script /path/to/logFile"
+	case shells.SNPwsh, shells.SNPowershell:
+		// Translates to roughly "/path/to/parse_pwsh_script.ps1 /path/to/stage_script"
 		containerCommand = []string{
 			s.scriptPath(parsePwshScriptName),
 			s.scriptPath(cmd.Stage),
-			s.logFile(),
 			s.buildRedirectionCmd(),
 		}
 		if cmd.Predefined {
@@ -437,34 +435,60 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 	return containerName, containerCommand
 }
 
-func (s *executor) buildLogPermissionsInitContainer() (api.Container, error) {
-	// We need to create the log file in which all scripts will append their output.
-	// The log file is created with the current user. There are 3 different scenarios for the user:
-	// 1. The user in all images and containers is root, in that case the chmod is redundant since they
-	// will all have permissions to the file.
-	// 2. The user of the helper image is root, however the build image's user is not root.
-	// In that case we need to allow the build user to write to the log file from inside the
-	// build container. That's where the chmod comes into play.
-	// 3. No user is root but all containers have the same user ID. In that case create the file.
-	// It will have the same user and group owner across all containers. This is the case for Kubernetes
-	// where the PodSecurityContext is set manually or for Openshift where each pod has a different user ID.
-	// *4. We don't allow setting different user IDs across containers, if that ever becomes the case
-	// we might need to try and chown the log file for the group only.
-	logFile := s.logFile()
-	chmod := fmt.Sprintf("touch %s && (chmod 777 %s || exit 0)", logFile, logFile)
-
+func (s *executor) buildPermissionsInitContainer(os string) (api.Container, error) {
 	pullPolicy, err := s.pullManager.GetPullPolicyFor(s.getHelperImage())
 	if err != nil {
-		return api.Container{}, fmt.Errorf("getting pull policy for log permissions init container: %w", err)
+		return api.Container{}, fmt.Errorf("getting pull policy for permissions init container: %w", err)
 	}
 
-	return api.Container{
-		Name:            "init-logs",
+	container := api.Container{
+		Name:            "init-permissions",
 		Image:           s.getHelperImage(),
-		Command:         []string{"sh", "-c", chmod},
 		VolumeMounts:    s.getVolumeMounts(),
 		ImagePullPolicy: pullPolicy,
-	}, nil
+	}
+
+	// The kubernetes executor uses both a helper container (for predefined stages) and a build
+	// container (for user defined steps). When accessing files on a shared volume, permissions
+	// are resolved within the context of the individual container.
+	//
+	// For Linux, the helper container and build container can occasionally have the same user IDs
+	// and access is not a problem. This can occur when:
+	// - the image defines a user ID that is identical across both images
+	// - PodSecurityContext is used and the UIDs is set manually
+	// - Openshift is used and each pod is assigned a different user ID
+	// Due to UIDs being different in other scenarios, we explicitly open the permissions on the
+	// log shared volume so both containers have access.
+	//
+	// For Windows, the security identifiers are larger. Unlike Linux, its not likely to have
+	// containers share the same identifier. The Windows Security Access Manager is not shared
+	// between containers, so we need to open up permissions across more than just the logging
+	// shared volume. Fortunately, Windows allows us to set permissions that recursively affect
+	// future folders and files.
+	switch os {
+	case helperimage.OSTypeWindows:
+		//nolint:lll
+		chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /t /q | out-null"
+		commands := []string{
+			fmt.Sprintf(chmod, s.logsDir()),
+			fmt.Sprintf(chmod, s.Build.RootDir),
+		}
+		container.Command = []string{
+			"pwsh",
+			"-c",
+			strings.Join(commands, ";\n"),
+		}
+
+	default:
+		chmod := "touch %[1]s && (chmod 777 %[1]s || exit 0)"
+		container.Command = []string{
+			"sh",
+			"-c",
+			fmt.Sprintf(chmod, s.logFile()),
+		}
+	}
+
+	return container, nil
 }
 
 func (s *executor) buildRedirectionCmd() string {
@@ -569,9 +593,10 @@ func (s *executor) retrieveShell() (common.Shell, error) {
 
 func (s *executor) generateScripts(shell common.Shell) (map[string]string, error) {
 	scripts := map[string]string{}
-	switch s.Shell().Shell {
-	case shells.SNPwsh:
-		scripts[parsePwshScriptName] = shells.PwshValidationScript
+	shellName := s.Shell().Shell
+	switch shellName {
+	case shells.SNPwsh, shells.SNPowershell:
+		scripts[parsePwshScriptName] = shells.PwshValidationScript(shellName)
 	default:
 		scripts[detectShellScriptName] = shells.BashDetectShellScript
 	}
@@ -606,49 +631,26 @@ func (s *executor) Cleanup() {
 	s.AbstractExecutor.Cleanup()
 }
 
-func (s *executor) cleanupServices() {
-	ch := make(chan serviceDeleteResponse)
-	var wg sync.WaitGroup
-	wg.Add(len(s.services))
-
-	for _, service := range s.services {
-		go s.deleteKubernetesService(service.ObjectMeta.Name, ch, &wg)
-	}
-
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-
-	for res := range ch {
-		if res.err != nil {
-			s.Errorln(fmt.Sprintf("Error cleaning up the pod service %q: %v", res.serviceName, res.err))
-		}
-	}
-}
-
-func (s *executor) deleteKubernetesService(serviceName string, ch chan<- serviceDeleteResponse, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	err := s.kubeClient.CoreV1().
-		Services(s.configurationOverwrites.namespace).
-		Delete(context.TODO(), serviceName, metav1.DeleteOptions{})
-	ch <- serviceDeleteResponse{serviceName: serviceName, err: err}
-}
-
+// cleanupResources deletes the resources used during the runner job
+// Having a pod does not mean that the owner-dependent relationship exists as an error may occur during setting
+// We therefore explicitly delete the resources if no ownerReference is found on it
+// This does not apply for services as they are created with the owner from the start
+// thus deletion of the pod automatically means deletion of the services if any
 func (s *executor) cleanupResources() {
 	if s.pod != nil {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.
 			CoreV1().
 			Pods(s.pod.Namespace).
-			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{})
+			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{
+				PropagationPolicy: &PropagationPolicy,
+			})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
 		}
 	}
-	if s.credentials != nil {
+
+	if s.credentials != nil && len(s.credentials.OwnerReferences) == 0 {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			Secrets(s.configurationOverwrites.namespace).
@@ -657,7 +659,7 @@ func (s *executor) cleanupResources() {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
-	if s.configMap != nil {
+	if s.configMap != nil && len(s.configMap.OwnerReferences) == 0 {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		err := s.kubeClient.CoreV1().
 			ConfigMaps(s.configurationOverwrites.namespace).
@@ -666,8 +668,6 @@ func (s *executor) cleanupResources() {
 			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
 	}
-
-	s.cleanupServices()
 }
 
 //nolint:funlen
@@ -756,7 +756,8 @@ func (s *executor) buildContainer(
 				s.Config.Kubernetes.CapDrop,
 			),
 		},
-		Stdin: true,
+		Lifecycle: s.prepareLifecycleHooks(),
+		Stdin:     true,
 	}
 
 	return container, nil
@@ -905,7 +906,12 @@ func (s *executor) getVolumes() []api.Volume {
 		return volumes
 	}
 
-	mode := int32(0777)
+	var mode *int32
+	if s.helperImageInfo.OSType != helperimage.OSTypeWindows {
+		defaultLinuxMode := int32(0777)
+		mode = &defaultLinuxMode
+	}
+
 	optional := false
 	volumes = append(
 		volumes,
@@ -916,7 +922,7 @@ func (s *executor) getVolumes() []api.Volume {
 					LocalObjectReference: api.LocalObjectReference{
 						Name: s.configMap.Name,
 					},
-					DefaultMode: &mode,
+					DefaultMode: mode,
 					Optional:    &optional,
 				},
 			},
@@ -1208,7 +1214,14 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	}
 
 	s.pod = pod
-	s.services, err = s.makePodProxyServices()
+
+	ownerReferences := s.buildPodReferences()
+	err = s.setOwnerReferencesForResources(ownerReferences)
+	if err != nil {
+		return fmt.Errorf("error setting ownerReferences: %w", err)
+	}
+
+	s.services, err = s.makePodProxyServices(ownerReferences)
 	if err != nil {
 		return err
 	}
@@ -1281,6 +1294,51 @@ func (s *executor) preparePodConfig(
 	return pod, nil
 }
 
+func (s *executor) setOwnerReferencesForResources(ownerReferences []metav1.OwnerReference) error {
+	if s.credentials != nil {
+		credentials := s.credentials.DeepCopy()
+		credentials.SetOwnerReferences(ownerReferences)
+
+		var err error
+		s.credentials, err = s.kubeClient.
+			CoreV1().
+			Secrets(s.configurationOverwrites.namespace).
+			Update(context.TODO(), credentials, metav1.UpdateOptions{})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if s.configMap != nil {
+		configMap := s.configMap.DeepCopy()
+		configMap.ObjectMeta.SetOwnerReferences(ownerReferences)
+
+		var err error
+		s.configMap, err = s.kubeClient.
+			CoreV1().
+			ConfigMaps(s.configurationOverwrites.namespace).
+			Update(context.TODO(), configMap, metav1.UpdateOptions{})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *executor) buildPodReferences() []metav1.OwnerReference {
+	return []metav1.OwnerReference{
+		{
+			APIVersion: apiVersion,
+			Kind:       ownerReferenceKind,
+			Name:       s.pod.GetName(),
+			UID:        s.pod.GetUID(),
+		},
+	}
+}
+
 func (s *executor) getDNSPolicy() api.DNSPolicy {
 	dnsPolicy, err := s.Config.Kubernetes.DNSPolicy.Get()
 	if err != nil {
@@ -1301,7 +1359,7 @@ func (s *executor) getHelperImage() string {
 	return s.helperImageInfo.String()
 }
 
-func (s *executor) makePodProxyServices() ([]api.Service, error) {
+func (s *executor) makePodProxyServices(ownerReferences []metav1.OwnerReference) ([]api.Service, error) {
 	s.Debugln("Creating pod proxy services")
 
 	ch := make(chan serviceCreateResponse)
@@ -1321,7 +1379,7 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 			}
 		}
 
-		serviceConfig := s.prepareServiceConfig(serviceName, servicePorts)
+		serviceConfig := s.prepareServiceConfig(serviceName, servicePorts, ownerReferences)
 		go s.createKubernetesService(&serviceConfig, serviceProxy.Settings, ch, &wg)
 	}
 
@@ -1345,11 +1403,16 @@ func (s *executor) makePodProxyServices() ([]api.Service, error) {
 	return proxyServices, nil
 }
 
-func (s *executor) prepareServiceConfig(name string, ports []api.ServicePort) api.Service {
+func (s *executor) prepareServiceConfig(
+	name string,
+	ports []api.ServicePort,
+	ownerReferences []metav1.OwnerReference,
+) api.Service {
 	return api.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: name,
-			Namespace:    s.configurationOverwrites.namespace,
+			GenerateName:    name,
+			Namespace:       s.configurationOverwrites.namespace,
+			OwnerReferences: ownerReferences,
 		},
 		Spec: api.ServiceSpec{
 			Ports:    ports,
@@ -1525,6 +1588,25 @@ func (s *executor) prepareOptions(build *common.Build) {
 	s.options.Image = build.Image
 
 	s.getServices(build)
+}
+
+func (s *executor) prepareLifecycleHooks() *api.Lifecycle {
+	lifecycleCfg := s.Config.Kubernetes.GetContainerLifecycle()
+
+	if lifecycleCfg.PostStart == nil && lifecycleCfg.PreStop == nil {
+		return nil
+	}
+
+	lifecycle := &api.Lifecycle{}
+
+	if lifecycleCfg.PostStart != nil {
+		lifecycle.PostStart = lifecycleCfg.PostStart.ToKubernetesLifecycleHandler()
+	}
+	if lifecycleCfg.PreStop != nil {
+		lifecycle.PreStop = lifecycleCfg.PreStop.ToKubernetesLifecycleHandler()
+	}
+
+	return lifecycle
 }
 
 func (s *executor) getServices(build *common.Build) {

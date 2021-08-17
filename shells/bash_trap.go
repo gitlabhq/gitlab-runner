@@ -16,16 +16,10 @@ import (
 // of the script as json.
 const bashTrapShellScript = `runner_script_trap() {
 	exit_code=$?
-	log_file=%s
 	out_json="{\"command_exit_code\": $exit_code, \"script\": \"$0\"}"
 
-	# Make sure the command status will always be printed on a new line 
-	if [[ $(tail -c1 $log_file | wc -l) -gt 0 ]]; then
-		printf "$out_json\n" >> $log_file
-	else 
-		printf "\n$out_json\n" >> $log_file
-	fi
-	
+	echo ""
+	echo "$out_json"
 	exit 0
 }
 
@@ -53,7 +47,7 @@ func (b *BashTrapShellWriter) Finish(trace bool) string {
 }
 
 func (b *BashTrapShellWriter) writeTrap(w io.Writer) {
-	_, _ = fmt.Fprintf(w, bashTrapShellScript, b.logFile)
+	_, _ = fmt.Fprint(w, bashTrapShellScript)
 }
 
 type BashTrapShell struct {

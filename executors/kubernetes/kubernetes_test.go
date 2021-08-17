@@ -790,15 +790,13 @@ func TestCleanup(t *testing.T) {
 			Services: []api.Service{{ObjectMeta: objectMeta}},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == http.MethodDelete && p == servicesEndpointURI:
-					return fakeKubeDeleteResponse(http.StatusNotFound), nil
 				case m == http.MethodDelete && p == podsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusOK), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
 				}
 			},
-			Error: true,
+			Error: false,
 		},
 		{
 			Name:     "POD creation failed, Services created",
@@ -819,13 +817,11 @@ func TestCleanup(t *testing.T) {
 			Services: []api.Service{{ObjectMeta: objectMeta}},
 			ClientFunc: func(req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
-				case m == http.MethodDelete && p == servicesEndpointURI:
-					return fakeKubeDeleteResponse(http.StatusNotFound), nil
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
 				}
 			},
-			Error: true,
+			Error: false,
 		},
 		{
 			Name:      "ConfigMap cleanup",
@@ -1920,8 +1916,10 @@ func TestSetupCredentials(t *testing.T) {
 type setupBuildPodTestDef struct {
 	RunnerConfig             common.RunnerConfig
 	Variables                []common.JobVariable
+	Credentials              []common.Credentials
 	Options                  *kubernetesOptions
 	InitContainers           []api.Container
+	SetHTTPPutResponse       func() (*http.Response, error)
 	PrepareFn                func(*testing.T, setupBuildPodTestDef, *executor)
 	VerifyFn                 func(*testing.T, setupBuildPodTestDef, *api.Pod)
 	VerifyExecutorFn         func(*testing.T, setupBuildPodTestDef, *executor)
@@ -1936,29 +1934,59 @@ type setupBuildPodFakeRoundTripper struct {
 
 func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	rt.executed = true
-	podBytes, err := ioutil.ReadAll(req.Body)
+	dataBytes, err := ioutil.ReadAll(req.Body)
 	if !assert.NoError(rt.t, err, "failed to read request body") {
 		return nil, err
-	}
-
-	p := new(api.Pod)
-	err = json.Unmarshal(podBytes, p)
-	if !assert.NoError(rt.t, err, "failed to read request body") {
-		return nil, err
-	}
-
-	if rt.test.VerifyFn != nil {
-		rt.test.VerifyFn(rt.t, rt.test, p)
 	}
 
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
 		Body: FakeReadCloser{
-			Reader: bytes.NewBuffer(podBytes),
+			Reader: bytes.NewBuffer(dataBytes),
 		},
 	}
 	resp.Header = make(http.Header)
 	resp.Header.Add("Content-Type", "application/json")
+
+	if strings.Contains(req.URL.Path, "pods") {
+		p := new(api.Pod)
+		err = json.Unmarshal(dataBytes, p)
+		if !assert.NoError(rt.t, err, "failed to read request body") {
+			return nil, err
+		}
+
+		if rt.test.VerifyFn != nil {
+			rt.test.VerifyFn(rt.t, rt.test, p)
+		}
+
+		return resp, nil
+	}
+
+	if req.Method == http.MethodPost && strings.Contains(req.URL.Path, "secrets") {
+		s := new(api.Secret)
+		err = json.Unmarshal(dataBytes, s)
+		if !assert.NoError(rt.t, err, "failed to read request body") {
+			return nil, err
+		}
+		s.SetName("secret-name")
+		dataBytes, err = json.Marshal(s)
+		if !assert.NoError(rt.t, err, "failed to marshal secret named") {
+			return nil, err
+		}
+		resp = &http.Response{
+			StatusCode: http.StatusOK,
+			Body: FakeReadCloser{
+				Reader: bytes.NewBuffer(dataBytes),
+			},
+		}
+		resp.Header = make(http.Header)
+		resp.Header.Add("Content-Type", "application/json")
+		return resp, nil
+	}
+
+	if req.Method == http.MethodPut && rt.test.SetHTTPPutResponse != nil {
+		return rt.test.SetHTTPPutResponse()
+	}
 
 	return resp, nil
 }
@@ -2320,11 +2348,13 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				ownerReferences := e.buildPodReferences()
 				expectedServices := []api.Service{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							GenerateName: "build",
-							Namespace:    "default",
+							GenerateName:    "build",
+							Namespace:       "default",
+							OwnerReferences: ownerReferences,
 						},
 						Spec: api.ServiceSpec{
 							Ports: []api.ServicePort{
@@ -2340,8 +2370,9 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							GenerateName: "proxy-svc-0",
-							Namespace:    "default",
+							GenerateName:    "proxy-svc-0",
+							Namespace:       "default",
+							OwnerReferences: ownerReferences,
 						},
 						Spec: api.ServiceSpec{
 							Ports: []api.ServicePort{
@@ -2362,8 +2393,9 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							GenerateName: "proxy-svc-1",
-							Namespace:    "default",
+							GenerateName:    "proxy-svc-1",
+							Namespace:       "default",
+							OwnerReferences: ownerReferences,
 						},
 						Spec: api.ServiceSpec{
 							Ports: []api.ServicePort{
@@ -3223,6 +3255,153 @@ func TestSetupBuildPod(t *testing.T) {
 				require.Nil(t, pod.Spec.Containers[0].SecurityContext.Capabilities)
 			},
 		},
+		"supports adding ownerReferences to a created service": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+				Services: common.Services{
+					{
+						Name: "test-service",
+						Ports: []common.Port{
+							{
+								Number: 82,
+							},
+							{
+								Number: 84,
+							},
+						},
+					},
+					{
+						Name: "test-service2",
+						Ports: []common.Port{
+							{
+								Number: 85,
+							},
+						},
+					},
+					{
+						Name: "test-service3",
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				require.Len(t, e.services[0].OwnerReferences, 1)
+
+				ownerReference := e.services[0].OwnerReferences[0]
+				assert.Equal(t, apiVersion, ownerReference.APIVersion)
+				assert.Equal(t, ownerReferenceKind, ownerReference.Kind)
+				assert.Equal(t, e.pod.GetName(), ownerReference.Name)
+				assert.Equal(t, e.pod.GetUID(), ownerReference.UID)
+			},
+		},
+		"supports adding ownerReferences to a configMap": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				require.Len(t, e.configMap.OwnerReferences, 1)
+
+				ownerReference := e.configMap.OwnerReferences[0]
+				assert.Equal(t, "v1", ownerReference.APIVersion)
+				assert.Equal(t, "Pod", ownerReference.Kind)
+				assert.Equal(t, e.pod.GetName(), ownerReference.Name)
+				assert.Equal(t, e.pod.GetUID(), ownerReference.UID)
+			},
+		},
+		"supports adding ownerReferences to a credentials": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Credentials: []common.Credentials{
+				{
+					Type:     "registry",
+					URL:      "http://example.com",
+					Username: "user",
+					Password: "password",
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				require.Len(t, e.credentials.OwnerReferences, 1)
+
+				ownerReference := e.credentials.OwnerReferences[0]
+				assert.Equal(t, "v1", ownerReference.APIVersion)
+				assert.Equal(t, "Pod", ownerReference.Kind)
+				assert.Equal(t, e.pod.GetName(), ownerReference.Name)
+				assert.Equal(t, e.pod.GetUID(), ownerReference.UID)
+			},
+		},
+		"supports failure to set owner-dependent relationship": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:   "default",
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+					Ports: []common.Port{
+						{
+							Number: 80,
+						},
+					},
+				},
+			},
+			SetHTTPPutResponse: func() (*http.Response, error) {
+				return nil, errors.New("cannot set owner-dependent relationship")
+			},
+			VerifySetupBuildPodErrFn: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "error setting ownerReferences")
+				assert.Contains(t, err.Error(), "cannot set owner-dependent relationship")
+			},
+		},
 	}
 
 	for testName, test := range tests {
@@ -3236,6 +3415,11 @@ func TestSetupBuildPod(t *testing.T) {
 			vars := test.Variables
 			if vars == nil {
 				vars = []common.JobVariable{}
+			}
+
+			creds := test.Credentials
+			if creds == nil {
+				creds = []common.Credentials{}
 			}
 
 			options := test.Options
@@ -3263,7 +3447,8 @@ func TestSetupBuildPod(t *testing.T) {
 					BuildShell: &common.ShellConfiguration{},
 					Build: &common.Build{
 						JobResponse: common.JobResponse{
-							Variables: vars,
+							Variables:   vars,
+							Credentials: creds,
 						},
 						Runner: &test.RunnerConfig,
 					},
@@ -3301,6 +3486,11 @@ func TestSetupBuildPod(t *testing.T) {
 
 			err = ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err, "error preparing overwrites")
+
+			if test.Credentials != nil {
+				err = ex.setupCredentials()
+				assert.NoError(t, err, "error setting up credentials")
+			}
 
 			err = ex.setupBuildPod(test.InitContainers)
 			if test.VerifySetupBuildPodErrFn == nil {
@@ -3713,9 +3903,10 @@ func TestGenerateScripts(t *testing.T) {
 
 	setupScripts := func(e *executor, stages []common.BuildStage) map[string]string {
 		scripts := map[string]string{}
-		switch e.Shell().Shell {
-		case shells.SNPwsh:
-			scripts[parsePwshScriptName] = shells.PwshValidationScript
+		shell := e.Shell().Shell
+		switch shell {
+		case shells.SNPwsh, shells.SNPowershell:
+			scripts[parsePwshScriptName] = shells.PwshValidationScript(shell)
 		default:
 			scripts[detectShellScriptName] = shells.BashDetectShellScript
 		}
@@ -3822,7 +4013,7 @@ func TestGenerateScripts(t *testing.T) {
 	}
 }
 
-func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
+func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 	dockerHub, err := helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -3911,7 +4102,7 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 			err := e.Prepare(prepareOptions)
 			require.NoError(t, err)
 
-			c, err := e.buildLogPermissionsInitContainer()
+			c, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedImage, c.Image)
 			assert.Equal(t, api.PullIfNotPresent, c.ImagePullPolicy)
@@ -3921,7 +4112,7 @@ func TestExecutor_buildLogPermissionsInitContainer(t *testing.T) {
 	}
 }
 
-func TestExecutor_buildLogPermissionsInitContainer_FailPullPolicy(t *testing.T) {
+func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {
 	mockPullManager := &pull.MockManager{}
 	defer mockPullManager.AssertExpectations(t)
 
@@ -3944,7 +4135,7 @@ func TestExecutor_buildLogPermissionsInitContainer_FailPullPolicy(t *testing.T) 
 		Return(api.PullAlways, assert.AnError).
 		Once()
 
-	_, err := e.buildLogPermissionsInitContainer()
+	_, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
 	assert.ErrorIs(t, err, assert.AnError)
 }
 
@@ -4033,7 +4224,6 @@ func TestGetContainerInfo(t *testing.T) {
 				return []string{
 					e.scriptPath(parsePwshScriptName),
 					e.scriptPath(cmd.Stage),
-					e.logFile(),
 					e.buildRedirectionCmd(),
 				}
 			},
@@ -4080,5 +4270,166 @@ func setupExecutor(shell string, successfulResponse common.JobResponse) *executo
 				JobResponse: successfulResponse,
 			},
 		},
+	}
+}
+
+func TestLifecyclePrepare(t *testing.T) {
+	initExecutor := func(lifecycleCfg common.KubernetesContainerLifecyle) *executor {
+		return &executor{
+			AbstractExecutor: executors.AbstractExecutor{
+				ExecutorOptions: executorOptions,
+				Build: &common.Build{
+					Runner: &common.RunnerConfig{},
+				},
+				Config: common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Kubernetes: &common.KubernetesConfig{
+							ContainerLifecycle: lifecycleCfg,
+						},
+					},
+				},
+			},
+		}
+	}
+
+	execHandler := &api.ExecAction{
+		Command: []string{"ls", "-alF"},
+	}
+
+	httpGetHandler := &api.HTTPGetAction{
+		Port:        intstr.FromInt(8080),
+		Path:        "/test",
+		Host:        "localhost",
+		HTTPHeaders: []api.HTTPHeader{},
+	}
+
+	tcpSocketHander := &api.TCPSocketAction{
+		Port: intstr.FromInt(8080),
+		Host: "localhost",
+	}
+
+	tests := map[string]struct {
+		lifecycleCfg        common.KubernetesContainerLifecyle
+		validateHookHandler func(*testing.T, *api.Lifecycle)
+	}{
+		"empty container lifecycle": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle)
+			},
+		},
+		"valid preStop exec hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PreStop: &common.KubernetesLifecycleHandler{
+					Exec: &common.KubernetesLifecycleExecAction{
+						Command: []string{"ls", "-alF"},
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PostStart)
+
+				assert.Equal(t, execHandler, lifecycle.PreStop.Exec)
+				assert.Nil(t, lifecycle.PreStop.HTTPGet)
+				assert.Nil(t, lifecycle.PreStop.TCPSocket)
+			},
+		},
+		"valid preStop httpGet hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PreStop: &common.KubernetesLifecycleHandler{
+					HTTPGet: &common.KubernetesLifecycleHTTPGet{
+						Port: 8080,
+						Host: "localhost",
+						Path: "/test",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PostStart)
+
+				assert.Equal(t, httpGetHandler, lifecycle.PreStop.HTTPGet)
+				assert.Nil(t, lifecycle.PreStop.Exec)
+				assert.Nil(t, lifecycle.PreStop.TCPSocket)
+			},
+		},
+		"valid preStop TCPSocket hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PreStop: &common.KubernetesLifecycleHandler{
+					TCPSocket: &common.KubernetesLifecycleTCPSocket{
+						Port: 8080,
+						Host: "localhost",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PostStart)
+
+				assert.Equal(t, tcpSocketHander, lifecycle.PreStop.TCPSocket)
+				assert.Nil(t, lifecycle.PreStop.Exec)
+				assert.Nil(t, lifecycle.PreStop.HTTPGet)
+			},
+		},
+		"valid postStart exec hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					Exec: &common.KubernetesLifecycleExecAction{
+						Command: []string{"ls", "-alF"},
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PreStop)
+
+				assert.Equal(t, execHandler, lifecycle.PostStart.Exec)
+				assert.Nil(t, lifecycle.PostStart.HTTPGet)
+				assert.Nil(t, lifecycle.PostStart.TCPSocket)
+			},
+		},
+		"valid postStart httpGet hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					HTTPGet: &common.KubernetesLifecycleHTTPGet{
+						Port: 8080,
+						Host: "localhost",
+						Path: "/test",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PreStop)
+
+				assert.Equal(t, httpGetHandler, lifecycle.PostStart.HTTPGet)
+				assert.Nil(t, lifecycle.PostStart.Exec)
+				assert.Nil(t, lifecycle.PostStart.TCPSocket)
+			},
+		},
+		"valid postStart TCPSocket hook configuration": {
+			lifecycleCfg: common.KubernetesContainerLifecyle{
+				PostStart: &common.KubernetesLifecycleHandler{
+					TCPSocket: &common.KubernetesLifecycleTCPSocket{
+						Port: 8080,
+						Host: "localhost",
+					},
+				},
+			},
+			validateHookHandler: func(t *testing.T, lifecycle *api.Lifecycle) {
+				assert.Nil(t, lifecycle.PreStop)
+
+				assert.Equal(t, tcpSocketHander, lifecycle.PostStart.TCPSocket)
+				assert.Nil(t, lifecycle.PostStart.Exec)
+				assert.Nil(t, lifecycle.PostStart.HTTPGet)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			executor := initExecutor(tt.lifecycleCfg)
+			lifecycle := executor.prepareLifecycleHooks()
+
+			if tt.validateHookHandler != nil {
+				tt.validateHookHandler(t, lifecycle)
+			}
+		})
 	}
 }

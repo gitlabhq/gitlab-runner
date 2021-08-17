@@ -661,6 +661,7 @@ check_interval = 0
         mount_path = "/path/to/empty_dir"
         medium = "Memory"
     [runners.kubernetes.dns_config]
+    [runners.kubernetes.container_lifecycle]
 `,
 		},
 		"incorrect config template merge": {

@@ -461,6 +461,7 @@ The following parameters are for Parallels.
 | `base_name`         | Name of Parallels VM that is cloned. |
 | `template_name`     | Custom name of Parallels VM linked template. Optional. |
 | `disable_snapshots` | If disabled, the VMs are destroyed when the jobs are done. |
+| `allowed_images`    | List of allowed `image`/`base_name` values, represented as regular expressions. See the [Overriding the base VM image](#overriding-the-base-vm-image) section for more details. |
 
 Example:
 
@@ -484,6 +485,7 @@ your `PATH` environment variable on Windows hosts:
 | `base_snapshot`     | Name or UUID of a specific snapshot of the VM to create a linked clone from. If this value is empty or omitted, the current snapshot is used. If no current snapshot exists, one is created. Unless `disable_snapshots` is true, in which case a full clone of the base VM is made. |
 | `base_folder`       | Folder to save the new VM in. If this value is empty or omitted, the default VM folder is used. |
 | `disable_snapshots` | If disabled, the VMs are destroyed when the jobs are done. |
+| `allowed_images`    | List of allowed `image`/`base_name` values, represented as regular expressions. See the [Overriding the base VM image](#overriding-the-base-vm-image) section for more details. |
 
 Example:
 
@@ -493,6 +495,36 @@ Example:
   base_snapshot = "my-image-snapshot"
   disable_snapshots = false
 ```
+
+## Overriding the base VM image
+
+> Introduced in GitLab Runner 14.2.
+
+For both the Parallels and VirtualBox executors, you can override the base VM name specified by `base_name`.
+To do this, use the [image](https://docs.gitlab.com/ee/ci/yaml/#image) parameter in the `.gitlab-ci.yml` file.
+
+For backward compatibility, you cannot override this value by default. Only the image specified by `base_name` is allowed.
+
+To allow users to select a VM image by using the `.gitlab-ci.yml` [image](https://docs.gitlab.com/ee/ci/yaml/#image) parameter:
+
+```toml
+[runners.virtualbox]
+  ...
+  allowed_images = [".*"]
+```
+
+In the example, any existing VM image can be used.
+
+The `allowed_images` parameter is a list of regular expressions. Configuration can be as precise as required.
+For instance, if you want to allow only certain VM images, you can use regex like:
+
+```toml
+[runners.virtualbox]
+  ...
+  allowed_images = ["^allowed_vm[1-2]$"]
+```
+
+In this example, only `allowed_vm1` and `allowed_vm2` are allowed. Any other attempts will result in an error.
 
 ## The `[runners.ssh]` section
 

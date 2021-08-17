@@ -83,6 +83,16 @@ To register a runner under Linux:
    sudo gitlab-runner register
    ```
 
+   If you are behind a proxy, add an environment variable and then run the
+   registration command:
+
+   ```shell
+   export HTTP_PROXY=http://yourproxyurl:3128
+   export HTTPS_PROXY=http://yourproxyurl:3128
+
+   sudo -E gitlab-runner register
+   ```
+
 1. Enter your GitLab instance URL (also known as the `gitlab-ci coordinator URL`).
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner. You can change this value later in the
