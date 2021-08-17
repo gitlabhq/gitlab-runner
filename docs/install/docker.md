@@ -197,6 +197,35 @@ The following multi-platform Docker images are available:
 See [GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/tree/main/dockerfiles)
 source for possible build instructions for both Ubuntu and Alpine images.
 
+### Creating a GitLab Runner Docker image
+
+As of 2021-08-03, the GitLab Runner Docker image based on Alpine uses Alpine 3.12.0. However, you can upgrade the image's OS before it is available in the GitLab repositories.
+
+To build a `gitlab-runner` Docker image for the latest Alpine version:
+
+1. Create `alpine-upgrade/Dockerfile`.
+
+```dockerfile
+RG GITLAB_RUNNER_IMAGE_TYPE
+ARG GITLAB_RUNNER_IMAGE_TAG
+FROM gitlab/${GITLAB_RUNNER_IMAGE_TYPE}:${GITLAB_RUNNER_IMAGE_TAG}
+
+RUN apk update
+RUN apk upgrade
+```
+
+1. Create an upgraded `gitlab-runner` image.
+
+```shell
+GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner GITLAB_RUNNER_IMAGE_TAG=alpine-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
+```
+
+1. Create an upgraded `gitlab-runner-helper` image.
+
+```shell
+GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper GITLAB_RUNNER_IMAGE_TAG=x86_64-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
+```
+
 NOTE:
 The IBM Z image does not contain the `docker-machine` dependency, as it is not yet maintained for the Linux s390x
 platform. See [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551) for current status.
