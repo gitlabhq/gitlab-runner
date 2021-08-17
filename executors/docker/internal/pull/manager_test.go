@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/errdefs"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -56,6 +57,148 @@ func TestDockerForNamedImage(t *testing.T) {
 	image, err = m.pullDockerImage(validSHA, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image)
+}
+
+func TestDockerForImagePullFailures(t *testing.T) {
+	c := new(docker.MockClient)
+	defer c.AssertExpectations(t)
+	errTest := errors.New("this is a test")
+
+	m := newDefaultTestManager(c)
+	options := buildImagePullOptions()
+
+	tests := map[string]struct {
+		imageName string
+		initMock  func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument)
+		assert    func(m *manager, imageName string)
+	}{
+		"ImagePullBlocking unwrapped system failure": {
+			imageName: "unwrapped-system:failure",
+			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
+				c.On("ImagePullBlocking", m.context, imageName, options).
+					Return(errdefs.System(errTest)).
+					Once()
+			},
+			assert: func(m *manager, imageName string) {
+				var buildError *common.BuildError
+				image, err := m.pullDockerImage(imageName, nil)
+				assert.Nil(t, image)
+				assert.Error(t, err)
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, buildError.FailureReason, common.RunnerSystemFailure)
+			},
+		},
+		"ImagePullBlocking wrapped system failure": {
+			imageName: "wrapped-system:failure",
+			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
+				c.On("ImagePullBlocking", m.context, imageName, options).
+					Return(fmt.Errorf("wrapped error: %w", errdefs.System(errTest))).
+					Once()
+			},
+			assert: func(m *manager, imageName string) {
+				var buildError *common.BuildError
+				image, err := m.pullDockerImage(imageName, nil)
+				assert.Nil(t, image)
+				assert.Error(t, err)
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, buildError.FailureReason, common.RunnerSystemFailure)
+			},
+		},
+		"ImagePullBlocking two level wrapped system failure": {
+			imageName: "two-level-wrapped-system:failure",
+			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
+				c.On("ImagePullBlocking", m.context, imageName, options).
+					Return(fmt.Errorf("wrapped error: %w", fmt.Errorf("wrapped error: %w", errdefs.System(errTest)))).
+					Once()
+			},
+			assert: func(m *manager, imageName string) {
+				var buildError *common.BuildError
+				image, err := m.pullDockerImage(imageName, nil)
+				assert.Nil(t, image)
+				assert.Error(t, err)
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, buildError.FailureReason, common.RunnerSystemFailure)
+			},
+		},
+		"ImagePullBlocking wrapped request timeout failure": {
+			imageName: "wrapped-request-timeout:failure",
+			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
+				c.On("ImagePullBlocking", m.context, imageName, options).
+					Return(fmt.Errorf(
+						"wrapped error: %w", errdefs.System(errors.New(
+							"request canceled while waiting for connection",
+						)))).
+					Once()
+			},
+			assert: func(m *manager, imageName string) {
+				var buildError *common.BuildError
+				image, err := m.pullDockerImage(imageName, nil)
+				assert.Nil(t, image)
+				assert.Error(t, err)
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+			},
+		},
+		"ImagePullBlocking two level wrapped request timeout failure": {
+			imageName: "lwo-level-wrapped-request-timeout:failure",
+			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
+				c.On("ImagePullBlocking", m.context, imageName, options).
+					Return(fmt.Errorf(
+						"wrapped error: %w", fmt.Errorf(
+							"wrapped error: %w", errdefs.System(errors.New(
+								"request canceled while waiting for connection",
+							))))).
+					Once()
+			},
+			assert: func(m *manager, imageName string) {
+				var buildError *common.BuildError
+				image, err := m.pullDockerImage(imageName, nil)
+				assert.Nil(t, image)
+				assert.Error(t, err)
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+			},
+		},
+		"ImagePullBlocking unwrapped script failure": {
+			imageName: "unwrapped-script:failure",
+			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
+				c.On("ImagePullBlocking", m.context, imageName, options).
+					Return(errdefs.NotFound(errTest)).
+					Once()
+			},
+			assert: func(m *manager, imageName string) {
+				var buildError *common.BuildError
+				image, err := m.pullDockerImage(imageName, nil)
+				assert.Nil(t, image)
+				assert.Error(t, err)
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+			},
+		},
+		"ImagePullBlocking wrapped script failure": {
+			imageName: "wrapped-script:failure",
+			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
+				c.On("ImagePullBlocking", m.context, imageName, options).
+					Return(fmt.Errorf("wrapped error: %w", errdefs.NotFound(errTest))).
+					Once()
+			},
+			assert: func(m *manager, imageName string) {
+				var buildError *common.BuildError
+				image, err := m.pullDockerImage(imageName, nil)
+				assert.Nil(t, image)
+				assert.Error(t, err)
+				require.ErrorAs(t, err, &buildError)
+				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			tc.initMock(c, tc.imageName, options)
+			tc.assert(m, tc.imageName)
+		})
+	}
 }
 
 func TestDockerForExistingImage(t *testing.T) {

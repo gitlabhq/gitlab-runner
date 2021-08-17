@@ -16,6 +16,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
@@ -36,6 +37,21 @@ func IsErrNotFound(err error) bool {
 		err = unwrapped
 	}
 	return client.IsErrNotFound(err)
+}
+
+// IsSystemError checks whether a returned error is due to an system error
+// Proxies the docker implementation.
+func IsSystemError(err error) bool {
+	for {
+		if errdefs.IsSystem(err) {
+			return true
+		}
+
+		err = errors.Unwrap(err)
+		if err == nil {
+			return false
+		}
+	}
 }
 
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,

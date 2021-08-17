@@ -811,7 +811,12 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 
 	var buildError *BuildError
 	if errors.As(err, &buildError) {
-		logger.SoftErrorln("Job failed:", err)
+		msg := fmt.Sprintln("Job failed:", err)
+		if buildError.FailureReason == RunnerSystemFailure {
+			msg = fmt.Sprintln("Job failed (system failure):", err)
+		}
+
+		logger.SoftErrorln(msg)
 
 		trace.Fail(err, JobFailureData{
 			Reason:   b.ensureSupportedFailureReason(buildError.FailureReason),

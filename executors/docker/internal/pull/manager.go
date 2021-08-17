@@ -15,6 +15,16 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 )
 
+var (
+	// These are some docker system error messages returned when
+	// not able to pull the given image. As we don't want those errors to be triggered as runner_system_failure
+	// (as for all the other docker system error), we specifically catch them and flag them as script_failure
+	// "repository does not exist|not found" where kept for compatibility with previous version of docker
+	errorRegexp = regexp.MustCompile(
+		"request canceled while waiting for connection|no such host|repository does not exist|not found",
+	)
+)
+
 type Manager interface {
 	GetDockerImage(imageName string) (*types.ImageInspect, error)
 }
@@ -201,12 +211,11 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 	options := types.ImagePullOptions{}
 	options.RegistryAuth, _ = auth.EncodeConfig(ac)
 
-	errorRegexp := regexp.MustCompile("(repository does not exist|not found)")
 	if err := m.client.ImagePullBlocking(m.context, ref, options); err != nil {
-		if errorRegexp.MatchString(err.Error()) {
-			return nil, &common.BuildError{Inner: err, FailureReason: common.ScriptFailure}
+		if docker.IsSystemError(err) && !errorRegexp.MatchString(err.Error()) {
+			return nil, &common.BuildError{Inner: err, FailureReason: common.RunnerSystemFailure}
 		}
-		return nil, err
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ScriptFailure}
 	}
 
 	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
