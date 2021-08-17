@@ -293,7 +293,7 @@ This defines the Docker Container parameters.
 ### The `[[runners.docker.services]]` section
 
 Specify additional services that should be run with the job. Visit the
-[Docker Registry](https://hub.docker.com) for the list of available applications.
+[Docker Registry](https://hub.docker.com) for the list of available images.
 Each service runs in a separate container and is linked to the job.
 
 | Parameter | Description |
