@@ -1715,8 +1715,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/builds",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1750,8 +1749,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/builds",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1785,8 +1783,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/builds",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1819,8 +1816,7 @@ func TestPrepare(t *testing.T) {
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/builds",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
