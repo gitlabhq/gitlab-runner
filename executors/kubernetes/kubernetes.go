@@ -828,7 +828,7 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 	if s.isDefaultBuildsDirVolumeRequired() {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      "repo",
-			MountPath: s.Build.RootDir,
+			MountPath: s.AbstractExecutor.RootDir(),
 		})
 	}
 

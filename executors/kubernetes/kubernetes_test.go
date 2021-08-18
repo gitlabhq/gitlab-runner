@@ -94,7 +94,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				{Name: "repo"},
+				{Name: "repo", MountPath: "/builds"},
 			},
 		},
 		"custom volumes": {
@@ -175,7 +175,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
 				{Name: "csi", MountPath: "/path/to/csi/volume"},
 				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
-				{Name: "repo"},
+				{Name: "repo", MountPath: "/builds"},
 			},
 		},
 		"custom volumes with read-only settings": {
@@ -215,21 +215,21 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
 				{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 				{Name: "csi", MountPath: "/path/to/csi/volume", ReadOnly: true},
-				{Name: "repo"},
+				{Name: "repo", MountPath: "/builds"},
 			},
 		},
 		"default volume with build dir": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{},
 					},
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
 				{
@@ -242,6 +242,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
@@ -252,8 +253,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
 				{Name: "user-provided", MountPath: "/path/to/builds/dir"},
@@ -459,14 +459,14 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{},
 					},
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
@@ -488,6 +488,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
@@ -498,8 +499,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
 				{Name: "user-provided", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/to/builds/dir"}}},
