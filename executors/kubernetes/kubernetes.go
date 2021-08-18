@@ -1086,7 +1086,7 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 
 	var required = true
 	for _, mount := range s.getVolumeMountsForConfig() {
-		if mount.MountPath == s.Build.RootDir {
+		if mount.MountPath == s.AbstractExecutor.RootDir() {
 			required = false
 			break
 		}
@@ -1112,7 +1112,7 @@ func (s *executor) isSharedBuildsDirRequired() bool {
 	// Fetch name of the volume backing the builds volume mount
 	buildVolumeName := "repo"
 	for _, mount := range s.getVolumeMountsForConfig() {
-		if mount.MountPath == s.Build.RootDir {
+		if mount.MountPath == s.AbstractExecutor.RootDir() {
 			buildVolumeName = mount.Name
 			break
 		}
