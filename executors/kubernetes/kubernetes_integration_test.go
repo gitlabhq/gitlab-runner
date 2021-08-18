@@ -60,8 +60,9 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesReplaceEnvFeatureFlag":                     testKubernetesReplaceEnvFeatureFlag,
 		"testKubernetesReplaceMissingEnvVarFeatureFlag":           testKubernetesReplaceMissingEnvVarFeatureFlag,
 		"testKubernetesWithNonRootSecurityContext":                testKubernetesWithNonRootSecurityContext,
-		"testConfiguredBuildDirVolumeMountFeatureFlag":            testBuildDirVolumeMountFeatureFlag,
-		"testUserConfiguredBuildDirVolumeMountFeatureFlag":        testUserConfiguredBuildDirVolumeMountFeatureFlag,
+		"testBuildsDirDefaultVolumeFeatureFlag":                   testBuildsDirDefaultVolumeFeatureFlag,
+		"testBuildsDirVolumeMountEmptyDirFeatureFlag":             testBuildsDirVolumeMountEmptyDirFeatureFlag,
+		"testBuildsDirVolumeMountHostPathFeatureFlag":             testBuildsDirVolumeMountHostPathFeatureFlag,
 		"testKubernetesPwshFeatureFlag":                           testKubernetesPwshFeatureFlag,
 		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
@@ -544,38 +545,32 @@ func testKubernetesReplaceMissingEnvVarFeatureFlag(t *testing.T, featureFlagName
 	assert.Contains(t, err.Error(), "image pull failed: Failed to apply default image tag \"alpine:\"")
 }
 
-func testBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+func testBuildsDirDefaultVolumeFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 	build.Image.Name = common.TestDockerGitImage
+	build.Runner.BuildsDir = "/path/to/builds/dir"
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
-		EmptyDirs: []common.KubernetesEmptyDir{
-			{
-				Name:      "build",
-				MountPath: "/builds",
-				Medium:    "Memory",
-			},
-		},
-	}
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+
+	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/tests/gitlab-test", build.BuildDir)
 }
 
-func testUserConfiguredBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+func testBuildsDirVolumeMountEmptyDirFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 	build.Image.Name = common.TestDockerGitImage
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-	build.Runner.BuildsDir = "/some/path"
+	build.Runner.BuildsDir = "/path/to/builds/dir"
 	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
 		EmptyDirs: []common.KubernetesEmptyDir{
 			{
-				Name:      "build",
-				MountPath: "/some/path",
+				Name:      "repo",
+				MountPath: "/path/to/builds/dir",
 				Medium:    "Memory",
 			},
 		},
@@ -583,6 +578,32 @@ func testUserConfiguredBuildDirVolumeMountFeatureFlag(t *testing.T, featureFlagN
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+
+	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/tests/gitlab-test", build.BuildDir)
+}
+
+func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestDockerGitImage
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+		HostPaths: []common.KubernetesHostPath{
+			{
+				Name:      "repo-host",
+				MountPath: "/builds",
+				HostPath:  "/tmp/builds",
+			},
+		},
+	}
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	allVariables := build.GetAllVariables()
+
+	assert.Equal(t, fmt.Sprintf("/builds/%s/gitlab-org/ci-cd/tests/gitlab-test", allVariables.Get("CI_CONCURRENT_ID")), build.BuildDir)
 }
 
 // testKubernetesGarbageCollection tests the deletion of resources via garbage collector once the owning pod is deleted
