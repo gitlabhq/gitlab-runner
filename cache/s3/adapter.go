@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -20,7 +21,7 @@ type s3Adapter struct {
 }
 
 func (a *s3Adapter) GetDownloadURL() *url.URL {
-	URL, err := a.client.PresignedGetObject(a.config.BucketName, a.objectName, a.timeout, nil)
+	URL, err := a.client.PresignedGetObject(context.Background(), a.config.BucketName, a.objectName, a.timeout, nil)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
 
@@ -31,7 +32,7 @@ func (a *s3Adapter) GetDownloadURL() *url.URL {
 }
 
 func (a *s3Adapter) GetUploadURL() *url.URL {
-	URL, err := a.client.PresignedPutObject(a.config.BucketName, a.objectName, a.timeout)
+	URL, err := a.client.PresignedPutObject(context.Background(), a.config.BucketName, a.objectName, a.timeout)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
 

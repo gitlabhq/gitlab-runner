@@ -32,11 +32,10 @@ require (
 	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
 	github.com/kardianos/service v1.2.0
 	github.com/klauspost/compress v1.11.6 // indirect
-	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/klauspost/pgzip v1.2.5
 	github.com/kr/pty v1.1.5
 	github.com/minio/md5-simd v1.1.1 // indirect
-	github.com/minio/minio-go/v6 v6.0.57
+	github.com/minio/minio-go/v7 v7.0.8
 	github.com/mitchellh/gox v1.0.1
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
