@@ -107,7 +107,7 @@ There are two contexts that need to be taken into account when we consider regis
   possible scenario.
 - The **Runner helper image**, which is used for standard operations such as fetching sources,
   uploading artifacts, etc. In this scenario, the user only needs to make a certificate file
-  available at a specific location (e.g. `/etc/gitlab-runner/certs/ca.crt`), and the Docker container will
+  available at a specific location (for example, `/etc/gitlab-runner/certs/ca.crt`), and the Docker container will
   automatically install it for the user.
 
 ### Trusting the certificate for user scripts
