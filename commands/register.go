@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/imdario/mergo"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
@@ -32,7 +32,7 @@ func (c *configTemplate) Enabled() bool {
 func (c *configTemplate) MergeTo(config *common.RunnerConfig) error {
 	err := c.loadConfigTemplate()
 	if err != nil {
-		return errors.Wrap(err, "couldn't load configuration template file")
+		return fmt.Errorf("couldn't load configuration template file: %w", err)
 	}
 
 	if len(c.Runners) != 1 {
@@ -41,7 +41,7 @@ func (c *configTemplate) MergeTo(config *common.RunnerConfig) error {
 
 	err = mergo.Merge(config, c.Runners[0])
 	if err != nil {
-		return errors.Wrap(err, "error while merging configuration with configuration template")
+		return fmt.Errorf("error while merging configuration with configuration template: %w", err)
 	}
 
 	return nil

@@ -3,11 +3,12 @@
 package commands
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/imdario/mergo"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
@@ -185,9 +186,9 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 		},
 		"error on merging": {
 			templateContent: configTemplateMergeToAdditionalConfiguration,
-			expectedError: errors.Wrap(
+			expectedError: fmt.Errorf(
+				"error while merging configuration with configuration template: %w",
 				mergo.ErrNotSupported,
-				"error while merging configuration with configuration template",
 			),
 		},
 	}
