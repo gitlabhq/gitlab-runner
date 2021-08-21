@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kardianos/osext"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -137,7 +136,7 @@ func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (i
 
 func init() {
 	// Look for self
-	runnerCommand, err := osext.Executable()
+	runnerCommand, err := os.Executable()
 	if err != nil {
 		logrus.Warningln(err)
 	}

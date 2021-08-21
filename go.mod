@@ -31,7 +31,6 @@ require (
 	github.com/imdario/mergo v0.3.7
 	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
 	github.com/kardianos/service v1.2.0
 	github.com/klauspost/compress v1.11.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
