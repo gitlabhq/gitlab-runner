@@ -155,7 +155,7 @@ When using the [Docker-in-Docker executor](https://docs.gitlab.com/ee/ci/docker/
 it may be necessary to specify `docker:2375,docker:2376` in the `NO_PROXY` environment variable. The ports are required, otherwise `docker push` is blocked.
 
 Communication between `dockerd` from dind and the local `docker` client (as described here: <https://hub.docker.com/_/docker/>)
-uses proxy variables held in root's Docker config.
+uses proxy variables held in root's Docker configuration.
 
 To configure this, you need to edit `/root/.docker/config.json` to include your complete proxy configuration, for example:
 
