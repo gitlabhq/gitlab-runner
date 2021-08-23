@@ -70,6 +70,7 @@ exceptions:
   - HDD
   - HEAD
   - HIPAA
+  - HLL
   - HTML
   - HTTP
   - HTTPS
@@ -120,6 +121,7 @@ exceptions:
   - PUT
   - RAID
   - RAM
+  - RBAC
   - RDP
   - REST
   - RFC
