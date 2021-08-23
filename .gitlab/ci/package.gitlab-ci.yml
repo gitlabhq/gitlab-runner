@@ -1,12 +1,12 @@
-.packages: &packages
+.packages:
   extends:
   - .rules:merge_request_pipelines:no_docs
   stage: package
+  environment:
+    name: package/$PKGS/$CI_COMMIT_REF_NAME
   needs:
   - 'helper images'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x linux/ppc64le'
-  environment:
-    name: package/$CI_JOB_NAME/$CI_COMMIT_REF_NAME
+  - binaries
   before_script:
   - |
     # checking GPG signing support
@@ -19,12 +19,29 @@
     fi
   script:
   - source ci/touch_make_dependencies
-  - make ${CI_JOB_NAME}
+  - make $PKGS
   artifacts:
     paths:
     - out/deb/
     - out/rpm/
     expire_in: 7d
 
-package-deb: *packages
-package-rpm: *packages
+package-deb:
+  extends:
+  - .packages
+  parallel:
+    matrix:
+    - PKGS:
+      - package-deb-64bit
+      - package-deb-32bit
+      - package-deb-ibm
+
+package-rpm:
+  extends:
+  - .packages
+  parallel:
+    matrix:
+    - PKGS:
+      - package-rpm-64bit
+      - package-rpm-32bit
+      - package-rpm-ibm
