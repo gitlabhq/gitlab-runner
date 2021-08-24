@@ -53,10 +53,10 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 	}
 
 	client.
-		On("PresignedGetObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On("PresignedGetObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(tc.presignedURL, err)
 	client.
-		On("PresignedPutObject", mock.Anything, mock.Anything, mock.Anything).
+		On("PresignedPutObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(tc.presignedURL, err)
 
 	oldNewMinioURLGenerator := newMinioClient
