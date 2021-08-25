@@ -262,3 +262,10 @@ Without the role binding, the runner pod no longer has access.
 
 See [this issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/225)
 for details.
+
+## Elasticsearch service container startup error `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+
+Elasticsearch has a `vm.max_map_count` requirement that has to be set on the instance on which Elasticsearch is run.
+
+See the [Elasticsearch Docs](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites)
+for how to set this value correctly depending on the platform.
