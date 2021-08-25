@@ -1,5 +1,5 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.16.7-1
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.17.5-1
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"

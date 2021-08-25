@@ -131,7 +131,7 @@ code_quality:
   # Use GOCACHE instead of GOLANGCI_LINT_CACHE
   # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
   - .go-cache
-  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:1.27.0-go1.16
+  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:1.27.0-go1.17
   needs: []
   allow_failure: true
   variables:
@@ -228,7 +228,7 @@ fuzz variable mask:
   extends:
   - .fuzz_base
   - .rules:merge_request_pipelines:no_docs
-  image: golang:1.16.7
+  image: golang:1.17.5
   stage: test
   variables:
     COVFUZZ_SEED_CORPUS: './helpers/trace/testdata/corpus'
@@ -319,7 +319,7 @@ git 1.8.3.1:
     CGO_ENABLED: 0
   before_script:
   - yum install -y -q git make patch && git version
-  - curl https://storage.googleapis.com/golang/go1.16.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+  - curl https://storage.googleapis.com/golang/go1.17.5.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
   - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx -C /usr/bin
   - git-lfs install --skip-repo
   - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
