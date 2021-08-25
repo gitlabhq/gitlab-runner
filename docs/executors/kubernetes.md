@@ -707,44 +707,106 @@ Define a list of [node affinities](https://kubernetes.io/docs/concepts/schedulin
 
 ```toml
 concurrent = 1
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-    [runners.kubernetes]
-      [runners.kubernetes.affinity]
-        [runners.kubernetes.affinity.node_affinity]
-          [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
-            weight = 100
-            [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
-              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
-               key = "cpu_speed"
-               operator = "In"
-               values = ["fast"]
-              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
-               key = "mem_speed"
-               operator = "In"
-               values = ["fast"]
-          [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
-            weight = 50
-            [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
-              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
-                key = "core_count"
-                operator = "In"
-                values = ["high", "32"]
-              [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields]]
-               key = "cpu_type"
-               operator = "In"
-               values = ["arm64"]
-        [runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
-          [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
-            [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
-              key = "kubernetes.io/e2e-az-name"
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [runners.kubernetes.affinity]
+      [runners.kubernetes.affinity.node_affinity]
+        [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+          weight = 100
+          [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+              key = "cpu_speed"
               operator = "In"
-              values = [
-                "e2e-az1",
-                "e2e-az2"
-              ]
+              values = ["fast"]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+              key = "mem_speed"
+              operator = "In"
+              values = ["fast"]
+        [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+          weight = 50
+          [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+              key = "core_count"
+              operator = "In"
+              values = ["high", "32"]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields]]
+              key = "cpu_type"
+              operator = "In"
+              values = ["arm64"]
+      [runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
+        [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
+          [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
+            key = "kubernetes.io/e2e-az-name"
+            operator = "In"
+            values = [
+              "e2e-az1",
+              "e2e-az2"
+            ]
+```
+
+### Pod affinity and anti-affinity
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 14.3.
+
+Use these affinities to constrain which nodes [your pod is eligible](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) to be scheduled on based on the labels on other pods.
+
+```toml
+concurrent = 1
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [runners.kubernetes.affinity]
+      [runners.kubernetes.affinity.pod_affinity]
+        [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          namespaces = ["namespace_1", "namespace_2"]
+          [runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+            [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
+              key = "security"
+              operator = "In"
+              values = ["S1"]
+        [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution]]
+        weight = 100
+        [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+            [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+              key = "security_2"
+              operator = "In"
+              values = ["S2"]
+      [runners.kubernetes.affinity.pod_anti_affinity]
+        [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution]]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          namespaces = ["namespace_1", "namespace_2"]
+          [runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
+              key = "security"
+              operator = "In"
+              values = ["S1"]
+          [runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespace_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespace_selector.match_expressions]]
+              key = "security"
+              operator = "In"
+              values = ["S1"]
+        [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
+        weight = 100
+        [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+              key = "security_2"
+              operator = "In"
+              values = ["S2"]
+          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector.match_expressions]]
+              key = "security_2"
+              operator = "In"
+              values = ["S2"]
 ```
 
 ## Container lifecycle hooks

@@ -16,6 +16,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -441,13 +442,27 @@ type KubernetesPodSecurityContext struct {
 
 //nolint:lll
 type KubernetesAffinity struct {
-	NodeAffinity *KubernetesNodeAffinity `toml:"node_affinity,omitempty" json:"node_affinity" long:"node-affinity" description:"Node affinity is conceptually similar to nodeSelector -- it allows you to constrain which nodes your pod is eligible to be scheduled on, based on labels on the node."`
+	NodeAffinity    *KubernetesNodeAffinity    `toml:"node_affinity,omitempty" json:"node_affinity" long:"node-affinity" description:"Node affinity is conceptually similar to nodeSelector -- it allows you to constrain which nodes your pod is eligible to be scheduled on, based on labels on the node."`
+	PodAffinity     *KubernetesPodAffinity     `toml:"pod_affinity,omitempty" json:"pod_affinity" description:"Pod affinity allows to constrain which nodes your pod is eligible to be scheduled on based on the labels on other pods."`
+	PodAntiAffinity *KubernetesPodAntiAffinity `toml:"pod_anti_affinity,omitempty" json:"pod_anti_affinity" description:"Pod anti-affinity allows to constrain which nodes your pod is eligible to be scheduled on based on the labels on other pods."`
 }
 
 //nolint:lll
 type KubernetesNodeAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
 	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
+}
+
+//nolint:lll
+type KubernetesPodAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
+	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
+}
+
+//nolint:lll
+type KubernetesPodAntiAffinity struct {
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
+	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
 }
 
 //nolint:lll
@@ -542,6 +557,11 @@ type PreferredSchedulingTerm struct {
 	Preference NodeSelectorTerm `toml:"preference" json:"preference"`
 }
 
+type WeightedPodAffinityTerm struct {
+	Weight          int32           `toml:"weight" json:"weight"`
+	PodAffinityTerm PodAffinityTerm `toml:"pod_affinity_term" json:"pod_affinity_term"`
+}
+
 type NodeSelectorTerm struct {
 	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions"`
 	MatchFields      []NodeSelectorRequirement `toml:"match_fields,omitempty" json:"match_fields"`
@@ -552,6 +572,18 @@ type NodeSelectorRequirement struct {
 	Key      string   `toml:"key,omitempty" json:"key"`
 	Operator string   `toml:"operator,omitempty" json:"operator"`
 	Values   []string `toml:"values,omitempty" json:"values"`
+}
+
+type PodAffinityTerm struct {
+	LabelSelector     *LabelSelector `toml:"label_selector,omitempty" json:"label_selector"`
+	Namespaces        []string       `toml:"namespaces,omitempty" json:"namespaces"`
+	TopologyKey       string         `toml:"topology_key,omitempty" json:"topology_key"`
+	NamespaceSelector *LabelSelector `toml:"namespace_selector,omitempty" json:"namespace_selector"`
+}
+
+type LabelSelector struct {
+	MatchLabels      map[string]string         `toml:"match_labels,omitempty" json:"match_labels"`
+	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions"`
 }
 
 //nolint:lll
@@ -882,6 +914,14 @@ func (c *KubernetesConfig) GetAffinity() *api.Affinity {
 		affinity.NodeAffinity = c.GetNodeAffinity()
 	}
 
+	if c.Affinity.PodAffinity != nil {
+		affinity.PodAffinity = c.GetPodAffinity()
+	}
+
+	if c.Affinity.PodAntiAffinity != nil {
+		affinity.PodAntiAffinity = c.GetPodAntiAffinity()
+	}
+
 	return &affinity
 }
 
@@ -905,16 +945,19 @@ func (c *KubernetesConfig) GetDNSConfig() *api.PodDNSConfig {
 	return &config
 }
 
-//nolint:lll
 func (c *KubernetesConfig) GetNodeAffinity() *api.NodeAffinity {
 	var nodeAffinity api.NodeAffinity
 
 	if c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
-		nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.GetNodeSelector()
+		nodeSelector := c.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.GetNodeSelector()
+		nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = nodeSelector
 	}
 
 	for _, preferred := range c.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
-		nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, preferred.GetPreferredSchedulingTerm())
+		nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+			preferred.GetPreferredSchedulingTerm(),
+		)
 	}
 	return &nodeAffinity
 }
@@ -940,15 +983,92 @@ func (c *NodeSelectorRequirement) GetNodeSelectorRequirement() api.NodeSelectorR
 	}
 }
 
-//nolint:lll
+func (c *LabelSelector) GetLabelSelectorMatchExpressions() []metav1.LabelSelectorRequirement {
+	var labelSelectorRequirement []metav1.LabelSelectorRequirement
+
+	for _, label := range c.MatchExpressions {
+		var expression = metav1.LabelSelectorRequirement{
+			Key:      label.Key,
+			Operator: metav1.LabelSelectorOperator(label.Operator),
+			Values:   label.Values,
+		}
+		labelSelectorRequirement = append(labelSelectorRequirement, expression)
+	}
+
+	return labelSelectorRequirement
+}
+
+func (c *KubernetesConfig) GetPodAffinity() *api.PodAffinity {
+	var podAffinity api.PodAffinity
+
+	for _, required := range c.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
+		podAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			podAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+			required.GetPodAffinityTerm(),
+		)
+	}
+
+	for _, preferred := range c.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+		podAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			podAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+			preferred.GetWeightedPodAffinityTerm(),
+		)
+	}
+
+	return &podAffinity
+}
+
+func (c *KubernetesConfig) GetPodAntiAffinity() *api.PodAntiAffinity {
+	var podAntiAffinity api.PodAntiAffinity
+
+	for _, required := range c.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution {
+		podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = append(
+			podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+			required.GetPodAffinityTerm(),
+		)
+	}
+
+	for _, preferred := range c.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution {
+		podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+			podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution,
+			preferred.GetWeightedPodAffinityTerm(),
+		)
+	}
+
+	return &podAntiAffinity
+}
+
+func (c *PodAffinityTerm) GetPodAffinityTerm() api.PodAffinityTerm {
+	return api.PodAffinityTerm{
+		LabelSelector:     c.GetLabelSelector(),
+		Namespaces:        c.Namespaces,
+		TopologyKey:       c.TopologyKey,
+		NamespaceSelector: c.GetNamespaceSelector(),
+	}
+}
+
+func (c *WeightedPodAffinityTerm) GetWeightedPodAffinityTerm() api.WeightedPodAffinityTerm {
+	return api.WeightedPodAffinityTerm{
+		Weight:          c.Weight,
+		PodAffinityTerm: c.PodAffinityTerm.GetPodAffinityTerm(),
+	}
+}
+
 func (c *NodeSelectorTerm) GetNodeSelectorTerm() api.NodeSelectorTerm {
 	var nodeSelectorTerm = api.NodeSelectorTerm{}
 	for _, expression := range c.MatchExpressions {
-		nodeSelectorTerm.MatchExpressions = append(nodeSelectorTerm.MatchExpressions, expression.GetNodeSelectorRequirement())
+		nodeSelectorTerm.MatchExpressions = append(
+			nodeSelectorTerm.MatchExpressions,
+			expression.GetNodeSelectorRequirement(),
+		)
 	}
 	for _, fields := range c.MatchFields {
-		nodeSelectorTerm.MatchFields = append(nodeSelectorTerm.MatchFields, fields.GetNodeSelectorRequirement())
+		nodeSelectorTerm.MatchFields = append(
+			nodeSelectorTerm.MatchFields,
+			fields.GetNodeSelectorRequirement(),
+		)
 	}
+
 	return nodeSelectorTerm
 }
 
@@ -956,6 +1076,28 @@ func (c *PreferredSchedulingTerm) GetPreferredSchedulingTerm() api.PreferredSche
 	return api.PreferredSchedulingTerm{
 		Weight:     c.Weight,
 		Preference: c.Preference.GetNodeSelectorTerm(),
+	}
+}
+
+func (c *PodAffinityTerm) GetLabelSelector() *metav1.LabelSelector {
+	if c.LabelSelector == nil {
+		return nil
+	}
+
+	return &metav1.LabelSelector{
+		MatchLabels:      c.LabelSelector.MatchLabels,
+		MatchExpressions: c.LabelSelector.GetLabelSelectorMatchExpressions(),
+	}
+}
+
+func (c *PodAffinityTerm) GetNamespaceSelector() *metav1.LabelSelector {
+	if c.NamespaceSelector == nil {
+		return nil
+	}
+
+	return &metav1.LabelSelector{
+		MatchLabels:      c.NamespaceSelector.MatchLabels,
+		MatchExpressions: c.NamespaceSelector.GetLabelSelectorMatchExpressions(),
 	}
 }
 
