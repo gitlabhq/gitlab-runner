@@ -2,7 +2,7 @@
 
 set -eEo pipefail
 
-ARCH="$1"
+ARCH=$(if [ "$1" == "ppc64le" ]; then echo "ppc64el"; else echo "$1"; fi)
 
 dpkg -i "/tmp/gitlab-runner_${ARCH}.deb"
 apt-get update

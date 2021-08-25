@@ -4,7 +4,7 @@
   stage: package
   needs:
   - 'helper images'
-  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x'
+  - 'binaries linux/386 linux/amd64 linux/arm linux/arm64 linux/s390x linux/ppc64le'
   environment:
     name: package/$CI_JOB_NAME/$CI_COMMIT_REF_NAME
   before_script:

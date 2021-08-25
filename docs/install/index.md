@@ -16,7 +16,7 @@ You can install it:
 
 GitLab Runner officially supported binaries are available for the following architectures:
 
-- x86, AMD64, ARM64, ARM, s390x
+- x86, AMD64, ARM64, ARM, s390x, ppc64le
 
 Official packages are available for the following Linux distributions:
 

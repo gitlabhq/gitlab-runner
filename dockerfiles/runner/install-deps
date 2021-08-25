@@ -28,6 +28,12 @@ case "${TARGETPLATFORM}" in
         DUMB_INIT_ARCH=s390x
         GIT_LFS_ARCH=s390x
         ;;
+    "linux/ppc64le")
+        ARCH=ppc64le
+        DOCKER_MACHINE_ARCH=ppc64le
+        DUMB_INIT_ARCH=ppc64le
+        GIT_LFS_ARCH=ppc64le
+        ;;
     *)
         echo "Unexpected TARGETPLATFORM value: ${TARGETPLATFORM}"
         ;;

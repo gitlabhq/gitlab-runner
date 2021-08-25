@@ -227,8 +227,8 @@ GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper GITLAB_RUNNER_IMAGE_TAG=x86_64-v13
 ```
 
 NOTE:
-The IBM Z image does not contain the `docker-machine` dependency, as it is not yet maintained for the Linux s390x
-platform. See [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551) for current status.
+The IBM Z image does not contain the `docker-machine` dependency, as it is not yet maintained for the Linux s390x or Linux ppc64le
+platforms. See [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26551) for current status.
 
 ## SELinux
 

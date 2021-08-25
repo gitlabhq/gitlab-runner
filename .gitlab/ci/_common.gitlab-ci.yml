@@ -61,7 +61,7 @@ default:
   - gitlab-org-docker
 
 .docker_qemu-before_script: &docker_qemu-before_script
-- docker run --rm --privileged docker/binfmt:a7996909642ee92942dcd6cff44b9b95f08dad64
+- docker run --privileged --rm tonistiigi/binfmt --install all
 
 .docker_qemu:
   before_script:
@@ -101,9 +101,11 @@ default:
     DUMB_INIT_LINUX_AMD64_CHECKSUM: "37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9"
     DUMB_INIT_LINUX_ARM64_CHECKSUM: "45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3"
     DUMB_INIT_LINUX_S390X_CHECKSUM: "8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d"
+    DUMB_INIT_LINUX_PPC64LE_CHECKSUM: "88b02a3bd014e4c30d8d54389597adc4f5a36d1d6b49200b5a4f6a71026c2246"
     GIT_LFS_LINUX_AMD64_CHECKSUM: "46508eb932c2ec0003a940f179246708d4ddc2fec439dcacbf20ff9e98b957c9"
     GIT_LFS_LINUX_ARM64_CHECKSUM: "ba6a2820d6afcdf94a83c9307bfbabcc2f8146b27404b450c673567798a81f67"
     GIT_LFS_LINUX_S390X_CHECKSUM: "ca73776cb1cdc855aaf743c09ae70caae97f67d8d5e4147f19dcc4f959f9fc4d"
+    GIT_LFS_LINUX_PPC64LE_CHECKSUM: "76196d06a79eec11c202d9cbafbab98f52b9a7fda8538c2d94748461ba192209"
 
 .windows-dependency-checksums:
   variables:

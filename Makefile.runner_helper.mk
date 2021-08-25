@@ -20,12 +20,14 @@ TAR_XZ += ${BASE_TAR_PATH}-alpine-x86_64-pwsh.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-alpine-arm.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-alpine-arm64.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-alpine-s390x.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-alpine-ppc64le.tar.xz
 
 TAR_XZ += ${BASE_TAR_PATH}-ubuntu-x86_64.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-ubuntu-x86_64-pwsh.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-ubuntu-arm.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-ubuntu-arm64.tar.xz
 TAR_XZ += ${BASE_TAR_PATH}-ubuntu-s390x.tar.xz
+TAR_XZ += ${BASE_TAR_PATH}-ubuntu-ppc64le.tar.xz
 
 # Binaries that we support for the helper image. We are using the following
 # pattern match:
@@ -38,6 +40,7 @@ BINARIES += ${BASE_BINARY_PATH}.x86_64
 BINARIES += ${BASE_BINARY_PATH}.arm
 BINARIES += ${BASE_BINARY_PATH}.arm64
 BINARIES += ${BASE_BINARY_PATH}.s390x
+BINARIES += ${BASE_BINARY_PATH}.ppc64le
 
 # Define variables with the architecture for each matching binary. We are using
 # the following pattern match GO_ARCH_{{arch}}-{{os}}, these should match up
@@ -46,6 +49,7 @@ GO_ARCH_x86_64 = linux/amd64
 GO_ARCH_arm = linux/arm
 GO_ARCH_arm64 = linux/arm64
 GO_ARCH_s390x = linux/s390x
+GO_ARCH_ppc64le = linux/ppc64le
 GO_ARCH_x86_64-windows = windows/amd64
 
 # Go files that are used to create the helper binary.
