@@ -45,6 +45,14 @@ type ExecutorPrepareOptions struct {
 	Context context.Context
 }
 
+type NoFreeExecutorError struct {
+	Message string
+}
+
+func (e *NoFreeExecutorError) Error() string {
+	return e.Message
+}
+
 // Executor represents entities responsible for build execution.
 // It prepares the environment, runs the build and cleans up resources.
 // See more in https://docs.gitlab.com/runner/executors/
