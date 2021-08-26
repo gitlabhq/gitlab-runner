@@ -474,7 +474,7 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 			fmt.Sprintf(chmod, s.Build.RootDir),
 		}
 		container.Command = []string{
-			"pwsh",
+			s.Shell().Shell,
 			"-c",
 			strings.Join(commands, ";\n"),
 		}
