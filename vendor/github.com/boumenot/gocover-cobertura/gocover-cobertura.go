@@ -94,6 +94,10 @@ func convert(in io.Reader, out io.Writer, ignore *Ignore) error {
 }
 
 func getPackages(profiles []*Profile) ([]*packages.Package, error) {
+	if len(profiles) == 0 {
+		return []*packages.Package{}, nil
+	}
+
 	var pkgNames []string
 	for _, profile := range profiles {
 		pkgNames = append(pkgNames, getPackageName(profile.FileName))

@@ -41,7 +41,7 @@ github.com/beorn7/perks/quantile
 # github.com/bmatcuk/doublestar v1.3.0
 ## explicit
 github.com/bmatcuk/doublestar
-# github.com/boumenot/gocover-cobertura v1.1.0
+# github.com/boumenot/gocover-cobertura v1.2.0
 ## explicit
 github.com/boumenot/gocover-cobertura
 # github.com/containerd/containerd v1.4.3

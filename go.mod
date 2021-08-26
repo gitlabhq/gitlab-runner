@@ -8,7 +8,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/bmatcuk/doublestar v1.3.0
-	github.com/boumenot/gocover-cobertura v1.1.0
+	github.com/boumenot/gocover-cobertura v1.2.0
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/creack/pty v1.1.11
 	github.com/docker/cli v20.10.2+incompatible
