@@ -261,6 +261,7 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 
 	go func() {
 		err := http.Serve(listener, mux)
+
 		if err != nil {
 			mr.log().WithError(err).Fatal("Metrics server terminated")
 		}
@@ -300,7 +301,18 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 		}
 	}
 
-	mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	// restrictHTTPMethods should be used on all promhttp handlers
+	// In this specific instance, the handler is unintrumented, so isn't as
+	// important. But in the future, if any other promhttp handlers are added
+	// they too should be wrapped and restriced.
+	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27194
+	mux.Handle(
+		"/metrics",
+		restrictHTTPMethods(
+			promhttp.HandlerFor(registry, promhttp.HandlerOpts{}),
+			http.MethodGet, http.MethodHead,
+		),
+	)
 }
 
 func (mr *RunCommand) serveDebugData(mux *http.ServeMux) {
@@ -313,6 +325,24 @@ func (mr *RunCommand) servePprof(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+}
+
+// restrictHTTPMethods wraps a http.Handler and returns a http.Handler that
+// restricts methods only to those provided.
+func restrictHTTPMethods(handler http.Handler, methods ...string) http.Handler {
+	supported := map[string]struct{}{}
+	for _, method := range methods {
+		supported[method] = struct{}{}
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := supported[r.Method]; !ok {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
 }
 
 func (mr *RunCommand) setupSessionServer() {
