@@ -525,7 +525,9 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 
 	// If we have a free machines we can process a build
 	if config.Machine.GetIdleCount() != 0 && machinesData.Idle == 0 {
-		err = errors.New("no free machines that can process builds")
+		err = &common.NoFreeExecutorError{
+			Message: "no free machines that can process builds",
+		}
 	}
 	return nil, err
 }

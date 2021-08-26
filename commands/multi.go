@@ -439,13 +439,17 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 		case runner := <-runners:
 			err := mr.processRunner(id, runner, runners)
 			if err != nil {
-				mr.log().
-					WithFields(logrus.Fields{
-						"runner":   runner.ShortDescription(),
-						"executor": runner.Executor,
-					}).
-					WithError(err).
-					Warn("Failed to process runner")
+				logger := mr.log().WithFields(logrus.Fields{
+					"runner":   runner.ShortDescription(),
+					"executor": runner.Executor,
+				}).WithError(err)
+
+				var NoFreeExecutorError *common.NoFreeExecutorError
+				if errors.As(err, &NoFreeExecutorError) {
+					logger.Debug("Failed to process runner")
+				} else {
+					logger.Warn("Failed to process runner")
+				}
 			}
 
 			// force GC cycle after processing build
