@@ -54,6 +54,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_POWERSHELL_PATH_RESOLVER` | `false` | ✗ |  | When enabled, Powershell resolves pathnames rather than Runner using OS-specific filepath functions that are specific to where Runner is hosted. |
 | `FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL` | `false` | ✗ |  | When enabled, the trace force send interval is dynamically adjusted based on the trace update interval. |
 | `FF_SCRIPT_SECTIONS` | `false` | ✗ |  | When enabled, each script line from the `.gitlab-ci.yml` file will be in a collapsible section in the job output and show the duration of each line |
+| `FF_USE_NEW_SHELL_ESCAPE` | `false` | ✗ |  | When enabled, a faster implementation of shell escape is used. |
 
 <!-- feature_flags_list_end -->
 

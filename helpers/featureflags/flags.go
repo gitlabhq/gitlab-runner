@@ -22,6 +22,7 @@ const (
 	UsePowershellPathResolver                   string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 	UseDynamicTraceForceSendInterval            string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
 	ScriptSections                              string = "FF_SCRIPT_SECTIONS"
+	UseNewShellEscape                           string = "FF_USE_NEW_SHELL_ESCAPE"
 )
 
 type FeatureFlag struct {
@@ -167,6 +168,13 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When enabled, each script line from the `.gitlab-ci.yml` file will be in a collapsible " +
 			"section in the job output and show the duration of each line",
+	},
+	{
+		Name:            UseNewShellEscape,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description:     "When enabled, a faster implementation of shell escape is used.",
 	},
 }
 

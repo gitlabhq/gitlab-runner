@@ -1,160 +1,81 @@
 package helpers
 
-// https://github.com/zimbatm/direnv/blob/master/shell.go
-
 import (
-	"bytes"
-	"encoding/hex"
 	"strings"
 )
 
-/*
- * Escaping
- */
+type mode string
 
 const (
-	ACK           = 6
-	TAB           = 9
-	LF            = 10
-	CR            = 13
-	US            = 31
-	SPACE         = 32
-	AMPERSTAND    = 38
-	SINGLE_QUOTE  = 39
-	PLUS          = 43
-	NINE          = 57
-	QUESTION      = 63
-	LOWERCASE_Z   = 90
-	OPEN_BRACKET  = 91
-	BACKSLASH     = 92
-	UNDERSCORE    = 95
-	CLOSE_BRACKET = 93
-	BACKTICK      = 96
-	TILDA         = 126
-	DEL           = 127
+	lit mode = "literal"
+	quo mode = "quote"
+
+	hextable = "0123456789abcdef"
 )
 
-type shellEscaper struct {
+// modeTable is a mapping of ascii characters to an escape mode:
+//   - escape character: where the mode is also the escaped string
+//   - literal: a string full of only literals does not require quoting
+//   - quote: a character that will need string quoting
+//   - "": a missing mapping indicates that the character will need hex quoting
+//
+// https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html
+var modeTable = [256]mode{
+	'\a': `\a`, '\b': `\b`, '\t': `\t`, '\n': `\n`, '\v': `\v`, '\f': `\f`,
+	'\r': `\r`, '\'': `\'`, '\\': `\\`,
+
+	',': lit, '-': lit, '.': lit, '/': lit,
+	'0': lit, '1': lit, '2': lit, '3': lit, '4': lit, '5': lit, '6': lit,
+	'7': lit, '8': lit, '9': lit,
+
+	'@': lit, 'A': lit, 'B': lit, 'C': lit, 'D': lit, 'E': lit, 'F': lit,
+	'G': lit, 'H': lit, 'I': lit, 'J': lit, 'K': lit, 'L': lit, 'M': lit,
+	'N': lit, 'O': lit, 'P': lit, 'Q': lit, 'R': lit, 'S': lit, 'T': lit,
+	'U': lit, 'V': lit, 'W': lit, 'X': lit, 'Y': lit, 'Z': lit,
+
+	'_': lit, 'a': lit, 'b': lit, 'c': lit, 'd': lit, 'e': lit, 'f': lit,
+	'g': lit, 'h': lit, 'i': lit, 'j': lit, 'k': lit, 'l': lit, 'm': lit,
+	'n': lit, 'o': lit, 'p': lit, 'q': lit, 'r': lit, 's': lit, 't': lit,
+	'u': lit, 'v': lit, 'w': lit, 'x': lit, 'y': lit, 'z': lit,
+
+	' ': quo, '!': quo, '"': quo, '#': quo, '$': quo, '%': quo, '&': quo,
+	'(': quo, ')': quo, '*': quo, '+': quo, ':': quo, ';': quo, '<': quo,
+	'=': quo, '>': quo, '?': quo, '[': quo, ']': quo, '^': quo, '`': quo,
+	'{': quo, '|': quo, '}': quo, '~': quo,
 }
 
-//nolint:lll
-// ShellEscape is taken from
-// https://github.com/solidsnack/shell-escape/blob/056c7b308be32ffeafec815907699f6c27536b1e/Data/ByteString/ShellEscape/Bash.hs
-/*
-A Bash escaped string. The strings are wrapped in @$\'...\'@ if any
-bytes within them must be escaped; otherwise, they are left as is.
-Newlines and other control characters are represented as ANSI escape
-sequences. High bytes are represented as hex codes. Thus Bash escaped
-strings will always fit on one line and never contain non-ASCII bytes.
-*/
-func ShellEscape(str string) string {
-	e := newShellEscaper()
-	outStr := e.getEscapedString(str)
-
-	return outStr
-}
-
-func newShellEscaper() *shellEscaper {
-	e := &shellEscaper{}
-
-	return e
-}
-
-func (e *shellEscaper) hex(char byte, out *bytes.Buffer) bool {
-	data := []byte{BACKSLASH, 'x', 0, 0}
-	hex.Encode(data[2:], []byte{char})
-	out.Write(data)
-	return true
-}
-
-func (e *shellEscaper) backslash(char byte, out *bytes.Buffer) bool {
-	out.Write([]byte{BACKSLASH, char})
-	return true
-}
-
-func (e *shellEscaper) escaped(str string, out *bytes.Buffer) bool {
-	out.WriteString(str)
-	return true
-}
-
-func (e *shellEscaper) quoted(char byte, out *bytes.Buffer) bool {
-	out.WriteByte(char)
-	return true
-}
-
-func (e *shellEscaper) literal(char byte, out *bytes.Buffer) bool {
-	out.WriteByte(char)
-	return false
-}
-
-func (e *shellEscaper) getEscapedString(str string) string {
-	if str == "" {
+// ShellEscape returns either a string identical to the input, or an escaped
+// string if certain characters are present. ANSI-C Quoting is used for
+// control characters and hexcodes are used for non-ascii characters.
+func ShellEscape(input string) string {
+	if input == "" {
 		return "''"
 	}
 
-	escape := false
-	in := []byte(str)
-	out := bytes.NewBuffer(make([]byte, 0, len(str)*2))
+	var sb strings.Builder
+	sb.Grow(len(input) * 2)
 
-	for _, c := range in {
-		if e.processChar(c, out) {
+	escape := false
+	for _, c := range []byte(input) {
+		mode := modeTable[c]
+		switch mode {
+		case lit:
+			sb.WriteByte(c)
+		case quo:
+			sb.WriteByte(c)
+			escape = true
+		case "":
+			sb.Write([]byte{'\\', 'x', hextable[c>>4], hextable[c&0x0f]})
+			escape = true
+		default:
+			sb.WriteString(string(mode))
 			escape = true
 		}
 	}
 
-	outStr := out.String()
 	if escape {
-		outStr = "$'" + outStr + "'"
+		return "$'" + sb.String() + "'"
 	}
 
-	return outStr
-}
-
-func (e *shellEscaper) processChar(char byte, out *bytes.Buffer) bool {
-	switch {
-	case char == TAB:
-		return e.escaped(`\t`, out)
-	case char == LF:
-		return e.escaped(`\n`, out)
-	case char == CR:
-		return e.escaped(`\r`, out)
-	case char <= US:
-		return e.hex(char, out)
-	case char <= AMPERSTAND:
-		return e.quoted(char, out)
-	case char == SINGLE_QUOTE:
-		return e.backslash(char, out)
-	case char <= PLUS:
-		return e.quoted(char, out)
-	case char <= NINE:
-		return e.literal(char, out)
-	case char <= QUESTION:
-		return e.quoted(char, out)
-	case char <= LOWERCASE_Z:
-		return e.literal(char, out)
-	case char == OPEN_BRACKET:
-		return e.quoted(char, out)
-	case char == BACKSLASH:
-		return e.backslash(char, out)
-	case char <= CLOSE_BRACKET:
-		return e.quoted(char, out)
-	case char == UNDERSCORE:
-		return e.literal(char, out)
-	case char <= BACKTICK:
-		return e.quoted(char, out)
-	case char <= TILDA:
-		return e.quoted(char, out)
-	case char == DEL:
-		return e.hex(char, out)
-	default:
-		return e.hex(char, out)
-	}
-}
-
-func ToBackslash(path string) string {
-	return strings.ReplaceAll(path, "/", "\\")
-}
-
-func ToSlash(path string) string {
-	return strings.ReplaceAll(path, "\\", "/")
+	return sb.String()
 }

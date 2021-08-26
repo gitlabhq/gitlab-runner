@@ -49,6 +49,7 @@ type BashWriter struct {
 
 	checkForErrors bool
 	useNewEval     bool
+	useNewEscape   bool
 }
 
 func (b *BashWriter) GetTemporaryPath() string {
@@ -86,7 +87,7 @@ func (b *BashWriter) Command(command string, arguments ...string) {
 
 func (b *BashWriter) buildCommand(command string, arguments ...string) string {
 	list := []string{
-		helpers.ShellEscape(command),
+		b.escape(command),
 	}
 
 	for _, argument := range arguments {
@@ -108,10 +109,10 @@ func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
 		b.Linef("mkdir -p %q", helpers.ToSlash(b.TemporaryPath))
-		b.Linef("echo -n %s > %q", helpers.ShellEscape(variable.Value), variableFile)
-		b.Linef("export %s=%q", helpers.ShellEscape(variable.Key), variableFile)
+		b.Linef("echo -n %s > %q", b.escape(variable.Value), variableFile)
+		b.Linef("export %s=%q", b.escape(variable.Key), variableFile)
 	} else {
-		b.Linef("export %s=%s", helpers.ShellEscape(variable.Key), helpers.ShellEscape(variable.Value))
+		b.Linef("export %s=%s", b.escape(variable.Key), b.escape(variable.Value))
 	}
 }
 
@@ -184,22 +185,22 @@ func (b *BashWriter) Join(elem ...string) string {
 
 func (b *BashWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
-	b.Line("echo " + helpers.ShellEscape(coloredText))
+	b.Line("echo " + b.escape(coloredText))
 }
 
 func (b *BashWriter) Noticef(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_GREEN + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
-	b.Line("echo " + helpers.ShellEscape(coloredText))
+	b.Line("echo " + b.escape(coloredText))
 }
 
 func (b *BashWriter) Warningf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_YELLOW + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
-	b.Line("echo " + helpers.ShellEscape(coloredText))
+	b.Line("echo " + b.escape(coloredText))
 }
 
 func (b *BashWriter) Errorf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_BOLD_RED + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
-	b.Line("echo " + helpers.ShellEscape(coloredText))
+	b.Line("echo " + b.escape(coloredText))
 }
 
 func (b *BashWriter) EmptyLine() {
@@ -245,9 +246,9 @@ func (b *BashWriter) writeTrace(w io.Writer, trace bool) {
 }
 
 func (b *BashWriter) writeEval(w io.Writer) {
-	command := ": | eval " + helpers.ShellEscape(b.String()) + "\n"
+	command := ": | eval " + b.escape(b.String()) + "\n"
 	if b.useNewEval {
-		command = ": | (eval " + helpers.ShellEscape(b.String()) + ")\n"
+		command = ": | (eval " + b.escape(b.String()) + ")\n"
 	}
 
 	_, _ = io.WriteString(w, command)
@@ -258,6 +259,14 @@ func (b *BashWriter) writeScript(w io.Writer) {
 	_, _ = io.WriteString(w, "set +o noclobber\n")
 	b.writeEval(w)
 	_, _ = io.WriteString(w, "exit 0\n")
+}
+
+func (b *BashWriter) escape(input string) string {
+	if b.useNewEscape {
+		return helpers.ShellEscape(input)
+	}
+
+	return helpers.ShellEscapeLegacy(input)
 }
 
 func (b *BashShell) GetName() string {
@@ -305,6 +314,7 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 		Shell:          b.Shell,
 		checkForErrors: info.Build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 		useNewEval:     info.Build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
+		useNewEscape:   info.Build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
 	}
 
 	return b.generateScript(w, buildStage, info)

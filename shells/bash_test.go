@@ -8,18 +8,51 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBash_CommandShellEscapes(t *testing.T) {
-	writer := &BashWriter{}
+func TestBash_CommandShellEscapesLegacy(t *testing.T) {
+	writer := &BashWriter{useNewEscape: false}
 	writer.Command("foo", "x&(y)")
 
 	assert.Equal(t, `$'foo' "x&(y)"`+"\n", writer.String())
 }
 
-func TestBash_IfCmdShellEscapes(t *testing.T) {
-	writer := &BashWriter{}
+func TestBash_IfCmdShellEscapesLegacy(t *testing.T) {
+	writer := &BashWriter{useNewEscape: false}
 	writer.IfCmd("foo", "x&(y)")
 
 	assert.Equal(t, `if $'foo' "x&(y)" >/dev/null 2>/dev/null; then`+"\n", writer.String())
+}
+
+func TestBash_CommandShellEscapes(t *testing.T) {
+	tests := []struct {
+		command  string
+		args     []string
+		expected string
+	}{
+		{
+			command:  "foo",
+			args:     []string{"x&(y)"},
+			expected: "foo \"x&(y)\"\n",
+		},
+		{
+			command:  "echo",
+			args:     []string{"c:\\windows"},
+			expected: "echo \"c:\\\\windows\"\n",
+		},
+	}
+
+	for _, tc := range tests {
+		writer := &BashWriter{useNewEscape: true}
+		writer.Command(tc.command, tc.args...)
+
+		assert.Equal(t, tc.expected, writer.String())
+	}
+}
+
+func TestBash_IfCmdShellEscapes(t *testing.T) {
+	writer := &BashWriter{useNewEscape: true}
+	writer.IfCmd("foo", "x&(y)")
+
+	assert.Equal(t, "if foo \"x&(y)\" >/dev/null 2>/dev/null; then\n", writer.String())
 }
 
 func TestBash_CheckForErrors(t *testing.T) {

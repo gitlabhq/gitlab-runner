@@ -136,7 +136,7 @@ func (s *Client) Exec(cmd string) error {
 func (s *Command) fullCommand() string {
 	var arguments []string
 	for _, part := range s.Command {
-		arguments = append(arguments, helpers.ShellEscape(part))
+		arguments = append(arguments, helpers.ShellEscapeLegacy(part))
 	}
 	return strings.Join(arguments, " ")
 }
@@ -154,7 +154,7 @@ func (s *Client) Run(ctx context.Context, cmd Command) error {
 
 	var envVariables bytes.Buffer
 	for _, keyValue := range cmd.Environment {
-		envVariables.WriteString("export " + helpers.ShellEscape(keyValue) + "\n")
+		envVariables.WriteString("export " + helpers.ShellEscapeLegacy(keyValue) + "\n")
 	}
 
 	session.Stdin = io.MultiReader(
