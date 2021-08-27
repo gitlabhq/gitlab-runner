@@ -108,6 +108,16 @@ github.com/docker/machine/libmachine/mcnutils
 github.com/docker/machine/version
 # github.com/dustin/go-humanize v1.0.0
 github.com/dustin/go-humanize
+# github.com/dvyukov/go-fuzz v0.0.0-20210602112143-b1f3d6f4ef4e
+## explicit
+github.com/dvyukov/go-fuzz/go-fuzz
+github.com/dvyukov/go-fuzz/go-fuzz-defs
+github.com/dvyukov/go-fuzz/go-fuzz/internal/pcg
+github.com/dvyukov/go-fuzz/go-fuzz/versifier
+github.com/dvyukov/go-fuzz/internal/go-fuzz-types
+# github.com/elazarl/go-bindata-assetfs v1.0.1
+## explicit
+github.com/elazarl/go-bindata-assetfs
 # github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484
 ## explicit
 # github.com/form3tech-oss/jwt-go v3.2.2+incompatible
@@ -327,6 +337,9 @@ github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/test
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
+# github.com/stephens2424/writerset v1.0.2
+## explicit
+github.com/stephens2424/writerset
 # github.com/stretchr/objx v0.3.0
 ## explicit
 github.com/stretchr/objx

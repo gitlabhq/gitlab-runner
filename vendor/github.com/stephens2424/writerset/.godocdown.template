@@ -1,0 +1,9 @@
+# writerset
+--
+
+Package writerset implements a mechanism to add and remove writers from a
+construct similar to io.MultiWriter.
+
+[![GoDoc](https://godoc.org/github.com/stephens2424/writerset?status.svg)](https://godoc.org/github.com/stephens2424/writerset)
+
+{{ .EmitUsage }}

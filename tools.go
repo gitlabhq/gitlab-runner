@@ -1,3 +1,4 @@
+//go:build tools
 // +build tools
 
 package main
@@ -7,5 +8,6 @@ package main
 // https://marcofranssen.nl/manage-go-tools-via-go-modules/
 import (
 	_ "github.com/boumenot/gocover-cobertura" // code coverage format conversion tool for inline code coverage in MRs
+	_ "github.com/dvyukov/go-fuzz/go-fuzz"    // fuzz testing job
 	_ "github.com/mitchellh/gox"              // cross-compilation of the binary
 )
