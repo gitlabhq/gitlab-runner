@@ -7,22 +7,21 @@ import (
 )
 
 const (
-	CmdDisableDelayedErrorLevelExpansion        string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
-	NetworkPerBuild                             string = "FF_NETWORK_PER_BUILD"
-	UseLegacyKubernetesExecutionStrategy        string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
-	UseDirectDownload                           string = "FF_USE_DIRECT_DOWNLOAD"
-	SkipNoOpBuildStages                         string = "FF_SKIP_NOOP_BUILD_STAGES"
-	UseFastzip                                  string = "FF_USE_FASTZIP"
-	GitLabRegistryHelperImage                   string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
-	DisableUmaskForDockerExecutor               string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
-	EnableBashExitCodeCheck                     string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
-	UseWindowsLegacyProcessStrategy             string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
-	SkipDockerMachineProvisionOnCreationFailure string = "FF_SKIP_DOCKER_MACHINE_PROVISION_ON_CREATION_FAILURE"
-	UseNewEvalStrategy                          string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
-	UsePowershellPathResolver                   string = "FF_USE_POWERSHELL_PATH_RESOLVER"
-	UseDynamicTraceForceSendInterval            string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
-	ScriptSections                              string = "FF_SCRIPT_SECTIONS"
-	UseNewShellEscape                           string = "FF_USE_NEW_SHELL_ESCAPE"
+	CmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
+	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
+	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
+	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
+	SkipNoOpBuildStages                  string = "FF_SKIP_NOOP_BUILD_STAGES"
+	UseFastzip                           string = "FF_USE_FASTZIP"
+	GitLabRegistryHelperImage            string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
+	DisableUmaskForDockerExecutor        string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
+	EnableBashExitCodeCheck              string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
+	UseWindowsLegacyProcessStrategy      string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
+	UseNewEvalStrategy                   string = "FF_USE_NEW_BASH_EVAL_STRATEGY"
+	UsePowershellPathResolver            string = "FF_USE_POWERSHELL_PATH_RESOLVER"
+	UseDynamicTraceForceSendInterval     string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
+	ScriptSections                       string = "FF_SCRIPT_SECTIONS"
+	UseNewShellEscape                    string = "FF_USE_NEW_SHELL_ESCAPE"
 )
 
 type FeatureFlag struct {
@@ -126,16 +125,6 @@ var flags = []FeatureFlag{
 			"and how we setup these processes may change as we continue to improve this. When set to `true`, legacy " +
 			"process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag should" +
 			"be set to `false`.",
-	},
-	{
-		Name:            SkipDockerMachineProvisionOnCreationFailure,
-		DefaultValue:    true,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description: "With the `docker+machine` executor, when a machine is " +
-			"not created, `docker-machine provision` runs for X amount of times. When " +
-			"this feature flag is set to `true`, it skips `docker-machine provision`, " +
-			"removes the machine, and creates another machine instead.",
 	},
 	{
 		Name:            UseNewEvalStrategy,

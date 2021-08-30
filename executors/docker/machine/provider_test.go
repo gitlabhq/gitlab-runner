@@ -17,7 +17,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 var machineDefaultConfig = &common.RunnerConfig{
@@ -34,18 +33,6 @@ var machineCreateFail = &common.RunnerConfig{
 		Machine: &common.DockerMachine{
 			MachineName: "create-fail-%s",
 			IdleTime:    5,
-		},
-	},
-}
-
-var machineCreateFailSkipProvision = &common.RunnerConfig{
-	RunnerSettings: common.RunnerSettings{
-		Machine: &common.DockerMachine{
-			MachineName: "create-fail-%s",
-			IdleTime:    5,
-		},
-		FeatureFlags: map[string]bool{
-			featureflags.SkipDockerMachineProvisionOnCreationFailure: true,
 		},
 	},
 }
@@ -320,15 +307,6 @@ func TestMachineCreationAndRemoval(t *testing.T) {
 	assert.NotNil(t, d3)
 	assert.Error(t, <-errCh)
 	assert.Equal(t, machineStateRemoving, d3.State)
-}
-
-func TestMachineCreation_SkipProvisionOnFailure(t *testing.T) {
-	p, _ := testMachineProvider()
-
-	m, errCh := p.create(machineCreateFailSkipProvision, machineStateUsed)
-	assert.NotNil(t, m)
-	assert.Error(t, <-errCh, "failed to create")
-	assert.Equal(t, machineStateRemoving, m.State)
 }
 
 func TestMachineUse(t *testing.T) {

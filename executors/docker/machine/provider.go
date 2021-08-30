@@ -11,7 +11,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 type machineProvider struct {
@@ -118,12 +117,7 @@ func (m *machineProvider) createWithGrowthCapacity(
 	logger := logrus.WithField("name", details.Name)
 	started := time.Now()
 
-	err := m.reprovisionMachineOnCreationFailure(
-		logger,
-		config,
-		details,
-		m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...),
-	)
+	err := m.machine.Create(config.Machine.MachineDriver, details.Name, config.Machine.MachineOptions...)
 	if err != nil {
 		logger.WithField("time", time.Since(started)).
 			WithError(err).
@@ -149,29 +143,6 @@ func (m *machineProvider) createWithGrowthCapacity(
 		coordinator.addAvailableMachine()
 	}
 	errCh <- err
-}
-
-func (m *machineProvider) reprovisionMachineOnCreationFailure(
-	logger logrus.FieldLogger,
-	config *common.RunnerConfig,
-	details *machineDetails,
-	err error,
-) error {
-	skipProvision := config.IsFeatureFlagOn(featureflags.SkipDockerMachineProvisionOnCreationFailure)
-	if skipProvision {
-		logger.WithError(err).Infof("Skipping provision retry on failed machine")
-		return err
-	}
-
-	for i := 0; i < 3 && err != nil; i++ {
-		details.RetryCount++
-		logger.WithError(err).
-			Warningln("Machine creation failed, trying to provision")
-		time.Sleep(provisionRetryInterval)
-		err = m.machine.Provision(details.Name)
-	}
-
-	return err
 }
 
 func (m *machineProvider) findFreeMachine(skipCache bool, machines ...string) (details *machineDetails) {
