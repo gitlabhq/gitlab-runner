@@ -165,10 +165,9 @@ section.
 
 ### Services
 
-You can use [services](https://docs.gitlab.com/ee/ci/services/) by
-enabling [network per-build](#network-per-build) networking mode.
-[Available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042)
-since GitLab Runner 12.9.
+In [GitLab Runner 12.9 and later](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042),
+you can use [services](https://docs.gitlab.com/ee/ci/services/) by
+enabling [a network for each job](#create-a-network-for-each-job).
 
 ## Workflow
 
@@ -234,16 +233,17 @@ to each service.
 
 ## Networking
 
-Networking is required to connect services to the build job and may also be used to run build jobs in user-defined
-networks. Either legacy `network_mode` or `per-build` networking may be used.
+Networking is required to connect services to a CI/CD job. Networking can also be used to run jobs in user-defined
+networks. You can use either legacy container links, or create a network for each job.
+We recommend creating a network for each job.
 
 ### Legacy container links
 
 The default network mode uses [Legacy container links](https://docs.docker.com/network/links/) with
 the default Docker `bridge` mode to link the job container with the services.
 
-`network_mode` can be used to configure how the networking stack is set up for the containers
-using one of the following values:
+This mode can be used to configure how the networking stack is set up for the containers
+by using one of the following values:
 
 - One of the standard Docker [networking modes](https://docs.docker.com/engine/reference/run/#network-settings):
   - `bridge`: use the bridge network (default)
@@ -252,41 +252,41 @@ using one of the following values:
   - Any other `network_mode` value is taken as the name of an already existing
     Docker network, which the build container should connect to.
 
-For name resolution to work, Docker will manipulate the `/etc/hosts` file in the build
-job container to include the service container hostname (and alias). However,
-the service container will **not** be able to resolve the build job container
-name. To achieve that, use the `per-build` network mode.
+For name resolution to work, Docker manipulates the `/etc/hosts` file in the
+container to include the service container hostname and alias. However,
+the service container is **not** able to resolve the container
+name. To resolve the container name, create a network for each job.
 
 Linked containers share their environment variables.
 
-### Network per-build
+### Create a network for each job
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042) in GitLab Runner 12.9.
 
-This mode will create and use a new user-defined Docker bridge network per build.
+This networking mode creates and uses a new user-defined Docker bridge network for each job.
 [User-defined bridge networks](https://docs.docker.com/network/bridge/) are covered in detail in the Docker documentation.
 
 Unlike [legacy container links](#legacy-container-links) used in other network modes,
 Docker environment variables are **not** shared across the containers.
 
-Docker networks may conflict with other networks on the host, including other Docker networks,
+Docker networks might conflict with other networks on the host, including other Docker networks,
 if the CIDR ranges are already in use. The default Docker address pool can be configured
-via `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
+by using `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
 
-To enable this mode you need to enable the [`FF_NETWORK_PER_BUILD`
+To enable this mode you must enable the [`FF_NETWORK_PER_BUILD`
 feature flag](../configuration/feature-flags.md).
 
-When a job starts, a bridge network is created (similarly to `docker
-network create <network>`). Upon creation, the service container(s) and the
+When a job starts, a bridge network is created (similar to `docker network create <network>`).
+Upon creation, the service containers and the
 build job container are connected to this network.
 
-Both the build job container, and the service container(s) will be able to
-resolve each other's hostnames (and aliases). This functionality is
+Both the container running the job and the containers running the service can
+resolve each other's hostnames and aliases. This functionality is
 [provided by Docker](https://docs.docker.com/network/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
 
-The build container is resolvable via the `build` alias as well as it's GitLab assigned hostname.
+The job container is resolvable by using the `build` alias as well, because the hostname is assigned by GitLab.
 
-The network is removed at the end of the build job.
+The network is removed at the end of the job.
 
 ## Define image and services from `.gitlab-ci.yml`
 

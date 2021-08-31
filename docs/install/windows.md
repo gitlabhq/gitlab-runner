@@ -335,6 +335,7 @@ of your drive instead.
 
 ### The build container is unable to connect to service containers
 
-[Network-per-build](../executors/docker.md#network-per-build)
-is required to use services with Windows containers. Ensure that the `FF_NETWORK_PER_BUILD`
-feature flag is set.
+To use services with Windows containers:
+
+- Use the networking mode that [creates a network for each job](../executors/docker.md#create-a-network-for-each-job).
+- Ensure that the `FF_NETWORK_PER_BUILD` feature flag is enabled.
