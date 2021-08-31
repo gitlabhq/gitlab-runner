@@ -75,21 +75,6 @@ var (
 	errIncorrectShellType = fmt.Errorf("kubernetes executor incorrect shell type")
 )
 
-// GetDefaultCapDrop returns the default capabilities that should be dropped
-// from a build container.
-func GetDefaultCapDrop(os string) []string {
-	// windows does not support security context capabilities
-	if os == helperimage.OSTypeWindows {
-		return nil
-	}
-
-	return []string{
-		// Reasons for disabling NET_RAW by default were
-		// discussed in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26833
-		"NET_RAW",
-	}
-}
-
 type commandTerminatedError struct {
 	exitCode int
 }
@@ -1232,7 +1217,10 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 			imageDefinition: service,
 			requests:        s.configurationOverwrites.serviceRequests,
 			limits:          s.configurationOverwrites.serviceLimits,
-			securityContext: s.Config.Kubernetes.GetServiceContainerSecurityContext(),
+			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+				s.Config.Kubernetes.ServiceContainerSecurityContext,
+				s.defaultCapDrop()...,
+			),
 		})
 		if err != nil {
 			return err
@@ -1298,6 +1286,20 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	return nil
 }
 
+func (s *executor) defaultCapDrop() []string {
+	os := s.helperImageInfo.OSType
+	// windows does not support security context capabilities
+	if os == helperimage.OSTypeWindows {
+		return nil
+	}
+
+	return []string{
+		// Reasons for disabling NET_RAW by default were
+		// discussed in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26833
+		"NET_RAW",
+	}
+}
+
 //nolint:funlen
 func (s *executor) preparePodConfig(
 	labels, annotations map[string]string,
@@ -1318,20 +1320,26 @@ func (s *executor) preparePodConfig(
 		imageDefinition: s.options.Image,
 		requests:        s.configurationOverwrites.buildRequests,
 		limits:          s.configurationOverwrites.buildLimits,
-		securityContext: s.Config.Kubernetes.GetBuildContainerSecurityContext(),
-		command:         dockerCmdForBuildContainer,
+		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+			s.Config.Kubernetes.BuildContainerSecurityContext,
+			s.defaultCapDrop()...,
+		),
+		command: dockerCmdForBuildContainer,
 	})
 	if err != nil {
 		return api.Pod{}, fmt.Errorf("building build container: %w", err)
 	}
 
 	helperContainer, err := s.buildContainer(containerBuildOpts{
-		name:            helperContainerName,
-		image:           s.getHelperImage(),
-		requests:        s.configurationOverwrites.helperRequests,
-		limits:          s.configurationOverwrites.helperLimits,
-		securityContext: s.Config.Kubernetes.GetHelperContainerSecurityContext(),
-		command:         s.BuildShell.DockerCommand,
+		name:     helperContainerName,
+		image:    s.getHelperImage(),
+		requests: s.configurationOverwrites.helperRequests,
+		limits:   s.configurationOverwrites.helperLimits,
+		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+			s.Config.Kubernetes.HelperContainerSecurityContext,
+			s.defaultCapDrop()...,
+		),
+		command: s.BuildShell.DockerCommand,
 	})
 	if err != nil {
 		return api.Pod{}, fmt.Errorf("building helper container: %w", err)

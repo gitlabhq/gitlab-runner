@@ -566,17 +566,17 @@ check_interval = 30
 
 ### Container security context
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/1507) in GitLab runner 14.3
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/3116) in GitLab Runner 14.5.
 
-The [container security context](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) configuration configures the executor to set a container security policy on the build, helper or service pods.
+Use the [container security context](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) configuration to configure the executor to set a container security policy on the build, helper, or service pods.
 
 | Option                | Type        | Required | Description |
 |-----------------------|-------------|----------|-------------|
-| `run_as_group`        | int         | no       | The GID to run the entry point of the container process |
-| `run_as_non_root`     | boolean     | no       | Indicates that the container must run as a non-root user |
-| `run_as_user`         | int         | no       | The UID to run the entry point of the container process |
-| `capabilities.add`    | string list | no       | The capabilities to add when running the container |
-| `capabilities.drop`   | string list | no       | The capabilities to drop when running the container |
+| `run_as_group`        | int         | No       | The GID to run the entry point of the container process. |
+| `run_as_non_root`     | boolean     | No       | Indicates that the container must run as a non-root user. |
+| `run_as_user`         | int         | No       | The UID to run the entry point of the container process. |
+| `capabilities.add`    | string list | No       | The capabilities to add when running the container. |
+| `capabilities.drop`   | string list | No       | The capabilities to drop when running the container. |
 
 The example below sets a pod security context, then overrides `run_as_user` and `run_as_group` for both the build and helper containers. In the example, all service containers would inherit `run_as_user` and `run_as_group` from the pod security context.
 
@@ -608,7 +608,6 @@ check_interval = 30
         run_as_user = 1000
         run_as_group = 1000
 ```
-
 
 ## Using services
 

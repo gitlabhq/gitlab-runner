@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
@@ -1337,10 +1336,7 @@ func TestEffectivePrivilege(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			k8sConfig := KubernetesConfig{
-				Privileged: &tt.pod,
-			}
-			effectivePrivileged := k8sConfig.getPrivilegedEffective(&tt.container)
+			effectivePrivileged := getContainerSecurityContextEffectiveFlagValue(&tt.container, &tt.pod)
 			require.NotNil(t, effectivePrivileged)
 			assert.Equal(t, tt.expected, *effectivePrivileged)
 		})
@@ -1352,211 +1348,85 @@ func TestContainerSecurityContext(t *testing.T) {
 		return &v
 	}
 
+	int64Ptr := func(v int64) *int64 {
+		return &v
+	}
+
 	tests := map[string]struct {
-		assignSecurityContextFn             func(c *KubernetesConfig)
-		getSecurityContext                  func(c *KubernetesConfig) *v1.SecurityContext
-		getExpectedContainerSecurityContext func() *v1.SecurityContext
+		getSecurityContext                  func(c *KubernetesConfig) *api.SecurityContext
+		getExpectedContainerSecurityContext func() *api.SecurityContext
 	}{
-		"no build container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetBuildContainerSecurityContext()
+		"no container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{})
 			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-				}
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{}
 			},
 		},
-		"run as user - build container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
+		"run as user - container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					RunAsUser: int64Ptr(1000),
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				runAsUser := int64(1000)
-				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
+				return &api.SecurityContext{
 					RunAsUser: &runAsUser,
 				}
 			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetBuildContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				runAsUser := int64(1000)
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
-				}
-			},
 		},
-		"no service container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetServiceContainerSecurityContext()
+		"privileged - container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Privileged: boolPtr(true),
+				})
 			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-				}
-			},
-		},
-		"run as user - service container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				runAsUser := int64(900)
-				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
-					RunAsUser: &runAsUser,
-				}
-			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetServiceContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				runAsUser := int64(900)
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
-				}
-			},
-		},
-		"no helper container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetHelperContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-				}
-			},
-		},
-		"run as user - helper container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				runAsUser := int64(65535)
-				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
-					RunAsUser: &runAsUser,
-				}
-			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetHelperContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				runAsUser := int64(65535)
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
-				}
-			},
-		},
-		"privileged - helper container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.Privileged = boolPtr(true)
-			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetHelperContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := true
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-				}
-			},
-		},
-		"privileged - service container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.Privileged = boolPtr(true)
-			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetServiceContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := true
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-				}
-			},
-		},
-		"privileged - build container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.Privileged = boolPtr(true)
-			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetBuildContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				return &v1.SecurityContext{
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
 					Privileged: boolPtr(true),
 				}
 			},
 		},
-		"container privileged override - helper container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
+		"container privileged override - container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
 				c.Privileged = boolPtr(true)
-
-				privileged := false
-				runAsUser := int64(65535)
-				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
-				}
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Privileged: boolPtr(false),
+					RunAsUser:  int64Ptr(65535),
+				})
 			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetHelperContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
 				runAsUser := int64(65535)
-				return &v1.SecurityContext{
-					Privileged: &privileged,
+				return &api.SecurityContext{
+					Privileged: boolPtr(false),
 					RunAsUser:  &runAsUser,
 				}
 			},
 		},
-		"container privileged override - service container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.Privileged = boolPtr(true)
-
-				privileged := false
-				runAsUser := int64(65535)
-				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
-				}
+		"allow privilege escalation - not set on container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AllowPrivilegeEscalation: boolPtr(true),
+				})
 			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetServiceContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				runAsUser := int64(65535)
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AllowPrivilegeEscalation: boolPtr(true),
 				}
 			},
 		},
-		"container privileged override - build container security context": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.Privileged = boolPtr(true)
-
-				privileged := false
-				runAsUser := int64(65535)
-				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
-				}
+		"allow privilege escalation - set on container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				c.AllowPrivilegeEscalation = boolPtr(true)
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AllowPrivilegeEscalation: boolPtr(false),
+				})
 			},
-			getSecurityContext: func(c *KubernetesConfig) *v1.SecurityContext {
-				return c.GetBuildContainerSecurityContext()
-			},
-			getExpectedContainerSecurityContext: func() *v1.SecurityContext {
-				privileged := false
-				runAsUser := int64(65535)
-				return &v1.SecurityContext{
-					Privileged: &privileged,
-					RunAsUser:  &runAsUser,
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AllowPrivilegeEscalation: boolPtr(false),
 				}
 			},
 		},
@@ -1565,9 +1435,6 @@ func TestContainerSecurityContext(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			config := new(KubernetesConfig)
-			tt.assignSecurityContextFn(config)
-
-			tt.assignSecurityContextFn(config)
 			scExpected := tt.getExpectedContainerSecurityContext()
 			scActual := tt.getSecurityContext(config)
 			assert.Equal(t, scExpected, scActual)
@@ -1577,202 +1444,209 @@ func TestContainerSecurityContext(t *testing.T) {
 
 func TestContainerSecurityCapabilities(t *testing.T) {
 	tests := map[string]struct {
-		assignSecurityContextFn func(c *KubernetesConfig)
-		getCapabilitiesFn       func(c *KubernetesConfig) *v1.Capabilities
-		expectedCapabilities    *v1.Capabilities
+		getCapabilitiesFn    func(c *KubernetesConfig) *api.Capabilities
+		expectedCapabilities *api.Capabilities
 	}{
-		"build container add": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
-					Capabilities: &KubernetesBuildContainerCapabilities{
-						Add: []v1.Capability{"SYS_TIME"},
+		"container add": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Add: []api.Capability{"SYS_TIME"},
 					},
-				}
+				}).Capabilities
 			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getBuildContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  []v1.Capability{"SYS_TIME"},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"SYS_TIME"},
 				Drop: nil,
 			},
 		},
-		"build container drop": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
-					Capabilities: &KubernetesBuildContainerCapabilities{
-						Drop: []v1.Capability{"SYS_TIME"},
+		"container drop": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Drop: []api.Capability{"SYS_TIME"},
 					},
-				}
+				}).Capabilities
 			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getBuildContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
+			expectedCapabilities: &api.Capabilities{
 				Add:  nil,
-				Drop: []v1.Capability{"SYS_TIME"},
+				Drop: []api.Capability{"SYS_TIME"},
 			},
 		},
-		"build container add and drop": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{
-					Capabilities: &KubernetesBuildContainerCapabilities{
-						Add:  []v1.Capability{"SYS_TIME"},
-						Drop: []v1.Capability{"SYS_TIME"},
+		"container add and drop": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Add:  []api.Capability{"SYS_TIME"},
+						Drop: []api.Capability{"SYS_TIME"},
 					},
-				}
+				}).Capabilities
 			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getBuildContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  []v1.Capability{"SYS_TIME"},
-				Drop: []v1.Capability{"SYS_TIME"},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"SYS_TIME"},
+				Drop: []api.Capability{"SYS_TIME"},
 			},
 		},
-		"build container empty": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.BuildContainerSecurityContext = KubernetesBuildContainerSecurityContext{}
+		"container empty": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{}).Capabilities
 			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getBuildContainerCapabilities()
-			},
-			expectedCapabilities: nil,
 		},
-		"helper container add": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
-					Capabilities: &KubernetesHelperContainerCapabilities{
-						Add: []v1.Capability{"SYS_TIME"},
+		"container when capAdd and capDrop exist": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				c.CapAdd = []string{"add"}
+				c.CapDrop = []string{"drop"}
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{}).Capabilities
+			},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"add"},
+				Drop: []api.Capability{"drop"},
+			},
+		},
+		"container when capAdd and container capabilities exist": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				c.CapAdd = []string{"add"}
+				c.CapDrop = []string{"drop"}
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Add: []api.Capability{"add container"},
 					},
-				}
+				}).Capabilities
 			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getHelperContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  []v1.Capability{"SYS_TIME"},
-				Drop: nil,
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"add container"},
+				Drop: []api.Capability{"drop"},
 			},
 		},
-		"helper container drop": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
-					Capabilities: &KubernetesHelperContainerCapabilities{
-						Drop: []v1.Capability{"SYS_TIME"},
+		"container when capDrop and container capabilities exist": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				c.CapAdd = []string{"add"}
+				c.CapDrop = []string{"drop"}
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Drop: []api.Capability{"drop container"},
 					},
-				}
+				}).Capabilities
 			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getHelperContainerCapabilities()
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"add"},
+				Drop: []api.Capability{"drop container"},
 			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  nil,
-				Drop: []v1.Capability{"SYS_TIME"},
-			},
-		},
-		"helper container add and drop": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{
-					Capabilities: &KubernetesHelperContainerCapabilities{
-						Add:  []v1.Capability{"SYS_TIME"},
-						Drop: []v1.Capability{"SYS_TIME"},
-					},
-				}
-			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getHelperContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  []v1.Capability{"SYS_TIME"},
-				Drop: []v1.Capability{"SYS_TIME"},
-			},
-		},
-		"helper container empty": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.HelperContainerSecurityContext = KubernetesHelperContainerSecurityContext{}
-			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getHelperContainerCapabilities()
-			},
-			expectedCapabilities: nil,
-		},
-		"service container add": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
-					Capabilities: &KubernetesServiceContainerCapabilities{
-						Add: []v1.Capability{"SYS_TIME"},
-					},
-				}
-			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getServiceContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  []v1.Capability{"SYS_TIME"},
-				Drop: nil,
-			},
-		},
-		"service container drop": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
-					Capabilities: &KubernetesServiceContainerCapabilities{
-						Drop: []v1.Capability{"SYS_TIME"},
-					},
-				}
-			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getServiceContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  nil,
-				Drop: []v1.Capability{"SYS_TIME"},
-			},
-		},
-		"service container add and drop": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{
-					Capabilities: &KubernetesServiceContainerCapabilities{
-						Add:  []v1.Capability{"SYS_TIME"},
-						Drop: []v1.Capability{"SYS_TIME"},
-					},
-				}
-			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getServiceContainerCapabilities()
-			},
-
-			expectedCapabilities: &v1.Capabilities{
-				Add:  []v1.Capability{"SYS_TIME"},
-				Drop: []v1.Capability{"SYS_TIME"},
-			},
-		},
-		"service container empty": {
-			assignSecurityContextFn: func(c *KubernetesConfig) {
-				c.ServiceContainerSecurityContext = KubernetesServiceContainerSecurityContext{}
-			},
-			getCapabilitiesFn: func(c *KubernetesConfig) *v1.Capabilities {
-				return c.getServiceContainerCapabilities()
-			},
-			expectedCapabilities: nil,
 		},
 	}
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			config := new(KubernetesConfig)
-			tt.assignSecurityContextFn(config)
-
 			c := tt.getCapabilitiesFn(config)
 			assert.Equal(t, tt.expectedCapabilities, c)
+		})
+	}
+}
+
+func TestGetCapabilities(t *testing.T) {
+	tests := map[string]struct {
+		defaultCapDrop     []string
+		capAdd             []string
+		capDrop            []string
+		assertCapabilities func(t *testing.T, a *api.Capabilities)
+	}{
+		"no data provided": {
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				assert.Nil(t, a)
+			},
+		},
+		"only default_cap_drop provided": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 2)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+			},
+		},
+		"only custom cap_add provided": {
+			capAdd: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 2)
+				assert.Contains(t, a.Add, api.Capability("CAP_1"))
+				assert.Contains(t, a.Add, api.Capability("CAP_2"))
+				assert.Empty(t, a.Drop)
+			},
+		},
+		"only custom cap_drop provided": {
+			capDrop: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 2)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+			},
+		},
+		"default_cap_drop and custom cap_drop sums": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capDrop:        []string{"CAP_3", "CAP_4"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 4)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_3"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_4"))
+			},
+		},
+		"default_cap_drop and custom cap_drop duplicate": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capDrop:        []string{"CAP_2", "CAP_3"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 3)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_3"))
+			},
+		},
+		"default_cap_drop and custom cap_add intersect": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capAdd:         []string{"CAP_2", "CAP_3"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 2)
+				assert.Contains(t, a.Add, api.Capability("CAP_2"))
+				assert.Contains(t, a.Add, api.Capability("CAP_3"))
+				assert.Len(t, a.Drop, 1)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+			},
+		},
+		"default_cap_drop and custom cap_add intersect and cap_drop forces": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capAdd:         []string{"CAP_2", "CAP_3"},
+			capDrop:        []string{"CAP_2", "CAP_4"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 1)
+				assert.Contains(t, a.Add, api.Capability("CAP_3"))
+				assert.Len(t, a.Drop, 3)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_4"))
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			c := KubernetesConfig{
+				CapAdd:  tt.capAdd,
+				CapDrop: tt.capDrop,
+			}
+
+			tt.assertCapabilities(t, c.getCapabilities(tt.defaultCapDrop))
 		})
 	}
 }
