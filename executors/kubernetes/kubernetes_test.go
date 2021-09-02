@@ -4043,7 +4043,19 @@ func TestGenerateScripts(t *testing.T) {
 	successfulResponse, err := common.GetRemoteSuccessfulMultistepBuild()
 	require.NoError(t, err)
 
+	extension := func(shell *common.ShellScriptInfo) string {
+		switch shell.Shell {
+		case shells.SNPwsh, shells.SNPowershell:
+			return "ps1"
+		}
+		return ""
+	}
+
 	setupMockShellGenerateScript := func(m *common.MockShell, e *executor, stages []common.BuildStage) {
+		m.On("GetConfiguration", mock.Anything).
+			Return(&common.ShellConfiguration{Extension: extension(e.Shell())}, nil).
+			Maybe()
+
 		for _, s := range stages {
 			m.On("GenerateScript", s, e.ExecutorOptions.Shell).
 				Return("OK", nil).
@@ -4054,15 +4066,19 @@ func TestGenerateScripts(t *testing.T) {
 	setupScripts := func(e *executor, stages []common.BuildStage) map[string]string {
 		scripts := map[string]string{}
 		shell := e.Shell().Shell
+		ext := extension(e.Shell())
+		if ext != "" {
+			ext = "." + ext
+		}
 		switch shell {
 		case shells.SNPwsh, shells.SNPowershell:
-			scripts[parsePwshScriptName] = shells.PwshValidationScript(shell)
+			scripts[parsePwshScriptName+ext] = shells.PwshValidationScript(shell)
 		default:
-			scripts[detectShellScriptName] = shells.BashDetectShellScript
+			scripts[detectShellScriptName+ext] = shells.BashDetectShellScript
 		}
 
 		for _, s := range stages {
-			scripts[string(s)] = "OK"
+			scripts[string(s)+ext] = "OK"
 		}
 
 		return scripts
@@ -4136,6 +4152,9 @@ func TestGenerateScripts(t *testing.T) {
 			setupMockShell: func(e *executor) *common.MockShell {
 				buildStages := e.Build.BuildStages()
 				m := new(common.MockShell)
+				m.On("GetConfiguration", mock.Anything).
+					Return(&common.ShellConfiguration{Extension: extension(e.Shell())}, nil).
+					Maybe()
 				m.On("GenerateScript", buildStages[0], e.ExecutorOptions.Shell).
 					Return("", testErr).
 					Once()
@@ -4344,7 +4363,7 @@ func TestGetContainerInfo(t *testing.T) {
 					"sh",
 					e.scriptPath(detectShellScriptName),
 					e.scriptPath(cmd.Stage),
-					e.buildRedirectionCmd(),
+					e.buildRedirectionCmd("bash"),
 				}
 			},
 		},
@@ -4360,7 +4379,7 @@ func TestGetContainerInfo(t *testing.T) {
 					e.helperImageInfo.Cmd,
 					"<<<",
 					e.scriptPath(cmd.Stage),
-					e.buildRedirectionCmd(),
+					e.buildRedirectionCmd("bash"),
 				)
 			},
 		},
@@ -4374,7 +4393,7 @@ func TestGetContainerInfo(t *testing.T) {
 				return []string{
 					e.scriptPath(parsePwshScriptName),
 					e.scriptPath(cmd.Stage),
-					e.buildRedirectionCmd(),
+					e.buildRedirectionCmd("pwsh"),
 				}
 			},
 		},
@@ -4388,7 +4407,7 @@ func TestGetContainerInfo(t *testing.T) {
 			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
 				commands := append([]string(nil), fmt.Sprintf("Get-Content -Path %s | ", e.scriptPath(cmd.Stage)))
 				commands = append(commands, e.helperImageInfo.Cmd...)
-				commands = append(commands, e.buildRedirectionCmd())
+				commands = append(commands, e.buildRedirectionCmd("pwsh"))
 				return commands
 			},
 		},
@@ -4404,6 +4423,16 @@ func TestGetContainerInfo(t *testing.T) {
 }
 
 func setupExecutor(shell string, successfulResponse common.JobResponse) *executor {
+	build := &common.Build{
+		JobResponse: successfulResponse,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "kubernetes",
+				Shell:    shell,
+			},
+		},
+	}
+
 	return &executor{
 		helperImageInfo: helperimage.Info{
 			Cmd: []string{"custom", "command"},
@@ -4414,11 +4443,10 @@ func setupExecutor(shell string, successfulResponse common.JobResponse) *executo
 				DefaultCacheDir:  "/cache",
 				Shell: common.ShellScriptInfo{
 					Shell: shell,
+					Build: build,
 				},
 			},
-			Build: &common.Build{
-				JobResponse: successfulResponse,
-			},
+			Build: build,
 		},
 	}
 }
