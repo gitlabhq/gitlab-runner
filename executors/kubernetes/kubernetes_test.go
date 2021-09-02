@@ -3655,9 +3655,7 @@ func TestProcessLogs(t *testing.T) {
 			expectedExitCode: 1,
 			expectedScript:   "script",
 			run: func(ch chan string, errCh chan error) {
-				b, err := json.Marshal(getCommandExitStatus(1, "script"))
-				require.NoError(t, err)
-				ch <- string(b)
+				ch <- getCommandExitStatus(1, "script")
 			},
 		},
 		"Reattach failure with CodeExitError": {
@@ -3697,9 +3695,7 @@ func TestProcessLogs(t *testing.T) {
 			expectedScript:   "script",
 			run: func(ch chan string, errCh chan error) {
 				close(errCh)
-				b, err := json.Marshal(getCommandExitStatus(3, "script"))
-				require.NoError(t, err)
-				ch <- string(b)
+				ch <- getCommandExitStatus(3, "script")
 				close(ch)
 			},
 		},
@@ -3733,7 +3729,7 @@ func TestProcessLogs(t *testing.T) {
 			go e.processLogs(context.Background())
 
 			exitStatus := <-e.remoteProcessTerminated
-			assert.Equal(t, tc.expectedExitCode, *exitStatus.CommandExitCode)
+			assert.Equal(t, tc.expectedExitCode, exitStatus.CommandExitCode)
 			if tc.expectedScript != "" {
 				assert.Equal(t, tc.expectedScript, *exitStatus.Script)
 			}
@@ -3741,11 +3737,8 @@ func TestProcessLogs(t *testing.T) {
 	}
 }
 
-func getCommandExitStatus(exitCode int, script string) shells.TrapCommandExitStatus {
-	return shells.TrapCommandExitStatus{
-		CommandExitCode: &exitCode,
-		Script:          &script,
-	}
+func getCommandExitStatus(exitCode int, script string) string {
+	return fmt.Sprintf(`{"command_exit_code": %v, "script": %q}`, exitCode, script)
 }
 
 func TestRunAttachCheckPodStatus(t *testing.T) {
