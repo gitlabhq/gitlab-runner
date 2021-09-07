@@ -313,7 +313,7 @@ To convert an Off Peak Configuration into an autoscaling one, create a `[[runner
 - `IdleTime` field takes the value from `OffpeakIdleTime`
 - `Timezone` field takes the value from `OffpeakTimezone`
 
-As an example, consider the conversion of the following **Offpeak configuration**: 
+As an example, consider the conversion of the following **Offpeak configuration**:
 
 ```toml
 [runners.machine]

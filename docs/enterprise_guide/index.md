@@ -211,7 +211,7 @@ Here are a few essential dashboards that we recommend you use to monitor your ru
 You can correlate this data with other metrics, like job duration, to determine if you need configuration changes or
 capacity upgrades to continue to service your internal SLO's for CI/CD job performance.
 
-**Job duration**: 
+**Job duration**:
 
 - Analyze the performance and scaling of your runner fleet.
 

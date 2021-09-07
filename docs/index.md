@@ -176,7 +176,7 @@ sequenceDiagram
 
     opt registration
       GitLabRunner ->>+ GitLab: POST /api/v4/runners with registration_token
-      GitLab -->>- GitLabRunner: Registered with runner_token 
+      GitLab -->>- GitLabRunner: Registered with runner_token
     end
 
     loop job requesting and handling
