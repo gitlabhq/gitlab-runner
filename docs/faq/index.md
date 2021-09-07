@@ -66,7 +66,7 @@ logLevel: debug
 
 ## Configure DNS for a Docker executor runner
 
-When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container. 
+When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container.
 
 **Example:**
 

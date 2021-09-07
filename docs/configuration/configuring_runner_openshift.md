@@ -82,7 +82,7 @@ This is a list of the supported properties that can be passed to the Operator.
 To create a proxy environment:
 
 1. Edit the `custom-env.yaml` file. For example:
-    
+
    ```yaml
    apiVersion: v1
    data:
@@ -91,12 +91,12 @@ To create a proxy environment:
    metadata:
      name: custom-env
    ```
-    
+
 1. Update OpenShift to apply the changes.
-    
+
    ```shell
    oc apply -f custom-env.yaml
-   ``` 
+   ```
 
 1. Update your [`gitlab-runner.yml`](../install/openshift.md#install-gitlab-runner) file.
 
@@ -144,7 +144,7 @@ You can customize the runner's `config.toml` file by using the [configuration te
       gitlabUrl: https://gitlab.example.com
       token: gitlab-runner-secret
       config: custom-config-toml
-    ``` 
+    ```
 
 ## Configure a custom TLS cert
 
@@ -166,7 +166,7 @@ You can customize the runner's `config.toml` file by using the [configuration te
     ```
 
 1. Create the secret:
-    
+
    ```shell
    oc apply -f custom-tls-ca-secret.yaml
    ```
@@ -182,7 +182,7 @@ You can customize the runner's `config.toml` file by using the [configuration te
       gitlabUrl: https://gitlab.example.com
       token: gitlab-runner-secret
       ca: custom-tls-ca
-    ``` 
+    ```
 
 ## Configure the CPU and memory size of runner pods
 
@@ -190,7 +190,7 @@ To set [CPU limits](../executors/kubernetes.md#cpu-requests-and-limits) and [mem
 
 ## Configure job concurrency per runner based on cluster resources
 
-Set the `concurrent` property of the `Runner` resource: 
+Set the `concurrent` property of the `Runner` resource:
 
    ```yaml
    apiVersion: apps.gitlab.com/v1beta2
@@ -203,7 +203,7 @@ Set the `concurrent` property of the `Runner` resource:
      concurrent: 2
    ```
 
-Job concurrency is dictated by the requirements of the specific project. 
+Job concurrency is dictated by the requirements of the specific project.
 
 1. Start by trying to determine the compute and memory resources required to execute a CI job.
 1. Calculate how many times that job would be able to execute given the resources in the cluster.
@@ -263,7 +263,7 @@ FIELD:    ca <string>
 DESCRIPTION:
      Name of tls secret containing the custom certificate authority (CA)
      certificates
-```  
+```
 
 The secret can be created using the following command:
 
@@ -276,15 +276,15 @@ oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
 If the runner cannot match the self-signed certificate with the hostname, you might get an error message. This can happen when the GitLab self-managed instance is configured to be accessed from an IP address instead of a hostname (where ###.##.##.## is the IP address of the GitLab server):
 
 ```shell
-[31;1mERROR: Registering runner... failed               [0;m  [31;1mrunner[0;m=A5abcdEF [31;1mstatus[0;m=couldn't execute POST against https://###.##.##.##/api/v4/runners: 
+[31;1mERROR: Registering runner... failed               [0;m  [31;1mrunner[0;m=A5abcdEF [31;1mstatus[0;m=couldn't execute POST against https://###.##.##.##/api/v4/runners:
 Post https://###.##.##.##/api/v4/runners: x509: cannot validate certificate for ###.##.##.## because it doesn't contain any IP SANs
-[31;1mPANIC: Failed to register the runner. You may be having network problems.[0;m 
+[31;1mPANIC: Failed to register the runner. You may be having network problems.[0;m
 ```
 
 To fix this issue:
 
 1. On the GitLab self-managed server, modify the `openssl` to add the IP address to the `subjectAltName` parameter:
- 
+
    ```shell
    # vim /etc/pki/tls/openssl.cnf
 
@@ -293,7 +293,7 @@ To fix this issue:
     ```
 
 1. Then re-generate a self-signed CA with the commands below:
-  
+
    ```shell
    # cd /etc/gitlab/ssl
    # openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -keyout /etc/gitlab/ssl/169.57.64.36.key -out /etc/gitlab/ssl/169.57.64.36.crt

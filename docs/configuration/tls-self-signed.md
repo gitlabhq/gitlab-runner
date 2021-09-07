@@ -227,7 +227,7 @@ when performing operations like cloning and uploading artifacts, for example.
        # Add directory holding your ca.crt file in the volumes list
        volumes = ["c:\\cache", "c:\\path\\to-ca-cert-dir:C:\\GitLab-Runner\\certs:ro"]
     ```
-  
+
 #### Kubernetes
 
 Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4125) in the Kubernetes executor's
