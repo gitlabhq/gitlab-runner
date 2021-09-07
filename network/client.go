@@ -253,6 +253,55 @@ func (n *client) do(
 	return res, nil
 }
 
+// ErrorResponse is an error type that is returned when there is an issue
+// calling the remote server. It contains the http.Response responsible for
+// the error and the error payload provided by the server.
+type ErrorResponse struct {
+	Response *http.Response       `json:"-"`
+	Message  ErrorResponseMessage `json:"message"`
+}
+
+type ErrorResponseMessage string
+
+func (r *ErrorResponse) Error() string {
+	statusCodeMsg := fmt.Sprintf("%d %s", r.Response.StatusCode, http.StatusText(r.Response.StatusCode))
+	errMessage := fmt.Sprintf("%v %v: %s", r.Response.Request.Method, r.Response.Request.URL, statusCodeMsg)
+
+	if string(r.Message) == statusCodeMsg {
+		// If the message returned by the server is the status text, then don't repeat it in the message
+		return errMessage
+	}
+
+	return fmt.Sprintf("%s (%s)", errMessage, r.Message)
+}
+
+func (e *ErrorResponseMessage) UnmarshalJSON(data []byte) error {
+	type simple ErrorResponseMessage
+	err := json.Unmarshal(data, (*simple)(e))
+	if err == nil {
+		return nil
+	}
+
+	var complex map[string][]interface{}
+	err = json.Unmarshal(data, &complex)
+	if err != nil {
+		// explicitly ignore error, we can't decode this type
+		return nil
+	}
+
+	messages := make([]string, 0, len(complex))
+	for key, val := range complex {
+		values := make([]string, 0, len(val))
+		for _, msg := range val {
+			values = append(values, fmt.Sprintf("%v", msg))
+		}
+		messages = append(messages, fmt.Sprintf("%s: %s", key, strings.Join(values, "; ")))
+	}
+
+	*e = ErrorResponseMessage(strings.Join(messages, ", "))
+	return nil
+}
+
 func (n *client) doJSON(
 	ctx context.Context,
 	uri, method string,
@@ -284,6 +333,7 @@ func (n *client) doJSON(
 		_ = res.Body.Close()
 	}()
 
+	status := getMessageFromJSONResponse(res)
 	if res.StatusCode == statusCode && response != nil {
 		isApplicationJSON, err := isResponseApplicationJSON(res)
 		if !isApplicationJSON {
@@ -299,7 +349,23 @@ func (n *client) doJSON(
 
 	n.setLastUpdate(res.Header)
 
-	return res.StatusCode, res.Status, res
+	return res.StatusCode, status, res
+}
+
+func getMessageFromJSONResponse(res *http.Response) string {
+	if res.StatusCode >= 200 && res.StatusCode <= 299 {
+		return res.Status
+	}
+
+	if isApplicationJSON, _ := isResponseApplicationJSON(res); isApplicationJSON {
+		errResp := ErrorResponse{Response: res}
+		err := json.NewDecoder(res.Body).Decode(&errResp)
+		if err == nil && len(errResp.Error()) > 0 {
+			return errResp.Error()
+		}
+	}
+
+	return res.Status
 }
 
 func (n *client) getResponseTLSData(tls *tls.ConnectionState) (ResponseTLSData, error) {
