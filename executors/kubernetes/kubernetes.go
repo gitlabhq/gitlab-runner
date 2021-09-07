@@ -523,7 +523,7 @@ func (s *executor) processLogs(ctx context.Context) {
 			exitCode := getExitCode(err)
 			s.Warningln(fmt.Sprintf("%v", err))
 			// Script can be kept to nil as not being used after the exitStatus is received L1223
-			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: &exitCode}
+			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: exitCode}
 		}
 	}
 }
@@ -1520,12 +1520,14 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 		}
 
 		exitStatus := <-s.remoteProcessTerminated
-		if *exitStatus.CommandExitCode == 0 {
+		s.Debugln("Remote process exited with the status:", exitStatus)
+
+		if exitStatus.CommandExitCode == 0 {
 			errCh <- nil
 			return
 		}
 
-		errCh <- &commandTerminatedError{exitCode: *exitStatus.CommandExitCode}
+		errCh <- &commandTerminatedError{exitCode: exitStatus.CommandExitCode}
 	}()
 
 	return errCh
