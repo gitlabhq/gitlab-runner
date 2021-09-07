@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,14 @@ import (
 const (
 	validToken   = "valid"
 	invalidToken = "invalid"
+)
+
+type registerRunnerResponse int
+
+const (
+	registerRunnerResponseOK = iota
+	registerRunnerResponseRunnerNamespacesLimitHit
+	registerRunnerResponseRunnerProjectsLimitHit
 )
 
 var brokenCredentials = RunnerCredentials{
@@ -77,7 +86,7 @@ func TestClients(t *testing.T) {
 	assert.Error(t, c8err)
 }
 
-func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response registerRunnerResponse, t *testing.T) {
 	if r.URL.Path != "/api/v4/runners" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -104,6 +113,20 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
+
+		//nolint:lll
+		mapResponseToBody := map[registerRunnerResponse]string{
+			registerRunnerResponseRunnerNamespacesLimitHit: `{"message":{"runner_namespaces.base":["Maximum number of ci registered group runners (3) exceeded"]}}`,
+			registerRunnerResponseRunnerProjectsLimitHit:   `{"message":{"runner_projects.base":["Maximum number of ci registered project runners (3) exceeded"]}}`,
+		}
+		if badRequestBody := mapResponseToBody[response]; badRequestBody != "" {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(badRequestBody))
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
 		res["token"] = req["token"].(string)
 	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
@@ -131,7 +154,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testin
 
 func TestRegisterRunner(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testRegisterRunnerHandler(w, r, t)
+		testRegisterRunnerHandler(w, r, registerRunnerResponseOK, t)
 	}))
 	defer s.Close()
 
@@ -212,6 +235,72 @@ func TestRegisterRunner(t *testing.T) {
 			Active:      true,
 		})
 	assert.Nil(t, res)
+}
+
+func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
+	type testCase struct {
+		response registerRunnerResponse
+
+		expectedMessage string
+	}
+
+	//nolint:lll
+	testCases := map[string]testCase{
+		"namespace runner limit hit": {
+			response:        registerRunnerResponseRunnerNamespacesLimitHit,
+			expectedMessage: "400 Bad Request (runner_namespaces.base: Maximum number of ci registered group runners (3) exceeded)",
+		},
+		"project runner limit hit": {
+			response:        registerRunnerResponseRunnerProjectsLimitHit,
+			expectedMessage: "400 Bad Request (runner_projects.base: Maximum number of ci registered project runners (3) exceeded)",
+		},
+	}
+
+	c := NewGitLabClient()
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				testRegisterRunnerHandler(w, r, tc.response, t)
+			}))
+			defer s.Close()
+
+			validToken := RunnerCredentials{
+				URL:   s.URL,
+				Token: validToken,
+			}
+
+			h := registerRunnerLogHook{}
+			logrus.AddHook(&h)
+
+			res := c.RegisterRunner(
+				validToken,
+				RegisterRunnerParameters{
+					Description: "test",
+					Tags:        "tags",
+					RunUntagged: true,
+					Locked:      true,
+					Active:      true,
+				})
+			assert.Nil(t, res)
+			require.Len(t, h.entries, 1)
+			assert.Equal(t, "Registering runner... failed", h.entries[0].Message)
+			assert.Contains(t, h.entries[0].Data["status"], tc.expectedMessage)
+		})
+	}
+}
+
+type registerRunnerLogHook struct {
+	entries []*logrus.Entry
+}
+
+func (s *registerRunnerLogHook) Levels() []logrus.Level {
+	return []logrus.Level{logrus.ErrorLevel}
+}
+
+func (s *registerRunnerLogHook) Fire(entry *logrus.Entry) error {
+	s.entries = append(s.entries, entry)
+	return nil
 }
 
 func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {

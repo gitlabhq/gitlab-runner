@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -45,11 +46,15 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 	case "/api/v4/test/json":
 		if r.Header.Get("Content-Type") != "application/json" {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, `{"message":{"some-key":["some error"]}}`)
 			return
 		}
 		if r.Header.Get("Accept") != "application/json" {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotAcceptable)
+			fmt.Fprint(w, `{"message":"406 Not Acceptable"}`)
 			return
 		}
 
@@ -142,12 +147,21 @@ func TestClientDo(t *testing.T) {
 
 	statusCode, statusText, _ = c.doJSON(context.Background(), "test/json", http.MethodGet, http.StatusOK, nil, &res)
 	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
+	assert.Contains(t, statusText, `test/json: 400 Bad Request (some-key: some error)`)
 
 	statusCode, statusText, _ = c.doJSON(context.Background(), "test/json", http.MethodGet, http.StatusOK, &req, nil)
 	assert.Equal(t, http.StatusNotAcceptable, statusCode, statusText)
+	assert.True(
+		t,
+		strings.HasSuffix(statusText, "test/json: 406 Not Acceptable"),
+		"%q should contain %q suffix",
+		statusText,
+		"test/json: 406 Not Acceptable",
+	)
 
 	statusCode, statusText, _ = c.doJSON(context.Background(), "test/json", http.MethodGet, http.StatusOK, nil, nil)
 	assert.Equal(t, http.StatusBadRequest, statusCode, statusText)
+	assert.Contains(t, statusText, `test/json: 400 Bad Request (some-key: some error)`)
 
 	statusCode, statusText, _ = c.doJSON(context.Background(), "test/json", http.MethodGet, http.StatusOK, &req, &res)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
