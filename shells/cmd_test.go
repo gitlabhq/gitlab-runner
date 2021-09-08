@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type testCase struct {
@@ -63,6 +64,24 @@ func TestCMD_CommandShellEscapes(t *testing.T) {
 	writer.Command("foo", "x&(y)")
 
 	assert.Equal(t, "\"foo\" \"x^&(y)\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", writer.String())
+}
+
+func TestCMD_CommandShellNoEscapes(t *testing.T) {
+	writer := &CmdWriter{}
+	writer.CommandArgExpand("foo", "x&(y)")
+
+	assert.Equal(t, "\"foo\" \"x^&(y)\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", writer.String())
+}
+
+func TestCMD_CommandEscapeVariable(t *testing.T) {
+	writer := &CmdWriter{}
+	writer.Variable(common.JobVariable{
+		Key:   "A",
+		Value: "expanded",
+	})
+	writer.Command("echo", "%A%")
+
+	assert.Contains(t, writer.String(), `"echo" "^%A^%"`)
 }
 
 func TestCMD_IfCmdShellEscapes(t *testing.T) {
