@@ -66,6 +66,17 @@ type BashWriter struct {
 	useJSONTermination bool
 }
 
+func NewBashWriter(build *common.Build, shell string) *BashWriter {
+	return &BashWriter{
+		TemporaryPath:  build.TmpProjectDir(),
+		Shell:          shell,
+		checkForErrors: build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
+		useNewEval:     build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
+		useNewEscape:   build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
+		usePosixEscape: build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
+	}
+}
+
 func (b *BashWriter) GetTemporaryPath() string {
 	return b.TemporaryPath
 }
@@ -95,17 +106,22 @@ func (b *BashWriter) Unindent() {
 }
 
 func (b *BashWriter) Command(command string, arguments ...string) {
-	b.Line(b.buildCommand(command, arguments...))
+	b.Line(b.buildCommand(b.escapeNoLegacy, command, arguments...))
 	b.CheckForErrors()
 }
 
-func (b *BashWriter) buildCommand(command string, arguments ...string) string {
+func (b *BashWriter) CommandArgExpand(command string, arguments ...string) {
+	b.Line(b.buildCommand(doubleQuote, command, arguments...))
+	b.CheckForErrors()
+}
+
+func (b *BashWriter) buildCommand(quoter stringQuoter, command string, arguments ...string) string {
 	list := []string{
 		b.escape(command),
 	}
 
 	for _, argument := range arguments {
-		list = append(list, strconv.Quote(argument))
+		list = append(list, quoter(argument))
 	}
 
 	return strings.Join(list, " ")
@@ -141,13 +157,13 @@ func (b *BashWriter) IfFile(path string) {
 }
 
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(cmd, arguments...)
+	cmdline := b.buildCommand(b.escapeNoLegacy, cmd, arguments...)
 	b.Linef("if %s >/dev/null 2>&1; then", cmdline)
 	b.Indent()
 }
 
 func (b *BashWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(cmd, arguments...)
+	cmdline := b.buildCommand(b.escapeNoLegacy, cmd, arguments...)
 	b.Linef("if %s; then", cmdline)
 	b.Indent()
 }
@@ -283,6 +299,16 @@ func (b *BashWriter) escape(input string) string {
 	return helpers.ShellEscapeLegacy(input)
 }
 
+func (b *BashWriter) escapeNoLegacy(input string) string {
+	// We don't want to use the `escape` function since the legacy
+	// escape will not always work for us, opening us for vulnerabilities
+	if b.usePosixEscape {
+		return helpers.PosixShellEscape(input)
+	}
+
+	return helpers.ShellEscape(input)
+}
+
 func (b *BashShell) GetName() string {
 	return b.Shell
 }
@@ -321,15 +347,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 }
 
 func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
-	w := &BashWriter{
-		TemporaryPath:  info.Build.TmpProjectDir(),
-		Shell:          b.Shell,
-		checkForErrors: info.Build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
-		useNewEval:     info.Build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
-		useNewEscape:   info.Build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
-		usePosixEscape: info.Build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
-	}
-
+	w := NewBashWriter(info.Build, b.Shell)
 	return b.generateScript(w, buildStage, info)
 }
 
