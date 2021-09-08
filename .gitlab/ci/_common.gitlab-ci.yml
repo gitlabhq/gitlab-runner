@@ -1,5 +1,9 @@
 variables:
   CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.13.8-13
+  # Feature flags
+  FF_SCRIPT_SECTIONS: "true"
+  FF_USE_FASTZIP: "true"
+  FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 20.10.2
@@ -23,9 +27,7 @@ variables:
   # This will disable all other rules.
   SAST_DISABLED: "true"
   DEPENDENCY_SCANNING_DISABLED: "true"
-  FF_USE_FASTZIP: "true"
   TRANSFER_METER_FREQUENCY: "5s"
-  FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
   GO111MODULE: "on"
 
 default:
