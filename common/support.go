@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 	"strings"
@@ -384,6 +385,18 @@ func getLocalRepoURL() (string, error) {
 	}
 
 	return localRepoURL, nil
+}
+
+func RunLocalRepoGitCommand(arguments ...string) error {
+	url, err := getLocalRepoURL()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command("git", arguments...)
+	cmd.Dir = path.Dir(url)
+
+	return cmd.Run()
 }
 
 func buildSnakeOilCert() (string, error) {

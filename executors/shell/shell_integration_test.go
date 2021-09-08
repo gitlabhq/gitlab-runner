@@ -1630,3 +1630,30 @@ func TestBuildScriptSections(t *testing.T) {
 		buildtest.RunBuildWithSections(t, build)
 	})
 }
+
+func TestCloneBranchExpansion(t *testing.T) {
+	const branch = "$(id)"
+
+	_ = common.RunLocalRepoGitCommand("checkout", "-b", branch)
+	defer func() {
+		_ = common.RunLocalRepoGitCommand("branch", "-D", branch)
+	}()
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := newBuild(t, common.JobResponse{}, shell)
+
+		successfulBuild, err := common.GetLocalBuildResponse()
+		require.NoError(t, err)
+
+		build.JobResponse = successfulBuild
+		build.GitInfo.Ref = branch
+		build.Runner.RunnerSettings.Shell = shell
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		t.Log(out)
+		assert.NoError(t, err)
+		assert.Contains(t, out, fmt.Sprintf("as %s...", branch))
+		assert.NotContains(t, out, "uid=")
+		assert.Contains(t, out, "Job succeeded")
+	})
+}

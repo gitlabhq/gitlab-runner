@@ -27,7 +27,14 @@ type CmdWriter struct {
 }
 
 func batchQuote(text string) string {
+	// can't use doubleQuoter here since that causes the backlashes to be escaped which doesn't work well
 	return "\"" + batchEscapeInsideQuotedString(text) + "\""
+}
+
+func batchQuoteEscapeCommand(text string) string {
+	text = batchEscapeInsideQuotedString(text)
+	text = strings.ReplaceAll(text, "%", "^%")
+	return "\"" + text + "\""
 }
 
 func batchEscapeInsideQuotedString(text string) string {
@@ -100,17 +107,22 @@ func (b *CmdWriter) updateErrLevelCheck(errCheck string) string {
 }
 
 func (b *CmdWriter) Command(command string, arguments ...string) {
-	b.Line(b.buildCommand(command, arguments...))
+	b.Line(b.buildCommand(batchQuoteEscapeCommand, command, arguments...))
 	b.checkErrorLevel()
 }
 
-func (b *CmdWriter) buildCommand(command string, arguments ...string) string {
+func (b *CmdWriter) CommandArgExpand(command string, arguments ...string) {
+	b.Line(b.buildCommand(batchQuote, command, arguments...))
+	b.checkErrorLevel()
+}
+
+func (b *CmdWriter) buildCommand(quoter stringQuoter, command string, arguments ...string) string {
 	list := []string{
 		batchQuote(command),
 	}
 
 	for _, argument := range arguments {
-		list = append(list, batchQuote(argument))
+		list = append(list, quoter(argument))
 	}
 
 	return strings.Join(list, " ")
@@ -147,7 +159,7 @@ func (b *CmdWriter) IfFile(path string) {
 }
 
 func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(cmd, arguments...)
+	cmdline := b.buildCommand(batchQuote, cmd, arguments...)
 	b.Linef("%s 2>NUL 1>NUL", cmdline)
 	errCheck := "IF !errorlevel! EQU 0 ("
 	b.Line(b.updateErrLevelCheck(errCheck))
@@ -155,7 +167,7 @@ func (b *CmdWriter) IfCmd(cmd string, arguments ...string) {
 }
 
 func (b *CmdWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(cmd, arguments...)
+	cmdline := b.buildCommand(batchQuote, cmd, arguments...)
 	b.Line(cmdline)
 	errCheck := "IF !errorlevel! EQU 0 ("
 	b.Line(b.updateErrLevelCheck(errCheck))

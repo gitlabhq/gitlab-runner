@@ -61,6 +61,8 @@ func TestShellEscape(t *testing.T) {
 		{"f", "f"},
 		{"\f", "$'\\f'"},
 		{"export variable='test' && echo $variable", "$'export variable=\\'test\\' && echo $variable'"},
+		{"$HOME", `$'$HOME'`},
+		{"'$HOME'", `$'\'$HOME\''`},
 	}
 
 	for _, test := range tests {
