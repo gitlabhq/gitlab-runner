@@ -22,6 +22,7 @@ const (
 	UseDynamicTraceForceSendInterval     string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
 	ScriptSections                       string = "FF_SCRIPT_SECTIONS"
 	UseNewShellEscape                    string = "FF_USE_NEW_SHELL_ESCAPE"
+	EnableJobCleanup                     string = "FF_ENABLE_JOB_CLEANUP"
 )
 
 type FeatureFlag struct {
@@ -156,7 +157,7 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "When enabled, each script line from the `.gitlab-ci.yml` file will be in a collapsible " +
-			"section in the job output and show the duration of each line",
+			"section in the job output and show the duration of each line.",
 	},
 	{
 		Name:            UseNewShellEscape,
@@ -164,6 +165,15 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "When enabled, a faster implementation of shell escape is used.",
+	},
+	{
+		Name:            EnableJobCleanup,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, the project directory will be cleaned up at the end of the build. " +
+			"If `GIT_CLONE` is used, the whole project directory will be deleted. If `GIT_FETCH` is used, " +
+			"a series of Git `clean` commands will be issued.",
 	},
 }
 

@@ -1337,3 +1337,63 @@ func TestKubernetesAllowedServices(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanupProjectGitClone(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	buildtest.RunBuildWithCleanupGitClone(t, getTestBuild(t, common.GetRemoteSuccessfulBuild))
+}
+
+func TestCleanupProjectGitFetch(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	untrackedFilename := "untracked"
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, "", "")...,
+		)
+	})
+
+	buildtest.RunBuildWithCleanupGitFetch(t, build, untrackedFilename)
+}
+
+func TestCleanupProjectGitSubmoduleNormal(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	untrackedFile := "untracked"
+	untrackedSubmoduleFile := "untracked_submodule"
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFile, untrackedSubmoduleFile, "")...,
+		)
+	})
+
+	buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, build, untrackedFile, untrackedSubmoduleFile)
+}
+
+func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	untrackedFile := "untracked"
+	untrackedSubmoduleFile := "untracked_submodule"
+	untrackedSubSubmoduleFile := "untracked_submodule_submodule"
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(
+				untrackedFile,
+				untrackedSubmoduleFile,
+				untrackedSubSubmoduleFile)...,
+		)
+	})
+
+	buildtest.RunBuildWithCleanupRecursiveSubmoduleStrategy(
+		t,
+		build,
+		untrackedFile,
+		untrackedSubmoduleFile,
+		untrackedSubSubmoduleFile,
+	)
+}

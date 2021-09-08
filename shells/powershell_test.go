@@ -299,7 +299,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 				pwshShell.EOL + pwshShell.EOL,
 		},
 		"cleanup variables": {
-			stage:           common.BuildStageCleanupFileVariables,
+			stage:           common.BuildStageCleanup,
 			info:            shellInfo,
 			expectedFailure: false,
 			expectedScript:  ``,

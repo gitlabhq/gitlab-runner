@@ -595,3 +595,69 @@ func TestBuildWithAccessToJobResponseFile(t *testing.T) {
 		assert.Contains(t, output, fmt.Sprintf("job project name => %s", testJobInfo.ProjectName))
 	})
 }
+
+func TestCleanupProjectGitClone(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		require.NoError(t, err)
+
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithCleanupGitClone(t, build)
+	})
+}
+
+func TestCleanupProjectGitFetch(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		untrackedFilename := "untracked"
+
+		successfulBuild, err := common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFilename, "", "")...,
+		)
+		require.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithCleanupGitFetch(t, build, untrackedFilename)
+	})
+}
+
+func TestCleanupProjectGitSubmoduleNormal(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		untrackedFile := "untracked"
+		untrackedSubmoduleFile := "untracked_submodule"
+
+		successfulBuild, err := common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(untrackedFile, untrackedSubmoduleFile, "")...,
+		)
+		require.NoError(t, err)
+
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, build, untrackedFile, untrackedSubmoduleFile)
+	})
+}
+
+func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		untrackedFile := "untracked"
+		untrackedSubmoduleFile := "untracked_submodule"
+		untrackedSubSubmoduleFile := "untracked_submodule_submodule"
+
+		successfulBuild, err := common.GetRemoteBuildResponse(
+			buildtest.GetNewUntrackedFileIntoSubmodulesCommands(
+				untrackedFile,
+				untrackedSubmoduleFile,
+				untrackedSubSubmoduleFile,
+			)...,
+		)
+
+		require.NoError(t, err)
+		build, cleanup := newBuild(t, successfulBuild, shell)
+		defer cleanup()
+
+		buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, build, untrackedFile, untrackedSubmoduleFile)
+	})
+}
