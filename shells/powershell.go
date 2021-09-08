@@ -91,7 +91,7 @@ func PowershellDockerCmd(shell string) []string {
 	return append([]string{shell}, stdinCmdArgs()...)
 }
 
-func psQuote(text string) string {
+func psReplaceSpecialChars(text string) string {
 	// taken from: http://www.robvanderwoude.com/escapechars.php
 	text = strings.ReplaceAll(text, "`", "``")
 	// text = strings.ReplaceAll(text, "\0", "`0")
@@ -105,11 +105,20 @@ func psQuote(text string) string {
 	text = strings.ReplaceAll(text, "#", "`#")
 	text = strings.ReplaceAll(text, "'", "`'")
 	text = strings.ReplaceAll(text, "\"", "`\"")
-	return `"` + text + `"`
+
+	return text
+}
+
+func psSingleQuote(text string) string {
+	return singleQuote(psReplaceSpecialChars(text))
+}
+
+func psDoubleQuote(text string) string {
+	return doubleQuote(psReplaceSpecialChars(text))
 }
 
 func psQuoteVariable(text string) string {
-	text = psQuote(text)
+	text = psDoubleQuote(text)
 	text = strings.ReplaceAll(text, "$", "`$")
 	text = strings.ReplaceAll(text, "``e", "`e")
 	return text
@@ -145,7 +154,12 @@ func (p *PsWriter) checkErrorLevel() {
 }
 
 func (p *PsWriter) Command(command string, arguments ...string) {
-	p.Line(p.buildCommand(command, arguments...))
+	p.Line(p.buildCommand(psSingleQuote, command, arguments...))
+	p.checkErrorLevel()
+}
+
+func (p *PsWriter) CommandArgExpand(command string, arguments ...string) {
+	p.Line(p.buildCommand(psDoubleQuote, command, arguments...))
 	p.checkErrorLevel()
 }
 
@@ -153,13 +167,13 @@ func (p *PsWriter) SectionStart(id, command string) {}
 
 func (p *PsWriter) SectionEnd(id string) {}
 
-func (p *PsWriter) buildCommand(command string, arguments ...string) string {
+func (p *PsWriter) buildCommand(quoter stringQuoter, command string, arguments ...string) string {
 	list := []string{
-		psQuote(command),
+		psDoubleQuote(command),
 	}
 
 	for _, argument := range arguments {
-		list = append(list, psQuote(argument))
+		list = append(list, quoter(argument))
 	}
 
 	return "& " + strings.Join(list, " ")
@@ -167,10 +181,12 @@ func (p *PsWriter) buildCommand(command string, arguments ...string) string {
 
 func (p *PsWriter) resolvePath(path string) string {
 	if p.resolvePaths {
-		return fmt.Sprintf("$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%s)", psQuote(path))
+		return fmt.Sprintf(
+			"$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%s)", psDoubleQuote(path),
+		)
 	}
 
-	return psQuote(p.fromSlash(path))
+	return psDoubleQuote(p.fromSlash(path))
 }
 
 func (p *PsWriter) TmpFile(name string) string {
@@ -226,11 +242,11 @@ func (p *PsWriter) IfFile(path string) {
 }
 
 func (p *PsWriter) IfCmd(cmd string, arguments ...string) {
-	p.ifInTryCatch(p.buildCommand(cmd, arguments...) + " 2>$null")
+	p.ifInTryCatch(p.buildCommand(psSingleQuote, cmd, arguments...) + " 2>$null")
 }
 
 func (p *PsWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	p.ifInTryCatch(p.buildCommand(cmd, arguments...))
+	p.ifInTryCatch(p.buildCommand(psSingleQuote, cmd, arguments...))
 }
 
 func (p *PsWriter) ifInTryCatch(cmd string) {
@@ -317,7 +333,7 @@ func (p *PsWriter) RmFilesRecursive(path string, name string) {
 		// `Remove-Item -Recurse` has a known issue (see Example 4 in
 		// https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/remove-item)
 		"Get-ChildItem -Path %s -Filter %s -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }",
-		resolvedPath, psQuote(name),
+		resolvedPath, psQuoteVariable(name),
 	)
 	p.EndIf()
 }

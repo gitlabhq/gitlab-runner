@@ -9,6 +9,7 @@ type ShellWriter interface {
 	EnvVariableKey(name string) string
 	Variable(variable common.JobVariable)
 	Command(command string, arguments ...string)
+	CommandArgExpand(command string, arguments ...string)
 	Line(text string)
 	CheckForErrors()
 
