@@ -166,7 +166,7 @@ GitLab Runner has the following features.
 
 ## Runner execution flow
 
-This diagram shows how runners are registered and how jobs are requested and handled. It also shows which actions use [registration, authentication](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens), and [job tokens](https://docs.gitlab.com/ee/user/project/new_ci_build_permissions_model.html#job-token).
+This diagram shows how runners are registered and how jobs are requested and handled. It also shows which actions use [registration, authentication](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens), and [job tokens](https://docs.gitlab.com/ee/ci/jobs/ci_job_token.html).
 
 ```mermaid
 sequenceDiagram
@@ -176,7 +176,7 @@ sequenceDiagram
 
     opt registration
       GitLabRunner ->>+ GitLab: POST /api/v4/runners with registration_token
-      GitLab -->>- GitLabRunner: Registered with runner_token 
+      GitLab -->>- GitLabRunner: Registered with runner_token
     end
 
     loop job requesting and handling

@@ -101,7 +101,7 @@ This approach is secure, but makes the runner a single point of trust.
 
 There are two contexts that need to be taken into account when we consider registering a certificate on a container:
 
-- The [**user image**](https://docs.gitlab.com/ce/ci/yaml/#image), which is used to run the user script.
+- The [**user image**](https://docs.gitlab.com/ee/ci/yaml/#image), which is used to run the user script.
   In this scenario, the user must take ownership regarding how to install a certificate, since this is
   highly dependent on the image itself, and the runner has no way of knowing how to install a certificate in each
   possible scenario.
@@ -227,7 +227,7 @@ when performing operations like cloning and uploading artifacts, for example.
        # Add directory holding your ca.crt file in the volumes list
        volumes = ["c:\\cache", "c:\\path\\to-ca-cert-dir:C:\\GitLab-Runner\\certs:ro"]
     ```
-  
+
 #### Kubernetes
 
 Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4125) in the Kubernetes executor's
