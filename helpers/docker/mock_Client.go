@@ -13,6 +13,8 @@ import (
 
 	network "github.com/docker/docker/api/types/network"
 
+	time "time"
+
 	types "github.com/docker/docker/api/types"
 
 	volume "github.com/docker/docker/api/types/volume"
@@ -223,6 +225,20 @@ func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, op
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, types.ContainerStartOptions) error); ok {
 		r0 = rf(ctx, containerID, options)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ContainerStop provides a mock function with given fields: ctx, containerID, timeout
+func (_m *MockClient) ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error {
+	ret := _m.Called(ctx, containerID, timeout)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *time.Duration) error); ok {
+		r0 = rf(ctx, containerID, timeout)
 	} else {
 		r0 = ret.Error(0)
 	}
