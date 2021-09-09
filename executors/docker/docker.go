@@ -731,7 +731,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 }
 
 func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
-	dockerExec := exec.NewDocker(e.client, e.waiter, e.Build.Log())
+	dockerExec := exec.NewDocker(e.Context, e.client, e.waiter, e.Build.Log())
 
 	return dockerExec.Exec(ctx, id, input, e.Trace)
 }
