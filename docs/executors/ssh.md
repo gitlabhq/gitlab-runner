@@ -57,6 +57,6 @@ connecting to via SSH.
 
 ## Security
 
-The SSH executor is susceptible to MITM attacks (man-in-the-middle), because of
-the missing `StrictHostKeyChecking` option. This will be fixed in one of the
-future releases.
+To enable SSH `StrictHostKeyChecking`, make sure the `[runners.ssh.disable_strict_host_key_checking]` is set 
+to `false`. [In the future](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192), a blank value will default to `true` since we don't want to break existing builds
+by enforcing `StrictHostKeyChecking` by default.

@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ssh"
-
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 type Client struct {
@@ -74,6 +76,23 @@ func (s *Client) getSSHAuthMethods() ([]ssh.AuthMethod, error) {
 	return methods, nil
 }
 
+func getHostKeyCallback(config Config) (ssh.HostKeyCallback, error) {
+	if config.ShouldDisableStrictHostKeyChecking() {
+		return ssh.InsecureIgnoreHostKey(), nil
+	}
+
+	if config.KnownHostsFile == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("user home directory: %w", err)
+		}
+
+		config.KnownHostsFile = filepath.Join(homeDir, ".ssh", "known_hosts")
+	}
+
+	return knownhosts.New(config.KnownHostsFile)
+}
+
 func (s *Client) Connect() error {
 	if s.Host == "" {
 		s.Host = "localhost"
@@ -87,14 +106,19 @@ func (s *Client) Connect() error {
 
 	methods, err := s.getSSHAuthMethods()
 	if err != nil {
-		return fmt.Errorf("getSSHAuthMethods error: %w", err)
+		return fmt.Errorf("getting SSH authentication methods: %w", err)
 	}
 
 	config := &ssh.ClientConfig{
-		User:            s.User,
-		Auth:            methods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		User: s.User,
+		Auth: methods,
 	}
+
+	hostKeyCallback, err := getHostKeyCallback(s.Config)
+	if err != nil {
+		return fmt.Errorf("getting host key callback: %w", err)
+	}
+	config.HostKeyCallback = hostKeyCallback
 
 	connectRetries := s.ConnectRetries
 	if connectRetries == 0 {
