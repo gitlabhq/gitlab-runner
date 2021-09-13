@@ -1,3 +1,4 @@
+//go:build integration && kubernetes
 // +build integration,kubernetes
 
 package kubernetes_test

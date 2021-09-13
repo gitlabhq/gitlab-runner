@@ -1,3 +1,4 @@
+//go:build aix || android || darwin || dragonfly || freebsd || hurd || illumos || linux || netbsd || openbsd || solaris
 // +build aix android darwin dragonfly freebsd hurd illumos linux netbsd openbsd solaris
 
 package commands
