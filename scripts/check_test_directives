@@ -4,8 +4,10 @@
 ##
 ## This script ensures that test file names match the required build tags, so that integration tests
 ## (which run for longer) can be run in a separate job from unit tests.
-##  - Integration test files (named *integration_*test.go) should have a '// +build integration' build directive
-##  - Unit test files (named *_test.go) should have a '// +build !integration' build directive
+##  - Integration test files (named *integration_*test.go) should have a '// +build integration'
+##    and '//go:build integration' build constraints
+##  - Unit test files (named *_test.go) should have a '// +build !integration' and '//go:build integration'
+##    build constraints
 ##
 ## Return value: 1 if any discrepancy is found, otherwise 0
 ##
@@ -14,35 +16,5 @@
 set -o pipefail
 
 GIT_ROOT=$(cd "${BASH_SOURCE%/*}" && git rev-parse --show-toplevel)
-ERROR_RESULTS=0
 
-echo "Check for missing build directives in test files"
-
-pushd "${GIT_ROOT}" >/dev/null
-
-files=$(find . -type f ! -path '*vendor/*' -name '*_test.go' ! -name '*integration_*test.go' ! -name 'helpers_*_test.go')
-for f in ${files}; do
-  if ! head -n1 "$f" | grep '// +build !integration' >/dev/null; then
-    ((ERROR_RESULTS++))
-    echo "$f"
-  fi
-done
-
-files=$(find . -type f ! -path '*vendor/*' -name '*integration_*test.go')
-for f in ${files}; do
-  if ! head -n1 "$f" | grep '// +build integration' >/dev/null; then
-    ((ERROR_RESULTS++))
-    echo "$f"
-  fi
-done
-
-popd >/dev/null
-
-if [ "${ERROR_RESULTS}" -ne 0 ]; then
-    echo "✖ ${ERROR_RESULTS} files missing appropriate build directive. Review the log carefully to see full listing." \
-       >/dev/stderr
-    exit 1
-else
-    echo "✔ Test file build directive linting passed" >/dev/stderr
-    exit 0
-fi
+go run ${GIT_ROOT}/scripts/check-test-directives ${GIT_ROOT}
