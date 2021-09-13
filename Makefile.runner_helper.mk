@@ -111,7 +111,7 @@ ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker ubuntu $* $@
 
-${BASE_TAR_PATH}-alpine-%.tar: export ALPINE_IMAGE_VERSION ?= 3.12.0
+${BASE_TAR_PATH}-alpine-%.tar: export ALPINE_IMAGE_VERSION ?= 3.13.6
 ${BASE_TAR_PATH}-alpine-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= ${ALPINE_IMAGE_VERSION}
 ${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
