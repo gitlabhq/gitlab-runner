@@ -1,3 +1,47 @@
+## v14.3.0-rc1 (2021-09-13)
+
+### New features
+
+- Cleanup build directory with feature flag !3065
+- Consider only docker image pull system error as runner-system-failure !3060
+
+### Security fixes
+
+- Restrict accepted metric listener HTTP methods !3109
+
+### Bug fixes
+
+- Fix docker-machine executor check to reduce warning log spam for no runners able to process a job !3106 (Thomas Scully @tscully49)
+
+### Maintenance
+
+- Turn on FF_SCRIPT_SECTIONS for GitLab Runner pipelines !3124
+- Expose runner limit error message on registration !3108
+- Split linux packages into multiple jobs !3105
+- Upgrade minio to v7 !3099
+- Update runner docs tests !3096
+- Remove docker-machine feature flag !3093
+- Improve log line decoding for kubernetes !3091
+- Add strict host key checking to SSH config !3074
+- Upgrade alpine version to 3.13.6 !3057
+- Improved bash shell escaping (behavior, performance) !2882
+
+### Documentation changes
+
+- Added mac setup guide !3129
+- Fix trailing spaces in Runner docs !3125
+- Per-build networking is recommended !3118
+- Fixed typo in Dockerfile example for installing Runner with Docker !3113 (Markus Möslinger @metabytewien)
+- Update documentation template !3107
+- Use latest docs linting images !3100
+- Update feature-flags.md, fixed typo, runners.feature_flag -> runners.feature_flags !3098 (Joost van der Sluis @jvdsluis)
+- Reword so that docker services list "images" instead of "applications" !3094
+- Adds Linux register command for behind a proxy !3087 (Rui Duarte @P0w3rb0y)
+- Add info for DOCKER_HOST value in Using docker:dind !3085
+- Added docker image build steps for Alpine !3076
+- Add doc in FAQ about running Elasticsearch !3110
+- Fix typo in security process !3092
+
 ## v14.2.0 (2021-08-22)
 
 ### Bug fixes
