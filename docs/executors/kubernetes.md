@@ -655,7 +655,7 @@ so if process-isolation is used, you must additionally provide the specific wind
     url = "gitlab.example.com"
     executor = "kubernetes"
 
-    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell 
+    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell
     # to resolve paths for Windows correctly when Runner is operating in a Linux environment
     # but targeting Windows nodes.
     environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=1"]
@@ -672,7 +672,7 @@ so if process-isolation is used, you must additionally provide the specific wind
 
 This feature is available in Kubernetes 1.7+.
 
-[Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) configuration
+[Host aliases](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/) configuration
 instructs Kubernetes to add entries to `/etc/hosts` file inside of the container. The host aliases can be configured with the following options:
 
 | Option       | Type          | Required | Description |
@@ -1027,7 +1027,7 @@ the build container:
 - `DOCKER_HOST=tcp://<hostname>:2375` for no TLS connection.
 - `DOCKER_HOST=tcp://<hostname>:2376` for TLS connection.
 
-If you are using GitLab Runner 12.7 or earlier and Kubernetes 1.6 or earlier, the value of 
+If you are using GitLab Runner 12.7 or earlier and Kubernetes 1.6 or earlier, the value of
 `hostname` must be set to `localhost`. Otherwise it should be set to `docker`.
 
 Make sure to configure those properly. As of Docker 19.03, TLS is enabled by
