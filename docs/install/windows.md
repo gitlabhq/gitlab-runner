@@ -94,17 +94,17 @@ rmdir /s GitLab-Runner
 
 ## Windows version support policy
 
-We follow the same lifecycle policy as Microsoft's [Servicing
-Channels](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19).
+We follow the same lifecycle policy as Microsoft [Servicing
+Channels](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels).
 
 This means that we support:
 
 - [Long-Term Servicing
-  Channel](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#long-term-servicing-channel-ltsc),
+  Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel),
   versions for 5 years after their release date. Note that we don't
   support versions that are on extended support.
 - [Semi-Annual
-  Channel](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#semi-annual-channel)
+  Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#semi-annual-channel)
   versions for 18 months after their release date. We don't support
   these versions after mainstream support ends.
 
