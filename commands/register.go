@@ -268,6 +268,10 @@ func (s *RegisterCommand) askRunner() {
 		logrus.Panicln("Failed to register the runner. You may be having network problems.")
 	}
 
+	// golangci-lint doesn't recognize logrus.Panicln() call as breaking the execution
+	// flow which causes the following assignment to throw false-positive report for
+	// 'SA5011: possible nil pointer dereference'
+	// nolint:staticcheck
 	s.Token = result.Token
 	s.registered = true
 }
