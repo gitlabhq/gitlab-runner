@@ -46,6 +46,22 @@ These instructions to install GitLab Runner assume the
 
    An [example file is available](#example-runner-manifest).
 
+1. Edit `runner-manifest.yaml` file to include the `namespace` for every resource. The output of `helm template` doesn't include the
+   `namespace` in the generated resources:
+
+   ```yaml
+   ---
+   # Source: gitlab-runner/templates/service-account.yaml
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     annotations:
+     name: gitlab-runner-gitlab-runner
+     namespace: gitlab
+     labels:
+   ...
+   ```
+
 1. Push your `runner-manifest.yaml` to your manifest repository.
 
 ## Example runner manifest
