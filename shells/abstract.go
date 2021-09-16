@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -846,8 +844,7 @@ func (b *AbstractShell) writeCleanupScript(w ShellWriter, info common.ShellScrip
 			return err
 		}
 
-		//clean up git directory
-		return writeGitSanitizeScript(w, filepath.Join(info.Build.FullProjectDir(), ".git"))
+		w.RmFile(filepath.Join(info.Build.FullProjectDir(), ".git", "config"))
 	}
 
 	if skipCleanupStage {
@@ -855,62 +852,6 @@ func (b *AbstractShell) writeCleanupScript(w ShellWriter, info common.ShellScrip
 	}
 
 	return nil
-}
-
-func writeGitSanitizeScript(w ShellWriter, gitPath string) error {
-	shardingDirRegex, err := regexp.Compile(filepath.Join(gitPath, "objects/[0-9a-f]{2}$"))
-	if err != nil {
-		return err
-	}
-	return filepath.Walk(gitPath, func(path string, d os.FileInfo, err error) error {
-		if gitPath == path {
-			return nil
-		}
-
-		if shardingDirRegex.MatchString(path) {
-			return filepath.SkipDir
-		}
-
-		relPath, err := filepath.Rel(gitPath, path)
-		if err != nil {
-			return err
-		}
-
-		if relPath == "objects" {
-			return nil
-		}
-
-		whitelistedFiles := map[string]struct{}{
-			"packed-refs": struct{}{},
-			"HEAD":        struct{}{},
-			"ORIG_HEAD":   struct{}{},
-			"index":       struct{}{},
-			"shallow":     struct{}{},
-		}
-
-		whitelistedDirs := map[string]struct{}{
-			"modules":      struct{}{},
-			"refs":         struct{}{},
-			"objects/info": struct{}{},
-			"objects/pack": struct{}{},
-		}
-
-		if _, ok := whitelistedDirs[relPath]; ok {
-			return filepath.SkipDir
-		}
-
-		if _, ok := whitelistedFiles[relPath]; ok {
-			return nil
-		}
-
-		if d.IsDir() {
-			w.RmDir(path)
-			return nil
-		}
-
-		w.RmFile(path)
-		return nil
-	})
 }
 
 func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info common.ShellScriptInfo) error {
