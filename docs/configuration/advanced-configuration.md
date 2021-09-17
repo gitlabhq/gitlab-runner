@@ -700,14 +700,15 @@ The following parameters define S3 storage for cache.
 
 In GitLab Runner 11.2 and earlier, these settings were in the global `[runners.cache]` section.
 
-| Parameter        | Type             | Description |
-|------------------|------------------|-------------|
-| `ServerAddress`  | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
-| `AccessKey`      | string           | The access key specified for your S3 instance. |
-| `SecretKey`      | string           | The secret key specified for your S3 instance. |
-| `BucketName`     | string           | Name of the storage bucket where cache is stored. |
-| `BucketLocation` | string           | Name of S3 region. |
-| `Insecure`       | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
+| Parameter           | Type             | Description |
+|---------------------|------------------|-------------|
+| `ServerAddress`     | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
+| `AccessKey`         | string           | The access key specified for your S3 instance. |
+| `SecretKey`         | string           | The secret key specified for your S3 instance. |
+| `BucketName`        | string           | Name of the storage bucket where cache is stored. |
+| `BucketLocation`    | string           | Name of S3 region. |
+| `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
+| `AuthenticationType`| string           | In GitLab 14.4 and later, set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
 
 Example:
 
@@ -725,13 +726,10 @@ Example:
     Insecure = false
 ```
 
-For Amazon S3, the `ServerAddress` should always be `s3.amazonaws.com`. The MinIO S3 client
-gets bucket metadata and modifies the URL to point to the valid region, for example `s3-eu-west-1.amazonaws.com`.
-
-If `ServerAddress`, `AccessKey` or `SecretKey` aren't specified, then the S3 client uses the
-IAM instance profile available to the `gitlab-runner` instance. In an
-[autoscale](autoscale.md) configuration, this is not the on-demand machine
-that jobs are executed on.
+If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified and `AuthenticationType` is not provided, the S3 client uses the
+IAM instance profile available to the `gitlab-runner` instance. In an [autoscale](autoscale.md) configuration, this is not the on-demand machine
+that jobs are executed on. If `ServerAddress`, `AccessKey` and `SecretKey` are all specified but `AuthenticationType` is not provided, 
+`access-key` will be used as the authentication type. 
 
 When you use Helm charts to install GitLab Runner, and `rbac.create` is set to true
 in the `values.yaml` file, a ServiceAccount is created. This ServiceAccount's annotations are retrieved from the

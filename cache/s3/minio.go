@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"time"
 
@@ -30,8 +31,8 @@ type minioClient interface {
 }
 
 var newMinio = minio.New
-var newMinioWithIAM = func(bucketLocation string) (*minio.Client, error) {
-	return minio.New(DefaultAWSS3Server, &minio.Options{
+var newMinioWithIAM = func(serverAddress, bucketLocation string) (*minio.Client, error) {
+	return minio.New(serverAddress, &minio.Options{
 		Creds:  credentials.NewIAM(""),
 		Secure: true,
 		Transport: &bucketLocationTripper{
@@ -41,15 +42,24 @@ var newMinioWithIAM = func(bucketLocation string) (*minio.Client, error) {
 }
 
 var newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
-	if s3.ShouldUseIAMCredentials() {
-		return newMinioWithIAM(s3.BucketLocation)
+	serverAddress := s3.ServerAddress
+
+	if serverAddress == "" {
+		serverAddress = DefaultAWSS3Server
 	}
 
-	return newMinio(s3.ServerAddress, &minio.Options{
-		Creds:  credentials.NewStaticV4(s3.AccessKey, s3.SecretKey, ""),
-		Secure: !s3.Insecure,
-		Transport: &bucketLocationTripper{
-			bucketLocation: s3.BucketLocation,
-		},
-	})
+	switch s3.AuthType() {
+	case common.S3AuthTypeIAM:
+		return newMinioWithIAM(serverAddress, s3.BucketLocation)
+	case common.S3AuthTypeAccessKey:
+		return newMinio(serverAddress, &minio.Options{
+			Creds:  credentials.NewStaticV4(s3.AccessKey, s3.SecretKey, ""),
+			Secure: !s3.Insecure,
+			Transport: &bucketLocationTripper{
+				bucketLocation: s3.BucketLocation,
+			},
+		})
+	default:
+		return nil, errors.New("invalid s3 authentication type")
+	}
 }

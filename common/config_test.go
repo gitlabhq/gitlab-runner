@@ -16,10 +16,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
 
-func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
+func TestCacheS3Config_AuthType(t *testing.T) {
 	tests := map[string]struct {
-		s3                     CacheS3Config
-		shouldUseIAMCredential bool
+		s3       CacheS3Config
+		authType S3AuthType
 	}{
 		"Everything is empty": {
 			s3: CacheS3Config{
@@ -29,7 +29,7 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: true,
+			authType: S3AuthTypeIAM,
 		},
 		"Both AccessKey & SecretKey are empty": {
 			s3: CacheS3Config{
@@ -39,7 +39,7 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: true,
+			authType: S3AuthTypeIAM,
 		},
 		"SecretKey is empty": {
 			s3: CacheS3Config{
@@ -49,7 +49,7 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: true,
+			authType: S3AuthTypeIAM,
 		},
 		"AccessKey is empty": {
 			s3: CacheS3Config{
@@ -59,7 +59,7 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: true,
+			authType: S3AuthTypeIAM,
 		},
 		"ServerAddress is empty": {
 			s3: CacheS3Config{
@@ -69,7 +69,7 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: true,
+			authType: S3AuthTypeIAM,
 		},
 		"ServerAddress & AccessKey are empty": {
 			s3: CacheS3Config{
@@ -79,7 +79,7 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: true,
+			authType: S3AuthTypeIAM,
 		},
 		"ServerAddress & SecretKey are empty": {
 			s3: CacheS3Config{
@@ -89,7 +89,7 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: true,
+			authType: S3AuthTypeIAM,
 		},
 		"Nothing is empty": {
 			s3: CacheS3Config{
@@ -99,13 +99,44 @@ func TestCacheS3Config_ShouldUseIAMCredentials(t *testing.T) {
 				BucketName:     "name",
 				BucketLocation: "us-east-1a",
 			},
-			shouldUseIAMCredential: false,
+			authType: S3AuthTypeAccessKey,
+		},
+		"IAM set as auth type": {
+			s3: CacheS3Config{
+				ServerAddress:      "s3.amazonaws.com",
+				AccessKey:          "TOKEN",
+				SecretKey:          "TOKEN",
+				AuthenticationType: S3AuthTypeIAM,
+				BucketName:         "name",
+				BucketLocation:     "us-east-1a",
+			},
+			authType: S3AuthTypeIAM,
+		},
+		"Root credentials set as auth type": {
+			s3: CacheS3Config{
+				AccessKey:          "TOKEN",
+				SecretKey:          "TOKEN",
+				AuthenticationType: S3AuthTypeAccessKey,
+				BucketName:         "name",
+				BucketLocation:     "us-east-1a",
+			},
+			authType: S3AuthTypeAccessKey,
+		},
+		"Explicitly set invalid auth type": {
+			s3: CacheS3Config{
+				AccessKey:          "TOKEN",
+				SecretKey:          "TOKEN",
+				AuthenticationType: "invalid",
+				BucketName:         "name",
+				BucketLocation:     "us-east-1a",
+			},
+			authType: "",
 		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, tt.shouldUseIAMCredential, tt.s3.ShouldUseIAMCredentials())
+			assert.Equal(t, tt.s3.AuthType(), tt.authType)
 		})
 	}
 }
@@ -323,7 +354,7 @@ func TestConfigParse(t *testing.T) {
 											key = "security"
 											operator = "In"
 											values = ["S1"]
-								
+
 								[[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution]]
 								weight = 100
 								[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
@@ -406,7 +437,7 @@ func TestConfigParse(t *testing.T) {
 											key = "security"
 											operator = "In"
 											values = ["S1"]
-								
+
 								[[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
 								weight = 100
 								[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
