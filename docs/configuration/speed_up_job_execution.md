@@ -67,8 +67,8 @@ To create a Docker Hub Registry mirror:
    You should choose the private network IP address. The private
    network is usually the fastest solution for internal communication
    between machines on a single provider, like DigitalOcean, AWS, or Azure.
-   Usually, storage on a private network is not applied against your monthly
-   bandwidth limit.
+   Usually, data transferred on a private network is not applied against
+   your monthly bandwidth limit.
 
 The Docker Hub registry is accessible under `MY_REGISTRY_IP:6000`.
 
