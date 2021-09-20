@@ -248,7 +248,7 @@ runners:
             BucketName = "runners-cache"
 
   cache:
-      secretName: gcsaccess
+    secretName: gcsaccess
 ```
 
 Next, create a `gcsaccess` Kubernetes secret that contains `gcs-access-id`
