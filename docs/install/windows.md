@@ -288,6 +288,57 @@ After adding the `SeServiceLogonRight` for the user used in service configuratio
 the command `gitlab-runner start` should finish without failures
 and the service should be started properly.
 
+### Job marked as success or failed incorrectly
+
+Most Windows programs output `exit code 0` for success. However, some programs don't
+return an exit code or have a different value for success. An example is the Windows
+tool `robocopy`. The following `.gitlab-ci.yml` fails, even though it should be successful,
+due to the exit code output by `robocopy`:
+
+```yaml
+test:
+  stage: test
+  script:
+    - New-Item -type Directory -Path ./source
+    - New-Item -type Directory -Path ./dest
+    - Write-Output "Hello World!" > ./source/file.txt
+    - robocopy ./source ./dest
+  tags:
+    - windows
+```
+
+In the case above, you need to manually add an exit code check to the `script:`. For example,
+you can create a powershell script:
+
+```powershell
+$exitCodes = 0,1
+
+robocopy ./source ./dest
+
+if ( $exitCodes.Contains($LastExitCode) ) {
+    exit 0
+} else {
+    exit 1
+}
+```
+
+And change the `.gitlab-ci.yml` file to:
+
+```yaml
+test:
+  stage: test
+  script:
+    - New-Item -type Directory -Path ./source
+    - New-Item -type Directory -Path ./dest
+    - Write-Output "Hello World!" > ./source/file.txt
+    - ./robocopyCommand.ps1
+  tags:
+    - windows
+```
+
+Also, be careful of the difference between `return` and `exit` when using PowerShell
+functions. While `exit 1` will mark a job as failed, `return 1` will **not**.
+
 ### Job marked as success and terminated midway using Kubernetes executor
 
 Please see [Job execution](../executors/kubernetes.md#job-execution).
