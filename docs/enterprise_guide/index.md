@@ -179,7 +179,7 @@ To view those metrics on a runner, execute the command as noted [here](../monito
 | `gitlab_runner_jobs` | This shows how many jobs are currently being executed (with different scopes in the labels). |
 | `gitlab_runner_job_duration_seconds` | Histogram of job durations. |
 | `gitlab_runner_jobs_total` | This displays the total jobs executed. |
-| `gitlab_runner_limit` | The current value of concurrent setting. |
+| `gitlab_runner_limit` | The current value of the limit setting. |
 | `gitlab_runner_request_concurrency` | The current number of concurrent requests for a new job. |
 | `gitlab_runner_request_concurrency_exceeded_total` | Counter tracking exceeding of request concurrency. |
 | `gitlab_runner_version_info` | A metric with a constant `1` value labeled by different build stats fields. |
