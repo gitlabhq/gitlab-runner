@@ -1508,6 +1508,38 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 	})
 }
 
+func TestSanitizeGitDirectory(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		jobResponse, err := common.GetLocalBuildResponse(
+			"git remote set-url origin /tmp/some/invalid/directory",
+		)
+
+		build, cleanup := newBuild(t, jobResponse, shell)
+		defer cleanup()
+
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+			common.JobVariable{Key: featureflags.EnableJobCleanup, Value: "true"},
+		)
+
+		err = buildtest.RunBuild(t, build)
+		require.NoError(t, err)
+
+		_, err = os.Stat(filepath.Join(build.FullProjectDir(), ".git", "config"))
+		assert.True(t, errors.Is(err, os.ErrNotExist))
+
+		out, err := gitInDir(build.BuildDir, "init", "--template", filepath.Join(build.BuildDir, "git-template"))
+		assert.NoError(t, err)
+		assert.Contains(t, string(out), "Reinitialized existing Git repository")
+
+		_, err = gitInDir(build.BuildDir, "fsck")
+		assert.NoError(t, err)
+	})
+}
+
 func TestBuildFileVariablesRemoval(t *testing.T) {
 	getJobResponse := func(t *testing.T, jobResponseRequester func() (common.JobResponse, error)) common.JobResponse {
 		jobResponse, err := jobResponseRequester()

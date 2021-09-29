@@ -843,6 +843,8 @@ func (b *AbstractShell) writeCleanupScript(w ShellWriter, info common.ShellScrip
 		if err := b.writeCleanupBuildDirectoryScript(w, info); err != nil {
 			return err
 		}
+
+		w.RmFile(filepath.Join(info.Build.FullProjectDir(), ".git", "config"))
 	}
 
 	if skipCleanupStage {
@@ -887,6 +889,7 @@ func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info com
 		}
 	case common.GitNone:
 		w.Noticef("Skipping build directory cleanup step")
+
 	default:
 		return errUnknownGitStrategy
 	}
