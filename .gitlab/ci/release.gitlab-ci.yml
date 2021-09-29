@@ -133,6 +133,13 @@ bleeding edge packagecloud:
   environment:
     name: bleeding_edge/packagecloud
     url: https://packages.gitlab.com/runner/unstable
+  parallel:
+    matrix:
+    - DIST_FLAVOR:
+      - debian
+      - ubuntu
+      - el
+      - fedora
 
 bleeding edge docker images:
   extends:
@@ -245,6 +252,16 @@ stable packagecloud:
   environment:
     name: stable/packagecloud
     url: https://packages.gitlab.com/runner/gitlab-runner
+  parallel:
+    matrix:
+    - DIST_FLAVOR:
+      - debian
+      - ubuntu
+      - raspbian
+      - linuxmint
+      - el
+      - ol
+      - fedora
 
 stable docker images:
   extends:

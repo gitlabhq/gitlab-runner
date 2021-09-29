@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+distFlavor=${DIST_FLAVOR:-""}
+
+packageCloudURL=${1}
+packageCloudRepo=${2}
+packageType=${3}
+shift 3
+
+push_packagecloud() {
+  local dist="${1}"
+
+  echo "===================="
+  echo "${dist}"
+  echo "===================="
+
+  echo package_cloud push --verbose --url "${packageCloudURL}" "${packageCloudRepo}/${dist}" "out/${packageType}/*.${packageType}"
+}
+
+# shellcheck disable=SC2068
+for dist in ${@}; do
+    if [[ -z "${distFlavor}" ]] || [[ "${dist}" =~ ${distFlavor} ]]; then
+        push_packagecloud "${dist}"
+    fi
+done
