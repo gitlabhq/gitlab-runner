@@ -772,6 +772,7 @@ func TestGitFetchFlags(t *testing.T) {
 
 			mockWriter.On("Noticef", "Fetching changes...").Once()
 			mockWriter.On("MkTmpDir", mock.Anything).Return(mock.Anything).Once()
+			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
 			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
 			mockWriter.On("Command", "git", "init", dummyProjectDir, "--template", mock.Anything).Once()
 			mockWriter.On("Cd", mock.Anything)
