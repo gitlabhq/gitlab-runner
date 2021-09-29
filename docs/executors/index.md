@@ -118,7 +118,7 @@ Supported features by different executors:
 |:---------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|:------:|
 | Secure Variables                             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | GitLab Runner Exec command                   | ✗    | ✓       | ✗          | ✗         | ✓      | ✓          | ✓      |
-| `gitlab-ci.yml`: image                       | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          | ✓ (via [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages)      |
+| `gitlab-ci.yml`: image                       | ✗    | ✗       | ✓ (2)      | ✓ (2)     | ✓      | ✓          | ✓ (via [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages))      |
 | `gitlab-ci.yml`: services                    | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          | ✓      |
 | `gitlab-ci.yml`: cache                       | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | `gitlab-ci.yml`: artifacts                   | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
@@ -129,6 +129,8 @@ Supported features by different executors:
 1. Interactive web terminals are not yet supported by
 [`gitlab-runner` Helm chart](../install/kubernetes.md),
 but support [is planned](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
+1. Support [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1257) in GitLab Runner 14.2.
+   Refer to the [Overriding the base VM image](../configuration/advanced-configuration.md#overriding-the-base-vm-image) section for further details.
 
 Supported systems by different shells:
 
