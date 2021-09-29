@@ -528,10 +528,10 @@ github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd h1:AWwhYCrmFN0BKkPB7tNCeDJdV3ehZirzug4xiCe4OPY=
-gitlab.com/ayufan/golang-cli-helpers v0.0.0-20171103152739-a7cf72d604cd/go.mod h1:rMC8UwmKfpoQjGUjXJCKylz54ljoMvP60UFp9Qiu4MY=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462 h1:zq6ZD20H7/HfIORMgN5MXzctrhWUuZo5J6z1TgvR7j4=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462/go.mod h1:se8TSJQp4al+oC4Wqpsdqx87UMPgJOPd3MsMcOkGHXQ=
+gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a h1:YJih+edJDiMUqLZJalahqTikYkZ+5lKKPFaJxGdZcR0=
+gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
 go.opencensus.io v0.15.0/go.mod h1:UffZAU+4sDEINUGP/B7UfBBkq4fqLu9zXAX7ke6CHW0=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=

@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
-	clihelpers "gitlab.com/ayufan/golang-cli-helpers"
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/common"

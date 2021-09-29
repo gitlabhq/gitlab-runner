@@ -7,7 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	clihelpers "gitlab.com/ayufan/golang-cli-helpers"
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/gitlab_ci_yaml_parser"
