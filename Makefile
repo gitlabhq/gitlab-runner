@@ -245,11 +245,11 @@ packagecloud-deps:
 
 packagecloud-deb:
 	# Sending Debian compatible packages...
-	@./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) deb $(DEB_PLATFORMS)
+	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) deb $(DEB_PLATFORMS)
 
 packagecloud-rpm:
 	# Sending RedHat compatible packages...
-	@./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) rpm $(RPM_PLATFORMS)
+	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) rpm $(RPM_PLATFORMS)
 
 packagecloud-yank:
 ifneq ($(YANK),)
