@@ -545,7 +545,7 @@ func TestDockerCommandPullingImageRequestTimeout(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.ErrorAs(t, err, &buildError)
 
-	assert.True(t, docker.IsSystemError(err), "expected docker system error is missing in error chain")
+	assert.Equal(t, common.ScriptFailure, buildError.FailureReason, "expected script failure error")
 	assert.Contains(t, err.Error(), "request canceled while waiting for connection")
 }
 
