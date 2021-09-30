@@ -434,7 +434,7 @@ configuration added with the `DOCKER_AUTH_CONFIG` variable.
 
 In your jobs, you can use any image from your GitLab integrated
 registry, even if the image is private or protected. For information on the images jobs have access to, read the
-[CI/CD job token documentation](https://docs.gitlab.com/ee/api/README.html#gitlab-cicd-job-token) documentation.
+[CI/CD job token documentation](https://docs.gitlab.com/ee/ci/jobs/ci_job_token.html) documentation.
 
 #### Precedence of Docker authorization resolving
 
