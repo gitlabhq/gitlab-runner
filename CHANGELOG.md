@@ -1,3 +1,9 @@
+## v14.3.2 (2021-09-30)
+
+### GitLab Runner distribution
+
+- Fix the packagecloud pushing script
+
 ## v14.3.1 (2021-09-29)
 
 ### GitLab Runner distribution
