@@ -14,7 +14,7 @@ push_packagecloud() {
   echo "${dist}"
   echo "===================="
 
-  echo package_cloud push --verbose --url "${packageCloudURL}" "${packageCloudRepo}/${dist}" "out/${packageType}/*.${packageType}"
+  package_cloud push --verbose --url "${packageCloudURL}" "${packageCloudRepo}/${dist}" "out/${packageType}/*.${packageType}"
 }
 
 # shellcheck disable=SC2068
