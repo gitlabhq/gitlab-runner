@@ -23,4 +23,3 @@ for dist in ${@}; do
         push_packagecloud "${dist}"
     fi
 done
-
