@@ -1036,16 +1036,6 @@ certificates to your client. You can enable non-TLS connection for DIND or
 mount certificates as described in
 [**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor)
 
-### Not supplying Git
-
-Do *not* try to use an image that doesn't supply Git and add the `GIT_STRATEGY=none`
-environment variable for a job that you think doesn't need to do a fetch or clone.
-Because Pods are ephemeral and do not keep state of previously run jobs your
-checked out code will not exist in both the build and the Docker service container.
-Errors you might run into are things like `could not find git binary` and
-the Docker service complaining that it cannot follow some symlinks into your
-build context because of the missing code.
-
 ### Resource separation
 
 In both the `docker:dind` and `/var/run/docker.sock` cases the Docker daemon
