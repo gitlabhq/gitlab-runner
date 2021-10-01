@@ -3,7 +3,6 @@ package pull
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -13,16 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
-)
-
-var (
-	// These are some docker system error messages returned when
-	// not able to pull the given image. As we don't want those errors to be triggered as runner_system_failure
-	// (as for all the other docker system error), we specifically catch them and flag them as script_failure
-	// "repository does not exist|not found" where kept for compatibility with previous version of docker
-	errorRegexp = regexp.MustCompile(
-		"request canceled while waiting for connection|no such host|repository does not exist|not found",
-	)
 )
 
 type Manager interface {
@@ -212,9 +201,6 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 	options.RegistryAuth, _ = auth.EncodeConfig(ac)
 
 	if err := m.client.ImagePullBlocking(m.context, ref, options); err != nil {
-		if docker.IsSystemError(err) && !errorRegexp.MatchString(err.Error()) {
-			return nil, &common.BuildError{Inner: err, FailureReason: common.RunnerSystemFailure}
-		}
 		return nil, &common.BuildError{Inner: err, FailureReason: common.ScriptFailure}
 	}
 

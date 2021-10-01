@@ -85,7 +85,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.RunnerSystemFailure)
+				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
 			},
 		},
 		"ImagePullBlocking wrapped system failure": {
@@ -101,7 +101,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.RunnerSystemFailure)
+				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
 			},
 		},
 		"ImagePullBlocking two level wrapped system failure": {
@@ -117,7 +117,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.RunnerSystemFailure)
+				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
 			},
 		},
 		"ImagePullBlocking wrapped request timeout failure": {
