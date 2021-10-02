@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Runners autoscale configuration **(FREE)**
+# Docker Machine Executor autoscale configuration **(FREE)**
 
 > The autoscale feature was introduced in GitLab Runner 1.1.0.
 
@@ -15,6 +15,12 @@ GitLab Runner can autoscale, so that your infrastructure contains only as
 many build instances as are necessary at any time. If you configure GitLab Runner to
 only use autoscale, the system on which GitLab Runner is installed acts as a
 bastion for all the machines it creates. This machine is referred to as a "Runner Manager."
+
+NOTE:
+Docker has deprecated Docker Machine, the underlying technology used to autoscale
+runners on public cloud virtual machines. You can read the issue discussing the
+[strategy in response to the deprecation of Docker Machine](https://gitlab.com/gitlab-org/gitlab/-/issues/341856)
+for more details.
 
 ## Overview
 
@@ -42,8 +48,8 @@ Before configuring autoscale, you must:
 ## Supported cloud providers
 
 The autoscale mechanism is based on [Docker Machine](https://docs.docker.com/machine/overview/).
-All supported virtualization/cloud provider parameters, are available at the
-[Docker Machine drivers documentation](https://docs.docker.com/machine/drivers/).
+All supported virtualization and cloud provider parameters are available at the
+GitLab-managed fork of [Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/).
 
 ## Runner configuration
 
