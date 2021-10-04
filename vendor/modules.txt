@@ -187,8 +187,6 @@ github.com/json-iterator/go
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
-# github.com/kardianos/osext v0.0.0-20160811001526-c2c54e542fb7
-github.com/kardianos/osext
 # github.com/kardianos/service v1.2.0
 github.com/kardianos/service
 # github.com/klauspost/compress v1.11.6

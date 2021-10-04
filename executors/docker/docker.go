@@ -20,7 +20,6 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/kardianos/osext"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -97,7 +96,7 @@ type executor struct {
 }
 
 func init() {
-	runnerFolder, err := osext.ExecutableFolder()
+	runner, err := os.Executable()
 	if err != nil {
 		logrus.Errorln(
 			"Docker executor: unable to detect gitlab-runner folder, "+
@@ -105,6 +104,8 @@ func init() {
 			err,
 		)
 	}
+
+	runnerFolder := filepath.Dir(runner)
 
 	PrebuiltImagesPaths = []string{
 		// When gitlab-runner is running from repository root
