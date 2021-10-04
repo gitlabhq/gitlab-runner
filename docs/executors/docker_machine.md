@@ -13,11 +13,10 @@ For an overview of the autoscale architecture, take a look at the
 
 ## Forked version of Docker machine
 
-Because `docker-machine` is in [maintenance
-mode](https://github.com/docker/machine/issues/4537), GitLab is
-providing it's [own fork of
-`docker-machine`](https://gitlab.com/gitlab-org/ci-cd/docker-machine),
-which is based on the latest `main` branch of `docker-machine` with
+Docker has [deprecated](https://docs.docker.com/machine/) Docker Machine. However,
+GitLab maintains a fork of [`docker-machine`](https://gitlab.com/gitlab-org/ci-cd/docker-machine)
+for GitLab Runner users who rely on the Docker Machine executor. This fork is
+based on the latest `main` branch of `docker-machine` with
 some additional patches for the following bugs:
 
 - [Make DigitalOcean driver RateLimit aware](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/2)
@@ -39,26 +38,19 @@ installed in the same machine:
 1. Log in to a new Linux-based machine that will serve as a bastion server
    where Docker will spawn new machines from
 1. [Install GitLab Runner](../install/index.md)
-1. [Install Docker Machine](https://docs.docker.com/machine/install-machine/)
+1. Install Docker Machine from the fork
 1. Optionally but recommended, prepare a
    [proxy container registry and a cache server](../configuration/speed_up_job_execution.md)
    to be used with the autoscaled runners
-
-If you need to use any virtualization/cloud providers that aren't handled by
-Docker Machine's internal drivers, the appropriate driver plugin must be
-installed. The Docker Machine driver plugin installation and configuration is
-out of the scope of this documentation. For more details please read the
-[Docker Machine documentation](https://docs.docker.com/machine/)
 
 ## Configuring GitLab Runner
 
 1. Familiarize yourself with the core concepts of using `docker-machine` together
    with `gitlab-runner`:
-      - Read Docker's documentation about your [Docker Machine Driver](https://docs.docker.com/machine/drivers/)
       - Read [GitLab Runner Autoscaling](../configuration/autoscale.md)
       - Read [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)
 1. The **first time** you're using Docker Machine, it is best to manually execute the
-   `docker-machine create ...` command with your [Docker Machine Driver](https://docs.docker.com/machine/drivers/).
+   `docker-machine create ...` command with your [Docker Machine Driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/drivers).
    Run this command alongside with the options that you intend to configure in the
    [MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section) section.
    This will set up the Docker Machine environment properly and will also be a good
