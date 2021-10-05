@@ -30,8 +30,16 @@ type Docker interface {
 	Exec(ctx context.Context, containerID string, input io.Reader, output io.Writer) error
 }
 
-func NewDocker(c docker.Client, waiter wait.KillWaiter, logger logrus.FieldLogger) Docker {
+// NewDocker returns a client for starting a new container and running a
+// command inside of it.
+//
+// The context passed is used to wait for any created container to stop. This
+// is likely an executor's context. This means that waits to stop are only ever
+// canceled should the job be aborted (either manually, or by exceeding the
+// build time).
+func NewDocker(ctx context.Context, c docker.Client, waiter wait.KillWaiter, logger logrus.FieldLogger) Docker {
 	return &defaultDocker{
+		ctx:    ctx,
 		c:      c,
 		waiter: waiter,
 		logger: logger,
@@ -39,6 +47,7 @@ func NewDocker(c docker.Client, waiter wait.KillWaiter, logger logrus.FieldLogge
 }
 
 type defaultDocker struct {
+	ctx    context.Context
 	c      docker.Client
 	waiter wait.KillWaiter
 	logger logrus.FieldLogger
@@ -92,9 +101,13 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, input io.R
 		d.logger.Debugln("Container", containerID, "finished with", err)
 	}
 
-	// Kill and wait for exit.
+	// Try to gracefully stop, then kill and wait for the exit.
 	// Containers are stopped so that they can be reused by the job.
-	return d.waiter.KillWait(ctx, containerID)
+	//
+	// It's very likely that at this point, the context passed to Exec has
+	// been cancelled, so is unable to be used. Instead, we use the context
+	// passed to NewDocker.
+	return d.waiter.StopKillWait(d.ctx, containerID, nil)
 }
 
 func attachOptions() types.ContainerAttachOptions {

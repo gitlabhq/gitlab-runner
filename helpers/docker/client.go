@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -30,6 +31,7 @@ type Client interface {
 		containerName string) (container.ContainerCreateCreatedBody, error)
 	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
 	ContainerKill(ctx context.Context, containerID, signal string) error
+	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ContainerAttach(
 		ctx context.Context,

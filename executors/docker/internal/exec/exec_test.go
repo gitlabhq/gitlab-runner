@@ -107,7 +107,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("KillWait", expectedCtx, id).Return(nil).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {
 				assert.Contains(t, logOutput, "finished with aborted")
@@ -125,7 +125,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("KillWait", expectedCtx, id).Return(nil).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {
 				assert.Contains(t, logOutput, "finished with input error")
@@ -143,7 +143,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("KillWait", expectedCtx, id).Return(nil).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {
 				assert.Contains(t, logOutput, "finished with output error")
@@ -162,7 +162,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("KillWait", expectedCtx, id).Return(assert.AnError).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(assert.AnError).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {},
 			expectedError:   assert.AnError,
@@ -180,19 +180,22 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			logger, hook := test.NewNullLogger()
 			logger.SetLevel(logrus.DebugLevel)
 
-			ctx, cancelFn := context.WithCancel(context.Background())
+			executorCtx, executorCancelFn := context.WithCancel(context.Background())
+			defer executorCancelFn()
+
+			ctx, cancelFn := context.WithCancel(executorCtx)
 			defer cancelFn()
 
 			out := new(bytes.Buffer)
 
 			tt.setupDockerClient(t, clientMock, ctx)
-			tt.setupKillWaiter(t, waiterMock, ctx)
+			tt.setupKillWaiter(t, waiterMock, executorCtx)
 
 			if tt.cancelContext {
 				cancelFn()
 			}
 
-			dockerExec := NewDocker(clientMock, waiterMock, logger)
+			dockerExec := NewDocker(executorCtx, clientMock, waiterMock, logger)
 			err := dockerExec.Exec(ctx, id, tt.input, out)
 
 			logOutput := ""

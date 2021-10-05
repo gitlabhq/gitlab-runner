@@ -137,6 +137,12 @@ func (c *officialDockerClient) ContainerKill(ctx context.Context, containerID st
 	return wrapError("ContainerKill", err, started)
 }
 
+func (c *officialDockerClient) ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error {
+	started := time.Now()
+	err := c.client.ContainerStop(ctx, containerID, timeout)
+	return wrapError("ContainerStop", err, started)
+}
+
 func (c *officialDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
 	started := time.Now()
 	data, err := c.client.ContainerInspect(ctx, containerID)
