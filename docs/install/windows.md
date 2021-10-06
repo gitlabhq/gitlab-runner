@@ -109,15 +109,13 @@ This means that we support:
   these versions after mainstream support ends.
 
 This is the case for both the [Windows binaries](#installation) that we
-distribute, and also for the [Docker
-executor](../executors/docker.md#supported-windows-versions).
+distribute, and also for the [Docker executor](../executors/docker.md#supported-windows-versions).
 
 NOTE:
 The Docker executor for Windows containers has strict version
 requirements, because containers have to match the version of the host
-OS. See the [list of supported Windows
-containers](../executors/docker.md#supported-windows-versions) for more
-information.
+OS. See the [list of supported Windows containers](../executors/docker.md#supported-windows-versions)
+for more information.
 
 After a Windows version no longer receives mainstream support from
 Microsoft, we officially [deprecate the
