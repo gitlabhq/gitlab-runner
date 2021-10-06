@@ -405,6 +405,7 @@ func (e *executor) createHostConfigForService() *container.HostConfig {
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    e.Config.Docker.Privileged,
+		Runtime:       e.Config.Docker.Runtime,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		NetworkMode:   e.networkMode,
 		Binds:         e.volumesManager.Binds(),
