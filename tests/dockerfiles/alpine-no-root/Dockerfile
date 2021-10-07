@@ -1,4 +1,4 @@
-FROM alpine:3.13.6
+FROM alpine:3.12.0
 
 RUN adduser alpine -D
 USER alpine

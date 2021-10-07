@@ -4164,7 +4164,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			config: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Image:      "alpine:3.13",
+						Image:      "alpine:3.12",
 						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:       "127.0.0.1",
 					},
@@ -4183,7 +4183,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			config: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Image:      "alpine:3.13",
+						Image:      "alpine:3.12",
 						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:       "127.0.0.1",
 					},
@@ -4196,7 +4196,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						HelperImage: "config-image",
-						Image:       "alpine:3.13",
+						Image:       "alpine:3.12",
 						PullPolicy:  common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:        "127.0.0.1",
 					},
