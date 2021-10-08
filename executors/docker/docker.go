@@ -374,7 +374,7 @@ func (e *executor) createService(
 	config := &container.Config{
 		Image:  serviceImage.ID,
 		Labels: e.labeler.Labels(labels),
-		Env:    append(e.getServiceVariables(), e.BuildShell.Environment...),
+		Env:    append(append(e.getServiceVariables(), e.BuildShell.Environment...), serviceDefinition.Variables.Expand().StringList()...),
 	}
 
 	if len(serviceDefinition.Command) > 0 {

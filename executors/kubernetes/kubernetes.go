@@ -700,6 +700,8 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		s.helperImageInfo.Name,
 	}
 
+	serviceVariables := []common.JobVariable{}
+
 	var (
 		optionName    string
 		allowedImages []string
@@ -707,7 +709,8 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	if strings.HasPrefix(opts.name, "svc-") {
 		optionName = "services"
 		allowedImages = s.Config.Kubernetes.AllowedServices
-	} else if opts.name == buildContainerName {
+		serviceVariables = imageDefinition.Variables.Expand()
+	} else if name == buildContainerName {
 		optionName = "images"
 		allowedImages = s.Config.Kubernetes.AllowedImages
 	}
@@ -757,7 +760,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		ImagePullPolicy: pullPolicy,
 		Command:         command,
 		Args:            args,
-		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
+		Env:             buildVariables(append(s.Build.GetAllVariables().PublicOrInternal(), serviceVariables...)),
 		Resources: api.ResourceRequirements{
 			Limits:   opts.limits,
 			Requests: opts.requests,
@@ -1238,7 +1241,7 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	// by the services, to link each service to the pod
 	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
-		labels[k] = sanitizeLabel(s.Build.Variables.ExpandValue(v))
+		labels[k] = s.Build.Variables.ExpandValue(v)
 	}
 
 	annotations := make(map[string]string)
