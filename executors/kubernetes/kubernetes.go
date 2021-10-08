@@ -1174,7 +1174,7 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	// by the services, to link each service to the pod
 	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
-		labels[k] = s.Build.Variables.ExpandValue(v)
+		labels[k] = sanitizeLabel(s.Build.Variables.ExpandValue(v))
 	}
 
 	annotations := make(map[string]string)

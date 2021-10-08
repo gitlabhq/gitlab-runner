@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -342,4 +343,33 @@ func buildCapabilities(enabled map[string]bool) *api.Capabilities {
 	}
 
 	return capabilities
+}
+
+// Sanitize labels to match Kubernetes restrictions from https://kubernetes.io/
+// /docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+//nolint:gocognit
+func sanitizeLabel(value string) string {
+	mapFn := func(r rune) rune {
+		if r >= 'a' && r <= 'z' ||
+			r >= 'A' && r <= 'Z' ||
+			r >= '0' && r <= '9' ||
+			r == '-' || r == '_' || r == '.' {
+			return r
+		}
+		return '_'
+	}
+
+	// only alphanumerics, dashes (-), underscores (_), dots (.) are valid
+	value = strings.Map(mapFn, value)
+
+	// must start/end with alphanumerics only
+	value = strings.Trim(value, "-_.")
+
+	// length must be <= 63 characters
+	if len(value) > 63 {
+		value = value[:63]
+	}
+
+	// trim again if required after shortening
+	return strings.Trim(value, "-_.")
 }

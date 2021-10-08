@@ -604,3 +604,42 @@ func TestGetCapabilities(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeLabel(t *testing.T) {
+	tests := []struct {
+		Name string
+		In   string
+		Out  string
+	}{
+		{
+			Name: "valid label",
+			In:   "label",
+			Out:  "label",
+		},
+		{
+			Name: "invalid label",
+			In:   "label++@",
+			Out:  "label",
+		},
+		{
+			Name: "invalid label start end character",
+			In:   "--label-",
+			Out:  "label",
+		},
+		{
+			Name: "invalid label too long",
+			In:   "labellabellabellabellabellabellabellabellabellabellabellabellabel",
+			Out:  "labellabellabellabellabellabellabellabellabellabellabellabellab",
+		},
+		{
+			Name: "invalid characters",
+			In:   "a\xc5z",
+			Out:  "a_z",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			assert.Equal(t, sanitizeLabel(test.In), test.Out)
+		})
+	}
+}
