@@ -175,15 +175,15 @@ func TestJobImageExposed(t *testing.T) {
 		expectImageName string
 	}{
 		"normal image exposed": {
-			image:           "alpine:3.13",
+			image:           "alpine:3.11",
 			expectVarExists: true,
-			expectImageName: "alpine:3.13",
+			expectImageName: "alpine:3.11",
 		},
 		"image with variable expansion": {
-			image:           "${IMAGE}:3.13",
+			image:           "${IMAGE}:3.11",
 			vars:            []JobVariable{{Key: "IMAGE", Value: "alpine", Public: true}},
 			expectVarExists: true,
-			expectImageName: "alpine:3.13",
+			expectImageName: "alpine:3.11",
 		},
 		"no image specified": {
 			image:           "",
