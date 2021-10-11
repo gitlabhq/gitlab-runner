@@ -720,14 +720,15 @@ func TestCleanup(t *testing.T) {
 		Pod         *api.Pod
 		ConfigMap   *api.ConfigMap
 		Credentials *api.Secret
-		ClientFunc  func(*http.Request) (*http.Response, error)
+		ClientFunc  func(*testing.T, *http.Request) (*http.Response, error)
 		Services    []api.Service
+		Config      *common.KubernetesConfig
 		Error       bool
 	}{
 		{
 			Name: "Proper Cleanup",
 			Pod:  &api.Pod{ObjectMeta: objectMeta},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == podsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusOK), nil
@@ -739,7 +740,7 @@ func TestCleanup(t *testing.T) {
 		{
 			Name: "Delete failure",
 			Pod:  &api.Pod{ObjectMeta: objectMeta},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				return nil, fmt.Errorf("delete failed")
 			},
 			Error: true,
@@ -747,7 +748,7 @@ func TestCleanup(t *testing.T) {
 		{
 			Name: "POD already deleted",
 			Pod:  &api.Pod{ObjectMeta: objectMeta},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == podsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusNotFound), nil
@@ -761,7 +762,7 @@ func TestCleanup(t *testing.T) {
 			Name:        "POD creation failed, Secrets provided",
 			Pod:         nil, // a failed POD create request will cause a nil Pod
 			Credentials: &api.Secret{ObjectMeta: objectMeta},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == secretsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusNotFound), nil
@@ -775,7 +776,7 @@ func TestCleanup(t *testing.T) {
 			Name:     "POD created, Services created",
 			Pod:      &api.Pod{ObjectMeta: objectMeta},
 			Services: []api.Service{{ObjectMeta: objectMeta}},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && ((p == servicesEndpointURI) || (p == podsEndpointURI)):
 					return fakeKubeDeleteResponse(http.StatusOK), nil
@@ -788,7 +789,7 @@ func TestCleanup(t *testing.T) {
 			Name:     "POD created, Services creation failed",
 			Pod:      &api.Pod{ObjectMeta: objectMeta},
 			Services: []api.Service{{ObjectMeta: objectMeta}},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == podsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusOK), nil
@@ -802,7 +803,7 @@ func TestCleanup(t *testing.T) {
 			Name:     "POD creation failed, Services created",
 			Pod:      nil, // a failed POD create request will cause a nil Pod
 			Services: []api.Service{{ObjectMeta: objectMeta}},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == servicesEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusOK), nil
@@ -815,7 +816,7 @@ func TestCleanup(t *testing.T) {
 			Name:     "POD creation failed, Services cleanup failed",
 			Pod:      nil, // a failed POD create request will cause a nil Pod
 			Services: []api.Service{{ObjectMeta: objectMeta}},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				default:
 					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
@@ -826,7 +827,7 @@ func TestCleanup(t *testing.T) {
 		{
 			Name:      "ConfigMap cleanup",
 			ConfigMap: &api.ConfigMap{ObjectMeta: objectMeta},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == configMapsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusOK), nil
@@ -838,7 +839,7 @@ func TestCleanup(t *testing.T) {
 		{
 			Name:      "ConfigMap cleanup failed",
 			ConfigMap: &api.ConfigMap{ObjectMeta: objectMeta},
-			ClientFunc: func(req *http.Request) (*http.Response, error) {
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == configMapsEndpointURI:
 					return fakeKubeDeleteResponse(http.StatusNotFound), nil
@@ -848,12 +849,73 @@ func TestCleanup(t *testing.T) {
 			},
 			Error: true,
 		},
+		{
+			Name: "Pod cleanup specifies GracePeriodSeconds with TerminationGracePeriodSeconds set",
+			Config: &common.KubernetesConfig{
+				TerminationGracePeriodSeconds: common.Int64Ptr(15),
+			},
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && p == podsEndpointURI:
+					defer req.Body.Close()
+					b, err := ioutil.ReadAll(req.Body)
+					if err != nil {
+						return nil, err
+					}
+
+					var opts metav1.DeleteOptions
+					err = json.Unmarshal(b, &opts)
+					if err != nil {
+						return nil, err
+					}
+
+					assert.EqualValues(t, common.Int64Ptr(15), opts.GracePeriodSeconds)
+					return fakeKubeDeleteResponse(http.StatusOK), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+			Pod: &api.Pod{ObjectMeta: objectMeta},
+		},
+		{
+			Name: "Pod cleanup specifies GracePeriodSeconds with CleanupGracePeriodSeconds set",
+			Config: &common.KubernetesConfig{
+				CleanupGracePeriodSeconds: common.Int64Ptr(10),
+			},
+			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case m == http.MethodDelete && p == podsEndpointURI:
+					defer req.Body.Close()
+					b, err := ioutil.ReadAll(req.Body)
+					if err != nil {
+						return nil, err
+					}
+
+					var opts metav1.DeleteOptions
+					err = json.Unmarshal(b, &opts)
+					if err != nil {
+						return nil, err
+					}
+
+					assert.EqualValues(t, common.Int64Ptr(10), opts.GracePeriodSeconds)
+					return fakeKubeDeleteResponse(http.StatusOK), nil
+				default:
+					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
+				}
+			},
+			Pod: &api.Pod{ObjectMeta: objectMeta},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			ex := executor{
-				kubeClient:  testKubernetesClient(version, fake.CreateHTTPClient(test.ClientFunc)),
+				kubeClient: testKubernetesClient(
+					version,
+					fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+						return test.ClientFunc(t, req)
+					}),
+				),
 				pod:         test.Pod,
 				credentials: test.Credentials,
 				services:    test.Services,
@@ -878,6 +940,15 @@ func TestCleanup(t *testing.T) {
 			}
 			ex.AbstractExecutor.Trace = buildTrace
 			ex.AbstractExecutor.BuildLogger = common.NewBuildLogger(buildTrace, logrus.WithFields(logrus.Fields{}))
+
+			if test.Config == nil {
+				test.Config = &common.KubernetesConfig{}
+			}
+			ex.AbstractExecutor.Config = common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: test.Config,
+				},
+			}
 
 			ex.Cleanup()
 
@@ -2001,7 +2072,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						NodeSelector: map[string]string{
 							"a-selector":       "first",
 							"another-selector": "second",
@@ -2037,7 +2107,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						ImagePullSecrets: []string{
 							"docker-registry-credentials",
 						},
@@ -2050,13 +2119,6 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		},
 		"uses default security context flags for containers": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				for _, c := range pod.Spec.Containers {
 					assert.Empty(
@@ -2076,7 +2138,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:                "default",
 						Privileged:               func(b bool) *bool { return &b }(false),
 						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(false),
 					},
@@ -2095,7 +2156,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:                "default",
 						Privileged:               func(b bool) *bool { return &b }(true),
 						AllowPrivilegeEscalation: func(b bool) *bool { return &b }(true),
 					},
@@ -2111,13 +2171,6 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		},
 		"configures helper container": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				hasHelper := false
 				for _, c := range pod.Spec.Containers {
@@ -2132,7 +2185,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2149,7 +2201,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						PodLabels: map[string]string{
 							"test":    "label",
 							"another": "label",
@@ -2174,7 +2225,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						PodAnnotations: map[string]string{
 							"test":    "annotation",
 							"another": "annotation",
@@ -2198,7 +2248,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image:${CI_RUNNER_REVISION}",
 					},
 				},
@@ -2215,7 +2264,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						NodeTolerations: map[string]string{
 							"node-role.kubernetes.io/master": "NoSchedule",
 							"custom.toleration=value":        "NoSchedule",
@@ -2258,7 +2306,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2308,7 +2355,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2418,7 +2464,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2441,7 +2486,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2476,7 +2520,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2505,7 +2548,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2564,7 +2606,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2601,7 +2642,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -2660,11 +2700,6 @@ func TestSetupBuildPod(t *testing.T) {
 				RunnerCredentials: common.RunnerCredentials{
 					Token: "ToK3_?OF",
 				},
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				dns_test.AssertRFC1123Compatibility(t, pod.GetGenerateName())
@@ -2674,7 +2709,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						PodSecurityContext: common.KubernetesPodSecurityContext{
 							FSGroup:            func() *int64 { i := int64(200); return &i }(),
 							RunAsGroup:         func() *int64 { i := int64(200); return &i }(),
@@ -2694,13 +2728,6 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		},
 		"uses default security context when unspecified": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				assert.Empty(t, pod.Spec.SecurityContext, "Security context should be empty")
 			},
@@ -2709,7 +2736,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						Affinity: common.KubernetesAffinity{
 							NodeAffinity: &common.KubernetesNodeAffinity{
 								PreferredDuringSchedulingIgnoredDuringExecution: []common.PreferredSchedulingTerm{
@@ -2811,7 +2837,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						Affinity: common.KubernetesAffinity{
 							PodAffinity: &common.KubernetesPodAffinity{
 								RequiredDuringSchedulingIgnoredDuringExecution: []common.PodAffinityTerm{
@@ -2878,7 +2903,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						Affinity: common.KubernetesAffinity{
 							PodAntiAffinity: &common.KubernetesPodAntiAffinity{
 								RequiredDuringSchedulingIgnoredDuringExecution: []common.PodAffinityTerm{
@@ -2945,7 +2969,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						HostAliases: []common.KubernetesHostAliases{
 							{
 								IP:        "127.0.0.1",
@@ -3002,13 +3025,6 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		},
 		"ignores non RFC1123 aliases": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			Options: &kubernetesOptions{
 				Services: common.Services{
 					{
@@ -3034,7 +3050,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						HostAliases: []common.KubernetesHostAliases{
 							{
 								IP:        "127.0.0.1",
@@ -3067,13 +3082,6 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		},
 		"check host aliases with non kubernetes version error": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			Options: &kubernetesOptions{
 				Services: common.Services{
 					{
@@ -3092,13 +3100,6 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		},
 		"check host aliases with kubernetes version error": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			Options: &kubernetesOptions{
 				Services: common.Services{
 					{
@@ -3117,26 +3118,12 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 		},
 		"no init container defined": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			InitContainers: []api.Container{},
 			VerifyFn: func(t *testing.T, def setupBuildPodTestDef, pod *api.Pod) {
 				assert.Nil(t, pod.Spec.InitContainers)
 			},
 		},
 		"init container defined": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-					},
-				},
-			},
 			InitContainers: []api.Container{
 				{
 					Name:  "a-init-container",
@@ -3151,9 +3138,8 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						CapAdd:    []string{"CAP_1", "CAP_2"},
-						CapDrop:   []string{"CAP_3", "CAP_4"},
+						CapAdd:  []string{"CAP_1", "CAP_2"},
+						CapDrop: []string{"CAP_3", "CAP_4"},
 					},
 				},
 			},
@@ -3174,8 +3160,7 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						CapAdd:    []string{"NET_RAW", "CAP_2"},
+						CapAdd: []string{"NET_RAW", "CAP_2"},
 					},
 				},
 			},
@@ -3193,9 +3178,8 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						CapAdd:    []string{"CAP_1"},
-						CapDrop:   []string{"CAP_1"},
+						CapAdd:  []string{"CAP_1"},
+						CapDrop: []string{"CAP_1"},
 					},
 				},
 			},
@@ -3213,9 +3197,8 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
-						CapAdd:    []string{"CAP_1"},
-						CapDrop:   []string{"CAP_2"},
+						CapAdd:  []string{"CAP_1"},
+						CapDrop: []string{"CAP_2"},
 					},
 				},
 			},
@@ -3256,7 +3239,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						DNSPolicy: "",
 					},
 				},
@@ -3270,7 +3252,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						DNSPolicy: common.DNSPolicyNone,
 					},
 				},
@@ -3283,7 +3264,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						DNSPolicy: common.DNSPolicyDefault,
 					},
 				},
@@ -3297,7 +3277,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						DNSPolicy: common.DNSPolicyClusterFirst,
 					},
 				},
@@ -3311,7 +3290,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						DNSPolicy: common.DNSPolicyClusterFirstWithHostNet,
 					},
 				},
@@ -3325,7 +3303,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						DNSPolicy: "some-invalid-policy",
 					},
 				},
@@ -3339,7 +3316,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace: "default",
 						DNSConfig: common.KubernetesDNSConfig{
 							Nameservers: []string{"1.2.3.4"},
 							Searches:    []string{"ns1.svc.cluster-domain.example", "my.dns.search.suffix"},
@@ -3393,7 +3369,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -3446,7 +3421,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -3475,7 +3449,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -3512,7 +3485,6 @@ func TestSetupBuildPod(t *testing.T) {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Namespace:   "default",
 						HelperImage: "custom/helper-image",
 					},
 				},
@@ -3534,6 +3506,38 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "error setting ownerReferences")
 				assert.Contains(t, err.Error(), "cannot set owner-dependent relationship")
+			},
+		},
+		"supports TerminationGracePeriodSeconds": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						TerminationGracePeriodSeconds: common.Int64Ptr(10),
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.EqualValues(
+					t,
+					test.RunnerConfig.Kubernetes.TerminationGracePeriodSeconds,
+					e.pod.Spec.TerminationGracePeriodSeconds,
+				)
+			},
+		},
+		"supports TerminationGracePeriodSeconds through PodTerminationGracePeriodSeconds": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						PodTerminationGracePeriodSeconds: common.Int64Ptr(10),
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.EqualValues(
+					t,
+					test.RunnerConfig.Kubernetes.PodTerminationGracePeriodSeconds,
+					e.pod.Spec.TerminationGracePeriodSeconds,
+				)
 			},
 		},
 	}
@@ -3559,6 +3563,14 @@ func TestSetupBuildPod(t *testing.T) {
 			options := test.Options
 			if options == nil {
 				options = &kubernetesOptions{}
+			}
+
+			if test.RunnerConfig.Kubernetes == nil {
+				test.RunnerConfig.Kubernetes = &common.KubernetesConfig{}
+			}
+
+			if test.RunnerConfig.Kubernetes.Namespace == "" {
+				test.RunnerConfig.Kubernetes.Namespace = "default"
 			}
 
 			rt := setupBuildPodFakeRoundTripper{
