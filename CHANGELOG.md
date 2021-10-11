@@ -1,3 +1,44 @@
+## v14.4.0-rc1 (2021-10-11)
+
+### Security fixes
+
+- Sanitize git folder after each build !3134
+
+### Bug fixes
+
+- Add Kubernetes pod label sanitization !3054 (Theodor van Nahl @t.vannahl)
+
+### Maintenance
+
+- Revert "Merge branch 'alpine-3-13' into 'main'" !3157
+- Consider all docker pull image system error as runner script failure !3142
+- Docker Executor: use Stop for graceful shutdown !3128 (Aaron Friel @frieltwochairs)
+- Update to minio-go v7.0.13 !3120 (Philip Schwartz @pschwar1)
+- Explicit configuration for cache s3 authentication type !3117
+- refactor: remove osext dependency !3101 (feistel   @feistel)
+- Respect Docker Runtime setting for services !3063 (Jakob-Niklas See @networkException)
+
+### GitLab Runner distribution
+
+- Split packagecloud release by distribution flavor !3146
+
+### Documentation changes
+
+- Mark URLs compatible with markdownlint-cli 0.29.0 !3154
+- Remove Fedora 34 from list of packages - docs !3151
+- Fixed docs crosslink from Advanced Config !3149 (Raimund Hook @stingrayza)
+- Update Autoscale config due to docker machine deprecation docs !3144
+- Compatibility chart update !3141 (Alexander Kutelev @kutelev)
+- Update docker_machine.md - docs !3140
+- Change description for gitlab_runner_limit !3139
+- docs: Delete link to gitlab.com-config (target does not exist) !3138 (Stefan Schmalzhaf @the_s)
+- Fix yaml indention of GCS secretName !3136 (Kate @kate_stack11)
+- Replace incorrect terminology (storage -> bandwidth) !3135 (Jay Williams @codingJWilliams)
+- Docs: Updated Microsoft Service policy links !3133
+- Runner: fix some broken external links !3127
+- Additional step when install GitLab Runner using KAS !3126
+- Added info about code handling for Windows runner !1975
+
 ## v14.3.0 (2021-09-21)
 
 ### New features
