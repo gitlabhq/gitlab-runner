@@ -28,7 +28,7 @@ type manager struct {
 	logger       pullLogger
 	pullPolicies []api.PullPolicy
 
-	mu         sync.RWMutex
+	mu         sync.Mutex
 	failureMap map[string]int
 }
 
@@ -45,8 +45,8 @@ func NewPullManager(pullPolicies []api.PullPolicy, logger pullLogger) Manager {
 }
 
 func (m *manager) GetPullPolicyFor(image string) (api.PullPolicy, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	failureCount := m.failureMap[image]
 	if failureCount < len(m.pullPolicies) {

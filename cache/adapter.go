@@ -23,7 +23,7 @@ type Factory func(config *common.CacheConfig, timeout time.Duration, objectName 
 
 type FactoriesMap struct {
 	internal map[string]Factory
-	lock     sync.RWMutex
+	lock     sync.Mutex
 }
 
 func (m *FactoriesMap) Register(typeName string, factory Factory) error {
@@ -45,8 +45,8 @@ func (m *FactoriesMap) Register(typeName string, factory Factory) error {
 }
 
 func (m *FactoriesMap) Find(typeName string) (Factory, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	factory := m.internal[typeName]
 	if factory == nil {
