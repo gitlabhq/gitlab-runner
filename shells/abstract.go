@@ -342,6 +342,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	templateDir := w.MkTmpDir("git-template")
 	templateFile := w.Join(templateDir, "config")
 
+	w.Command("git", "config", "-f", templateFile, "init.defaultBranch", "none")
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
 	if build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
