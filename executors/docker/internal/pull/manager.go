@@ -34,7 +34,7 @@ type pullLogger interface {
 
 type manager struct {
 	usedImages     map[string]string
-	usedImagesLock sync.RWMutex
+	usedImagesLock sync.Mutex
 
 	context             context.Context
 	config              ManagerConfig
@@ -94,8 +94,8 @@ func (m *manager) GetDockerImage(imageName string) (*types.ImageInspect, error) 
 }
 
 func (m *manager) wasImageUsed(imageName, imageID string) bool {
-	m.usedImagesLock.RLock()
-	defer m.usedImagesLock.RUnlock()
+	m.usedImagesLock.Lock()
+	defer m.usedImagesLock.Unlock()
 
 	return m.usedImages[imageName] == imageID
 }

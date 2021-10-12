@@ -140,11 +140,10 @@ type Build struct {
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
 
-	// statusLock handles access to currentStage, currentState and
-	// executorStageResolver. These variables can be accessed via
-	// CurrentStage(), CurrentState() and CurrentExecutorStage() from the
-	// metrics go routine whilst a build is in-flight.
-	statusLock            sync.RWMutex
+	// CurrentStage(), CurrentState() and CurrentExecutorStage() are called
+	// from the metrics go routine whilst a build is in-flight, so access
+	// to these variables requires a lock.
+	statusLock            sync.Mutex
 	currentStage          BuildStage
 	currentState          BuildRuntimeState
 	executorStageResolver func() ExecutorStage
@@ -172,8 +171,8 @@ func (b *Build) setCurrentStage(stage BuildStage) {
 }
 
 func (b *Build) CurrentStage() BuildStage {
-	b.statusLock.RLock()
-	defer b.statusLock.RUnlock()
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
 
 	return b.currentStage
 }
@@ -186,8 +185,8 @@ func (b *Build) setCurrentState(state BuildRuntimeState) {
 }
 
 func (b *Build) CurrentState() BuildRuntimeState {
-	b.statusLock.RLock()
-	defer b.statusLock.RUnlock()
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
 
 	return b.currentState
 }
@@ -862,8 +861,8 @@ func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {
 }
 
 func (b *Build) CurrentExecutorStage() ExecutorStage {
-	b.statusLock.RLock()
-	defer b.statusLock.RUnlock()
+	b.statusLock.Lock()
+	defer b.statusLock.Unlock()
 
 	if b.executorStageResolver == nil {
 		return ExecutorStage("")

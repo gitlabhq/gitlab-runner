@@ -21,7 +21,7 @@ type CredentialsFactory func(config *common.CacheConfig) (CredentialsAdapter, er
 
 type CredentialsFactoriesMap struct {
 	internal map[string]CredentialsFactory
-	lock     sync.RWMutex
+	lock     sync.Mutex
 }
 
 func (m *CredentialsFactoriesMap) Register(typeName string, factory CredentialsFactory) error {
@@ -43,8 +43,8 @@ func (m *CredentialsFactoriesMap) Register(typeName string, factory CredentialsF
 }
 
 func (m *CredentialsFactoriesMap) Find(typeName string) (CredentialsFactory, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	factory := m.internal[typeName]
 	if factory == nil {
