@@ -33,7 +33,7 @@ setting.
 
 NOTE:
 You can also specify
-[`GIT_CLONE_PATH`](https://docs.gitlab.com/ee/ci/yaml/README.html#custom-build-directories)
+[`GIT_CLONE_PATH`](https://docs.gitlab.com/ee/ci/yaml/index.html#custom-build-directories)
 if you want to clone to a custom directory, and the guideline below
 doesn't apply.
 

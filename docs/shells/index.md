@@ -21,7 +21,7 @@ The shell scripts contain commands to execute all steps of the build:
 1. Generate and upload the build artifacts
 
 The shells don't have any configuration options. The build steps are received
-from the commands defined in the [`script` directive in `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html#script).
+from the commands defined in the [`script` directive in `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html#script).
 
 The supported shells are:
 

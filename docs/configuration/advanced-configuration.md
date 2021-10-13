@@ -420,7 +420,7 @@ The steps performed by the runner can be summed up as:
    found, subsequent pulls makes use of it.
 
 Now that the runner is set up to authenticate against your private registry,
-learn [how to configure the `.gitlab-ci.yml` file](https://docs.gitlab.com/ee/ci/yaml/README.html#image) to use that
+learn [how to configure the `.gitlab-ci.yml` file](https://docs.gitlab.com/ee/ci/yaml/index.html#image) to use that
 registry.
 
 #### Support for GitLab integrated registry

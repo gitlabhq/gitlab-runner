@@ -353,7 +353,7 @@ The conversion results in:
 NOTE:
 Read how to [use a distributed cache](../configuration/speed_up_job_execution.md#use-a-distributed-cache).
 
-To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/README.html#cache)
+To speed up your jobs, GitLab Runner provides a [cache mechanism](https://docs.gitlab.com/ee/ci/yaml/index.html#cache)
 where selected directories and/or files are saved and shared between subsequent
 jobs.
 
