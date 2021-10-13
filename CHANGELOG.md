@@ -2914,7 +2914,7 @@ that even in edge cases you can always rely on them.
 - Add internal command for uploading artifacts without the system dependencies
 - Use umask in docker build containers to fix running jobs as specific user
 - Fix problem with `cache` paths never being archived
-- Add support for [`cache:key`](http://doc.gitlab.com/ce/ci/yaml/README.html#cachekey)
+- Add support for [`cache:key`](http://doc.gitlab.com/ce/ci/yaml/index.html#cachekey)
 - Add warnings about using runner in `user-mode`
 - Push packages to all upcoming distributions (Debian/Ubuntu/Fedora)
 - Rewrite the shell support adding all features to all shells (makes possible to use artifacts and caching on Windows)

@@ -90,7 +90,7 @@ This is how the runner knows which projects it's available for.
 
 ### Tags
 
-When you register a runner, you can add [**tags**](https://docs.gitlab.com/ee/ci/yaml/README.html#tags) to it.
+When you register a runner, you can add [**tags**](https://docs.gitlab.com/ee/ci/yaml/index.html#tags) to it.
 
 When a CI/CD job runs, it knows which runner to use by looking at the assigned tags.
 
@@ -127,7 +127,7 @@ After a runner is configured and available for your project, your
 [CI/CD](https://docs.gitlab.com/ee/ci/README.html) jobs can use the runner.
 
 Specify the name of the runner or its tags in your
-[`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/README.html) file.
+[`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) file.
 Then, when you commit to your repository, the pipeline runs, and
 the runner's executor processes the commands.
 
