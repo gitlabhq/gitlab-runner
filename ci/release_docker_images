@@ -25,8 +25,10 @@ checksums['GIT_LFS_ARM64']=${GIT_LFS_LINUX_ARM64_CHECKSUM:-ba6a2820d6afcdf94a83c
 checksums['GIT_LFS_S390X']=${GIT_LFS_LINUX_S390X_CHECKSUM:-ca73776cb1cdc855aaf743c09ae70caae97f67d8d5e4147f19dcc4f959f9fc4d}
 checksums['GIT_LFS_PPC64LE']=${GIT_LFS_LINUX_PPC64LE_CHECKSUM:-76196d06a79eec11c202d9cbafbab98f52b9a7fda8538c2d94748461ba192209}
 
+IMAGE_FLAVOR=${IMAGE_FLAVOR:-'ubuntu'}
+
 if [ -n "${TARGET_ARCHS}" ]; then
-    IFS=', ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
+    IFS=' ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
 else
     TARGET_ARCHS=('amd64')
 fi
@@ -169,23 +171,18 @@ for arch in "${TARGET_ARCHS[@]}"; do
         "${runner_home_dir}/alpine/"
 done
 
-alpineTags=()
-ubuntuTags=()
+tags=()
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
-   add_tags alpineTags "alpine" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
-   add_tags ubuntuTags "ubuntu" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
+   add_tags tags "${IMAGE_FLAVOR}" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
 fi
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
-   add_tags alpineTags "alpine" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
-   add_tags ubuntuTags "ubuntu" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
+   add_tags tags "${IMAGE_FLAVOR}" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
 fi
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-   add_tags alpineTags "alpine" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
-   add_tags ubuntuTags "ubuntu" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
+   add_tags tags "${IMAGE_FLAVOR}" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
 fi
 
 # Build and publish multi-platform images using `docker buildx`
-buildx "${runner_home_dir}/ubuntu" "${ubuntuTags[@]}"
-buildx "${runner_home_dir}/alpine" "${alpineTags[@]}"
+buildx "${runner_home_dir}/${IMAGE_FLAVOR}" "${tags[@]}"
