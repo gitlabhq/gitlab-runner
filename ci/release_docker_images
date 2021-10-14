@@ -4,8 +4,8 @@ set -eEo pipefail
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-# shellcheck source=ci/docker_buildx_commands
-source "${SCRIPTPATH}/docker_buildx_commands"
+# shellcheck source=ci/docker_commands
+source "${SCRIPTPATH}/docker_commands"
 
 declare -A checksums
 

@@ -7,8 +7,8 @@ SCRIPTPATH="$(
   pwd -P
 )"
 
-# shellcheck source=ci/docker_buildx_commands
-source "${SCRIPTPATH}/docker_buildx_commands"
+# shellcheck source=ci/docker_commands
+source "${SCRIPTPATH}/docker_commands"
 # shellcheck source=ci/.colors
 source "${SCRIPTPATH}/.colors"
 
