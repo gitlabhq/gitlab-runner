@@ -312,8 +312,12 @@ prepare_index: $(RELEASE_INDEX_GENERATOR)
 								-gpg-password-env GPG_PASSPHRASE
 
 release_docker_images:
-	# Releasing Docker images
+	# Releasing GitLab Runner images
 	@./ci/release_docker_images
+
+release_helper_docker_images:
+	# Releasing GitLab Runner Helper images
+	@./ci/release_helper_docker_images
 
 generate_changelog: export CHANGELOG_RELEASE ?= $(VERSION)
 generate_changelog: $(GITLAB_CHANGELOG)

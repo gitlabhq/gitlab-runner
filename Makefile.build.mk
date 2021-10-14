@@ -25,6 +25,7 @@ runner-and-helper-bin: runner-bin helper-bin helper-dockerarchive
 runner-and-helper-docker-host: export CI_COMMIT_REF_SLUG=$(shell echo $(BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
 runner-and-helper-docker-host: runner-and-helper-deb-host
 	$(MAKE) release_docker_images
+	$(MAKE) release_helper_docker_images
 
 runner-and-helper-deb-host: ARCH := $(shell uname -m | sed s/x86_64/amd64/ | sed s/i386/386/)
 runner-and-helper-deb-host: export BUILD_ARCHS := -arch '$(ARCH)'
