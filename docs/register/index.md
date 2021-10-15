@@ -235,7 +235,7 @@ Some runner configuration settings can't be set with environment variables or co
 For example:
 
 - Environment variables do not support slices.
-- Command line option support is internationally unavailable for the settings for the
+- Command line option support is intentionally unavailable for the settings for the
   whole Kubernetes executor volumes tree.
 
 This is a problem for environments that are handled by any kind of automation, such as the
