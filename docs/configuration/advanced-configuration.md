@@ -151,6 +151,9 @@ of `host:port`, where `host` may be an IP address (`127.0.0.1:8093`)
 or a domain (`my-runner.example.com:8093`). The runner uses this information to create
 a TLS certificate, for a secure connection.
 
+NOTE:
+Live sessions are initiated by the web browser. Make sure your web browser can connect to the `advertise_address`.
+
 | Setting | Description |
 | ------- | ----------- |
 | `listen_address` | An internal URL for the session server. |
@@ -158,6 +161,9 @@ a TLS certificate, for a secure connection.
 | `session_timeout` | Number of seconds the session can stay active after the job completes. The timeout blocks the job from finishing. Default is `1800` (30 minutes). |
 
 To disable the session server and terminal support, delete the `[session_server]` section.
+
+NOTE:
+When your runner instance is already running, you might need to execute `gitlab-runner restart` for the changes in the `[session_server]` section to be take effect.
 
 If you are using the GitLab Runner Docker image, you must expose port `8093` by
 adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
