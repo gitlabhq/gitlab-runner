@@ -15,13 +15,13 @@ These instructions to install GitLab Runner assume the
 
    ```yaml
    # The GitLab Server URL (with protocol) that want to register the runner against
-   # ref: https://docs.gitlab.com/runner/commands/README.html#gitlab-runner-register
+   # ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register
    #
    gitlabUrl: https://gitlab.my.domain.example.com/
 
    # The Registration Token for adding new runners to the GitLab Server. This must
    # be retrieved from your GitLab instance.
-   # ref: https://docs.gitlab.com/ce/ci/runners/README.html
+   # ref: https://docs.gitlab.com/ee/ci/runners/index.html
    #
    runnerRegistrationToken: "yrnZW46BrtBFqM7xDzE7dddd"
 

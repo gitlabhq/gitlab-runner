@@ -124,7 +124,7 @@ much CPU your runners are using.
 ## Use a runner to run your job
 
 After a runner is configured and available for your project, your
-[CI/CD](https://docs.gitlab.com/ee/ci/README.html) jobs can use the runner.
+[CI/CD](https://docs.gitlab.com/ee/ci/index.html) jobs can use the runner.
 
 Specify the name of the runner or its tags in your
 [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) file.
@@ -135,7 +135,7 @@ the runner's executor processes the commands.
 
 If you use GitLab.com, GitLab [manages runners for you](https://docs.gitlab.com/ee/user/gitlab_com/index.html#shared-runners).
 These runners are enabled for all projects, though
-[you can disable them](https://docs.gitlab.com/ee/ci/runners/README.html#disable-shared-runners).
+[you can disable them](https://docs.gitlab.com/ee/ci/runners/index.html#disable-shared-runners).
 
 If you don't want to use runners managed by GitLab, you can install GitLab Runner and
 register your own runners on GitLab.com.
