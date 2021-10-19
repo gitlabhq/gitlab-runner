@@ -176,7 +176,7 @@ Each `[[runners]]` section defines one runner.
 | ------- | ----------- |
 | `name`               | The runner's description. Informational only. |
 | `url`                | GitLab instance URL. |
-| `token`              | The runner's special token (not to be confused with the registration token). |
+| `token`              | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens). |
 | `tls-ca-file`        | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md). |
 | `tls-cert-file`      | When using HTTPS, file that contains the certificate to authenticate with the peer. |
 | `tls-key-file`       | When using HTTPS, file that contains the private key to authenticate with the peer. |
