@@ -4,8 +4,8 @@ set -eEo pipefail
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-# shellcheck source=ci/docker_buildx_commands
-source "${SCRIPTPATH}/docker_buildx_commands"
+# shellcheck source=ci/docker_commands
+source "${SCRIPTPATH}/docker_commands"
 
 declare -A checksums
 
@@ -25,40 +25,12 @@ checksums['GIT_LFS_ARM64']=${GIT_LFS_LINUX_ARM64_CHECKSUM:-ba6a2820d6afcdf94a83c
 checksums['GIT_LFS_S390X']=${GIT_LFS_LINUX_S390X_CHECKSUM:-ca73776cb1cdc855aaf743c09ae70caae97f67d8d5e4147f19dcc4f959f9fc4d}
 checksums['GIT_LFS_PPC64LE']=${GIT_LFS_LINUX_PPC64LE_CHECKSUM:-76196d06a79eec11c202d9cbafbab98f52b9a7fda8538c2d94748461ba192209}
 
+IMAGE_FLAVOR=${IMAGE_FLAVOR:-'ubuntu'}
+
 if [ -n "${TARGET_ARCHS}" ]; then
-    IFS=', ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
+    IFS=' ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
 else
     TARGET_ARCHS=('amd64')
-fi
-
-CI_COMMIT_TAG=${CI_COMMIT_TAG:-}
-CI_REGISTRY=${CI_REGISTRY:-}
-CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE:-}
-CI_REGISTRY_USER=${CI_REGISTRY_USER:-}
-CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD:-}
-DOCKER_HUB_NAMESPACE=${DOCKER_HUB_NAMESPACE:-'gitlab'}
-DOCKER_HUB_USER=${DOCKER_HUB_USER:-}
-DOCKER_HUB_PASSWORD=${DOCKER_HUB_PASSWORD:-}
-ECR_PUBLIC_REGISTRY=${ECR_PUBLIC_REGISTRY:-'public.ecr.aws/gitlab'}
-ECR_PUBLIC_USER='AWS'
-ECR_PUBLIC_PASSWORD=${ECR_PUBLIC_PASSWORD:-}
-IS_LATEST=${IS_LATEST:-}
-PUBLISH_IMAGES=${PUBLISH_IMAGES:-false}
-PUSH_TO_DOCKER_HUB=${PUSH_TO_DOCKER_HUB:-false}
-PUSH_TO_ECR_PUBLIC=${PUSH_TO_ECR_PUBLIC:-false}
-
-ref_tag="${CI_COMMIT_TAG}"
-if [[ -z "${ref_tag}" ]]; then
-    ref_tag=${CI_COMMIT_REF_SLUG:-main}
-fi
-
-if [[ "${ref_tag}" == "main" ]]; then
-    ref_tag=bleeding
-fi
-
-REVISION=${REVISION:-}
-if [[ -z "${REVISION}" ]]; then
-    REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
 fi
 
 join_by() {
@@ -143,112 +115,6 @@ buildx() {
     fi
 }
 
-import() {
-    echo -e "\033[1mImporting image: \033[32m${2}\033[0m"
-    _docker import "${1}" "${2}"
-}
-
-tag() {
-    echo -e "\033[1mTagging image: \033[32m${2}\033[0m"
-    _docker tag "${1}" "${2}"
-}
-
-tag_latest() {
-    if [[ -z "${IS_LATEST}" ]]; then
-        return
-    fi
-
-    tag "${@}"
-}
-
-push() {
-    echo -e "\033[1mPushing image: \033[32m${1}\033[0m"
-    _docker push "${1}"
-}
-
-push_latest() {
-    if [[ -z "${IS_LATEST}" ]]; then
-        return
-    fi
-
-    push "${@}"
-}
-
-# Release the helper images. The first passed argument will be used as a
-# prefix for the image name, which is useful to push do a different registry.
-# For example `registry.gitlab.com/gitlab-org/gitlab-runner` and `gitlab`.
-release_docker_helper_images() {
-    FLAVOR=$2
-    PREFIX=$3
-
-    helper_image_x86_64="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
-    helper_image_x86_64_pwsh="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}-pwsh"
-    helper_image_x86_64_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
-    helper_image_x86_64_pwsh_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}-pwsh"
-    helper_image_x86_64_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest"
-    helper_image_x86_64_pwsh_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest-pwsh"
-    helper_image_arm="${1}/gitlab-runner-helper:${PREFIX}arm-${REVISION}"
-    helper_image_arm_version="${1}/gitlab-runner-helper:${PREFIX}arm-${ref_tag}"
-    helper_image_arm_latest="${1}/gitlab-runner-helper:${PREFIX}arm-latest"
-    helper_image_arm64="${1}/gitlab-runner-helper:${PREFIX}arm64-${REVISION}"
-    helper_image_arm64_version="${1}/gitlab-runner-helper:${PREFIX}arm64-${ref_tag}"
-    helper_image_arm64_latest="${1}/gitlab-runner-helper:${PREFIX}arm64-latest"
-    helper_image_s390x="${1}/gitlab-runner-helper:${PREFIX}s390x-${REVISION}"
-    helper_image_s390x_version="${1}/gitlab-runner-helper:${PREFIX}s390x-${ref_tag}"
-    helper_image_s390x_latest="${1}/gitlab-runner-helper:${PREFIX}s390x-latest"
-    helper_image_ppc64le="${1}/gitlab-runner-helper:${PREFIX}ppc64le-${REVISION}"
-    helper_image_ppc64le_version="${1}/gitlab-runner-helper:${PREFIX}ppc64le-${ref_tag}"
-    helper_image_ppc64le_latest="${1}/gitlab-runner-helper:${PREFIX}ppc64le-latest"
-
-    import "out/helper-images/prebuilt-${FLAVOR}-x86_64.tar.xz" "${helper_image_x86_64}"
-    import "out/helper-images/prebuilt-${FLAVOR}-x86_64-pwsh.tar.xz" "${helper_image_x86_64_pwsh}"
-    import "out/helper-images/prebuilt-${FLAVOR}-arm.tar.xz" "${helper_image_arm}"
-    import "out/helper-images/prebuilt-${FLAVOR}-arm64.tar.xz" "${helper_image_arm64}"
-    import "out/helper-images/prebuilt-${FLAVOR}-s390x.tar.xz" "${helper_image_s390x}"
-    import "out/helper-images/prebuilt-${FLAVOR}-ppc64le.tar.xz" "${helper_image_ppc64le}"
-
-    tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
-    tag_latest "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_latest}"
-    tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
-    tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
-    tag_latest "${helper_image_s390x}" "${helper_image_s390x_latest}"
-    tag_latest "${helper_image_ppc64le}" "${helper_image_ppc64le_latest}"
-    tag "${helper_image_x86_64}" "${helper_image_x86_64_version}"
-    tag "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_version}"
-    tag "${helper_image_arm}" "${helper_image_arm_version}"
-    tag "${helper_image_arm64}" "${helper_image_arm64_version}"
-    tag "${helper_image_s390x}" "${helper_image_s390x_version}"
-    tag "${helper_image_ppc64le}" "${helper_image_ppc64le_version}"
-
-    push "${helper_image_x86_64}"
-    push "${helper_image_x86_64_pwsh}"
-    push "${helper_image_arm}"
-    push "${helper_image_arm64}"
-    push "${helper_image_s390x}"
-    push "${helper_image_ppc64le}"
-
-    push_latest "${helper_image_x86_64_latest}"
-    push_latest "${helper_image_x86_64_pwsh_latest}"
-    push_latest "${helper_image_arm_latest}"
-    push_latest "${helper_image_arm64_latest}"
-    push_latest "${helper_image_s390x_latest}"
-    push_latest "${helper_image_ppc64le_latest}"
-    push "${helper_image_x86_64_version}"
-    push "${helper_image_x86_64_pwsh_version}"
-    push "${helper_image_arm_version}"
-    push "${helper_image_arm64_version}"
-    push "${helper_image_s390x_version}"
-    push "${helper_image_ppc64le_version}"
-}
-
-login() {
-    echo "${2}" | _docker login --username "${1}" --password-stdin "${3}"
-}
-
-logout() {
-    _docker logout "${1}"
-}
-
 add_tags() {
     local -n tags=$1
     local base_image="$2"
@@ -305,51 +171,18 @@ for arch in "${TARGET_ARCHS[@]}"; do
         "${runner_home_dir}/alpine/"
 done
 
-alpineTags=()
-ubuntuTags=()
+tags=()
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
-   add_tags alpineTags "alpine" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
-   add_tags ubuntuTags "ubuntu" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
+   add_tags tags "${IMAGE_FLAVOR}" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
 fi
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
-   add_tags alpineTags "alpine" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
-   add_tags ubuntuTags "ubuntu" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
+   add_tags tags "${IMAGE_FLAVOR}" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
 fi
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-   add_tags alpineTags "alpine" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
-   add_tags ubuntuTags "ubuntu" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
+   add_tags tags "${IMAGE_FLAVOR}" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
 fi
 
 # Build and publish multi-platform images using `docker buildx`
-buildx "${runner_home_dir}/ubuntu" "${ubuntuTags[@]}"
-buildx "${runner_home_dir}/alpine" "${alpineTags[@]}"
-
-# Release helper images
-if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && [[ "${PUBLISH_IMAGES}" == "true" ]]; then
-    login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
-
-    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "alpine" ""
-    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "ubuntu" "ubuntu-"
-
-    logout "${CI_REGISTRY}"
-fi
-
-if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
-    login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
-
-    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "alpine" ""
-    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "ubuntu" "ubuntu-"
-
-    logout
-fi
-
-if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-    login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
-
-    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "alpine" ""
-    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "ubuntu" "ubuntu-"
-
-    logout "${ECR_PUBLIC_REGISTRY}"
-fi
+buildx "${runner_home_dir}/${IMAGE_FLAVOR}" "${tags[@]}"

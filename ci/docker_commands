@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+DOCKER_HOST=${DOCKER_HOST:-}
+DOCKER_CERT_PATH=${DOCKER_CERT_PATH:-}
+
+docker_buildx_ctx_name='docker-buildx'
+docker_builder_name='buildx-builder'
+
+_docker() {
+    docker "${@}"
+}
+
+login() {
+    echo "${2}" | _docker login --username "${1}" --password-stdin "${3}"
+}
+
+logout() {
+    _docker logout "${1}"
+}
+
+import() {
+    echo -e "\033[1mImporting image: \033[32m${2}\033[0m"
+    _docker import "${1}" "${2}"
+}
+
+tag() {
+    echo -e "\033[1mTagging image: \033[32m${2}\033[0m"
+    _docker tag "${1}" "${2}"
+}
+
+push() {
+    echo -e "\033[1mPushing image: \033[32m${1}\033[0m"
+    _docker push "${1}"
+}
+
+_docker_buildx() {
+    DOCKER_CLI_EXPERIMENTAL=enabled _docker buildx "${@}"
+}
+
+setup_docker_context() {
+    # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
+    # Otherwise, we get the following error:
+    # > could not create a builder instance with TLS data loaded from environment.
+    local docker="host=unix:///var/run/docker.sock"
+    if [ -n "${DOCKER_CERT_PATH}" ]; then
+        docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
+    fi
+    _docker context create "${docker_buildx_ctx_name}" \
+        --default-stack-orchestrator=swarm \
+        --description "Temporary buildx Docker context" \
+        --docker "${docker}"
+
+    _docker_buildx create --use --name "${docker_builder_name}" "${docker_buildx_ctx_name}"
+}
+
+cleanup_docker_context_trap() {
+    local error_code=$?
+
+    cleanup_docker_context
+
+    exit "${error_code}"
+}
+
+cleanup_docker_context() {
+    set +e
+    _docker_buildx rm "${docker_builder_name}" >/dev/null 2>&1
+    _docker context rm -f "${docker_buildx_ctx_name}" >/dev/null 2>&1
+    set -e
+}
+
+CI_COMMIT_TAG=${CI_COMMIT_TAG:-}
+CI_REGISTRY=${CI_REGISTRY:-}
+CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE:-}
+CI_REGISTRY_USER=${CI_REGISTRY_USER:-}
+CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD:-}
+DOCKER_HUB_NAMESPACE=${DOCKER_HUB_NAMESPACE:-'gitlab'}
+DOCKER_HUB_USER=${DOCKER_HUB_USER:-}
+DOCKER_HUB_PASSWORD=${DOCKER_HUB_PASSWORD:-}
+ECR_PUBLIC_REGISTRY=${ECR_PUBLIC_REGISTRY:-'public.ecr.aws/gitlab'}
+ECR_PUBLIC_USER='AWS'
+ECR_PUBLIC_PASSWORD=${ECR_PUBLIC_PASSWORD:-}
+IS_LATEST=${IS_LATEST:-}
+PUBLISH_IMAGES=${PUBLISH_IMAGES:-false}
+PUSH_TO_DOCKER_HUB=${PUSH_TO_DOCKER_HUB:-false}
+PUSH_TO_ECR_PUBLIC=${PUSH_TO_ECR_PUBLIC:-false}
+
+ref_tag="${CI_COMMIT_TAG}"
+if [[ -z "${ref_tag}" ]]; then
+    ref_tag=${CI_COMMIT_REF_SLUG:-main}
+fi
+
+if [[ "${ref_tag}" == "main" ]]; then
+    ref_tag=bleeding
+fi
+
+REVISION=${REVISION:-}
+if [[ -z "${REVISION}" ]]; then
+    REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
+fi
