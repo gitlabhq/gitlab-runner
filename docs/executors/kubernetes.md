@@ -1176,3 +1176,7 @@ If using the `alpine` flavor of the [helper image](../configuration/advanced-con
 there can be [DNS issues](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129) related to Alpine's `musl`'s DNS resolver.
 
 Using the `helper_image_flavor = "ubuntu"` option should resolve this.
+
+### `docker: Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon running?`
+
+This error can occur when [using Docker-in-Docker](#using-dockerdind) if attempts are made to access the DIND service before it has had time to fully start up. For a more detailed explanation, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215).
