@@ -546,6 +546,32 @@ securityContext:
   runAsUser: 999
 ```
 
+### Running with non-root user
+
+By default, the GitLab Runner images will not work with non-root users. The [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
+images are designed for that scenario. To use them change the GitLab Runner and GitLab Runner Helper images:
+
+NOTE:
+The images are designed so that they can work with any user ID. It's important that this user ID is part of the root group.
+Being part of the root group doesn't give it any specific privileges.
+
+```yaml
+image: registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-ocp:v13.11.0
+
+securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+
+runners:
+    config: |
+        [[runners]]
+          [runners.kubernetes]
+            helper_image = "registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:x86_64-v13.11.0"
+            [runners.kubernetes.pod_security_context]
+              run_as_non_root = true
+              run_as_user = 59417
+```
+
 ## Uninstalling GitLab Runner using the Helm Chart
 
 Before uninstalling GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.
