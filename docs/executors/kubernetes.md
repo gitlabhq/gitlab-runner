@@ -524,6 +524,11 @@ concurrent = 4
 Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
 
+NOTE:
+If no additional requirements other than `nonroot` environment is required, the The [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) images can be used in place of building own helper image.
+One caveat is that the images are designed so that they can work with any user ID. It's important that this user ID is part of the root group.
+Being part of the root group doesn't give it any specific privileges.
+
 [Read more about the helper image](../configuration/advanced-configuration.md#helper-image).
 Example of building your own helper image:
 
