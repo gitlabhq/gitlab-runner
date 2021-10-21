@@ -55,6 +55,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_SCRIPT_SECTIONS` | `false` | ✗ |  | When enabled, each script line from the `.gitlab-ci.yml` file will be in a collapsible section in the job output and show the duration of each line. |
 | `FF_USE_NEW_SHELL_ESCAPE` | `false` | ✗ |  | When enabled, a faster implementation of shell escape is used. |
 | `FF_ENABLE_JOB_CLEANUP` | `false` | ✗ |  | When enabled, the project directory will be cleaned up at the end of the build. If `GIT_CLONE` is used, the whole project directory will be deleted. If `GIT_FETCH` is used, a series of Git `clean` commands will be issued. |
+| `FF_KUBERNETES_HONOR_ENTRYPOINT` | `false` | ✗ |  | When enabled, the Docker entrypoint of an image will be honored if `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is not set to true |
 
 <!-- feature_flags_list_end -->
 
