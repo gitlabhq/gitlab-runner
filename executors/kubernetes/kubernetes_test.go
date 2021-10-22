@@ -125,8 +125,13 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 								{Name: "PVC", MountPath: "/path/to/whatever"},
 								{
 									Name:      "PVC-subpath",
-									MountPath: "/path/to/whatever",
-									SubPath:   "PVC-subpath",
+									MountPath: "/path/to/whatever/1",
+									SubPath:   "PVC-subpath-1",
+								},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/path/to/whatever/2",
+									SubPath:   "PVC-subpath-2",
 								},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
@@ -168,7 +173,8 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "Secret", MountPath: "/path/to/whatever"},
 				{Name: "Secret-subpath", MountPath: "/path/to/whatever", SubPath: "secret-subpath"},
 				{Name: "PVC", MountPath: "/path/to/whatever"},
-				{Name: "PVC-subpath", MountPath: "/path/to/whatever", SubPath: "PVC-subpath"},
+				{Name: "PVC-subpath", MountPath: "/path/to/whatever/1", SubPath: "PVC-subpath-1"},
+				{Name: "PVC-subpath", MountPath: "/path/to/whatever/2", SubPath: "PVC-subpath-2"},
 				{Name: "ConfigMap", MountPath: "/path/to/whatever"},
 				{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
 				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
@@ -336,8 +342,13 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 								{Name: "PVC", MountPath: "/path/to/whatever"},
 								{
 									Name:      "PVC-subpath",
-									MountPath: "/subpath",
-									SubPath:   "subpath",
+									MountPath: "/subpath1",
+									SubPath:   "subpath1",
+								},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/subpath2",
+									SubPath:   "subpath2",
 								},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
