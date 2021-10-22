@@ -844,7 +844,7 @@ For more parameters, see the [Kubernetes executor documentation](../executors/ku
 | `privileged`     | boolean | Run all containers with the privileged flag enabled. |
 | `allow_privilege_escalation` | boolean | Optional. Runs all containers with the `allowPrivilegeEscalation` flag enabled. |
 | `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Limits the creation of pods to Kubernetes nodes that match all the `key=value` pairs. |
-| `image_pull_secrets` | array | A list of secrets that are used to authenticate Docker image pulling. |
+| `image_pull_secrets` | array | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
 
 Example:
 
@@ -857,7 +857,7 @@ Example:
   image = "golang:1.8"
   privileged = true
   allow_privilege_escalation = true
-  image_pull_secrets = ["docker-registry-credentials"]
+  image_pull_secrets = ["docker-registry-credentials", "optional-additional-credentials"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
   allowed_services = ["postgres:9.4", "postgres:latest"]
   [runners.kubernetes.node_selector]
