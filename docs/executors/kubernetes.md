@@ -156,7 +156,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
 | `helper_image_flavor` | Sets the helper image flavor (`alpine` or `ubuntu`). Defaults to `alpine`. |
 | `host_aliases` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases](#adding-extra-host-aliases). |
-| `image_pull_secrets` | A array of secrets that are used to authenticate Docker image pulling. |
+| `image_pull_secrets` | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
 | `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
 | `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#using-node-selectors). |

@@ -402,17 +402,30 @@ The working example project can be copied to your own group or instance for test
 
 Using an image from a private registry requires the configuration of imagePullSecrets. For more details on how to create imagePullSecrets [see the documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
 
+You must create one or more secrets in the Kubernetes namespace used for the CI/CD job.
+
+You can use the following command to create a secret that works with `image_pull_secrets`:
+
+```yaml
+kubectl create secret docker-registry <SECRET_NAME> \
+  --namespace <NAMESPACE> \
+  --docker-server="https://<REGISTRY_SERVER>" \
+  --docker-username="<REGISTRY_USERNAME>" \
+  --docker-password="<REGISTRY_PASSWORD>"
+```
+
+If you configure `runners.imagePullSecrets`, the container adds `--kubernetes-image-pull-secrets "<SECRET_NAME>"` to the image entrypoint script. This eliminates the need to configure the `image_pull_secrets` parameter in the Kubernetes executor `config.toml` settings.
+
 ```yaml
 runners:
   ## Specify one or more imagePullSecrets
   ##
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
   ##
-  imagePullSecrets:
-  - [your-image-pull-secret]
+  imagePullSecrets: [your-image-pull-secret]
 ```
 
-Take note of the format. The value is not prefixed by a 'name' tag as is the convention in Kubernetes resources.
+Take note of the format. The value is not prefixed by a `name` tag as is the convention in Kubernetes resources. An array of one or more secret names is required, regardless of whether or not you're using multiple registry credentials.
 
 ### Providing a custom certificate for accessing GitLab
 
@@ -433,9 +446,8 @@ the secret, you tell Kubernetes to store the certificate as a secret and present
 to the GitLab Runner containers as a file. To do this, run the following command:
 
 ```shell
-kubectl
-  --namespace <NAMESPACE>
-  create secret generic <SECRET_NAME>
+kubectl create secret generic <SECRET_NAME> \
+  --namespace <NAMESPACE> \
   --from-file=<CERTIFICATE_FILENAME>
 ```
 
@@ -450,9 +462,8 @@ does not follow the format `<gitlab-hostname.crt>` then it will be necessary to
 specify the filename to use on the target:
 
 ```shell
-kubectl
-  --namespace <NAMESPACE>
-  create secret generic <SECRET_NAME>
+kubectl create secret generic <SECRET_NAME> \
+  --namespace <NAMESPACE> \
   --from-file=<TARGET_FILENAME>=<CERTIFICATE_FILENAME>
 ```
 
