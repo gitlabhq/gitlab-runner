@@ -1801,3 +1801,55 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 		untrackedSubSubmoduleFile,
 	)
 }
+
+func TestDockerCommandServiceVariables(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.Variables = append(build.JobResponse.Variables,
+		common.JobVariable{
+			Key:    "FF_NETWORK_PER_BUILD",
+			Value:  "true",
+			Public: true,
+		},
+		common.JobVariable{
+			Key:    "BUILD_VAR",
+			Value:  "BUILD_VAR_VALUE",
+			Public: true,
+		},
+	)
+
+	shell := "sh"
+	if runtime.GOOS == "windows" {
+		shell = shells.SNPowershell
+	}
+
+	// immediately timeout as triggering an error is the  only way to get a
+	// service to send its output to the log
+	build.Runner.Docker.WaitForServicesTimeout = 1
+
+	build.Services = common.Services{
+		common.Image{
+			Name: common.TestLivenessImage,
+			Variables: []common.JobVariable{
+				{
+					Key:   "SERVICE_VAR",
+					Value: "SERVICE_VAR_VALUE",
+				},
+				{
+					Key:   "SERVICE_VAR_REF_BUILD_VAR",
+					Value: "$BUILD_VAR",
+				},
+			},
+			Entrypoint: append([]string{shell, "-c"}, "echo SERVICE_VAR=$SERVICE_VAR SERVICE_VAR_REF_BUILD_VAR=$SERVICE_VAR_REF_BUILD_VAR"),
+		},
+	}
+
+	var buffer bytes.Buffer
+	err := build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	assert.NoError(t, err)
+	out := buffer.String()
+	assert.Contains(t, out, "SERVICE_VAR=SERVICE_VAR_VALUE")
+	assert.Contains(t, out, "SERVICE_VAR_REF_BUILD_VAR=BUILD_VAR_VALUE")
+}

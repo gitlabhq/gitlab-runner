@@ -90,6 +90,7 @@ type FeaturesInfo struct {
 	VaultSecrets            bool `json:"vault_secrets"`
 	Cancelable              bool `json:"cancelable"`
 	ReturnExitCode          bool `json:"return_exit_code"`
+	ServiceVariables        bool `json:"service_variables"`
 }
 
 type ConfigInfo struct {
