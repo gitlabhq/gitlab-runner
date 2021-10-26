@@ -163,6 +163,7 @@ type DockerMachine struct {
 	MaxGrowthRate int `toml:"MaxGrowthRate,omitzero" long:"max-growth-rate" env:"MACHINE_MAX_GROWTH_RATE" description:"Maximum machines being provisioned concurrently, set to 0 for unlimited"`
 
 	IdleCount      int      `long:"idle-nodes" env:"MACHINE_IDLE_COUNT" description:"Maximum idle machines"`
+	IdleBuffer     int      `long:"idle-buffer" env"MACHINE_IDLE_BUFFER" description:"Target percentage of total machines to have waiting as idle"`
 	IdleTime       int      `toml:"IdleTime,omitzero" long:"idle-time" env:"MACHINE_IDLE_TIME" description:"Minimum time after node can be destroyed"`
 	MaxBuilds      int      `toml:"MaxBuilds,omitzero" long:"max-builds" env:"MACHINE_MAX_BUILDS" description:"Maximum number of builds processed by machine"`
 	MachineDriver  string   `long:"machine-driver" env:"MACHINE_DRIVER" description:"The driver to use when creating machine"`
@@ -182,6 +183,7 @@ type DockerMachineAutoscaling struct {
 	Periods         []string `long:"periods" description:"List of crontab expressions for this autoscaling configuration"`
 	Timezone        string   `long:"timezone" description:"Timezone for the periods (defaults to Local)"`
 	IdleCount       int      `long:"idle-count" description:"Maximum idle machines when this configuration is active"`
+	IdleBuffer      int      `long:"idle-buffer" env"MACHINE_IDLE_BUFFER" description:"Target percentage of total machines to have waiting as idle"`
 	IdleTime        int      `long:"idle-time" description:"Minimum time after which and idle machine can be destroyed when this configuration is active"`
 	compiledPeriods *timeperiod.TimePeriod
 }
@@ -1303,6 +1305,17 @@ func (c *DockerMachine) GetIdleCount() int {
 	}
 
 	return c.IdleCount
+}
+
+func (c *DockerMachine) GetIdleBuffer() int {
+	// TODO - handle the fact that we don't want to force people to adopt this config value. Ignored
+	// for now for simplicities sake as a demonstration point
+	autoscaling := c.getActiveAutoscalingConfig()
+	if autoscaling != nil {
+		return autoscaling.IdleBuffer
+	}
+
+	return c.IdleBuffer
 }
 
 func (c *DockerMachine) GetIdleTime() int {

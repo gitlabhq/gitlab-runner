@@ -393,11 +393,23 @@ func (m *machineProvider) updateMachines(
 	return
 }
 
+func calculateDesiredIdleMachineCount(config *common.RunnerConfig, data *machinesData) int {
+	inUse := data.Total() - data.Available()
+
+	bufferPercent := config.Machine.GetIdleBuffer()
+
+	return int(float64(inUse) * (float64(bufferPercent) / 100.0))
+}
+
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
 	// Create a new machines and mark them as Idle
 	for {
 		if data.Available() >= config.Machine.GetIdleCount() {
 			// Limit maximum number of idle machines
+			break
+		}
+		if data.Available() >= calculateDesiredIdleMachineCount(config, data) {
+			// Limit the current amount of idle machines
 			break
 		}
 		if data.Total() >= config.Limit && config.Limit > 0 {
