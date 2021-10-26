@@ -1081,7 +1081,14 @@ func (e *executor) Cleanup() {
 	}
 
 	if e.client != nil {
-		_ = e.client.Close()
+		err = e.client.Close()
+		if err != nil {
+			clientCloseLogger := e.WithFields(logrus.Fields{
+				"error": err,
+			})
+
+			clientCloseLogger.Debugln("Failed to close the client")
+		}
 	}
 
 	e.AbstractExecutor.Cleanup()
