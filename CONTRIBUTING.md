@@ -57,11 +57,11 @@ At the current time, new hardware architectures will only be considered if the
 following criteria are met:
 
 1. GitLab Inc. must be able to build and test for the new architecture on our Shared Runners on GitLab.com
-1. If adding support for the new architecture in the helper image, Docker must also support the architecture upstream
+1. If you add support for the new architecture in the helper image, Docker must also support the architecture upstream
 
-As we explore adding more architectures other requirements may come up.
+As we explore adding more architectures, other requirements may come up.
 
-We are currently discussing the ability of providing builds for architectures that we
+We are currently discussing the ability to provide builds for architectures that we
 don't have the ability to support and [we welcome contributions to that discussion](https://gitlab.com/gitlab-org/gitlab-runner/issues/4229).
 
 ### Submitting Merge Requests
@@ -71,7 +71,7 @@ don't have the ability to support and [we welcome contributions to that discussi
 When submitting a Merge Request please remember that we use the Merge Request titles to generate entries
 for the [`CHANGELOG.md`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CHANGELOG.md) file.
 This one line will be the only thing a Runner administrator will see when reviewing
-the changelog prior to deciding if an upgrade should be made or not. The administrator may not check the
+the changelog before deciding if an upgrade should be made or not. The administrator may not check the
 MR description, list of changes, or diff which would give more context.
 
 Please make the title clear, concise and informative. A title of `Fixes bug` would not be
