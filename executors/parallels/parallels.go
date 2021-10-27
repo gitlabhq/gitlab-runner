@@ -153,15 +153,25 @@ func (s *executor) updateGuestTime() error {
 		timeServer = "time.apple.com"
 	}
 
-	// Check either ntpdate command exists or not before trying to execute it
-	// Starting from Mojave ntpdate was removed
+	// Try ntpdate first, this command is available in macOS versions prior to Mojave.
+	// This is not guaranteed, but there is high probability that ntpdate may be available on other UNIX-like systems.
 	_, err := prl.Exec(s.vmName, "which", "ntpdate")
-	if err != nil {
-		// Fallback to sntp
+	if err == nil {
+		return prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", timeServer)
+	}
+
+	// Starting from Mojave, ntpdate is no longer available on macOS, sntp is supposed to be used instead.
+	_, err = prl.Exec(s.vmName, "which", "sntp")
+	if err == nil {
 		return prl.TryExec(s.vmName, 20, "sudo", "sntp", "-sS", timeServer)
 	}
 
-	return prl.TryExec(s.vmName, 20, "sudo", "ntpdate", "-u", timeServer)
+	// Neither sntp nor ntpdate is available, very likely guest OS is not macOS.
+	// Report a warning to a user and gracefully return.
+
+	s.Warningln("Neither sntp nor ntpdate are available in a guest VM. Proceeding without time synchronization ...")
+
+	return nil
 }
 
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
