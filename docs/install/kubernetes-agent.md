@@ -38,10 +38,10 @@ These instructions to install GitLab Runner assume the
    ```
 
 1. Create a single manifest file to install the GitLab Runner chart with your cluster agent,
-   replacing `GITLAB GITLAB-RUNNER` with your namespace:
+   replacing `GITLAB-NAMESPACE` with your namespace:
 
    ```shell
-   helm template --namespace GITLAB GITLAB-RUNNER -f runner-chart-values.yaml gitlab/gitlab-runner > runner-manifest.yaml
+   helm template --namespace GITLAB-NAMESPACE gitlab-runner -f runner-chart-values.yaml gitlab/gitlab-runner > runner-manifest.yaml
    ```
 
    An [example file is available](#example-runner-manifest).
@@ -465,4 +465,19 @@ spec:
       - name: scripts
         configMap:
           name: gitlab-runner-gitlab-runner
+```
+
+## Troubleshooting
+
+### `associative list with keys has an element that omits key field "protocol"`
+
+Due to [the bug in Kubernetes v1.19](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130), you may see this error when installing GitLab Runner or any other application with GitLab Kubernetes Agent. To fix it make sure to either upgrade your Kubernetes cluster to v1.20 and above or add `protocol: TCP` to `containers.ports` subsection:
+
+```yaml
+...
+ports:
+  - name: metrics
+    containerPort: 9252
+    protocol: TCP
+...
 ```
