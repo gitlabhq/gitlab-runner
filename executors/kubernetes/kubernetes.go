@@ -1004,16 +1004,24 @@ func (s *executor) getVolumesForSecrets() []api.Volume {
 func (s *executor) getVolumesForPVCs() []api.Volume {
 	var volumes []api.Volume
 
+	store := make(map[string]api.Volume)
+
 	for _, volume := range s.Config.Kubernetes.Volumes.PVCs {
-		volumes = append(volumes, api.Volume{
+		if _, found := store[volume.Name]; found {
+			continue
+		}
+
+		apiVolume := api.Volume{
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
 				PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{
 					ClaimName: volume.Name,
-					ReadOnly:  volume.ReadOnly,
 				},
 			},
-		})
+		}
+
+		volumes = append(volumes, apiVolume)
+		store[volume.Name] = apiVolume
 	}
 
 	return volumes
