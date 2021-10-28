@@ -393,33 +393,15 @@ func (m *machineProvider) updateMachines(
 	return
 }
 
-func calculateDesiredIdleMachineCount(config *common.RunnerConfig, data *machinesData) int {
-	inUse := data.Total() - data.Available()
-
-	bufferPercent := config.Machine.GetIdleBuffer()
-
-	return int(float64(inUse) * (float64(bufferPercent) / 100.0))
-}
-
+// createMachines starts goroutines that are creating the new machines.
+// Limiting strategy is used to ensure the autoscaling parameters are respected.
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
-	// Create a new machines and mark them as Idle
 	for {
-		if data.Available() >= config.Machine.GetIdleCount() {
-			// Limit maximum number of idle machines
-			break
+		if idleLimitExceeded(config, data) {
+			return
 		}
-		if data.Available() >= calculateDesiredIdleMachineCount(config, data) {
-			// Limit the current amount of idle machines
-			break
-		}
-		if data.Total() >= config.Limit && config.Limit > 0 {
-			// Limit maximum number of machines
-			break
-		}
-		if data.Creating >= config.Machine.MaxGrowthRate && config.Machine.MaxGrowthRate > 0 {
-			// Prevent excessive growth in the number of machines
-			break
-		}
+
+		// Create a new machine and mark it as Idle
 		m.create(config, machineStateIdle)
 		data.Creating++
 	}
@@ -491,13 +473,15 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 	// Pre-create machines
 	m.createMachines(config, &machinesData)
 
-	logrus.WithFields(machinesData.Fields()).
+	logger := logrus.WithFields(machinesData.Fields()).
 		WithField("runner", config.ShortDescription()).
-		WithField("minIdleCount", config.Machine.GetIdleCount()).
+		WithField("idleCountMin", config.Machine.GetIdleCountMin()).
+		WithField("idleCount", config.Machine.GetIdleCount()).
+		WithField("idleScaleFactor", config.Machine.GetIdleScaleFactor()).
 		WithField("maxMachines", config.Limit).
-		WithField("maxMachineCreate", config.Machine.MaxGrowthRate).
-		WithField("time", time.Now()).
-		Debugln("Docker Machine Details")
+		WithField("maxMachineCreate", config.Machine.MaxGrowthRate)
+
+	logger.WithField("time", time.Now()).Debugln("Docker Machine Details")
 	machinesData.writeDebugInformation()
 
 	// Try to find a free machine
@@ -506,13 +490,13 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 		return details, nil
 	}
 
-	// If we have a free machines we can process a build
-	if config.Machine.GetIdleCount() != 0 && machinesData.Idle == 0 {
-		err = &common.NoFreeExecutorError{
-			Message: "no free machines that can process builds",
-		}
+	if config.Machine.GetIdleCount() == 0 {
+		logger.Info("IdleCount is set to 0 so the machine will be created on demand in job context")
+	} else if machinesData.Idle == 0 {
+		return nil, &common.NoFreeExecutorError{Message: "no free machines that can process builds"}
 	}
-	return nil, err
+
+	return nil, nil
 }
 
 //nolint:nakedret

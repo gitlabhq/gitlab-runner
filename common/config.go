@@ -162,13 +162,14 @@ type DockerConfig struct {
 type DockerMachine struct {
 	MaxGrowthRate int `toml:"MaxGrowthRate,omitzero" long:"max-growth-rate" env:"MACHINE_MAX_GROWTH_RATE" description:"Maximum machines being provisioned concurrently, set to 0 for unlimited"`
 
-	IdleCount      int      `long:"idle-nodes" env:"MACHINE_IDLE_COUNT" description:"Maximum idle machines"`
-	IdleBuffer     int      `long:"idle-buffer" env"MACHINE_IDLE_BUFFER" description:"Target percentage of total machines to have waiting as idle"`
-	IdleTime       int      `toml:"IdleTime,omitzero" long:"idle-time" env:"MACHINE_IDLE_TIME" description:"Minimum time after node can be destroyed"`
-	MaxBuilds      int      `toml:"MaxBuilds,omitzero" long:"max-builds" env:"MACHINE_MAX_BUILDS" description:"Maximum number of builds processed by machine"`
-	MachineDriver  string   `long:"machine-driver" env:"MACHINE_DRIVER" description:"The driver to use when creating machine"`
-	MachineName    string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
-	MachineOptions []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
+	IdleCount       int      `long:"idle-nodes" env:"MACHINE_IDLE_COUNT" description:"Maximum idle machines"`
+	IdleScaleFactor float64  `long:"idle-scale-factor" env:"MACHINE_IDLE_SCALE_FACTOR" description:"(Experimental) Defines what factor of in-use machines should be used as current idle value, but never more then defined IdleCount. 0.0 means use IdleCount as a static number (defaults to 0.0). Must be defined as float number."`
+	IdleCountMin    int      `long:"idle-count-min" env:"MACHINE_IDLE_COUNT_MIN" description:"Minimal number of idle machines when IdleScaleFactor is in use. Defaults to 1."`
+	IdleTime        int      `toml:"IdleTime,omitzero" long:"idle-time" env:"MACHINE_IDLE_TIME" description:"Minimum time after node can be destroyed"`
+	MaxBuilds       int      `toml:"MaxBuilds,omitzero" long:"max-builds" env:"MACHINE_MAX_BUILDS" description:"Maximum number of builds processed by machine"`
+	MachineDriver   string   `long:"machine-driver" env:"MACHINE_DRIVER" description:"The driver to use when creating machine"`
+	MachineName     string   `long:"machine-name" env:"MACHINE_NAME" description:"The template for machine name (needs to include %s)"`
+	MachineOptions  []string `long:"machine-options" env:"MACHINE_OPTIONS" description:"Additional machine creation options"`
 
 	OffPeakPeriods   []string `toml:"OffPeakPeriods,omitempty" description:"Time periods when the scheduler is in the OffPeak mode. DEPRECATED"`                                // DEPRECATED
 	OffPeakTimezone  string   `toml:"OffPeakTimezone,omitempty" description:"Timezone for the OffPeak periods (defaults to Local). DEPRECATED"`                                 // DEPRECATED
@@ -183,7 +184,8 @@ type DockerMachineAutoscaling struct {
 	Periods         []string `long:"periods" description:"List of crontab expressions for this autoscaling configuration"`
 	Timezone        string   `long:"timezone" description:"Timezone for the periods (defaults to Local)"`
 	IdleCount       int      `long:"idle-count" description:"Maximum idle machines when this configuration is active"`
-	IdleBuffer      int      `long:"idle-buffer" env"MACHINE_IDLE_BUFFER" description:"Target percentage of total machines to have waiting as idle"`
+	IdleScaleFactor float64  `long:"idle-scale-factor" description:"(Experimental) Defines what factor of in-use machines should be used as current idle value, but never more then defined IdleCount. 0.0 means use IdleCount as a static number (defaults to 0.0). Must be defined as float number."`
+	IdleCountMin    int      `long:"idle-count-min" description:"Minimal number of idle machines when IdleScaleFactor is in use. Defaults to 1."`
 	IdleTime        int      `long:"idle-time" description:"Minimum time after which and idle machine can be destroyed when this configuration is active"`
 	compiledPeriods *timeperiod.TimePeriod
 }
@@ -1307,15 +1309,22 @@ func (c *DockerMachine) GetIdleCount() int {
 	return c.IdleCount
 }
 
-func (c *DockerMachine) GetIdleBuffer() int {
-	// TODO - handle the fact that we don't want to force people to adopt this config value. Ignored
-	// for now for simplicities sake as a demonstration point
+func (c *DockerMachine) GetIdleCountMin() int {
 	autoscaling := c.getActiveAutoscalingConfig()
 	if autoscaling != nil {
-		return autoscaling.IdleBuffer
+		return autoscaling.IdleCountMin
 	}
 
-	return c.IdleBuffer
+	return c.IdleCountMin
+}
+
+func (c *DockerMachine) GetIdleScaleFactor() float64 {
+	autoscaling := c.getActiveAutoscalingConfig()
+	if autoscaling != nil {
+		return autoscaling.IdleScaleFactor
+	}
+
+	return c.IdleScaleFactor
 }
 
 func (c *DockerMachine) GetIdleTime() int {
