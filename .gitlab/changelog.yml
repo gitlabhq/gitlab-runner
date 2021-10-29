@@ -26,8 +26,14 @@ label_matchers:
   - security
   scope: security-fix
 - labels:
-  - bug
+  - type::bug
   scope: fix
+- labels:
+  - type::maintenance
+  scope: maintenance
+- labels:
+  - feature::enhancement
+  scope: maintenance
 - labels:
   - technical debt
   scope: maintenance
@@ -36,12 +42,6 @@ label_matchers:
   scope: maintenance
 - labels:
   - tooling::workflow
-  scope: maintenance
-- labels:
-  - feature::maintenance
-  scope: maintenance
-- labels:
-  - feature::enhancement
   scope: maintenance
 - labels:
   - documentation
