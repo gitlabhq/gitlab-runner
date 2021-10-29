@@ -21,6 +21,7 @@ ARG GIT_LFS_VERSION
 
 COPY gitlab-runner_*.deb checksums-* install-deps install-gitlab-runner /tmp/
 RUN /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}" "${GIT_LFS_VERSION}"
+RUN rm -rf /tmp/*
 
 COPY entrypoint /
 RUN chmod +x /entrypoint
