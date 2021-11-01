@@ -20,7 +20,7 @@ your host OS and container OS versions to match.
 
 ## Infrastructure
 
-We need to build the helper image for it to be used for the user job.
+We must build the helper image for it to be used for the user job.
 
 ### Create a base image for infrastructure to use
 
@@ -28,7 +28,7 @@ Windows requires us to have the host OS version match the container
 OS, so if we are building `Windows Server Core 2004` image we need to
 have `gitlab-runner` installed on `Windows Server Core 2004`.
 
-To do this we need to update the
+To do this we must update the
 [windows-containers](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers)
 repository to build a base image. The base image will be used by the
 [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler)
