@@ -5,7 +5,7 @@ import (
 )
 
 var scrubRegexp = regexp.MustCompile(
-	`(?im)([\?&]((?:private|authenticity|rss)[\-_]token)|X-AMZ-Signature|X-AMZ-Credential)=[^& ]*`,
+	`(?im)([\?&]((?:private|authenticity|rss)[\-_]token)|X-AMZ-Signature|X-AMZ-Credential|X-AMZ-Security-Token)=[^& ]*`,
 )
 
 // ScrubSecrets replaces the content of any sensitive query string parameters
