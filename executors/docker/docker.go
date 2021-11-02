@@ -38,6 +38,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
@@ -1275,7 +1276,7 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 }
 
 func (e *executor) readContainerLogs(containerID string) string {
-	var containerBuffer bytes.Buffer
+	var buf bytes.Buffer
 
 	options := types.ContainerLogsOptions{
 		ShowStdout: true,
@@ -1289,7 +1290,10 @@ func (e *executor) readContainerLogs(containerID string) string {
 	}
 	defer func() { _ = hijacked.Close() }()
 
-	_, _ = stdcopy.StdCopy(&containerBuffer, &containerBuffer, hijacked)
-	containerLog := containerBuffer.String()
-	return strings.TrimSpace(containerLog)
+	// limit how much data we read from the container log to
+	// avoid memory exhaustion
+	w := limitwriter.New(&buf, 64*1024)
+
+	_, _ = stdcopy.StdCopy(w, w, hijacked)
+	return strings.TrimSpace(buf.String())
 }
