@@ -43,11 +43,15 @@ To install GitLab Runner:
 
 1. Add the official GitLab repository:
 
-   ```shell
-   # For Debian/Ubuntu/Mint
-   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
+   For Debian/Ubuntu/Mint:
 
-   # For RHEL/CentOS/Fedora
+   ```shell
+   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
+   ```
+
+   For RHEL/CentOS/Fedora:
+
+   ```shell
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
    ```
 
@@ -62,27 +66,35 @@ To install GitLab Runner:
    the `skel` directory usage is [disabled](#disable-skel) by default to prevent
    [`No such file or directory` job failures](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)
 
-   ```shell
-   # For Debian/Ubuntu/Mint
-   sudo apt-get install gitlab-runner
+   For Debian/Ubuntu/Mint:
 
-   # For RHEL/CentOS/Fedora
+   ```shell
+   sudo apt-get install gitlab-runner
+   ```
+
+   For RHEL/CentOS/Fedora:
+
+   ```shell
    sudo yum install gitlab-runner
    ```
 
 1. To install a specific version of GitLab Runner:
 
+   For DEB based systems:
+
    ```shell
-   # for DEB based systems
    apt-cache madison gitlab-runner
    sudo apt-get install gitlab-runner=10.0.0
+   ```
 
-   # for RPM based systems
+   For RPM based systems:
+
+   ```shell
    yum list gitlab-runner --showduplicates | sort -r
    sudo yum install gitlab-runner-10.0.0-1
    ```
 
-1. [Register a runner](../register/index.md)
+1. [Register a runner](../register/index.md).
 
 After completing the step above, a runner should be started and be
 ready to be used by your projects!
@@ -115,12 +127,16 @@ EOF
 
 Simply execute to install latest version:
 
+For Debian/Ubuntu/Mint:
+
 ```shell
-# For Debian/Ubuntu/Mint
 sudo apt-get update
 sudo apt-get install gitlab-runner
+```
 
-# For RHEL/CentOS/Fedora
+For RHEL/CentOS/Fedora:
+
+```shell
 sudo yum update
 sudo yum install gitlab-runner
 ```
@@ -286,11 +302,15 @@ If for any reason it's needed that `skel` directory will be used to populate the
 created `$HOME` directory, the `GITLAB_RUNNER_DISABLE_SKEL` variable should be set explicitly
 to `false` before package installation. For example:
 
-```shell
-# For Debian/Ubuntu/Mint
-export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E apt-get install gitlab-runner
+For Debian/Ubuntu/Mint:
 
-# For RHEL/CentOS/Fedora
+```shell
+export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E apt-get install gitlab-runner
+```
+
+For RHEL/CentOS/Fedora:
+
+```shell
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner
 ```
 
@@ -303,11 +323,15 @@ To upgrade GitLab Runner from a version prior to 10.0:
 
 1. Remove the old repository:
 
-   ```shell
-   # For Debian/Ubuntu/Mint
-   sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
+   For Debian/Ubuntu/Mint:
 
-   # For RHEL/CentOS/Fedora
+   ```shell
+   sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
+   ```
+
+   For RHEL/CentOS/Fedora:
+
+   ```shell
    sudo rm /etc/yum.repos.d/runner_gitlab-ci-multi-runner.repo
    ```
 
