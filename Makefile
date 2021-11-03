@@ -342,7 +342,7 @@ update_feature_flags_docs:
 	go run ./scripts/update-feature-flags-docs/main.go
 
 development_setup:
-	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git tmp/gitlab-test
+	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test tmp/gitlab-test
 	if prlctl --version ; then $(MAKE) -C tests/ubuntu parallels ; fi
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
