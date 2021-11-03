@@ -342,34 +342,6 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 	return nil
 }
 
-func (m *machineProvider) updateMachine(
-	config *common.RunnerConfig,
-	data *machinesData,
-	details *machineDetails,
-) error {
-	if details.State != machineStateIdle {
-		return nil
-	}
-
-	if config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
-		// Limit number of builds
-		return errors.New("too many builds")
-	}
-
-	if data.Total() >= config.Limit && config.Limit > 0 {
-		// Limit maximum number of machines
-		return errors.New("too many machines")
-	}
-
-	if time.Since(details.Used) > time.Second*time.Duration(config.Machine.GetIdleTime()) {
-		if data.Idle >= config.Machine.GetIdleCount() {
-			// Remove machine that are way over the idle time
-			return errors.New("too many idle machines")
-		}
-	}
-	return nil
-}
-
 func (m *machineProvider) updateMachines(
 	machines []string,
 	config *common.RunnerConfig,
@@ -381,11 +353,11 @@ func (m *machineProvider) updateMachines(
 		details := m.machineDetails(name, false)
 		details.LastSeen = time.Now()
 
-		err := m.updateMachine(config, &data, details)
-		if err == nil {
+		reason := shouldRemoveIdle(config, &data, details)
+		if reason == dontRemoveIdleMachine {
 			validMachines = append(validMachines, name)
 		} else {
-			_ = m.remove(details.Name, err)
+			_ = m.remove(details.Name, reason)
 		}
 
 		data.Add(details)
@@ -397,7 +369,7 @@ func (m *machineProvider) updateMachines(
 // Limiting strategy is used to ensure the autoscaling parameters are respected.
 func (m *machineProvider) createMachines(config *common.RunnerConfig, data *machinesData) {
 	for {
-		if idleLimitExceeded(config, data) {
+		if !canCreateIdle(config, data) {
 			return
 		}
 
