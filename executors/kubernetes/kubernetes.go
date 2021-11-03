@@ -64,7 +64,6 @@ var (
 		DefaultCustomBuildsDirEnabled: true,
 		DefaultBuildsDir:              "/builds",
 		DefaultCacheDir:               "/cache",
-		SharedBuildsDir:               true,
 		Shell: common.ShellScriptInfo{
 			Shell:         "bash",
 			Type:          common.NormalShell,
@@ -140,6 +139,8 @@ type executor struct {
 
 	remoteProcessTerminated chan shells.TrapCommandExitStatus
 
+	requireSharedBuildsDir *bool
+
 	// Flag if a repo mount and emptyDir volume are needed
 	requireDefaultBuildsDirVolume *bool
 }
@@ -163,6 +164,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.pullManager = pull.NewPullManager(pullPolicies, &s.BuildLogger)
 
 	s.prepareOptions(options.Build)
+
+	// Dynamically configure use of shared build dir allowing
+	// for static build dir when isolated volume is in use.
+	s.SharedBuildsDir = s.isSharedBuildsDirRequired()
 
 	if err = s.checkDefaults(); err != nil {
 		return fmt.Errorf("check defaults error: %w", err)
@@ -828,7 +833,7 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 	if s.isDefaultBuildsDirVolumeRequired() {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      "repo",
-			MountPath: s.Build.RootDir,
+			MountPath: s.AbstractExecutor.RootDir(),
 		})
 	}
 
@@ -1094,7 +1099,7 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 
 	var required = true
 	for _, mount := range s.getVolumeMountsForConfig() {
-		if mount.MountPath == s.Build.RootDir {
+		if mount.MountPath == s.AbstractExecutor.RootDir() {
 			required = false
 			break
 		}
@@ -1102,6 +1107,39 @@ func (s *executor) isDefaultBuildsDirVolumeRequired() bool {
 
 	s.requireDefaultBuildsDirVolume = &required
 
+	return required
+}
+
+func (s *executor) isSharedBuildsDirRequired() bool {
+	// Return quickly when default builds dir is used as job is
+	// isolated to pod, so no need for SharedBuildsDir behavior
+	if s.isDefaultBuildsDirVolumeRequired() {
+		return false
+	}
+
+	var required = true
+	if s.requireSharedBuildsDir != nil {
+		return *s.requireSharedBuildsDir
+	}
+
+	// Fetch name of the volume backing the builds volume mount
+	buildVolumeName := "repo"
+	for _, mount := range s.getVolumeMountsForConfig() {
+		if mount.MountPath == s.AbstractExecutor.RootDir() {
+			buildVolumeName = mount.Name
+			break
+		}
+	}
+
+	// Require shared builds dir when builds dir volume is anything except an emptyDir
+	for _, volume := range s.getVolumes() {
+		if volume.Name == buildVolumeName && volume.VolumeSource.EmptyDir != nil {
+			required = false
+			break
+		}
+	}
+
+	s.requireSharedBuildsDir = &required
 	return required
 }
 

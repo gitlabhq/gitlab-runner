@@ -94,7 +94,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
-				{Name: "repo"},
+				{Name: "repo", MountPath: "/builds"},
 			},
 		},
 		"custom volumes": {
@@ -181,7 +181,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
 				{Name: "csi", MountPath: "/path/to/csi/volume"},
 				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
-				{Name: "repo"},
+				{Name: "repo", MountPath: "/builds"},
 			},
 		},
 		"custom volumes with read-only settings": {
@@ -221,21 +221,21 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "secret", MountPath: "/path/to/secret", ReadOnly: true},
 				{Name: "configMap", MountPath: "/path/to/configmap", ReadOnly: true},
 				{Name: "csi", MountPath: "/path/to/csi/volume", ReadOnly: true},
-				{Name: "repo"},
+				{Name: "repo", MountPath: "/builds"},
 			},
 		},
 		"default volume with build dir": {
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{},
 					},
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
 				{
@@ -248,6 +248,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
@@ -258,8 +259,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.VolumeMount{
 				{Name: "user-provided", MountPath: "/path/to/builds/dir"},
@@ -470,14 +470,14 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{},
 					},
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
 				{Name: "repo", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
@@ -499,6 +499,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 			GlobalConfig: &common.Config{},
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
+					BuildsDir: "/path/to/builds/dir",
 					Kubernetes: &common.KubernetesConfig{
 						Volumes: common.KubernetesVolumes{
 							HostPaths: []common.KubernetesHostPath{
@@ -509,8 +510,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 				},
 			},
 			Build: &common.Build{
-				RootDir: "/path/to/builds/dir",
-				Runner:  &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{},
 			},
 			Expected: []api.Volume{
 				{Name: "user-provided", VolumeSource: api.VolumeSource{HostPath: &api.HostPathVolumeSource{Path: "/path/to/builds/dir"}}},
@@ -1017,8 +1017,9 @@ func TestPrepare(t *testing.T) {
 		RunnerConfig *common.RunnerConfig
 		Build        *common.Build
 
-		Expected           *executor
-		ExpectedPullPolicy api.PullPolicy
+		Expected                *executor
+		ExpectedPullPolicy      api.PullPolicy
+		ExpectedSharedBuildsDir bool
 	}{
 		{
 			Name:         "all with limits",
@@ -1784,6 +1785,132 @@ func TestPrepare(t *testing.T) {
 			},
 			Error: `prepare helper image: unsupported OSType "freebsd"`,
 		},
+		{
+			Name:         "builds dir default",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: false,
+		},
+		{
+			Name:         "builds dir user specified empty_dir",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+						Volumes: common.KubernetesVolumes{
+							EmptyDirs: []common.KubernetesEmptyDir{
+								{
+									Name:      "repo",
+									MountPath: "/builds",
+									Medium:    "Memory",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: false,
+		},
+		{
+			Name:         "builds dir user specified host_path",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{
+									Name:      "repo-host",
+									MountPath: "/builds",
+									HostPath:  "/mnt/builds",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: true,
+		},
+		{
+			Name:         "builds dir user specified pvc",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image: "test-image",
+						Host:  "test-server",
+						Volumes: common.KubernetesVolumes{
+							PVCs: []common.KubernetesPVC{
+								{
+									Name:      "repo-pvc",
+									MountPath: "/builds",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedSharedBuildsDir: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -1820,10 +1947,15 @@ func TestPrepare(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, test.ExpectedPullPolicy, pullPolicy)
 
+			sharedBuildsDir := e.isSharedBuildsDirRequired()
+			assert.Equal(t, test.ExpectedSharedBuildsDir, sharedBuildsDir)
+
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
 			e.pullManager = nil
+			e.requireDefaultBuildsDirVolume = nil
+			e.requireSharedBuildsDir = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
