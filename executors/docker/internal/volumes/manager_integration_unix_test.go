@@ -1,5 +1,5 @@
 // +build integration
-// +build linux darwin freebsd openbsd
+// +build aix android darwin dragonfly freebsd hurd illumos linux netbsd openbsd solaris
 
 package volumes_test
 
