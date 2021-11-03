@@ -12,6 +12,7 @@
   - "{ci,dockerfiles,packaging,scripts,tests,vendor}/**/*"
   - "**/testdata/**/*"
   - "go.*"
+  - "tmp/gitlab-test/**"
 
 .docs-patterns: &docs-patterns
   - ".vale.ini"
