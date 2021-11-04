@@ -3,7 +3,7 @@ package common
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	clihelpers "gitlab.com/ayufan/golang-cli-helpers"
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 )
 
 var commands []cli.Command

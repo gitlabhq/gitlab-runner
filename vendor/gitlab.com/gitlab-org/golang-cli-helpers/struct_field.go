@@ -1,10 +1,11 @@
 package clihelpers
 
 import (
-	"github.com/urfave/cli"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/urfave/cli"
 )
 
 type StructFieldValue struct {
@@ -80,6 +81,16 @@ func getStructFieldFlag(field reflect.StructField, fieldValue reflect.Value, ns 
 		return []cli.Flag{}
 	}
 
+	envName := field.Tag.Get("env")
+	// If the env tag begins with "@", any namespace tags take affect, with an opininated format:
+	// - All characters are uppercased
+	// - All hyphens are converted to underscores
+	if strings.HasPrefix(envName, "@") {
+		envName = strings.Join(append(ns, envName[1:]), "_")
+		envName = strings.ToUpper(envName)
+		envName = strings.ReplaceAll(envName, "-", "_")
+	}
+
 	flag := cli.GenericFlag{
 		Name: strings.Join(names, ", "),
 		Value: StructFieldValue{
@@ -87,7 +98,7 @@ func getStructFieldFlag(field reflect.StructField, fieldValue reflect.Value, ns 
 			value: fieldValue,
 		},
 		Usage:  reName.ReplaceAllString(field.Tag.Get("description"), "`$1`"),
-		EnvVar: field.Tag.Get("env"),
+		EnvVar: envName,
 	}
 	return []cli.Flag{StructFieldFlag{GenericFlag: flag}}
 }
