@@ -1,4 +1,4 @@
-// +build darwin dragonfly freebsd linux netbsd openbsd
+// +build aix android darwin dragonfly freebsd hurd illumos linux netbsd openbsd solaris
 
 package process
 

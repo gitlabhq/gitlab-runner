@@ -38,3 +38,13 @@ runner-and-helper-rpm-host: export BUILD_ARCHS := -arch '$(ARCH)'
 runner-and-helper-rpm-host: PACKAGE_ARCH := $(shell uname -m | sed s/x86_64/amd64/ | sed s/i386/i686/)
 runner-and-helper-rpm-host: runner-and-helper-bin-host package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=$(ARCH) PACKAGE_ARCH=$(PACKAGE_ARCH)
+
+UNIX_ARCHS_CHECK ?= aix/ppc64 android/amd64 dragonfly/amd64 freebsd/amd64 hurd/amd64 illumos/amd64 linux/riscv64 netbsd/amd64 openbsd/amd64 solaris/amd64
+
+# runner-unix-check compiles against various unix OSs that we don't officially support. This is not used
+# as part of any CI job at the moment, but is to be used locally to easily determine what currently compiles.
+runner-unix-check:
+	$(MAKE) $(foreach OSARCH,$(UNIX_ARCHS_CHECK),runner-unix-check-arch-$(subst /,-,$(OSARCH)))
+
+runner-unix-check-arch-%:
+	GOOS=$(subst -, GOARCH=,$(subst runner-unix-check-arch-,,$@)) go build -o /dev/null || true
