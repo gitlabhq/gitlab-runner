@@ -42,7 +42,7 @@ const (
 
 	// The `.ps1` extension is added to the script name to fix a strange behavior
 	// where stage scripts wouldn't be executed otherwise
-	parsePwshScriptName = "parse_pwsh_script.ps1"
+	parsePwshScriptName = "parse_pwsh_script"
 
 	waitLogFileTimeout = time.Minute
 
@@ -399,19 +399,21 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 	var containerCommand []string
 	containerName := buildContainerName
 
-	switch s.Shell().Shell {
+	shell := s.Shell().Shell
+
+	switch shell {
 	case shells.SNPwsh, shells.SNPowershell:
 		// Translates to roughly "/path/to/parse_pwsh_script.ps1 /path/to/stage_script"
 		containerCommand = []string{
 			s.scriptPath(parsePwshScriptName),
 			s.scriptPath(cmd.Stage),
-			s.buildRedirectionCmd(),
+			s.buildRedirectionCmd(shell),
 		}
 		if cmd.Predefined {
 			containerName = helperContainerName
 			containerCommand = []string{fmt.Sprintf("Get-Content -Path %s | ", s.scriptPath(cmd.Stage))}
 			containerCommand = append(containerCommand, s.helperImageInfo.Cmd...)
-			containerCommand = append(containerCommand, s.buildRedirectionCmd())
+			containerCommand = append(containerCommand, s.buildRedirectionCmd(shell))
 		}
 	default:
 		// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
@@ -421,7 +423,7 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 			"sh",
 			s.scriptPath(detectShellScriptName),
 			s.scriptPath(cmd.Stage),
-			s.buildRedirectionCmd(),
+			s.buildRedirectionCmd(shell),
 		}
 		if cmd.Predefined {
 			containerName = helperContainerName
@@ -432,7 +434,7 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 				s.helperImageInfo.Cmd,
 				"<<<",
 				s.scriptPath(cmd.Stage),
-				s.buildRedirectionCmd(),
+				s.buildRedirectionCmd(shell),
 			)
 		}
 	}
@@ -479,7 +481,7 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 			fmt.Sprintf(chmod, s.Build.RootDir),
 		}
 		container.Command = []string{
-			"pwsh",
+			s.Shell().Shell,
 			"-c",
 			strings.Join(commands, ";\n"),
 		}
@@ -496,7 +498,15 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 	return container, nil
 }
 
-func (s *executor) buildRedirectionCmd() string {
+func (s *executor) buildRedirectionCmd(shell string) string {
+	switch shell {
+	// powershell outputs utf16, so we re-encode the output to utf8
+	// this is important because our json decoder that detects the exit status
+	// of a job requires utf8.
+	case shells.SNPowershell:
+		return fmt.Sprintf("2>&1 | Out-File -Append -Encoding UTF8 %s", s.logFile())
+	}
+
 	return fmt.Sprintf("2>&1 | tee -a %s", s.logFile())
 }
 
@@ -601,9 +611,9 @@ func (s *executor) generateScripts(shell common.Shell) (map[string]string, error
 	shellName := s.Shell().Shell
 	switch shellName {
 	case shells.SNPwsh, shells.SNPowershell:
-		scripts[parsePwshScriptName] = shells.PwshValidationScript(shellName)
+		scripts[s.scriptName(parsePwshScriptName)] = shells.PwshValidationScript(shellName)
 	default:
-		scripts[detectShellScriptName] = shells.BashDetectShellScript
+		scripts[s.scriptName(detectShellScriptName)] = shells.BashDetectShellScript
 	}
 
 	for _, stage := range s.Build.BuildStages() {
@@ -614,7 +624,7 @@ func (s *executor) generateScripts(shell common.Shell) (map[string]string, error
 			return nil, fmt.Errorf("generating trap shell script: %w", err)
 		}
 
-		scripts[string(stage)] = script
+		scripts[s.scriptName(string(stage))] = script
 	}
 
 	return scripts, nil
@@ -799,7 +809,17 @@ func (s *executor) scriptsDir() string {
 }
 
 func (s *executor) scriptPath(stage common.BuildStage) string {
-	return path.Join(s.scriptsDir(), string(stage))
+	return path.Join(s.scriptsDir(), s.scriptName(string(stage)))
+}
+
+func (s *executor) scriptName(name string) string {
+	shell := s.Shell()
+	conf, err := common.GetShell(shell.Shell).GetConfiguration(*shell)
+	if err != nil || conf.Extension == "" {
+		return name
+	}
+
+	return name + "." + conf.Extension
 }
 
 func (s *executor) getVolumeMounts() []api.VolumeMount {

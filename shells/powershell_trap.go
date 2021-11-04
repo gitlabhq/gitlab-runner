@@ -44,6 +44,12 @@ func (b *PwshTrapShellWriter) Finish(trace bool) string {
 	var buffer bytes.Buffer
 	w := bufio.NewWriter(&buffer)
 
+	if b.Shell != SNPwsh {
+		// write UTF-8 BOM (Powershell Core doesn't use a BOM as mentioned in
+		// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3896#note_157830131)
+		_, _ = io.WriteString(w, "\xef\xbb\xbf")
+	}
+
 	b.writeShebang(w)
 	b.writeTrap(w)
 	b.writeTrace(w, trace)
