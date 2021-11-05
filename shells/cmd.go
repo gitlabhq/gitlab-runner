@@ -198,6 +198,8 @@ func (b *CmdWriter) RmFile(path string) {
 	b.Linef("del /f /q %s 2>NUL 1>NUL", batchQuote(helpers.ToBackslash(path)))
 }
 
+func (b *CmdWriter) RmFilesRecursive(path string, name string) {}
+
 func (b *CmdWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...) + helpers.ANSI_RESET
 	b.Line("echo " + batchEscapeVariable(coloredText))

@@ -96,3 +96,39 @@ func TestRmFile(t *testing.T) {
 		runShell(t, shell, tmpDir, writer)
 	})
 }
+
+func TestRmFilesRecursive(t *testing.T) {
+	const TestPath = "test-path"
+
+	tmpDir, err := ioutil.TempDir("", "runner-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
+		if shell == "cmd" {
+			t.Skip("cmd shell is no longer actively developed")
+		}
+
+		var tmpFiles []string
+
+		// lockfiles can be in multiple subdirs
+		for i := 0; i < 3; i++ {
+			tmpSubDir, err := ioutil.TempDir(tmpDir, "subdir")
+			require.NoError(t, err)
+
+			tmpFile := path.Join(tmpSubDir, TestPath)
+			err = ioutil.WriteFile(tmpFile, []byte{}, 0600)
+			require.NoError(t, err)
+			tmpFiles = append(tmpFiles, tmpFile)
+		}
+
+		writer.RmFilesRecursive(tmpDir, TestPath)
+
+		runShell(t, shell, tmpDir, writer)
+
+		for _, file := range tmpFiles {
+			_, err = os.Stat(file)
+			require.True(t, os.IsNotExist(err), "tmpFile not deleted")
+		}
+	})
+}

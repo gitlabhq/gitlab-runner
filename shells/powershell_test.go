@@ -214,6 +214,16 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 				`C:\path\file`: "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -PathType Leaf) ) {\n  Remove-Item2 -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")) {\n  Remove-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")\n}\n\n",
 			},
 		},
+		"rmfilesrecursive": {
+			op: func(path string, w *PsWriter) {
+				w.RmFilesRecursive(path, "test")
+			},
+			expected: map[string]string{
+				`path/name`:    "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -Filter \"test\" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }\n}\n",
+				`\\unc\file`:   "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -Filter \"test\" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }\n}\n",
+				`C:\path\file`: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -Filter \"test\" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }\n}\n",
+			},
+		},
 		"rmdir": {
 			op: func(path string, w *PsWriter) {
 				w.RmDir(path)

@@ -312,6 +312,18 @@ func (p *PsWriter) RmFile(path string) {
 	p.Line("")
 }
 
+func (p *PsWriter) RmFilesRecursive(path string, name string) {
+	resolvedPath := p.resolvePath(path)
+	p.IfDirectory(path)
+	p.Linef(
+		// `Remove-Item -Recurse` has a known issue (see Example 4 in
+		// https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/remove-item)
+		"Get-ChildItem -Path %s -Filter %s -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }",
+		resolvedPath, psQuote(name),
+	)
+	p.EndIf()
+}
+
 func (p *PsWriter) Printf(format string, arguments ...interface{}) {
 	coloredText := helpers.ANSI_RESET + fmt.Sprintf(format, arguments...)
 	p.Line("echo " + psQuoteVariable(coloredText))
