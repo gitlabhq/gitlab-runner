@@ -44,6 +44,7 @@ type defaultDocker struct {
 	logger logrus.FieldLogger
 }
 
+//nolint:funlen
 func (d *defaultDocker) Exec(ctx context.Context, containerID string, input io.Reader, output io.Writer) error {
 	d.logger.Debugln("Attaching to container", containerID, "...")
 
@@ -59,15 +60,25 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, input io.R
 		return err
 	}
 
+	// stdout/stdin error channels, buffered intentionally so that if select{}
+	// below exits, the go routines don't block forever upon container exit.
+	stdoutErrCh := make(chan error, 1)
+	stdinErrCh := make(chan error, 1)
+
 	// Copy any output to the build trace
-	stdoutErrCh := make(chan error)
 	go func() {
 		_, errCopy := stdcopy.StdCopy(output, output, hijacked.Reader)
+
+		// this goroutine can continue even whilst StopKillWait is in flight,
+		// allowing a graceful stop. If reading stdout returns, we must close
+		// attached connection, otherwise kills can be interfered with and
+		// block indefinitely.
+		hijacked.Close()
+
 		stdoutErrCh <- errCopy
 	}()
 
 	// Write the input to the container and close its STDIN to get it to finish
-	stdinErrCh := make(chan error)
 	go func() {
 		_, errCopy := io.Copy(hijacked.Conn, input)
 		_ = hijacked.CloseWrite()

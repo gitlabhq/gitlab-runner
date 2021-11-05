@@ -39,7 +39,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 		expectedCtx context.Context,
 	) {
 		conn := new(mockConn)
-		conn.On("Close").Return(nil).Once()
+		conn.On("Close").Return(nil).Twice()
 		conn.On("Write", mock.Anything).Return(0, nil)
 
 		hijacked := types.HijackedResponse{
@@ -78,7 +78,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			cancelContext: false,
 			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
 				conn := new(mockConn)
-				conn.On("Close").Return(nil).Once()
+				conn.On("Close").Return(nil).Twice()
 				conn.On("Write", mock.Anything).Return(0, nil)
 
 				hijacked := types.HijackedResponse{
