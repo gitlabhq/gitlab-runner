@@ -52,6 +52,8 @@ const (
 	ExecutorStagePullingImage         common.ExecutorStage = "docker_pulling_image"
 )
 
+const ServiceLogOutputLimit = 64 * 1024
+
 var PrebuiltImagesPaths []string
 
 const (
@@ -1301,7 +1303,7 @@ func (e *executor) readContainerLogs(containerID string) string {
 
 	// limit how much data we read from the container log to
 	// avoid memory exhaustion
-	w := limitwriter.New(&buf, 64*1024)
+	w := limitwriter.New(&buf, ServiceLogOutputLimit)
 
 	_, _ = stdcopy.StdCopy(w, w, hijacked)
 	return strings.TrimSpace(buf.String())
