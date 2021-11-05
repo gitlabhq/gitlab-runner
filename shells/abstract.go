@@ -348,7 +348,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}
 
-	b.writeGitCleanup(w, projectDir)
+	b.writeGitCleanup(w, build.GetSubmoduleStrategy(), projectDir)
 
 	w.Command("git", "init", projectDir, "--template", templateDir)
 	w.Cd(projectDir)
@@ -374,19 +374,26 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	w.Command("git", fetchArgs...)
 }
 
-func (b *AbstractShell) writeGitCleanup(w ShellWriter, projectDir string) {
+func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.SubmoduleStrategy, projectDir string) {
+	const gitDir = ".git"
+
 	// Remove .git/{index,shallow,HEAD,config}.lock files from .git, which can fail the fetch command
-	// The file can be left if previous build was terminated during git operation
+	// The file can be left if previous build was terminated during git operation.
+	// If the git submodule strategy is defined as normal or recursive, also remove these files
+	// inside .git/modules/**/
 	files := []string{
-		".git/index.lock",
-		".git/shallow.lock",
-		".git/HEAD.lock",
-		".git/hooks/post-checkout",
-		".git/config.lock",
+		"index.lock",
+		"shallow.lock",
+		"HEAD.lock",
+		"hooks/post-checkout",
+		"config.lock",
 	}
 
 	for _, f := range files {
-		w.RmFile(path.Join(projectDir, f))
+		w.RmFile(path.Join(projectDir, gitDir, f))
+		if submoduleStrategy == common.SubmoduleNormal || submoduleStrategy == common.SubmoduleRecursive {
+			w.RmFilesRecursive(path.Join(projectDir, gitDir, "modules"), path.Base(f))
+		}
 	}
 }
 
