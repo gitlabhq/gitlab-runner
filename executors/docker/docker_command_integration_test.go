@@ -354,6 +354,43 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDockerCommandOwnershipOverflow(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	resp, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	resp.Image.Name = common.TestAlpineIDOverflowImage
+	build := &common.Build{
+		JobResponse: resp,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+				},
+				FeatureFlags: map[string]bool{
+					featureflags.DisableUmaskForDockerExecutor: true,
+				},
+			},
+		},
+	}
+
+	trace := &common.Trace{Writer: os.Stdout}
+	timeoutTimer := time.AfterFunc(time.Minute, func() {
+		trace.Abort()
+	})
+	defer timeoutTimer.Stop()
+
+	err = build.Run(&common.Config{}, trace)
+	assert.Error(t, err)
+
+	// error is only canceled if it timed out, something that will only happen
+	// if data from the overflow isn't safely limited.
+	assert.NotErrorIs(t, err, &common.BuildError{FailureReason: common.JobCanceled})
+}
+
 func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
@@ -1049,6 +1086,44 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			assert.NotContains(t, out, "probably didn't start properly")
 		})
 	}
+}
+
+func TestDockerServiceHealthcheckOverflow(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	resp, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	build := &common.Build{
+		JobResponse: resp,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker:   &common.DockerConfig{},
+			},
+		},
+	}
+
+	build.Image = common.Image{
+		Name: common.TestAlpineImage,
+	}
+
+	build.Services = append(build.Services, common.Image{
+		Name:    common.TestAlpineImage,
+		Command: []string{"printf", "datastart: %" + strconv.Itoa(execDocker.ServiceLogOutputLimit) + "s", ":dataend"},
+	})
+
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:    "FF_NETWORK_PER_BUILD",
+		Value:  "true",
+		Public: true,
+	})
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, "datastart:")
+	assert.NotContains(t, out, ":dataend")
 }
 
 func runDockerInDocker(version string) (id string, err error) {
