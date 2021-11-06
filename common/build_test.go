@@ -1449,6 +1449,42 @@ func TestGitFetchFlags(t *testing.T) {
 	}
 }
 
+func TestGitSubmoduleUpdateFlags(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult []string
+	}{
+		"empty update flags": {
+			value:          "",
+			expectedResult: []string{},
+		},
+		"use custom update flags": {
+			value:          "custom-flags",
+			expectedResult: []string{"custom-flags"},
+		},
+		"use custom update flags with multiple arguments": {
+			value:          "--remote --jobs 4",
+			expectedResult: []string{"--remote", "--jobs", "4"},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{
+						{Key: "GIT_SUBMODULE_UPDATE_FLAGS", Value: test.value},
+					},
+				},
+			}
+
+			result := build.GetGitSubmoduleUpdateFlags()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
 func TestDefaultVariables(t *testing.T) {
 	tests := map[string]struct {
 		jobVariables  JobVariables
