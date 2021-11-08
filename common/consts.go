@@ -41,7 +41,7 @@ const (
 var PreparationRetryInterval = 3 * time.Second
 
 const (
-	TestAlpineImage           = "alpine:3.12.0"
+	TestAlpineImage           = "alpine:3.14.2"
 	TestWindowsImage          = "mcr.microsoft.com/windows/servercore:%s"
 	TestPwshImage             = "mcr.microsoft.com/powershell:7.1.1-alpine-3.12-20210125"
 	TestAlpineNoRootImage     = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest"

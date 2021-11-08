@@ -38,6 +38,9 @@ create_package() {
 
     mkdir -p "out/${packageType}/"
 
+    local base_input_part="out/helper-images/prebuilt-"
+    local base_output_part="/usr/lib/gitlab-runner/helper-images/prebuilt-"
+
     fpm \
         --package "out/${packageType}/${PACKAGE_NAME}_${PACKAGE_ARCH}.${packageType}" \
         --force \
@@ -70,7 +73,17 @@ create_package() {
         \
         packaging/root/=/ \
         "${RUNNER_BINARY}=/usr/bin/gitlab-runner" \
-        out/helper-images/=/usr/lib/gitlab-runner/helper-images/
+        "${base_input_part}alpine-arm.tar.xz=${base_output_part}alpine-arm.tar.xz" \
+        "${base_input_part}alpine-arm64.tar.xz=${base_output_part}alpine-arm64.tar.xz" \
+        "${base_input_part}alpine-s390x.tar.xz=${base_output_part}alpine-s390x.tar.xz" \
+        "${base_input_part}alpine-x86_64-pwsh.tar.xz=${base_output_part}alpine-x86_64-pwsh.tar.xz" \
+        "${base_input_part}alpine-x86_64.tar.xz=${base_output_part}alpine-x86_64.tar.xz" \
+        "${base_input_part}ubuntu-arm.tar.xz=${base_output_part}ubuntu-arm.tar.xz" \
+        "${base_input_part}ubuntu-arm64.tar.xz=${base_output_part}ubuntu-arm64.tar.xz" \
+        "${base_input_part}ubuntu-ppc64le.tar.xz=${base_output_part}ubuntu-ppc64le.tar.xz" \
+        "${base_input_part}ubuntu-s390x.tar.xz=${base_output_part}ubuntu-s390x.tar.xz" \
+        "${base_input_part}ubuntu-x86_64-pwsh.tar.xz=${base_output_part}ubuntu-x86_64-pwsh.tar.xz" \
+        "${base_input_part}ubuntu-x86_64.tar.xz=${base_output_part}ubuntu-x86_64.tar.xz"
 }
 
 create_deb() {

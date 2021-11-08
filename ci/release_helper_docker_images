@@ -7,6 +7,9 @@ SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 # shellcheck source=ci/docker_commands
 source "${SCRIPTPATH}/docker_commands"
 
+IMAGE_FLAVOR=${IMAGE_FLAVOR:-"alpine"}
+IMAGE_TAG=${IMAGE_TAG:-""}
+
 tag_latest() {
     if [[ -z "${IS_LATEST}" ]]; then
         return
@@ -50,52 +53,56 @@ release_docker_helper_images() {
     helper_image_ppc64le_latest="${1}/gitlab-runner-helper:${PREFIX}ppc64le-latest"
 
     import "out/helper-images/prebuilt-${FLAVOR}-x86_64.tar.xz" "${helper_image_x86_64}"
-    import "out/helper-images/prebuilt-${FLAVOR}-x86_64-pwsh.tar.xz" "${helper_image_x86_64_pwsh}"
     import "out/helper-images/prebuilt-${FLAVOR}-arm.tar.xz" "${helper_image_arm}"
     import "out/helper-images/prebuilt-${FLAVOR}-arm64.tar.xz" "${helper_image_arm64}"
     import "out/helper-images/prebuilt-${FLAVOR}-s390x.tar.xz" "${helper_image_s390x}"
     import "out/helper-images/prebuilt-${FLAVOR}-ppc64le.tar.xz" "${helper_image_ppc64le}"
 
     tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
-    tag_latest "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_latest}"
     tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
     tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
     tag_latest "${helper_image_s390x}" "${helper_image_s390x_latest}"
     tag_latest "${helper_image_ppc64le}" "${helper_image_ppc64le_latest}"
+
     tag "${helper_image_x86_64}" "${helper_image_x86_64_version}"
-    tag "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_version}"
     tag "${helper_image_arm}" "${helper_image_arm_version}"
     tag "${helper_image_arm64}" "${helper_image_arm64_version}"
     tag "${helper_image_s390x}" "${helper_image_s390x_version}"
     tag "${helper_image_ppc64le}" "${helper_image_ppc64le_version}"
 
     push "${helper_image_x86_64}"
-    push "${helper_image_x86_64_pwsh}"
     push "${helper_image_arm}"
     push "${helper_image_arm64}"
     push "${helper_image_s390x}"
     push "${helper_image_ppc64le}"
 
     push_latest "${helper_image_x86_64_latest}"
-    push_latest "${helper_image_x86_64_pwsh_latest}"
     push_latest "${helper_image_arm_latest}"
     push_latest "${helper_image_arm64_latest}"
     push_latest "${helper_image_s390x_latest}"
     push_latest "${helper_image_ppc64le_latest}"
     push "${helper_image_x86_64_version}"
-    push "${helper_image_x86_64_pwsh_version}"
     push "${helper_image_arm_version}"
     push "${helper_image_arm64_version}"
     push "${helper_image_s390x_version}"
     push "${helper_image_ppc64le_version}"
+
+    if [[ "$FLAVOR" != "alpine3.14" ]]; then
+      # Special case until pwsh adds the alpine 3.14 docker images, the whole condition can be removed after that
+        import "out/helper-images/prebuilt-${FLAVOR}-x86_64-pwsh.tar.xz" "${helper_image_x86_64_pwsh}"
+        tag_latest "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_latest}"
+        tag "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_version}"
+        push "${helper_image_x86_64_pwsh}"
+        push_latest "${helper_image_x86_64_pwsh_latest}"
+        push "${helper_image_x86_64_pwsh_version}"
+    fi
 }
 
 # Release helper images
 if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && [[ "${PUBLISH_IMAGES}" == "true" ]]; then
     login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
 
-    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "alpine" ""
-    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "ubuntu" "ubuntu-"
+    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 
     logout "${CI_REGISTRY}"
 fi
@@ -103,8 +110,7 @@ fi
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
     login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
 
-    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "alpine" ""
-    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "ubuntu" "ubuntu-"
+    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 
     logout
 fi
@@ -112,8 +118,7 @@ fi
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
     login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
 
-    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "alpine" ""
-    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "ubuntu" "ubuntu-"
+    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 
     logout "${ECR_PUBLIC_REGISTRY}"
 fi

@@ -6,6 +6,7 @@
     name: package/$PKGS/$CI_COMMIT_REF_NAME
   needs:
   - 'helper images'
+  - 'helper images binaries'
   - binaries
   before_script:
   - |

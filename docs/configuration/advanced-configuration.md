@@ -271,7 +271,7 @@ This defines the Docker Container parameters.
 | `extra_hosts`                  | Hosts that should be defined in container environment. |
 | `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
 | `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
-| `helper_image_flavor`          | Sets the helper image flavor (`alpine` or `ubuntu`). Defaults to `alpine`. |
+| `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.12`. |
 | `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
 | `hostname`                     | Custom hostname for the Docker container. |
 | `image`                        | The image to run jobs with. |
@@ -873,7 +873,7 @@ The helper image is available for amd64, arm, arm64, s390x, and ppc64le architec
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
 of available commands, as well as Git, Git LFS, SSL certificates store.
 
-The helper image has two flavors: `alpine` and `ubuntu`. The `alpine` image is currently the default due to its small
+The helper image has a few flavors: `alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14` and `ubuntu`. The `alpine` flavor uses the same version as `alpine3.12`. The `alpine` image is currently the default due to its small
 footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
 Using `helper_image_flavor = "ubuntu"` will select the `ubuntu` flavor of the helper image.
 
@@ -882,6 +882,8 @@ When the runner prepares to execute the job, if the image in the specified versi
 revision) is not found on Docker Engine, it is automatically loaded. Both the
 `docker` and `docker+machine` executors work this way.
 
+For the alpine flavors, only the default `alpine` flavor image is included in the package. All other flavors will be downloaded from the registry.
+
 The `kubernetes` executor and manual installations of GitLab Runner work differently.
 
 - For manual installations, the `gitlab-runner-helper` binary is not included.
@@ -889,6 +891,25 @@ The `kubernetes` executor and manual installations of GitLab Runner work differe
 
 In both cases, GitLab Runner downloads the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper`.
 The GitLab Runner revision and architecture define which tag to download.
+
+### Runner images that use an old version of Alpine Linux
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3122) in GitLab Runner 14.5.
+
+Images are built with multiple versions of Alpine Linux, so you can use a newer version of Alpine, but at the same time use older versions as well.
+
+For the helper image, change the `helper_image_flavor` or read the [Helper image](#helper-image) section.
+
+For the GitLab Runner image follow the same logic where `alpine`, `alpine3.12`, `alpine3.13` or `alpine3.14` is used as a prefix in the image, before the version:
+
+```shell
+docker pull gitlab/gitlab-runner:alpine3.14-v14.4.0
+```
+
+### Alpine 3.14 pwsh images
+
+The [pwsh Docker images](https://hub.docker.com/_/microsoft-powershell) do not yet include Alpine 3.14.
+Currently, `alpine3.13` is the latest supported `pwsh` image.
 
 ### Default registry
 

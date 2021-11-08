@@ -82,13 +82,14 @@ echo -e "Building helper image for: ${GRN}${platform}${RST} based on ${GRN}${BAS
 trap cleanup_docker_context_trap ERR SIGINT SIGTERM
 setup_docker_context
 
+# shellcheck disable=SC2154
 _docker_buildx build \
     --platform "${platform}" \
     --no-cache \
     --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+    --build-arg "http_proxy=${http_proxy}" \
     --output "type=tar,dest=$TARGET_FILE" \
     --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
-    --build-arg http_proxy="${http_proxy}" \
     --file "dockerfiles/runner-helper/${DOCKERFILE}" \
     dockerfiles/runner-helper
 

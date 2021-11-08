@@ -27,6 +27,38 @@ checksums['GIT_LFS_PPC64LE']=${GIT_LFS_LINUX_PPC64LE_CHECKSUM:-76196d06a79eec11c
 
 IMAGE_FLAVOR=${IMAGE_FLAVOR:-'ubuntu'}
 
+image_platform=""
+if [[ "${IMAGE_FLAVOR}" == ubuntu* ]]; then
+  image_platform="ubuntu"
+else
+  image_platform="alpine"
+fi
+
+declare -A base_images_from_flavor
+base_images_from_flavor=(
+  ["ubuntu"]="ubuntu:20.04"
+  ["alpine3.12"]="alpine:3.12.0"
+  ["alpine3.13"]="alpine:3.13.6"
+  ["alpine3.14"]="alpine:3.14.2"
+)
+
+get_image_version_from_flavor() {
+  local flavor="$1"
+  echo "${base_images_from_flavor[${flavor}]}"
+}
+
+declare -A flavor_aliases
+flavor_aliases=( ["alpine3.12"]="alpine,alpine3.12" )
+
+get_flavor_aliases() {
+  local flavor="$1"
+  if [[ "${flavor_aliases[$flavor]}" != "" ]]; then
+      echo "${flavor_aliases[$flavor]}"
+  else
+      echo "$flavor"
+  fi
+}
+
 if [ -n "${TARGET_ARCHS}" ]; then
     IFS=' ' read -r -a TARGET_ARCHS <<< "${TARGET_ARCHS}"
 else
@@ -42,12 +74,15 @@ join_by() {
 # buildx receives an array of tag names, and the context path as the last parameter
 buildx() {
     local contextPath="$1"
+    local base_image="$2"
     local platforms=()
     local os
     os=$(_docker version -f '{{.Server.Os}}')
     for arch in "${TARGET_ARCHS[@]}"; do
         platforms+=("${os}/${arch}")
     done
+
+    shift
     shift
 
     local args=("$@")
@@ -92,6 +127,7 @@ buildx() {
         --build-arg DOCKER_MACHINE_VERSION="${DOCKER_MACHINE_VERSION}" \
         --build-arg DUMB_INIT_VERSION="${DUMB_INIT_VERSION}" \
         --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
+        --build-arg BASE_IMAGE="${base_image}" \
         --platform "${formatted_platforms}" \
         --no-cache \
         "${tagOpts[@]}" \
@@ -116,8 +152,8 @@ buildx() {
 }
 
 add_tags() {
-    local -n tags=$1
-    local base_image="$2"
+    local -n add_to_tags=$1
+    local base_images="$2"
     local user="$3"
     local password="$4"
     local repository="$5"
@@ -127,16 +163,18 @@ add_tags() {
         return
     fi
 
-    tags+=("${repository}:${base_image}-${ref_tag}")
-    if [[ "${base_image}" == "${default_image}" ]]; then
-        tags+=("${repository}:${ref_tag}")
-    fi
-    if [[ -n "${IS_LATEST}" ]]; then
-        tags+=("${repository}:${base_image}")
-        if [[ "${base_image}" == "${default_image}" ]]; then
-            tags+=("${repository}:latest")
-        fi
-    fi
+    for base_image in ${base_images//,/ }; do
+      add_to_tags+=("${repository}:${base_image}-${ref_tag}")
+      if [[ "${base_image}" == "${default_image}" ]]; then
+          add_to_tags+=("${repository}:${ref_tag}")
+      fi
+      if [[ -n "${IS_LATEST}" ]]; then
+          add_to_tags+=("${repository}:${base_image}")
+          if [[ "${base_image}" == "${default_image}" ]]; then
+              add_to_tags+=("${repository}:latest")
+          fi
+      fi
+    done
 }
 
 [ "${#TARGET_ARCHS[@]}" -eq 0 ] && TARGET_ARCHS=("$(_docker version -f '{{.Server.Arch}}')")
@@ -172,17 +210,20 @@ for arch in "${TARGET_ARCHS[@]}"; do
 done
 
 tags=()
+aliases="$(get_flavor_aliases "$IMAGE_FLAVOR")"
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
-   add_tags tags "${IMAGE_FLAVOR}" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
+   add_tags tags "${aliases}" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
 fi
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
-   add_tags tags "${IMAGE_FLAVOR}" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
+   add_tags tags "${aliases}" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
 fi
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-   add_tags tags "${IMAGE_FLAVOR}" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
+   add_tags tags "${aliases}" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
 fi
 
 # Build and publish multi-platform images using `docker buildx`
-buildx "${runner_home_dir}/${IMAGE_FLAVOR}" "${tags[@]}"
+# shellcheck disable=SC2154
+base_image="$(get_image_version_from_flavor "${IMAGE_FLAVOR}")"
+buildx "${runner_home_dir}/${image_platform}" "$base_image" "${tags[@]}"
