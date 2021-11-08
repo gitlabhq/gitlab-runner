@@ -158,6 +158,19 @@ func Test_linuxInfo_create(t *testing.T) {
 					Cmd:                     expectedCmd,
 				},
 			},
+			"Alpine3.13 flavor configured DockerHub registry": {
+				dockerArch:     "amd64",
+				revision:       "2923a43",
+				gitlabRegistry: false,
+				flavor:         "alpine3.13",
+				expectedInfo: Info{
+					Architecture:            "x86_64",
+					Name:                    DockerHubName,
+					Tag:                     "alpine3.13-x86_64-2923a43" + expectedTagSuffix,
+					IsSupportingLocalImport: true,
+					Cmd:                     expectedCmd,
+				},
+			},
 		}
 
 		t.Run(shell, func(t *testing.T) {

@@ -25,13 +25,21 @@
     matrix:
     - IMAGE_FLAVOR: ubuntu
       TARGET_ARCHS: amd64 arm64 ppc64le
-    - IMAGE_FLAVOR: alpine
+    - IMAGE_FLAVOR: alpine3.12
+      TARGET_ARCHS: amd64 arm64 ppc64le
+    - IMAGE_FLAVOR: alpine3.13
+      TARGET_ARCHS: amd64 arm64 ppc64le
+    - IMAGE_FLAVOR: alpine3.14
       TARGET_ARCHS: amd64 arm64 ppc64le
     # we build s390x images on their own, as they don't play nicely when built
     # concurrently: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28392
     - IMAGE_FLAVOR: ubuntu
       TARGET_ARCHS: s390x
-    - IMAGE_FLAVOR: alpine
+    - IMAGE_FLAVOR: alpine3.12
+      TARGET_ARCHS: s390x
+    - IMAGE_FLAVOR: alpine3.13
+      TARGET_ARCHS: s390x
+    - IMAGE_FLAVOR: alpine3.14
       TARGET_ARCHS: s390x
 
 .release_helper_docker_images:
@@ -43,6 +51,16 @@
   - 'helper images'
   script:
   - make release_helper_docker_images
+  parallel:
+    matrix:
+    - IMAGE_FLAVOR: "alpine3.12"
+      IMAGE_TAG: ["", "alpine3.12-"]
+    - IMAGE_FLAVOR: "alpine3.13"
+      IMAGE_TAG: ["alpine3.13-"]
+    - IMAGE_FLAVOR: "alpine3.14"
+      IMAGE_TAG: ["alpine3.14-"]
+    - IMAGE_FLAVOR: "ubuntu"
+      IMAGE_TAG: ["ubuntu-"]
 
 .release_windows_docker_images:
   extends:
@@ -52,8 +70,9 @@
     PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
     PUBLISH_IMAGES: "true"
+    PWSH_VERSION: 7.1.1
   dependencies:
-  - 'helper images'
+  - 'helper images binaries'
   - 'ecr public token'
   - 'binaries: [windows/386 windows/amd64]'
   script:
@@ -70,6 +89,7 @@
   - .release
   dependencies:
   - 'helper images'
+  - 'helper images binaries'
   - 'test coverage report'
   - 'binaries'
   - 'package-deb'
@@ -355,7 +375,7 @@ static QA:
   - .rules:merge_request_pipelines:no_docs
   - .no_cache
   stage: release
-  image: alpine:3.12.0
+  image: alpine:3.14.2
   needs:
   - code_quality
   script: |

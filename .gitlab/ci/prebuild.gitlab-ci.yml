@@ -7,11 +7,27 @@ helper images:
   variables:
     TAR_XZ_ARGS: -f -9
   script:
-  - make helper-bin helper-dockerarchive
+  - make "helper-dockerarchive-${IMAGE_BASE}"
   retry: 2
   artifacts:
     paths:
     - out/helper-images/
+    expire_in: 7d
+  parallel:
+    matrix:
+    - IMAGE_BASE: "alpine"
+    - IMAGE_BASE: "alpine3.13"
+    - IMAGE_BASE: "alpine3.14"
+    - IMAGE_BASE: "ubuntu"
+
+helper images binaries:
+  extends:
+  - .rules:merge_request_pipelines:no_docs
+  stage: prebuild
+  script:
+  - make helper-bin
+  artifacts:
+    paths:
     - out/binaries/gitlab-runner-helper/gitlab-runner-helper*
     expire_in: 7d
 

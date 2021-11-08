@@ -1661,6 +1661,61 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
+			Name:         "helper image with ubuntu flavour DockerHub registry",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:              "test-server",
+						HelperImageFlavor: "alpine3.13",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: common.JobVariables{
+						common.JobVariable{
+							Key:      featureflags.GitLabRegistryHelperImage,
+							Value:    "false",
+							Public:   false,
+							Internal: false,
+							File:     false,
+							Masked:   false,
+							Raw:      false,
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+				helperImageInfo: helperimage.Info{
+					OSType:                  os,
+					Architecture:            "x86_64",
+					Name:                    helperimage.DockerHubName,
+					Tag:                     fmt.Sprintf("alpine3.13-x86_64-%s", helperImageTag),
+					IsSupportingLocalImport: true,
+					Cmd:                     []string{"gitlab-runner-build"},
+				},
+			},
+		},
+		{
 			Name:         "helper image from node selector (linux, arm)",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
@@ -4338,7 +4393,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			config: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Image:      "alpine:3.12",
+						Image:      "alpine:3.14",
 						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:       "127.0.0.1",
 					},
@@ -4357,7 +4412,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 			config: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Image:      "alpine:3.12",
+						Image:      "alpine:3.14",
 						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:       "127.0.0.1",
 					},
@@ -4370,7 +4425,7 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
 						HelperImage: "config-image",
-						Image:       "alpine:3.12",
+						Image:       "alpine:3.14",
 						PullPolicy:  common.StringOrArray{common.PullPolicyIfNotPresent},
 						Host:        "127.0.0.1",
 					},

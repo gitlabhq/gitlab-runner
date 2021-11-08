@@ -38,6 +38,11 @@ _docker_buildx() {
 }
 
 setup_docker_context() {
+    # We need the context to not exist either way. If we don't clean it up, we just need to rerun the script
+    # since it gets deleted in case of an error anyways. There are also some other edge cases where it's not being cleaned up
+    # properly so this makes the building of images more consistent and less error prone
+    cleanup_docker_context || true
+
     # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
     # Otherwise, we get the following error:
     # > could not create a builder instance with TLS data loaded from environment.
