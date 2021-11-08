@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
-	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -27,9 +26,16 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 )
 
 const osTypeWindows = "windows"
+
+var spaceReplacer = strings.NewReplacer(" ", "", "\t", "")
+
+type kv struct {
+	key, value string
+}
 
 func TestAccessLevelSetting(t *testing.T) {
 	tests := map[string]struct {
@@ -70,7 +76,7 @@ func TestAccessLevelSetting(t *testing.T) {
 				"--access-level", string(testCase.accessLevel),
 			}
 
-			_, output, err := testRegisterCommandRun(t, network, arguments...)
+			_, output, err := testRegisterCommandRun(t, network, nil, arguments...)
 
 			if testCase.failureExpected {
 				assert.EqualError(t, err, "command error: Given access-level is not valid. "+
@@ -111,6 +117,7 @@ func TestAskRunnerOverrideDefaultsForExecutors(t *testing.T) {
 func testRegisterCommandRun(
 	t *testing.T,
 	network common.Network,
+	env []kv,
 	args ...string,
 ) (content, output string, err error) {
 	config := &common.RunnerConfig{
@@ -121,6 +128,19 @@ func testRegisterCommandRun(
 			Executor: "shell",
 		},
 	}
+
+	for _, kv := range env {
+		err := os.Setenv(kv.key, kv.value)
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	defer func() {
+		for _, kv := range env {
+			_ = os.Unsetenv(kv.key)
+		}
+	}()
 
 	hook := test.NewGlobal()
 
@@ -654,6 +674,9 @@ check_interval = 0
     pod_annotations_overwrite_allowed = ""
     [runners.kubernetes.affinity]
     [runners.kubernetes.pod_security_context]
+    [runners.kubernetes.build_container_security_context]
+    [runners.kubernetes.helper_container_security_context]
+    [runners.kubernetes.service_container_security_context]
     [runners.kubernetes.volumes]
 
       [[runners.kubernetes.volumes.empty_dir]]
@@ -704,7 +727,7 @@ check_interval = 0
 
 			tt.networkAssertions(network)
 
-			fileContent, _, err := testRegisterCommandRun(t, network, args...)
+			fileContent, _, err := testRegisterCommandRun(t, network, nil, args...)
 			if tt.errExpected {
 				require.Error(t, err)
 				return
@@ -796,9 +819,10 @@ func TestUnregisterOnFailure(t *testing.T) {
 
 func TestRegisterCommand(t *testing.T) {
 	type testCase struct {
-		condition      func() bool
-		arguments      []string
-		expectedConfig string
+		condition       func() bool
+		arguments       []string
+		environment     []kv
+		expectedConfigs []string
 	}
 
 	testCases := map[string]testCase{
@@ -808,11 +832,9 @@ func TestRegisterCommand(t *testing.T) {
 				"--feature-flags", "FF_TEST_1:true",
 				"--feature-flags", "FF_TEST_2:false",
 			},
-			expectedConfig: `
-  [runners.feature_flags]
-    FF_TEST_1 = true
-    FF_TEST_2 = false
-`,
+			expectedConfigs: []string{`[runners.feature_flags]
+		   FF_TEST_1 = true
+		   FF_TEST_2 = false`},
 		},
 		"shell defaults to pwsh on Windows with shell executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
@@ -820,9 +842,7 @@ func TestRegisterCommand(t *testing.T) {
 				"--name", "test-runner",
 				"--executor", "shell",
 			},
-			expectedConfig: `
-  shell = "pwsh"
-`,
+			expectedConfigs: []string{`shell = "pwsh"`},
 		},
 		"shell defaults to pwsh on Windows with docker-windows executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
@@ -831,9 +851,7 @@ func TestRegisterCommand(t *testing.T) {
 				"--executor", "docker-windows",
 				"--docker-image", "abc",
 			},
-			expectedConfig: `
-  shell = "pwsh"
-`,
+			expectedConfigs: []string{`shell = "pwsh"`},
 		},
 		"shell can be overridden to powershell on Windows with shell executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
@@ -842,9 +860,7 @@ func TestRegisterCommand(t *testing.T) {
 				"--executor", "shell",
 				"--shell", "powershell",
 			},
-			expectedConfig: `
-  shell = "powershell"
-`,
+			expectedConfigs: []string{`shell = "powershell"`},
 		},
 		"shell can be overridden to powershell on Windows with docker-windows executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
@@ -854,9 +870,40 @@ func TestRegisterCommand(t *testing.T) {
 				"--shell", "powershell",
 				"--docker-image", "abc",
 			},
-			expectedConfig: `
-  shell = "powershell"
-`,
+			expectedConfigs: []string{`shell = "powershell"`},
+		},
+		"kubernetes security context namespace": {
+			arguments: []string{
+				"--executor", "kubernetes",
+			},
+			environment: []kv{
+				{
+					key:   "KUBERNETES_BUILD_CONTAINER_SECURITY_CONTEXT_PRIVILEGED",
+					value: "true",
+				},
+				{
+					key:   "KUBERNETES_HELPER_CONTAINER_SECURITY_CONTEXT_RUN_AS_USER",
+					value: "1000",
+				},
+				{
+					key:   "KUBERNETES_SERVICE_CONTAINER_SECURITY_CONTEXT_RUN_AS_NON_ROOT",
+					value: "true",
+				},
+				{
+					key:   "KUBERNETES_SERVICE_CONTAINER_SECURITY_CONTEXT_CAPABILITIES_ADD",
+					value: "NET_RAW, NET_RAW1",
+				},
+			},
+			expectedConfigs: []string{`
+		[runners.kubernetes.build_container_security_context]
+			privileged = true`, `
+		[runners.kubernetes.helper_container_security_context]
+			run_as_user = 1000`, `
+		[runners.kubernetes.service_container_security_context]
+			run_as_non_root = true`, `
+      	[runners.kubernetes.service_container_security_context.capabilities]
+        	add = ["NET_RAW, NET_RAW1"]`,
+			},
 		},
 	}
 
@@ -875,10 +922,12 @@ func TestRegisterCommand(t *testing.T) {
 				}).
 				Once()
 
-			gotConfig, _, err := testRegisterCommandRun(t, network, tc.arguments...)
+			gotConfig, _, err := testRegisterCommandRun(t, network, tc.environment, tc.arguments...)
 			require.NoError(t, err)
 
-			assert.Contains(t, gotConfig, tc.expectedConfig)
+			for _, expectedConfig := range tc.expectedConfigs {
+				assert.Contains(t, spaceReplacer.Replace(gotConfig), spaceReplacer.Replace(expectedConfig))
+			}
 		})
 	}
 }

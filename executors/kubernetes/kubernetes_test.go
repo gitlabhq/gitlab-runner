@@ -4798,3 +4798,60 @@ func TestLifecyclePrepare(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildContainerSecurityContext(t *testing.T) {
+	tests := map[string]struct {
+		getSecurityContext func() *api.SecurityContext
+	}{
+		"build security context": {
+			getSecurityContext: func() *api.SecurityContext {
+				runAsNonRoot := true
+				readOnlyRootFileSystem := true
+				privileged := false
+				allowPrivilageEscalation := false
+				var uid int64 = 1000
+				var gid int64 = 1000
+				return &api.SecurityContext{
+					RunAsNonRoot:             &runAsNonRoot,
+					ReadOnlyRootFilesystem:   &readOnlyRootFileSystem,
+					Privileged:               &privileged,
+					AllowPrivilegeEscalation: &allowPrivilageEscalation,
+					RunAsUser:                &uid,
+					RunAsGroup:               &gid,
+					Capabilities: &api.Capabilities{
+						Drop: []api.Capability{"ALL"},
+					},
+				}
+			},
+		},
+		"no security context": {
+			getSecurityContext: func() *api.SecurityContext {
+				return nil
+			},
+		},
+	}
+
+	mockPullManager := &pull.MockManager{}
+	mockPullManager.On("GetPullPolicyFor", mock.Anything).
+		Return(api.PullAlways, nil).
+		Times(2)
+
+	defer mockPullManager.AssertExpectations(t)
+
+	executor := newExecutor()
+	executor.pullManager = mockPullManager
+	executor.Build = new(common.Build)
+	executor.Config.Kubernetes = new(common.KubernetesConfig)
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			opts := containerBuildOpts{
+				name:            buildContainerName,
+				securityContext: tt.getSecurityContext(),
+			}
+			container, err := executor.buildContainer(opts)
+			require.NoError(t, err)
+			assert.Equal(t, tt.getSecurityContext(), container.SecurityContext)
+		})
+	}
+}

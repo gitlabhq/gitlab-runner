@@ -165,6 +165,9 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
 | `pod_labels` | A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. |
 | `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context). |
+| `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#using-security-context). |
+| `helper_container_security_context` | Sets a container security context for the helper container. [Read more about security context](#using-security-context). |
+| `service_container_security_context` | Sets a container security context for the service containers. [Read more about security context](#using-security-context). |
 | `pod_termination_grace_period_seconds` | Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
 | `poll_interval` | How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3). |
 | `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180). |
@@ -516,9 +519,9 @@ concurrent = 4
 | Option               | Type       | Required | Description |
 |----------------------|------------|----------|-------------|
 | `fs_group`           | `int`      | No       | A special supplemental group that applies to all containers in a pod. |
-| `run_as_group`       | `int`      | No       | The GID to run the entrypoint of the container process. |
+| `run_as_group`       | `int`      | No       | The GID to run the entry point of the container process. |
 | `run_as_non_root`    | boolean    | No       | Indicates that the container must run as a non-root user. |
-| `run_as_user`        | `int`      | No       | The UID to run the entrypoint of the container process. |
+| `run_as_user`        | `int`      | No       | The UID to run the entry point of the container process. |
 | `supplemental_groups`| `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
 
 Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
@@ -553,12 +556,57 @@ check_interval = 30
     url = "gitlab.example.com"
     executor = "kubernetes"
     [runners.kubernetes]
-      helper_image = "gitlab-registy.example.com/helper:latest"
+      helper_image = "gitlab-registry.example.com/helper:latest"
       [runners.kubernetes.pod_security_context]
         run_as_non_root = true
         run_as_user = 59417
         run_as_group = 59417
         fs_group = 59417
+```
+
+### Container security context
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/3116) in GitLab Runner 14.5.
+
+Use the [container security context](https://kubernetes.io/docs/concepts/policy/pod-security-policy/) configuration to configure the executor to set a container security policy on the build, helper, or service pods.
+
+| Option                | Type        | Required | Description |
+|-----------------------|-------------|----------|-------------|
+| `run_as_group`        | int         | No       | The GID to run the entry point of the container process. |
+| `run_as_non_root`     | boolean     | No       | Indicates that the container must run as a non-root user. |
+| `run_as_user`         | int         | No       | The UID to run the entry point of the container process. |
+| `capabilities.add`    | string list | No       | The capabilities to add when running the container. |
+| `capabilities.drop`   | string list | No       | The capabilities to drop when running the container. |
+
+The example below sets a pod security context, then overrides `run_as_user` and `run_as_group` for both the build and helper containers. In the example, all service containers would inherit `run_as_user` and `run_as_group` from the pod security context.
+
+Example of setting pod security context in your `config.toml`:
+
+```toml
+concurrent = 4
+check_interval = 30
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      helper_image = "gitlab-registry.example.com/helper:latest"
+      [runners.kubernetes.pod_security_context]
+        run_as_non_root = true
+        run_as_user = 59417
+        run_as_group = 59417
+        fs_group = 59417
+      [runners.kubernetes.build_container_security_context]
+        run_as_user = 65534
+        run_as_group = 65534
+        [runners.kubernetes.build_container_security_context.capabilities]
+          add = ["NET_ADMIN"]
+      [runners.kubernetes.helper_container_security_context]
+        run_as_user = 1000
+        run_as_group = 1000
+      [runners.kubernetes.service_container_security_context]
+        run_as_user = 1000
+        run_as_group = 1000
 ```
 
 ## Using services

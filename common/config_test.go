@@ -1306,6 +1306,351 @@ func TestRunnerSettings_IsFeatureFlagOn(t *testing.T) {
 	}
 }
 
+func TestEffectivePrivilege(t *testing.T) {
+	tests := map[string]struct {
+		pod       bool
+		container bool
+		expected  bool
+	}{
+		"pod and container privileged": {
+			pod:       true,
+			container: true,
+			expected:  true,
+		},
+		"pod privileged": {
+			pod:       true,
+			container: false,
+			expected:  false,
+		},
+		"container privileged": {
+			pod:       false,
+			container: true,
+			expected:  true,
+		},
+		"all unprivileged": {
+			pod:       false,
+			container: false,
+			expected:  false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			effectivePrivileged := getContainerSecurityContextEffectiveFlagValue(&tt.container, &tt.pod)
+			require.NotNil(t, effectivePrivileged)
+			assert.Equal(t, tt.expected, *effectivePrivileged)
+		})
+	}
+}
+
+func TestContainerSecurityContext(t *testing.T) {
+	boolPtr := func(v bool) *bool {
+		return &v
+	}
+
+	int64Ptr := func(v int64) *int64 {
+		return &v
+	}
+
+	tests := map[string]struct {
+		getSecurityContext                  func(c *KubernetesConfig) *api.SecurityContext
+		getExpectedContainerSecurityContext func() *api.SecurityContext
+	}{
+		"no container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{}
+			},
+		},
+		"run as user - container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					RunAsUser: int64Ptr(1000),
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				runAsUser := int64(1000)
+				return &api.SecurityContext{
+					RunAsUser: &runAsUser,
+				}
+			},
+		},
+		"privileged - container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Privileged: boolPtr(true),
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					Privileged: boolPtr(true),
+				}
+			},
+		},
+		"container privileged override - container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				c.Privileged = boolPtr(true)
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Privileged: boolPtr(false),
+					RunAsUser:  int64Ptr(65535),
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				runAsUser := int64(65535)
+				return &api.SecurityContext{
+					Privileged: boolPtr(false),
+					RunAsUser:  &runAsUser,
+				}
+			},
+		},
+		"allow privilege escalation - not set on container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AllowPrivilegeEscalation: boolPtr(true),
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AllowPrivilegeEscalation: boolPtr(true),
+				}
+			},
+		},
+		"allow privilege escalation - set on container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				c.AllowPrivilegeEscalation = boolPtr(true)
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					AllowPrivilegeEscalation: boolPtr(false),
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					AllowPrivilegeEscalation: boolPtr(false),
+				}
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			config := new(KubernetesConfig)
+			scExpected := tt.getExpectedContainerSecurityContext()
+			scActual := tt.getSecurityContext(config)
+			assert.Equal(t, scExpected, scActual)
+		})
+	}
+}
+
+func TestContainerSecurityCapabilities(t *testing.T) {
+	tests := map[string]struct {
+		getCapabilitiesFn    func(c *KubernetesConfig) *api.Capabilities
+		expectedCapabilities *api.Capabilities
+	}{
+		"container add": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Add: []api.Capability{"SYS_TIME"},
+					},
+				}).Capabilities
+			},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"SYS_TIME"},
+				Drop: nil,
+			},
+		},
+		"container drop": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Drop: []api.Capability{"SYS_TIME"},
+					},
+				}).Capabilities
+			},
+			expectedCapabilities: &api.Capabilities{
+				Add:  nil,
+				Drop: []api.Capability{"SYS_TIME"},
+			},
+		},
+		"container add and drop": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Add:  []api.Capability{"SYS_TIME"},
+						Drop: []api.Capability{"SYS_TIME"},
+					},
+				}).Capabilities
+			},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"SYS_TIME"},
+				Drop: []api.Capability{"SYS_TIME"},
+			},
+		},
+		"container empty": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{}).Capabilities
+			},
+		},
+		"container when capAdd and capDrop exist": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				c.CapAdd = []string{"add"}
+				c.CapDrop = []string{"drop"}
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{}).Capabilities
+			},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"add"},
+				Drop: []api.Capability{"drop"},
+			},
+		},
+		"container when capAdd and container capabilities exist": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				c.CapAdd = []string{"add"}
+				c.CapDrop = []string{"drop"}
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Add: []api.Capability{"add container"},
+					},
+				}).Capabilities
+			},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"add container"},
+				Drop: []api.Capability{"drop"},
+			},
+		},
+		"container when capDrop and container capabilities exist": {
+			getCapabilitiesFn: func(c *KubernetesConfig) *api.Capabilities {
+				c.CapAdd = []string{"add"}
+				c.CapDrop = []string{"drop"}
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					Capabilities: &KubernetesContainerCapabilities{
+						Drop: []api.Capability{"drop container"},
+					},
+				}).Capabilities
+			},
+			expectedCapabilities: &api.Capabilities{
+				Add:  []api.Capability{"add"},
+				Drop: []api.Capability{"drop container"},
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			config := new(KubernetesConfig)
+			c := tt.getCapabilitiesFn(config)
+			assert.Equal(t, tt.expectedCapabilities, c)
+		})
+	}
+}
+
+func TestGetCapabilities(t *testing.T) {
+	tests := map[string]struct {
+		defaultCapDrop     []string
+		capAdd             []string
+		capDrop            []string
+		assertCapabilities func(t *testing.T, a *api.Capabilities)
+	}{
+		"no data provided": {
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				assert.Nil(t, a)
+			},
+		},
+		"only default_cap_drop provided": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 2)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+			},
+		},
+		"only custom cap_add provided": {
+			capAdd: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 2)
+				assert.Contains(t, a.Add, api.Capability("CAP_1"))
+				assert.Contains(t, a.Add, api.Capability("CAP_2"))
+				assert.Empty(t, a.Drop)
+			},
+		},
+		"only custom cap_drop provided": {
+			capDrop: []string{"CAP_1", "CAP_2"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 2)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+			},
+		},
+		"default_cap_drop and custom cap_drop sums": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capDrop:        []string{"CAP_3", "CAP_4"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 4)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_3"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_4"))
+			},
+		},
+		"default_cap_drop and custom cap_drop duplicate": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capDrop:        []string{"CAP_2", "CAP_3"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Empty(t, a.Add)
+				assert.Len(t, a.Drop, 3)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_3"))
+			},
+		},
+		"default_cap_drop and custom cap_add intersect": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capAdd:         []string{"CAP_2", "CAP_3"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 2)
+				assert.Contains(t, a.Add, api.Capability("CAP_2"))
+				assert.Contains(t, a.Add, api.Capability("CAP_3"))
+				assert.Len(t, a.Drop, 1)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+			},
+		},
+		"default_cap_drop and custom cap_add intersect and cap_drop forces": {
+			defaultCapDrop: []string{"CAP_1", "CAP_2"},
+			capAdd:         []string{"CAP_2", "CAP_3"},
+			capDrop:        []string{"CAP_2", "CAP_4"},
+			assertCapabilities: func(t *testing.T, a *api.Capabilities) {
+				require.NotNil(t, a)
+				assert.Len(t, a.Add, 1)
+				assert.Contains(t, a.Add, api.Capability("CAP_3"))
+				assert.Len(t, a.Drop, 3)
+				assert.Contains(t, a.Drop, api.Capability("CAP_1"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_2"))
+				assert.Contains(t, a.Drop, api.Capability("CAP_4"))
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			c := KubernetesConfig{
+				CapAdd:  tt.capAdd,
+				CapDrop: tt.capDrop,
+			}
+
+			tt.assertCapabilities(t, c.getCapabilities(tt.defaultCapDrop))
+		})
+	}
+}
+
 func TestKubernetesTerminationPeriod(t *testing.T) {
 	tests := map[string]struct {
 		cfg                                      KubernetesConfig

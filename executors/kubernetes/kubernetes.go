@@ -75,21 +75,6 @@ var (
 	errIncorrectShellType = fmt.Errorf("kubernetes executor incorrect shell type")
 )
 
-// GetDefaultCapDrop returns the default capabilities that should be dropped
-// from a build container.
-func GetDefaultCapDrop(os string) []string {
-	// windows does not support security context capabilities
-	if os == helperimage.OSTypeWindows {
-		return nil
-	}
-
-	return []string{
-		// Reasons for disabling NET_RAW by default were
-		// discussed in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26833
-		"NET_RAW",
-	}
-}
-
 type commandTerminatedError struct {
 	exitCode int
 }
@@ -115,6 +100,16 @@ func (p *podPhaseError) Error() string {
 type kubernetesOptions struct {
 	Image    common.Image
 	Services common.Services
+}
+
+type containerBuildOpts struct {
+	name            string
+	image           string
+	imageDefinition common.Image
+	requests        api.ResourceList
+	limits          api.ResourceList
+	securityContext *api.SecurityContext
+	command         []string
 }
 
 type executor struct {
@@ -691,12 +686,7 @@ func (s *executor) cleanupResources() {
 }
 
 //nolint:funlen
-func (s *executor) buildContainer(
-	name, image string,
-	imageDefinition common.Image,
-	requests, limits api.ResourceList,
-	containerCommand ...string,
-) (api.Container, error) {
+func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error) {
 	// check if the image/service is allowed
 	internalImages := []string{
 		s.Config.Kubernetes.Image,
@@ -707,16 +697,16 @@ func (s *executor) buildContainer(
 		optionName    string
 		allowedImages []string
 	)
-	if strings.HasPrefix(name, "svc-") {
+	if strings.HasPrefix(opts.name, "svc-") {
 		optionName = "services"
 		allowedImages = s.Config.Kubernetes.AllowedServices
-	} else if name == buildContainerName {
+	} else if opts.name == buildContainerName {
 		optionName = "images"
 		allowedImages = s.Config.Kubernetes.AllowedImages
 	}
 
 	verifyAllowedImageOptions := common.VerifyAllowedImageOptions{
-		Image:          image,
+		Image:          opts.image,
 		OptionName:     optionName,
 		AllowedImages:  allowedImages,
 		InternalImages: internalImages,
@@ -726,58 +716,50 @@ func (s *executor) buildContainer(
 		return api.Container{}, err
 	}
 
-	containerPorts := make([]api.ContainerPort, len(imageDefinition.Ports))
-	proxyPorts := make([]proxy.Port, len(imageDefinition.Ports))
+	containerPorts := make([]api.ContainerPort, len(opts.imageDefinition.Ports))
+	proxyPorts := make([]proxy.Port, len(opts.imageDefinition.Ports))
 
-	for i, port := range imageDefinition.Ports {
+	for i, port := range opts.imageDefinition.Ports {
 		proxyPorts[i] = proxy.Port{Name: port.Name, Number: port.Number, Protocol: port.Protocol}
 		containerPorts[i] = api.ContainerPort{ContainerPort: int32(port.Number)}
 	}
 
 	if len(proxyPorts) > 0 {
-		serviceName := imageDefinition.Alias
+		serviceName := opts.imageDefinition.Alias
 
 		if serviceName == "" {
-			serviceName = name
-			if name != buildContainerName {
-				serviceName = fmt.Sprintf("proxy-%s", name)
+			serviceName = opts.name
+			if opts.name != buildContainerName {
+				serviceName = fmt.Sprintf("proxy-%s", opts.name)
 			}
 		}
 
 		s.ProxyPool[serviceName] = s.newProxy(serviceName, proxyPorts)
 	}
 
-	pullPolicy, err := s.pullManager.GetPullPolicyFor(image)
+	pullPolicy, err := s.pullManager.GetPullPolicyFor(opts.image)
 	if err != nil {
 		return api.Container{}, err
 	}
 
-	command, args := s.getCommandAndArgs(imageDefinition, containerCommand...)
+	command, args := s.getCommandAndArgs(opts.imageDefinition, opts.command...)
 
 	container := api.Container{
-		Name:            name,
-		Image:           image,
+		Name:            opts.name,
+		Image:           opts.image,
 		ImagePullPolicy: pullPolicy,
 		Command:         command,
 		Args:            args,
 		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
 		Resources: api.ResourceRequirements{
-			Limits:   limits,
-			Requests: requests,
+			Limits:   opts.limits,
+			Requests: opts.requests,
 		},
-		Ports:        containerPorts,
-		VolumeMounts: s.getVolumeMounts(),
-		SecurityContext: &api.SecurityContext{
-			Privileged:               s.Config.Kubernetes.Privileged,
-			AllowPrivilegeEscalation: s.Config.Kubernetes.AllowPrivilegeEscalation,
-			Capabilities: getCapabilities(
-				GetDefaultCapDrop(s.helperImageInfo.OSType),
-				s.Config.Kubernetes.CapAdd,
-				s.Config.Kubernetes.CapDrop,
-			),
-		},
-		Lifecycle: s.prepareLifecycleHooks(),
-		Stdin:     true,
+		Ports:           containerPorts,
+		VolumeMounts:    s.getVolumeMounts(),
+		SecurityContext: opts.securityContext,
+		Lifecycle:       s.prepareLifecycleHooks(),
+		Stdin:           true,
 	}
 
 	return container, nil
@@ -1229,13 +1211,17 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
 		var err error
-		podServices[i], err = s.buildContainer(
-			fmt.Sprintf("svc-%d", i),
-			resolvedImage,
-			service,
-			s.configurationOverwrites.serviceRequests,
-			s.configurationOverwrites.serviceLimits,
-		)
+		podServices[i], err = s.buildContainer(containerBuildOpts{
+			name:            fmt.Sprintf("svc-%d", i),
+			image:           resolvedImage,
+			imageDefinition: service,
+			requests:        s.configurationOverwrites.serviceRequests,
+			limits:          s.configurationOverwrites.serviceLimits,
+			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+				s.Config.Kubernetes.ServiceContainerSecurityContext,
+				s.defaultCapDrop()...,
+			),
+		})
 		if err != nil {
 			return err
 		}
@@ -1300,6 +1286,20 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	return nil
 }
 
+func (s *executor) defaultCapDrop() []string {
+	os := s.helperImageInfo.OSType
+	// windows does not support security context capabilities
+	if os == helperimage.OSTypeWindows {
+		return nil
+	}
+
+	return []string{
+		// Reasons for disabling NET_RAW by default were
+		// discussed in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26833
+		"NET_RAW",
+	}
+}
+
 //nolint:funlen
 func (s *executor) preparePodConfig(
 	labels, annotations map[string]string,
@@ -1308,34 +1308,39 @@ func (s *executor) preparePodConfig(
 	hostAliases []api.HostAlias,
 	initContainers []api.Container,
 ) (api.Pod, error) {
-	buildImage := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
-
 	dockerCmdForBuildContainer := s.BuildShell.DockerCommand
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) &&
 		!s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		dockerCmdForBuildContainer = []string{}
 	}
 
-	buildContainer, err := s.buildContainer(
-		buildContainerName,
-		buildImage,
-		s.options.Image,
-		s.configurationOverwrites.buildRequests,
-		s.configurationOverwrites.buildLimits,
-		dockerCmdForBuildContainer...,
-	)
+	buildContainer, err := s.buildContainer(containerBuildOpts{
+		name:            buildContainerName,
+		image:           s.Build.GetAllVariables().ExpandValue(s.options.Image.Name),
+		imageDefinition: s.options.Image,
+		requests:        s.configurationOverwrites.buildRequests,
+		limits:          s.configurationOverwrites.buildLimits,
+		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+			s.Config.Kubernetes.BuildContainerSecurityContext,
+			s.defaultCapDrop()...,
+		),
+		command: dockerCmdForBuildContainer,
+	})
 	if err != nil {
 		return api.Pod{}, fmt.Errorf("building build container: %w", err)
 	}
 
-	helperContainer, err := s.buildContainer(
-		helperContainerName,
-		s.getHelperImage(),
-		common.Image{},
-		s.configurationOverwrites.helperRequests,
-		s.configurationOverwrites.helperLimits,
-		s.BuildShell.DockerCommand...,
-	)
+	helperContainer, err := s.buildContainer(containerBuildOpts{
+		name:     helperContainerName,
+		image:    s.getHelperImage(),
+		requests: s.configurationOverwrites.helperRequests,
+		limits:   s.configurationOverwrites.helperLimits,
+		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+			s.Config.Kubernetes.HelperContainerSecurityContext,
+			s.defaultCapDrop()...,
+		),
+		command: s.BuildShell.DockerCommand,
+	})
 	if err != nil {
 		return api.Pod{}, fmt.Errorf("building helper container: %w", err)
 	}
