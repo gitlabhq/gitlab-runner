@@ -31,7 +31,7 @@ These settings are global. They apply to all runners.
 
 | Setting | Description |
 | ------- | ----------- |
-| `concurrent`     | Limits how many jobs can run concurrently. The maximum number is all defined runners. `0` **does not** mean unlimited. |
+| `concurrent`     | Limits how many jobs can run concurrently, across all registered runners. Each `[[runners]]` section can define its own limit, but this value sets a maximum for all of those values combined. For example, a value of `10` means no more than 10 jobs can run concurrently. `0` is forbidden. If you use this value, the runner process exits with a critical error. |
 | `log_level`      | Defines the log level. Options are `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. This setting has lower priority than the level set by the command-line arguments `--debug`, `-l`, or `--log-level`. |
 | `log_format`     | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`. |
 | `check_interval` | Defines the interval length, in seconds, between new jobs check. The default value is `3`. If set to `0` or lower, the default value is used. |
@@ -180,7 +180,7 @@ Each `[[runners]]` section defines one runner.
 | `tls-ca-file`        | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md). |
 | `tls-cert-file`      | When using HTTPS, file that contains the certificate to authenticate with the peer. |
 | `tls-key-file`       | When using HTTPS, file that contains the private key to authenticate with the peer. |
-| `limit`              | Limit how many jobs can be handled concurrently by this token. `0` (default) means do not limit. |
+| `limit`              | Limit how many jobs can be handled concurrently by this registered runner. `0` (default) means do not limit. |
 | `executor`           | Select how a project should be built. |
 | `shell`              | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md#overview). |
 | `builds_dir`         | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH. |
