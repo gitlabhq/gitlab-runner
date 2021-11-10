@@ -53,7 +53,7 @@
   - make release_helper_docker_images
   parallel:
     matrix:
-    - IMAGE_FLAVOR: "alpine3.12"
+    - IMAGE_FLAVOR: "alpine"
       IMAGE_TAG: ["", "alpine3.12-"]
     - IMAGE_FLAVOR: "alpine3.13"
       IMAGE_TAG: ["alpine3.13-"]
