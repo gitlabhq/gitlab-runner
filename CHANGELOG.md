@@ -1,3 +1,56 @@
+## v14.5.0-rc1 (2021-11-10)
+
+### New features
+
+- Scrub the X-Amz-Security-Token parameter from query strings !3171 (Estelle Poulin @estelle.a.poulin)
+- Kubernetes executor container security context !3116
+
+### Bug fixes
+
+- Fix lockfile cleanup for submodules !2858 (Nejc Habjan @nejch1)
+
+### Maintenance
+
+- Docs: Added SSH executor disable_strict_host_key_checking details !3195
+- Fix releasing alpine 3.12 helper images !3193
+- Renamed enterprise_guide to fleet_scaling !3191
+- Add all available unix OS build tags to unix targeted go files !3189 (Arran Walker @ajwalker)
+- Fix gitlab grack to use our own repositories !3187
+- Use newer docs linting image !3186
+- Update changelog generator configuration !3183
+- Fix docker pulling image integration test !3182
+- Break out shell blocks to allow copy from button !3181
+- Add troubleshooting info to Runner installation with Agent !3180
+- Log errors when failing to close docker client !3178
+- gitlab-runner Dockerfile: clear /tmp of ubuntu docker image !3177 (Yalcin Ozhabes @trim_the_main)
+- Fix PVC volume config generation in Kubernetes executor !3174 (Sandra Tatarevićová @sandra17)
+- Add troubleshooting note for dind connection error on k8s executor !3173
+- Docs: Clarified concurrency setting !3172
+- Fixed broken external links !3168
+- Fix: typo in docs/register/index.md !3166 (David Duncan @duncan.davidii)
+- Docs: Clarify runner token !3165 (Stefan Schmalzhaf @the_s)
+- docs: add useful notes on setting session_server !3164 (Yang Liu @robturtle)
+- Updated broken external links !3163
+- Refactor images building and publishing jobs !3162
+- Add changeable config directory for root !3161 (Boris Korzun @boris.korzun)
+- Docs: Correct link to Windows shared runner info !3160
+- Use sync.Mutex rather than RWMutex for simple protections !3159
+- Remove need for Git in runner images !3152 (Ben Bodenmiller @bbodenmiller)
+- Suppress git hints about branch naming standards !3148
+- Update golang-cli-helpers library, support env namespaces !3147
+- Handle situations when neither `ntpdate` nor `sntp` is available !3143 (Alexander Kutelev @kutelev)
+- Docs: Small edits to enhance readability !3137 (Ankita Singh @ankita.singh.200020)
+- Better support for Powershell on Kubernetes !3119
+- Do not pass in bash detection script into build container !3095
+- Kubernetes executor should only used SharedBuildsDir behaviour when it is required !3078 (David Alger @davidalger)
+- [DOCS] - Improve image pull secrets documentation clarity !3047 (Aaron Johnson @acjohnson1985)
+- Document how to run jobs as non-root user for kubernetes and kubernetes with helm !2900
+- Allow finer-grained control over pod grace periods. !2130 (Dominic Bevacqua @dbevacqua)
+
+### GitLab Runner distribution
+
+- Provide docker images for alpine 3.12 (default), 3.13 and 3.14. !3122
+
 ## v14.4.0 (2021-10-25)
 
 ### Security fixes
