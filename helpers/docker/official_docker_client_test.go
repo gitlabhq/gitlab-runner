@@ -114,5 +114,5 @@ func TestRedirectsNotAllowed(t *testing.T) {
 	// Unwrap method for withStack and withMessage types, so we can't leverage
 	// errors.Is and must resort to string search
 	assert.Contains(t, err.Error(), "error during connect")
-	assert.Contains(t, err.Error(), ErrRedirectNotAllowed.Error())
+	assert.ErrorIs(t, err, ErrRedirectNotAllowed)
 }
