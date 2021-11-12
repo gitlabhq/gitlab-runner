@@ -609,6 +609,7 @@ check_interval = 0
 [[runners]]
   name = %q
   url = "http://gitlab.example.com/"
+  id = 0
   token = "test-runner-token"
   token_obtained_at = %s
   token_expires_at = 0001-01-01T00:00:00Z
@@ -671,6 +672,7 @@ check_interval = 0
 [[runners]]
   name = %q
   url = "http://gitlab.example.com/"
+  id = 0
   token = "test-runner-token"
   token_obtained_at = %s
   token_expires_at = 0001-01-01T00:00:00Z
@@ -813,6 +815,12 @@ func TestRegisterCommand(t *testing.T) {
 	}
 
 	testCases := map[string]testCase{
+		"runner ID is included in config": {
+			arguments: []string{
+				"--name", "test-runner",
+			},
+			expectedConfigs: []string{`id = 12345`},
+		},
 		"feature flags are included in config": {
 			arguments: []string{
 				"--name", "test-runner",
@@ -926,6 +934,7 @@ func TestRegisterCommand(t *testing.T) {
 
 			network.On("RegisterRunner", mock.Anything, mock.Anything).
 				Return(&common.RegisterRunnerResponse{
+					ID:    12345,
 					Token: "test-runner-token",
 				}).
 				Once()

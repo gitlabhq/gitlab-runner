@@ -116,6 +116,7 @@ type RegisterRunnerRequest struct {
 }
 
 type RegisterRunnerResponse struct {
+	ID             int64     `json:"id,omitempty"`
 	Token          string    `json:"token,omitempty"`
 	TokenExpiresAt time.Time `json:"token_expires_at,omitempty"`
 }

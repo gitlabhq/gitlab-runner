@@ -129,11 +129,13 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 		}
 
 		w.WriteHeader(http.StatusCreated)
+		res["id"] = 12345
 		res["token"] = req["token"].(string)
 		res["token_expires_at"] = nil
 	case expiringToken:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+		res["id"] = 54321
 		res["token"] = req["token"].(string)
 		res["token_expires_at"] = "2684-10-16T13:25:59Z"
 	case invalidToken:
@@ -167,11 +169,13 @@ func TestRegisterRunner(t *testing.T) {
 	defer s.Close()
 
 	validToken := RunnerCredentials{
+		ID:    12345,
 		URL:   s.URL,
 		Token: validToken,
 	}
 
 	expiringToken := RunnerCredentials{
+		ID:             54321,
 		URL:            s.URL,
 		Token:          expiringToken,
 		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
@@ -199,6 +203,7 @@ func TestRegisterRunner(t *testing.T) {
 			Paused:      false,
 		})
 	if assert.NotNil(t, res) {
+		assert.Equal(t, validToken.ID, res.ID)
 		assert.Equal(t, validToken.Token, res.Token)
 		assert.True(t, res.TokenExpiresAt.IsZero())
 	}
@@ -213,6 +218,7 @@ func TestRegisterRunner(t *testing.T) {
 			Paused:      false,
 		})
 	if assert.NotNil(t, res) {
+		assert.Equal(t, expiringToken.ID, res.ID)
 		assert.Equal(t, expiringToken.Token, res.Token)
 		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
 	}
