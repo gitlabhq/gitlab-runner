@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	validToken   = "valid"
-	invalidToken = "invalid"
+	validToken    = "valid"
+	expiringToken = "expiring"
+	invalidToken  = "invalid"
 )
 
 type registerRunnerResponse int
@@ -129,6 +130,12 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 
 		w.WriteHeader(http.StatusCreated)
 		res["token"] = req["token"].(string)
+		res["token_expires_at"] = nil
+	case expiringToken:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		res["token"] = req["token"].(string)
+		res["token_expires_at"] = "2684-10-16T13:25:59Z"
 	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -164,6 +171,12 @@ func TestRegisterRunner(t *testing.T) {
 		Token: validToken,
 	}
 
+	expiringToken := RunnerCredentials{
+		URL:            s.URL,
+		Token:          expiringToken,
+		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+	}
+
 	invalidToken := RunnerCredentials{
 		URL:   s.URL,
 		Token: invalidToken,
@@ -187,6 +200,21 @@ func TestRegisterRunner(t *testing.T) {
 		})
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
+		assert.True(t, res.TokenExpiresAt.IsZero())
+	}
+
+	res = c.RegisterRunner(
+		expiringToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			Paused:      false,
+		})
+	if assert.NotNil(t, res) {
+		assert.Equal(t, expiringToken.Token, res.Token)
+		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
 	}
 
 	res = c.RegisterRunner(

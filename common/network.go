@@ -116,7 +116,8 @@ type RegisterRunnerRequest struct {
 }
 
 type RegisterRunnerResponse struct {
-	Token string `json:"token,omitempty"`
+	Token          string    `json:"token,omitempty"`
+	TokenExpiresAt time.Time `json:"token_expires_at,omitempty"`
 }
 
 type VerifyRunnerRequest struct {

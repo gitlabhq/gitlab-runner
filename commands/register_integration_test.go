@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -609,6 +610,8 @@ check_interval = 0
   name = %q
   url = "http://gitlab.example.com/"
   token = "test-runner-token"
+  token_obtained_at = %s
+  token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   shell = "pwsh"
   [runners.custom_build_dir]
@@ -669,6 +672,8 @@ check_interval = 0
   name = %q
   url = "http://gitlab.example.com/"
   token = "test-runner-token"
+  token_obtained_at = %s
+  token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   shell = "pwsh"
   [runners.custom_build_dir]
@@ -718,7 +723,7 @@ check_interval = 0
 			require.NoError(t, err)
 			name, err := os.Hostname()
 			require.NoError(t, err)
-			assert.Equal(t, fmt.Sprintf(tt.expectedFileContentFmt, name), fileContent)
+			assert.Equal(t, fmt.Sprintf(tt.expectedFileContentFmt, name, time.Now().UTC().Format(time.RFC3339)), fileContent)
 		})
 	}
 }
@@ -931,6 +936,49 @@ func TestRegisterCommand(t *testing.T) {
 			for _, expectedConfig := range tc.expectedConfigs {
 				assert.Contains(t, spaceReplacer.Replace(gotConfig), spaceReplacer.Replace(expectedConfig))
 			}
+		})
+	}
+}
+
+func TestRegisterTokenExpiresAt(t *testing.T) {
+	type testCase struct {
+		expiration     time.Time
+		expectedConfig string
+	}
+
+	testCases := map[string]testCase{
+		"no expiration": {
+			expectedConfig: `token = "test-runner-token"
+				token_obtained_at = %s
+				token_expires_at = 0001-01-01T00:00:00Z`,
+		},
+		"token expiration": {
+			expiration: time.Date(2594, 7, 21, 15, 42, 53, 0, time.UTC),
+			expectedConfig: `token = "test-runner-token"
+				token_obtained_at = %s
+				token_expires_at = 2594-07-21T15:42:53Z`,
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			network := new(common.MockNetwork)
+			defer network.AssertExpectations(t)
+
+			network.On("RegisterRunner", mock.Anything, mock.Anything).
+				Return(&common.RegisterRunnerResponse{
+					Token:          "test-runner-token",
+					TokenExpiresAt: tc.expiration,
+				}).
+				Once()
+
+			gotConfig, _, err := testRegisterCommandRun(t, network, []kv{}, "--name", "test-runner")
+			require.NoError(t, err)
+
+			assert.Contains(
+				t, spaceReplacer.Replace(gotConfig),
+				spaceReplacer.Replace(fmt.Sprintf(tc.expectedConfig, time.Now().UTC().Format(time.RFC3339))),
+			)
 		})
 	}
 }
