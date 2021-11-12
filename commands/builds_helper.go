@@ -219,10 +219,24 @@ func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 	defer b.lock.Unlock()
 
 	data := make(map[statePermutation]int)
+
+	for token := range b.counters {
+		// 'idle' state will ensure the metric is always present, even if no
+		// builds are being processed at the moment
+		idleState := statePermutation{
+			runner:        helpers.ShortenToken(token),
+			buildState:    "idle",
+			buildStage:    "idle",
+			executorStage: "idle",
+		}
+		data[idleState] = 0
+	}
+
 	for _, build := range b.builds {
 		state := newStatePermutationFromBuild(build)
 		data[state]++
 	}
+
 	return data
 }
 
