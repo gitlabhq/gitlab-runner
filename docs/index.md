@@ -133,9 +133,9 @@ the runner's executor processes the commands.
 
 ## Runners on GitLab.com
 
-If you use GitLab.com, GitLab [manages runners for you](https://docs.gitlab.com/ee/user/gitlab_com/index.html#shared-runners).
+If you use GitLab.com, GitLab [manages runners for you](https://docs.gitlab.com/ee/user/gitlab_com/index.html#shared-runner-cloud-runners).
 These runners are enabled for all projects, though
-[you can disable them](https://docs.gitlab.com/ee/ci/runners/index.html#disable-shared-runners).
+[you can disable them](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners).
 
 If you don't want to use runners managed by GitLab, you can install GitLab Runner and
 register your own runners on GitLab.com.
