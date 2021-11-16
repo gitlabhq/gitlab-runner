@@ -85,7 +85,7 @@ be present in the `PATH`:
 ## Stages
 
 The Custom executor provides the stages for you to configure some
-details of the job, prepare and cleanup the environment and run the job
+details of the job, prepare and clean up the environment and run the job
 script within it. Each stage is responsible for specific things and has
 different things to keep in mind.
 
