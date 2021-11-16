@@ -133,7 +133,7 @@ the runner's executor processes the commands.
 
 ## Runners on GitLab.com
 
-If you use GitLab.com, GitLab [manages runners for you](https://docs.gitlab.com/ee/user/gitlab_com/index.html#shared-runner-cloud-runners).
+If you use GitLab.com, you can run your CI jobs on Runner Cloud. These are runners [managed](https://docs.gitlab.com/ee/user/gitlab_com/index.html#shared-runner-cloud-runners) by GitLab and fully integrated with GitLab.com.
 These runners are enabled for all projects, though
 [you can disable them](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners).
 
