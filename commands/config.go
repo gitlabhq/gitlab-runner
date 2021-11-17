@@ -80,6 +80,20 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 	return nil, fmt.Errorf("could not find a runner with the name '%s'", name)
 }
 
+func (c *configOptions) RunnerByURLAndID(url string, id int64) (*common.RunnerConfig, error) {
+	if c.config == nil {
+		return nil, fmt.Errorf("config has not been loaded")
+	}
+
+	for _, runner := range c.config.Runners {
+		if runner.URL == url && runner.ID == id {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the URL %q and ID %d", url, id)
+}
+
 //nolint:lll
 type configOptionsWithListenAddress struct {
 	configOptions

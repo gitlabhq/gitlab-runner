@@ -110,12 +110,12 @@ the `CONFIG_FILE` environment variable.
 You can use system signals to interact with GitLab Runner. The
 following commands support the following signals:
 
-| Command | Signal | Action |
-|---------|--------|--------|
-| `register` | **SIGINT** | Cancel runner registration and delete if it was already registered. |
-| `run`, `exec`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**). |
-| `run`, `exec`, `run-single` | **SIGQUIT** | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
-| `run` | **SIGHUP** | Force to reload configuration file. |
+| Command                     | Signal                  | Action                                                                                                   |
+| --------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| `register`                  | **SIGINT**              | Cancel runner registration and delete if it was already registered.                                      |
+| `run`, `exec`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**).    |
+| `run`, `exec`, `run-single` | **SIGQUIT**             | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
+| `run`                       | **SIGHUP**              | Force to reload configuration file.                                                                      |
 
 For example, to force a reload of a runner's configuration file, run:
 
@@ -201,9 +201,9 @@ them if they are still registered.
 
 These commands support the following arguments:
 
-| Parameter   | Default | Description |
-|-------------|---------|-------------|
-| `--config`  | See the [configuration file section](#configuration-file) | Specify a custom configuration file to be used |
+| Parameter  | Default                                                   | Description                                    |
+| ---------- | --------------------------------------------------------- | ---------------------------------------------- |
+| `--config` | See the [configuration file section](#configuration-file) | Specify a custom configuration file to be used |
 
 ### `gitlab-runner register`
 
@@ -356,6 +356,42 @@ If there is more than one runner with the given name, only the first one is remo
 gitlab-runner unregister --all-runners
 ```
 
+### `gitlab-runner reset-token`
+
+This command resets a runner's token by using the GitLab Runners API, with
+either the [runner ID](https://docs.gitlab.com/ee/api/runners.html#reset-runners-authentication-token-by-using-the-runner-id)
+or the [current token](https://docs.gitlab.com/ee/api/runners.html#reset-runners-authentication-token-by-using-the-current-token).
+
+It expects the runner's name (or URL and ID), and an optional PAT if
+resetting by runner ID. The PAT and runner ID are intended to be used if the
+token has already expired.
+
+With the `--all-runners` option, it resets all the attached runners' tokens.
+
+#### With runner's current token
+
+```shell
+gitlab-runner reset-token --name test-runner
+```
+
+#### With PAT and runner name
+
+```shell
+gitlab-runner reset-token --name test-runner --pat PaT
+```
+
+#### With PAT, GitLab URL, and runner ID
+
+```shell
+gitlab-runner reset-token --url https://gitlab.example.com/ --id 12345 --pat PaT
+```
+
+#### All runners
+
+```shell
+gitlab-runners reset-token --all-runners
+```
+
 ## Service-related commands
 
 The following commands allow you to manage the runner as a system or user
@@ -372,9 +408,9 @@ service. Use them to install, uninstall, start, and stop the runner service.
 
 All service related commands accept these arguments:
 
-| Parameter   | Default                                           | Description |
-|-------------|---------------------------------------------------|-------------|
-| `--service` | `gitlab-runner`                                   | Specify custom service name |
+| Parameter   | Default                                           | Description                                |
+| ----------- | ------------------------------------------------- | ------------------------------------------ |
+| `--service` | `gitlab-runner`                                   | Specify custom service name                |
 | `--config`  | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
 
 ### `gitlab-runner install`
@@ -385,14 +421,14 @@ arguments depending on which system it's run on.
 When run on **Windows** or as super-user, it accepts the `--user` flag which
 allows you to drop privileges of builds run with the **shell** executor.
 
-| Parameter             | Default                                           | Description |
-|-----------------------|---------------------------------------------------|-------------|
-| `--service`           | `gitlab-runner`                                   | Specify service name to use |
-| `--config`            | See the [configuration file](#configuration-file) | Specify a custom configuration file to use |
-| `--syslog`            | `true` (for non systemd systems)                  | Specify if the service should integrate with system logging service |
+| Parameter             | Default                                           | Description                                                                                         |
+| --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `--service`           | `gitlab-runner`                                   | Specify service name to use                                                                         |
+| `--config`            | See the [configuration file](#configuration-file) | Specify a custom configuration file to use                                                          |
+| `--syslog`            | `true` (for non systemd systems)                  | Specify if the service should integrate with system logging service                                 |
 | `--working-directory` | the current directory                             | Specify the root directory where all data is stored when builds are run with the **shell** executor |
-| `--user`              | `root`                                            | Specify the user that executes the builds |
-| `--password`          | none                                              | Specify the password for the user that executes the builds |
+| `--user`              | `root`                                            | Specify the user that executes the builds                                                           |
+| `--password`          | none                                              | Specify the password for the user that executes the builds                                          |
 
 ### `gitlab-runner uninstall`
 
@@ -434,13 +470,13 @@ The command is executed and works until it [receives a signal](#signals).
 
 It accepts the following parameters.
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--config`  | See [configuration-file](#configuration-file) | Specify a custom configuration file to be used |
-| `--working-directory` | the current directory | Specify the root directory where all data is stored when builds run with the **shell** executor |
-| `--user`    | the current user | Specify the user that executes builds |
-| `--syslog`  | `false` | Send all logs to SysLog (Unix) or EventLog (Windows) |
-| `--listen-address` | empty | Address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening |
+| Parameter             | Default                                       | Description                                                                                     |
+| --------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--config`            | See [configuration-file](#configuration-file) | Specify a custom configuration file to be used                                                  |
+| `--working-directory` | the current directory                         | Specify the root directory where all data is stored when builds run with the **shell** executor |
+| `--user`              | the current user                              | Specify the user that executes builds                                                           |
+| `--syslog`            | `false`                                       | Send all logs to SysLog (Unix) or EventLog (Windows)                                            |
+| `--listen-address`    | empty                                         | Address (`<host>:<port>`) on which the Prometheus metrics HTTP server should be listening       |
 
 ### `gitlab-runner run-single`
 
@@ -538,40 +574,40 @@ for more details.
 
 The following features are supported. If a feature is not listed in this table, it is not supported.
 
-| GitLab CI feature | Available with `exec` | Comments |
-|-------------------|-----------------------|----------|
-| `image`             | yes                   | Extended configuration (`name`, `entrypoint`) are also supported. |
-| `services`          | yes                   | Extended configuration (`name`, `alias`, `entrypoint`, `command`) are also supported. |
-| `before_script`     | yes                   | Supports both global and job-level `before_script`. |
-| `after_script`      | partially             | Global `after_script` is not supported. Only job-level `after_script`; only commands are taken into consideration, `when` is hardcoded to `always`. |
-| `variables`         | yes                   | Supports default (partially), global and job-level variables; default variables are pre-set as can be seen in <https://gitlab.com/gitlab-org/gitlab-runner/-/blob/c715666c059cc88a354d7cbcb5948b992d23f2a8/helpers/gitlab_ci_yaml_parser/parser.go#L149>. |
-| `cache`             | partially             | Regarding the specific configuration it may or may not work as expected. |
-| YAML features       | yes                   | Anchors (`&`), aliases (`*`), map merging (`<<`) are part of YAML specification and are handled by the parser. |
-| `pages`             | partially             | Job's script is executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab. |
+| GitLab CI feature | Available with `exec` | Comments                                                                                                                                                                                                                                                  |
+| ----------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image`           | yes                   | Extended configuration (`name`, `entrypoint`) are also supported.                                                                                                                                                                                         |
+| `services`        | yes                   | Extended configuration (`name`, `alias`, `entrypoint`, `command`) are also supported.                                                                                                                                                                     |
+| `before_script`   | yes                   | Supports both global and job-level `before_script`.                                                                                                                                                                                                       |
+| `after_script`    | partially             | Global `after_script` is not supported. Only job-level `after_script`; only commands are taken into consideration, `when` is hardcoded to `always`.                                                                                                       |
+| `variables`       | yes                   | Supports default (partially), global and job-level variables; default variables are pre-set as can be seen in <https://gitlab.com/gitlab-org/gitlab-runner/-/blob/c715666c059cc88a354d7cbcb5948b992d23f2a8/helpers/gitlab_ci_yaml_parser/parser.go#L149>. |
+| `cache`           | partially             | Regarding the specific configuration it may or may not work as expected.                                                                                                                                                                                  |
+| YAML features     | yes                   | Anchors (`&`), aliases (`*`), map merging (`<<`) are part of YAML specification and are handled by the parser.                                                                                                                                            |
+| `pages`           | partially             | Job's script is executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab.                                                                                                                                              |
 
 **Compatibility table - features based on variables**
 
-| GitLab CI feature          | Available with `exec` | Comments |
-|----------------------------|-----------------------|----------|
-| GIT_STRATEGY               | yes                   |          |
-| GIT_CHECKOUT               | yes                   |          |
-| GIT_SUBMODULE_STRATEGY     | yes                   |          |
-| GIT_SUBMODULE_PATHS        | yes                   |          |
-| GIT_SUBMODULE_UPDATE_FLAGS | yes                   |          |
-| GET_SOURCES_ATTEMPTS       | yes                   |          |
+| GitLab CI feature          | Available with `exec` | Comments                     |
+| -------------------------- | --------------------- | ---------------------------- |
+| GIT_STRATEGY               | yes                   |                              |
+| GIT_CHECKOUT               | yes                   |                              |
+| GIT_SUBMODULE_STRATEGY     | yes                   |                              |
+| GIT_SUBMODULE_PATHS        | yes                   |                              |
+| GIT_SUBMODULE_UPDATE_FLAGS | yes                   |                              |
+| GET_SOURCES_ATTEMPTS       | yes                   |                              |
 | ARTIFACT_DOWNLOAD_ATTEMPTS | no                    | Artifacts are not supported. |
-| RESTORE_CACHE_ATTEMPTS     | yes                   |          |
-| GIT_DEPTH                  | yes                   |          |
+| RESTORE_CACHE_ATTEMPTS     | yes                   |                              |
+| GIT_DEPTH                  | yes                   |                              |
 
 **Compatibility table - other features**
 
-| GitLab CI feature | Available with `exec` | Comments |
-|-------------------|-----------------------|----------|
-| Secret Variables  | no                    |          |
-| triggers          | no                    |          |
-| schedules         | no                    |          |
+| GitLab CI feature | Available with `exec` | Comments             |
+| ----------------- | --------------------- | -------------------- |
+| Secret Variables  | no                    |                      |
+| triggers          | no                    |                      |
+| schedules         | no                    |                      |
 | job timeout       | no                    | Hardcoded to 1 hour. |
-| `[ci skip]`       | no                    |          |
+| `[ci skip]`       | no                    |                      |
 
 **Other requirements and limitations**
 

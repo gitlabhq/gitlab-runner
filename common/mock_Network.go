@@ -104,6 +104,38 @@ func (_m *MockNetwork) RequestJob(ctx context.Context, config RunnerConfig, sess
 	return r0, r1
 }
 
+// ResetToken provides a mock function with given fields: runner
+func (_m *MockNetwork) ResetToken(runner RunnerCredentials) *ResetTokenResponse {
+	ret := _m.Called(runner)
+
+	var r0 *ResetTokenResponse
+	if rf, ok := ret.Get(0).(func(RunnerCredentials) *ResetTokenResponse); ok {
+		r0 = rf(runner)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ResetTokenResponse)
+		}
+	}
+
+	return r0
+}
+
+// ResetTokenWithPAT provides a mock function with given fields: runner, pat
+func (_m *MockNetwork) ResetTokenWithPAT(runner RunnerCredentials, pat string) *ResetTokenResponse {
+	ret := _m.Called(runner, pat)
+
+	var r0 *ResetTokenResponse
+	if rf, ok := ret.Get(0).(func(RunnerCredentials, string) *ResetTokenResponse); ok {
+		r0 = rf(runner, pat)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ResetTokenResponse)
+		}
+	}
+
+	return r0
+}
+
 // UnregisterRunner provides a mock function with given fields: config
 func (_m *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
 	ret := _m.Called(config)

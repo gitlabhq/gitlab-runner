@@ -332,10 +332,11 @@ func (e *ErrorResponseMessage) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (n *client) doJSON(
+func (n *client) doJSONWithPAT(
 	ctx context.Context,
 	uri, method string,
 	statusCode int,
+	pat string,
 	request interface{},
 	response interface{},
 ) (int, string, *http.Response) {
@@ -352,6 +353,9 @@ func (n *client) doJSON(
 	headers := make(http.Header)
 	if response != nil {
 		headers.Set("Accept", jsonMimeType)
+	}
+	if pat != "" {
+		headers.Set("PRIVATE-TOKEN", pat)
 	}
 
 	res, err := n.do(ctx, uri, method, body, jsonMimeType, headers)

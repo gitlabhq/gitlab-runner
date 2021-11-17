@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -192,12 +193,24 @@ func (n *GitLabClient) doJSON(
 	request interface{},
 	response interface{},
 ) (int, string, *http.Response) {
+	return n.doJSONWithPAT(ctx, credentials, method, uri, statusCode, "", request, response)
+}
+
+func (n *GitLabClient) doJSONWithPAT(
+	ctx context.Context,
+	credentials requestCredentials,
+	method, uri string,
+	statusCode int,
+	pat string,
+	request interface{},
+	response interface{},
+) (int, string, *http.Response) {
 	c, err := n.getClient(credentials)
 	if err != nil {
 		return clientError, err.Error(), nil
 	}
 
-	return c.doJSON(ctx, uri, method, statusCode, request, response)
+	return c.doJSONWithPAT(ctx, uri, method, statusCode, pat, request, response)
 }
 
 func (n *GitLabClient) getResponseTLSData(
@@ -320,6 +333,55 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	default:
 		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed")
 		return false
+	}
+}
+
+func (n *GitLabClient) ResetToken(runner common.RunnerCredentials) *common.ResetTokenResponse {
+	return n.resetToken(runner, "runners/reset_authentication_token", "")
+}
+
+func (n *GitLabClient) ResetTokenWithPAT(runner common.RunnerCredentials, pat string) *common.ResetTokenResponse {
+	return n.resetToken(runner, fmt.Sprintf("runners/%d/reset_authentication_token", runner.ID), pat)
+}
+
+func (n *GitLabClient) resetToken(runner common.RunnerCredentials, uri string, pat string) *common.ResetTokenResponse {
+	var request *common.ResetTokenRequest
+	if pat == "" {
+		request = &common.ResetTokenRequest{
+			Token: runner.Token,
+		}
+	}
+
+	var response common.ResetTokenResponse
+	result, statusText, resp := n.doJSONWithPAT(
+		context.Background(),
+		&runner,
+		http.MethodPost,
+		uri,
+		http.StatusCreated,
+		pat,
+		request,
+		&response,
+	)
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
+
+	const baseLogText = "Resetting runner token..."
+	switch result {
+	case http.StatusCreated:
+		runner.Log().Println(baseLogText, "succeeded")
+		response.TokenObtainedAt = time.Now().UTC()
+		return &response
+	case http.StatusForbidden:
+		runner.Log().Errorln(baseLogText, "failed (check used token)")
+		return nil
+	case clientError:
+		runner.Log().WithField("status", statusText).Errorln(baseLogText, "error")
+		return nil
+	default:
+		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed")
+		return nil
 	}
 }
 
