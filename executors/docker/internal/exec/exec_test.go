@@ -58,11 +58,6 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			Once()
 	}
 
-	assertNoOutputs := func(t *testing.T, stdOut *bytes.Buffer, stdErr *bytes.Buffer) {
-		assert.Empty(t, stdOut.String())
-		assert.Empty(t, stdErr.String())
-	}
-
 	tests := map[string]struct {
 		input             io.Reader
 		cancelContext     bool
@@ -70,7 +65,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 		setupKillWaiter   func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context)
 		assertLogOutput   func(t *testing.T, logOutput string)
 		expectedError     error
-		assertOutputs     func(t *testing.T, stdOut *bytes.Buffer, stdErr *bytes.Buffer)
+		expectedStdOut    string
+		expectedStdErr    string
 	}{
 		"ContainerAttach error": {
 			cancelContext: false,
@@ -122,7 +118,6 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				assert.Contains(t, logOutput, "finished with aborted")
 			},
 			expectedError: nil,
-			assertOutputs: assertNoOutputs,
 		},
 		"input error": {
 			input:         input(errors.New("input error")),
@@ -141,7 +136,6 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				assert.Contains(t, logOutput, "finished with input error")
 			},
 			expectedError: nil,
-			assertOutputs: assertNoOutputs,
 		},
 		"output error": {
 			input:         input(io.EOF),
@@ -160,7 +154,6 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				assert.Contains(t, logOutput, "finished with output error")
 			},
 			expectedError: nil,
-			assertOutputs: assertNoOutputs,
 		},
 		"killWaiter error": {
 			input:         input(io.EOF),
@@ -209,10 +202,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {},
 			expectedError:   nil,
-			assertOutputs: func(t *testing.T, stdOut *bytes.Buffer, stdErr *bytes.Buffer) {
-				assert.Equal(t, "out line 1\nout line 2\n", stdOut.String())
-				assert.Equal(t, "err line 1\nerr line 2\n", stdErr.String())
-			},
+			expectedStdOut:  "out line 1\nout line 2\n",
+			expectedStdErr:  "err line 1\nerr line 2\n",
 		},
 	}
 
@@ -244,9 +235,9 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			}
 
 			streams := IOStreams{
-				Input: tt.input,
-				Out:   outBuf,
-				Err:   errBuf,
+				Stdin:  tt.input,
+				Stdout: outBuf,
+				Stderr: errBuf,
 			}
 
 			dockerExec := NewDocker(executorCtx, clientMock, waiterMock, logger)
@@ -268,7 +259,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 
 			assert.NoError(t, err)
 
-			tt.assertOutputs(t, outBuf, errBuf)
+			assert.Equal(t, tt.expectedStdOut, outBuf.String())
+			assert.Equal(t, tt.expectedStdErr, errBuf.String())
 		})
 	}
 }

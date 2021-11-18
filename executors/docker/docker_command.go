@@ -278,9 +278,9 @@ func (s *commandExecutor) executeChownOnDir(
 	// avoid memory exhaustion
 	lw := limitwriter.New(output, 1024)
 	streams := exec.IOStreams{
-		Input: strings.NewReader(fmt.Sprintf("chown -RP -- %d:%d %q", uid, gid, dir)),
-		Err:   lw,
-		Out:   lw,
+		Stdin:  strings.NewReader(fmt.Sprintf("chown -RP -- %d:%d %q", uid, gid, dir)),
+		Stderr: lw,
+		Stdout: lw,
 	}
 
 	err := dockerExec.Exec(s.Context, c.ID, streams)

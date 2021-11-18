@@ -27,9 +27,9 @@ type reader interface {
 }
 
 type IOStreams struct {
-	Input io.Reader
-	Out   io.Writer
-	Err   io.Writer
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
 }
 
 type Docker interface {
@@ -59,6 +59,7 @@ type defaultDocker struct {
 	logger logrus.FieldLogger
 }
 
+//nolint:funlen
 func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IOStreams) error {
 	d.logger.Debugln("Attaching to container", containerID, "...")
 
@@ -81,7 +82,7 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 
 	// Copy any output to the build trace
 	go func() {
-		_, errCopy := stdcopy.StdCopy(streams.Out, streams.Err, hijacked.Reader)
+		_, errCopy := stdcopy.StdCopy(streams.Stdout, streams.Stderr, hijacked.Reader)
 
 		// this goroutine can continue even whilst StopKillWait is in flight,
 		// allowing a graceful stop. If reading stdout returns, we must close
@@ -94,7 +95,7 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 
 	// Write the input to the container and close its STDIN to get it to finish
 	go func() {
-		_, errCopy := io.Copy(hijacked.Conn, streams.Input)
+		_, errCopy := io.Copy(hijacked.Conn, streams.Stdin)
 		_ = hijacked.CloseWrite()
 		if errCopy != nil {
 			stdinErrCh <- errCopy

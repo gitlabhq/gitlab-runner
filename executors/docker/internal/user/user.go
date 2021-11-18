@@ -60,14 +60,12 @@ func (i *defaultInspect) GID(ctx context.Context, containerID string) (int, erro
 }
 
 func (i *defaultInspect) executeCommand(ctx context.Context, containerID string, command string) (int, error) {
-	stdOut := new(bytes.Buffer)
-	stdErr := new(bytes.Buffer)
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
 	streams := exec.IOStreams{
-		Input: strings.NewReader(command),
-		// limit how much data we read from the container log to
-		// avoid memory exhaustion
-		Out: limitwriter.New(stdOut, 1024),
-		Err: limitwriter.New(stdErr, 1024),
+		Stdin:  strings.NewReader(command),
+		Stdout: limitwriter.New(stdout, 1024),
+		Stderr: limitwriter.New(stderr, 1024),
 	}
 
 	err := i.exec.Exec(ctx, containerID, streams)
@@ -75,15 +73,15 @@ func (i *defaultInspect) executeCommand(ctx context.Context, containerID string,
 		return 0, fmt.Errorf("executing %q on container %q: %w", command, containerID, err)
 	}
 
-	out := strings.TrimSpace(stdOut.String())
-	errOut := strings.TrimSpace(stdErr.String())
-	if len(out) < 1 {
-		return 0, fmt.Errorf("%w (stderr: %s)", errIDNoOutput, errOut)
+	stdoutContent := strings.TrimSpace(stdout.String())
+	stderrContent := strings.TrimSpace(stderr.String())
+	if len(stdoutContent) < 1 {
+		return 0, fmt.Errorf("%w (stderr: %s)", errIDNoOutput, stderrContent)
 	}
 
-	id, err := strconv.Atoi(out)
+	id, err := strconv.Atoi(stdoutContent)
 	if err != nil {
-		return 0, fmt.Errorf("parsing %q output: %w (stderr: %s)", command, err, errOut)
+		return 0, fmt.Errorf("parsing %q output: %w (stderr: %s)", command, err, stderrContent)
 	}
 
 	return id, nil

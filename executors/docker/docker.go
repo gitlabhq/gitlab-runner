@@ -739,9 +739,9 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 	dockerExec := exec.NewDocker(e.Context, e.client, e.waiter, e.Build.Log())
 
 	streams := exec.IOStreams{
-		Input: input,
-		Err:   e.Trace,
-		Out:   e.Trace,
+		Stdin:  input,
+		Stderr: e.Trace,
+		Stdout: e.Trace,
 	}
 
 	return dockerExec.Exec(ctx, id, streams)

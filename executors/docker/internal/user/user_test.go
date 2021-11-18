@@ -138,19 +138,19 @@ func testDefaultInspectUIDandGID(
 		streams, ok := args.Get(2).(exec.IOStreams)
 		require.True(t, ok)
 
-		data, err := ioutil.ReadAll(streams.Input)
+		data, err := ioutil.ReadAll(streams.Stdin)
 		require.NoError(t, err)
 
 		assert.Equal(t, expectedCommand, string(data))
 	}
-	mockOutput := func(t *testing.T, args mock.Arguments, stdOut string, stdErr string) {
+	mockOutput := func(t *testing.T, args mock.Arguments, stdout string, stderr string) {
 		streams, ok := args.Get(2).(exec.IOStreams)
 		require.True(t, ok)
 
-		_, err := fmt.Fprintln(streams.Out, stdOut)
+		_, err := fmt.Fprintln(streams.Stdout, stdout)
 		require.NoError(t, err)
 
-		_, err = fmt.Fprintln(streams.Err, stdErr)
+		_, err = fmt.Fprintln(streams.Stderr, stderr)
 		require.NoError(t, err)
 	}
 

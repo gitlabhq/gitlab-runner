@@ -355,6 +355,33 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDockerCommandEntrypointWithStderrOutput(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	resp, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	resp.Image.Name = common.TestAlpineEntrypointStderrImage
+	build := &common.Build{
+		JobResponse: resp,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+				},
+				FeatureFlags: map[string]bool{
+					featureflags.DisableUmaskForDockerExecutor: true,
+				},
+			},
+		},
+	}
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
+
 func TestDockerCommandOwnershipOverflow(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
