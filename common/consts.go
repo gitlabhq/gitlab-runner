@@ -30,6 +30,7 @@ const DefaultNetworkClientTimeout = 60 * time.Minute
 const DefaultSessionTimeout = 30 * time.Minute
 const WaitForBuildFinishTimeout = 5 * time.Minute
 const SecretVariableDefaultsToFile = true
+const TokenResetIntervalFactor = 0.75
 
 const (
 	DefaultTraceOutputLimit = 4 * 1024 * 1024 // in bytes

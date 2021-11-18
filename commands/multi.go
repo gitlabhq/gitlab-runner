@@ -46,6 +46,26 @@ var (
 	)
 )
 
+type runAtTask interface {
+	cancel() bool
+}
+
+type runAtTimerTask struct {
+	timer *time.Timer
+}
+
+func (t *runAtTimerTask) cancel() bool {
+	return t.timer.Stop()
+}
+
+func runAt(t time.Time, f func()) runAtTask {
+	timer := time.AfterFunc(time.Until(t), f)
+	task := runAtTimerTask{
+		timer: timer,
+	}
+	return &task
+}
+
 type RunCommand struct {
 	configOptionsWithListenAddress
 	network common.Network
@@ -83,10 +103,15 @@ type RunCommand struct {
 	// server.
 	stopSignal os.Signal
 
+	// configReloaded is used to notify that the config has been reloaded
+	configReloaded chan int
+
 	// runFinished is used to notify that run() did finish
 	runFinished chan bool
 
 	currentWorkers int
+
+	runAt func(time.Time, func()) runAtTask
 }
 
 func (mr *RunCommand) log() *logrus.Entry {
@@ -101,6 +126,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 	mr.abortBuilds = make(chan os.Signal)
 	mr.runInterruptSignal = make(chan os.Signal, 1)
 	mr.reloadSignal = make(chan os.Signal, 1)
+	mr.configReloaded = make(chan int, 1)
 	mr.runFinished = make(chan bool, 1)
 	mr.stopSignals = make(chan os.Signal)
 
@@ -124,6 +150,70 @@ func (mr *RunCommand) Start(_ service.Service) error {
 	go mr.run()
 
 	return nil
+}
+
+func nextRunnerToReset(config *common.Config) (*common.RunnerConfig, time.Time) {
+	var runnerToReset *common.RunnerConfig
+	var runnerResetTime time.Time
+
+	for _, runner := range config.Runners {
+		if runner.TokenExpiresAt.IsZero() {
+			continue
+		}
+
+		expirationInterval := runner.TokenExpiresAt.Sub(runner.TokenObtainedAt)
+		resetTime := runner.TokenObtainedAt.Add(
+			time.Duration(common.TokenResetIntervalFactor * float64(expirationInterval.Nanoseconds())),
+		)
+		if runnerToReset == nil || resetTime.Before(runnerResetTime) {
+			runnerToReset = runner
+			runnerResetTime = resetTime
+		}
+	}
+
+	return runnerToReset, runnerResetTime
+}
+
+func (mr *RunCommand) resetRunnerTokens() {
+	for mr.resetOneRunnerToken() {
+	}
+}
+
+func (mr *RunCommand) resetOneRunnerToken() bool {
+	runnerResetCh := make(chan *common.RunnerConfig)
+
+	config := mr.getConfig()
+
+	runnerToReset, runnerResetTime := nextRunnerToReset(config)
+	var task runAtTask
+
+	if runnerToReset != nil {
+		task = mr.runAt(runnerResetTime, func() {
+			runnerResetCh <- runnerToReset
+		})
+	}
+
+	select {
+	case runner := <-runnerResetCh:
+		if common.ResetToken(mr.network, &runner.RunnerCredentials, "") {
+			err := mr.saveConfig()
+			if err != nil {
+				mr.log().WithError(err).Errorln("Failed to save config")
+			}
+		}
+
+	case <-mr.runFinished:
+		if task != nil {
+			task.cancel()
+		}
+		return false
+	case <-mr.configReloaded:
+		if task != nil {
+			task.cancel()
+		}
+	}
+
+	return true
 }
 
 func (mr *RunCommand) loadConfig() error {
@@ -160,6 +250,8 @@ func (mr *RunCommand) loadConfig() error {
 	} else {
 		mr.sentryLogHook = sentry.LogHook{}
 	}
+
+	mr.configReloaded <- 1
 
 	return nil
 }
@@ -203,6 +295,8 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 func (mr *RunCommand) run() {
 	mr.setupMetricsAndDebugServer()
 	mr.setupSessionServer()
+
+	go mr.resetRunnerTokens()
 
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
@@ -967,6 +1061,7 @@ func init() {
 			prometheusLogHook:               prometheus_helper.NewLogHook(),
 			failuresCollector:               prometheus_helper.NewFailuresCollector(),
 			buildsHelper:                    newBuildsHelper(),
+			runAt:                           runAt,
 		},
 	)
 }
