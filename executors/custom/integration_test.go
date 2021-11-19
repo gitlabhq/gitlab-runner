@@ -278,6 +278,7 @@ func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Runner.PostCloneScript = "echo post-clone-script"
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -289,6 +290,7 @@ func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 		assert.Contains(t, out, "pre-clone-script")
+		assert.Contains(t, out, "post-clone-script")
 	})
 }
 
@@ -301,6 +303,7 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Runner.PostCloneScript = "echo post-clone-script"
 		build.Variables = append(
 			build.Variables,
 			common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
@@ -316,6 +319,7 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 		assert.Contains(t, out, "Created fresh repository")
 		assert.Contains(t, out, "Skipping Git checkout")
 		assert.Contains(t, out, "pre-clone-script")
+		assert.Contains(t, out, "post-clone-script")
 	})
 }
 
@@ -433,6 +437,7 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 		defer cleanup()
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
+		build.Runner.PostCloneScript = "echo post-clone-script"
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -445,6 +450,7 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 		assert.Contains(t, out, "Fetching changes")
 		assert.Regexp(t, "Checking out [a-f0-9]+ as", out)
 		assert.Contains(t, out, "pre-clone-script")
+		assert.Contains(t, out, "post-clone-script")
 	})
 }
 

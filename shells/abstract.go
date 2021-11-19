@@ -218,15 +218,27 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
 	}
 
-	if info.PreCloneScript != "" && info.Build.GetGitStrategy() != common.GitNone {
-		b.writeCommands(w, info, "pre_clone_script", info.PreCloneScript)
-	}
+	b.guardCloneScriptHooks(w, info, "pre_clone_script", info.PreCloneScript)
 
 	if err := b.writeCloneFetchCmds(w, info); err != nil {
 		return err
 	}
 
-	return b.writeSubmoduleUpdateCmds(w, info)
+	if err := b.writeSubmoduleUpdateCmds(w, info); err != nil {
+		return err
+	}
+
+	b.guardCloneScriptHooks(w, info, "post_clone_script", info.PostCloneScript)
+
+	return nil
+}
+
+func (b *AbstractShell) guardCloneScriptHooks(w ShellWriter, info common.ShellScriptInfo, prefix string, s string) {
+	if s == "" || info.Build.GetGitStrategy() == common.GitNone {
+		return
+	}
+
+	b.writeCommands(w, info, prefix, s)
 }
 
 func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo) {

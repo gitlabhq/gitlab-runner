@@ -37,6 +37,7 @@ type ShellScriptInfo struct {
 	User            string
 	RunnerCommand   string
 	PreCloneScript  string
+	PostCloneScript string
 	PreBuildScript  string
 	PostBuildScript string
 }
