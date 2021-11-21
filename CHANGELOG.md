@@ -1,4 +1,4 @@
-## v14.5.0-rc1 (2021-11-10)
+## v14.5.0 (2021-11-21)
 
 ### New features
 
@@ -68,7 +68,7 @@
 - Docker Executor: use Stop for graceful shutdown !3128 (Aaron Friel @frieltwochairs)
 - Update to minio-go v7.0.13 !3120 (Philip Schwartz @pschwar1)
 - Explicit configuration for cache s3 authentication type !3117
-- refactor: remove osext dependency !3101 (feistel   @feistel)
+- refactor: remove osext dependency !3101 (feistel @feistel)
 - Respect Docker Runtime setting for services !3063 (Jakob-Niklas See @networkException)
 
 ### GitLab Runner distribution
@@ -460,7 +460,7 @@
 - Runner: Update spelling exceptions list !2770
 - Docs for installing runner on a separate machine !2767
 - Update docs/monitoring/README.md !2766
-- Fix misspelling of "Force" in Powershell examples !2764 (Gabriel Smith @yodal_)
+- Fix misspelling of "Force" in Powershell examples !2764 (Gabriel Smith @yodal\_)
 - Add runner execution flow diagram !2760
 - Fix duplicate labels in CONTRIBUTING.md !2747 (h.yoshida @hirokiyoshida837)
 - Add backticks around --google-accelerator docs !2742
@@ -1059,7 +1059,7 @@
 - Rename network manager file for docker executor !2147
 - Enable staticcheck linter !2136
 - Update GitLab CI image to include git lfs !2124
-- Implement Is for *BuildError !2121
+- Implement Is for \*BuildError !2121
 - Update log message for failure of removing network for build !2119 (Max Wittig @max-wittig)
 - Change license management to use rules !2096
 - Use Docker client's ContainerWait !2073
@@ -1259,7 +1259,7 @@
 
 - Upgrade docker client to version 19.03.5 for CI image !1874
 - Fix docker machine executor test filename !1927
-- Remove executor_ prefix from filenames in the executors package !1902
+- Remove executor\_ prefix from filenames in the executors package !1902
 - Fix 'make all' target !1900
 - Replace changelog generator script !1888
 - Bump Minio to latest version !1881 (Tom Elliff @tomelliff)
@@ -1518,7 +1518,7 @@
 - docker.md: Correct Image Sizes !1542
 - Add note on shell-based Docker image requirement !1459
 - Fixed powershell commands for Windows Runner !1544
-- Remove the scripting  for release checklist issue creation !1556
+- Remove the scripting for release checklist issue creation !1556
 - Use new location for helm charts repo !1553
 - Make Notes look consistent !1555
 - Change markdownlint wildcard format !1554
@@ -1672,7 +1672,7 @@ Please look into linked issues for details.
 - Add configuration of access_level for runners on registration !1323
 - Remove doc notice for deprecated OSes !1384
 - Remove deprecated clone/fetch command !1372
-- Allow configuration of  Pod Security Context by Kubernetes Exeutor !1036
+- Allow configuration of Pod Security Context by Kubernetes Exeutor !1036
 - Fix case sensitivity for windows volumes !1389
 - Accept docker-windows as an option on register !1388
 - Add documentation for windows development !1183
@@ -1751,7 +1751,7 @@ All deprecations, with a detailed description, are listed at
 https://about.gitlab.com/2019/04/22/gitlab-11-10-released/#release-deprecations
 
 1. With version 11.10 we're deprecating the feature flag
-[FF_USE_LEGACY_GIT_CLEAN_STRATEGY](https://docs.gitlab.com/runner/configuration/feature-flags.html#available-feature-flags).
+   [FF_USE_LEGACY_GIT_CLEAN_STRATEGY](https://docs.gitlab.com/runner/configuration/feature-flags.html#available-feature-flags).
 
 **Release changes:**
 
@@ -2134,7 +2134,7 @@ https://about.gitlab.com/2019/03/22/gitlab-11-9-released/#release-deprecations
 - Use local GOPATH in Makefile !779
 - Move Bleeding Edge release from ubuntu/yakkety to ububut/artful !797
 - Fix data race in commands package unit tests !787
-- Fix data race in function common.(*Trace).Write() !784
+- Fix data race in function common.(\*Trace).Write() !784
 - Fix data races in executor/docker package !800
 - Fix data races in network package !775
 
@@ -2202,16 +2202,16 @@ https://about.gitlab.com/2019/03/22/gitlab-11-9-released/#release-deprecations
 ## v10.0.0 (2017-09-22)
 
 > **Note:** With 10.0, we've moved repository from https://gitlab.com/gitlab-org/gitlab-ci-multi-runner
-to https://gitlab.com/gitlab-org/gitlab-runner. Please update your Bookmarks!
+> to https://gitlab.com/gitlab-org/gitlab-runner. Please update your Bookmarks!
 
 > **Note:** Starting with 10.0, we're marking the `exec` and service-related commands as **deprecated**. They will
-be removed in one of the upcoming releases.
+> be removed in one of the upcoming releases.
 
 > **Note:** Starting with 10.0, we're marking the `docker-ssh` and `docker-ssh+machine` executors as **deprecated**.
-They will be removed in one of the upcoming releases.
+> They will be removed in one of the upcoming releases.
 
 > **Note:** Starting with 10.0, behavior of `register` command was slightly changed. Please look into
-https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/657 for more details.
+> https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/657 for more details.
 
 - Lock runners to project by default on registration !657
 - Update cli library !656
@@ -2760,6 +2760,7 @@ that even in edge cases you can always rely on them.
 - Remove LFS from prebuilt images
 
 ## v1.5.2 (2016-08-24)
+
 (no changes)
 
 ## v1.5.1 (2016-08-24)
