@@ -17,6 +17,7 @@ exceptions:
   - AJAX
   - ANSI
   - API
+  - APM
   - ARM
   - ARN
   - ASCII
@@ -24,6 +25,7 @@ exceptions:
   - BSD
   - CAS
   - CDN
+  - CIDR
   - CLI
   - CNA
   - CNAME
@@ -41,16 +43,19 @@ exceptions:
   - DNS
   - DOM
   - DSA
+  - DSL
   - DVCS
   - ECDSA
   - ECS
   - EFS
   - EKS
+  - ELB
   - EOL
   - EXIF
   - FAQ
   - FIFO
   - FIPS
+  - FLAG
   - FOSS
   - FQDN
   - FREE
@@ -59,6 +64,7 @@ exceptions:
   - GDK
   - GDPR
   - GET
+  - GID
   - GIF
   - GKE
   - GNU
@@ -94,6 +100,7 @@ exceptions:
   - LESS
   - LFS
   - LRU
+  - LTM
   - LTS
   - MIME
   - MIT
@@ -107,6 +114,7 @@ exceptions:
   - NTP
   - ONLY
   - OSS
+  - OTP
   - OWASP
   - PAT
   - PCI-DSS
@@ -114,6 +122,8 @@ exceptions:
   - PEM
   - PEP
   - PGP
+  - PID
+  - PKCS
   - PHP
   - PNG
   - POSIX
@@ -123,6 +133,7 @@ exceptions:
   - RAM
   - RBAC
   - RDP
+  - RDS
   - REST
   - RFC
   - RHEL
@@ -130,10 +141,12 @@ exceptions:
   - RPM
   - RPS
   - RSA
+  - RDS
   - RSS
   - RVM
   - SAAS
   - SAML
+  - SAN
   - SAST
   - SATA
   - SCIM
@@ -167,7 +180,9 @@ exceptions:
   - TODO
   - TOML
   - TTL
+  - UID
   - UDP
+  - UID
   - UNIX
   - URI
   - URL

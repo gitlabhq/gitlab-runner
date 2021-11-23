@@ -45,8 +45,8 @@ autoscales
 autoscaling
 awardable
 awardables
-Ayoa
 Axios
+Ayoa
 Azure
 B-tree
 backfilling
@@ -90,11 +90,12 @@ callstack
 callstacks
 Camo
 canonicalized
+captcha
 CentOS
 Certbot
+chai
 changeset
 changesets
-chai
 ChaosKube
 chatbot
 chatbots
@@ -127,7 +128,7 @@ crosslinked
 crosslinking
 crosslinks
 Crossplane
-CrowdIn
+Crowdin
 CSV
 cybersecurity
 Dangerfile
@@ -149,6 +150,7 @@ denormalized
 denormalizes
 denormalizing
 denylist
+denylisted
 denylisting
 denylists
 deployer
@@ -160,7 +162,12 @@ deprovisions
 dequarantine
 dequarantined
 dequarantining
+deserialization
+deserialize
+deserializers
+deserializes
 DevOps
+Dhall
 disambiguates
 discoverability
 dismissable
@@ -180,6 +187,7 @@ downvotes
 Dpl
 Dreamweaver
 Ecto
+ElastiCache
 Elasticsearch
 enablement
 enqueued
@@ -209,6 +217,7 @@ fixup
 Flawfinder
 Flowdock
 Fluentd
+Flycheck
 Forgerock
 formatters
 Fugit
@@ -469,6 +478,7 @@ queryable
 Quicktime
 Rackspace
 Raspbian
+rbenv
 rbtrace
 Rdoc
 reachability
@@ -675,8 +685,8 @@ triaged
 triages
 triaging
 Trivy
-truthy
 Truststore
+truthy
 Twilio
 Twitter
 TypeScript
@@ -815,8 +825,10 @@ Worldline
 Xcode
 Xeon
 YouTrack
+ytt
 Yubico
 Zeitwerk
 Zendesk
+ZenTao
 zsh
 Zstandard
