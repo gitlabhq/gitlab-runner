@@ -905,6 +905,27 @@ func TestRegisterCommand(t *testing.T) {
         	add = ["NET_RAW, NET_RAW1"]`,
 			},
 		},
+		"s3 cache AuthenticationType arg": {
+			arguments: []string{
+				"--cache-s3-authentication_type=iam",
+			},
+			expectedConfigs: []string{`
+		[runners.cache.s3]
+			AuthenticationType = "iam"
+			`},
+		},
+		"s3 cache AuthenticationType env": {
+			environment: []kv{
+				{
+					key:   "CACHE_S3_AUTHENTICATION_TYPE",
+					value: "iam",
+				},
+			},
+			expectedConfigs: []string{`
+		[runners.cache.s3]
+			AuthenticationType = "iam"
+			`},
+		},
 	}
 
 	for tn, tc := range testCases {

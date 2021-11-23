@@ -214,6 +214,7 @@ runners:
             BucketName = "my_bucket_name"
             BucketLocation = "eu-west-1"
             Insecure = false
+            AuthenticationType = "access-key"
 
   cache:
       secretName: s3access
