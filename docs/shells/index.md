@@ -33,7 +33,7 @@ The supported shells are:
 | `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default when registering a new runner. |
 | `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Core. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. [Learn how to gain access to the CMD shell when PowerShell is the default shell](#access-cmd-shell-when-powershell-is-the-default). |
 
-If you want to select a particular shell to use other than the default, you need to [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
+If you want to select a particular shell to use other than the default, you must [specify the shell](../executors/shell.md#selecting-your-shell) in your `config.toml` file.
 
 ## Sh/Bash shells
 
