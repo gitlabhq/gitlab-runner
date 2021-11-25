@@ -7,3 +7,9 @@ trigger UBI images build:
   - if: $CI_PROJECT_PATH != "gitlab-org/gitlab-runner"
     when: never
   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/
+
+trigger runner-incept tests:
+  extends:
+    - .rules:merge_request_pipelines:no_docs
+  stage: postrelease
+  trigger: gitlab-org/ci-cd/tests/runner-incept
