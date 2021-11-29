@@ -38,11 +38,8 @@ const (
 	buildContainerName  = "build"
 	helperContainerName = "helper"
 
-	detectShellScriptName = "detect_shell_script"
-
-	// The `.ps1` extension is added to the script name to fix a strange behavior
-	// where stage scripts wouldn't be executed otherwise
-	parsePwshScriptName = "parse_pwsh_script"
+	detectShellScriptName         = "detect_shell_script"
+	pwshJSONTerminationScriptName = "terminate_with_json_script"
 
 	waitLogFileTimeout = time.Minute
 
@@ -392,7 +389,11 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 
 func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []string) {
 	var containerCommand []string
+
 	containerName := buildContainerName
+	if cmd.Predefined {
+		containerName = helperContainerName
+	}
 
 	shell := s.Shell().Shell
 
@@ -400,15 +401,9 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 	case shells.SNPwsh, shells.SNPowershell:
 		// Translates to roughly "/path/to/parse_pwsh_script.ps1 /path/to/stage_script"
 		containerCommand = []string{
-			s.scriptPath(parsePwshScriptName),
+			s.scriptPath(pwshJSONTerminationScriptName),
 			s.scriptPath(cmd.Stage),
 			s.buildRedirectionCmd(shell),
-		}
-		if cmd.Predefined {
-			containerName = helperContainerName
-			containerCommand = []string{fmt.Sprintf("Get-Content -Path %s | ", s.scriptPath(cmd.Stage))}
-			containerCommand = append(containerCommand, s.helperImageInfo.Cmd...)
-			containerCommand = append(containerCommand, s.buildRedirectionCmd(shell))
 		}
 	default:
 		// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
@@ -421,7 +416,6 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 			s.buildRedirectionCmd(shell),
 		}
 		if cmd.Predefined {
-			containerName = helperContainerName
 			// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
 			// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
 			// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
@@ -590,15 +584,15 @@ func (s *executor) setupScriptsConfigMap() error {
 func (s *executor) retrieveShell() (common.Shell, error) {
 	bashShell, ok := common.GetShell(s.Shell().Shell).(*shells.BashShell)
 	if ok {
-		return &shells.BashTrapShell{BashShell: bashShell, LogFile: s.logFile()}, nil
+		return &shells.BashTrapShell{BashShell: bashShell}, nil
 	}
 
-	pwshShell, ok := common.GetShell(s.Shell().Shell).(*shells.PowerShell)
-	if ok {
-		return &shells.PwshTrapShell{PowerShell: pwshShell, LogFile: s.logFile()}, nil
+	shell := common.GetShell(s.Shell().Shell)
+	if shell == nil {
+		return nil, errIncorrectShellType
 	}
 
-	return nil, errIncorrectShellType
+	return shell, nil
 }
 
 func (s *executor) generateScripts(shell common.Shell) (map[string]string, error) {
@@ -606,7 +600,7 @@ func (s *executor) generateScripts(shell common.Shell) (map[string]string, error
 	shellName := s.Shell().Shell
 	switch shellName {
 	case shells.SNPwsh, shells.SNPowershell:
-		scripts[s.scriptName(parsePwshScriptName)] = shells.PwshValidationScript(shellName)
+		scripts[s.scriptName(pwshJSONTerminationScriptName)] = shells.PwshJSONTerminationScript(shellName)
 	default:
 		scripts[s.scriptName(detectShellScriptName)] = shells.BashDetectShellScript
 	}

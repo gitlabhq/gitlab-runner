@@ -4259,7 +4259,7 @@ func TestGenerateScripts(t *testing.T) {
 		}
 		switch shell {
 		case shells.SNPwsh, shells.SNPowershell:
-			scripts[parsePwshScriptName+ext] = shells.PwshValidationScript(shell)
+			scripts[pwshJSONTerminationScriptName+ext] = shells.PwshJSONTerminationScript(shell)
 		default:
 			scripts[detectShellScriptName+ext] = shells.BashDetectShellScript
 		}
@@ -4578,7 +4578,7 @@ func TestGetContainerInfo(t *testing.T) {
 			expectedContainerName: buildContainerName,
 			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
 				return []string{
-					e.scriptPath(parsePwshScriptName),
+					e.scriptPath(pwshJSONTerminationScriptName),
 					e.scriptPath(cmd.Stage),
 					e.buildRedirectionCmd("pwsh"),
 				}
@@ -4592,10 +4592,11 @@ func TestGetContainerInfo(t *testing.T) {
 			},
 			expectedContainerName: helperContainerName,
 			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
-				commands := append([]string(nil), fmt.Sprintf("Get-Content -Path %s | ", e.scriptPath(cmd.Stage)))
-				commands = append(commands, e.helperImageInfo.Cmd...)
-				commands = append(commands, e.buildRedirectionCmd("pwsh"))
-				return commands
+				return []string{
+					e.scriptPath(pwshJSONTerminationScriptName),
+					e.scriptPath(cmd.Stage),
+					e.buildRedirectionCmd("pwsh"),
+				}
 			},
 		},
 	}
