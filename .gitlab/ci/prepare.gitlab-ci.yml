@@ -32,3 +32,11 @@ prepare alpine-entrypoint image:
   variables:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile
+
+prepare alpine-id-overflow image:
+  extends:
+  - .image_builder
+  - .rules:prepare:alpine-id-overflow:image:merge-requests
+  variables:
+    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-id-overflow:latest
+    BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-id-overflow/Dockerfile

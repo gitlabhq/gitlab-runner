@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 )
 
 const (
@@ -56,10 +57,16 @@ func (i *defaultInspect) GID(ctx context.Context, containerID string) (int, erro
 }
 
 func (i *defaultInspect) executeCommand(ctx context.Context, containerID string, command string) (int, error) {
-	input := bytes.NewBufferString(command)
 	output := new(bytes.Buffer)
 
-	err := i.exec.Exec(ctx, containerID, input, output)
+	err := i.exec.Exec(
+		ctx,
+		containerID,
+		strings.NewReader(command),
+		// limit how much data we read from the container log to
+		// avoid memory exhaustion
+		limitwriter.New(output, 1024),
+	)
 	if err != nil {
 		return 0, fmt.Errorf("executing %q on container %q: %w", command, containerID, err)
 	}
