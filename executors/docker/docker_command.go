@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 )
 
 type commandExecutor struct {
@@ -271,10 +273,16 @@ func (s *commandExecutor) executeChownOnDir(
 ) error {
 	s.Println(fmt.Sprintf("Changing ownership of files at %q to %d:%d", dir, uid, gid))
 
-	input := bytes.NewBufferString(fmt.Sprintf("chown -RP -- %d:%d %q", uid, gid, dir))
 	output := new(bytes.Buffer)
 
-	err := dockerExec.Exec(s.Context, c.ID, input, output)
+	err := dockerExec.Exec(
+		s.Context,
+		c.ID,
+		strings.NewReader(fmt.Sprintf("chown -RP -- %d:%d %q", uid, gid, dir)),
+		// limit how much data we read from the container log to
+		// avoid memory exhaustion
+		limitwriter.New(output, 1024),
+	)
 
 	log := s.Build.Log().WithField("updatedDir", dir)
 	log.WithField("output", output.String()).Debug("Changing ownership of files")
