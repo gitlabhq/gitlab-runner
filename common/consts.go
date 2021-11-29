@@ -46,6 +46,7 @@ const (
 	TestPwshImage             = "mcr.microsoft.com/powershell:7.1.1-alpine-3.12-20210125"
 	TestAlpineNoRootImage     = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest"
 	TestAlpineEntrypointImage = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint:latest"
+	TestAlpineIDOverflowImage = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-id-overflow:latest"
 	TestDockerDindImage       = "docker:18-dind"
 	TestDockerGitImage        = "docker:18-git"
 	TestLivenessImage         = "registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0"
