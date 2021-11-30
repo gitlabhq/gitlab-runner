@@ -369,18 +369,3 @@ stable servercore20H2 docker images:
   environment:
     name: stable/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-
-static QA:
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .no_cache
-  stage: release
-  image: alpine:3.14.2
-  needs:
-  - code_quality
-  script: |
-    if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then
-      apk add -U --no-cache jq > /dev/null
-      jq -C . gl-code-quality-report.json
-      exit 1
-    fi
