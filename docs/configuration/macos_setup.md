@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 To run a CI/CD job on a macOS runner, complete the following steps in order.
 
-When you're done, GitLab Runner will be running on your macOS machine
+When you're done, GitLab Runner will be running on a macOS machine
 and an individual runner will be ready to process jobs.
 
 - Change the system shell to Bash.
