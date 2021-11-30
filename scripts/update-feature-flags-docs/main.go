@@ -68,10 +68,10 @@ func prepareTable() string {
 		},
 		"tick": func(input bool) string {
 			if input {
-				return "✓"
+				return "**{check-circle}** Yes"
 			}
 
-			return "✗"
+			return "**{dotted-circle}** No"
 		},
 	})
 
