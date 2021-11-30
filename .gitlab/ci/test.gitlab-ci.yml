@@ -343,3 +343,5 @@ integration_k8s:
   script:
   # use env -i to clear parent environment variables for go test
   - ./scripts/go_test_no_env -tags=integration,kubernetes -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes
+  retry: 2
+
