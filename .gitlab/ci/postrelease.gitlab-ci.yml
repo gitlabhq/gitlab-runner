@@ -13,3 +13,18 @@ trigger runner-incept tests:
     - .rules:merge_request_pipelines:no_docs
   stage: postrelease
   trigger: gitlab-org/ci-cd/tests/runner-incept
+
+static QA:
+  extends:
+  - .rules:merge_request_pipelines:no_docs
+  - .no_cache
+  stage: postrelease
+  image: alpine:3.14.2
+  needs:
+  - code_quality
+  script: |
+    if [ "$(cat gl-code-quality-report.json)" != "[]" ] ; then
+      apk add -U --no-cache jq > /dev/null
+      jq -C . gl-code-quality-report.json
+      exit 1
+    fi
