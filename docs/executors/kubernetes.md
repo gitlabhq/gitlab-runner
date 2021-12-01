@@ -1223,3 +1223,13 @@ Using the `helper_image_flavor = "ubuntu"` option should resolve this.
 ### `docker: Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon running?`
 
 This error can occur when [using Docker-in-Docker](#using-dockerdind) if attempts are made to access the DIND service before it has had time to fully start up. For a more detailed explanation, see [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215).
+
+### `curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443`
+
+This error can happen when [using Docker-in-Docker](#using-dockerdind) if the DIND Maximum Transmission Unit (MTU) is larger than the Kubernetes overlay network. DIND uses a default MTU of 1500, which is too large to route across the default overlay network. The DIND MTU can be changed within the service definition:
+
+```yaml
+services:
+  - name: docker:dind
+    command: ["--mtu=1450"]
+```
