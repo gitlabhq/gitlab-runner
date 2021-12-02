@@ -1,3 +1,9 @@
+## v14.3.3 (2021-12-02)
+
+### Other changes
+
+- Limit docker executor's container reads to prevent memory exhaustion [!36](https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/36)
+
 ## v14.3.2 (2021-09-30)
 
 ### GitLab Runner distribution
