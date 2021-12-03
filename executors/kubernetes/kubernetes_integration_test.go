@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -32,10 +33,71 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func generateRandomNamespace(prefix string) string {
+	// If running tests inside a local cluster the following command can be used to clean-up integration namespaces:
+	// kubectl get namespaces -o name| grep k8s-integration| xargs kubectl delete
+	return fmt.Sprintf("k8s-integration-%s-%d", prefix, rand.Uint64())
+}
+
+type kubernetesNamespaceManagerAction int64
+
+const (
+	createNamespace kubernetesNamespaceManagerAction = iota
+	deleteNamespace
+)
+
+type namespaceManager struct {
+	action      kubernetesNamespaceManagerAction
+	namespace   string
+	client      *k8s.Clientset
+	maxAttempts int
+	timeout     time.Duration
+}
+
+func newNamespaceManager(client *k8s.Clientset, action kubernetesNamespaceManagerAction, namespace string) namespaceManager {
+	return namespaceManager{
+		namespace:   namespace,
+		action:      action,
+		client:      client,
+		maxAttempts: 3,
+		timeout:     time.Minute,
+	}
+}
+
+func (n namespaceManager) Run() error {
+	var err error
+	ctx, cancel := context.WithTimeout(context.Background(), n.timeout)
+	defer cancel()
+
+	switch n.action {
+	case createNamespace:
+		k8sNamespace := &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:         n.namespace,
+				GenerateName: n.namespace,
+			},
+		}
+		_, err = n.client.CoreV1().Namespaces().Create(ctx, k8sNamespace, metav1.CreateOptions{})
+	case deleteNamespace:
+		err = n.client.CoreV1().Namespaces().Delete(ctx, n.namespace, metav1.DeleteOptions{})
+	}
+
+	return err
+}
+
+func (n namespaceManager) ShouldRetry(tries int, err error) bool {
+	return tries < n.maxAttempts && err != nil
+}
 
 type featureFlagTest func(t *testing.T, flagName string, flagValue bool)
 
@@ -709,18 +771,9 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 			namespace: "default",
 		},
 		"pod deletion during prepare stage in custom namespace": {
-			namespace: "garbage-collection-namespace",
+			namespace: generateRandomNamespace("gc"),
 			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-				defer cancel()
-
-				k8sNamespace := &v1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:         namespace,
-						GenerateName: namespace,
-					},
-				}
-				k8sNamespace, err := client.CoreV1().Namespaces().Create(ctx, k8sNamespace, metav1.CreateOptions{})
+				err := retry.New(newNamespaceManager(client, createNamespace, namespace)).Run()
 				require.NoError(t, err)
 
 				credentials, err := getSecrets(client, namespace, "")
@@ -732,10 +785,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 				assert.Empty(t, configMaps)
 			},
 			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-				defer cancel()
-
-				err := client.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+				err := retry.New(newNamespaceManager(client, deleteNamespace, namespace)).Run()
 				require.NoError(t, err)
 			},
 		},
