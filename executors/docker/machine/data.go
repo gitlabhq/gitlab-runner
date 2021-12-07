@@ -18,6 +18,10 @@ type machinesData struct {
 	StuckOnRemoving int
 }
 
+func (d *machinesData) InUse() int {
+	return d.Used
+}
+
 func (d *machinesData) Available() int {
 	return d.Acquired + d.Creating + d.Idle
 }
