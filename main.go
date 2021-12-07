@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"syscall"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -38,6 +39,9 @@ func main() {
 			panic(r)
 		}
 	}()
+
+	// Ensure that Fd-0 fixed runtime is used
+	syscall.Fd0Fix()
 
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
