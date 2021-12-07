@@ -1,4 +1,4 @@
-runner-bin: $(GOX)
+runner-bin: $(GOX) .patched_go_env
 	# Building $(NAME) in version $(VERSION) for $(BUILD_PLATFORMS)
 	$(GOX) $(BUILD_PLATFORMS) \
 		   -ldflags "$(GO_LDFLAGS)" \
