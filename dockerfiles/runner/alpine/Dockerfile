@@ -12,7 +12,8 @@ RUN apk add --no-cache \
     ca-certificates \
     git \
     tzdata \
-    openssh-client
+    openssh-client \
+    curl
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
