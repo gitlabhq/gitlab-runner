@@ -9,13 +9,13 @@ patch -p1 -N -d "$GOROOT" <<EOF
 --- a/src/syscall/exec_unix.go.bak	2021-12-07 22:27:19.480273436 +0000
 +++ b/src/syscall/exec_unix.go	2021-12-07 22:53:37.878003817 +0000
 @@ -194,7 +194,7 @@
- 
+
  	// Allocate child status pipe close on exec.
  	if err = forkExecPipe(p[:]); err != nil {
 -		goto error
 +		goto error2
  	}
- 
+
  	// Kick off child.
 @@ -234,6 +234,7 @@
  		Close(p[0])
@@ -28,7 +28,7 @@ patch -p1 -N -d "$GOROOT" <<EOF
 @@ -249,6 +250,10 @@
  	return pid, 0, err
  }
- 
+
 +// Dummy function to test fd-0 bug
 +func Fd0Fix() {
 +}
@@ -36,14 +36,4 @@ patch -p1 -N -d "$GOROOT" <<EOF
  // Implemented in runtime package.
  func runtime_BeforeExec()
  func runtime_AfterExec()
---- /dev/null	2021-12-07 22:24:49.391615478 +0000
-+++ b/src/syscall/exec_fd0.go	2021-12-07 22:54:42.042082765 +0000
-@@ -0,0 +1,7 @@
-+// +build !aix,!darwin,!dragonfly,!freebsd,!linux,!netbsd,!openbsd,!solaris
-+
-+package syscall
-+
-+// Dummy function to test fd-0 bug
-+func Fd0Fix() {
-+}
 EOF
