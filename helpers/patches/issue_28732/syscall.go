@@ -1,12 +1,12 @@
 // +build aix android darwin dragonfly freebsd hurd illumos linux netbsd openbsd solaris
 
-package fd0
+package issue_28732
 
 import (
 	"syscall"
 )
 
 func AssertFixPresent() {
-	// Ensure that Fd-0 fixed runtime is used
-	syscall.Fd0Fix()
+	// Ensure that Issue28732Fix fixed runtime is used
+	syscall.Issue28732Fix()
 }
