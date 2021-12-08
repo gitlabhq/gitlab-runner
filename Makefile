@@ -115,7 +115,6 @@ version:
 
 .PHONY: deps
 deps: $(DEVELOPMENT_TOOLS) .patched_go_env
-	@scripts/patch_go_env
 
 .PHONY: check_test_directives
 check_test_directives:

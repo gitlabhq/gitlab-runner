@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"syscall"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -10,6 +9,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
+	fd0_patch "gitlab.com/gitlab-org/gitlab-runner/helpers/patches/fd0"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
@@ -40,8 +40,7 @@ func main() {
 		}
 	}()
 
-	// Ensure that Fd-0 fixed runtime is used
-	syscall.Fd0Fix()
+	fd0_patch.AssertFixPresent()
 
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
