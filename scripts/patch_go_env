@@ -30,7 +30,7 @@ patch -p1 -N -d "$GOROOT" <<EOF
  }
 
 +// Dummy function to test fd-0 bug
-+func Fd0Fix() {
++func Issue28732Fix() {
 +}
 +
  // Implemented in runtime package.
