@@ -1,3 +1,3 @@
-package fd0
+package issue_28732
 
 func AssertFixPresent() {}
