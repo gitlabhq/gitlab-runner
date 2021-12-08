@@ -1133,6 +1133,17 @@ to `true` and [submit an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/is
 
 Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress on legacy execution strategy removal.
 
+## Pod cleanup
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27870) in GitLab Runner 14.6.
+
+Sometimes old runner pods are not cleared. This can happen when Runner Manager is incorrectly shut down.
+
+To handle this situation, you can use the GitLab Runner Pod Cleanup application to schedule cleanup of old pods. For more information, see:
+
+- The GitLab Runner Pod Cleanup project [README](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/readme.md).
+- GitLab Runner Pod Cleanup [documentation](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/docs/README.md).
+
 ## Troubleshooting
 
 The following errors are commonly encountered when using the Kubernetes executor.
