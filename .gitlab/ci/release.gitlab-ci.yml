@@ -90,7 +90,6 @@
   dependencies:
   - 'helper images'
   - 'helper images binaries'
-  - 'test coverage report'
   - 'binaries'
   - 'package-deb'
   - 'package-rpm'
