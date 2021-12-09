@@ -1382,6 +1382,7 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 	cases := map[string]struct {
 		formValueKey string
 		statusCode   int
+		body         string
 	}{
 		"too-large": {
 			statusCode: http.StatusRequestEntityTooLarge,
@@ -1404,6 +1405,14 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 		"service-unavailable": {
 			statusCode: http.StatusServiceUnavailable,
 		},
+		"bad-request": {
+			statusCode: http.StatusBadRequest,
+			body:       `{"message": "duplicate variables"}`,
+		},
+		"bad-request-not-json": {
+			statusCode: http.StatusBadRequest,
+			body:       `not JSON response`,
+		},
 	}
 
 	testCase, ok := cases[body]
@@ -1412,6 +1421,8 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	if len(testCase.formValueKey) > 0 {
 		if r.FormValue(testCase.formValueKey) != body {
 			return
@@ -1419,6 +1430,7 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 	}
 
 	w.WriteHeader(testCase.statusCode)
+	_, _ = w.Write([]byte(testCase.body))
 }
 
 func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
@@ -1532,6 +1544,14 @@ func TestArtifactsUpload(t *testing.T) {
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600))
 	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
+
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("bad-request"), 0600))
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
+
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("bad-request-not-json"), 0600))
+	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
 }
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
