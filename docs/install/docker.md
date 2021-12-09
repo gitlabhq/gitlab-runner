@@ -59,9 +59,13 @@ To run `gitlab-runner` inside a Docker container, you need to make sure that the
 
 Make sure that you read the [FAQ](../faq/index.md) section which describes some of the most common problems with GitLab Runner.
 
-NOTE:
-If you are using a [`session_server`](../configuration/advanced-configuration.md), you also
+- If you are using a [`session_server`](../configuration/advanced-configuration.md), you also
 need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
+- If you want to use the Docker Machine executor for autoscaling feature, you also need to mount Docker Machine 
+  storage path: `/root/.docker/machine`:
+  
+  - by adding `-v /srv/gitlab-runner/docker-machine-config:/root/.docker/machine` for system volume mounts
+  - by adding `-v docker-machine-config:/root/.docker/machine` for Docker named volumes
 
 ### Option 1: Use local system volume mounts to start the Runner container
 
