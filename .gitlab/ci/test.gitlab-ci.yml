@@ -140,6 +140,8 @@ code_quality:
     OUT_FORMAT: code-climate
     GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
   before_script:
+  - apk add --no-cache patch
+  - source ci/touch_make_dependencies
   # Ensure the goargs linter plugin is available at .tmp/goargs.so to suit .golangci.yml
   - mkdir .tmp && ln -s /usr/lib/goargs.so .tmp/goargs.so
   # Copy the Docker image's golangci-lint to the location expected by `make lint` so that it is not built
@@ -316,7 +318,7 @@ git 1.8.3.1:
     GOPATH: /go
     CGO_ENABLED: 0
   before_script:
-  - yum install -y -q git make && git version
+  - yum install -y -q git make patch && git version
   - curl https://storage.googleapis.com/golang/go1.13.8.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
   - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx -C /usr/bin
   - git-lfs install --skip-repo
