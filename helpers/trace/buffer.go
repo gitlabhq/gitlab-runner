@@ -200,7 +200,7 @@ func (w *limitWriter) writeLimitExceededMessage() {
 }
 
 func New() (*Buffer, error) {
-	logFile, err := ioutil.TempFile("", "trace")
+	logFile, err := newLogFile()
 	if err != nil {
 		return nil, err
 	}
@@ -219,6 +219,10 @@ func New() (*Buffer, error) {
 	buffer.SetMasked(nil)
 
 	return buffer, nil
+}
+
+func newLogFile() (*os.File, error) {
+	return ioutil.TempFile("", "trace")
 }
 
 // truncateSafeUTF8 truncates a job log at the capacity but avoids
