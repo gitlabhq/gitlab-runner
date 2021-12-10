@@ -325,9 +325,18 @@ stable packagecloud:
       - ol
       - fedora
 
+.stable_docker_images_base_variables_overwrite:
+  variables:
+    # Setting the CI_PROJECT_ID and CI_REGISTRY_IMAGE variable explicitly because we're
+    # running this job also from the https://gitlab.com/gitlab-org/security/gitlab-runner
+    # fork. But it should still create the release entry in the canonical one.
+    CI_REGISTRY: registry.gitlab.com
+    CI_REGISTRY_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner
+
 .stable_docker_images_base:
   extends:
   - .rules:release:stable:branch
+  - .stable_docker_images_base_variables_overwrite
   environment:
     name: stable/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
@@ -347,6 +356,7 @@ stable servercore1809 docker images:
   - .windows1809
   - .release_windows_docker_images
   - .rules:release:stable:branch
+  - .stable_docker_images_base_variables_overwrite
   environment:
     name: stable/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
@@ -356,6 +366,7 @@ stable servercore2004 docker images:
   - .windows2004
   - .release_windows_docker_images
   - .rules:release:stable:branch
+  - .stable_docker_images_base_variables_overwrite
   environment:
     name: stable/docker_images/windows2004
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
@@ -365,6 +376,7 @@ stable servercore20H2 docker images:
   - .windows20H2
   - .release_windows_docker_images
   - .rules:release:stable:branch
+  - .stable_docker_images_base_variables_overwrite
   environment:
     name: stable/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
