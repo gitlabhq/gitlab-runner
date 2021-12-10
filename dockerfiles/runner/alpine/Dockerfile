@@ -12,7 +12,8 @@ RUN apk add --no-cache \
     ca-certificates \
     git \
     tzdata \
-    openssh-client
+    openssh-client \
+    curl
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
@@ -26,9 +27,12 @@ COPY checksums-* install-deps install-gitlab-runner /tmp/
 RUN apk add --no-cache --virtual .fetch-deps wget && \
     /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}" "${GIT_LFS_VERSION}" && \
     apk del .fetch-deps
+RUN rm -rf /tmp/*
 
-COPY entrypoint /
-RUN chmod +x /entrypoint
+FROM $BASE_IMAGE
+
+COPY --from=0 / /
+COPY --chmod=777 entrypoint /
 
 STOPSIGNAL SIGQUIT
 VOLUME ["/etc/gitlab-runner", "/home/gitlab-runner"]

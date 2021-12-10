@@ -20,6 +20,8 @@ const (
 	kubernetesExecutor    = "kubernetes"
 	dockerExecutor        = "docker"
 	dockerWindowsExecutor = "docker-windows"
+	virtualboxExecutor    = "virtualbox"
+	parallelsExecutor     = "parallels"
 
 	SNPwsh       = "pwsh"
 	SNPowershell = "powershell"
@@ -436,7 +438,9 @@ func (b *PowerShell) isStdinSupported(info common.ShellScriptInfo) bool {
 
 	return executor == kubernetesExecutor ||
 		executor == dockerExecutor ||
-		executor == dockerWindowsExecutor
+		executor == dockerWindowsExecutor ||
+		executor == virtualboxExecutor ||
+		executor == parallelsExecutor
 }
 
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {

@@ -157,15 +157,19 @@ func (s *Client) Exec(cmd string) error {
 	return err
 }
 
-func (s *Command) fullCommand() string {
+func (s *Command) fullCommand(shell string) string {
 	var arguments []string
 	for _, part := range s.Command {
-		arguments = append(arguments, helpers.ShellEscapeLegacy(part))
+		if shell == "pwsh" || shell == "powershell" {
+			arguments = append(arguments, part)
+		} else {
+			arguments = append(arguments, helpers.ShellEscapeLegacy(part))
+		}
 	}
 	return strings.Join(arguments, " ")
 }
 
-func (s *Client) Run(ctx context.Context, cmd Command) error {
+func (s *Client) Run(ctx context.Context, cmd Command, shell string) error {
 	if s.client == nil {
 		return errors.New("not connected")
 	}
@@ -177,8 +181,10 @@ func (s *Client) Run(ctx context.Context, cmd Command) error {
 	defer func() { _ = session.Close() }()
 
 	var envVariables bytes.Buffer
-	for _, keyValue := range cmd.Environment {
-		envVariables.WriteString("export " + helpers.ShellEscapeLegacy(keyValue) + "\n")
+	if shell != "pwsh" && shell != "powershell" {
+		for _, keyValue := range cmd.Environment {
+			envVariables.WriteString("export " + helpers.ShellEscapeLegacy(keyValue) + "\n")
+		}
 	}
 
 	session.Stdin = io.MultiReader(
@@ -187,7 +193,7 @@ func (s *Client) Run(ctx context.Context, cmd Command) error {
 	)
 	session.Stdout = s.Stdout
 	session.Stderr = s.Stderr
-	err = session.Start(cmd.fullCommand())
+	err = session.Start(cmd.fullCommand(shell))
 	if err != nil {
 		return err
 	}
