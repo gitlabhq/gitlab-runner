@@ -140,7 +140,6 @@ code_quality:
     OUT_FORMAT: code-climate
     GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
   before_script:
-  - apk add --no-cache patch
   - source ci/touch_make_dependencies
   # Ensure the goargs linter plugin is available at .tmp/goargs.so to suit .golangci.yml
   - mkdir .tmp && ln -s /usr/lib/goargs.so .tmp/goargs.so

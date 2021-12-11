@@ -109,12 +109,8 @@ version:
 	@echo RPM platforms: $(RPM_PLATFORMS)
 	@echo IS_LATEST: $(IS_LATEST)
 
-.patched_go_env:
-	@scripts/patch_go_env
-	touch $@
-
 .PHONY: deps
-deps: $(DEVELOPMENT_TOOLS) .patched_go_env
+deps: $(DEVELOPMENT_TOOLS)
 
 .PHONY: check_test_directives
 check_test_directives:

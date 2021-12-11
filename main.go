@@ -9,7 +9,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
-	issue_28732_patch "gitlab.com/gitlab-org/gitlab-runner/helpers/patches/issue_28732"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
@@ -39,8 +38,6 @@ func main() {
 			panic(r)
 		}
 	}()
-
-	issue_28732_patch.AssertFixPresent()
 
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])

@@ -6,5 +6,3 @@ if [ -d out ]; then
     touch "$1"
   ' sh {} \;
 fi
-
-make .patched_go_env
