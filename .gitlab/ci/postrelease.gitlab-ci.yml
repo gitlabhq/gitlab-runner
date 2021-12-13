@@ -1,9 +1,9 @@
 trigger UBI images build:
   stage: postrelease
+  extends:
+  - .rules:release:stable:branch
+  - .rules:release:bleeding-edge
   variables:
     BUILD_RELEASE: ${CI_COMMIT_REF_NAME}
   trigger: gitlab-org/ci-cd/gitlab-runner-ubi-images
-  rules:
-  - if: $CI_PROJECT_PATH != "gitlab-org/gitlab-runner"
-    when: never
-  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/
+
