@@ -120,7 +120,7 @@ github.com/docker/machine/version
 # github.com/dustin/go-humanize v1.0.0
 ## explicit
 github.com/dustin/go-humanize
-# github.com/dvyukov/go-fuzz v0.0.0-20210602112143-b1f3d6f4ef4e
+# github.com/dvyukov/go-fuzz v0.0.0-20210914135545-4980593459a1
 ## explicit
 github.com/dvyukov/go-fuzz/go-fuzz
 github.com/dvyukov/go-fuzz/go-fuzz-defs

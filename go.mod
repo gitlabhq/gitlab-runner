@@ -18,7 +18,7 @@ require (
 	github.com/docker/go-connections v0.3.0
 	github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
 	github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
-	github.com/dvyukov/go-fuzz v0.0.0-20210602112143-b1f3d6f4ef4e
+	github.com/dvyukov/go-fuzz v0.0.0-20210914135545-4980593459a1
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
