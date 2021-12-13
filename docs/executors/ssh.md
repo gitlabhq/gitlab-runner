@@ -14,8 +14,8 @@ This is a simple executor that allows you to execute builds on a remote machine
 by executing commands over SSH.
 
 NOTE:
-GitLab Runner will use the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the remote machine.
-Ensure Git LFS is up-to-date on any remote systems where GitLab Runner will run using SSH executor.
+GitLab Runner uses the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the remote machine.
+Ensure Git LFS is up-to-date on any remote systems where GitLab Runner runs using SSH executor.
 
 ## Overview
 
