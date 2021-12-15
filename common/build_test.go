@@ -1259,7 +1259,7 @@ func TestWaitForTerminal(t *testing.T) {
 			require.NoError(t, err)
 			build.Session = sess
 
-			srv := httptest.NewServer(build.Session.Mux())
+			srv := httptest.NewServer(build.Session.Handler())
 			defer srv.Close()
 
 			mockConn := terminal.MockConn{}

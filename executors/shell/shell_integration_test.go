@@ -1426,11 +1426,11 @@ func TestInteractiveTerminal(t *testing.T) {
 			}()
 
 			// Wait until the build starts.
-			for build.Session.Mux() == nil {
+			for build.Session.Handler() == nil {
 				time.Sleep(10 * time.Millisecond)
 			}
 
-			srv := httptest.NewServer(build.Session.Mux())
+			srv := httptest.NewServer(build.Session.Handler())
 			defer srv.Close()
 
 			u := url.URL{

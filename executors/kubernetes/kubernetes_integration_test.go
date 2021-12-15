@@ -540,13 +540,13 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 		outCh <- outBuffer.String()
 	}()
 
-	for build.Session.Mux() == nil {
+	for build.Session.Handler() == nil {
 		time.Sleep(10 * time.Millisecond)
 	}
 
 	time.Sleep(5 * time.Second)
 
-	srv := httptest.NewServer(build.Session.Mux())
+	srv := httptest.NewServer(build.Session.Handler())
 	defer srv.Close()
 
 	u := url.URL{

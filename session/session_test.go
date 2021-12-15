@@ -44,7 +44,7 @@ func TestExecSuccessful(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	session.Mux().ServeHTTP(w, req)
+	session.Handler().ServeHTTP(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
@@ -124,7 +124,7 @@ func TestExecFailedRequest(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			session.Mux().ServeHTTP(w, req)
+			session.Handler().ServeHTTP(w, req)
 
 			resp := w.Result()
 			defer resp.Body.Close()
@@ -160,7 +160,7 @@ func TestDoNotAllowMultipleConnections(t *testing.T) {
 	req.Header.Add("Authorization", validToken)
 
 	w := httptest.NewRecorder()
-	session.Mux().ServeHTTP(w, req)
+	session.Handler().ServeHTTP(w, req)
 	resp := w.Result()
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusLocked, resp.StatusCode)
@@ -302,11 +302,40 @@ func TestProxy(t *testing.T) {
 				mockConn.On("ProxyRequest", mock.Anything, mock.Anything, mock.Anything, "80", mock.Anything).Once()
 			}
 
-			session.Mux().ServeHTTP(w, req)
+			session.Handler().ServeHTTP(w, req)
 
 			resp := w.Result()
 			defer resp.Body.Close()
 			assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestProxyVars(t *testing.T) {
+	tests := map[string]struct {
+		service      string
+		port         string
+		requestedURI string
+		ok           bool
+	}{
+		"empty":              {"", "", "", false},
+		"/":                  {"", "", "", false},
+		"//":                 {"", "", "", false},
+		"///":                {"", "", "/", false},
+		"/80/":               {"", "80", "", false},
+		"/80/foo/bar":        {"", "80", "foo/bar", false},
+		"service//foo/bar":   {"service", "", "foo/bar", false},
+		"service/80/foo":     {"service", "80", "foo", true},
+		"service/80/foo/bar": {"service", "80", "foo/bar", true},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			service, port, requestedURI, ok := parseProxyParams(tn)
+			assert.Equal(t, tc.service, service)
+			assert.Equal(t, tc.port, port)
+			assert.Equal(t, tc.requestedURI, requestedURI)
+			assert.Equal(t, tc.ok, ok)
 		})
 	}
 }

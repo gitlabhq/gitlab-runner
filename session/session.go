@@ -3,9 +3,9 @@ package session
 import (
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 
@@ -24,7 +24,7 @@ type Session struct {
 	Endpoint string
 	Token    string
 
-	mux *mux.Router
+	mux *http.ServeMux
 
 	interactiveTerminal terminal.InteractiveTerminal
 	terminalConn        terminal.Conn
@@ -108,20 +108,20 @@ func (s *Session) setMux() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.mux = mux.NewRouter()
-	s.mux.Handle(
-		s.Endpoint+"/proxy/{resource}/{port}/{requestedUri:.*}",
-		s.withAuthorization(http.HandlerFunc(s.proxyHandler)),
-	)
+	s.mux = http.NewServeMux()
+	s.mux.Handle(s.Endpoint+"/proxy/", s.withAuthorization(http.HandlerFunc(s.proxyHandler)))
 	s.mux.Handle(s.Endpoint+"/exec", s.withAuthorization(http.HandlerFunc(s.execHandler)))
 }
 
 func (s *Session) proxyHandler(w http.ResponseWriter, r *http.Request) {
+	serviceName, port, requestedURI, ok := parseProxyParams(strings.TrimPrefix(r.URL.Path, s.Endpoint+"/proxy/"))
+	if !ok {
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		return
+	}
+
 	logger := s.log.WithField("uri", r.RequestURI)
 	logger.Debug("Proxy session request")
-
-	params := mux.Vars(r)
-	serviceName := params["resource"]
 
 	serviceProxy := s.proxyPool[serviceName]
 	if serviceProxy == nil {
@@ -136,7 +136,7 @@ func (s *Session) proxyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serviceProxy.ConnectionHandler.ProxyRequest(w, r, params["requestedUri"], params["port"], serviceProxy.Settings)
+	serviceProxy.ConnectionHandler.ProxyRequest(w, r, requestedURI, port, serviceProxy.Settings)
 }
 
 func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
@@ -225,7 +225,7 @@ func (s *Session) SetProxyPool(pooler proxy.Pooler) {
 	s.proxyPool = pooler.Pool()
 }
 
-func (s *Session) Mux() *mux.Router {
+func (s *Session) Handler() http.Handler {
 	return s.mux
 }
 
@@ -248,4 +248,17 @@ func (s *Session) Kill() error {
 	s.terminalConn = nil
 
 	return err
+}
+
+// parseProxyParams returns the service, port and requestedURI
+// from a proxy path. Service and port are not optional.
+func parseProxyParams(path string) (service string, port string, uri string, ok bool) {
+	p := strings.SplitN(path, "/", 3)
+	switch len(p) {
+	case 2:
+		return p[0], p[1], "", p[0] != "" && p[1] != ""
+	case 3:
+		return p[0], p[1], p[2], p[0] != "" && p[1] != ""
+	}
+	return "", "", "", false
 }
