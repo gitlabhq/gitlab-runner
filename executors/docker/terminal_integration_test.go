@@ -50,7 +50,7 @@ func TestInteractiveTerminal(t *testing.T) {
 		_ = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	}()
 
-	srv := httptest.NewServer(build.Session.Mux())
+	srv := httptest.NewServer(build.Session.Handler())
 	defer srv.Close()
 
 	u := url.URL{

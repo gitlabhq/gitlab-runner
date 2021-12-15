@@ -279,7 +279,7 @@ func TestTerminalConn_Start(t *testing.T) {
 
 	session.SetInteractiveTerminal(&s)
 
-	srv := httptest.NewServer(session.Mux())
+	srv := httptest.NewServer(session.Handler())
 
 	u := url.URL{
 		Scheme: "ws",

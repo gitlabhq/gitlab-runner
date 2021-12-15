@@ -138,10 +138,6 @@ github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/openapiv2
 # github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
 github.com/gorhill/cronexpr
-# github.com/gorilla/context v1.1.1
-github.com/gorilla/context
-# github.com/gorilla/mux v1.3.1-0.20170228224354-599cba5e7b61
-github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.2
 github.com/gorilla/websocket
 # github.com/hashicorp/errwrap v1.0.0

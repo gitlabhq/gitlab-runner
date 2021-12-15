@@ -131,13 +131,13 @@ func (s *Server) handleSessionRequest(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Processing session request")
 
 	session := s.sessionFinder(r.RequestURI)
-	if session == nil || session.Mux() == nil {
+	if session == nil || session.Handler() == nil {
 		logger.Error("Mux handler not found")
 		http.NotFound(w, r)
 		return
 	}
 
-	session.Mux().ServeHTTP(w, r)
+	session.Handler().ServeHTTP(w, r)
 }
 
 func (s *Server) Start() error {
