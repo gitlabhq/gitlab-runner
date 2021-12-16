@@ -105,7 +105,7 @@ To set the container's timezone, in the `docker run` command, use the flag `--en
 
 ### Register the runner
 
-The final step is to [register a new runner](../register/index.md#docker). The GitLab Runner Container won't pick up any jobs until it's registered.
+The final step is to [register a new runner](../register/index.md#docker). The GitLab Runner container doesn't pick up any jobs until it's registered.
 
 ## Update configuration
 
