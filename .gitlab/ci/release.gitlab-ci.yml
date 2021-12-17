@@ -321,32 +321,10 @@ stable servercore20H2 docker images:
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable gitlab release:
-  # The `stable gitlab release` job creates the new entry at the
-  # https://gitlab.com/gitlab-org/gitlab-runner/-/releases page.
-  # As some users are using this page to find out what stable
-  # and/or RC versions were tagged, we're intentionally mark this
-  # job as dependent on all the stable release jobs. Even that
-  # the releases page doesn't touch the container images at all.
-  # With that the entry will be created only when all the different
-  # release artifacts were sent to the required places.
-  needs:
-  - job: "stable S3"
-    artifacts: false
-  - job: "stable packagecloud"
-    artifacts: false
-  - job: "stable docker images"
-    artifacts: false
-  - job: "stable helper docker images"
-    artifacts: false
-  - job: "stable servercore1809 docker images"
-    artifacts: false
-  - job: "stable servercore2004 docker images"
-    artifacts: false
-  - job: "stable servercore20H2 docker images"
-    artifacts: false
+  stage: postrelease
   extends:
-  - .release
   - .rules:release:stable-or-rc
+  dependencies: []
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   variables:
     CHANGELOG: https://gitlab.com/gitlab-org/gitlab-runner/blob/$CI_COMMIT_TAG/CHANGELOG.md
