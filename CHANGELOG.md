@@ -1,4 +1,4 @@
-## v14.6.0-rc1 (2021-12-17)
+## v14.6.0 (2021-12-17)
 
 ### Bug fixes
 
@@ -29,6 +29,7 @@
 - Improve Runner container image size for ubuntu and alpine !3185 (Furkan Türkal @Dentrax)
 - Autoscale VMs based on a percentage of in-use VMs !3179
 - Use native go errors and drop pkg/errors !3104 (feistel   @feistel)
+- Fix the 'stable gitlab release' job !3252
 
 ### GitLab Runner distribution
 
