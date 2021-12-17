@@ -1,3 +1,49 @@
+## v14.6.0-rc1 (2021-12-17)
+
+### Bug fixes
+
+- Implement improved JSON termination mode for Kubernetes !3225
+
+### Maintenance
+
+- Add Vale rule updates from the GitLab project to this project !3249
+- Minor capitalization and style fix !3248
+- Trigger UBI images build also from security fork !3245
+- Add note about running docker runner with docker-machine functionality !3236 (Ihor Martyniuk @enoot)
+- Remove coverage reports from S3 release !3235
+- Add curl in alpine image !3233
+- Fix flaky garbage collection test !3230
+- Move the "static QA" job to the postrelease stage !3227
+- Automatically retry integration_k8s jobs !3226
+- Docs: Clarifying that it's "a" macOS machine, rather than "yours" !3223
+- Remove unneeded quotes from markdownlint config !3215
+- Run incept tests in the postrelease stage so that all binaries and images are available !3214
+- Update markdownlint and Vale rules from GitLab project !3213
+- Add additional docs and integration tests for cache.s3.AuthenticationType !3210
+- Docs: Changed "clean up" from noun to verb !3206
+- Docs: Clarify what Runner Cloud is !3205
+- Drop gorilla/mux in favour of http.ServeMux !3203
+- Add idle gitlab_runner_jobs metric per runner !3202
+- Fix links to shared runners documentation !3201
+- Add openssl command to download the cert !3200
+- Improve Runner container image size for ubuntu and alpine !3185 (Furkan Türkal @Dentrax)
+- Autoscale VMs based on a percentage of in-use VMs !3179
+- Use native go errors and drop pkg/errors !3104 (feistel   @feistel)
+
+### GitLab Runner distribution
+
+- Push stable images built on security fork to canonical repository !3242
+- Update the GitLab Release job !3228
+
+### Documentation changes
+
+- Update lint-html image for docs !3239
+- Docs: Added OpenSSL SSL_connect: SSL_ERROR_SYSCALL troubleshooting topic !3229
+- Docs: Add pod cleanup info in the Kubernetes doc !3224
+- Update docs for installing runner from binary !3222 (Wojciech Pater @wpater)
+- Changed symbol in docs table !3220
+- Add Native Windows OpenSSH Server and Powershell support for Virtualbox and Parallels executors !3176 (Guillaume Chauvel @guillaume.chauvel)
+
 ## v14.5.2 (2021-12-10)
 
 ### Security fixes
