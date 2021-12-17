@@ -4,12 +4,12 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# The Kubernetes executor **(FREE)**
+# The Kubernetes executor for GitLab Runner **(FREE)**
 
 GitLab Runner can use Kubernetes to run builds on a Kubernetes cluster. This is
-possible with the use of the **Kubernetes** executor.
+possible with the use of the Kubernetes executor.
 
-The **Kubernetes** executor, when used with GitLab CI, connects to the Kubernetes
+The Kubernetes executor, when used with GitLab CI, connects to the Kubernetes
 API in the cluster creating a Pod for each GitLab CI Job. This Pod is made
 up of, at the very least, a build container, a helper container, and an additional container for each
 `service` defined in the `.gitlab-ci.yml` or `config.toml` files. The names for these containers
@@ -302,7 +302,7 @@ Here is an example `config.toml`:
 concurrent = 4
 
 [[runners]]
-  name = "Kubernetes Runner"
+  name = "myRunner"
   url = "https://gitlab.com/ci"
   token = "......"
   executor = "kubernetes"
@@ -1195,7 +1195,7 @@ The message `request did not complete within requested timeout` observed during 
 
 Admission control webhooks are a cluster-level administrative control intercept for all API requests they're scoped for, and can cause failures if they do not execute in time.
 
-Admission control webhooks support filters that can finely control which API requests and namespace sources it intercepts. If the GitLab Runner's Kubernetes API calls do not need to pass through an admission control webhook then you may alter the [webhook's selector/filter configuration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector) to ignore GitLab Runner's namespace, or apply exclusion labels/annotations over the GitLab Runner pod by configuring `podAnnotations` or `podLabels` in the [GitLab Runner Helm Chart `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/57e026d7f43f63adc32cdd2b21e6d450abcf0686/values.yaml#L490-500).
+Admission control webhooks support filters that can finely control which API requests and namespace sources it intercepts. If the Kubernetes API calls from GitLab Runner do not need to pass through an admission control webhook then you may alter the [webhook's selector/filter configuration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector) to ignore the GitLab Runner namespace, or apply exclusion labels/annotations over the GitLab Runner pod by configuring `podAnnotations` or `podLabels` in the [GitLab Runner Helm Chart `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/57e026d7f43f63adc32cdd2b21e6d450abcf0686/values.yaml#L490-500).
 
 For example, to avoid [DataDog Admission Controller webhook](https://docs.datadoghq.com/agent/cluster_agent/admission_controller/) from intercepting API requests made by the GitLab Runner manager pod, the following can be added:
 
