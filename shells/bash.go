@@ -1,10 +1,8 @@
 package shells
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"path"
 	"runtime"
 	"strconv"
@@ -36,6 +34,20 @@ fi
 
 `
 
+// bashJSONTerminationScript prints a json log-line to provide exit code context to
+// executors that cannot directly retrieve the exit status of the script.
+const bashJSONTerminationScript = `runner_script_trap() {
+	exit_code=$?
+	out_json="{\"command_exit_code\": $exit_code, \"script\": \"$0\"}"
+
+	echo ""
+	echo "$out_json"
+	exit 0
+}
+
+trap runner_script_trap EXIT
+`
+
 type BashShell struct {
 	AbstractShell
 	Shell string
@@ -47,9 +59,10 @@ type BashWriter struct {
 	Shell         string
 	indent        int
 
-	checkForErrors bool
-	useNewEval     bool
-	useNewEscape   bool
+	checkForErrors     bool
+	useNewEval         bool
+	useNewEscape       bool
+	useJSONTermination bool
 }
 
 func (b *BashWriter) GetTemporaryPath() string {
@@ -229,43 +242,32 @@ func (b *BashWriter) SectionEnd(id string) {
 }
 
 func (b *BashWriter) Finish(trace bool) string {
-	var buffer bytes.Buffer
-	w := bufio.NewWriter(&buffer)
+	var buf strings.Builder
 
-	b.writeShebang(w)
-	b.writeTrace(w, trace)
-	b.writeScript(w)
-
-	_ = w.Flush()
-	return buffer.String()
-}
-
-func (b *BashWriter) writeShebang(w io.Writer) {
 	if b.Shell != "" {
-		_, _ = io.WriteString(w, "#!/usr/bin/env "+b.Shell+"\n\n")
+		buf.WriteString("#!/usr/bin/env " + b.Shell + "\n\n")
 	}
-}
 
-func (b *BashWriter) writeTrace(w io.Writer, trace bool) {
+	if b.useJSONTermination {
+		buf.WriteString(bashJSONTerminationScript)
+	}
+
 	if trace {
-		_, _ = io.WriteString(w, "set -o xtrace\n")
+		buf.WriteString("set -o xtrace\n")
 	}
-}
 
-func (b *BashWriter) writeEval(w io.Writer) {
-	command := ": | eval " + b.escape(b.String()) + "\n"
+	buf.WriteString("set -eo pipefail\n")
+	buf.WriteString("set +o noclobber\n")
+
 	if b.useNewEval {
-		command = ": | (eval " + b.escape(b.String()) + ")\n"
+		buf.WriteString(": | (eval " + b.escape(b.String()) + ")\n")
+	} else {
+		buf.WriteString(": | eval " + b.escape(b.String()) + "\n")
 	}
 
-	_, _ = io.WriteString(w, command)
-}
+	buf.WriteString("exit 0")
 
-func (b *BashWriter) writeScript(w io.Writer) {
-	_, _ = io.WriteString(w, "set -eo pipefail\n")
-	_, _ = io.WriteString(w, "set +o noclobber\n")
-	b.writeEval(w)
-	_, _ = io.WriteString(w, "exit 0\n")
+	return buf.String()
 }
 
 func (b *BashWriter) escape(input string) string {

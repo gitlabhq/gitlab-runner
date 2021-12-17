@@ -1,10 +1,8 @@
 package shells
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,24 +29,17 @@ const (
 	// Those errors are not catched by the powershell_trap_script thus causing the job to hang
 	// To avoid this problem, the PwshValidationScript is used to validate the given script and eventually to cause
 	// the job to fail if a `ParserError` is thrown
-	pwshValidationScript = `
+	pwshJSONTerminationScript = `
 param (
 	[Parameter(Mandatory=$true,Position=1)]
 	[string]$Path
 )
 
-# Empty collection for errors
-$Errors = @()
-$input = [IO.File]::ReadAllText($Path)
-[void][System.Management.Automation.Language.Parser]::ParseInput($input,[ref]$null,[ref]$Errors)
-if($Errors.Count -gt 0){
-	foreach ($err in $Errors) { Write-Error $err.toString() }
-	$out_json= '{"command_exit_code":1, "script": "' + $MyInvocation.MyCommand.Name + '"}'
-	echo ""
-	echo "$out_json"
-	exit 0
-}
 %s -File $Path
+$out_json= '{"command_exit_code": ' + $LASTEXITCODE + ', "script": "' + $MyInvocation.MyCommand.Name + '"}'
+echo ""
+echo "$out_json"
+Exit 0
 `
 )
 
@@ -87,8 +78,8 @@ func fileCmdArgs() []string {
 	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
 }
 
-func PwshValidationScript(shell string) string {
-	return fmt.Sprintf(pwshValidationScript, shell)
+func PwshJSONTerminationScript(shell string) string {
+	return fmt.Sprintf(pwshJSONTerminationScript, shell)
 }
 
 func PowershellDockerCmd(shell string) []string {
@@ -374,43 +365,29 @@ func (p *PsWriter) Join(elem ...string) string {
 }
 
 func (p *PsWriter) Finish(trace bool) string {
-	var buffer bytes.Buffer
-	w := bufio.NewWriter(&buffer)
+	var buf strings.Builder
 
-	if p.Shell != SNPwsh {
+	if p.Shell == SNPwsh && p.EOL == "\n" {
+		buf.WriteString("#!/usr/bin/env " + p.Shell + p.EOL)
+	}
+
+	if p.Shell == SNPowershell {
 		// write UTF-8 BOM (Powershell Core doesn't use a BOM as mentioned in
 		// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3896#note_157830131)
-		_, _ = io.WriteString(w, "\xef\xbb\xbf")
+		buf.WriteString("\xef\xbb\xbf")
 	}
 
-	p.writeTrace(w, trace)
-	if p.Shell == SNPwsh {
-		_, _ = io.WriteString(w, `$ErrorActionPreference = "Stop"`+p.EOL+p.EOL)
-	}
-
-	// add empty line to close code-block when it is piped to STDIN
-	p.Line("")
-	_, _ = io.WriteString(w, p.String())
-	_ = w.Flush()
-	return buffer.String()
-}
-
-func (p *PsWriter) writeShebang(w io.Writer) {
-	if p.Shell != "" {
-		_, _ = io.WriteString(w, "#!/usr/bin/env "+p.Shell+p.EOL+p.EOL)
-	}
-}
-
-func (p *PsWriter) writeTrace(w io.Writer, trace bool) {
 	if trace {
-		_, _ = io.WriteString(w, "Set-PSDebug -Trace 2"+p.EOL)
+		buf.WriteString("Set-PSDebug -Trace 2" + p.EOL)
 	}
-}
 
-func (p *PsWriter) writeScript(w io.Writer) {
-	lines := strings.Split(p.String(), p.EOL)
-	_, _ = io.WriteString(w, strings.Join(lines, p.EOL))
-	_, _ = io.WriteString(w, p.EOL+p.EOL+"trap {runner_script_trap} runner_script_trap"+p.EOL+p.EOL+"exit 0"+p.EOL)
+	if p.Shell == SNPwsh {
+		buf.WriteString(`$ErrorActionPreference = "Stop"` + p.EOL)
+	}
+
+	buf.WriteString(p.String() + p.EOL)
+
+	return buf.String()
 }
 
 func (b *PowerShell) GetName() string {

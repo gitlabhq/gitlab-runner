@@ -126,7 +126,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testBuildsDirDefaultVolumeFeatureFlag":                   testBuildsDirDefaultVolumeFeatureFlag,
 		"testBuildsDirVolumeMountEmptyDirFeatureFlag":             testBuildsDirVolumeMountEmptyDirFeatureFlag,
 		"testBuildsDirVolumeMountHostPathFeatureFlag":             testBuildsDirVolumeMountHostPathFeatureFlag,
-		"testKubernetesPwshFeatureFlag":                           testKubernetesPwshFeatureFlag,
+		"testKubernetesBashFeatureFlag":                           testKubernetesBashFeatureFlag,
 		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
 	}
@@ -1123,26 +1123,61 @@ func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName stri
 	assert.Contains(t, out, fmt.Sprintf("uid=%d gid=0(root)", runAsUser))
 }
 
-func testKubernetesPwshFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+func testKubernetesBashFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
-	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-
-	build.Image.Name = common.TestPwshImage
-	build.Runner.Shell = shells.SNPwsh
-	build.JobResponse.Steps = common.Steps{
-		common.Step{
-			Name: common.StepNameScript,
-			Script: []string{
-				"Write-Output $PSVersionTable",
-			},
+	tests := []struct {
+		script              string
+		expectedContent     string
+		expectedErrExitCode int
+	}{
+		{
+			script:          "export hello=world; echo \"hello $hello\"",
+			expectedContent: "hello world",
+		},
+		{
+			script:              "return 129",
+			expectedErrExitCode: 129,
+		},
+		{
+			script:              "exit 128",
+			expectedErrExitCode: 128,
+		},
+		{
+			script:              "eco 'function error'",
+			expectedErrExitCode: 127,
+		},
+		{
+			script:              "{{}",
+			expectedErrExitCode: 127,
 		},
 	}
 
-	out, err := buildtest.RunBuildReturningOutput(t, build)
-	assert.NoError(t, err)
-	assert.Regexp(t, regexp.MustCompile("PSEdition +Core"), out)
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			build.Image.Name = common.TestAlpineImage
+			build.Runner.Shell = "bash"
+			build.JobResponse.Steps = common.Steps{
+				common.Step{
+					Name:   common.StepNameScript,
+					Script: []string{tc.script},
+				},
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			assert.Contains(t, out, tc.expectedContent)
+
+			if tc.expectedErrExitCode != 0 {
+				var buildError *common.BuildError
+				if assert.ErrorAs(t, err, &buildError) {
+					assert.Equal(t, tc.expectedErrExitCode, buildError.ExitCode)
+				}
+			}
+		})
+	}
 }
 
 func testKubernetesContainerHookFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -1526,4 +1561,68 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 		untrackedSubmoduleFile,
 		untrackedSubSubmoduleFile,
 	)
+}
+
+func TestKubernetesPwshFeatureFlag(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := []struct {
+		script              string
+		expectedRegexp      string
+		expectedErrExitCode int
+	}{
+		{
+			script:         "Write-Output $PSVersionTable",
+			expectedRegexp: "PSEdition +Core",
+		},
+		{
+			script:         "return 129",
+			expectedRegexp: "Job succeeded",
+		},
+		{
+			script:              "Write-Error 'should fail'",
+			expectedErrExitCode: 1,
+		},
+		{
+			script:              "Exit 128",
+			expectedErrExitCode: 128,
+		},
+		{
+			script:              "$host.SetShouldExit(130)",
+			expectedErrExitCode: 130,
+		},
+		{
+			script:              "eco 'function error'",
+			expectedErrExitCode: 1,
+		},
+		{
+			script:              "syntax error {{}",
+			expectedErrExitCode: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run("", func(t *testing.T) {
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+
+			build.Image.Name = common.TestPwshImage
+			build.Runner.Shell = shells.SNPwsh
+			build.JobResponse.Steps = common.Steps{
+				common.Step{
+					Name:   common.StepNameScript,
+					Script: []string{tc.script},
+				},
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			assert.Regexp(t, regexp.MustCompile(tc.expectedRegexp), out)
+
+			if tc.expectedErrExitCode != 0 {
+				var buildError *common.BuildError
+				if assert.ErrorAs(t, err, &buildError) {
+					assert.Equal(t, tc.expectedErrExitCode, buildError.ExitCode)
+				}
+			}
+		})
+	}
 }

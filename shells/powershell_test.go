@@ -26,12 +26,12 @@ func TestPowershell_LineBreaks(t *testing.T) {
 		"Windows newline on Core": {
 			shell:                   SNPwsh,
 			eol:                     "\r\n",
-			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\r\n\r\n",
+			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\r\n",
 		},
 		"Linux newline on Core": {
 			shell:                   SNPwsh,
 			eol:                     "\n",
-			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\n\n",
+			expectedErrorPreference: `#!/usr/bin/env pwsh` + "\n" + `$ErrorActionPreference = "Stop"` + "\n",
 		},
 	}
 
@@ -293,6 +293,10 @@ func TestPowershell_GenerateScript(t *testing.T) {
 	shellInfo.Build.Hostname = "Test Hostname"
 
 	pwshShell := common.GetShell("pwsh").(*PowerShell)
+	shebang := ""
+	if pwshShell.EOL == "\n" {
+		shebang = "#!/usr/bin/env pwsh\n"
+	}
 
 	testCases := map[string]struct {
 		stage           common.BuildStage
@@ -304,7 +308,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 			stage:           common.BuildStagePrepare,
 			info:            shellInfo,
 			expectedFailure: false,
-			expectedScript: `$ErrorActionPreference = "Stop"` + pwshShell.EOL + pwshShell.EOL +
+			expectedScript: shebang + `$ErrorActionPreference = "Stop"` + pwshShell.EOL +
 				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` +
 				pwshShell.EOL + pwshShell.EOL,
 		},
