@@ -838,7 +838,7 @@ Example:
 > Introduced in GitLab Runner v1.6.0.
 
 The following parameters define Kubernetes behavior.
-For more parameters, see the [Kubernetes executor documentation](../executors/kubernetes.md).
+For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes.md).
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
