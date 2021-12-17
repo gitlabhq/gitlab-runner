@@ -1,3 +1,15 @@
+## v14.5.2 (2021-12-10)
+
+### Security fixes
+
+- Fix `syscall.forkExec` calling `close(fd=0)` on pipe error [!44](https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/44)
+
+## v14.5.1 (2021-12-01)
+
+### Security fixes
+
+- Limit docker executor's container reads to prevent memory exhaustion [!37](https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/37)
+
 ## v14.5.0 (2021-11-21)
 
 ### New features
