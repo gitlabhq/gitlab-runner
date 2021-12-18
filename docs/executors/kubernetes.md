@@ -658,7 +658,7 @@ For multiple pull policies:
 The policy applies to the build image, helper image, and any services. It controls how an image is fetched and updated.
 
 To determine when to use which policy, see
-[the documentation on Kubernetes pull policies](https://v1-17.docs.kubernetes.io/docs/concepts/configuration/overview/#container-images).
+[the documentation on Kubernetes pull policies](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
 
 The GitLab naming convention is slightly different than the Kubernetes one.
 
