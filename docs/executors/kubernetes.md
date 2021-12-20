@@ -1133,6 +1133,15 @@ to `true` and [submit an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/is
 
 Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress on legacy execution strategy removal.
 
+### Container entrypoint
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3095) in GitLab Runner 14.5.
+
+GitLab Runner honors the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
+
+NOTE:
+If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the CI job hangs.
+
 ## Pod cleanup
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27870) in GitLab Runner 14.6.
