@@ -53,7 +53,7 @@ GOX = gox
 MOCKERY_VERSION ?= 1.1.0
 MOCKERY ?= .tmp/mockery-$(MOCKERY_VERSION)
 
-GOLANGLINT_VERSION ?= v1.27.0
+GOLANGLINT_VERSION ?= v1.43.0
 GOLANGLINT ?= .tmp/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= .tmp/goargs.so
 
@@ -376,7 +376,7 @@ $(GOLANGLINT): $(GOLANGLINT_GOARGS)
 	cd $(TOOL_BUILD_DIR) && \
 	export COMMIT=$(shell git rev-parse --short HEAD) && \
 	export DATE=$(shell date -u '+%FT%TZ') && \
-	CGO_ENABLED=1 go build -o $(BUILD_DIR)/$(GOLANGLINT) \
+	CGO_ENABLED=1 go build --trimpath -o $(BUILD_DIR)/$(GOLANGLINT) \
 		-ldflags "-s -w -X main.version=$(GOLANGLINT_VERSION) -X main.commit=$${COMMIT} -X main.date=$${DATE}" \
 		./cmd/golangci-lint/ && \
 	cd $(BUILD_DIR) && \
@@ -388,7 +388,7 @@ $(GOLANGLINT_GOARGS):
 	rm -rf $(TOOL_BUILD_DIR)
 	git clone https://gitlab.com/gitlab-org/language-tools/go/linters/goargs.git --no-tags --depth 1 $(TOOL_BUILD_DIR)
 	cd $(TOOL_BUILD_DIR) && \
-	CGO_ENABLED=1 go build -buildmode=plugin -o $(BUILD_DIR)/$(GOLANGLINT_GOARGS) plugin/analyzer.go
+	CGO_ENABLED=1 go build --trimpath --buildmode=plugin -o $(BUILD_DIR)/$(GOLANGLINT_GOARGS) plugin/analyzer.go
 	rm -rf $(TOOL_BUILD_DIR)
 
 $(MOCKERY): OS_TYPE ?= $(shell uname -s)
