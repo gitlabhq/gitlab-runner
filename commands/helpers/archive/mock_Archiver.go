@@ -4,7 +4,7 @@ package archive
 
 import (
 	context "context"
-	os "os"
+	fs "io/fs"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -15,11 +15,11 @@ type MockArchiver struct {
 }
 
 // Archive provides a mock function with given fields: ctx, files
-func (_m *MockArchiver) Archive(ctx context.Context, files map[string]os.FileInfo) error {
+func (_m *MockArchiver) Archive(ctx context.Context, files map[string]fs.FileInfo) error {
 	ret := _m.Called(ctx, files)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, map[string]os.FileInfo) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, map[string]fs.FileInfo) error); ok {
 		r0 = rf(ctx, files)
 	} else {
 		r0 = ret.Error(0)

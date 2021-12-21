@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 // This implementation only works when compiled for Windows

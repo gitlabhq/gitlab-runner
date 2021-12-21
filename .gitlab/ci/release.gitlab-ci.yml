@@ -35,12 +35,16 @@
     # concurrently: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28392
     - IMAGE_FLAVOR: ubuntu
       TARGET_ARCHS: s390x
+      ALLOW_IMAGE_BUILD_FAILURE: "true"
     - IMAGE_FLAVOR: alpine3.12
       TARGET_ARCHS: s390x
+      ALLOW_IMAGE_BUILD_FAILURE: "true"
     - IMAGE_FLAVOR: alpine3.13
       TARGET_ARCHS: s390x
+      ALLOW_IMAGE_BUILD_FAILURE: "true"
     - IMAGE_FLAVOR: alpine3.14
       TARGET_ARCHS: s390x
+      ALLOW_IMAGE_BUILD_FAILURE: "true"
 
 .release_helper_docker_images:
   extends:

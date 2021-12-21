@@ -27,6 +27,8 @@ Usage
 
     $ go test -coverprofile=coverage.txt -covermode count github.com/gorilla/mux
     $ gocover-cobertura < coverage.txt > coverage.xml
+    
+Note that you should run this from the directory which holds your `go.mod` file.
 
 Some flags can be passed (each flag should only be used once):
 

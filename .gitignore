@@ -36,5 +36,3 @@ debug.test
 
 # Ignore the generated binary
 /gitlab-runner*
-
-.patched_go_env
