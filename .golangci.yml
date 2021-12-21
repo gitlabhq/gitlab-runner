@@ -149,6 +149,10 @@ issues:
     linters:
     - errcheck
     - gocritic
+  - path: ".*_test.go"
+    text: "typeUnparen"
+    linters:
+    - gocritic
   - path: referees/prometheus_api.go
     linters:
     - deadcode

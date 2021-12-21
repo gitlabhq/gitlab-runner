@@ -44,8 +44,8 @@ var dialer = net.Dialer{
 }
 
 const (
-	backOffDelayMin    = 100 * time.Millisecond
-	backOffDelayMax    = 60 * time.Second
+	backOffMinDelay    = 100 * time.Millisecond
+	backOffMaxDelay    = 60 * time.Second
 	backOffDelayFactor = 2.0
 	backOffDelayJitter = true
 )
@@ -191,8 +191,8 @@ func (n *client) ensureBackoff(method, uri string) *backoff.Backoff {
 	key := fmt.Sprintf("%s_%s", method, uri)
 	if n.requestBackOffs[key] == nil {
 		n.requestBackOffs[key] = &backoff.Backoff{
-			Min:    backOffDelayMin,
-			Max:    backOffDelayMax,
+			Min:    backOffMinDelay,
+			Max:    backOffMaxDelay,
 			Factor: backOffDelayFactor,
 			Jitter: backOffDelayJitter,
 		}
@@ -419,9 +419,7 @@ func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
 
 func fixCIURL(url string) string {
 	url = strings.TrimRight(url, "/")
-	if strings.HasSuffix(url, "/ci") {
-		url = strings.TrimSuffix(url, "/ci")
-	}
+	url = strings.TrimSuffix(url, "/ci")
 	return url
 }
 

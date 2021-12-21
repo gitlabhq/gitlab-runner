@@ -1082,7 +1082,7 @@ func (c *KubernetesConfig) GetPodTerminationGracePeriodSeconds() *int64 {
 	// "terminate immediately" as opposed to nil, which by default is a timeout of 30 seconds as per http://gitlab.com/gitlab-org/gitlab-runner/blob/45472cdf02591942c9a95d2ce38ef5ff3a38d842/vendor/k8s.io/api/core/v1/types.go#L2988-2988.
 	// For details refer to https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2130.
 	// Will be removed with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.
-	var defaultPodTerminationGracePeriod int64 = 0
+	var defaultPodTerminationGracePeriod int64
 	if c.PodTerminationGracePeriodSeconds == nil {
 		return &defaultPodTerminationGracePeriod
 	}
