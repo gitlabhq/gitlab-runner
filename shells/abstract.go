@@ -440,6 +440,9 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 		pathArgs = append(pathArgs, "--", submodulePaths)
 	}
 
+	// Init submodules must occur prior to sync to ensure completeness of .git/config
+	w.Command("git", "submodule", "init")
+
 	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
 	args := []string{"submodule", "sync"}
 	if recursive {

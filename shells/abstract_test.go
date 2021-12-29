@@ -851,6 +851,11 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			mockWriter.
 				On(
 					"Command",
+					[]interface{}{"git", "submodule", "init"}...,
+				).Once()
+			mockWriter.
+				On(
+					"Command",
 					append([]interface{}{"git", "submodule", "sync"}, tc.ExpectedGitForEachFlags...)...,
 				).Once()
 			mockWriter.
@@ -1024,6 +1029,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 			defer mockWriter.AssertExpectations(t)
 
 			mockWriter.On("Noticef", mock.Anything).Once()
+			mockWriter.On("Command", "git", "submodule", "init").Once()
 			mockWriter.On("Command", submoduleCommand(test.paths, "sync")...).Once()
 			mockWriter.On("Command", submoduleCommand(test.paths, "update", "--init")...).Once()
 			cleanCmd := mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
