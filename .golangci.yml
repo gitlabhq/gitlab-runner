@@ -89,7 +89,7 @@ linters:
   - goconst
   - gocritic
   - goimports
-  - golint
+  - revive
   - goprintffuncname
   - gosimple
   - govet
@@ -129,10 +129,10 @@ issues:
     linters:
     - gocyclo
   - linters:
-    - golint
+    - revive
     text: "don't use ALL_CAPS in Go names; use CamelCase"
   - linters:
-    - golint
+    - revive
     text: "don't use an underscore in package name"
   - path: ".*_test.go"
     linters:
@@ -148,6 +148,10 @@ issues:
     text: "regexpMust"
     linters:
     - errcheck
+    - gocritic
+  - path: ".*_test.go"
+    text: "typeUnparen"
+    linters:
     - gocritic
   - path: referees/prometheus_api.go
     linters:

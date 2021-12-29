@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	defaultRetryBackoffMin = 1 * time.Second
-	defaultRetryBackoffMax = 5 * time.Second
+	defaultRetryMinBackoff = 1 * time.Second
+	defaultRetryMaxBackoff = 5 * time.Second
 )
 
 type Retryable interface {
@@ -27,7 +27,7 @@ type Retry struct {
 func New(retry Retryable) *Retry {
 	return &Retry{
 		retryable: retry,
-		backoff:   &backoff.Backoff{Min: defaultRetryBackoffMin, Max: defaultRetryBackoffMax},
+		backoff:   &backoff.Backoff{Min: defaultRetryMinBackoff, Max: defaultRetryMaxBackoff},
 	}
 }
 

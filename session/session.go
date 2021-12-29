@@ -225,6 +225,7 @@ func (s *Session) SetProxyPool(pooler proxy.Pooler) {
 	s.proxyPool = pooler.Pool()
 }
 
+//nolint:staticcheck
 func (s *Session) Handler() http.Handler {
 	return s.mux
 }

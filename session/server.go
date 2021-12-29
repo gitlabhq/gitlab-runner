@@ -135,7 +135,7 @@ func (s *Server) handleSessionRequest(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Processing session request")
 
 	session := s.sessionFinder(r.RequestURI)
-	if session == nil || session.Handler() == nil {
+	if session == nil || session.Handler() == nil { //nolint:staticcheck
 		logger.Error("Mux handler not found")
 		http.NotFound(w, r)
 		return

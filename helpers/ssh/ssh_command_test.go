@@ -18,7 +18,7 @@ import (
 func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	user, pass := "testuser", "testpass"
 
-	s, err := ssh.NewStubServer(user, pass)
+	s, _ := ssh.NewStubServer(user, pass)
 	defer s.Stop()
 
 	tempDir, err := ioutil.TempDir("", "ssh-stub-server")
