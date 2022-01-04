@@ -242,15 +242,16 @@ We recommend creating a network for each job.
 The default network mode uses [Legacy container links](https://docs.docker.com/network/links/) with
 the default Docker `bridge` mode to link the job container with the services.
 
-This mode can be used to configure how the networking stack is set up for the containers
-by using one of the following values:
+This mode can be used to configure how the networking stack is set up for the containers by using `network_mode` 
+[configuration parameter](../configuration/advanced-configuration.md#the-runnersdocker-section) 
+with one of the following values:
 
 - One of the standard Docker [networking modes](https://docs.docker.com/engine/reference/run/#network-settings):
   - `bridge`: use the bridge network (default)
   - `host`: use the host's network stack inside the container
   - `none`: no networking (not recommended)
-  - Any other `network_mode` value is taken as the name of an already existing
-    Docker network, which the build container should connect to.
+- Any other `network_mode` value is taken as the name of an already existing
+  Docker network, which the build container should connect to.
 
 For name resolution to work, Docker manipulates the `/etc/hosts` file in the
 container to include the service container hostname and alias. However,
