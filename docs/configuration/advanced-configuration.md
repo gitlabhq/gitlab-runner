@@ -761,6 +761,10 @@ The IAM policy for this role must have permissions to do the following actions f
 - "s3:GetObject"
 - "s3:DeleteObject"
 
+NOTE:
+The maximum size of a single file that can be uploaded to AWS S3 cache is 5 GB.
+A discussion about potential workarounds for this behavior is in [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26921).
+
 ### The `[runners.cache.gcs]` section
 
 > Introduced in GitLab Runner 11.3.0.
