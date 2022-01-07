@@ -96,13 +96,14 @@ type ConfigInfo struct {
 }
 
 type RegisterRunnerParameters struct {
-	Description    string `json:"description,omitempty"`
-	Tags           string `json:"tag_list,omitempty"`
-	RunUntagged    bool   `json:"run_untagged"`
-	Locked         bool   `json:"locked"`
-	AccessLevel    string `json:"access_level,omitempty"`
-	MaximumTimeout int    `json:"maximum_timeout,omitempty"`
-	Active         bool   `json:"active"`
+	Description     string `json:"description,omitempty"`
+	MaintenanceNote string `json:"maintenance_note,omitempty"`
+	Tags            string `json:"tag_list,omitempty"`
+	RunUntagged     bool   `json:"run_untagged"`
+	Locked          bool   `json:"locked"`
+	AccessLevel     string `json:"access_level,omitempty"`
+	MaximumTimeout  int    `json:"maximum_timeout,omitempty"`
+	Active          bool   `json:"active"`
 }
 
 type RegisterRunnerRequest struct {
