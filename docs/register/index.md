@@ -19,11 +19,11 @@ Before registering a runner, you need to first:
 - [Install it](../install/index.md) on a server separate than where GitLab
   is installed
 - Obtain a token:
-  - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/#shared-runners),
+  - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#shared-runners),
     have an administrator go to the GitLab Admin Area and click **Overview > Runners**
-  - For a [group runner](https://docs.gitlab.com/ee/ci/runners/index.html#group-runners),
+  - For a [group runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners),
     go to **Settings > CI/CD** and expand the **Runners** section
-  - For a [project-specific runner](https://docs.gitlab.com/ee/ci/runners/index.html#specific-runners),
+  - For a [project-specific runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#specific-runners),
     go to **Settings > CI/CD** and expand the **Runners** section
 
 NOTE:
@@ -65,7 +65,7 @@ To register a runner using a Docker container:
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner. You can change this value later in the
    GitLab user interface.
-1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
+1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
@@ -97,7 +97,7 @@ To register a runner under Linux:
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner. You can change this value later in the
    GitLab user interface.
-1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
+1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
@@ -123,7 +123,7 @@ To register a runner under macOS:
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner. You can change this value later in the
    GitLab user interface.
-1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
+1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
@@ -145,7 +145,7 @@ To register a runner under Windows:
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner. You can change this value later in the
    GitLab user interface.
-1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
+1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
@@ -167,7 +167,7 @@ To register a runner under FreeBSD:
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner. You can change this value later in the
    GitLab user interface.
-1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/#using-tags),
+1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
@@ -221,7 +221,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 ```
 
 The `--access-level` parameter was added in GitLab Runner 12.0. It uses a registration API parameter introduced in GitLab 11.11.
-Use this parameter during registration to create a [protected runner](https://docs.gitlab.com/ee/ci/runners/#prevent-runners-from-revealing-sensitive-information).
+Use this parameter during registration to create a [protected runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#prevent-runners-from-revealing-sensitive-information).
 For a protected runner, use the `--access-level="ref_protected"` parameter.
 For an unprotected runner, use `--access-level="not_protected"` instead or leave the value undefined.
 This value can later be toggled on or off in the project's **Settings > CI/CD** menu.
