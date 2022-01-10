@@ -6,10 +6,11 @@ import (
 
 var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 	config := volumes.ManagerConfig{
-		CacheDir:     e.Config.Docker.CacheDir,
-		BasePath:     e.Build.FullProjectDir(),
-		UniqueName:   e.Build.ProjectUniqueName(),
-		DisableCache: e.Config.Docker.DisableCache,
+		CacheDir:      e.Config.Docker.CacheDir,
+		BasePath:      e.Build.FullProjectDir(),
+		UniqueName:    e.Build.ProjectUniqueName(),
+		TemporaryName: e.getProjectUniqRandomizedName(),
+		DisableCache:  e.Config.Docker.DisableCache,
 	}
 
 	if e.newVolumePermissionSetter != nil {
