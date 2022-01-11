@@ -20,20 +20,20 @@ import (
 )
 
 const (
-	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/tests/gitlab-test.git"
+	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test"
 
 	repoRefType = RefTypeBranch
 
-	repoSHA       = "91956efe32fb7bef54f378d90c9bd74c19025872"
-	repoBeforeSHA = "ca50079dac5293292f83a4d454922ba8db44e7a3"
+	repoSHA       = "035c3a26fadbc7bd2f4101c84812a8b6e722f562"
+	repoBeforeSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
 	repoRefName   = "main"
 
-	repoLFSSHA       = "2371dd05e426fca09b0d2ec5d9ed757559035e2f"
-	repoLFSBeforeSHA = "91956efe32fb7bef54f378d90c9bd74c19025872"
+	repoLFSSHA       = "79aba0959bed25b02fd82ab5b6646d5e451f90a0"
+	repoLFSBeforeSHA = "ad90a78d4aacdb04f3de7ff9465cec74e3dbe4ef"
 	repoLFSRefName   = "add-lfs-object"
 
-	repoSubmoduleLFSSHA       = "d0cb7ff49b5c4fcf159e860fd6b30ef40731c435"
-	repoSubmoduleLFSBeforeSHA = "dcbc4f0c93cb1731eeac4e3a70a55a991838e137"
+	repoSubmoduleLFSSHA       = "ad90a78d4aacdb04f3de7ff9465cec74e3dbe4ef"
+	repoSubmoduleLFSBeforeSHA = "035c3a26fadbc7bd2f4101c84812a8b6e722f562"
 	repoSubmoduleLFSRefName   = "add-lfs-submodule"
 
 	FilesLFSFile1LFSsize = int64(2097152)
