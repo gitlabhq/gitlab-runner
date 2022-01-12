@@ -8,26 +8,38 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 This section can assist when troubleshooting GitLab Runner.
 
+## General troubleshooting tips
+
+View the logs:
+
+- `tail -100 /var/log/syslog` (Debian)
+- `tail -100 /var/log/messages` (RHEL)
+
+Restart the service:
+
+- `service gitlab-runner restart`
+
+View the Docker machines:
+
+- `sudo docker-machine ls`
+- `sudo su - && docker-machine ls`
+
+Delete all Docker machines:
+
+- `docker-machine rm $(docker-machine ls -q)`
+
+After making changes to your `config.toml`:
+
+- `service gitlab-runner restart`
+- `docker-machine rm $(docker-machine ls -q)`
+- `tail -f /var/log/syslog` (Debian)
+- `tail -f /var/log/messages` (RHEL)
+
 ## Confirm your GitLab and GitLab Runner versions
 
 GitLab aims to [guarantee backward compatibility](../index.md#gitlab-runner-versions).
 However, as a first troubleshooting step, you should ensure your version
 of GitLab Runner is the same as your GitLab version.
-
-- You can confirm your GitLab version by running the following Rake command:
-
-  ```shell
-  sudo gitlab-rake gitlab:env:info
-  ```
-
-- You can confirm your GitLab Runner version:
-
-  - On your GitLab instance by going to **Admin Area > Runners**.
-  - On your GitLab Runner instance, by running:
-
-    ```shell
-    sudo gitlab-runner status
-    ```
 
 ## What does `coordinator` mean?
 
@@ -36,24 +48,26 @@ The `coordinator` is the GitLab installation from which a job is requested.
 In other words, runners are isolated (virtual) machines that pick up jobs
 requested by their `coordinator`.
 
-## Where are logs stored when run as a service?
+## Where are logs stored when run as a service on Windows?
 
-- If the GitLab Runner is run as service on Linux/macOS the daemon logs to syslog.
 - If GitLab Runner is running as a service on Windows, it creates system event logs. To view them, open the Event Viewer (from the Run menu, type `eventvwr.msc` or search for "Event Viewer"). Then go to **Windows Logs > Application**. The **Source** for Runner logs is `gitlab-runner`. If you are using Windows Server Core, run this PowerShell command to get the last 20 log entries: `get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto`.
 
-## Run in `--debug` mode
+## Enable debug logging mode in your GitLab Runner `config.toml`
 
-Is it possible to run GitLab Runner in debug/verbose mode. From a terminal, run:
+From a terminal, logged in as root, run:
 
 ```shell
+gitlab-runner stop
 gitlab-runner --debug run
 ```
 
-### Enable debug mode logging in `config.toml`
+Debug logging can be enabled in the [global section of the `config.toml`](../configuration/advanced-configuration.md#the-global-section) by setting the `log_level` setting to `debug`. Add the following line at the very top of your `config.toml`, before/after the concurrent line:
 
-Debug logging can be enabled in the [global section of the `config.toml`](../configuration/advanced-configuration.md#the-global-section) by setting the `log_level` setting to `debug`.
+```toml
+log_level = "debug"
+```
 
-### Enable debug mode logging for the Helm Chart
+## Enable debug logging mode for the Helm Chart
 
 If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configuring-gitlab-runner-using-the-helm-chart):
 
@@ -66,7 +80,7 @@ logLevel: debug
 
 ## Configure DNS for a Docker executor runner
 
-When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container.
+When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container. 
 
 **Example:**
 
@@ -89,7 +103,7 @@ dns           = ["192.168.xxx.xxx","192.168.xxx.xxx"]
 
 ## I'm seeing `x509: certificate signed by unknown authority`
 
-Please see [the self-signed certificates](../configuration/tls-self-signed.md) documentation and [general SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl.html#troubleshooting) information.
+Please see [the self-signed certificates](../configuration/tls-self-signed.md).
 
 ## I get `Permission Denied` when accessing the `/var/run/docker.sock`
 
@@ -98,6 +112,25 @@ and you are connecting to Docker Engine installed on server.
 You can see the `Permission Denied` error.
 The most likely cause is that your system uses SELinux (enabled by default on CentOS, Fedora and RHEL).
 Check your SELinux policy on your system for possible denials.
+
+## Docker-machine error: `Unable to query docker version: Cannot connect to the docker engine endpoint.`
+
+If you get the error `Unable to query docker version: Cannot connect to the docker engine endpoint`, it could be related to a TLS failure. When `docker-machine` is installed, it ends up with some certs that don't work. 
+
+To fix this issue, clear out the certs and restart the runner. Upon restart, the runner notices the certs are empty and it recreates them.
+
+```shell
+sudo su -
+rm -r /root/.docker/machine/certs/*
+service gitlab-runner restart
+```
+
+## Adding an AWS Instance Profile to your autoscaled runners
+
+After you create an AWS IAM Role, in your IAM console, the role has a **Role ARN** and a **Instance Profile ARNs**. You must use the **Instance Profile** name, **not** the **Role Name**.
+
+Add the following value to your `[runners.machine]` section:
+`"amazonec2-iam-instance-profile=<instance-profile-name>",`
 
 ## The Docker executor gets timeout when building Java project
 
@@ -115,7 +148,7 @@ This happens due to fact that GitLab Runner uses `Transfer-Encoding: chunked` wh
 
 Upgrade your NGINX to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1031>
 
-## `warning: You appear to have cloned an empty repository.`
+## Error: `warning: You appear to have cloned an empty repository.`
 
 When running `git clone` using HTTP(s) (with GitLab Runner or manually for
 tests) and you see the following output:
@@ -147,7 +180,7 @@ through the **GitLab Workhorse**.
 
 See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1105).
 
-## `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
+## Error: `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
 
 It's possible to configure the timezone in which `[[docker.machine.autoscaling]]` periods
 are described. This feature should work on most Unix systems out of the box. However on some
