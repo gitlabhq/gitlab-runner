@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test"
+	repoRemoteURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test.git"
 
 	repoRefType = RefTypeBranch
 
