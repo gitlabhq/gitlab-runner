@@ -673,7 +673,7 @@ func testBuildsDirDefaultVolumeFeatureFlag(t *testing.T, featureFlagName string,
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
-	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/tests/gitlab-test", build.BuildDir)
+	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", build.BuildDir)
 }
 
 func testBuildsDirVolumeMountEmptyDirFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -696,7 +696,7 @@ func testBuildsDirVolumeMountEmptyDirFeatureFlag(t *testing.T, featureFlagName s
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
 
-	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/tests/gitlab-test", build.BuildDir)
+	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", build.BuildDir)
 }
 
 func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -720,7 +720,7 @@ func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName s
 
 	allVariables := build.GetAllVariables()
 
-	assert.Equal(t, fmt.Sprintf("/builds/%s/gitlab-org/ci-cd/tests/gitlab-test", allVariables.Get("CI_CONCURRENT_ID")), build.BuildDir)
+	assert.Equal(t, fmt.Sprintf("/builds/%s/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", allVariables.Get("CI_CONCURRENT_ID")), build.BuildDir)
 }
 
 // testKubernetesGarbageCollection tests the deletion of resources via garbage collector once the owning pod is deleted

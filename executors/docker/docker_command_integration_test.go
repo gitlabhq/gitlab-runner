@@ -677,7 +677,7 @@ func TestDockerCommandOutput(t *testing.T) {
 	assert.NoError(t, err)
 
 	re, err :=
-		regexp.Compile("(?m)^Initialized empty Git repository in /builds/gitlab-org/ci-cd/tests/gitlab-test/.git/")
+		regexp.Compile("(?m)^Initialized empty Git repository in /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test/.git/")
 	require.NoError(t, err)
 	assert.Regexp(t, re, buffer.String())
 }

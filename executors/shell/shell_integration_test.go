@@ -1321,7 +1321,7 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
 		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Checking out 2371dd05 as add-lfs-object...")
+		assert.Contains(t, out, "Checking out 79aba095 as add-lfs-object...")
 	})
 }
 
