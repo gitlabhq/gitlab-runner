@@ -80,7 +80,7 @@ logLevel: debug
 
 ## Configure DNS for a Docker executor runner
 
-When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container. 
+When configuring a GitLab Runner with the Docker executor, it is possible to run into a problem where the Runner daemon on the host can access GitLab but the built container cannot. This can happen when DNS is configured in the host but those configurations are not passed to the container.
 
 **Example:**
 
@@ -115,7 +115,7 @@ Check your SELinux policy on your system for possible denials.
 
 ## Docker-machine error: `Unable to query docker version: Cannot connect to the docker engine endpoint.`
 
-If you get the error `Unable to query docker version: Cannot connect to the docker engine endpoint`, it could be related to a TLS failure. When `docker-machine` is installed, it ends up with some certs that don't work. 
+If you get the error `Unable to query docker version: Cannot connect to the docker engine endpoint`, it could be related to a TLS failure. When `docker-machine` is installed, it ends up with some certs that don't work.
 
 To fix this issue, clear out the certs and restart the runner. Upon restart, the runner notices the certs are empty and it recreates them.
 

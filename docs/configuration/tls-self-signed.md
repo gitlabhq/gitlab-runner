@@ -55,7 +55,7 @@ GitLab Runner supports the following options:
 
     If your server address is `https://gitlab.example.com:8443/`, create the
     certificate file at: `/etc/gitlab-runner/certs/gitlab.example.com.crt`.
-    
+
     You can use the `openssl` client to download the GitLab instance's certificate to `/etc/gitlab-runner/certs`:
 
     ```shell

@@ -115,7 +115,7 @@ in the [Red Hat Ecosystem Catalog container list](https://catalog.redhat.com/sof
    NAME                             READY   STATUS    RESTARTS   AGE
    gitlab-runner-bf9894bdb-wplxn    1/1     Running   0          5m
    ```
-   
+
 #### Install other versions of GitLab Runner
 
 If you do not want to use the version of GitLab Runner Operator that's available in the RedHat OperatorHub, you can install a different version.
@@ -149,7 +149,7 @@ oc apply -f catalogsource.yaml
 ```
 
 In a minute the new Runner should show up in the OpenShift cluster's OperatorHub section.
-   
+
 #### Configuration
 
 To configure GitLab Runner in OpenShift, see the [Configuring GitLab Runner on OpenShift](../configuration/configuring_runner_openshift.md) page.
