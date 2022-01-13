@@ -743,8 +743,8 @@ Example:
 
 If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified and `AuthenticationType` is not provided, the S3 client uses the
 IAM instance profile available to the `gitlab-runner` instance. In an [autoscale](autoscale.md) configuration, this is not the on-demand machine
-that jobs are executed on. If `ServerAddress`, `AccessKey` and `SecretKey` are all specified but `AuthenticationType` is not provided, 
-`access-key` will be used as the authentication type. 
+that jobs are executed on. If `ServerAddress`, `AccessKey` and `SecretKey` are all specified but `AuthenticationType` is not provided,
+`access-key` will be used as the authentication type.
 
 When you use Helm charts to install GitLab Runner, and `rbac.create` is set to true
 in the `values.yaml` file, a ServiceAccount is created. This ServiceAccount's annotations are retrieved from the

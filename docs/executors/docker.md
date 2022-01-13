@@ -242,8 +242,8 @@ We recommend creating a network for each job.
 The default network mode uses [Legacy container links](https://docs.docker.com/network/links/) with
 the default Docker `bridge` mode to link the job container with the services.
 
-This mode can be used to configure how the networking stack is set up for the containers by using `network_mode` 
-[configuration parameter](../configuration/advanced-configuration.md#the-runnersdocker-section) 
+This mode can be used to configure how the networking stack is set up for the containers by using `network_mode`
+[configuration parameter](../configuration/advanced-configuration.md#the-runnersdocker-section)
 with one of the following values:
 
 - One of the standard Docker [networking modes](https://docs.docker.com/engine/reference/run/#network-settings):

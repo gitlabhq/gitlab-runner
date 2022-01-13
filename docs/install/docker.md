@@ -61,7 +61,7 @@ Make sure that you read the [FAQ](../faq/index.md) section which describes some 
 
 - If you are using a [`session_server`](../configuration/advanced-configuration.md), you also
 need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
-- If you want to use the Docker Machine executor for autoscaling feature, you also need to mount Docker Machine 
+- If you want to use the Docker Machine executor for autoscaling feature, you also need to mount Docker Machine
   storage path: `/root/.docker/machine`:
   
   - by adding `-v /srv/gitlab-runner/docker-machine-config:/root/.docker/machine` for system volume mounts
