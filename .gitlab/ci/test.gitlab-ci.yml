@@ -306,25 +306,27 @@ windows 20H2 integration tests:
   - .windows integration test
   - .windows20H2
 
-git 1.8.3.1:
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .go-cache
-  image: centos:7
-  stage: test
-  variables:
-    GOROOT: /usr/local/go
-    GOPATH: /go
-    CGO_ENABLED: 0
-  before_script:
-  - yum install -y -q git make patch && git version
-  - curl https://storage.googleapis.com/golang/go1.17.5.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
-  - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx -C /usr/bin
-  - git-lfs install --skip-repo
-  - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
-  - source ci/touch_make_dependencies
-  script:
-  - make git1.8-test
+# temporarily remove git 1.8.3.1 tests
+# see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28821
+#git 1.8.3.1:
+#  extends:
+#  - .rules:merge_request_pipelines:no_docs
+#  - .go-cache
+#  image: centos:7
+#  stage: test
+#  variables:
+#    GOROOT: /usr/local/go
+#    GOPATH: /go
+#    CGO_ENABLED: 0
+#  before_script:
+#  - yum install -y -q git make patch && git version
+#  - curl https://storage.googleapis.com/golang/go1.17.5.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+#  - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx -C /usr/bin
+#  - git-lfs install --skip-repo
+#  - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
+#  - source ci/touch_make_dependencies
+#  script:
+#  - make git1.8-test
 
 integration_k8s:
   extends:
