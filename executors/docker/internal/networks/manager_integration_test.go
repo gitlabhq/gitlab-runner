@@ -58,11 +58,11 @@ func TestCreateNetworkLabels(t *testing.T) {
 	network, err := manager.Inspect(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{
-		"com.gitlab.gitlab-runner.job.before_sha":  "91956efe32fb7bef54f378d90c9bd74c19025872",
+		"com.gitlab.gitlab-runner.job.before_sha":  "035c3a26fadbc7bd2f4101c84812a8b6e722f562",
 		"com.gitlab.gitlab-runner.job.id":          "0",
 		"com.gitlab.gitlab-runner.job.url":         "https://gitlab.example.com/namespace/project/-/jobs/0",
 		"com.gitlab.gitlab-runner.job.ref":         "main",
-		"com.gitlab.gitlab-runner.job.sha":         "035c3a26fadbc7bd2f4101c84812a8b6e722f562",
+		"com.gitlab.gitlab-runner.job.sha":         "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7",
 		"com.gitlab.gitlab-runner.managed":         "true",
 		"com.gitlab.gitlab-runner.pipeline.id":     "1",
 		"com.gitlab.gitlab-runner.project.id":      "0",
