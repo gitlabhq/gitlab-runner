@@ -138,9 +138,12 @@ github.com/form3tech-oss/jwt-go
 # github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 ## explicit
 github.com/fullsailor/pkcs7
-# github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
-## explicit
-github.com/getsentry/raven-go
+# github.com/getsentry/sentry-go v0.11.0
+## explicit; go 1.14
+github.com/getsentry/sentry-go
+github.com/getsentry/sentry-go/internal/crypto/randutil
+github.com/getsentry/sentry-go/internal/debug
+github.com/getsentry/sentry-go/internal/ratelimit
 # github.com/go-logr/logr v0.4.0
 ## explicit; go 1.14
 github.com/go-logr/logr
