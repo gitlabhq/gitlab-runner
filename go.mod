@@ -22,7 +22,7 @@ require (
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
-	github.com/getsentry/raven-go v0.0.0-20160518204710-dffeb57df75d
+	github.com/getsentry/sentry-go v0.11.0
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
