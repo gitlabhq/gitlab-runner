@@ -10,7 +10,16 @@ trigger UBI images build:
 trigger runner-incept tests:
   extends:
     - .rules:merge_request_pipelines:no_docs
+  needs:
+    - job: "prepare runner-incept variables"
+      artifacts: true
+    - "binaries: [linux/386 linux/arm]"
+    - "binaries: [linux/amd64 linux/arm64]"
+    - "binaries: [linux/s390x linux/ppc64le]"
+    - "helper images: [alpine]"
   stage: postrelease
+  variables:
+    UPSTREAM_CI_COMMIT_REF: $UPSTREAM_CI_COMMIT_REF
   trigger: gitlab-org/ci-cd/tests/runner-incept
 
 static QA:
