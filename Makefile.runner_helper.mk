@@ -36,6 +36,12 @@ TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-arm64.tar.xz
 TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-s390x.tar.xz
 TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-ppc64le.tar.xz
 
+TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-x86_64.tar.xz
+TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-arm.tar.xz
+TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-arm64.tar.xz
+TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-s390x.tar.xz
+TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-ppc64le.tar.xz
+
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-x86_64.tar.xz
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-x86_64-pwsh.tar.xz
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-arm.tar.xz
@@ -122,7 +128,7 @@ helper-dockerarchive-host:
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive
-helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.13 helper-dockerarchive-alpine3.14 helper-dockerarchive-ubuntu
+helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.13 helper-dockerarchive-alpine3.14 helper-dockerarchive-alpine3.15 helper-dockerarchive-ubuntu
 
 .PHONY: helper-dockerarchive-alpine
 helper-dockerarchive-alpine: $(TAR_XZ_ALPINE)
@@ -132,6 +138,9 @@ helper-dockerarchive-alpine3.13: $(TAR_XZ_ALPINE_313)
 
 .PHONY: helper-dockerarchive-alpine3.14
 helper-dockerarchive-alpine3.14: $(TAR_XZ_ALPINE_314)
+
+.PHONY: helper-dockerarchive-alpine3.15
+helper-dockerarchive-alpine3.15: $(TAR_XZ_ALPINE_315)
 
 .PHONY: helper-dockerarchive-ubuntu
 helper-dockerarchive-ubuntu: $(TAR_XZ_UBUNTU)
@@ -192,6 +201,11 @@ ${BASE_TAR_PATH}-alpine3.13-%.tar: ${BASE_BINARY_PATH}.%
 
 ${BASE_TAR_PATH}-alpine3.14-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.14.2
 ${BASE_TAR_PATH}-alpine3.14-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@
+
+${BASE_TAR_PATH}-alpine3.15-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.15.0
+${BASE_TAR_PATH}-alpine3.15-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
