@@ -88,9 +88,9 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 ### Use Cygwin
 
 - Install [Cygwin](https://cygwin.com/)
-- Install sshd and Git from Cygwin (do not use *Git For Windows*, you will get lots of path issues!)
+- Install `sshd` and Git from Cygwin (do not use *Git For Windows*, you will get lots of path issues!)
 - Install Git LFS
-- Configure sshd and set it up as a service (see [Cygwin wiki](https://cygwin.fandom.com/wiki/Sshd))
+- Configure `sshd` and set it up as a service (see [Cygwin wiki](https://cygwin.fandom.com/wiki/Sshd))
 - Create a rule for the Windows Firewall to allow incoming TCP traffic on port 22
 - Add the GitLab server(s) to `~/.ssh/known_hosts`
 - To convert paths between Cygwin and Windows, use [the `cygpath` utility](https://cygwin.fandom.com/wiki/Cygpath_utility)
@@ -99,10 +99,10 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 
 > [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3176) GitLab Runner 14.6.
 
-- Install [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows)
+- Install [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2)
 - Install [OpenSSH](https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse)
 - Install [Git For Windows](https://git-scm.com/)
-- Configure [sshd, set it up as a service and add a rule for the Windows firewall](https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse#start-and-configure-openssh-server)
+- Configure [`sshd`, set it up as a service and add a rule for the Windows firewall](https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse#start-and-configure-openssh-server)
 - Configure the [default shell as `pwsh`](https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_server_configuration#configuring-the-default-shell-for-openssh-in-windows). Update example with the correct full path:
 
   ```powershell

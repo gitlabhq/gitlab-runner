@@ -215,4 +215,4 @@ As a result, GitLab Runner handles rate limited scenarios with the following log
 
 NOTE:
 The header `RateLimit-ResetTime` is case insensitive since all header keys are run
-through the [`http.CanonicalHeaderKey`](https://golang.org/pkg/net/http/#CanonicalHeaderKey) function.
+through the [`http.CanonicalHeaderKey`](https://pkg.go.dev/net/http#CanonicalHeaderKey) function.
