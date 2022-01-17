@@ -77,7 +77,7 @@ Install the prerequisites:
 1. Log in to your server
 1. [Install GitLab Runner from the official GitLab repository](../../install/linux-repository.md)
 1. [Install Docker](https://docs.docker.com/engine/installation/#server)
-1. [Install Docker Machine](https://docs.docker.com/machine/install-machine/)
+1. [Install Docker Machine from the GitLab fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine) (Docker has deprecated Docker Machine)
 
 Now that the Runner is installed, it's time to register it.
 
