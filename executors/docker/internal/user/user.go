@@ -3,6 +3,7 @@ package user
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,6 +17,8 @@ const (
 	commandIDU = "id -u"
 	commandIDG = "id -g"
 )
+
+var errIDNoOutput = errors.New("id command returned no output on stdout")
 
 type Inspect interface {
 	IsRoot(ctx context.Context, imageID string) (bool, error)
@@ -57,23 +60,28 @@ func (i *defaultInspect) GID(ctx context.Context, containerID string) (int, erro
 }
 
 func (i *defaultInspect) executeCommand(ctx context.Context, containerID string, command string) (int, error) {
-	output := new(bytes.Buffer)
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	streams := exec.IOStreams{
+		Stdin:  strings.NewReader(command),
+		Stdout: limitwriter.New(stdout, 1024),
+		Stderr: limitwriter.New(stderr, 1024),
+	}
 
-	err := i.exec.Exec(
-		ctx,
-		containerID,
-		strings.NewReader(command),
-		// limit how much data we read from the container log to
-		// avoid memory exhaustion
-		limitwriter.New(output, 1024),
-	)
+	err := i.exec.Exec(ctx, containerID, streams)
 	if err != nil {
 		return 0, fmt.Errorf("executing %q on container %q: %w", command, containerID, err)
 	}
 
-	id, err := strconv.Atoi(strings.TrimSpace(output.String()))
+	stdoutContent := strings.TrimSpace(stdout.String())
+	stderrContent := strings.TrimSpace(stderr.String())
+	if len(stdoutContent) < 1 {
+		return 0, fmt.Errorf("%w (stderr: %s)", errIDNoOutput, stderrContent)
+	}
+
+	id, err := strconv.Atoi(stdoutContent)
 	if err != nil {
-		return 0, fmt.Errorf("parsing %q output: %w", command, err)
+		return 0, fmt.Errorf("parsing %q output: %w (stderr: %s)", command, err, stderrContent)
 	}
 
 	return id, nil

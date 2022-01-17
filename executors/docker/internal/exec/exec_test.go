@@ -8,10 +8,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -63,6 +65,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 		setupKillWaiter   func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context)
 		assertLogOutput   func(t *testing.T, logOutput string)
 		expectedError     error
+		expectedStdOut    string
+		expectedStdErr    string
 	}{
 		"ContainerAttach error": {
 			cancelContext: false,
@@ -168,6 +172,39 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			assertLogOutput: func(t *testing.T, logOutput string) {},
 			expectedError:   assert.AnError,
 		},
+		"output passed to the writers": {
+			input:         input(io.EOF),
+			cancelContext: false,
+			setupDockerClient: func(t *testing.T, clientMock *docker.MockClient, expectedCtx context.Context) {
+				pr, pw := io.Pipe()
+
+				outWriter := stdcopy.NewStdWriter(pw, stdcopy.Stdout)
+				errWriter := stdcopy.NewStdWriter(pw, stdcopy.Stderr)
+
+				go func() {
+					var err error
+					_, err = fmt.Fprintln(outWriter, "out line 1")
+					require.NoError(t, err)
+					_, err = fmt.Fprintln(errWriter, "err line 1")
+					require.NoError(t, err)
+					_, err = fmt.Fprintln(outWriter, "out line 2")
+					require.NoError(t, err)
+					_, err = fmt.Fprintln(errWriter, "err line 2")
+					require.NoError(t, err)
+					err = pw.Close()
+					require.NoError(t, err)
+				}()
+
+				mockWorkingClient(clientMock, pr, expectedCtx)
+			},
+			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
+			},
+			assertLogOutput: func(t *testing.T, logOutput string) {},
+			expectedError:   nil,
+			expectedStdOut:  "out line 1\nout line 2\n",
+			expectedStdErr:  "err line 1\nerr line 2\n",
+		},
 	}
 
 	for tn, tt := range tests {
@@ -187,7 +224,8 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			ctx, cancelFn := context.WithCancel(executorCtx)
 			defer cancelFn()
 
-			out := new(bytes.Buffer)
+			outBuf := new(bytes.Buffer)
+			errBuf := new(bytes.Buffer)
 
 			tt.setupDockerClient(t, clientMock, ctx)
 			tt.setupKillWaiter(t, waiterMock, executorCtx)
@@ -196,8 +234,14 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				cancelFn()
 			}
 
+			streams := IOStreams{
+				Stdin:  tt.input,
+				Stdout: outBuf,
+				Stderr: errBuf,
+			}
+
 			dockerExec := NewDocker(executorCtx, clientMock, waiterMock, logger)
-			err := dockerExec.Exec(ctx, id, tt.input, out)
+			err := dockerExec.Exec(ctx, id, streams)
 
 			logOutput := ""
 			for _, entry := range hook.AllEntries() {
@@ -214,6 +258,9 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
+
+			assert.Equal(t, tt.expectedStdOut, outBuf.String())
+			assert.Equal(t, tt.expectedStdErr, errBuf.String())
 		})
 	}
 }

@@ -26,8 +26,14 @@ type reader interface {
 	io.Reader
 }
 
+type IOStreams struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
+
 type Docker interface {
-	Exec(ctx context.Context, containerID string, input io.Reader, output io.Writer) error
+	Exec(ctx context.Context, containerID string, streams IOStreams) error
 }
 
 // NewDocker returns a client for starting a new container and running a
@@ -54,7 +60,7 @@ type defaultDocker struct {
 }
 
 //nolint:funlen
-func (d *defaultDocker) Exec(ctx context.Context, containerID string, input io.Reader, output io.Writer) error {
+func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IOStreams) error {
 	d.logger.Debugln("Attaching to container", containerID, "...")
 
 	hijacked, err := d.c.ContainerAttach(ctx, containerID, attachOptions())
@@ -76,7 +82,7 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, input io.R
 
 	// Copy any output to the build trace
 	go func() {
-		_, errCopy := stdcopy.StdCopy(output, output, hijacked.Reader)
+		_, errCopy := stdcopy.StdCopy(streams.Stdout, streams.Stderr, hijacked.Reader)
 
 		// this goroutine can continue even whilst StopKillWait is in flight,
 		// allowing a graceful stop. If reading stdout returns, we must close
@@ -89,7 +95,7 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, input io.R
 
 	// Write the input to the container and close its STDIN to get it to finish
 	go func() {
-		_, errCopy := io.Copy(hijacked.Conn, input)
+		_, errCopy := io.Copy(hijacked.Conn, streams.Stdin)
 		_ = hijacked.CloseWrite()
 		if errCopy != nil {
 			stdinErrCh <- errCopy
