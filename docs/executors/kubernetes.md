@@ -333,6 +333,17 @@ concurrent = 4
       "onlyKey" = ""
 ```
 
+## Using the cache with the Kubernetes executor
+
+When the cache is used with the Kubernetes executor, a specific volume called `/cache` is mounted on the pod. 
+The cache volume can be configured in the `config.toml` file by using the `cache_dir` setting.
+
+During the job's execution, if the cached data is needed, the runner checks to see if cached data is available (if a compressed file is available on the cache volume).
+
+- If available, the compressed file is extracted into the build folder and can then be used in the job.
+- If not available, the cached data is downloaded from the configured storage and saved into the `cache dir` as a compressed file.
+  The compressed file is then extracted into the `build` folder.
+
 ## Using volumes
 
 As described earlier, volumes can be mounted in the build container.
