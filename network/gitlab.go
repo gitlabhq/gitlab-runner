@@ -690,7 +690,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 		_ = res.Body.Close()
 	}()
 
-	return n.determineUploadState(res.StatusCode, log, messagePrefix)
+	return n.determineUploadState(res, log, messagePrefix)
 }
 
 func closeWithLogging(log logrus.FieldLogger, c io.Closer, name string) {
@@ -701,25 +701,27 @@ func closeWithLogging(log logrus.FieldLogger, c io.Closer, name string) {
 }
 
 func (n *GitLabClient) determineUploadState(
-	statusCode int,
+	resp *http.Response,
 	log *logrus.Entry,
 	messagePrefix string,
 ) common.UploadState {
-	switch statusCode {
+	statusText := getMessageFromJSONResponse(resp)
+
+	switch resp.StatusCode {
 	case http.StatusCreated:
-		log.Println(messagePrefix, "ok")
+		log.Println(messagePrefix, statusText)
 		return common.UploadSucceeded
 	case http.StatusForbidden:
-		log.WithField("status", statusCode).Errorln(messagePrefix, "forbidden")
+		log.WithField("status", resp.StatusCode).Errorln(messagePrefix, statusText)
 		return common.UploadForbidden
 	case http.StatusRequestEntityTooLarge:
-		log.WithField("status", statusCode).Errorln(messagePrefix, "too large archive")
+		log.WithField("status", resp.StatusCode).Errorln(messagePrefix, statusText)
 		return common.UploadTooLarge
 	case http.StatusServiceUnavailable:
-		log.WithField("status", statusCode).Errorln(messagePrefix, "service unavailable")
+		log.WithField("status", resp.StatusCode).Errorln(messagePrefix, statusText)
 		return common.UploadServiceUnavailable
 	default:
-		log.WithField("status", statusCode).Warningln(messagePrefix, "failed")
+		log.WithField("status", resp.StatusCode).Warningln(messagePrefix, statusText)
 		return common.UploadFailed
 	}
 }
