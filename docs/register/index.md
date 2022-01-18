@@ -14,7 +14,7 @@ each with a different configuration, by repeating the `register` command.
 
 ## Requirements
 
-Before registering a runner, you need to first:
+Before registering a runner, you must first:
 
 - [Install it](../install/index.md) on a server separate than where GitLab
   is installed
@@ -38,7 +38,7 @@ The instructions in this section are meant to be used *after* you
 The following steps describe launching a short-lived `gitlab-runner` container to
 register the container you created during install. After you finish
 registration, the resulting configuration is written to your chosen
-configuration volume (for example, `/srv/gitlab-runner/config`) and will be
+configuration volume (for example, `/srv/gitlab-runner/config`) and is
 loaded by the runner using that configuration volume.
 
 To register a runner using a Docker container:
@@ -70,7 +70,7 @@ To register a runner using a Docker container:
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
-1. If you entered `docker` as your executor, you'll be asked for the default
+1. If you entered `docker` as your executor, you are asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
 
 ## Linux
@@ -102,7 +102,7 @@ To register a runner under Linux:
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
-1. If you entered `docker` as your executor, you'll be asked for the default
+1. If you entered `docker` as your executor, you are asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
 
 ## macOS
@@ -150,7 +150,7 @@ To register a runner under Windows:
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
-1. If you entered `docker` as your executor, you'll be asked for the default
+1. If you entered `docker` as your executor, you are asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
 
 ## FreeBSD
@@ -172,7 +172,7 @@ To register a runner under FreeBSD:
    interface.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
-1. If you entered `docker` as your executor, you'll be asked for the default
+1. If you entered `docker` as your executor, you are asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
 
 ## One-line registration command
@@ -299,7 +299,7 @@ Registering runner... succeeded                     runner=__REDACTED__
 Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
 ```
 
-The command above will create the following `config.toml` file:
+The command above creates the following `config.toml` file:
 
 ```toml
 concurrent = 1
@@ -335,12 +335,12 @@ We can see the basic configuration created from the provided command line option
 - The default, empty section `runners.kubernetes` with only the one option
   provided during the registration filled out.
 
-Normally one would need to set few more options to make the Kubernetes executor
+Normally one would have to set few more options to make the Kubernetes executor
 usable, but the above is enough for the purpose of our example.
 
-Let's now assume that we need to configure an `emptyDir` volume for our Kubernetes executor. There is
+Let's now assume that we have to configure an `emptyDir` volume for our Kubernetes executor. There is
 no way to add this while registering with neither environment variables nor command line options.
-We would need to **manually append** something like this to the end of the file:
+We would have to **manually append** something like this to the end of the file:
 
 ```toml
 [[runners.kubernetes.volumes.empty_dir]]
@@ -354,7 +354,7 @@ relies on entries ordering), we could just append the required changes to the en
 file.
 ​
 However, this becomes tricky when more `[[runners]]` sections are being registered
-within one `config.toml` file. The assumption that the new one will be always at the
+within one `config.toml` file. The assumption that the new one is always at the
 end is risky.
 
 With GitLab Runner 12.2, this becomes much easier using the `--template-config` flag.
@@ -373,7 +373,7 @@ EOF
 
 Having the file, we can now try to register the runner again, but this time adding the
 `--template-config /tmp/test-config.template.toml` option. Apart from this change, the
-rest of registration command will be exactly the same:
+rest of registration command is exactly the same:
 
 ```shell
 $ sudo gitlab-runner register \
