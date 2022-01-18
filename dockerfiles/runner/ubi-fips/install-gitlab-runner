@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -eEo pipefail
+
+ARCH=$(if [ "$1" == "ppc64le" ]; then echo "ppc64el"; else echo "$1"; fi)
+
+rpm -i "/tmp/gitlab-runner_${ARCH}-fips.rpm"
+dnf update -y
+dnf install -y gitlab-runner-fips
+dnf clean all
+rm -rf /var/cache/dnf
+rm "/tmp/gitlab-runner_${ARCH}-fips.rpm"

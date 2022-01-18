@@ -1,0 +1,31 @@
+ARG BASE_IMAGE
+
+FROM $BASE_IMAGE
+
+# gitlab-runner-helper will try to resolve `sh` from the path. We ensure the PATH is populated by default, as some container runtimes do no longer set a default (e.g. containerd v1.2.8)
+ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
+
+# hadolint ignore=DL3018
+RUN dnf update -y && \
+    dnf install -y \
+    bash \
+    ca-certificates \
+    git \
+    git-lfs \
+    wget && \
+    wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 && \
+    chmod +x /usr/bin/dumb-init
+
+RUN git lfs install --skip-repo
+
+COPY ./helpers/entrypoint /
+RUN chmod +x /entrypoint
+
+COPY ./scripts/ ./binaries/gitlab-runner-helper /usr/bin/
+
+RUN echo 'hosts: files dns' >> /etc/nsswitch.conf
+
+# NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
+# See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
+ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]
+CMD ["sh"]

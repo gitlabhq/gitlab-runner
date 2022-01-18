@@ -21,7 +21,8 @@ if [ -z "${TARGET_ARCH}" ] || [ -z "${TARGET_FILE}" ]; then
     exit 1
 fi
 
-DOCKERFILE="Dockerfile.${TARGET_FLAVOR}"
+DOCKERFILE=${TARGET_DOCKERFILE:-"Dockerfile.${TARGET_FLAVOR}"}
+HELPER_BINARY_POSTFIX=${HELPER_BINARY_POSTFIX:-}
 
 if [[ $IMAGE_SHELL == 'pwsh' ]]; then
     if [ -z "${TARGET_FLAVOR}" ] || [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" ] || [ -z "${PWSH_IMAGE_DATE}" ]; then
@@ -64,7 +65,7 @@ case "${TARGET_ARCH}" in
         ;;
 esac
 
-binary_file="out/binaries/gitlab-runner-helper/gitlab-runner-helper.${TARGET_ARCH}"
+binary_file="out/binaries/gitlab-runner-helper/gitlab-runner-helper.${TARGET_ARCH}${HELPER_BINARY_POSTFIX}"
 
 if [ ! -f "$binary_file" ]; then
     echo -e "${RED}Missing binary file. You probably need to run 'make helper-bin'.${RST}"

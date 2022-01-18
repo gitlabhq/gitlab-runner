@@ -1,0 +1,40 @@
+#!/bin/bash
+
+export GIT_ROOT=$(cd "${BASH_SOURCE%/*}" && git rev-parse --show-toplevel)
+
+registry_credentials_available() {
+    echo "Checking registry credentials"
+    [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && return 0
+    return 1
+}
+
+login() {
+    echo "Logging into registry"
+    registry_credentials_available || return 0
+    echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+}
+
+logout() {
+    echo "Logging out of registry"
+    docker logout "${CI_REGISTRY}"
+}
+
+pull () {
+    echo "Pulling base image"
+    registry_credentials_available || return 0
+    docker pull "${BUILD_IMAGE}" || echo "${BUILD_IMAGE} image is not available. Will not use cache."
+}
+
+push () {
+    echo "Pushing image"
+    registry_credentials_available || return 0
+    docker push "${BUILD_IMAGE}"
+}
+
+scan() {
+    echo "Triggering container scan for ${BUILD_IMAGE}"
+    curl -X POST --form token="${CONTAINER_SCANNING_PIPELINE_TRIGGER_TOKEN}" \
+        --form ref=master  \
+        --form "variables[IMAGES]= ${BUILD_IMAGE}" \
+         https://gitlab.com/api/v4/projects/16505542/trigger/pipeline
+}

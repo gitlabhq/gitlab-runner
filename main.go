@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"gitlab.com/gitlab-org/gitlab-runner/boring"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
@@ -38,6 +39,8 @@ func main() {
 			panic(r)
 		}
 	}()
+
+	boring.CheckBoring()
 
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])

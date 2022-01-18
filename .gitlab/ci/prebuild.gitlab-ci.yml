@@ -1,4 +1,4 @@
-helper images:
+.helper images base:
   extends:
   - .docker
   - .go-cache-docker-qemu
@@ -13,12 +13,25 @@ helper images:
     paths:
     - out/helper-images/
     expire_in: 7d
+
+helper images:
+  extends:
+  - '.helper images base'
   parallel:
     matrix:
     - IMAGE_BASE: "alpine"
     - IMAGE_BASE: "alpine3.13"
     - IMAGE_BASE: "alpine3.14"
     - IMAGE_BASE: "ubuntu"
+
+helper images fips:
+  extends:
+    - '.helper images base'
+  needs:
+    - 'fips helper binaries'
+  parallel:
+    matrix:
+      - IMAGE_BASE: "ubi-fips"
 
 helper images binaries:
   extends:

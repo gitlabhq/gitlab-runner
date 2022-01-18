@@ -1,5 +1,5 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.17.5-1
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.17.5-2
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"
@@ -24,6 +24,8 @@ variables:
   DEPENDENCY_SCANNING_DISABLED: "true"
   TRANSFER_METER_FREQUENCY: "5s"
   GO111MODULE: "on"
+  GO_FIPS_VERSION: "1.17"
+  GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$GO_FIPS_VERSION
 
 default:
   image: $CI_IMAGE

@@ -45,6 +45,13 @@ package-rpm-ibm: package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=s390x PACKAGE_ARCH=s390x
 	$(MAKE) package-rpm-arch ARCH=ppc64le PACKAGE_ARCH=ppc64le
 
+.PHONY: package-rpm-fips
+package-rpm-fips: ARCH ?= amd64
+package-rpm-fips: export PACKAGE_ARCH ?= amd64
+package-rpm-fips: export RUNNER_BINARY ?= out/binaries/$(NAME)-linux-$(ARCH)-fips
+package-rpm-fips: package-deps package-prepare
+	@./ci/package rpm-fips
+
 .PHONY: package-deb-arch
 package-deb-arch: ARCH ?= amd64
 package-deb-arch: export PACKAGE_ARCH ?= amd64
