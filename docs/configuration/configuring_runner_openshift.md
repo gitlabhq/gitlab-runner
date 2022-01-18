@@ -248,6 +248,25 @@ service account, `gitlab-runner-sa`, which is used by the GitLab Runner containe
 oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa
 ```
 
+### Using FIPS Compliant GitLab Runner
+
+NOTE:
+Currently, for Operator, you can change only the helper image. [An issue exists](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to change the GitLab Runner image as well.
+
+To use a [FIPS compliant GitLab Runner Helper](../install/index.md#fips-compliant-gitlab-runner), change the helper image as follows: 
+
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+ name: dev
+spec:
+ gitlabUrl: https://gitlab.example.com
+ token: gitlab-runner-secret
+ helperImage: gitlab/gitlab-runner-helper:ubi-fips
+ concurrent: 2
+```
+
 #### Register GitLab Runner by using a self-signed certificate
 
 When you use a self-signed certificate with your GitLab self-managed installation, you must create a secret that contains the CA certificate used to sign your private certificates.

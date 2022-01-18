@@ -31,6 +31,27 @@ You can also view installation instructions in GitLab by going to your project's
 **Settings > CI / CD**, expanding the **Runners** section, and clicking
 **Show runner installation instructions**.
 
+## FIPS compliant GitLab Runner
+
+As of GitLab Runner 14.7, we provide a FIPS 140-12 compliant GitLab Runner binary. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
+
+NOTE:
+Only Red Hat Enterprise Linux (RHEL) distributions are supported.
+
+FIPS compliant GitLab Runner binaries are provided for the following architectures:
+
+- AMD64
+
+Docker images and RPM packages for the same architectures are also provided.
+
+### FIPS compliant GitLab Runner in RHEL
+
+When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS mode](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/security_hardening/assembly_installing-a-rhel-8-system-with-fips-mode-enabled_security-hardening).
+
+### FIPS compliant GitLab Runner in other systems and architectures
+
+Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to follow progress on adding other architectures and distros.
+
 ## Repositories
 
 - [Install using the GitLab repository for Debian/Ubuntu/CentOS/RedHat](linux-repository.md)
