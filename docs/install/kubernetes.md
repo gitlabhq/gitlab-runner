@@ -584,6 +584,20 @@ runners:
               run_as_user = 59417
 ```
 
+### Using FIPS compliant GitLab Runner
+
+To use a [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) change the GitLab Runner image and the Helper image as follows:
+
+```yaml
+image: gitlab/gitlab-runner:ubi-fips
+
+runners:
+    config: |
+        [[runners]]
+          [runners.kubernetes]
+            helper_image_flavor = "ubi-fips"
+```
+
 ## Uninstalling GitLab Runner using the Helm Chart
 
 Before uninstalling GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.

@@ -49,6 +49,14 @@ For example, for CentOS or Red Hat Enterprise Linux:
 curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_${arch}.rpm"
 ```
 
+For example, for [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) on RHEL:
+
+```shell
+# Currently only amd64 is a supported arch
+# A full list of architectures can be found here https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
+curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_amd64_fips.rpm"
+```
+
 ### Install
 
 1. Install the package for your system as follows.
@@ -113,6 +121,9 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
    # Linux ppc64le
    sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-ppc64le"
+   
+   # Linux x86-64 FIPS Compliant
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64-fips"
    ```
 
    You can download a binary for every available version as described in
