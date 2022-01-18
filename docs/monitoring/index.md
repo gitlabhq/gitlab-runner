@@ -77,7 +77,7 @@ the `pprof` HTTP endpoints.
 `pprof` endpoints will be available via an embedded HTTP server on `/debug/pprof/`
 path.
 
-You can read more about using `pprof` in its [documentation](https://golang.org/pkg/net/http/pprof/).
+You can read more about using `pprof` in its [documentation](https://pkg.go.dev/net/http/pprof).
 
 ## Configuration of the metrics HTTP server
 

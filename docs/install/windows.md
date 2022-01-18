@@ -144,10 +144,10 @@ date:
 ### Future releases
 
 Microsoft releases new Windows Server products in the [Semi-Annual
-Channel](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#semi-annual-channel)
+Channel](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#semi-annual-channel)
 twice a year, and every 2 - 3 years a new major version of Windows Sever
 is released in the [Long-Term Servicing Channel
-(LTSC)](https://docs.microsoft.com/en-us/windows-server/get-started-19/servicing-channels-19#long-term-servicing-channel-ltsc).
+(LTSC)](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#long-term-servicing-channel-ltsc).
 
 GitLab aims to test and release new GitLab Runner helper images that
 include the latest Windows Server version (Semi-Annual Channel) within 1
