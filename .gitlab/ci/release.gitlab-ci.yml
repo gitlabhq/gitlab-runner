@@ -19,10 +19,14 @@
   - 'ecr public token'
   - 'binaries'
   - 'package-deb'
+  - 'binaries-fips'
+  - 'package-rpm: [package-rpm-fips]'
   script:
   - make release_docker_images
   parallel:
     matrix:
+    - IMAGE_FLAVOR: ubi-fips
+      TARGET_ARCHS: amd64
     - IMAGE_FLAVOR: ubuntu
       TARGET_ARCHS: amd64 arm64 ppc64le
     - IMAGE_FLAVOR: alpine3.12
@@ -53,6 +57,7 @@
   - 'ecr public token'
   - 'binaries'
   - 'helper images'
+  - 'helper images fips'
   script:
   - make release_helper_docker_images
   parallel:
@@ -65,6 +70,8 @@
       IMAGE_TAG: ["alpine3.14-"]
     - IMAGE_FLAVOR: "ubuntu"
       IMAGE_TAG: ["ubuntu-"]
+    - IMAGE_FLAVOR: "ubi-fips"
+      IMAGE_TAG: ["ubi-fips-"]
 
 .release_windows_docker_images:
   extends:
@@ -95,6 +102,7 @@
   - 'helper images'
   - 'helper images binaries'
   - 'binaries'
+  - 'binaries-fips'
   - 'package-deb'
   - 'package-rpm'
   before_script:

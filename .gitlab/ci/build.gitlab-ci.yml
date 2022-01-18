@@ -23,3 +23,23 @@ binaries:
       - darwin/amd64
       - freebsd/386 freebsd/amd64 freebsd/arm
       - windows/386 windows/amd64
+
+binaries-fips:
+  extends:
+  - .rules:merge_request_pipelines:no_docs
+  - .go-cache
+  stage: build
+  image: $GO_FIPS_IMAGE
+  needs:
+  - 'prepare go fips'
+  script:
+  - source ci/touch_make_dependencies
+  - make runner-bin-fips GOOS=$GOOS GOARCH=$GOARCH
+  artifacts:
+    paths:
+      - out/binaries/gitlab-runner-*
+    expire_in: 7d
+  parallel:
+    matrix:
+    - GOOS: linux
+      GOARCH: amd64

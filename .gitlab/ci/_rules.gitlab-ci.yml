@@ -201,6 +201,13 @@
     - tests/dockerfiles/alpine-id-overflow/*
     - .gitlab/ci/prepare.gitlab-ci.yml
 
+.rules:prepare:go-fips:image:merge-requests:
+  rules:
+    - <<: *if-runner-merge-request-pipeline
+      changes:
+        - dockerfiles/ci/go.fips.Dockerfile
+        - .gitlab/ci/prepare.gitlab-ci.yml
+
 ##############
 # Docs rules #
 ##############

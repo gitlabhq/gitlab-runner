@@ -43,6 +43,8 @@ TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-arm64.tar.xz
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-s390x.tar.xz
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-ppc64le.tar.xz
 
+TAR_XZ_FIPS += ${BASE_TAR_PATH}-ubi-fips-x86_64.tar.xz
+
 # Binaries that we support for the helper image. We are using the following
 # pattern match:
 # out/binaries/gitlab-runner-helper/gitlab-runner-helper.{{arch}}-{{os}}, these should
@@ -66,6 +68,8 @@ GO_ARCH_s390x = linux/s390x
 GO_ARCH_ppc64le = linux/ppc64le
 GO_ARCH_x86_64-windows = windows/amd64
 
+GO_ARCH_NAME_amd64 = x86_64
+
 # Go files that are used to create the helper binary.
 HELPER_GO_FILES ?= $(shell find common network vendor -name '*.go')
 
@@ -76,6 +80,26 @@ helper-bin-host: ${BASE_BINARY_PATH}.$(shell uname -m)
 # Build the Runner Helper binaries for all supported platforms.
 .PHONY: helper-bin
 helper-bin: $(BINARIES)
+
+# Make sure the fips target is first since it's less general
+${BASE_BINARY_PATH}-fips: export GOOS ?= linux
+${BASE_BINARY_PATH}-fips: export GOARCH ?= amd64
+${BASE_BINARY_PATH}-fips: $(HELPER_GO_FILES)
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build \
+    		   -tags boringcrypto \
+    		   -ldflags "$(GO_LDFLAGS)" \
+    		   -o="${BASE_BINARY_PATH}.$(GO_ARCH_NAME_$(GOARCH))-fips" \
+    		   $(PKG)/apps/gitlab-runner-helper
+
+${BASE_BINARY_PATH}-fips-docker: export GOOS ?= linux
+${BASE_BINARY_PATH}-fips-docker: export GOARCH ?= amd64
+${BASE_BINARY_PATH}-fips-docker: export GO_VERSION ?= 1.17
+${BASE_BINARY_PATH}-fips-docker: $(HELPER_GO_FILES)
+	# Building $(NAME)-helper in version $(VERSION) for FIPS $(GOOS) $(GOARCH)
+	@docker build -t gitlab-runner-helper-fips --build-arg GOOS="$(GOOS)" --build-arg GOARCH="$(GOARCH)" --build-arg GO_VERSION="$(GO_VERSION)" -f dockerfiles/fips/helper.fips.Dockerfile .
+	@docker rm -f gitlab-runner-helper-fips && docker create -it --name gitlab-runner-helper-fips gitlab-runner-helper-fips
+	@docker cp gitlab-runner-helper-fips:/gitlab-runner-helper-fips "${BASE_BINARY_PATH}.$(GO_ARCH_NAME_$(GOARCH))-fips"
+	@docker rm -f gitlab-runner-helper-fips
 
 ${BASE_BINARY_PATH}.%: $(HELPER_GO_FILES) $(GOX)
 	$(GOX) -osarch=$(GO_ARCH_$*) -ldflags "$(GO_LDFLAGS)" -output=$@ $(PKG)/apps/gitlab-runner-helper
@@ -112,11 +136,24 @@ helper-dockerarchive-alpine3.14: $(TAR_XZ_ALPINE_314)
 .PHONY: helper-dockerarchive-ubuntu
 helper-dockerarchive-ubuntu: $(TAR_XZ_UBUNTU)
 
+.PHONY: helper-dockerarchive-ubi-fips
+helper-dockerarchive-ubi-fips: $(TAR_XZ_FIPS)
+
+${BASE_TAR_PATH}-ubi-fips-%.tar.xz: ${BASE_TAR_PATH}-ubi-fips-%.tar
+	xz $(TAR_XZ_ARGS) $<
+
 ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
 	xz $(TAR_XZ_ARGS) $<
 
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz $(TAR_XZ_ARGS) $<
+
+${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 8.5-214
+${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_DOCKERFILE ?= Dockerfile.fips
+${BASE_TAR_PATH}-ubi-fips-%.tar: export HELPER_BINARY_POSTFIX ?= -fips
+${BASE_TAR_PATH}-ubi-fips-%.tar:
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker redhat/ubi8 $* $@
 
 # See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export IMAGE_SHELL := pwsh

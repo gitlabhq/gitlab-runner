@@ -51,6 +51,20 @@ release_docker_helper_images() {
     helper_image_ppc64le="${1}/gitlab-runner-helper:${PREFIX}ppc64le-${REVISION}"
     helper_image_ppc64le_version="${1}/gitlab-runner-helper:${PREFIX}ppc64le-${ref_tag}"
     helper_image_ppc64le_latest="${1}/gitlab-runner-helper:${PREFIX}ppc64le-latest"
+    helper_image_x86_64_fips="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
+    helper_image_x86_64_fips_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
+    helper_image_x86_64_fips_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest"
+
+    if [[ "$FLAVOR" == "ubi-fips" ]]; then
+        # Special case for FIPS since we don't yet support all the architectures we do for other flavors
+        import "out/helper-images/prebuilt-${FLAVOR}-x86_64.tar.xz" "${helper_image_x86_64_fips}"
+        tag_latest "${helper_image_x86_64_fips}" "${helper_image_x86_64_fips_latest}"
+        tag_latest "${helper_image_x86_64_fips}" "${helper_image_x86_64_fips_version}"
+        push "${helper_image_x86_64_fips}"
+        push_latest "${helper_image_x86_64_fips_latest}"
+        push "${helper_image_x86_64_fips_version}"
+        return 0
+    fi
 
     import "out/helper-images/prebuilt-${FLAVOR}-x86_64.tar.xz" "${helper_image_x86_64}"
     import "out/helper-images/prebuilt-${FLAVOR}-arm.tar.xz" "${helper_image_arm}"

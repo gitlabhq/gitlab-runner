@@ -1,0 +1,18 @@
+fips helper binaries:
+  extends:
+  - .rules:merge_request_pipelines:no_docs
+  - .go-cache
+  stage: fips helper binaries
+  image: $GO_FIPS_IMAGE
+  needs:
+  - 'prepare go fips'
+  script:
+  - make out/binaries/gitlab-runner-helper/gitlab-runner-helper-fips GOOS=$GOOS GOARCH=$GOARCH
+  artifacts:
+    paths:
+    - out/binaries/gitlab-runner-helper/gitlab-runner-helper.*
+    expire_in: 7d
+  parallel:
+    matrix:
+    - GOOS: linux
+      GOARCH: amd64
