@@ -26,7 +26,7 @@ gosec-sast:
 
 # Perform documentation linting on Markdown files
 docs lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.14-vale-2.12.0-markdownlint-0.29.0
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.15-vale-2.14.0-markdownlint-0.30.0
   stage: test
   extends:
   - .rules:merge_request_pipelines
@@ -38,7 +38,7 @@ docs lint markdown:
 
 # Perform link checks on published HTML files
 docs check links:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.14-ruby-2.7.5-08847baa
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.15-ruby-2.7.5-cee62c13
   stage: test
   extends:
   - .rules:merge_request_pipelines
