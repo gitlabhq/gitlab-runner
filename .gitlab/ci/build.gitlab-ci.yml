@@ -31,7 +31,8 @@ binaries-fips:
   stage: build
   image: $GO_FIPS_IMAGE
   needs:
-  - 'prepare go fips'
+  - job: 'prepare go fips'
+    optional: true
   script:
   - source ci/touch_make_dependencies
   - make runner-bin-fips GOOS=$GOOS GOARCH=$GOARCH

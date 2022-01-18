@@ -5,7 +5,8 @@ fips helper binaries:
   stage: fips helper binaries
   image: $GO_FIPS_IMAGE
   needs:
-  - 'prepare go fips'
+  - job: 'prepare go fips'
+    optional: true
   script:
   - make out/binaries/gitlab-runner-helper/gitlab-runner-helper-fips GOOS=$GOOS GOARCH=$GOARCH
   artifacts:
