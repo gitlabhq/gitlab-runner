@@ -1,3 +1,47 @@
+## v14.7.0 (2022-01-19)
+
+### New features
+
+- Add RHEL/UBI amd64 FIPS support !3255
+
+### Bug fixes
+
+- Exclude stderr content from parsing UID/GID information within Docker executor !2768
+
+### Maintenance
+
+- Fix fips rpm package name to sign !3285
+- Mark "prepare go fips" job as optional !3284
+- Updating documentation linting images for project !3283
+- Fix external links from project and remove old redirects !3282
+- Restore git 1.8.3.1 tests !3278
+- Fix tests using gitlab-grack submodule !3272
+- Clarify how to configure network mode with docker executor !3264
+- Update golangci-lint !3261
+- Pass UPSTREAM_CI_COMMIT_REF to incept tests !3257
+- Update sentry library from raven-go to sentry-go !3199 (Markus Legner @mlegner)
+- Bump used Go version to 1.17 !3112
+- Show error details for failed artifact uploads !3240
+
+### GitLab Runner distribution
+
+- Fix the 'stable gitlab release' job !3252
+
+### Documentation changes
+
+- Point to Gitlab maintained fork of Docker Machine !3276 (Thameez Bodhanya @thameezbo)
+- Release of a FIPS Compliant runner !3274
+- Adds note about 5 GB S3 cache limit !3266
+- Added troubleshooting steps !3273
+- Fix broken external links !3270 (Niklas @Taucher2003)
+- Update to mention centos stream 8 instead of centos linux 8 !3267 (Ondřej Budai @ondrejbudai)
+- Document need for entrypoint to open shell !3256
+- Updated language for Kubernetes executor !3253
+- Update link to K8s pull policy !3254
+- Improve the cache documentation for k8s executor !3237
+- Update docs for GitLab Runner Helm Chart using ACS (retired) to AKS !3219
+- Remove trailing spaces for Jan 2022 TW monthly chores !3275
+
 ## v14.6.0 (2021-12-17)
 
 ### Bug fixes
