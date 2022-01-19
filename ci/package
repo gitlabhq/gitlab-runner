@@ -136,7 +136,7 @@ create_rpm_fips() {
     options+=("--depends openssl")
 
     create_package rpm "${prebuilt_images_list_fips}" "-fips" "${options[@]}"
-    sign_rpm "${PACKAGE_NAME}_${PACKAGE_ARCH}_fips.rpm"
+    sign_rpm "${PACKAGE_NAME}_${PACKAGE_ARCH}-fips.rpm"
 }
 
 sign_rpm() {
