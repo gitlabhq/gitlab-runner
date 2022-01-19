@@ -59,7 +59,7 @@ release_docker_helper_images() {
         # Special case for FIPS since we don't yet support all the architectures we do for other flavors
         import "out/helper-images/prebuilt-${FLAVOR}-x86_64.tar.xz" "${helper_image_x86_64_fips}"
         tag_latest "${helper_image_x86_64_fips}" "${helper_image_x86_64_fips_latest}"
-        tag_latest "${helper_image_x86_64_fips}" "${helper_image_x86_64_fips_version}"
+        tag "${helper_image_x86_64_fips}" "${helper_image_x86_64_fips_version}"
         push "${helper_image_x86_64_fips}"
         push_latest "${helper_image_x86_64_fips_latest}"
         push "${helper_image_x86_64_fips_version}"
