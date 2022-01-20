@@ -3,7 +3,7 @@
   extends:
   - .rules:docs:review
   - .no_cache_and_dependencies
-  image: ruby:2.6-alpine
+  image: ruby:2.7-alpine
   needs: []
   before_script:
   - gem install gitlab --no-doc

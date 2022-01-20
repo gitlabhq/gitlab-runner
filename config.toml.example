@@ -10,7 +10,7 @@ concurrent = 4
   shell = "bash"
 
 [[runners]]
-  name = "ruby-2.6-docker"
+  name = "ruby-2.7-docker"
   url = "https://CI/"
   token = "TOKEN"
   limit = 0
@@ -18,7 +18,7 @@ concurrent = 4
   builds_dir = ""
   [runners.docker]
     host = ""
-    image = "ruby:2.6"
+    image = "ruby:2.7"
     privileged = false
     disable_cache = false
     cache_dir = ""

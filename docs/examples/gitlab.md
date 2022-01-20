@@ -31,9 +31,9 @@ gitlab-runner register \
   --url "https://gitlab.com" \
   --registration-token "$REGISTRATION_TOKEN" \
   --template-config /tmp/test-config.template.toml \
-  --description "gitlab-ce-ruby-2.6" \
+  --description "gitlab-ce-ruby-2.7" \
   --executor "docker" \
-  --docker-image ruby:2.6
+  --docker-image ruby:2.7
 ```
 
 You now have a GitLab CE integration testing instance with bundle caching.
