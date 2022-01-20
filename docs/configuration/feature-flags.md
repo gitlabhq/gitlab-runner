@@ -91,7 +91,7 @@ in the [Runner configuration](advanced-configuration.md):
 
 ```toml
 [[runners]]
-  name = "ruby-2.6-docker"
+  name = "ruby-2.7-docker"
   url = "https://CI/"
   token = "TOKEN"
   limit = 0
@@ -113,7 +113,7 @@ they don't deal with how the job is executed.
 
 ```toml
 [[runners]]
-  name = "ruby-2.6-docker"
+  name = "ruby-2.7-docker"
   url = "https://CI/"
   token = "TOKEN"
   executor = "docker"

@@ -199,8 +199,8 @@ create a container on which your build will run.
 If you don't specify the namespace, Docker implies `library` which includes all
 [official images](https://hub.docker.com/u/library/). That's why you'll see
 many times the `library` part omitted in `.gitlab-ci.yml` and `config.toml`.
-For example you can define an image like `image: ruby:2.6`, which is a shortcut
-for `image: library/ruby:2.6`.
+For example you can define an image like `image: ruby:2.7`, which is a shortcut
+for `image: library/ruby:2.7`.
 
 Then, for each Docker image there are tags, denoting the version of the image.
 These are defined with a colon (`:`) after the image name. For example, for
@@ -295,7 +295,7 @@ You can simply define an image that will be used for all jobs and a list of
 services that you want to use during build time.
 
 ```yaml
-image: ruby:2.6
+image: ruby:2.7
 
 services:
   - postgres:9.3
@@ -335,7 +335,7 @@ Look for the `[runners.docker]` section:
 
 ```toml
 [runners.docker]
-  image = "ruby:2.6"
+  image = "ruby:2.7"
 
 [[runners.docker.services]]
   name = "mysql:latest"
