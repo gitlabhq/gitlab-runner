@@ -5,31 +5,48 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 comments: false
 ---
 
-# Security of running jobs **(FREE)**
+# Security for self-managed runners **(FREE)**
 
-When using GitLab Runner you should be aware of potential security implications
-when running your jobs.
+A GitLab CI/CD pipeline is a workflow automation engine used for simple or complex DevOps automation tasks. Because these pipelines enable a remote code execution service, you should implement the following process to reduce security risks:
 
-## Usage of Shell executor
+- A systematic approach to configuring the security of the entire technology stack.
+- Ongoing rigorous reviews of the configuration and use of the platform.
+
+If you plan to run your GitLab CI/CD jobs on self-managed runners, then security risks exist for your compute infrastructure and network.
+
+The runner executes code defined in the CI/CD job. Any user that has the Developer role for the project's repository could compromise the security of the environment hosting the runner, whether intentional or not.
+
+This risk is even more acute if your self-managed runners are non-ephemeral and used for multiple projects.
+
+- A job from a repository embedded with malicious code can compromise the security of other repositories serviced by the non-ephemeral runner.
+- Depending on the executor, a job can install malicious code on the virtual machine where the runner is hosted.
+- Secret variables exposed to jobs running in a compromised environment can be stolen, including but not limited to the CI_JOB_TOKEN.
+
+## Security risks for different executors
+
+Depending on the executor you are using, you can face different security risks.
+
+### Usage of Shell executor
 
 **Generally, it's unsafe to run tests with `shell` executors.** The jobs are run
 with the permissions of the GitLab Runner's user and can steal code from other
 projects that are run on this server. Use it only for running trusted builds.
 
-## Usage of Docker executor
+### Usage of Docker executor
 
 **Docker can be considered safe when running in non-privileged mode.** To make
-such setup more secure it's advised to run jobs as a user (non-root) in Docker
+such a configuration more secure, run jobs as a non-root user in Docker
 containers with disabled sudo or dropped `SETUID` and `SETGID` capabilities.
-
-On the other hand, there's a privileged mode which enables full access to the
-host system, permission to mount and unmount volumes, and run nested containers.
-It's not advised to run containers in privileged mode.
 
 More granular permissions can be configured in non-privileged mode via the
 `cap_add`/`cap_drop` settings.
 
-## Usage of private Docker images with `if-not-present` pull policy
+WARNING:
+Privileged containers in Docker have all of the root capabilities of the host VM. When privileged mode is enabled, a user running a CI/CD job could gain full root access to the runner's host system.
+
+Docker's **privileged mode** enables full access to the host system, permission to mount and unmount volumes, and run nested containers. It is **not advised** to run containers in privileged mode.
+
+### Usage of private Docker images with `if-not-present` pull policy
 
 When using the private Docker images support described in
 [advanced configuration: using a private container registry](../configuration/advanced-configuration.md#use-a-private-container-registry)
@@ -68,18 +85,18 @@ NOTE:
 This applies to installations below 0.5.0 or ones that were upgraded to the
 newer version.
 
-When installing the package on Linux systems with Docker installed,
+When installing the GitLab Runner package on Linux systems with Docker installed,
 `gitlab-runner` will create a user that will have permission to access the `Docker`
 daemon. This makes the jobs that run with the `shell` executor able to access `docker`
 with full permissions and potentially allows root access to the server.
 
-## Usage of SSH executor
+### Usage of SSH executor
 
 **SSH executors are susceptible to MITM attack (man-in-the-middle)**, because of
 missing `StrictHostKeyChecking` option. This will be fixed in one of the future
 releases.
 
-## Usage of Parallels executor
+### Usage of Parallels executor
 
 **Parallels executor is the safest possible option** because it uses full system
 virtualization and with VM machines that are configured to run in the isolated
@@ -92,7 +109,16 @@ Runners use a token to identify to the GitLab Server. If you clone a runner then
 the cloned runner could be picking up the same jobs for that token. This is a possible
 attack vector to "steal" runner jobs.
 
-## Network Segmentation
+## Security hardening options
+
+### Reduce the security risk of using privileged containers
+
+If you must run CI/CD jobs that require the use of Docker's `--privileged` flag, you can take these steps to reduce the security risk:
+
+- Run Docker containers with the `--privileged` flag enabled only on isolated and ephemeral virtual machines.
+- Configure dedicated runners that are meant to execute jobs that require the use of Docker's `--privileged` flag. Then configure these runners to execute jobs only on protected branches.
+
+### Network segmentation
 
 GitLab Runner is designed to run user-controlled scripts. To reduce the
 attack surface if a job is malicious, you can consider running them in their
@@ -111,3 +137,9 @@ All runners will need outbound network connectivity to
 GitLab.com or your GitLab instance.
 Most jobs will also require outbound network connectivity to
 the Internet - for dependency pulling etc.
+
+### Secure the runner host
+
+If you are using a static host for a runner, whether bare-metal or virtual machine, you should implement security best practices for the host operating system. 
+
+Malicious code executed in the context of a CI job could compromise the host, so security protocols can help mitigate the impact. Other points to keep in mind include securing or removing files such as SSH keys from the host system that may enable an attacker to access other endpoints in the environment. 
