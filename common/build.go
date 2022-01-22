@@ -1275,6 +1275,11 @@ func (b *Build) GetGitFetchFlags() []string {
 	return strings.Fields(flags)
 }
 
+func (b *Build) GetGitSubmoduleUpdateFlags() []string {
+	flags := b.GetAllVariables().Get("GIT_SUBMODULE_UPDATE_FLAGS")
+	return strings.Fields(flags)
+}
+
 func (b *Build) IsDebugTraceEnabled() bool {
 	trace, err := strconv.ParseBool(b.GetAllVariables().Get("CI_DEBUG_TRACE"))
 	if err != nil {

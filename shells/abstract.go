@@ -451,6 +451,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	// Update / initialize submodules
 	updateArgs := []string{"submodule", "update", "--init"}
 	foreachArgs := []string{"submodule", "foreach"}
+	gitSubmoduleUpdateFlags := build.GetGitSubmoduleUpdateFlags()
 	if recursive {
 		updateArgs = append(updateArgs, "--recursive")
 		foreachArgs = append(foreachArgs, "--recursive")
@@ -458,6 +459,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if depth > 0 {
 		updateArgs = append(updateArgs, "--depth", strconv.Itoa(depth))
 	}
+	updateArgs = append(updateArgs, gitSubmoduleUpdateFlags...)
 	updateArgs = append(updateArgs, pathArgs...)
 
 	// Clean changed files in submodules
