@@ -141,7 +141,7 @@ These are the binaries that you can install:
 
 1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
 1. [kubectl](https://kubernetes.io/docs/tasks/tools/) with
-   [Minikube](https://github.com/kubernetes/minikube)
+   [minikube](https://github.com/kubernetes/minikube)
 1. [Parallels Pro or Business edition](https://www.parallels.com/products/desktop/)
 1. [PowerShell](https://docs.microsoft.com/en-us/powershell/)
 
@@ -210,7 +210,7 @@ gitlab/gitlab-runner-helper                                   x86_64-a6bc0800   
 ### Helper image with Kubernetes
 
 If you are running a local Kubernetes cluster make sure to reuse the cluster's Docker daemon to build images.
-For example, with Minikube:
+For example, with minikube:
 
 ```shell
 eval $(minikube docker-env)

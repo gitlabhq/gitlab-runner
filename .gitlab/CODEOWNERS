@@ -8,5 +8,5 @@
 .gitignore      @gitlab-com/runner-group @gitlab-com/runner-maintainers
 
 [Documentation]
-.markdownlint.yml @marcel.amirault @eread @aqualls @cnorris
+.markdownlint.yml @gitlab-com/runner-docs-maintainers
 /docs/ @gitlab-com/runner-docs-maintainers
