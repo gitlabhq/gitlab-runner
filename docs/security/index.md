@@ -42,9 +42,26 @@ More granular permissions can be configured in non-privileged mode via the
 `cap_add`/`cap_drop` settings.
 
 WARNING:
-Privileged containers in Docker have all of the root capabilities of the host VM. When privileged mode is enabled, a user running a CI/CD job could gain full root access to the runner's host system.
+Privileged containers in Docker have all the root capabilities of the host VM.
+For more information, check out the official Docker documentation
+on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities)
 
-Docker's **privileged mode** enables full access to the host system, permission to mount and unmount volumes, and run nested containers. It is **not advised** to run containers in privileged mode.
+It is **not advised** to run containers in privileged mode.
+
+When privileged mode is enabled, a user running a CI/CD job could gain full root access
+to the runner's host system, permission to mount and unmount volumes, and run nested
+containers.
+
+By enabling privileged mode, you are effectively disabling all the container's security
+mechanisms and exposing your host to privilege escalation, which can lead to container breakout.
+
+It is especially risky when runners are shared between several organizations.
+For example, an instance-wide runner in a service like GitLab.com, where multiple
+separate organizations can work concurrently.
+
+If you use a Docker Machine executor, we also strongly recommend to use the `MaxBuilds = 1` setting,
+which ensures that a single autoscaled VM (potentially compromised because of the security weakness
+introduced by the privileged mode) is used to handle one and only one job.
 
 ### Usage of private Docker images with `if-not-present` pull policy
 
