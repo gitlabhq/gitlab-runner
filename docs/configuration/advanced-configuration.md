@@ -765,6 +765,44 @@ NOTE:
 The maximum size of a single file that can be uploaded to AWS S3 cache is 5 GB.
 A discussion about potential workarounds for this behavior is in [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26921).
 
+#### Use KMS key encryption in S3 bucket for runner cache
+
+The `GenerateDataKey` API uses the KMS symmetric key to create a data key for client-side encryption (<https://docs.aws.amazon.com/kms/latest/APIReference/API_GenerateDataKey.html>). KMS key configuration must be as follows:
+
+| Attribute         | Description         |
+|-------------------|---------------------|
+| Key Type          | Symmetric           | 
+| Origin            | `AWS_KMS`           |
+| Key Spec          | `SYMMETRIC_DEFAULT` |
+| Key Usage         | Encrypt and decrypt |
+
+The IAM policy for the role assigned to the ServiceAccount defined in `rbac.serviceAccountName` must have permissions to do the following actions for the KMS Key:
+
+- `kms:GetPublicKey`
+- `kms:Decrypt`
+- `kms:Encrypt`
+- `kms:DescribeKey`
+- `kms:GenerateDataKey`
+
+#### Enable IAM roles for Kubernetes ServiceAccount resources
+
+To use IAM roles for service accounts, an IAM OIDC provider [must exist for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html). After an IAM OIDC provider is associated with your cluster, you can create an IAM role to associate to the service account of the runner. 
+
+1. On the **Create Role** window, under **Select type of trusted entity**, select **Web Identity**.
+1. On the **Trusted Relationships tab** of the role:
+
+   - The **Trusted entities** section must have the format:
+     `arn:aws:iam::<ACCOUNT_ID>:oidc-provider/oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>`.
+     The **OIDC ID** can be found on EKS cluster’s **Configuration** tab.
+
+   - The **Condition** section must have the GitLab Runner service account
+     defined in `rbac.serviceAccountName` or the default service account
+     created if `rbac.create` is set to `true`:
+
+     | Condition         | Key      | Value |
+     |-------------------|----------|-------|
+     | `StringEquals`    |`oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>:sub` | `system:serviceaccount:<GITLAB_RUNNER_NAMESPACE>:<GITLAB_RUNNER_SERVICE_ACCOUNT>` |
+
 ### The `[runners.cache.gcs]` section
 
 > Introduced in GitLab Runner 11.3.0.
