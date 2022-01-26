@@ -96,6 +96,89 @@ If the `IdleCount` is set to a value greater than `0`, then idle VMs are created
 - If the job is assigned to the runner, then that job is sent to the previously acquired VM.
 - If the job is not assigned to the runner, then the lock on the idle VM is released and the VM is returned back to the pool.
 
+## Limit the number of VMs created by the Docker Machine executor
+
+To limit the number of virtual machines (VMs) created by the Docker Machine executor, use the `limit` parameter in the `[[runners]]` section of the `config.toml` file.
+
+The `concurrent` parameter **does not** limit the number of VMs.
+
+As detailed [here](../fleet_scaling/index.md#basic-configuration-one-runner-one-worker), one process can be configured to manage multiple runner workers.
+
+This example illustrates the values set in the `config.toml` file for one runner process:
+
+```toml
+concurrent = 100
+
+[[runners]]
+name = "first"
+executor = "shell"
+limit = 40
+(...)
+
+[[runners]]
+name = "second"
+executor = "docker+machine"
+limit = 30
+(...)
+
+[[runners]]
+name = "third"
+executor = "ssh"
+limit = 10
+
+[[runners]]
+name = "fourth"
+executor = "virtualbox"
+limit = 20
+(...)
+
+```
+
+With this configuration:
+
+- One runner process can create four different runner workers using different execution environments.
+- The `concurrent` value is set to 100, so this one runner will execute a maximum of 100 concurrent GitLab CI/CD jobs. 
+- Only the `second` runner worker is configured to use the Docker Machine executor and therefore can automatically create VMs. 
+- The `limit` setting of `30` means that the `second` runner worker can execute a maximum of 30 CI/CD jobs on autoscaled VMs at any point in time.
+- While `concurrent` defines the global concurrency limit across multiple `[[runners]]` workers, `limit` defines the maximum concurrency for a single `[[runners]]` worker. 
+
+In this example, the runner process handles:
+
+- Across all `[[runners]]` workers, up to 100 concurrent jobs.
+- For the `first` worker, no more than 40 jobs, which are executed with the `shell` executor.
+- For the `second` worker, no more than 30 jobs, which are executed with the `docker+machine` executor. Additionally, Runner will maintain VMs based on the autoscaling configuration in `[runners.machine]`, but no more than 30 VMs in all states (idle, in-use, in-creation, in-removal).
+- For the `third` worker, no more than 10 jobs, executed with the `ssh` executor.
+- For the `fourth` worker, no more than 20 jobs, executed with the `virtualbox` executor.
+
+In this second example, there are two `[[runners]]` workers configured to use the `docker+machine` executor. With this configuration, each runner worker manages a separate pool of VMs that are constrained by the value of the `limit` parameter.
+
+```toml
+concurrent = 100
+
+[[runners]]
+name = "first"
+executor = "docker+machine"
+limit = 80
+(...)
+
+[[runners]]
+name = "second"
+executor = "docker+machine"
+limit = 50
+(...)
+
+```
+
+In this example:
+
+- The runner processes no more than 100 jobs (the value of `concurrent`). 
+- The runner process executes jobs in two `[[runners]]` workers, each of which uses the `docker+machine` executor.
+- The `first` runner can create a maximum of 80 VMs. Therefore this runner can execute a maximum of 80 jobs at any point in time.
+- The `second` runner can create a maximum of 50 VMs. Therefore this runner can execute a maximum of 50 jobs at any point in time.
+
+NOTE:
+Even though the sum of the limit value is `130` (`80 + 50 = 130`), the `concurrent` value of `100` at the global level means that this runner process can execute a maximum of 100 jobs concurrently.
+
 ## Autoscaling algorithm and parameters
 
 The autoscaling algorithm is based on these parameters:
