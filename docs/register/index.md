@@ -68,6 +68,7 @@ To register a runner using a Docker container:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
+1. Enter any optional maintenance note for the runner.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you are asked for the default
@@ -100,6 +101,7 @@ To register a runner under Linux:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
+1. Enter any optional maintenance note for the runner.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you are asked for the default
@@ -126,6 +128,7 @@ To register a runner under macOS:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
+1. Enter any optional maintenance note for the runner.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you'll be asked for the default
@@ -148,6 +151,7 @@ To register a runner under Windows:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
+1. Enter any optional maintenance note for the runner.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you are asked for the default
@@ -170,6 +174,7 @@ To register a runner under FreeBSD:
 1. Enter the [tags associated with the runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#use-tags-to-control-which-jobs-a-runner-can-run),
    separated by commas. You can change this value later in the GitLab user
    interface.
+1. Enter any optional maintenance note for the runner.
 1. Provide the [runner executor](../executors/index.md). For most use cases, enter
    `docker`.
 1. If you entered `docker` as your executor, you are asked for the default
@@ -197,6 +202,7 @@ sudo gitlab-runner register \
   --executor "docker" \
   --docker-image alpine:latest \
   --description "docker-runner" \
+  --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
   --run-untagged="true" \
   --locked="false" \
@@ -214,6 +220,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --url "https://gitlab.com/" \
   --registration-token "PROJECT_REGISTRATION_TOKEN" \
   --description "docker-runner" \
+  --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
   --run-untagged="true" \
   --locked="false" \
@@ -225,6 +232,9 @@ Use this parameter during registration to create a [protected runner](https://do
 For a protected runner, use the `--access-level="ref_protected"` parameter.
 For an unprotected runner, use `--access-level="not_protected"` instead or leave the value undefined.
 This value can later be toggled on or off in the project's **Settings > CI/CD** menu.
+
+The `--maintenance-note` parameter was [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3268) in GitLab Runner 14.8.
+You can use it to add information related to runner maintenance. The maximum allowed length is 255 characters.
 
 ## `[[runners]]` configuration template file
 

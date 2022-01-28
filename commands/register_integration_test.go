@@ -222,43 +222,48 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 				"test-registration-token",
 				"name",
 				"tag,list",
+				"basic notes",
 			}, executorAnswers(t, executor)...),
 			validate: basicValidation,
 			expectedParams: func(p common.RegisterRunnerParameters) bool {
 				return p == common.RegisterRunnerParameters{
-					Description: "name",
-					Tags:        "tag,list",
-					Locked:      true,
-					Active:      true,
+					Description:     "name",
+					MaintenanceNote: "basic notes",
+					Tags:            "tag,list",
+					Locked:          true,
+					Active:          true,
 				}
 			},
 		},
 		"basic arguments, accepting provided": {
-			answers: make([]string, 10),
+			answers: make([]string, 11),
 			arguments: append(
 				executorCmdLineArgs(t, executor),
 				"--url", "http://gitlab.example.com/",
 				"-r", "test-registration-token",
 				"--name", "name",
 				"--tag-list", "tag,list",
+				"--maintenance-note", "maintainer notes",
 				"--paused",
 				"--locked=false",
 			),
 			validate: basicValidation,
 			expectedParams: func(p common.RegisterRunnerParameters) bool {
 				return p == common.RegisterRunnerParameters{
-					Description: "name",
-					Tags:        "tag,list",
+					Description:     "name",
+					MaintenanceNote: "maintainer notes",
+					Tags:            "tag,list",
 				}
 			},
 		},
 		"basic arguments override": {
-			answers: append([]string{"", "", "new-name", "", ""}, executorOverrideAnswers(t, executor)...),
+			answers: append([]string{"", "", "new-name", "", "maintainer notes", ""}, executorOverrideAnswers(t, executor)...),
 			arguments: append(
 				executorCmdLineArgs(t, executor),
 				"--url", "http://gitlab.example.com/",
 				"-r", "test-registration-token",
 				"--name", "name",
+				"--maintenance-note", "notes",
 				"--tag-list", "tag,list",
 				"--paused",
 				"--locked=false",
@@ -268,8 +273,9 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 			},
 			expectedParams: func(p common.RegisterRunnerParameters) bool {
 				return p == common.RegisterRunnerParameters{
-					Description: "new-name",
-					Tags:        "tag,list",
+					Description:     "new-name",
+					MaintenanceNote: "maintainer notes",
+					Tags:            "tag,list",
 				}
 			},
 		},
@@ -278,6 +284,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 				"http://gitlab.example.com/",
 				"test-registration-token",
 				"name",
+				"",
 				"",
 			}, executorAnswers(t, executor)...),
 			validate: basicValidation,
@@ -295,6 +302,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 				"http://gitlab.example.com/",
 				"test-registration-token",
 				"name",
+				"",
 				"",
 			}, executorAnswers(t, executor)...),
 			arguments: []string{"--run-untagged"},
@@ -314,6 +322,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 				"test-registration-token",
 				"name",
 				"tag,list",
+				"",
 			}, executorAnswers(t, executor)...),
 			arguments: []string{"--run-untagged"},
 			validate:  basicValidation,
@@ -790,7 +799,7 @@ func TestUnregisterOnFailure(t *testing.T) {
 				arguments = append(arguments, "--leave-runner")
 			}
 
-			answers := []string{"https://gitlab.com/", token, "description", ""}
+			answers := []string{"https://gitlab.com/", token, "description", "", ""}
 			if testCase.registrationFails {
 				defer func() { _ = recover() }()
 			} else {
