@@ -26,6 +26,7 @@ type ManagerConfig struct {
 	CacheDir         string
 	BasePath         string
 	UniqueName       string
+	TemporaryName    string
 	DisableCache     bool
 	PermissionSetter permission.Setter
 }
@@ -143,7 +144,7 @@ func (m *manager) addCacheVolume(ctx context.Context, volume *parser.Volume) err
 		return m.createHostBasedCacheVolume(volume.Destination)
 	}
 
-	_, err := m.createCacheVolume(ctx, volume.Destination)
+	_, err := m.createCacheVolume(ctx, volume.Destination, true)
 
 	return err
 }
@@ -169,7 +170,7 @@ func (m *manager) createHostBasedCacheVolume(destination string) error {
 	return nil
 }
 
-func (m *manager) createCacheVolume(ctx context.Context, destination string) (string, error) {
+func (m *manager) createCacheVolume(ctx context.Context, destination string, reusable bool) (string, error) {
 	destination, err := m.absolutePath(destination)
 	if err != nil {
 		return "", fmt.Errorf("defining absolute path: %w", err)
@@ -180,7 +181,12 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) (st
 		return "", fmt.Errorf("updating managed volumes list: %w", err)
 	}
 
-	volumeName := fmt.Sprintf("%s-cache-%s", m.config.UniqueName, hashPath(destination))
+	name := m.config.TemporaryName
+	if reusable {
+		name = m.config.UniqueName
+	}
+
+	volumeName := fmt.Sprintf("%s-cache-%s", name, hashPath(destination))
 	vBody := volume.VolumeCreateBody{
 		Name:   volumeName,
 		Labels: m.labeler.Labels(map[string]string{"type": "cache"}),
@@ -212,7 +218,7 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string) (st
 // It's up to the caller to clean up the temporary volumes by calling
 // `RemoveTemporary`.
 func (m *manager) CreateTemporary(ctx context.Context, destination string) error {
-	volumeName, err := m.createCacheVolume(ctx, destination)
+	volumeName, err := m.createCacheVolume(ctx, destination, false)
 	if err != nil {
 		return fmt.Errorf("creating cache volume: %w", err)
 	}

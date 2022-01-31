@@ -483,10 +483,10 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 	}{
 		"volume created": {
 			volume:             "volume",
-			expectedVolumeName: "unique-cache-f69aef9fb01e88e6213362a04877452d",
+			expectedVolumeName: "temporary-cache-f69aef9fb01e88e6213362a04877452d",
 			expectedBindings: []string{
 				existingBinding,
-				"unique-cache-f69aef9fb01e88e6213362a04877452d:/builds/project/volume",
+				"temporary-cache-f69aef9fb01e88e6213362a04877452d:/builds/project/volume",
 			},
 		},
 		"volume root": {
@@ -495,7 +495,7 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 		},
 		"volume creation error": {
 			volume:             "volume",
-			expectedVolumeName: "unique-cache-f69aef9fb01e88e6213362a04877452d",
+			expectedVolumeName: "temporary-cache-f69aef9fb01e88e6213362a04877452d",
 			volumeCreateErr:    volumeCreateErr,
 			expectedError:      volumeCreateErr,
 		},
@@ -508,8 +508,8 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			config := ManagerConfig{
-				BasePath:   "/builds/project",
-				UniqueName: "unique",
+				BasePath:      "/builds/project",
+				TemporaryName: "temporary",
 			}
 
 			m := newDefaultManager(config)
