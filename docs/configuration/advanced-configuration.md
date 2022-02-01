@@ -128,11 +128,6 @@ repeated after all requests for the other runners and their sleep periods are ca
 
 ## The `[session_server]` section
 
-NOTE:
-The `session_server` section is not supported by the
-[`gitlab-runner` Helm chart](https://docs.gitlab.com/charts/charts/gitlab/gitlab-runner/index.html),
-but [an issue exists to track this work](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/79).
-
 The `[session_server]` section lets users interact with jobs, for example, in the
 [interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/index.html).
 
