@@ -380,6 +380,8 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 			"Refer to gitlab-runner register -h for the correct options.")
 	}
 
+	s.mergeTemplate()
+
 	s.askRunner()
 
 	if !s.LeaveRunner {
@@ -397,8 +399,6 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 	s.askExecutor()
 	s.askExecutorOptions()
-
-	s.mergeTemplate()
 
 	s.addRunner(&s.RunnerConfig)
 	err = s.saveConfig()

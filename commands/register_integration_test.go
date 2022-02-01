@@ -674,42 +674,12 @@ check_interval = 0
     [runners.cache.s3]
     [runners.cache.gcs]
     [runners.cache.azure]
-  [runners.kubernetes]
-    host = ""
-    bearer_token_overwrite_allowed = false
-    image = ""
-    namespace = ""
-    namespace_overwrite_allowed = ""
-    service_account_overwrite_allowed = ""
-    pod_annotations_overwrite_allowed = ""
-    [runners.kubernetes.affinity]
-    [runners.kubernetes.pod_security_context]
-    [runners.kubernetes.build_container_security_context]
-    [runners.kubernetes.helper_container_security_context]
-    [runners.kubernetes.service_container_security_context]
-    [runners.kubernetes.volumes]
-
-      [[runners.kubernetes.volumes.empty_dir]]
-        name = "empty_dir"
-        mount_path = "/path/to/empty_dir"
-        medium = "Memory"
-    [runners.kubernetes.dns_config]
-    [runners.kubernetes.container_lifecycle]
 `,
 		},
 		"incorrect config template merge": {
-			configTemplate: configTemplateMergeInvalidConfiguration,
-			networkAssertions: func(n *common.MockNetwork) {
-				n.On("RegisterRunner", mock.Anything, mock.Anything).
-					Return(&common.RegisterRunnerResponse{
-						Token: "test-runner-token",
-					}).
-					Once()
-				n.On("UnregisterRunner", mock.Anything).
-					Return(true).
-					Once()
-			},
-			errExpected: true,
+			configTemplate:    configTemplateMergeInvalidConfiguration,
+			networkAssertions: func(n *common.MockNetwork) {},
+			errExpected:       true,
 		},
 	}
 
