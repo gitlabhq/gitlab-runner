@@ -69,13 +69,12 @@ function Main
 
         Connect-Registry $Env:DOCKER_HUB_USER $Env:DOCKER_HUB_PASSWORD
         Push-Tag $namespace $tag
+        Push-As-Ref $namespace $tag
 
         if ($Env:IS_LATEST -eq "true")
         {
-            Add-LatestTag $namespace $tag
-            Push-Latest $namespace
+            Push-As-Latest $namespace $tag
         }
-
         Disconnect-Registry
     }
 
@@ -84,11 +83,11 @@ function Main
         Connect-Registry $Env:CI_REGISTRY_USER $Env:CI_REGISTRY_PASSWORD $Env:CI_REGISTRY
 
         Push-Tag "${Env:CI_REGISTRY_IMAGE}" $tag
+        Push-As-Ref "${Env:CI_REGISTRY_IMAGE}" $tag
 
         if ($Env:IS_LATEST -eq "true")
         {
-            Add-LatestTag $Env:CI_REGISTRY_IMAGE $tag
-            Push-Latest $Env:CI_REGISTRY_IMAGE
+            Push-As-Latest $Env:CI_REGISTRY_IMAGE $tag
         }
 
         Disconnect-Registry $env:CI_REGISTRY
@@ -101,11 +100,11 @@ function Main
         Connect-Registry AWS $Env:ECR_PUBLIC_PASSWORD $ecrPublicRegistry
 
         Push-Tag $ecrPublicRegistry $tag
+        Push-As-Ref $ecrPublicRegistry $tag
 
         if ($Env:IS_LATEST -eq "true")
         {
-            Add-LatestTag $ecrPublicRegistry $tag
-            Push-Latest $ecrPublicRegistry
+            Push-As-Latest $ecrPublicRegistry $tag
         }
 
         Disconnect-Registry $ecrPublicRegistry
@@ -195,13 +194,43 @@ function Push-Tag($namespace, $tag)
     }
 }
 
-function Add-LatestTag($namespace, $tag)
+function Push-As-Latest($namespace, $tag)
 {
-    Write-Information "Tag $tag as latest"
+    Push-As $namespace $tag "latest"
+}
 
-    & 'docker' tag "${namespace}/gitlab-runner-helper:$tag" "${namespace}/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
+function Push-As-Ref($namespace, $tag)
+{
+    $ref = "${Env:CI_COMMIT_TAG}"
+    if ($ref -eq "") {
+       $ref = "${Env:CI_COMMIT_REF_SLUG}"
+    }
+    if($ref -eq "") {
+        $ref = "main"
+    }
+    if($ref -eq "main") {
+        $ref = "bleeding"
+    }
+    Push-As $namespace $tag $ref
+}
+
+function Push-As($namespace, $tag, $alias)
+{
+    $image = "${namespace}/gitlab-runner-helper:$tag"
+
+    $newTag = "x86_64-${alias}-$Env:WINDOWS_VERSION"
+    $newImage = "${namespace}/gitlab-runner-helper:$newTag"
+
+    Write-Information "Tag $tag as $newTag"
+    & 'docker' tag $image $newImage
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to tag ${namespace}/gitlab-runner-helper:$tag as latest image" )
+        throw ("Failed to tag $tag as $newTag" )
+    }
+
+    Write-Information "Push image $newImage"
+    & 'docker' push $newImage
+    if ($LASTEXITCODE -ne 0) {
+        throw ("Failed to push image $newImage to registry" )
     }
 }
 
