@@ -302,16 +302,15 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "ubuntu:16.04"
-        [runners.cache]
-          Type = "s3"
-          Path = "runner"
-          Shared = true
-          [runners.cache.azure]
-            ContainerName = "my_container_name"
-            StorageDomain = "blob.core.windows.net"
-
-  cache:
-      secretName: azureaccess
+      [runners.cache]
+        Type = "azure"
+        Path = "runner"
+        Shared = true
+        [runners.cache.azure]
+          AccountName = "ACCOUNT_NAME"
+          AccountKey = "ACCOUNT_KEY"
+          ContainerName = "CONTAINER_NAME"
+          StorageDomain = "blob.core.windows.net"
 ```
 
 Next, create an `azureaccess` Kubernetes secret that contains
