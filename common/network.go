@@ -57,6 +57,7 @@ const (
 	UploadForbidden
 	UploadFailed
 	UploadServiceUnavailable
+	UploadRedirected
 )
 
 const (
@@ -594,6 +595,6 @@ type Network interface {
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile io.WriteCloser, directDownload *bool) DownloadState
-	UploadRawArtifacts(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) UploadState
+	UploadRawArtifacts(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string)
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error)
 }

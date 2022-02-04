@@ -1444,6 +1444,12 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 		return
 	}
 
+	if r.Header.Get("JOB-TOKEN") == "redirect" {
+		w.Header().Set("Location", "new-location")
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		return
+	}
+
 	if r.Header.Get("JOB-TOKEN") != "token" {
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -1467,19 +1473,19 @@ func uploadArtifacts(
 	artifactsFile,
 	artifactType string,
 	artifactFormat ArtifactFormat,
-) UploadState {
+) (UploadState, string) {
 	file, err := os.Open(artifactsFile)
 	if err != nil {
-		return UploadFailed
+		return UploadFailed, ""
 	}
 	defer file.Close()
 
 	fi, err := file.Stat()
 	if err != nil {
-		return UploadFailed
+		return UploadFailed, ""
 	}
 	if fi.IsDir() {
-		return UploadFailed
+		return UploadFailed, ""
 	}
 
 	options := ArtifactsOptions{
@@ -1507,6 +1513,11 @@ func TestArtifactsUpload(t *testing.T) {
 		URL:   s.URL,
 		Token: "invalid-token",
 	}
+	redirectToken := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "redirect",
+	}
 
 	tempFile, err := ioutil.TempFile("", "artifacts")
 	assert.NoError(t, err)
@@ -1516,42 +1527,57 @@ func TestArtifactsUpload(t *testing.T) {
 	c := NewGitLabClient()
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600))
-	state := uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	state, location := uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
+	assert.Empty(t, location)
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("too-large"), 0600))
-	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
+	assert.Empty(t, location)
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("zip"), 0600))
-	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatZip)
+	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatZip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
+	assert.Empty(t, location)
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("gzip"), 0600))
-	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatGzip)
+	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
+	assert.Empty(t, location)
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600))
-	state = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
+	state, location = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
+	assert.Empty(t, location)
 
-	state = uploadArtifacts(c, config, "not/existing/file", "", ArtifactFormatDefault)
+	state, location = uploadArtifacts(c, config, "not/existing/file", "", ArtifactFormatDefault)
 	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
+	assert.Empty(t, location)
 
-	state = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
+	state, location = uploadArtifacts(c, invalidToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
+	assert.Empty(t, location)
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600))
-	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
+	assert.Empty(t, location)
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("bad-request"), 0600))
-	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
+	assert.Empty(t, location)
 
 	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("bad-request-not-json"), 0600))
-	state = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
+	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
+	assert.Empty(t, location)
+
+	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600))
+	state, location = uploadArtifacts(c, redirectToken, tempFile.Name(), "", ArtifactFormatDefault)
+	assert.Equal(t, UploadRedirected, state, "Artifacts upload should be redirected")
+	assert.Equal(t, "new-location", location)
 }
 
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
