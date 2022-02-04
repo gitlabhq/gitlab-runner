@@ -141,6 +141,10 @@ func checkMemoryAllocRetry(err error, retriesRemaining int) (error, int) {
 
 	// When running in containers, we will occasionally get errors allocating
 	// memory under pressure. So we retry a few times, then fail the extraction
+	//
+	// This is likely due to GC pressure, as the loop that calls this is dealing with
+	// Individual files and has to expand them individually in memory.
+	//
 	if err == nil || !strings.Contains(err.Error(), errCannotAllocateMemory) {
 		return err, 0
 	}
@@ -162,6 +166,9 @@ func checkMemoryAllocRetry(err error, retriesRemaining int) (error, int) {
 	if !disableWait {
 		time.Sleep(memoryErrorWaitTime)
 	}
+
+	// Force a GC to ensure we've cleaned up
+	runtime.GC()
 	retriesRemaining--
 	return nil, retriesRemaining
 }
