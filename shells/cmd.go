@@ -77,6 +77,11 @@ func (b *CmdWriter) CheckForErrors() {
 	b.checkErrorLevel()
 }
 
+func (b *CmdWriter) Exit(code int) {
+	b.Line(fmt.Sprintf("exit /b %d", code))
+	b.Line("")
+}
+
 func (b *CmdWriter) Indent() {
 	b.indent++
 }

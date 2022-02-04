@@ -33,6 +33,7 @@ type ShellWriter interface {
 	Warningf(fmt string, arguments ...interface{})
 	Errorf(fmt string, arguments ...interface{})
 	EmptyLine()
+	Exit(code int)
 
 	Finish(trace bool) string
 }

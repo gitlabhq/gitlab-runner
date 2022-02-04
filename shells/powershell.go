@@ -133,6 +133,11 @@ func (p *PsWriter) CheckForErrors() {
 	p.checkErrorLevel()
 }
 
+func (p *PsWriter) Exit(code int) {
+	p.Line(fmt.Sprintf("Exit %d", code))
+	p.Line("")
+}
+
 func (p *PsWriter) Indent() {
 	p.indent++
 }

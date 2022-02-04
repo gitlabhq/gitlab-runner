@@ -1,3 +1,4 @@
+//go:build !integration
 // +build !integration
 
 package shells
@@ -755,6 +756,14 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 }
 
 func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
+	testCacheCommon(t, false)
+}
+
+func TestAbstractShell_extractCacheWithFallbackKeyRequired(t *testing.T) {
+	testCacheCommon(t, true)
+}
+
+func testCacheCommon(t *testing.T, cacheRequired bool) {
 	testCacheKey := "test-cache-key"
 	testFallbackCacheKey := "test-fallback-cache-key"
 
@@ -778,9 +787,10 @@ func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
 			},
 			Cache: common.Caches{
 				{
-					Key:    testCacheKey,
-					Policy: common.CachePolicyPullPush,
-					Paths:  []string{"path1", "path2"},
+					Key:      testCacheKey,
+					Policy:   common.CachePolicyPullPush,
+					Paths:    []string{"path1", "path2"},
+					Required: cacheRequired,
 				},
 			},
 			Variables: common.JobVariables{
@@ -834,6 +844,10 @@ func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
 	mockWriter.On("EndIf").Once()
 	mockWriter.On("Else").Once()
 	mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+
+	if cacheRequired {
+		mockWriter.On("Exit", 1).Once()
+	}
 	mockWriter.On("EndIf").Once()
 
 	err := shell.cacheExtractor(mockWriter, info)

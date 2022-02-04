@@ -71,6 +71,11 @@ func (b *BashWriter) CheckForErrors() {
 	b.Line("_runner_exit_code=$?; if [[ $_runner_exit_code -ne 0 ]]; then exit $_runner_exit_code; fi")
 }
 
+func (b *BashWriter) Exit(code int) {
+	b.Line(fmt.Sprintf("exit %d", code))
+	b.Line("")
+}
+
 func (b *BashWriter) Indent() {
 	b.indent++
 }

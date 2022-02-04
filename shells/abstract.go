@@ -107,7 +107,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
-		b.extractCacheOrFallbackCacheWrapper(w, info, cacheFile, cacheKey)
+		b.extractCacheOrFallbackCacheWrapper(w, info, cacheFile, cacheKey, cacheOptions.Required)
 	}
 
 	if skipRestoreCache {
@@ -122,12 +122,13 @@ func (b *AbstractShell) extractCacheOrFallbackCacheWrapper(
 	info common.ShellScriptInfo,
 	cacheFile string,
 	cacheKey string,
+	required bool,
 ) {
 	cacheFallbackKey := info.Build.GetAllVariables().Get("CACHE_FALLBACK_KEY")
 
-	// Execute cache-extractor command. Failure is not fatal.
+	// Execute cache-extractor command. Failure is not fatal unless required is true.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		b.addExtractCacheCommand(w, info, cacheFile, cacheKey, cacheFallbackKey)
+		b.addExtractCacheCommand(w, info, cacheFile, cacheKey, cacheFallbackKey, required)
 	})
 }
 
@@ -137,6 +138,7 @@ func (b *AbstractShell) addExtractCacheCommand(
 	cacheFile string,
 	cacheKey string,
 	cacheFallbackKey string,
+	required bool,
 ) {
 	args := []string{
 		"cache-extractor",
@@ -154,7 +156,11 @@ func (b *AbstractShell) addExtractCacheCommand(
 	w.Else()
 	w.Warningf("Failed to extract cache")
 	if cacheFallbackKey != "" {
-		b.addExtractCacheCommand(w, info, cacheFile, cacheFallbackKey, "")
+		b.addExtractCacheCommand(w, info, cacheFile, cacheFallbackKey, "", required)
+	} else if required {
+		// if no cache key, then set the exit code to fail the build
+		// since most jobs will not be able to run without a cache in any case
+		w.Exit(1)
 	}
 	w.EndIf()
 }

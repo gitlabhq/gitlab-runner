@@ -85,6 +85,11 @@ func (_m *MockShellWriter) Errorf(fmt string, arguments ...interface{}) {
 	_m.Called(_ca...)
 }
 
+// Exit provides a mock function with given fields: code
+func (_m *MockShellWriter) Exit(code int) {
+	_m.Called(code)
+}
+
 // Finish provides a mock function with given fields: trace
 func (_m *MockShellWriter) Finish(trace bool) string {
 	ret := _m.Called(trace)

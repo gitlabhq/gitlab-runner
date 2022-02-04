@@ -1,3 +1,4 @@
+//go:build !integration
 // +build !integration
 
 package archives
@@ -5,6 +6,8 @@ package archives
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -95,4 +98,55 @@ func TestExtractZipFileWithGitPath(t *testing.T) {
 func TestExtractZipFileNotFound(t *testing.T) {
 	err := ExtractZipFile("non_existing_zip_file.zip")
 	assert.Error(t, err)
+}
+
+func TestMemoryAllocRetry(t *testing.T) {
+
+	memErr := errors.New(errCannotAllocateMemory)
+	otherErr := errors.New("foo")
+
+	cases := []struct {
+		err       error
+		retries   int
+		res       error
+		remaining int
+	}{
+		{
+			err:       memErr,
+			res:       nil,
+			retries:   1,
+			remaining: 0,
+		},
+		{
+			err:       memErr,
+			res:       memErr,
+			retries:   0,
+			remaining: 0,
+		},
+		{
+			err:       otherErr,
+			res:       otherErr,
+			retries:   2,
+			remaining: 0,
+		},
+		{
+			err:       nil,
+			res:       nil,
+			retries:   0,
+			remaining: 0,
+		},
+	}
+
+	disableWait = true
+
+	for i, c := range cases {
+
+		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+			err, retries := checkMemoryAllocRetry(c.err , c.retries)
+
+			assert.Equal(t, c.res, err)
+			assert.Equal(t, c.remaining, retries)
+		})
+	}
+
 }
