@@ -1,4 +1,4 @@
-FROM golang:1.17.5-buster
+FROM golang:1.17.6-buster
 
 # Install required dependencies
 # hadolint ignore=DL3008,DL3015
