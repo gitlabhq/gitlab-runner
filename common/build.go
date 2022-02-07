@@ -160,7 +160,7 @@ type Build struct {
 	createdAt time.Time
 
 	Referees         []referees.Referee
-	ArtifactUploader func(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) UploadState
+	ArtifactUploader func(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string)
 }
 
 func (b *Build) setCurrentStage(stage BuildStage) {

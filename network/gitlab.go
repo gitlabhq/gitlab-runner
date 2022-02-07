@@ -639,7 +639,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 	config common.JobCredentials,
 	reader io.ReadCloser,
 	options common.ArtifactsOptions,
-) common.UploadState {
+) (common.UploadState, string) {
 	defer func() {
 		_ = reader.Close()
 	}()
@@ -682,7 +682,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 
 	if err != nil {
 		log.WithError(err).Errorln(messagePrefix, "error")
-		return common.UploadFailed
+		return common.UploadFailed, ""
 	}
 
 	defer func() {
@@ -704,26 +704,43 @@ func (n *GitLabClient) determineUploadState(
 	resp *http.Response,
 	log *logrus.Entry,
 	messagePrefix string,
-) common.UploadState {
+) (common.UploadState, string) {
 	statusText := getMessageFromJSONResponse(resp)
 
 	switch resp.StatusCode {
 	case http.StatusCreated:
 		log.Println(messagePrefix, statusText)
-		return common.UploadSucceeded
+		return common.UploadSucceeded, ""
+	case http.StatusTemporaryRedirect:
+		return handleUploadRedirectionState(resp, log, messagePrefix, statusText)
 	case http.StatusForbidden:
 		log.WithField("status", resp.StatusCode).Errorln(messagePrefix, statusText)
-		return common.UploadForbidden
+		return common.UploadForbidden, ""
 	case http.StatusRequestEntityTooLarge:
 		log.WithField("status", resp.StatusCode).Errorln(messagePrefix, statusText)
-		return common.UploadTooLarge
+		return common.UploadTooLarge, ""
 	case http.StatusServiceUnavailable:
 		log.WithField("status", resp.StatusCode).Errorln(messagePrefix, statusText)
-		return common.UploadServiceUnavailable
+		return common.UploadServiceUnavailable, ""
 	default:
 		log.WithField("status", resp.StatusCode).Warningln(messagePrefix, statusText)
-		return common.UploadFailed
+		return common.UploadFailed, ""
 	}
+}
+
+func handleUploadRedirectionState(
+	resp *http.Response,
+	log *logrus.Entry,
+	messagePrefix string,
+	statusText string,
+) (common.UploadState, string) {
+	location := resp.Header.Get("Location")
+	if location == "" {
+		log.WithField("status", resp.StatusCode).Errorln(messagePrefix, statusText, "empty location")
+		return common.UploadFailed, ""
+	}
+
+	return common.UploadRedirected, location
 }
 
 func (n *GitLabClient) DownloadArtifacts(

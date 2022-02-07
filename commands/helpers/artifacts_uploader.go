@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -114,9 +115,15 @@ func (c *ArtifactsUploaderCommand) Run() error {
 	)
 
 	// Upload the data
-	switch c.network.UploadRawArtifacts(c.JobCredentials, stream, options) {
+	resp, location := c.network.UploadRawArtifacts(c.JobCredentials, stream, options)
+	switch resp {
 	case common.UploadSucceeded:
 		return nil
+	case common.UploadRedirected:
+		logrus.WithField("location", location).Warning("Upload request redirected")
+		c.JobCredentials.URL = location
+
+		return retryableErr{err: fmt.Errorf("request redirected")}
 	case common.UploadForbidden:
 		return os.ErrPermission
 	case common.UploadTooLarge:

@@ -123,7 +123,7 @@ func (m *testNetwork) UploadRawArtifacts(
 	config common.JobCredentials,
 	reader io.ReadCloser,
 	options common.ArtifactsOptions,
-) common.UploadState {
+) (common.UploadState, string) {
 	m.uploadCalled++
 
 	if m.uploadState == common.UploadSucceeded {
@@ -132,20 +132,20 @@ func (m *testNetwork) UploadRawArtifacts(
 
 		switch options.Format {
 		case common.ArtifactFormatZip, common.ArtifactFormatDefault:
-			return m.consumeZipUpload(reader)
+			return m.consumeZipUpload(reader), ""
 
 		case common.ArtifactFormatGzip:
-			return m.consumeGzipUpload(reader)
+			return m.consumeGzipUpload(reader), ""
 
 		case common.ArtifactFormatRaw:
-			return m.consumeRawUpload(reader)
+			return m.consumeRawUpload(reader), ""
 
 		default:
-			return common.UploadForbidden
+			return common.UploadForbidden, ""
 		}
 	}
 
-	return m.uploadState
+	return m.uploadState, ""
 }
 
 func writeTestFile(t *testing.T, fileName string) {
