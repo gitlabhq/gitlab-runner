@@ -27,10 +27,14 @@ import (
 func TestArchiveUploadRedirect(t *testing.T) {
 	finalRequestReceived := false
 
-	finalServer := httptest.NewServer(finalServerHandler(t, &finalRequestReceived))
+	finalServer := httptest.NewServer(
+		assertRequestPathAndMethod(t, "final", finalServerHandler(t, &finalRequestReceived)),
+	)
 	defer finalServer.Close()
 
-	redirectingServer := httptest.NewServer(redirectingServerHandler(finalServer.URL))
+	redirectingServer := httptest.NewServer(
+		assertRequestPathAndMethod(t, "redirection", redirectingServerHandler(finalServer.URL)),
+	)
 	defer redirectingServer.Close()
 
 	cmd := &ArtifactsUploaderCommand{
@@ -57,6 +61,17 @@ func TestArchiveUploadRedirect(t *testing.T) {
 	}, "expected command not to log fatal")
 
 	assert.True(t, finalRequestReceived)
+}
+
+func assertRequestPathAndMethod(t *testing.T, handlerName string, handler http.HandlerFunc) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+
+		assert.Equal(t, "/api/v4/jobs/12345/artifacts", r.URL.Path, "server handler: %s", handlerName)
+		assert.NotEqual(t, "/api/v4/jobs/12345/jobs/12345/artifacts", r.URL.Path, "server handler: %s", handlerName)
+
+		handler(rw, r)
+	}
 }
 
 func redirectingServerHandler(finalServerURL string) http.HandlerFunc {
@@ -99,7 +114,7 @@ func finalServerHandler(t *testing.T, finalRequestReceived *bool) http.HandlerFu
 	}
 }
 
-func receiveFile(t *testing.T, r *http.Request, targetDir string)  {
+func receiveFile(t *testing.T, r *http.Request, targetDir string) {
 	err := r.ParseMultipartForm(1024)
 	require.NoError(t, err)
 
