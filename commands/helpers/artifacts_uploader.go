@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -120,10 +121,7 @@ func (c *ArtifactsUploaderCommand) Run() error {
 	case common.UploadSucceeded:
 		return nil
 	case common.UploadRedirected:
-		logrus.WithField("location", location).Warning("Upload request redirected")
-		c.JobCredentials.URL = location
-
-		return retryableErr{err: fmt.Errorf("request redirected")}
+		return c.handleRedirect(location)
 	case common.UploadForbidden:
 		return os.ErrPermission
 	case common.UploadTooLarge:
@@ -135,6 +133,24 @@ func (c *ArtifactsUploaderCommand) Run() error {
 	default:
 		return os.ErrInvalid
 	}
+}
+
+func (c *ArtifactsUploaderCommand) handleRedirect(location string) error {
+	newURL, err := url.Parse(location)
+	if err != nil {
+		return retryableErr{err: fmt.Errorf("parsing new location URL: %w", err)}
+	}
+
+	newURL.RawQuery = ""
+	newURL.Path = ""
+
+	c.JobCredentials.URL = newURL.String()
+
+	logrus.WithField("location", location).
+		WithField("new-url", c.JobCredentials.URL).
+		Warning("Upload request redirected")
+
+	return retryableErr{err: fmt.Errorf("request redirected")}
 }
 
 func (c *ArtifactsUploaderCommand) ShouldRetry(tries int, err error) bool {
