@@ -27,8 +27,8 @@ The supported shells are:
 
 | Shell         | Status             |  Description |
 | --------------| ------------------ |  ----------- |
-| `bash`        | Fully Supported    | Bash (Bourne-shell) shell. All commands executed in Bash context (default for all Unix systems) |
-| `sh`          | Fully Supported    | Sh (Bourne-shell) shell. All commands executed in Sh context (fallback for `bash` for all Unix systems) |
+| `bash`        | Fully Supported    | Bash (Bourne Again Shell). All commands executed in Bash context (default for all Unix systems) |
+| `sh`          | Fully Supported    | Sh (Bourne shell). All commands executed in Sh context (fallback for `bash` for all Unix systems) |
 | `powershell`  | Fully Supported    | PowerShell script. All commands are executed in PowerShell Desktop context. In GitLab Runner 12.0-13.12, this is the default when registering a new runner. |
 | `pwsh`        | Fully Supported    | PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default when registering a new runner. |
 | `cmd`         | Deprecated         | Windows Batch script. All commands are executed in Batch context. Deprecated in favor of PowerShell Core. Default when no [`shell`](../configuration/advanced-configuration.md#the-runners-section) is specified. [Learn how to gain access to the CMD shell when PowerShell is the default shell](#access-cmd-shell-when-powershell-is-the-default). |
