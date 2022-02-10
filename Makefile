@@ -186,7 +186,7 @@ dockerfiles:
 .PHONY: mocks
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
-	find . -type f ! -path '*vendor/*' -name 'mock_*' -delete
+	find . -type f -name 'mock_*' -delete
 	$(MOCKERY) -dir=./network -name='requester' -inpkg
 	$(MOCKERY) -dir=./helpers -all -inpkg
 	$(MOCKERY) -dir=./executors/docker -all -inpkg
@@ -205,8 +205,8 @@ check_mocks:
 	@$(MAKE) mocks
 	# Checking the differences
 	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
-		$(shell git ls-files | grep 'mock_' | grep -v 'vendor/') && \
-		!(git ls-files -o | grep 'mock_' | grep -v 'vendor/') && \
+		$(shell git ls-files | grep 'mock_') && \
+		!(git ls-files -o | grep 'mock_') && \
 		echo "Mocks up-to-date!"
 
 test-docker:
@@ -347,13 +347,6 @@ development_setup:
 	if vboxmanage --version ; then $(MAKE) -C tests/ubuntu virtualbox ; fi
 
 check_modules:
-	# Check if there is any difference in vendor/
-	@git checkout HEAD -- vendor/*
-	@git status -sb vendor/ > /tmp/vendor-$${CI_JOB_ID}-before
-	@go mod vendor
-	@git status -sb vendor/ > /tmp/vendor-$${CI_JOB_ID}-after
-	@diff -U0 /tmp/vendor-$${CI_JOB_ID}-before /tmp/vendor-$${CI_JOB_ID}-after
-
 	# check go.sum
 	@git checkout HEAD -- go.sum
 	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-before

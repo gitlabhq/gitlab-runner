@@ -1,7 +1,0 @@
-*.iml
-.project
-.idea/
-.editorconfig
-/.gopath/
-/vendor
-

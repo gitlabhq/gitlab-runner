@@ -77,7 +77,7 @@ GO_ARCH_x86_64-windows = windows/amd64
 GO_ARCH_NAME_amd64 = x86_64
 
 # Go files that are used to create the helper binary.
-HELPER_GO_FILES ?= $(shell find common network vendor -name '*.go')
+HELPER_GO_FILES ?= $(shell find common network -name '*.go')
 
 # Build the Runner Helper binaries for the host platform.
 .PHONY: helper-bin-host

@@ -237,7 +237,7 @@ If you need an IDE to edit and debug code, there are a few free suggestions you 
 ## Managing build dependencies
 
 GitLab Runner uses [Go Modules](https://github.com/golang/go/wiki/Modules) to manage
-its dependencies - they get checked into the repository under the `vendor/` directory
+its dependencies.
 
 Don't add dependency from upstream default branch when version tags are available.
 

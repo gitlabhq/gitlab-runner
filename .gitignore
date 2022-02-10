@@ -4,6 +4,7 @@ config.toml.lock
 .project
 out
 builds/
+vendor/
 commands/helpers/archive.zip
 dockerfiles/**/checksums-*
 dockerfiles/runner/*/install-deps

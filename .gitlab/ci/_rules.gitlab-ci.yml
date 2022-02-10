@@ -9,7 +9,7 @@
   - ".gitattributes"
   - "Makefile*"
   - "**/*.go"
-  - "{ci,dockerfiles,packaging,scripts,tests,vendor}/**/*"
+  - "{ci,dockerfiles,packaging,scripts,tests}/**/*"
   - "**/testdata/**/*"
   - "go.*"
   - "tmp/gitlab-test/**"
