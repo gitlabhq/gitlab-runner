@@ -14,12 +14,18 @@ package-prepare:
 .PHONY: package-deb-64bit
 package-deb-64bit: package-deps package-prepare
 	$(MAKE) package-deb-arch ARCH=amd64 PACKAGE_ARCH=amd64
+
+.PHONY: package-deb-arm-64bit
+package-deb-arm-64bit: package-deps package-prepare
 	$(MAKE) package-deb-arch ARCH=arm64 PACKAGE_ARCH=aarch64
 	$(MAKE) package-deb-arch ARCH=arm64 PACKAGE_ARCH=arm64
 
 .PHONY: package-deb-32bit
 package-deb-32bit: package-deps package-prepare
 	$(MAKE) package-deb-arch ARCH=386 PACKAGE_ARCH=i386
+
+.PHONY: package-deb-arm-32bit
+package-deb-arm-32bit: package-deps package-prepare
 	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=armel
 	$(MAKE) package-deb-arch ARCH=arm PACKAGE_ARCH=armhf
 
@@ -31,12 +37,18 @@ package-deb-ibm: package-deps package-prepare
 .PHONY: package-rpm-64bit
 package-rpm-64bit: package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=amd64 PACKAGE_ARCH=amd64
+
+.PHONY: package-rpm-arm-64bit
+package-rpm-arm-64bit: package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=arm64 PACKAGE_ARCH=aarch64
 	$(MAKE) package-rpm-arch ARCH=arm64 PACKAGE_ARCH=arm64
 
 .PHONY: package-rpm-32bit
 package-rpm-32bit: package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=386 PACKAGE_ARCH=i686
+
+.PHONY: package-rpm-arm-32bit
+package-rpm-arm-32bit: package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=arm
 	$(MAKE) package-rpm-arch ARCH=arm PACKAGE_ARCH=armhf
 

@@ -36,7 +36,9 @@ package-deb:
     matrix:
     - PKGS:
       - package-deb-64bit
+      - package-deb-arm-64bit
       - package-deb-32bit
+      - package-deb-arm-32bit
       - package-deb-ibm
 
 package-rpm:
@@ -46,6 +48,8 @@ package-rpm:
     matrix:
     - PKGS:
       - package-rpm-64bit
+      - package-rpm-arm-64bit
       - package-rpm-32bit
+      - package-rpm-arm-32bit
       - package-rpm-ibm
       - package-rpm-fips
