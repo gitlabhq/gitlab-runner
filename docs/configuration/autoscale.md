@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 > The autoscale feature was introduced in GitLab Runner 1.1.0.
 
-Autoscale provides the ability to utilize resources in a more elastic and
+Autoscale provides the ability to use resources in a more elastic and
 dynamic way.
 
 GitLab Runner can autoscale, so that your infrastructure contains only as
