@@ -340,7 +340,7 @@ In the worst case scenario, you can't have 10 idle machines, but only 5, because
 
 ## The `IdleScaleFactor` strategy
 
-> Introduced as experimental feature in [GitLab Runner 14.5](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3179).
+> Introduced as experimental feature in [GitLab Runner 14.6](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3179).
 
 The `IdleCount` parameter defines a static number of _Idle_ machines that runner should sustain.
 The value you assign depends on your use case.
