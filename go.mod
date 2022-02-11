@@ -11,7 +11,7 @@ require (
 	github.com/boumenot/gocover-cobertura v1.1.0
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/docker/cli v20.10.2+incompatible
-	github.com/docker/distribution v2.7.0+incompatible
+	github.com/docker/distribution v2.8.0+incompatible
 	github.com/docker/docker v20.10.2+incompatible
 	github.com/docker/docker-credential-helpers v0.4.1 // indirect
 	github.com/docker/go-connections v0.3.0
