@@ -67,6 +67,11 @@ need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command
   - by adding `-v /srv/gitlab-runner/docker-machine-config:/root/.docker/machine` for system volume mounts
   - by adding `-v docker-machine-config:/root/.docker/machine` for Docker named volumes
 
+NOTE:
+This setup delegates full control over the Docker daemon to each GitLab Runner container.
+The effect is that isolation guarantees break if you run GitLab Runner inside a Docker daemon
+that also runs other payloads.
+
 ### Option 1: Use local system volume mounts to start the Runner container
 
 This example uses the local system for the configuration volume that is mounted into the `gitlab-runner` container. This volume is used for configs and other resources.
