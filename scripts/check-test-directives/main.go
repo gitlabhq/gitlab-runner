@@ -100,9 +100,6 @@ func walkTestFiles(testType string, rootPath string, walkFunc filepath.WalkFunc)
 			if name == ".git" {
 				return filepath.SkipDir
 			}
-			if name == "vendor" {
-				return filepath.SkipDir
-			}
 		}
 
 		if !testFileRx.MatchString(name) {
