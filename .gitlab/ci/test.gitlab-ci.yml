@@ -249,6 +249,11 @@ fuzz variable mask:
   parallel: 6
   before_script:
   - Set-MpPreference -DisableRealtimeMonitoring $true
+  - go version
+  - curl -o golang.msi "https://go.dev/dl/go1.17.6.windows-amd64.msi"
+  - Start-Process msiexec.exe -Wait -ArgumentList '/I golang.msi /quiet'
+  - $env:Path = "C:\Program Files\Go\bin;$env:Path"
+  - go version
   - *go-cache-windows_before_script
   script:
   - .\ci\test_windows.ps1 $TESTSDEFINITIONSPATH
