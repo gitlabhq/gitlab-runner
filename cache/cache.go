@@ -15,29 +15,21 @@ import (
 
 var createAdapter = CreateAdapter
 
-func getCacheConfig(build *common.Build) *common.CacheConfig {
-	if build == nil || build.Runner == nil || build.Runner.Cache == nil {
-		return nil
-	}
-
-	return build.Runner.Cache
-}
-
-func generateBaseObjectName(build *common.Build, config *common.CacheConfig) string {
-	runnerSegment := ""
-	if !config.GetShared() {
-		runnerSegment = path.Join("runner", build.Runner.ShortDescription())
-	}
-
-	return path.Join(config.GetPath(), runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID))
-}
-
+// generateObjectName returns a fully-qualified name for the cache object,
+// ensuring there's no path traversal outside.
 func generateObjectName(build *common.Build, config *common.CacheConfig, key string) (string, error) {
 	if key == "" {
 		return "", nil
 	}
 
-	basePath := generateBaseObjectName(build, config)
+	// runners get their own namespace, unless they're shared, in which case the
+	// namespace is empty.
+	namespace := ""
+	if !config.GetShared() {
+		namespace = path.Join("runner", build.Runner.ShortDescription())
+	}
+
+	basePath := path.Join(config.GetPath(), namespace, "project", strconv.Itoa(build.JobInfo.ProjectID))
 	fullPath := path.Join(basePath, key)
 
 	// The typical concerns regarding the use of strings.HasPrefix to detect
@@ -52,97 +44,72 @@ func generateObjectName(build *common.Build, config *common.CacheConfig, key str
 	return fullPath, nil
 }
 
-func buildAdapter(build *common.Build, key string) (Adapter, error) {
-	config := getCacheConfig(build)
-	if config == nil {
+func getAdaptorForBuild(build *common.Build, key string) Adapter {
+	if build == nil || build.Runner == nil || build.Runner.Cache == nil {
 		logrus.Warning("Cache config not defined. Skipping cache operation.")
-		return nil, nil
+		return nil
 	}
 
-	objectName, err := generateObjectName(build, config, key)
+	objectName, err := generateObjectName(build, build.Runner.Cache, key)
 	if err != nil {
 		logrus.WithError(err).Error("Error while generating cache bucket.")
-		return nil, nil
+		return nil
 	}
 
 	if objectName == "" {
 		logrus.Warning("Empty cache key. Skipping adapter selection.")
-		return nil, nil
+		return nil
 	}
 
-	return createAdapter(config, build.GetBuildTimeout(), objectName)
-}
-
-func onAdapter(build *common.Build, key string, handler func(adapter Adapter) interface{}) interface{} {
-	adapter, err := buildAdapter(build, key)
+	adapter, err := createAdapter(build.Runner.Cache, build.GetBuildTimeout(), objectName)
 	if err != nil {
 		logrus.WithError(err).Error("Could not create cache adapter")
 	}
 
-	if adapter == nil {
-		return nil
-	}
-
-	return handler(adapter)
+	return adapter
 }
 
 func GetCacheDownloadURL(build *common.Build, key string) *url.URL {
-	return castToURL(func() interface{} {
-		return onAdapter(build, key, func(adapter Adapter) interface{} {
-			return adapter.GetDownloadURL()
-		})
-	})
-}
-
-func castToURL(handler func() interface{}) *url.URL {
-	result := handler()
-
-	u, ok := result.(*url.URL)
-	if !ok {
+	adaptor := getAdaptorForBuild(build, key)
+	if adaptor == nil {
 		return nil
 	}
 
-	return u
+	return adaptor.GetDownloadURL()
 }
 
 func GetCacheUploadURL(build *common.Build, key string) *url.URL {
-	return castToURL(func() interface{} {
-		return onAdapter(build, key, func(adapter Adapter) interface{} {
-			return adapter.GetUploadURL()
-		})
-	})
+	adaptor := getAdaptorForBuild(build, key)
+	if adaptor == nil {
+		return nil
+	}
+
+	return adaptor.GetUploadURL()
 }
 
 func GetCacheUploadHeaders(build *common.Build, key string) http.Header {
-	result := onAdapter(build, key, func(adapter Adapter) interface{} {
-		return adapter.GetUploadHeaders()
-	})
-
-	h, ok := result.(http.Header)
-	if !ok {
+	adaptor := getAdaptorForBuild(build, key)
+	if adaptor == nil {
 		return nil
 	}
 
-	return h
+	return adaptor.GetUploadHeaders()
 }
 
 func GetCacheGoCloudURL(build *common.Build, key string) *url.URL {
-	return castToURL(func() interface{} {
-		return onAdapter(build, key, func(adapter Adapter) interface{} {
-			return adapter.GetGoCloudURL()
-		})
-	})
-}
-
-func GetCacheUploadEnv(build *common.Build, key string) map[string]string {
-	result := onAdapter(build, key, func(adapter Adapter) interface{} {
-		return adapter.GetUploadEnv()
-	})
-
-	m, ok := result.(map[string]string)
-	if !ok {
+	adaptor := getAdaptorForBuild(build, key)
+	if adaptor == nil {
 		return nil
 	}
 
-	return m
+	return adaptor.GetGoCloudURL()
+}
+
+func GetCacheUploadEnv(build *common.Build, key string) map[string]string {
+	adaptor := getAdaptorForBuild(build, key)
+	if adaptor == nil {
+		return nil
+	}
+
+	return adaptor.GetUploadEnv()
 }
