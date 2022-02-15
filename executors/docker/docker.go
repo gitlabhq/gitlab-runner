@@ -847,7 +847,7 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 }
 
 func (e *executor) connectDocker() error {
-	client, err := docker.New(e.Config.Docker.Credentials, "")
+	client, err := docker.New(e.Config.Docker.Credentials)
 	if err != nil {
 		return err
 	}
@@ -857,6 +857,15 @@ func (e *executor) connectDocker() error {
 	if err != nil {
 		return err
 	}
+
+	e.Debugln(fmt.Sprintf(
+		"Connected to docker daemon (api version: %s, server version: %s, kernel: %s, os: %s/%s)",
+		e.client.ClientVersion(),
+		e.info.ServerVersion,
+		e.info.KernelVersion,
+		e.info.OSType,
+		e.info.Architecture,
+	))
 
 	err = e.validateOSType()
 	if err != nil {

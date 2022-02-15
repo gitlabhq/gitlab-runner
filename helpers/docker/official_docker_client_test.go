@@ -23,7 +23,7 @@ func prepareDockerClientAndFakeServer(t *testing.T, handler http.HandlerFunc) (C
 		TLSVerify: false,
 	}
 
-	client, err := New(credentials, "")
+	client, err := New(credentials)
 	require.NoError(t, err)
 
 	return client, server
@@ -63,34 +63,6 @@ func TestWrapError(t *testing.T) {
 	assert.Regexp(t, "\\(official_docker_client_test.go:\\d\\d:\\d+s\\)", err.Error())
 }
 
-func TestNew_Version(t *testing.T) {
-	cases := []struct {
-		version         string
-		host            string
-		expectedVersion string
-	}{
-		{
-			version:         "0.11",
-			expectedVersion: "0.11",
-		},
-		{
-			version:         "",
-			expectedVersion: DefaultAPIVersion,
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.expectedVersion, func(t *testing.T) {
-			client, err := New(Credentials{}, c.version)
-			require.NoError(t, err)
-
-			test, ok := client.(*officialDockerClient)
-			assert.True(t, ok)
-			assert.Equal(t, c.expectedVersion, test.client.ClientVersion())
-		})
-	}
-}
-
 func TestRedirectsNotAllowed(t *testing.T) {
 	_, server := prepareDockerClientAndFakeServer(t, func(w http.ResponseWriter, r *http.Request) {
 		require.Fail(t, "This server should not be hit")
@@ -106,7 +78,7 @@ func TestRedirectsNotAllowed(t *testing.T) {
 		TLSVerify: false,
 	}
 
-	client, err := New(credentials, "")
+	client, err := New(credentials)
 	require.NoError(t, err)
 
 	_, err = client.Info(context.Background())
