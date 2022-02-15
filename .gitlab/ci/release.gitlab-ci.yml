@@ -382,6 +382,9 @@ stable gitlab release:
       - name: 'binary: macOS amd64'
         url: '$S3/binaries/gitlab-runner-darwin-amd64'
         filepath: '/binaries/gitlab-runner-darwin-amd64'
+      - name: 'binary: macOS arm64'
+        url: '$S3/binaries/gitlab-runner-darwin-arm64'
+        filepath: '/binaries/gitlab-runner-darwin-arm64'
 
       - name: 'binary: Windows amd64'
         url: '$S3/binaries/gitlab-runner-windows-amd64.zip'

@@ -23,7 +23,11 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 1. Download the binary for your system:
 
    ```shell
+   # macOS amd64
    sudo curl --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64"
+
+   # macOS Apple Silicon/arm64
+   sudo curl --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-arm64"
    ```
 
    You can download a binary for every available version as described in
