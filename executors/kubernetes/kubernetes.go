@@ -432,12 +432,11 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 }
 
 func (s *executor) initContainerResources() api.ResourceRequirements {
-
 	resources := api.ResourceRequirements{}
 
 	if s.configurationOverwrites != nil {
-		resources.Limits = s.configurationOverwrites.buildLimits
-		resources.Requests = s.configurationOverwrites.buildRequests
+		resources.Limits = s.configurationOverwrites.helperLimits
+		resources.Requests = s.configurationOverwrites.helperRequests
 	}
 
 	return resources

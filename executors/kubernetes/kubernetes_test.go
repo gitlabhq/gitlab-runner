@@ -4515,11 +4515,11 @@ func TestExecutor_buildPermissionsInitContainer_CheckResources(t *testing.T) {
 		},
 		pullManager: mockPullManager,
 		configurationOverwrites: &overwrites{
-			buildLimits: api.ResourceList{
+			helperLimits: api.ResourceList{
 				"cpu":    cpu,
 				"memory": memory,
 			},
-			buildRequests: api.ResourceList{
+			helperRequests: api.ResourceList{
 				"cpu":    cpu,
 				"memory": memory,
 			},
