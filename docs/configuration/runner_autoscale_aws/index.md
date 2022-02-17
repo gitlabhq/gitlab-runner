@@ -265,6 +265,13 @@ under `MachineOptions`. Below you can see the most common ones.
 | `amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true` | AWS extra tag key-value pairs, useful to identify the instances on the AWS console. The "Name" [tag](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) is set to the machine name by default. We set the "runner-manager-name" to match the runner name set in `[[runners]]`, so that we can filter all the EC2 instances created by a specific manager setup. |
 | `amazonec2-security-group=xxxx` | AWS VPC security group name, not the security group ID. See [AWS security groups](#aws-security-groups). |
 | `amazonec2-instance-type=m4.2xlarge` | The instance type that the child runners will run on. |
+| `amazonec2-ssh-user=xxxx` | The user that will have SSH access to the instance. |
+| `amazonec2-iam-instance-profile=xxxx_runner_machine_inst_profile_name` | The IAM instance profile to use for the runner machine. |
+| `amazonec2-ami=xxxx_runner_machine_ami_id` | The GitLab Runner AMI ID for a specific image. |
+| `amazonec2-request-spot-instance=true` | Use spare EC2 capacity that is available for less than the on-demand price. | 
+| `amazonec2-spot-price=xxxx_runner_machine_spot_price=x.xx` | Spot instance bid price (in US dollars). Requires the `--amazonec2-request-spot-instance flag` set to `true`. If you omit the `amazonec2-spot-price`, Docker Machine sets the maximum price to a default value of `$0.50` per hour. |
+| `amazonec2-security-group-readonly=true` | Set the security group to read-only.|
+| `amazonec2-userdata=xxxx_runner_machine_userdata_path` | Specify the runner machine `userdata` path. | 
 
 Notes:
 
