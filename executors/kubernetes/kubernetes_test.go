@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest/fake"
@@ -4494,6 +4495,50 @@ func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {
 
 	_, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
 	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestExecutor_buildPermissionsInitContainer_CheckResources(t *testing.T) {
+	mockPullManager := &pull.MockManager{}
+	cpu := resource.MustParse("1")
+	memory := resource.MustParse("1Gi")
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executorOptions,
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+			},
+		},
+		pullManager: mockPullManager,
+		configurationOverwrites: &overwrites{
+			helperLimits: api.ResourceList{
+				"cpu":    cpu,
+				"memory": memory,
+			},
+			helperRequests: api.ResourceList{
+				"cpu":    cpu,
+				"memory": memory,
+			},
+		},
+	}
+
+	mockPullManager.On("GetPullPolicyFor", mock.Anything).
+		Return(api.PullAlways, nil).
+		Once()
+
+	container, err := e.buildPermissionsInitContainer(helperimage.OSTypeLinux)
+
+	require.NoError(t, err)
+
+	assert.True(t, container.Resources.Limits.Cpu().Equal(cpu))
+	assert.True(t, container.Resources.Requests.Cpu().Equal(cpu))
+
+	assert.True(t, container.Resources.Limits.Memory().Equal(memory))
+	assert.True(t, container.Resources.Requests.Memory().Equal(memory))
 }
 
 func TestShellRetrieval(t *testing.T) {

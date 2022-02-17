@@ -431,6 +431,17 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 	return containerName, containerCommand
 }
 
+func (s *executor) initContainerResources() api.ResourceRequirements {
+	resources := api.ResourceRequirements{}
+
+	if s.configurationOverwrites != nil {
+		resources.Limits = s.configurationOverwrites.helperLimits
+		resources.Requests = s.configurationOverwrites.helperRequests
+	}
+
+	return resources
+}
+
 func (s *executor) buildPermissionsInitContainer(os string) (api.Container, error) {
 	pullPolicy, err := s.pullManager.GetPullPolicyFor(s.getHelperImage())
 	if err != nil {
@@ -442,6 +453,8 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 		Image:           s.getHelperImage(),
 		VolumeMounts:    s.getVolumeMounts(),
 		ImagePullPolicy: pullPolicy,
+		// let's use build container resources
+		Resources: s.initContainerResources(),
 	}
 
 	// The kubernetes executor uses both a helper container (for predefined stages) and a build
