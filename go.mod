@@ -11,9 +11,9 @@ require (
 	github.com/boumenot/gocover-cobertura v1.2.0
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/docker/cli v20.10.2+incompatible
+	github.com/docker/cli v20.10.12+incompatible
 	github.com/docker/distribution v2.7.0+incompatible
-	github.com/docker/docker v20.10.2+incompatible
+	github.com/docker/docker v20.10.12+incompatible
 	github.com/docker/docker-credential-helpers v0.4.1 // indirect
 	github.com/docker/go-connections v0.3.0
 	github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
@@ -143,4 +143,4 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
+replace golang.org/x/sys => golang.org/x/sys v0.0.0-20220209214540-3681064d5158
