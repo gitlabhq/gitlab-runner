@@ -265,7 +265,7 @@ func (b *BashWriter) Finish(trace bool) string {
 		buf.WriteString(": | eval " + b.escape(b.String()) + "\n")
 	}
 
-	buf.WriteString("exit 0")
+	buf.WriteString("exit 0\n")
 
 	return buf.String()
 }
