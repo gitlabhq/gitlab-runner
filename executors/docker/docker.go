@@ -129,8 +129,11 @@ func init() {
 	}
 }
 
-func (e *executor) getServiceVariables() []string {
-	return e.Build.GetAllVariables().PublicOrInternal().StringList()
+func (e *executor) getServiceVariables(serviceDefinition common.Image) []string {
+	variables := e.Build.GetAllVariables().PublicOrInternal()
+	variables = append(variables, serviceDefinition.Variables...)
+
+	return append(variables.Expand().StringList(), e.BuildShell.Environment...)
 }
 
 func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {
@@ -374,7 +377,7 @@ func (e *executor) createService(
 	config := &container.Config{
 		Image:  serviceImage.ID,
 		Labels: e.labeler.Labels(labels),
-		Env:    append(e.getServiceVariables(), e.BuildShell.Environment...),
+		Env:    e.getServiceVariables(serviceDefinition),
 	}
 
 	if len(serviceDefinition.Command) > 0 {

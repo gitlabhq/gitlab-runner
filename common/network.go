@@ -90,6 +90,7 @@ type FeaturesInfo struct {
 	VaultSecrets            bool `json:"vault_secrets"`
 	Cancelable              bool `json:"cancelable"`
 	ReturnExitCode          bool `json:"return_exit_code"`
+	ServiceVariables        bool `json:"service_variables"`
 }
 
 type ConfigInfo struct {
@@ -215,11 +216,12 @@ type Step struct {
 type Steps []Step
 
 type Image struct {
-	Name       string   `json:"name"`
-	Alias      string   `json:"alias,omitempty"`
-	Command    []string `json:"command,omitempty"`
-	Entrypoint []string `json:"entrypoint,omitempty"`
-	Ports      []Port   `json:"ports,omitempty"`
+	Name       string       `json:"name"`
+	Alias      string       `json:"alias,omitempty"`
+	Command    []string     `json:"command,omitempty"`
+	Entrypoint []string     `json:"entrypoint,omitempty"`
+	Ports      []Port       `json:"ports,omitempty"`
+	Variables  JobVariables `json:"variables,omitempty"`
 }
 
 type Port struct {

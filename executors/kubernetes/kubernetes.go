@@ -703,13 +703,16 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	var (
 		optionName    string
 		allowedImages []string
+		envVars       []common.JobVariable
 	)
 	if strings.HasPrefix(opts.name, "svc-") {
 		optionName = "services"
 		allowedImages = s.Config.Kubernetes.AllowedServices
+		envVars = s.getServiceVariables(opts.imageDefinition)
 	} else if opts.name == buildContainerName {
 		optionName = "images"
 		allowedImages = s.Config.Kubernetes.AllowedImages
+		envVars = s.Build.GetAllVariables().PublicOrInternal()
 	}
 
 	verifyAllowedImageOptions := common.VerifyAllowedImageOptions{
@@ -757,7 +760,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		ImagePullPolicy: pullPolicy,
 		Command:         command,
 		Args:            args,
-		Env:             buildVariables(s.Build.GetAllVariables().PublicOrInternal()),
+		Env:             buildVariables(envVars),
 		Resources: api.ResourceRequirements{
 			Limits:   opts.limits,
 			Requests: opts.requests,
@@ -1716,6 +1719,13 @@ func (s *executor) getServices(build *common.Build) {
 	}
 }
 
+func (s *executor) getServiceVariables(serviceDefinition common.Image) common.JobVariables {
+	variables := s.Build.GetAllVariables().PublicOrInternal()
+	variables = append(variables, serviceDefinition.Variables...)
+
+	return variables.Expand()
+}
+
 // checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults() error {
 	if s.options.Image.Name == "" {
@@ -1782,6 +1792,7 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Session = true
 	features.Terminal = true
 	features.Proxy = true
+	features.ServiceVariables = true
 }
 
 func init() {
