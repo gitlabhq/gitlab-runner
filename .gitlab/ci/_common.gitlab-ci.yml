@@ -1,17 +1,16 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.17.7-1
+  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.17.7-2
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"
   FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
-  DOCKER_VERSION: 20.10.9
+  DOCKER_VERSION: 20.10.12
   DOCKER_MACHINE_VERSION: "0.16.2"
-  BUILDX_VERSION: 0.6.3
-  KUBECTL_VERSION: 1.18.0
-  AWS_CLI_VERSION: 2.1.6
-  UBUNTU_IMAGE_VERSION: "20.04"
+  BUILDX_VERSION: 0.7.1
+  KUBECTL_VERSION: 1.23.0
+  AWS_CLI_VERSION: 2.4.19
   DUMB_INIT_VERSION: "1.2.2"
   GIT_VERSION: "2.30.2"
   GIT_VERSION_BUILD: "1"
