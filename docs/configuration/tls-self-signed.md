@@ -98,7 +98,7 @@ in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `
 
 ### Git cloning
 
-The runner injects missing certificates to build the CA chain in build containers.
+The runner injects missing certificates to build the CA chain in build containers by using `CI_SERVER_TLS_CA_FILE`.
 This allows `git clone` and `artifacts` to work with servers that do not use publicly
 trusted certificates.
 
@@ -191,6 +191,12 @@ To install the certificate:
               update-ca-certificates --fresh > /dev/null
               """
             ```
+
+If you just need the GitLab server CA cert that can be used, you can retrieve it from the file stored in the `CI_SERVER_TLS_CA_FILE` variable:
+
+```shell
+curl --cacert "${CI_SERVER_TLS_CA_FILE}"  ${URL} -o ${FILE}
+```
 
 ### Trusting the certificate for the other CI/CD stages
 
