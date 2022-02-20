@@ -1,3 +1,57 @@
+## v14.8.0 (2022-02-20)
+
+### New features
+
+- Allow specifying maintenance-note on runner registration !3268
+- Support Apple Silicon (darwin/arm64) !2274
+- Add variable support for services (Stefano Tenuta @ST-Apps1) !3158
+
+### Bug fixes
+
+- Fix artifacts upload redirection support !3308
+- Handle redirects on artifact uploads !3303
+- Introduce non-reusable docker cache volumes !3269
+- Merge the config template before asking the user for configuration !2561 (Matthias Baur @m.baur)
+- Make use of build requests/limits for build permission init container !3321
+
+### Maintenance
+
+- Add details to docs on CI_SERVER_TLS_CA_FILE !3332 (Ben Bodenmiller @bbodenmiller)
+- Ensure shell writers terminate with newline flush !3329
+- Upgrade Go to 1.17.7 !3327
+- Install supported Go version for Windows prior to testing !3324
+- Upgrade minio to v7.0.21 !3323
+- Fix milestone ship date error for the idlescalefactor feature - docs !3317
+- Remove vendor/ directory !3314
+- Divide packages buildling jobs in the pipeline even more !3313
+- Use latest docs linting image for Markdown !3312
+- Docs: Update shell descriptions to use full names !3310 (Neil Roza @realtime-neil)
+- Bump version of Go for project to 1.17.6 !3305
+- Fix Azure caching example config !3300 (Stefan Asseg @stefanasseg)
+- Encourage use of K8s secrets !3299 (Christian Mäder @nxt.cma)
+- Update interactive example that was incorrectly set to non-interactive !3297 (Arran Walker @ajwalker)
+- Update support for session_server using helm chart !3296
+- Cleanup cache proxy pattern !3294
+- Adds details about how to limit the number of VMs when autoscaling !3289
+- Update linting configuration from GitLab project !3288
+- Replace ruby:2.6 in examples and test cases with ruby:2.7 !3287
+- Update runner security docs !3279
+- Update Page with more common -machine-machine-options for use with docker and amazon ec2 instances. !3259
+- Add information on how to connect to S3 from Runners on Amazon EKS with IAM Role for ServiceAccount !3251
+- Add version number to windows helper image tags !3217 (Florian Greinacher @fgreinacher)
+- Update docs/executors/shell.md !3208
+- To disable wait_for_services_timeout use -1 not 0 !3207
+- Add support for extra submodule update flags !3192 (Nejc Habjan @nejc)
+- Clarify that listed limitations are specific to Windows !3155
+- Ensure proper assumptions !3038 (Deniz Adrian @zined)
+- Update the security caveats about the usage of privileged mode !2482
+- Add debian/bullseye to packagecloud DEB_PLATFORMS !2940 (James Addison @jayaddison-collabora)
+
+### Documentation changes
+
+- Add details on concurrent parameter for docker executor - docs !3286
+- Add alpine 3.15 as new runner/helper-image flavor !3281 (Fabio Huser @fh1ch)
+
 ## v14.7.0 (2022-01-19)
 
 ### New features
