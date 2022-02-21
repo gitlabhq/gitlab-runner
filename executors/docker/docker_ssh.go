@@ -69,9 +69,8 @@ func (s *sshExecutor) Run(cmd common.ExecutorCommand) error {
 	s.SetCurrentStage(ExecutorStageRun)
 
 	err := s.sshCommand.Run(cmd.Context, ssh.Command{
-		Environment: s.BuildShell.Environment,
-		Command:     s.BuildShell.GetCommandWithArguments(),
-		Stdin:       cmd.Script,
+		Command: s.BuildShell.GetCommandWithArguments(),
+		Stdin:   cmd.Script,
 	}, s.Shell().Shell)
 	if exitError, ok := err.(*ssh.ExitError); ok {
 		exitCode := exitError.ExitCode()

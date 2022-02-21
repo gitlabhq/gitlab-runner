@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -28,9 +27,8 @@ type Client struct {
 }
 
 type Command struct {
-	Environment []string
-	Command     []string
-	Stdin       string
+	Command []string
+	Stdin   string
 }
 
 type ExitError struct {
@@ -180,17 +178,7 @@ func (s *Client) Run(ctx context.Context, cmd Command, shell string) error {
 	}
 	defer func() { _ = session.Close() }()
 
-	var envVariables bytes.Buffer
-	if shell != "pwsh" && shell != "powershell" {
-		for _, keyValue := range cmd.Environment {
-			envVariables.WriteString("export " + helpers.ShellEscapeLegacy(keyValue) + "\n")
-		}
-	}
-
-	session.Stdin = io.MultiReader(
-		&envVariables,
-		bytes.NewBufferString(cmd.Stdin),
-	)
+	session.Stdin = strings.NewReader(cmd.Stdin)
 	session.Stdout = s.Stdout
 	session.Stderr = s.Stderr
 	err = session.Start(cmd.fullCommand(shell))

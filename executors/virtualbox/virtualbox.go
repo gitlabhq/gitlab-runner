@@ -317,9 +317,8 @@ func (s *executor) sshConnect() error {
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
 	err := s.sshCommand.Run(cmd.Context, ssh.Command{
-		Environment: s.BuildShell.Environment,
-		Command:     s.BuildShell.GetCommandWithArguments(),
-		Stdin:       cmd.Script,
+		Command: s.BuildShell.GetCommandWithArguments(),
+		Stdin:   cmd.Script,
 	}, s.Shell().Shell)
 	if exitError, ok := err.(*ssh.ExitError); ok {
 		exitCode := exitError.ExitCode()

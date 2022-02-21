@@ -9,7 +9,6 @@ import (
 )
 
 type ShellConfiguration struct {
-	Environment   []string
 	DockerCommand []string
 	Command       string
 	Arguments     []string
