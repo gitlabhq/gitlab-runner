@@ -4,10 +4,10 @@ group: Configure
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Install GitLab Runner with Kubernetes Agent **(PREMIUM ONLY)**
+# Install GitLab Runner with the agent for Kubernetes **(PREMIUM ONLY)**
 
 These instructions to install GitLab Runner assume the
-[GitLab Kubernetes Agent](https://docs.gitlab.com/ee/user/clusters/agent/index.html) is already configured.
+[GitLab agent for Kubernetes](https://docs.gitlab.com/ee/user/clusters/agent/index.html) is already configured.
 
 1. Review the possible [GitLab Runner chart YAML values](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 1. Create a `runner-chart-values.yaml` file with the configuration that fits
@@ -471,7 +471,7 @@ spec:
 
 ### `associative list with keys has an element that omits key field "protocol"`
 
-Due to [the bug in Kubernetes v1.19](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130), you may see this error when installing GitLab Runner or any other application with GitLab Kubernetes Agent. To fix it make sure to either upgrade your Kubernetes cluster to v1.20 and above or add `protocol: TCP` to `containers.ports` subsection:
+Due to [the bug in Kubernetes v1.19](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130), you may see this error when installing GitLab Runner or any other application with GitLab agent for Kubernetes. To fix it make sure to either upgrade your Kubernetes cluster to v1.20 and above or add `protocol: TCP` to `containers.ports` subsection:
 
 ```yaml
 ...
