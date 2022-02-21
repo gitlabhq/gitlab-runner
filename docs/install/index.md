@@ -68,7 +68,7 @@ Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814
 
 - [Install as a Docker service](docker.md)
 - [Install on Kubernetes](kubernetes.md)
-- [Install using the Kubernetes Agent](kubernetes-agent.md)
+- [Install using the agent for Kubernetes](kubernetes-agent.md)
 - [Install on OpenShift](openshift.md)
 
 ## Autoscale
