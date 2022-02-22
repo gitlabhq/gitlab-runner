@@ -19,7 +19,7 @@ BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os
 S3_UPLOAD_PATH ?= main
 
 # Keep in sync with docs/install/linux-repository.md
-DEB_PLATFORMS ?= debian/jessie debian/stretch debian/buster \
+DEB_PLATFORMS ?= debian/stretch debian/buster debian/bullseye \
     ubuntu/xenial ubuntu/bionic ubuntu/focal \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya
