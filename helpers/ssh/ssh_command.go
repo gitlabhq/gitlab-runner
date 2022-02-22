@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
@@ -27,7 +26,7 @@ type Client struct {
 }
 
 type Command struct {
-	Command []string
+	Command string
 	Stdin   string
 }
 
@@ -155,19 +154,7 @@ func (s *Client) Exec(cmd string) error {
 	return err
 }
 
-func (s *Command) fullCommand(shell string) string {
-	var arguments []string
-	for _, part := range s.Command {
-		if shell == "pwsh" || shell == "powershell" {
-			arguments = append(arguments, part)
-		} else {
-			arguments = append(arguments, helpers.ShellEscapeLegacy(part))
-		}
-	}
-	return strings.Join(arguments, " ")
-}
-
-func (s *Client) Run(ctx context.Context, cmd Command, shell string) error {
+func (s *Client) Run(ctx context.Context, cmd Command) error {
 	if s.client == nil {
 		return errors.New("not connected")
 	}
@@ -181,7 +168,7 @@ func (s *Client) Run(ctx context.Context, cmd Command, shell string) error {
 	session.Stdin = strings.NewReader(cmd.Stdin)
 	session.Stdout = s.Stdout
 	session.Stderr = s.Stderr
-	err = session.Start(cmd.fullCommand(shell))
+	err = session.Start(cmd.Command)
 	if err != nil {
 		return err
 	}

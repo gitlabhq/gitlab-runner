@@ -9,9 +9,12 @@ import (
 )
 
 type ShellConfiguration struct {
+	Command   string
+	Arguments []string
+
+	CmdLine string // combination of shell escaped command + args
+
 	DockerCommand []string
-	Command       string
-	Arguments     []string
 	PassFile      bool
 	Extension     string
 }
@@ -22,12 +25,6 @@ const (
 	NormalShell ShellType = iota
 	LoginShell
 )
-
-func (s *ShellConfiguration) GetCommandWithArguments() []string {
-	parts := []string{s.Command}
-	parts = append(parts, s.Arguments...)
-	return parts
-}
 
 func (s *ShellConfiguration) String() string {
 	return helpers.ToYAML(s)

@@ -283,36 +283,33 @@ func (b *BashShell) GetName() string {
 }
 
 func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
-	var detectScript string
-	var shellCommand string
-	if info.Type == common.LoginShell {
-		detectScript = strings.ReplaceAll(BashDetectShellScript, "$@", "--login")
-		shellCommand = b.Shell + " --login"
-	} else {
-		detectScript = strings.ReplaceAll(BashDetectShellScript, "$@", "")
-		shellCommand = b.Shell
+	script := &common.ShellConfiguration{
+		Command: b.Shell,
+		CmdLine: b.Shell,
 	}
 
-	script := &common.ShellConfiguration{}
-	script.DockerCommand = []string{"sh", "-c", detectScript}
-
-	// su
-	if info.User != "" {
-		script.Command = "su"
-		//nolint:goconst
-		if runtime.GOOS == "linux" {
-			script.Arguments = append(script.Arguments, "-s", "/bin/"+b.Shell)
-		}
-		script.Arguments = append(
-			script.Arguments,
-			info.User,
-			"-c", shellCommand,
-		)
+	if info.Type == common.LoginShell {
+		script.CmdLine += " --login"
+		script.Arguments = []string{"--login"}
+		script.DockerCommand = []string{"sh", "-c", strings.ReplaceAll(BashDetectShellScript, "$@", "--login")}
 	} else {
-		script.Command = b.Shell
-		if info.Type == common.LoginShell {
-			script.Arguments = append(script.Arguments, "--login")
-		}
+		script.DockerCommand = []string{"sh", "-c", strings.ReplaceAll(BashDetectShellScript, "$@", "")}
+	}
+
+	if info.User == "" {
+		return script, nil
+	}
+
+	script.Command = "su"
+	if runtime.GOOS == OSLinux {
+		script.Arguments = []string{"-s", "/bin/" + b.Shell, info.User, "-c", script.CmdLine}
+	} else {
+		script.Arguments = []string{info.User, "-c", script.CmdLine}
+	}
+
+	script.CmdLine = script.Command
+	for _, arg := range script.Arguments {
+		script.CmdLine += " " + helpers.ShellEscape(arg)
 	}
 
 	return script, nil
