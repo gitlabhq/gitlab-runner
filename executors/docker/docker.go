@@ -133,7 +133,7 @@ func (e *executor) getServiceVariables(serviceDefinition common.Image) []string 
 	variables := e.Build.GetAllVariables().PublicOrInternal()
 	variables = append(variables, serviceDefinition.Variables...)
 
-	return append(variables.Expand().StringList(), e.BuildShell.Environment...)
+	return variables.Expand().StringList()
 }
 
 func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {
@@ -688,7 +688,7 @@ func (e *executor) createContainerConfig(
 		AttachStderr: true,
 		OpenStdin:    true,
 		StdinOnce:    true,
-		Env:          append(e.Build.GetAllVariables().StringList(), e.BuildShell.Environment...),
+		Env:          e.Build.GetAllVariables().StringList(),
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 

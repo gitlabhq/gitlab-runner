@@ -235,9 +235,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	err = e.createLabeler()
 	require.NoError(t, err)
 
-	e.BuildShell = &common.ShellConfiguration{
-		Environment: []string{},
-	}
+	e.BuildShell = &common.ShellConfiguration{}
 
 	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
 
@@ -807,9 +805,7 @@ func TestCreateDependencies(t *testing.T) {
 				Name: "alpine:latest",
 			})
 
-			e.BuildShell = &common.ShellConfiguration{
-				Environment: []string{},
-			}
+			e.BuildShell = &common.ShellConfiguration{}
 		},
 		volumesManagerAssertions: func(vm *volumes.MockManager) {
 			binds := make([]string, 0)
@@ -914,9 +910,7 @@ func prepareTestDockerConfiguration(
 		Runner: &common.RunnerConfig{},
 	}
 	e.Build.Token = "abcd123456"
-	e.BuildShell = &common.ShellConfiguration{
-		Environment: []string{},
-	}
+	e.BuildShell = &common.ShellConfiguration{}
 	var err error
 	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:          e.info.OSType,

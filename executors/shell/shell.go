@@ -62,7 +62,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 func (s *executor) Run(cmd common.ExecutorCommand) error {
 	s.BuildLogger.Debugln("Using new shell command execution")
 	cmdOpts := process.CommandOptions{
-		Env:                             append(os.Environ(), s.BuildShell.Environment...),
+		Env:                             os.Environ(),
 		Stdout:                          s.Trace,
 		Stderr:                          s.Trace,
 		UseWindowsLegacyProcessStrategy: s.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
