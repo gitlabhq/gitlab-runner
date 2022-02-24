@@ -13,6 +13,7 @@ import (
 
 func TestNewClient(t *testing.T) {
 	serverURL := "https://vault.example.com"
+	namespace := "test_namespace"
 
 	assertAPIClient :=
 		func(healthResponse *api.HealthResponse, healthCheckError error) func(t *testing.T, c *mockApiClient) func() {
@@ -21,6 +22,10 @@ func TestNewClient(t *testing.T) {
 				sysMock.On("Health").Return(healthResponse, healthCheckError).Once()
 
 				c.On("Sys").Return(sysMock).Once()
+
+				if healthResponse != nil && healthResponse.Initialized {
+					c.On("SetNamespace", namespace).Return(nil).Once()
+				}
 
 				return func() {
 					sysMock.AssertExpectations(t)
@@ -72,7 +77,7 @@ func TestNewClient(t *testing.T) {
 
 			defer tt.assertAPIClient(t, apiClientMock)()
 
-			c, err := NewClient(serverURL)
+			c, err := NewClient(serverURL, namespace)
 
 			if tt.expectedError != nil {
 				assert.ErrorAs(t, err, &tt.expectedError)

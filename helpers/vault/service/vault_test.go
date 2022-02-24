@@ -17,6 +17,7 @@ import (
 
 func TestNewVault(t *testing.T) {
 	testURL := "https://vault.example.com/"
+	testNamespace := "test_namespace"
 
 	authPath := "path"
 	authData := auth_methods.Data{"key": "value"}
@@ -89,8 +90,9 @@ func TestNewVault(t *testing.T) {
 			defer func() {
 				newVaultClient = oldNewVaultClient
 			}()
-			newVaultClient = func(URL string) (vault.Client, error) {
+			newVaultClient = func(URL string, ns string) (vault.Client, error) {
 				assert.Equal(t, testURL, URL)
+				assert.Equal(t, testNamespace, ns)
 
 				return clientMock, tt.vaultClientCreationError
 			}
@@ -101,7 +103,7 @@ func TestNewVault(t *testing.T) {
 			tt.assertAuthMock(t.Name(), authMock)
 			tt.assertClientMock(clientMock, authMethodMock)
 
-			service, err := NewVault(testURL, authMock)
+			service, err := NewVault(testURL, testNamespace, authMock)
 
 			if tt.expectedError != nil {
 				assert.ErrorAs(t, err, &tt.expectedError)

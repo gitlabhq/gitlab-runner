@@ -39,10 +39,10 @@ type defaultVault struct {
 
 var newVaultClient = vault.NewClient
 
-func NewVault(url string, auth Auth) (Vault, error) {
+func NewVault(url string, namespace string, auth Auth) (Vault, error) {
 	v := new(defaultVault)
 
-	err := v.initialize(url, auth)
+	err := v.initialize(url, namespace, auth)
 	if err != nil {
 		return nil, fmt.Errorf("initializing Vault service: %w", err)
 	}
@@ -50,8 +50,8 @@ func NewVault(url string, auth Auth) (Vault, error) {
 	return v, nil
 }
 
-func (v *defaultVault) initialize(url string, auth Auth) error {
-	err := v.prepareAuthenticatedClient(url, auth)
+func (v *defaultVault) initialize(url string, namespace string, auth Auth) error {
+	err := v.prepareAuthenticatedClient(url, namespace, auth)
 	if err != nil {
 		return fmt.Errorf("preparing authenticated client: %w", err)
 	}
@@ -59,8 +59,8 @@ func (v *defaultVault) initialize(url string, auth Auth) error {
 	return nil
 }
 
-func (v *defaultVault) prepareAuthenticatedClient(url string, authDetails Auth) error {
-	client, err := newVaultClient(url)
+func (v *defaultVault) prepareAuthenticatedClient(url string, namespace string, authDetails Auth) error {
+	client, err := newVaultClient(url, namespace)
 	if err != nil {
 		return err
 	}

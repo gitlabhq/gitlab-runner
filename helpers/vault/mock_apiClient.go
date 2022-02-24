@@ -25,6 +25,11 @@ func (_m *mockApiClient) Logical() apiClientLogical {
 	return r0
 }
 
+// SetNamespace provides a mock function with given fields: ns
+func (_m *mockApiClient) SetNamespace(ns string) {
+	_m.Called(ns)
+}
+
 // SetToken provides a mock function with given fields: v
 func (_m *mockApiClient) SetToken(v string) {
 	_m.Called(v)

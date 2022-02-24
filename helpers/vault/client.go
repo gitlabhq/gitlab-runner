@@ -22,6 +22,7 @@ type apiClient interface {
 	Sys() apiClientSys
 	Logical() apiClientLogical
 	SetToken(v string)
+	SetNamespace(ns string)
 }
 
 type apiClientSys interface {
@@ -50,6 +51,10 @@ func (c *apiClientAdapter) SetToken(v string) {
 	c.c.SetToken(v)
 }
 
+func (c *apiClientAdapter) SetNamespace(ns string) {
+	c.c.SetNamespace(ns)
+}
+
 var (
 	ErrVaultServerNotReady = errors.New("not initialized or sealed Vault server")
 
@@ -63,7 +68,7 @@ var (
 	}
 )
 
-func NewClient(URL string) (Client, error) {
+func NewClient(URL string, namespace string) (Client, error) {
 	config := &api.Config{
 		Address: URL,
 	}
@@ -81,6 +86,8 @@ func NewClient(URL string) (Client, error) {
 	if !healthResp.Initialized || healthResp.Sealed {
 		return nil, ErrVaultServerNotReady
 	}
+
+	client.SetNamespace(namespace)
 
 	c := &defaultClient{
 		internal: client,

@@ -76,6 +76,7 @@ func TestShouldCache(t *testing.T) {
 
 func TestSecrets_expandVariables(t *testing.T) {
 	testServerURL := "server-url"
+	testNamespace := "custom-namespace"
 	testAuthName := "auth-name"
 	testAuthPath := "auth-path"
 	testAuthJWT := "auth-jwt"
@@ -88,6 +89,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 
 	variables := JobVariables{
 		{Key: "CI_VAULT_SERVER_URL", Value: testServerURL},
+		{Key: "CI_VAULT_NAMESPACE", Value: testNamespace},
 		{Key: "CI_VAULT_AUTH_NAME", Value: testAuthName},
 		{Key: "CI_VAULT_AUTH_PATH", Value: testAuthPath},
 		{Key: "CI_VAULT_AUTH_JWT", Value: testAuthJWT},
@@ -161,7 +163,8 @@ func TestSecrets_expandVariables(t *testing.T) {
 				"VAULT": Secret{
 					Vault: &VaultSecret{
 						Server: VaultServer{
-							URL: "url ${CI_VAULT_SERVER_URL}",
+							URL:       "url ${CI_VAULT_SERVER_URL}",
+							Namespace: "namespace ${CI_VAULT_NAMESPACE}",
 							Auth: VaultAuth{
 								Name: "name ${CI_VAULT_AUTH_NAME}",
 								Path: "path ${CI_VAULT_AUTH_PATH}",
@@ -184,6 +187,7 @@ func TestSecrets_expandVariables(t *testing.T) {
 			assertSecrets: func(t *testing.T, secrets Secrets) {
 				require.NotNil(t, secrets["VAULT"].Vault)
 				assertValue(t, "url", testServerURL, secrets["VAULT"].Vault.Server.URL)
+				assertValue(t, "namespace", testNamespace, secrets["VAULT"].Vault.Server.Namespace)
 				assertValue(t, "name", testAuthName, secrets["VAULT"].Vault.Server.Auth.Name)
 				assertValue(t, "path", testAuthPath, secrets["VAULT"].Vault.Server.Auth.Path)
 				require.NotNil(t, secrets["VAULT"].Vault.Server.Auth.Data["jwt"])

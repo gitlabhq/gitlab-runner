@@ -47,7 +47,8 @@ func TestResolver_Resolve(t *testing.T) {
 	secret := common.Secret{
 		Vault: &common.VaultSecret{
 			Server: common.VaultServer{
-				URL: "test_url",
+				URL:       "test_url",
+				Namespace: "test_namespace",
 			},
 		},
 	}
@@ -101,10 +102,10 @@ func TestResolver_Resolve(t *testing.T) {
 			defer func() {
 				newVaultService = oldNewVaultService
 			}()
-			newVaultService = func(url string, auth service.Auth) (service.Vault, error) {
+			newVaultService = func(url string, namespace string, auth service.Auth) (service.Vault, error) {
 				assert.Equal(t, tt.secret.Vault.Server.URL, url)
 				assert.Equal(t, tt.secret.Vault, auth)
-
+				assert.Equal(t, tt.secret.Vault.Server.Namespace, namespace)
 				return serviceMock, tt.vaultServiceCreationError
 			}
 
