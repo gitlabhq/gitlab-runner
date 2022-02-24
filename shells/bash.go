@@ -299,6 +299,7 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 	// su
 	if info.User != "" {
 		script.Command = "su"
+		//nolint:goconst
 		if runtime.GOOS == "linux" {
 			script.Arguments = append(script.Arguments, "-s", "/bin/"+b.Shell)
 		}

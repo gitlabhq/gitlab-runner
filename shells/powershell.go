@@ -15,11 +15,7 @@ import (
 )
 
 const (
-	kubernetesExecutor    = "kubernetes"
-	dockerExecutor        = "docker"
 	dockerWindowsExecutor = "docker-windows"
-	virtualboxExecutor    = "virtualbox"
-	parallelsExecutor     = "parallels"
 
 	SNPwsh       = "pwsh"
 	SNPowershell = "powershell"
@@ -42,6 +38,15 @@ echo "$out_json"
 Exit 0
 `
 )
+
+type powershellChangeUserError struct {
+	shell    string
+	executor string
+}
+
+func (p *powershellChangeUserError) Error() string {
+	return fmt.Sprintf("%s doesn't support changing user with the %s executor", p.shell, p.executor)
+}
 
 type PowerShell struct {
 	AbstractShell
@@ -367,27 +372,46 @@ func (p *PsWriter) Join(elem ...string) string {
 func (p *PsWriter) Finish(trace bool) string {
 	var buf strings.Builder
 
-	if p.Shell == SNPwsh && p.EOL == "\n" {
-		buf.WriteString("#!/usr/bin/env " + p.Shell + p.EOL)
+	if p.Shell == SNPwsh {
+		p.finishPwsh(&buf, trace)
+	} else {
+		p.finishPowerShell(&buf, trace)
 	}
 
-	if p.Shell == SNPowershell {
-		// write UTF-8 BOM (Powershell Core doesn't use a BOM as mentioned in
-		// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3896#note_157830131)
-		buf.WriteString("\xef\xbb\xbf")
+	return buf.String()
+}
+
+func (p *PsWriter) finishPwsh(buf *strings.Builder, trace bool) {
+	if p.EOL == "\n" {
+		buf.WriteString("#!/usr/bin/env " + SNPwsh + p.EOL)
 	}
+
+	// All pwsh scripts can and should be wrapped in a script block. Regardless whether they are passed
+	// as files or through stdin, this way the whole script will be executed as a block,
+	// this was suggested at https://github.com/PowerShell/PowerShell/issues/15331#issuecomment-1016942586.
+	// This also fixes things like https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2715 and
+	// allows us to bypass file permissions when changing the current user.
+	buf.WriteString("& {" + p.EOL + p.EOL)
 
 	if trace {
 		buf.WriteString("Set-PSDebug -Trace 2" + p.EOL)
 	}
 
-	if p.Shell == SNPwsh {
-		buf.WriteString(`$ErrorActionPreference = "Stop"` + p.EOL)
+	buf.WriteString(`$ErrorActionPreference = "Stop"` + p.EOL)
+	buf.WriteString(p.String() + p.EOL)
+	buf.WriteString("}" + p.EOL + p.EOL)
+}
+
+func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
+	// write UTF-8 BOM (Powershell Core doesn't use a BOM as mentioned in
+	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3896#note_157830131)
+	buf.WriteString("\xef\xbb\xbf")
+
+	if trace {
+		buf.WriteString("Set-PSDebug -Trace 2" + p.EOL)
 	}
 
 	buf.WriteString(p.String() + p.EOL)
-
-	return buf.String()
 }
 
 func (b *PowerShell) GetName() string {
@@ -397,27 +421,42 @@ func (b *PowerShell) GetName() string {
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
 	script := &common.ShellConfiguration{
 		Command:       b.Shell,
-		Arguments:     stdinCmdArgs(),
-		PassFile:      !b.isStdinSupported(info),
+		PassFile:      b.Shell != SNPwsh && info.Build.Runner.Executor != dockerWindowsExecutor,
 		Extension:     "ps1",
 		DockerCommand: PowershellDockerCmd(b.Shell),
 	}
 
-	if script.PassFile {
-		script.Arguments = fileCmdArgs()
+	if info.User != "" {
+		if script.PassFile {
+			return nil, &powershellChangeUserError{
+				shell:    b.Shell,
+				executor: info.Build.Runner.Executor,
+			}
+		}
+
+		script.Command = "su"
+		if runtime.GOOS == "linux" {
+			script.Arguments = append(script.Arguments, "-s", "/usr/bin/"+b.Shell)
+		}
+		script.Arguments = append(
+			script.Arguments,
+			info.User,
+			"-c",
+			b.Shell+" "+strings.Join(stdinCmdArgs(), " "),
+		)
+	} else {
+		script.Arguments = b.scriptArgs(script)
 	}
 
 	return script, nil
 }
 
-func (b *PowerShell) isStdinSupported(info common.ShellScriptInfo) bool {
-	executor := info.Build.Runner.Executor
+func (b *PowerShell) scriptArgs(script *common.ShellConfiguration) []string {
+	if script.PassFile {
+		return fileCmdArgs()
+	}
 
-	return executor == kubernetesExecutor ||
-		executor == dockerExecutor ||
-		executor == dockerWindowsExecutor ||
-		executor == virtualboxExecutor ||
-		executor == parallelsExecutor
+	return stdinCmdArgs()
 }
 
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
