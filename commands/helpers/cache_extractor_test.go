@@ -14,29 +14,38 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 const cacheExtractorArchive = "archive.zip"
 const cacheExtractorTestArchivedFile = "archive_file"
+const cacheExtractorTestFile = "test_file"
 
 func TestCacheExtractorValidArchive(t *testing.T) {
+	expectedContents := bytes.Repeat([]byte("198273qhnjbqwdjbqwe2109u3abcdef3"), 1024*1024)
 	OnEachZipExtractor(t, func(t *testing.T) {
 		file, err := os.Create(cacheExtractorArchive)
 		assert.NoError(t, err)
 		defer file.Close()
 		defer os.Remove(file.Name())
 		defer os.Remove(cacheExtractorTestArchivedFile)
+		defer os.Remove(cacheExtractorTestFile)
 
 		archive := zip.NewWriter(file)
 		_, err = archive.Create(cacheExtractorTestArchivedFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
+
+		w, err := archive.Create(cacheExtractorTestFile)
+		require.NoError(t, err)
+		_, err = w.Write(expectedContents)
+		require.NoError(t, err)
 
 		archive.Close()
 
 		_, err = os.Stat(cacheExtractorTestArchivedFile)
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		cmd := CacheExtractorCommand{
 			File: cacheExtractorArchive,
@@ -47,6 +56,10 @@ func TestCacheExtractorValidArchive(t *testing.T) {
 
 		_, err = os.Stat(cacheExtractorTestArchivedFile)
 		assert.NoError(t, err)
+
+		contents, err := os.ReadFile(cacheExtractorTestFile)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedContents, contents)
 	})
 }
 
