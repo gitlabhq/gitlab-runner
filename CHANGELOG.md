@@ -1,3 +1,13 @@
+## v14.8.1 (2022-02-28)
+
+### Bug fixes
+
+- Upgrade fastzip to v0.1.8 !3333
+
+### GitLab Runner distribution
+
+- Align debian releases for stable and Bleeding Edge versions !3335
+
 ## v14.8.0 (2022-02-20)
 
 ### New features
