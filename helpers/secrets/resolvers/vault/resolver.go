@@ -40,8 +40,9 @@ func (v *resolver) Resolve() (string, error) {
 	secret := v.secret.Vault
 
 	url := secret.Server.URL
+	namespace := secret.Server.Namespace
 
-	s, err := newVaultService(url, secret)
+	s, err := newVaultService(url, namespace, secret)
 	if err != nil {
 		return "", err
 	}

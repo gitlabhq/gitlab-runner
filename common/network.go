@@ -384,8 +384,9 @@ type VaultSecret struct {
 }
 
 type VaultServer struct {
-	URL  string    `json:"url"`
-	Auth VaultAuth `json:"auth"`
+	URL       string    `json:"url"`
+	Auth      VaultAuth `json:"auth"`
+	Namespace string    `json:"namespace"`
 }
 
 type VaultAuth struct {
@@ -463,6 +464,7 @@ func (s *VaultSecret) SecretField() string {
 
 func (s *VaultServer) expandVariables(vars JobVariables) {
 	s.URL = vars.ExpandValue(s.URL)
+	s.Namespace = vars.ExpandValue(s.Namespace)
 
 	s.Auth.expandVariables(vars)
 }
