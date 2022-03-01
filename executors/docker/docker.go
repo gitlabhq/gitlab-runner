@@ -832,19 +832,12 @@ func (e *executor) environmentDialContext(
 // validateOSType checks if the ExecutorOptions metadata matches with the docker
 // info response.
 func (e *executor) validateOSType() error {
-	executorOSType := e.ExecutorOptions.Metadata[metadataOSType]
-	if executorOSType == "" {
-		return common.MakeBuildError("%s does not have any OSType specified", e.Config.Executor)
+	switch e.info.OSType {
+	case osTypeLinux, osTypeWindows:
+		return nil
 	}
 
-	if executorOSType != e.info.OSType {
-		return common.MakeBuildError(
-			"executor requires OSType=%s, but Docker Engine supports only OSType=%s",
-			executorOSType, e.info.OSType,
-		)
-	}
-
-	return nil
+	return fmt.Errorf("unsupported os type: %s", e.info.OSType)
 }
 
 func (e *executor) createDependencies() error {
@@ -951,6 +944,9 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
+	// setup default executor options based on OS type
+	e.setupDefaultExecutorOptions(e.helperImageInfo.OSType)
+
 	err = e.prepareBuildsDir(options)
 	if err != nil {
 		return err
@@ -977,6 +973,49 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 	return nil
+}
+
+func (e *executor) setupDefaultExecutorOptions(os string) {
+	switch os {
+	case helperimage.OSTypeWindows:
+		e.DefaultBuildsDir = `C:\builds`
+		e.DefaultCacheDir = `C:\cache`
+
+		e.ExecutorOptions.Shell.Shell = shells.SNPowershell
+		e.ExecutorOptions.Shell.RunnerCommand = "gitlab-runner-helper"
+
+		if e.volumeParser == nil {
+			e.volumeParser = parser.NewWindowsParser()
+		}
+
+		if e.newVolumePermissionSetter == nil {
+			e.newVolumePermissionSetter = func() (permission.Setter, error) {
+				return permission.NewDockerWindowsSetter(), nil
+			}
+		}
+
+	default:
+		e.DefaultBuildsDir = `/builds`
+		e.DefaultCacheDir = `/cache`
+
+		e.ExecutorOptions.Shell.Shell = "bash"
+		e.ExecutorOptions.Shell.RunnerCommand = "/usr/bin/gitlab-runner-helper"
+
+		if e.volumeParser == nil {
+			e.volumeParser = parser.NewLinuxParser()
+		}
+
+		if e.newVolumePermissionSetter == nil {
+			e.newVolumePermissionSetter = func() (permission.Setter, error) {
+				helperImage, err := e.getPrebuiltImage()
+				if err != nil {
+					return nil, err
+				}
+
+				return permission.NewDockerLinuxSetter(e.client, e.Build.Log(), helperImage), nil
+			}
+		}
+	}
 }
 
 func (e *executor) prepareHelperImage() (helperimage.Info, error) {

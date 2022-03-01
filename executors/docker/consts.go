@@ -10,5 +10,3 @@ const waitForContainerTimeout = 15 * time.Second
 
 const osTypeLinux = "linux"
 const osTypeWindows = "windows"
-
-const metadataOSType = "OSType"

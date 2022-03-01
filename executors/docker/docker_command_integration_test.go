@@ -187,7 +187,6 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 	shell := "bash"
 
 	if runtime.GOOS == "windows" {
-		executor = "docker-windows"
 		shell = shells.SNPowershell
 		image = getWindowsImage(t)
 	}
@@ -1136,7 +1135,6 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 
 			if runtime.GOOS == "windows" {
 				build.Runner.RunnerSettings.Shell = shells.SNPwsh
-				build.Runner.RunnerSettings.Executor = "docker-windows"
 				build.Image.Entrypoint = []string{""}
 			}
 
