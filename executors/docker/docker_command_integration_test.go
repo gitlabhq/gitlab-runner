@@ -862,7 +862,7 @@ func TestCacheInContainer(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 
-	successfulBuild.JobInfo.ProjectID = int(time.Now().Unix())
+	successfulBuild.JobInfo.ProjectID = time.Now().Unix()
 	successfulBuild.Steps[0].Script = common.StepScript{
 		"(test -d cached/ && ls -lh cached/) || echo \"no cached directory\"",
 		"(test -f cached/date && cat cached/date) || echo \"no cached date\"",

@@ -174,7 +174,7 @@ func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, 
 		"--token",
 		job.Token,
 		"--id",
-		strconv.Itoa(job.ID),
+		strconv.FormatInt(job.ID, 10),
 	}
 
 	w.Noticef("Downloading artifacts for %s (%d)...", job.Name, job.ID)
@@ -715,7 +715,7 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 		"--token",
 		info.Build.Token,
 		"--id",
-		strconv.Itoa(info.Build.ID),
+		strconv.FormatInt(info.Build.ID, 10),
 	}
 
 	// Create list of files to archive
