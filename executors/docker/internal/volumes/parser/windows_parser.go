@@ -1,12 +1,7 @@
-//go:build windows
-// +build windows
-
 package parser
 
 import (
 	"regexp"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
 // The specification of regular expression used for parsing Windows volumes
@@ -17,6 +12,7 @@ import (
 // The original source is licensed under Apache License 2.0 and the copyright for it
 // goes to Docker, Inc.
 
+//nolint:lll
 const (
 	// Spec should be in the format [source:]destination[:mode]
 	//
@@ -75,7 +71,7 @@ type windowsParser struct {
 func NewWindowsParser() Parser {
 	return &windowsParser{
 		baseParser: baseParser{
-			path: path.NewWindowsPath(),
+			path: newWindowsPath(),
 		},
 	}
 }

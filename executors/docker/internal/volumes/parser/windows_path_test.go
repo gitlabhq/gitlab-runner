@@ -1,7 +1,7 @@
-//go:build !integration && windows
-// +build !integration,windows
+//go:build !integration && !windows
+// +build !integration,!windows
 
-package path
+package parser
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestWindowsJoin(t *testing.T) {
-	p := NewWindowsPath()
+	p := newWindowsPath()
 
 	tests := map[string]struct {
 		args     []string
@@ -26,15 +26,11 @@ func TestWindowsJoin(t *testing.T) {
 		},
 		"joins absolute two absolutes": {
 			args:     []string{"d:/path/to", "/dir/path"},
-			expected: "d:\\path\\to\\dir\\path",
+			expected: "d:/path/to\\/dir/path",
 		},
-		"cleans paths": {
-			args:     []string{"path\\..\\to", "dir/with/my/../path"},
-			expected: "to\\dir\\with\\path",
-		},
-		"does normalize separators": {
-			args:     []string{"path/to/windows/dir"},
-			expected: "path\\to\\windows\\dir",
+		"unclean paths": {
+			args:     []string{"path/..\\to", "dir/with/my/../path"},
+			expected: "path/..\\to\\dir/with/my/../path",
 		},
 	}
 
@@ -46,7 +42,7 @@ func TestWindowsJoin(t *testing.T) {
 }
 
 func TestWindowsIsAbs(t *testing.T) {
-	p := NewWindowsPath()
+	p := newWindowsPath()
 
 	tests := map[string]struct {
 		arg      string
@@ -56,20 +52,17 @@ func TestWindowsIsAbs(t *testing.T) {
 			arg:      "dir",
 			expected: false,
 		},
-		// Go's filepath.IsAbs() does not believe unix-style paths on Windows
-		// are absolute. However, Windows will typically work fine with these
-		// paths. For example:
-		//     [System.IO.Path]::IsPathRooted("/path/to/dir")
-		// will return True.
-		// For now, we keep this as expected=false though, as it is what Go
-		// returns.
+		"mixed slash relative path": {
+			arg:      "a\\b/c",
+			expected: false,
+		},
 		"unix absolute path": {
 			arg:      "/path/to/dir",
-			expected: false,
+			expected: true,
 		},
 		"unclean unix absolute path": {
 			arg:      "/path/../to/dir",
-			expected: false,
+			expected: true,
 		},
 		"windows absolute path": {
 			arg:      "c:\\path\\to\\dir",
@@ -101,7 +94,7 @@ func TestWindowsIsAbs(t *testing.T) {
 }
 
 func TestWindowsIsRoot(t *testing.T) {
-	p := NewWindowsPath()
+	p := newWindowsPath()
 
 	tests := map[string]struct {
 		arg      string
@@ -157,7 +150,7 @@ func TestWindowsIsRoot(t *testing.T) {
 }
 
 func TestWindowsContains(t *testing.T) {
-	p := NewWindowsPath()
+	p := newWindowsPath()
 
 	tests := map[string]struct {
 		basepath   string
@@ -190,6 +183,7 @@ func TestWindowsContains(t *testing.T) {
 			expected:   false,
 		},
 		"invalid absolute path": {
+			//nolint:misspell
 			basepath:   "c:\\other",
 			targetpath: "\\path\\to\\dir",
 			expected:   false,
