@@ -56,6 +56,7 @@ func (p *windowsPath) Contains(basePath, targetPath string) bool {
 	return true
 }
 
-func NewWindowsPath() Path {
+//revive:disable:unexported-return
+func NewWindowsPath() *windowsPath {
 	return &windowsPath{}
 }

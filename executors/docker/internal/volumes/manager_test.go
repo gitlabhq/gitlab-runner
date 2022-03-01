@@ -60,7 +60,7 @@ func addUnixParser(manager *manager) *parser.MockParser {
 	return addParser(manager, path.NewUnixPath())
 }
 
-func addParser(manager *manager, p path.Path) *parser.MockParser {
+func addParser(manager *manager, p parser.Path) *parser.MockParser {
 	parserMock := new(parser.MockParser)
 	parserMock.On("Path").Return(p)
 

@@ -2,12 +2,10 @@ package parser
 
 import (
 	"regexp"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/path"
 )
 
 type baseParser struct {
-	path path.Path
+	path Path
 }
 
 // The way how matchesToVolumeSpecParts parses the volume mount specification and assigns
@@ -47,6 +45,6 @@ func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regex
 	return parts, nil
 }
 
-func (p *baseParser) Path() path.Path {
+func (p *baseParser) Path() Path {
 	return p.path
 }
