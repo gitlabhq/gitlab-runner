@@ -29,7 +29,7 @@ func generateBaseObjectName(build *common.Build, config *common.CacheConfig) str
 		runnerSegment = path.Join("runner", build.Runner.ShortDescription())
 	}
 
-	return path.Join(config.GetPath(), runnerSegment, "project", strconv.Itoa(build.JobInfo.ProjectID))
+	return path.Join(config.GetPath(), runnerSegment, "project", strconv.FormatInt(build.JobInfo.ProjectID, 10))
 }
 
 func generateObjectName(build *common.Build, config *common.CacheConfig, key string) (string, error) {
