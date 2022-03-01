@@ -118,9 +118,9 @@ func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.Execu
 	return e, options, out
 }
 
-var currentJobID = 0
+var currentJobID = int64(0)
 
-func jobID() int {
+func jobID() int64 {
 	i := currentJobID
 	currentJobID++
 

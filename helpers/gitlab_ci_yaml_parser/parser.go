@@ -146,6 +146,7 @@ func (c *GitLabCiYamlParser) prepareSteps(job *common.JobResponse) error {
 	return nil
 }
 
+//nolint:lll
 func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) common.JobVariables {
 	return common.JobVariables{
 		{Key: "CI", Value: "true", Public: true, Internal: true, File: false},
@@ -153,8 +154,8 @@ func (c *GitLabCiYamlParser) buildDefaultVariables(job *common.JobResponse) comm
 		{Key: "CI_SERVER_NAME", Value: "GitLab CI", Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER_VERSION", Value: "", Public: true, Internal: true, File: false},
 		{Key: "CI_SERVER_REVISION", Value: "", Public: true, Internal: true, File: false},
-		{Key: "CI_PROJECT_ID", Value: strconv.Itoa(job.JobInfo.ProjectID), Public: true, Internal: true, File: false},
-		{Key: "CI_JOB_ID", Value: strconv.Itoa(job.ID), Public: true, Internal: true, File: false},
+		{Key: "CI_PROJECT_ID", Value: strconv.FormatInt(job.JobInfo.ProjectID, 10), Public: true, Internal: true, File: false},
+		{Key: "CI_JOB_ID", Value: strconv.FormatInt(job.ID, 10), Public: true, Internal: true, File: false},
 		{Key: "CI_JOB_NAME", Value: job.JobInfo.Name, Public: true, Internal: true, File: false},
 		{Key: "CI_JOB_STAGE", Value: job.JobInfo.Stage, Public: true, Internal: true, File: false},
 		{Key: "CI_JOB_TOKEN", Value: job.Token, Public: true, Internal: true, File: false},
