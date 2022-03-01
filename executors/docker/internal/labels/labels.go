@@ -29,12 +29,12 @@ type labeler struct {
 // Includes a set of defaults. Add additional ones or overwrites in the provided map.
 func (l *labeler) Labels(otherLabels map[string]string) map[string]string {
 	labels := map[string]string{
-		dockerLabelPrefix + ".job.id":          strconv.Itoa(l.build.ID),
+		dockerLabelPrefix + ".job.id":          strconv.FormatInt(l.build.ID, 10),
 		dockerLabelPrefix + ".job.url":         l.build.JobURL(),
 		dockerLabelPrefix + ".job.sha":         l.build.GitInfo.Sha,
 		dockerLabelPrefix + ".job.before_sha":  l.build.GitInfo.BeforeSha,
 		dockerLabelPrefix + ".job.ref":         l.build.GitInfo.Ref,
-		dockerLabelPrefix + ".project.id":      strconv.Itoa(l.build.JobInfo.ProjectID),
+		dockerLabelPrefix + ".project.id":      strconv.FormatInt(l.build.JobInfo.ProjectID, 10),
 		dockerLabelPrefix + ".pipeline.id":     l.build.GetAllVariables().Get("CI_PIPELINE_ID"),
 		dockerLabelPrefix + ".runner.id":       l.build.Runner.ShortDescription(),
 		dockerLabelPrefix + ".runner.local_id": strconv.Itoa(l.build.RunnerID),

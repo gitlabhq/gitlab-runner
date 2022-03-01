@@ -29,7 +29,7 @@ func generateObjectName(build *common.Build, config *common.CacheConfig, key str
 		namespace = path.Join("runner", build.Runner.ShortDescription())
 	}
 
-	basePath := path.Join(config.GetPath(), namespace, "project", strconv.Itoa(build.JobInfo.ProjectID))
+	basePath := path.Join(config.GetPath(), namespace, "project", strconv.FormatInt(build.JobInfo.ProjectID, 10))
 	fullPath := path.Join(basePath, key)
 
 	// The typical concerns regarding the use of strings.HasPrefix to detect
