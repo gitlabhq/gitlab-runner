@@ -14,7 +14,7 @@ type clientJobTrace struct {
 	client         common.Network
 	config         common.RunnerConfig
 	jobCredentials *common.JobCredentials
-	id             int
+	id             int64
 	cancelFunc     context.CancelFunc
 	abortFunc      context.CancelFunc
 
