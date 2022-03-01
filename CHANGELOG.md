@@ -1,3 +1,9 @@
+## v14.7.1 (2022-03-01)
+
+### Bug fixes
+
+- Update network responses to support 64-bit Job IDs !3346
+
 ## v14.7.0 (2022-01-19)
 
 ### New features
