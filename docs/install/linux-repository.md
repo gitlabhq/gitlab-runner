@@ -12,6 +12,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 |---------------|-----------------------------|-----------------------|
 | Debian        | stretch                     | [June 2022](https://wiki.debian.org/LTS)             |
 | Debian        | buster                      | [June 2024](https://wiki.debian.org/LTS)             |
+| Debian        | bullseye                    | [June 2026](https://wiki.debian.org/LTS)             |
 | Ubuntu        | xenial                      | [April 2021](https://wiki.ubuntu.com/Releases)            |
 | Ubuntu        | bionic                      | [April 2023](https://wiki.ubuntu.com/Releases)            |
 | Ubuntu        | focal                       | [April 2025](https://wiki.ubuntu.com/Releases)            |
