@@ -160,6 +160,11 @@
   - <<: *if-security-runner-release-ref
     changes: *code-backstage-patterns
 
+.rules:release:stable:branch:ignore-changes:
+  rules:
+  - <<: *if-runner-stable-release-ref
+  - <<: *if-security-runner-release-ref
+
 .rules:release:development:merge-requests:
   rules:
   - <<: *if-runner-merge-request-pipeline
