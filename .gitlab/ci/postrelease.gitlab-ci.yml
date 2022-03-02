@@ -1,7 +1,7 @@
 trigger UBI images build:
   stage: postrelease
   extends:
-  - .rules:release:stable:branch
+  - .rules:release:stable:branch:ignore-changes
   - .rules:release:bleeding-edge
   variables:
     BUILD_RELEASE: ${CI_COMMIT_REF_NAME}
