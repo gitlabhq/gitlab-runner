@@ -236,6 +236,14 @@ This value can later be toggled on or off in the project's **Settings > CI/CD** 
 The `--maintenance-note` parameter was [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3268) in GitLab Runner 14.8.
 You can use it to add information related to runner maintenance. The maximum allowed length is 255 characters.
 
+## `Check registration token` error
+
+The `check registration token` error message is displayed when the GitLab instance does not recognize
+the entered registration token. This issue can occur when the instance group or project registration token
+has been changed in GitLab or when the user did not correctly enter the registration token. 
+
+When this error occurs, the first step is to ask a GitLab administrator to verify that the registration token is valid.
+
 ## `[[runners]]` configuration template file
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
