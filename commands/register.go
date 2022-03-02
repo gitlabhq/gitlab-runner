@@ -268,7 +268,7 @@ func (s *RegisterCommand) askRunner() {
 
 	result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
 	if result == nil {
-		logrus.Panicln("Failed to register the runner. You may be having network problems.")
+		logrus.Panicln("Failed to register the runner.")
 	}
 
 	// golangci-lint doesn't recognize logrus.Panicln() call as breaking the execution
