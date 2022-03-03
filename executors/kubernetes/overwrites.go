@@ -18,6 +18,9 @@ const (
 	ServiceAccountOverwriteVariableName = "KUBERNETES_SERVICE_ACCOUNT_OVERWRITE"
 	// BearerTokenOverwriteVariableValue is the key for the JobVariable containing user overwritten BearerToken
 	BearerTokenOverwriteVariableValue = "KUBERNETES_BEARER_TOKEN"
+	// PodLabelsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
+	// user overwritten PodLabels
+	PodLabelsOverwriteVariablePrefix = "KUBERNETES_POD_LABELS_"
 	// PodAnnotationsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
 	// user overwritten PodAnnotations
 	PodAnnotationsOverwriteVariablePrefix = "KUBERNETES_POD_ANNOTATIONS_"
@@ -105,6 +108,7 @@ type overwrites struct {
 	namespace      string
 	serviceAccount string
 	bearerToken    string
+	podLabels      map[string]string
 	podAnnotations map[string]string
 
 	buildLimits     api.ResourceList
@@ -156,6 +160,18 @@ func createOverwrites(
 		config.BearerToken,
 		config.BearerTokenOverwriteAllowed,
 		bearerTokenOverwrite,
+		logger,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	o.podLabels, err = o.evaluateMapOverwrite(
+		"PodLabels",
+		config.PodLabels,
+		config.PodLabelsOverwriteAllowed,
+		variables,
+		PodLabelsOverwriteVariablePrefix,
 		logger,
 	)
 	if err != nil {

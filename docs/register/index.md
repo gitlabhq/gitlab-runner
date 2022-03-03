@@ -344,6 +344,7 @@ check_interval = 0
     namespace_overwrite_allowed = ""
     privileged = false
     service_account_overwrite_allowed = ""
+    pod_labels_overwrite_allowed = ""
     pod_annotations_overwrite_allowed = ""
     [runners.kubernetes.volumes]
 ```
@@ -444,6 +445,7 @@ check_interval = 0
     namespace_overwrite_allowed = ""
     privileged = false
     service_account_overwrite_allowed = ""
+    pod_labels_overwrite_allowed = ""
     pod_annotations_overwrite_allowed = ""
     [runners.kubernetes.volumes]
 

@@ -164,6 +164,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `pod_annotations` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
 | `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
 | `pod_labels` | A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. |
+| `pod_labels_overwrite_allowed` | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. |
 | `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context). |
 | `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#using-security-context). |
 | `helper_container_security_context` | Sets a container security context for the helper container. [Read more about security context](#using-security-context). |
@@ -245,6 +246,23 @@ set the `Host` configuration setting.
 ``` yaml
 variables:
   KUBERNETES_BEARER_TOKEN: thebearertokenfromanothernamespace
+```
+
+### Overwriting pod labels
+
+You can overwrite Kubernetes pod labels.
+
+First, ensure you specify [`pod_labels_overwrite_allowed`](#the-available-configtoml-settings) in your `.config.yaml` file.
+
+Then, in your `.gitlab-ci.yml` file, use the `KUBERNETES_POD_LABELS_*` variables with `key=value`. The pod labels are overwritten to the `key=value`.
+
+You can apply multiple values. For example:
+
+```yaml
+variables:
+  KUBERNETES_POD_LABELS_1: "Key1=Val1"
+  KUBERNETES_POD_LABELS_2: "Key2=Val2"
+  KUBERNETES_POD_LABELS_3: "Key3=Val3"
 ```
 
 ### Overwriting pod annotations
