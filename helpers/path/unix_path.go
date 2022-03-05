@@ -1,26 +1,25 @@
 package path
 
-import golang_path "path"
+import "path"
 
 type unixPath struct{}
 
 func (p *unixPath) Join(elem ...string) string {
-	return golang_path.Join(elem...)
+	return path.Join(elem...)
 }
 
-func (p *unixPath) IsAbs(path string) bool {
-	path = golang_path.Clean(path)
-	return golang_path.IsAbs(path)
+func (p *unixPath) IsAbs(pathname string) bool {
+	return path.IsAbs(pathname)
 }
 
-func (p *unixPath) IsRoot(path string) bool {
-	path = golang_path.Clean(path)
-	return golang_path.IsAbs(path) && golang_path.Dir(path) == path
+func (p *unixPath) IsRoot(pathname string) bool {
+	pathname = path.Clean(pathname)
+	return path.IsAbs(pathname) && path.Dir(pathname) == pathname
 }
 
 func (p *unixPath) Contains(basePath, targetPath string) bool {
-	basePath = golang_path.Clean(basePath)
-	targetPath = golang_path.Clean(targetPath)
+	basePath = path.Clean(basePath)
+	targetPath = path.Clean(targetPath)
 
 	for {
 		if targetPath == basePath {
@@ -29,7 +28,7 @@ func (p *unixPath) Contains(basePath, targetPath string) bool {
 		if p.IsRoot(targetPath) || targetPath == "." {
 			return false
 		}
-		targetPath = golang_path.Dir(targetPath)
+		targetPath = path.Dir(targetPath)
 	}
 }
 
