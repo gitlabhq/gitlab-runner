@@ -32,6 +32,7 @@ func (p *unixPath) Contains(basePath, targetPath string) bool {
 	}
 }
 
-func NewUnixPath() Path {
+//revive:disable:unexported-return
+func NewUnixPath() *unixPath {
 	return &unixPath{}
 }
