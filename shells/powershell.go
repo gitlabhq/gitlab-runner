@@ -435,7 +435,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 		}
 
 		script.Command = "su"
-		if runtime.GOOS == "linux" {
+		if runtime.GOOS == OSLinux {
 			script.Arguments = append(script.Arguments, "-s", "/usr/bin/"+b.Shell)
 		}
 		script.Arguments = append(
@@ -447,6 +447,8 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 	} else {
 		script.Arguments = b.scriptArgs(script)
 	}
+
+	script.CmdLine = strings.Join(append([]string{script.Command}, script.Arguments...), " ")
 
 	return script, nil
 }

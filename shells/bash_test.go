@@ -4,9 +4,12 @@
 package shells
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func TestBash_CommandShellEscapesLegacy(t *testing.T) {
@@ -78,6 +81,65 @@ func TestBash_CheckForErrors(t *testing.T) {
 			writer.Command("echo 'hello world'")
 
 			assert.Equal(t, tc.expected, writer.String())
+		})
+	}
+}
+
+func TestBash_GetConfiguration(t *testing.T) {
+	tests := map[string]struct {
+		info common.ShellScriptInfo
+		cmd  string
+		args []string
+		os   string
+	}{
+		`bash`: {
+			info: common.ShellScriptInfo{Shell: "bash", Type: common.NormalShell},
+			cmd:  "bash",
+		},
+		`bash --login`: {
+			info: common.ShellScriptInfo{Shell: "bash", Type: common.LoginShell},
+			cmd:  "bash",
+			args: []string{"--login"},
+		},
+		`su -s /bin/bash foobar -c bash`: {
+			info: common.ShellScriptInfo{Shell: "bash", User: "foobar", Type: common.NormalShell},
+			cmd:  "su",
+			args: []string{"-s", "/bin/bash", "foobar", "-c", "bash"},
+			os:   OSLinux,
+		},
+		`su -s /bin/bash foobar -c $'bash --login'`: {
+			info: common.ShellScriptInfo{Shell: "bash", User: "foobar", Type: common.LoginShell},
+			cmd:  "su",
+			args: []string{"-s", "/bin/bash", "foobar", "-c", "bash --login"},
+			os:   OSLinux,
+		},
+		`su -s /bin/sh foobar -c $'sh --login'`: {
+			info: common.ShellScriptInfo{Shell: "sh", User: "foobar", Type: common.LoginShell},
+			cmd:  "su",
+			args: []string{"-s", "/bin/sh", "foobar", "-c", "sh --login"},
+			os:   OSLinux,
+		},
+		`su foobar -c $'bash --login'`: {
+			info: common.ShellScriptInfo{Shell: "bash", User: "foobar", Type: common.LoginShell},
+			cmd:  "su",
+			args: []string{"foobar", "-c", "bash --login"},
+			os:   "darwin",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			if tc.os != "" && tc.os != runtime.GOOS {
+				t.Skipf("test only runs on %s", tc.os)
+			}
+
+			sh := BashShell{Shell: tc.info.Shell}
+			config, err := sh.GetConfiguration(tc.info)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.cmd, config.Command)
+			assert.Equal(t, tc.args, config.Arguments)
+			assert.Equal(t, tn, config.CmdLine)
 		})
 	}
 }

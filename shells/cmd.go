@@ -265,6 +265,7 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 		Arguments: []string{"/C"},
 		PassFile:  true,
 		Extension: "cmd",
+		CmdLine:   "cmd /C",
 	}
 	return
 }
