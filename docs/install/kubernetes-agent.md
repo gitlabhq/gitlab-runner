@@ -4,14 +4,17 @@ group: Configure
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# Install GitLab Runner with the agent for Kubernetes **(PREMIUM ONLY)**
+# Use the agent to install GitLab Runner **(PREMIUM ONLY)**
 
-These instructions to install GitLab Runner assume the
-[GitLab agent for Kubernetes](https://docs.gitlab.com/ee/user/clusters/agent/index.html) is already configured.
+After you install and configure the [GitLab agent for Kubernetes](../index.md)
+you can use the agent to install GitLab Runner in your cluster.
 
-1. Review the possible [GitLab Runner chart YAML values](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
-1. Create a `runner-chart-values.yaml` file with the configuration that fits
-   your needs, such as:
+With this [GitOps workflow](https://docs.gitlab.com/ee/user/clusters/agent/gitops.html),
+your repository contains the GitLab Runner configuration file and
+your cluster is automatically updated. 
+
+1. Review the Helm chart values for [GitLab Runner](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
+1. Create a `runner-chart-values.yaml` file. For example:
 
    ```yaml
    # The GitLab Server URL (with protocol) that you want to register the runner against
@@ -19,9 +22,9 @@ These instructions to install GitLab Runner assume the
    #
    gitlabUrl: https://gitlab.my.domain.example.com/
 
-   # The Registration Token for adding new runners to the GitLab Server. This must
-   # be retrieved from your GitLab instance.
-   # ref: https://docs.gitlab.com/ee/ci/runners/index.html
+   # The registration token for adding new runners to the GitLab server
+   # Retrieve this value from your GitLab instance
+   # For more info: https://docs.gitlab.com/ee/ci/runners/index.html
    #
    runnerRegistrationToken: "yrnZW46BrtBFqM7xDzE7dddd"
 
@@ -30,23 +33,22 @@ These instructions to install GitLab Runner assume the
        create: true
 
    # Run all containers with the privileged flag enabled
-   # This will allow the docker:dind image to run if you need to run Docker
-   # commands. Please read the docs before turning this on:
-   # ref: https://docs.gitlab.com/runner/executors/kubernetes.html#using-dockerdind
+   # This flag allows the docker:dind image to run if you need to run Docker commands
+   # Read the docs before turning this on:
+   # https://docs.gitlab.com/runner/executors/kubernetes.html#using-dockerdind
    runners:
        privileged: true
    ```
 
-1. Create a single manifest file to install the GitLab Runner chart with your cluster agent,
-   replacing `GITLAB-NAMESPACE` with your namespace:
+1. Create a single manifest file to install the GitLab Runner chart with your cluster agent:
 
    ```shell
    helm template --namespace GITLAB-NAMESPACE gitlab-runner -f runner-chart-values.yaml gitlab/gitlab-runner > runner-manifest.yaml
    ```
 
-   An [example file is available](#example-runner-manifest).
+   Replace `GITLAB-NAMESPACE` with your namespace. [View an example](#example-runner-manifest).
 
-1. Edit `runner-manifest.yaml` file to include the `namespace` for every resource. The output of `helm template` doesn't include the
+1. Edit the `runner-manifest.yaml` file to include the `namespace` for every resource. The output of `helm template` doesn't include the
    `namespace` in the generated resources:
 
    ```yaml
@@ -62,11 +64,14 @@ These instructions to install GitLab Runner assume the
    ...
    ```
 
-1. Push your `runner-manifest.yaml` to your manifest repository.
+1. Push your `runner-manifest.yaml` to the repository where you keep your Kubernetes manifests.
+
+Now each time the agent checks the repository for manifest updates, your
+cluster is updated to include GitLab Runner.
 
 ## Example runner manifest
 
-This code is an example of a runner manifest looks like.
+This example shows a sample runner manifest file.
 Create your own `manifest.yaml` file to meet your project's needs.
 
 ```yaml
@@ -121,14 +126,14 @@ data:
       export CACHE_S3_SECRET_KEY=$(cat /secrets/secretkey)
     fi
 
-    if [[ -f /secrets/gcs-applicaton-credentials-file ]]; then
-      export GOOGLE_APPLICATION_CREDENTIALS="/secrets/gcs-applicaton-credentials-file"
+    if [[ -f /secrets/gcs-application-credentials-file ]]; then
+      export GOOGLE_APPLICATION_CREDENTIALS="/secrets/gcs-application-credentials-file"
     elif [[ -f /secrets/gcs-application-credentials-file ]]; then
       export GOOGLE_APPLICATION_CREDENTIALS="/secrets/gcs-application-credentials-file"
     else
       if [[ -f /secrets/gcs-access-id && -f /secrets/gcs-private-key ]]; then
         export CACHE_GCS_ACCESS_ID=$(cat /secrets/gcs-access-id)
-        # echo -e used to make private key multiline (in google json auth key private key is oneline with \n)
+        # echo -e used to make private key multiline (in google json auth key private key is one line with \n)
         export CACHE_GCS_PRIVATE_KEY=$(echo -e $(cat /secrets/gcs-private-key))
       fi
     fi
@@ -471,13 +476,16 @@ spec:
 
 ### `associative list with keys has an element that omits key field "protocol"`
 
-Due to [the bug in Kubernetes v1.19](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130), you may see this error when installing GitLab Runner or any other application with GitLab agent for Kubernetes. To fix it make sure to either upgrade your Kubernetes cluster to v1.20 and above or add `protocol: TCP` to `containers.ports` subsection:
+Due to [the bug in Kubernetes v1.19](https://github.com/kubernetes-sigs/structured-merge-diff/issues/130), you may see this error when installing GitLab Runner or any other application with the GitLab agent for Kubernetes. To fix it, either:
 
-```yaml
-...
-ports:
-  - name: metrics
-    containerPort: 9252
-    protocol: TCP
-...
-```
+- Upgrade your Kubernetes cluster to v1.20 or later.
+- Add `protocol: TCP` to `containers.ports` subsection:
+
+  ```yaml
+  ...
+  ports:
+    - name: metrics
+      containerPort: 9252
+      protocol: TCP
+  ...
+  ```
