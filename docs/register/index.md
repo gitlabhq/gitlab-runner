@@ -141,7 +141,7 @@ To register a runner under Windows:
 1. Run the following command:
 
    ```shell
-   ./gitlab-runner.exe register
+   .\gitlab-runner.exe register
    ```
 
 1. Enter your GitLab instance URL (also known as the `gitlab-ci coordinator URL`).
