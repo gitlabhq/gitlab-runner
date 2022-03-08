@@ -140,13 +140,13 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 	}
 
 	if c.File == "" {
-		logrus.Fatalln("Missing cache file")
+		warningln("Missing cache file")
 	}
 
 	if c.URL != "" {
 		err := c.doRetry(c.download)
 		if err != nil {
-			logrus.Fatalln(err)
+			warningln(err)
 		}
 	} else {
 		logrus.Infoln(
@@ -172,6 +172,11 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 	if err != nil {
 		logrus.Fatalln(err)
 	}
+}
+
+func warningln(args interface{}) {
+	logrus.Warningln(args)
+	logrus.Exit(1)
 }
 
 func init() {
