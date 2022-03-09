@@ -438,10 +438,21 @@ to the GitLab Runner Helm Chart, which will be used to populate the container's
 Each key name in the Secret will be used as a filename in the directory, with the
 file content being the value associated with the key:
 
-- The key/file name used should be in the format `<gitlab-hostname>.crt`, for example
+- The key/file name used should be in the format `<gitlab.hostname>.crt`, for example
   `gitlab.your-domain.com.crt`.
 - Any intermediate certificates need to be concatenated to your server certificate in the same file.
 - The hostname used should be the one the certificate is registered for.
+
+If you installed GitLab Helm Chart using the [auto-generated self-signed wildcard certificate](https://docs.gitlab.com/charts/installation/tls.html#option-4-use-auto-generated-self-signed-wildcard-certificate) method a secret is created for you.
+
+```yaml
+## Set the certsSecretName to pass custom certificates for GitLab Runner to use
+## Provide resource name for a Kubernetes Secret Object in the same namespace,
+## this is used to populate the /home/gitlab-runner/.gitlab-runner/certs/ directory
+## ref: https://docs.gitlab.com/runner/configuration/tls-self-signed.html#supported-options-for-self-signed-certificates
+##
+certsSecretName: RELEASE-wildcard-tls-chain
+```
 
 The GitLab Runner Helm Chart does not create a secret for you. In order to create
 the secret, you tell Kubernetes to store the certificate as a secret and present it
@@ -460,7 +471,7 @@ Where:
 - `<CERTIFICATE_FILENAME>` is the filename for the certificate in your current directory that will be imported into the secret.
 
 If the source file `<CERTIFICATE_FILENAME>` is not in the current directory or
-does not follow the format `<gitlab-hostname.crt>` then it will be necessary to
+does not follow the format `<gitlab.hostname.crt>` then it will be necessary to
 specify the filename to use on the target:
 
 ```shell
@@ -472,7 +483,7 @@ kubectl create secret generic <SECRET_NAME> \
 Where:
 
 - `<TARGET_FILENAME>` is the name of the certificate file as presented to the Runner
-  containers. (For example: `gitlab-hostname.crt`.)
+  containers. (For example: `gitlab.hostname.crt`.)
 - `<CERTIFICATE_FILENAME>` is the filename for the certificate relative to your
   current directory that will be imported into the secret. (For example:
   `cert-directory/my-gitlab-certificate.crt`)
