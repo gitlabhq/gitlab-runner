@@ -496,6 +496,23 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 | `sub_path`          | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | `read_only`         | boolean             | No       | Sets the volume in read-only mode (defaults to false). |
 
+### Mounting volumes on service containers
+
+Volumes defined for the build container are also automatically mounted for all services containers. This can be, for example, leveraged to mount database storage in RAM to speed up tests, as an alternative to [services_tmpfs](docker.md#mounting-a-directory-in-ram) which is only available to the Docker executor.
+
+Here is an example configuration:
+
+```toml
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [[runners.kubernetes.volumes.empty_dir]]
+      name = "mysql-tmpfs"
+      mount_path = "/var/lib/mysql"
+      medium = "Memory"
+```
+
 ## Custom builds directory mount
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2862) in GitLab Runner 13.12.
