@@ -52,7 +52,13 @@ requested by their `coordinator`.
 
 - If GitLab Runner is running as a service on Windows, it creates system event logs. To view them, open the Event Viewer (from the Run menu, type `eventvwr.msc` or search for "Event Viewer"). Then go to **Windows Logs > Application**. The **Source** for Runner logs is `gitlab-runner`. If you are using Windows Server Core, run this PowerShell command to get the last 20 log entries: `get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto`.
 
-## Enable debug logging mode in your GitLab Runner `config.toml`
+## Enable debug logging mode 
+
+WARNING:
+Debug logging can be a serious security risk. The output contains the content of
+all variables and other secrets available to the job.
+
+### In the GitLab Runner `config.toml`
 
 From a terminal, logged in as root, run:
 
@@ -67,7 +73,7 @@ Debug logging can be enabled in the [global section of the `config.toml`](../con
 log_level = "debug"
 ```
 
-## Enable debug logging mode for the Helm Chart
+### In the Helm Chart
 
 If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configuring-gitlab-runner-using-the-helm-chart):
 
