@@ -160,7 +160,7 @@ for more details.
 
 To prepare your system and test that GPUs can be created with Google Compute Engine:
 
-1. [Set up the Google Compute Engine driver credentials](https://docs.docker.com/machine/drivers/gce#credentials)
+1. [Set up the Google Compute Engine driver credentials](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md#credentials)
 for Docker Machine. You may need to export environment variables to the
 runner if your VM does not have a default service account. How
 this is done depends on how the runner is launched. For example:
