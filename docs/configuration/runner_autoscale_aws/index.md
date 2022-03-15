@@ -29,7 +29,7 @@ A familiarity with Amazon Web Services (AWS) is required as this is where most
 of the configuration will take place.
 
 We suggest a quick read through Docker machine [`amazonec2` driver
-documentation](https://docs.docker.com/machine/drivers/aws/) to familiarize
+documentation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md) to familiarize
 yourself with the parameters we will set later in this article.
 
 Your GitLab Runner is going to need to talk to your GitLab instance over the network,
@@ -43,7 +43,7 @@ is likely different, so consider what works best for your situation.
 ### AWS security groups
 
 Docker Machine will attempt to use a
-[default security group](https://docs.docker.com/machine/drivers/aws/#security-group)
+[default security group](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md/#security-group)
 with rules for port `2376` and SSH `22`, which is required for communication with the Docker
 daemon. Instead of relying on Docker, you can create a security group with the
 rules you need and provide that in the GitLab Runner options as we will
