@@ -4,9 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
 ---
 
-# How to scale a fleet of runners for your enterprise
+# Plan and operate a fleet of shared runners
 
-When you host a fleet of runners, you need a well-planned infrastructure that takes
+This document contains best practices for scaling a fleet of runners in a shared service model.
+
+When you host a fleet of shared runners, you need a well-planned infrastructure that takes
 into consideration your:
 
 - Computing capacity.
