@@ -23,7 +23,7 @@ func TestBash_IfCmdShellEscapesLegacy(t *testing.T) {
 	writer := &BashWriter{useNewEscape: false}
 	writer.IfCmd("foo", "x&(y)")
 
-	assert.Equal(t, `if $'foo' "x&(y)" >/dev/null 2>/dev/null; then`+"\n", writer.String())
+	assert.Equal(t, `if $'foo' "x&(y)" >/dev/null 2>&1; then`+"\n", writer.String())
 }
 
 func TestBash_CommandShellEscapes(t *testing.T) {
@@ -56,7 +56,7 @@ func TestBash_IfCmdShellEscapes(t *testing.T) {
 	writer := &BashWriter{useNewEscape: true}
 	writer.IfCmd("foo", "x&(y)")
 
-	assert.Equal(t, "if foo \"x&(y)\" >/dev/null 2>/dev/null; then\n", writer.String())
+	assert.Equal(t, "if foo \"x&(y)\" >/dev/null 2>&1; then\n", writer.String())
 }
 
 func TestBash_CheckForErrors(t *testing.T) {
@@ -67,7 +67,7 @@ func TestBash_CheckForErrors(t *testing.T) {
 		"enabled": {
 			checkForErrors: true,
 			// nolint:lll
-			expected: "$'echo \\'hello world\\''\n_runner_exit_code=$?; if [[ $_runner_exit_code -ne 0 ]]; then exit $_runner_exit_code; fi\n",
+			expected: "$'echo \\'hello world\\''\n_runner_exit_code=$?; if [ $_runner_exit_code -ne 0 ]; then exit $_runner_exit_code; fi\n",
 		},
 		"disabled": {
 			checkForErrors: false,
@@ -96,10 +96,10 @@ func TestBash_GetConfiguration(t *testing.T) {
 			info: common.ShellScriptInfo{Shell: "bash", Type: common.NormalShell},
 			cmd:  "bash",
 		},
-		`bash --login`: {
+		`bash -l`: {
 			info: common.ShellScriptInfo{Shell: "bash", Type: common.LoginShell},
 			cmd:  "bash",
-			args: []string{"--login"},
+			args: []string{"-l"},
 		},
 		`su -s /bin/bash foobar -c bash`: {
 			info: common.ShellScriptInfo{Shell: "bash", User: "foobar", Type: common.NormalShell},
@@ -107,22 +107,22 @@ func TestBash_GetConfiguration(t *testing.T) {
 			args: []string{"-s", "/bin/bash", "foobar", "-c", "bash"},
 			os:   OSLinux,
 		},
-		`su -s /bin/bash foobar -c $'bash --login'`: {
+		`su -s /bin/bash foobar -c $'bash -l'`: {
 			info: common.ShellScriptInfo{Shell: "bash", User: "foobar", Type: common.LoginShell},
 			cmd:  "su",
-			args: []string{"-s", "/bin/bash", "foobar", "-c", "bash --login"},
+			args: []string{"-s", "/bin/bash", "foobar", "-c", "bash -l"},
 			os:   OSLinux,
 		},
-		`su -s /bin/sh foobar -c $'sh --login'`: {
+		`su -s /bin/sh foobar -c $'sh -l'`: {
 			info: common.ShellScriptInfo{Shell: "sh", User: "foobar", Type: common.LoginShell},
 			cmd:  "su",
-			args: []string{"-s", "/bin/sh", "foobar", "-c", "sh --login"},
+			args: []string{"-s", "/bin/sh", "foobar", "-c", "sh -l"},
 			os:   OSLinux,
 		},
-		`su foobar -c $'bash --login'`: {
+		`su foobar -c $'bash -l'`: {
 			info: common.ShellScriptInfo{Shell: "bash", User: "foobar", Type: common.LoginShell},
 			cmd:  "su",
-			args: []string{"foobar", "-c", "bash --login"},
+			args: []string{"foobar", "-c", "bash -l"},
 			os:   "darwin",
 		},
 	}

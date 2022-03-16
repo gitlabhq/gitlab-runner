@@ -82,7 +82,7 @@ func (b *BashWriter) CheckForErrors() {
 		return
 	}
 
-	b.Line("_runner_exit_code=$?; if [[ $_runner_exit_code -ne 0 ]]; then exit $_runner_exit_code; fi")
+	b.Line("_runner_exit_code=$?; if [ $_runner_exit_code -ne 0 ]; then exit $_runner_exit_code; fi")
 }
 
 func (b *BashWriter) Indent() {
@@ -122,7 +122,7 @@ func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
 		b.Linef("mkdir -p %q", helpers.ToSlash(b.TemporaryPath))
-		b.Linef("echo -n %s > %q", b.escape(variable.Value), variableFile)
+		b.Linef("printf '%%s' %s > %q", b.escape(variable.Value), variableFile)
 		b.Linef("export %s=%q", b.escape(variable.Key), variableFile)
 	} else {
 		b.Linef("export %s=%s", b.escape(variable.Key), b.escape(variable.Value))
@@ -130,18 +130,18 @@ func (b *BashWriter) Variable(variable common.JobVariable) {
 }
 
 func (b *BashWriter) IfDirectory(path string) {
-	b.Linef("if [[ -d %q ]]; then", path)
+	b.Linef("if [ -d %q ]; then", path)
 	b.Indent()
 }
 
 func (b *BashWriter) IfFile(path string) {
-	b.Linef("if [[ -e %q ]]; then", path)
+	b.Linef("if [ -e %q ]; then", path)
 	b.Indent()
 }
 
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
 	cmdline := b.buildCommand(cmd, arguments...)
-	b.Linef("if %s >/dev/null 2>/dev/null; then", cmdline)
+	b.Linef("if %s >/dev/null 2>&1; then", cmdline)
 	b.Indent()
 }
 
@@ -228,16 +228,16 @@ func (b *BashWriter) EmptyLine() {
 }
 
 func (b *BashWriter) SectionStart(id, command string) {
-	b.Line("echo -e " +
+	b.Line("printf '%b' " +
 		helpers.ANSI_CLEAR +
-		"section_start:`date +%s`:section_" + id +
+		"section_start:$(date +%s):section_" + id +
 		"\r" + helpers.ANSI_CLEAR + helpers.ShellEscape(helpers.ANSI_BOLD_GREEN+command+helpers.ANSI_RESET))
 }
 
 func (b *BashWriter) SectionEnd(id string) {
-	b.Line("echo -e " +
+	b.Line("printf '%b' " +
 		helpers.ANSI_CLEAR +
-		"section_end:`date +%s`:section_" + id +
+		"section_end:$(date +%s):section_" + id +
 		"\r" + helpers.ANSI_CLEAR)
 }
 
@@ -256,7 +256,7 @@ func (b *BashWriter) Finish(trace bool) string {
 		buf.WriteString("set -o xtrace\n")
 	}
 
-	buf.WriteString("set -eo pipefail\n")
+	buf.WriteString("if set -o | grep pipefail > /dev/null; then set -o pipefail; fi; set -o errexit\n")
 	buf.WriteString("set +o noclobber\n")
 
 	if b.useNewEval {
@@ -289,9 +289,9 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 	}
 
 	if info.Type == common.LoginShell {
-		script.CmdLine += " --login"
-		script.Arguments = []string{"--login"}
-		script.DockerCommand = []string{"sh", "-c", strings.ReplaceAll(BashDetectShellScript, "$@", "--login")}
+		script.CmdLine += " -l"
+		script.Arguments = []string{"-l"}
+		script.DockerCommand = []string{"sh", "-c", strings.ReplaceAll(BashDetectShellScript, "$@", "-l")}
 	} else {
 		script.DockerCommand = []string{"sh", "-c", strings.ReplaceAll(BashDetectShellScript, "$@", "")}
 	}
