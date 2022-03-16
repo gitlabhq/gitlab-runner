@@ -19,12 +19,21 @@ func BenchmarkEscaping(b *testing.B) {
 
 	input := string(data)
 
-	b.Run("shellescape", func(b *testing.B) {
+	b.Run("bash-ansi-c-shellescape", func(b *testing.B) {
 		b.SetBytes(int64(len(input)))
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
 			ShellEscape(input)
+		}
+	})
+
+	b.Run("posix-shellescape", func(b *testing.B) {
+		b.SetBytes(int64(len(input)))
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			PosixShellEscape(input)
 		}
 	})
 
@@ -56,6 +65,28 @@ func TestShellEscape(t *testing.T) {
 
 	for _, test := range tests {
 		actual := ShellEscape(test.in)
+		assert.Equal(t, test.out, actual, "src=%v", test.in)
+	}
+}
+
+func TestPosixShellEscape(t *testing.T) {
+	var tests = []struct {
+		in  string
+		out string
+	}{
+		{"unquoted", "unquoted"},
+		{"standard string", `"standard string"`},
+		{"+\t\n\r&", "\"+\t\n\r&\""},
+		{"", "''"},
+		{"hello, 世界", `"hello, 世界"`},
+		{"blackslash \\n", "\"blackslash \\\\n\""},
+		{"f", "f"},
+		{"\f", "\f"},
+		{"export variable='test' && echo $variable", `"export variable='test' && echo \$variable"`},
+	}
+
+	for _, test := range tests {
+		actual := PosixShellEscape(test.in)
 		assert.Equal(t, test.out, actual, "src=%v", test.in)
 	}
 }

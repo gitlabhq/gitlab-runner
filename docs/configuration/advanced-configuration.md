@@ -244,6 +244,16 @@ The available shells can run on different platforms.
 | `powershell`  | Generate PowerShell script. All commands are executed in PowerShell Desktop context. In GitLab Runner 12.0-13.12, this is the default for Windows. |
 | `pwsh`        | Generate PowerShell script. All commands are executed in PowerShell Core context. In GitLab Runner 14.0 and later, this is the default for Windows. |
 
+When the `shell` option is set to `bash` or `sh`, Bash's [ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html) is used
+to shell escape job scripts.
+
+### Use a POSIX-compliant shell
+
+In GitLab Runner 14.9 and later, [enable the feature flag](feature-flags.md) named
+`FF_POSIXLY_CORRECT_ESCAPES` to use a POSIX-compliant shell (like `dash`).
+When enabled, ["Double Quotes"](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02),
+which is POSIX-compliant shell escaping mechanism, is used.
+
 ## The `[runners.docker]` section
 
 This defines the Docker Container parameters.

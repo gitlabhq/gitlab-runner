@@ -62,6 +62,7 @@ type BashWriter struct {
 	checkForErrors     bool
 	useNewEval         bool
 	useNewEscape       bool
+	usePosixEscape     bool
 	useJSONTermination bool
 }
 
@@ -231,7 +232,7 @@ func (b *BashWriter) SectionStart(id, command string) {
 	b.Line("printf '%b' " +
 		helpers.ANSI_CLEAR +
 		"section_start:$(date +%s):section_" + id +
-		"\r" + helpers.ANSI_CLEAR + helpers.ShellEscape(helpers.ANSI_BOLD_GREEN+command+helpers.ANSI_RESET))
+		"\r" + helpers.ANSI_CLEAR + b.escape(helpers.ANSI_BOLD_GREEN+command+helpers.ANSI_RESET))
 }
 
 func (b *BashWriter) SectionEnd(id string) {
@@ -271,6 +272,10 @@ func (b *BashWriter) Finish(trace bool) string {
 }
 
 func (b *BashWriter) escape(input string) string {
+	if b.usePosixEscape {
+		return helpers.PosixShellEscape(input)
+	}
+
 	if b.useNewEscape {
 		return helpers.ShellEscape(input)
 	}
@@ -322,6 +327,7 @@ func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.She
 		checkForErrors: info.Build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 		useNewEval:     info.Build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
 		useNewEscape:   info.Build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
+		usePosixEscape: info.Build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
 	}
 
 	return b.generateScript(w, buildStage, info)
