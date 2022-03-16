@@ -24,7 +24,10 @@ binary on them.
 
 GitLab Runner can also run inside a Docker container or be deployed into a Kubernetes cluster.
 
-View some [best practices](best_practice/index.md) for how to use and administer GitLab Runner.
+## Scaling a fleet of runners
+
+When your organization scales to having a fleet of runners, you
+should [plan for how you will monitor and adjust performance for these runners](fleet_scaling/index.md).
 
 ## GitLab Runner versions
 
@@ -133,7 +136,8 @@ the runner's executor processes the commands.
 
 ## Runners on GitLab.com
 
-If you use GitLab.com, you can run your CI jobs on Runner Cloud. These are runners [managed](https://docs.gitlab.com/ee/user/gitlab_com/index.html#shared-runner-cloud-runners) by GitLab and fully integrated with GitLab.com.
+If you use GitLab.com, you can run your CI/CD jobs on runners hosted by GitLab.
+These runners are [managed](https://docs.gitlab.com/ee/ci/runners/index.html) by GitLab and fully integrated with GitLab.com.
 These runners are enabled for all projects, though
 [you can disable them](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners).
 
