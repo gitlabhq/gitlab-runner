@@ -812,43 +812,73 @@ func TestSharedEnvVariables(t *testing.T) {
 }
 
 func TestGetRemoteURL(t *testing.T) {
-	testCases := []struct {
-		runner RunnerSettings
-		result string
+	const (
+		exampleJobToken    = "job-token"
+		exampleRepoURL     = "http://gitlab-ci-token:job-token@test.remote/my/project.git"
+		exampleProjectPath = "my/project"
+	)
+
+	testCases := map[string]struct {
+		runner                    RunnerSettings
+		jobTokenVariableOverwrite string
+		expectedURL               string
 	}{
-		{
+		"using clone_url with http protocol": {
 			runner: RunnerSettings{
 				CloneURL: "http://test.local/",
 			},
-			result: "http://gitlab-ci-token:1234567@test.local/h5bp/html5-boilerplate.git",
+			expectedURL: "http://gitlab-ci-token:job-token@test.local/my/project.git",
 		},
-		{
+		"using clone_url with https protocol": {
 			runner: RunnerSettings{
 				CloneURL: "https://test.local",
 			},
-			result: "https://gitlab-ci-token:1234567@test.local/h5bp/html5-boilerplate.git",
+			expectedURL: "https://gitlab-ci-token:job-token@test.local/my/project.git",
 		},
-		{
-			runner: RunnerSettings{},
-			result: "http://fallback.url",
+		"not using clone_url": {
+			runner:      RunnerSettings{},
+			expectedURL: exampleRepoURL,
+		},
+		"overwriting job token with variable and clone_url": {
+			runner: RunnerSettings{
+				CloneURL: "https://test.local",
+			},
+			jobTokenVariableOverwrite: "wrong-token",
+			expectedURL:               "https://gitlab-ci-token:job-token@test.local/my/project.git",
+		},
+		"overwriting job token with variable and no clone_url": {
+			runner:                    RunnerSettings{},
+			jobTokenVariableOverwrite: "wrong-token",
+			expectedURL:               exampleRepoURL,
 		},
 	}
 
-	for _, tc := range testCases {
-		build := &Build{
-			Runner: &RunnerConfig{
-				RunnerSettings: tc.runner,
-			},
-			allVariables: JobVariables{
-				JobVariable{Key: "CI_JOB_TOKEN", Value: "1234567"},
-				JobVariable{Key: "CI_PROJECT_PATH", Value: "h5bp/html5-boilerplate"},
-			},
-			JobResponse: JobResponse{
-				GitInfo: GitInfo{RepoURL: "http://fallback.url"},
-			},
-		}
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: tc.runner,
+				},
+				allVariables: JobVariables{
+					JobVariable{Key: "CI_PROJECT_PATH", Value: exampleProjectPath},
+				},
+				JobResponse: JobResponse{
+					Token: exampleJobToken,
+					GitInfo: GitInfo{
+						RepoURL: exampleRepoURL,
+					},
+				},
+			}
 
-		assert.Equal(t, tc.result, build.GetRemoteURL())
+			if tc.jobTokenVariableOverwrite != "" {
+				build.allVariables = append(build.allVariables, JobVariable{
+					Key:   "CI_JOB_TOKEN",
+					Value: tc.jobTokenVariableOverwrite,
+				})
+			}
+
+			assert.Equal(t, tc.expectedURL, build.GetRemoteURL())
+		})
 	}
 }
 
