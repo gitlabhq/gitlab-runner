@@ -13,6 +13,7 @@
   - "**/testdata/**/*"
   - "go.*"
   - "tmp/gitlab-test/**"
+  - "VERSION"
 
 .docs-patterns: &docs-patterns
   - ".vale.ini"
