@@ -28,7 +28,7 @@ Depending on the executor you are using, you can face different security risks.
 
 ### Usage of Shell executor
 
-**Generally, it's unsafe to run tests with `shell` executors.** The jobs are run
+**High-security risks exist to your runner host and network when running builds with the `shell` executor.** The jobs are run
 with the permissions of the GitLab Runner's user and can steal code from other
 projects that are run on this server. Use it only for running trusted builds.
 
@@ -125,6 +125,15 @@ mode. It blocks access to all peripherals and shared folders.
 Runners use a token to identify to the GitLab Server. If you clone a runner then
 the cloned runner could be picking up the same jobs for that token. This is a possible
 attack vector to "steal" runner jobs.
+
+## Security risks when using `GIT_STRATEGY: fetch` on shared environments
+
+When you set [`GIT_STRATEGY`](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#git-strategy)
+to `fetch`, the runner attempts to reuse the local working copy of the Git repository.
+
+Using a local copy can improve the performance of CI/CD jobs. However, any user with access to that reusable copy can add code that executes in other users' pipelines.
+
+Use `GIT_STRATEGY: fetch` only when you trust all users who have access to the shared environment.
 
 ## Security hardening options
 
