@@ -157,7 +157,7 @@ You can customize the runner's `config.toml` file by using the [configuration te
         name: custom-tls-ca
     type: Opaque
     stringData:
-        tls.ca: |
+        tls.crt: |
             -----BEGIN CERTIFICATE-----
             MIIEczCCA1ugAwIBAgIBADANBgkqhkiG9w0BAQQFAD..AkGA1UEBhMCR0Ix
             .....
