@@ -24,6 +24,7 @@ const (
 	UseNewShellEscape                    string = "FF_USE_NEW_SHELL_ESCAPE"
 	EnableJobCleanup                     string = "FF_ENABLE_JOB_CLEANUP"
 	KubernetesHonorEntrypoint            string = "FF_KUBERNETES_HONOR_ENTRYPOINT"
+	PosixlyCorrectEscapes                string = "FF_POSIXLY_CORRECT_ESCAPES"
 )
 
 type FeatureFlag struct {
@@ -183,6 +184,16 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When enabled, the Docker entrypoint of an image will be honored if " +
 			"`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is not set to true",
+	},
+	{
+		Name:            PosixlyCorrectEscapes,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		//nolint:lll
+		Description: "When enabled, [POSIX shell escapes](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02) " +
+			"are used rather than [`bash`-style ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html). " +
+			"This should be enabled if the job environment uses a POSIX-compliant shell.",
 	},
 }
 

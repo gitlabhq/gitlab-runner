@@ -79,3 +79,45 @@ func ShellEscape(input string) string {
 
 	return sb.String()
 }
+
+// posixModeTable defines what characters need quoting, and which need to be
+// backslash escaped:
+//
+// https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02
+var posixModeTable = [256]mode{
+	'`': "\\`", '"': `\"`, '\\': `\\`, '$': `\$`,
+
+	' ': quo, '!': quo, '#': quo, '%': quo, '&': quo, '(': quo, ')': quo,
+	'*': quo, '<': quo, '=': quo, '>': quo, '?': quo, '[': quo, '|': quo,
+}
+
+// PosixShellEscape double quotes strings and escapes a string where necessary.
+func PosixShellEscape(input string) string {
+	if input == "" {
+		return "''"
+	}
+
+	var sb strings.Builder
+	sb.Grow(len(input) * 2)
+
+	escape := false
+	for _, c := range []byte(input) {
+		mode := posixModeTable[c]
+		switch mode {
+		case quo:
+			sb.WriteByte(c)
+			escape = true
+		case "":
+			sb.WriteByte(c)
+		default:
+			sb.WriteString(string(mode))
+			escape = true
+		}
+	}
+
+	if escape {
+		return `"` + sb.String() + `"`
+	}
+
+	return sb.String()
+}

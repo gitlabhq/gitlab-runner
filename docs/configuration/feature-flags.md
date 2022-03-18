@@ -56,6 +56,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_NEW_SHELL_ESCAPE` | `false` | **{dotted-circle}** No |  | When enabled, a faster implementation of shell escape is used. |
 | `FF_ENABLE_JOB_CLEANUP` | `false` | **{dotted-circle}** No |  | When enabled, the project directory will be cleaned up at the end of the build. If `GIT_CLONE` is used, the whole project directory will be deleted. If `GIT_FETCH` is used, a series of Git `clean` commands will be issued. |
 | `FF_KUBERNETES_HONOR_ENTRYPOINT` | `false` | **{dotted-circle}** No |  | When enabled, the Docker entrypoint of an image will be honored if `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is not set to true |
+| `FF_POSIXLY_CORRECT_ESCAPES` | `false` | **{dotted-circle}** No |  | When enabled, [POSIX shell escapes](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02) are used rather than [`bash`-style ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html). This should be enabled if the job environment uses a POSIX-compliant shell. |
 
 <!-- feature_flags_list_end -->
 

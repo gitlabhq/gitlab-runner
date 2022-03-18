@@ -16,6 +16,7 @@ func (b *BashTrapShell) GenerateScript(buildStage common.BuildStage, info common
 		checkForErrors:     info.Build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 		useNewEval:         info.Build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
 		useNewEscape:       info.Build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
+		usePosixEscape:     info.Build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
 		useJSONTermination: true,
 	}
 
