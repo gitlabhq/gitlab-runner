@@ -411,7 +411,6 @@ github.com/klauspost/compress v1.9.7/go.mod h1:RyIbtBH6LamlWaDj8nUwkbUhJ87Yi3uG0
 github.com/klauspost/compress v1.10.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/compress v1.11.3/go.mod h1:aoV0uJVorq1K+umq18yTdKaF57EivdYsUV+/s2qKfXs=
 github.com/klauspost/compress v1.13.5/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
-github.com/klauspost/compress v1.14.3/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/klauspost/compress v1.14.4 h1:eijASRJcobkVtSt81Olfh7JX43osYLwy5krOJo6YEu4=
 github.com/klauspost/compress v1.14.4/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/klauspost/cpuid v1.2.1/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
@@ -558,10 +557,10 @@ github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR
 github.com/ryanuber/columnize v2.1.0+incompatible/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
 github.com/ryanuber/go-glob v1.0.0 h1:iQh3xXAumdQ+4Ufa5b25cRpC5TYKlno6hsv6Cb3pkBk=
 github.com/ryanuber/go-glob v1.0.0/go.mod h1:807d1WSdnB0XRJzKNil9Om6lcp/3a0v4qIHxIXzX/Yc=
-github.com/saracen/fastzip v0.1.8 h1:AOmsBHrLKXcFmPZ7MzYEwDEAcWPfW8Ss2uiV8C3V08U=
-github.com/saracen/fastzip v0.1.8/go.mod h1:BBicltdY2Tv2bn06o8q3oUIkAVCvsw+cseAUM6tSUNo=
-github.com/saracen/zipextra v0.0.0-20201205103923-7347a2ee3f10 h1:UdM0Zmjq5MlMEnSu1M+dbJI6/YwlNLiO6p+IJJ3au4A=
-github.com/saracen/zipextra v0.0.0-20201205103923-7347a2ee3f10/go.mod h1:6Zk1rDeZXl7t6qPppqntIzWu6A+k9OYmT1LzehKE6e0=
+github.com/saracen/fastzip v0.1.9 h1:HB9/N2b9YoVnxleYc1LXzT+wW+cKYYSX527cv1EVaus=
+github.com/saracen/fastzip v0.1.9/go.mod h1:Hf4Av+J5ds9vhY9Un7rGvQS/hk/T6iq7VVOI3ezpspM=
+github.com/saracen/zipextra v0.0.0-20220303013732-0187cb0159ea h1:8czYLkvzZRE+AElIQeDffQdgR+CC3wKEFILYU/1PeX4=
+github.com/saracen/zipextra v0.0.0-20220303013732-0187cb0159ea/go.mod h1:hnzuad9d2wdd3z8fC6UouHQK5qZxqv3F/E6MMzXc7q0=
 github.com/schollz/closestmatch v2.1.0+incompatible/go.mod h1:RtP1ddjLong6gTkbtmuhtR2uUrrJOpYzYRvbcPAid+g=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=

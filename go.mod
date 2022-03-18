@@ -51,7 +51,7 @@ require (
 	github.com/prometheus/common v0.6.0
 	github.com/prometheus/procfs v0.0.5
 	github.com/rs/xid v1.3.0 // indirect
-	github.com/saracen/fastzip v0.1.8
+	github.com/saracen/fastzip v0.1.9
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stephens2424/writerset v1.0.2 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
@@ -121,7 +121,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/saracen/zipextra v0.0.0-20201205103923-7347a2ee3f10 // indirect
+	github.com/saracen/zipextra v0.0.0-20220303013732-0187cb0159ea // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.22.5 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
