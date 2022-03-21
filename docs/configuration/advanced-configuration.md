@@ -184,7 +184,8 @@ Each `[[runners]]` section defines one runner.
 | `request_concurrency` | Limit number of concurrent requests for new jobs from GitLab. Default is `1`. |
 | `output_limit`       | Maximum build log size in kilobytes. Default is `4096` (4MB). |
 | `pre_clone_script`   | Commands to be executed on the runner before cloning the Git repository. Use it to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
-| `pre_build_script`   | Commands to be executed on the runner after cloning the Git repository, but before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
+| `post_clone_script`  | Commands to be executed on the runner after cloning the Git repository and updating submodules. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
+| `pre_build_script`   | Commands to be executed on the runner before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
 | `post_build_script`  | Commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
 | `clone_url`          | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL. |
 | `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to `true`, then debug log (trace) remains disabled, even if `CI_DEBUG_TRACE` is set to `true` by the user. |
