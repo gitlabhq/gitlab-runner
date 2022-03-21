@@ -28,7 +28,12 @@ For example, you might want two AWS security groups:
   external IP range (for administrative access).
 - One that applies to the Fargate Tasks and that allows SSH traffic only from the EC2 instance.
 
+Additionally, for any non-public container registry your ECS Task will either [need IAM permissions (for AWS ECR only)](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html) or will require [Private registry authentication for tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) for non-ECR private registries.
+
 You can use CloudFormation or Terraform to automate the provisioning and setup of your AWS infrastructure.
+
+WARNING:
+CI/CD jobs use the image defined in the ECS task, rather than the value of the `image:` keyword in your `.gitlab-ci.yml` file. This configuration can result in multiple instances of Runner Manager or in large build containers. AWS is aware of the issue and GitLab is [tracking resolution](https://gitlab.com/gitlab-com/alliances/aws/public-tracker/-/issues/22). You might consider creating an EKS cluster instead by following the official [AWS EKS Quick Start](https://aws.amazon.com/quickstart/architecture/amazon-eks/).
 
 ## Prerequisites
 
@@ -264,6 +269,10 @@ above.
 
 Refer to the AWS [documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/create-task-definition.html)
 for detailed instructions on setting up and working with task definitions.
+
+Refer to the AWS documentation [Amazon ECS task execution IAM role](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html) for information on the ECS service permissions required to launch images from an AWS ECR.
+
+Refer to the AWS documentation [Private registry authentication for tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) for information on having ECS authenticate to private registries including any hosted on a GitLab instance.
 
 At this point the GitLab Runner Manager and Fargate Driver are configured and ready
 to start executing jobs on AWS Fargate.
