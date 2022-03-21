@@ -109,6 +109,15 @@ type containerBuildOpts struct {
 	command         []string
 }
 
+type podConfigPrepareOpts struct {
+	labels           map[string]string
+	annotations      map[string]string
+	services         []api.Container
+	initContainers   []api.Container
+	imagePullSecrets []api.LocalObjectReference
+	hostAliases      []api.HostAlias
+}
+
 type executor struct {
 	executors.AbstractExecutor
 
@@ -1212,59 +1221,15 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 	return createHostAliases(s.options.Services, s.Config.Kubernetes.GetHostAliases())
 }
 
-//nolint:funlen
 func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	s.Debugln("Setting up build pod")
 
-	podServices := make([]api.Container, len(s.options.Services))
-
-	for i, service := range s.options.Services {
-		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
-		var err error
-		podServices[i], err = s.buildContainer(containerBuildOpts{
-			name:            fmt.Sprintf("svc-%d", i),
-			image:           resolvedImage,
-			imageDefinition: service,
-			requests:        s.configurationOverwrites.serviceRequests,
-			limits:          s.configurationOverwrites.serviceLimits,
-			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
-				s.Config.Kubernetes.ServiceContainerSecurityContext,
-				s.defaultCapDrop()...,
-			),
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	// We set a default label to the pod. This label will be used later
-	// by the services, to link each service to the pod
-	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
-	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
-		labels[k] = sanitizeLabel(s.Build.Variables.ExpandValue(v))
-	}
-
-	annotations := make(map[string]string)
-	for key, val := range s.configurationOverwrites.podAnnotations {
-		annotations[key] = s.Build.Variables.ExpandValue(val)
-	}
-
-	var imagePullSecrets []api.LocalObjectReference
-	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
-		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
-	}
-
-	if s.credentials != nil {
-		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
-	}
-
-	hostAliases, err := s.getHostAliases()
+	prepareOpts, err := s.createPodConfigPrepareOpts(initContainers)
 	if err != nil {
 		return err
 	}
 
-	podConfig, err :=
-		s.preparePodConfig(labels, annotations, podServices, imagePullSecrets, hostAliases, initContainers)
+	podConfig, err := s.preparePodConfig(prepareOpts)
 	if err != nil {
 		return err
 	}
@@ -1296,6 +1261,40 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	return nil
 }
 
+func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (podConfigPrepareOpts, error) {
+	podServices, err := s.preparePodServices()
+	if err != nil {
+		return podConfigPrepareOpts{}, err
+	}
+
+	// We set a default label to the pod. This label will be used later
+	// by the services, to link each service to the pod
+	labels := map[string]string{"pod": s.Build.ProjectUniqueName()}
+	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
+		labels[k] = sanitizeLabel(s.Build.Variables.ExpandValue(v))
+	}
+
+	annotations := make(map[string]string)
+	for key, val := range s.configurationOverwrites.podAnnotations {
+		annotations[key] = s.Build.Variables.ExpandValue(val)
+	}
+
+	imagePullSecrets := s.prepareImagePullSecrets()
+	hostAliases, err := s.getHostAliases()
+	if err != nil {
+		return podConfigPrepareOpts{}, err
+	}
+
+	return podConfigPrepareOpts{
+		labels:           labels,
+		annotations:      annotations,
+		services:         podServices,
+		imagePullSecrets: imagePullSecrets,
+		hostAliases:      hostAliases,
+		initContainers:   initContainers,
+	}, nil
+}
+
 func (s *executor) defaultCapDrop() []string {
 	os := s.helperImageInfo.OSType
 	// windows does not support security context capabilities
@@ -1310,14 +1309,83 @@ func (s *executor) defaultCapDrop() []string {
 	}
 }
 
-//nolint:funlen
-func (s *executor) preparePodConfig(
-	labels, annotations map[string]string,
-	services []api.Container,
-	imagePullSecrets []api.LocalObjectReference,
-	hostAliases []api.HostAlias,
-	initContainers []api.Container,
-) (api.Pod, error) {
+func (s *executor) prepareImagePullSecrets() []api.LocalObjectReference {
+	var imagePullSecrets []api.LocalObjectReference
+	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
+	}
+
+	if s.credentials != nil {
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
+	}
+
+	return imagePullSecrets
+}
+
+func (s *executor) preparePodServices() ([]api.Container, error) {
+	var err error
+	podServices := make([]api.Container, len(s.options.Services))
+
+	for i, service := range s.options.Services {
+		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
+		podServices[i], err = s.buildContainer(containerBuildOpts{
+			name:            fmt.Sprintf("svc-%d", i),
+			image:           resolvedImage,
+			imageDefinition: service,
+			requests:        s.configurationOverwrites.serviceRequests,
+			limits:          s.configurationOverwrites.serviceLimits,
+			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+				s.Config.Kubernetes.ServiceContainerSecurityContext,
+				s.defaultCapDrop()...,
+			),
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return podServices, nil
+}
+
+func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) {
+	buildContainer, helperContainer, err := s.createBuildAndHelperContainers()
+	if err != nil {
+		return api.Pod{}, err
+	}
+
+	pod := api.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: s.Build.ProjectUniqueName(),
+			Namespace:    s.configurationOverwrites.namespace,
+			Labels:       opts.labels,
+			Annotations:  opts.annotations,
+		},
+		Spec: api.PodSpec{
+			Volumes:            s.getVolumes(),
+			ServiceAccountName: s.configurationOverwrites.serviceAccount,
+			RestartPolicy:      api.RestartPolicyNever,
+			NodeSelector:       s.Config.Kubernetes.NodeSelector,
+			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
+			InitContainers:     opts.initContainers,
+			Containers: append([]api.Container{
+				buildContainer,
+				helperContainer,
+			}, opts.services...),
+			TerminationGracePeriodSeconds: s.Config.Kubernetes.GetPodTerminationGracePeriodSeconds(),
+			ImagePullSecrets:              opts.imagePullSecrets,
+			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
+			HostAliases:                   opts.hostAliases,
+			Affinity:                      s.Config.Kubernetes.GetAffinity(),
+			DNSPolicy:                     s.getDNSPolicy(),
+			DNSConfig:                     s.Config.Kubernetes.GetDNSConfig(),
+			RuntimeClassName:              s.Config.Kubernetes.RuntimeClassName,
+		},
+	}
+
+	return pod, nil
+}
+
+func (s *executor) createBuildAndHelperContainers() (api.Container, api.Container, error) {
 	dockerCmdForBuildContainer := s.BuildShell.DockerCommand
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) &&
 		!s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
@@ -1337,7 +1405,7 @@ func (s *executor) preparePodConfig(
 		command: dockerCmdForBuildContainer,
 	})
 	if err != nil {
-		return api.Pod{}, fmt.Errorf("building build container: %w", err)
+		return api.Container{}, api.Container{}, fmt.Errorf("building build container: %w", err)
 	}
 
 	helperContainer, err := s.buildContainer(containerBuildOpts{
@@ -1352,38 +1420,10 @@ func (s *executor) preparePodConfig(
 		command: s.BuildShell.DockerCommand,
 	})
 	if err != nil {
-		return api.Pod{}, fmt.Errorf("building helper container: %w", err)
+		return api.Container{}, api.Container{}, fmt.Errorf("building helper container: %w", err)
 	}
 
-	pod := api.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: s.Build.ProjectUniqueName(),
-			Namespace:    s.configurationOverwrites.namespace,
-			Labels:       labels,
-			Annotations:  annotations,
-		},
-		Spec: api.PodSpec{
-			Volumes:            s.getVolumes(),
-			ServiceAccountName: s.configurationOverwrites.serviceAccount,
-			RestartPolicy:      api.RestartPolicyNever,
-			NodeSelector:       s.Config.Kubernetes.NodeSelector,
-			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
-			InitContainers:     initContainers,
-			Containers: append([]api.Container{
-				buildContainer,
-				helperContainer,
-			}, services...),
-			TerminationGracePeriodSeconds: s.Config.Kubernetes.GetPodTerminationGracePeriodSeconds(),
-			ImagePullSecrets:              imagePullSecrets,
-			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
-			HostAliases:                   hostAliases,
-			Affinity:                      s.Config.Kubernetes.GetAffinity(),
-			DNSPolicy:                     s.getDNSPolicy(),
-			DNSConfig:                     s.Config.Kubernetes.GetDNSConfig(),
-		},
-	}
-
-	return pod, nil
+	return buildContainer, helperContainer, nil
 }
 
 func (s *executor) setOwnerReferencesForResources(ownerReferences []metav1.OwnerReference) error {
