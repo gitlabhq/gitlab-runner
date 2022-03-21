@@ -3778,6 +3778,36 @@ func TestSetupBuildPod(t *testing.T) {
 				)
 			},
 		},
+		"supports runtimeClass": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						RuntimeClassName: func() *string {
+							runtimeClassName := "testRunTimeClass"
+							return &runtimeClassName
+						}(),
+					},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.EqualValues(
+					t,
+					*test.RunnerConfig.Kubernetes.RuntimeClassName,
+					*e.pod.Spec.RuntimeClassName,
+				)
+			},
+		},
+
+		"no runtimeClass when not specified": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+			},
+			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
+				assert.Nil(t, e.pod.Spec.RuntimeClassName)
+			},
+		},
 	}
 
 	for testName, test := range tests {
