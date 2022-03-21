@@ -33,11 +33,11 @@ every build. In the following example,
 create a disk VM image.
 
 ```shell
-virt-builder debian-9 \
+virt-builder debian-11 \
     --size 8G \
     --output /var/lib/libvirt/images/gitlab-runner-base.qcow2 \
     --format qcow2 \
-    --hostname gitlab-runner-stretch \
+    --hostname gitlab-runner-bullseye \
     --network \
     --install curl \
     --run-command 'curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | bash' \
@@ -138,12 +138,12 @@ set -eo pipefail
 trap "exit $SYSTEM_FAILURE_EXIT_CODE" ERR
 
 # Copy base disk to use for Job.
-qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE"
+qemu-img create -f qcow2 -b "$BASE_VM_IMAGE" "$VM_IMAGE" -F qcow2
 
 # Install the VM
 virt-install \
     --name "$VM_ID" \
-    --os-variant debian9 \
+    --os-variant debian11 \
     --disk "$VM_IMAGE" \
     --import \
     --vcpus=2 \
