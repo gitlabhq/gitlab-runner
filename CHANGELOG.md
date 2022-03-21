@@ -1,3 +1,59 @@
+## v14.9.0 (2022-03-21)
+
+### New features
+
+- Add posix shell quoting implementation !3367
+
+### Bug fixes
+
+- Use token from job payload when composing repository URL based on clone_url !3366
+- Upgrade minio to v7.0.24 pre-release, for IAM timeout fix !3354
+- Upgrade fastzip to v0.1.9, fixes invalid timestamps !3353
+- Update network responses to support 64-bit Job IDs !3346
+- Upgrade fastzip to v0.1.8 !3333
+- Allow changing shell executor with pwsh user !3298
+- Remove bashisms from Bash shell implementation !3014 (Neil Roza @realtime-neil)
+
+### Maintenance
+
+- Update stringData for Custom TLS cert !3372
+- Add default issue & MR templates !3368
+- Docs: Added fleet management link !3364
+- Add link to AWS driver docs in gitlab docker machine - docs !3363
+- Change fleet scaling to best practices for runner shared services - docs !3362
+- Docs: kubernetes volumes are mounted on services !3361 (Quentin Barbe @forty1)
+- Add warning about enabling debug logging !3359
+- Add links to clarify AWS and docker credentials requirements and clarification on image: tag !3358
+- Add link to docker machine fork - docs !3357
+- Edited for style !3351
+- Run trigger-UBI-images-build job also for patch release tags !3350
+- Update runner registration failure log message !3349
+- Add runner registration message section - docs !3348
+- Move Path interface to docker volume consumer !3343
+- Neaten helpers/path unix path impl !3342
+- Fix misleading error during cache restoration !3340
+- Clean up docs redirects - 2022-02-22 !3339
+- Make ssh command/executor shell agnostic !3337
+- Remove redundant shell config environment property !3336
+- Updated agent for Kubernetes !3334
+- Update CI toolchain versions !3330
+- Upgrade Docker to 20.10.12 !3328
+- Support Vault EE namespaces !3320 (Aleksander Zak @aleksanderzak)
+- Add Debian bullseye to supported versions !3318
+- Add post_clone_script hook !3211 (Dan Rice @dnrce)
+- Docs: Update kubernetes key file format !3097 (Brandon Hee @brandonhee)
+- fix grammatical error !2896 (James Dube @jamesdube)
+
+### GitLab Runner distribution
+
+- Fixes version definition in VERSION file !3371
+- Align debian releases for stable and Bleeding Edge versions !3335
+
+### Documentation changes
+
+- Add support for Kubernetes runtime class !2326
+- Add docs about security risks for using cache and the git_strategy=fetch !3365
+
 ## v14.8.0 (2022-02-20)
 
 ### New features
