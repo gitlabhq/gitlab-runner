@@ -7,7 +7,7 @@ case "${target}" in
     bleeding)
         make packagecloud PACKAGE_CLOUD="runner/unstable" \
                           DEB_PLATFORMS="debian/stretch debian/buster debian/bullseye ubuntu/xenial ubuntu/bionic ubuntu/focal" \
-                          RPM_PLATFORMS="el/7 el/8 fedora/32 fedora/33 fedora/34"
+                          RPM_PLATFORMS="el/7 el/8 fedora/32 fedora/33 fedora/34 amazon/2"
         ;;
     stable)
         make packagecloud

@@ -212,6 +212,7 @@ bleeding edge packagecloud:
       - ubuntu
       - el
       - fedora
+      - amazon
 
 .bleding_edge_docker_images_base:
   extends:
@@ -282,6 +283,7 @@ stable packagecloud:
       - el
       - ol
       - fedora
+      - amazon
 
 .stable_docker_images_base_variables_overwrite:
   variables:
