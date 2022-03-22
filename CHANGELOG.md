@@ -1,3 +1,9 @@
+## v14.9.1 (2022-03-22)
+
+### GitLab Runner distribution
+
+- Add amazon/2 RPM distribution to the release list !3378
+
 ## v14.9.0 (2022-03-21)
 
 ### New features
