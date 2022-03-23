@@ -15,7 +15,7 @@
   - chmod 755 trigger-build
   variables:
     GIT_STRATEGY: none
-    DOCS_REVIEW_APPS_DOMAIN: 178.62.207.141.nip.io
+    DOCS_REVIEW_APPS_DOMAIN: 35.193.151.162.nip.io
   allow_failure: true
 
 # Trigger a docs build in gitlab-docs
