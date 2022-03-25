@@ -78,11 +78,17 @@ func (c *ArtifactsDownloaderCommand) Execute(cliContext *cli.Context) {
 		logrus.Fatalln("Unable to get working directory")
 	}
 
-	if c.URL == "" || c.Token == "" {
-		logrus.Fatalln("Missing runner credentials")
+	if c.URL == "" {
+		logrus.Warningln("Missing URL --url")
+	}
+	if c.Token == "" {
+		logrus.Warningln("Missing runner credentials --token")
 	}
 	if c.ID <= 0 {
-		logrus.Fatalln("Missing build ID")
+		logrus.Warningln("Missing build ID --id")
+	}
+	if c.ID <= 0 || c.Token == "" || c.URL == "" {
+		logrus.Fatalln("Incomplete arguments")
 	}
 
 	// Create temporary file
