@@ -28,54 +28,56 @@ Read about all the available properties in [Operator properties](#operator-prope
 
 This is a list of the supported properties that can be passed to the Operator.
 
-| Setting | Description |
-| ------- | ----------- |
-| `gitlabUrl`     | The fully qualified domain name for the GitLab instance, for example, `https://gitlab.example.com`. |
-| `token`         | Name of `Secret` containing the `runner-registration-token` key used to register the runner. |
-| `tags`          | List of comma-separated tags to be applied to the runner. |
-| `concurrent`    | Limits how many jobs can run concurrently. The maximum number is all defined runners. 0 does not mean unlimited. Default is `10`. |
-| `interval`      | Defines the number of seconds between checks for new jobs. Default is `30`. |
-| `cloneURL`      | Overwrite the URL for the GitLab instance. Used only if the runner can’t connect to the GitLab URL. |
-| `env`           | Name of `ConfigMap` containing key-value pairs that will be injected as environment variables in the Runner pod. |
-| `helperImage`   | Overwrites the default GitLab Runner Helper Image. |
-| `buildImage`    | The default Docker image to use for builds when none is specified. |
-| `cacheType`     | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`. |
-| `cachePath`     | Defines the cache path on the file system. |
-| `cacheShared`   | Enable sharing of cache between runners. |
-| `s3`            | Options used to setup S3 cache. Refer to [Cache properties](#cache-properties). |
-| `gcs`           | Options used to setup GCS cache. Refer to [Cache properties](#cache-properties). |
-| `azure`         | Options used to setup Azure cache. Refer to [Cache properties](#cache-properties). |
-| `ca`            | Name of TLS secret containing the custom certificate authority (CA) certificates. |
-| `serviceAccount`| Use to override service account used to run the Runner pod. |
-| `config`        | Use to provide a custom config map with a [configuration template](../register/index.md#runners-configuration-template-file). |
+Some properties are only available with more recent versions of the Operator.
+
+| Setting | Operator | Description |
+| ------- | -------- | ----------- |
+| `gitlabUrl`      | all      | The fully qualified domain name for the GitLab instance, for example, `https://gitlab.example.com`. |
+| `token`          | all      | Name of `Secret` containing the `runner-registration-token` key used to register the runner. |
+| `tags`           | all      | List of comma-separated tags to be applied to the runner. |
+| `concurrent`     | all      | Limits how many jobs can run concurrently. The maximum number is all defined runners. 0 does not mean unlimited. Default is `10`. |
+| `interval`       | all      | Defines the number of seconds between checks for new jobs. Default is `30`. |
+| `cloneURL`       | all      | Overwrite the URL for the GitLab instance. Used only if the runner can’t connect to the GitLab URL. |
+| `env`            | all      | Name of `ConfigMap` containing key-value pairs that will be injected as environment variables in the Runner pod. |
+| `helperImage`    | all      | Overwrites the default GitLab Runner Helper Image. |
+| `buildImage`     | all      | The default Docker image to use for builds when none is specified. |
+| `cacheType`      | all      | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`. |
+| `cachePath`      | all      | Defines the cache path on the file system. |
+| `cacheShared`    | all      | Enable sharing of cache between runners. |
+| `s3`             | all      | Options used to setup S3 cache. Refer to [Cache properties](#cache-properties). |
+| `gcs`            | all      | Options used to setup GCS cache. Refer to [Cache properties](#cache-properties). |
+| `azure`          | all      | Options used to setup Azure cache. Refer to [Cache properties](#cache-properties). |
+| `ca`             | all      | Name of TLS secret containing the custom certificate authority (CA) certificates. |
+| `serviceAccount` | all      | Use to override service account used to run the Runner pod. |
+| `config`         | all      | Use to provide a custom config map with a [configuration template](../register/index.md#runners-configuration-template-file). |
 
 ## Cache properties
 
 ### S3 cache
 
-| Setting | Description |
-| ------- | ----------- |
-| `server`        | The S3 server address. |
-| `credentials`   | Name of the `Secret` containing the `accesskey` and `secretkey` properties used to access the object storage. |
-| `bucket`        | Name of the bucket in which the cache will be stored. |
-| `location`      | Name of the S3 region which the cache will be stored. |
-| `insecure`      | Use insecure connections or `HTTP`. |
+| Setting | Operator | Description |
+| ------- | -------- | ----------- |
+| `server`        | all      | The S3 server address. |
+| `credentials`   | all      | Name of the `Secret` containing the `accesskey` and `secretkey` properties used to access the object storage. |
+| `bucket`        | all      | Name of the bucket in which the cache will be stored. |
+| `location`      | all      | Name of the S3 region which the cache will be stored. |
+| `insecure`      | all      | Use insecure connections or `HTTP`. |
 
 ### GCS cache
 
-| Setting | Description |
-| ------- | ----------- |
-| `credentials`     | Name of the `Secret` containing the `access-id` and `private-key` properties used to access the object storage. |
-| `bucket`          | Name of the bucket in which the cache will be stored. |
-| `credentialsFile` | Takes GCS credentials file, `keys.json`. |
+| Setting | Operator | Description |
+| ------- | -------- | ----------- |
+| `credentials`     | all      | Name of the `Secret` containing the `access-id` and `private-key` properties used to access the object storage. |
+| `bucket`          | all      | Name of the bucket in which the cache will be stored. |
+| `credentialsFile` | all      | Takes GCS credentials file, `keys.json`. |
 
 ### Azure cache
 
-| Setting | Description |
-| ------- | ----------- |
-| `credentials`     | Name of the `Secret` containing the `accountName` and `privateKey` properties used to access the object storage. |
-| `container`       | Name of the Azure container in which the cache will be stored. |
-| `storageDomain`   | The domain name of the Azure blob storage. |
+| Setting | Operator | Description |
+| ------- | -------- | ----------- |
+| `credentials`     | all      | Name of the `Secret` containing the `accountName` and `privateKey` properties used to access the object storage. |
+| `container`       | all      | Name of the Azure container in which the cache will be stored. |
+| `storageDomain`   | all      | The domain name of the Azure blob storage. |
 
 ## Configure a proxy environment
 
