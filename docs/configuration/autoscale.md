@@ -631,7 +631,7 @@ concurrent = 50   # All registered runners can run up to 50 concurrent jobs
   [runners.cache]
     Type = "s3"
     [runners.cache.s3]
-      ServerAddress = "s3-eu-west-1.amazonaws.com"
+      ServerAddress = "s3.eu-west-1.amazonaws.com"
       AccessKey = "AMAZON_S3_ACCESS_KEY"
       SecretKey = "AMAZON_S3_SECRET_KEY"
       BucketName = "runner"
