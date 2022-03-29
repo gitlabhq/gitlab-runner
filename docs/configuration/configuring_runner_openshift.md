@@ -40,7 +40,7 @@ Some properties are only available with more recent versions of the Operator.
 | `cloneURL`       | all      | Overwrite the URL for the GitLab instance. Used only if the runner can’t connect to the GitLab URL. |
 | `env`            | all      | Name of `ConfigMap` containing key-value pairs that will be injected as environment variables in the Runner pod. |
 | `runnerImage`    | 1.7      | Overwrites the default GitLab Runner image. Default is the Runner image the operator was bundled with. |
-| `helperImage`    | all      | Overwrites the default GitLab Runner Helper Image. |
+| `helperImage`    | all      | Overwrites the default GitLab Runner helper image. |
 | `buildImage`     | all      | The default Docker image to use for builds when none is specified. |
 | `cacheType`      | all      | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`. |
 | `cachePath`      | all      | Defines the cache path on the file system. |
