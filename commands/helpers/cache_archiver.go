@@ -210,7 +210,7 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 		}
 	} else {
 		logrus.Infoln(
-			"No URL provided, cache will be not uploaded to shared cache server. " +
+			"No URL provided, cache will not be uploaded to shared cache server. " +
 				"Cache will be stored only locally.")
 	}
 }
