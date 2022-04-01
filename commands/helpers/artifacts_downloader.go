@@ -79,13 +79,13 @@ func (c *ArtifactsDownloaderCommand) Execute(cliContext *cli.Context) {
 	}
 
 	if c.URL == "" {
-		logrus.Warningln("Missing URL --url")
+		logrus.Warningln("Missing URL (--url)")
 	}
 	if c.Token == "" {
-		logrus.Warningln("Missing runner credentials --token")
+		logrus.Warningln("Missing runner credentials (--token)")
 	}
 	if c.ID <= 0 {
-		logrus.Warningln("Missing build ID --id")
+		logrus.Warningln("Missing build ID (--id)")
 	}
 	if c.ID <= 0 || c.Token == "" || c.URL == "" {
 		logrus.Fatalln("Incomplete arguments")
