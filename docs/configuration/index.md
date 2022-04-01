@@ -35,4 +35,4 @@ Learn how to configure GitLab Runner.
   Docker executor.
 - [Best practices](../best_practice/index.md).
 - [Handling rate limited requests](proxy.md#handling-rate-limited-requests).
-- [Configure GitLab Runner Operator on OpenShift](configuring_runner_openshift.md).
+- [Configure GitLab Runner Operator](configuring_runner_operator.md).
