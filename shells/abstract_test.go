@@ -885,9 +885,21 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 
 func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
 	testCacheKey := "test-cache-key"
-	testFallbackCacheKey := "test-fallback-cache-key"
 
-	shell := AbstractShell{}
+	tests := map[string]struct {
+		cacheFallbackKeyVarValue string
+		expectedCacheKey         string
+	}{
+		"using allowed key value": {
+			cacheFallbackKeyVarValue: "test-fallback-cache-key",
+			expectedCacheKey:         "test-fallback-cache-key",
+		},
+		"using reserved suffix": {
+			cacheFallbackKeyVarValue: "main-protected",
+			expectedCacheKey:         "test-cache-key",
+		},
+	}
+
 	runnerConfig := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Cache: &common.CacheConfig{
@@ -896,77 +908,85 @@ func TestAbstractShell_extractCacheWithFallbackKey(t *testing.T) {
 			},
 		},
 	}
-	build := &common.Build{
-		BuildDir: "/builds",
-		CacheDir: "/cache",
-		Runner:   runnerConfig,
-		JobResponse: common.JobResponse{
-			ID: 1000,
-			JobInfo: common.JobInfo{
-				ProjectID: 1000,
-			},
-			Cache: common.Caches{
-				{
-					Key:    testCacheKey,
-					Policy: common.CachePolicyPullPush,
-					Paths:  []string{"path1", "path2"},
+	shell := AbstractShell{}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := &common.Build{
+				BuildDir: "/builds",
+				CacheDir: "/cache",
+				Runner:   runnerConfig,
+				JobResponse: common.JobResponse{
+					ID: 1000,
+					JobInfo: common.JobInfo{
+						ProjectID: 1000,
+					},
+					Cache: common.Caches{
+						{
+							Key:    testCacheKey,
+							Policy: common.CachePolicyPullPush,
+							Paths:  []string{"path1", "path2"},
+						},
+					},
+					Variables: common.JobVariables{
+						{
+							Key:   "CACHE_FALLBACK_KEY",
+							Value: tc.cacheFallbackKeyVarValue,
+						},
+					},
 				},
-			},
-			Variables: common.JobVariables{
-				{
-					Key:   "CACHE_FALLBACK_KEY",
-					Value: testFallbackCacheKey,
-				},
-			},
-		},
+			}
+			info := common.ShellScriptInfo{
+				RunnerCommand: "runner-command",
+				Build:         build,
+			}
+
+			mockWriter := new(MockShellWriter)
+			defer mockWriter.AssertExpectations(t)
+
+			mockWriter.On("IfCmd", "runner-command", "--version").Once()
+			mockWriter.On("Noticef", "Checking cache for %s...", testCacheKey).Once()
+			mockWriter.On(
+				"IfCmdWithOutput",
+				"runner-command",
+				"cache-extractor",
+				"--file",
+				filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
+				"--timeout",
+				"10",
+				"--url",
+				fmt.Sprintf("test://download/project/1000/%s", testCacheKey),
+			).Once()
+			mockWriter.On("Noticef", "Successfully extracted cache").Once()
+			mockWriter.On("Else").Once()
+			mockWriter.On("Warningf", "Failed to extract cache").Once()
+			if tc.cacheFallbackKeyVarValue == tc.expectedCacheKey {
+				mockWriter.On("Noticef", "Checking cache for %s...", tc.expectedCacheKey).Once()
+				mockWriter.On(
+					"IfCmdWithOutput",
+					"runner-command",
+					"cache-extractor",
+					"--file",
+					filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
+					"--timeout",
+					"10",
+					"--url",
+					fmt.Sprintf("test://download/project/1000/%s", tc.expectedCacheKey),
+				).Once()
+				mockWriter.On("Noticef", "Successfully extracted cache").Once()
+				mockWriter.On("Else").Once()
+				mockWriter.On("Warningf", "Failed to extract cache").Once()
+				mockWriter.On("EndIf").Once()
+			}
+			mockWriter.On("EndIf").Once()
+			mockWriter.On("Else").Once()
+			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+			mockWriter.On("EndIf").Once()
+
+			err := shell.cacheExtractor(mockWriter, info)
+			assert.NoError(t, err)
+		})
 	}
-	info := common.ShellScriptInfo{
-		RunnerCommand: "runner-command",
-		Build:         build,
-	}
-
-	mockWriter := new(MockShellWriter)
-	defer mockWriter.AssertExpectations(t)
-
-	mockWriter.On("IfCmd", "runner-command", "--version").Once()
-	mockWriter.On("Noticef", "Checking cache for %s...", testCacheKey).Once()
-	mockWriter.On(
-		"IfCmdWithOutput",
-		"runner-command",
-		"cache-extractor",
-		"--file",
-		filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
-		"--timeout",
-		"10",
-		"--url",
-		fmt.Sprintf("test://download/project/1000/%s", testCacheKey),
-	).Once()
-	mockWriter.On("Noticef", "Successfully extracted cache").Once()
-	mockWriter.On("Else").Once()
-	mockWriter.On("Warningf", "Failed to extract cache").Once()
-	mockWriter.On("Noticef", "Checking cache for %s...", testFallbackCacheKey).Once()
-	mockWriter.On(
-		"IfCmdWithOutput",
-		"runner-command",
-		"cache-extractor",
-		"--file",
-		filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
-		"--timeout",
-		"10",
-		"--url",
-		fmt.Sprintf("test://download/project/1000/%s", testFallbackCacheKey),
-	).Once()
-	mockWriter.On("Noticef", "Successfully extracted cache").Once()
-	mockWriter.On("Else").Once()
-	mockWriter.On("Warningf", "Failed to extract cache").Once()
-	mockWriter.On("EndIf").Once()
-	mockWriter.On("EndIf").Once()
-	mockWriter.On("Else").Once()
-	mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
-	mockWriter.On("EndIf").Once()
-
-	err := shell.cacheExtractor(mockWriter, info)
-	assert.NoError(t, err)
 }
 
 func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
