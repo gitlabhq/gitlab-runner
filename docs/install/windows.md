@@ -388,3 +388,16 @@ To use services with Windows containers:
 
 - Use the networking mode that [creates a network for each job](../executors/docker.md#create-a-network-for-each-job).
 - Ensure that the `FF_NETWORK_PER_BUILD` feature flag is enabled.
+
+### The job cannot create a build directory and fails with an error
+
+When you use the `GitLab-Runner` with the `Docker-Windows` executor, a job might fail with an error like:
+
+```shell
+fatal: cannot chdir to c:/builds/gitlab/test: Permission denied`
+```
+
+When this error occurs, ensure the user the Docker engine is running as has full permissions to `C:\Program Data\Docker`.
+The Docker engine must be able to write to this directory for certain actions, and without the correct permissions it will fail.
+
+[Read more about configuring Docker Engine on Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon).
