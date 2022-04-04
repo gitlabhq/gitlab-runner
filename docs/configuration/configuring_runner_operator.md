@@ -114,6 +114,30 @@ To create a proxy environment:
      env: custom-env
    ```
 
+If the proxy can't reach the Kubernetes API, you might see an error in your CI/CD job:
+
+```shell
+ERROR: Job failed (system failure): prepare environment: setting up credentials: Post https://172.21.0.1:443/api/v1/namespaces/<KUBERNETES_NAMESPACE>/secrets: net/http: TLS handshake timeout. Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information
+```
+
+To resolve this error, add the IP address of the Kubernetes API to `NO_PROXY` configuration in the `custom-env.yaml` file:
+
+```yaml
+   apiVersion: v1
+   data:
+     NO_PROXY: 172.21.0.1
+     HTTP_PROXY: example.com
+   kind: ConfigMap
+   metadata:
+     name: custom-env
+```
+
+You can verify the IP address of the Kubernetes API by running:
+
+```shell
+oc get services --namespace default --field-selector='metadata.name=kubernetes' | grep -v NAME | awk '{print $3}'
+```
+
 ## Customize `config.toml` with a configuration template
 
 You can customize the runner's `config.toml` file by using the [configuration template](../register/index.md#runners-configuration-template-file).
