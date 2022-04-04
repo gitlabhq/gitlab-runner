@@ -336,7 +336,7 @@ concurrent = 4
 
 ## Using the cache with the Kubernetes executor
 
-When the cache is used with the Kubernetes executor, a specific volume called `/cache` is mounted on the pod. 
+When the cache is used with the Kubernetes executor, a specific volume called `/cache` is mounted on the pod.
 The cache volume can be configured in the `config.toml` file by using the `cache_dir` setting.
 
 During the job's execution, if the cached data is needed, the runner checks to see if cached data is available (if a compressed file is available on the cache volume).
@@ -1245,6 +1245,35 @@ Error cleaning up pod: etcdserver: request timed out, possibly due to previous l
 Error cleaning up pod: etcdserver: request timed out
 Error cleaning up pod: context deadline exceeded
 ```
+
+### Connection refused when attempting to communicate with the Kubernetes API
+
+When GitLab Runner makes a request to the Kubernetes API and it fails,
+it is likely because
+[`kube-apiserver`](https://kubernetes.io/docs/concepts/overview/components/#kube-apiserver)
+is overloaded and can't accept or process API requests.
+
+### `Error cleaning up pod` and `Job failed (system failure): prepare environment: waiting for pod running`
+
+The following errors occur when Kubernetes fails to schedule the job pod in a timely manner.
+GitLab Runner waits for the pod to be ready, but it fails and then tries to clean up the pod, which can also fail.
+
+```plaintext
+Error: Error cleaning up pod: Delete "https://xx.xx.xx.x:443/api/v1/namespaces/gitlab-runner/runner-0001": dial tcp xx.xx.xx.x:443 connect: connection refused
+
+Error: Job failed (system failure): prepare environment: waiting for pod running: Get "https://xx.xx.xx.x:443/api/v1/namespaces/gitlab-runner/runner-0001": dial tcp xx.xx.xx.x:443 connect: connection refused
+```
+
+To troubleshoot, check the Kubernetes primary node and all nodes that run a
+[`kube-apiserver`](https://kubernetes.io/docs/concepts/overview/components/#kube-apiserver)
+instance. Ensure they have all of the resources needed to manage the target number
+of pods that you hope to scale up to on the cluster.
+
+To change the time GitLab Runner waits for a pod to reach its `Ready` status, use the
+[`poll_timeout`](#other-configtoml-settings) setting.
+
+To better understand how pods are scheduled or why they might not get scheduled
+on time, [read about the Kubernetes Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/). 
 
 ### `request did not complete within requested timeout`
 
