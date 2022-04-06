@@ -16,7 +16,7 @@ the [compatibility section](https://docs.gitlab.com/runner/#compatibility-with-g
 
 ## Release process
 
-The description of release process of GitLab Runner project can be found in the [release documentation](docs/release_process/README.md).
+The description of release process of GitLab Runner project can be found inside of [`PROCESS.md`](PROCESS.md).
 
 ## Contributing
 
