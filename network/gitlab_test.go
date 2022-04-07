@@ -1580,6 +1580,55 @@ func TestArtifactsUpload(t *testing.T) {
 	assert.Equal(t, "new-location", location)
 }
 
+func checkTestArtifactsDownloadHandlerContent(w http.ResponseWriter, token string) {
+	cases := map[string]struct {
+		statusCode  int
+		body        string
+		contentType string
+	}{
+		"token": {
+			statusCode:  http.StatusOK,
+			body:        "Artifact: direct_download=false",
+			contentType: "text/plain",
+		},
+		"object-storage-forbidden": {
+			statusCode: http.StatusForbidden,
+			body: `<?xml version="1.0" encoding="UTF-8"?>
+<Error>
+<Code>SecurityPolicyViolated</Code>
+<Message>Request violates VPC Service Controls</Message>
+</Error>`,
+			contentType: "application/xml",
+		},
+		"object-storage-forbidden-json": {
+			statusCode:  http.StatusForbidden,
+			body:        `{"message": "not allowed"}`,
+			contentType: "application/json",
+		},
+		"object-storage-bad-xml": {
+			statusCode:  http.StatusForbidden,
+			body:        "This is not XML",
+			contentType: "application/xml",
+		},
+		"object-storage-no-code-in-xml": {
+			statusCode: http.StatusForbidden,
+			body: `<?xml version="1.0" encoding="UTF-8"?>
+<Test>Hello</Test>`,
+			contentType: "text/xml",
+		},
+	}
+
+	testCase, ok := cases[token]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", testCase.contentType)
+	w.WriteHeader(testCase.statusCode)
+	_, _ = w.Write([]byte(testCase.body))
+}
+
 func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/direct-download" {
 		w.WriteHeader(http.StatusOK)
@@ -1597,7 +1646,8 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("JOB-TOKEN") != "token" {
+	token := r.Header.Get("JOB-TOKEN")
+	if token == "invalid-token" {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -1619,11 +1669,9 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if directDownload {
 		w.Header().Set("Location", "/direct-download")
 		w.WriteHeader(http.StatusTemporaryRedirect)
-		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(bytes.NewBufferString("Artifact: direct_download=false").Bytes())
+	checkTestArtifactsDownloadHandlerContent(w, token)
 }
 
 type nopWriteCloser struct {
@@ -1661,6 +1709,26 @@ func TestArtifactsDownload(t *testing.T) {
 		URL:   s.URL,
 		Token: "token",
 	}
+	objectStorageForbiddenCredentials := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "object-storage-forbidden",
+	}
+	objectStorageForbiddenJSONCredentials := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "object-storage-forbidden-json",
+	}
+	objectStorageForbiddenBadXMLCredentials := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "object-storage-bad-xml",
+	}
+	objectStorageForbiddenNoCodeInXMLCredentials := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "object-storage-no-code-in-xml",
+	}
 
 	trueValue := true
 	falseValue := false
@@ -1697,6 +1765,26 @@ func TestArtifactsDownload(t *testing.T) {
 			credentials:    fileNotFoundTokenCredentials,
 			directDownload: &trueValue,
 			expectedState:  DownloadNotFound,
+		},
+		"forbidden should be generated for object storage forbidden error": {
+			credentials:    objectStorageForbiddenCredentials,
+			directDownload: &falseValue,
+			expectedState:  DownloadForbidden,
+		},
+		"forbidden should be generated for object storage forbidden with bad JSON error": {
+			credentials:    objectStorageForbiddenJSONCredentials,
+			directDownload: &falseValue,
+			expectedState:  DownloadForbidden,
+		},
+		"forbidden should be generated for object storage forbidden with bad XML error": {
+			credentials:    objectStorageForbiddenBadXMLCredentials,
+			directDownload: &falseValue,
+			expectedState:  DownloadForbidden,
+		},
+		"forbidden should be generated for object storage forbidden with no error code in XML": {
+			credentials:    objectStorageForbiddenNoCodeInXMLCredentials,
+			directDownload: &falseValue,
+			expectedState:  DownloadForbidden,
 		},
 	}
 

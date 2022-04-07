@@ -782,7 +782,12 @@ func (n *GitLabClient) DownloadArtifacts(
 	case http.StatusOK:
 		return n.downloadArtifactFile(log, artifactsFile, res)
 	case http.StatusForbidden:
-		log.WithField("status", res.Status).Errorln("Downloading artifacts from coordinator...", "forbidden")
+		// We generally expect JSON responses from the GitLab API, but a
+		// 302 redirection to object storage may result in an XML
+		// response that might include important details why the request
+		// was rejected (e.g. Google VPC Service Controls).
+		statusText := getMessageFromJSONOrXMLResponse(res)
+		log.WithField("status", statusText).Errorln("Downloading artifacts from coordinator...", "forbidden")
 		return common.DownloadForbidden
 	case http.StatusNotFound:
 		log.Errorln("Downloading artifacts from coordinator...", "not found")
