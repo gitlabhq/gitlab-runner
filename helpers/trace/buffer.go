@@ -29,6 +29,21 @@ type Buffer struct {
 
 	logFile  *os.File
 	checksum hash.Hash32
+
+	opts options
+}
+
+type options struct {
+	urlParamMasking bool
+}
+
+type Option func(*options) error
+
+func WithURLParamMasking(enabled bool) Option {
+	return func(o *options) error {
+		o.urlParamMasking = enabled
+		return nil
+	}
 }
 
 type inverseLengthSort []string
@@ -54,9 +69,11 @@ func (b *Buffer) SetMasked(values []string) {
 		b.w.Close()
 	}
 
-	defaultTransformers := []transform.Transformer{
-		encoding.Replacement.NewEncoder(),
+	var defaultTransformers []transform.Transformer
+	if b.opts.urlParamMasking {
+		defaultTransformers = append(defaultTransformers, newSensitiveURLParamTransform())
 	}
+	defaultTransformers = append(defaultTransformers, encoding.Replacement.NewEncoder())
 
 	transformers := make([]transform.Transformer, 0, len(values)+len(defaultTransformers))
 
@@ -199,15 +216,27 @@ func (w *limitWriter) writeLimitExceededMessage() {
 	w.written += int64(n)
 }
 
-func New() (*Buffer, error) {
+func New(opts ...Option) (*Buffer, error) {
 	logFile, err := newLogFile()
 	if err != nil {
 		return nil, err
 	}
 
+	options := options{
+		urlParamMasking: true,
+	}
+
+	for _, o := range opts {
+		err := o(&options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	buffer := &Buffer{
 		logFile:  logFile,
 		checksum: crc32.NewIEEE(),
+		opts:     options,
 	}
 
 	buffer.lw = &limitWriter{

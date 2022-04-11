@@ -56,6 +56,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_ENABLE_JOB_CLEANUP` | `false` | **{dotted-circle}** No |  | When enabled, the project directory will be cleaned up at the end of the build. If `GIT_CLONE` is used, the whole project directory will be deleted. If `GIT_FETCH` is used, a series of Git `clean` commands will be issued. |
 | `FF_KUBERNETES_HONOR_ENTRYPOINT` | `false` | **{dotted-circle}** No |  | When enabled, the Docker entrypoint of an image will be honored if `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is not set to true |
 | `FF_POSIXLY_CORRECT_ESCAPES` | `false` | **{dotted-circle}** No |  | When enabled, [POSIX shell escapes](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02) are used rather than [`bash`-style ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html). This should be enabled if the job environment uses a POSIX-compliant shell. |
+| `FF_USE_IMPROVED_URL_MASKING` | `false` | **{dotted-circle}** No |  | When enabled, any sensitive URL parameters are masked no matter where they appear in the trace log output. When this is disabled, sensitive URL parameters are only masked in select places and can [occasionally be revealed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4625). This feature flag can only be configured via Runner's config and not from a job. |
 
 <!-- feature_flags_list_end -->
 

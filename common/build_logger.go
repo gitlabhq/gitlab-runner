@@ -16,6 +16,10 @@ type BuildLogger struct {
 	entry *logrus.Entry
 }
 
+type jobTraceIsMaskingURLParams interface {
+	IsMaskingURLParams() bool
+}
+
 func NewBuildLogger(log JobTrace, entry *logrus.Entry) BuildLogger {
 	return BuildLogger{
 		log:   log,
@@ -43,7 +47,10 @@ func (e *BuildLogger) sendLog(logger func(args ...interface{}), logPrefix string
 		// (fmt.Sprintln consistently adds a space between arguments).
 		logLine := fmt.Sprintln(args...)
 		logLine = logLine[:len(logLine)-1]
-		logLine = url_helpers.ScrubSecrets(logLine)
+
+		if trace, ok := e.log.(jobTraceIsMaskingURLParams); !ok || !trace.IsMaskingURLParams() {
+			logLine = url_helpers.ScrubSecrets(logLine)
+		}
 		logLine += helpers.ANSI_RESET + "\n"
 
 		e.SendRawLog(logPrefix + logLine)
