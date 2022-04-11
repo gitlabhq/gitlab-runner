@@ -34,6 +34,7 @@ func TestArtifactsDownloader(t *testing.T) {
 	testCases := map[string]struct {
 		downloadState                common.DownloadState
 		directDownload               bool
+		stagingDir                   string
 		expectedSuccess              bool
 		expectedDownloadCalled       int
 		expectedDirectDownloadCalled int
@@ -74,6 +75,10 @@ func TestArtifactsDownloader(t *testing.T) {
 			expectedDirectDownloadCalled: 1,
 			expectedDownloadCalled:       1,
 		},
+		"setting invalid staging directory": {
+			downloadState: common.DownloadSucceeded,
+			stagingDir:    "/dev/null",
+		},
 	}
 
 	removeHook := helpers.MakeFatalToPanic()
@@ -95,6 +100,7 @@ func TestArtifactsDownloader(t *testing.T) {
 					retryHelper: retryHelper{
 						Retry: 2,
 					},
+					StagingDir: testCase.stagingDir,
 				}
 
 				// file is cleaned after running test
