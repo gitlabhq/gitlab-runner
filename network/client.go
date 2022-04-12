@@ -31,7 +31,8 @@ import (
 )
 
 const jsonMimeType = "application/json"
-const xmlMimeType = "text/xml"
+const applicationXMLMimeType = "application/xml"
+const textXMLMimeType = "text/xml"
 
 type requestCredentials interface {
 	GetURL() string
@@ -387,7 +388,7 @@ func getMessageFromJSONResponse(res *http.Response) string {
 	}
 
 	if isApplicationJSON, _ := isResponseApplicationJSON(res); isApplicationJSON {
-		errMsg := decodeJSONResponse(res)
+		errMsg, _ := decodeJSONResponse(res)
 
 		if errMsg != "" {
 			return errMsg
@@ -408,24 +409,24 @@ func getMimeAndContentType(res *http.Response) (mimeType, contentType string, e 
 	return mimeType, contentType, nil
 }
 
-func decodeJSONResponse(res *http.Response) string {
+func decodeJSONResponse(res *http.Response) (string, error) {
 	errResp := ErrorResponse{Response: res}
 	err := json.NewDecoder(res.Body).Decode(&errResp)
 	if err == nil {
-		return errResp.Error()
+		return errResp.Error(), nil
 	}
 
-	return ""
+	return "", err
 }
 
-func decodeXMLResponse(res *http.Response) string {
+func decodeXMLResponse(res *http.Response) (string, error) {
 	xmlResp := XMLErrorResponse{Response: res}
 	err := xml.NewDecoder(res.Body).Decode(&xmlResp)
 	if err == nil {
-		return xmlResp.Error()
+		return xmlResp.Error(), nil
 	}
 
-	return ""
+	return "", err
 }
 
 func getMessageFromJSONOrXMLResponse(res *http.Response) string {
@@ -438,17 +439,20 @@ func getMessageFromJSONOrXMLResponse(res *http.Response) string {
 		return res.Status
 	}
 
+	var decodeErr error
 	var errMsg string
 
 	switch mimeType {
 	case jsonMimeType:
-		errMsg = decodeJSONResponse(res)
-	case xmlMimeType:
-		errMsg = decodeXMLResponse(res)
+		errMsg, decodeErr = decodeJSONResponse(res)
+	case applicationXMLMimeType, textXMLMimeType:
+		errMsg, decodeErr = decodeXMLResponse(res)
 	}
 
 	if errMsg != "" {
 		return errMsg
+	} else if decodeErr != nil {
+		return fmt.Sprintf("%s (%s decode error: %v)", res.Status, mimeType, decodeErr)
 	}
 
 	return res.Status
