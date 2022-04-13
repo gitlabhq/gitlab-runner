@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -26,9 +27,12 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls/ca_chain"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 const jsonMimeType = "application/json"
+const applicationXMLMimeType = "application/xml"
+const textXMLMimeType = "text/xml"
 
 type requestCredentials interface {
 	GetURL() string
@@ -261,11 +265,27 @@ type ErrorResponse struct {
 	Message  ErrorResponseMessage `json:"message"`
 }
 
+// XMLErrorResponse is an error type that is returned when there is an issue
+// from an object storage provider that returns XML. It contains the
+// http.Response responsible for the error and the error payload provided by
+// the server.
+//
+// Google: https://cloud.google.com/storage/docs/xml-api/reference-status
+// Amazon: https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html
+// Azure: https://docs.microsoft.com/en-us/rest/api/storageservices/status-and-error-codes2
+type XMLErrorResponse struct {
+	Response *http.Response `xml:"-"`
+	XMLName  xml.Name       `xml:"Error"`
+	Code     string         `xml:"Code"`
+	Message  string         `xml:"Message"`
+}
+
 type ErrorResponseMessage string
 
 func (r *ErrorResponse) Error() string {
 	statusCodeMsg := fmt.Sprintf("%d %s", r.Response.StatusCode, http.StatusText(r.Response.StatusCode))
-	errMessage := fmt.Sprintf("%v %v: %s", r.Response.Request.Method, r.Response.Request.URL, statusCodeMsg)
+	reqURL := url_helpers.CleanURL(r.Response.Request.URL.String())
+	errMessage := fmt.Sprintf("%v %s: %s", r.Response.Request.Method, reqURL, statusCodeMsg)
 
 	if string(r.Message) == statusCodeMsg {
 		// If the message returned by the server is the status text, then don't repeat it in the message
@@ -273,6 +293,16 @@ func (r *ErrorResponse) Error() string {
 	}
 
 	return fmt.Sprintf("%s (%s)", errMessage, r.Message)
+}
+
+func (r *XMLErrorResponse) Error() string {
+	statusCodeMsg := fmt.Sprintf("%d %s", r.Response.StatusCode, http.StatusText(r.Response.StatusCode))
+
+	if r.Code == "" {
+		return statusCodeMsg
+	}
+
+	return fmt.Sprintf("%s (%s: %s)", statusCodeMsg, r.Code, r.Message)
 }
 
 func (e *ErrorResponseMessage) UnmarshalJSON(data []byte) error {
@@ -358,11 +388,71 @@ func getMessageFromJSONResponse(res *http.Response) string {
 	}
 
 	if isApplicationJSON, _ := isResponseApplicationJSON(res); isApplicationJSON {
-		errResp := ErrorResponse{Response: res}
-		err := json.NewDecoder(res.Body).Decode(&errResp)
-		if err == nil && len(errResp.Error()) > 0 {
-			return errResp.Error()
+		errMsg, _ := decodeJSONResponse(res)
+
+		if errMsg != "" {
+			return errMsg
 		}
+	}
+
+	return res.Status
+}
+
+func getMimeAndContentType(res *http.Response) (mimeType, contentType string, e error) {
+	contentType = res.Header.Get("Content-Type")
+
+	mimeType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return "", contentType, fmt.Errorf("parsing Content-Type: %w", err)
+	}
+
+	return mimeType, contentType, nil
+}
+
+func decodeJSONResponse(res *http.Response) (string, error) {
+	errResp := ErrorResponse{Response: res}
+	err := json.NewDecoder(res.Body).Decode(&errResp)
+	if err == nil {
+		return errResp.Error(), nil
+	}
+
+	return "", err
+}
+
+func decodeXMLResponse(res *http.Response) (string, error) {
+	xmlResp := XMLErrorResponse{Response: res}
+	err := xml.NewDecoder(res.Body).Decode(&xmlResp)
+	if err == nil {
+		return xmlResp.Error(), nil
+	}
+
+	return "", err
+}
+
+func getMessageFromJSONOrXMLResponse(res *http.Response) string {
+	if res.StatusCode >= 200 && res.StatusCode <= 299 {
+		return res.Status
+	}
+
+	mimeType, _, err := getMimeAndContentType(res)
+	if err != nil {
+		return res.Status
+	}
+
+	var decodeErr error
+	var errMsg string
+
+	switch mimeType {
+	case jsonMimeType:
+		errMsg, decodeErr = decodeJSONResponse(res)
+	case applicationXMLMimeType, textXMLMimeType:
+		errMsg, decodeErr = decodeXMLResponse(res)
+	}
+
+	if errMsg != "" {
+		return errMsg
+	} else if decodeErr != nil {
+		return fmt.Sprintf("%s (%s decode error: %v)", res.Status, mimeType, decodeErr)
 	}
 
 	return res.Status
@@ -403,11 +493,9 @@ func (n *client) buildCAChain(tls *tls.ConnectionState) (string, error) {
 }
 
 func isResponseApplicationJSON(res *http.Response) (result bool, err error) {
-	contentType := res.Header.Get("Content-Type")
-
-	mimeType, _, err := mime.ParseMediaType(contentType)
+	mimeType, contentType, err := getMimeAndContentType(res)
 	if err != nil {
-		return false, fmt.Errorf("parsing Content-Type: %w", err)
+		return false, err
 	}
 
 	if mimeType != jsonMimeType {
