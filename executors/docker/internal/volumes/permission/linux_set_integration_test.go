@@ -70,7 +70,7 @@ func TestDockerLinuxSetter(t *testing.T) {
 }
 
 func setupTestDockerLinuxSetter(t *testing.T) (string, permission.Setter, docker.Client, func()) {
-	client, err := docker.New(docker.Credentials{}, "")
+	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err, "creating docker client")
 
 	const helperImageRef = "gitlab/gitlab-runner-helper:x86_64-4c96e5ad"

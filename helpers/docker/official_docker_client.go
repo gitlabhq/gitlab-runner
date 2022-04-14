@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -20,9 +21,6 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
 )
-
-// The default API version used to create a new docker client.
-const DefaultAPIVersion = "1.25"
 
 // ErrRedirectNotAllowed is returned when we get a 3xx request from the Docker
 // client to prevent any redirections to malicious docker clients.
@@ -47,7 +45,7 @@ type officialDockerClient struct {
 	Transport *http.Transport
 }
 
-func newOfficialDockerClient(c Credentials, apiVersion string) (*officialDockerClient, error) {
+func newOfficialDockerClient(c Credentials) (*officialDockerClient, error) {
 	transport, err := newHTTPTransport(c)
 	if err != nil {
 		logrus.Errorln("Error creating TLS Docker client:", err)
@@ -60,11 +58,22 @@ func newOfficialDockerClient(c Credentials, apiVersion string) (*officialDockerC
 		},
 	}
 
-	dockerClient, err := client.NewClientWithOpts(
+	options := []client.Opt{
 		client.WithHost(c.Host),
-		client.WithVersion(apiVersion),
+		client.WithAPIVersionNegotiation(),
 		client.WithHTTPClient(httpClient),
-	)
+	}
+
+	// TODO: Newer versions of the docker client support `client.WithVersionFromEnv()` but this has not yet been
+	// released. When it is, we can directly use that option instead.
+	// https://github.com/moby/moby/blob/eae20b1a1bce8ba699a8458a527f444df366d4c1/client/options.go#L191-L198
+	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28984
+	if version := os.Getenv("DOCKER_API_VERSION"); version != "" {
+		options = append(options, client.WithVersion(version))
+	}
+
+	dockerClient, err := client.NewClientWithOpts(options...)
+
 	if err != nil {
 		transport.CloseIdleConnections()
 		logrus.Errorln("Error creating Docker client:", err)
@@ -89,6 +98,10 @@ func wrapError(method string, err error, started time.Time) error {
 	}
 
 	return fmt.Errorf("%w (%s:%ds)", err, method, seconds)
+}
+
+func (c *officialDockerClient) ClientVersion() string {
+	return c.client.ClientVersion()
 }
 
 func (c *officialDockerClient) ImageInspectWithRaw(
@@ -317,7 +330,7 @@ func (c *officialDockerClient) Close() error {
 // If no host is given in the Credentials, it will attempt to look up
 // details from the environment. If that fails, it will use the default
 // connection details for your platform.
-func New(c Credentials, apiVersion string) (Client, error) {
+func New(c Credentials) (Client, error) {
 	if c.Host == "" {
 		c = credentialsFromEnv()
 	}
@@ -327,11 +340,7 @@ func New(c Credentials, apiVersion string) (Client, error) {
 		c.Host = client.DefaultDockerHost
 	}
 
-	if apiVersion == "" {
-		apiVersion = DefaultAPIVersion
-	}
-
-	return newOfficialDockerClient(c, apiVersion)
+	return newOfficialDockerClient(c)
 }
 
 func newHTTPTransport(c Credentials) (*http.Transport, error) {

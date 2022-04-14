@@ -27,7 +27,7 @@ func testCreateVolumesLabels(t *testing.T, p parser.Parser) {
 	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
 
-	client, err := docker.New(docker.Credentials{}, "")
+	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err, "should be able to connect to docker")
 	defer client.Close()
 

@@ -27,7 +27,7 @@ func TestCreateNetworkLabels(t *testing.T) {
 	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
 	require.NoError(t, err)
 
-	client, err := docker.New(docker.Credentials{}, "")
+	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err, "should be able to connect to docker")
 	defer client.Close()
 

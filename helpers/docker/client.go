@@ -12,6 +12,8 @@ import (
 )
 
 type Client interface {
+	ClientVersion() string
+
 	ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error)
 
 	ImagePullBlocking(ctx context.Context, ref string, options types.ImagePullOptions) error

@@ -212,7 +212,7 @@ func windowsDockerImageTag(operatingSystem string) (string, error) {
 
 func getWindowsImage(t *testing.T) string {
 	getWindowsImageOnce.Do(func() {
-		client, err := docker.New(docker.Credentials{}, "")
+		client, err := docker.New(docker.Credentials{})
 		require.NoError(t, err, "creating docker client")
 		defer client.Close()
 
@@ -530,7 +530,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 }
 
 func isDockerOlderThan17_07(t *testing.T) bool {
-	client, err := docker.New(docker.Credentials{}, "")
+	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err, "should be able to connect to docker")
 
 	types, err := client.Info(context.Background())
@@ -1185,7 +1185,7 @@ func getDockerCredentials(id string) (credentials docker.Credentials, err error)
 }
 
 func waitForDocker(credentials docker.Credentials) error {
-	client, err := docker.New(credentials, "")
+	client, err := docker.New(credentials)
 	if err != nil {
 		return err
 	}
@@ -1540,7 +1540,7 @@ func removeBuildContainer(t *testing.T) <-chan string {
 	removedContainer := make(chan string, 1)
 	defer close(removedContainer)
 
-	client, err := docker.New(docker.Credentials{}, "")
+	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err, "creating docker client")
 	defer client.Close()
 
@@ -1593,7 +1593,7 @@ func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
 	const volumeBind = "/test"
 	const helperImage = "gitlab/gitlab-runner-helper:x86_64-4c96e5ad"
 
-	client, err := docker.New(docker.Credentials{}, "")
+	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err, "creating docker client")
 
 	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
