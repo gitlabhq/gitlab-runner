@@ -24,7 +24,8 @@ type ArtifactsDownloaderCommand struct {
 	network common.Network
 	meter.TransferMeterCommand
 
-	DirectDownload bool `long:"direct-download" env:"FF_USE_DIRECT_DOWNLOAD" description:"Support direct download for data stored externally to GitLab"`
+	DirectDownload bool   `long:"direct-download" env:"FF_USE_DIRECT_DOWNLOAD" description:"Support direct download for data stored externally to GitLab"`
+	StagingDir     string `long:"archiver-staging-dir" env:"ARCHIVER_STAGING_DIR" description:"Directory to stage artifact archives"`
 }
 
 func (c *ArtifactsDownloaderCommand) directDownloadFlag(retry int) *bool {
@@ -92,7 +93,7 @@ func (c *ArtifactsDownloaderCommand) Execute(cliContext *cli.Context) {
 	}
 
 	// Create temporary file
-	file, err := ioutil.TempFile("", "artifacts")
+	file, err := ioutil.TempFile(c.StagingDir, "artifacts")
 	if err != nil {
 		logrus.Fatalln(err)
 	}
