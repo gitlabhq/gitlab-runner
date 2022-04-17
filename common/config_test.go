@@ -239,6 +239,56 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "image", config.Runners[0].Docker.Image)
 			},
 		},
+		"parse Docker Container Labels with string key and value": {
+			config: `
+                        [[runners]]
+                                [runners.docker]
+                                        image = "image"
+                                        [runners.docker.container_labels]
+                                                "my.docker.TestContainerlabel1" = "TestContainerlabel-1"
+                `,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Equal(t, 1, len(config.Runners))
+
+				runner := config.Runners[0]
+				require.NotNil(t, runner.RunnerSettings.Docker.ContainerLabels)
+				require.NotNil(t, runner.RunnerSettings.Docker.ContainerLabels["my.docker.TestContainerlabel1"])
+				require.Equal(
+					t,
+					"TestContainerlabel-1",
+					runner.RunnerSettings.Docker.ContainerLabels["my.docker.TestContainerlabel1"],
+				)
+			},
+		},
+		"parse Docker Container Labels with integer key and value": {
+			config: `
+                        [[runners]]
+                                [runners.docker]
+                                        image = "image"
+                                        [runners.docker.container_labels]
+                                                5 = 5
+                `,
+			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
+		},
+		"parse Docker Container Labels with integer value": {
+			config: `
+                        [[runners]]
+                                [runners.docker]
+                                        image = "image"
+                                        [runners.docker.container_labels]
+                                                "my.docker.TestContainerlabel1" = 5
+                `,
+			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
+		},
+		"parse Docker Container Labels with integer key": {
+			config: `
+                        [[runners]]
+                                [runners.docker]
+                                        image = "image"
+                                        [runners.docker.container_labels]
+                                                5 = "TestContainerlabel-1"
+                `,
+		},
 		//nolint:lll
 		"check node affinities": {
 			config: `

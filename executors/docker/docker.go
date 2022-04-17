@@ -677,11 +677,12 @@ func (e *executor) createContainerConfig(
 	hostname string,
 	cmd []string,
 ) *container.Config {
+	labels := e.prepareContainerLabels(map[string]string{"type": containerType})
 	config := &container.Config{
 		Image:        imageID,
 		Hostname:     hostname,
 		Cmd:          cmd,
-		Labels:       e.labeler.Labels(map[string]string{"type": containerType}),
+		Labels:       labels,
 		Tty:          false,
 		AttachStdin:  true,
 		AttachStdout: true,
@@ -1325,4 +1326,14 @@ func (e *executor) readContainerLogs(containerID string) string {
 
 	_, _ = stdcopy.StdCopy(w, w, hijacked)
 	return strings.TrimSpace(buf.String())
+}
+
+func (e *executor) prepareContainerLabels(otherLabels map[string]string) map[string]string {
+	l := e.labeler.Labels(otherLabels)
+
+	for k, v := range e.Config.Docker.ContainerLabels {
+		l[k] = e.Build.Variables.ExpandValue(v)
+	}
+
+	return l
 }

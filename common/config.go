@@ -156,6 +156,7 @@ type DockerConfig struct {
 	SysCtls                    DockerSysCtls     `toml:"sysctls,omitempty" json:"sysctls" long:"sysctls" env:"DOCKER_SYSCTLS" description:"Sysctl options, a toml table/json object of key=value. Value is expected to be a string."`
 	HelperImage                string            `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"DOCKER_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 	HelperImageFlavor          string            `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"DOCKER_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
+	ContainerLabels            map[string]string `toml:"container_labels,omitempty" json:"container_labels" long:"container-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create containers with the given container labels. Environment variables will be substituted for values here."`
 }
 
 //nolint:lll
