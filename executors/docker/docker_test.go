@@ -1058,6 +1058,33 @@ func TestDockerCPUSetCPUsSetting(t *testing.T) {
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
+func TestDockerContainerLabelsSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		ContainerLabels: map[string]string{"my.custom.label": "my.custom.value"},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		expected := map[string]string{
+			"com.gitlab.gitlab-runner.job.before_sha":  "",
+			"com.gitlab.gitlab-runner.job.id":          "0",
+			"com.gitlab.gitlab-runner.job.ref":         "",
+			"com.gitlab.gitlab-runner.job.sha":         "",
+			"com.gitlab.gitlab-runner.job.url":         "/-/jobs/0",
+			"com.gitlab.gitlab-runner.managed":         "true",
+			"com.gitlab.gitlab-runner.pipeline.id":     "",
+			"com.gitlab.gitlab-runner.project.id":      "0",
+			"com.gitlab.gitlab-runner.runner.id":       "",
+			"com.gitlab.gitlab-runner.runner.local_id": "0",
+			"com.gitlab.gitlab-runner.type":            "build",
+			"my.custom.label":                          "my.custom.value",
+		}
+
+		assert.Equal(t, expected, config.Labels)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
 func TestDockerServicesTmpfsSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		ServicesTmpfs: map[string]string{
