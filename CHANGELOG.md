@@ -1,3 +1,40 @@
+## v14.10.0 (2022-04-19)
+
+### Bug fixes
+
+- add tip for windows docker permissions !3397
+- Add newline between the command and the output when collapsible section is enabled !3389 (Thomas Chandelle @tchandelle)
+- Increase token short length if it includes prefix !3373
+
+### Maintenance
+
+- Update lint-markdown image for docs !3408
+- Remove explicit mention of t4g.nano !3405
+- Log object storage forbidden errors during artifact downloads !3400
+- Change release milestone for k8s operator - docs !3395
+- Link macOS install docs to config docs !3392
+- Add runnerImage property to OpenShift Operator docs !3385 (Em Karisch @QuingKhaos)
+- Artifacts download argument validation !3384
+- Added how to fix TLS handshake timeout error in a proxy environment !3383
+- Fix a typo in the cache uploading messaging !3382 (Lee Tickett @leetickett)
+- Add new troubleshooting step to the Kubernetes docs !3380
+- Change the docs review apps IP !3379
+- Debian 9 won't build / qemu now requires -F !3369 (Donny Davis @donnydavis)
+- Add support for docker client version negotiation !3322
+- docs: update region specific s3 endpoint urls !2975 (Casey Vockrodt @casey.vockrodt)
+- Add archiver staging directory option to runner helper !3403
+
+### GitLab Runner distribution
+
+- Add amazon/2 RPM distribution to the release list !3378
+
+### Documentation changes
+
+- Add Kubernetes operator installation and uninstallation docs and updated OpenShift docs !3388
+- Add runner registration related properties to OpenShift Operator !3386 (Em Karisch @QuingKhaos)
+- Support docker container custom labels !3304 (aylinsenadogan @aylinsenadogan)
+- Update release process link in readme !3319 (Théo DELCEY @theodelcey)
+
 ## v14.9.0 (2022-03-21)
 
 ### New features
