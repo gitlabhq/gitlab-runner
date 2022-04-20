@@ -59,13 +59,13 @@ GitLab Runner supports the following options:
     You can use the `openssl` client to download the GitLab instance's certificate to `/etc/gitlab-runner/certs`:
 
     ```shell
-    openssl s_client -showcerts -connect gitlab.example.com:443 < /dev/null 2>/dev/null | openssl x509 -outform PEM > /etc/gitlab-runner/certs/gitlab.example.com.crt
+    openssl s_client -showcerts -connect gitlab.example.com:443 -servername gitlab.example.com < /dev/null 2>/dev/null | openssl x509 -outform PEM > /etc/gitlab-runner/certs/gitlab.example.com.crt
     ```
 
     To verify that the file is correctly installed, you can use a tool like `openssl`. For example:
 
     ```shell
-    echo | openssl s_client -CAfile /etc/gitlab-runner/certs/gitlab.example.com.crt -connect gitlab.example.com:443
+    echo | openssl s_client -CAfile /etc/gitlab-runner/certs/gitlab.example.com.crt -connect gitlab.example.com:443 -servername gitlab.example.com
     ```
 
   - `~/.gitlab-runner/certs/gitlab.example.com.crt` on *nix systems when GitLab Runner is executed as non-root.
