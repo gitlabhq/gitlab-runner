@@ -5,13 +5,11 @@ package process_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -57,8 +55,7 @@ func newKillerWithLoggerAndCommand(
 func prepareTestBinary(t *testing.T) string {
 	t.Helper()
 
-	dir, err := ioutil.TempDir("", strings.ReplaceAll(t.Name(), "/", ""))
-	require.NoError(t, err)
+	dir := t.TempDir()
 	binaryPath := filepath.Join(dir, strconv.FormatInt(time.Now().UnixNano(), 10))
 
 	// Windows can only have executables ending with `.exe`
@@ -70,7 +67,7 @@ func prepareTestBinary(t *testing.T) string {
 	sleepCommandSource := filepath.Clean(filepath.Join(filepath.Dir(currentTestFile), "testdata", "sleep", "main.go"))
 
 	command := exec.Command("go", "build", "-o", binaryPath, sleepCommandSource)
-	err = command.Run()
+	err := command.Run()
 	require.NoError(t, err)
 
 	return binaryPath

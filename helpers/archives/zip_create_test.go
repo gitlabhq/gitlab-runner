@@ -81,8 +81,7 @@ func testInWorkDir(t *testing.T, testCase func(t *testing.T, fileName string)) {
 	assert.NoError(t, err)
 	defer func() { _ = os.Chdir(wd) }()
 
-	td, err := ioutil.TempDir("", "zip_create")
-	require.NoError(t, err)
+	td := t.TempDir()
 
 	err = os.Chdir(td)
 	assert.NoError(t, err)

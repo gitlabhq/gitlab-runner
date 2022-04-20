@@ -1806,13 +1806,12 @@ func TestArtifactsDownload(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			c := NewGitLabClient()
 
-			tempDir, err := ioutil.TempDir("", "artifacts")
-			require.NoError(t, err)
-			defer os.Remove(tempDir)
+			tempDir := t.TempDir()
 
 			artifactsFileName := filepath.Join(tempDir, "downloaded-artifact")
 			file, err := os.Create(artifactsFileName)
 			require.NoError(t, err)
+			defer file.Close()
 
 			buf := bufio.NewWriter(file)
 

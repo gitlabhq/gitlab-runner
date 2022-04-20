@@ -6,7 +6,6 @@ package ssh_test
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -24,11 +23,7 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	s, _ := ssh.NewStubServer(user, pass)
 	defer s.Stop()
 
-	tempDir, err := ioutil.TempDir("", "ssh-stub-server")
-	require.NoError(t, err)
-	defer func() {
-		os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	knownHostsFile := filepath.Join(tempDir, "known-hosts-file")
 	require.NoError(t, ioutil.WriteFile(
@@ -79,7 +74,7 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 			c.Config.DisableStrictHostKeyChecking = tc.disableHostChecking
 			c.Config.KnownHostsFile = tc.knownHostsFileLocation
 
-			err = c.Connect()
+			err := c.Connect()
 			defer c.Cleanup()
 
 			if tc.expectErr {

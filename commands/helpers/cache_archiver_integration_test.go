@@ -101,8 +101,7 @@ func TestCacheArchiverRemoteServer(t *testing.T) {
 }
 
 func TestCacheArchiverGoCloudRemoteServer(t *testing.T) {
-	mux, bucketDir, cleanup := setupGoCloudFileBucket(t, "testblob")
-	defer cleanup()
+	mux, bucketDir := setupGoCloudFileBucket(t, "testblob")
 
 	objectName := "path/to/cache.zip"
 
@@ -217,18 +216,14 @@ func (o *dirOpener) OpenBucketURL(_ context.Context, u *url.URL) (*blob.Bucket, 
 	return fileblob.OpenBucket(o.tmpDir, nil)
 }
 
-func setupGoCloudFileBucket(t *testing.T, scheme string) (m *blob.URLMux, bucketDir string, cleanup func()) {
-	tmpDir, err := ioutil.TempDir("", "test-bucket")
-	require.NoError(t, err)
+func setupGoCloudFileBucket(t *testing.T, scheme string) (m *blob.URLMux, bucketDir string) {
+	tmpDir := t.TempDir()
 
 	mux := new(blob.URLMux)
 	fake := &dirOpener{tmpDir: tmpDir}
 	mux.RegisterBucket(scheme, fake)
-	cleanup = func() {
-		os.RemoveAll(tmpDir)
-	}
 
-	return mux, tmpDir, cleanup
+	return mux, tmpDir
 }
 
 func goCloudObjectExists(t *testing.T, bucketDir string, objectName string) {

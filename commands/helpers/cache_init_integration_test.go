@@ -4,7 +4,6 @@
 package helpers_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,14 +29,10 @@ func newCacheInitTestApp() *cli.App {
 }
 
 func TestCacheInit(t *testing.T) {
-	// Specifically test a dir name with spaces.
-	dir, err := ioutil.TempDir("", "Test Cache Chmod")
-	require.NoError(t, err)
-
-	defer os.Remove(dir)
+	dir := t.TempDir()
 
 	// Make sure that the mode is not the expected 0777.
-	err = os.Chmod(dir, 0600)
+	err := os.Chmod(dir, 0600)
 	require.NoError(t, err)
 
 	// Start a new cli with the arguments for the command.

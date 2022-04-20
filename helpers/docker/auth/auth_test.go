@@ -370,10 +370,9 @@ func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) func(
 	oldHomeDirectory := HomeDirectory
 
 	if configFileContents != "" {
-		tempHomeDir, err := ioutil.TempDir("", "docker-auth-configs-test")
-		require.NoError(t, err)
+		tempHomeDir := t.TempDir()
 		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
-		err = ioutil.WriteFile(dockerConfigFile, []byte(configFileContents), 0600)
+		err := ioutil.WriteFile(dockerConfigFile, []byte(configFileContents), 0600)
 		require.NoError(t, err)
 		HomeDirectory = tempHomeDir
 	} else {
@@ -381,9 +380,6 @@ func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) func(
 	}
 
 	return func() {
-		if configFileContents != "" {
-			_ = os.RemoveAll(HomeDirectory)
-		}
 		HomeDirectory = oldHomeDirectory
 	}
 }
@@ -573,9 +569,7 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 			HomeDirectory = ""
 
 			if test.homeDirProvided {
-				dir, err := ioutil.TempDir("", "docker_config_test")
-				require.NoErrorf(t, err, "failed to create temp directory: %s", err)
-				defer os.RemoveAll(dir)
+				dir := t.TempDir()
 
 				HomeDirectory = dir
 				configDir := HomeDirectory

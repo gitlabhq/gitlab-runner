@@ -56,9 +56,7 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
 func TestMkDir(t *testing.T) {
 	const TestPath = "test-path"
 
-	tmpDir, err := ioutil.TempDir("", "runner-test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
 		testTmpDir := writer.MkTmpDir(shell + "-mkdir-test")
@@ -77,13 +75,11 @@ func TestMkDir(t *testing.T) {
 func TestRmFile(t *testing.T) {
 	const TestPath = "test-path"
 
-	tmpDir, err := ioutil.TempDir("", "runner-test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
 		tmpFile := path.Join(tmpDir, TestPath)
-		err = ioutil.WriteFile(tmpFile, []byte{}, 0600)
+		err := ioutil.WriteFile(tmpFile, []byte{}, 0600)
 		require.NoError(t, err)
 
 		writer.RmFile(TestPath)
@@ -101,9 +97,7 @@ func TestRmFile(t *testing.T) {
 func TestRmFilesRecursive(t *testing.T) {
 	const TestPath = "test-path"
 
-	tmpDir, err := ioutil.TempDir("", "runner-test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
 		if shell == "cmd" {
@@ -128,7 +122,7 @@ func TestRmFilesRecursive(t *testing.T) {
 		runShell(t, shell, tmpDir, writer)
 
 		for _, file := range tmpFiles {
-			_, err = os.Stat(file)
+			_, err := os.Stat(file)
 			require.True(t, os.IsNotExist(err), "tmpFile not deleted")
 		}
 	})
