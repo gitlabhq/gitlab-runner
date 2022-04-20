@@ -155,6 +155,10 @@ function Build-Image($tag)
     $dockerHubNamespace = DockerHub-Namespace
     $ecrPublicRegistry = ECR-Public-Registry
 
+    if ($windowsVersion -eq "21H1") {
+        $windowsVersion = "ltsc2022"
+    }
+
     Write-Information "Build image for x86_64_${env:WINDOWS_VERSION}"
 
     $dockerFile = "${imagesBasePath}_${windowsFlavor}"
