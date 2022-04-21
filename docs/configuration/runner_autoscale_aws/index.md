@@ -331,7 +331,7 @@ check_interval = 0
       "amazonec2-subnet-id=subnet-xxxxx",
       "amazonec2-use-private-address=true",
       "amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true",
-      "amazonec2-security-group=docker-machine-scaler",
+      "amazonec2-security-group=XXXX",
       "amazonec2-instance-type=m4.2xlarge",
     ]
     [[runners.machine.autoscaling]]
