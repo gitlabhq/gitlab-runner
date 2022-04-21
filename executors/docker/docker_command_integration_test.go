@@ -45,6 +45,7 @@ var windowsImage string
 
 var windowsDockerImageTagMappings = map[string]string{
 	windows.V20H2: "20H2",
+	windows.V21H1: "21H1",
 }
 
 func TestMain(m *testing.M) {

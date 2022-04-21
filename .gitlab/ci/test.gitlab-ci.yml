@@ -319,6 +319,11 @@ windows 20H2 integration tests:
   - .windows integration test
   - .windows20H2
 
+windows 21H1 integration tests:
+  extends:
+  - .windows integration test
+  - .windows21H1
+
 git 1.8.3.1:
   extends:
   - .rules:merge_request_pipelines:no_docs

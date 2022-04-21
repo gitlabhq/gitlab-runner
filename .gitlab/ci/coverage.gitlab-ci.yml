@@ -143,3 +143,11 @@ check windows 20H2 integration test failures:
   - .rules:default-branch-only:no_docs:always
   needs:
   - windows 20H2 integration tests
+
+check windows 21H1 integration test failures:
+  extends:
+  - .check windows test failures
+  - .windows21H1_variables
+  - .rules:default-branch-only:no_docs:always
+  needs:
+  - windows 21H1 integration tests

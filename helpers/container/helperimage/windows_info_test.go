@@ -114,7 +114,22 @@ func Test_windowsInfo_create(t *testing.T) {
 				},
 				expectedErr: nil,
 			},
-
+			{
+				operatingSystem: "Windows Server Datacenter Version 21h1 (OS Build 20348.587)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         DockerHubName,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage21H1,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
 			{
 				operatingSystem: "some random string",
 				expectedErr:     windows.NewUnsupportedWindowsVersionError("some random string"),

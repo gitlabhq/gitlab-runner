@@ -190,6 +190,16 @@ development servercore20H2 helper docker image:
     PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
+development servercore21H1 helper docker image:
+  extends:
+  - .windows21H1
+  - .release_windows_docker_images
+  - .rules:release:development:merge-requests
+  variables:
+    PUBLISH_IMAGES: "false"
+    PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+
 bleeding edge S3:
   extends:
   - .release_s3
@@ -256,6 +266,15 @@ bleeding edge servercore20H2 docker images:
   - .rules:release:bleeding-edge
   environment:
     name: bleeding_edge/docker_images/windows20H2
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge servercore21H1 docker images:
+  extends:
+  - .windows21H1
+  - .release_windows_docker_images
+  - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/docker_images/windows21H1
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable S3:
@@ -339,6 +358,16 @@ stable servercore20H2 docker images:
   - .stable_docker_images_base_variables_overwrite
   environment:
     name: stable/docker_images/windows20H2
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore21H1 docker images:
+  extends:
+  - .windows21H1
+  - .release_windows_docker_images
+  - .rules:release:stable:branch
+  - .stable_docker_images_base_variables_overwrite
+  environment:
+    name: stable/docker_images/windows21H1
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
 stable gitlab release:

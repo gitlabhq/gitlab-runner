@@ -13,6 +13,8 @@ const (
 	V2004 = "2004"
 	// V20H2 is the Windows version that is 2009 sac.
 	V20H2 = "2009"
+	// V21H1 is the Windows version that is 21H1 also known as Windows 2022 LTSC.
+	V21H1 = "21h1"
 )
 
 // UnsupportedWindowsVersionError represents that the version specified is not
@@ -39,6 +41,7 @@ var supportedWindowsVersions = []string{
 	V1809,
 	V2004,
 	V20H2,
+	V21H1,
 }
 
 var supportedWindowsBuilds = map[string]string{
