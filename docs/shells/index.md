@@ -99,7 +99,7 @@ passing the filename to the following command:
   pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
   ```
 
-This is how an example PowerShell script looks like:
+This is what an example PowerShell script looks like:
 
 ```powershell
 $ErrorActionPreference = "Continue" # This will be set to 'Stop' when targetting PowerShell Core
@@ -302,7 +302,7 @@ passing the filename to the following command:
 cmd /Q /C generated-windows-batch.cmd
 ```
 
-This is how an example Batch script looks like:
+This is what an example Batch script looks like:
 
 ```batch
 @echo off
