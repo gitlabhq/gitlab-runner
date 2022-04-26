@@ -124,6 +124,7 @@ create_rpm() {
     local options=()
     options+=("--rpm-compression bzip2")
     options+=("--rpm-os linux")
+    options+=("--rpm-digest sha256")
 
     create_package rpm "${prebuilt_images_list}" "" "${options[@]}"
     sign_rpm "${PACKAGE_NAME}_${PACKAGE_ARCH}.rpm"
@@ -134,6 +135,7 @@ create_rpm_fips() {
     options+=("--rpm-compression bzip2")
     options+=("--rpm-os linux")
     options+=("--depends openssl")
+    options+=("--rpm-digest sha256")
 
     create_package rpm "${prebuilt_images_list_fips}" "-fips" "${options[@]}"
     sign_rpm "${PACKAGE_NAME}_${PACKAGE_ARCH}-fips.rpm"
