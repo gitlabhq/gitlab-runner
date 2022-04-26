@@ -153,6 +153,7 @@ Now install GitLab Runner on the Ubuntu instance.
      builds_dir = "/opt/gitlab-runner/builds"
      cache_dir = "/opt/gitlab-runner/cache"
      [runners.custom]
+       volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
        config_exec = "/opt/gitlab-runner/fargate"
        config_args = ["--config", "/etc/gitlab-runner/fargate.toml", "custom", "config"]
        prepare_exec = "/opt/gitlab-runner/fargate"
@@ -162,6 +163,14 @@ Now install GitLab Runner on the Ubuntu instance.
        cleanup_exec = "/opt/gitlab-runner/fargate"
        cleanup_args = ["--config", "/etc/gitlab-runner/fargate.toml", "custom", "cleanup"]
    ```
+
+1. If you have a self-managed instance with a private CA, add this line:
+
+   ```toml
+          volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
+   ```
+
+   [Learn more about trusting the certificate](../tls-self-signed.md#trusting-the-certificate-for-the-other-cicd-stages).
 
    The section of the `config.toml` file shown below is created by the registration command. Do not change it.
 
