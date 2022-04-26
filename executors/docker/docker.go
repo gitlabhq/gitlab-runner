@@ -475,7 +475,7 @@ func (e *executor) waitForServices() {
 
 	// wait for all services to came up
 	if waitForServicesTimeout > 0 && len(e.services) > 0 {
-		e.Println("Waiting for services to be up and running...")
+		e.Println("Waiting for services to be up and running (timeout", waitForServicesTimeout, "seconds)...")
 		wg := sync.WaitGroup{}
 		for _, service := range e.services {
 			wg.Add(1)
