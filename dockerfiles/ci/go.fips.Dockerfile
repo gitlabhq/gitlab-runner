@@ -17,7 +17,7 @@ RUN git clone \
     /usr/local/go
 
 RUN cd /usr/local/go/src && \
-    CGO_ENABLED=0 ./make.bash && \
+    CGO_ENABLED=1 ./make.bash && \
     rm -rf \
         /usr/local/go/pkg/*/cmd \
         /usr/local/go/pkg/bootstrap \
