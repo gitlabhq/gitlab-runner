@@ -1,3 +1,9 @@
+## v14.10.1 (2022-05-02)
+
+### Security fixes
+
+- Disallow reserved CACHE_FALLBACK_KEY values !49
+
 ## v14.10.0 (2022-04-19)
 
 ### Bug fixes
