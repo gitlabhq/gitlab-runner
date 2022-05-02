@@ -1,3 +1,9 @@
+## v14.9.2 (2022-05-02)
+
+### Security fixes
+
+- Disallow reserved CACHE_FALLBACK_KEY values !48
+
 ## v14.9.1 (2022-03-22)
 
 ### GitLab Runner distribution
