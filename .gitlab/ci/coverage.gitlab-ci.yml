@@ -151,4 +151,3 @@ check windows 21H1 integration test failures:
   - .rules:default-branch-only:no_docs:always
   needs:
   - windows 21H1 integration tests
-  allow_failure: true #temporarily allow 21h1 tests to fail #29037
