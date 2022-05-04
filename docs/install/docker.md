@@ -76,15 +76,15 @@ that also runs other payloads.
 
 This example uses the local system for the configuration volume that is mounted into the `gitlab-runner` container. This volume is used for configs and other resources.
 
-   ```shell
-   docker run -d --name gitlab-runner --restart always \
-     -v /srv/gitlab-runner/config:/etc/gitlab-runner \
-     -v /var/run/docker.sock:/var/run/docker.sock \
-     gitlab/gitlab-runner:latest
-   ```
+```shell
+docker run -d --name gitlab-runner --restart always \
+  -v /srv/gitlab-runner/config:/etc/gitlab-runner \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  gitlab/gitlab-runner:latest
+```
 
-   NOTE:
-   On macOS, use `/Users/Shared` instead of `/srv`.
+NOTE:
+On macOS, use `/Users/Shared` instead of `/srv`.
 
 ### Option 2: Use Docker volumes to start the Runner container
 
