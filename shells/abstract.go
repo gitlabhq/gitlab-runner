@@ -131,6 +131,10 @@ func (b *AbstractShell) extractCacheOrFallbackCacheWrapper(
 	cacheKey string,
 ) {
 	cacheFallbackKey := info.Build.GetAllVariables().Get("CACHE_FALLBACK_KEY")
+	if strings.HasSuffix(cacheFallbackKey, "-protected") {
+		// The `-protected` suffix is reserved for protected refs, so we disallow it from user-specified values.
+		cacheFallbackKey = ""
+	}
 
 	// Execute cache-extractor command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
