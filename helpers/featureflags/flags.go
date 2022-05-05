@@ -13,7 +13,6 @@ const (
 	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
 	SkipNoOpBuildStages                  string = "FF_SKIP_NOOP_BUILD_STAGES"
 	UseFastzip                           string = "FF_USE_FASTZIP"
-	GitLabRegistryHelperImage            string = "FF_GITLAB_REGISTRY_HELPER_IMAGE"
 	DisableUmaskForDockerExecutor        string = "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
 	EnableBashExitCodeCheck              string = "FF_ENABLE_BASH_EXIT_CODE_CHECK"
 	UseWindowsLegacyProcessStrategy      string = "FF_USE_WINDOWS_LEGACY_PROCESS_STRATEGY"
@@ -89,14 +88,6 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description:     "Fastzip is a performant archiver for cache/artifact archiving and extraction",
-	},
-	{
-		Name:            GitLabRegistryHelperImage,
-		DefaultValue:    true,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description: "Use GitLab Runner helper image for the Docker and " +
-			"Kubernetes executors from `registry.gitlab.com` instead of Docker Hub",
 	},
 	{
 		Name:            DisableUmaskForDockerExecutor,

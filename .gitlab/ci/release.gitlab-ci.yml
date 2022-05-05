@@ -6,7 +6,6 @@
   - .linux-dependency-checksums
   variables:
     PUBLISH_IMAGES: "true"
-    PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
   before_script:
   - source ci/touch_make_dependencies
@@ -85,7 +84,6 @@
   - .windows-dependency-checksums
   stage: release
   variables:
-    PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
     PUBLISH_IMAGES: "true"
     PWSH_VERSION: 7.1.1
@@ -148,7 +146,6 @@ development docker images:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
 development helper docker images:
@@ -157,7 +154,6 @@ development helper docker images:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore1809 helper docker image:
@@ -167,7 +163,6 @@ development servercore1809 helper docker image:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore2004 helper docker image:
@@ -177,7 +172,6 @@ development servercore2004 helper docker image:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore20H2 helper docker image:
@@ -187,7 +181,6 @@ development servercore20H2 helper docker image:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore21H1 helper docker image:
@@ -197,7 +190,6 @@ development servercore21H1 helper docker image:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
 
 bleeding edge S3:

@@ -226,11 +226,10 @@ func (s *executor) setupDefaultExecutorOptions(os string) {
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 	config := helperimage.Config{
-		OSType:         helperimage.OSTypeLinux,
-		Architecture:   "amd64",
-		GitLabRegistry: s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
-		Shell:          s.Config.Shell,
-		Flavor:         s.Config.Kubernetes.HelperImageFlavor,
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+		Shell:        s.Config.Shell,
+		Flavor:       s.Config.Kubernetes.HelperImageFlavor,
 	}
 
 	// use node selector labels to better select the correct image
@@ -1482,10 +1481,6 @@ func (s *executor) getDNSPolicy() api.DNSPolicy {
 func (s *executor) getHelperImage() string {
 	if len(s.Config.Kubernetes.HelperImage) > 0 {
 		return common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.HelperImage)
-	}
-
-	if !s.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
-		s.Warningln(helperimage.DockerHubWarningMessage)
 	}
 
 	return s.helperImageInfo.String()

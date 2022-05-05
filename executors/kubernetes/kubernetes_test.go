@@ -1004,10 +1004,9 @@ func TestPrepare(t *testing.T) {
 		os = helperimage.OSTypeWindows
 	}
 	pwshHelperImage, err := helperimage.Get(helperImageTag, helperimage.Config{
-		Architecture:   "x86_64",
-		OSType:         os,
-		Shell:          shells.SNPwsh,
-		GitLabRegistry: true,
+		Architecture: "x86_64",
+		OSType:       os,
+		Shell:        shells.SNPwsh,
 	})
 	require.NoError(t, err)
 
@@ -1526,52 +1525,6 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "DockerHub helper image",
-			GlobalConfig: &common.Config{},
-			RunnerConfig: &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Host: "test-server",
-					},
-				},
-			},
-			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
-						Name: "test-image",
-					},
-					Variables: common.JobVariables{
-						common.JobVariable{
-							Key:      featureflags.GitLabRegistryHelperImage,
-							Value:    "false",
-							Public:   false,
-							Internal: false,
-							File:     false,
-							Masked:   false,
-							Raw:      false,
-						},
-					},
-				},
-				Runner: &common.RunnerConfig{},
-			},
-			Expected: &executor{
-				options: &kubernetesOptions{
-					Image: common.Image{
-						Name: "test-image",
-					},
-				},
-				helperImageInfo: helperimage.Info{
-					OSType:                  os,
-					Architecture:            "x86_64",
-					Name:                    helperimage.DockerHubName,
-					Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
-					IsSupportingLocalImport: true,
-					Cmd:                     []string{"gitlab-runner-build"},
-				},
-				configurationOverwrites: defaultOverwrites,
-			},
-		},
-		{
 			Name:         "helper image with ubuntu flavour default registry",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
@@ -1602,116 +1555,6 @@ func TestPrepare(t *testing.T) {
 					Architecture:            "x86_64",
 					Name:                    helperimage.GitLabRegistryName,
 					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
-					IsSupportingLocalImport: true,
-					Cmd:                     []string{"gitlab-runner-build"},
-				},
-			},
-		},
-		{
-			Name:         "helper image with ubuntu flavour DockerHub registry",
-			GlobalConfig: &common.Config{},
-			RunnerConfig: &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Host:              "test-server",
-						HelperImageFlavor: "ubuntu",
-					},
-				},
-			},
-			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
-						Name: "test-image",
-					},
-					Variables: common.JobVariables{
-						common.JobVariable{
-							Key:      featureflags.GitLabRegistryHelperImage,
-							Value:    "false",
-							Public:   false,
-							Internal: false,
-							File:     false,
-							Masked:   false,
-							Raw:      false,
-						},
-					},
-				},
-				Runner: &common.RunnerConfig{},
-			},
-			Expected: &executor{
-				options: &kubernetesOptions{
-					Image: common.Image{
-						Name: "test-image",
-					},
-				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
-				helperImageInfo: helperimage.Info{
-					OSType:                  os,
-					Architecture:            "x86_64",
-					Name:                    helperimage.DockerHubName,
-					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
-					IsSupportingLocalImport: true,
-					Cmd:                     []string{"gitlab-runner-build"},
-				},
-			},
-		},
-		{
-			Name:         "helper image with ubuntu flavour DockerHub registry",
-			GlobalConfig: &common.Config{},
-			RunnerConfig: &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Host:              "test-server",
-						HelperImageFlavor: "alpine3.13",
-					},
-				},
-			},
-			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
-						Name: "test-image",
-					},
-					Variables: common.JobVariables{
-						common.JobVariable{
-							Key:      featureflags.GitLabRegistryHelperImage,
-							Value:    "false",
-							Public:   false,
-							Internal: false,
-							File:     false,
-							Masked:   false,
-							Raw:      false,
-						},
-					},
-				},
-				Runner: &common.RunnerConfig{},
-			},
-			Expected: &executor{
-				options: &kubernetesOptions{
-					Image: common.Image{
-						Name: "test-image",
-					},
-				},
-				configurationOverwrites: &overwrites{
-					namespace:       "default",
-					serviceLimits:   api.ResourceList{},
-					buildLimits:     api.ResourceList{},
-					helperLimits:    api.ResourceList{},
-					serviceRequests: api.ResourceList{},
-					buildRequests:   api.ResourceList{},
-					helperRequests:  api.ResourceList{},
-				},
-				helperImageInfo: helperimage.Info{
-					OSType:                  os,
-					Architecture:            "x86_64",
-					Name:                    helperimage.DockerHubName,
-					Tag:                     fmt.Sprintf("alpine3.13-x86_64-%s", helperImageTag),
 					IsSupportingLocalImport: true,
 					Cmd:                     []string{"gitlab-runner-build"},
 				},
@@ -4440,45 +4283,18 @@ func TestGenerateScripts(t *testing.T) {
 }
 
 func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
-	dockerHub, err := helperimage.Get(common.REVISION, helperimage.Config{
+	gitlabRegistry, err := helperimage.Get(common.REVISION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	})
 	require.NoError(t, err)
 
-	gitlabRegistry, err := helperimage.Get(common.REVISION, helperimage.Config{
-		OSType:         helperimage.OSTypeLinux,
-		Architecture:   "amd64",
-		GitLabRegistry: true,
-	})
-	require.NoError(t, err)
-
 	tests := map[string]struct {
 		expectedImage string
-		jobVariables  common.JobVariables
 		config        common.RunnerConfig
 	}{
 		"default helper image": {
 			expectedImage: gitlabRegistry.String(),
-			config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Image:      "alpine:3.14",
-						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
-						Host:       "127.0.0.1",
-					},
-				},
-			},
-		},
-		"helper image from DockerHub": {
-			expectedImage: dockerHub.String(),
-			jobVariables: []common.JobVariable{
-				{
-					Key:    featureflags.GitLabRegistryHelperImage,
-					Value:  "false",
-					Public: true,
-				},
-			},
 			config: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -4510,9 +4326,6 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: executorOptions,
 					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables: tt.jobVariables,
-						},
 						Runner: &tt.config,
 					},
 					Config: tt.config,

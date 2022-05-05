@@ -969,29 +969,12 @@ docker pull gitlab/gitlab-runner:alpine3.14-v14.4.0
 The [pwsh Docker images](https://hub.docker.com/_/microsoft-powershell) do not yet include Alpine 3.14 and 3.15.
 Currently, `alpine3.13` is the latest supported `pwsh` image.
 
-### Default registry
+### Helper image registry
 
-The helper image is pulled from a specific registry location, based on your version of GitLab
-Runner and the `FF_GITLAB_REGISTRY_HELPER_IMAGE` [feature flag](feature-flags.md).
+In GitLab 15.0 and later, the helper image is pulled from the GitLab Container Registry. In addition, helper images are
+only published in the GitLab Container Registry.
 
-In 14.0, `FF_GITLAB_REGISTRY_HELPER_IMAGE=true` [became the default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27218)
-and helper images are pulled from GitLab Registry unless this feature flag is
-disabled.
-
-In 13.7, `FF_GITLAB_REGISTRY_HELPER_IMAGE`
-was [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27196)
-but disabled by default.
-
-Prior to 13.7, the helper image was always pulled from
-[Docker Hub](https://hub.docker.com/r/gitlab/gitlab-runner-helper).
-
-This feature flag can be disabled for:
-
-- A [specific pipeline](feature-flags.md#enable-feature-flag-in-pipeline-configuration).
-- [Every job](feature-flags.md#enable-feature-flag-in-runner-environment-variables).
-- If you are a runner administrator and don't want users to override it, you can set this
-  feature flag by specifying
-  [`[runners.feature_flags]`](feature-flags.md#enable-feature-flag-in-runner-configuration).
+Before 15.0, you could configure this behavior to use images from Docker Hub.
 
 ### Override the helper image
 

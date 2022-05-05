@@ -23,18 +23,16 @@ func Test_linuxInfo_create(t *testing.T) {
 		}
 
 		tests := map[string]struct {
-			shell          string
-			dockerArch     string
-			revision       string
-			gitlabRegistry bool
-			flavor         string
-			expectedInfo   Info
+			shell        string
+			dockerArch   string
+			revision     string
+			flavor       string
+			expectedInfo Info
 		}{
 			"When dockerArch not specified we fallback to runtime arch": {
-				shell:          shell,
-				dockerArch:     "",
-				revision:       "2923a43",
-				gitlabRegistry: true,
+				shell:      shell,
+				dockerArch: "",
+				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            getExpectedArch(),
 					Name:                    GitLabRegistryName,
@@ -44,10 +42,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				},
 			},
 			"Docker runs on armv6l": {
-				shell:          shell,
-				dockerArch:     "armv6l",
-				revision:       "2923a43",
-				gitlabRegistry: true,
+				shell:      shell,
+				dockerArch: "armv6l",
+				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "arm",
 					Name:                    GitLabRegistryName,
@@ -57,10 +54,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				},
 			},
 			"Docker runs on amd64": {
-				shell:          shell,
-				dockerArch:     "amd64",
-				revision:       "2923a43",
-				gitlabRegistry: true,
+				shell:      shell,
+				dockerArch: "amd64",
+				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "x86_64",
 					Name:                    GitLabRegistryName,
@@ -70,10 +66,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				},
 			},
 			"Docker runs on arm64": {
-				shell:          shell,
-				dockerArch:     "aarch64",
-				revision:       "2923a43",
-				gitlabRegistry: true,
+				shell:      shell,
+				dockerArch: "aarch64",
+				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "arm64",
 					Name:                    GitLabRegistryName,
@@ -83,10 +78,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				},
 			},
 			"Docker runs on s390x": {
-				shell:          shell,
-				dockerArch:     "s390x",
-				revision:       "2923a43",
-				gitlabRegistry: true,
+				shell:      shell,
+				dockerArch: "s390x",
+				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "s390x",
 					Name:                    GitLabRegistryName,
@@ -96,10 +90,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				},
 			},
 			"Docker runs on ppc64le": {
-				shell:          shell,
-				dockerArch:     "ppc64le",
-				revision:       "2923a43",
-				gitlabRegistry: true,
+				shell:      shell,
+				dockerArch: "ppc64le",
+				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "ppc64le",
 					Name:                    GitLabRegistryName,
@@ -109,10 +102,9 @@ func Test_linuxInfo_create(t *testing.T) {
 				},
 			},
 			"Configured architecture is unknown": {
-				shell:          shell,
-				dockerArch:     "some-random-arch",
-				revision:       "2923a43",
-				gitlabRegistry: true,
+				shell:      shell,
+				dockerArch: "some-random-arch",
+				revision:   "2923a43",
 				expectedInfo: Info{
 					Architecture:            "some-random-arch",
 					Name:                    GitLabRegistryName,
@@ -121,53 +113,14 @@ func Test_linuxInfo_create(t *testing.T) {
 					Cmd:                     expectedCmd,
 				},
 			},
-			"DockerHub registry configured": {
-				dockerArch:     "amd64",
-				revision:       "2923a43",
-				gitlabRegistry: false,
-				expectedInfo: Info{
-					Architecture:            "x86_64",
-					Name:                    DockerHubName,
-					Tag:                     "x86_64-2923a43" + expectedTagSuffix,
-					IsSupportingLocalImport: true,
-					Cmd:                     expectedCmd,
-				},
-			},
 			"Flavor configured default registry": {
-				dockerArch:     "amd64",
-				revision:       "2923a43",
-				gitlabRegistry: true,
-				flavor:         "ubuntu",
+				dockerArch: "amd64",
+				revision:   "2923a43",
+				flavor:     "ubuntu",
 				expectedInfo: Info{
 					Architecture:            "x86_64",
 					Name:                    GitLabRegistryName,
 					Tag:                     "ubuntu-x86_64-2923a43" + expectedTagSuffix,
-					IsSupportingLocalImport: true,
-					Cmd:                     expectedCmd,
-				},
-			},
-			"Flavor configured DockerHub registry": {
-				dockerArch:     "amd64",
-				revision:       "2923a43",
-				gitlabRegistry: false,
-				flavor:         "ubuntu",
-				expectedInfo: Info{
-					Architecture:            "x86_64",
-					Name:                    DockerHubName,
-					Tag:                     "ubuntu-x86_64-2923a43" + expectedTagSuffix,
-					IsSupportingLocalImport: true,
-					Cmd:                     expectedCmd,
-				},
-			},
-			"Alpine3.13 flavor configured DockerHub registry": {
-				dockerArch:     "amd64",
-				revision:       "2923a43",
-				gitlabRegistry: false,
-				flavor:         "alpine3.13",
-				expectedInfo: Info{
-					Architecture:            "x86_64",
-					Name:                    DockerHubName,
-					Tag:                     "alpine3.13-x86_64-2923a43" + expectedTagSuffix,
 					IsSupportingLocalImport: true,
 					Cmd:                     expectedCmd,
 				},
@@ -182,10 +135,9 @@ func Test_linuxInfo_create(t *testing.T) {
 					image, err := l.Create(
 						test.revision,
 						Config{
-							Architecture:   test.dockerArch,
-							Shell:          shell,
-							GitLabRegistry: test.gitlabRegistry,
-							Flavor:         test.flavor,
+							Architecture: test.dockerArch,
+							Shell:        shell,
+							Flavor:       test.flavor,
 						},
 					)
 

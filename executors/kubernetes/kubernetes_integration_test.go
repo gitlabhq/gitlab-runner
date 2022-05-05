@@ -32,7 +32,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -999,36 +998,6 @@ func TestPrepareIssue2583(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, namespace, runnerConfig.Kubernetes.Namespace)
 	assert.Equal(t, serviceAccount, runnerConfig.Kubernetes.ServiceAccount)
-}
-
-func TestHelperImageRegistryLogs(t *testing.T) {
-	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
-
-	for _, tt := range []bool{true, false} {
-		t.Run(fmt.Sprintf("%s is %t", featureflags.GitLabRegistryHelperImage, tt), func(t *testing.T) {
-			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
-			build.Runner.Kubernetes.PullPolicy = common.StringOrArray{common.PullPolicyAlways}
-			buildtest.SetBuildFeatureFlag(build, featureflags.GitLabRegistryHelperImage, tt)
-
-			trace := bytes.Buffer{}
-			err := build.Run(&common.Config{}, &common.Trace{Writer: &trace})
-			require.NoError(t, err)
-
-			if !tt {
-				assert.Contains(
-					t,
-					trace.String(),
-					helperimage.DockerHubWarningMessage,
-				)
-				return
-			}
-			assert.NotContains(
-				t,
-				trace.String(),
-				helperimage.DockerHubWarningMessage,
-			)
-		})
-	}
 }
 
 func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {

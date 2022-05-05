@@ -54,7 +54,7 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 
 	return Info{
 		Architecture:            arch,
-		Name:                    imageName(cfg.GitLabRegistry),
+		Name:                    GitLabRegistryName,
 		Tag:                     tag,
 		IsSupportingLocalImport: true,
 		Cmd:                     cmd,
