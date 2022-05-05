@@ -1741,32 +1741,6 @@ func TestHelperImageRegistry(t *testing.T) {
 			},
 			expectedHelperImageName: helperimage.GitLabRegistryName,
 		},
-		"DockerHub helper image": {
-			build: &common.Build{
-				JobResponse: common.JobResponse{
-					Image: common.Image{
-						Name: "test",
-					},
-					Variables: common.JobVariables{
-						common.JobVariable{
-							Key:      featureflags.GitLabRegistryHelperImage,
-							Value:    "false",
-							Public:   false,
-							Internal: false,
-							File:     false,
-							Masked:   false,
-							Raw:      false,
-						},
-					},
-				},
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Docker: &common.DockerConfig{},
-					},
-				},
-			},
-			expectedHelperImageName: helperimage.DockerHubName,
-		},
 		"helper image overridden still use default helper image in prepare": {
 			build: &common.Build{
 				JobResponse: common.JobResponse{
@@ -1785,31 +1759,6 @@ func TestHelperImageRegistry(t *testing.T) {
 			// We expect the default image to still be chosen since the check of
 			// the override happens at a later stage.
 			expectedHelperImageName: helperimage.GitLabRegistryName,
-		},
-		"helper image overridden still use DockerHub helper image in prepare": {
-			build: &common.Build{
-				JobResponse: common.JobResponse{
-					Variables: common.JobVariables{
-						common.JobVariable{
-							Key:   featureflags.GitLabRegistryHelperImage,
-							Value: "false",
-						},
-					},
-					Image: common.Image{
-						Name: "test",
-					},
-				},
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Docker: &common.DockerConfig{
-							HelperImage: "private.registry.com/helper",
-						},
-					},
-				},
-			},
-			// We expect the DockerHub image to still be chosen since
-			// the check of the override happens at a later stage.
-			expectedHelperImageName: helperimage.DockerHubName,
 		},
 	}
 
@@ -1853,16 +1802,15 @@ func TestLocalHelperImage(t *testing.T) {
 	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26678
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 
-	dockerHubHelperImage := fmt.Sprintf("%s:%s", helperimage.DockerHubName, "localimageimport")
-	gitlabRegistryHelperImage := fmt.Sprintf("%s:%s", helperimage.GitLabRegistryName, "localimageimport")
-	defaultHelperImageInfo := helperimage.Info{
+	helperImage := fmt.Sprintf("%s:%s", helperimage.GitLabRegistryName, "localimageimport")
+	helperImageInfo := helperimage.Info{
 		Architecture:            "x86_64",
-		Name:                    helperimage.DockerHubName,
+		Name:                    helperimage.GitLabRegistryName,
 		Tag:                     "localimageimport",
 		IsSupportingLocalImport: true,
 	}
 
-	cleanupFn := createFakePrebuiltImages(t, defaultHelperImageInfo.Architecture)
+	cleanupFn := createFakePrebuiltImages(t, helperImageInfo.Architecture)
 	defer cleanupFn()
 
 	tests := map[string]struct {
@@ -1883,42 +1831,8 @@ func TestLocalHelperImage(t *testing.T) {
 			clientAssertions: func(c *docker.MockClient) {},
 			expectedImage:    nil,
 		},
-		"Docker import using Docker Hub name": {
-			helperImageInfo: defaultHelperImageInfo,
-			clientAssertions: func(c *docker.MockClient) {
-				c.On(
-					"ImageImportBlocking",
-					mock.Anything,
-					mock.Anything,
-					helperimage.DockerHubName,
-					mock.Anything,
-				).Return(nil)
-
-				imageInspect := types.ImageInspect{
-					RepoTags: []string{
-						dockerHubHelperImage,
-					},
-				}
-
-				c.On(
-					"ImageInspectWithRaw",
-					mock.Anything,
-					dockerHubHelperImage,
-				).Return(imageInspect, []byte{}, nil)
-			},
-			expectedImage: &types.ImageInspect{
-				RepoTags: []string{
-					dockerHubHelperImage,
-				},
-			},
-		},
 		"Docker import using registry.gitlab.com name": {
-			helperImageInfo: helperimage.Info{
-				Architecture:            "x86_64",
-				Name:                    helperimage.GitLabRegistryName,
-				Tag:                     "localimageimport",
-				IsSupportingLocalImport: true,
-			},
+			helperImageInfo: helperImageInfo,
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -1930,24 +1844,24 @@ func TestLocalHelperImage(t *testing.T) {
 
 				imageInspect := types.ImageInspect{
 					RepoTags: []string{
-						gitlabRegistryHelperImage,
+						helperImage,
 					},
 				}
 
 				c.On(
 					"ImageInspectWithRaw",
 					mock.Anything,
-					gitlabRegistryHelperImage,
+					helperImage,
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &types.ImageInspect{
 				RepoTags: []string{
-					gitlabRegistryHelperImage,
+					helperImage,
 				},
 			},
 		},
 		"entrypoint added": {
-			helperImageInfo: defaultHelperImageInfo,
+			helperImageInfo: helperImageInfo,
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -1971,7 +1885,7 @@ func TestLocalHelperImage(t *testing.T) {
 			expectedImage: &types.ImageInspect{},
 		},
 		"nil is returned if error on import": {
-			helperImageInfo: defaultHelperImageInfo,
+			helperImageInfo: helperImageInfo,
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -1984,7 +1898,7 @@ func TestLocalHelperImage(t *testing.T) {
 			expectedImage: nil,
 		},
 		"nil is returned if error on inspect": {
-			helperImageInfo: defaultHelperImageInfo,
+			helperImageInfo: helperImageInfo,
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
 					"ImageImportBlocking",
@@ -2003,7 +1917,7 @@ func TestLocalHelperImage(t *testing.T) {
 			expectedImage: nil,
 		},
 		"Powershell image is used when shell is pwsh": {
-			helperImageInfo: defaultHelperImageInfo,
+			helperImageInfo: helperImageInfo,
 			shell:           shells.SNPwsh,
 			clientAssertions: func(c *docker.MockClient) {
 				c.On(
@@ -2017,30 +1931,30 @@ func TestLocalHelperImage(t *testing.T) {
 								path.Base((source.Source.(*os.File)).Name()),
 							)
 					}),
-					helperimage.DockerHubName,
+					helperimage.GitLabRegistryName,
 					mock.Anything,
 				).Return(nil)
 
 				imageInspect := types.ImageInspect{
 					RepoTags: []string{
-						dockerHubHelperImage,
+						helperImage,
 					},
 				}
 
 				c.On(
 					"ImageInspectWithRaw",
 					mock.Anything,
-					dockerHubHelperImage,
+					helperImage,
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &types.ImageInspect{
 				RepoTags: []string{
-					dockerHubHelperImage,
+					helperImage,
 				},
 			},
 		},
 		"Powershell image is used when shell is pwsh and flavor ubuntu": {
-			helperImageInfo: defaultHelperImageInfo,
+			helperImageInfo: helperImageInfo,
 			imageFlavor:     "ubuntu",
 			shell:           shells.SNPwsh,
 			clientAssertions: func(c *docker.MockClient) {
@@ -2055,25 +1969,25 @@ func TestLocalHelperImage(t *testing.T) {
 								path.Base((source.Source.(*os.File)).Name()),
 							)
 					}),
-					helperimage.DockerHubName,
+					helperimage.GitLabRegistryName,
 					mock.Anything,
 				).Return(nil)
 
 				imageInspect := types.ImageInspect{
 					RepoTags: []string{
-						dockerHubHelperImage,
+						helperImage,
 					},
 				}
 
 				c.On(
 					"ImageInspectWithRaw",
 					mock.Anything,
-					dockerHubHelperImage,
+					helperImage,
 				).Return(imageInspect, []byte{}, nil)
 			},
 			expectedImage: &types.ImageInspect{
 				RepoTags: []string{
-					dockerHubHelperImage,
+					helperImage,
 				},
 			},
 		},

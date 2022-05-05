@@ -121,14 +121,6 @@ if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && [[ "$
     logout "${CI_REGISTRY}"
 fi
 
-if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
-    login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
-
-    release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
-
-    logout
-fi
-
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
     login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
 

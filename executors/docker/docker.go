@@ -36,7 +36,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -210,10 +209,6 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 	loadedImage := e.getLocalHelperImage()
 	if loadedImage != nil {
 		return loadedImage, nil
-	}
-
-	if !e.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage) {
-		e.Warningln(helperimage.DockerHubWarningMessage)
 	}
 
 	// Fall back to getting image from registry
@@ -1034,7 +1029,6 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 		Architecture:    e.info.Architecture,
 		OperatingSystem: e.info.OperatingSystem,
 		Shell:           e.Config.Shell,
-		GitLabRegistry:  e.Build.IsFeatureFlagOn(featureflags.GitLabRegistryHelperImage),
 		Flavor:          e.Config.Docker.HelperImageFlavor,
 	})
 }

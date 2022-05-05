@@ -20,8 +20,6 @@ const (
 		"for more information see " +
 		"https://docs.gitlab.com/runner/configuration/advanced-configuration.html#migrate-helper-image-to-registrygitlabcom"
 
-	// DockerHubName is the name of the helper image hosted in Docker Hub.
-	DockerHubName = "gitlab/gitlab-runner-helper"
 	// GitLabRegistryName is the name of the helper image hosted in registry.gitlab.com.
 	GitLabRegistryName = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"
 
@@ -52,7 +50,6 @@ type Config struct {
 	Architecture    string
 	OperatingSystem string
 	Shell           string
-	GitLabRegistry  bool
 	Flavor          string
 }
 
@@ -83,14 +80,6 @@ func imageRevision(revision string) string {
 	}
 
 	return latestImageRevision
-}
-
-func imageName(gitlabRegistry bool) string {
-	if gitlabRegistry {
-		return GitLabRegistryName
-	}
-
-	return DockerHubName
 }
 
 func getPowerShellCmd(shell string) []string {
