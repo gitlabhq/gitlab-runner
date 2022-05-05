@@ -9,26 +9,27 @@ IFS=$'\n\t'
 set -euo pipefail
 
 if ! [ -x "$(command -v docker)" ]; then
-    echo -e "INFO: Docker installation not found, skipping clear-docker-cache"
-    exit 0
+  echo -e "INFO: Docker installation not found, skipping clear-docker-cache"
+  exit 0
 fi
 
-DOCKER_VERSION=$(docker version --format '{{.Server.Version}}') #get docker version
-REQUIRED_DOCKER_VERSION=1.13
+DOCKER_API_VERSION=$(docker version --format '{{.Client.APIVersion}}')
+DOCKER_CLIENT_VERSION=$(docker version --format '{{.Client.Version}}')
+REQUIRED_DOCKER_API_VERSION=1.25
+FILTER_FLAG='label=com.gitlab.gitlab-runner.managed=true'
 
-#print usage information
 usage() {
-   echo -e "\nUsage: $0 prune-volumes|prune|space|help\n"
-   echo -e "\tprune-volumes    Remove all unused containers (both dangling and unreferenced) and volumes"
-   echo -e "\tprune            Remove all unused containers (both dangling and unreferenced)"
-   echo -e "\tspace            Show docker disk usage"
-   echo -e "\thelp             Show usage"
-   exit 1 # Exit script after printing usage
+  echo -e "\nUsage: $0 prune-volumes|prune|space|help\n"
+  echo -e "\tprune-volumes    Remove all unused containers (both dangling and unreferenced) and volumes"
+  echo -e "\tprune            Remove all unused containers (both dangling and unreferenced)"
+  echo -e "\tspace            Show docker disk usage"
+  echo -e "\thelp             Show usage"
+  exit 1
 }
 
-if  awk 'BEGIN {exit !('$DOCKER_VERSION' < '$REQUIRED_DOCKER_VERSION')}'; then
-    echo -e "\nERROR: Your current API version is lower than 1.25. The client and daemon API must both be at least 1.25+ to run these commands. Kindly upgrade your docker version\n"
-    exit 1
+if awk "BEGIN {exit !(\"$DOCKER_API_VERSION\" < \"$REQUIRED_DOCKER_API_VERSION\")}"; then
+  echo -e "ERROR: Your current API version is lower than ${REQUIRED_DOCKER_API_VERSION}. The client and daemon API must both be at least ${REQUIRED_DOCKER_API_VERSION}+ to run these commands. Kindly upgrade your docker version."
+  exit 1
 fi
 
 
@@ -39,8 +40,21 @@ case "$COMMAND" in
   prune)
 
     echo -e "\nCheck and remove all unused containers (both dangling and unreferenced)"
-    echo -e "-----------------------------------------------------------------------\n\n"
-    docker system prune -af --filter label=com.gitlab.gitlab-runner.managed=true
+    echo -e "-----------------------------------------------------------------------"
+
+    if awk "BEGIN {exit !(\"$DOCKER_CLIENT_VERSION\" < \"17.06.1\")}"; then
+      # The docker system prune command without pruning volumes does not exist before 17.06.1, so we need to use docker rm
+      CONTAINERS=$(docker ps -a -q \
+                  --filter=status=exited \
+                  --filter=status=dead \
+                  --filter="$FILTER_FLAG")
+
+      if [ -n "${CONTAINERS}" ]; then
+        docker rm "${CONTAINERS}"
+      fi
+    else
+      docker system prune -af --filter "$FILTER_FLAG"
+    fi
 
     exit 0
     ;;
@@ -48,7 +62,7 @@ case "$COMMAND" in
   space)
 
     echo -e "\nShow docker disk usage"
-    echo -e "----------------------\n"
+    echo -e "----------------------"
     docker system df
 
     exit 0
@@ -62,8 +76,28 @@ case "$COMMAND" in
   prune-volumes)
 
     echo -e "\nCheck and remove all unused containers (both dangling and unreferenced) including volumes."
-    echo -e "------------------------------------------------------------------------------------------\n\n"
-    docker system prune --volumes -af --filter label=com.gitlab.gitlab-runner.managed=true
+    echo -e "------------------------------------------------------------------------------------------"
+    VOLUMES_FLAG='--volumes'
+
+    if awk "BEGIN {exit !(\"$DOCKER_CLIENT_VERSION\" < \"17.06.1\")}"; then
+      # The --volumes flag is not supported before 17.06.1 (it was implicit in those versions), so we need to remove the --volumes flag in that case
+      VOLUMES_FLAG=''
+
+      if awk "BEGIN {exit !(\"$DOCKER_CLIENT_VERSION\" < \"17.04.0\")}"; then
+        # The --filter flag is not supported in docker system prune before 17.04.0, so we need to use docker rm
+        CONTAINERS=$(docker ps -a -q \
+                    --filter=status=exited \
+                    --filter=status=dead \
+                    --filter="$FILTER_FLAG")
+
+        if [ -n "${CONTAINERS}" ]; then
+          docker rm -v "${CONTAINERS}"
+        fi
+
+        exit 0
+      fi
+    fi
+    docker system prune "$VOLUMES_FLAG" -af --filter "$FILTER_FLAG"
 
     exit 0
     ;;
