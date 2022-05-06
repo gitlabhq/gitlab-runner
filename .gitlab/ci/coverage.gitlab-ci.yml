@@ -15,7 +15,9 @@ test coverage report:
   - make parallel_test_coverage_report cobertura_report
   artifacts:
     reports:
-      cobertura: out/cobertura/cobertura-coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: out/cobertura/cobertura-coverage.xml
     paths:
     - out/coverage/
     expire_in: 7d
