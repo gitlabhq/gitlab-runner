@@ -8,6 +8,9 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 This section can assist when troubleshooting GitLab Runner.
 
+NOTE:
+A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/) will reset runner registration tokens for your group and projects. If you use an automated process (scripts that encode the value of the registration token) to register runners, this update will break that process. However, it should have no affect on previously registered runners. 
+
 ## General troubleshooting tips
 
 View the logs:
