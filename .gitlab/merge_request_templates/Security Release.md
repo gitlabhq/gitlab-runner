@@ -23,6 +23,7 @@ See [the general developer security release guidelines](https://gitlab.com/gitla
   - [ ] Ensure it's approved according to our [Approval Guidelines].
   - [ ] Ensure it's approved by an AppSec engineer.
     - If you're unsure who should approve, find the AppSec engineer associated to the issue in the [Canonical repository], or ask #sec-appsec on Slack.
+    - [ ] When approving, the AppSec engineer should mention this MR on the [security release tracking issue] in the `gitlab-org/gitlab` project for awareness
   - [ ] Merge request _must_ close the corresponding security issue.
 - [ ] Ensure that a backport MR targeting a versioned stable branch (`X-Y-stable`) is approved by a maintainer.
 
@@ -44,4 +45,5 @@ See [the general developer security release guidelines](https://gitlab.com/gitla
 [Code Review process]: https://docs.gitlab.com/ee/development/code_review.html
 [Approval Guidelines]: https://docs.gitlab.com/ee/development/code_review.html#approval-guidelines
 [Canonical repository]: https://gitlab.com/gitlab-org/gitlab-runner
+[security release tracking issue]: https://gitlab.com/gitlab-org/gitlab/-/issues/?scope=all&utf8=%E2%9C%93&state=opened&label_name%5B%5D=upcoming%20security%20release
 
