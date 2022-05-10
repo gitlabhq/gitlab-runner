@@ -28,6 +28,7 @@ import (
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kuberuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest/fake"
 	"k8s.io/client-go/util/exec"
@@ -2027,6 +2028,396 @@ func TestSetupCredentials(t *testing.T) {
 	}
 }
 
+func TestServiceAccountExists(t *testing.T) {
+	version, codec := testVersionAndCodec()
+	errClientFunc := fmt.Errorf("unexpected request")
+	namespace := "default"
+
+	tests := map[string]struct {
+		clientFunc func(*http.Request) (*http.Response, error)
+		name       string
+		found      bool
+	}{
+		"serviceaccount exists": {
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+namespace+"/serviceaccounts/my-serviceaccount" &&
+					m == http.MethodGet:
+					sa := &api.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "my-serviceaccount",
+						},
+					}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, errClientFunc
+				}
+			},
+			name:  "my-serviceaccount",
+			found: true,
+		},
+		"serviceaccount does not exist": {
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				sa := &api.ServiceAccount{}
+				return &http.Response{
+					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					StatusCode: http.StatusOK,
+					Status:     http.StatusText(http.StatusOK),
+					Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+				}, errClientFunc
+			},
+			name:  "my-serviceaccount-1",
+			found: false,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
+				options:    &kubernetesOptions{},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{
+								Namespace: namespace,
+							},
+						},
+					},
+				},
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			defer cancel()
+
+			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			assert.NoError(t, err)
+			assert.Equal(t, tc.found, ex.serviceAccountExists()(ctx, tc.name))
+		})
+	}
+}
+
+func TestSecretExists(t *testing.T) {
+	version, codec := testVersionAndCodec()
+	errClientFunc := fmt.Errorf("unexpected request")
+
+	tests := map[string]struct {
+		clientFunc func(*http.Request) (*http.Response, error)
+		name       string
+		found      bool
+	}{
+		"secret exists": {
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+DefaultResourceIdentifier+"/secrets/my-secret" &&
+					m == http.MethodGet:
+					s := &api.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "my-secret",
+						},
+					}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, errClientFunc
+				}
+			},
+			name:  "my-secret",
+			found: true,
+		},
+		"secret does not exist": {
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				sa := &api.ServiceAccount{}
+				return &http.Response{
+					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					StatusCode: http.StatusOK,
+					Status:     http.StatusText(http.StatusOK),
+					Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+				}, errClientFunc
+			},
+			name:  "my-secret-1",
+			found: false,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
+				options:    &kubernetesOptions{},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{
+								Namespace: DefaultResourceIdentifier,
+							},
+						},
+					},
+				},
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			defer cancel()
+
+			err := ex.prepareOverwrites(make(common.JobVariables, 0))
+			assert.NoError(t, err)
+			assert.Equal(t, tc.found, ex.secretExists()(ctx, tc.name))
+		})
+	}
+}
+
+func TestWaitForResources(t *testing.T) {
+	attempt := -1
+	version, codec := testVersionAndCodec()
+	errClientFunc := fmt.Errorf("unexpected request")
+
+	tests := map[string]struct {
+		ctxTimeout       time.Duration
+		clientFunc       func(*http.Request) (*http.Response, error)
+		resourceType     string
+		serviceAccount   string
+		imagePullSecrets []string
+		expectedErr      error
+	}{
+		"no service account set": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				return nil, nil
+			},
+			resourceType: resourceTypeServiceAccount,
+		},
+		"no secrets set": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				return nil, nil
+			},
+			resourceType: resourceTypePullSecret,
+		},
+		"service account exists": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+DefaultResourceIdentifier+
+					"/serviceaccounts/my-serviceaccount" && m == http.MethodGet:
+					sa := &api.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "my-serviceaccount",
+						},
+					}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, errClientFunc
+				}
+			},
+			resourceType:   resourceTypeServiceAccount,
+			serviceAccount: "my-serviceaccount",
+		},
+		"secret exists": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				s := &api.Secret{}
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+DefaultResourceIdentifier+"/secrets/my-secret-1" &&
+					m == http.MethodGet:
+					s.ObjectMeta = metav1.ObjectMeta{
+						Name: "my-secret-1",
+					}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+					}, nil
+				default:
+					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
+					return nil, errClientFunc
+				}
+			},
+			resourceType:     resourceTypePullSecret,
+			imagePullSecrets: []string{"my-secret-1"},
+		},
+		"service account does not exist": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+DefaultResourceIdentifier+
+					"/serviceaccounts/my-serviceaccount" && m == http.MethodGet:
+					sa := &api.ServiceAccount{}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+					}, errClientFunc
+				default:
+					return nil, errClientFunc
+				}
+			},
+			resourceType:   resourceTypeServiceAccount,
+			serviceAccount: "my-serviceaccount",
+			expectedErr: &resourceCheckError{
+				resourceType: resourceTypeServiceAccount,
+				resourceName: "my-serviceaccount",
+			},
+		},
+		"secret does not exist": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+DefaultResourceIdentifier+"/secrets/my-secret-1" &&
+					m == http.MethodGet:
+					s := &api.Secret{}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+					}, errClientFunc
+				default:
+					return nil, errClientFunc
+				}
+			},
+			resourceType:     resourceTypePullSecret,
+			imagePullSecrets: []string{"my-secret-1"},
+			expectedErr: &resourceCheckError{
+				resourceType: resourceTypePullSecret,
+				resourceName: "my-secret-1",
+			},
+		},
+		"secret found after multiple attempts": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				if attempt < 2 {
+					attempt++
+					return nil, errClientFunc
+				}
+
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+DefaultResourceIdentifier+"/secrets/my-secret-1" &&
+					m == http.MethodGet:
+					s := &api.Secret{
+						TypeMeta: metav1.TypeMeta{
+							Kind: "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "my-secret-1",
+						},
+					}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+					}, nil
+				default:
+					return nil, errClientFunc
+				}
+			},
+			resourceType:     resourceTypePullSecret,
+			imagePullSecrets: []string{"my-secret-1"},
+		},
+		"service account found after multiple attempts": {
+			ctxTimeout: time.Second * 30,
+			clientFunc: func(req *http.Request) (*http.Response, error) {
+				if attempt < 2 {
+					attempt++
+					return nil, errClientFunc
+				}
+
+				switch p, m := req.URL.Path, req.Method; {
+				case p == "/api/"+version+"/namespaces/"+DefaultResourceIdentifier+
+					"/serviceaccounts/my-serviceaccount" && m == http.MethodGet:
+					sa := &api.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "my-serviceaccount",
+						},
+					}
+
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: http.StatusOK,
+						Status:     http.StatusText(http.StatusOK),
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+					}, nil
+				default:
+					return nil, errClientFunc
+				}
+			},
+			resourceType:   resourceTypeServiceAccount,
+			serviceAccount: "my-serviceaccount",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
+				options:    &kubernetesOptions{},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{
+								Namespace:                            DefaultResourceIdentifier,
+								ServiceAccount:                       tc.serviceAccount,
+								ImagePullSecrets:                     tc.imagePullSecrets,
+								ResourceAvailabilityCheckMaxAttempts: 3,
+							},
+						},
+					},
+				},
+			}
+
+			var err error
+
+			ctx, cancel := context.WithTimeout(context.Background(), tc.ctxTimeout)
+			defer cancel()
+
+			err = ex.prepareOverwrites(make(common.JobVariables, 0))
+			assert.NoError(t, err)
+
+			switch tc.resourceType {
+			case resourceTypeServiceAccount:
+				err = ex.waitForResource(ctx, tc.resourceType, tc.serviceAccount, ex.serviceAccountExists())
+			case resourceTypePullSecret:
+				if len(tc.imagePullSecrets) > 0 {
+					err = ex.waitForResource(ctx, tc.resourceType, tc.imagePullSecrets[0], ex.secretExists())
+				}
+			}
+
+			if tc.expectedErr != nil {
+				assert.Error(t, err, tc.expectedErr.Error())
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
 type setupBuildPodTestDef struct {
 	RunnerConfig             common.RunnerConfig
 	Variables                []common.JobVariable
@@ -2047,6 +2438,16 @@ type setupBuildPodFakeRoundTripper struct {
 }
 
 func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodGet && strings.Contains(req.URL.Path, "secrets") {
+		part := strings.Split(req.URL.Path, "/")
+		return buildSecretAPIResponse(rt.t, part[len(part)-1])
+	}
+
+	if req.Method == http.MethodGet && strings.Contains(req.URL.Path, "serviceaccounts") {
+		part := strings.Split(req.URL.Path, "/")
+		return buildServiceAccountAPIResponse(rt.t, part[len(part)-1])
+	}
+
 	rt.executed = true
 	dataBytes, err := ioutil.ReadAll(req.Body)
 	if !assert.NoError(rt.t, err, "failed to read request body") {
@@ -2102,6 +2503,42 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 		return rt.test.SetHTTPPutResponse()
 	}
 
+	return resp, nil
+}
+
+func buildSecretAPIResponse(t *testing.T, secretName string) (*http.Response, error) {
+	s := new(api.Secret)
+	s.SetName(secretName)
+	dataBytes, err := json.Marshal(s)
+	if !assert.NoError(t, err, "failed to marshall secret") {
+		return nil, err
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: FakeReadCloser{
+			Reader: bytes.NewBuffer(dataBytes),
+		},
+	}
+	resp.Header = make(http.Header)
+	resp.Header.Add("Content-Type", "application/json")
+	return resp, nil
+}
+
+func buildServiceAccountAPIResponse(t *testing.T, saName string) (*http.Response, error) {
+	sa := new(api.ServiceAccount)
+	sa.SetName(saName)
+	dataBytes, err := json.Marshal(sa)
+	if !assert.NoError(t, err, "failed to marshall serviceaccount") {
+		return nil, err
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: FakeReadCloser{
+			Reader: bytes.NewBuffer(dataBytes),
+		},
+	}
+	resp.Header = make(http.Header)
+	resp.Header.Add("Content-Type", "application/json")
 	return resp, nil
 }
 
@@ -3640,7 +4077,6 @@ func TestSetupBuildPod(t *testing.T) {
 				)
 			},
 		},
-
 		"no runtimeClass when not specified": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -3649,6 +4085,17 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				assert.Nil(t, e.pod.Spec.RuntimeClassName)
+			},
+		},
+		"service account and pull image secret set": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						ServiceAccount:                       "my-serviceaccount",
+						ImagePullSecrets:                     []string{"my-secret1"},
+						ResourceAvailabilityCheckMaxAttempts: 2,
+					},
+				},
 			},
 		},
 	}
