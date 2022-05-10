@@ -24,6 +24,7 @@ const (
 	EnableJobCleanup                     string = "FF_ENABLE_JOB_CLEANUP"
 	KubernetesHonorEntrypoint            string = "FF_KUBERNETES_HONOR_ENTRYPOINT"
 	PosixlyCorrectEscapes                string = "FF_POSIXLY_CORRECT_ESCAPES"
+	UseImprovedURLMasking                string = "FF_USE_IMPROVED_URL_MASKING"
 )
 
 type FeatureFlag struct {
@@ -185,6 +186,15 @@ var flags = []FeatureFlag{
 		Description: "When enabled, [POSIX shell escapes](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_02) " +
 			"are used rather than [`bash`-style ANSI-C quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html). " +
 			"This should be enabled if the job environment uses a POSIX-compliant shell.",
+	},
+	{
+		Name:         UseImprovedURLMasking,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, any sensitive URL parameters are masked no matter where they appear in the trace " +
+			"log output. When this is disabled, sensitive URL parameters are only masked in select places and can " +
+			"[occasionally be revealed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4625). This feature " +
+			"flag can only be configured via Runner's config and not from a job.",
 	},
 }
 

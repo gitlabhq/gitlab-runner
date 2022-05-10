@@ -401,12 +401,16 @@ func (c *clientJobTrace) setupLogLimit() {
 	c.buffer.SetLimit(bytesLimit)
 }
 
+func (c *clientJobTrace) IsMaskingURLParams() bool {
+	return c.config.IsFeatureFlagOn(featureflags.UseImprovedURLMasking)
+}
+
 func newJobTrace(
 	client common.Network,
 	config common.RunnerConfig,
 	jobCredentials *common.JobCredentials,
 ) (*clientJobTrace, error) {
-	buffer, err := trace.New()
+	buffer, err := trace.New(trace.WithURLParamMasking(config.IsFeatureFlagOn(featureflags.UseImprovedURLMasking)))
 	if err != nil {
 		return nil, err
 	}

@@ -313,7 +313,7 @@ func BenchmarkBuffer10k(b *testing.B) {
 func BenchmarkBuffer10kWithURLScrub(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		func() {
-			buffer, err := New()
+			buffer, err := New(WithURLParamMasking(false))
 			require.NoError(b, err)
 			defer buffer.Close()
 
