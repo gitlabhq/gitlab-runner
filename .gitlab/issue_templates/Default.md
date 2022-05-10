@@ -7,3 +7,5 @@ Before raising an issue to the GitLab Runner issue tracker, please read through 
 If you feel that your issue can be categorized as an existing bug or a feature proposal, please use one of the issue templates provided and include as much information as possible.
 
 Thank you for helping to make GitLab Runner a better product.
+
+<!-- template sourced from https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/.gitlab/issue_templates/Default.md -->
