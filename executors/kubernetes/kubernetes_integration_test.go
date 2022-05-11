@@ -137,12 +137,17 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 
 	for tn, tt := range tests {
 		for _, ff := range featureFlags {
-			t.Run(fmt.Sprintf("%s %s true", tn, ff), func(t *testing.T) {
-				tt(t, ff, true)
-			})
+			tnn := fmt.Sprintf("%s %s", tn, ff)
+			t.Run(tnn, func(t *testing.T) {
+				t.Parallel()
 
-			t.Run(fmt.Sprintf("%s %s false", tn, ff), func(t *testing.T) {
-				tt(t, ff, false)
+				t.Run(fmt.Sprintf("%s true", tnn), func(t *testing.T) {
+					tt(t, ff, true)
+				})
+
+				t.Run(fmt.Sprintf("%s false", tnn), func(t *testing.T) {
+					tt(t, ff, false)
+				})
 			})
 		}
 	}
