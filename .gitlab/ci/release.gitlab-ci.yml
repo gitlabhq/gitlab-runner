@@ -67,13 +67,15 @@
   parallel:
     matrix:
     - IMAGE_FLAVOR: "alpine"
-      IMAGE_TAG: ["", "alpine3.12-"]
+      IMAGE_TAG: ["alpine3.12-"]
     - IMAGE_FLAVOR: "alpine3.13"
       IMAGE_TAG: ["alpine3.13-"]
     - IMAGE_FLAVOR: "alpine3.14"
       IMAGE_TAG: ["alpine3.14-"]
     - IMAGE_FLAVOR: "alpine3.15"
-      IMAGE_TAG: ["alpine3.15-"]
+      IMAGE_TAG: ["", "alpine3.15-"]
+    - IMAGE_FLAVOR: "alpine-latest"
+      IMAGE_TAG: ["alpine-latest-"]
     - IMAGE_FLAVOR: "ubuntu"
       IMAGE_TAG: ["ubuntu-"]
     - IMAGE_FLAVOR: "ubi-fips"

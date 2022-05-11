@@ -23,6 +23,7 @@ helper images:
     - IMAGE_BASE: "alpine3.13"
     - IMAGE_BASE: "alpine3.14"
     - IMAGE_BASE: "alpine3.15"
+    - IMAGE_BASE: "alpine-latest"
     - IMAGE_BASE: "ubuntu"
 
 helper images fips:

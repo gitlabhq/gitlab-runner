@@ -52,8 +52,10 @@ get_image_version_from_flavor() {
   echo "${base_images_from_flavor[${flavor}]}"
 }
 
+# This marks the alpine3.15 to be aliased to alpine,
+# which makes 3.15 the default alpine version for users
 declare -A flavor_aliases
-flavor_aliases=( ["alpine3.12"]="alpine,alpine3.12" )
+flavor_aliases=( ["alpine3.15"]="alpine,alpine3.15" )
 
 get_flavor_aliases() {
   local flavor="$1"
