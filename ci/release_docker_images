@@ -43,7 +43,7 @@ base_images_from_flavor=(
   ["alpine3.13"]="alpine:3.13.6"
   ["alpine3.14"]="alpine:3.14.2"
   ["alpine3.15"]="alpine:3.15.0"
-  ["ubi-fips"]="redhat/ubi8:8.5-214"
+  ["ubi-fips"]="redhat/ubi8:8.6-754"
 )
 
 get_image_version_from_flavor() {
