@@ -157,7 +157,7 @@ ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz $(TAR_XZ_ARGS) $<
 
-${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 8.5-214
+${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 8.6-754
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_DOCKERFILE ?= Dockerfile.fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export HELPER_BINARY_POSTFIX ?= -fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar:

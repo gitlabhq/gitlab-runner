@@ -68,7 +68,7 @@ esac
 binary_file="out/binaries/gitlab-runner-helper/gitlab-runner-helper.${TARGET_ARCH}${HELPER_BINARY_POSTFIX}"
 
 if [ ! -f "$binary_file" ]; then
-    echo -e "${RED}Missing binary file. You probably need to run 'make helper-bin'.${RST}"
+    echo -e "${RED}Missing binary file ${binary_file}. You probably need to run 'make helper-bin'.${RST}"
     exit 1
 fi
 
