@@ -18,6 +18,9 @@ import (
 func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	user, pass := "testuser", "testpass"
 
+	boolTrueValue := true
+	boolFalseValue := false
+
 	s, _ := ssh.NewStubServer(user, pass)
 	defer s.Stop()
 
@@ -42,27 +45,30 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	))
 
 	testCases := map[string]struct {
-		disableHostChecking    bool
+		disableHostChecking    *bool
 		knownHostsFileLocation string
 		expectErr              bool
 	}{
+		"strict host checking not initialized with missing known hosts file": {
+			expectErr: true,
+		},
 		"strict host checking with valid known hosts file": {
-			disableHostChecking:    false,
+			disableHostChecking:    &boolFalseValue,
 			knownHostsFileLocation: knownHostsFile,
 			expectErr:              false,
 		},
 		"strict host checking with missing known hosts file": {
-			disableHostChecking:    false,
+			disableHostChecking:    &boolFalseValue,
 			knownHostsFileLocation: missingEntryKnownHostsFile,
 			expectErr:              true,
 		},
 		"no strict host checking with missing known hosts file": {
-			disableHostChecking:    true,
+			disableHostChecking:    &boolTrueValue,
 			knownHostsFileLocation: missingEntryKnownHostsFile,
 			expectErr:              false,
 		},
 		"strict host checking without provided known hosts file": {
-			disableHostChecking: false,
+			disableHostChecking: &boolFalseValue,
 			expectErr:           true,
 		},
 	}
@@ -70,7 +76,7 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
 			c := s.Client()
-			c.Config.DisableStrictHostKeyChecking = &tc.disableHostChecking
+			c.Config.DisableStrictHostKeyChecking = tc.disableHostChecking
 			c.Config.KnownHostsFile = tc.knownHostsFileLocation
 
 			err = c.Connect()

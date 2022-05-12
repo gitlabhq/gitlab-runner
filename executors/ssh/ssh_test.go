@@ -5,9 +5,13 @@ package ssh
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -29,12 +33,22 @@ var (
 )
 
 func TestPrepare(t *testing.T) {
+	tempDir := t.TempDir()
+	knownHostsFilePath := filepath.Join(tempDir, "known-hosts-file")
+	host := "127.0.0.1"
+
 	runnerConfig := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Executor: "ssh",
-			SSH:      &sshHelpers.Config{User: "user", Password: "pass", Host: "127.0.0.1"},
+			SSH: &sshHelpers.Config{
+				User:           "user",
+				Password:       "pass",
+				Host:           host,
+				KnownHostsFile: knownHostsFilePath,
+			},
 		},
 	}
+
 	build := &common.Build{
 		JobResponse: common.JobResponse{
 			GitInfo: common.GitInfo{
@@ -47,6 +61,12 @@ func TestPrepare(t *testing.T) {
 	sshConfig := runnerConfig.RunnerSettings.SSH
 	server, err := sshHelpers.NewStubServer(sshConfig.User, sshConfig.Password)
 	assert.NoError(t, err)
+
+	require.NoError(t, ioutil.WriteFile(
+		knownHostsFilePath,
+		[]byte(fmt.Sprintf("[%s]:%s %s\n", host, server.Port(), sshHelpers.TestSSHKeyPair.PublicKey)),
+		0644,
+	))
 
 	defer server.Stop()
 
