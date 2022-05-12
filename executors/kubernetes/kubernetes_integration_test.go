@@ -129,6 +129,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesBashFeatureFlag":                           testKubernetesBashFeatureFlag,
 		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
+		"testKubernetesWaitResources":                             testKubernetesWaitResources,
 	}
 
 	featureFlags := []string{
@@ -572,7 +573,10 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	}
 
 	client := getTestKubeClusterClient(t)
-	secrets, err := client.CoreV1().Secrets("default").List(context.Background(), metav1.ListOptions{})
+	secrets, err := client.
+		CoreV1().
+		Secrets(kubernetes.DefaultResourceIdentifier).
+		List(context.Background(), metav1.ListOptions{})
 	require.NoError(t, err)
 
 	build := getTestBuild(t, func() (common.JobResponse, error) {
@@ -765,10 +769,10 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 		finalize  func(t *testing.T, client *k8s.Clientset, namespace string)
 	}{
 		"pod deletion during build step": {
-			namespace: "default",
+			namespace: kubernetes.DefaultResourceIdentifier,
 		},
 		"pod deletion during prepare step": {
-			namespace: "default",
+			namespace: kubernetes.DefaultResourceIdentifier,
 		},
 		"pod deletion during prepare stage in custom namespace": {
 			namespace: generateRandomNamespace("gc"),
@@ -874,6 +878,159 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 	}
 }
 
+func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	secretName := "my-secret-1"
+	saName := "my-serviceaccount"
+	client := getTestKubeClusterClient(t)
+
+	tests := map[string]struct {
+		init             func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string)
+		finalize         func(t *testing.T, client *k8s.Clientset, namespace string)
+		checkMaxAttempts int
+		namespace        string
+		imagePullSecret  []string
+		serviceAccount   string
+		expectedErr      bool
+	}{
+		"no resources available": {
+			checkMaxAttempts: 1,
+			namespace:        kubernetes.DefaultResourceIdentifier,
+			imagePullSecret:  []string{secretName},
+			serviceAccount:   saName,
+			expectedErr:      true,
+		},
+		"only serviceaccount set": {
+			namespace:      kubernetes.DefaultResourceIdentifier,
+			serviceAccount: kubernetes.DefaultResourceIdentifier,
+		},
+		"secret not set but serviceaccount available": {
+			checkMaxAttempts: 1,
+			namespace:        kubernetes.DefaultResourceIdentifier,
+			imagePullSecret:  []string{secretName},
+			serviceAccount:   kubernetes.DefaultResourceIdentifier,
+			expectedErr:      true,
+		},
+		"secret made available while waiting for resources": {
+			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
+				time.Sleep(time.Second * 3)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				defer cancel()
+
+				s := &v1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						Kind: "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: secretName,
+					},
+					Data: map[string][]byte{},
+				}
+
+				_, err := client.
+					CoreV1().
+					Secrets(namespace).
+					Create(ctx, s, metav1.CreateOptions{})
+				require.NoError(t, err)
+			},
+			checkMaxAttempts: 2,
+			namespace:        kubernetes.DefaultResourceIdentifier,
+			imagePullSecret:  []string{secretName},
+			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				defer cancel()
+
+				err := client.
+					CoreV1().
+					Secrets(namespace).
+					Delete(ctx, secretName, metav1.DeleteOptions{})
+				require.NoError(t, err)
+			},
+		},
+		"serviceaccount made available while waiting for resources": {
+			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
+				time.Sleep(time.Second * 3)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				defer cancel()
+
+				sa := &v1.ServiceAccount{
+					TypeMeta: metav1.TypeMeta{
+						Kind: "ServiceAccount",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: saName,
+					},
+				}
+
+				_, err := client.
+					CoreV1().
+					ServiceAccounts(namespace).
+					Create(ctx, sa, metav1.CreateOptions{})
+				require.NoError(t, err)
+			},
+			checkMaxAttempts: 2,
+			namespace:        kubernetes.DefaultResourceIdentifier,
+			serviceAccount:   saName,
+			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				defer cancel()
+
+				err := client.
+					CoreV1().
+					ServiceAccounts(namespace).
+					Delete(ctx, saName, metav1.DeleteOptions{})
+				require.NoError(t, err)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				jobResponse, err := common.GetRemoteBuildResponse(
+					"echo Hello World",
+				)
+				require.NoError(t, err)
+
+				jobResponse.Credentials = []common.Credentials{
+					{
+						Type:     "registry",
+						URL:      "http://example.com",
+						Username: "user",
+						Password: "password",
+					},
+				}
+
+				return jobResponse, nil
+			})
+			build.Runner.Kubernetes.Namespace = tc.namespace
+			build.Runner.Kubernetes.ResourceAvailabilityCheckMaxAttempts = tc.checkMaxAttempts
+			build.Runner.Kubernetes.ImagePullSecrets = tc.imagePullSecret
+			build.Runner.Kubernetes.ServiceAccount = tc.serviceAccount
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			if tc.init != nil {
+				go tc.init(t, build, client, tc.namespace)
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+
+			if tc.finalize != nil {
+				tc.finalize(t, client, tc.namespace)
+			}
+
+			if tc.expectedErr {
+				assert.Error(t, err, "checking ImagePullSecret: couldn't find ImagePullSecret or ServiceAccount")
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Contains(t, out, "Hello World")
+		})
+	}
+}
+
 // TestLogDeletionAttach tests the outcome when the log files are all deleted
 func TestLogDeletionAttach(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
@@ -920,7 +1077,7 @@ func TestLogDeletionAttach(t *testing.T) {
 				client := getTestKubeClusterClient(t)
 				pods, err := client.
 					CoreV1().
-					Pods("default").
+					Pods(kubernetes.DefaultResourceIdentifier).
 					List(context.Background(), metav1.ListOptions{
 						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
 					})
@@ -1045,7 +1202,7 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 			deletedPodNameCh := make(chan string)
 			defer buildtest.OnStage(build, tt.stage, func() {
 				client := getTestKubeClusterClient(t)
-				pods, err := client.CoreV1().Pods("default").List(
+				pods, err := client.CoreV1().Pods(kubernetes.DefaultResourceIdentifier).List(
 					context.Background(),
 					metav1.ListOptions{
 						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
@@ -1056,7 +1213,7 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 				pod := pods.Items[0]
 				err = client.
 					CoreV1().
-					Pods("default").
+					Pods(kubernetes.DefaultResourceIdentifier).
 					Delete(context.Background(), pod.Name, metav1.DeleteOptions{})
 				require.NoError(t, err)
 

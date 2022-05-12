@@ -348,6 +348,7 @@ type KubernetesConfig struct {
 	CleanupGracePeriodSeconds                         *int64                             `toml:"cleanup_grace_period_seconds,omitzero" json:"cleanup_grace_period_seconds" long:"cleanup_grace_period_seconds" env:"KUBERNETES_CLEANUP_GRACE_PERIOD_SECONDS" description:"When cleaning up a pod on completion of a job, the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if KUBERNETES_TERMINATIONGRACEPERIODSECONDS is specified."`
 	PollInterval                                      int                                `toml:"poll_interval,omitzero" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status"`
 	PollTimeout                                       int                                `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
+	ResourceAvailabilityCheckMaxAttempts              int                                `toml:"resource_availability_check_max_attempts,omitzero" json:"resource_availability_check_max_attempts" long:"resource-availability-check-max-attempts" env:"KUBERNETES_RESOURCE_AVAILABILITY_CHECK_MAX_ATTEMPTS" default:"5" description:"The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt"`
 	PodLabels                                         map[string]string                  `toml:"pod_labels,omitempty" json:"pod_labels" long:"pod-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create pods with the given pod labels. Environment variables will be substituted for values here."`
 	ServiceAccount                                    string                             `toml:"service_account,omitempty" json:"service_account" long:"service-account" env:"KUBERNETES_SERVICE_ACCOUNT" description:"Executor pods will use this Service Account to talk to kubernetes API"`
 	ServiceAccountOverwriteAllowed                    string                             `toml:"service_account_overwrite_allowed" json:"service_account_overwrite_allowed" long:"service_account_overwrite_allowed" env:"KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_SERVICE_ACCOUNT' value"`
@@ -1011,6 +1012,14 @@ func (c *KubernetesConfig) GetPollInterval() int {
 	}
 
 	return c.PollInterval
+}
+
+func (c *KubernetesConfig) GetResourceAvailabilityCheckMaxAttempts() int {
+	if c.ResourceAvailabilityCheckMaxAttempts < 0 {
+		c.ResourceAvailabilityCheckMaxAttempts = KubernetesResourceAvailabilityCheckMaxAttempts
+	}
+
+	return c.ResourceAvailabilityCheckMaxAttempts
 }
 
 func (c *KubernetesConfig) GetNodeTolerations() []api.Toleration {

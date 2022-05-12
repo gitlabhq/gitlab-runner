@@ -52,6 +52,9 @@ const (
 
 	apiVersion         = "v1"
 	ownerReferenceKind = "Pod"
+
+	// Polling time between each attempt to check serviceAccount and imagePullSecret (in seconds)
+	resourceAvailabilityCheckMaxPollInterval = 5 * time.Second
 )
 
 var (
@@ -70,6 +73,10 @@ var (
 	}
 
 	errIncorrectShellType = fmt.Errorf("kubernetes executor incorrect shell type")
+
+	DefaultResourceIdentifier  = "default"
+	resourceTypeServiceAccount = "ServiceAccount"
+	resourceTypePullSecret     = "ImagePullSecret"
 )
 
 type commandTerminatedError struct {
@@ -92,6 +99,24 @@ type podPhaseError struct {
 
 func (p *podPhaseError) Error() string {
 	return fmt.Sprintf("pod %q status is %q", p.name, p.phase)
+}
+
+type resourceCheckError struct {
+	resourceType string
+	resourceName string
+}
+
+func (r *resourceCheckError) Error() string {
+	return fmt.Sprintf(
+		"Timed out while waiting for %s/%s to be present in the cluster",
+		r.resourceType,
+		r.resourceName,
+	)
+}
+
+func (r *resourceCheckError) Is(err error) bool {
+	_, ok := err.(*resourceCheckError)
+	return ok
 }
 
 type kubernetesOptions struct {
@@ -1233,6 +1258,29 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		return err
 	}
 
+	s.Debugln("Checking for ImagePullSecrets or ServiceAccount existence")
+	err = s.waitForResource(
+		context.TODO(),
+		resourceTypeServiceAccount,
+		s.Config.Kubernetes.ServiceAccount,
+		s.serviceAccountExists(),
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, secretName := range s.Config.Kubernetes.ImagePullSecrets {
+		err = s.waitForResource(
+			context.TODO(),
+			resourceTypePullSecret,
+			secretName,
+			s.secretExists(),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
 	s.Debugln("Creating build pod")
 
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
@@ -1467,6 +1515,71 @@ func (s *executor) buildPodReferences() []metav1.OwnerReference {
 			Name:       s.pod.GetName(),
 			UID:        s.pod.GetUID(),
 		},
+	}
+}
+
+func (s *executor) waitForResource(
+	ctx context.Context,
+	resourceType string,
+	resourceName string,
+	checkExists func(context.Context, string) bool,
+
+) error {
+	attempt := -1
+
+	s.Debugln(fmt.Sprintf("Checking for %s existence", resourceType))
+
+	for attempt < s.Config.Kubernetes.GetResourceAvailabilityCheckMaxAttempts() {
+		if checkExists(ctx, resourceName) {
+			return nil
+		}
+
+		attempt++
+		if attempt > 0 {
+			s.Debugln(fmt.Sprintf(
+				"Pausing check of the %s availability for %d (attempt %d)",
+				resourceType,
+				resourceAvailabilityCheckMaxPollInterval,
+				attempt,
+			))
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(resourceAvailabilityCheckMaxPollInterval):
+		}
+	}
+
+	return &resourceCheckError{
+		resourceType: resourceType,
+		resourceName: resourceName,
+	}
+}
+
+func (s *executor) serviceAccountExists() func(context.Context, string) bool {
+	return func(ctx context.Context, saName string) bool {
+		if saName == "" {
+			return true
+		}
+
+		_, err := s.kubeClient.
+			CoreV1().
+			ServiceAccounts(s.configurationOverwrites.namespace).
+			Get(ctx, saName, metav1.GetOptions{})
+
+		return err == nil
+	}
+}
+
+func (s *executor) secretExists() func(context.Context, string) bool {
+	return func(ctx context.Context, secretName string) bool {
+		_, err := s.kubeClient.
+			CoreV1().
+			Secrets(s.configurationOverwrites.namespace).
+			Get(ctx, secretName, metav1.GetOptions{})
+
+		return err == nil
 	}
 }
 
@@ -1774,8 +1887,10 @@ func (s *executor) checkDefaults() error {
 	}
 
 	if s.configurationOverwrites.namespace == "" {
-		s.Warningln("Namespace is empty, therefore assuming 'default'.")
-		s.configurationOverwrites.namespace = "default"
+		s.Warningln(
+			fmt.Printf("Namespace is empty, therefore assuming '%s'.", DefaultResourceIdentifier),
+		)
+		s.configurationOverwrites.namespace = DefaultResourceIdentifier
 	}
 
 	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)

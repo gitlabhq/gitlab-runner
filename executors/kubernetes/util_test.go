@@ -494,6 +494,8 @@ func testVersionAndCodec() (version string, codec runtime.Codec) {
 	scheme.AddKnownTypes(
 		api.SchemeGroupVersion,
 		&api.Pod{},
+		&api.ServiceAccount{},
+		&api.Secret{},
 		&metav1.Status{},
 	)
 
