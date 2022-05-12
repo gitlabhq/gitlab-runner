@@ -12,5 +12,5 @@ type Config struct {
 }
 
 func (c *Config) ShouldDisableStrictHostKeyChecking() bool {
-	return c.DisableStrictHostKeyChecking == nil || *c.DisableStrictHostKeyChecking
+	return c.DisableStrictHostKeyChecking != nil && *c.DisableStrictHostKeyChecking
 }

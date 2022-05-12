@@ -1469,22 +1469,6 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	return &r, err
 }
 
-func (c *RunnerConfig) logWarnings() {
-	if c.SSH != nil {
-		if c.SSH.DisableStrictHostKeyChecking == nil {
-			// TODO: Remove in 15.0 https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28192
-			logrus.Warningln("[[ssh.disable_strict_host_key_checking]] is not set. " +
-				"Starting from 15.0, strict host checking will be enabled unless explicitly disabled.")
-		}
-
-		if c.SSH.ShouldDisableStrictHostKeyChecking() {
-			logrus.Warningln("SSH strict host checking is disabled. Consider setting " +
-				"[[ssh.disable_strict_host_key_checking]] " +
-				"to false (https://docs.gitlab.com/runner/executors/ssh.html#security).")
-		}
-	}
-}
-
 func NewConfig() *Config {
 	return &Config{
 		Concurrent: 1,
@@ -1517,8 +1501,6 @@ func (c *Config) LoadConfig(configFile string) error {
 	}
 
 	for _, runner := range c.Runners {
-		runner.logWarnings()
-
 		if runner.Machine == nil {
 			continue
 		}
