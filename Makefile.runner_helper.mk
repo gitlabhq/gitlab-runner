@@ -189,22 +189,22 @@ ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker ubuntu $* $@
 
-${BASE_TAR_PATH}-alpine-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.12.0
+${BASE_TAR_PATH}-alpine-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.12.12
 ${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-alpine3.13-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.13.6
+${BASE_TAR_PATH}-alpine3.13-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.13.10
 ${BASE_TAR_PATH}-alpine3.13-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-alpine3.14-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.14.2
+${BASE_TAR_PATH}-alpine3.14-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.14.6
 ${BASE_TAR_PATH}-alpine3.14-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-alpine3.15-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.15.0
+${BASE_TAR_PATH}-alpine3.15-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.15.4
 ${BASE_TAR_PATH}-alpine3.15-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@

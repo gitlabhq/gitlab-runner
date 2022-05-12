@@ -39,10 +39,11 @@ fi
 declare -A base_images_from_flavor
 base_images_from_flavor=(
   ["ubuntu"]="ubuntu:20.04"
-  ["alpine3.12"]="alpine:3.12.0"
-  ["alpine3.13"]="alpine:3.13.6"
-  ["alpine3.14"]="alpine:3.14.2"
-  ["alpine3.15"]="alpine:3.15.0"
+  ["alpine3.12"]="alpine:3.12.12"
+  ["alpine3.13"]="alpine:3.13.10"
+  ["alpine3.14"]="alpine:3.14.6"
+  ["alpine3.15"]="alpine:3.15.4"
+  ["alpine-latest"]="alpine:latest"
   ["ubi-fips"]="redhat/ubi8:8.6-754"
 )
 
