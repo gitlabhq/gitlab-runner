@@ -277,7 +277,7 @@ This defines the Docker Container parameters.
 | `extra_hosts`                  | Hosts that should be defined in container environment. |
 | `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
 | `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
-| `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, `alpine3.15`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.12`. |
+| `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, `alpine3.15`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.15`. |
 | `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
 | `hostname`                     | Custom hostname for the Docker container. |
 | `image`                        | The image to run jobs with. |
@@ -931,9 +931,13 @@ The helper image is available for amd64, arm, arm64, s390x, and ppc64le architec
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
 of available commands, as well as Git, Git LFS, SSL certificates store.
 
-The helper image has a few flavors: `alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, `alpine3.15`, and `ubuntu`. The `alpine` flavor uses the same version as `alpine3.12`. The `alpine` image is currently the default due to its small
+The helper image has a few flavors: `alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, `alpine3.15`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is currently the default due to its small
 footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
 Using `helper_image_flavor = "ubuntu"` will select the `ubuntu` flavor of the helper image.
+
+In GitLab Runner 15.0 and later the `alpine` flavor is an alias for `alpine3.15`.
+
+The `alpine-latest` flavor uses `alpine:latest` as its base image, which could potentially mean it will be more unstable.
 
 When GitLab Runner is installed from the DEB/RPM packages, images for the supported architectures are installed on the host.
 When the runner prepares to execute the job, if the image in the specified version (based on the runner's Git
@@ -958,7 +962,7 @@ Images are built with multiple versions of Alpine Linux, so you can use a newer 
 
 For the helper image, change the `helper_image_flavor` or read the [Helper image](#helper-image) section.
 
-For the GitLab Runner image, follow the same logic, where `alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, or `alpine3.15` is used as a prefix in the image, before the version:
+For the GitLab Runner image, follow the same logic, where `alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, `alpine3.15` or `alpine-latest` is used as a prefix in the image, before the version:
 
 ```shell
 docker pull gitlab/gitlab-runner:alpine3.14-v14.4.0
