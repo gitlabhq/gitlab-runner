@@ -261,8 +261,8 @@ func TestConfigParse(t *testing.T) {
 				require.Equal(t, 1, len(config.Runners))
 				require.Equal(t, 1, len(config.Runners[0].Docker.Services))
 				require.Equal(t, 2, len(config.Runners[0].Docker.Services[0].Environment))
-				assert.Equal(t, "ENV1=value1", config.Runner[0].Docker.Services[0].Environment[0])
-				assert.Equal(t, "ENV2=value2", config.Runner[0].Docker.Services[0].Environment[1])
+				assert.Equal(t, "ENV1=value1", config.Runners[0].Docker.Services[0].Environment[0])
+				assert.Equal(t, "ENV2=value2", config.Runners[0].Docker.Services[0].Environment[1])
 			},
 		},
 		"parse Docker Container Labels with string key and value": {
