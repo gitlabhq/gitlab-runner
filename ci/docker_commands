@@ -29,8 +29,12 @@ tag() {
 }
 
 push() {
-    echo -e "\033[1mPushing image: \033[32m${1}\033[0m"
-    _docker push "${1}"
+    if [[ "${PUBLISH_IMAGES}" == "true" ]]; then
+      echo -e "\033[1mPushing image: \033[32m${1}\033[0m"
+      _docker push "${1}"
+    else
+      echo -e "\033[1mSkipping pushing image: \033[32m${1}\033[0m"
+    fi
 }
 
 _docker_buildx() {
