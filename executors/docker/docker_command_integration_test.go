@@ -45,7 +45,7 @@ var windowsImage string
 
 var windowsDockerImageTagMappings = map[string]string{
 	windows.V20H2: "20H2",
-	windows.V21H1: "21H1",
+	windows.V21H1: "ltsc2022",
 }
 
 func TestMain(m *testing.M) {
@@ -222,6 +222,7 @@ func getWindowsImage(t *testing.T) string {
 
 		dockerImageTag, err := windowsDockerImageTag(info.OperatingSystem)
 		require.NoError(t, err)
+
 		windowsImage = fmt.Sprintf(common.TestWindowsImage, dockerImageTag)
 	})
 
