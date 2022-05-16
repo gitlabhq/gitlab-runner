@@ -29,6 +29,9 @@ push_latest() {
 # Release the helper images. The first passed argument will be used as a
 # prefix for the image name, which is useful to push do a different registry.
 # For example `registry.gitlab.com/gitlab-org/gitlab-runner` and `gitlab`.
+# This function will perform all actions needed for pushing except for
+# the pushing itself. That is regulated by the `PUBLISH_IMAGES` variable
+# which is checked inside the `push` function
 release_docker_helper_images() {
     FLAVOR=$2
     PREFIX=$3
@@ -117,16 +120,12 @@ release_docker_helper_images() {
 # Release helper images
 if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && [[ "${PUBLISH_IMAGES}" == "true" ]]; then
     login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
-
-    release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
-
     logout "${CI_REGISTRY}"
 fi
+release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
     login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
-
-    release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
-
     logout "${ECR_PUBLIC_REGISTRY}"
 fi
+release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
