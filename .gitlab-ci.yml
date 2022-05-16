@@ -2,6 +2,7 @@ stages:
 - prepare
 - fips helper binaries
 - prebuild
+- windows helper images
 - test
 - coverage
 - build
@@ -16,6 +17,7 @@ include:
 - local: /.gitlab/ci/prepare.gitlab-ci.yml
 - local: /.gitlab/ci/fips-helper-binaries.gitlab-ci.yml
 - local: /.gitlab/ci/prebuild.gitlab-ci.yml
+- local: /.gitlab/ci/windows-helper-images.gitlab-ci.yml
 - local: /.gitlab/ci/test.gitlab-ci.yml
 - local: /.gitlab/ci/coverage.gitlab-ci.yml
 - local: /.gitlab/ci/build.gitlab-ci.yml

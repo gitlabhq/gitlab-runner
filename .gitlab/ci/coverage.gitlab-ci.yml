@@ -146,11 +146,18 @@ check windows 20H2 integration test failures:
   needs:
   - windows 20H2 integration tests
 
+check windows 21H1 unit test failures:
+  extends:
+  - .check windows test failures
+  - .windows21H1_variables
+  - .rules:merge_request_pipelines:no_docs
+  needs:
+  - windows 21H1 unit tests
+
 check windows 21H1 integration test failures:
   extends:
   - .check windows test failures
   - .windows21H1_variables
-  - .rules:default-branch-only:no_docs:always
+  - .rules:merge_request_pipelines:no_docs
   needs:
   - windows 21H1 integration tests
-  allow_failure: true #temporarily allow 21h1 tests to fail #29037
