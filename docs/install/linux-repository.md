@@ -18,16 +18,18 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Ubuntu        | focal                       | [April 2025](https://wiki.ubuntu.com/Releases)            |
 | Mint          | sarah, serena, sonya, sylvia| [April 2021](https://www.linuxmint.com/download_all.php)          |
 | Mint          | tara, tessa, tina, tricia   | [April 2023](https://www.linuxmint.com/download_all.php)          |
-| Mint          | ulyana, ulyssa              | [April 2025](https://www.linuxmint.com/download_all.php)          |
+| Mint          | ulyana, ulyssa, uma, una    | [April 2025](https://www.linuxmint.com/download_all.php)          |
 | RHEL/CentOS   | 7                           | [June 2024](https://wiki.centos.org/About/Product)             |
 | CentOS Stream | 8                           | [May 2024](https://wiki.centos.org/About/Product)              |
 | RHEL          | 8                           | [May 2029](https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux)         |
 | Fedora        | 32                          | approx. May 2021      |
 | Fedora        | 33                          | approx. Nov 2021      |
+| Fedora        | 34                          | approx. June 2022     |
+| Fedora        | 35                          | approx. Nov 2022      |
 | Amazon Linux  | 2                           | [June 30, 2023](https://aws.amazon.com/amazon-linux-2/faqs/) |
 
 NOTE:
-Packages for distributions that are not on the list (for example: **Fedora 34**) are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket. Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28150) for details.
+Packages for distributions that are not on the list are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket. 
 
 ## Prerequisites
 
