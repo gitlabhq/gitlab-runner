@@ -1317,7 +1317,7 @@ To change the time GitLab Runner waits for a pod to reach its `Ready` status, us
 [`poll_timeout`](#other-configtoml-settings) setting.
 
 To better understand how pods are scheduled or why they might not get scheduled
-on time, [read about the Kubernetes Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/). 
+on time, [read about the Kubernetes Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/).
 
 ### `request did not complete within requested timeout`
 

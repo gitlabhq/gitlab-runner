@@ -52,8 +52,8 @@ We recommend testing the image generated in the `dev` step. It is likely to be n
 To test the image, the following steps can be followed:
 
 1. Add support for the new windows server version in [`GitLab Runner project`](https://gitlab.com/gitlab-org/gitlab-runner) and generate the `gitlab-runner-helper.x86_64-windows.exe` binary.
-1. Create a VM using the disk image generated during the `dev` step. 
-When adding support for `windows server ltsc2022`, the disk image name was 
+1. Create a VM using the disk image generated during the `dev` step.
+When adding support for `windows server ltsc2022`, the disk image name was
 [`runners-windows-21h1-core-containers-dev-40-mr`](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/jobs/2333691567#L697)
 1. Generate the `gitlab-runner-helper` Docker image from this VM. To do so, you will need to download the `gitlab-runner-helper.x86_64-windows.exe` binary on the VM.
 As the `Invoke-WebRequest` Powershell command might be unavailable, we recommend using the `Start-BitsTransfer` command instead.

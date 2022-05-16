@@ -66,7 +66,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
 GitLab Runner is installed and will be run after a system reboot.
 
-If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/gitlab-runner/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md). 
+If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/gitlab-runner/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md).
 
 ### Homebrew installation (alternative)
 

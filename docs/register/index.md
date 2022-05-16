@@ -240,7 +240,7 @@ You can use it to add information related to runner maintenance. The maximum all
 
 The `check registration token` error message is displayed when the GitLab instance does not recognize
 the entered registration token. This issue can occur when the instance group or project registration token
-has been changed in GitLab or when the user did not correctly enter the registration token. 
+has been changed in GitLab or when the user did not correctly enter the registration token.
 
 When this error occurs, the first step is to ask a GitLab administrator to verify that the registration token is valid.
 

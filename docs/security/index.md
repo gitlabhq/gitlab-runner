@@ -166,6 +166,6 @@ the Internet - for dependency pulling etc.
 
 ### Secure the runner host
 
-If you are using a static host for a runner, whether bare-metal or virtual machine, you should implement security best practices for the host operating system. 
+If you are using a static host for a runner, whether bare-metal or virtual machine, you should implement security best practices for the host operating system.
 
-Malicious code executed in the context of a CI job could compromise the host, so security protocols can help mitigate the impact. Other points to keep in mind include securing or removing files such as SSH keys from the host system that may enable an attacker to access other endpoints in the environment. 
+Malicious code executed in the context of a CI job could compromise the host, so security protocols can help mitigate the impact. Other points to keep in mind include securing or removing files such as SSH keys from the host system that may enable an attacker to access other endpoints in the environment.

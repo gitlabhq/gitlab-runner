@@ -137,10 +137,10 @@ limit = 20
 With this configuration:
 
 - One runner process can create four different runner workers using different execution environments.
-- The `concurrent` value is set to 100, so this one runner will execute a maximum of 100 concurrent GitLab CI/CD jobs. 
-- Only the `second` runner worker is configured to use the Docker Machine executor and therefore can automatically create VMs. 
+- The `concurrent` value is set to 100, so this one runner will execute a maximum of 100 concurrent GitLab CI/CD jobs.
+- Only the `second` runner worker is configured to use the Docker Machine executor and therefore can automatically create VMs.
 - The `limit` setting of `30` means that the `second` runner worker can execute a maximum of 30 CI/CD jobs on autoscaled VMs at any point in time.
-- While `concurrent` defines the global concurrency limit across multiple `[[runners]]` workers, `limit` defines the maximum concurrency for a single `[[runners]]` worker. 
+- While `concurrent` defines the global concurrency limit across multiple `[[runners]]` workers, `limit` defines the maximum concurrency for a single `[[runners]]` worker.
 
 In this example, the runner process handles:
 
@@ -171,7 +171,7 @@ limit = 50
 
 In this example:
 
-- The runner processes no more than 100 jobs (the value of `concurrent`). 
+- The runner processes no more than 100 jobs (the value of `concurrent`).
 - The runner process executes jobs in two `[[runners]]` workers, each of which uses the `docker+machine` executor.
 - The `first` runner can create a maximum of 80 VMs. Therefore this runner can execute a maximum of 80 jobs at any point in time.
 - The `second` runner can create a maximum of 50 VMs. Therefore this runner can execute a maximum of 50 jobs at any point in time.

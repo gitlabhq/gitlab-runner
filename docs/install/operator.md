@@ -161,7 +161,7 @@ oc apply -f catalogsource.yaml
 
 In a minute the new Runner should show up in the OpenShift cluster's OperatorHub section.
 
-## Uninstall Operator 
+## Uninstall Operator
 
 ### Uninstall on RedHat OpenShift
 

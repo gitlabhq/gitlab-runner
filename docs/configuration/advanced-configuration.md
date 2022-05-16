@@ -778,7 +778,7 @@ The `GenerateDataKey` API uses the KMS symmetric key to create a data key for cl
 
 | Attribute         | Description         |
 |-------------------|---------------------|
-| Key Type          | Symmetric           | 
+| Key Type          | Symmetric           |
 | Origin            | `AWS_KMS`           |
 | Key Spec          | `SYMMETRIC_DEFAULT` |
 | Key Usage         | Encrypt and decrypt |
@@ -793,7 +793,7 @@ The IAM policy for the role assigned to the ServiceAccount defined in `rbac.serv
 
 #### Enable IAM roles for Kubernetes ServiceAccount resources
 
-To use IAM roles for service accounts, an IAM OIDC provider [must exist for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html). After an IAM OIDC provider is associated with your cluster, you can create an IAM role to associate to the service account of the runner. 
+To use IAM roles for service accounts, an IAM OIDC provider [must exist for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html). After an IAM OIDC provider is associated with your cluster, you can create an IAM role to associate to the service account of the runner.
 
 1. On the **Create Role** window, under **Select type of trusted entity**, select **Web Identity**.
 1. On the **Trusted Relationships tab** of the role:
