@@ -659,6 +659,27 @@ Consider the following example:
 This is just one of the examples. With this approach the possibilities are
 limitless.
 
+## Specify which user runs the job
+
+By default, the runner runs jobs as the `root` user within the container. To specify a different, non-root user to run the job, use the `USER` directive in the Dockerfile of the Docker image.
+
+```dockerfile
+FROM amazonlinux
+RUN ["yum", "install", "-y", "nginx"]
+RUN ["useradd", "www"]
+USER "www"
+CMD ["/bin/bash"]
+```
+
+When you use that Docker image to execute your job, it runs as the specified user:
+
+```yaml
+build:
+  image: my/docker-build:image
+  script:
+  - whoami   # www
+```
+
 ## How pull policies work
 
 When using the `docker` or `docker+machine` executors, you can set the
