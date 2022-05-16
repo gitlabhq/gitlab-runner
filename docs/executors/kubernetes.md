@@ -146,8 +146,8 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 |---------|-------------|
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation) behavior. |
-| `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](../configuration/advanced-configuration.md#restricting-docker-images-and-services). |
-| `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). See [Restrict Docker images and services](../configuration/advanced-configuration.md#restricting-docker-images-and-services). |
+| `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
+| `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
 | `bearer_token` | Default bearer token used to launch build pods. |
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
@@ -1180,6 +1180,36 @@ kaniko:
 - Works without the Docker daemon.
 
 For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
+
+### Restricting Docker images and services
+
+> Added for the Kubernetes executor in GitLab Runner 14.2.
+
+You can restrict the Docker images that are used to run your jobs.
+To do this, you specify wildcard patterns. For example, to allow images
+from your private Docker registry only:
+
+```toml
+[[runners]]
+  (...)
+  executor = "kubernetes"
+  [runners.kubernetes]
+    (...)
+    allowed_images = ["my.registry.tld:5000/*:*"]
+    allowed_services = ["my.registry.tld:5000/*:*"]
+```
+
+Or, to restrict to a specific list of images from this registry:
+
+```toml
+[[runners]]
+  (...)
+  executor = "kubernetes"
+  [runners.kubernetes]
+    (...)
+    allowed_images = ["my.registry.tld:5000/ruby:*", "my.registry.tld:5000/node:*"]
+    allowed_services = ["postgres:9.4", "postgres:latest"]
+```
 
 ## Job execution
 

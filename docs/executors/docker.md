@@ -372,6 +372,34 @@ image `namespace/image:tag`.
 If the repository is private you need to authenticate your GitLab Runner in the
 registry. Read more on [using a private Docker registry](../configuration/advanced-configuration.md#use-a-private-container-registry).
 
+## Restricting Docker images and services
+
+You can restrict the Docker images that can run your jobs.
+To do this, you specify wildcard patterns. For example, to allow images
+from your private Docker registry only:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_images = ["my.registry.tld:5000/*:*"]
+    allowed_services = ["my.registry.tld:5000/*:*"]
+```
+
+Or, to restrict to a specific list of images from this registry:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_images = ["my.registry.tld:5000/ruby:*", "my.registry.tld:5000/node:*"]
+    allowed_services = ["postgres:9.4", "postgres:latest"]
+```
+
 ## Accessing the services
 
 Let's say that you need a Wordpress instance to test some API integration with
