@@ -251,7 +251,7 @@ fuzz variable mask:
 
 .windows test:
   extends:
-  - .rules:default-branch-only:no_docs
+  - .rules:merge_request_pipelines:no_docs
   - .go-cache-windows
   stage: test
   parallel: 6
