@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 This section can assist when troubleshooting GitLab Runner.
 
 NOTE:
-A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/) will reset runner registration tokens for your group and projects. If you use an automated process (scripts that encode the value of the registration token) to register runners, this update will break that process. However, it should have no affect on previously registered runners. 
+A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/critical-security-release-gitlab-14-8-2-released/) will reset runner registration tokens for your group and projects. If you use an automated process (scripts that encode the value of the registration token) to register runners, this update will break that process. However, it should have no affect on previously registered runners.
 
 ## General troubleshooting tips
 
@@ -55,7 +55,7 @@ requested by their `coordinator`.
 
 - If GitLab Runner is running as a service on Windows, it creates system event logs. To view them, open the Event Viewer (from the Run menu, type `eventvwr.msc` or search for "Event Viewer"). Then go to **Windows Logs > Application**. The **Source** for Runner logs is `gitlab-runner`. If you are using Windows Server Core, run this PowerShell command to get the last 20 log entries: `get-eventlog Application -Source gitlab-runner -Newest 20 | format-table -wrap -auto`.
 
-## Enable debug logging mode 
+## Enable debug logging mode
 
 WARNING:
 Debug logging can be a serious security risk. The output contains the content of

@@ -29,7 +29,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Amazon Linux  | 2                           | [June 30, 2023](https://aws.amazon.com/amazon-linux-2/faqs/) |
 
 NOTE:
-Packages for distributions that are not on the list are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket. 
+Packages for distributions that are not on the list are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket.
 
 ## Prerequisites
 

@@ -283,7 +283,7 @@ oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa
 NOTE:
 Currently, for Operator, you can change only the helper image. [An issue exists](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to change the GitLab Runner image as well.
 
-To use a [FIPS compliant GitLab Runner Helper](../install/index.md#fips-compliant-gitlab-runner), change the helper image as follows: 
+To use a [FIPS compliant GitLab Runner Helper](../install/index.md#fips-compliant-gitlab-runner), change the helper image as follows:
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2

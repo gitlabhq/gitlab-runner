@@ -11,7 +11,7 @@ you can use the agent to install GitLab Runner in your cluster.
 
 With this [GitOps workflow](https://docs.gitlab.com/ee/user/clusters/agent/gitops.html),
 your repository contains the GitLab Runner configuration file and
-your cluster is automatically updated. 
+your cluster is automatically updated.
 
 1. Review the Helm chart values for [GitLab Runner](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 1. Create a `runner-chart-values.yaml` file. For example:
