@@ -105,20 +105,6 @@ default:
     GIT_LFS_LINUX_S390X_CHECKSUM: "ca73776cb1cdc855aaf743c09ae70caae97f67d8d5e4147f19dcc4f959f9fc4d"
     GIT_LFS_LINUX_PPC64LE_CHECKSUM: "76196d06a79eec11c202d9cbafbab98f52b9a7fda8538c2d94748461ba192209"
 
-.windows_docker_images:
-  extends:
-  - .windows-dependency-checksums
-  variables:
-    PUSH_TO_ECR_PUBLIC: "true"
-    PUBLISH_IMAGES: "true"
-    PWSH_VERSION: 7.1.1
-  dependencies:
-  - 'helper images binaries'
-  - 'ecr public token'
-  - 'window helper binaries: [windows/386 windows/amd64]'
-  script:
-  - .\ci\build_release_windows_images.ps1
-
 .windows-dependency-checksums:
   variables:
     GIT_WINDOWS_AMD64_CHECKSUM: "168fdc5021f77ad51269a7fd778c9254a87418352bdc039723c078da693a3ac6"
