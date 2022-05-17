@@ -45,7 +45,7 @@ development servercore21H1 helper docker image:
   variables:
     PUSH_TO_ECR_PUBLIC: "false"
 
-bleeding edge servercore1809 docker images:
+bleeding edge servercore1809 helper docker images:
   extends:
     - .windows1809
     - .release_windows_docker_images
@@ -54,7 +54,7 @@ bleeding edge servercore1809 docker images:
     name: bleeding_edge/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-bleeding edge servercore2004 docker images:
+bleeding edge servercore2004 helper docker images:
   extends:
     - .windows2004
     - .release_windows_docker_images
@@ -63,7 +63,7 @@ bleeding edge servercore2004 docker images:
     name: bleeding_edge/docker_images/windows2004
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-bleeding edge servercore20H2 docker images:
+bleeding edge servercore20H2 helper docker images:
   extends:
     - .windows20H2
     - .release_windows_docker_images
@@ -72,7 +72,7 @@ bleeding edge servercore20H2 docker images:
     name: bleeding_edge/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-bleeding edge servercore21H1 docker images:
+bleeding edge servercore21H1 helper docker images:
   extends:
     - .windows21H1
     - .release_windows_docker_images
@@ -81,7 +81,7 @@ bleeding edge servercore21H1 docker images:
     name: bleeding_edge/docker_images/windows21H1
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable servercore1809 docker images:
+stable servercore1809 helper docker images:
   extends:
     - .windows1809
     - .release_windows_docker_images
@@ -91,7 +91,7 @@ stable servercore1809 docker images:
     name: stable/docker_images/windows1809
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable servercore2004 docker images:
+stable servercore2004 helper docker images:
   extends:
     - .windows2004
     - .release_windows_docker_images
@@ -101,7 +101,7 @@ stable servercore2004 docker images:
     name: stable/docker_images/windows2004
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable servercore20H2 docker images:
+stable servercore20H2 helper docker images:
   extends:
     - .windows20H2
     - .release_windows_docker_images
@@ -111,7 +111,7 @@ stable servercore20H2 docker images:
     name: stable/docker_images/windows20H2
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
 
-stable servercore21H1 docker images:
+stable servercore21H1 helper docker images:
   extends:
     - .windows21H1
     - .release_windows_docker_images
