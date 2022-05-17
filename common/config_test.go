@@ -123,6 +123,16 @@ func TestCacheS3Config_AuthType(t *testing.T) {
 			},
 			authType: S3AuthTypeAccessKey,
 		},
+		"Explicitly set but lowercase auth type": {
+			s3: CacheS3Config{
+				AccessKey:          "TOKEN",
+				SecretKey:          "TOKEN",
+				AuthenticationType: "access-key",
+				BucketName:         "name",
+				BucketLocation:     "us-east-1a",
+			},
+			authType: S3AuthTypeAccessKey,
+		},
 		"Explicitly set invalid auth type": {
 			s3: CacheS3Config{
 				AccessKey:          "TOKEN",

@@ -875,17 +875,17 @@ const (
 )
 
 func (c *CacheS3Config) AuthType() S3AuthType {
-	switch c.AuthenticationType {
+	authType := S3AuthType(strings.ToLower(string(c.AuthenticationType)))
+
+	switch authType {
 	case S3AuthTypeAccessKey, S3AuthTypeIAM:
-		return c.AuthenticationType
+		return authType
 	}
 
-	if c.AuthenticationType != "" {
+	if authType != "" {
 		return ""
 	}
 
-	// TODO: deprecate this path in 15.0. Users will need to explicitly define AuthenticationType
-	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28171
 	if c.ServerAddress == "" || c.AccessKey == "" || c.SecretKey == "" {
 		return S3AuthTypeIAM
 	}
