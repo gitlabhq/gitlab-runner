@@ -13,7 +13,7 @@
     - .\ci\build_release_windows_images.ps1
   retry: 2
 
-development servercore1809 helper docker image:
+development servercore1809 helper docker images:
   extends:
     - .windows1809
     - .release_windows_docker_images
@@ -21,7 +21,7 @@ development servercore1809 helper docker image:
   variables:
     PUSH_TO_ECR_PUBLIC: "false"
 
-development servercore2004 helper docker image:
+development servercore2004 helper docker images:
   extends:
     - .windows2004
     - .release_windows_docker_images
@@ -29,7 +29,7 @@ development servercore2004 helper docker image:
   variables:
     PUSH_TO_ECR_PUBLIC: "false"
 
-development servercore20H2 helper docker image:
+development servercore20H2 helper docker images:
   extends:
     - .windows20H2
     - .release_windows_docker_images
@@ -37,7 +37,7 @@ development servercore20H2 helper docker image:
   variables:
     PUSH_TO_ECR_PUBLIC: "false"
 
-development servercore21H1 helper docker image:
+development servercore21H1 helper docker images:
   extends:
     - .windows21H1
     - .release_windows_docker_images
