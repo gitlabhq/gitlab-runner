@@ -287,10 +287,6 @@ fuzz variable mask:
 .windows integration test:
   extends:
   - .windows test
-  needs:
-  - 'integration test definitions'
-  - 'clone test repo'
-  - 'prepare done'
   variables:
     TESTFLAGS: '-tags=integration'
     TESTSDEFINITIONSPATH: integration\testsdefinitions.txt
@@ -303,26 +299,52 @@ windows 1809 unit tests:
   - .windows1809
   - .rules:merge_request_pipelines:no_docs
 
+windows 21H1 unit tests:
+  extends:
+    - .windows unit test
+    - .windows21H1
+    - .rules:merge_request_pipelines:no_docs
+
 windows 1809 integration tests:
   extends:
   - .windows integration test
   - .windows1809
   - .rules:merge_request_pipelines:no_docs
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - 'development servercore1809 helper docker image'
 
 windows 2004 integration tests:
   extends:
   - .windows integration test
   - .windows2004
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - 'development servercore2004 helper docker image'
 
 windows 20H2 integration tests:
   extends:
   - .windows integration test
   - .windows20H2
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - 'development servercore20H2 helper docker image'
 
 windows 21H1 integration tests:
   extends:
   - .windows integration test
   - .windows21H1
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - 'development servercore21H1 helper docker image'
 
 git 1.8.3.1:
   extends:
