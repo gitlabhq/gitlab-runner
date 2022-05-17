@@ -314,11 +314,11 @@ windows 1809 integration tests:
   - 'integration test definitions'
   - 'clone test repo'
   - 'prepare done'
-  - job: 'development servercore1809 helper docker image'
+  - job: 'development servercore1809 helper docker images'
     optional: true
-  - job: 'bleeding edge servercore1809 helper docker image'
+  - job: 'bleeding edge servercore1809 helper docker images'
     optional: true
-  - job: 'stable servercore1809 helper docker image'
+  - job: 'stable servercore1809 helper docker images'
     optional: true
 
 windows 2004 integration tests:
@@ -329,11 +329,11 @@ windows 2004 integration tests:
   - 'integration test definitions'
   - 'clone test repo'
   - 'prepare done'
-  - job: 'development servercore2004 helper docker image'
+  - job: 'development servercore2004 helper docker images'
     optional: true
-  - job: 'bleeding edge servercore2004 helper docker image'
+  - job: 'bleeding edge servercore2004 helper docker images'
     optional: true
-  - job: 'stable servercore2004 helper docker image'
+  - job: 'stable servercore2004 helper docker images'
     optional: true
 
 windows 20H2 integration tests:
@@ -344,11 +344,11 @@ windows 20H2 integration tests:
   - 'integration test definitions'
   - 'clone test repo'
   - 'prepare done'
-  - job: 'development servercore20H2 helper docker image'
+  - job: 'development servercore20H2 helper docker images'
     optional: true
-  - job: 'bleeding edge servercore20H2 helper docker image'
+  - job: 'bleeding edge servercore20H2 helper docker images'
     optional: true
-  - job: 'stable servercore20H2 helper docker image'
+  - job: 'stable servercore20H2 helper docker images'
     optional: true
 
 windows 21H1 integration tests:
@@ -359,11 +359,11 @@ windows 21H1 integration tests:
   - 'integration test definitions'
   - 'clone test repo'
   - 'prepare done'
-  - job: 'development servercore21H1 helper docker image'
+  - job: 'development servercore21H1 helper docker images'
     optional: true
-  - job: 'bleeding edge servercore21H1 helper docker image'
+  - job: 'bleeding edge servercore21H1 helper docker images'
     optional: true
-  - job: 'stable servercore21H1 helper docker image'
+  - job: 'stable servercore21H1 helper docker images'
     optional: true
 
 git 1.8.3.1:
