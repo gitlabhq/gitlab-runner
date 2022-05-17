@@ -46,28 +46,6 @@ helper images binaries:
     - out/binaries/gitlab-runner-helper/gitlab-runner-helper*
     expire_in: 7d
 
-window helper binaries:
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .go-cache
-  stage: prebuild
-  needs:
-  - 'integration test definitions'
-  - 'prepare done'
-  script:
-  - source ci/touch_make_dependencies
-  - make runner-bin BUILD_PLATFORMS="-osarch='$PLATFORMS'"
-  artifacts:
-    paths:
-    - out/binaries/gitlab-runner-*
-    exclude:
-    - out/binaries/gitlab-runner-helper/
-    expire_in: 7d
-  parallel:
-    matrix:
-    - PLATFORMS:
-      - windows/386 windows/amd64
-
 clone test repo:
   extends:
   - .rules:merge_request_pipelines:no_docs

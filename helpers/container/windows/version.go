@@ -56,19 +56,6 @@ var supportedWindowsBuilds = map[string]string{
 func Version(operatingSystem string) (string, error) {
 	for _, windowsVersion := range supportedWindowsVersions {
 		if strings.Contains(operatingSystem, fmt.Sprintf(" %s ", windowsVersion)) {
-			if !strings.Contains(operatingSystem, fmt.Sprintf(" %s ", windowsVersion)) {
-				continue
-			}
-
-			// Both V20H2 and LTSC2022 have the Version 2009
-			// However, the year 2022 is found also in the name
-			// of the 21H1/LTSC2022 operating system name (Windows Server 2022 Datacenter Version 2009).
-			// When the version is 2009, we also check if "Windows Server 2022" can be found in the name
-			// to better detect the windows version
-			if windowsVersion == V20H2 && isLTSC2022(operatingSystem) {
-				return V21H1, nil
-			}
-
 			return windowsVersion, nil
 		}
 	}
@@ -79,8 +66,4 @@ func Version(operatingSystem string) (string, error) {
 	}
 
 	return "", NewUnsupportedWindowsVersionError(operatingSystem)
-}
-
-func isLTSC2022(operatingSystem string) bool {
-	return strings.Contains(operatingSystem, "Windows Server 2022")
 }

@@ -83,10 +83,18 @@
 
 .release_windows_docker_images:
   extends:
-  - .windows_docker_images
+  - .windows-dependency-checksums
+  stage: release
+  variables:
+    PUSH_TO_ECR_PUBLIC: "true"
+    PUBLISH_IMAGES: "true"
+    PWSH_VERSION: 7.1.1
   dependencies:
   - 'helper images binaries'
-  stage: release
+  - 'ecr public token'
+  - 'binaries: [windows/386 windows/amd64]'
+  script:
+  - .\ci\build_release_windows_images.ps1
   retry: 2
 
 .release:
@@ -145,6 +153,42 @@ development docker images:
 development helper docker images:
   extends:
   - .release_helper_docker_images
+  - .rules:release:development:merge-requests
+  variables:
+    PUBLISH_IMAGES: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+
+development servercore1809 helper docker image:
+  extends:
+  - .windows1809
+  - .release_windows_docker_images
+  - .rules:release:development:merge-requests
+  variables:
+    PUBLISH_IMAGES: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+
+development servercore2004 helper docker image:
+  extends:
+  - .windows2004
+  - .release_windows_docker_images
+  - .rules:release:development:merge-requests
+  variables:
+    PUBLISH_IMAGES: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+
+development servercore20H2 helper docker image:
+  extends:
+  - .windows20H2
+  - .release_windows_docker_images
+  - .rules:release:development:merge-requests
+  variables:
+    PUBLISH_IMAGES: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+
+development servercore21H1 helper docker image:
+  extends:
+  - .windows21H1
+  - .release_windows_docker_images
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"

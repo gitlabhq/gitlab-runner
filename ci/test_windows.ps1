@@ -13,9 +13,6 @@ $executionSize = [int]($numberOfDefinitions / $env:CI_NODE_TOTAL)
 $nodeIndex = $env:CI_NODE_INDEX - 1
 $executionOffset = ($nodeIndex * $executionSize)
 
-$revision = ((git rev-parse --short=8 HEAD) | Out-String).TrimEnd()
-$goLdflags = "-X gitlab.com/gitlab-org/gitlab-runner/common.REVISION=$revision"
-
 Write-Information "Number of definitions: $numberOfDefinitions"
 Write-Information "Suite size: $env:CI_NODE_TOTAL"
 Write-Information "Suite index: $env:CI_NODE_INDEX"
@@ -37,7 +34,7 @@ Get-Content $testsDefinitionsFile | Select-Object -skip $executionOffset -first 
 
     Write-Information "`r`n`r`n--- Starting part $index of go $type tests of '$pkg' package:`r`n`r`n"
 
-    powershell -File .\scripts\go_test_no_env.ps1 $env:TESTFLAGS -timeout 30m -v $pkg -ldflags "$goLdflags" -run "$tests" | Tee ".testoutput/${type}/${pkgSlug}.${index}.windows.${WINDOWS_VERSION}.output.txt"
+    powershell -File .\scripts\go_test_no_env.ps1 $env:TESTFLAGS -timeout 30m -v $pkg -run "$tests" | Tee ".testoutput/${type}/${pkgSlug}.${index}.windows.${WINDOWS_VERSION}.output.txt"
 
     if ($LASTEXITCODE -ne 0) {
         $failed += "$pkg-$index"
