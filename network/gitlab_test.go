@@ -183,7 +183,7 @@ func TestRegisterRunner(t *testing.T) {
 			Tags:        "tags",
 			RunUntagged: true,
 			Locked:      true,
-			Active:      true,
+			Paused:      false,
 		})
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
@@ -197,7 +197,7 @@ func TestRegisterRunner(t *testing.T) {
 			RunUntagged: true,
 			Locked:      true,
 			AccessLevel: "not_protected",
-			Active:      true,
+			Paused:      false,
 		})
 	assert.Nil(t, res)
 
@@ -209,7 +209,7 @@ func TestRegisterRunner(t *testing.T) {
 			RunUntagged: true,
 			Locked:      true,
 			AccessLevel: "not_protected",
-			Active:      true,
+			Paused:      false,
 		})
 	assert.Nil(t, res)
 
@@ -221,7 +221,7 @@ func TestRegisterRunner(t *testing.T) {
 			RunUntagged: true,
 			Locked:      true,
 			AccessLevel: "not_protected",
-			Active:      true,
+			Paused:      false,
 		})
 	assert.Nil(t, res)
 
@@ -233,7 +233,7 @@ func TestRegisterRunner(t *testing.T) {
 			RunUntagged: true,
 			Locked:      true,
 			AccessLevel: "not_protected",
-			Active:      true,
+			Paused:      false,
 		})
 	assert.Nil(t, res)
 }
@@ -281,7 +281,7 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 					Tags:        "tags",
 					RunUntagged: true,
 					Locked:      true,
-					Active:      true,
+					Paused:      false,
 				})
 			assert.Nil(t, res)
 			require.Len(t, h.entries, 1)

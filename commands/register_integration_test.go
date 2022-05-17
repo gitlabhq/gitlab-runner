@@ -231,7 +231,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 					MaintenanceNote: "basic notes",
 					Tags:            "tag,list",
 					Locked:          true,
-					Active:          true,
+					Paused:          false,
 				}
 			},
 		},
@@ -253,6 +253,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 					Description:     "name",
 					MaintenanceNote: "maintainer notes",
 					Tags:            "tag,list",
+					Paused:          true,
 				}
 			},
 		},
@@ -276,6 +277,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 					Description:     "new-name",
 					MaintenanceNote: "maintainer notes",
 					Tags:            "tag,list",
+					Paused:          true,
 				}
 			},
 		},
@@ -293,7 +295,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 					Description: "name",
 					RunUntagged: true,
 					Locked:      true,
-					Active:      true,
+					Paused:      false,
 				}
 			},
 		},
@@ -312,7 +314,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 					Description: "name",
 					RunUntagged: true,
 					Locked:      true,
-					Active:      true,
+					Paused:      false,
 				}
 			},
 		},
@@ -332,7 +334,7 @@ func testAskRunnerOverrideDefaultsForExecutor(t *testing.T, executor string) {
 					Tags:        "tag,list",
 					RunUntagged: true,
 					Locked:      true,
-					Active:      true,
+					Paused:      false,
 				}
 			},
 		},

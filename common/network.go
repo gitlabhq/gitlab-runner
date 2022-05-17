@@ -105,7 +105,7 @@ type RegisterRunnerParameters struct {
 	Locked          bool   `json:"locked"`
 	AccessLevel     string `json:"access_level,omitempty"`
 	MaximumTimeout  int    `json:"maximum_timeout,omitempty"`
-	Active          bool   `json:"active"`
+	Paused          bool   `json:"paused"`
 }
 
 type RegisterRunnerRequest struct {

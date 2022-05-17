@@ -263,7 +263,7 @@ func (s *RegisterCommand) askRunner() {
 		AccessLevel:     s.AccessLevel,
 		RunUntagged:     s.RunUntagged,
 		MaximumTimeout:  s.MaximumTimeout,
-		Active:          !s.Paused,
+		Paused:          s.Paused,
 	}
 
 	result := s.network.RegisterRunner(s.RunnerCredentials, parameters)

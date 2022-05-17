@@ -31,7 +31,8 @@ should [plan for how you will monitor and adjust performance for these runners](
 
 ## GitLab Runner versions
 
-For compatibility reasons, the GitLab Runner [major.minor](https://en.wikipedia.org/wiki/Software_versioning) version should stay in sync with the GitLab major and minor version. Older runners may still work
+For compatibility reasons, the GitLab Runner [major.minor](https://en.wikipedia.org/wiki/Software_versioning) version
+should stay in sync with the GitLab major and minor version. Older runners may still work
 with newer GitLab versions, and vice versa. However, features may be not available or work properly
 if a version difference exists.
 
@@ -39,9 +40,13 @@ Backward compatibility is guaranteed between minor version updates. However, som
 version updates of GitLab can introduce new features that require GitLab Runner to be on the same minor
 version.
 
+NOTE:
+GitLab Runner 15.0 [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) a change to the
+registration API request format. It prevents the GitLab Runner from communicating with GitLab versions lower than 14.8.
+You must use a Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
+
 If you host your own runners but host your repositories on GitLab.com,
-keep GitLab Runner [updated](install/index.md)
-to the latest version, as GitLab.com is
+keep GitLab Runner [updated](install/index.md) to the latest version, as GitLab.com is
 [updated continuously](https://gitlab.com/gitlab-org/release/tasks/-/issues).
 
 ## Runner registration
