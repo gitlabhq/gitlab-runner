@@ -33,7 +33,7 @@ should [plan for how you will monitor and adjust performance for these runners](
 
 For compatibility reasons, the GitLab Runner [major.minor](https://en.wikipedia.org/wiki/Software_versioning) version
 should stay in sync with the GitLab major and minor version. Older runners may still work
-with newer GitLab versions, and vice versa. However, features may be not available or work properly
+with newer GitLab versions, and vice versa. However, features may not be available or work properly
 if a version difference exists.
 
 Backward compatibility is guaranteed between minor version updates. However, sometimes minor
