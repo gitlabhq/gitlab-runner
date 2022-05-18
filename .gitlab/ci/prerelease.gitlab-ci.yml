@@ -1,0 +1,123 @@
+.release_windows_docker_images:
+  extends:
+    - .windows-dependency-checksums
+  stage: prerelease
+  variables:
+    PUSH_TO_ECR_PUBLIC: "true"
+    PUBLISH_IMAGES: "true"
+    PWSH_VERSION: 7.1.1
+  dependencies:
+    - 'helper images binaries'
+    - 'ecr public token'
+  script:
+    - .\ci\build_release_windows_images.ps1
+  retry: 2
+
+development servercore1809 helper docker images:
+  extends:
+    - .windows1809
+    - .release_windows_docker_images
+    - .rules:release:development:merge-requests
+  variables:
+    PUSH_TO_ECR_PUBLIC: "false"
+
+development servercore2004 helper docker images:
+  extends:
+    - .windows2004
+    - .release_windows_docker_images
+    - .rules:release:development:merge-requests
+  variables:
+    PUSH_TO_ECR_PUBLIC: "false"
+
+development servercore20H2 helper docker images:
+  extends:
+    - .windows20H2
+    - .release_windows_docker_images
+    - .rules:release:development:merge-requests
+  variables:
+    PUSH_TO_ECR_PUBLIC: "false"
+
+development servercore21H1 helper docker images:
+  extends:
+    - .windows21H1
+    - .release_windows_docker_images
+    - .rules:release:development:merge-requests
+  variables:
+    PUSH_TO_ECR_PUBLIC: "false"
+
+bleeding edge servercore1809 helper docker images:
+  extends:
+    - .windows1809
+    - .release_windows_docker_images
+    - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/docker_images/windows1809
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge servercore2004 helper docker images:
+  extends:
+    - .windows2004
+    - .release_windows_docker_images
+    - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/docker_images/windows2004
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge servercore20H2 helper docker images:
+  extends:
+    - .windows20H2
+    - .release_windows_docker_images
+    - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/docker_images/windows20H2
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+bleeding edge servercore21H1 helper docker images:
+  extends:
+    - .windows21H1
+    - .release_windows_docker_images
+    - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/docker_images/windows21H1
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore1809 helper docker images:
+  extends:
+    - .windows1809
+    - .release_windows_docker_images
+    - .rules:release:stable:branch
+    - .stable_docker_images_base_variables_overwrite
+  environment:
+    name: stable/docker_images/windows1809
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore2004 helper docker images:
+  extends:
+    - .windows2004
+    - .release_windows_docker_images
+    - .rules:release:stable:branch
+    - .stable_docker_images_base_variables_overwrite
+  environment:
+    name: stable/docker_images/windows2004
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore20H2 helper docker images:
+  extends:
+    - .windows20H2
+    - .release_windows_docker_images
+    - .rules:release:stable:branch
+    - .stable_docker_images_base_variables_overwrite
+  environment:
+    name: stable/docker_images/windows20H2
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+
+stable servercore21H1 helper docker images:
+  extends:
+    - .windows21H1
+    - .release_windows_docker_images
+    - .rules:release:stable:branch
+    - .stable_docker_images_base_variables_overwrite
+  environment:
+    name: stable/docker_images/windows21H1
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+

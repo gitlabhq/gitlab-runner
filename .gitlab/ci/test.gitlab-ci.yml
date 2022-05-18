@@ -251,7 +251,7 @@ fuzz variable mask:
 
 .windows test:
   extends:
-  - .rules:default-branch-only:no_docs
+  - .rules:merge_request_pipelines:no_docs
   - .go-cache-windows
   stage: test
   parallel: 6
@@ -287,10 +287,6 @@ fuzz variable mask:
 .windows integration test:
   extends:
   - .windows test
-  needs:
-  - 'integration test definitions'
-  - 'clone test repo'
-  - 'prepare done'
   variables:
     TESTFLAGS: '-tags=integration'
     TESTSDEFINITIONSPATH: integration\testsdefinitions.txt
@@ -303,26 +299,72 @@ windows 1809 unit tests:
   - .windows1809
   - .rules:merge_request_pipelines:no_docs
 
+windows 21H1 unit tests:
+  extends:
+    - .windows unit test
+    - .windows21H1
+    - .rules:merge_request_pipelines:no_docs
+
 windows 1809 integration tests:
   extends:
   - .windows integration test
   - .windows1809
   - .rules:merge_request_pipelines:no_docs
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - job: 'development servercore1809 helper docker images'
+    optional: true
+  - job: 'bleeding edge servercore1809 helper docker images'
+    optional: true
+  - job: 'stable servercore1809 helper docker images'
+    optional: true
 
 windows 2004 integration tests:
   extends:
   - .windows integration test
   - .windows2004
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - job: 'development servercore2004 helper docker images'
+    optional: true
+  - job: 'bleeding edge servercore2004 helper docker images'
+    optional: true
+  - job: 'stable servercore2004 helper docker images'
+    optional: true
 
 windows 20H2 integration tests:
   extends:
   - .windows integration test
   - .windows20H2
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - job: 'development servercore20H2 helper docker images'
+    optional: true
+  - job: 'bleeding edge servercore20H2 helper docker images'
+    optional: true
+  - job: 'stable servercore20H2 helper docker images'
+    optional: true
 
 windows 21H1 integration tests:
   extends:
   - .windows integration test
   - .windows21H1
+  needs:
+  - 'integration test definitions'
+  - 'clone test repo'
+  - 'prepare done'
+  - job: 'development servercore21H1 helper docker images'
+    optional: true
+  - job: 'bleeding edge servercore21H1 helper docker images'
+    optional: true
+  - job: 'stable servercore21H1 helper docker images'
+    optional: true
 
 git 1.8.3.1:
   extends:
