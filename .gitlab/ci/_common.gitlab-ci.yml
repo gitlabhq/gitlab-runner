@@ -14,7 +14,7 @@ variables:
   DUMB_INIT_VERSION: "1.2.2"
   GIT_VERSION: "2.30.2"
   GIT_VERSION_BUILD: "1"
-  GIT_LFS_VERSION: "2.11.0"
+  GIT_LFS_VERSION: "2.13.3"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
   # We're overriding rules for the jobs that we want to run.
