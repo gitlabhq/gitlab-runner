@@ -681,6 +681,8 @@ check_interval = 30
 
 ## Using pull policies
 
+> Support for multiple pull policies [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2807) in GitLab 13.11.
+
 Use the `pull_policy` parameter to specify a single or multiple pull policies.
 
 For a single pull policy:
