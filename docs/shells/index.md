@@ -437,7 +437,7 @@ The [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/wa
 video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci)
 Guided Exploration project. It was tested on:
 
-- Windows PowerShell and PowerShell Core 7 on GitLab [Windows shared runners](https://docs.gitlab.com/ee/ci/runners/build_cloud/windows_build_cloud.html).
+- Windows PowerShell and PowerShell Core 7 on GitLab [Windows shared runners](https://docs.gitlab.com/ee/ci/runners/saas/windows_saas_runner.html).
 - PowerShell Core 7 in Linux Containers with the [Docker-Machine runner](../executors/docker_machine.md).
 
 The example can be copied to your own group or instance for testing. More details
