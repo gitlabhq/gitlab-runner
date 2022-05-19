@@ -1,3 +1,62 @@
+## v15.0.0 (2022-05-19)
+
+### Security fixes
+
+- Improve sensitive URL parameter masking !3404
+
+### Bug fixes
+
+- Allow S3 cache's AuthenticationType to be provided case-insensitively !3446
+
+### Maintenance
+
+- Update git-lfs to 2.13.3 !3458
+- Add TestMachineIdleLimits in the windows 21h1 test failure !3457
+- Repair redirected links !3456
+- Add history to docs for kubernetes pull policy !3455 (Raimund Hook @stingrayza)
+- Run bleeding edge windows builds for security pipelines as well !3449
+- Fix minor grammatical error. !3448 (Crafton Williams @crafton)
+- Fix windows 21H1 pushing helper images and integration tests !3447
+- Delete trailing whitespace !3443
+- Fix alpine-latest pipelines for pwsh and prevent this happening on main in the future !3442
+- Moved content to executor pages !3440
+- Add instructions for how to specify what user a job is run as via docker executor !3438
+- Update alpine versions to latest !3436
+- Parallelize Kubernetes TestRunIntegrationTestsWithFeatureFlag tests !3435
+- Update FIPS base UBI image to 8.6-754 !3434
+- Add alpine-latest helper image flavor and switch default alias to 3.15 !3433
+- List source of Default templates !3431 (Ben Bodenmiller @bbodenmiller)
+- Switch from cobertura to coverage_report keyword !3429
+- Stop publishing helper images to Docker Hub !3425
+- Add a note to troubleshooting section regarding security release !3424
+- Set max_line_length attribute in .editorconfig !3423
+- Fix 21h1 hcsshim::CreateComputeSystem error !3421
+- Fix indentation for docker run runner example !3419
+- Register runner with renamed paused argument !3414
+- Enable CGO_ENABLED by default in golang-fips compiler !3413
+- Change amazonec2-security-group to XXXX in example !3411
+- Check serviceaccount and imagepullsecret availability before creating pod !3399
+- Make clear-docker-cache script to work for Docker versions below 17.06.1 !3394 (Roland Hügli @rhuegli)
+- Servername in openssl command !3374
+- Update index.md !3356 (Don Low @Don.Low)
+- Docs: Small edit to change 'how' to 'what' !3325
+- Update docs/monitoring/index.md !3216
+- Expose fastzip configuration options !3130
+- Docs: Update autoscale_aws_fargate to include ca certificate location !2625
+- Print out service timeout seconds in Docker executor !279 (Elan Ruusamäe @glensc)
+
+### GitLab Runner distribution
+
+- Add packages added by package cloud 3.0.5 release !3437
+- Use SHA256 instead of MD5 for digest !3415
+
+### Documentation changes
+
+- Add step for AppSec in the security release template !3432
+- Make explicit disabling of strict-host-key-checking mandatory by default !3418
+- Add support for Windows server 2022 !3218
+- Add sh to --shell --help following documentation !2988 (David Hannasch @dHannasch)
+
 ## v14.10.1 (2022-05-02)
 
 ### Security fixes
