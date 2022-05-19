@@ -162,7 +162,7 @@ The total number of runner managers you may need over time depends on:
 For example, on GitLab.com, we currently run seven runner managers with the Docker Machine executor.
 Each CI/CD job is executed in a Google Cloud Platform (GCP) `n1-standard-1` VM. With this configuration,
 we process millions of jobs per month. You can view
-[a snippet of the `config.toml` configuration file for GitLab.com](https://docs.gitlab.com/ee/ci/runners/build_cloud/linux_build_cloud.html#configtoml).
+[a snippet of the `config.toml` configuration file for GitLab.com](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#configtoml).
 
 ## Monitoring runners
 

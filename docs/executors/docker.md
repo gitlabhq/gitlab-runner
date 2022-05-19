@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 GitLab Runner can use Docker to run jobs on user provided images. This is
 possible with the use of **Docker** executor.
 
-The **Docker** executor when used with GitLab CI, connects to [Docker Engine](https://www.docker.com/products/container-runtime)
+The **Docker** executor when used with GitLab CI, connects to [Docker Engine](https://www.docker.com/products/container-runtime/)
 and runs each build in a separate and isolated container using the predefined
 image that is [set up in `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and in accordance in
 [`config.toml`](../commands/index.md#configuration-file).
