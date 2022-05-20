@@ -259,14 +259,14 @@ You could create a directory under `/home` for example `/home/ci` and set `ENV H
 
 For the runner pods [it's expected that `HOME` would be set to `/home/gitlab-runner`](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/e265820a00a6a1b9a271dc132de2618ced43cf92/runner/Dockerfile.OCP#L14).
 If this variable is changed, the new location must have the [proper permissions](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/e265820a00a6a1b9a271dc132de2618ced43cf92/runner/Dockerfile.OCP#L38).
-These guidelines are also documented in the [RedHat Container Platform Docs > Creating Images > Support arbitrary user ids](https://docs.openshift.com/container-platform/4.7/openshift_images/create-images.html#support-arbitrary-user-ids).
+These guidelines are also documented in the [Red Hat Container Platform Docs > Creating Images > Support arbitrary user ids](https://docs.openshift.com/container-platform/4.7/openshift_images/create-images.html#support-arbitrary-user-ids).
 
 #### Watch out for SCC
 
 By default, when installed in a new OpenShift project, the GitLab Runner Operator will run as non-root.
 There are exceptions, when all the service accounts in a project are granted `anyuid` access, such as the `default` project.
 In that case, the user of the image will be `root`. This can be easily checked by running the `whoami` inside any container shell, e.g. a job.
-Read more about SCC in [RedHat Container Platform Docs > Managing security context constraints](https://docs.openshift.com/container-platform/4.7/authentication/managing-security-context-constraints.html).
+Read more about SCC in [Red Hat Container Platform Docs > Managing security context constraints](https://docs.openshift.com/container-platform/4.7/authentication/managing-security-context-constraints.html).
 
 #### Run As anyuid SCC
 

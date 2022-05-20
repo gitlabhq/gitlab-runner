@@ -244,7 +244,7 @@ platforms. See [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2655
 
 ## SELinux
 
-Some distributions (CentOS, RedHat, Fedora) use SELinux by default to enhance the security of the underlying system.
+Some distributions (CentOS, Red Hat, Fedora) use SELinux by default to enhance the security of the underlying system.
 
 Special care must be taken when dealing with such a configuration.
 
