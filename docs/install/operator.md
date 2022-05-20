@@ -129,7 +129,7 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
 
 #### Install other versions of GitLab Runner Operator for OpenShift
 
-If you do not want to use the version of GitLab Runner Operator that's available in the RedHat OperatorHub, you can install a different version.
+If you do not want to use the version of GitLab Runner Operator that's available in the Red Hat OperatorHub, you can install a different version.
 
 To find out the official currently-available Operator versions, view the [tags in the `gitlab-runner-operator` repository](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/tags).
 To find out which version of GitLab Runner the Operator is running, view the
@@ -163,7 +163,7 @@ In a minute the new Runner should show up in the OpenShift cluster's OperatorHub
 
 ## Uninstall Operator
 
-### Uninstall on RedHat OpenShift
+### Uninstall on Red Hat OpenShift
 
 1. Delete Runner `CRD`:
 
@@ -177,7 +177,7 @@ In a minute the new Runner should show up in the OpenShift cluster's OperatorHub
    kubectl delete -f gitlab-runner-secret.yml
    ```
 
-1. Follow the instructions at the RedHat documentation for [Deleting Operators from a cluster using the web console](https://docs.openshift.com/container-platform/4.7/operators/admin/olm-deleting-operators-from-cluster.html#olm-deleting-operators-from-a-cluster-using-web-console_olm-deleting-operators-from-a-cluster).
+1. Follow the instructions at the Red Hat documentation for [Deleting Operators from a cluster using the web console](https://docs.openshift.com/container-platform/4.7/operators/admin/olm-deleting-operators-from-cluster.html#olm-deleting-operators-from-a-cluster-using-web-console_olm-deleting-operators-from-a-cluster).
 
 ### Uninstall on Kubernetes
 

@@ -54,7 +54,7 @@ Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814
 
 ## Repositories
 
-- [Install using the GitLab repository for Debian/Ubuntu/CentOS/RedHat](linux-repository.md)
+- [Install using the GitLab repository for Debian/Ubuntu/CentOS/Red Hat](linux-repository.md)
 
 ## Binaries
 

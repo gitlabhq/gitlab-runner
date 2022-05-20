@@ -45,7 +45,7 @@ You can then install it with:
 dpkg -i gitlab-runner_386.deb
 ```
 
-## Download one of the packages for RedHat or CentOS
+## Download one of the packages for Red Hat or CentOS
 
 - <https://s3.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_i686.rpm>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/main/rpm/gitlab-runner_amd64.rpm>
