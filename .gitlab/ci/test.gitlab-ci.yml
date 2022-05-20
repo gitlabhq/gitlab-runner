@@ -34,7 +34,7 @@ check version definition:
 
 # Perform documentation linting on Markdown files
 docs lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.15-vale-2.15.5-markdownlint-0.31.1
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.15-vale-2.16.1-markdownlint-0.31.1
   stage: test
   extends:
   - .rules:merge_request_pipelines
@@ -46,7 +46,7 @@ docs lint markdown:
 
 # Perform link checks on published HTML files
 docs check links:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.15-ruby-2.7.5-cee62c13
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.15-ruby-2.7.5-e6a8a48a
   stage: test
   extends:
   - .rules:merge_request_pipelines
