@@ -41,14 +41,38 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 	cases := []struct {
 		name            string
 		expectedConnect bool
+		exposeHigher	bool
+		exposeLower		bool
 	}{
 		{
 			name:            "Successful connect",
 			expectedConnect: true,
+			exposeHigher:  	 false,
+			exposeLower:	 false,
 		},
 		{
 			name:            "Unsuccessful connect because service is down",
 			expectedConnect: false,
+			exposeHigher:  	 false,
+			exposeLower:	 false,
+		},
+		{
+			name:            "Successful connect with higher port exposed",
+			expectedConnect: true,
+			exposeHigher:  	 true,
+			exposeLower:	 false,
+		},
+		{
+			name:            "Unsuccessful connect because lower port exposed",
+			expectedConnect: false,
+			exposeHigher:  	 false,
+			exposeLower:	 true,
+		},
+		{
+			name:            "Unsuccessful connect because both lower and higher port exposed",
+			expectedConnect: false,
+			exposeHigher:  	 true,
+			exposeLower:	 true,
 		},
 	}
 
@@ -58,11 +82,23 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 			listener, err := net.Listen("tcp", "127.0.0.1:")
 			require.NoError(t, err)
 
+			port := listener.Addr().(*net.TCPAddr).Port
+
 			err = os.Setenv("SERVICE_TCP_ADDR", "127.0.0.1")
 			require.NoError(t, err)
 
-			err = os.Setenv("SERVICE_TCP_PORT", strconv.Itoa(listener.Addr().(*net.TCPAddr).Port))
+			err = os.Setenv("SERVICE_TCP_PORT", strconv.Itoa(port))
 			require.NoError(t, err)
+
+			if c.exposeHigher {
+				err = os.Setenv("SERVICE_HIGHER_TCP_PORT", strconv.Itoa(port + 1))
+				require.NoError(t, err)
+			}
+
+			if c.exposeLower {
+				err = os.Setenv("SERVICE_LOWER_TCP_PORT", strconv.Itoa(port - 1))
+				require.NoError(t, err)
+			}
 
 			// If we don't expect to connect we close the listener.
 			if !c.expectedConnect {
