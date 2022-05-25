@@ -1651,6 +1651,10 @@ func testArtifactsDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
+	if token == "unauthorized-token" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
 	// parse status of direct download
 	directDownloadFlag := r.URL.Query().Get("direct_download")
@@ -1703,6 +1707,11 @@ func TestArtifactsDownload(t *testing.T) {
 		ID:    10,
 		URL:   s.URL,
 		Token: "invalid-token",
+	}
+	unauthorizedTokenCredentials := JobCredentials{
+		ID:    10,
+		URL:   s.URL,
+		Token: "unauthorized-token",
 	}
 	fileNotFoundTokenCredentials := JobCredentials{
 		ID:    11,
@@ -1760,6 +1769,11 @@ func TestArtifactsDownload(t *testing.T) {
 			credentials:    invalidTokenCredentials,
 			directDownload: &trueValue,
 			expectedState:  DownloadForbidden,
+		},
+		"unauthorized should be generated for unauthorized credentials": {
+			credentials:    unauthorizedTokenCredentials,
+			directDownload: &trueValue,
+			expectedState:  DownloadUnauthorized,
 		},
 		"file should not be downloaded if not existing": {
 			credentials:    fileNotFoundTokenCredentials,

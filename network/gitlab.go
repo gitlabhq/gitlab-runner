@@ -789,6 +789,9 @@ func (n *GitLabClient) DownloadArtifacts(
 		statusText := getMessageFromJSONOrXMLResponse(res)
 		log.WithField("status", statusText).Errorln("Downloading artifacts from coordinator...", "forbidden")
 		return common.DownloadForbidden
+	case http.StatusUnauthorized:
+		log.WithField("status", res.Status).Errorln("Downloading artifacts from coordinator...", "unauthorized")
+		return common.DownloadUnauthorized
 	case http.StatusNotFound:
 		log.Errorln("Downloading artifacts from coordinator...", "not found")
 		return common.DownloadNotFound

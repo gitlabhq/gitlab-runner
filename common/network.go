@@ -63,6 +63,7 @@ const (
 const (
 	DownloadSucceeded DownloadState = iota
 	DownloadForbidden
+	DownloadUnauthorized
 	DownloadFailed
 	DownloadNotFound
 )

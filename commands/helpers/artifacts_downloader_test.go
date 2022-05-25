@@ -49,6 +49,11 @@ func TestArtifactsDownloader(t *testing.T) {
 			expectedSuccess:        false,
 			expectedDownloadCalled: 1,
 		},
+		"download unauthorized": {
+			downloadState:          common.DownloadUnauthorized,
+			expectedSuccess:        false,
+			expectedDownloadCalled: 1,
+		},
 		"retries are called": {
 			downloadState:          common.DownloadFailed,
 			expectedSuccess:        false,
