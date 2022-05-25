@@ -639,3 +639,19 @@ ERROR: Job failed (system failure): secrets is forbidden: User "system:serviceac
 ```
 
 [Enable RBAC support](#enabling-rbac-support) to correct the error.
+
+### Slow artifact uploads to Google Cloud Storage
+
+<!-- See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28393#note_722733798 -->
+
+Artifact uploads to Google Cloud Storage can experience reduced performance due to the runner helper pod becoming CPU bound. This will appear in the form of a slow bandwidth rate.
+
+This can be mitigated by increasing the Helper pod CPU Limit:
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        helper_cpu_limit = "250m"
+```
