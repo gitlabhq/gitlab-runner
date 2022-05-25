@@ -735,7 +735,7 @@ func TestGitCleanFlags(t *testing.T) {
 			defer mockWriter.AssertExpectations(t)
 
 			mockWriter.On("Noticef", "Checking out %s as detached HEAD (ref is %s)...", dummySha[0:8], dummyRef).Once()
-			mockWriter.On("Command", "git", "checkout", "-f", "-q", dummySha).Once()
+			mockWriter.On("Command", "git", "-c", "submodule.recurse=false", "checkout", "-f", "-q", dummySha).Once()
 
 			if test.expectedGitClean {
 				command := []interface{}{"git", "clean"}
