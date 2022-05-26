@@ -152,7 +152,10 @@ func (c *fileArchiver) processPaths() {
 		}
 
 		if found == 0 {
-			logrus.Warningf("%s: no matching files", path)
+			logrus.Warningf(
+				"%s: no matching files. Ensure that the artifact path is relative to the working directory",
+				path,
+			)
 		} else {
 			logrus.Infof("%s: found %d matching files and directories", path, found)
 		}
