@@ -6,6 +6,7 @@
   - .linux-dependency-checksums
   variables:
     PUBLISH_IMAGES: "true"
+    PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "true"
   before_script:
   - source ci/touch_make_dependencies
@@ -177,6 +178,8 @@ bleeding edge docker images:
   extends:
   - .bleding_edge_docker_images_base
   - .release_docker_images
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
 
 bleeding edge helper docker images:
   extends:
@@ -230,6 +233,8 @@ stable docker images:
   extends:
   - .stable_docker_images_base
   - .release_docker_images
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
 
 stable helper docker images:
   extends:
