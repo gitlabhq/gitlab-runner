@@ -708,6 +708,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 			Devices:           e.devices,
 			DeviceRequests:    e.deviceRequests,
 			OomKillDisable:    e.Config.Docker.GetOomKillDisable(),
+			DeviceCgroupRules: e.Config.Docker.DeviceCgroupRules,
 		},
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
