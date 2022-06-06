@@ -67,4 +67,4 @@ COPY Makefile* /tmp/
 WORKDIR /tmp
 RUN make deps package-deps packagecloud-deps
 
-RUN go get -u github.com/jstemmer/go-junit-report
+RUN go install github.com/jstemmer/go-junit-report@2a37e36ac67395cc83bca97552a19c8a4ec4ddb1
