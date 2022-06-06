@@ -305,17 +305,3 @@ you can use `cd $Env:RUNNER_SRC`.
 1. [Reviewing GitLab Runner merge requests](reviewing-gitlab-runner.md)
 1. [Add support for new Windows Version](add-windows-version.md)
 1. [Runner Group - Team Resources](https://about.gitlab.com/handbook/engineering/development/ops/verify/runner/team-resources/#overview)
-
-## Troubleshooting
-
-### `docker.go missing Asset symbol`
-
-This error happens due to missing `executors/docker/bindata.go` file that is generated from Docker prebuilts.
-Which is especially tricky on Windows.
-
-Try to execute: `make deps docker`, if it doesn't help you can do that in steps:
-
-1. Execute `go get -u github.com/jteeuwen/go-bindata/...`
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/main/docker/prebuilt-x86_64.tar.xz> and save to `out/docker/prebuilt-x86_64.tar.xz`
-1. Download <https://gitlab-runner-downloads.s3.amazonaws.com/main/docker/prebuilt-arm.tar.xz> and save to `out/docker/prebuilt-arm.tar.xz`
-1. Execute `make docker` or check the Makefile how this command looks like

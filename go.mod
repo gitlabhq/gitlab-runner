@@ -8,7 +8,6 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/bmatcuk/doublestar v1.3.0
-	github.com/boumenot/gocover-cobertura v1.2.0
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/creack/pty v1.1.11
 	github.com/docker/cli v20.10.12+incompatible
@@ -18,8 +17,6 @@ require (
 	github.com/docker/go-connections v0.3.0
 	github.com/docker/go-units v0.3.2-0.20160802145505-eb879ae3e2b8
 	github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
-	github.com/dvyukov/go-fuzz v0.0.0-20210914135545-4980593459a1
-	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/sentry-go v0.11.0
@@ -41,7 +38,6 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.24-0.20220302185830-f2d40be3e82f
 	github.com/minio/sha256-simd v1.0.0 // indirect
-	github.com/mitchellh/gox v1.0.1
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
@@ -53,7 +49,6 @@ require (
 	github.com/rs/xid v1.3.0 // indirect
 	github.com/saracen/fastzip v0.1.9
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stephens2424/writerset v1.0.2 // indirect
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
@@ -112,7 +107,6 @@ require (
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/iochan v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.0 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

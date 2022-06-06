@@ -241,7 +241,7 @@ fuzz variable mask:
     COVFUZZ_SEED_CORPUS: './helpers/trace/testdata/corpus'
   script:
   - apt update && apt install -y clang
-  - go get github.com/dvyukov/go-fuzz/go-fuzz && go get github.com/dvyukov/go-fuzz/go-fuzz-build
+  - go install github.com/dvyukov/go-fuzz/go-fuzz@latest && go install github.com/dvyukov/go-fuzz/go-fuzz-build@latest && go get github.com/dvyukov/go-fuzz/go-fuzz-dep@latest
   - go-fuzz-build -libfuzzer -o fuzz_variable_mask.a ./helpers/trace
   - clang -fsanitize=fuzzer fuzz_variable_mask.a -o fuzz_variable_mask
   - ./gitlab-cov-fuzz run -- ./fuzz_variable_mask -only_ascii=1 -max_len=128 -max_total_time=300
