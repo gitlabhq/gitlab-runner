@@ -1426,6 +1426,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 			DNSPolicy:                     s.getDNSPolicy(),
 			DNSConfig:                     s.Config.Kubernetes.GetDNSConfig(),
 			RuntimeClassName:              s.Config.Kubernetes.RuntimeClassName,
+			PriorityClassName:             s.Config.Kubernetes.PriorityClassName,
 		},
 	}
 

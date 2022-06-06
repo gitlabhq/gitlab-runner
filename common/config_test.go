@@ -802,6 +802,19 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "localhost", lifecycleCfg.PreStop.TCPSocket.Host)
 			},
 		},
+		"setting Priority Class to priority-1": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						priority_class_name = 'priority-1'
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				priorityClassName := config.Runners[0].Kubernetes.PriorityClassName
+				assert.Equal(t, "priority-1", priorityClassName)
+			},
+		},
 	}
 
 	for tn, tt := range tests {
