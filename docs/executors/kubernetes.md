@@ -182,6 +182,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `volumes` | Configured through the configuration file, the list of volumes that will be mounted in the build container. [Read more about using volumes](#using-volumes). |
 | `dns_policy` | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) will be used if not set. |
 | `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#pods-dns-config). |
+| `priority_class_name` | Specify the Priority Class to be set to the pod. The default one will be used if not set. |
 
 ### Configuring executor Service Account
 
@@ -326,6 +327,7 @@ concurrent = 4
     poll_interval = 5
     poll_timeout = 3600
     dns_policy = "cluster-first"
+    priority_class_name = "priority-1"
     [runners.kubernetes.node_selector]
       gitlab = "true"
     [runners.kubernetes.node_tolerations]

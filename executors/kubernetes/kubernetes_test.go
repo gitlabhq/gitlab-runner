@@ -4098,6 +4098,19 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 		},
+		"support setting Pod Priority Class": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:         "default",
+						PriorityClassName: "priority-1",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, "priority-1", pod.Spec.PriorityClassName)
+			},
+		},
 	}
 
 	for testName, test := range tests {
