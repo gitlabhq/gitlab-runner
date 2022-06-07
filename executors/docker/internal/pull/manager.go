@@ -61,13 +61,26 @@ func NewManager(
 }
 
 func (m *manager) GetDockerImage(imageName string) (*types.ImageInspect, error) {
-	pullPolicies, err := m.config.DockerConfig.GetPullPolicies()
+	configPullPolicies, err := m.config.DockerConfig.GetPullPolicies()
 	if err != nil {
 		return nil, err
 	}
 
+	allowedPullPolicies, err := m.config.DockerConfig.GetAllowedPullPolicies()
+	if err != nil {
+		return nil, err
+	}
+
+	if !m.verifyPullPolicies(configPullPolicies, allowedPullPolicies) {
+		return nil, fmt.Errorf(
+			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
+			configPullPolicies,
+			allowedPullPolicies,
+		)
+	}
+
 	var imageErr error
-	for idx, pullPolicy := range pullPolicies {
+	for idx, pullPolicy := range configPullPolicies {
 		attempt := 1 + idx
 		if attempt > 1 {
 			m.logger.Infoln(fmt.Sprintf("Attempt #%d: Trying %q pull policy", attempt, pullPolicy))
@@ -88,9 +101,25 @@ func (m *manager) GetDockerImage(imageName string) (*types.ImageInspect, error) 
 	return nil, fmt.Errorf(
 		"failed to pull image %q with specified policies %v: %w",
 		imageName,
-		pullPolicies,
+		configPullPolicies,
 		imageErr,
 	)
+}
+
+func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) bool {
+	contains := true
+
+	for _, policy := range pullPolicies {
+		contains = false
+		for _, allowedPolicy := range allowedPullPolicies {
+			if policy == allowedPolicy {
+				contains = true
+				break
+			}
+		}
+	}
+
+	return contains
 }
 
 func (m *manager) wasImageUsed(imageName, imageID string) bool {
