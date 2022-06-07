@@ -99,11 +99,8 @@ func skipOnGit(t *testing.T, constraints string) {
 	}
 }
 
-func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (*common.Build, func()) {
-	dir, err := ioutil.TempDir("", "gitlab-runner-shell-executor-test")
-	if err != nil {
-		t.Fatal(err)
-	}
+func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) *common.Build {
+	dir := t.TempDir()
 
 	t.Log("Build directory:", dir)
 
@@ -125,11 +122,7 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) (
 		},
 	}
 
-	cleanup := func() {
-		os.RemoveAll(dir)
-	}
-
-	return build, cleanup
+	return build
 }
 
 func TestBuildSuccess(t *testing.T) {
@@ -137,8 +130,7 @@ func TestBuildSuccess(t *testing.T) {
 		buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
 			successfulBuild, err := common.GetSuccessfulBuild()
 			assert.NoError(t, err)
-			build, cleanup := newBuild(t, successfulBuild, shell)
-			defer cleanup()
+			build := newBuild(t, successfulBuild, shell)
 
 			setup(build)
 
@@ -173,7 +165,7 @@ func TestMultistepBuild(t *testing.T) {
 			},
 			errExpected: false,
 		},
-		"Failure on script step. Release is skipped. After script runs.": {
+		"Failure on script step Release is skipped After script runs": {
 			jobResponse: failingScriptBuild,
 			expectedOutput: []string{
 				"echo Hello World",
@@ -198,8 +190,7 @@ func TestMultistepBuild(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-				build, cleanup := newBuild(t, tt.jobResponse, shell)
-				defer cleanup()
+				build := newBuild(t, tt.jobResponse, shell)
 
 				out, err := buildtest.RunBuildReturningOutput(t, build)
 
@@ -258,8 +249,7 @@ func TestBuildJobStatusEnvVars(t *testing.T) {
 				multistepBuildScript, err := common.GetRemoteFailingMultistepBuildPrintVars(shell, tc.fail, "CI_JOB_STATUS")
 				require.NoError(t, err)
 
-				build, cleanup := newBuild(t, multistepBuildScript, shell)
-				defer cleanup()
+				build := newBuild(t, multistepBuildScript, shell)
 
 				out, err := buildtest.RunBuildReturningOutput(t, build)
 
@@ -298,8 +288,7 @@ func TestRawVariableOutput(t *testing.T) {
 		successfulBuild, err := common.GetLocalBuildResponse(test.command)
 		require.NoError(t, err)
 
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		value := "$VARIABLE$WITH$DOLLARS$$"
 		build.Variables = append(build.Variables, common.JobVariable{
@@ -316,8 +305,7 @@ func TestRawVariableOutput(t *testing.T) {
 
 func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.JobResponse{}, shell)
-		defer cleanup()
+		build := newBuild(t, common.JobResponse{}, shell)
 
 		updateSleepForCMD := func(build *common.Build) {
 			if shell != "cmd" {
@@ -336,8 +324,7 @@ func TestBuildCancel(t *testing.T) {
 
 func TestBuildMasking(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.JobResponse{}, shell)
-		defer cleanup()
+		build := newBuild(t, common.JobResponse{}, shell)
 
 		buildtest.RunBuildWithMasking(t, build.Runner, nil)
 	})
@@ -347,8 +334,7 @@ func TestBuildWithIndexLock(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
@@ -366,8 +352,7 @@ func TestBuildWithShallowLock(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -390,8 +375,7 @@ func TestBuildWithHeadLock(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
@@ -409,8 +393,7 @@ func TestBuildWithLeftoverConfigLock(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
@@ -428,8 +411,7 @@ func TestBuildWithGitLFSHook(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
@@ -477,8 +459,7 @@ func TestBuildWithGitStrategyNoneWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Runner.PostCloneScript = "echo post-clone-script"
@@ -498,8 +479,7 @@ func TestBuildWithGitStrategyNoneWithLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "none"})
 
@@ -516,8 +496,7 @@ func TestBuildWithGitStrategyFetchWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Runner.PostCloneScript = "echo post-clone-script"
@@ -541,8 +520,7 @@ func TestBuildWithGitStrategyFetchWithLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
@@ -566,8 +544,7 @@ func TestBuildWithGitStrategyFetchWithUserDisabledLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -599,8 +576,7 @@ func TestBuildWithGitStrategyFetchNoCheckoutWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Runner.PostCloneScript = "echo post-clone-script"
@@ -628,8 +604,7 @@ func TestBuildWithGitStrategyFetchNoCheckoutWithLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -657,8 +632,7 @@ func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Runner.PostCloneScript = "echo post-clone-script"
@@ -681,8 +655,7 @@ func TestBuildWithGitStrategyCloneWithLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
 
@@ -697,8 +670,7 @@ func TestBuildWithGitStrategyCloneWithUserDisabledLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -717,8 +689,7 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Runner.PostCloneScript = "echo post-clone-script"
@@ -745,8 +716,7 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -766,8 +736,7 @@ func TestBuildWithSubmoduleLFSPullsLFSObject(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 		build.Variables = append(
 			build.Variables,
 			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
@@ -789,8 +758,7 @@ func TestBuildWithSubmoduleLFSDisabledSmudging(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 		build.Variables = append(
 			build.Variables,
 			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
@@ -815,8 +783,7 @@ func TestBuildWithGitSubmoduleStrategyNone(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 				successfulBuild, err := common.GetSuccessfulBuild()
 				assert.NoError(t, err)
-				build, cleanup := newBuild(t, successfulBuild, shell)
-				defer cleanup()
+				build := newBuild(t, successfulBuild, shell)
 
 				build.Variables = append(
 					build.Variables,
@@ -892,8 +859,7 @@ func TestBuildWithGitSubmodulePaths(t *testing.T) {
 				successfulBuild, err := common.GetSuccessfulBuild()
 				assert.NoError(t, err)
 
-				build, cleanup := newBuild(t, successfulBuild, shell)
-				defer cleanup()
+				build := newBuild(t, successfulBuild, shell)
 
 				build.Variables = append(
 					build.Variables,
@@ -924,8 +890,7 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
 
@@ -947,8 +912,7 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"})
 
@@ -970,8 +934,7 @@ func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -1008,8 +971,7 @@ func TestBuildGitCloneStrategyCleanup(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 		build.Runner.RunnerSettings.Shell = shell
 
 		buildtest.RunBuildWithCleanupGitClone(t, build)
@@ -1027,8 +989,7 @@ func TestBuildGitFetchStrategyCleanup(t *testing.T) {
 		)
 
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 		build.Runner.RunnerSettings.Shell = shell
 
 		buildtest.RunBuildWithCleanupGitFetch(t, build, untrackedFilename)
@@ -1048,8 +1009,7 @@ func TestBuildGitFetchStrategySubmoduleNormalCleanup(t *testing.T) {
 		)
 
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, build, untrackedFilename, untrackedFileInSubmodule)
 
@@ -1073,8 +1033,7 @@ func TestBuildGitFetchStrategySubmoduleRecursiveCleanup(t *testing.T) {
 		)
 
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		buildtest.RunBuildWithCleanupRecursiveSubmoduleStrategy(
 			t,
@@ -1101,8 +1060,7 @@ func TestBuildWithGitSubmoduleStrategyInvalid(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "invalid"})
 
@@ -1118,8 +1076,7 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -1142,8 +1099,7 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"})
 
@@ -1195,8 +1151,7 @@ func TestBuildWithoutDebugTrace(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		// The default build shouldn't have debug tracing enabled
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1208,8 +1163,7 @@ func TestBuildWithDebugTrace(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Variables = append(build.Variables, common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "true"})
 
@@ -1224,8 +1178,7 @@ func TestBuildMultilineCommand(t *testing.T) {
 
 	multilineBuild, err := common.GetMultilineBashBuild()
 	assert.NoError(t, err)
-	build, cleanup := newBuild(t, multilineBuild, "bash")
-	defer cleanup()
+	build := newBuild(t, multilineBuild, "bash")
 
 	// The default build shouldn't have debug tracing enabled
 	out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1242,8 +1195,7 @@ func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteBrokenTLSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.URL = "https://gitlab.com"
 
@@ -1258,8 +1210,7 @@ func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.URL = "https://gitlab.com"
 
@@ -1275,8 +1226,7 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 
 		build.Runner.PreCloneScript = "echo pre-clone-script"
 		build.Runner.PostCloneScript = "echo post-clone-script"
@@ -1300,8 +1250,7 @@ func TestBuildWithUntrackedDirFromPreviousBuild(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1321,8 +1270,7 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		assert.NoError(t, err)
-		build, cleanup := newBuild(t, successfulBuild, shell)
-		defer cleanup()
+		build := newBuild(t, successfulBuild, shell)
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -1344,8 +1292,7 @@ func TestBuildPowerShellCatchesExceptions(t *testing.T) {
 
 			successfulBuild, err := common.GetRemoteSuccessfulBuild()
 			assert.NoError(t, err)
-			build, cleanup := newBuild(t, successfulBuild, shell)
-			defer cleanup()
+			build := newBuild(t, successfulBuild, shell)
 			build.Variables = append(
 				build.Variables,
 				common.JobVariable{Key: "ErrorActionPreference", Value: "Stop"},
@@ -1417,8 +1364,7 @@ func TestInteractiveTerminal(t *testing.T) {
 
 			successfulBuild, err := common.GetLocalBuildResponse(c.command)
 			require.NoError(t, err)
-			build, cleanup := newBuild(t, successfulBuild, c.shell)
-			defer cleanup()
+			build := newBuild(t, successfulBuild, c.shell)
 			sess, err := session.NewSession(nil)
 			build.Session = sess
 			require.NoError(t, err)
@@ -1489,8 +1435,7 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 		jobResponse, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
 
-		build, cleanup := newBuild(t, jobResponse, shell)
-		defer cleanup()
+		build := newBuild(t, jobResponse, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -1529,8 +1474,7 @@ func TestSanitizeGitDirectory(t *testing.T) {
 			"git remote set-url origin /tmp/some/invalid/directory",
 		)
 
-		build, cleanup := newBuild(t, jobResponse, shell)
-		defer cleanup()
+		build := newBuild(t, jobResponse, shell)
 
 		build.Variables = append(
 			build.Variables,
@@ -1576,8 +1520,7 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 				buildtest.WithEachFeatureFlag(t, func(t *testing.T, setup buildtest.BuildSetupFn) {
-					build, cleanup := newBuild(t, tt.jobResponse, shell)
-					defer cleanup()
+					build := newBuild(t, tt.jobResponse, shell)
 
 					testVariableName := "TEST_VARIABLE"
 
@@ -1604,8 +1547,7 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 
 func TestBuildLogLimitExceeded(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		build, cleanup := newBuild(t, common.JobResponse{}, shell)
-		defer cleanup()
+		build := newBuild(t, common.JobResponse{}, shell)
 
 		buildtest.RunBuildWithJobOutputLimitExceeded(t, build.Runner, nil)
 	})
@@ -1617,14 +1559,11 @@ func TestBuildInvokeBinaryHelper(t *testing.T) {
 			successfulBuild, err := common.GetRemoteSuccessfulBuild()
 			require.NoError(t, err)
 
-			build, cleanup := newBuild(t, successfulBuild, shell)
-			defer cleanup()
+			build := newBuild(t, successfulBuild, shell)
 
 			setup(build)
 
-			dir, err := ioutil.TempDir("", "")
-			require.NoError(t, err)
-			defer os.RemoveAll(dir)
+			dir := t.TempDir()
 
 			build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
 			build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
@@ -1650,8 +1589,7 @@ func TestBuildPwshHandlesSyntaxErrors(t *testing.T) {
 	successfulBuild, err := common.GetLocalBuildResponse("some syntax error\nWrite-Output $PSVersionTable")
 	require.NoError(t, err)
 
-	build, cleanup := newBuild(t, successfulBuild, shells.SNPwsh)
-	defer cleanup()
+	build := newBuild(t, successfulBuild, shells.SNPwsh)
 
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	assert.Error(t, err)
@@ -1664,8 +1602,7 @@ func TestBuildPwshHandlesScriptEncodingCorrectly(t *testing.T) {
 	successfulBuild, err := common.GetLocalBuildResponse("echo $Env:GL_Test1 | Format-Hex")
 	require.NoError(t, err)
 
-	build, cleanup := newBuild(t, successfulBuild, shells.SNPwsh)
-	defer cleanup()
+	build := newBuild(t, successfulBuild, shells.SNPwsh)
 
 	build.Variables = append(build.Variables, common.JobVariable{
 		Key:   "GL_Test1",
@@ -1684,8 +1621,7 @@ func TestBuildScriptSections(t *testing.T) {
 			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
 			t.Skip("CMD not supported")
 		}
-		build, cleanup := newBuild(t, common.JobResponse{}, shell)
-		defer cleanup()
+		build := newBuild(t, common.JobResponse{}, shell)
 
 		successfulBuild, err := common.GetSuccessfulBuild()
 		require.NoError(t, err)

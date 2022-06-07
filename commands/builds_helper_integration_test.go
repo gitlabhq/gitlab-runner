@@ -5,7 +5,6 @@ package commands
 
 import (
 	"io/ioutil"
-	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -19,9 +18,7 @@ import (
 )
 
 func TestBuildsHelperCollect(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gitlab-runner-helper-collector")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	ch := make(chan prometheus.Metric, 50)
 	b := newBuildsHelper()

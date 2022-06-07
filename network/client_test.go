@@ -245,9 +245,7 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	hostname, _, err := net.SplitHostPort(serverURL.Host)
 	require.NoError(t, err)
 
-	tempDir, err := ioutil.TempDir("", "certs")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	CertificateDirectory = tempDir
 
 	err = writeTLSCertificate(s, filepath.Join(tempDir, hostname+".crt"))
@@ -340,9 +338,7 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	s.StartTLS()
 	defer s.Close()
 
-	tempDir, err := ioutil.TempDir("", "certs")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	CertificateDirectory = tempDir
 
 	serverURL, err := url.Parse(s.URL)

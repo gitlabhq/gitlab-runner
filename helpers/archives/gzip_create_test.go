@@ -62,22 +62,18 @@ func TestGzipArchiveOfMultipleFiles(t *testing.T) {
 }
 
 func TestGzipArchivingShouldFailIfDirectoryIsBeingArchived(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test_dir")
-	require.NoError(t, err)
-	defer os.Remove(dir)
+	dir := t.TempDir()
 
 	var buffer bytes.Buffer
-	err = CreateGzipArchive(&buffer, []string{dir})
+	err := CreateGzipArchive(&buffer, []string{dir})
 	require.Errorf(t, err, "the %q is not a regular file", dir)
 }
 
 func TestGzipArchivingShouldFailIfSymlinkIsBeingArchived(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test_dir")
-	require.NoError(t, err)
-	defer os.Remove(dir)
+	dir := t.TempDir()
 
 	filePath := filepath.Join(dir, "file")
-	err = ioutil.WriteFile(filePath, testGzipFileContent, 0644)
+	err := ioutil.WriteFile(filePath, testGzipFileContent, 0644)
 	require.NoError(t, err)
 
 	symlinkPath := filepath.Join(dir, "symlink")
@@ -99,12 +95,10 @@ func TestGzipDoesNotArchiveNonExistingFile(t *testing.T) {
 }
 
 func TestGzipArchivesExistingAndNonExistingFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test_dir")
-	require.NoError(t, err)
-	defer os.Remove(dir)
+	dir := t.TempDir()
 
 	filePath := filepath.Join(dir, "file")
-	err = ioutil.WriteFile(filePath, testGzipFileContent, 0644)
+	err := ioutil.WriteFile(filePath, testGzipFileContent, 0644)
 	require.NoError(t, err)
 
 	var buffer bytes.Buffer

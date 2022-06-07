@@ -18,17 +18,15 @@ import (
 )
 
 func guardMachineOperationTest(t *testing.T, name string, callback func(t *testing.T)) {
-	tempHomeDir, err := ioutil.TempDir("", "docker-machine-list")
-	require.NoError(t, err)
+	tempHomeDir := t.TempDir()
 
 	machineDir := path.Join(tempHomeDir, ".docker", "machine")
-	err = os.MkdirAll(machineDir, 0755)
+	err := os.MkdirAll(machineDir, 0755)
 	require.NoError(t, err)
 
 	mcndirs.BaseDir = machineDir
 	defer func() {
 		mcndirs.BaseDir = ""
-		os.RemoveAll(tempHomeDir)
 	}()
 
 	t.Run(name, callback)
@@ -82,13 +80,11 @@ func TestList(t *testing.T) {
 }
 
 func mockDockerMachineExecutable(t *testing.T) func() {
-	tempDir, err := ioutil.TempDir("", "docker-machine-executable")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	dmExecutable := filepath.Join(tempDir, "docker-machine")
 
-	err = ioutil.WriteFile(dmExecutable, []byte{}, 0777)
+	err := ioutil.WriteFile(dmExecutable, []byte{}, 0777)
 	require.NoError(t, err)
 
 	currentDockerMachineExecutable := dockerMachineExecutable

@@ -257,6 +257,9 @@ fuzz variable mask:
   parallel: 6
   before_script:
   - Set-MpPreference -DisableRealtimeMonitoring $true
+  - git config --system core.longpaths true
+  - New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
+    -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
   - go version
   - curl -o golang.msi "https://go.dev/dl/go1.17.7.windows-amd64.msi"
   - Start-Process msiexec.exe -Wait -ArgumentList '/I golang.msi /quiet'
@@ -405,4 +408,3 @@ integration_k8s:
   # use env -i to clear parent environment variables for go test
   - ./scripts/go_test_no_env -tags=integration,kubernetes -v gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes
   retry: 2
-

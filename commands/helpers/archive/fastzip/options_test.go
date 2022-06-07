@@ -91,9 +91,7 @@ func TestExtractorOptionFromEnv(t *testing.T) {
 }
 
 func archiveTestDir(t *testing.T, fn func(string, string, error)) {
-	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	pathname := filepath.Join(dir, "test_file")
 	require.NoError(t, ioutil.WriteFile(pathname, []byte("foobar"), 0777))

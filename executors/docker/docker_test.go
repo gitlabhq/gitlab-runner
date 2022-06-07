@@ -2031,8 +2031,7 @@ func TestLocalHelperImage(t *testing.T) {
 
 func createFakePrebuiltImages(t *testing.T, architecture string) func() {
 	// Create fake image files so that tests do not need helper images built
-	tempImgDir, err := ioutil.TempDir(os.TempDir(), "runner-tests")
-	require.NoError(t, err)
+	tempImgDir := t.TempDir()
 
 	prevPrebuiltImagesPaths := PrebuiltImagesPaths
 	PrebuiltImagesPaths = []string{tempImgDir}
@@ -2048,7 +2047,6 @@ func createFakePrebuiltImages(t *testing.T, architecture string) func() {
 	}
 
 	return func() {
-		os.RemoveAll(tempImgDir)
 		PrebuiltImagesPaths = prevPrebuiltImagesPaths
 	}
 }

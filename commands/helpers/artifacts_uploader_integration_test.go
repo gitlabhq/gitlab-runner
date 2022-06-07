@@ -83,15 +83,11 @@ func redirectingServerHandler(finalServerURL string) http.HandlerFunc {
 
 func finalServerHandler(t *testing.T, finalRequestReceived *bool) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		dir, err := os.MkdirTemp("", "test-archive-upload-redirect-dir-")
-		require.NoError(t, err)
-		defer func() {
-			_ = os.RemoveAll(dir)
-		}()
+		dir := t.TempDir()
 
 		receiveFile(t, r, dir)
 
-		err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
 			}
