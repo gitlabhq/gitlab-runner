@@ -10,7 +10,7 @@ GitLab Runner can be installed and updated on macOS.
 
 ## Installing
 
-There are two methods for installing GitLab Runner on macOS:
+Two methods for installing GitLab Runner on macOS are available:
 
 - [Manual installation](#manual-installation-official). This method is officially supported and recommended by GitLab.
 - [Homebrew installation](#homebrew-installation-alternative). Install with [Homebrew](https://brew.sh) as an alternative to manual installation.
@@ -22,13 +22,17 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 
 1. Download the binary for your system:
 
-   ```shell
-   # macOS amd64
-   sudo curl --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64"
+   - For Intel-based systems:
+     
+     ```shell
+     sudo curl --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64"
+     ```
 
-   # macOS Apple Silicon/arm64
-   sudo curl --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-arm64"
-   ```
+   - For Apple Silicon-based systems:
+
+     ```shell
+     sudo curl --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-arm64"
+     ```
 
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
@@ -39,15 +43,12 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-**The rest of the commands should execute as the user who will run the runners.**
+As the user who is to run the runners:
 
-1. [Register a runner](../register/index.md)
-
-   NOTE:
-   When you build iOS or macOS applications on macOS, use [the shell executor](../executors/shell.md).
-   The build and tests run as the identity of the logged-in user, directly on the build host.
-   It does not run in a container. This is less secure than using container executors. For more information, see the
-   [security implications documentation](../security/index.md#usage-of-shell-executor)
+1. [Register a runner](../register/index.md). When you build iOS or macOS applications on macOS, use
+   [the shell executor](../executors/shell.md). The build and tests run as the identity of the logged-in user, directly
+   on the build host. It does not run in a container, which is less secure than using container executors. For more
+   information, see the [security implications documentation](../security/index.md#usage-of-shell-executor)
    for additional detail on what to keep in mind in this scenario.
 
 1. Open a terminal and switch to the current user.
@@ -64,7 +65,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    gitlab-runner start
    ```
 
-GitLab Runner is installed and will be run after a system reboot.
+GitLab Runner is installed and is run after a system reboot.
 
 If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/gitlab-runner/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md).
 
@@ -95,17 +96,16 @@ GitLab Runner is installed and running.
 
 NOTE:
 The service needs to be installed from a Terminal window logged in
-as your current user. Only then will you be able to manage the service.
+as your current user. Only then can you manage the service.
 
 To sign in as your current user, run the command `su - <username>` in the terminal. You can obtain your username by running the command `ls /users`.
 
 Currently, the only proven way for it to work in macOS is by running the service in user-mode.
 
-Since the service will be running only when the user is logged in, you should
-enable auto-login on your macOS machine.
+Because the service runs only when the user is logged in, you should enable auto-login on your macOS machine.
 
-The service will be launched as a `LaunchAgent`. By using `LaunchAgents`,
-the builds will be able to perform UI interactions, making it possible to run and
+The service is launched as a `LaunchAgent`. By using `LaunchAgents`,
+the builds are able to perform UI interactions, making it possible to run and
 test in the iOS simulator.
 
 It's worth noting that macOS also has `LaunchDaemons`, services running
@@ -156,9 +156,17 @@ git config credential.helper
 
 1. Download the binary to replace the GitLab Runner executable:
 
-   ```shell
-   sudo curl -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64"
-   ```
+   - For Intel-based systems:
+
+     ```shell
+     sudo curl -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64"
+     ```
+
+   - For Apple Silicon-based systems:
+     
+     ```shell
+     sudo curl -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-arm64"
+     ```
 
    You can download a binary for every available version as described in
    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
@@ -180,7 +188,7 @@ some of the most common problems with GitLab Runner.
 
 ## Upgrade the service file
 
-In order to upgrade the `LaunchAgent` configuration, you need to uninstall and
+In order to upgrade the `LaunchAgent` configuration, you must uninstall and
 install the service:
 
 ```shell
@@ -191,8 +199,8 @@ gitlab-runner start
 
 ## Using codesign with the GitLab Runner Service
 
-If you installed `gitlab-runner` on macOS with homebrew and your build calls
-`codesign`, you may need to set `<key>SessionCreate</key><true/>` to have
+If you installed `gitlab-runner` on macOS with Homebrew and your build calls
+`codesign`, you may have to set `<key>SessionCreate</key><true/>` to have
 access to the user keychains. In the following example we run the builds as the `gitlab`
 user and want access to the signing certificates installed by that user for codesigning:
 
@@ -260,7 +268,7 @@ causes to why this happens:
 
    The first command enables access to developer tools for your user.
    The second command allows the user who is member of the developer group to
-   do UI interactions, e.g., run the iOS simulator.
+   do UI interactions (for example, run the iOS simulator).
 
 1. Make sure that your GitLab Runner service doesn't use `SessionCreate = true`.
    Previously, when running GitLab Runner as a service, we were creating
@@ -269,7 +277,7 @@ causes to why this happens:
    **OS X El Capitan** which introduced a lot of new security features that
    altered this behavior.
    Since GitLab Runner 1.1, when creating a `LaunchAgent`, we don't set
-   `SessionCreate`. However, in order to upgrade, you need to manually
+   `SessionCreate`. However, in order to upgrade, you must manually
    reinstall the `LaunchAgent` script:
 
    ```shell
