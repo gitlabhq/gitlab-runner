@@ -262,7 +262,7 @@ This defines the Docker Container parameters.
 | Parameter | Description |
 | --------- | ----------- |
 | `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restricting-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
-| `allowed_pull_policies`        | List of pull policies that can be specified in the `config.toml` file. If not specified, all pull policies specified in `pull-policy` are allowed. |
+| `allowed_pull_policies`        | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, all pull policies specified in `pull-policy` are allowed. Use with the [Docker](../executors/docker.md#restrict-docker-pull-policies) executor. |
 | `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restricting-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
 | `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
 | `cap_add`                      | Add additional Linux capabilities to the container. |
@@ -291,7 +291,7 @@ This defines the Docker Container parameters.
 | `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
 | `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
-| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies). |
+| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies), or [restrict pull policies](../executors/docker.md#restrict-docker-pull-policies). |
 | `runtime`                      | The runtime for the Docker container. |
 | `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
 | `shm_size`                     | Shared memory size for images (in bytes). |

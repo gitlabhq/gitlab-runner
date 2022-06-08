@@ -83,7 +83,7 @@ func (c DockerConfig) GetPullPolicies() ([]DockerPullPolicy, error) {
 		case PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever:
 			policies[idx] = DockerPullPolicy(p)
 		default:
-			return []DockerPullPolicy{}, fmt.Errorf("unsupported docker-pull-policy: %q", p)
+			return []DockerPullPolicy{}, fmt.Errorf("unsupported pull_policy config: %q", p)
 		}
 	}
 
@@ -104,7 +104,7 @@ func (c DockerConfig) GetAllowedPullPolicies() ([]DockerPullPolicy, error) {
 		case PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever:
 			policies[idx] = p
 		default:
-			return []DockerPullPolicy{}, fmt.Errorf("unsupported docker-pull-policy: %q", p)
+			return []DockerPullPolicy{}, fmt.Errorf("unsupported allowed_pull_policies config: %q", p)
 		}
 	}
 

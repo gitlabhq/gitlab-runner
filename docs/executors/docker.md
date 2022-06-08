@@ -400,6 +400,31 @@ Or, to restrict to a specific list of images from this registry:
     allowed_services = ["postgres:9.4", "postgres:latest"]
 ```
 
+## Restrict Docker pull policies
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
+
+In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how
+a CI/CD job should fetch images.
+
+To restrict which pull policies can be used in the `.gitlab-ci.yml` file, you can use `allowed_pull_policies`.
+
+For example, to allow only the `always` and `if-not-present` pull policies:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_pull_policies = ["always", "if-not-present"]
+```
+
+- If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
+- If you don't specify `pull_policy`, the default is `always`.
+- The existing [`pull_policy` keyword](../executors/docker.md#how-pull-policies-work) must not include a pull policy
+  that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
+
 ## Accessing the services
 
 Let's say that you need a Wordpress instance to test some API integration with
