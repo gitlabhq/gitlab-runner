@@ -809,6 +809,10 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
+	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
+		return []string{}, command
+	}
+
 	if len(command) == 0 && len(imageDefinition.Entrypoint) > 0 {
 		command = imageDefinition.Entrypoint
 	}
@@ -1434,12 +1438,6 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 }
 
 func (s *executor) createBuildAndHelperContainers() (api.Container, api.Container, error) {
-	dockerCmdForBuildContainer := s.BuildShell.DockerCommand
-	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) &&
-		!s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
-		dockerCmdForBuildContainer = []string{}
-	}
-
 	buildContainer, err := s.buildContainer(containerBuildOpts{
 		name:            buildContainerName,
 		image:           s.Build.GetAllVariables().ExpandValue(s.options.Image.Name),
@@ -1450,7 +1448,7 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 			s.Config.Kubernetes.BuildContainerSecurityContext,
 			s.defaultCapDrop()...,
 		),
-		command: dockerCmdForBuildContainer,
+		command: s.BuildShell.DockerCommand,
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building build container: %w", err)

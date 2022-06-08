@@ -48,6 +48,7 @@ const (
 	TestAlpineNoRootImage           = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest"
 	TestAlpineEntrypointImage       = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint:latest"
 	TestAlpineEntrypointStderrImage = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-stderr:latest"
+	TestHelperEntrypointImage       = "registry.gitlab.com/gitlab-org/gitlab-runner/helper-entrypoint:latest"
 	TestAlpineIDOverflowImage       = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-id-overflow:latest"
 	TestDockerDindImage             = "docker:18-dind"
 	TestDockerGitImage              = "docker:18-git"

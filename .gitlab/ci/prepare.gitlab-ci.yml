@@ -49,6 +49,21 @@ prepare alpine-id-overflow image:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-id-overflow:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-id-overflow/Dockerfile
 
+prepare helper-entrypoint image:
+  extends:
+  - .docker
+  - .rules:prepare:gitlab-runner-helper-entrypoint:image:merge-requests
+  stage: prepare
+  variables:
+    BUILD_DOCKERFILE_BASEDIR: ./tests/dockerfiles/gitlab-runner-helper-entrypoint
+    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/helper-entrypoint:latest
+    BUILD_DOCKERFILE: "$BUILD_DOCKERFILE_BASEDIR/dockerfile"
+  script:
+  - make helper-bin-host
+  - mkdir -p "$BUILD_DOCKERFILE_BASEDIR/binaries/"
+  - cp out/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64 "$BUILD_DOCKERFILE_BASEDIR/binaries/gitlab-runner-helper"
+  - source ./ci/build_ci_image
+
 prepare go fips:
   extends:
     - .docker

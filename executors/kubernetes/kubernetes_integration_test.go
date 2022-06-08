@@ -184,15 +184,54 @@ func TestBuildScriptSections(t *testing.T) {
 func TestEntrypointNotIgnored(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
+	buildTestJob, err := common.GetRemoteBuildResponse(
+		"if [ -f /tmp/debug.log ]; then",
+		"cat /tmp/debug.log",
+		"else",
+		"echo 'file not found'",
+		"fi",
+		"echo \"I am now `whoami`\"",
+	)
+	require.NoError(t, err)
+
+	helperTestJob, err := common.GetRemoteBuildResponse(
+		"if [ -f /builds/debug.log ]; then",
+		"cat /builds/debug.log",
+		"else",
+		"echo 'file not found'",
+		"fi",
+		"echo \"I am now `whoami`\"",
+	)
+	require.NoError(t, err)
+
 	testCases := map[string]struct {
+		jobResponse          common.JobResponse
+		buildImage           string
+		helperImage          string
 		useHonorEntrypointFF bool
 		expectedOutputLines  []string
 	}{
-		"feature flag off": {
+		"build image with entrypoint feature flag off": {
+			jobResponse:          buildTestJob,
+			buildImage:           common.TestAlpineEntrypointImage,
 			useHonorEntrypointFF: false,
 			expectedOutputLines:  []string{"I am now root", "file not found"},
 		},
-		"feature flag on": {
+		"build image with entrypoint feature flag on": {
+			jobResponse:          buildTestJob,
+			buildImage:           common.TestAlpineEntrypointImage,
+			useHonorEntrypointFF: true,
+			expectedOutputLines:  []string{"I am now nobody", "this has been executed through a custom entrypoint"},
+		},
+		"helper image with entrypoint feature flag off": {
+			jobResponse:          helperTestJob,
+			helperImage:          common.TestHelperEntrypointImage,
+			useHonorEntrypointFF: false,
+			expectedOutputLines:  []string{"I am now root", "file not found"},
+		},
+		"helper image with entrypoint feature flag on": {
+			jobResponse:          helperTestJob,
+			helperImage:          common.TestHelperEntrypointImage,
 			useHonorEntrypointFF: true,
 			expectedOutputLines:  []string{"I am now nobody", "this has been executed through a custom entrypoint"},
 		},
@@ -201,21 +240,17 @@ func TestEntrypointNotIgnored(t *testing.T) {
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
 			build := getTestBuildWithImage(t, common.TestAlpineEntrypointImage, func() (common.JobResponse, error) {
-				job, err := common.GetRemoteBuildResponse(
-					"if [ -f /tmp/debug.log ]; then",
-					"cat /tmp/debug.log",
-					"else",
-					"echo 'file not found'",
-					"fi",
-					"echo \"I am now `whoami`\"",
-				)
-
+				job := tc.jobResponse
 				job.Image = common.Image{
 					Name: common.TestAlpineEntrypointImage,
 				}
 
 				return job, err
 			})
+
+			if tc.helperImage != "" {
+				build.Runner.Kubernetes.HelperImage = common.TestHelperEntrypointImage
+			}
 
 			build.Variables = append(
 				build.Variables,

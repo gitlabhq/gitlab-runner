@@ -224,6 +224,13 @@
         - dockerfiles/ci/go.fips.Dockerfile
         - .gitlab/ci/prepare.gitlab-ci.yml
 
+.rules:prepare:gitlab-runner-helper-entrypoint:image:merge-requests:
+  rules:
+  - <<: *if-runner-merge-request-pipeline
+    changes:
+    - tests/dockerfiles/gitlab-runner-helper-entrypoint/*
+    - .gitlab/ci/prepare.gitlab-ci.yml
+
 ##############
 # Docs rules #
 ##############
