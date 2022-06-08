@@ -5228,7 +5228,9 @@ func TestBuildContainerSecurityContext(t *testing.T) {
 
 	executor := newExecutor()
 	executor.pullManager = mockPullManager
-	executor.Build = new(common.Build)
+	executor.Build = &common.Build{
+		Runner: new(common.RunnerConfig),
+	}
 	executor.Config.Kubernetes = new(common.KubernetesConfig)
 
 	for tn, tt := range tests {
