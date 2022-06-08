@@ -85,8 +85,6 @@ check race unexpected test failures:
   - ./scripts/check_unexpected_test_failures
 
 .check windows unexpected test failures:
-  extends:
-  - .rules:merge_request_pipelines:no_docs:always
   stage: coverage
   script:
   - ./scripts/check_unexpected_test_failures
@@ -94,24 +92,28 @@ check race unexpected test failures:
 check windows 1809 unexpected unit test failures:
   extends:
   - .check windows unexpected test failures
+  - .rules:merge_request_pipelines:no_docs:always
   needs:
   - windows 1809 unit tests
 
 check windows 1809 unexpected integration test failures:
   extends:
   - .check windows unexpected test failures
+  - .rules:merge_request_pipelines:no_docs:always
   needs:
   - windows 1809 integration tests
 
 check windows 21H1 unexpected unit test failures:
   extends:
-    - .check windows unexpected test failures
+  - .check windows unexpected test failures
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
     - windows 21H1 unit tests
 
 check windows 21H1 unexpected integration test failures:
   extends:
-    - .check windows unexpected test failures
+  - .check windows unexpected test failures
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
     - windows 21H1 integration tests
 
@@ -136,9 +138,9 @@ check windows 1809 unit test failures:
 
 check windows 21H1 unit test failures:
   extends:
-    - .check windows test failures
-    - .windows21H1_variables
-    - .rules:merge_request_pipelines:no_docs
+  - .check windows test failures
+  - .windows21H1_variables
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
     - windows 21H1 unit tests
 

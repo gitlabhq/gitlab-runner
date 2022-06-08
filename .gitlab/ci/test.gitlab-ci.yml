@@ -304,9 +304,9 @@ windows 1809 unit tests:
 
 windows 21H1 unit tests:
   extends:
-    - .windows unit test
-    - .windows21H1
-    - .rules:merge_request_pipelines:no_docs
+  - .windows unit test
+  - .windows21H1
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
 
 windows 1809 integration tests:
   extends:
@@ -328,6 +328,7 @@ windows 2004 integration tests:
   extends:
   - .windows integration test
   - .windows2004
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - 'integration test definitions'
   - 'clone test repo'
@@ -343,6 +344,7 @@ windows 20H2 integration tests:
   extends:
   - .windows integration test
   - .windows20H2
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - 'integration test definitions'
   - 'clone test repo'
@@ -358,6 +360,7 @@ windows 21H1 integration tests:
   extends:
   - .windows integration test
   - .windows21H1
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - 'integration test definitions'
   - 'clone test repo'

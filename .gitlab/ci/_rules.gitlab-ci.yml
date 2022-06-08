@@ -111,6 +111,21 @@
   - <<: *if-security-runner-release-ref
     changes: *code-backstage-patterns
 
+.rules:merge_request_pipelines:no_docs:no-community-mr:
+  rules:
+  - <<: *if-not-canonical-namespace
+    when: never
+  - <<: *if-merge-request-pipeline
+    changes: *code-backstage-patterns
+  - <<: *if-runner-or-security-runner-default-branch
+    changes: *code-backstage-patterns
+  - <<: *if-runner-or-security-runner-stable-ref
+    changes: *code-backstage-patterns
+  - <<: *if-runner-release-ref
+    changes: *code-backstage-patterns
+  - <<: *if-security-runner-release-ref
+    changes: *code-backstage-patterns
+
 .rules:merge_request_pipelines:no_docs:always:
   rules:
   - <<: *if-merge-request-pipeline
@@ -178,6 +193,15 @@
 
 .rules:release:development:merge-requests:
   rules:
+  - <<: *if-runner-merge-request-pipeline
+    changes: *code-backstage-patterns
+  - <<: *if-runner-security-merge-request-pipeline
+    changes: *code-backstage-patterns
+
+.rules:release:development:merge-requests:no-community-mr:
+  rules:
+  - <<: *if-not-canonical-namespace
+    when: never
   - <<: *if-runner-merge-request-pipeline
     changes: *code-backstage-patterns
   - <<: *if-runner-security-merge-request-pipeline
