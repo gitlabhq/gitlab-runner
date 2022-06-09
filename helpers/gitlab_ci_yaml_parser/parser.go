@@ -380,9 +380,9 @@ func (c *GitLabCiYamlParser) ParseYaml(job *common.JobResponse) (err error) {
 	return nil
 }
 
-func NewGitLabCiYamlParser(jobName string) *GitLabCiYamlParser {
+func NewGitLabCiYamlParser(configFile, jobName string) *GitLabCiYamlParser {
 	return &GitLabCiYamlParser{
-		filename: ".gitlab-ci.yml",
+		filename: configFile,
 		jobName:  jobName,
 	}
 }
