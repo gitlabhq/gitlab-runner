@@ -23,8 +23,9 @@ import (
 
 type ExecCommand struct {
 	common.RunnerSettings
-	Job     string
-	Timeout int `long:"timeout" description:"Job execution timeout (in seconds)"`
+	Job            string
+	CICDConfigFile string `long:"cicd-config-file" description:"CI/CD configuration file"`
+	Timeout        int    `long:"timeout" description:"Job execution timeout (in seconds)"`
 }
 
 // nolint:unparam
@@ -77,7 +78,7 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (*
 			BeforeSha: strings.TrimSpace(beforeSha),
 		},
 		RunnerInfo: common.RunnerInfo{
-			Timeout: c.getTimeout(),
+			Timeout: c.Timeout,
 		},
 	}
 
@@ -86,14 +87,6 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (*
 	}
 
 	return common.NewBuild(jobResponse, runner, abortSignal, nil)
-}
-
-func (c *ExecCommand) getTimeout() int {
-	if c.Timeout > 0 {
-		return c.Timeout
-	}
-
-	return common.DefaultExecTimeout
 }
 
 func (c *ExecCommand) Execute(context *cli.Context) {
@@ -130,7 +123,7 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	parser := gitlab_ci_yaml_parser.NewGitLabCiYamlParser(c.Job)
+	parser := gitlab_ci_yaml_parser.NewGitLabCiYamlParser(c.CICDConfigFile, c.Job)
 	err = parser.ParseYaml(&build.JobResponse)
 	if err != nil {
 		logrus.Fatalln(err)
@@ -143,7 +136,10 @@ func (c *ExecCommand) Execute(context *cli.Context) {
 }
 
 func init() {
-	cmd := &ExecCommand{}
+	cmd := &ExecCommand{
+		CICDConfigFile: common.DefaultCICDConfigFile,
+		Timeout:        common.DefaultExecTimeout,
+	}
 
 	flags := clihelpers.GetFlagsFromStruct(cmd)
 	cliCmd := cli.Command{

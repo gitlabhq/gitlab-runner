@@ -503,6 +503,19 @@ If you want to use the `docker` executor with the `exec` command, use that in
 context of `docker-machine shell` or `boot2docker shell`. This is required to
 properly map your local directory to the directory inside the Docker container.
 
+Other options are also available:
+
+- To view all possible configuration options, use `--help`:
+
+  ```shell
+  gitlab-runner exec --help
+  ```
+
+- To specify the path of the CI/CD configuration file, if your project doesn't use the default
+  `.gitlab-ci.yml`, use `--cicd-config-file`.
+- To set the job execution timeout (in seconds), use `--timeout`.
+  The default of `1800` means that the execution times out after 30 minutes.
+
 #### Limitations of `gitlab-runner exec`
 
 With the current implementation of `exec`, some of the features of GitLab CI/CD

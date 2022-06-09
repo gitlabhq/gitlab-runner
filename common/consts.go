@@ -4,6 +4,7 @@ import "time"
 
 const DefaultTimeout = 7200
 const DefaultExecTimeout = 1800
+const DefaultCICDConfigFile = ".gitlab-ci.yml"
 const CheckInterval = 3 * time.Second
 const NotHealthyCheckInterval = 300
 const ReloadConfigInterval = 3
