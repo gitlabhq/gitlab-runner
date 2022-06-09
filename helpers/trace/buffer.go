@@ -8,14 +8,14 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"sort"
 	"sync"
 	"unicode/utf8"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/masker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/urlsanitizer"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 const defaultBytesLimit = 4 * 1024 * 1024 // 4MB
@@ -46,20 +46,6 @@ func WithURLParamMasking(enabled bool) Option {
 	}
 }
 
-type inverseLengthSort []string
-
-func (s inverseLengthSort) Len() int {
-	return len(s)
-}
-
-func (s inverseLengthSort) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s inverseLengthSort) Less(i, j int) bool {
-	return len(s[i]) > len(s[j])
-}
-
 func (b *Buffer) SetMasked(values []string) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -69,28 +55,16 @@ func (b *Buffer) SetMasked(values []string) {
 		b.w.Close()
 	}
 
-	var defaultTransformers []transform.Transformer
+	// convert bytes to utf-8
+	b.w = transform.NewWriter(b.lw, encoding.Replacement.NewEncoder())
+
+	// mask values
+	b.w = masker.New(b.w, values)
+
+	// mask urls if enabled
 	if b.opts.urlParamMasking {
-		defaultTransformers = append(defaultTransformers, newSensitiveURLParamTransform())
+		b.w = urlsanitizer.New(b.w)
 	}
-	defaultTransformers = append(defaultTransformers, encoding.Replacement.NewEncoder())
-
-	transformers := make([]transform.Transformer, 0, len(values)+len(defaultTransformers))
-
-	sort.Sort(inverseLengthSort(values))
-	seen := make(map[string]struct{})
-	for _, value := range values {
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-
-		transformers = append(transformers, newPhraseTransform(value))
-	}
-
-	transformers = append(transformers, defaultTransformers...)
-
-	b.w = transform.NewWriter(b.lw, transform.Chain(transformers...))
 }
 
 func (b *Buffer) SetLimit(size int) {
@@ -118,33 +92,15 @@ func (b *Buffer) Write(p []byte) (int, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	src := p
-	var n int
-	for len(src) > 0 {
-		written, err := b.w.Write(src)
-		// if we get a log limit exceeded error, we've written the log limit
-		// notice out to the log and will now silently not write any additional
-		// data: we return len(p), nil so the caller continues as normal.
-		if err == errLogLimitExceeded {
-			return len(p), nil
-		}
-		if err != nil {
-			return n, err
-		}
-
-		// the text/transformer implementation can return n < len(p) without an
-		// error. For this reason, we continue writing whatever data is left
-		// unless nothing was written (therefore zero progress) on our call to
-		// Write().
-		if written == 0 {
-			return n, io.ErrShortWrite
-		}
-
-		src = src[written:]
-		n += written
+	n, err := b.w.Write(p)
+	// if we get a log limit exceeded error, we've written the log limit
+	// notice out to the log and will now silently not write any additional
+	// data: we return len(p), nil so the caller continues as normal.
+	if err == errLogLimitExceeded {
+		return len(p), nil
 	}
 
-	return n, nil
+	return n, err
 }
 
 func (b *Buffer) Finish() {
