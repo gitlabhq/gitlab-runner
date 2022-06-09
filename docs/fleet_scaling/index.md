@@ -87,7 +87,7 @@ only one runner "worker" can execute CI/CD jobs for the runner process on this s
 ### Intermediate configuration: one runner, multiple workers
 
 You can also register multiple runner workers on the same machine.
-When you do this, the runner's `config.toml` file has multiple `[[runner]]` sections in it.
+When you do this, the runner's `config.toml` file has multiple `[[runners]]` sections in it.
 If all of the additional runner workers are registered to use the shell executor,
 and you update the value of the global configuration option, `concurrent`, to `3`,
 the upper limit of jobs that can run concurrently on this host is equal to three.
