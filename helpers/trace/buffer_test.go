@@ -261,6 +261,32 @@ func TestTraceRace(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestFlushOnError(t *testing.T) {
+	buffer, err := New()
+	require.NoError(t, err)
+	defer buffer.Close()
+
+	require.False(t, buffer.failedFlush)
+
+	n, err := buffer.Write([]byte("write to buffer"))
+	require.Equal(t, 15, n)
+	require.NoError(t, err)
+
+	// close underlying writer
+	buffer.logFile.Close()
+
+	// consecutive flushes should now continue to error, as a closed file cannot
+	// be recovered.
+	_, err = buffer.Bytes(0, 15)
+	require.Error(t, err)
+
+	n, err = buffer.Write([]byte("..."))
+	require.Equal(t, 3, n)
+	require.Error(t, err)
+
+	require.True(t, buffer.failedFlush)
+}
+
 func TestFixupInvalidUTF8(t *testing.T) {
 	buffer, err := New()
 	require.NoError(t, err)
