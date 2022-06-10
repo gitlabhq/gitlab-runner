@@ -1,11 +1,16 @@
 package gcs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 
+	"cloud.google.com/go/compute/metadata"
+	credentialsapiv1 "cloud.google.com/go/iam/credentials/apiv1"
+	gax "github.com/googleapis/gax-go/v2"
 	"github.com/sirupsen/logrus"
+	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -13,6 +18,19 @@ import (
 type credentialsResolver interface {
 	Credentials() *common.CacheGCSCredentials
 	Resolve() error
+	SignBytesFunc() func([]byte) ([]byte, error)
+}
+
+type IamCredentialsClient interface {
+	SignBlob(
+		context.Context,
+		*credentialspb.SignBlobRequest,
+		...gax.CallOption,
+	) (*credentialspb.SignBlobResponse, error)
+}
+
+type MetadataClient interface {
+	Email(serviceAccount string) (string, error)
 }
 
 const TypeServiceAccount = "service_account"
@@ -24,8 +42,10 @@ type credentialsFile struct {
 }
 
 type defaultCredentialsResolver struct {
-	config      *common.CacheGCSConfig
-	credentials *common.CacheGCSCredentials
+	config            *common.CacheGCSConfig
+	credentials       *common.CacheGCSCredentials
+	metadataClient    MetadataClient
+	credentialsClient IamCredentialsClient
 }
 
 func (cr *defaultCredentialsResolver) Credentials() *common.CacheGCSCredentials {
@@ -36,8 +56,33 @@ func (cr *defaultCredentialsResolver) Resolve() error {
 	if cr.config.CredentialsFile != "" {
 		return cr.readCredentialsFromFile()
 	}
+	if cr.config.AccessID == "" && cr.config.PrivateKey == "" {
+		return cr.readAccessIDFromMetadataServer()
+	}
 
 	return cr.readCredentialsFromConfig()
+}
+
+func (cr *defaultCredentialsResolver) SignBytesFunc() func([]byte) ([]byte, error) {
+	return func(payload []byte) ([]byte, error) {
+		ctx := context.Background()
+		req := &credentialspb.SignBlobRequest{
+			Name:    cr.credentials.AccessID,
+			Payload: payload,
+		}
+
+		client, err := cr.iamCredentialsClient(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := client.SignBlob(ctx, req)
+		if err != nil {
+			return nil, fmt.Errorf("signing blob: %w", err)
+		}
+
+		return res.SignedBlob, nil
+	}
 }
 
 func (cr *defaultCredentialsResolver) readCredentialsFromFile() error {
@@ -75,14 +120,36 @@ func (cr *defaultCredentialsResolver) readCredentialsFromConfig() error {
 	return nil
 }
 
+func (cr *defaultCredentialsResolver) readAccessIDFromMetadataServer() error {
+	email, err := cr.metadataClient.Email("")
+	if err != nil {
+		return fmt.Errorf("getting email from metadata server: %w", err)
+	}
+	cr.credentials.AccessID = email
+	return nil
+}
+
+func (cr *defaultCredentialsResolver) iamCredentialsClient(ctx context.Context) (IamCredentialsClient, error) {
+	if cr.credentialsClient == nil {
+		var err error
+		cr.credentialsClient, err = credentialsapiv1.NewIamCredentialsClient(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("creating iam credentials client: %w", err)
+		}
+	}
+
+	return cr.credentialsClient, nil
+}
+
 func newDefaultCredentialsResolver(config *common.CacheGCSConfig) (*defaultCredentialsResolver, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config can't be nil")
 	}
 
 	credentials := &defaultCredentialsResolver{
-		config:      config,
-		credentials: &common.CacheGCSCredentials{},
+		config:         config,
+		credentials:    &common.CacheGCSCredentials{},
+		metadataClient: metadata.NewClient(nil),
 	}
 
 	return credentials, nil

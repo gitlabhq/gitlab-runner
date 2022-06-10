@@ -45,6 +45,11 @@ func (a *gcsAdapter) GetUploadEnv() map[string]string {
 }
 
 func (a *gcsAdapter) presignURL(method string, contentType string) *url.URL {
+	if a.config.BucketName == "" {
+		logrus.Error("BucketName can't be empty")
+		return nil
+	}
+
 	err := a.credentialsResolver.Resolve()
 	if err != nil {
 		logrus.Errorf("error while resolving GCS credentials: %v", err)
@@ -53,23 +58,21 @@ func (a *gcsAdapter) presignURL(method string, contentType string) *url.URL {
 
 	credentials := a.credentialsResolver.Credentials()
 
-	var privateKey []byte
-	if credentials.PrivateKey != "" {
-		privateKey = []byte(credentials.PrivateKey)
-	}
-
-	if a.config.BucketName == "" {
-		logrus.Error("BucketName can't be empty")
-		return nil
-	}
-
-	rawURL, err := a.generateSignedURL(a.config.BucketName, a.objectName, &storage.SignedURLOptions{
+	suo := storage.SignedURLOptions{
 		GoogleAccessID: credentials.AccessID,
-		PrivateKey:     privateKey,
 		Method:         method,
 		Expires:        time.Now().Add(a.timeout),
 		ContentType:    contentType,
-	})
+	}
+
+	if credentials.PrivateKey != "" {
+		suo.PrivateKey = []byte(credentials.PrivateKey)
+	} else {
+		logrus.Debug("No private key was provided for GCS cache. Attempting to use instance credentials.")
+		suo.SignBytes = a.credentialsResolver.SignBytesFunc()
+	}
+
+	rawURL, err := a.generateSignedURL(a.config.BucketName, a.objectName, &suo)
 	if err != nil {
 		logrus.Errorf("error while generating GCS pre-signed URL: %v", err)
 		return nil

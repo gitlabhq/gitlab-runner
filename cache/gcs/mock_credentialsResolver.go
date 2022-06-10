@@ -41,3 +41,19 @@ func (_m *mockCredentialsResolver) Resolve() error {
 
 	return r0
 }
+
+// SignBytesFunc provides a mock function with given fields:
+func (_m *mockCredentialsResolver) SignBytesFunc() func([]byte) ([]byte, error) {
+	ret := _m.Called()
+
+	var r0 func([]byte) ([]byte, error)
+	if rf, ok := ret.Get(0).(func() func([]byte) ([]byte, error)); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(func([]byte) ([]byte, error))
+		}
+	}
+
+	return r0
+}

@@ -105,6 +105,10 @@ func prepareMockedCredentialsResolverForInvalidConfig(adapter *gcsAdapter, tc ad
 		PrivateKey: tc.privateKey,
 	})
 
+	cr.On("SignBytesFunc").Return(func(payload []byte) ([]byte, error) {
+		return []byte("output"), nil
+	})
+
 	adapter.credentialsResolver = cr
 }
 
@@ -151,11 +155,6 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 			privateKey:    privateKey,
 			bucketName:    bucketName,
 			expectedError: "storage: missing required GoogleAccessID",
-		},
-		"no-private-key": {
-			accessID:      accessID,
-			bucketName:    bucketName,
-			expectedError: "storage: exactly one of PrivateKey or SignedBytes must be set",
 		},
 		"bucket-not-specified": {
 			accessID:      "access-id",
@@ -205,14 +204,27 @@ type adapterOperationTestCase struct {
 	returnedURL        string
 	returnedError      error
 	assertErrorMessage func(t *testing.T, message string)
+	signBlobAPITest    bool
 }
 
-func prepareMockedCredentialsResolver(adapter *gcsAdapter) func(t *testing.T) {
+func mockSignBytesFunc() func([]byte) ([]byte, error) {
+	return func(payload []byte) ([]byte, error) {
+		return []byte("output"), nil
+	}
+}
+
+func prepareMockedCredentialsResolver(adapter *gcsAdapter, tc adapterOperationTestCase) func(t *testing.T) {
 	cr := &mockCredentialsResolver{}
 	cr.On("Resolve").Return(nil)
+
+	pk := privateKey
+	if tc.signBlobAPITest {
+		pk = ""
+		cr.On("SignBytesFunc").Return(mockSignBytesFunc)
+	}
 	cr.On("Credentials").Return(&common.CacheGCSCredentials{
 		AccessID:   accessID,
-		PrivateKey: privateKey,
+		PrivateKey: pk,
 	})
 
 	adapter.credentialsResolver = cr
@@ -231,7 +243,13 @@ func prepareMockedSignedURLGenerator(
 ) {
 	adapter.generateSignedURL = func(bucket string, name string, opts *storage.SignedURLOptions) (string, error) {
 		require.Equal(t, accessID, opts.GoogleAccessID)
-		require.Equal(t, privateKey, string(opts.PrivateKey))
+		if tc.signBlobAPITest {
+			require.NotNil(t, opts.SignBytes)
+			require.Nil(t, opts.PrivateKey)
+		} else {
+			require.Equal(t, privateKey, string(opts.PrivateKey))
+			require.Nil(t, opts.SignBytes)
+		}
 		require.Equal(t, expectedMethod, opts.Method)
 		require.Equal(t, expectedContentType, opts.ContentType)
 
@@ -249,7 +267,7 @@ func testAdapterOperation(
 	operation func() *url.URL,
 ) {
 	t.Run(name, func(t *testing.T) {
-		cleanupCredentialsResolverMock := prepareMockedCredentialsResolver(adapter)
+		cleanupCredentialsResolverMock := prepareMockedCredentialsResolver(adapter, tc)
 		defer cleanupCredentialsResolverMock(t)
 
 		prepareMockedSignedURLGenerator(t, tc, expectedMethod, expectedContentType, adapter)
@@ -279,6 +297,7 @@ func TestAdapterOperation(t *testing.T) {
 			assertErrorMessage: func(t *testing.T, message string) {
 				assert.Contains(t, message, "error while generating GCS pre-signed URL: test error")
 			},
+			signBlobAPITest: false,
 		},
 		"invalid-URL-returned": {
 			returnedURL:   "://test",
@@ -288,11 +307,19 @@ func TestAdapterOperation(t *testing.T) {
 				assert.Contains(t, message, "://test")
 				assert.Contains(t, message, "missing protocol scheme")
 			},
+			signBlobAPITest: false,
 		},
 		"valid-configuration": {
 			returnedURL:        "https://storage.googleapis.com/test/key?Expires=123456789&GoogleAccessId=test-access-id%40X.iam.gserviceaccount.com&Signature=XYZ",
 			returnedError:      nil,
 			assertErrorMessage: nil,
+			signBlobAPITest:    false,
+		},
+		"sign-blob-api-valid-configuration": {
+			returnedURL:        "https://storage.googleapis.com/test/key?Expires=123456789&GoogleAccessId=test-access-id%40X.iam.gserviceaccount.com&Signature=XYZ",
+			returnedError:      nil,
+			assertErrorMessage: nil,
+			signBlobAPITest:    true,
 		},
 	}
 
