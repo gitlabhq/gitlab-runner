@@ -54,7 +54,7 @@ For example, for [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-r
 ```shell
 # Currently only amd64 is a supported arch
 # A full list of architectures can be found here https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
-curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_amd64_fips.rpm"
+curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_amd64-fips.rpm"
 ```
 
 ### Install
