@@ -5,12 +5,16 @@ package gcs
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -22,6 +26,7 @@ type credentialsResolverTestCase struct {
 	credentialsFileContent         *credentialsFile
 	credentialsFileDoesNotExist    bool
 	credentialsFileWithInvalidJSON bool
+	metadataServerError            bool
 	errorExpectedOnInitialization  bool
 	errorExpectedOnResolve         bool
 	expectedCredentials            *common.CacheGCSCredentials
@@ -97,12 +102,26 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 		},
 		"credentials not set": {
 			config:                 &common.CacheGCSConfig{},
+			errorExpectedOnResolve: false,
+			expectedCredentials:    getExpectedCredentials(accessID, ""),
+		},
+		"credentials not set - metadata server error": {
+			config:                 &common.CacheGCSConfig{},
+			metadataServerError:    true,
 			errorExpectedOnResolve: true,
 		},
 		"credentials direct in config": {
 			config:                 getCredentialsConfig(accessID, privateKey),
 			errorExpectedOnResolve: false,
 			expectedCredentials:    getExpectedCredentials(accessID, privateKey),
+		},
+		"credentials direct in config - only accessID": {
+			config:                 getCredentialsConfig(accessID, ""),
+			errorExpectedOnResolve: true,
+		},
+		"credentials direct in config - only privatekey": {
+			config:                 getCredentialsConfig("", privateKey),
+			errorExpectedOnResolve: true,
 		},
 		"credentials in credentials file - service account file": {
 			config:                 &common.CacheGCSConfig{},
@@ -140,6 +159,13 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 			cleanupCredentialsFileMock := prepareStubbedCredentialsFile(t, testCase)
 			defer cleanupCredentialsFileMock()
 
+			mc := &MockMetadataClient{}
+			metadataCall := mc.On("Email", mock.Anything)
+			if testCase.metadataServerError {
+				metadataCall.Return("", fmt.Errorf("test error"))
+			} else {
+				metadataCall.Return(accessID, nil)
+			}
 			cr, err := newDefaultCredentialsResolver(testCase.config)
 
 			if testCase.errorExpectedOnInitialization {
@@ -148,6 +174,7 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 			}
 
 			require.NoError(t, err, "Error on resolver initialization is not expected")
+			cr.metadataClient = mc
 
 			err = cr.Resolve()
 
@@ -158,6 +185,52 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 
 			require.NoError(t, err, "Error on credentials resolving is not expected")
 			assert.Equal(t, testCase.expectedCredentials, cr.Credentials())
+		})
+	}
+}
+
+type signBytesOperationTestCase struct {
+	returnError error
+	output      []byte
+}
+
+func TestSignBytesOperation(t *testing.T) {
+	tests := map[string]signBytesOperationTestCase{
+		"valid-sign": {
+			returnError: nil,
+			output:      []byte("output"),
+		},
+		"error": {
+			returnError: errors.New("error"),
+			output:      nil,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			config := getCredentialsConfig(accessID, "")
+
+			sbr := credentialspb.SignBlobResponse{SignedBlob: tc.output}
+
+			icc := &MockIamCredentialsClient{}
+			signBlobCall := icc.On("SignBlob", mock.Anything, mock.Anything)
+			cr, _ := newDefaultCredentialsResolver(config)
+			if tc.returnError == nil {
+				cr.credentialsClient = icc
+				signBlobCall.Return(&sbr, nil)
+			} else {
+				signBlobCall.Return(nil, tc.returnError)
+			}
+
+			signed, err := cr.SignBytesFunc()([]byte("input"))
+
+			if tc.returnError == nil {
+				assert.Nil(t, err)
+				assert.Equal(t, signed, tc.output)
+			} else {
+				assert.ErrorAs(t, err, &tc.returnError)
+				assert.Nil(t, signed)
+			}
 		})
 	}
 }

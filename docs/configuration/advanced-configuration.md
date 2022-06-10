@@ -622,7 +622,7 @@ Example:
     IdleCount = 50
     IdleCountMin = 5
     IdleScaleFactor = 1.5 # Means that current number of Idle machines will be 1.5*in-use machines,
-                          # no more than 50 (the value of IdleCount) and no less than 5 (the value of IdleCountMin) 
+                          # no more than 50 (the value of IdleCount) and no less than 5 (the value of IdleCountMin)
     IdleTime = 3600
     Timezone = "UTC"
   [[runners.machine.autoscaling]]
@@ -853,6 +853,21 @@ Examples:
     CredentialsFile = "/etc/gitlab-runner/service-account.json"
     BucketName = "runners-cache"
 ```
+
+**Application Default Credentials (ADC) from the metadata server in GCP:**
+
+When you use GitLab Runner with Google Cloud ADC, you typically use the default service account. Then you don't need to supply credentials for the instance:
+
+```toml
+[runners.cache]
+  Type = "gcs"
+  Path = "path/to/prefix"
+  Shared = false
+  [runners.cache.gcs]
+    BucketName = "runners-cache"
+```
+
+If you use ADC, be sure that the service account that you use has the `iam.serviceAccounts.signBlob` permission. Typically this is done by granting the [Service Account Token Creator role](https://cloud.google.com/iam/docs/service-accounts#token-creator-role) to the service account.
 
 ### The `[runners.cache.azure]` section
 
