@@ -895,8 +895,8 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 	for _, mount := range s.Config.Kubernetes.Volumes.HostPaths {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
-			MountPath: mount.MountPath,
-			SubPath:   mount.SubPath,
+			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -904,8 +904,8 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 	for _, mount := range s.Config.Kubernetes.Volumes.Secrets {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
-			MountPath: mount.MountPath,
-			SubPath:   mount.SubPath,
+			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -913,8 +913,8 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 	for _, mount := range s.Config.Kubernetes.Volumes.PVCs {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
-			MountPath: mount.MountPath,
-			SubPath:   mount.SubPath,
+			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -922,8 +922,8 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 	for _, mount := range s.Config.Kubernetes.Volumes.ConfigMaps {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
-			MountPath: mount.MountPath,
-			SubPath:   mount.SubPath,
+			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
 			ReadOnly:  mount.ReadOnly,
 		})
 	}
@@ -931,16 +931,16 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 	for _, mount := range s.Config.Kubernetes.Volumes.EmptyDirs {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
-			MountPath: mount.MountPath,
-			SubPath:   mount.SubPath,
+			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
 		})
 	}
 
 	for _, mount := range s.Config.Kubernetes.Volumes.CSIs {
 		mounts = append(mounts, api.VolumeMount{
 			Name:      mount.Name,
-			MountPath: mount.MountPath,
-			SubPath:   mount.SubPath,
+			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
 			ReadOnly:  mount.ReadOnly,
 		})
 	}

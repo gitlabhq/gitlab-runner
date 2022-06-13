@@ -268,6 +268,102 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 				{Name: "user-provided", MountPath: "/path/to/builds/dir"},
 			},
 		},
+		"volumes with variables inside mountPath and subPath": {
+			GlobalConfig: &common.Config{},
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Volumes: common.KubernetesVolumes{
+							HostPaths: []common.KubernetesHostPath{
+								{Name: "docker", MountPath: "${DOCKER_SOCKET}", HostPath: "/var/run/docker.sock"},
+								{Name: "host-path", MountPath: "${PATH_TWO}", HostPath: "/path/one"},
+								{
+									Name:      "host-subpath",
+									MountPath: "/${SUB_PATH}",
+									HostPath:  "/path/one",
+									SubPath:   "${SUB_PATH}",
+								},
+							},
+							Secrets: []common.KubernetesSecret{
+								{Name: "Secret", MountPath: "/${PATH_TO_WHATEVER}"},
+								{
+									Name:      "Secret-subpath",
+									MountPath: "/${PATH_TO_WHATEVER}",
+									SubPath:   "secret-subpath",
+								},
+							},
+							PVCs: []common.KubernetesPVC{
+								{Name: "PVC", MountPath: "/${PATH_TO_WHATEVER}"},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/path/to/whatever/1",
+									SubPath:   "PVC-subpath-1",
+								},
+								{
+									Name:      "PVC-subpath",
+									MountPath: "/path/to/whatever/2",
+									SubPath:   "PVC-subpath-2",
+								},
+							},
+							ConfigMaps: []common.KubernetesConfigMap{
+								{Name: "ConfigMap", MountPath: "/path/to/whatever"},
+								{
+									Name:      "ConfigMap-subpath",
+									MountPath: "/${PATH_TO_WHATEVER}",
+									SubPath:   "ConfigMap-subpath",
+								},
+							},
+							EmptyDirs: []common.KubernetesEmptyDir{
+								{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
+								{
+									Name:      "emptyDir-subpath",
+									MountPath: "/${SUB_PATH}",
+									SubPath:   "empty-${SUB_PATH}",
+								},
+							},
+							CSIs: []common.KubernetesCSI{
+								{Name: "csi", MountPath: "/path/to/${KEYWORD_CSI}/volume", Driver: "some-driver"},
+								{
+									Name:      "csi-subpath",
+									MountPath: "/path/to/${KEYWORD_CSI}/volume",
+									Driver:    "some-driver",
+									SubPath:   "${SUB_PATH}",
+								},
+							},
+						},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Variables: []common.JobVariable{
+						{Key: "DOCKER_SOCKET", Value: "/var/run/docker.sock"},
+						{Key: "PATH_TWO", Value: "/path/two"},
+						{Key: "SUB_PATH", Value: "subpath"},
+						{Key: "PATH_TO_WHATEVER", Value: "path/to/whatever"},
+						{Key: "KEYWORD_CSI", Value: "csi"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: []api.VolumeMount{
+				{Name: "docker", MountPath: "/var/run/docker.sock"},
+				{Name: "host-path", MountPath: "/path/two"},
+				{Name: "host-subpath", MountPath: "/subpath", SubPath: "subpath"},
+				{Name: "Secret", MountPath: "/path/to/whatever"},
+				{Name: "Secret-subpath", MountPath: "/path/to/whatever", SubPath: "secret-subpath"},
+				{Name: "PVC", MountPath: "/path/to/whatever"},
+				{Name: "PVC-subpath", MountPath: "/path/to/whatever/1", SubPath: "PVC-subpath-1"},
+				{Name: "PVC-subpath", MountPath: "/path/to/whatever/2", SubPath: "PVC-subpath-2"},
+				{Name: "ConfigMap", MountPath: "/path/to/whatever"},
+				{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
+				{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
+				{Name: "emptyDir-subpath", MountPath: "/subpath", SubPath: "empty-subpath"},
+				{Name: "csi", MountPath: "/path/to/csi/volume"},
+				{Name: "csi-subpath", MountPath: "/path/to/csi/volume", SubPath: "subpath"},
+				{Name: "repo", MountPath: "/builds"},
+			},
+		},
 	}
 
 	for tn, tt := range tests {
