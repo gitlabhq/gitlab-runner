@@ -358,7 +358,7 @@ func (e *executor) createService(
 	}
 
 	e.Println("Starting service", service+":"+version, "...")
-	serviceImage, err := e.pullManager.GetDockerImage(image, nil)
+	serviceImage, err := e.pullManager.GetDockerImage(image, serviceDefinition.PullPolicies)
 	if err != nil {
 		return nil, err
 	}
