@@ -8,6 +8,13 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 This is how you can run GitLab Runner inside a Docker container.
 
+## Docker Engine version compatibility
+
+In general, the version of Docker Engine and the version of the GitLab Runner container image
+do not have to match. The GitLab Runner images should be backwards and forwards compatible.
+However, to ensure you have the latest features and security updates,
+you should always use the latest stable [Docker Engine version](https://docs.docker.com/engine/release-notes/).
+
 ## General GitLab Runner Docker image usage
 
 GitLab Runner Docker images (based on [Ubuntu or Alpine Linux](#docker-images))
