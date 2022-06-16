@@ -82,6 +82,11 @@ To install GitLab Runner:
    sudo yum install gitlab-runner
    ```
 
+   NOTE:
+   In GitLab 14.7 and later, a FIPS 140-2 compliant version of GitLab Runner is
+   available for RHEL distributions. You can install this version by using
+   `gitlab-runner-fips` as the package name, instead of `gitlab-runner`.
+
 1. To install a specific version of GitLab Runner:
 
    For DEB based systems:
