@@ -138,7 +138,7 @@ If your operating system is configured to automatically restart the service if i
 
 ## Commands overview
 
-This is what you see if you run `gitlab-runner` without any arguments:
+You see the following if you run `gitlab-runner` without any arguments:
 
 ```plaintext
 NAME:
