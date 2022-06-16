@@ -888,7 +888,7 @@ func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(
 	return container.ContainerCreateCreatedBody{ID: "abc"}, nil
 }
 
-func prepareTestDockerConfiguration(
+func createExecutorForTestDockerConfiguration(
 	t *testing.T,
 	dockerConfig *common.DockerConfig,
 	cce containerConfigExpectations,
@@ -921,6 +921,16 @@ func prepareTestDockerConfiguration(
 
 	err = e.createLabeler()
 	require.NoError(t, err)
+
+	return c, e
+}
+
+func prepareTestDockerConfiguration(
+	t *testing.T,
+	dockerConfig *common.DockerConfig,
+	cce containerConfigExpectations,
+) (*dockerConfigurationTestFakeDockerClient, *executor) {
+	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
 	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
 		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Twice()
@@ -1166,7 +1176,7 @@ func TestDockerServiceUserNSSetting(t *testing.T) {
 	testDockerConfigurationWithServiceContainer(t, dockerConfigWithHostUsernsMode, cceWithHostUsernsMode)
 }
 
-func TestDockerServiceWithNoDockerConfigAndWithImagePullPolicyAlways(t *testing.T) {
+func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.T) {
 	dockerConfig := &common.DockerConfig{}
 	serviceConfig := common.Image{
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
@@ -1197,21 +1207,28 @@ func TestDockerServiceWithNoDockerConfigAndWithImagePullPolicyAlways(t *testing.
 	assert.NoError(t, err, "Should create service container without errors")
 }
 
-func TestDockerServiceWithDockerConfigAlwaysAndWithImagePullPolicyAlways(t *testing.T) {
+func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolicyIfNotPresent(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		PullPolicy: common.StringOrArray{common.PullPolicyAlways, common.PullPolicyIfNotPresent},
 	}
 	serviceConfig := common.Image{
-		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
+		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
 
 	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
 
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
-	defer c.AssertExpectations(t)
+	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
+	c.On("ImageInspectWithRaw", mock.Anything, "alpine").
+		Return(types.ImageInspect{ID: "123"}, []byte{}, nil).Once()
+	c.On("NetworkList", mock.Anything, mock.Anything).
+		Return([]types.NetworkResource{}, nil).Once()
+	c.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Once()
 	c.On("ContainerStart", mock.Anything, "abc", mock.Anything).
 		Return(nil).Once()
+
+	defer c.AssertExpectations(t)
 
 	err := e.createVolumesManager()
 	require.NoError(t, err)
@@ -1230,23 +1247,17 @@ func TestDockerServiceWithDockerConfigAlwaysAndWithImagePullPolicyAlways(t *test
 	assert.NoError(t, err, "Should create service container without errors")
 }
 
-func TestDockerServiceWithDockerConfigAlwaysButNotAllowedAndWithNoImagePullPolicy(t *testing.T) {
+func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolicy(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		PullPolicy:          common.StringOrArray{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
 	serviceConfig := common.Image{}
 
-	e := new(executor)
-	e.Config.Docker = dockerConfig
-	e.Build = &common.Build{
-		Runner: &common.RunnerConfig{},
-	}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	err := e.createLabeler()
-	require.NoError(t, err)
-
-	err = e.createVolumesManager()
+	err := e.createVolumesManager()
 	require.NoError(t, err)
 
 	err = e.createPullManager()
@@ -1267,7 +1278,7 @@ func TestDockerServiceWithDockerConfigAlwaysButNotAllowedAndWithNoImagePullPolic
 	)
 }
 
-func TestDockerServiceWithDockerConfigAlwaysAndWithImagePullPolicyIfNotPresent(t *testing.T) {
+func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		PullPolicy:          common.StringOrArray{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
@@ -1276,16 +1287,10 @@ func TestDockerServiceWithDockerConfigAlwaysAndWithImagePullPolicyIfNotPresent(t
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
 
-	e := new(executor)
-	e.Config.Docker = dockerConfig
-	e.Build = &common.Build{
-		Runner: &common.RunnerConfig{},
-	}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
-	err := e.createLabeler()
-	require.NoError(t, err)
-
-	err = e.createVolumesManager()
+	err := e.createVolumesManager()
 	require.NoError(t, err)
 
 	err = e.createPullManager()
