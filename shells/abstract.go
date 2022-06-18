@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -739,6 +740,10 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 		strconv.FormatInt(info.Build.ID, 10),
 	}
 
+	if info.Build.Variables.Bool(common.GenerateArtifactsMetadataVariable) {
+		args = append(args, b.generateArtifactsMetadataArgs(info)...)
+	}
+
 	// Create list of files to archive
 	var archiverArgs []string
 	for _, path := range artifact.Paths {
@@ -783,6 +788,34 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	})
 
 	return true
+}
+
+func (b *AbstractShell) generateArtifactsMetadataArgs(info common.ShellScriptInfo) []string {
+	args := []string{
+		"--generate-artifacts-metadata",
+		"--runner-id",
+		info.Build.Variables.Get("CI_RUNNER_ID"),
+		"--repo-url",
+		strings.TrimSuffix(info.Build.RepoCleanURL(), ".git"),
+		"--repo-digest",
+		info.Build.GitInfo.Sha,
+		"--job-name",
+		info.Build.JobInfo.Name,
+		"--executor-name",
+		info.Build.ExecutorName(),
+		"--runner-name",
+		info.Build.Runner.Name,
+		"--started-at",
+		info.Build.StartedAt().Format(time.RFC3339),
+		"--ended-at",
+		time.Now().Format(time.RFC3339),
+	}
+
+	for _, variable := range info.Build.Variables {
+		args = append(args, "--metadata-parameter", variable.Key)
+	}
+
+	return args
 }
 
 func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) error {

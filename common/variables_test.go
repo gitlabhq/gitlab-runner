@@ -369,3 +369,31 @@ func TestPredefinedServerVariables(t *testing.T) {
 		}
 	}
 }
+
+func TestBoolVariables(t *testing.T) {
+	tests := map[string]bool{
+		"true":           true,
+		"TRUE":           true,
+		"tRuE":           true,
+		"false":          false,
+		"FALSE":          false,
+		"fAlsE":          false,
+		"1":              true,
+		"-1":             false,
+		"0":              false,
+		"100":            false,
+		"":               false,
+		"something else": false,
+	}
+
+	for value, expected := range tests {
+		t.Run(value, func(t *testing.T) {
+			v := JobVariables{
+				{Key: "variable", Value: value},
+			}
+
+			result := v.Bool("variable")
+			require.Equal(t, expected, result)
+		})
+	}
+}

@@ -36,6 +36,7 @@ type ArtifactsUploaderCommand struct {
 	common.JobCredentials
 	fileArchiver
 	meter.TransferMeterCommand
+	artifactMetadataGenerator
 
 	network common.Network
 
@@ -185,6 +186,19 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 	err := c.enumerate()
 	if err != nil {
 		logrus.Fatalln(err)
+	}
+
+	if c.GenerateArtifactsMetadata {
+		logrus.Infof("Generating cache metadata")
+		metadataFile, err := c.generateMetadataToFile(generateMetadataOptions{
+			files: c.files,
+			wd:    c.wd,
+			jobID: c.ID,
+		})
+		if err != nil {
+			logrus.Fatalln(err)
+		}
+		c.process(metadataFile)
 	}
 
 	// If the upload fails, exit with a non-zero exit code to indicate an issue?

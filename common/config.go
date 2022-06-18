@@ -42,6 +42,8 @@ const (
 	DNSPolicyDefault                 KubernetesDNSPolicy = "default"
 	DNSPolicyClusterFirst            KubernetesDNSPolicy = "cluster-first"
 	DNSPolicyClusterFirstWithHostNet KubernetesDNSPolicy = "cluster-first-with-host-net"
+
+	GenerateArtifactsMetadataVariable = "RUNNER_GENERATE_ARTIFACTS_METADATA"
 )
 
 // InvalidTimePeriodsError represents that the time period specified is not valid.

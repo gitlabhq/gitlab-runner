@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -52,6 +53,24 @@ func (b JobVariables) Get(key string) string {
 		}
 	}
 	return ""
+}
+
+// Bool tries to get the boolean value of a variable
+// "true" and "false" strings are parsed as well as numeric values
+// where only the value of "1" is considered to be true
+func (b JobVariables) Bool(key string) bool {
+	value := b.Get(key)
+	parsedBool, err := strconv.ParseBool(strings.ToLower(value))
+	if err == nil {
+		return parsedBool
+	}
+
+	parsedInt, err := strconv.ParseInt(value, 10, 32)
+	if err == nil {
+		return parsedInt == 1
+	}
+
+	return false
 }
 
 // OverwriteKey overwrites an existing key with a new variable.

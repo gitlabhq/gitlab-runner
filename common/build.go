@@ -133,6 +133,7 @@ type Build struct {
 	Runner           *RunnerConfig  `json:"runner"`
 	ExecutorData     ExecutorData
 	ExecutorFeatures FeaturesInfo `json:"-" yaml:"-"`
+	ExecutorName     func() string
 
 	// Unique ID for all running builds on this runner
 	RunnerID int `json:"runner_id"`
@@ -874,6 +875,10 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	var executor Executor
 
+	b.ExecutorName = func() string {
+		return executor.Name()
+	}
+
 	b.logger = NewBuildLogger(trace, b.Log())
 	b.printRunningWithHeader()
 
@@ -1345,6 +1350,10 @@ func (b *Build) GetExecutorJobSectionAttempts() (int, error) {
 
 func validAttempts(attempts int) bool {
 	return attempts < 1 || attempts > 10
+}
+
+func (b *Build) StartedAt() time.Time {
+	return b.createdAt
 }
 
 func (b *Build) Duration() time.Duration {

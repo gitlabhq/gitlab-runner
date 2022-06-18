@@ -26,6 +26,10 @@ type machineExecutor struct {
 	currentStage common.ExecutorStage
 }
 
+func (e *machineExecutor) Name() string {
+	return "docker+machine"
+}
+
 func (e *machineExecutor) log() (log *logrus.Entry) {
 	log = e.build.Log()
 
