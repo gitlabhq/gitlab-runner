@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1582,6 +1583,109 @@ func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
 
 	err := shell.writeCleanupScript(mockShellWriter, info)
 	assert.NoError(t, err)
+}
+
+func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{}) {
+	info := common.ShellScriptInfo{
+		Build: &common.Build{
+			JobResponse: common.JobResponse{
+				Variables: common.JobVariables{
+					{Key: "CI_RUNNER_ID", Value: "1000"},
+					{Key: "TEST_VARIABLE", Value: ""},
+				},
+				GitInfo: common.GitInfo{
+					RepoURL: "https://gitlab.com/my/repo.git",
+					Sha:     "testsha",
+				},
+				JobInfo: common.JobInfo{
+					Name: "testjob",
+				},
+			},
+			Runner: &common.RunnerConfig{
+				Name: "testrunner",
+			},
+		},
+	}
+
+	info.Build.ExecutorName = func() string {
+		return "testexecutor"
+	}
+
+	parseRFC3339Mock := func(t string) bool {
+		_, err := time.Parse(time.RFC3339, t)
+		return err == nil
+	}
+
+	expected := []interface{}{
+		"--generate-artifacts-metadata",
+		"--runner-id",
+		"1000",
+		"--repo-url",
+		"https://gitlab.com/my/repo",
+		"--repo-digest",
+		"testsha",
+		"--job-name",
+		"testjob",
+		"--executor-name",
+		"testexecutor",
+		"--runner-name",
+		"testrunner",
+		"--started-at",
+		mock.MatchedBy(parseRFC3339Mock),
+		"--ended-at",
+		mock.MatchedBy(parseRFC3339Mock),
+		"--metadata-parameter",
+		"CI_RUNNER_ID",
+		"--metadata-parameter",
+		"TEST_VARIABLE",
+		"--metadata-parameter",
+		"RUNNER_GENERATE_ARTIFACTS_METADATA",
+	}
+
+	return info, expected
+}
+
+func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) {
+	info, expectedMetadataArgs := testGenerateArtifactsMetadataData()
+
+	info.Build.Runner.URL = "testurl"
+	info.Build.Token = "testtoken"
+	info.Build.ID = 1000
+	info.RunnerCommand = "testcommand"
+	info.Build.Variables = append(
+		info.Build.Variables,
+		common.JobVariable{Key: common.GenerateArtifactsMetadataVariable, Value: "true"},
+	)
+
+	uploaderArgs := []interface{}{
+		"artifacts-uploader",
+		"--url",
+		"testurl",
+		"--token",
+		"testtoken",
+		"--id",
+		"1000",
+	}
+
+	args := []interface{}{"testcommand"}
+	args = append(args, uploaderArgs...)
+	args = append(args, expectedMetadataArgs...)
+
+	args = append(args, "--path", "testpath")
+
+	shellWriter := &MockShellWriter{}
+	shellWriter.On("IfCmd", mock.Anything, mock.Anything).Once()
+	shellWriter.On("Noticef", "Uploading artifacts...").Once()
+	shellWriter.On("Command", args...).Once()
+	shellWriter.On("Else").Once()
+	shellWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
+	shellWriter.On("EndIf").Once()
+	defer shellWriter.AssertExpectations(t)
+
+	shell := &AbstractShell{}
+	shell.writeUploadArtifact(shellWriter, info, common.Artifact{
+		Paths: []string{"testpath"},
+	})
 }
 
 func BenchmarkScriptStage(b *testing.B) {

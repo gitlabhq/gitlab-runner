@@ -21,6 +21,10 @@ type executor struct {
 	machineVerified bool
 }
 
+func (s *executor) Name() string {
+	return "virtualbox"
+}
+
 func (s *executor) verifyMachine(sshPort string) error {
 	if s.machineVerified {
 		return nil

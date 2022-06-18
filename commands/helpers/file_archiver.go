@@ -78,7 +78,6 @@ func (c *fileArchiver) process(match string) bool {
 			excluded, rule := c.isExcluded(relative)
 			if excluded {
 				c.exclude(rule)
-
 				return false
 			}
 

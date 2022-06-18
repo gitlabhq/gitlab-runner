@@ -176,6 +176,10 @@ type serviceCreateResponse struct {
 	err     error
 }
 
+func (s *executor) Name() string {
+	return "kubernetes"
+}
+
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.AbstractExecutor.PrepareConfiguration(options)
 

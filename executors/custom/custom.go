@@ -78,6 +78,10 @@ type executor struct {
 	jobEnv map[string]string
 }
 
+func (e *executor) Name() string {
+	return "custom"
+}
+
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	e.AbstractExecutor.PrepareConfiguration(options)
 
