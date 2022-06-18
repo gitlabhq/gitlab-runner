@@ -659,6 +659,82 @@ Consider the following example:
 This is just one of the examples. With this approach the possibilities are
 limitless.
 
+## Use Podman to run Docker commands (BETA)
+
+If you have GitLab Runner installed on Linux, your jobs can use Podman to replace Docker as the container runtime in the Docker executor.
+
+1. On the Linux host where you have GitLab Runner installed, [install Podman](https://podman.io/getting-started/installation).
+1. Enable and start the Podman socket:
+
+   ```shell
+   systemctl --user --now enable podman.socket
+   ```
+
+1. Verify the Podman socket is listening:
+
+   ```shell
+   systemctl status --user podman.socket
+   ```
+
+1. Copy the socket string in the `Listen` key through which Podman's API is being accessed.
+1. Edit the GitLab Runner `config.toml` file and add the socket value to the host entry in the `[[runners.docker]]` section.
+   For example:
+
+   ```toml
+   [[runners]]
+     name = "podman-test-runner-2022-06-07"
+     url = "https://gitlab.com"
+     token = "x-XxXXXXX-xxXxXxxxxx"
+     executor = "docker"
+     [runners.docker]
+       host = "unix:///run/user/1012/podman/podman.sock"
+       tls_verify = false
+       image = "quay.io/podman/stable"
+       privileged = true
+   ```
+
+As of [Podman](https://podman.io/) v4.1.0, the handling of `stdin` and `stdout` can result in errors in certain conditions. Also, be mindful of permissions for the Podman socket. For example, if GitLab Runner is installed with the OS package manager, it will use the `gitlab-runner` user to start. Make sure to either start the Podman socket service with the same user, or to grant proper permissions.
+
+### Using Podman to build container images from a Dockerfile
+
+The example below illustrates how to use Podman to build a container image and push the image to the GitLab Container registry. The default container image in the Runner `config.toml` is set to `quay.io/podman/stable`, which means the CI job will default to using that image to execute the included commands.
+
+```yaml
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+
+before_script:
+  - podman login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+
+oci-container-build:
+  stage: build
+  script:
+    - podman build -t $IMAGE_TAG .
+    - podman push $IMAGE_TAG
+  when: manual
+```
+
+### Using Buildah to build container images from a Dockerfile
+
+The example below illustrates how to use [Buildah](https://buildah.io/) to build a container image and push the image to the GitLab Container registry.
+
+```yaml
+image: quay.io/buildah/stable
+
+variables:
+  IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
+
+before_script:
+  - buildah login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+
+oci-container-build:
+  stage: build
+  script:
+    - buildah bud -t $IMAGE_TAG .
+    - buildah push $IMAGE_TAG
+  when: manual
+```
+
 ## Specify which user runs the job
 
 By default, the runner runs jobs as the `root` user within the container. To specify a different, non-root user to run the job, use the `USER` directive in the Dockerfile of the Docker image.
