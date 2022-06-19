@@ -89,7 +89,7 @@ type AttestationPredicateInvocationParameters map[string]string
 
 type AttestationMetadataInfo struct {
 	BuildStartedOn  TimeRFC3339                         `json:"buildStartedOn"`
-	BuildFinishedOn TimeRFC3339                         `json:"BuildFinishedOn"`
+	BuildFinishedOn TimeRFC3339                         `json:"buildFinishedOn"`
 	Reproducible    bool                                `json:"reproducible"`
 	Completeness    AttestationMetadataInfoCompleteness `json:"completeness"`
 }
