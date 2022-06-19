@@ -217,12 +217,13 @@ type Step struct {
 type Steps []Step
 
 type Image struct {
-	Name       string       `json:"name"`
-	Alias      string       `json:"alias,omitempty"`
-	Command    []string     `json:"command,omitempty"`
-	Entrypoint []string     `json:"entrypoint,omitempty"`
-	Ports      []Port       `json:"ports,omitempty"`
-	Variables  JobVariables `json:"variables,omitempty"`
+	Name         string             `json:"name"`
+	Alias        string             `json:"alias,omitempty"`
+	Command      []string           `json:"command,omitempty"`
+	Entrypoint   []string           `json:"entrypoint,omitempty"`
+	Ports        []Port             `json:"ports,omitempty"`
+	Variables    JobVariables       `json:"variables,omitempty"`
+	PullPolicies []DockerPullPolicy `json:"pull_policy,omitempty"`
 }
 
 type Port struct {

@@ -239,7 +239,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 
 	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
 
-	p.On("GetDockerImage", imageName).
+	p.On("GetDockerImage", imageName, []common.DockerPullPolicy(nil)).
 		Return(&types.ImageInspect{ID: "helper-image"}, nil).
 		Once()
 
@@ -304,7 +304,7 @@ func TestHelperImageWithVariable(t *testing.T) {
 
 	runnerImageTag := "gitlab/gitlab-runner:" + common.REVISION
 
-	p.On("GetDockerImage", runnerImageTag).
+	p.On("GetDockerImage", runnerImageTag, []common.DockerPullPolicy(nil)).
 		Return(&types.ImageInspect{ID: "helper-image"}, nil).
 		Once()
 
@@ -2106,6 +2106,67 @@ func TestGetUIDandGID(t *testing.T) {
 			assert.Equal(t, testGID, gid)
 		})
 	}
+}
+
+func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		Memory: "42m",
+	}
+	imageConfig := common.Image{
+		Name:         "alpine",
+		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, int64(44040192), hostConfig.Memory)
+	}
+
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	defer c.AssertExpectations(t)
+
+	c.On("ContainerInspect", mock.Anything, "abc").
+		Return(types.ContainerJSON{}, nil).Once()
+
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	err = e.createPullManager()
+	require.NoError(t, err)
+
+	_, err = e.createContainer("build", imageConfig, []string{"/bin/sh"}, []string{})
+	assert.NoError(t, err, "Should create container without errors")
+}
+
+func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		Memory: "42m",
+	}
+	imageConfig := common.Image{
+		Name:         "alpine",
+		PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, int64(44040192), hostConfig.Memory)
+	}
+
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+
+	c.On("ContainerInspect", mock.Anything, "abc").
+		Return(types.ContainerJSON{}, nil).Once()
+
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	err = e.createPullManager()
+	require.NoError(t, err)
+
+	_, err = e.createContainer("build", imageConfig, []string{"/bin/sh"}, []string{})
+	assert.EqualError(
+		t,
+		err,
+		"the configured PullPolicies ([never]) are not allowed by AllowedPullPolicies ([always])",
+	)
 }
 
 func init() {

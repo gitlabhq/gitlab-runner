@@ -15,7 +15,7 @@ import (
 )
 
 type Manager interface {
-	GetDockerImage(imageName string) (*types.ImageInspect, error)
+	GetDockerImage(imageName string, imagePullPolicies []common.DockerPullPolicy) (*types.ImageInspect, error)
 }
 
 type ManagerConfig struct {
@@ -60,8 +60,11 @@ func NewManager(
 	}
 }
 
-func (m *manager) GetDockerImage(imageName string) (*types.ImageInspect, error) {
-	configPullPolicies, err := m.config.DockerConfig.GetPullPolicies()
+func (m *manager) GetDockerImage(
+	imageName string,
+	imagePullPolicies []common.DockerPullPolicy,
+) (*types.ImageInspect, error) {
+	pullPolicies, err := m.fetchPullPolicies(imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -71,16 +74,16 @@ func (m *manager) GetDockerImage(imageName string) (*types.ImageInspect, error) 
 		return nil, err
 	}
 
-	if !m.verifyPullPolicies(configPullPolicies, allowedPullPolicies) {
+	if !m.verifyPullPolicies(pullPolicies, allowedPullPolicies) {
 		return nil, fmt.Errorf(
 			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
-			configPullPolicies,
+			pullPolicies,
 			allowedPullPolicies,
 		)
 	}
 
 	var imageErr error
-	for idx, pullPolicy := range configPullPolicies {
+	for idx, pullPolicy := range pullPolicies {
 		attempt := 1 + idx
 		if attempt > 1 {
 			m.logger.Infoln(fmt.Sprintf("Attempt #%d: Trying %q pull policy", attempt, pullPolicy))
@@ -101,7 +104,7 @@ func (m *manager) GetDockerImage(imageName string) (*types.ImageInspect, error) 
 	return nil, fmt.Errorf(
 		"failed to pull image %q with specified policies %v: %w",
 		imageName,
-		configPullPolicies,
+		pullPolicies,
 		imageErr,
 	)
 }
@@ -235,4 +238,17 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 
 	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)
 	return &image, err
+}
+
+func (m *manager) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]common.DockerPullPolicy, error) {
+	if len(imagePullPolicies) == 0 {
+		configPullPolicies, err := m.config.DockerConfig.GetPullPolicies()
+		if err != nil {
+			return nil, err
+		}
+
+		return configPullPolicies, nil
+	}
+
+	return imagePullPolicies, nil
 }

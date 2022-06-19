@@ -139,13 +139,17 @@ func (e *executor) getServiceVariables(serviceDefinition common.Image) []string 
 	return variables.Expand().StringList()
 }
 
-func (e *executor) expandAndGetDockerImage(imageName string, allowedImages []string) (*types.ImageInspect, error) {
+func (e *executor) expandAndGetDockerImage(
+	imageName string,
+	allowedImages []string,
+	imagePullPolicies []common.DockerPullPolicy,
+) (*types.ImageInspect, error) {
 	imageName, err := e.expandImageName(imageName, allowedImages)
 	if err != nil {
 		return nil, err
 	}
 
-	image, err := e.pullManager.GetDockerImage(imageName)
+	image, err := e.pullManager.GetDockerImage(imageName, imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +204,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 			"...",
 		)
 
-		return e.pullManager.GetDockerImage(imageNameFromConfig)
+		return e.pullManager.GetDockerImage(imageNameFromConfig, nil)
 	}
 
 	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
@@ -217,7 +221,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 	// Fall back to getting image from registry
 	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
-	return e.pullManager.GetDockerImage(e.helperImageInfo.String())
+	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), nil)
 }
 
 func (e *executor) getLocalHelperImage() *types.ImageInspect {
@@ -268,8 +272,10 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 		return nil, err
 	}
 
+	imagePullPolicies := e.Build.Image.PullPolicies
+
 	// Fetch image
-	image, err := e.pullManager.GetDockerImage(imageName)
+	image, err := e.pullManager.GetDockerImage(imageName, imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +362,7 @@ func (e *executor) createService(
 	}
 
 	e.Println("Starting service", service+":"+version, "...")
-	serviceImage, err := e.pullManager.GetDockerImage(image)
+	serviceImage, err := e.pullManager.GetDockerImage(image, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -622,7 +628,7 @@ func (e *executor) createContainer(
 		return nil, errVolumesManagerUndefined
 	}
 
-	image, err := e.expandAndGetDockerImage(imageDefinition.Name, allowedInternalImages)
+	image, err := e.expandAndGetDockerImage(imageDefinition.Name, allowedInternalImages, imageDefinition.PullPolicies)
 	if err != nil {
 		return nil, err
 	}
