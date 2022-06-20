@@ -48,8 +48,8 @@ of GitLab Runner is the same as your GitLab version.
 
 The `coordinator` is the GitLab installation from which a job is requested.
 
-In other words, runners are isolated (virtual) machines that pick up jobs
-requested by their `coordinator`.
+In other words, runner is an isolated agent that request jobs from
+the `coordinator` (GitLab installation through GitLab API).
 
 ## Where are logs stored when run as a service on Windows?
 
