@@ -1,3 +1,57 @@
+## v15.1.0 (2022-06-20)
+
+### New features
+
+- Generate artifacts metadata !3489
+- Add image pull-policy support to services !3488
+
+### Bug fixes
+
+- Init submodules prior to sync to ensure submodules remote URL configuration is properly synchronized !3265 (David Alger @davidalger)
+- Honor entrypoint for build and helper images with exec passthrough !3212 (bdwyertech @bdwyertech)
+
+### Maintenance
+
+- Ignore TestPowershell_GetConfiguration for all windows versions !3494
+- Add TestPowershell_GetConfiguration/pwsh_on_shell_with_custom_user_(windows)... !3492
+- Update Docker images for linting docs !3490
+- Add note about gitlab-runner-fips !3487
+- Update minio-go dependency to fix FIPS endpoints !3484
+- The context of the language would suggest the plural form of this noun. !3483
+- Fixed a broken link for FIPS RHEL runner !3481 (Brock R @fearthebadger)
+- Clarify on Docker engine version requirement !3479
+- Expand variables for Pod volume subPath and mountpath config !3478
+- Update documentation on interactive web terminal support for helm chart !3477
+- Add upgrade code sample for arm64 !3475
+- Fix error in oc create configmap command - docs !3471
+- Remove windows server 2004/20H2/21H1 related tests from community MR pipeline !3467
+- Do not retry artifact download on 401 response !3461
+- Modify doc mentions of RedHat to Red Hat !3459 (lousyd @lousyd)
+- Update project to use latest linting images from gitlab-docs !3452
+- Use `T.TempDir` to create temporary test directory !3410 (Eng Zer Jun @Juneezee)
+- Use 'go install' instead of 'go get' to install tools !3402 (M. Ángel @jimen0)
+- DeviceCgroupRules for Docker Executors !3309 (Alexander Sinn @embeddedcoder)
+- Workaround to slow artifacts upload to GCS !3194
+- Add extra information when "no matching files" !3079 (Adrian Mârza @adrian.marza.mambu)
+- Override ci image and registry for all windows helper pushing jobs !3485
+- health-check port discovery should be consistent with WAIT_FOR_SERVICE_TCP_PORT !3033 (Anton Neznaienko @neanton)
+
+### GitLab Runner distribution
+
+- Trigger UBI images for all releases and main branch !3466
+- Fix not pushing main Runner images to Docker hub !3465
+
+### Documentation changes
+
+- Add Podman configuration steps !3480
+- Implement allowed_pull_policies in config.toml !3422
+- Implement supporting pull_policy from jobs !3412
+- Allow to overwrite Pod labels in the Kubernetes executor !3352 (Mathieu Parent @sathieu)
+- Add a flag to `gitlab-runner exec` to specify the CI/CD config file !3246 (Alexis Jeandeau @jeandeaual)
+- Use GCP metadata server and sign blob API for GCS cache url !3231 (Jasper Maes @jlemaes)
+- Complete the example configuration for gcp cache !2956 (Edward Smit @edwardsmit)
+- Support Priority Class Name for Kubernetes executor !2685 (ayoub mrini @ayoubmrini424)
+
 ## v15.0.0 (2022-05-19)
 
 ### Security fixes
