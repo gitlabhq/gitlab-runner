@@ -66,8 +66,9 @@ type buildsHelper struct {
 	builds   []*common.Build
 	lock     sync.Mutex
 
-	jobsTotal            *prometheus.CounterVec
-	jobDurationHistogram *prometheus.HistogramVec
+	jobsTotal                 *prometheus.CounterVec
+	jobDurationHistogram      *prometheus.HistogramVec
+	jobQueueDurationHistogram *prometheus.HistogramVec
 }
 
 func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCounter {
@@ -190,6 +191,13 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 
 	b.builds = append(b.builds, build)
 	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription(), build.Runner.SystemIDState.GetSystemID()).Inc()
+	b.jobQueueDurationHistogram.
+		WithLabelValues(
+			build.Runner.ShortDescription(),
+			build.Runner.SystemIDState.GetSystemID(),
+			build.JobInfo.ProjectJobsRunningOnInstanceRunnersCount,
+		).
+		Observe(build.JobInfo.TimeInQueueSeconds)
 }
 
 func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
@@ -265,6 +273,7 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 
 	b.jobsTotal.Describe(ch)
 	b.jobDurationHistogram.Describe(ch)
+	b.jobQueueDurationHistogram.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -304,6 +313,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 
 	b.jobsTotal.Collect(ch)
 	b.jobDurationHistogram.Collect(ch)
+	b.jobQueueDurationHistogram.Collect(ch)
 }
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
@@ -343,6 +353,14 @@ func newBuildsHelper() buildsHelper {
 				Buckets: []float64{30, 60, 300, 600, 1800, 3600, 7200, 10800, 18000, 36000},
 			},
 			[]string{"runner", "system_id"},
+		),
+		jobQueueDurationHistogram: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "gitlab_runner_job_queue_duration_seconds",
+				Help:    "Histogram of job queuing durations",
+				Buckets: []float64{1, 3, 10, 30, 60, 120, 300, 900, 1800, 3600},
+			},
+			[]string{"runner", "system_id", "project_jobs_running"},
 		),
 	}
 }
