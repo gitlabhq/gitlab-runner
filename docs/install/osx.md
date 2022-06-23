@@ -23,7 +23,7 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
 1. Download the binary for your system:
 
    - For Intel-based systems:
-     
+
      ```shell
      sudo curl --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-amd64"
      ```
@@ -163,7 +163,7 @@ git config credential.helper
      ```
 
    - For Apple Silicon-based systems:
-     
+
      ```shell
      sudo curl -o /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-darwin-arm64"
      ```
