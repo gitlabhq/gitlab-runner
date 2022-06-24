@@ -147,6 +147,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/security/pod-security-policy/#privilege-escalation) behavior. |
 | `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
+| `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, all pull policies specified in `pull-policy` are allowed. |
 | `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
 | `bearer_token` | Default bearer token used to launch build pods. |
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
@@ -175,7 +176,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `resource_availability_check_max_attempts` | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt (default is `5`). [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. |
 | `privileged` | Run containers with the privileged flag. |
 | `runtime_class_name` | A Runtime class to use for all created pods. If the feature is unsupported by the cluster, jobs exit or fail. |
-| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#using-pull-policies). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). |
+| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#using-pull-policies). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
 | `service_account` | Default service account job/executor pods use to talk to Kubernetes API. |
 | `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
 | `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#using-services). |
@@ -1232,6 +1233,31 @@ Or, to restrict to a specific list of images from this registry:
     allowed_images = ["my.registry.tld:5000/ruby:*", "my.registry.tld:5000/node:*"]
     allowed_services = ["postgres:9.4", "postgres:latest"]
 ```
+
+### Restrict Docker pull policies
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
+
+In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how
+a CI/CD job should fetch images.
+
+To restrict which pull policies can be used in the `.gitlab-ci.yml` file, you can use `allowed_pull_policies`.
+
+For example, to allow only the `always` and `if-not-present` pull policies:
+
+```toml
+[[runners]]
+  (...)
+  executor = "kubernetes"
+  [runners.kubernetes]
+    (...)
+    allowed_pull_policies = ["always", "if-not-present"]
+```
+
+- If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
+- If you don't specify `pull_policy`, the default is `always`.
+- The existing [`pull_policy` keyword](../executors/kubernetes.md#using-pull-policies) must not include a pull policy
+  that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
 
 ## Job execution
 

@@ -187,11 +187,28 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 
-	var pullPolicies []api.PullPolicy
-	if pullPolicies, err = s.Config.Kubernetes.GetPullPolicies(); err != nil {
-		return fmt.Errorf("couldn't get pull policy: %w", err)
+	var pullPolicies []common.DockerPullPolicy
+	if pullPolicies, err = s.fetchPullPolicies(options.Build.Image.PullPolicies); err != nil {
+		return err
 	}
-	s.pullManager = pull.NewPullManager(pullPolicies, &s.BuildLogger)
+
+	var allowedPullPolicies []common.DockerPullPolicy
+	allowedPullPolicies, err = s.Config.Kubernetes.GetAllowedPullPolicies()
+	if err != nil {
+		return err
+	}
+
+	err = s.verifyPullPolicies(pullPolicies, allowedPullPolicies)
+	if err != nil {
+		return err
+	}
+
+	kubernetesPullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(pullPolicies)
+	if err != nil {
+		return err
+	}
+
+	s.pullManager = pull.NewPullManager(kubernetesPullPolicies, &s.BuildLogger)
 
 	s.prepareOptions(options.Build)
 
@@ -241,6 +258,43 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	return err
+}
+
+func (s *executor) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]common.DockerPullPolicy, error) {
+	if len(imagePullPolicies) == 0 {
+		configPullPolicies, err := s.Config.Kubernetes.GetPullPolicies()
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get pull policy: %w", err)
+		}
+
+		return configPullPolicies, nil
+	}
+
+	return imagePullPolicies, nil
+}
+
+func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) error {
+	contains := true
+
+	for _, policy := range pullPolicies {
+		contains = false
+		for _, allowedPolicy := range allowedPullPolicies {
+			if policy == allowedPolicy {
+				contains = true
+				break
+			}
+		}
+	}
+
+	if contains {
+		return nil
+	} else {
+		return fmt.Errorf(
+			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
+			pullPolicies,
+			allowedPullPolicies,
+		)
+	}
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {

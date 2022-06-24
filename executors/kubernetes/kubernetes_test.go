@@ -1136,7 +1136,7 @@ func TestPrepare(t *testing.T) {
 						HelperMemoryLimit:            "100Mi",
 						HelperEphemeralStorageLimit:  "200Mi",
 						Privileged:                   func(b bool) *bool { return &b }(true),
-						PullPolicy:                   common.StringOrArray{"if-not-present"},
+						PullPolicy:                   common.StringOrArray{common.PullPolicyIfNotPresent},
 					},
 				},
 			},
@@ -1908,6 +1908,163 @@ func TestPrepare(t *testing.T) {
 			},
 			ExpectedSharedBuildsDir: true,
 		},
+		{
+			Name:         "runner pull policy is one of allowed pull policies",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						PullPolicy:          common.StringOrArray{common.PullPolicyNever},
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyNever},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedPullPolicy: api.PullNever,
+		},
+		{
+			Name:         "runner pull policy is not one of allowed pull policies",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						PullPolicy:          common.StringOrArray{common.PullPolicyIfNotPresent},
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyNever},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			Error: "the configured PullPolicies ([if-not-present]) are not allowed by AllowedPullPolicies ([always never])",
+		},
+		{
+			Name:         "image pull policy is one of allowed pull policies",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyNever},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedPullPolicy: api.PullNever,
+		},
+		{
+			Name:         "image pull policy is not one of allowed pull policies",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyNever},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			Error: "the configured PullPolicies ([if-not-present]) are not allowed by AllowedPullPolicies ([always never])",
+		},
+		{
+			Name:         "both runner and image pull policies are defined",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						PullPolicy:          common.StringOrArray{common.PullPolicyNever},
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyIfNotPresent, common.PullPolicyNever},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			ExpectedPullPolicy: api.PullIfNotPresent,
+		},
 	}
 
 	for _, test := range tests {
@@ -1916,6 +2073,7 @@ func TestPrepare(t *testing.T) {
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: executorOptions,
 				},
+				options: &kubernetesOptions{},
 			}
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
