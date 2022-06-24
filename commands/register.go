@@ -408,7 +408,8 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 	logrus.Printf(
 		"Runner registered successfully. " +
-			"Feel free to start it, but if it's running already the config should be automatically reloaded!")
+			"Feel free to start it, but if it's running already the config should be automatically reloaded!\n")
+	logrus.Printf("Configuration (with the authentication token) was saved in %q", s.ConfigFile)
 }
 
 func (s *RegisterCommand) unregisterRunner() func() {
