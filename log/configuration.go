@@ -21,7 +21,7 @@ var (
 		cli.BoolFlag{
 			Name:   "debug",
 			Usage:  "debug mode",
-			EnvVar: "DEBUG",
+			EnvVar: "RUNNER_DEBUG",
 		},
 		cli.StringFlag{
 			Name:   "log-format",
