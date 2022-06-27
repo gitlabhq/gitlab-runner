@@ -92,7 +92,7 @@ Notes:
     ```
 
 - If you are updating the certificate for an existing Runner, [restart it](../commands/index.md#gitlab-runner-restart).
-- If you already had a Runner configured through HTTP make sure you check your `config.toml` file to update your instance path to the new HTTPS URL of your GitLab instance. 
+- If you already have a Runner configured through HTTP, update your instance path to the new HTTPS URL of your GitLab instance in your `config.toml`. 
 - As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
 - If you are using GitLab Runner Helm chart, you will need to configure certificates according to the doc [Providing a custom certificate for accessing GitLab](../install/kubernetes.md#providing-a-custom-certificate-for-accessing-gitlab).
