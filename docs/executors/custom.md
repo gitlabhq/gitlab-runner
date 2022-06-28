@@ -187,7 +187,7 @@ times.
 | `hostname` | string | ✗ | ✓ | The hostname to associate with job's "metadata" stored by the runner. If undefined, the hostname is not set. |
 | `driver.name` | string | ✗ | ✓ | The user-defined name for the driver. Printed with the `Using custom executor...` line. If undefined, no information about driver is printed. |
 | `driver.version` | string | ✗ | ✓ | The user-defined version for the drive. Printed with the `Using custom executor...` line. If undefined, only the name information is printed. |
-| `job_env` | object | ✗ | ✓ |  Name-value pairs that will be made available through environment variables to all subsequent stages of the job. |
+| `job_env` | object | ✗ | ✓ |  Name-value pairs that are available through environment variables to all subsequent stages of the job execution. They are available for the driver, not the job. For details, see [`job_env` usage](#job_env-usage). |
 
 The `STDERR` of the executable will print to the job log.
 
@@ -211,6 +211,38 @@ are defined, these will be added in order to the executable defined in
 ```
 
 GitLab Runner would execute it as `/path/to/config Arg1 Arg2`.
+
+#### `job_env` usage
+
+The main purpose of `job_env` configuration is to pass variables **to the context of custom executor driver calls**
+for subsequent stages of the job execution.
+
+Let's consider an example driver, where connection with the job execution environment requires preparing some
+credentials and that this operation is very expensive. Let's say we need to connect to our local credentials
+provider to get a temporary SSH username and password that the custom executor can next use to connect with the
+job execution environment.
+
+With Custom Executor execution flow, where each job execution [stage](#stages): `prepare`, multiple `run` calls
+and `cleanup` are separate executions of the driver, the context is separate for each of them. For our credentials
+resolving example, connection to the credentials provider needs to be done each time.
+
+If this operation is expensive, we might want to do it once for a whole job execution, and then re-use the credentials
+for all job execution stages. This is where the `job_env` can help. With this you can connect with the provider once,
+during the `config_exec` call and then pass the received credentials with the `job_env`. They will be next added to the
+list of variables that the custom executor calls for [`prepare_exec`](#prepare), [`run_exec`](#run) and [`cleanup_exec`](#cleanup) are receiving. With
+this, the driver instead of connecting to the credentials provider each time may just read the variables and use the
+credentials that are present.
+
+The important thing to understand is that **the variables are not automaticaly available for the job itself**. It
+fully depends on how the Custom Executor Driver is implemented and in many cases it will be not present there.
+
+If you're considering the `job_env` setting so you can pass a set of variables to every job executed
+by a particular runner, then look at the
+[`environment` setting from `[[runners]]`](../configuration/advanced-configuration.md#the-runners-section).
+
+If the variables are dynamic and it's expected that their values will change between different jobs, then you should
+make sure that your driver is implemented in a way that the variables passed by `job_env` will be added to the job
+execution call.
 
 ### Prepare
 
