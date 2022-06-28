@@ -22,7 +22,7 @@ func (c *ListCommand) Execute(context *cli.Context) {
 		"ConfigFile": c.ConfigFile,
 	}).Println("Listing configured runners")
 
-	for _, runner := range c.config.Runners {
+	for _, runner := range c.getConfig().Runners {
 		logrus.WithFields(logrus.Fields{
 			"Executor": runner.RunnerSettings.Executor,
 			"Token":    runner.RunnerCredentials.Token,

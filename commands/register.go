@@ -230,6 +230,9 @@ func (s *RegisterCommand) askSSHLogin() {
 }
 
 func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
+	s.configMutex.Lock()
+	defer s.configMutex.Unlock()
+
 	s.config.Runners = append(s.config.Runners, runner)
 }
 
@@ -388,12 +391,13 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 		defer s.unregisterRunner()()
 	}
 
-	if s.config.Concurrent < s.Limit {
+	config := s.getConfig()
+	if config.Concurrent < s.Limit {
 		logrus.Warningf(
 			"Specified limit (%d) larger then current concurrent limit (%d). "+
 				"Concurrent limit will not be enlarged.",
 			s.Limit,
-			s.config.Concurrent,
+			config.Concurrent,
 		)
 	}
 

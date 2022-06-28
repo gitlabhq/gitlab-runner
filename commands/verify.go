@@ -43,7 +43,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 	}
 
 	// check if anything changed
-	if len(c.config.Runners) == len(okRunners) {
+	if len(c.getConfig().Runners) == len(okRunners) {
 		return
 	}
 
@@ -52,7 +52,9 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 		return
 	}
 
+	c.configMutex.Lock()
 	c.config.Runners = okRunners
+	c.configMutex.Unlock()
 
 	// save config file
 	err = c.saveConfig()
@@ -65,7 +67,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 func (c *VerifyCommand) selectRunners() (toVerify, okRunners []*common.RunnerConfig, err error) {
 	var selectorPresent = c.Name != "" || c.RunnerCredentials.URL != "" || c.RunnerCredentials.Token != ""
 
-	for _, runner := range c.config.Runners {
+	for _, runner := range c.getConfig().Runners {
 		selected := !selectorPresent || runner.Name == c.Name || runner.RunnerCredentials.SameAs(&c.RunnerCredentials)
 
 		if selected {
