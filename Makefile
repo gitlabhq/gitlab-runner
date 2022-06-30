@@ -22,7 +22,7 @@ S3_UPLOAD_PATH ?= main
 DEB_PLATFORMS ?= debian/stretch debian/buster debian/bullseye \
     ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/impish ubuntu/jammy \
     raspbian/jessie raspbian/stretch raspbian/buster \
-    linuxmint/sarah linuxmint/serena linuxmint/sonya linuxmint/ulyana linuxmint/ulyssa linuxmint/uma linuxmint/una \
+    linuxmint/sarah linuxmint/serena linuxmint/sonya linuxmint/ulyana linuxmint/ulyssa linuxmint/uma linuxmint/una
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
 RPM_PLATFORMS ?= el/6 el/7 el/8 \
     ol/6 ol/7 ol/8 \
