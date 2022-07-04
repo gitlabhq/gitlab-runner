@@ -7,7 +7,7 @@
   variables:
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "true"
+    PUSH_TO_ECR_PUBLIC: "false"
   before_script:
   - source ci/touch_make_dependencies
   retry: 2
@@ -16,7 +16,6 @@
   extends:
   - .release_docker_images_base
   dependencies:
-  - 'ecr public token'
   - 'binaries'
   - 'package-deb'
   - 'binaries-fips'
@@ -59,7 +58,6 @@
   extends:
   - .release_docker_images_base
   dependencies:
-  - 'ecr public token'
   - 'binaries'
   - 'helper images'
   - 'helper images fips'

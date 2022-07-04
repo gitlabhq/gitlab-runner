@@ -3,12 +3,11 @@
     - .windows-dependency-checksums
   stage: prerelease
   variables:
-    PUSH_TO_ECR_PUBLIC: "true"
+    PUSH_TO_ECR_PUBLIC: "false"
     PUBLISH_IMAGES: "true"
     PWSH_VERSION: 7.1.1
   dependencies:
     - 'helper images binaries'
-    - 'ecr public token'
   script:
     - .\ci\build_release_windows_images.ps1
   retry: 2
