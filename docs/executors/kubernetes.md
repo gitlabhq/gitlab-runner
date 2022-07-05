@@ -210,13 +210,33 @@ disabled.
 When you overwrite the Kubernetes namespace, make sure that:
 
 - In the `values.yml` file for GitLab Runner Helm charts, this value is set: `rbac.clusterWideAccess: true`.
-- The runner has these permissions in the core API group:
+- The runner has these permissions in the core API group
 
-  | Resource   | Permissions |
-  |------------|-------------|
-  | pods/exec  | create, patch, delete |
-  | pods       | get, list, watch, create, patch, delete |
-  | secrets    | get, list, watch, create, patch, delete |
+  - For `exec strategy`:
+
+  | Resource          | Permissions                                     |
+  |-------------------|-------------------------------------------------|
+  | pods/exec         | create, patch, delete                           |
+  | pods              | get, list, watch, create, patch, delete         |
+  | services          | get, list, watch, create, patch, delete         |
+  | secrets           | get, list, watch, create, update, patch, delete |
+  | serviceAccounts   | get (1)                                         |
+
+  - For `attach strategy`:
+
+  | Resource          | Permissions                             |
+  |-------------------|-----------------------------------------|
+  | pods/attach       | create, patch, delete                   |
+  | pods              | get, watch, create, delete              |
+  | services          | get, watch, create, delete              |
+  | configmaps        | get, create, update, delete             |
+  | secrets           | get, create, update, delete             |
+  | serviceAccounts   | get (1)                                 |
+
+_(1) The serviceAccount permission is only needed_
+
+_- For GitLab 15.0 and 15.1_
+_- For GitLab 15.2 when `resource_availability_check_max_attempts` is set with a value higher than 0_
 
 This can be achieved by setting `rbac.create: true` or by specifying a service account `rbac.serviceAccountName: <service_account_name>` with the above permissions in the `values.yml` file.
 
