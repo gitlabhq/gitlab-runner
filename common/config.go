@@ -113,23 +113,18 @@ func (c DockerConfig) GetAllowedPullPolicies() ([]DockerPullPolicy, error) {
 	return policies, nil
 }
 
-func (c KubernetesConfig) GetAllowedPullPolicies() ([]DockerPullPolicy, error) {
+func (c KubernetesConfig) GetAllowedPullPolicies() ([]api.PullPolicy, error) {
 	if len(c.AllowedPullPolicies) == 0 {
 		return c.GetPullPolicies()
 	}
 
 	// Verify allowed pull policies
-	policies := make([]DockerPullPolicy, len(c.AllowedPullPolicies))
-	for idx, p := range c.AllowedPullPolicies {
-		switch p {
-		case "", PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever:
-			policies[idx] = p
-		default:
-			return []DockerPullPolicy{}, fmt.Errorf("unsupported allowed_pull_policies config: %q", p)
-		}
+	pullPolicies, err := c.ConvertFromDockerPullPolicy(c.AllowedPullPolicies)
+	if err != nil {
+		return []api.PullPolicy{}, fmt.Errorf("allowed_pull_policies config: %w", err)
 	}
 
-	return policies, nil
+	return pullPolicies, nil
 }
 
 // StringOrArray implements UnmarshalTOML to unmarshal either a string or array of strings.
@@ -276,24 +271,24 @@ type CustomConfig struct {
 
 // GetPullPolicies returns a validated list of pull policies, falling back to a predefined value if empty,
 // or returns an error if the list is not valid
-func (c KubernetesConfig) GetPullPolicies() ([]DockerPullPolicy, error) {
+func (c KubernetesConfig) GetPullPolicies() ([]api.PullPolicy, error) {
 	// Default to cluster pull policy
 	if len(c.PullPolicy) == 0 {
-		return []DockerPullPolicy{""}, nil
+		return []api.PullPolicy{""}, nil
 	}
 
 	// Verify pull policies
 	policies := make([]DockerPullPolicy, len(c.PullPolicy))
-	for idx, p := range c.PullPolicy {
-		switch p {
-		case "", PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever:
-			policies[idx] = DockerPullPolicy(p)
-		default:
-			return []DockerPullPolicy{}, fmt.Errorf("unsupported pull_policy config: %q", p)
-		}
+	for idx, policy := range c.PullPolicy {
+		policies[idx] = DockerPullPolicy(policy)
 	}
 
-	return policies, nil
+	pullPolicies, err := c.ConvertFromDockerPullPolicy(policies)
+	if err != nil {
+		return []api.PullPolicy{}, fmt.Errorf("pull_policy config: %w", err)
+	}
+
+	return pullPolicies, nil
 }
 
 // ConvertFromDockerPullPolicy converts an array of DockerPullPolicy to an api.PullPolicy array

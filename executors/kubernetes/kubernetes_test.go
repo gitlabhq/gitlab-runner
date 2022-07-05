@@ -1965,7 +1965,8 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "the configured PullPolicies ([if-not-present]) are not allowed by AllowedPullPolicies ([always never])",
+			Error: "the configured PullPolicies ([IfNotPresent]) " +
+				"are not allowed by AllowedPullPolicies ([Always Never])",
 		},
 		{
 			Name:         "image pull policy is one of allowed pull policies",
@@ -2028,7 +2029,8 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "the configured PullPolicies ([if-not-present]) are not allowed by AllowedPullPolicies ([always never])",
+			Error: "the configured PullPolicies ([IfNotPresent]) " +
+				"are not allowed by AllowedPullPolicies ([Always Never])",
 		},
 		{
 			Name:         "both runner and image pull policies are defined",
@@ -2036,10 +2038,14 @@ func TestPrepare(t *testing.T) {
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
-						Image:               "test-image",
-						Host:                "test-server",
-						PullPolicy:          common.StringOrArray{common.PullPolicyNever},
-						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyIfNotPresent, common.PullPolicyNever},
+						Image:      "test-image",
+						Host:       "test-server",
+						PullPolicy: common.StringOrArray{common.PullPolicyNever},
+						AllowedPullPolicies: []common.DockerPullPolicy{
+							common.PullPolicyAlways,
+							common.PullPolicyIfNotPresent,
+							common.PullPolicyNever,
+						},
 					},
 				},
 			},

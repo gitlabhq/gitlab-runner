@@ -180,6 +180,7 @@ func (s *executor) Name() string {
 	return "kubernetes"
 }
 
+// nolint:funlen
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.AbstractExecutor.PrepareConfiguration(options)
 
@@ -187,12 +188,12 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 
-	var pullPolicies []common.DockerPullPolicy
+	var pullPolicies []api.PullPolicy
 	if pullPolicies, err = s.fetchPullPolicies(options.Build.Image.PullPolicies); err != nil {
 		return err
 	}
 
-	var allowedPullPolicies []common.DockerPullPolicy
+	var allowedPullPolicies []api.PullPolicy
 	allowedPullPolicies, err = s.Config.Kubernetes.GetAllowedPullPolicies()
 	if err != nil {
 		return err
@@ -203,12 +204,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return err
 	}
 
-	kubernetesPullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(pullPolicies)
-	if err != nil {
-		return err
-	}
-
-	s.pullManager = pull.NewPullManager(kubernetesPullPolicies, &s.BuildLogger)
+	s.pullManager = pull.NewPullManager(pullPolicies, &s.BuildLogger)
 
 	s.prepareOptions(options.Build)
 
@@ -260,8 +256,13 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	return err
 }
 
-func (s *executor) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]common.DockerPullPolicy, error) {
-	if len(imagePullPolicies) == 0 {
+func (s *executor) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]api.PullPolicy, error) {
+	k8sImagePullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(imagePullPolicies)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(k8sImagePullPolicies) == 0 {
 		configPullPolicies, err := s.Config.Kubernetes.GetPullPolicies()
 		if err != nil {
 			return nil, fmt.Errorf("couldn't get pull policy: %w", err)
@@ -270,10 +271,10 @@ func (s *executor) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy
 		return configPullPolicies, nil
 	}
 
-	return imagePullPolicies, nil
+	return k8sImagePullPolicies, nil
 }
 
-func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) error {
+func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []api.PullPolicy) error {
 	contains := true
 
 	for _, policy := range pullPolicies {
@@ -286,15 +287,15 @@ func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []common
 		}
 	}
 
-	if contains {
-		return nil
-	} else {
+	if !contains {
 		return fmt.Errorf(
 			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
 			pullPolicies,
 			allowedPullPolicies,
 		)
 	}
+
+	return nil
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {

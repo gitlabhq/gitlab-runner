@@ -1276,33 +1276,33 @@ func TestDockerConfig_GetAllowedPullPolicies(t *testing.T) {
 func TestKubernetesConfig_GetAllowedPullPolicies(t *testing.T) {
 	tests := map[string]struct {
 		config               KubernetesConfig
-		expectedPullPolicies []DockerPullPolicy
+		expectedPullPolicies []api.PullPolicy
 		expectedErr          bool
 	}{
 		"nil allowed_pull_policies": {
 			config:               KubernetesConfig{},
-			expectedPullPolicies: []DockerPullPolicy{""},
+			expectedPullPolicies: []api.PullPolicy{""},
 			expectedErr:          false,
 		},
 		"empty allowed_pull_policies": {
 			config: KubernetesConfig{
 				AllowedPullPolicies: []DockerPullPolicy{},
 			},
-			expectedPullPolicies: []DockerPullPolicy{""},
+			expectedPullPolicies: []api.PullPolicy{""},
 			expectedErr:          false,
 		},
 		"empty string allowed_pull_policies": {
 			config: KubernetesConfig{
 				AllowedPullPolicies: []DockerPullPolicy{""},
 			},
-			expectedPullPolicies: []DockerPullPolicy{""},
+			expectedPullPolicies: []api.PullPolicy{""},
 			expectedErr:          false,
 		},
 		"known elements in allowed_pull_policies": {
 			config: KubernetesConfig{
 				AllowedPullPolicies: []DockerPullPolicy{PullPolicyAlways, PullPolicyNever},
 			},
-			expectedPullPolicies: []DockerPullPolicy{PullPolicyAlways, PullPolicyNever},
+			expectedPullPolicies: []api.PullPolicy{api.PullAlways, api.PullNever},
 			expectedErr:          false,
 		},
 		"invalid allowed_pull_policies": {
@@ -1331,29 +1331,29 @@ func TestKubernetesConfig_GetAllowedPullPolicies(t *testing.T) {
 func TestKubernetesConfig_GetPullPolicies(t *testing.T) {
 	tests := map[string]struct {
 		config               KubernetesConfig
-		expectedPullPolicies []DockerPullPolicy
+		expectedPullPolicies []api.PullPolicy
 		expectedErr          bool
 	}{
 		"nil pull_policy": {
 			config:               KubernetesConfig{},
-			expectedPullPolicies: []DockerPullPolicy{""},
+			expectedPullPolicies: []api.PullPolicy{""},
 			expectedErr:          false,
 		},
 		"empty pull_policy": {
 			config:               KubernetesConfig{PullPolicy: StringOrArray{}},
-			expectedPullPolicies: []DockerPullPolicy{""},
+			expectedPullPolicies: []api.PullPolicy{""},
 			expectedErr:          false,
 		},
 		"empty string pull_policy": {
 			config:               KubernetesConfig{PullPolicy: StringOrArray{""}},
-			expectedPullPolicies: []DockerPullPolicy{""},
+			expectedPullPolicies: []api.PullPolicy{""},
 			expectedErr:          false,
 		},
 		"known elements in pull_policy": {
 			config: KubernetesConfig{
 				PullPolicy: StringOrArray{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
 			},
-			expectedPullPolicies: []DockerPullPolicy{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
+			expectedPullPolicies: []api.PullPolicy{api.PullAlways, api.PullIfNotPresent, api.PullNever},
 			expectedErr:          false,
 		},
 		"invalid pull_policy": {
