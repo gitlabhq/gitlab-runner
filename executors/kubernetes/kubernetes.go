@@ -188,23 +188,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 
-	var pullPolicies []api.PullPolicy
-	if pullPolicies, err = s.fetchPullPolicies(options.Build.Image.PullPolicies); err != nil {
-		return err
-	}
-
-	var allowedPullPolicies []api.PullPolicy
-	allowedPullPolicies, err = s.Config.Kubernetes.GetAllowedPullPolicies()
+	s.pullManager, err = s.preparePullManager(options)
 	if err != nil {
 		return err
 	}
-
-	err = s.verifyPullPolicies(pullPolicies, allowedPullPolicies)
-	if err != nil {
-		return err
-	}
-
-	s.pullManager = pull.NewPullManager(pullPolicies, &s.BuildLogger)
 
 	s.prepareOptions(options.Build)
 
@@ -256,7 +243,30 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	return err
 }
 
-func (s *executor) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]api.PullPolicy, error) {
+func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pull.Manager, error) {
+	var (
+		err          error
+		pullPolicies []api.PullPolicy
+	)
+
+	if pullPolicies, err = s.getPullPolicies(options.Build.Image.PullPolicies); err != nil {
+		return nil, err
+	}
+
+	allowedPullPolicies, err := s.Config.Kubernetes.GetAllowedPullPolicies()
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.verifyPullPolicies(pullPolicies, allowedPullPolicies)
+	if err != nil {
+		return nil, err
+	}
+
+	return pull.NewPullManager(pullPolicies, &s.BuildLogger), nil
+}
+
+func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]api.PullPolicy, error) {
 	k8sImagePullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(imagePullPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("conversion to Kubernetes policy: %w", err)
@@ -265,7 +275,7 @@ func (s *executor) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy
 	if len(k8sImagePullPolicies) == 0 {
 		configPullPolicies, err := s.Config.Kubernetes.GetPullPolicies()
 		if err != nil {
-			return nil, fmt.Errorf("couldn't get pull policy: %w", err)
+			return nil, err
 		}
 
 		return configPullPolicies, nil

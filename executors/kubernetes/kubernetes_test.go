@@ -1965,8 +1965,7 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "the configured PullPolicies ([IfNotPresent]) " +
-				"are not allowed by AllowedPullPolicies ([Always Never])",
+			Error: "configured PullPolicies ([IfNotPresent]) are not allowed by AllowedPullPolicies ([Always Never])",
 		},
 		{
 			Name:         "image pull policy is one of allowed pull policies",
@@ -2029,8 +2028,7 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "the configured PullPolicies ([IfNotPresent]) " +
-				"are not allowed by AllowedPullPolicies ([Always Never])",
+			Error: "configured PullPolicies ([IfNotPresent]) are not allowed by AllowedPullPolicies ([Always Never])",
 		},
 		{
 			Name:         "both runner and image pull policies are defined",
@@ -2133,7 +2131,7 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "couldn't get pull policy: pull_policy config: unsupported pull policy: \"invalid\"",
+			Error: "pull_policy config: unsupported pull policy: \"invalid\"",
 		},
 		{
 			Name:         "one of image pull policies is invalid",
