@@ -259,7 +259,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 func (s *executor) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]api.PullPolicy, error) {
 	k8sImagePullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(imagePullPolicies)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("conversion to Kubernetes policy: %w", err)
 	}
 
 	if len(k8sImagePullPolicies) == 0 {

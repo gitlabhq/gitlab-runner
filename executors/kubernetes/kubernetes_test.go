@@ -2071,6 +2071,106 @@ func TestPrepare(t *testing.T) {
 			},
 			ExpectedPullPolicy: api.PullIfNotPresent,
 		},
+		{
+			Name:         "one of allowed pull policies is invalid",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						PullPolicy:          common.StringOrArray{common.PullPolicyNever},
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, "invalid"},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			Error: "allowed_pull_policies config: unsupported pull policy: \"invalid\"",
+		},
+		{
+			Name:         "one of config pull policies is invalid",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						PullPolicy:          common.StringOrArray{common.PullPolicyNever, "invalid"},
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			Error: "couldn't get pull policy: pull_policy config: unsupported pull policy: \"invalid\"",
+		},
+		{
+			Name:         "one of image pull policies is invalid",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "test-image",
+						Host:                "test-server",
+						PullPolicy:          common.StringOrArray{common.PullPolicyNever, common.PullPolicyAlways},
+						AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name:         "test-image",
+						PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, "invalid"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+			Error: "conversion to Kubernetes policy: unsupported pull policy: \"invalid\"",
+		},
 	}
 
 	for _, test := range tests {
