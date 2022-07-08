@@ -781,3 +781,48 @@ func addDeniesPullExpectations(c *docker.MockClient, imageName string) {
 		Return(fmt.Errorf("deny pulling")).
 		Once()
 }
+
+func Test_manager_getPullPolicies(t *testing.T) {
+	m := manager{
+		config: ManagerConfig{
+			DockerConfig: &common.DockerConfig{},
+		},
+	}
+
+	tests := map[string]struct {
+		imagePullPolicies []common.DockerPullPolicy
+		pullPolicy        common.StringOrArray
+		want              []common.DockerPullPolicy
+	}{
+		"gitlab-ci.yaml only": {
+			imagePullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+			pullPolicy:        common.StringOrArray{},
+			want:              []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+		},
+		"config.toml only": {
+			imagePullPolicies: []common.DockerPullPolicy{},
+			pullPolicy:        common.StringOrArray{common.PullPolicyIfNotPresent},
+			want:              []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+		},
+		"both": {
+			imagePullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+			pullPolicy:        common.StringOrArray{common.PullPolicyNever},
+			want:              []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+		},
+		"not configured": {
+			imagePullPolicies: []common.DockerPullPolicy{},
+			pullPolicy:        common.StringOrArray{},
+			want:              []common.DockerPullPolicy{common.PullPolicyAlways},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			m.config.DockerConfig.PullPolicy = tt.pullPolicy
+			got, err := m.getPullPolicies(tt.imagePullPolicies)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
