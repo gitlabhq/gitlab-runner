@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 package pull
 
@@ -561,10 +560,15 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowedDefault(t *testing.T) {
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
 	_, err := m.GetDockerImage("existing", imagePullPolicies)
-	assert.EqualError(
+	assert.Contains(
 		t,
-		err,
-		"the configured PullPolicies ([if-not-present]) are not allowed by AllowedPullPolicies ([always])",
+		err.Error(),
+		"failed to pull image 'existing'",
+	)
+	assert.Contains(
+		t,
+		err.Error(),
+		fmt.Sprintf(common.IncompatiblePullPolicy, "[if-not-present]", "GitLab pipeline config", "[always]"),
 	)
 }
 
@@ -580,10 +584,15 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowed(t *testing.T) {
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
 	_, err := m.GetDockerImage("existing", imagePullPolicies)
-	assert.EqualError(
+	assert.Contains(
 		t,
-		err,
-		"the configured PullPolicies ([if-not-present]) are not allowed by AllowedPullPolicies ([never])",
+		err.Error(),
+		"failed to pull image 'existing'",
+	)
+	assert.Contains(
+		t,
+		err.Error(),
+		fmt.Sprintf(common.IncompatiblePullPolicy, "[if-not-present]", "GitLab pipeline config", "[never]"),
 	)
 }
 
@@ -599,10 +608,15 @@ func TestPullPolicyWhenConfigIsNotAllowed(t *testing.T) {
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	_, err := m.GetDockerImage("existing", nil)
-	assert.EqualError(
+	assert.Contains(
 		t,
-		err,
-		"the configured PullPolicies ([never if-not-present]) are not allowed by AllowedPullPolicies ([always])",
+		err.Error(),
+		"failed to pull image 'existing'",
+	)
+	assert.Contains(
+		t,
+		err.Error(),
+		fmt.Sprintf(common.IncompatiblePullPolicy, "[never if-not-present]", "Runner config", "[always]"),
 	)
 }
 

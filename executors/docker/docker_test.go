@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 package docker
 
@@ -1271,10 +1270,15 @@ func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolic
 		serviceConfig,
 		nil,
 	)
-	assert.EqualError(
+	assert.Contains(
 		t,
-		err,
-		"the configured PullPolicies ([always]) are not allowed by AllowedPullPolicies ([if-not-present])",
+		err.Error(),
+		"failed to pull image 'alpine'",
+	)
+	assert.Contains(
+		t,
+		err.Error(),
+		fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "Runner config", "[if-not-present]"),
 	)
 }
 
@@ -1304,10 +1308,15 @@ func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t
 		serviceConfig,
 		nil,
 	)
-	assert.EqualError(
+	assert.Contains(
 		t,
-		err,
-		"the configured PullPolicies ([if-not-present]) are not allowed by AllowedPullPolicies ([always])",
+		err.Error(),
+		"failed to pull image 'alpine'",
+	)
+	assert.Contains(
+		t,
+		err.Error(),
+		fmt.Sprintf(common.IncompatiblePullPolicy, "[if-not-present]", "GitLab pipeline config", "[always]"),
 	)
 }
 
@@ -2307,10 +2316,15 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = e.createContainer("build", imageConfig, []string{"/bin/sh"}, []string{})
-	assert.EqualError(
+	assert.Contains(
 		t,
-		err,
-		"the configured PullPolicies ([never]) are not allowed by AllowedPullPolicies ([always])",
+		err.Error(),
+		"failed to pull image 'alpine'",
+	)
+	assert.Contains(
+		t,
+		err.Error(),
+		fmt.Sprintf(common.IncompatiblePullPolicy, "[never]", "GitLab pipeline config", "[always]"),
 	)
 }
 
