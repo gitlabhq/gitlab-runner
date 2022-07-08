@@ -249,14 +249,8 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 // either gitlab-ci.yaml or config.toml. If present, the pull_policies in
 // gitlab-ci.yaml take precedence over those in config.toml.
 func (m *manager) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]common.DockerPullPolicy, error) {
-	if len(imagePullPolicies) == 0 {
-		configPullPolicies, err := m.config.DockerConfig.GetPullPolicies()
-		if err != nil {
-			return nil, err
-		}
-
-		return configPullPolicies, nil
+	if len(imagePullPolicies) != 0 {
+		return imagePullPolicies, nil
 	}
-
-	return imagePullPolicies, nil
+	return m.config.DockerConfig.GetPullPolicies()
 }
