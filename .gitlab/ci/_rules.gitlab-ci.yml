@@ -126,6 +126,7 @@
   - <<: *if-security-runner-release-ref
     changes: *code-backstage-patterns
 
+# Rules cannot be merged, instead of opt for creating a new rule like this one
 .rules:merge_request_pipelines:no_docs:only_canonical:
   rules:
     - <<: *if-not-canonical-namespace
