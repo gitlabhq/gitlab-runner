@@ -1002,7 +1002,7 @@ Each lifecycle hook is configured through the following settings:
 
 ## Pod's DNS Config
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6562) in GitLab Runner 13.7.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6562) in GitLab Runner 13.7.
 
 [Pod's DNS Config](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config) gives users more control on the DNS settings of the created build Pods.
 
