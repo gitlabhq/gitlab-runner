@@ -121,7 +121,7 @@ func (c KubernetesConfig) GetAllowedPullPolicies() ([]api.PullPolicy, error) {
 	// Verify allowed pull policies
 	pullPolicies, err := c.ConvertFromDockerPullPolicy(c.AllowedPullPolicies)
 	if err != nil {
-		return []api.PullPolicy{}, fmt.Errorf("allowed_pull_policies config: %w", err)
+		return nil, fmt.Errorf("allowed_pull_policies config: %w", err)
 	}
 
 	return pullPolicies, nil
@@ -285,7 +285,7 @@ func (c KubernetesConfig) GetPullPolicies() ([]api.PullPolicy, error) {
 
 	pullPolicies, err := c.ConvertFromDockerPullPolicy(policies)
 	if err != nil {
-		return []api.PullPolicy{}, fmt.Errorf("pull_policy config: %w", err)
+		return nil, fmt.Errorf("pull_policy config: %w", err)
 	}
 
 	return pullPolicies, nil

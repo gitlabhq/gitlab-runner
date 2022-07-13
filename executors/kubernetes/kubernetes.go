@@ -245,15 +245,17 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pull.Manager, error) {
 	var (
-		err          error
-		pullPolicies []api.PullPolicy
+		err                 error
+		pullPolicies        []api.PullPolicy
+		allowedPullPolicies []api.PullPolicy
 	)
 
-	if pullPolicies, err = s.getPullPolicies(options.Build.Image.PullPolicies); err != nil {
+	pullPolicies, err = s.getPullPolicies(options.Build.Image.PullPolicies)
+	if err != nil {
 		return nil, err
 	}
 
-	allowedPullPolicies, err := s.Config.Kubernetes.GetAllowedPullPolicies()
+	allowedPullPolicies, err = s.Config.Kubernetes.GetAllowedPullPolicies()
 	if err != nil {
 		return nil, err
 	}
@@ -272,16 +274,11 @@ func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) 
 		return nil, fmt.Errorf("conversion to Kubernetes policy: %w", err)
 	}
 
-	if len(k8sImagePullPolicies) == 0 {
-		configPullPolicies, err := s.Config.Kubernetes.GetPullPolicies()
-		if err != nil {
-			return nil, err
-		}
-
-		return configPullPolicies, nil
+	if len(k8sImagePullPolicies) != 0 {
+		return k8sImagePullPolicies, nil
 	}
 
-	return k8sImagePullPolicies, nil
+	return s.Config.Kubernetes.GetPullPolicies()
 }
 
 func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []api.PullPolicy) error {

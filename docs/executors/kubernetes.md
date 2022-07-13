@@ -1255,7 +1255,7 @@ For example, to allow only the `always` and `if-not-present` pull policies:
 ```
 
 - If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
-- If you don't specify `pull_policy`, the default is `always`.
+- If you don't specify `pull_policy`, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used.
 - The existing [`pull_policy` keyword](../executors/kubernetes.md#using-pull-policies) must not include a pull policy
   that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
 

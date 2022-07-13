@@ -64,7 +64,7 @@ func (m *manager) GetDockerImage(
 	imageName string,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
-	pullPolicies, err := m.fetchPullPolicies(imagePullPolicies)
+	pullPolicies, err := m.getPullPolicies(imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -74,12 +74,9 @@ func (m *manager) GetDockerImage(
 		return nil, err
 	}
 
-	if !m.verifyPullPolicies(pullPolicies, allowedPullPolicies) {
-		return nil, fmt.Errorf(
-			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
-			pullPolicies,
-			allowedPullPolicies,
-		)
+	err = m.verifyPullPolicies(pullPolicies, allowedPullPolicies)
+	if err != nil {
+		return nil, err
 	}
 
 	var imageErr error
@@ -109,7 +106,7 @@ func (m *manager) GetDockerImage(
 	)
 }
 
-func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) bool {
+func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) error {
 	contains := true
 
 	for _, policy := range pullPolicies {
@@ -122,7 +119,15 @@ func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.
 		}
 	}
 
-	return contains
+	if !contains {
+		return fmt.Errorf(
+			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
+			pullPolicies,
+			allowedPullPolicies,
+		)
+	}
+
+	return nil
 }
 
 func (m *manager) wasImageUsed(imageName, imageID string) bool {
@@ -240,7 +245,7 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 	return &image, err
 }
 
-func (m *manager) fetchPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]common.DockerPullPolicy, error) {
+func (m *manager) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]common.DockerPullPolicy, error) {
 	if len(imagePullPolicies) == 0 {
 		configPullPolicies, err := m.config.DockerConfig.GetPullPolicies()
 		if err != nil {
