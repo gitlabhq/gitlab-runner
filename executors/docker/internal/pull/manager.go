@@ -74,9 +74,8 @@ func (m *manager) GetDockerImage(
 		return nil, err
 	}
 
-	err = m.verifyPullPolicies(pullPolicies, allowedPullPolicies)
-	if err != nil {
-		return nil, err
+	if err := m.verifyPullPolicies(pullPolicies, allowedPullPolicies, imagePullPolicies); err != nil {
+		return nil, fmt.Errorf("failed to pull image '%s': %w", imageName, err)
 	}
 
 	var imageErr error
@@ -106,7 +105,11 @@ func (m *manager) GetDockerImage(
 	)
 }
 
-func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) error {
+func (m *manager) verifyPullPolicies(
+	pullPolicies,
+	allowedPullPolicies,
+	imagePullPolicies []common.DockerPullPolicy,
+) error {
 	for _, policy := range pullPolicies {
 		for _, allowedPolicy := range allowedPullPolicies {
 			if policy == allowedPolicy {
@@ -115,10 +118,10 @@ func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.
 		}
 	}
 
-	return fmt.Errorf(
-		"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
+	return common.IncompatiblePullPolicyError(
 		pullPolicies,
 		allowedPullPolicies,
+		common.GetPullPolicySource(imagePullPolicies, m.config.DockerConfig.PullPolicy),
 	)
 }
 
