@@ -107,27 +107,19 @@ func (m *manager) GetDockerImage(
 }
 
 func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) error {
-	contains := true
-
 	for _, policy := range pullPolicies {
-		contains = false
 		for _, allowedPolicy := range allowedPullPolicies {
 			if policy == allowedPolicy {
-				contains = true
-				break
+				return nil
 			}
 		}
 	}
 
-	if !contains {
-		return fmt.Errorf(
-			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
-			pullPolicies,
-			allowedPullPolicies,
-		)
-	}
-
-	return nil
+	return fmt.Errorf(
+		"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
+		pullPolicies,
+		allowedPullPolicies,
+	)
 }
 
 func (m *manager) wasImageUsed(imageName, imageID string) bool {
