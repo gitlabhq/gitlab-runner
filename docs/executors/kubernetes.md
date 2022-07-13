@@ -1396,3 +1396,20 @@ services:
   - name: docker:dind
     command: ["--mtu=1450"]
 ```
+
+### `MountVolume.SetUp failed for volume "kube-api-access-xxxxx" : chown is not supported by windows`
+
+When you run your CI/CD job, you might receive an error like the following:
+
+```plaintext
+MountVolume.SetUp failed for volume "kube-api-access-xxxxx" : chown c:\var\lib\kubelet\pods\xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\volumes\kubernetes.io~projected\kube-api-access-xxxxx\..2022_07_07_20_52_19.102630072\token: not supported by windows
+```
+
+This issue occurs when you [use node selectors](#using-node-selectors) to run builds on nodes with different operating systems and architectures.
+
+To fix the issue, configure `nodeSelector` so that the Runner Manager pod is always scheduled on a Linux node. For example, your [`values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) should contain the following:
+
+```yaml
+nodeSelector:
+  kubernetes.io/os: linux
+```
