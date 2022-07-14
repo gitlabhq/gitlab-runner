@@ -62,53 +62,87 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
 1. Create the `gitlab_runner` script inside `rc.d`:
 
+   Bash users can do the following:
+
+      ```shell
+      sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
+      #!/bin/sh
+      # PROVIDE: gitlab_runner
+      # REQUIRE: DAEMON NETWORKING
+      # BEFORE:
+      # KEYWORD:
+
+      . /etc/rc.subr
+
+      name="gitlab_runner"
+      rcvar="gitlab_runner_enable"
+
+      user="gitlab-runner"
+      user_home="/home/gitlab-runner"
+      command="/usr/local/bin/gitlab-runner"
+      command_args="run"
+      pidfile="/var/run/${name}.pid"
+
+      start_cmd="gitlab_runner_start"
+
+      gitlab_runner_start()
+      {
+         export USER=${user}
+         export HOME=${user_home}
+         if checkyesno ${rcvar}; then
+            cd ${user_home}
+            /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
+         fi
+      }
+
+      load_rc_config $name
+      run_rc_command $1
+      EOF
+      ```
+
+   If you are not using bash, create a file named `/usr/local/etc/rc.d/gitlab_runner` and include the following content:
+
    ```shell
-   sudo bash -c 'cat > /usr/local/etc/rc.d/gitlab_runner' << "EOF"
-   #!/bin/sh
-   # PROVIDE: gitlab_runner
-   # REQUIRE: DAEMON NETWORKING
-   # BEFORE:
-   # KEYWORD:
+      #!/bin/sh
+      # PROVIDE: gitlab_runner
+      # REQUIRE: DAEMON NETWORKING
+      # BEFORE:
+      # KEYWORD:
 
-   . /etc/rc.subr
+      . /etc/rc.subr
 
-   name="gitlab_runner"
-   rcvar="gitlab_runner_enable"
+      name="gitlab_runner"
+      rcvar="gitlab_runner_enable"
 
-   user="gitlab-runner"
-   user_home="/home/gitlab-runner"
-   command="/usr/local/bin/gitlab-runner"
-   command_args="run"
-   pidfile="/var/run/${name}.pid"
+      user="gitlab-runner"
+      user_home="/home/gitlab-runner"
+      command="/usr/local/bin/gitlab-runner"
+      command_args="run"
+      pidfile="/var/run/${name}.pid"
 
-   start_cmd="gitlab_runner_start"
+      start_cmd="gitlab_runner_start"
 
-   gitlab_runner_start()
-   {
-       export USER=${user}
-       export HOME=${user_home}
-       if checkyesno ${rcvar}; then
-           cd ${user_home}
-           /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
-       fi
-   }
+      gitlab_runner_start()
+      {
+         export USER=${user}
+         export HOME=${user_home}
+         if checkyesno ${rcvar}; then
+            cd ${user_home}
+            /usr/sbin/daemon -u ${user} -p ${pidfile} ${command} ${command_args} > /var/log/gitlab_runner.log 2>&1
+         fi
+      }
 
-   load_rc_config $name
-   run_rc_command $1
-   EOF
+      load_rc_config $name
+      run_rc_command $1
    ```
 
-1. Make it executable:
+1. Make the `gitlab_runner` script executable:
 
    ```shell
    sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
-   ```
-
-1. [Register a runner](../register/index.md)
-1. Enable the `gitlab-runner` service and start it:
 
    ```shell
-   sudo sysrc -f /etc/rc.conf "gitlab_runner_enable=YES"
+   sudo sysrc gitlab_runner_enable=YES
    sudo service gitlab_runner start
    ```
 
