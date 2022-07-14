@@ -285,27 +285,19 @@ func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) 
 }
 
 func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []api.PullPolicy) error {
-	contains := true
-
 	for _, policy := range pullPolicies {
-		contains = false
 		for _, allowedPolicy := range allowedPullPolicies {
 			if policy == allowedPolicy {
-				contains = true
-				break
+				return nil
 			}
 		}
 	}
 
-	if !contains {
-		return fmt.Errorf(
-			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
-			pullPolicies,
-			allowedPullPolicies,
-		)
-	}
-
-	return nil
+    return fmt.Errorf(
+        "the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
+        pullPolicies,
+        allowedPullPolicies,
+    )
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {
