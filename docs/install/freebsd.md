@@ -140,6 +140,10 @@ Here are the steps to install and configure GitLab Runner under FreeBSD:
 
    ```shell
    sudo chmod +x /usr/local/etc/rc.d/gitlab_runner
+   ```
+
+1. [Register a runner](../register/index.md)
+1. Enable the `gitlab-runner` service and start it:
 
    ```shell
    sudo sysrc gitlab_runner_enable=YES
