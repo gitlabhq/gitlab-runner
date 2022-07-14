@@ -1955,6 +1955,9 @@ func TestPrepare(t *testing.T) {
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
 					GitInfo: common.GitInfo{
 						Sha: "1234567890",
 					},
@@ -1965,7 +1968,8 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "configured PullPolicies ([IfNotPresent]) are not allowed by AllowedPullPolicies ([Always Never])",
+			Error: "failed to pull image 'test-image': " +
+				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "Runner config", "[Always Never]"),
 		},
 		{
 			Name:         "image pull policy is one of allowed pull policies",
@@ -2019,6 +2023,7 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 					Image: common.Image{
+						Name:         "test-image",
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 					},
 				},
@@ -2028,7 +2033,9 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "configured PullPolicies ([IfNotPresent]) are not allowed by AllowedPullPolicies ([Always Never])",
+			Error: "failed to pull image 'test-image': " +
+				//nolint:lll
+				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]"),
 		},
 		{
 			Name:         "both runner and image pull policies are defined",
