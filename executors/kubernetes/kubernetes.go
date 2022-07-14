@@ -268,6 +268,9 @@ func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pu
 	return pull.NewPullManager(pullPolicies, &s.BuildLogger), nil
 }
 
+// getPullPolicies selects the pull_policy configurations originating from
+// either gitlab-ci.yaml or config.toml. If present, the pull_policies in
+// gitlab-ci.yaml take precedence over those in config.toml.
 func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]api.PullPolicy, error) {
 	k8sImagePullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(imagePullPolicies)
 	if err != nil {
