@@ -5341,3 +5341,90 @@ func TestBuildContainerSecurityContext(t *testing.T) {
 		})
 	}
 }
+
+func TestInitPermissionContainerSecurityContext(t *testing.T) {
+	runAsNonRoot := true
+	readOnlyRootFileSystem := true
+	privileged := false
+	allowPrivilageEscalation := false
+	var uid int64 = 1000
+	var gid int64 = 1000
+
+	tests := map[string]struct {
+		getConfig          common.KubernetesContainerSecurityContext
+		getSecurityContext *api.SecurityContext
+	}{
+		"init permission security context": {
+			getConfig: common.KubernetesContainerSecurityContext{
+				Capabilities: &common.KubernetesContainerCapabilities{
+					Add:  nil,
+					Drop: []api.Capability{"ALL"},
+				},
+				Privileged:               &privileged,
+				RunAsUser:                &uid,
+				RunAsGroup:               &gid,
+				RunAsNonRoot:             &runAsNonRoot,
+				ReadOnlyRootFilesystem:   &readOnlyRootFileSystem,
+				AllowPrivilegeEscalation: &allowPrivilageEscalation,
+			},
+			getSecurityContext: &api.SecurityContext{
+				RunAsNonRoot:             &runAsNonRoot,
+				ReadOnlyRootFilesystem:   &readOnlyRootFileSystem,
+				Privileged:               &privileged,
+				AllowPrivilegeEscalation: &allowPrivilageEscalation,
+				RunAsUser:                &uid,
+				RunAsGroup:               &gid,
+				Capabilities: &api.Capabilities{
+					Drop: []api.Capability{"ALL"},
+				},
+			},
+		},
+		"no security context": {
+			getConfig: common.KubernetesContainerSecurityContext{
+				Capabilities:             nil,
+				Privileged:               nil,
+				RunAsUser:                nil,
+				RunAsGroup:               nil,
+				RunAsNonRoot:             nil,
+				ReadOnlyRootFilesystem:   nil,
+				AllowPrivilegeEscalation: nil,
+			},
+			getSecurityContext: &api.SecurityContext{
+				Capabilities: &api.Capabilities{
+					// default Drop Capabilities
+					Drop: []api.Capability{"NET_RAW"},
+				},
+				Privileged:               nil,
+				RunAsUser:                nil,
+				RunAsGroup:               nil,
+				RunAsNonRoot:             nil,
+				ReadOnlyRootFilesystem:   nil,
+				AllowPrivilegeEscalation: nil,
+			},
+		},
+	}
+
+	mockPullManager := &pull.MockManager{}
+	mockPullManager.On("GetPullPolicyFor", mock.Anything).
+		Return(api.PullAlways, nil).
+		Times(len(tests))
+
+	defer mockPullManager.AssertExpectations(t)
+
+	executor := newExecutor()
+	executor.pullManager = mockPullManager
+	executor.Build = &common.Build{
+		Runner: new(common.RunnerConfig),
+	}
+
+	executor.Config.Kubernetes = new(common.KubernetesConfig)
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			executor.Config.Kubernetes.InitPermissionsContainerSecurityContext = tt.getConfig
+			container, err := executor.buildPermissionsInitContainer(executor.helperImageInfo.OSType)
+			require.NoError(t, err)
+			assert.Equal(t, tt.getSecurityContext, container.SecurityContext)
+		})
+	}
+}
