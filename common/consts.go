@@ -55,3 +55,11 @@ const (
 	TestDockerGitImage              = "docker:18-git"
 	TestLivenessImage               = "registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0"
 )
+
+type PullPolicySource string
+
+const (
+	PullPolicySourceGitLabCI = "GitLab pipeline config"
+	PullPolicySourceRunner   = "Runner config"
+	PullPolicySourceDefault  = "Runner config (default)"
+)
