@@ -492,6 +492,10 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 		ImagePullPolicy: pullPolicy,
 		// let's use build container resources
 		Resources: s.initContainerResources(),
+		SecurityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+			s.Config.Kubernetes.InitPermissionsContainerSecurityContext,
+			s.defaultCapDrop()...,
+		),
 	}
 
 	// The kubernetes executor uses both a helper container (for predefined stages) and a build
