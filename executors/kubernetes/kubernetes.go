@@ -180,6 +180,7 @@ func (s *executor) Name() string {
 	return "kubernetes"
 }
 
+// nolint:funlen
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.AbstractExecutor.PrepareConfiguration(options)
 
@@ -187,11 +188,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 
-	var pullPolicies []api.PullPolicy
-	if pullPolicies, err = s.Config.Kubernetes.GetPullPolicies(); err != nil {
-		return fmt.Errorf("couldn't get pull policy: %w", err)
+	s.pullManager, err = s.preparePullManager(options)
+	if err != nil {
+		return err
 	}
-	s.pullManager = pull.NewPullManager(pullPolicies, &s.BuildLogger)
 
 	s.prepareOptions(options.Build)
 
@@ -241,6 +241,68 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	return err
+}
+
+func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pull.Manager, error) {
+	var (
+		err                 error
+		pullPolicies        []api.PullPolicy
+		allowedPullPolicies []api.PullPolicy
+	)
+
+	pullPolicies, err = s.getPullPolicies(options.Build.Image.PullPolicies)
+	if err != nil {
+		return nil, err
+	}
+
+	allowedPullPolicies, err = s.Config.Kubernetes.GetAllowedPullPolicies()
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.verifyPullPolicies(pullPolicies, allowedPullPolicies)
+	if err != nil {
+		return nil, err
+	}
+
+	return pull.NewPullManager(pullPolicies, &s.BuildLogger), nil
+}
+
+func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]api.PullPolicy, error) {
+	k8sImagePullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(imagePullPolicies)
+	if err != nil {
+		return nil, fmt.Errorf("conversion to Kubernetes policy: %w", err)
+	}
+
+	if len(k8sImagePullPolicies) != 0 {
+		return k8sImagePullPolicies, nil
+	}
+
+	return s.Config.Kubernetes.GetPullPolicies()
+}
+
+func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []api.PullPolicy) error {
+	contains := true
+
+	for _, policy := range pullPolicies {
+		contains = false
+		for _, allowedPolicy := range allowedPullPolicies {
+			if policy == allowedPolicy {
+				contains = true
+				break
+			}
+		}
+	}
+
+	if !contains {
+		return fmt.Errorf(
+			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
+			pullPolicies,
+			allowedPullPolicies,
+		)
+	}
+
+	return nil
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {

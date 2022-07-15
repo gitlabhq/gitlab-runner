@@ -113,6 +113,20 @@ func (c DockerConfig) GetAllowedPullPolicies() ([]DockerPullPolicy, error) {
 	return policies, nil
 }
 
+func (c KubernetesConfig) GetAllowedPullPolicies() ([]api.PullPolicy, error) {
+	if len(c.AllowedPullPolicies) == 0 {
+		return c.GetPullPolicies()
+	}
+
+	// Verify allowed pull policies
+	pullPolicies, err := c.ConvertFromDockerPullPolicy(c.AllowedPullPolicies)
+	if err != nil {
+		return nil, fmt.Errorf("allowed_pull_policies config: %w", err)
+	}
+
+	return pullPolicies, nil
+}
+
 // StringOrArray implements UnmarshalTOML to unmarshal either a string or array of strings.
 type StringOrArray []string
 
@@ -255,8 +269,6 @@ type CustomConfig struct {
 	ForceKillTimeout    *int `toml:"force_kill_timeout,omitempty" json:"force_kill_timeout" long:"force-kill-timeout" env:"CUSTOM_FORCE_KILL_TIMEOUT" description:"Force timeout for scripts execution (in seconds). Counted from the force kill call; if process will be not terminated, Runner will abandon process termination and log an error"`
 }
 
-type KubernetesPullPolicy string
-
 // GetPullPolicies returns a validated list of pull policies, falling back to a predefined value if empty,
 // or returns an error if the list is not valid
 func (c KubernetesConfig) GetPullPolicies() ([]api.PullPolicy, error) {
@@ -266,9 +278,26 @@ func (c KubernetesConfig) GetPullPolicies() ([]api.PullPolicy, error) {
 	}
 
 	// Verify pull policies
-	policies := make([]api.PullPolicy, len(c.PullPolicy))
-	for idx, p := range c.PullPolicy {
-		switch p {
+	policies := make([]DockerPullPolicy, len(c.PullPolicy))
+	for idx, policy := range c.PullPolicy {
+		policies[idx] = DockerPullPolicy(policy)
+	}
+
+	pullPolicies, err := c.ConvertFromDockerPullPolicy(policies)
+	if err != nil {
+		return nil, fmt.Errorf("pull_policy config: %w", err)
+	}
+
+	return pullPolicies, nil
+}
+
+// ConvertFromDockerPullPolicy converts an array of DockerPullPolicy to an api.PullPolicy array
+// or returns an error if the list contains invalid pull policies.
+func (c KubernetesConfig) ConvertFromDockerPullPolicy(dockerPullPolicies []DockerPullPolicy) ([]api.PullPolicy, error) {
+	policies := make([]api.PullPolicy, len(dockerPullPolicies))
+
+	for idx, policy := range dockerPullPolicies {
+		switch policy {
 		case "":
 			policies[idx] = ""
 		case PullPolicyAlways:
@@ -278,7 +307,7 @@ func (c KubernetesConfig) GetPullPolicies() ([]api.PullPolicy, error) {
 		case PullPolicyIfNotPresent:
 			policies[idx] = api.PullIfNotPresent
 		default:
-			return []api.PullPolicy{""}, fmt.Errorf("unsupported kubernetes-pull-policy: %q", p)
+			return []api.PullPolicy{""}, fmt.Errorf("unsupported pull policy: %q", policy)
 		}
 	}
 
@@ -360,6 +389,7 @@ type KubernetesConfig struct {
 	HelperEphemeralStorageRequest                     string                             `toml:"helper_ephemeral_storage_request,omitempty" json:"helper_ephemeral_storage_request" long:"helper-ephemeral_storage-request" env:"KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST" description:"The amount of ephemeral storage requested for build helper containers"`
 	HelperEphemeralStorageRequestOverwriteMaxAllowed  string                             `toml:"helper_ephemeral_storage_request_overwrite_max_allowed,omitempty" json:"helper_ephemeral_storage_request_overwrite_max_allowed" long:"helper-ephemeral_storage-request-overwrite-max-allowed" env:"KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST_OVERWRITE_MAX_ALLOWED" description:"If set, the max amount the helper ephemeral storage request can be set to. Used with the KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST variable in the build."`
 	AllowedImages                                     []string                           `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"KUBERNETES_ALLOWED_IMAGES" description:"Image allowlist"`
+	AllowedPullPolicies                               []DockerPullPolicy                 `toml:"allowed_pull_policies,omitempty" json:"allowed_pull_policies" long:"allowed-pull-policies" env:"KUBERNETES_ALLOWED_PULL_POLICIES" description:"Pull policy allowlist"`
 	AllowedServices                                   []string                           `toml:"allowed_services,omitempty" json:"allowed_services" long:"allowed-services" env:"KUBERNETES_ALLOWED_SERVICES" description:"Service allowlist"`
 	PullPolicy                                        StringOrArray                      `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	NodeSelector                                      map[string]string                  `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" env:"KUBERNETES_NODE_SELECTOR" description:"A toml table/json object of key:value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key:value pairs. Only one selector is supported through environment variable configuration."`

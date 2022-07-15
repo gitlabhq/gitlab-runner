@@ -1273,6 +1273,61 @@ func TestDockerConfig_GetAllowedPullPolicies(t *testing.T) {
 	}
 }
 
+func TestKubernetesConfig_GetAllowedPullPolicies(t *testing.T) {
+	tests := map[string]struct {
+		config               KubernetesConfig
+		expectedPullPolicies []api.PullPolicy
+		expectedErr          bool
+	}{
+		"nil allowed_pull_policies": {
+			config:               KubernetesConfig{},
+			expectedPullPolicies: []api.PullPolicy{""},
+			expectedErr:          false,
+		},
+		"empty allowed_pull_policies": {
+			config: KubernetesConfig{
+				AllowedPullPolicies: []DockerPullPolicy{},
+			},
+			expectedPullPolicies: []api.PullPolicy{""},
+			expectedErr:          false,
+		},
+		"empty string allowed_pull_policies": {
+			config: KubernetesConfig{
+				AllowedPullPolicies: []DockerPullPolicy{""},
+			},
+			expectedPullPolicies: []api.PullPolicy{""},
+			expectedErr:          false,
+		},
+		"known elements in allowed_pull_policies": {
+			config: KubernetesConfig{
+				AllowedPullPolicies: []DockerPullPolicy{PullPolicyAlways, PullPolicyNever},
+			},
+			expectedPullPolicies: []api.PullPolicy{api.PullAlways, api.PullNever},
+			expectedErr:          false,
+		},
+		"invalid allowed_pull_policies": {
+			config: KubernetesConfig{
+				AllowedPullPolicies: []DockerPullPolicy{"invalid"},
+			},
+			expectedErr: true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			policies, err := tt.config.GetAllowedPullPolicies()
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedPullPolicies, policies)
+		})
+	}
+}
+
 func TestKubernetesConfig_GetPullPolicies(t *testing.T) {
 	tests := map[string]struct {
 		config               KubernetesConfig
@@ -1310,6 +1365,42 @@ func TestKubernetesConfig_GetPullPolicies(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			policies, err := tt.config.GetPullPolicies()
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedPullPolicies, policies)
+		})
+	}
+}
+
+func TestKubernetesConfig_ConvertFromDockerPullPolicy(t *testing.T) {
+	tests := map[string]struct {
+		config               KubernetesConfig
+		dockerPullPolicies   []DockerPullPolicy
+		expectedPullPolicies []api.PullPolicy
+		expectedErr          bool
+	}{
+		"valid list": {
+			config:               KubernetesConfig{},
+			dockerPullPolicies:   []DockerPullPolicy{PullPolicyAlways, PullPolicyIfNotPresent, PullPolicyNever},
+			expectedPullPolicies: []api.PullPolicy{api.PullAlways, api.PullIfNotPresent, api.PullNever},
+			expectedErr:          false,
+		},
+		"has an invalid pull policy": {
+			config:               KubernetesConfig{},
+			dockerPullPolicies:   []DockerPullPolicy{PullPolicyAlways, "invalid"},
+			expectedPullPolicies: []api.PullPolicy{""},
+			expectedErr:          true,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			policies, err := tt.config.ConvertFromDockerPullPolicy(tt.dockerPullPolicies)
 
 			if tt.expectedErr {
 				assert.Error(t, err)
