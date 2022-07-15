@@ -22,6 +22,7 @@ func (m *machineProvider) Describe(ch chan<- *prometheus.Desc) {
 	m.creationHistogram.Describe(ch)
 	m.stoppingHistogram.Describe(ch)
 	m.removalHistogram.Describe(ch)
+	m.failedCreationHistogram.Describe(ch)
 	ch <- m.currentStatesDesc
 }
 
@@ -69,4 +70,5 @@ func (m *machineProvider) Collect(ch chan<- prometheus.Metric) {
 	m.creationHistogram.Collect(ch)
 	m.stoppingHistogram.Collect(ch)
 	m.removalHistogram.Collect(ch)
+	m.failedCreationHistogram.Collect(ch)
 }

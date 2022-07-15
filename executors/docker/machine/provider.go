@@ -26,11 +26,12 @@ type machineProvider struct {
 	stuckRemoveLock sync.Mutex
 
 	// metrics
-	totalActions      *prometheus.CounterVec
-	currentStatesDesc *prometheus.Desc
-	creationHistogram prometheus.Histogram
-	stoppingHistogram prometheus.Histogram
-	removalHistogram  prometheus.Histogram
+	totalActions            *prometheus.CounterVec
+	currentStatesDesc       *prometheus.Desc
+	creationHistogram       prometheus.Histogram
+	stoppingHistogram       prometheus.Histogram
+	removalHistogram        prometheus.Histogram
+	failedCreationHistogram prometheus.Histogram
 }
 
 func (m *machineProvider) machineDetails(name string, acquire bool) *machineDetails {
@@ -122,6 +123,8 @@ func (m *machineProvider) createWithGrowthCapacity(
 		logger.WithField("time", time.Since(started)).
 			WithError(err).
 			Errorln("Machine creation failed")
+		m.totalActions.WithLabelValues("creation-failed").Inc()
+		m.failedCreationHistogram.Observe(time.Since(started).Seconds())
 		_ = m.remove(details.Name, "Failed to create")
 	} else {
 		m.lock.Lock()
@@ -581,6 +584,7 @@ func (m *machineProvider) Create() common.Executor {
 	}
 }
 
+//nolint:funlen
 func newMachineProvider(name, executor string) *machineProvider {
 	provider := common.GetExecutorProvider(executor)
 	if provider == nil {
@@ -635,6 +639,16 @@ func newMachineProvider(name, executor string) *machineProvider {
 			prometheus.HistogramOpts{
 				Name:    "gitlab_runner_autoscaling_machine_removal_duration_seconds",
 				Help:    "Histogram of machine removal time.",
+				Buckets: []float64{1, 3, 5, 10, 30, 50, 60, 80, 90, 120},
+				ConstLabels: prometheus.Labels{
+					"executor": name,
+				},
+			},
+		),
+		failedCreationHistogram: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "gitlab_runner_autoscaling_machine_failed_creation_duration_seconds",
+				Help:    "Histogram of machine failed creation timings",
 				Buckets: []float64{1, 3, 5, 10, 30, 50, 60, 80, 90, 120},
 				ConstLabels: prometheus.Labels{
 					"executor": name,
