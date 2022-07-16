@@ -4098,6 +4098,17 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 		},
+		"resources checking disabled": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						ServiceAccount:                       "my-serviceaccount",
+						ImagePullSecrets:                     []string{"my-secret1"},
+						ResourceAvailabilityCheckMaxAttempts: 0,
+					},
+				},
+			},
+		},
 	}
 
 	for testName, test := range tests {

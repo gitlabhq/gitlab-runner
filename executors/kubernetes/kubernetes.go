@@ -1259,26 +1259,9 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	}
 
 	s.Debugln("Checking for ImagePullSecrets or ServiceAccount existence")
-	err = s.waitForResource(
-		context.TODO(),
-		resourceTypeServiceAccount,
-		s.Config.Kubernetes.ServiceAccount,
-		s.serviceAccountExists(),
-	)
+	err = s.checkDependantResources()
 	if err != nil {
 		return err
-	}
-
-	for _, secretName := range s.Config.Kubernetes.ImagePullSecrets {
-		err = s.waitForResource(
-			context.TODO(),
-			resourceTypePullSecret,
-			secretName,
-			s.secretExists(),
-		)
-		if err != nil {
-			return err
-		}
 	}
 
 	s.Debugln("Creating build pod")
@@ -1303,6 +1286,37 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	s.services, err = s.makePodProxyServices(ownerReferences)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *executor) checkDependantResources() error {
+	if s.Config.Kubernetes.GetResourceAvailabilityCheckMaxAttempts() == 0 {
+		s.Debugln("Resources check has been disabled")
+		return nil
+	}
+
+	err := s.waitForResource(
+		context.TODO(),
+		resourceTypeServiceAccount,
+		s.Config.Kubernetes.ServiceAccount,
+		s.serviceAccountExists(),
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, secretName := range s.Config.Kubernetes.ImagePullSecrets {
+		err = s.waitForResource(
+			context.TODO(),
+			resourceTypePullSecret,
+			secretName,
+			s.secretExists(),
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
