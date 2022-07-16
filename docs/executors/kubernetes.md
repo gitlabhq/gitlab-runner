@@ -167,6 +167,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `pod_labels` | A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. |
 | `pod_labels_overwrite_allowed` | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. |
 | `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context). |
+| `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#using-security-context). |
 | `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#using-security-context). |
 | `helper_container_security_context` | Sets a container security context for the helper container. [Read more about security context](#using-security-context). |
 | `service_container_security_context` | Sets a container security context for the service containers. [Read more about security context](#using-security-context). |
@@ -660,6 +661,9 @@ check_interval = 30
         run_as_user = 59417
         run_as_group = 59417
         fs_group = 59417
+      [runners.kubernetes.init_permissions_container_security_context]
+        run_as_user = 1000
+        run_as_group = 1000
       [runners.kubernetes.build_container_security_context]
         run_as_user = 65534
         run_as_group = 65534
