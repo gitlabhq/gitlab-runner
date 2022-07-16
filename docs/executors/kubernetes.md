@@ -174,7 +174,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `pod_termination_grace_period_seconds` | Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
 | `poll_interval` | How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3). |
 | `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180). |
-| `resource_availability_check_max_attempts` | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt (default is `5`). [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. |
+| `resource_availability_check_max_attempts` | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. [Read more about resources check during prepare step](#resources-check-during-prepare-step). |
 | `privileged` | Run containers with the privileged flag. |
 | `runtime_class_name` | A Runtime class to use for all created pods. If the feature is unsupported by the cluster, jobs exit or fail. |
 | `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#using-pull-policies). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
@@ -214,11 +214,31 @@ When you overwrite the Kubernetes namespace, make sure that:
 - In the `values.yml` file for GitLab Runner Helm charts, this value is set: `rbac.clusterWideAccess: true`.
 - The runner has these permissions in the core API group:
 
-  | Resource   | Permissions |
-  |------------|-------------|
-  | pods/exec  | create, patch, delete |
-  | pods       | get, list, watch, create, patch, delete |
-  | secrets    | get, list, watch, create, patch, delete |
+  - For `exec strategy`:
+
+    | Resource          | Permissions                                     |
+    |-------------------|-------------------------------------------------|
+    | pods/exec         | create, patch, delete                           |
+    | pods              | get, list, watch, create, patch, delete         |
+    | services          | get, list, watch, create, patch, delete         |
+    | secrets           | get, list, watch, create, update, patch, delete |
+    | serviceAccounts   | get (1)                                         |
+
+  - For `attach strategy`:
+
+    | Resource          | Permissions                             |
+    |-------------------|-----------------------------------------|
+    | pods/attach       | create, patch, delete                   |
+    | pods              | get, watch, create, delete              |
+    | services          | get, watch, create, delete              |
+    | configmaps        | get, create, update, delete             |
+    | secrets           | get, create, update, delete             |
+    | serviceAccounts   | get (1)                                 |
+
+_(1) The `serviceAccount` permission is needed only:_
+
+- _For GitLab 15.0 and 15.1._
+- _For GitLab 15.0.1, 15.1.1, and 15.2 when `resource_availability_check_max_attempts` is set to a value higher than 0._
 
 This can be achieved by setting `rbac.create: true` or by specifying a service account `rbac.serviceAccountName: <service_account_name>` with the above permissions in the `values.yml` file.
 
@@ -359,16 +379,21 @@ concurrent = 4
 
 ## Resources check during prepare step
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
+> - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29101) in GitLab 15.2.
 
 Prerequisites:
 
 - `image_pull_secrets` or `service_account` is set.
 - `resource_availability_check_max_attempts` is set to a number greater than zero.
+- Kubernetes `serviceAccount` used with the `get` and `list` permissions.
 
 GitLab Runner checks if the new service accounts or secrets are available with a 5-second interval between each try.
 The number of times to check is equal to the value of `resource_availability_check_max_attempts`.
-The default value is `5`.
+
+- In GitLab 15.0 and 15.1, you cannot disable this feature and it defaults to `5` when a negative value is set.
+- In GitLab 15.0.1, 15.1.1, 15.2 and later, this feature is disabled by default and can be enabled 
+by setting the `resource_availability_check_max_attempts` to any value other than `0`
 
 ## Using the cache with the Kubernetes executor
 
