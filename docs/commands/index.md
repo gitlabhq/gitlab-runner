@@ -148,7 +148,7 @@ USAGE:
    gitlab-runner [global options] command [command options] [arguments...]
 
 VERSION:
-   13.0.0 (HEAD)
+   15.1.0 (76984217)
 
 AUTHOR:
    GitLab Inc. <support@gitlab.com>
@@ -173,7 +173,16 @@ COMMANDS:
      cache-extractor       download and extract cache artifacts (internal)
      cache-init            changed permissions for cache paths (internal)
      health-check          check health for a specific address
+     read-logs             reads job logs from a file, used by kubernetes executor (internal)
      help, h               Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --cpuprofile value           write cpu profile to file [$CPU_PROFILE]
+   --debug                      debug mode [$DEBUG]
+   --log-format value           Choose log format (options: runner, text, json) [$LOG_FORMAT]
+   --log-level value, -l value  Log level (options: debug, info, warn, error, fatal, panic) [$LOG_LEVEL]
+   --help, -h                   show help
+   --version, -v                print the version
 ```
 
 Below we explain what each command does in detail.
