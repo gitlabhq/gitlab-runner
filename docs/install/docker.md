@@ -44,10 +44,10 @@ NAME:
    gitlab-runner - a GitLab Runner
 
 USAGE:
-   gitlab-runner <global options> command <command options> <arguments...>
+   gitlab-runner [global options] command [command options] [arguments...]
 
 VERSION:
-   10.7.0 (7c273476)
+   15.1.0 (76984217)
 
 (...)
 ```
