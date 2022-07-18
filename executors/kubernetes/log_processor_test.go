@@ -233,7 +233,7 @@ func TestListenReadLines(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockLogStreamer := newMockLogStreamer()
+	mockLogStreamer := makeMockLogStreamer(t)
 	defer mockLogStreamer.AssertExpectations(t)
 
 	logs := []log{
@@ -279,8 +279,8 @@ func TestListenReadLines(t *testing.T) {
 	assert.Equal(t, expectedLines, receivedLogs)
 }
 
-func newMockLogStreamer() *mockLogStreamer {
-	s := new(mockLogStreamer)
+func makeMockLogStreamer(t *testing.T) *mockLogStreamer {
+	s := newMockLogStreamer(t)
 	s.On("String").Return("mockLogStreamer").Maybe()
 
 	return s
@@ -310,7 +310,7 @@ func newDefaultMockBackoffCalculator() *mockBackoffCalculator {
 }
 
 func TestListenCancelContext(t *testing.T) {
-	mockLogStreamer := newMockLogStreamer()
+	mockLogStreamer := makeMockLogStreamer(t)
 	defer mockLogStreamer.AssertExpectations(t)
 
 	ctx, _ := context.WithTimeout(context.Background(), 200*time.Millisecond)
@@ -339,7 +339,7 @@ func TestAttachReconnectLogStream(t *testing.T) {
 	const expectedConnectCount = 5
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockLogStreamer := newMockLogStreamer()
+	mockLogStreamer := makeMockLogStreamer(t)
 	defer mockLogStreamer.AssertExpectations(t)
 
 	var connects int
@@ -372,7 +372,7 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 	const expectedConnectCount = 5
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockLogStreamer := newMockLogStreamer()
+	mockLogStreamer := makeMockLogStreamer(t)
 	defer mockLogStreamer.AssertExpectations(t)
 
 	var connects int
@@ -425,7 +425,7 @@ func drainProcessLogsChannels(ch <-chan string, errCh <-chan error) error {
 func TestAttachCorrectOffset(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	mockLogStreamer := newMockLogStreamer()
+	mockLogStreamer := makeMockLogStreamer(t)
 	defer mockLogStreamer.AssertExpectations(t)
 
 	logs := []log{
