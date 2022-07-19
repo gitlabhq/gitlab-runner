@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package docker_test
 
@@ -1854,4 +1853,71 @@ func TestDockerCommandServiceVariables(t *testing.T) {
 	out := buffer.String()
 	assert.Contains(t, out, "SERVICE_VAR=SERVICE_VAR_VALUE")
 	assert.Contains(t, out, "SERVICE_VAR_REF_BUILD_VAR=BUILD_VAR_VALUE")
+}
+
+func TestDockerCommandConflictingPullPolicies(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	require.NoError(t, err)
+
+	successfulBuild.Image = common.Image{Name: common.TestAlpineImage}
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: common.TestAlpineImage,
+				},
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		imagePullPolicies   []common.DockerPullPolicy
+		pullPolicy          common.StringOrArray
+		allowedPullPolicies []common.DockerPullPolicy
+		wantErrMsg          string
+	}{
+		"allowed_pull_policies configured, default pull_policy": {
+			imagePullPolicies:   nil,
+			pullPolicy:          nil,
+			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "Runner config (default)", "[if-not-present]"),
+		},
+		"allowed_pull_policies and pull_policy configured": {
+			imagePullPolicies:   nil,
+			pullPolicy:          common.StringOrArray{common.PullPolicyNever},
+			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[never]", "Runner config", "[if-not-present]"),
+		},
+		"allowed_pull_policies and image pull_policy configured": {
+			imagePullPolicies:   []common.DockerPullPolicy{common.PullPolicyAlways},
+			pullPolicy:          nil,
+			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "GitLab pipeline config", "[if-not-present]"),
+		},
+		"all configured": {
+			imagePullPolicies:   []common.DockerPullPolicy{common.PullPolicyAlways},
+			pullPolicy:          common.StringOrArray{common.PullPolicyNever},
+			allowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
+			wantErrMsg:          fmt.Sprintf(common.IncompatiblePullPolicy, "[always]", "GitLab pipeline config", "[if-not-present]"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build.JobResponse.Image.PullPolicies = test.imagePullPolicies
+			build.Runner.RunnerSettings.Docker.PullPolicy = test.pullPolicy
+			build.Runner.RunnerSettings.Docker.AllowedPullPolicies = test.allowedPullPolicies
+
+			gotErr := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+
+			require.Error(t, gotErr)
+			assert.Contains(t, gotErr.Error(), test.wantErrMsg)
+			assert.Contains(t, gotErr.Error(), "failed to pull image '"+common.TestAlpineImage)
+		})
+	}
 }
