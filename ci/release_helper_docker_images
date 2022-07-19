@@ -26,46 +26,51 @@ push_latest() {
     push "${@}"
 }
 
-# Release the helper images. The first passed argument will be used as a
+# Release the helper images.
+# The first passed argument will be used as a
 # prefix for the image name, which is useful to push do a different registry.
 # For example `registry.gitlab.com/gitlab-org/gitlab-runner` and `gitlab`.
 # This function will perform all actions needed for pushing except for the
 # pushing itself depending on the `PUBLISH_IMAGES` and `PUSH_TO_ECR_PUBLIC` variables
 # which is checked inside the `push` function.
+# The second argument tells if the push is actually enabled.
+# This argument is then forwarded to the `push` function.
 release_docker_helper_images() {
-    FLAVOR=$2
-    PREFIX=$3
+    REGISTRY=$1
+    PUSH_ENABLED=$2
+    FLAVOR=$3
+    PREFIX=$4
 
-    helper_image_x86_64="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
-    helper_image_x86_64_pwsh="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}-pwsh"
-    helper_image_x86_64_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
-    helper_image_x86_64_pwsh_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}-pwsh"
-    helper_image_x86_64_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest"
-    helper_image_x86_64_pwsh_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest-pwsh"
-    helper_image_arm="${1}/gitlab-runner-helper:${PREFIX}arm-${REVISION}"
-    helper_image_arm_version="${1}/gitlab-runner-helper:${PREFIX}arm-${ref_tag}"
-    helper_image_arm_latest="${1}/gitlab-runner-helper:${PREFIX}arm-latest"
-    helper_image_arm64="${1}/gitlab-runner-helper:${PREFIX}arm64-${REVISION}"
-    helper_image_arm64_version="${1}/gitlab-runner-helper:${PREFIX}arm64-${ref_tag}"
-    helper_image_arm64_latest="${1}/gitlab-runner-helper:${PREFIX}arm64-latest"
-    helper_image_s390x="${1}/gitlab-runner-helper:${PREFIX}s390x-${REVISION}"
-    helper_image_s390x_version="${1}/gitlab-runner-helper:${PREFIX}s390x-${ref_tag}"
-    helper_image_s390x_latest="${1}/gitlab-runner-helper:${PREFIX}s390x-latest"
-    helper_image_ppc64le="${1}/gitlab-runner-helper:${PREFIX}ppc64le-${REVISION}"
-    helper_image_ppc64le_version="${1}/gitlab-runner-helper:${PREFIX}ppc64le-${ref_tag}"
-    helper_image_ppc64le_latest="${1}/gitlab-runner-helper:${PREFIX}ppc64le-latest"
-    helper_image_x86_64_fips="${1}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
-    helper_image_x86_64_fips_version="${1}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
-    helper_image_x86_64_fips_latest="${1}/gitlab-runner-helper:${PREFIX}x86_64-latest"
+    helper_image_x86_64="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
+    helper_image_x86_64_pwsh="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}-pwsh"
+    helper_image_x86_64_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
+    helper_image_x86_64_pwsh_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}-pwsh"
+    helper_image_x86_64_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-latest"
+    helper_image_x86_64_pwsh_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-latest-pwsh"
+    helper_image_arm="${REGISTRY}/gitlab-runner-helper:${PREFIX}arm-${REVISION}"
+    helper_image_arm_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}arm-${ref_tag}"
+    helper_image_arm_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}arm-latest"
+    helper_image_arm64="${REGISTRY}/gitlab-runner-helper:${PREFIX}arm64-${REVISION}"
+    helper_image_arm64_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}arm64-${ref_tag}"
+    helper_image_arm64_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}arm64-latest"
+    helper_image_s390x="${REGISTRY}/gitlab-runner-helper:${PREFIX}s390x-${REVISION}"
+    helper_image_s390x_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}s390x-${ref_tag}"
+    helper_image_s390x_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}s390x-latest"
+    helper_image_ppc64le="${REGISTRY}/gitlab-runner-helper:${PREFIX}ppc64le-${REVISION}"
+    helper_image_ppc64le_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}ppc64le-${ref_tag}"
+    helper_image_ppc64le_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}ppc64le-latest"
+    helper_image_x86_64_fips="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
+    helper_image_x86_64_fips_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
+    helper_image_x86_64_fips_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-latest"
 
     if [[ "$FLAVOR" == "ubi-fips" ]]; then
         # Special case for FIPS since we don't yet support all the architectures we do for other flavors
         import "out/helper-images/prebuilt-${FLAVOR}-x86_64.tar.xz" "${helper_image_x86_64_fips}"
         tag_latest "${helper_image_x86_64_fips}" "${helper_image_x86_64_fips_latest}"
         tag "${helper_image_x86_64_fips}" "${helper_image_x86_64_fips_version}"
-        push "${helper_image_x86_64_fips}"
-        push_latest "${helper_image_x86_64_fips_latest}"
-        push "${helper_image_x86_64_fips_version}"
+        push "${helper_image_x86_64_fips}" "${PUSH_ENABLED}"
+        push_latest "${helper_image_x86_64_fips_latest}" "${PUSH_ENABLED}"
+        push "${helper_image_x86_64_fips_version}" "${PUSH_ENABLED}"
         return 0
     fi
 
@@ -87,22 +92,22 @@ release_docker_helper_images() {
     tag "${helper_image_s390x}" "${helper_image_s390x_version}"
     tag "${helper_image_ppc64le}" "${helper_image_ppc64le_version}"
 
-    push "${helper_image_x86_64}"
-    push "${helper_image_arm}"
-    push "${helper_image_arm64}"
-    push "${helper_image_s390x}"
-    push "${helper_image_ppc64le}"
+    push "${helper_image_x86_64}" "${PUSH_ENABLED}"
+    push "${helper_image_arm}" "${PUSH_ENABLED}"
+    push "${helper_image_arm64}" "${PUSH_ENABLED}"
+    push "${helper_image_s390x}" "${PUSH_ENABLED}"
+    push "${helper_image_ppc64le}" "${PUSH_ENABLED}"
 
-    push_latest "${helper_image_x86_64_latest}"
-    push_latest "${helper_image_arm_latest}"
-    push_latest "${helper_image_arm64_latest}"
-    push_latest "${helper_image_s390x_latest}"
-    push_latest "${helper_image_ppc64le_latest}"
-    push "${helper_image_x86_64_version}"
-    push "${helper_image_arm_version}"
-    push "${helper_image_arm64_version}"
-    push "${helper_image_s390x_version}"
-    push "${helper_image_ppc64le_version}"
+    push_latest "${helper_image_x86_64_latest}" "${PUSH_ENABLED}"
+    push_latest "${helper_image_arm_latest}" "${PUSH_ENABLED}"
+    push_latest "${helper_image_arm64_latest}" "${PUSH_ENABLED}"
+    push_latest "${helper_image_s390x_latest}" "${PUSH_ENABLED}"
+    push_latest "${helper_image_ppc64le_latest}" "${PUSH_ENABLED}"
+    push "${helper_image_x86_64_version}" "${PUSH_ENABLED}"
+    push "${helper_image_arm_version}" "${PUSH_ENABLED}"
+    push "${helper_image_arm64_version}" "${PUSH_ENABLED}"
+    push "${helper_image_s390x_version}" "${PUSH_ENABLED}"
+    push "${helper_image_ppc64le_version}" "${PUSH_ENABLED}"
 
     if [[ "$FLAVOR" != "alpine3.14" ]] && [[ "$FLAVOR" != "alpine3.15" ]] && [[ "$FLAVOR" != "alpine-latest" ]]; then
         # Special case until pwsh adds the alpine 3.14 and 3.15 docker images
@@ -112,9 +117,9 @@ release_docker_helper_images() {
         import "out/helper-images/prebuilt-${FLAVOR}-x86_64-pwsh.tar.xz" "${helper_image_x86_64_pwsh}"
         tag_latest "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_latest}"
         tag "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_version}"
-        push "${helper_image_x86_64_pwsh}"
-        push_latest "${helper_image_x86_64_pwsh_latest}"
-        push "${helper_image_x86_64_pwsh_version}"
+        push "${helper_image_x86_64_pwsh}" "${PUSH_ENABLED}"
+        push_latest "${helper_image_x86_64_pwsh_latest}" "${PUSH_ENABLED}"
+        push "${helper_image_x86_64_pwsh_version}" "${PUSH_ENABLED}"
     fi
 }
 
@@ -122,12 +127,12 @@ release_docker_helper_images() {
 if [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]] && [[ "${PUBLISH_IMAGES}" == "true" ]]; then
     login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
 fi
-release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
+release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${PUBLISH_IMAGES}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 # Docker exits with a 0 code if we weren't logged in previously which makes it fine to run at all times
 logout "${CI_REGISTRY}"
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
     login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
 fi
-release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
+release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "${PUSH_TO_ECR_PUBLIC}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 logout "${ECR_PUBLIC_REGISTRY}"
