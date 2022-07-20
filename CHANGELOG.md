@@ -1,3 +1,39 @@
+## v15.2.0 (2022-07-20)
+
+### Bug fixes
+
+- Update github.com/containerd/containerd dependency !3525
+- Rename DEBUG env var to RUNNER_DEBUG !3497
+
+### Maintenance
+
+- Push image on registry during release stage only when enabled !3528
+- Fix version history formatting !3523
+- Upgrade Go to 1.17.9 in project !3515
+- Disable push to ECR in all cases !3514
+- Make resource checking disabled by default !3513
+- Fix DEB_PLATFORMS definition in the Makefile !3510
+- Monitor docker-machine provision failed state !3355 (StoneMan @Wenyuyang)
+- Run incept tests only for canonical namespaces !3341
+
+### Documentation changes
+
+- Update command usage and GitLab Runner version !3531
+- Restore previous step for freebsd install procedure !3527
+- Fix link to cluster agent !3521
+- Add explanation on how to select runner manager node with nodeSelector !3520
+- Update sysrc command for Freebsd installation procedure
+ !3519 (Roller Angel @rollerangel)
+- Add security context for init permissions container !3516
+- Add note about configurability of Fargate host properties !3509
+- Remove columns to correct rendering config.toml, CLI options and ENV variable for the register table !3508
+- Add the pull-policy from jobs support to Kubernetes !3504
+- Remove trailing spaces from docs !3502
+- Add note for pre existing runner use condition !3501
+- Improve the output of registration command !3500
+- Fix description of 'Coordinator' in FAQ !3496
+- Add some clarifications to how job_env in Custom Executor works !2810
+
 ## v15.1.0 (2022-06-20)
 
 ### New features
