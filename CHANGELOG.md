@@ -1,3 +1,9 @@
+## v15.1.1 (2022-07-20)
+
+### Bug fixes
+
+- Make resource checking disabled by default !3513
+
 ## v15.1.0 (2022-06-20)
 
 ### New features
