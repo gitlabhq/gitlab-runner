@@ -79,7 +79,7 @@ func testTimeperiodsWithTimezone(
 
 	now := timePeriods.GetCurrentTime()
 	nowInLocation := now.In(timePeriods.location)
-	t.Log(fmt.Sprintf("Checking timeperiod '%s' in timezone '%s' for %s (%s)", period, timezone, now, nowInLocation))
+	t.Logf("Checking timeperiod '%s' in timezone '%s' for %s (%s)", period, timezone, now, nowInLocation)
 
 	if inPeriod {
 		assert.True(t, timePeriods.InPeriod(), "It should be inside of the period")
