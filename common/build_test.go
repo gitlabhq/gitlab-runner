@@ -1180,6 +1180,82 @@ func TestStartBuild(t *testing.T) {
 	}
 }
 
+func TestTmpProjectDir(t *testing.T) {
+	createTestBuild := func(variables JobVariables) Build {
+		return Build{
+			JobResponse: JobResponse{
+				GitInfo: GitInfo{
+					RepoURL: "https://gitlab.com/test-namespace/test-repo.git",
+				},
+				Variables: variables,
+			},
+			Runner: &RunnerConfig{
+				RunnerCredentials: RunnerCredentials{
+					Token: "1234",
+				},
+			},
+		}
+	}
+
+	type startBuildArgs struct {
+		rootDir               string
+		cacheDir              string
+		customBuildDirEnabled bool
+		sharedDir             bool
+	}
+	testStartBuildArgs := startBuildArgs{
+		rootDir:               "/builds",
+		cacheDir:              "/cache",
+		customBuildDirEnabled: true,
+		sharedDir:             false,
+	}
+
+	tests := map[string]struct {
+		args                  startBuildArgs
+		jobVariables          JobVariables
+		expectedTmpProjectDir string
+		expectedError         bool
+	}{
+		"test default build dir": {
+			args:                  testStartBuildArgs,
+			jobVariables:          nil,
+			expectedError:         false,
+			expectedTmpProjectDir: "/builds/test-namespace/test-repo.tmp",
+		},
+		"test custom build dir with double trailing slashes": {
+			args: testStartBuildArgs,
+			jobVariables: JobVariables{
+				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo//", Public: true},
+			},
+			expectedError:         false,
+			expectedTmpProjectDir: "/builds/go/src/gitlab.com/test-namespace/test-repo.tmp",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := createTestBuild(tt.jobVariables)
+
+			err := build.StartBuild(
+				tt.args.rootDir,
+				tt.args.cacheDir,
+				tt.args.customBuildDirEnabled,
+				tt.args.sharedDir,
+			)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+
+			dir := build.TmpProjectDir()
+			assert.Equal(t, tt.expectedTmpProjectDir, dir)
+		})
+	}
+}
+
 func TestSkipBuildStageFeatureFlag(t *testing.T) {
 	featureFlagValues := []string{
 		"true",
