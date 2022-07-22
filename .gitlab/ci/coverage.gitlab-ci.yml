@@ -67,7 +67,7 @@ code navigation: # See https://docs.gitlab.com/ee/user/project/code_intelligence
   allow_failure: true # recommended
   needs:
   - prepare done
-  image: sourcegraph/lsif-go:v1.3.1
+  image: sourcegraph/lsif-go:v1.9.0
   script:
   - lsif-go
   artifacts:
