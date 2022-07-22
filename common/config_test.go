@@ -1642,6 +1642,18 @@ func TestContainerSecurityContext(t *testing.T) {
 				}
 			},
 		},
+		"SELinux type label - container security context": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					SELinuxType: "spc_t",
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					SELinuxOptions: &api.SELinuxOptions{Type: "spc_t"},
+				}
+			},
+		},
 	}
 
 	for tn, tt := range tests {
