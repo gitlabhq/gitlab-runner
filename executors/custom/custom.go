@@ -361,6 +361,7 @@ func (e *executor) Cleanup() {
 func init() {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
+		DefaultSafeDirectoryCheckout:  false,
 		Shell: common.ShellScriptInfo{
 			Shell:         common.GetDefaultShell(),
 			Type:          common.NormalShell,

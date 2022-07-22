@@ -146,6 +146,7 @@ func init() {
 func RegisterExecutor(executorName string, runnerCommandPath string) {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
+		DefaultSafeDirectoryCheckout:  false,
 		DefaultBuildsDir:              "$PWD/builds",
 		DefaultCacheDir:               "$PWD/cache",
 		SharedBuildsDir:               true,

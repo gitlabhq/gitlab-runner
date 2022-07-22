@@ -332,6 +332,7 @@ func (s *commandExecutor) GetMetricsSelector() string {
 func init() {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
+		DefaultSafeDirectoryCheckout:  true,
 		DefaultBuildsDir:              "/builds",
 		DefaultCacheDir:               "/cache",
 		SharedBuildsDir:               false,

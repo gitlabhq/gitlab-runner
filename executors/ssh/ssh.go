@@ -67,6 +67,7 @@ func (s *executor) Cleanup() {
 func init() {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: false,
+		DefaultSafeDirectoryCheckout:  false,
 		DefaultBuildsDir:              "builds",
 		DefaultCacheDir:               "cache",
 		SharedBuildsDir:               true,

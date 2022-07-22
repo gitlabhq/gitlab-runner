@@ -425,6 +425,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 		e.CacheDir(),
 		e.CustomBuildEnabled(),
 		e.SharedBuildsDir,
+		false,
 	)
 	require.NoError(t, err)
 
