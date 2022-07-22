@@ -3233,6 +3233,7 @@ func TestSetupBuildPod(t *testing.T) {
 							RunAsNonRoot:       func() *bool { i := bool(true); return &i }(),
 							RunAsUser:          func() *int64 { i := int64(200); return &i }(),
 							SupplementalGroups: []int64{200},
+							SELinuxType:        "spc_t",
 						},
 					},
 				},
@@ -3243,6 +3244,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, int64(200), *pod.Spec.SecurityContext.RunAsUser)
 				assert.Equal(t, true, *pod.Spec.SecurityContext.RunAsNonRoot)
 				assert.Equal(t, []int64{200}, pod.Spec.SecurityContext.SupplementalGroups)
+				assert.Equal(t, "spc_t", pod.Spec.SecurityContext.SELinuxOptions.Type)
 			},
 		},
 		"uses default security context when unspecified": {

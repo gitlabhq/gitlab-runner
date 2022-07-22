@@ -566,6 +566,7 @@ concurrent = 4
 | `run_as_non_root`    | boolean    | No       | Indicates that the container must run as a non-root user. |
 | `run_as_user`        | `int`      | No       | The UID to run the entry point of the container process. |
 | `supplemental_groups`| `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
+| `selinux_type`       | `string`   | No       | The SELinux type label that applies to all containers in a pod. |
 
 Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
 image that conforms to the policy you set here.
@@ -620,6 +621,7 @@ Use the [container security context](https://kubernetes.io/docs/concepts/securit
 | `run_as_user`         | int         | No       | The UID to run the entry point of the container process. |
 | `capabilities.add`    | string list | No       | The capabilities to add when running the container. |
 | `capabilities.drop`   | string list | No       | The capabilities to drop when running the container. |
+| `selinux_type`        | string      | No       | The SELinux type label that is associated with the container process. |
 
 The example below sets a pod security context, then overrides `run_as_user` and `run_as_group` for both the build and helper containers. In the example, all service containers would inherit `run_as_user` and `run_as_group` from the pod security context.
 

@@ -450,6 +450,7 @@ type KubernetesPodSecurityContext struct {
 	RunAsNonRoot       *bool   `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
 	RunAsUser          *int64  `toml:"run_as_user,omitempty" long:"run-as-user" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_USER" description:"The UID to run the entrypoint of the container process"`
 	SupplementalGroups []int64 `toml:"supplemental_groups,omitempty" long:"supplemental-groups" description:"A list of groups applied to the first process run in each container, in addition to the container's primary GID"`
+	SELinuxType        string  `toml:"selinux_type,omitempty" long:"selinux-type" description:"The SELinux type label that applies to all containers in a pod"`
 }
 
 //nolint:lll
@@ -467,6 +468,7 @@ type KubernetesContainerSecurityContext struct {
 	RunAsNonRoot             *bool                            `toml:"run_as_non_root,omitempty" long:"run-as-non-root" env:"@RUN_AS_NON_ROOT" description:"Indicates that the container must run as a non-root user"`
 	ReadOnlyRootFilesystem   *bool                            `toml:"read_only_root_filesystem" long:"read-only-root-filesystem" env:"@READ_ONLY_ROOT_FILESYSTEM" description:" Whether this container has a read-only root filesystem."`
 	AllowPrivilegeEscalation *bool                            `toml:"allow_privilege_escalation" long:"allow-privilege-escalation" env:"@ALLOW_PRIVILEGE_ESCALATION" description:"AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process"`
+	SELinuxType              string                           `toml:"selinux_type,omitempty" long:"selinux-type" description:"The SELinux type label that is associated with the container process"`
 }
 
 func (c *KubernetesConfig) getCapabilities(defaultCapDrop []string) *api.Capabilities {
@@ -509,6 +511,11 @@ func (c *KubernetesConfig) GetContainerSecurityContext(
 	securityContext KubernetesContainerSecurityContext,
 	defaultCapDrop ...string,
 ) *api.SecurityContext {
+	var seLinuxOptions *api.SELinuxOptions
+	if securityContext.SELinuxType != "" {
+		seLinuxOptions = &api.SELinuxOptions{Type: securityContext.SELinuxType}
+	}
+
 	return &api.SecurityContext{
 		Capabilities: mergeCapabilitiesAddDrop(
 			c.getCapabilities(defaultCapDrop),
@@ -523,6 +530,7 @@ func (c *KubernetesConfig) GetContainerSecurityContext(
 		RunAsNonRoot:           securityContext.RunAsNonRoot,
 		RunAsUser:              securityContext.RunAsUser,
 		ReadOnlyRootFilesystem: securityContext.ReadOnlyRootFilesystem,
+		SELinuxOptions:         seLinuxOptions,
 	}
 }
 
@@ -1055,8 +1063,14 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 		podSecurityContext.RunAsGroup == nil &&
 		podSecurityContext.RunAsNonRoot == nil &&
 		podSecurityContext.RunAsUser == nil &&
-		len(podSecurityContext.SupplementalGroups) == 0 {
+		len(podSecurityContext.SupplementalGroups) == 0 &&
+		podSecurityContext.SELinuxType == "" {
 		return nil
+	}
+
+	var seLinuxOptions *api.SELinuxOptions
+	if podSecurityContext.SELinuxType != "" {
+		seLinuxOptions = &api.SELinuxOptions{Type: podSecurityContext.SELinuxType}
 	}
 
 	return &api.PodSecurityContext{
@@ -1065,6 +1079,7 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 		RunAsNonRoot:       podSecurityContext.RunAsNonRoot,
 		RunAsUser:          podSecurityContext.RunAsUser,
 		SupplementalGroups: podSecurityContext.SupplementalGroups,
+		SELinuxOptions:     seLinuxOptions,
 	}
 }
 
