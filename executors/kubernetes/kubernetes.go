@@ -1497,6 +1497,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 		},
 		Spec: api.PodSpec{
 			Volumes:            s.getVolumes(),
+			SchedulerName:      s.Config.Kubernetes.SchedulerName,
 			ServiceAccountName: s.configurationOverwrites.serviceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.Config.Kubernetes.NodeSelector,
