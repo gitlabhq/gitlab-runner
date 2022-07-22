@@ -290,7 +290,7 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 		return "", MakeBuildError("the %s=%q has to be within %q", overrideKey, dir, rootDir)
 	}
 
-	return dir, nil
+	return path.Clean(dir), nil
 }
 
 func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, sharedDir bool) error {
