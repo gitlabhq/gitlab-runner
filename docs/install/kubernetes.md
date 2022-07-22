@@ -643,6 +643,11 @@ ERROR: Job failed (system failure): secrets is forbidden: User "system:serviceac
 
 [Enable RBAC support](#enabling-rbac-support) to correct the error.
 
+### `Unable to mount volumes for pod`
+
+If you see mount volume failures for a required secret, ensure that you've followed
+[Store registration tokens or runner tokens in secrets](#store-registration-tokens-or-runner-tokens-in-secrets).
+
 ### Slow artifact uploads to Google Cloud Storage
 
 <!-- See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28393#note_722733798 -->
