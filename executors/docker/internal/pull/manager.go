@@ -74,9 +74,8 @@ func (m *manager) GetDockerImage(
 		return nil, err
 	}
 
-	err = m.verifyPullPolicies(pullPolicies, allowedPullPolicies)
-	if err != nil {
-		return nil, err
+	if err := m.verifyPullPolicies(pullPolicies, allowedPullPolicies, imagePullPolicies); err != nil {
+		return nil, fmt.Errorf("failed to pull image '%s': %w", imageName, err)
 	}
 
 	var imageErr error
@@ -106,28 +105,24 @@ func (m *manager) GetDockerImage(
 	)
 }
 
-func (m *manager) verifyPullPolicies(pullPolicies, allowedPullPolicies []common.DockerPullPolicy) error {
-	contains := true
-
+func (m *manager) verifyPullPolicies(
+	pullPolicies,
+	allowedPullPolicies,
+	imagePullPolicies []common.DockerPullPolicy,
+) error {
 	for _, policy := range pullPolicies {
-		contains = false
 		for _, allowedPolicy := range allowedPullPolicies {
 			if policy == allowedPolicy {
-				contains = true
-				break
+				return nil
 			}
 		}
 	}
 
-	if !contains {
-		return fmt.Errorf(
-			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
-			pullPolicies,
-			allowedPullPolicies,
-		)
-	}
-
-	return nil
+	return common.IncompatiblePullPolicyError(
+		pullPolicies,
+		allowedPullPolicies,
+		common.GetPullPolicySource(imagePullPolicies, m.config.DockerConfig.PullPolicy),
+	)
 }
 
 func (m *manager) wasImageUsed(imageName, imageID string) bool {
@@ -245,15 +240,12 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 	return &image, err
 }
 
+// getPullPolicies selects the pull_policy configurations originating from
+// either gitlab-ci.yaml or config.toml. If present, the pull_policies in
+// gitlab-ci.yaml take precedence over those in config.toml.
 func (m *manager) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]common.DockerPullPolicy, error) {
-	if len(imagePullPolicies) == 0 {
-		configPullPolicies, err := m.config.DockerConfig.GetPullPolicies()
-		if err != nil {
-			return nil, err
-		}
-
-		return configPullPolicies, nil
+	if len(imagePullPolicies) != 0 {
+		return imagePullPolicies, nil
 	}
-
-	return imagePullPolicies, nil
+	return m.config.DockerConfig.GetPullPolicies()
 }

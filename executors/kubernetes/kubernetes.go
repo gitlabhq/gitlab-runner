@@ -260,14 +260,17 @@ func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pu
 		return nil, err
 	}
 
-	err = s.verifyPullPolicies(pullPolicies, allowedPullPolicies)
+	err = s.verifyPullPolicies(pullPolicies, allowedPullPolicies, options.Build.Image.PullPolicies)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to pull image '%s': %w", options.Build.Image.Name, err)
 	}
 
 	return pull.NewPullManager(pullPolicies, &s.BuildLogger), nil
 }
 
+// getPullPolicies selects the pull_policy configurations originating from
+// either gitlab-ci.yaml or config.toml. If present, the pull_policies in
+// gitlab-ci.yaml take precedence over those in config.toml.
 func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) ([]api.PullPolicy, error) {
 	k8sImagePullPolicies, err := s.Config.Kubernetes.ConvertFromDockerPullPolicy(imagePullPolicies)
 	if err != nil {
@@ -281,28 +284,24 @@ func (s *executor) getPullPolicies(imagePullPolicies []common.DockerPullPolicy) 
 	return s.Config.Kubernetes.GetPullPolicies()
 }
 
-func (s *executor) verifyPullPolicies(pullPolicies, allowedPullPolicies []api.PullPolicy) error {
-	contains := true
-
+func (s *executor) verifyPullPolicies(
+	pullPolicies,
+	allowedPullPolicies []api.PullPolicy,
+	imagePullPolicies []common.DockerPullPolicy,
+) error {
 	for _, policy := range pullPolicies {
-		contains = false
 		for _, allowedPolicy := range allowedPullPolicies {
 			if policy == allowedPolicy {
-				contains = true
-				break
+				return nil
 			}
 		}
 	}
 
-	if !contains {
-		return fmt.Errorf(
-			"the configured PullPolicies (%v) are not allowed by AllowedPullPolicies (%v)",
-			pullPolicies,
-			allowedPullPolicies,
-		)
-	}
-
-	return nil
+	return common.IncompatiblePullPolicyError(
+		pullPolicies,
+		allowedPullPolicies,
+		common.GetPullPolicySource(imagePullPolicies, s.Config.Kubernetes.PullPolicy),
+	)
 }
 
 func (s *executor) setupDefaultExecutorOptions(os string) {

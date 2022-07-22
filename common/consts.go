@@ -1,6 +1,9 @@
 package common
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 const DefaultTimeout = 7200
 const DefaultExecTimeout = 1800
@@ -54,4 +57,35 @@ const (
 	TestDockerDindImage             = "docker:18-dind"
 	TestDockerGitImage              = "docker:18-git"
 	TestLivenessImage               = "registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0"
+	IncompatiblePullPolicy          = "pull_policy (%v) defined in %s is not one of the allowed_pull_policies (%v)"
 )
+
+type PullPolicySource string
+
+const (
+	PullPolicySourceGitLabCI = "GitLab pipeline config"
+	PullPolicySourceRunner   = "Runner config"
+	PullPolicySourceDefault  = "Runner config (default)"
+)
+
+// TODO: make pullPolicies and allowedPullPolicies generic on
+// [T []DockerPullPolicy | []api.PullPolicy]
+type incompatiblePullPolicyError struct {
+	pullPolicySource    PullPolicySource
+	pullPolicies        interface{}
+	allowedPullPolicies interface{}
+}
+
+func (e *incompatiblePullPolicyError) Error() string {
+	return fmt.Sprintf(IncompatiblePullPolicy, e.pullPolicies, string(e.pullPolicySource), e.allowedPullPolicies)
+}
+
+// TODO: make pullPolicies and allowedPullPolicies generic on
+// [T []DockerPullPolicy | []api.PullPolicy]
+func IncompatiblePullPolicyError(pullPolicy, allowedPullPolicies interface{}, pullPolicySource PullPolicySource) error {
+	return &incompatiblePullPolicyError{
+		pullPolicies:        pullPolicy,
+		allowedPullPolicies: allowedPullPolicies,
+		pullPolicySource:    pullPolicySource,
+	}
+}
