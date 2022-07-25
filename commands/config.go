@@ -44,7 +44,8 @@ func (c *configOptions) getConfig() *common.Config {
 		return nil
 	}
 
-	return &*c.config
+	config := *c.config
+	return &config
 }
 
 func (c *configOptions) saveConfig() error {
