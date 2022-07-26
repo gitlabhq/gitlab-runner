@@ -12,6 +12,7 @@ RUN dnf update -y && \
         git \
         wget \
         openssh-clients \
+        hostname \
         && dnf clean all && \
         rm -rf /var/cache/dnf
 
