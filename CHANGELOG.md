@@ -1,3 +1,9 @@
+## v15.2.1 (2022-07-26)
+
+### Bug fixes
+
+- Revert github.com/urfave/cli back to v1.20.0 !3539
+
 ## v15.2.0 (2022-07-20)
 
 ### Bug fixes
