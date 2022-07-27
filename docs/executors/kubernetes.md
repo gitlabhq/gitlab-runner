@@ -797,7 +797,7 @@ By using certain labels, builds can be scheduled on nodes with different operati
 
 ### Example for `windows/amd64`
 
-Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/setup/production-environment/windows/intro-windows-in-kubernetes/#supported-functionality-and-limitations),
+Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support),
 so if process-isolation is used, you must additionally provide the specific windows build version with the
 [`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
 

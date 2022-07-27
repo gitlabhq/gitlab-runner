@@ -184,7 +184,7 @@ as a Windows service. You can find the logs in the Event Viewer
 with the provider name `gitlab-runner`.
 
 If you don't have access to the GUI, in PowerShell, you can run
-[`Get-WinEvent`](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-7.1).
+[`Get-WinEvent`](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-7.2).
 
 ```shell
 PS C:\> Get-WinEvent -ProviderName gitlab-runner
