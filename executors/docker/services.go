@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
+	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 )
 
 func (e *executor) createServices() error {
@@ -256,6 +257,32 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	_, _ = io.Copy(e.Trace, &buffer)
 	return err
+}
+
+// captureContainersLogs initiates capturing logs for the specified containers
+// to a desired additional sink. The sink can be any io.Writer. Currently the
+// sink is the jobs main trace, which is wrapped in an inlineServiceLogWriter
+// instance to add additional context to logs. In the future this could be
+// separate file.
+func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[string]*types.Container) {
+	if !e.Build.IsCIDebugServiceEnabled() {
+		return
+	}
+
+	for _, service := range e.services {
+		aliases := []string{}
+
+		for alias, container := range linksMap {
+			if container == service {
+				aliases = append(aliases, alias)
+			}
+		}
+
+		sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), e.Trace)
+		if err := e.captureContainerLogs(ctx, service.ID, service.Names[0], sink); err != nil {
+			e.Warningln(err.Error())
+		}
+	}
 }
 
 // captureContainerLogs tails (i.e. reads) logs emitted to stdout or stdin from
