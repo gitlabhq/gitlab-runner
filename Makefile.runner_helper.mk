@@ -96,6 +96,7 @@ helper-bin: $(BINARIES)
 # Make sure the fips target is first since it's less general
 ${BASE_BINARY_PATH}-fips: export GOOS ?= linux
 ${BASE_BINARY_PATH}-fips: export GOARCH ?= amd64
+${BASE_BINARY_PATH}-fips: APP_NAME := "gitlab-runner-helper"
 ${BASE_BINARY_PATH}-fips: $(HELPER_GO_FILES)
 	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build \
     		   -tags boringcrypto \
@@ -113,6 +114,7 @@ ${BASE_BINARY_PATH}-fips-docker: $(HELPER_GO_FILES)
 	@docker cp gitlab-runner-helper-fips:/gitlab-runner-helper-fips "${BASE_BINARY_PATH}.$(GO_ARCH_NAME_$(GOARCH))-fips"
 	@docker rm -f gitlab-runner-helper-fips
 
+${BASE_BINARY_PATH}.%: APP_NAME := "gitlab-runner-helper"
 ${BASE_BINARY_PATH}.%: $(HELPER_GO_FILES) $(GOX)
 	$(GOX) -osarch=$(GO_ARCH_$*) -ldflags "$(GO_LDFLAGS)" -output=$@ $(PKG)/apps/gitlab-runner-helper
 
