@@ -240,9 +240,9 @@ func (n *client) do(
 		req.Header = headers
 	}
 
+	req.Header.Set("User-Agent", common.AppVersion.UserAgent())
 	if request != nil {
 		req.Header.Set("Content-Type", requestType)
-		req.Header.Set("User-Agent", common.AppVersion.UserAgent())
 	}
 
 	n.ensureTLSConfig()

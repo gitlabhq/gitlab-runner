@@ -639,3 +639,42 @@ func Test307and308Redirections(t *testing.T) {
 		}
 	}
 }
+
+func TestEnsureUserAgentAlwaysSent(t *testing.T) {
+	tests := map[string]struct {
+		r io.Reader
+	}{
+		"request reader is present": {
+			r: bytes.NewBufferString("test"),
+		},
+		"request reader is empty": {
+			r: nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, AppVersion.UserAgent(), r.UserAgent())
+				rw.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			url, err := url.Parse(server.URL)
+			require.NoError(t, err)
+
+			c := &client{
+				url:             url,
+				requestBackOffs: make(map[string]*backoff.Backoff),
+			}
+			c.requester = &c.Client
+
+			headers := http.Header{}
+			headers.Set("Test", "test")
+
+			response, err := c.do(context.Background(), "/", http.MethodGet, tt.r, "", headers)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, response.StatusCode)
+		})
+	}
+}
