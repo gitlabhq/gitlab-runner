@@ -97,3 +97,118 @@ func TestTruncateWriter(t *testing.T) {
 		})
 	}
 }
+
+func TestInlineServiceLogWriter(t *testing.T) {
+	buf := bytes.Buffer{}
+	slw := NewInlineServiceLogWriter("foo", &buf)
+	pre := string(slw.prefix)
+	suf := string(slw.suffix)
+	newLine := suf + pre
+	emptyLine := pre + suf
+
+	tests := map[string]struct {
+		msg  string
+		want string
+	}{
+		"no newlines": {
+			msg:  "bar baz bla bla bla",
+			want: pre + "bar baz bla bla bla" + suf,
+		},
+		"leading newline": {
+			msg:  "\nbar baz bla bla bla",
+			want: emptyLine + pre + "bar baz bla bla bla" + suf,
+		},
+		"trailing newline": {
+			msg:  "bar baz bla bla bla\n",
+			want: pre + "bar baz bla bla bla" + suf,
+		},
+		"inner newlines": {
+			msg:  "bar\nbaz\nbla bla bla",
+			want: pre + "bar" + newLine + "baz" + newLine + "bla bla bla" + suf,
+		},
+		"all the newlines": {
+			msg:  "\nbar\nbaz\nbla bla bla\n",
+			want: emptyLine + pre + "bar" + newLine + "baz" + newLine + "bla bla bla" + suf,
+		},
+		"consecutive newlines": {
+			msg:  "bar\n\nbaz bla\n\nbla bla",
+			want: pre + "bar" + newLine + newLine + "baz bla" + newLine + newLine + "bla bla" + suf,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			defer buf.Reset()
+
+			n, err := slw.Write([]byte(tt.msg))
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, buf.String())
+			assert.Equal(t, len(tt.msg), n)
+		})
+	}
+}
+
+// Ensure that inlineServiceLogWriter respects the `io.Writer` contract.
+// Specifically, if the number of bytes written returned by `Write()` is less
+// than the message length, `Write() must return an error.
+func TestInlineServiceLogWriter_Err(t *testing.T) {
+	buf := bytes.Buffer{}
+	tw := truncateWriter{sink: &buf}
+	slw := NewInlineServiceLogWriter("foo", &tw)
+
+	plen, slen := len(slw.prefix), len(slw.suffix)
+
+	tests := map[string]struct {
+		msg         string
+		stopAfter   int
+		wantWritten int
+	}{
+		"none of original message written": {
+			msg:         "bar baz bla",
+			stopAfter:   6,
+			wantWritten: 0,
+		},
+		"some of original message written": {
+			msg:         "bar baz bla",
+			stopAfter:   plen + 7,
+			wantWritten: 7,
+		},
+		"all of original message written": {
+			msg:         "bar baz bla",
+			stopAfter:   plen + 11 + slen - 2,
+			wantWritten: 11,
+		},
+		"some of original message (with newlines) written": {
+			msg:         "\nbar baz\nbla\n",
+			stopAfter:   plen*2 + slen*2 - 1 + 7,
+			wantWritten: 9,
+		},
+		"some more of original message (with newlines) written": {
+			msg:         "\nbar baz\nbla\n",
+			stopAfter:   plen*3 + slen*2 + 9,
+			wantWritten: 11,
+		},
+		"all of original message (with newlines) written": {
+			msg:         "\nbar baz\nbla\n",
+			stopAfter:   plen*3 + slen*3 - 1 + 10,
+			wantWritten: 13,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				buf.Reset()
+				tw.written = 0
+			}()
+
+			tw.stopAfter = tt.stopAfter
+
+			n, err := slw.Write([]byte(tt.msg))
+
+			assert.Equal(t, tt.wantWritten, n)
+			assert.Error(t, err)
+		})
+	}
+}
