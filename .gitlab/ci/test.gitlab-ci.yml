@@ -403,6 +403,10 @@ integration_k8s:
   services:
   - name: registry.gitlab.com/gitlab-org/cluster-integration/test-utils/k3s-gitlab-ci/releases/v1.16.7-k3s1
     alias: k3s
+    command:
+      - server
+      - --tls-san=k3s
+      - --kube-apiserver-arg=feature-gates=ProcMountType=true
   before_script:
   - curl k3s:8081?service=k3s > k3s.yaml
   - export KUBECONFIG=$(pwd)/k3s.yaml

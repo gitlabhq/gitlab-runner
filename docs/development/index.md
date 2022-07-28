@@ -263,6 +263,28 @@ To execute the tests run:
 make test
 ```
 
+### Kubernetes Integration tests
+
+To run correctly, some Kubernetes integration tests require specific configuration or runtime
+arguments of the Kubernetes cluster they run against. These tests will be skipped if the
+cluster configuration is incorrect. Below is a sample configuration for Kubernetes clusters
+that would commonly be used on a developer workstation:
+
+- `minikube`
+
+```shell
+minikube delete
+minikube config set container-runtime containerd
+minikube config set feature-gates "ProcMountType=true"
+minikube start
+```
+
+- `k3s`
+
+```shell
+k3s server --tls-san=k3s --kube-apiserver-arg=feature-gates=ProcMountType=true
+```
+
 ## 8. Run tests with helper image version of choice
 
 If you are developing functionality inside a helper, you'll most likely want to run tests with

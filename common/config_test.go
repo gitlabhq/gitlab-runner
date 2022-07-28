@@ -1675,6 +1675,58 @@ func TestContainerSecurityContext(t *testing.T) {
 				}
 			},
 		},
+		"proc mount - blank": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					ProcMount: "",
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					ProcMount: nil,
+				}
+			},
+		},
+		"proc mount - invalid": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					ProcMount: "invalid",
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				return &api.SecurityContext{
+					ProcMount: nil,
+				}
+			},
+		},
+		"proc mount - default": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					ProcMount: "default",
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				pm := api.DefaultProcMount
+
+				return &api.SecurityContext{
+					ProcMount: &pm,
+				}
+			},
+		},
+		"proc mount - unmasked": {
+			getSecurityContext: func(c *KubernetesConfig) *api.SecurityContext {
+				return c.GetContainerSecurityContext(KubernetesContainerSecurityContext{
+					ProcMount: "unmasked",
+				})
+			},
+			getExpectedContainerSecurityContext: func() *api.SecurityContext {
+				pm := api.UnmaskedProcMount
+
+				return &api.SecurityContext{
+					ProcMount: &pm,
+				}
+			},
+		},
 	}
 
 	for tn, tt := range tests {
