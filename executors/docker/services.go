@@ -36,6 +36,8 @@ func (e *executor) createServices() error {
 		}
 	}
 
+	e.captureContainersLogs(e.Context, linksMap)
+
 	e.waitForServices()
 
 	if e.networkMode.IsBridge() || e.networkMode.NetworkName() == "" {
