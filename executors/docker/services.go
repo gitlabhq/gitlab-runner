@@ -12,6 +12,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/pkg/stdcopy"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
@@ -255,4 +256,38 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	_, _ = io.Copy(e.Trace, &buffer)
 	return err
+}
+
+// captureContainerLogs tails (i.e. reads) logs emitted to stdout or stdin from
+// processes in the specified container, and redirects them to the specified
+// sink, which can be any io.Writer (e.g. this process's stdout, a file, a log
+// aggregator). The logs are streamed as they are emitted, rather than batched
+// and written when we disconnect from the container (or it is stopped). The
+// specified sink is closed when the source is completely drained.
+func (e *executor) captureContainerLogs(ctx context.Context, cid, containerName string, sink io.WriteCloser) error {
+	source, err := e.client.ContainerLogs(ctx, cid, types.ContainerLogsOptions{
+		ShowStderr: true,
+		ShowStdout: true,
+		Timestamps: true,
+		Follow:     true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
+	}
+
+	e.Debugln("streaming logs for container " + containerName)
+	go func() {
+		defer source.Close()
+		defer sink.Close()
+
+		// Using stdcopy assumes service containers are run with TTY=false. If
+		// containers are started with TTY=true, io.Copy should be used instead.
+		if _, err := stdcopy.StdCopy(sink, sink, source); err != nil {
+			if err != io.EOF && !errors.Is(err, context.Canceled) {
+				e.Warningln(fmt.Sprintf("error streaming logs for container %s: %s", containerName, err.Error()))
+			}
+		}
+		e.Debugln("stopped streaming logs for container " + containerName)
+	}()
+	return nil
 }
