@@ -25,6 +25,7 @@ arity
 Artifactory
 Asana
 Asciidoctor
+asdf
 Assembla
 Atlassian
 auditability
@@ -64,6 +65,7 @@ Bamboo
 Bazel
 Bhyve
 Bitbucket
+Bitnami
 blockquote
 blockquoted
 blockquotes
@@ -71,6 +73,7 @@ blockquoting
 boolean
 booleans
 Bootsnap
+Bottlerocket
 browsable
 bugfix
 bugfixed
@@ -90,10 +93,16 @@ Caddy
 callstack
 callstacks
 Camo
+canonicalization
 canonicalized
 captcha
+Casdoor
 CentOS
+Ceph
 Certbot
+cgo
+cgroup
+cgroups
 chai
 changeset
 changesets
@@ -103,17 +112,20 @@ chatbots
 ChatOps
 checksummed
 checksumming
+Chemlab
 Citrix
 Citus
 clonable
 Cloudwatch
 Cobertura
+Codeception
 Codepen
 Cognito
 colocated
 colocating
 compilable
 composable
+composables
 Conda
 Consul
 Contentful
@@ -173,6 +185,7 @@ disambiguates
 discoverability
 dismissable
 Disqus
+Distroless
 Divio
 Dockerfile
 Dockerfiles
@@ -198,6 +211,7 @@ enums
 ETag
 Excon
 exfiltration
+ExifTool
 expirable
 Facebook
 failover
@@ -205,6 +219,7 @@ failovers
 failsafe
 Falco
 falsy
+Fargate
 fastlane
 Fastzip
 favicon
@@ -225,10 +240,12 @@ Fortinet
 Fugit
 fuzzer
 Gantt
+Gbps
 Gemfile
 Gemnasium
 Gemojione
 Getter
+getters
 Getters
 gettext
 Git
@@ -252,7 +269,9 @@ Gradle
 Grafana
 Grafonnet
 gravatar
+Grype
 Gzip
+Hackathon
 Haml
 hardcode
 hardcoded
@@ -331,6 +350,7 @@ Leiningen
 libFuzzer
 Libravatar
 liveness
+lockfiles
 Lodash
 Lograge
 logrotate
@@ -350,6 +370,7 @@ Makefile
 Makefiles
 Markdown
 markdownlint
+Marketo
 matcher
 matchers
 Matomo
@@ -362,6 +383,7 @@ memoizing
 Memorystore
 mergeability
 mergeable
+metaprogramming
 Microsoft
 middleware
 middlewares
@@ -384,6 +406,7 @@ ModSecurity
 Monokai
 monorepo
 monorepos
+monospace
 multiline
 mutex
 nameserver
@@ -397,6 +420,7 @@ Nanoc
 negatable
 Netlify
 Nokogiri
+nosniff
 noteable
 noteables
 npm
@@ -470,6 +494,7 @@ proxies
 proxyable
 proxying
 pseudocode
+pseudonymization
 pseudonymized
 pseudonymizer
 Puma
@@ -482,6 +507,7 @@ Rackspace
 Raspbian
 rbenv
 rbtrace
+Rclone
 Rdoc
 reachability
 Realplayer
@@ -516,6 +542,7 @@ reinitialize
 reinitializing
 relicensing
 remediations
+renderers
 replicables
 repmgr
 repmgrd
@@ -523,6 +550,7 @@ repurposing
 requeue
 requeued
 requeues
+requeuing
 Restlet
 resync
 resynced
@@ -546,7 +574,7 @@ rsyncing
 rsyncs
 Rubinius
 Rubix
-Rubocop
+RuboCop
 Rubular
 ruleset
 rulesets
@@ -571,11 +599,12 @@ serializer
 serializers
 serializing
 serverless
+setuptools
 severities
 sharded
 sharding
 shfmt
-Shibboleth
+Shimo
 Shopify
 Sidekiq
 Silverlight
@@ -588,10 +617,13 @@ Slony
 smartcard
 smartcards
 snapshotting
+Snyk
 Sobelow
 Solargraph
 Solarized
 Sourcegraph
+Spamcheck
+spammable
 sparkline
 sparklines
 spidering
@@ -643,6 +675,8 @@ subtrees
 sudo
 supercookie
 supercookies
+superset
+supersets
 supertype
 supertypes
 swappiness
@@ -653,6 +687,7 @@ Sysbench
 syscall
 syscalls
 syslog
+systemd
 tanuki
 tcpdump
 templated
@@ -693,6 +728,7 @@ Twilio
 Twitter
 TypeScript
 Ubuntu
+Udemy
 unapplied
 unapprove
 unapproved
@@ -797,6 +833,7 @@ Vagrantfile
 validator
 validators
 vendored
+vendoring
 versionless
 viewport
 viewports
@@ -821,6 +858,7 @@ wireframes
 wireframing
 Wireshark
 Wordpress
+Workato
 worktree
 worktrees
 Worldline
@@ -829,6 +867,7 @@ Xeon
 YouTrack
 ytt
 Yubico
+Zabbix
 Zeitwerk
 Zendesk
 ZenTao

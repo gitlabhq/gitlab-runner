@@ -56,7 +56,7 @@ to create containers when GitLab jobs run.
 1. Ensure the image has GitLab Runner, which handles artifacts and caching. Refer to the [Run](../../executors/custom.md#run)
    stage section of the custom executor docs for additional information.
 1. Ensure the container image can accept an SSH connection through public-key authentication.
-   The runner uses this connection to send the build commands defined in the `gitlab-ci.yml` file to the container
+   The runner uses this connection to send the build commands defined in the `.gitlab-ci.yml` file to the container
    on AWS Fargate. The SSH keys are automatically managed by the Fargate driver. The container must be able
    to accept keys from the `SSH_PUBLIC_KEY` environment variable.
 
@@ -307,7 +307,7 @@ Your configuration should now be ready to use.
 1. Update the branch and any variables and click **Run Pipeline**.
 
 NOTE:
-The `image` and `service` keywords in your `gitlab-ci.yml` file are ignored.
+The `image` and `service` keywords in your `.gitlab-ci.yml` file are ignored.
 The runner only uses the values specified in the task definition.
 
 ## Clean up

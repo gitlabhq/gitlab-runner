@@ -10,8 +10,7 @@ GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
 
 ## Embedded Prometheus metrics
 
-> The embedded HTTP Statistics Server with Prometheus metrics was
-introduced in GitLab Runner 1.8.0.
+> The embedded HTTP Statistics Server with Prometheus metrics was introduced in GitLab Runner 1.8.0.
 
 GitLab Runner is instrumented with native Prometheus
 metrics, which can be exposed via an embedded HTTP server on the `/metrics`

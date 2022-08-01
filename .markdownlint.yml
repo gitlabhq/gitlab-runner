@@ -123,6 +123,7 @@ proper-names:
     "SAML",
     "Sendmail",
     "Sentry",
+    "Service Desk",
     "Sidekiq",
     "Shibboleth",
     "Slack",
@@ -141,6 +142,8 @@ proper-names:
     "unicorn-worker-killer",
     "URL",
     "WebdriverIO",
+    "Workload Identity Pool",
+    "Workload Identity Provider",
     "YAML",
     "YouTrack"
   ]

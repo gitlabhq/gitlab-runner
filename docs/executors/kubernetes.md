@@ -1185,7 +1185,7 @@ Running the `docker:dind` also known as the `docker-in-docker` image is also
 possible but sadly needs the containers to be run in privileged mode.
 If you're willing to take that risk other problems will arise that might not
 seem as straight forward at first glance. Because the Docker daemon is started
-as a `service` usually in your `.gitlab-ci.yaml` it will be run as a separate
+as a `service` usually in your `.gitlab-ci.yml` it will be run as a separate
 container in your Pod. Basically containers in Pods only share volumes assigned
 to them and an IP address by which they can reach each other using `localhost`.
 `/var/run/docker.sock` is not shared by the `docker:dind` container and the `docker`
@@ -1222,7 +1222,7 @@ before any containers are deployed to it. For example build containers may only 
 on nodes that are labeled with `role=ci` while running all other production services
 on other nodes. Further separation of build containers can be achieved using node
 [taints](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
-This will disallow other pods from scheduling on the same nodes as the
+This prevents other pods from scheduling on the same nodes as the
 build pods without extra configuration for the other pods.
 
 ### Using kaniko
