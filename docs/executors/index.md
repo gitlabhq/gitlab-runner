@@ -118,10 +118,10 @@ Supported features by different executors:
 |:---------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|:------:|
 | Secure Variables                             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | GitLab Runner Exec command                   | ✗    | ✓       | ✗          | ✗         | ✓      | ✓          | ✓      |
-| `gitlab-ci.yml`: image                       | ✗    | ✗       | ✓ (1)      | ✓ (1)     | ✓      | ✓          | ✓ (via [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages))      |
-| `gitlab-ci.yml`: services                    | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          | ✓      |
-| `gitlab-ci.yml`: cache                       | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
-| `gitlab-ci.yml`: artifacts                   | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
+| `.gitlab-ci.yml`: image                      | ✗    | ✗       | ✓ (1)      | ✓ (1)     | ✓      | ✓          | ✓ (via [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages))      |
+| `.gitlab-ci.yml`: services                   | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          | ✓      |
+| `.gitlab-ci.yml`: cache                      | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
+| `.gitlab-ci.yml`: artifacts                  | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Passing artifacts between stages             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
 | Use GitLab Container Registry private images | n/a  | n/a     | n/a        | n/a       | ✓      | ✓          | n/a    |
 | Interactive Web terminal                     | ✗    | ✓ (UNIX)| ✗          | ✗         | ✓      | ✓          | ✗      |
