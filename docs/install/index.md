@@ -31,6 +31,10 @@ You can also view installation instructions in GitLab by going to your project's
 **Settings > CI / CD**, expanding the **Runners** section, and clicking
 **Show runner installation instructions**.
 
+After you install GitLab Runner, you must [register individual runners](../register/index.md) with your GitLab instance. This instance can be self-managed, or you can use GitLab.com.
+
+GitLab Runner runs the CI/CD jobs that are defined in GitLab.
+
 ## FIPS compliant GitLab Runner
 
 As of GitLab Runner 14.7, we provide a FIPS 140-12 compliant GitLab Runner binary. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
