@@ -140,17 +140,20 @@ func (mr *RunCommand) loadConfig() error {
 
 	// pass user to execute scripts as specific user
 	if mr.User != "" {
+		mr.configMutex.Lock()
 		mr.config.User = mr.User
+		mr.configMutex.Unlock()
 	}
 
+	config := mr.getConfig()
 	mr.healthy = nil
 	mr.log().Println("Configuration loaded")
-	mr.log().Debugln(helpers.ToYAML(mr.config))
+	mr.log().Debugln(helpers.ToYAML(config))
 
 	// initialize sentry
-	if mr.config.SentryDSN != nil {
+	if config.SentryDSN != nil {
 		var err error
-		mr.sentryLogHook, err = sentry.NewLogHook(*mr.config.SentryDSN)
+		mr.sentryLogHook, err = sentry.NewLogHook(*config.SentryDSN)
 		if err != nil {
 			mr.log().WithError(err).Errorln("Sentry failure")
 		}
@@ -164,8 +167,9 @@ func (mr *RunCommand) loadConfig() error {
 func (mr *RunCommand) updateLoggingConfiguration() error {
 	reloadNeeded := false
 
-	if mr.config.LogLevel != nil && !log.Configuration().IsLevelSetWithCli() {
-		err := log.Configuration().SetLevel(*mr.config.LogLevel)
+	config := mr.getConfig()
+	if config.LogLevel != nil && !log.Configuration().IsLevelSetWithCli() {
+		err := log.Configuration().SetLevel(*config.LogLevel)
 		if err != nil {
 			return err
 		}
@@ -173,8 +177,8 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 		reloadNeeded = true
 	}
 
-	if mr.config.LogFormat != nil && !log.Configuration().IsFormatSetWithCli() {
-		err := log.Configuration().SetFormat(*mr.config.LogFormat)
+	if config.LogFormat != nil && !log.Configuration().IsFormatSetWithCli() {
+		err := log.Configuration().SetFormat(*config.LogFormat)
 		if err != nil {
 			return err
 		}
@@ -346,7 +350,8 @@ func restrictHTTPMethods(handler http.Handler, methods ...string) http.Handler {
 }
 
 func (mr *RunCommand) setupSessionServer() {
-	if mr.config.SessionServer.ListenAddress == "" {
+	config := mr.getConfig()
+	if config.SessionServer.ListenAddress == "" {
 		mr.log().Info("[session_server].listen_address not defined, session endpoints disabled")
 		return
 	}
@@ -354,8 +359,8 @@ func (mr *RunCommand) setupSessionServer() {
 	var err error
 	mr.sessionServer, err = session.NewServer(
 		session.ServerConfig{
-			AdvertiseAddress: mr.config.SessionServer.AdvertiseAddress,
-			ListenAddress:    mr.config.SessionServer.ListenAddress,
+			AdvertiseAddress: config.SessionServer.AdvertiseAddress,
+			ListenAddress:    config.SessionServer.ListenAddress,
 			ShutdownTimeout:  common.ShutdownTimeout * time.Second,
 		},
 		mr.log(),
@@ -374,7 +379,7 @@ func (mr *RunCommand) setupSessionServer() {
 	}()
 
 	mr.log().
-		WithField("address", mr.config.SessionServer.ListenAddress).
+		WithField("address", config.SessionServer.ListenAddress).
 		Info("Session server listening")
 }
 
@@ -387,7 +392,7 @@ func (mr *RunCommand) setupSessionServer() {
 func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 	for mr.stopSignal == nil {
 		mr.log().Debugln("Feeding runners to channel")
-		config := mr.config
+		config := mr.getConfig()
 
 		// If no runners wait full interval to test again
 		if len(config.Runners) == 0 {
@@ -525,7 +530,7 @@ func (mr *RunCommand) processRunner(
 	mr.requeueRunner(runner, runners)
 
 	// Process a build
-	return build.Run(mr.config, trace)
+	return build.Run(mr.getConfig(), trace)
 }
 
 func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
@@ -655,7 +660,8 @@ func (mr *RunCommand) requeueRunner(runner *common.RunnerConfig, runners chan *c
 // for the fact that `concurrent` defines the upper number of jobs that can be concurrently handled
 // by GitLab Runner process.
 func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stopWorker chan bool) os.Signal {
-	concurrentLimit := mr.config.Concurrent
+	config := mr.getConfig()
+	concurrentLimit := config.Concurrent
 
 	if concurrentLimit < 1 {
 		mr.log().Fatalln("Concurrent is less than 1 - no jobs will be processed")
@@ -714,7 +720,8 @@ func (mr *RunCommand) checkConfig() (err error) {
 		return err
 	}
 
-	if !mr.config.ModTime.Before(info.ModTime()) {
+	config := mr.getConfig()
+	if !config.ModTime.Before(info.ModTime()) {
 		return nil
 	}
 
@@ -722,7 +729,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 	if err != nil {
 		mr.log().Errorln("Failed to load config", err)
 		// don't reload the same file
-		mr.config.ModTime = info.ModTime()
+		config.ModTime = info.ModTime()
 		return
 	}
 	return nil
@@ -929,7 +936,7 @@ func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
-	config := mr.config
+	config := mr.getConfig()
 
 	ch <- prometheus.MustNewConstMetric(
 		concurrentDesc,

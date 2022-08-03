@@ -19,7 +19,7 @@ type UnregisterCommand struct {
 
 func (c *UnregisterCommand) unregisterAllRunners() (runners []*common.RunnerConfig) {
 	logrus.Warningln("Unregistering all runners")
-	for _, r := range c.config.Runners {
+	for _, r := range c.getConfig().Runners {
 		if !c.network.UnregisterRunner(r.RunnerCredentials) {
 			logrus.Errorln("Failed to unregister runner", r.Name)
 			// If unregister fails, leave the runner in the config
@@ -44,7 +44,7 @@ func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
 	}
 
 	var runners []*common.RunnerConfig
-	for _, otherRunner := range c.config.Runners {
+	for _, otherRunner := range c.getConfig().Runners {
 		if otherRunner.RunnerCredentials != c.RunnerCredentials {
 			runners = append(runners, otherRunner)
 		}
@@ -69,11 +69,13 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 	}
 
 	// check if anything changed
-	if len(c.config.Runners) == len(runners) {
+	if len(c.getConfig().Runners) == len(runners) {
 		return
 	}
 
+	c.configMutex.Lock()
 	c.config.Runners = runners
+	c.configMutex.Unlock()
 
 	// save config file
 	err = c.saveConfig()

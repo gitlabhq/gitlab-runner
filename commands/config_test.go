@@ -67,3 +67,11 @@ func TestMetricsServer(t *testing.T) {
 		testListenAddressSetting(t, exampleName, example, configurationFromConfig)
 	}
 }
+
+func TestGetConfig(t *testing.T) {
+	c := &configOptions{}
+	assert.Nil(t, c.getConfig())
+
+	c.config = &common.Config{}
+	assert.True(t, c.config != c.getConfig())
+}
