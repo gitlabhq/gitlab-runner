@@ -817,15 +817,10 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	}
 	defer out.Close()
 
-	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes, buildContainerName)
-	if err != nil {
-		return fmt.Errorf("waiting for pod running: %w", err)
+	if err := s.waitForPod(ctx, out); err != nil {
+		return err
 	}
 	out.Close()
-
-	if status != api.PodRunning {
-		return fmt.Errorf("pod failed to enter running state: %s", status)
-	}
 
 	if err := s.setupTrappingScripts(ctx); err != nil {
 		return fmt.Errorf("setting up trapping scripts on emptyDir: %w", err)
@@ -875,6 +870,23 @@ func (s *executor) buildInitContainers() ([]api.Container, error) {
 	}
 
 	return initContainers, nil
+}
+
+func (s *executor) waitForPod(ctx context.Context, writer io.WriteCloser) error {
+	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, writer, s.Config.Kubernetes, buildContainerName)
+	if err != nil {
+		return fmt.Errorf("waiting for pod running: %w", err)
+	}
+
+	if status != api.PodRunning {
+		return fmt.Errorf("pod failed to enter running state: %s", status)
+	}
+
+	if err := waitForPodAttach(ctx, s.kubeClient, s.pod, s.Config.Kubernetes); err != nil {
+		return fmt.Errorf("pod failed to become attachable %v", err)
+	}
+
+	return nil
 }
 
 func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []string) {

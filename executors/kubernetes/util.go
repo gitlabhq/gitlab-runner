@@ -298,6 +298,57 @@ func waitForPodRunning(
 	return api.PodUnknown, errors.New("timed out waiting for pod to start")
 }
 
+func getPodLog(c kubernetes.Interface, pod *api.Pod) error {
+	count := int64(10)
+	podLogOptions := api.PodLogOptions{
+		Container: "helper",
+		Follow:    false,
+		TailLines: &count,
+	}
+	req := c.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOptions)
+	ctx := context.TODO()
+	podLogs, err := req.Stream(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to open log stream for %s: %v", pod.Name, err)
+	}
+	defer podLogs.Close()
+
+	return nil
+}
+
+func triggerPodAttachCheck(c kubernetes.Interface, pod *api.Pod) <-chan error {
+	errc := make(chan error)
+	go func() {
+		defer close(errc)
+		errc <- getPodLog(c, pod)
+	}()
+	return errc
+}
+
+func waitForPodAttach(
+	ctx context.Context,
+	c kubernetes.Interface,
+	pod *api.Pod,
+	config *common.KubernetesConfig,
+) error {
+	pollInterval := config.GetPollInterval()
+	pollAttempts := config.GetPollAttempts()
+	for i := 0; i <= pollAttempts; i++ {
+		select {
+		case r := <-triggerPodAttachCheck(c, pod):
+			if r != nil {
+				time.Sleep(time.Duration(pollInterval) * time.Second)
+				continue
+			}
+
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return errors.New("timed out waiting for pod to become attachable")
+}
+
 // limits takes a string representing CPU, memory and ephemeralStorage limits,
 // and returns a ResourceList with appropriately scaled Quantity
 // values for Kubernetes. This allows users to write "500m" for CPU,
