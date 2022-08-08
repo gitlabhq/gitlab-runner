@@ -452,7 +452,7 @@ If you installed GitLab Helm Chart using the [auto-generated self-signed wildcar
 ## Set the certsSecretName to pass custom certificates for GitLab Runner to use
 ## Provide resource name for a Kubernetes Secret Object in the same namespace,
 ## this is used to populate the /home/gitlab-runner/.gitlab-runner/certs/ directory
-## ref: https://docs.gitlab.com/runner/configuration/tls-self-signed.html#supported-options-for-self-signed-certificates
+## ref: https://docs.gitlab.com/runner/configuration/tls-self-signed.html#supported-options-for-self-signed-certificates-targeting-the-gitlab-server
 ##
 certsSecretName: RELEASE-wildcard-tls-chain
 ```
