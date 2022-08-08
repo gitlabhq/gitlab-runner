@@ -35,7 +35,8 @@ GitLab Runner provides two options to configure certificates to be used to verif
 ## Supported options for self-signed certificates targeting the GitLab server
 
 This section refers to the situation where only the GitLab server requires a custom certificate.
-If other hosts also require a custom certificate authority (CA), please see
+If other hosts (e.g. object storage service without [proxy download enabled](https://docs.gitlab.com/ee/administration/object_storage.html#proxy-download))
+also require a custom certificate authority (CA), please see
 the [next section](#trusting-tls-certificates-for-docker-and-kubernetes-executors).
 
 GitLab Runner supports the following options:
@@ -47,11 +48,13 @@ GitLab Runner supports the following options:
 - **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/index.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
-  This file will be read every time the runner tries to access the GitLab server.
+  This file will be read every time the Runner tries to access the GitLab server.
+  If you are using GitLab Runner Helm chart, you will need to configure certificates as described in
+  [Providing a custom certificate for accessing GitLab](../install/kubernetes.md#providing-a-custom-certificate-for-accessing-gitlab).
 
 - **Read a PEM certificate**: GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
   predefined file:
-  - `/etc/gitlab-runner/certs/gitlab.example.com.crt` on *nix systems when GitLab Runner is executed as root.
+  - `/etc/gitlab-runner/certs/gitlab.example.com.crt` on *nix systems when GitLab Runner is executed as `root`.
 
     If your server address is `https://gitlab.example.com:8443/`, create the
     certificate file at: `/etc/gitlab-runner/certs/gitlab.example.com.crt`.
@@ -68,7 +71,7 @@ GitLab Runner supports the following options:
     echo | openssl s_client -CAfile /etc/gitlab-runner/certs/gitlab.example.com.crt -connect gitlab.example.com:443 -servername gitlab.example.com
     ```
 
-  - `~/.gitlab-runner/certs/gitlab.example.com.crt` on *nix systems when GitLab Runner is executed as non-root.
+  - `~/.gitlab-runner/certs/gitlab.example.com.crt` on *nix systems when GitLab Runner is executed as non-`root`.
   - `./certs/gitlab.example.com.crt` on other systems. If running GitLab Runner as a Windows service,
     this will not work. Specify a custom certificate file instead.
 
@@ -95,15 +98,14 @@ Notes:
 - If you already have a Runner configured through HTTP, update your instance path to the new HTTPS URL of your GitLab instance in your `config.toml`. 
 - As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
-- If you are using GitLab Runner Helm chart, you will need to configure certificates according to the doc [Providing a custom certificate for accessing GitLab](../install/kubernetes.md#providing-a-custom-certificate-for-accessing-gitlab).
 
 ### Git cloning
 
-The runner injects missing certificates to build the CA chain in build containers by using `CI_SERVER_TLS_CA_FILE`.
-This allows `git clone` and `artifacts` to work with servers that do not use publicly
+The Runner injects missing certificates to build the CA chain by using `CI_SERVER_TLS_CA_FILE`.
+This allows `git clone` and artifacts to work with servers that do not use publicly
 trusted certificates.
 
-This approach is secure, but makes the runner a single point of trust.
+This approach is secure, but makes the Runner a single point of trust.
 
 ## Trusting TLS certificates for Docker and Kubernetes executors
 
@@ -111,10 +113,10 @@ There are two contexts that need to be taken into account when we consider regis
 
 - The [**user image**](https://docs.gitlab.com/ee/ci/yaml/#image), which is used to run the user script.
   In this scenario, the user must take ownership regarding how to install a certificate, since this is
-  highly dependent on the image itself, and the runner has no way of knowing how to install a certificate in each
+  highly dependent on the image itself, and the Runner has no way of knowing how to install a certificate in each
   possible scenario.
-- The **Runner helper image**, which is used for standard operations such as fetching sources,
-  uploading artifacts, etc. In this scenario, the user only needs to make a certificate file
+- The [**Runner helper image**](advanced-configuration.md#helper-image), which is used to handle Git, artifacts, and cache operations.
+  In this scenario, the user only needs to make a certificate file
   available at a specific location (for example, `/etc/gitlab-runner/certs/ca.crt`), and the Docker container will
   automatically install it for the user.
 
@@ -244,7 +246,7 @@ when performing operations like cloning and uploading artifacts, for example.
 
 #### Kubernetes
 
-Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4125) in the Kubernetes executor's
+Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484) in the Kubernetes executor's
 handling of the helper image's `ENTRYPOINT`, the mapped certificate file isn't automatically installed
 to the system certificate store.
 
@@ -253,4 +255,4 @@ to the system certificate store.
 Refer to the general [SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl.html#troubleshooting)
 documentation.
 
-In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/tlsctl) tool to debug GitLab certificates from the runner's end.
+In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/tlsctl) tool to debug GitLab certificates from the Runner's end.

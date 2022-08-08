@@ -946,7 +946,7 @@ to handle Git, artifacts, and cache operations. This container is created from a
 
 The helper image is available for amd64, arm, arm64, s390x, and ppc64le architectures. It contains
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
-of available commands, as well as Git, Git LFS, SSL certificates store.
+of available commands, as well as Git, Git LFS and SSL certificates store.
 
 The helper image has a few flavors: `alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, `alpine3.15`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is currently the default due to its small
 footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
@@ -961,14 +961,14 @@ When the runner prepares to execute the job, if the image in the specified versi
 revision) is not found on Docker Engine, it is automatically loaded. Both the
 `docker` and `docker+machine` executors work this way.
 
-For the alpine flavors, only the default `alpine` flavor image is included in the package. All other flavors will be downloaded from the registry.
+For the `alpine` flavors, only the default `alpine` flavor image is included in the package. All other flavors will be downloaded from the registry.
 
 The `kubernetes` executor and manual installations of GitLab Runner work differently.
 
 - For manual installations, the `gitlab-runner-helper` binary is not included.
 - For the `kubernetes` executor, the Kubernetes API doesn't allow the `gitlab-runner-helper` image to be loaded from a local archive.
 
-In both cases, GitLab Runner downloads the helper image from Docker Hub, from the official GitLab repository `gitlab/gitlab-runner-helper`.
+In both cases, GitLab Runner [downloads the helper image](#helper-image-registry).
 The GitLab Runner revision and architecture define which tag to download.
 
 ### Runner images that use an old version of Alpine Linux
@@ -1002,7 +1002,7 @@ Before 15.0, you could configure this behavior to use images from Docker Hub.
 In some cases, you may need to override the helper image. There are many reasons for doing this:
 
 1. **To speed up jobs execution**: In environments with slower internet connection, downloading the
-   same image multiple times from Docker Hub can increase the time it takes to execute a job. Downloading the helper image from
+   same image multiple times can increase the time it takes to execute a job. Downloading the helper image from
    a local registry, where the exact copy of `gitlab/gitlab-runner-helper:XYZ` is stored, can speed things up.
 
 1. **Security concerns**: You may not want to download external dependencies that were not checked before. There
