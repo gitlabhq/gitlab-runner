@@ -24,7 +24,7 @@ DEB_PLATFORMS ?= debian/stretch debian/buster debian/bullseye \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya linuxmint/ulyana linuxmint/ulyssa linuxmint/uma linuxmint/una
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
-RPM_PLATFORMS ?= el/6 el/7 el/8 \
+RPM_PLATFORMS ?= el/7 el/8 \
     ol/6 ol/7 ol/8 \
     fedora/32 fedora/33 fedora/34 fedora/35 \
     amazon/2
@@ -211,7 +211,6 @@ check_mocks:
 		echo "Mocks up-to-date!"
 
 test-docker:
-	$(MAKE) test-docker-image IMAGE=centos:6 TYPE=rpm
 	$(MAKE) test-docker-image IMAGE=centos:7 TYPE=rpm
 	$(MAKE) test-docker-image IMAGE=debian:wheezy TYPE=deb
 	$(MAKE) test-docker-image IMAGE=debian:jessie TYPE=deb
