@@ -263,8 +263,9 @@ kubectl create secret generic gcsaccess \
 
 #### Static credentials in a JSON file downloaded from GCP
 
-The following example shows how to [configure GCS with credentials in a
-JSON file downloaded from Google Cloud Platform](../configuration/advanced-configuration.md#the-runnerscache-section):
+The following example shows how to
+[configure GCS with credentials in a JSON file](../configuration/advanced-configuration.md#the-runnerscache-section)
+downloaded from Google Cloud Platform:
 
 ```yaml
 runners:
@@ -523,16 +524,15 @@ runner, you can use `runnerToken`. It can be a security risk to store
 tokens in `values.yml`, especially if you commit these to `git`.
 
 Instead, you can store the values of these tokens inside of a
-[Kubernetes
-secret](https://kubernetes.io/docs/concepts/configuration/secret/), and
+[Kubernetes secret](https://kubernetes.io/docs/concepts/configuration/secret/), and
 then update the `runners.secret` value in `values.yml` with the name of
 the secret.
 
 If you have an existing registered runner and want to use that, set the
 `runner-token` with the token used to identify that runner. If you want
 to have a new runner registered you can set the
-`runner-registration-token` with the [registration token that you would
-like](https://docs.gitlab.com/ee/ci/runners/).
+`runner-registration-token` with the
+[registration token that you would like](https://docs.gitlab.com/ee/ci/runners/).
 
 For example:
 

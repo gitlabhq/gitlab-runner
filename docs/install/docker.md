@@ -70,7 +70,7 @@ Make sure that you read the [FAQ](../faq/index.md) section which describes some 
 need to expose port `8093` by adding `-p 8093:8093` to your `docker run` command.
 - If you want to use the Docker Machine executor for autoscaling feature, you also need to mount Docker Machine
   storage path: `/root/.docker/machine`:
-  
+
   - by adding `-v /srv/gitlab-runner/docker-machine-config:/root/.docker/machine` for system volume mounts
   - by adding `-v docker-machine-config:/root/.docker/machine` for Docker named volumes
 
@@ -187,8 +187,8 @@ docker logs gitlab-runner
 where `gitlab-runner` is the name of the container, set with `--name gitlab-runner` by
 the first command.
 
-You may find more information about handling container logs at the [Docker documentation
-page](https://docs.docker.com/engine/reference/commandline/logs/).
+You may find more information about handling container logs at the
+[Docker documentation page](https://docs.docker.com/engine/reference/commandline/logs/).
 
 ## Installing trusted SSL server certificates
 

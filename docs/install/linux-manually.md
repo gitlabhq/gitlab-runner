@@ -29,8 +29,7 @@ To download the appropriate package for your system:
 1. Find the latest file name and options at
    <https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html>.
 1. Choose a version and download a binary, as described in the
-   documentation for [downloading any other tagged
-   releases](bleeding-edge.md#download-any-other-tagged-release) for
+   documentation for [downloading any other tagged releases](bleeding-edge.md#download-any-other-tagged-release) for
    bleeding edge GitLab Runner releases.
 
 For example, for Debian or Ubuntu:
@@ -121,7 +120,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 
    # Linux ppc64le
    sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-ppc64le"
-   
+
    # Linux x86-64 FIPS Compliant
    sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64-fips"
    ```

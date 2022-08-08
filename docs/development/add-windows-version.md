@@ -36,8 +36,8 @@ for our CI. The new base image will be used to build the GitLab Runner
 helper image.
 
 For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following [merge
-request](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/merge_requests/29).
+the 13.7 milestone we can see the following
+[merge request](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/merge_requests/29).
 Depending on the base image provided by GCP, we might have to install
 Docker as part of the build process or not. In this MR we update the
 following files:
@@ -65,15 +65,13 @@ An example of this procedure is summarized in [this comment](https://gitlab.com/
 
 ### Publish the image
 
-After we merge the merge request created from the [previous
-step](#create-a-base-image-for-infrastructure-to-use), we need to run the
-[publish
-job](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/blob/120b30096b2db7bb445f69b1923e161b10b589e6/.gitlab/ci/build.gitlab-ci.yml#L155-166)
+After we merge the merge request created from the
+[previous step](#create-a-base-image-for-infrastructure-to-use), we need to run the
+[publish job](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/blob/120b30096b2db7bb445f69b1923e161b10b589e6/.gitlab/ci/build.gitlab-ci.yml#L155-166)
 manually for the image to be published to our production GCP project.
 
 Take note of the image name that is created from the `publish` job, for
-example in [this
-job](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/jobs/643514801)
+example in [this job](https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/-/jobs/643514801)
 we created an image called
 `runners-windows-2019-core-containers-2020-07-17`. This will be used for
 the [install part](#install).
@@ -88,8 +86,8 @@ project. The only thing that is left is to set up the Runner Managers.
 
 Run [`gitlab-runner register`](../register/index.md)
 to register the two new runners. These should be project-specific runners, so
-we need to use the registration token from the [project
-settings](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd).
+we need to use the registration token from the
+[project settings](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd).
 The name of the runner should follow the same naming convention as the
 existing ones.
 
@@ -125,8 +123,8 @@ update our [Ansible repository](https://ops.gitlab.net/gitlab-com/gl-infra/ci-in
 to include the new Windows version.
 
 For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following [merge
-request](https://ops.gitlab.net/gitlab-com/gl-infra/ci-infrastructure-windows/-/merge_requests/70),
+the 13.7 milestone we can see the following
+[merge request](https://ops.gitlab.net/gitlab-com/gl-infra/ci-infrastructure-windows/-/merge_requests/70),
 where we update the following files:
 
 1. `ansible/roles/runner/tasks/main.yml`
@@ -147,8 +145,8 @@ as part of the CI process for [GitLab Runner](https://gitlab.com/gitlab-org/gitl
 Make sure that an image based on the new Windows version is published.
 
 For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following [merge
-request](https://gitlab.com/gitlab-org/ci-cd/tests/liveness/-/merge_requests/4),
+the 13.7 milestone we can see the following
+[merge request](https://gitlab.com/gitlab-org/ci-cd/tests/liveness/-/merge_requests/4),
 where we update the following files:
 
 1. `.gitlab-ci.yml`
@@ -168,8 +166,8 @@ We should update the following:
 1. [Update the `release` stage](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/v13.4.1/.gitlab-ci.yml#L8).
 
 For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following [merge
-request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2459),
+the 13.7 milestone we can see the following
+[merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2459),
 where we update the following files:
 
 1. `helpers/container/helperimage/windows_info.go`

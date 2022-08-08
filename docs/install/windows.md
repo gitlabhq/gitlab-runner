@@ -22,8 +22,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
 1. Download the binary for [64-bit](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-amd64.exe) or [32-bit](https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-windows-386.exe) and put it into the folder you
    created. The following assumes you have renamed the binary to `gitlab-runner.exe` (optional).
    You can download a binary for every available version as described in
-   [Bleeding Edge - download any other tagged
-   release](bleeding-edge.md#download-any-other-tagged-release).
+   [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 1. Make sure to restrict the `Write` permissions on the GitLab Runner directory and executable.
    If you do not set these permissions, regular users can replace the executable with their own and run arbitrary code with elevated privileges.
 1. Run an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
@@ -94,17 +93,15 @@ rmdir /s GitLab-Runner
 
 ## Windows version support policy
 
-We follow the same lifecycle policy as Microsoft [Servicing
-Channels](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels).
+We follow the same lifecycle policy as Microsoft
+[Servicing Channels](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels).
 
 This means that we support:
 
-- [Long-Term Servicing
-  Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel),
+- [Long-Term Servicing Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel),
   versions for 5 years after their release date. Note that we don't
   support versions that are on extended support.
-- [Semi-Annual
-  Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#semi-annual-channel)
+- [Semi-Annual Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#semi-annual-channel)
   versions for 18 months after their release date. We don't support
   these versions after mainstream support ends.
 
@@ -118,11 +115,9 @@ OS. See the [list of supported Windows containers](../executors/docker.md#suppor
 for more information.
 
 After a Windows version no longer receives mainstream support from
-Microsoft, we officially [deprecate the
-version](https://about.gitlab.com/handbook/product/#deprecated) and
+Microsoft, we officially [deprecate the version](https://about.gitlab.com/handbook/product/#deprecated) and
 remove it in the next major change. For example, in 12.x we started
-supporting [`Windows
-1803`](https://docs.microsoft.com/en-us/lifecycle/products/?alpha=1803)
+supporting [`Windows 1803`](https://docs.microsoft.com/en-us/lifecycle/products/?alpha=1803)
 because it came out on `2018-04-30`. Mainstream support ended on
 `2019-11-12`, so we deprecated `Windows 1803` in 12.x and it was
 [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6553) in
@@ -143,17 +138,16 @@ date:
 
 ### Future releases
 
-Microsoft releases new Windows Server products in the [Semi-Annual
-Channel](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#semi-annual-channel)
+Microsoft releases new Windows Server products in the
+[Semi-Annual Channel](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#semi-annual-channel)
 twice a year, and every 2 - 3 years a new major version of Windows Sever
-is released in the [Long-Term Servicing Channel
-(LTSC)](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#long-term-servicing-channel-ltsc).
+is released in the
+[Long-Term Servicing Channel (LTSC)](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#long-term-servicing-channel-ltsc).
 
 GitLab aims to test and release new GitLab Runner helper images that
 include the latest Windows Server version (Semi-Annual Channel) within 1
-month of the official Microsoft release date on the Google Cloud Platform. Refer to the [Windows
-Server current versions by servicing option
-list](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
+month of the official Microsoft release date on the Google Cloud Platform. Refer to the
+[Windows Server current versions by servicing option list](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
 for availability dates.
 
 ## Windows troubleshooting

@@ -59,8 +59,7 @@ The prepare script will do the following:
 
 - Destroy a container with the same name if there is one running.
 - Start a container and wait for it to start.
-- Install [prerequisite
-  dependencies](../custom.md#prerequisite-software-for-running-a-job).
+- Install [prerequisite dependencies](../custom.md#prerequisite-software-for-running-a-job).
 
 ```shell
 #!/usr/bin/env bash
