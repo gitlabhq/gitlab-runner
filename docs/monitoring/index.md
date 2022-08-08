@@ -37,8 +37,8 @@ track build trends to plan changes in your infrastructure.
 ### Learning more about Prometheus
 
 To learn how to set up a Prometheus server to scrape this HTTP endpoint and
-make use of the collected metrics, see Prometheus's [Getting
-started](https://prometheus.io/docs/prometheus/latest/getting_started/) guide. Also
+make use of the collected metrics, see Prometheus's
+[Getting started](https://prometheus.io/docs/prometheus/latest/getting_started/) guide. Also
 see the [Configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
 section for more details on how to configure Prometheus, as well as the section
 on [Alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/) and setting up

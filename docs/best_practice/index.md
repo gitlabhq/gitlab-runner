@@ -16,8 +16,7 @@ base path better known as the _Builds Directory_. The default location
 of this base directory depends on the executor. For:
 
 - [Kubernetes](../executors/kubernetes.md),
-  [Docker](../executors/docker.md) and [Docker
-  Machine](../executors/docker_machine.md) executors, it is
+  [Docker](../executors/docker.md) and [Docker Machine](../executors/docker_machine.md) executors, it is
   `/builds` inside of the container.
 - [Shell](../executors/shell.md) executor, it is `$PWD/builds`.
 - [SSH](../executors/ssh.md), [VirtualBox](../executors/virtualbox.md)

@@ -137,8 +137,8 @@ not necessary to use Docker Machine just for GPU support. The Docker
 Machine executor makes it easy to scale the GPU nodes up and down, but
 this can also be done with the [Kubernetes executor](kubernetes.md).
 
-You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create [Google Compute Engine instances
-with graphics processing units (GPUs)](https://cloud.google.com/compute/docs/gpus/).
+You can use the Docker Machine [fork](#forked-version-of-docker-machine) to create
+[Google Compute Engine instances with graphics processing units (GPUs)](https://cloud.google.com/compute/docs/gpus/).
 GitLab Runner 13.9 is [required for GPUs to work in a Docker executor](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4585).
 
 #### Docker Machine GPU options

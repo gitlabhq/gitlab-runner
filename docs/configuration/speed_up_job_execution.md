@@ -55,8 +55,8 @@ To create a Docker Hub Registry mirror:
 
    You can modify the port number (`6000`) to expose the registry on a
    different port. This will start the server with `http`. If you want
-   to turn on TLS (`https`) follow the [official
-   documentation](https://docs.docker.com/registry/configuration/#tls).
+   to turn on TLS (`https`) follow the
+   [official documentation](https://docs.docker.com/registry/configuration/#tls).
 
 1. Check the IP address of the server:
 

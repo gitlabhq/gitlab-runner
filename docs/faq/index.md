@@ -180,8 +180,8 @@ Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
 If you are using Omnibus GitLab, but don't want to use the bundled NGINX
 server, please read [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server).
 
-In the GitLab Recipes repository there are [web-server configuration
-examples](https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server) for Apache and NGINX.
+In the GitLab Recipes repository there are
+[web-server configuration examples](https://gitlab.com/gitlab-org/gitlab-recipes/tree/master/web-server) for Apache and NGINX.
 
 If you are using GitLab installed from source, please also read the above
 documentation and examples, and make sure that all HTTP(S) traffic is going
@@ -266,8 +266,8 @@ one time.
 
 ## `Job failed (system failure): preparing environment:`
 
-This error is often due to your shell [loading your
-profile](../shells/index.md#shell-profile-loading), and one of the scripts is
+This error is often due to your shell
+[loading your profile](../shells/index.md#shell-profile-loading), and one of the scripts is
 causing the failure.
 
 Example of dotfiles that are known to cause failure:

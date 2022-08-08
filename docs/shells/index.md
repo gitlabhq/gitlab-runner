@@ -59,12 +59,11 @@ cat generated-bash-script | /bin/bash
 
 For certain executors, the runner passes the `--login` flag as shown above,
 which also loads the shell profile. Anything that you have in your `.bashrc`,
-`.bash_logout`, [or any other
-dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_01_02),
+`.bash_logout`,
+[or any other dotfile](https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_03_01.html#sect_03_01_02),
 is executed in your job.
 
-If a [job fails on the `Prepare
-environment`](../faq/index.md#job-failed-system-failure-preparing-environment) stage, it
+If a [job fails on the `Prepare environment`](../faq/index.md#job-failed-system-failure-preparing-environment) stage, it
 is likely that something in the shell profile is causing the failure. A common
 failure is when you have a `.bash_logout` that tries to clear the console.
 

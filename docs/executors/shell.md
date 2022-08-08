@@ -44,8 +44,9 @@ in [`config.toml`](../configuration/advanced-configuration.md).
 
 ## Running as unprivileged user
 
-If GitLab Runner is installed on Linux from the [official `.deb` or `.rpm`
-packages](https://packages.gitlab.com/runner/gitlab-runner), the installer will try to use the `gitlab_ci_multi_runner`
+If GitLab Runner is installed on Linux from the
+[official `.deb` or `.rpm` packages](https://packages.gitlab.com/runner/gitlab-runner),
+the installer will try to use the `gitlab_ci_multi_runner`
 user if found. If it is not found, it will create a `gitlab-runner` user and use
 this instead.
 
@@ -84,8 +85,8 @@ server you trust and own.
 ## Terminating and killing processes
 
 The shell executor starts the script for each job in a new process. On
-UNIX systems, it sets the main process as a [process
-group](https://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
+UNIX systems, it sets the main process as a
+[process group](https://www.informit.com/articles/article.aspx?p=397655&seqNum=6).
 
 GitLab Runner terminates processes when:
 

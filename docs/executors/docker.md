@@ -66,8 +66,8 @@ the `nanoserver` variants for the helper image.
 The following are some limitations of using Windows containers with
 Docker executor:
 
-- Docker-in-Docker is not supported, since it's [not
-  supported](https://github.com/docker-library/docker/issues/49) by
+- Docker-in-Docker is not supported, since it's
+  [not supported](https://github.com/docker-library/docker/issues/49) by
   Docker itself.
 - Interactive web terminals are not supported.
 - Host device mounting not supported.
@@ -77,14 +77,11 @@ Docker executor:
   additional detail.
 - `docker-windows` executor can be run only using GitLab Runner running
   on Windows.
-- [Linux containers on
-  Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
-  are not supported, since they are still experimental. Read [the
-  relevant
-  issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
+- [Linux containers on Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
+  are not supported, since they are still experimental. Read
+  [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
   more details.
-- Because of a [limitation in
-  Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
+- Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
   if the destination path drive letter is not `c:`, paths are not supported for:
 
   - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
@@ -98,20 +95,18 @@ Docker executor:
 ### Supported Windows versions
 
 GitLab Runner only supports the following versions of Windows which
-follows our [support lifecycle for
-Windows](../install/windows.md#windows-version-support-policy):
+follows our [support lifecycle for Windows](../install/windows.md#windows-version-support-policy):
 
 - Windows Server 21H1/LTSC2022.
 - Windows Server 20H2.
 - Windows Server 2004.
 - Windows Server 1809.
 
-For future Windows Server versions, we have a [future version support
-policy](../install/windows.md#windows-version-support-policy).
+For future Windows Server versions, we have a
+[future version support policy](../install/windows.md#windows-version-support-policy).
 
 You can only run containers based on the same OS version that the Docker
-daemon is running on. For example, the following [`Windows Server
-Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
+daemon is running on. For example, the following [`Windows Server Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
 be used:
 
 - `mcr.microsoft.com/windows/servercore:ltsc2022`
@@ -162,8 +157,7 @@ executor running Windows.
 ```
 
 For other configuration options for the Docker executor, see the
-[advanced
-configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
+[advanced configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
 section.
 
 ### Services
@@ -277,8 +271,7 @@ Docker networks might conflict with other networks on the host, including other 
 if the CIDR ranges are already in use. The default Docker address pool can be configured
 by using `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
 
-To enable this mode you must enable the [`FF_NETWORK_PER_BUILD`
-feature flag](../configuration/feature-flags.md).
+To enable this mode you must enable the [`FF_NETWORK_PER_BUILD` feature flag](../configuration/feature-flags.md).
 
 When a job starts, a bridge network is created (similar to `docker network create <network>`).
 Upon creation, the service containers and the

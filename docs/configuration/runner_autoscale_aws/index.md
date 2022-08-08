@@ -28,9 +28,9 @@ powerful autoscaling machines.
 A familiarity with Amazon Web Services (AWS) is required as this is where most
 of the configuration will take place.
 
-We suggest a quick read through Docker machine [`amazonec2` driver
-documentation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md) to familiarize
-yourself with the parameters we will set later in this article.
+We suggest a quick read through Docker machine
+[`amazonec2` driver documentation](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md)
+to familiarize yourself with the parameters we will set later in this article.
 
 Your GitLab Runner is going to need to talk to your GitLab instance over the network,
 and that is something you need think about when configuring any AWS security
@@ -130,8 +130,8 @@ must be set to `docker+machine`. Most of those settings are taken care of when
 you register the runner for the first time.
 
 `limit` sets the maximum number of machines (running and idle) that this runner
-will spawn. For more information, check the [relationship between `limit`, `concurrent`
-and `IdleCount`](../autoscale.md#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines).
+will spawn. For more information, check the
+[relationship between `limit`, `concurrent` and `IdleCount`](../autoscale.md#how-concurrent-limit-and-idlecount-generate-the-upper-limit-of-running-machines).
 
 Example:
 
@@ -274,13 +274,13 @@ under `MachineOptions`. Below you can see the most common ones.
 
 Notes:
 
-- Under `MachineOptions` you can add anything that the [AWS Docker Machine driver
-  supports](https://docs.docker.com/machine/drivers/aws/#options). You are highly
+- Under `MachineOptions` you can add anything that the
+  [AWS Docker Machine driver supports](https://docs.docker.com/machine/drivers/aws/#options). You are highly
   encouraged to read Docker's docs as your infrastructure setup may warrant
   different options to be applied.
 - The child instances will use by default Ubuntu 16.04 unless you choose a
-  different AMI ID by setting `amazonec2-ami`. Set only [supported
-  base operating systems for Docker Machine](https://docs.docker.com/machine/drivers/os-base/).
+  different AMI ID by setting `amazonec2-ami`. Set only
+  [supported base operating systems for Docker Machine](https://docs.docker.com/machine/drivers/os-base/).
 - If you specify `amazonec2-private-address-only=true` as one of the machine
   options, your EC2 instance won't get assigned a public IP. This is ok if your
   VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
@@ -371,8 +371,8 @@ section, add the following:
 In this configuration with an empty `amazonec2-spot-price`, AWS sets your
 bidding price for a Spot instance to the default On-Demand price of that
 instance class. If you omit the `amazonec2-spot-price` completely, Docker
-Machine will set the maximum price to a [default value of $0.50 per
-hour](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values).
+Machine will set the maximum price to a
+[default value of $0.50 per hour](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values).
 
 You may further customize your Spot instance request:
 

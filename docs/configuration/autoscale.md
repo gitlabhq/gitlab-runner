@@ -555,8 +555,8 @@ set `Path` to separate caches between runners when cache sharing is enabled.
 
 ## Distributed container registry mirroring
 
-To speed up jobs executed inside of Docker containers, you can use the [Docker
-registry mirroring service](https://docs.docker.com/registry/). This service provides a proxy between your
+To speed up jobs executed inside of Docker containers, you can use the
+[Docker registry mirroring service](https://docs.docker.com/registry/). This service provides a proxy between your
 Docker machines and all used registries. Images are downloaded one time by the
 registry mirror. On each new host, or on an existing host where the image is
 not available, the image is downloaded from the configured registry mirror.
@@ -620,7 +620,7 @@ concurrent = 50   # All registered runners can run up to 50 concurrent jobs
       IdleCount = 50
       IdleCountMin = 5
       IdleScaleFactor = 1.5 # Means that current number of Idle machines will be 1.5*in-use machines,
-                            # no more than 50 (the value of IdleCount) and no less than 5 (the value of IdleCountMin) 
+                            # no more than 50 (the value of IdleCount) and no less than 5 (the value of IdleCountMin)
       IdleTime = 3600
       Timezone = "UTC"
     [[runners.machine.autoscaling]]

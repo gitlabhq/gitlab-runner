@@ -289,8 +289,7 @@ Signatures made by these keys should not be trusted anymore.
 
 ## Manually download packages
 
-You can [manually download and install the
-packages](linux-manually.md#using-debrpm-package) if necessary.
+You can [manually download and install the packages](linux-manually.md#using-debrpm-package) if necessary.
 
 ## Disable `skel`
 

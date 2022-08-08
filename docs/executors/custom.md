@@ -16,16 +16,14 @@ GitLab Runner to use some executable to provision, run, and clean up
 your environment.
 
 The scripts you configure for the custom executor are called `Drivers`.
-For example, you could create a Podman driver, an [LXD
-driver](custom_examples/lxd.md) or a [Libvirt
-driver](custom_examples/libvirt.md).
+For example, you could create a Podman driver, an [LXD driver](custom_examples/lxd.md) or a
+[Libvirt driver](custom_examples/libvirt.md).
 
 ## Limitations
 
 Below are some current limitations when using the Custom executor:
 
-- No [Interactive Web
-  Terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/) support.
+- No [Interactive Web Terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/) support.
 
 ## Configuration
 
@@ -97,10 +95,8 @@ exposed to the executable, which can be used to get information about
 the specific Job that is running. All stages will have the following
 environment variables available to them:
 
-- Standard CI/CD [environment
-  variables](https://docs.gitlab.com/ee/ci/variables/), including
-  [predefined
-  variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
+- Standard CI/CD [environment variables](https://docs.gitlab.com/ee/ci/variables/), including
+  [predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html).
 - All environment variables provided by the Custom executor Runner host system.
 - All services and their [available settings](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services).
   Exposed in JSON format as `CUSTOM_ENV_CI_JOB_SERVICES`.
@@ -442,12 +438,10 @@ process and will not try to stop/kill anymore. If both these timeouts
 are reached during `config_exec`, `prepare_exec` or `run_exec` the build
 is marked as failed.
 
-As of [GitLab
-13.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1743)
+As of [GitLab 13.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1743)
 any child process that is spawned by the driver will also receive the
 graceful termination process explained above on UNIX based systems. This
-is achieved by having the main process set as a [process
-group](https://man7.org/linux/man-pages/man2/setpgid.2.html)
+is achieved by having the main process set as a [process group](https://man7.org/linux/man-pages/man2/setpgid.2.html)
 which all the child processes belong too.
 
 ## Error handling

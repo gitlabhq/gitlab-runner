@@ -15,17 +15,17 @@ This example is inspired by a Community Contribution
 to add libvirt as a GitLab Runner executor.
 
 This document does not try to explain how to set up libvirt, since it's
-out of scope. However, this driver was tested using [GCP Nested
-Virtualization](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview),
-which also has [details on how to setup
-libvirt](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#starting_a_private_bridge_between_the_host_and_nested_vms)
+out of scope. However, this driver was tested using
+[GCP Nested Virtualization](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview),
+which also has
+[details on how to set up libvirt](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#starting_a_private_bridge_between_the_host_and_nested_vms)
 with bridge networking. This example will use the `default` network that
 comes with when installing libvirt so make sure it's running.
 
 This driver requires bridge networking since each VM needs to have
 it's own dedicated IP address so GitLab Runner can SSH inside of it to
-run commands. An SSH key can be generated [using the following
-commands](https://docs.gitlab.com/ee/user/ssh.html#generating-a-new-ssh-key-pair).
+run commands. An SSH key can be generated
+[using the following commands](https://docs.gitlab.com/ee/user/ssh.html#generating-a-new-ssh-key-pair).
 
 A base disk VM image is created so that dependencies are not downloaded
 every build. In the following example,
@@ -60,8 +60,7 @@ earlier.
 
 `virt-builder` will set a root password automatically which is printed
 at the end. If you want to specify a password yourself, pass
-[`--root-password
-password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password).
+[`--root-password password:$SOME_PASSWORD`](https://libguestfs.org/virt-builder.1.html#setting-the-root-password).
 
 ## Configuration
 
