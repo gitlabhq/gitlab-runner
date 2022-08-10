@@ -44,5 +44,5 @@ Documentation-related MRs should be reviewed by a Technical Writer for a non-blo
 - [ ] Review by assigned maintainer, who can always request/require the above reviews. Maintainer's review can occur before or after a technical writer review.
 - [ ] Ensure a release milestone is set.
 
-/label ~documentation ~"devops::verify" ~"group::runner" ~"Category:Runner"
+/label ~documentation ~"devops::verify" ~"group::runner" ~"Category:Runner"  ~"type::maintenance" ~"maintenance::refactor"
 /assign me
