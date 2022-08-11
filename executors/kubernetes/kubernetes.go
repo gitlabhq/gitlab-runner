@@ -56,6 +56,8 @@ const (
 
 	// Polling time between each attempt to check serviceAccount and imagePullSecret (in seconds)
 	resourceAvailabilityCheckMaxPollInterval = 5 * time.Second
+
+	serviceContainerPrefix = "svc-"
 )
 
 var (
@@ -808,7 +810,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		allowedImages []string
 		envVars       []common.JobVariable
 	)
-	if strings.HasPrefix(opts.name, "svc-") {
+	if strings.HasPrefix(opts.name, serviceContainerPrefix) {
 		optionName = "services"
 		allowedImages = s.Config.Kubernetes.AllowedServices
 		envVars = s.getServiceVariables(opts.imageDefinition)
@@ -1464,7 +1466,7 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
 		podServices[i], err = s.buildContainer(containerBuildOpts{
-			name:            fmt.Sprintf("svc-%d", i),
+			name:            fmt.Sprintf("%s%d", serviceContainerPrefix, i),
 			image:           resolvedImage,
 			imageDefinition: service,
 			requests:        s.configurationOverwrites.serviceRequests,
