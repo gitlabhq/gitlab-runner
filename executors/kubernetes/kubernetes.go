@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"strings"
@@ -1978,6 +1979,40 @@ func (s *executor) checkDefaults() error {
 
 	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
 
+	return nil
+}
+
+// captureContainerLogs tails (i.e. reads) logs emitted to stdout or stdin from
+// processes in the specified kubernetes managed container, and redirects them
+// to the specified sink, which can be any io.Writer (e.g. this process's
+// stdout, a file, a log aggregator). The logs are streamed as they are emitted,
+// rather than batched and written when we disconnect from the container (or it
+// is stopped). The specified sink is closed when the source is completely
+// drained.
+func (s *executor) captureContainerLogs(ctx context.Context, containerName string, sink io.WriteCloser) error {
+	podLogOpts := api.PodLogOptions{
+		Container:  containerName,
+		Follow:     true,
+		Timestamps: true,
+	}
+
+	podLogs, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
+	}
+
+	s.Debugln("streaming logs for container " + containerName)
+	go func() {
+		defer podLogs.Close()
+		defer sink.Close()
+
+		if _, err = io.Copy(sink, podLogs); err != nil {
+			if err != io.EOF && !errors.Is(err, context.Canceled) {
+				s.Warningln(fmt.Sprintf("error streaming logs for container %s: %s", containerName, err.Error()))
+			}
+		}
+		s.Debugln("stopped streaming logs for container " + containerName)
+	}()
 	return nil
 }
 
