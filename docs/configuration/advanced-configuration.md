@@ -995,7 +995,7 @@ Currently, `alpine3.13` is the latest supported `pwsh` image.
 In GitLab 15.0 and later, the helper image is pulled from the GitLab Container Registry. In addition, helper images are
 only published in the GitLab Container Registry.
 
-Before 15.0, you could configure this behavior to use images from Docker Hub.
+Before 15.0, you could configure this behavior to use images from Docker Hub. The base `gitlab-runner-helper` image can be retreived from the GitLab registry with a `helper-image` value `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_REVISION}`.
 
 ### Override the helper image
 
@@ -1035,7 +1035,7 @@ API that is expected to be the same in both binaries.
 By default, GitLab Runner references a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
 on the GitLab Runner architecture and Git revision. In GitLab Runner 11.3 and later, you can define the
 image version by using one of the
-[version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/11-3-stable/common/version.go#L48-50):
+[version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/common/version.go#L48-49):
 
 ```toml
 [[runners]]
@@ -1043,10 +1043,10 @@ image version by using one of the
   executor = "docker"
   [runners.docker]
     (...)
-    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-${CI_RUNNER_REVISION}"
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_REVISION}"
 ```
 
-With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
+With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-v${CI_RUNNER_REVISION}`,
 which is based on its compilation data. After updating GitLab Runner to a new version, GitLab
 Runner tries to download the proper image. The image should be uploaded to the registry
 before upgrading GitLab Runner, otherwise the jobs start failing with a "No such image" error.
@@ -1061,7 +1061,7 @@ valid and point to the same image.
   executor = "docker"
   [runners.docker]
     (...)
-    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-${CI_RUNNER_VERSION}"
 ```
 
 #### When using PowerShell Core
