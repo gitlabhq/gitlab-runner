@@ -47,15 +47,15 @@ var (
 )
 
 type runAtTask interface {
-	cancel() bool
+	cancel()
 }
 
 type runAtTimerTask struct {
 	timer *time.Timer
 }
 
-func (t *runAtTimerTask) cancel() bool {
-	return t.timer.Stop()
+func (t *runAtTimerTask) cancel() {
+	t.timer.Stop()
 }
 
 func runAt(t time.Time, f func()) runAtTask {
@@ -176,17 +176,17 @@ func nextRunnerToReset(config *common.Config) (*common.RunnerConfig, time.Time) 
 
 func (mr *RunCommand) resetRunnerTokens() {
 	for mr.resetOneRunnerToken() {
+		// Handling runner tokens resetting - one by one - until mr.runFinished
+		// reports that mr.run() have been finished
 	}
 }
 
 func (mr *RunCommand) resetOneRunnerToken() bool {
+	var task runAtTask
 	runnerResetCh := make(chan *common.RunnerConfig)
 
 	config := mr.getConfig()
-
 	runnerToReset, runnerResetTime := nextRunnerToReset(config)
-	var task runAtTask
-
 	if runnerToReset != nil {
 		task = mr.runAt(runnerResetTime, func() {
 			runnerResetCh <- runnerToReset

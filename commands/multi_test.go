@@ -321,10 +321,10 @@ func TestRunCommand_nextRunnerToReset(t *testing.T) {
 	}
 }
 
-type runAtRequest struct {
+type runAtCall struct {
 	time     time.Time
 	callback func()
-	task     *runAtMockTask
+	task     *runAtTaskMock
 }
 
 type resetTokenRequest struct {
@@ -332,96 +332,139 @@ type resetTokenRequest struct {
 }
 
 type resetRunnerTokenTestController struct {
-	t                            *testing.T
-	runCommand                   RunCommand
-	eventChan                    chan interface{}
-	resetRunnerTokenResponseChan chan *common.ResetTokenResponse
-	waitGroup                    sync.WaitGroup
+	runCommand RunCommand
+	eventChan  chan interface{}
+	waitGroup  sync.WaitGroup
+
+	networkMock     *common.MockNetwork
+	configSaverMock *common.MockConfigSaver
 }
 
-type runAtMockTask struct {
+type runAtTaskMock struct {
 	finished  bool
 	cancelled bool
 }
 
-func (t *runAtMockTask) cancel() bool {
-	finished := t.finished || t.cancelled
+func (t *runAtTaskMock) cancel() {
 	t.cancelled = true
-	return !finished
 }
 
-func makeResetRunnerTokenTestController(t *testing.T) *resetRunnerTokenTestController {
-	mNetwork := common.MockNetwork{}
+func newResetRunnerTokenTestController() *resetRunnerTokenTestController {
+	networkMock := new(common.MockNetwork)
+	configSaverMock := new(common.MockConfigSaver)
 
 	data := &resetRunnerTokenTestController{
-		t: t,
 		runCommand: RunCommand{
 			configOptionsWithListenAddress: configOptionsWithListenAddress{
 				configOptions: configOptions{
-					config: common.NewConfig(),
+					config: common.NewConfigWithSaver(configSaverMock),
 				},
 			},
 			runAt:          runAt,
 			runFinished:    make(chan bool),
 			configReloaded: make(chan int),
-			network:        &mNetwork,
+			network:        networkMock,
 		},
-		eventChan:                    make(chan interface{}),
-		resetRunnerTokenResponseChan: make(chan *common.ResetTokenResponse),
+		eventChan:       make(chan interface{}),
+		networkMock:     networkMock,
+		configSaverMock: configSaverMock,
 	}
-	data.runCommand.runAt = data.mockRunAt
-
-	mNetwork.On("ResetToken", mock.Anything).Return(data.mockResetToken)
+	data.runCommand.runAt = data.runAt
 
 	return data
 }
 
-func (c *resetRunnerTokenTestController) mockRunAt(time time.Time, callback func()) runAtTask {
-	task := runAtMockTask{
+// runAt implements the RunCommand.runAt interface and allows to integrate the call
+// done in context of token resetting with the test implementation
+func (c *resetRunnerTokenTestController) runAt(time time.Time, callback func()) runAtTask {
+	task := runAtTaskMock{
 		finished: false,
 	}
-	c.eventChan <- runAtRequest{
+	c.eventChan <- runAtCall{
 		time:     time,
 		callback: callback,
 		task:     &task,
 	}
+
 	return &task
 }
 
-func (c *resetRunnerTokenTestController) mockResetToken(runner common.RunnerCredentials) *common.ResetTokenResponse {
-	c.eventChan <- resetTokenRequest{
-		runner: runner,
-	}
-	return <-c.resetRunnerTokenResponseChan
+// mockResetToken should be run before the tested method call to ensure
+// that API call is properly mocked, required and feeds data needed for
+// further assertions
+//
+// Use only when this API call is expected. Otherwise - check assertResetTokenNotCalled
+func (c *resetRunnerTokenTestController) mockResetToken(runnerID int64, response *common.ResetTokenResponse) {
+	c.networkMock.
+		On(
+			"ResetToken",
+			mock.MatchedBy(func(runner common.RunnerCredentials) bool {
+				return runnerID == runner.ID
+			}),
+		).
+		Return(func(runner common.RunnerCredentials) *common.ResetTokenResponse {
+			// Sending is a blocking operation, so this blocks until the other thread receives it.
+			c.eventChan <- resetTokenRequest{
+				runner: runner,
+			}
+
+			return response
+		}).
+		Once()
 }
 
-func (c *resetRunnerTokenTestController) awaitRunAtRequest() runAtRequest {
+// mockConfigSave should be run before the tested method call to ensure
+// that configuration file save call is required
+//
+// Use only when save is expected. Otherwise - check assertConfigSaveNotCalled
+func (c *resetRunnerTokenTestController) mockConfigSave() {
+	c.configSaverMock.On("Save", "", mock.Anything).Return(nil).Once()
+}
+
+// awaitRunAtCall blocks on waiting for the RunCommand.runAt call (in context of token
+// resetting) to happen
+//
+// Returns details about the call for further assertions
+func (c *resetRunnerTokenTestController) awaitRunAtCall(t *testing.T) runAtCall {
 	event := <-c.eventChan
-	e := event.(runAtRequest)
-	require.NotNil(c.t, e)
+	e := event.(runAtCall)
+	require.NotNil(t, e)
+
 	return e
 }
 
-func (c *resetRunnerTokenTestController) awaitResetTokenRequest() resetTokenRequest {
+// awaitResetTokenRequest blocks on waiting for the mocked API call for the token reset
+// to happen
+//
+// Returns reset token request details for further assertions
+func (c *resetRunnerTokenTestController) awaitResetTokenRequest(t *testing.T) resetTokenRequest {
 	event := <-c.eventChan
 	e := event.(resetTokenRequest)
-	require.NotNil(c.t, e)
+	require.NotNil(t, e)
+
 	return e
 }
 
-func (c *resetRunnerTokenTestController) handleRunAtRequest(time time.Time) {
-	event := c.awaitRunAtRequest()
-	assert.Equal(c.t, time, event.time)
+// handleRunAtCall asserts whether the call is the expected one and if yes - executed
+// the callback registered for it (so in this case - the call that schedules another
+// request for the token reset API)
+func (c *resetRunnerTokenTestController) handleRunAtCall(t *testing.T, time time.Time) {
+	event := c.awaitRunAtCall(t)
+	assert.Equal(t, time, event.time)
 	event.callback()
 	event.task.finished = true
 }
 
-func (c *resetRunnerTokenTestController) handleResetTokenRequest(runnerID int, response *common.ResetTokenResponse) {
-	event := c.awaitResetTokenRequest()
-	assert.Equal(c.t, runnerID, event.runner.ID)
-	c.resetRunnerTokenResponseChan <- response
+// handleResetTokenRequest asserts whether the request to the API is the one expected
+// (basing on the ID of the Runner)
+func (c *resetRunnerTokenTestController) handleResetTokenRequest(t *testing.T, runnerID int64) {
+	event := c.awaitResetTokenRequest(t)
+	assert.Equal(t, runnerID, event.runner.ID)
 }
 
+// pushToWaitGroup ensures that the callback function is executed in context
+// of a WaitGroup. This allows use to organise the test case flow to be executed
+// in the expected order
 func (c *resetRunnerTokenTestController) pushToWaitGroup(callback func()) {
 	c.waitGroup.Add(1)
 	go func() {
@@ -430,38 +473,102 @@ func (c *resetRunnerTokenTestController) pushToWaitGroup(callback func()) {
 	}()
 }
 
+// stop simulates RunCommand interruption - the moment when run() is finished
 func (c *resetRunnerTokenTestController) stop() {
 	c.runCommand.stopSignal = os.Interrupt
 	close(c.runCommand.runFinished)
 }
 
+// reloadConfig simulates that configuration file update was discovered and that
+// it was reloaded (which normally is done by RunCommand in background)
+func (c *resetRunnerTokenTestController) reloadConfig() {
+	c.runCommand.configReloaded <- 1
+}
+
+// setRunners updates the test configuration with given runner credentials.
+//
+// It should be used as the test case initialisation and may be used to simulate
+// config change after reloading
+func (c *resetRunnerTokenTestController) setRunners(runners []common.RunnerCredentials) {
+	c.runCommand.configMutex.Lock()
+	defer c.runCommand.configMutex.Unlock()
+
+	configs := make([]*common.RunnerConfig, 0)
+
+	for _, runner := range runners {
+		configs = append(
+			configs,
+			&common.RunnerConfig{
+				RunnerCredentials: runner,
+			})
+	}
+	c.runCommand.config.Runners = configs
+}
+
+// wait stops execution until callbacks added currently to the WaitGroup
+// are done
+func (c *resetRunnerTokenTestController) wait() {
+	c.waitGroup.Wait()
+}
+
+// finish ensures that channels used by the controller are closed
+func (c *resetRunnerTokenTestController) finish() {
+	close(c.eventChan)
+}
+
+// assertExpectations should be run in defer after creating the controller. If the
+// tracked mocks have any command call expectations set, this will ensure to check
+// if they were called
+func (c *resetRunnerTokenTestController) assertExpectations(t *testing.T) {
+	c.networkMock.AssertExpectations(t)
+	c.configSaverMock.AssertExpectations(t)
+}
+
+// assertConfigSaveNotCalled should be run after the tested method call to ensure
+// that configuration saving event was not executed
+//
+// Use only when configuration save is not expected. Otherwise - check mockConfigSave
+func (c *resetRunnerTokenTestController) assertConfigSaveNotCalled(t *testing.T) {
+	c.configSaverMock.AssertNotCalled(t, "Save", mock.Anything, mock.Anything)
+}
+
+// assertResetTokenNotCalled should be run after the tested method call to ensure
+// that the network call to token reset API was not executed
+//
+// Use only when API call for token reset is not expected. Otherwise - check mockResetToken
+func (c *resetRunnerTokenTestController) assertResetTokenNotCalled(t *testing.T) {
+	c.networkMock.AssertNotCalled(t, "ResetToken", mock.Anything)
+}
+
 type resetRunnerTokenTestCase struct {
 	runners       []common.RunnerCredentials
-	testProcedure func(d *resetRunnerTokenTestController)
+	testProcedure func(t *testing.T, d *resetRunnerTokenTestController)
 }
 
 func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 	testCases := map[string]resetRunnerTokenTestCase{
 		"no runners stop": {
 			runners: []common.RunnerCredentials{},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					assert.False(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
 				d.stop()
-				d.waitGroup.Wait()
+				d.wait()
 			},
 		},
 		"no runners reload config": {
 			runners: []common.RunnerCredentials{},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
-				d.runCommand.configReloaded <- 1
-				d.waitGroup.Wait()
+				d.reloadConfig()
+				d.wait()
 			},
 		},
 		"one expiring runner": {
@@ -473,18 +580,19 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
+					d.mockResetToken(1, &common.ResetTokenResponse{
+						Token:           "token2",
+						TokenObtainedAt: time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 11, 0, 0, 0, 0, time.UTC),
+					})
+					d.mockConfigSave()
 					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
 				})
-				d.handleRunAtRequest(time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(1, &common.ResetTokenResponse{
-					Token:           "token2",
-					TokenObtainedAt: time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(2022, 1, 11, 0, 0, 0, 0, time.UTC),
-				})
-				d.waitGroup.Wait()
+				d.handleRunAtCall(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
+				d.handleResetTokenRequest(t, 1)
+				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
 				assert.Equal(t, "token2", runner.Token)
@@ -498,16 +606,19 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					ID:              1,
 					Token:           "token1",
 					TokenObtainedAt: time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+					// 0001-01-01T00:00:00.0 is the "zero" value of time.Time and is used
+					// by resetting mechanism to recognize runners that don't have expiration time assigned
+					TokenExpiresAt: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					assert.False(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
 				d.stop()
-				d.waitGroup.Wait()
+				d.wait()
 			},
 		},
 		"two expiring runners": {
@@ -525,34 +636,37 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 10, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
+					d.mockResetToken(1, &common.ResetTokenResponse{
+						Token:           "token1_2",
+						TokenObtainedAt: time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 11, 0, 0, 0, 0, time.UTC),
+					})
+					d.mockConfigSave()
 					assert.True(t, d.runCommand.resetOneRunnerToken())
 				})
-				d.handleRunAtRequest(time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(1, &common.ResetTokenResponse{
-					Token:           "token1_2",
-					TokenObtainedAt: time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(2022, 1, 11, 0, 0, 0, 0, time.UTC),
+				d.handleRunAtCall(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
+				d.handleResetTokenRequest(t, 1)
+				d.wait()
+
+				d.pushToWaitGroup(func() {
+					d.mockResetToken(2, &common.ResetTokenResponse{
+						Token:           "token2_2",
+						TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 12, 0, 0, 0, 0, time.UTC),
+					})
+					d.mockConfigSave()
+					assert.True(t, d.runCommand.resetOneRunnerToken())
 				})
-				d.waitGroup.Wait()
+				d.handleRunAtCall(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC))
+				d.handleResetTokenRequest(t, 2)
+				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
 				assert.Equal(t, "token1_2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 11, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
-
-				d.pushToWaitGroup(func() {
-					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
-				})
-				d.handleRunAtRequest(time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(2, &common.ResetTokenResponse{
-					Token:           "token2_2",
-					TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(2022, 1, 12, 0, 0, 0, 0, time.UTC),
-				})
-				d.waitGroup.Wait()
 
 				runner = d.runCommand.config.Runners[1]
 				assert.Equal(t, "token2_2", runner.Token)
@@ -566,7 +680,9 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					ID:              1,
 					Token:           "token1_1",
 					TokenObtainedAt: time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+					// 0001-01-01T00:00:00.0 is the "zero" value of time.Time and is used
+					// by resetting mechanism to recognize runners that don't have expiration time assigned
+					TokenExpiresAt: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
 					ID:              2,
@@ -575,20 +691,26 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 10, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
+					d.mockResetToken(2, &common.ResetTokenResponse{
+						Token:           "token2_2",
+						TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 12, 0, 0, 0, 0, time.UTC),
+					})
+					d.mockConfigSave()
 					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
 				})
-				d.handleRunAtRequest(time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(2, &common.ResetTokenResponse{
-					Token:           "token2_2",
-					TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(2022, 1, 12, 0, 0, 0, 0, time.UTC),
-				})
-				d.waitGroup.Wait()
+				d.handleRunAtCall(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC))
+				d.handleResetTokenRequest(t, 2)
+				d.wait()
 
-				runner := d.runCommand.config.Runners[1]
+				runner := d.runCommand.config.Runners[0]
+				assert.Equal(t, "token1_1", runner.Token)
+				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
+				assert.Equal(t, time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
+
+				runner = d.runCommand.config.Runners[1]
 				assert.Equal(t, "token2_2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 12, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
@@ -603,17 +725,27 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					assert.False(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
-				event := d.awaitRunAtRequest()
+
+				event := d.awaitRunAtCall(t)
+
 				assert.Equal(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC), event.time)
+
 				d.stop()
-				d.waitGroup.Wait()
+				d.wait()
+
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
+
+				runner := d.runCommand.config.Runners[0]
+				assert.Equal(t, "token1", runner.Token)
+				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
+				assert.Equal(t, time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
 			},
 		},
 		"one expiring runner reload config": {
@@ -625,17 +757,27 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
-				event := d.awaitRunAtRequest()
+
+				event := d.awaitRunAtCall(t)
+
 				assert.Equal(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC), event.time)
-				d.runCommand.configReloaded <- 1
-				d.waitGroup.Wait()
+
+				d.reloadConfig()
+				d.wait()
+
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
+
+				runner := d.runCommand.config.Runners[0]
+				assert.Equal(t, "token1", runner.Token)
+				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
+				assert.Equal(t, time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
 			},
 		},
 		"one expiring runner rewrite and reload config": {
@@ -647,45 +789,53 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
 
-				config := common.NewConfig()
-				config.Runners = []*common.RunnerConfig{
-					{
-						RunnerCredentials: common.RunnerCredentials{
-							ID:              1,
-							Token:           "token2",
-							TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
-							TokenExpiresAt:  time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC),
-						},
-					},
-				}
+				event := d.awaitRunAtCall(t)
 
-				event := d.awaitRunAtRequest()
 				assert.Equal(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC), event.time)
 
-				d.runCommand.configMutex.Lock()
-				d.runCommand.config = config
-				d.runCommand.configMutex.Unlock()
-				d.runCommand.configReloaded <- 1
-				d.waitGroup.Wait()
+				d.setRunners([]common.RunnerCredentials{
+					{
+						ID:              1,
+						Token:           "token2",
+						TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC),
+					},
+				})
+				d.reloadConfig()
+				d.wait()
+
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
 
+				runner := d.runCommand.config.Runners[0]
+				assert.Equal(t, "token2", runner.Token)
+				assert.Equal(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
+				assert.Equal(t, time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
+
 				d.pushToWaitGroup(func() {
+					d.mockResetToken(1, &common.ResetTokenResponse{
+						Token:           "token3",
+						TokenObtainedAt: time.Date(2022, 1, 14, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 22, 0, 0, 0, 0, time.UTC),
+					})
+					d.mockConfigSave()
 					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
 				})
-				d.handleRunAtRequest(time.Date(2022, 1, 14, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(1, &common.ResetTokenResponse{
-					Token:           "token3",
-					TokenObtainedAt: time.Date(2022, 1, 14, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(2022, 1, 22, 0, 0, 0, 0, time.UTC),
-				})
-				d.waitGroup.Wait()
+				d.handleRunAtCall(t, time.Date(2022, 1, 14, 0, 0, 0, 0, time.UTC))
+				d.handleResetTokenRequest(t, 1)
+				d.wait()
+
+				runner = d.runCommand.config.Runners[0]
+				assert.Equal(t, "token3", runner.Token)
+				assert.Equal(t, time.Date(2022, 1, 14, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
+				assert.Equal(t, time.Date(2022, 1, 22, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
 			},
 		},
 		"one expiring runner rewrite and reload config race condition": {
@@ -697,31 +847,34 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
 
-				config := common.NewConfig()
-				config.Runners = []*common.RunnerConfig{
+				d.setRunners([]common.RunnerCredentials{
 					{
-						RunnerCredentials: common.RunnerCredentials{
-							ID:              1,
-							Token:           "token2",
-							TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
-							TokenExpiresAt:  time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC),
-						},
+						ID:              1,
+						Token:           "token2",
+						TokenObtainedAt: time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC),
 					},
-				}
-				d.runCommand.configMutex.Lock()
-				d.runCommand.config = config
-				d.runCommand.configMutex.Unlock()
-				event := d.awaitRunAtRequest()
-				d.runCommand.configReloaded <- 1
-				d.waitGroup.Wait()
+				})
+
+				event := d.awaitRunAtCall(t)
+
+				d.reloadConfig()
+				d.wait()
+
 				assert.True(t, event.task.cancelled)
 				assert.False(t, event.task.finished)
+
+				runner := d.runCommand.config.Runners[0]
+				assert.Equal(t, "token2", runner.Token)
+				assert.Equal(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
+				assert.Equal(t, time.Date(2022, 1, 16, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
 			},
 		},
 		"one expiring runner error": {
@@ -733,14 +886,15 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 9, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
+					d.mockResetToken(1, nil)
 					assert.True(t, d.runCommand.resetOneRunnerToken())
-					close(d.eventChan)
+					d.assertConfigSaveNotCalled(t)
 				})
-				d.handleRunAtRequest(time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(1, nil)
-				d.waitGroup.Wait()
+				d.handleRunAtCall(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
+				d.handleResetTokenRequest(t, 1)
+				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
 				assert.Equal(t, "token1", runner.Token)
@@ -752,18 +906,12 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			d := makeResetRunnerTokenTestController(t)
-			for _, runner := range tc.runners {
-				d.runCommand.config.Runners = append(
-					d.runCommand.config.Runners,
-					&common.RunnerConfig{
-						RunnerCredentials: runner,
-					})
-			}
+			d := newResetRunnerTokenTestController()
+			defer d.assertExpectations(t)
 
-			tc.testProcedure(d)
-			_, res := <-d.eventChan
-			require.False(t, res)
+			d.setRunners(tc.runners)
+			tc.testProcedure(t, d)
+			d.finish()
 		})
 	}
 }
@@ -776,20 +924,23 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 					ID:              1,
 					Token:           "token1",
 					TokenObtainedAt: time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+					// 0001-01-01T00:00:00.0 is the "zero" value of time.Time and is used
+					// by resetting mechanism to recognize runners that don't have expiration time assigned
+					TokenExpiresAt: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					d.runCommand.resetRunnerTokens()
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
 
 				d.stop()
-				d.waitGroup.Wait()
+				d.wait()
 			},
 		},
-		"one expiring runner": {
+		"one expiring runner stop": {
 			runners: []common.RunnerCredentials{
 				{
 					ID:              1,
@@ -798,23 +949,25 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
 					d.runCommand.resetRunnerTokens()
-					close(d.eventChan)
+					d.assertResetTokenNotCalled(t)
+					d.assertConfigSaveNotCalled(t)
 				})
 
-				event := d.awaitRunAtRequest()
+				event := d.awaitRunAtCall(t)
 
 				d.stop()
-				d.waitGroup.Wait()
+				d.wait()
+
+				assert.True(t, event.task.cancelled)
+				assert.False(t, event.task.finished)
 
 				runner := d.runCommand.config.Runners[0]
 				assert.Equal(t, "token1", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
-				assert.True(t, event.task.cancelled)
-				assert.False(t, event.task.finished)
 			},
 		},
 		"one expiring runner with non-expiring response": {
@@ -826,20 +979,21 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
+					d.mockResetToken(1, &common.ResetTokenResponse{
+						Token:           "token2",
+						TokenObtainedAt: time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
+					})
+					d.mockConfigSave()
 					d.runCommand.resetRunnerTokens()
-					close(d.eventChan)
 				})
 
-				d.handleRunAtRequest(time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC))
+				d.handleRunAtCall(t, time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC))
 				d.stop()
-				d.handleResetTokenRequest(1, &common.ResetTokenResponse{
-					Token:           "token2",
-					TokenObtainedAt: time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC),
-				})
-				d.waitGroup.Wait()
+				d.handleResetTokenRequest(t, 1)
+				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
 				assert.Equal(t, "token2", runner.Token)
@@ -856,48 +1010,44 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 					TokenExpiresAt:  time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			testProcedure: func(d *resetRunnerTokenTestController) {
+			testProcedure: func(t *testing.T, d *resetRunnerTokenTestController) {
 				d.pushToWaitGroup(func() {
+					d.mockResetToken(1, &common.ResetTokenResponse{
+						Token:           "token2",
+						TokenObtainedAt: time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC),
+						TokenExpiresAt:  time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC),
+					})
+					d.mockConfigSave()
 					d.runCommand.resetRunnerTokens()
-					close(d.eventChan)
 				})
 
-				d.handleRunAtRequest(time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(1, &common.ResetTokenResponse{
-					Token:           "token2",
-					TokenObtainedAt: time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC),
-					TokenExpiresAt:  time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC),
-				})
+				d.handleRunAtCall(t, time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC))
+				d.handleResetTokenRequest(t, 1)
 
-				event := d.awaitRunAtRequest()
+				event := d.awaitRunAtCall(t)
 
 				d.stop()
-				d.waitGroup.Wait()
+				d.wait()
+
+				assert.True(t, event.task.cancelled)
+				assert.False(t, event.task.finished)
 
 				runner := d.runCommand.config.Runners[0]
 				assert.Equal(t, "token2", runner.Token)
 				assert.Equal(t, time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC), runner.TokenObtainedAt)
 				assert.Equal(t, time.Date(2022, 1, 17, 0, 0, 0, 0, time.UTC), runner.TokenExpiresAt)
-				assert.True(t, event.task.cancelled)
-				assert.False(t, event.task.finished)
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			d := makeResetRunnerTokenTestController(t)
-			for _, runner := range tc.runners {
-				d.runCommand.config.Runners = append(
-					d.runCommand.config.Runners,
-					&common.RunnerConfig{
-						RunnerCredentials: runner,
-					})
-			}
+			d := newResetRunnerTokenTestController()
+			defer d.assertExpectations(t)
 
-			tc.testProcedure(d)
-			_, res := <-d.eventChan
-			require.False(t, res)
+			d.setRunners(tc.runners)
+			tc.testProcedure(t, d)
+			d.finish()
 		})
 	}
 }

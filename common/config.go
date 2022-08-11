@@ -929,6 +929,30 @@ type Config struct {
 	SentryDSN     *string         `toml:"sentry_dsn"`
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
+
+	configSaver ConfigSaver
+}
+
+type ConfigSaver interface {
+	Save(filePath string, data []byte) error
+}
+
+type defaultConfigSaver struct{}
+
+func (s *defaultConfigSaver) Save(filePath string, data []byte) error {
+	// create directory to store configuration
+	err := os.MkdirAll(filepath.Dir(filePath), 0700)
+	if err != nil {
+		return fmt.Errorf("creating directory: %w", err)
+	}
+
+	// write config file
+	err = ioutil.WriteFile(filePath, data, 0600)
+	if err != nil {
+		return fmt.Errorf("saving the file: %w", err)
+	}
+
+	return nil
 }
 
 //nolint:lll
@@ -1554,6 +1578,13 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	return &r, err
 }
 
+func NewConfigWithSaver(s ConfigSaver) *Config {
+	c := NewConfig()
+	c.configSaver = s
+
+	return c
+}
+
 func NewConfig() *Config {
 	return &Config{
 		Concurrent: 1,
@@ -1615,14 +1646,11 @@ func (c *Config) SaveConfig(configFile string) error {
 		return err
 	}
 
-	// create directory to store configuration
-	err := os.MkdirAll(filepath.Dir(configFile), 0700)
-	if err != nil {
-		return err
+	if c.configSaver == nil {
+		c.configSaver = new(defaultConfigSaver)
 	}
 
-	// write config file
-	if err := ioutil.WriteFile(configFile, newConfig.Bytes(), 0600); err != nil {
+	if err := c.configSaver.Save(configFile, newConfig.Bytes()); err != nil {
 		return err
 	}
 
