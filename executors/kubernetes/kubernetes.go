@@ -31,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
+	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -1982,6 +1983,30 @@ func (s *executor) checkDefaults() error {
 	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
 
 	return nil
+}
+
+// captureContainersLogs initiates capturing logs for the specified kubernetes
+// managed containers to a desired additional sink. The sink can be any
+// io.Writer. Currently the sink is the jobs main trace, which is wrapped in an
+// inlineServiceLogWriter instance to add additional context to logs. In the
+// future this could be separate file.
+func (s *executor) captureContainersLogs(ctx context.Context, containers []api.Container) {
+	if !s.Build.IsCIDebugServiceEnabled() {
+		return
+	}
+
+	for _, service := range s.Build.Services {
+		for _, container := range containers {
+			if service.Name != container.Image {
+				continue
+			}
+			aliases := []string{strings.Split(container.Image, ":")[0], service.Alias}
+			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), s.Trace)
+			if err := s.captureContainerLogs(ctx, container.Name, sink); err != nil {
+				s.Warningln(err.Error())
+			}
+		}
+	}
 }
 
 // captureContainerLogs tails (i.e. reads) logs emitted to stdout or stdin from
