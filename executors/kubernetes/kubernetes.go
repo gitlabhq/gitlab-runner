@@ -486,6 +486,8 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 
 	go s.processLogs(ctx)
 
+	s.captureContainersLogs(ctx, s.pod.Spec.Containers)
+
 	return nil
 }
 
