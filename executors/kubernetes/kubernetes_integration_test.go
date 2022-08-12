@@ -1908,7 +1908,7 @@ func TestKubernetesPwshFeatureFlag(t *testing.T) {
 	}
 }
 
-func TestDockerCommandConflictingPullPolicies(t *testing.T) {
+func TestConflictingPullPolicies(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
