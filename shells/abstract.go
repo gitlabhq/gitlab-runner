@@ -740,11 +740,7 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 		strconv.FormatInt(info.Build.ID, 10),
 	}
 
-	generateArtifactsMetadata := info.Build.Variables.Bool(common.GenerateArtifactsMetadataVariable)
-	// Currently only zip artifacts are supported as artifact metadata effectively adds another file to the archive
-	// https://gitlab.com/gitlab-org/gitlab/-/issues/367203#note_1059841610
-	metadataArtifactsFormatSupported := artifact.Format == common.ArtifactFormatZip
-	if generateArtifactsMetadata && metadataArtifactsFormatSupported {
+	if b.shouldGenerateArtifactsMetadata(info, artifact) {
 		args = append(args, b.generateArtifactsMetadataArgs(info)...)
 	}
 
@@ -792,6 +788,14 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	})
 
 	return true
+}
+
+func (b *AbstractShell) shouldGenerateArtifactsMetadata(info common.ShellScriptInfo, artifact common.Artifact) bool {
+	generateArtifactsMetadata := info.Build.Variables.Bool(common.GenerateArtifactsMetadataVariable)
+	// Currently only zip artifacts are supported as artifact metadata effectively adds another file to the archive
+	// https://gitlab.com/gitlab-org/gitlab/-/issues/367203#note_1059841610
+	metadataArtifactsFormatSupported := artifact.Format == common.ArtifactFormatZip
+	return generateArtifactsMetadata && metadataArtifactsFormatSupported
 }
 
 func (b *AbstractShell) generateArtifactsMetadataArgs(info common.ShellScriptInfo) []string {
