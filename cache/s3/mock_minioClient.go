@@ -4,9 +4,11 @@ package s3
 
 import (
 	context "context"
-	time "time"
+	http "net/http"
 
 	mock "github.com/stretchr/testify/mock"
+
+	time "time"
 
 	url "net/url"
 )
@@ -16,13 +18,13 @@ type mockMinioClient struct {
 	mock.Mock
 }
 
-// PresignedGetObject provides a mock function with given fields: ctx, bucketName, objectName, expires, reqParams
-func (_m *mockMinioClient) PresignedGetObject(ctx context.Context, bucketName string, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error) {
-	ret := _m.Called(ctx, bucketName, objectName, expires, reqParams)
+// PresignHeader provides a mock function with given fields: ctx, method, bucketName, objectName, expires, reqParams, extraHeaders
+func (_m *mockMinioClient) PresignHeader(ctx context.Context, method string, bucketName string, objectName string, expires time.Duration, reqParams url.Values, extraHeaders http.Header) (*url.URL, error) {
+	ret := _m.Called(ctx, method, bucketName, objectName, expires, reqParams, extraHeaders)
 
 	var r0 *url.URL
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, time.Duration, url.Values) *url.URL); ok {
-		r0 = rf(ctx, bucketName, objectName, expires, reqParams)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, time.Duration, url.Values, http.Header) *url.URL); ok {
+		r0 = rf(ctx, method, bucketName, objectName, expires, reqParams, extraHeaders)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*url.URL)
@@ -30,31 +32,8 @@ func (_m *mockMinioClient) PresignedGetObject(ctx context.Context, bucketName st
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, time.Duration, url.Values) error); ok {
-		r1 = rf(ctx, bucketName, objectName, expires, reqParams)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// PresignedPutObject provides a mock function with given fields: ctx, bucketName, objectName, expires
-func (_m *mockMinioClient) PresignedPutObject(ctx context.Context, bucketName string, objectName string, expires time.Duration) (*url.URL, error) {
-	ret := _m.Called(ctx, bucketName, objectName, expires)
-
-	var r0 *url.URL
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, time.Duration) *url.URL); ok {
-		r0 = rf(ctx, bucketName, objectName, expires)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*url.URL)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, time.Duration) error); ok {
-		r1 = rf(ctx, bucketName, objectName, expires)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, time.Duration, url.Values, http.Header) error); ok {
+		r1 = rf(ctx, method, bucketName, objectName, expires, reqParams, extraHeaders)
 	} else {
 		r1 = ret.Error(1)
 	}

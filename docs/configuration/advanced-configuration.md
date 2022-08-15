@@ -709,6 +709,8 @@ This table lists `config.toml`, CLI options, and ENV variables for `register`.
 | `S3.BucketLocation`     | `[runners.cache.s3] -> BucketLocation` <br> <br> Before 12.0, `[runners.cache] -> BucketLocation` | `--cache-s3-bucket-location`                                   | `$CACHE_S3_BUCKET_LOCATION` <br> <br> Before 12.0, `$S3_BUCKET_LOCATION` |
 | `S3.Insecure`           | `[runners.cache.s3] -> Insecure` <br> <br> Before 12.0, `[runners.cache] -> Insecure`             | `--cache-s3-insecure`                                          | `$CACHE_S3_INSECURE` <br> <br> Before 12.0, `$S3_INSECURE`               |
 | `S3.AuthenticationType` | `[runners.cache.s3] -> AuthenticationType`                                                        | `--cache-s3-authentication_type`                               | `$CACHE_S3_AUTHENTICATION_TYPE`                                          |
+| `S3.ServerSideEncryption` | `[runners.cache.s3] -> ServerSideEncryption` | `--cache-s3-server-side-encryption` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION`   |                                     |                          |                       |
+| `S3.ServerSideEncryptionKeyID`         | `[runners.cache.s3] -> ServerSideEncryptionKeyID` | `--cache-s3-server-side-encryption-key-id` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID`   |                                     |                          |                       |
 | `GCS.AccessID`          | `[runners.cache.gcs] -> AccessID`                                                                 | `--cache-gcs-access-id`                                        | `$CACHE_GCS_ACCESS_ID`                                                   |
 | `GCS.PrivateKey`        | `[runners.cache.gcs] -> PrivateKey`                                                               | `--cache-gcs-private-key`                                      | `$CACHE_GCS_PRIVATE_KEY`                                                 |
 | `GCS.CredentialsFile`   | `[runners.cache.gcs] -> CredentialsFile`                                                          | `--cache-gcs-credentials-file`                                 | `$GOOGLE_APPLICATION_CREDENTIALS`                                        |
@@ -733,6 +735,8 @@ In GitLab Runner 11.2 and earlier, these settings were in the global `[runners.c
 | `BucketLocation`    | string           | Name of S3 region. |
 | `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
 | `AuthenticationType`| string           | In GitLab 14.4 and later, set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
+| `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. |
+| `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. |
 
 Example:
 
@@ -748,6 +752,8 @@ Example:
     BucketName = "runners-cache"
     BucketLocation = "eu-west-1"
     Insecure = false
+    ServerSideEncryption = "KMS"
+    ServerSideEncryptionKeyID = "alias/my-key"
 ```
 
 If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified and `AuthenticationType` is not provided, the S3 client uses the
@@ -769,6 +775,19 @@ The IAM policy for this role must have permissions to do the following actions f
 - "s3:GetObjectVersion"
 - "s3:GetObject"
 - "s3:DeleteObject"
+
+If you use `ServerSideEncryption` of type `KMS`, this role must also have permission to do the following actions for the specified AWS KMS Key: 
+
+- "kms:Encrypt"
+- "kms:Decrypt"
+- "kms:ReEncrypt*"
+- "kms:GenerateDataKey*"
+- "kms:DescribeKey"
+
+`ServerSideEncryption` of type `SSE-C` is currently not supported. 
+`SSE-C` requires that the headers, which contain the user-supplied key, are provided for the download request, in addition to the presigned URL.
+This would mean passing the key material to the job, where the key can't be kept safe. This does have the potential to leak the decryption key.
+A discussion about this issue is in [this merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295).
 
 NOTE:
 The maximum size of a single file that can be uploaded to AWS S3 cache is 5 GB.

@@ -41,38 +41,38 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 	cases := []struct {
 		name            string
 		expectedConnect bool
-		exposeHigher	bool
-		exposeLower		bool
+		exposeHigher    bool
+		exposeLower     bool
 	}{
 		{
 			name:            "Successful connect",
 			expectedConnect: true,
-			exposeHigher:  	 false,
-			exposeLower:	 false,
+			exposeHigher:    false,
+			exposeLower:     false,
 		},
 		{
 			name:            "Unsuccessful connect because service is down",
 			expectedConnect: false,
-			exposeHigher:  	 false,
-			exposeLower:	 false,
+			exposeHigher:    false,
+			exposeLower:     false,
 		},
 		{
 			name:            "Successful connect with higher port exposed",
 			expectedConnect: true,
-			exposeHigher:  	 true,
-			exposeLower:	 false,
+			exposeHigher:    true,
+			exposeLower:     false,
 		},
 		{
 			name:            "Unsuccessful connect because lower port exposed",
 			expectedConnect: false,
-			exposeHigher:  	 false,
-			exposeLower:	 true,
+			exposeHigher:    false,
+			exposeLower:     true,
 		},
 		{
 			name:            "Unsuccessful connect because both lower and higher port exposed",
 			expectedConnect: false,
-			exposeHigher:  	 true,
-			exposeLower:	 true,
+			exposeHigher:    true,
+			exposeLower:     true,
 		},
 	}
 

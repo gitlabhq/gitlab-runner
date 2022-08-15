@@ -5,7 +5,9 @@ package s3
 
 import (
 	"errors"
+	"net/http"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
@@ -37,12 +39,26 @@ func defaultCacheFactory() *common.CacheConfig {
 	}
 }
 
+func defaultCacheFactoryEncryptionAES() *common.CacheConfig {
+	cacheConfig := defaultCacheFactory()
+	cacheConfig.S3.ServerSideEncryption = "S3"
+	return cacheConfig
+}
+
+func defaultCacheFactoryEncryptionKMS() *common.CacheConfig {
+	cacheConfig := defaultCacheFactory()
+	cacheConfig.S3.ServerSideEncryption = "KMS"
+	cacheConfig.S3.ServerSideEncryptionKeyID = "alias/my-key"
+	return cacheConfig
+}
+
 type cacheOperationTest struct {
 	errorOnMinioClientInitialization bool
 	errorOnURLPresigning             bool
 
-	presignedURL *url.URL
-	expectedURL  *url.URL
+	presignedURL          *url.URL
+	expectedURL           *url.URL
+	expectedUploadHeaders http.Header
 }
 
 func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
@@ -54,10 +70,10 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 	}
 
 	client.
-		On("PresignedGetObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(tc.presignedURL, err)
-	client.
-		On("PresignedPutObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		On(
+			"PresignHeader", mock.Anything, mock.Anything, mock.Anything,
+			mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		).
 		Return(tc.presignedURL, err)
 
 	oldNewMinioURLGenerator := newMinioClient
@@ -78,12 +94,11 @@ func testCacheOperation(
 	operationName string,
 	operation func(adapter cache.Adapter) *url.URL,
 	tc cacheOperationTest,
+	cacheConfig *common.CacheConfig,
 ) {
 	t.Run(operationName, func(t *testing.T) {
 		cleanupMinioURLGeneratorMock := onFakeMinioURLGenerator(tc)
 		defer cleanupMinioURLGeneratorMock()
-
-		cacheConfig := defaultCacheFactory()
 
 		adapter, err := New(cacheConfig, defaultTimeout, objectName)
 
@@ -97,8 +112,16 @@ func testCacheOperation(
 		URL := operation(adapter)
 		assert.Equal(t, tc.expectedURL, URL)
 
-		headers := adapter.GetUploadHeaders()
-		assert.Nil(t, headers)
+		uploadHeaders := adapter.GetUploadHeaders()
+		if tc.expectedUploadHeaders != nil {
+			require.NotNil(t, uploadHeaders)
+			expectedUploadHeaders := tc.expectedUploadHeaders
+			assert.Len(t, uploadHeaders, len(expectedUploadHeaders))
+			assert.True(t, reflect.DeepEqual(expectedUploadHeaders, uploadHeaders))
+		} else {
+			assert.Nil(t, uploadHeaders)
+		}
+
 		assert.Nil(t, adapter.GetGoCloudURL())
 		assert.Empty(t, adapter.GetUploadEnv())
 	})
@@ -130,12 +153,103 @@ func TestCacheOperation(t *testing.T) {
 				"GetDownloadURL",
 				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
 				test,
+				defaultCacheFactory(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
 				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
 				test,
+				defaultCacheFactory(),
+			)
+		})
+	}
+}
+
+func TestCacheOperationEncryptionAES(t *testing.T) {
+	URL, err := url.Parse("https://s3.example.com")
+	require.NoError(t, err)
+	headers := http.Header{}
+	headers.Add("X-Amz-Server-Side-Encryption", "AES256")
+
+	tests := map[string]cacheOperationTest{
+		"error-on-minio-client-initialization": {
+			errorOnMinioClientInitialization: true,
+			expectedUploadHeaders:            headers,
+		},
+		"error-on-presigning-url": {
+			errorOnURLPresigning:  true,
+			presignedURL:          URL,
+			expectedURL:           nil,
+			expectedUploadHeaders: headers,
+		},
+		"presigned-url-aes": {
+			presignedURL:          URL,
+			expectedURL:           URL,
+			expectedUploadHeaders: headers,
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			testCacheOperation(
+				t,
+				"GetDownloadURL",
+				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
+				test,
+				defaultCacheFactoryEncryptionAES(),
+			)
+			testCacheOperation(
+				t,
+				"GetUploadURL",
+				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
+				test,
+				defaultCacheFactoryEncryptionAES(),
+			)
+		})
+	}
+}
+
+func TestCacheOperationEncryptionKMS(t *testing.T) {
+	URL, err := url.Parse("https://s3.example.com")
+	require.NoError(t, err)
+	headers := http.Header{}
+	headers.Add("X-Amz-Server-Side-Encryption", "aws:kms")
+	headers.Add("X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id", "alias/my-key")
+
+	tests := map[string]cacheOperationTest{
+		"error-on-minio-client-initialization": {
+			errorOnMinioClientInitialization: true,
+			expectedUploadHeaders:            headers,
+		},
+		"error-on-presigning-url": {
+			errorOnURLPresigning:  true,
+			presignedURL:          URL,
+			expectedURL:           nil,
+			expectedUploadHeaders: headers,
+		},
+		"presigned-url-kms": {
+			presignedURL:          URL,
+			expectedURL:           URL,
+			expectedUploadHeaders: headers,
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			testCacheOperation(
+				t,
+				"GetDownloadURL",
+				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
+				test,
+				defaultCacheFactoryEncryptionKMS(),
+			)
+			testCacheOperation(
+				t,
+				"GetUploadURL",
+				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
+				test,
+				defaultCacheFactoryEncryptionKMS(),
 			)
 		})
 	}
