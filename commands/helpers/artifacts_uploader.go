@@ -189,7 +189,7 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 	}
 
 	if c.GenerateArtifactsMetadata {
-		logrus.Infof("Generating cache metadata")
+		logrus.Infof("Generating artifacts metadata")
 		metadataFile, err := c.generateMetadataToFile(generateMetadataOptions{
 			files: c.files,
 			wd:    c.wd,
