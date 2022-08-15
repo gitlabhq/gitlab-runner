@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 	"errors"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -15,18 +16,14 @@ import (
 const DefaultAWSS3Server = "s3.amazonaws.com"
 
 type minioClient interface {
-	PresignedGetObject(
+	PresignHeader(
 		ctx context.Context,
+		method string,
 		bucketName string,
 		objectName string,
 		expires time.Duration,
 		reqParams url.Values,
-	) (*url.URL, error)
-	PresignedPutObject(
-		ctx context.Context,
-		bucketName string,
-		objectName string,
-		expires time.Duration,
+		extraHeaders http.Header,
 	) (*url.URL, error)
 }
 

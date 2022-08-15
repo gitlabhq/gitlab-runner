@@ -822,13 +822,15 @@ type CacheGCSConfig struct {
 
 //nolint:lll
 type CacheS3Config struct {
-	ServerAddress      string     `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
-	AccessKey          string     `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
-	SecretKey          string     `toml:"SecretKey,omitempty" long:"secret-key" env:"CACHE_S3_SECRET_KEY" description:"S3 Secret Key"`
-	BucketName         string     `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
-	BucketLocation     string     `toml:"BucketLocation,omitempty" long:"bucket-location" env:"CACHE_S3_BUCKET_LOCATION" description:"Name of S3 region"`
-	Insecure           bool       `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_INSECURE" description:"Use insecure mode (without https)"`
-	AuthenticationType S3AuthType `toml:"AuthenticationType,omitempty" long:"authentication_type" env:"CACHE_S3_AUTHENTICATION_TYPE" description:"IAM or credentials"`
+	ServerAddress             string     `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
+	AccessKey                 string     `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
+	SecretKey                 string     `toml:"SecretKey,omitempty" long:"secret-key" env:"CACHE_S3_SECRET_KEY" description:"S3 Secret Key"`
+	BucketName                string     `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
+	BucketLocation            string     `toml:"BucketLocation,omitempty" long:"bucket-location" env:"CACHE_S3_BUCKET_LOCATION" description:"Name of S3 region"`
+	Insecure                  bool       `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_INSECURE" description:"Use insecure mode (without https)"`
+	AuthenticationType        S3AuthType `toml:"AuthenticationType,omitempty" long:"authentication_type" env:"CACHE_S3_AUTHENTICATION_TYPE" description:"IAM or credentials"`
+	ServerSideEncryption      string     `toml:"ServerSideEncryption,omitempty" long:"server-side-encryption" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION" description:"Server side encryption type (S3, or KMS)"`
+	ServerSideEncryptionKeyID string     `toml:"ServerSideEncryptionKeyID,omitempty" long:"server-side-encryption-key-id" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID" description:"Server side encryption key ID (alias or Key ID)"`
 }
 
 //nolint:lll
