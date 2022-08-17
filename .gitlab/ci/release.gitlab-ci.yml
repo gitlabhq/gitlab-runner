@@ -27,32 +27,15 @@
     - IMAGE_FLAVOR: ubi-fips
       TARGET_ARCHS: amd64
     - IMAGE_FLAVOR: ubuntu
-      TARGET_ARCHS: amd64 arm64 ppc64le
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.12
-      TARGET_ARCHS: amd64 arm64 ppc64le
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.13
-      TARGET_ARCHS: amd64 arm64 ppc64le
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.14
-      TARGET_ARCHS: amd64 arm64 ppc64le
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.15
-      TARGET_ARCHS: amd64 arm64 ppc64le
-    # we build s390x images on their own, as they don't play nicely when built
-    # concurrently: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28392
-    - IMAGE_FLAVOR: ubuntu
-      TARGET_ARCHS: s390x
-      ALLOW_IMAGE_BUILD_FAILURE: "true"
-    - IMAGE_FLAVOR: alpine3.12
-      TARGET_ARCHS: s390x
-      ALLOW_IMAGE_BUILD_FAILURE: "true"
-    - IMAGE_FLAVOR: alpine3.13
-      TARGET_ARCHS: s390x
-      ALLOW_IMAGE_BUILD_FAILURE: "true"
-    - IMAGE_FLAVOR: alpine3.14
-      TARGET_ARCHS: s390x
-      ALLOW_IMAGE_BUILD_FAILURE: "true"
-    - IMAGE_FLAVOR: alpine3.15
-      TARGET_ARCHS: s390x
-      ALLOW_IMAGE_BUILD_FAILURE: "true"
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
 
 .release_helper_docker_images:
   extends:
