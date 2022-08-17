@@ -1667,25 +1667,42 @@ func TestWriteUploadArtifactIncludesGenerateArtifactsMetadataArgs(t *testing.T) 
 		"1000",
 	}
 
-	args := []interface{}{"testcommand"}
-	args = append(args, uploaderArgs...)
-	args = append(args, expectedMetadataArgs...)
+	for _, f := range []common.ArtifactFormat{
+		common.ArtifactFormatZip,
+		common.ArtifactFormatGzip,
+		common.ArtifactFormatRaw,
+		common.ArtifactFormatDefault,
+	} {
+		t.Run(string(f), func(t *testing.T) {
+			args := []interface{}{"testcommand"}
+			args = append(args, uploaderArgs...)
 
-	args = append(args, "--path", "testpath")
+			if f == common.ArtifactFormatZip {
+				args = append(args, expectedMetadataArgs...)
+			}
 
-	shellWriter := &MockShellWriter{}
-	shellWriter.On("IfCmd", mock.Anything, mock.Anything).Once()
-	shellWriter.On("Noticef", "Uploading artifacts...").Once()
-	shellWriter.On("Command", args...).Once()
-	shellWriter.On("Else").Once()
-	shellWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
-	shellWriter.On("EndIf").Once()
-	defer shellWriter.AssertExpectations(t)
+			args = append(args, "--path", "testpath")
 
-	shell := &AbstractShell{}
-	shell.writeUploadArtifact(shellWriter, info, common.Artifact{
-		Paths: []string{"testpath"},
-	})
+			if f != common.ArtifactFormatDefault {
+				args = append(args, "--artifact-format", string(f))
+			}
+
+			shellWriter := &MockShellWriter{}
+			shellWriter.On("IfCmd", mock.Anything, mock.Anything).Once()
+			shellWriter.On("Noticef", "Uploading artifacts...").Once()
+			shellWriter.On("Command", args...).Once()
+			shellWriter.On("Else").Once()
+			shellWriter.On("Warningf", mock.Anything, mock.Anything, mock.Anything).Once()
+			shellWriter.On("EndIf").Once()
+			defer shellWriter.AssertExpectations(t)
+
+			shell := &AbstractShell{}
+			shell.writeUploadArtifact(shellWriter, info, common.Artifact{
+				Paths:  []string{"testpath"},
+				Format: f,
+			})
+		})
+	}
 }
 
 func BenchmarkScriptStage(b *testing.B) {
