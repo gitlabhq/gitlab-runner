@@ -2230,3 +2230,53 @@ func TestSetTraceStatus(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetDebugServicePolicy(t *testing.T) {
+	tests := map[string]struct {
+		variable JobVariable
+		want     bool
+		wantLog  string
+	}{
+		"empty": {want: false},
+		"disabled": {
+			variable: JobVariable{Key: "CI_DEBUG_SERVICES", Value: "false", Public: true},
+			want:     false,
+		},
+		"bogus value": {
+			variable: JobVariable{Key: "CI_DEBUG_SERVICES", Value: "blammo", Public: true},
+			want:     false,
+			wantLog:  "failed to parse value 'blammo' for CI_DEBUG_SERVICES variable:",
+		},
+		"enabled": {
+			variable: JobVariable{Key: "CI_DEBUG_SERVICES", Value: "true", Public: true},
+			want:     true,
+		},
+	}
+
+	logs := bytes.Buffer{}
+	lentry := logrus.New()
+	lentry.Out = &logs
+	logger := NewBuildLogger(nil, logrus.NewEntry(lentry))
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			logs.Reset()
+
+			b := &Build{
+				Runner:      &RunnerConfig{},
+				logger:      logger,
+				JobResponse: JobResponse{Variables: []JobVariable{tt.variable}},
+			}
+
+			got := b.IsCIDebugServiceEnabled()
+
+			assert.Equal(t, tt.want, got)
+
+			if tt.wantLog == "" {
+				assert.Empty(t, logs.String())
+			} else {
+				assert.Contains(t, logs.String(), tt.wantLog)
+			}
+		})
+	}
+}
