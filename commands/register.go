@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
@@ -274,11 +275,14 @@ func (s *RegisterCommand) askRunner() {
 		logrus.Panicln("Failed to register the runner.")
 	}
 
+	s.ID = result.ID
 	// golangci-lint doesn't recognize logrus.Panicln() call as breaking the execution
 	// flow which causes the following assignment to throw false-positive report for
 	// 'SA5011: possible nil pointer dereference'
 	// nolint:staticcheck
 	s.Token = result.Token
+	s.TokenObtainedAt = time.Now().UTC()
+	s.TokenExpiresAt = result.TokenExpiresAt
 	s.registered = true
 }
 

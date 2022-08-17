@@ -116,7 +116,9 @@ type RegisterRunnerRequest struct {
 }
 
 type RegisterRunnerResponse struct {
-	Token string `json:"token,omitempty"`
+	ID             int64     `json:"id,omitempty"`
+	Token          string    `json:"token,omitempty"`
+	TokenExpiresAt time.Time `json:"token_expires_at,omitempty"`
 }
 
 type VerifyRunnerRequest struct {
@@ -125,6 +127,16 @@ type VerifyRunnerRequest struct {
 
 type UnregisterRunnerRequest struct {
 	Token string `json:"token,omitempty"`
+}
+
+type ResetTokenRequest struct {
+	Token string `json:"token,omitempty"`
+}
+
+type ResetTokenResponse struct {
+	Token           string `json:"token,omitempty"`
+	TokenObtainedAt time.Time
+	TokenExpiresAt  time.Time `json:"token_expires_at,omitempty"`
 }
 
 type VersionInfo struct {
@@ -597,6 +609,8 @@ type Network interface {
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool
 	UnregisterRunner(config RunnerCredentials) bool
+	ResetToken(runner RunnerCredentials) *ResetTokenResponse
+	ResetTokenWithPAT(runner RunnerCredentials, pat string) *ResetTokenResponse
 	RequestJob(ctx context.Context, config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
 	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult

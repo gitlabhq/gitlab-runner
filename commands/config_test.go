@@ -75,3 +75,144 @@ func TestGetConfig(t *testing.T) {
 	c.config = &common.Config{}
 	assert.True(t, c.config != c.getConfig())
 }
+
+func TestRunnerByName(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*common.RunnerConfig
+		runnerName    string
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by name": {
+			runners: []*common.RunnerConfig{
+				{
+					Name: "runner1",
+				},
+				{
+					Name: "runner2",
+				},
+			},
+			runnerName:    "runner2",
+			expectedIndex: 1,
+		},
+		"does not find non-existent runner": {
+			runners: []*common.RunnerConfig{
+				{
+					Name: "runner1",
+				},
+				{
+					Name: "runner2",
+				},
+			},
+			runnerName:    "runner3",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf("could not find a runner with the name 'runner3'"),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := configOptions{
+				config: &common.Config{
+					Runners: tt.runners,
+				},
+			}
+
+			runner, err := config.RunnerByName(tt.runnerName)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
+func TestRunnerByURLAndID(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*common.RunnerConfig
+		runnerURL     string
+		runnerID      int64
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by name": {
+			runners: []*common.RunnerConfig{
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						ID:  1,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						ID:  2,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+			},
+			runnerURL:     "https://gitlab1.example.com/",
+			runnerID:      1,
+			expectedIndex: 0,
+		},
+		"does not find runner with wrong ID": {
+			runners: []*common.RunnerConfig{
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						ID:  1,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						ID:  2,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+			},
+			runnerURL:     "https://gitlab1.example.com/",
+			runnerID:      3,
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the URL "https://gitlab1.example.com/" and ID 3`),
+		},
+		"does not find runner with wrong URL": {
+			runners: []*common.RunnerConfig{
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						ID:  1,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						ID:  2,
+						URL: "https://gitlab1.example.com/",
+					},
+				},
+			},
+			runnerURL:     "https://gitlab2.example.com/",
+			runnerID:      1,
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the URL "https://gitlab2.example.com/" and ID 1`),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := configOptions{
+				config: &common.Config{
+					Runners: tt.runners,
+				},
+			}
+
+			runner, err := config.RunnerByURLAndID(tt.runnerURL, tt.runnerID)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}

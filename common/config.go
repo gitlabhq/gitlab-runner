@@ -800,11 +800,14 @@ func (s *Service) ToImageDefinition() Image {
 
 //nolint:lll
 type RunnerCredentials struct {
-	URL         string `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"Runner URL"`
-	Token       string `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
-	TLSCAFile   string `toml:"tls-ca-file,omitempty" json:"tls-ca-file" long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
-	TLSCertFile string `toml:"tls-cert-file,omitempty" json:"tls-cert-file" long:"tls-cert-file" env:"CI_SERVER_TLS_CERT_FILE" description:"File containing certificate for TLS client auth when using HTTPS"`
-	TLSKeyFile  string `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
+	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"Runner URL"`
+	ID              int64     `toml:"id" json:"id" description:"Runner ID"`
+	Token           string    `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
+	TokenObtainedAt time.Time `toml:"token_obtained_at" json:"token_obtained_at" description:"When the runner token was obtained"`
+	TokenExpiresAt  time.Time `toml:"token_expires_at" json:"token_expires_at" description:"Runner token expiration time"`
+	TLSCAFile       string    `toml:"tls-ca-file,omitempty" json:"tls-ca-file" long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
+	TLSCertFile     string    `toml:"tls-cert-file,omitempty" json:"tls-cert-file" long:"tls-cert-file" env:"CI_SERVER_TLS_CERT_FILE" description:"File containing certificate for TLS client auth when using HTTPS"`
+	TLSKeyFile      string    `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
 }
 
 //nolint:lll
@@ -928,6 +931,30 @@ type Config struct {
 	SentryDSN     *string         `toml:"sentry_dsn"`
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
+
+	configSaver ConfigSaver
+}
+
+type ConfigSaver interface {
+	Save(filePath string, data []byte) error
+}
+
+type defaultConfigSaver struct{}
+
+func (s *defaultConfigSaver) Save(filePath string, data []byte) error {
+	// create directory to store configuration
+	err := os.MkdirAll(filepath.Dir(filePath), 0700)
+	if err != nil {
+		return fmt.Errorf("creating directory: %w", err)
+	}
+
+	// write config file
+	err = ioutil.WriteFile(filePath, data, 0600)
+	if err != nil {
+		return fmt.Errorf("saving the file: %w", err)
+	}
+
+	return nil
 }
 
 //nolint:lll
@@ -1553,6 +1580,13 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	return &r, err
 }
 
+func NewConfigWithSaver(s ConfigSaver) *Config {
+	c := NewConfig()
+	c.configSaver = s
+
+	return c
+}
+
 func NewConfig() *Config {
 	return &Config{
 		Concurrent: 1,
@@ -1614,14 +1648,11 @@ func (c *Config) SaveConfig(configFile string) error {
 		return err
 	}
 
-	// create directory to store configuration
-	err := os.MkdirAll(filepath.Dir(configFile), 0700)
-	if err != nil {
-		return err
+	if c.configSaver == nil {
+		c.configSaver = new(defaultConfigSaver)
 	}
 
-	// write config file
-	if err := ioutil.WriteFile(configFile, newConfig.Bytes(), 0600); err != nil {
+	if err := c.configSaver.Save(configFile, newConfig.Bytes()); err != nil {
 		return err
 	}
 

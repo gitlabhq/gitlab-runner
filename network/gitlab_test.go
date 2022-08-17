@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,8 +30,9 @@ import (
 )
 
 const (
-	validToken   = "valid"
-	invalidToken = "invalid"
+	validToken    = "valid"
+	expiringToken = "expiring"
+	invalidToken  = "invalid"
 )
 
 type registerRunnerResponse int
@@ -128,7 +130,15 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 		}
 
 		w.WriteHeader(http.StatusCreated)
+		res["id"] = 12345
 		res["token"] = req["token"].(string)
+		res["token_expires_at"] = nil
+	case expiringToken:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		res["id"] = 54321
+		res["token"] = req["token"].(string)
+		res["token_expires_at"] = "2684-10-16T13:25:59Z"
 	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -160,8 +170,16 @@ func TestRegisterRunner(t *testing.T) {
 	defer s.Close()
 
 	validToken := RunnerCredentials{
+		ID:    12345,
 		URL:   s.URL,
 		Token: validToken,
+	}
+
+	expiringToken := RunnerCredentials{
+		ID:             54321,
+		URL:            s.URL,
+		Token:          expiringToken,
+		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
 	}
 
 	invalidToken := RunnerCredentials{
@@ -186,7 +204,24 @@ func TestRegisterRunner(t *testing.T) {
 			Paused:      false,
 		})
 	if assert.NotNil(t, res) {
+		assert.Equal(t, validToken.ID, res.ID)
 		assert.Equal(t, validToken.Token, res.Token)
+		assert.True(t, res.TokenExpiresAt.IsZero())
+	}
+
+	res = c.RegisterRunner(
+		expiringToken,
+		RegisterRunnerParameters{
+			Description: "test",
+			Tags:        "tags",
+			RunUntagged: true,
+			Locked:      true,
+			Paused:      false,
+		})
+	if assert.NotNil(t, res) {
+		assert.Equal(t, expiringToken.ID, res.ID)
+		assert.Equal(t, expiringToken.Token, res.Token)
+		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
 	}
 
 	res = c.RegisterRunner(
@@ -434,6 +469,225 @@ func TestVerifyRunner(t *testing.T) {
 
 	state = c.VerifyRunner(brokenCredentials)
 	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
+}
+
+func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/runners/reset_authentication_token" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
+	if r.Header.Get("Accept") != "application/json" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	require.NoError(t, err)
+
+	var req map[string]interface{}
+	err = json.Unmarshal(body, &req)
+	require.NoError(t, err)
+
+	res := make(map[string]interface{})
+
+	switch req["token"].(string) {
+	case validToken:
+		res["token"] = "reset-token"
+		res["token_expires_at"] = nil
+	case expiringToken:
+		res["token"] = "reset-expiring-token"
+		res["token_expires_at"] = "2684-10-16T13:25:59Z"
+	case invalidToken:
+		w.WriteHeader(http.StatusForbidden)
+		return
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	output, err := json.Marshal(res)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, _ = w.Write(output)
+}
+
+func TestResetToken(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testResetTokenHandler(w, r, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	validToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: validToken,
+	}
+
+	expiringToken := RunnerCredentials{
+		URL:            s.URL,
+		Token:          expiringToken,
+		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+	}
+
+	invalidToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: invalidToken,
+	}
+
+	otherToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "other",
+	}
+
+	c := NewGitLabClient()
+
+	res := c.ResetToken(validToken)
+	if assert.NotNil(t, res) {
+		assert.Equal(t, "reset-token", res.Token)
+		assert.True(t, res.TokenExpiresAt.IsZero())
+	}
+
+	res = c.ResetToken(expiringToken)
+	if assert.NotNil(t, res) {
+		assert.Equal(t, "reset-expiring-token", res.Token)
+		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
+	}
+
+	res = c.ResetToken(invalidToken)
+	assert.Nil(t, res)
+
+	res = c.ResetToken(otherToken)
+	assert.Nil(t, res)
+}
+
+func testResetTokenWithPATHandler(w http.ResponseWriter, r *http.Request) {
+	regex := regexp.MustCompilePOSIX("^/api/v4/runners/(.*)/reset_authentication_token$")
+	matches := regex.FindStringSubmatch(r.URL.Path)
+	if len(matches) != 2 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	id := matches[1]
+
+	pat := r.Header.Get("PRIVATE-TOKEN")
+	if pat == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
+	if r.Header.Get("Accept") != "application/json" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	res := make(map[string]interface{})
+
+	switch id {
+	case "12345":
+		if pat != "valid-pat" {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		res["token"] = validToken
+		res["token_expires_at"] = nil
+	case "54321":
+		res["token"] = expiringToken
+		res["token_expires_at"] = "2684-10-16T13:25:59Z"
+	case "77777":
+		w.WriteHeader(http.StatusNotFound)
+		return
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	output, err := json.Marshal(res)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, _ = w.Write(output)
+}
+
+func TestResetTokenWithPAT(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testResetTokenWithPATHandler(w, r)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	validToken := RunnerCredentials{
+		ID:    12345,
+		URL:   s.URL,
+		Token: validToken,
+	}
+
+	expiringToken := RunnerCredentials{
+		ID:             54321,
+		URL:            s.URL,
+		Token:          expiringToken,
+		TokenExpiresAt: time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+	}
+
+	invalidToken := RunnerCredentials{
+		ID:    77777,
+		URL:   s.URL,
+		Token: invalidToken,
+	}
+
+	otherToken := RunnerCredentials{
+		ID:    88888,
+		URL:   s.URL,
+		Token: "other",
+	}
+
+	c := NewGitLabClient()
+
+	res := c.ResetTokenWithPAT(validToken, "valid-pat")
+	if assert.NotNil(t, res) {
+		assert.Equal(t, validToken.Token, res.Token)
+		assert.True(t, res.TokenExpiresAt.IsZero())
+	}
+
+	res = c.ResetTokenWithPAT(expiringToken, "valid-pat")
+	if assert.NotNil(t, res) {
+		assert.Equal(t, expiringToken.Token, res.Token)
+		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
+	}
+
+	res = c.ResetTokenWithPAT(validToken, "")
+	assert.Nil(t, res)
+
+	res = c.ResetTokenWithPAT(validToken, "invalid-pat")
+	assert.Nil(t, res)
+
+	res = c.ResetTokenWithPAT(invalidToken, "valid-pat")
+	assert.Nil(t, res)
+
+	res = c.ResetTokenWithPAT(otherToken, "valid-pat")
+	assert.Nil(t, res)
 }
 
 func getRequestJobResponse() map[string]interface{} {
