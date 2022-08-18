@@ -676,3 +676,87 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 		})
 	}
 }
+
+func Test_Executor_captureContainersLogs(t *testing.T) {
+	containers := []*types.Container{
+		{
+			ID:    "000000000000000000000000000000000",
+			Names: []string{"some container"},
+			Image: "some container",
+		},
+		{
+			ID:    "111111111111111111111111111111111",
+			Names: []string{"some other container"},
+			Image: "some other container",
+		},
+	}
+
+	linksMap := map[string]*types.Container{
+		"one":       containers[0],
+		"two":       containers[1],
+		"two-alias": containers[1],
+	}
+
+	logs := bytes.Buffer{}
+	lentry := logrus.New()
+	lentry.Out = &logs
+
+	stop := errors.New("don't actually try to stream the container's logs")
+	c := new(docker.MockClient)
+	defer c.AssertExpectations(t)
+
+	e := &executor{services: containers}
+	e.client = c
+	e.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry))
+	e.Build = &common.Build{}
+
+	ctx := context.Background()
+
+	tests := map[string]struct {
+		debugServicePolicy string
+		expect             func()
+		assert             func(t *testing.T)
+	}{
+		"enabled": {
+			debugServicePolicy: "true",
+			expect: func() {
+				for _, cont := range containers {
+					// have the call to ContainerLogs return an error so we
+					// don't have to mock more behaviour. that functionality is
+					// tested elsewhere.
+					c.On("ContainerLogs", ctx, cont.ID, mock.Anything).Return(nil, stop).Once()
+				}
+			},
+			assert: func(t *testing.T) {
+				for _, c := range containers {
+					assert.Contains(t, logs.String(), "WARNING: failed to open log stream for container "+
+						c.Names[0]+": "+stop.Error())
+				}
+			},
+		},
+		"disabled": {
+			debugServicePolicy: "false",
+			expect:             func() {},
+			assert:             func(t *testing.T) { assert.Empty(t, logs.String()) },
+		},
+		"bogus": {
+			debugServicePolicy: "blammo",
+			expect:             func() {},
+			assert:             func(t *testing.T) { assert.Empty(t, logs.String()) },
+		},
+	}
+
+	for name, tt := range tests {
+		logs.Reset()
+		t.Run(name, func(t *testing.T) {
+			e.Build = &common.Build{}
+			e.Build.Variables = common.JobVariables{
+				{Key: "CI_DEBUG_SERVICES", Value: tt.debugServicePolicy, Public: true},
+			}
+
+			tt.expect()
+			e.captureContainersLogs(ctx, linksMap)
+			tt.assert(t)
+		})
+	}
+}
