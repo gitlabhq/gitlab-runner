@@ -72,6 +72,10 @@ else
     TARGET_ARCHS=('amd64')
 fi
 
+if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]]; then
+  ECR_PUBLIC_REGISTRY_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
+fi
+
 join_by() {
     local IFS="$1"
     shift
@@ -124,8 +128,9 @@ buildx() {
     if [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]] && [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
         login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
     fi
-    if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]] && [[ -n "${ECR_PUBLIC_PASSWORD}" ]]; then
-        login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
+    if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]] && [[ -n "${ECR_PUBLIC_REGISTRY_PASSWORD}" ]]; then
+        ECR_PUBLIC_REGISTRY_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
+        login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_REGISTRY_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
     fi
 
     local formatted_platforms
@@ -153,7 +158,7 @@ buildx() {
     if [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]] && [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
         logout
     fi
-    if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]] && [[ -n "${ECR_PUBLIC_PASSWORD}" ]]; then
+    if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]] && [[ -n "${ECR_PUBLIC_REGISTRY_PASSWORD}" ]]; then
         logout "${ECR_PUBLIC_REGISTRY}"
     fi
 }
@@ -235,7 +240,7 @@ if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]
 fi
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-   add_tags tags "${aliases}" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
+   add_tags tags "${aliases}" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_REGISTRY_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
 fi
 
 # Build and publish multi-platform images using `docker buildx`

@@ -3,12 +3,14 @@
     - .windows-dependency-checksums
   stage: prerelease
   variables:
-    PUSH_TO_ECR_PUBLIC: "false"
+    PUSH_TO_ECR_PUBLIC: "true"
     PUBLISH_IMAGES: "true"
     PWSH_VERSION: 7.1.1
   dependencies:
     - 'helper images binaries'
   script:
+    - choco install awscli -y
+    - $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
     - .\ci\build_release_windows_images.ps1
   retry: 2
 
