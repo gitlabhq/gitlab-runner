@@ -1,3 +1,43 @@
+## v15.3.0 (2022-08-19)
+
+### New features
+
+- Improve documentation about installing and using Podman as a Docker executor replacement !3570
+- Add support SELinux type label setting in Kubernetes executor !3451 (Omar Aloraini @ooraini)
+- Add a check whether boringssl is being used by using the Enabled method !3390
+- Add support for server side encryption for S3 Cache !3295 (Johan Lanzrein @lanzrein)
+- Remove CentOS 6 packaging !2871 (Bene @bene64)
+
+### Bug fixes
+
+- Generate artifacts metadata only for zip !3565
+- Build s390x images alongside the other images !3561
+- Ensure that runner always uses the customized User-Agent !3543
+- Revert github.com/urfave/cli back to v1.20.0 !3539
+- Improve error message when there's a conflict between `pull_policy` and `allowed_pull_policies` settings !3526
+- Sanitize user-provided custom build directory before passing it forward !3360
+
+### Maintenance
+
+- Docs: Remove old install page !3563
+- Update default label for documentation MR template !3559
+- Promote gitlab.MultiLineLinks to error !3554 (Niklas @Taucher2003)
+- Fix links split across multiple lines in Runner repo !3553
+- Add note on GitLab instance pre-requisite for using Runners - docs !3549
+- Update Markdownlint and Vale configuration !3548
+- Fix "broken" links (redirect) !3542 (Lee Tickett @leetickett)
+- Add `hostname` to the UBI-fips helper image !3540
+- Docs: Fix a typo in `pull_policy` which is should be underscore !3537
+- Update linter version to 1.46.2 !3536
+- Update Helm chart troubleshooting for missing secrets !3534
+- Protect commands/config with a mutex !3507
+- Fix dead link & other runner docs cleanup !3491 (Ben Bodenmiller @bbodenmiller)
+
+### Documentation changes
+
+- Remove premium tier from agent install docs !3535
+- Add new functionality related to runner token expiration !3209 (Kyle Edwards @KyleFromKitware)
+
 ## v15.2.0 (2022-07-20)
 
 ### Bug fixes
