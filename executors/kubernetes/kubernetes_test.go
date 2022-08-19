@@ -5803,3 +5803,77 @@ func (frc *failingReadCloser) Close() error {
 	return nil
 }
 
+func Test_Executor_captureContainersLogs(t *testing.T) {
+	containers := []api.Container{
+		{Name: "not a service container"},
+		{Name: "svc-0-a service container", Image: "postgres"},
+		{Name: "svc-1-another service container", Image: "redis:latest"},
+		{Name: "also not a service container"},
+	}
+
+	logs := bytes.Buffer{}
+	lentry := logrus.New()
+	lentry.Out = &logs
+
+	stop := errors.New("don't actually try to stream the container's logs")
+	fakeRoundTripper := func(req *http.Request) (*http.Response, error) {
+		// have the call to GetLogs return an error so we don't have to mock
+		// more behaviour. that functionality is tested elsewhere.
+		return &http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Header:     http.Header{},
+		}, stop
+	}
+
+	version, _ := testVersionAndCodec()
+	e := executor{
+		pod:        &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
+		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
+	}
+	e.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry))
+
+	ctx := context.Background()
+
+	tests := map[string]struct {
+		debugServicePolicy string
+		assert             func(t *testing.T)
+	}{
+		"enabled": {
+			debugServicePolicy: "true",
+			assert: func(t *testing.T) {
+				for _, c := range containers {
+					if !strings.HasPrefix(c.Name, serviceContainerPrefix) {
+						continue
+					}
+					assert.Contains(t, logs.String(), "WARNING: failed to open log stream for container "+c.Name)
+					assert.Contains(t, logs.String(), stop.Error())
+				}
+			},
+		},
+		"disabled": {
+			debugServicePolicy: "false",
+			assert:             func(t *testing.T) { assert.Empty(t, logs.String()) },
+		},
+		"bogus": {
+			debugServicePolicy: "blammo",
+			assert:             func(t *testing.T) { assert.Empty(t, logs.String()) },
+		},
+	}
+
+	for name, tt := range tests {
+		logs.Reset()
+		t.Run(name, func(t *testing.T) {
+			e.Build = &common.Build{}
+			e.Build.Services = common.Services{
+				{Name: "postgres", Alias: "db"},
+				{Name: "redis:latest", Alias: "cache"},
+			}
+			e.Build.Variables = common.JobVariables{
+				{Key: "CI_DEBUG_SERVICES", Value: tt.debugServicePolicy, Public: true},
+			}
+
+			e.captureContainersLogs(ctx, containers)
+			tt.assert(t)
+		})
+	}
+}
