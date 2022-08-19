@@ -261,6 +261,9 @@ Linked containers share their environment variables.
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042) in GitLab Runner 12.9.
 
+NOTE:
+To enable network-per-build, set the `FF_NETWORK_PER_BUILD` variable. Do not set the `network_mode` variable in the `config.toml` file.
+
 This networking mode creates and uses a new user-defined Docker bridge network for each job.
 [User-defined bridge networks](https://docs.docker.com/network/bridge/) are covered in detail in the Docker documentation.
 
@@ -677,11 +680,30 @@ Consider the following example:
 This is just one of the examples. With this approach the possibilities are
 limitless.
 
-## Use Podman to run Docker commands (BETA)
+## Use Podman to run Docker commands
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27119) in GitLab 15.3.
 
 If you have GitLab Runner installed on Linux, your jobs can use Podman to replace Docker as the container runtime in the Docker executor.
 
-1. On the Linux host where you have GitLab Runner installed, [install Podman](https://podman.io/getting-started/installation).
+Prerequisites:
+
+- [Podman](https://podman.io/) v4.2.0 or later.
+- To run [services](#services) with Podman as an executor, enable the
+  [`FF_NETWORK_PER_BUILD` feature flag](#create-a-network-for-each-job).
+  [Docker container links](https://docs.docker.com/network/links/) are legacy
+  and are not supported by [Podman](https://podman.io/).
+
+1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
+   by using your system's package manager, it automatically creates a `gitlab-runner` user.
+1. Sign in as the user that will run GitLab Runner. You must do so in a way that
+   doesn't go around [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/pam_systemd.html).
+   You can use SSH with the correct user. This ensures you can run `systemctl` as this user.
+1. Make sure that your system fulfills the prerequisites for
+   [a rootless Podman setup](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md).
+   Specifically, make sure your user has
+   [correct entries in `/etc/subuid` and `/etc/subgid`](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md#etcsubuid-and-etcsubgid-configuration).
+1. On the Linux host, [install Podman](https://podman.io/getting-started/installation).
 1. Enable and start the Podman socket:
 
    ```shell
@@ -710,8 +732,6 @@ If you have GitLab Runner installed on Linux, your jobs can use Podman to replac
        image = "quay.io/podman/stable"
        privileged = true
    ```
-
-As of [Podman](https://podman.io/) v4.1.0, the handling of `stdin` and `stdout` can result in errors in certain conditions. Also, be mindful of permissions for the Podman socket. For example, if GitLab Runner is installed with the OS package manager, it will use the `gitlab-runner` user to start. Make sure to either start the Podman socket service with the same user, or to grant proper permissions.
 
 ### Using Podman to build container images from a Dockerfile
 
