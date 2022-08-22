@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"hash"
@@ -8,14 +9,14 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"sort"
 	"sync"
 	"unicode/utf8"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/masker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/urlsanitizer"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 const defaultBytesLimit = 4 * 1024 * 1024 // 4MB
@@ -28,9 +29,16 @@ type Buffer struct {
 	w    io.WriteCloser
 
 	logFile  *os.File
+	bufw     *bufio.Writer
 	checksum hash.Hash32
 
 	opts options
+
+	// failedFlush indicates that a read which subsequentialy attempted to
+	// flush data to the underlying writer failed. In this scenario, calls to
+	// Write() will immediately attempt to flush and return any error on a
+	// failure.
+	failedFlush bool
 }
 
 type options struct {
@@ -46,20 +54,6 @@ func WithURLParamMasking(enabled bool) Option {
 	}
 }
 
-type inverseLengthSort []string
-
-func (s inverseLengthSort) Len() int {
-	return len(s)
-}
-
-func (s inverseLengthSort) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s inverseLengthSort) Less(i, j int) bool {
-	return len(s[i]) > len(s[j])
-}
-
 func (b *Buffer) SetMasked(values []string) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -69,28 +63,16 @@ func (b *Buffer) SetMasked(values []string) {
 		b.w.Close()
 	}
 
-	var defaultTransformers []transform.Transformer
+	// convert bytes to utf-8
+	b.w = transform.NewWriter(b.lw, encoding.Replacement.NewEncoder())
+
+	// mask values
+	b.w = masker.New(b.w, values)
+
+	// mask urls if enabled
 	if b.opts.urlParamMasking {
-		defaultTransformers = append(defaultTransformers, newSensitiveURLParamTransform())
+		b.w = urlsanitizer.New(b.w)
 	}
-	defaultTransformers = append(defaultTransformers, encoding.Replacement.NewEncoder())
-
-	transformers := make([]transform.Transformer, 0, len(values)+len(defaultTransformers))
-
-	sort.Sort(inverseLengthSort(values))
-	seen := make(map[string]struct{})
-	for _, value := range values {
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-
-		transformers = append(transformers, newPhraseTransform(value))
-	}
-
-	transformers = append(transformers, defaultTransformers...)
-
-	b.w = transform.NewWriter(b.lw, transform.Chain(transformers...))
 }
 
 func (b *Buffer) SetLimit(size int) {
@@ -111,40 +93,56 @@ func (b *Buffer) Size() int {
 }
 
 func (b *Buffer) Bytes(offset, n int) ([]byte, error) {
-	return ioutil.ReadAll(io.NewSectionReader(b.logFile, int64(offset), int64(n)))
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	// For simplicity, we read only from the file, rather than also the bufio.Writer.
+	// To ensure the underlying file has the data requested, we always flush the
+	// buffer.
+	//
+	// If a failure occurs on flushing the data, we store that an error occurred so
+	// buffer.Write() can retry and additionally return any error on the write side.
+	if err := b.bufw.Flush(); err != nil {
+		b.failedFlush = true
+		return nil, fmt.Errorf("flushing log buffer: %w", err)
+	}
+
+	size := int(b.lw.written - int64(offset))
+	if n > size {
+		n = size
+	}
+
+	buf := make([]byte, n)
+	_, err := b.logFile.ReadAt(buf, int64(offset))
+	if err == io.EOF {
+		err = nil
+	}
+
+	return buf, err
 }
 
 func (b *Buffer) Write(p []byte) (int, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	src := p
-	var n int
-	for len(src) > 0 {
-		written, err := b.w.Write(src)
-		// if we get a log limit exceeded error, we've written the log limit
-		// notice out to the log and will now silently not write any additional
-		// data: we return len(p), nil so the caller continues as normal.
-		if err == errLogLimitExceeded {
-			return len(p), nil
-		}
-		if err != nil {
-			return n, err
-		}
-
-		// the text/transformer implementation can return n < len(p) without an
-		// error. For this reason, we continue writing whatever data is left
-		// unless nothing was written (therefore zero progress) on our call to
-		// Write().
-		if written == 0 {
-			return n, io.ErrShortWrite
-		}
-
-		src = src[written:]
-		n += written
+	n, err := b.w.Write(p)
+	// if we get a log limit exceeded error, we've written the log limit
+	// notice out to the log and will now silently not write any additional
+	// data: we return len(p), nil so the caller continues as normal.
+	if err == errLogLimitExceeded {
+		return len(p), nil
 	}
 
-	return n, nil
+	// if we previously failed to flush to the underlying writer, try again
+	// and return any failure immediately.
+	if b.failedFlush {
+		if err := b.bufw.Flush(); err != nil {
+			return n, err
+		}
+		b.failedFlush = false
+	}
+
+	return n, err
 }
 
 func (b *Buffer) Finish() {
@@ -235,12 +233,13 @@ func New(opts ...Option) (*Buffer, error) {
 
 	buffer := &Buffer{
 		logFile:  logFile,
+		bufw:     bufio.NewWriter(logFile),
 		checksum: crc32.NewIEEE(),
 		opts:     options,
 	}
 
 	buffer.lw = &limitWriter{
-		w:       io.MultiWriter(buffer.logFile, buffer.checksum),
+		w:       io.MultiWriter(buffer.bufw, buffer.checksum),
 		written: 0,
 		limit:   defaultBytesLimit,
 	}
