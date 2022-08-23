@@ -65,6 +65,18 @@ your cluster is automatically updated.
    ```
 
 1. Push your `runner-manifest.yaml` to the repository where you keep your Kubernetes manifests.
+1. Configure your agent to sync the runner manifest using
+   [GitOps](https://docs.gitlab.com/ee/user/clusters/agent/gitops.html). For example:
+
+   ```yaml
+   gitops:
+     manifest_projects:
+     - id: path/to/manifest/project
+       paths:
+       - glob: 'path/to/runner-manifest.yaml'
+   ```
+
+   For details, see the [GitOps configuration reference](https://docs.gitlab.com/ee/user/clusters/agent/gitops.html#gitops-configuration-reference).
 
 Now each time the agent checks the repository for manifest updates, your
 cluster is updated to include GitLab Runner.
