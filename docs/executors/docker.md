@@ -469,28 +469,31 @@ The following example shows a `config.toml` where the limit that each build can 
 
 ## Using host devices
 
-Hardware devices on the Runner host can be exposed to containers with the `devices`
-and `services_devices` option in the runner configuration.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6208) in GitLab 15.4.
 
-- The `devices` option will expose devices to `build` and
-  [helper](../configuration/advanced-configuration.md#helper-image) containers.
-- The `services_devices` option will expose devices to services containers only. A service
-  container's device access can be limited to images with a matching image name or glob,
-  so that users do not have direct access to the host system's devices.
+You can expose hardware devices on the GitLab Runner host to the container that's running the job.
+To do this, you configure the runner's `devices` and `services_devices` options.
 
-See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#add-host-device-to-container---device)
-for details on device access.
+- To expose devices to `build` and
+[helper](../configuration/advanced-configuration.md#helper-image) containers, use the `devices` option.
+- To expose devices to services containers, use the `services_devices` option. You can limit a service
+container's device access to images with a matching image name or glob,
+so that users do not have direct access to the host system's devices.
 
-The example below shows a `config.toml` section with `/dev/bus/usb` exposed to build
-containers. This will allow pipelines to access any USB device attached to the host
+  See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#add-host-device-to-container---device)
+  for details on device access.
+
+### Build container example
+
+This example shows a `config.toml` section with `/dev/bus/usb` exposed to build
+containers. This configuration allows pipelines to access any USB device attached to the host
 machine, such as Android smartphones controlled over the
 [Android Debug Bridge (adb)](https://developer.android.com/studio/command-line/adb).
 
-Since the build job container can execute anything with direct access to the
-host USB there is a likelihood that pipelines may conflict when simultaneously
-accessing the same hardware resources. It is preferable in some cases to prevent
-this failure point by using [resource_group](https://docs.gitlab.com/ee/ci/yaml/index.html#resource_group)
-to avoid conflicts of this nature.
+Because the build job container can execute anything with direct access to the
+host USB, pipelines might conflict when simultaneously
+accessing the same hardware resources. To prevent
+this failure point, you can use [`resource_group`](https://docs.gitlab.com/ee/ci/yaml/index.html#resource_group).
 
 ```toml
 [[runners]]
@@ -503,9 +506,11 @@ to avoid conflicts of this nature.
     devices = ["/dev/bus/usb"]
 ```
 
-The following example exposes `/dev/kvm` and `/dev/dri` to images from a private
+### Private registry example
+
+This example exposes `/dev/kvm` and `/dev/dri` to images from a private
 Docker registry, commonly used for hardware accelerated virtualization and rendering.
-Some risks involved with providing users direct access to hardware resources are mitigated
+You can mitigate some risks involved with providing users direct access to hardware resources
 by restricting access to images in the `myregistry:5000/emulator/*` namespace.
 
 ```toml
