@@ -522,9 +522,9 @@ feature.
 To overcome this issue, together with the autoscale feature, the distributed
 runners cache feature was introduced.
 
-It uses configured object storage server to share the cache between used Docker hosts.
-When restoring and archiving the cache, GitLab Runner queried the server
-and downloaded or uploaded the archive respectively.
+This feature uses configured object storage server to share the cache between used Docker hosts.
+GitLab Runner queries the server and downloads the archive to restore the cache,
+or uploads it to archive the cache.
 
 To enable distributed caching, you have to define it in `config.toml` using the
 [`[runners.cache]` directive](advanced-configuration.md#the-runnerscache-section):

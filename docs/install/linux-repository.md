@@ -322,7 +322,8 @@ For RHEL/CentOS/Fedora:
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner
 ```
 
-Please note, that shell configuration added to the `$HOME` directory with the usage of `skel` may
+NOTE:
+Shell configuration added to the `$HOME` directory with the usage of `skel` may
 interfere with the job execution and introduce unexpected problems like the ones mentioned above.
 
 ## Upgrading to GitLab Runner 10
