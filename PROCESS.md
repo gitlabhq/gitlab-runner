@@ -275,9 +275,8 @@ We follow the GitLab Security process with the following exceptions.
     - To create the release task issue, we use a different command than
       `/chatops run release prepare --security`.
 - [Developer](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/developer.md)
-    - When the document specifies `gitlab-org/gitlab` and
-      `gitlab-org/security/gitlab`, assume `gitlab-org/gitlab-runner` and
-      `gitlab-org/security/gitlab-runner` respectively.
+    - For mentions of `gitlab-org/gitlab` assume `gitlab-org/gitlab-runner` and
+      for `gitlab-org/security/gitlab` assume `gitlab-org/security/gitlab-runner`.
     - We have our own [Security Implementation
       Issue](https://gitlab.com/gitlab-org/release/docs/-/blob/master/general/security/developer.md#security-implementation-issue)
       that can be found
