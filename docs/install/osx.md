@@ -297,3 +297,16 @@ If one of the jobs fails with this error, make sure the runner can connect to yo
 - proxies
 - permissions
 - routing configurations
+
+### `FATAL: Failed to start gitlab-runner: "launchctl" failed with stderr: Load failed: 5: Input/output error` on `gitlab-runner start` command
+
+If this error is encountered when running the `gitlab-runner start` command, ensure that the directories specified in the `~/Library/LaunchAgents/gitlab-runner.plist` values `StandardOutPath` and `StandardErrorPath` exist:
+
+```xml
+<key>StandardOutPath</key>
+<string>/usr/local/var/log/gitlab-runner.out.log</string>
+<key>StandardErrorPath</key>
+<string>/usr/local/var/log/gitlab-runner.err.log</string>
+```
+
+If the directories do not exist, create them and ensure that the runner service user has appropriate permissions to read and write to them.
