@@ -34,6 +34,10 @@ func TestVolume_Definition(t *testing.T) {
 			volume:         &Volume{Source: "source", Destination: "destination", Mode: "mode"},
 			expectedOutput: "source:destination:mode",
 		},
+		"source, destination, label, and mode": {
+			volume:         &Volume{Source: "source", Destination: "destination", Mode: "mode", Label: "label"},
+			expectedOutput: "source:destination:mode,label",
+		},
 		"source, destination and bindPropagation": {
 			volume:         &Volume{Source: "source", Destination: "destination", BindPropagation: "bindPropagation"},
 			expectedOutput: "source:destination:bindPropagation",
@@ -43,9 +47,10 @@ func TestVolume_Definition(t *testing.T) {
 				Source:          "source",
 				Destination:     "destination",
 				Mode:            "mode",
+				Label:           "label",
 				BindPropagation: "bindPropagation",
 			},
-			expectedOutput: "source:destination:mode,bindPropagation",
+			expectedOutput: "source:destination:mode,label,bindPropagation",
 		},
 	}
 

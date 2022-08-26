@@ -39,17 +39,25 @@ func TestLinuxParser_ParseVolume(t *testing.T) {
 			volumeSpec:    "/source:/destination:ro",
 			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "ro"},
 		},
+		"SELinux label and read only is shared among multiple containers": {
+			volumeSpec:    "/source:/destination:ro,z",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "ro", Label: "z"},
+		},
+		"SELinux label and read only is private": {
+			volumeSpec:    "/source:/destination:ro,Z",
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "ro", Label: "Z"},
+		},
 		"volume case sensitive": {
 			volumeSpec:    "/Source:/Destination:rw",
 			expectedParts: &Volume{Source: "/Source", Destination: "/Destination", Mode: "rw"},
 		},
 		"support SELinux label bind mount content is shared among multiple containers": {
 			volumeSpec:    "/source:/destination:z",
-			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "z"},
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "", Label: "z"},
 		},
 		"support SELinux label bind mount content is private and unshare": {
 			volumeSpec:    "/source:/destination:Z",
-			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "Z"},
+			expectedParts: &Volume{Source: "/source", Destination: "/destination", Mode: "", Label: "Z"},
 		},
 		"unsupported mode": {
 			volumeSpec:    "/source:/destination:T",

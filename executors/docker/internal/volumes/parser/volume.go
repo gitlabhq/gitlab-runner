@@ -8,14 +8,16 @@ type Volume struct {
 	Source          string
 	Destination     string
 	Mode            string
+	Label           string
 	BindPropagation string
 }
 
-func newVolume(source, destination string, mode string, bindPropagation string) *Volume {
+func newVolume(source, destination, mode, label, bindPropagation string) *Volume {
 	return &Volume{
 		Source:          source,
 		Destination:     destination,
 		Mode:            mode,
+		Label:           label,
 		BindPropagation: bindPropagation,
 	}
 }
@@ -23,6 +25,7 @@ func newVolume(source, destination string, mode string, bindPropagation string) 
 func (v *Volume) Definition() string {
 	parts := make([]string, 0)
 	builder := strings.Builder{}
+	options := make([]string, 0)
 
 	if v.Source != "" {
 		parts = append(parts, v.Source)
@@ -31,20 +34,21 @@ func (v *Volume) Definition() string {
 	parts = append(parts, v.Destination)
 
 	if v.Mode != "" {
-		parts = append(parts, v.Mode)
+		options = append(options, v.Mode)
+	}
+	if v.Label != "" {
+		options = append(options, v.Label)
+	}
+	if v.BindPropagation != "" {
+		options = append(options, v.BindPropagation)
+	}
+
+	opts := strings.Join(options, ",")
+	if opts != "" {
+		parts = append(parts, opts)
 	}
 
 	builder.WriteString(strings.Join(parts, ":"))
-
-	if v.BindPropagation != "" {
-		separator := ":"
-		if v.Mode != "" {
-			separator = ","
-		}
-
-		builder.WriteString(separator)
-		builder.WriteString(v.BindPropagation)
-	}
 
 	return builder.String()
 }
