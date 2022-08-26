@@ -1,0 +1,17 @@
+{
+  "extends": [
+    ":disableMajorUpdates"
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": "\\.gitlab\\/ci\\/_common\\.gitlab-ci\\.yml",
+      "matchStrings": [
+        "# renovate: (datasource=(?<datasource>\\S+))?\\s?(depName=(?<depName>\\S+))?\\s?(registryUrl=(?<registryUrl>\\S+))?\\s?(versioning=(?<versioning>\\S+))?\\s?(allowedVersions=(?<allowedVersions>\\S+))?\\s?.*?_VERSION:\\s?\\\"?(?<currentValue>[\\w+\\.\\-]*)"
+      ],
+      "allowedVersionsTemplate": "{{allowedVersions}}"
+    }
+  ],
+  "enabledManagers": ["regex"],
+  "reviewers": ["ggeorgiev_gitlab"],
+  "recreateClosed": true
+}

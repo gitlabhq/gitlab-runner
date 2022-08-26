@@ -16,7 +16,7 @@ runner-bin-fips:
 		   $(PKG)
 
 go-fips-docker: export GO_VERSION ?= 1.17
-go-fips-docker: export UBI_VERSION ?= 8.6-754
+go-fips-docker: export UBI_VERSION ?= $(UBI_FIPS_VERSION)
 go-fips-docker: export BUILD_IMAGE ?= go-fips:$(GO_VERSION)
 go-fips-docker: export BUILD_DOCKERFILE ?= ./dockerfiles/ci/go.fips.Dockerfile
 go-fips-docker:

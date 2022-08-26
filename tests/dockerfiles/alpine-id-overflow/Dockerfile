@@ -1,4 +1,4 @@
-FROM alpine:3.14
+FROM alpine:3.14.2
 
 RUN rm /usr/bin/id && \
     printf "#!/bin/sh -e\ncat /dev/zero\n" > /bin/id && \
