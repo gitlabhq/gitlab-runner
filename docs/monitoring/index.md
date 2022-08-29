@@ -29,10 +29,10 @@ The metrics format is documented in Prometheus'
 specification.
 
 These metrics are meant as a way for operators to monitor and gain insight into
-your runners. For example, you may be interested if the load average increase
-on your runner's host is related to an increase in processed jobs. Or perhaps
-you are running a cluster of machines to be used for the jobs, and you want to
-track build trends to plan changes in your infrastructure.
+your runners. For example, you might be interested to know if an increase in load average
+on the runner host is related to an increase in processed jobs. Or perhaps
+you are running a cluster of machines, and you want to
+track build trends so you can make changes to your infrastructure.
 
 ### Learning more about Prometheus
 
