@@ -1423,6 +1423,9 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
 		labels[k] = sanitizeLabel(s.Build.Variables.ExpandValue(v))
 	}
+	for key, val := range s.configurationOverwrites.podLabels {
+		labels[key] = sanitizeLabel(s.Build.Variables.ExpandValue(val))
+	}
 
 	annotations := make(map[string]string)
 	for key, val := range s.configurationOverwrites.podAnnotations {

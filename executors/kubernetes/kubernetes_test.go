@@ -3091,6 +3091,34 @@ func TestSetupBuildPod(t *testing.T) {
 				{Key: "test", Value: "sometestvar"},
 			},
 		},
+		"overwrite pod labels": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						PodLabels: map[string]string{
+							"test":    "label",
+							"another": "label",
+							"var":     "$test",
+						},
+						PodLabelsOverwriteAllowed: "another.*",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"test":     "label",
+					"another":  "newlabel",
+					"var":      "sometestvar",
+					"another2": "sometestvar",
+					"pod":      pod.GenerateName,
+				}, pod.ObjectMeta.Labels)
+			},
+			Variables: []common.JobVariable{
+				{Key: "test", Value: "sometestvar"},
+				{Key: "KUBERNETES_POD_LABELS_1", Value: "another=newlabel"},
+				{Key: "KUBERNETES_POD_LABELS_2", Value: "another2=$test"},
+			},
+		},
 		"expands variables for pod annotations": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
@@ -4617,7 +4645,7 @@ func TestSetupBuildPod(t *testing.T) {
 				Return(api.PullAlways, nil).
 				Maybe()
 
-			err = ex.prepareOverwrites(make(common.JobVariables, 0))
+			err = ex.prepareOverwrites(test.Variables)
 			assert.NoError(t, err, "error preparing overwrites")
 
 			if test.Credentials != nil {
