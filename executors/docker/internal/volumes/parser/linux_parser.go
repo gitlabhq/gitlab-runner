@@ -13,8 +13,14 @@ const (
 	linuxSource = `((?P<source>((` + linuxDir + `)|(` + linuxVolumeName + `))):)?`
 
 	linuxDestination     = `(?P<destination>(?:` + linuxDir + `))`
-	linuxMode            = `(:(?P<mode>(?i)ro|rw|z))?`
+	linuxMode            = `(:(?P<mode>(?i)ro|rw))?`
+	linuxLabel           = `((:|,)(?P<label>(?i)z))?`
 	linuxBindPropagation = `((:|,)(?P<bindPropagation>(?i)shared|slave|private|rshared|rslave|rprivate))?`
+)
+
+var (
+	specExp = regexp.MustCompile(`^` + linuxSource + linuxDestination + linuxMode +
+		linuxLabel + linuxBindPropagation + `$`)
 )
 
 type linuxParser struct {
@@ -30,12 +36,12 @@ func NewLinuxParser() Parser {
 }
 
 func (p *linuxParser) ParseVolume(spec string) (*Volume, error) {
-	specExp := regexp.MustCompile(`^` + linuxSource + linuxDestination + linuxMode + linuxBindPropagation + `$`)
-
 	parts, err := p.matchesToVolumeSpecParts(spec, specExp)
 	if err != nil {
 		return nil, err
 	}
 
-	return newVolume(parts["source"], parts["destination"], parts["mode"], parts["bindPropagation"]), nil
+	v := newVolume(parts["source"], parts["destination"], parts["mode"], parts["label"], parts["bindPropagation"])
+
+	return v, nil
 }

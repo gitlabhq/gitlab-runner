@@ -32,6 +32,7 @@ func (p *baseParser) matchesToVolumeSpecParts(spec string, specExp *regexp.Regex
 		"source":          "",
 		"destination":     "",
 		"mode":            "",
+		"label":           "",
 		"bindPropagation": "",
 	}
 
