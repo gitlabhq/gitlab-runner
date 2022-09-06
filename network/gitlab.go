@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -391,11 +391,11 @@ func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 	}
 
 	if tlsData.CertFile != "" && tlsData.KeyFile != "" {
-		data, err := ioutil.ReadFile(tlsData.CertFile)
+		data, err := os.ReadFile(tlsData.CertFile)
 		if err == nil {
 			response.TLSAuthCert = string(data)
 		}
-		data, err = ioutil.ReadFile(tlsData.KeyFile)
+		data, err = os.ReadFile(tlsData.KeyFile)
 		if err == nil {
 			response.TLSAuthKey = string(data)
 		}
@@ -582,7 +582,7 @@ func (n *GitLabClient) PatchTrace(
 	)
 
 	defer func() {
-		_, _ = io.Copy(ioutil.Discard, response.Body)
+		_, _ = io.Copy(io.Discard, response.Body)
 		_ = response.Body.Close()
 	}()
 
@@ -748,7 +748,7 @@ func (n *GitLabClient) UploadRawArtifacts(
 	}
 
 	defer func() {
-		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
 
@@ -836,7 +836,7 @@ func (n *GitLabClient) DownloadArtifacts(
 		return common.DownloadFailed
 	}
 	defer func() {
-		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
 

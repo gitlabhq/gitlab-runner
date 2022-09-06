@@ -3,7 +3,7 @@ package gitlab_ci_yaml_parser
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -20,7 +20,7 @@ type GitLabCiYamlParser struct {
 }
 
 func (c *GitLabCiYamlParser) parseFile() (err error) {
-	data, err := ioutil.ReadFile(c.filename)
+	data, err := os.ReadFile(c.filename)
 	if err != nil {
 		return err
 	}

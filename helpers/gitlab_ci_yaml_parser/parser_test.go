@@ -3,7 +3,6 @@
 package gitlab_ci_yaml_parser
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -71,7 +70,7 @@ job2:
 `
 
 func prepareTestFile(t *testing.T, fileContent string) string {
-	file, err := ioutil.TempFile("", "gitlab-ci-yml")
+	file, err := os.CreateTemp("", "gitlab-ci-yml")
 	require.NoError(t, err)
 	defer file.Close()
 

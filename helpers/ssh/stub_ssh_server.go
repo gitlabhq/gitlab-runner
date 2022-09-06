@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -64,7 +63,7 @@ func NewStubServer(user, pass string) (*StubSSHServer, error) {
 		shouldExit: abool.New(),
 	}
 
-	tempDir, err := ioutil.TempDir("", "ssh-stub-server")
+	tempDir, err := os.MkdirTemp("", "ssh-stub-server")
 	if err != nil {
 		return nil, err
 	}
@@ -72,11 +71,11 @@ func NewStubServer(user, pass string) (*StubSSHServer, error) {
 	privateKeyLocation := filepath.Join(tempDir, "id_rsa_test")
 	publicKeyLocation := filepath.Join(tempDir, "id_rsa_test.pub")
 
-	if err := ioutil.WriteFile(privateKeyLocation, []byte(TestSSHKeyPair.PrivateKey), 0600); err != nil {
+	if err := os.WriteFile(privateKeyLocation, []byte(TestSSHKeyPair.PrivateKey), 0o600); err != nil {
 		return nil, err
 	}
 
-	if err := ioutil.WriteFile(publicKeyLocation, []byte(TestSSHKeyPair.PublicKey), 0600); err != nil {
+	if err := os.WriteFile(publicKeyLocation, []byte(TestSSHKeyPair.PublicKey), 0o600); err != nil {
 		return nil, err
 	}
 

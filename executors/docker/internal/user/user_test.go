@@ -5,7 +5,7 @@ package user
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strconv"
 	"testing"
 
@@ -137,7 +137,7 @@ func testDefaultInspectUIDandGID(
 		streams, ok := args.Get(2).(exec.IOStreams)
 		require.True(t, ok)
 
-		data, err := ioutil.ReadAll(streams.Stdin)
+		data, err := io.ReadAll(streams.Stdin)
 		require.NoError(t, err)
 
 		assert.Equal(t, expectedCommand, string(data))

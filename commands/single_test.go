@@ -4,7 +4,7 @@ package commands
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"os"
 	"syscall"
 	"testing"
@@ -82,7 +82,7 @@ func mockingExecutionStack(
 	// Network
 	jobData := common.JobResponse{}
 	_, cancel := context.WithCancel(context.Background())
-	jobTrace := common.Trace{Writer: ioutil.Discard}
+	jobTrace := common.Trace{Writer: io.Discard}
 	jobTrace.SetCancelFunc(cancel)
 	jobTrace.SetAbortFunc(cancel)
 	mockNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(&jobData, true).Times(maxBuilds)

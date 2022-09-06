@@ -9,7 +9,7 @@ package ca_chain
 import (
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -44,7 +44,7 @@ func (f *httpFetcher) Fetch(url string) ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

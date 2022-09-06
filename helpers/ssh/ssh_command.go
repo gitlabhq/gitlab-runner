@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +49,7 @@ func (e *ExitError) ExitCode() int {
 }
 
 func (s *Client) getSSHKey(identityFile string) (key ssh.Signer, err error) {
-	buf, err := ioutil.ReadFile(identityFile)
+	buf, err := os.ReadFile(identityFile)
 	if err != nil {
 		return nil, err
 	}

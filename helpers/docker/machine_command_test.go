@@ -5,7 +5,6 @@ package docker
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -68,7 +67,7 @@ func TestList(t *testing.T) {
 		err := os.MkdirAll(mcndirs.GetBaseDir(), 0755)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(mcndirs.GetMachineDir(), []byte{}, 0600)
+		err = os.WriteFile(mcndirs.GetMachineDir(), []byte{}, 0o600)
 		require.NoError(t, err)
 
 		mc := NewMachineCommand()
@@ -83,7 +82,7 @@ func mockDockerMachineExecutable(t *testing.T) func() {
 
 	dmExecutable := filepath.Join(tempDir, "docker-machine")
 
-	err := ioutil.WriteFile(dmExecutable, []byte{}, 0777)
+	err := os.WriteFile(dmExecutable, []byte{}, 0o777)
 	require.NoError(t, err)
 
 	currentDockerMachineExecutable := dockerMachineExecutable

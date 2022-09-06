@@ -5,7 +5,7 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -61,10 +61,10 @@ func TestPrepare(t *testing.T) {
 	server, err := sshHelpers.NewStubServer(sshConfig.User, sshConfig.Password)
 	assert.NoError(t, err)
 
-	require.NoError(t, ioutil.WriteFile(
+	require.NoError(t, os.WriteFile(
 		knownHostsFilePath,
 		[]byte(fmt.Sprintf("[%s]:%s %s\n", host, server.Port(), sshHelpers.TestSSHKeyPair.PublicKey)),
-		0644,
+		0o644,
 	))
 
 	defer server.Stop()

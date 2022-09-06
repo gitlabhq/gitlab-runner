@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 	"text/template"
 
@@ -39,7 +39,7 @@ func main() {
 }
 
 func getFileContent() string {
-	data, err := ioutil.ReadFile(docsFile)
+	data, err := os.ReadFile(docsFile)
 	if err != nil {
 		panic(fmt.Sprintf("Error while reading file %q: %v", docsFile, err))
 	}
@@ -102,7 +102,7 @@ func replace(fileContent, tableContent string) string {
 }
 
 func saveFileContent(newFileContent string) {
-	err := ioutil.WriteFile(docsFile, []byte(newFileContent), 0644)
+	err := os.WriteFile(docsFile, []byte(newFileContent), 0o644)
 	if err != nil {
 		panic(fmt.Sprintf("Error while writing new content for %q file: %v", docsFile, err))
 	}

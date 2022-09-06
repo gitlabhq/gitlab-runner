@@ -5,7 +5,6 @@ package commands_test
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -167,7 +166,7 @@ func testRegisterCommandRun(
 		},
 	}
 
-	configFile, err := ioutil.TempFile("", "config.toml")
+	configFile, err := os.CreateTemp("", "config.toml")
 	require.NoError(t, err)
 
 	err = configFile.Close()
@@ -188,7 +187,7 @@ func testRegisterCommandRun(
 
 	commandErr := app.Run(args)
 
-	fileContent, err := ioutil.ReadFile(configFile.Name())
+	fileContent, err := os.ReadFile(configFile.Name())
 	require.NoError(t, err)
 
 	err = commandErr

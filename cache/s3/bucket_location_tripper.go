@@ -3,7 +3,7 @@ package s3
 import (
 	"bytes"
 	"encoding/xml"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -25,7 +25,7 @@ func (b *bucketLocationTripper) RoundTrip(req *http.Request) (res *http.Response
 	}
 	res = &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       ioutil.NopCloser(&buffer),
+		Body:       io.NopCloser(&buffer),
 	}
 	return
 }

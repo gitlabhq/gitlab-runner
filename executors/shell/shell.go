@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -117,7 +116,7 @@ func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (i
 		return strings.NewReader(cmd.Script), args, func() {}, nil
 	}
 
-	scriptDir, err := ioutil.TempDir("", "build_script")
+	scriptDir, err := os.MkdirTemp("", "build_script")
 	if err != nil {
 		return nil, nil, func() {}, fmt.Errorf("creating tmp build script dir: %w", err)
 	}
@@ -130,7 +129,7 @@ func (s *executor) shellScriptArgs(cmd common.ExecutorCommand, args []string) (i
 	}
 
 	scriptFile := filepath.Join(scriptDir, "script."+s.BuildShell.Extension)
-	err = ioutil.WriteFile(scriptFile, []byte(cmd.Script), 0700)
+	err = os.WriteFile(scriptFile, []byte(cmd.Script), 0o700)
 	if err != nil {
 		return nil, nil, cleanup, fmt.Errorf("writing script file: %w", err)
 	}

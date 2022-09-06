@@ -5,7 +5,6 @@ package commands
 import (
 	"bufio"
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -37,7 +36,7 @@ func GetLogrusOutput(t *testing.T, hook *test.Hook) string {
 }
 
 func PrepareConfigurationTemplateFile(t *testing.T, content string) (string, func()) {
-	file, err := ioutil.TempFile("", "config.template.toml")
+	file, err := os.CreateTemp("", "config.template.toml")
 	require.NoError(t, err)
 
 	defer func() {

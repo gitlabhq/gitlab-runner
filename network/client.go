@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net"
 	"net/http"
@@ -117,7 +116,7 @@ func (n *client) addTLSCA(tlsConfig *tls.Config) {
 
 	logrus.Debugln("Trying to load", file, "...")
 
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logrus.Errorln("Failed to load", n.caFile, err)
@@ -363,7 +362,7 @@ func (n *client) doJSONWithPAT(
 		return -1, err.Error(), nil
 	}
 	defer func() {
-		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
 

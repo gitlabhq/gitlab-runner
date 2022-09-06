@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -35,7 +34,7 @@ func prepareStubbedCredentialsFile(t *testing.T, testCase credentialsResolverTes
 	cleanup := func() {}
 
 	if testCase.credentialsFileContent != nil {
-		file, err := ioutil.TempFile("", "gcp-credentials-file")
+		file, err := os.CreateTemp("", "gcp-credentials-file")
 		require.NoError(t, err)
 
 		cleanup = func() {

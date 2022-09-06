@@ -4,7 +4,6 @@ package custom_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,7 +39,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("Compiling test executor")
 
-	targetDir, err := ioutil.TempDir("", "test_executor")
+	targetDir, err := os.MkdirTemp("", "test_executor")
 	if err != nil {
 		panic("Error on preparing tmp directory for test executor binary")
 	}

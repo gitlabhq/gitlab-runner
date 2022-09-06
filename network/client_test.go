@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -33,7 +32,7 @@ import (
 )
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
+	body, _ := io.ReadAll(r.Body)
 	logrus.Debugln(
 		r.Method, r.URL.String(),
 		"Content-Type:", r.Header.Get("Content-Type"),
@@ -88,7 +87,7 @@ func writeTLSCertificate(s *httptest.Server, file string) error {
 		Bytes: c.Certificate[0],
 	})
 
-	return ioutil.WriteFile(file, encoded, 0600)
+	return os.WriteFile(file, encoded, 0o600)
 }
 
 func writeTLSKeyPair(s *httptest.Server, certFile, keyFile string) error {
@@ -102,7 +101,7 @@ func writeTLSKeyPair(s *httptest.Server, certFile, keyFile string) error {
 		Bytes: c.Certificate[0],
 	})
 
-	if err := ioutil.WriteFile(certFile, encodedCert, 0600); err != nil {
+	if err := os.WriteFile(certFile, encodedCert, 0o600); err != nil {
 		return err
 	}
 
@@ -112,7 +111,7 @@ func writeTLSKeyPair(s *httptest.Server, certFile, keyFile string) error {
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(k),
 		})
-		return ioutil.WriteFile(keyFile, encodedKey, 0600)
+		return os.WriteFile(keyFile, encodedKey, 0o600)
 	default:
 		return errors.New("unexpected private key type")
 	}
@@ -301,7 +300,7 @@ func TestClientTLSCAFile(t *testing.T) {
 	s := httptest.NewTLSServer(http.HandlerFunc(clientHandler))
 	defer s.Close()
 
-	file, err := ioutil.TempFile("", "cert_")
+	file, err := os.CreateTemp("", "cert_")
 	assert.NoError(t, err)
 	file.Close()
 	defer os.Remove(file.Name())
@@ -370,7 +369,7 @@ func TestClientInvalidTLSAuth(t *testing.T) {
 	s.StartTLS()
 	defer s.Close()
 
-	ca, err := ioutil.TempFile("", "cert_")
+	ca, err := os.CreateTemp("", "cert_")
 	assert.NoError(t, err)
 	ca.Close()
 	defer os.Remove(ca.Name())
@@ -402,7 +401,7 @@ func TestClientTLSAuth(t *testing.T) {
 	s.StartTLS()
 	defer s.Close()
 
-	ca, err := ioutil.TempFile("", "cert_")
+	ca, err := os.CreateTemp("", "cert_")
 	assert.NoError(t, err)
 	ca.Close()
 	defer os.Remove(ca.Name())
@@ -410,12 +409,12 @@ func TestClientTLSAuth(t *testing.T) {
 	err = writeTLSCertificate(s, ca.Name())
 	assert.NoError(t, err)
 
-	cert, err := ioutil.TempFile("", "cert_")
+	cert, err := os.CreateTemp("", "cert_")
 	assert.NoError(t, err)
 	cert.Close()
 	defer os.Remove(cert.Name())
 
-	key, err := ioutil.TempFile("", "key_")
+	key, err := os.CreateTemp("", "key_")
 	assert.NoError(t, err)
 	key.Close()
 	defer os.Remove(key.Name())
@@ -729,7 +728,7 @@ func Test307and308Redirections(t *testing.T) {
 					const redirectionURI = "/redirected"
 
 					if r.RequestURI == redirectionURI {
-						body, err := ioutil.ReadAll(r.Body)
+						body, err := io.ReadAll(r.Body)
 						assert.NoError(t, err)
 
 						if !assert.Equal(t, tt.expectedBody, body) {
@@ -741,7 +740,7 @@ func Test307and308Redirections(t *testing.T) {
 						return
 					}
 
-					_, err := io.Copy(ioutil.Discard, r.Body)
+					_, err := io.Copy(io.Discard, r.Body)
 					assert.NoError(t, err)
 
 					_ = r.Body.Close()

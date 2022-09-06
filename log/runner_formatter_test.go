@@ -4,7 +4,7 @@ package log
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -17,7 +17,7 @@ import (
 
 func newNullLogger(formatter logrus.Formatter, level logrus.Level) *logrus.Logger {
 	logger := logrus.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 	logger.SetFormatter(formatter)
 	logger.SetLevel(level)
 

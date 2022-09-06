@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -139,7 +138,7 @@ func (g *artifactMetadataGenerator) generateMetadataToFile(opts generateMetadata
 		return "", err
 	}
 
-	err = ioutil.WriteFile(file, b, 0700)
+	err = os.WriteFile(file, b, 0o700)
 	return file, err
 }
 
@@ -237,7 +236,6 @@ func (g *artifactMetadataGenerator) generateSubjects(files map[string]os.FileInf
 				Digest: AttestationDigest{Sha256: hex.EncodeToString(h.Sum(nil))},
 			}, nil
 		}(file)
-
 		if err != nil {
 			return nil, err
 		}

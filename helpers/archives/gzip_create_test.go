@@ -5,7 +5,6 @@ package archives
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,7 +32,7 @@ func testGzipStreams(t *testing.T, r io.Reader, streams [][]byte) {
 
 		gz.Multistream(false)
 
-		readed, err := ioutil.ReadAll(gz)
+		readed, err := io.ReadAll(gz)
 		require.NoError(t, err, "gzip archive should be uncompressed")
 		require.Equal(t, readed, streams[stream], "gzip archive should equal content")
 	}
@@ -44,7 +43,7 @@ func testGzipStreams(t *testing.T, r io.Reader, streams [][]byte) {
 }
 
 func TestGzipArchiveOfMultipleFiles(t *testing.T) {
-	file, err := ioutil.TempFile("", "test_file")
+	file, err := os.CreateTemp("", "test_file")
 	require.NoError(t, err)
 	defer file.Close()
 	defer os.Remove(file.Name())
@@ -72,7 +71,7 @@ func TestGzipArchivingShouldFailIfSymlinkIsBeingArchived(t *testing.T) {
 	dir := t.TempDir()
 
 	filePath := filepath.Join(dir, "file")
-	err := ioutil.WriteFile(filePath, testGzipFileContent, 0644)
+	err := os.WriteFile(filePath, testGzipFileContent, 0o644)
 	require.NoError(t, err)
 
 	symlinkPath := filepath.Join(dir, "symlink")
@@ -97,7 +96,7 @@ func TestGzipArchivesExistingAndNonExistingFile(t *testing.T) {
 	dir := t.TempDir()
 
 	filePath := filepath.Join(dir, "file")
-	err := ioutil.WriteFile(filePath, testGzipFileContent, 0644)
+	err := os.WriteFile(filePath, testGzipFileContent, 0o644)
 	require.NoError(t, err)
 
 	var buffer bytes.Buffer

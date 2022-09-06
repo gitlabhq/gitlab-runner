@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,11 +19,11 @@ import (
 )
 
 func TestGenerateMetadataToFile(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "")
+	tmpDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)
 
-	tmpFile, err := ioutil.TempFile(tmpDir, "")
+	tmpFile, err := os.CreateTemp(tmpDir, "")
 	require.NoError(t, err)
 
 	_, err = tmpFile.WriteString("testdata")
@@ -204,7 +204,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			file, err := os.Open(f)
 			require.NoError(t, err)
 
-			b, err := ioutil.ReadAll(file)
+			b, err := io.ReadAll(file)
 			require.NoError(t, err)
 
 			var actual AttestationMetadata

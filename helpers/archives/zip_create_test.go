@@ -5,7 +5,6 @@ package archives
 import (
 	"archive/zip"
 	"bytes"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -30,7 +29,7 @@ func createTestFile(t *testing.T, csb charsetByte) string {
 		name = "テストファイル.txt"
 	}
 
-	err := ioutil.WriteFile(name, testZipFileContent, 0640)
+	err := os.WriteFile(name, testZipFileContent, 0o640)
 	assert.NoError(t, err)
 	return name
 }
@@ -52,7 +51,7 @@ func createTestDirectory(t *testing.T, csb charsetByte) string {
 		name = "テストディレクトリ"
 	}
 
-	err := os.Mkdir(name, 0711)
+	err := os.Mkdir(name, 0o711)
 	assert.NoError(t, err)
 	return name
 }
@@ -69,7 +68,7 @@ func createTestGitPathFile(t *testing.T, csb charsetByte) string {
 		name = ".git/テストファイル"
 	}
 
-	err = ioutil.WriteFile(name, testZipFileContent, 0640)
+	err = os.WriteFile(name, testZipFileContent, 0o640)
 	assert.NoError(t, err)
 
 	return name
@@ -85,7 +84,7 @@ func testInWorkDir(t *testing.T, testCase func(t *testing.T, fileName string)) {
 	err = os.Chdir(td)
 	assert.NoError(t, err)
 
-	tempFile, err := ioutil.TempFile("", "archive")
+	tempFile, err := os.CreateTemp("", "archive")
 	require.NoError(t, err)
 	tempFile.Close()
 	defer os.Remove(tempFile.Name())

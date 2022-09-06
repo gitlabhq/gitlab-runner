@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -663,7 +662,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	}
 
 	fakeRoundTripper := func(req *http.Request) (*http.Response, error) {
-		body, errRT := ioutil.ReadAll(req.Body)
+		body, errRT := io.ReadAll(req.Body)
 		if !assert.NoError(t, errRT, "failed to read request body") {
 			return nil, errRT
 		}
@@ -967,7 +966,7 @@ func TestCleanup(t *testing.T) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == podsEndpointURI:
 					defer req.Body.Close()
-					b, err := ioutil.ReadAll(req.Body)
+					b, err := io.ReadAll(req.Body)
 					if err != nil {
 						return nil, err
 					}
@@ -995,7 +994,7 @@ func TestCleanup(t *testing.T) {
 				switch p, m := req.URL.Path, req.Method; {
 				case m == http.MethodDelete && p == podsEndpointURI:
 					defer req.Body.Close()
-					b, err := ioutil.ReadAll(req.Body)
+					b, err := io.ReadAll(req.Body)
 					if err != nil {
 						return nil, err
 					}
@@ -2314,7 +2313,7 @@ func TestSetupCredentials(t *testing.T) {
 	executed := false
 	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
 		return func(req *http.Request) (resp *http.Response, err error) {
-			podBytes, err := ioutil.ReadAll(req.Body)
+			podBytes, err := io.ReadAll(req.Body)
 			executed = true
 
 			if err != nil {
@@ -2417,7 +2416,7 @@ func TestServiceAccountExists(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
 					}, nil
 				default:
 					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
@@ -2434,7 +2433,7 @@ func TestServiceAccountExists(t *testing.T) {
 					Header:     map[string][]string{"Content-Type": {"application/json"}},
 					StatusCode: http.StatusOK,
 					Status:     http.StatusText(http.StatusOK),
-					Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+					Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
 				}, errClientFunc
 			},
 			name:  "my-serviceaccount-1",
@@ -2492,7 +2491,7 @@ func TestSecretExists(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
 					}, nil
 				default:
 					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
@@ -2509,7 +2508,7 @@ func TestSecretExists(t *testing.T) {
 					Header:     map[string][]string{"Content-Type": {"application/json"}},
 					StatusCode: http.StatusOK,
 					Status:     http.StatusText(http.StatusOK),
-					Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+					Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
 				}, errClientFunc
 			},
 			name:  "my-secret-1",
@@ -2586,7 +2585,7 @@ func TestWaitForResources(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
 					}, nil
 				default:
 					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
@@ -2611,7 +2610,7 @@ func TestWaitForResources(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
 					}, nil
 				default:
 					t.Errorf("unexpected request: %s %#v\n%#v", req.Method, req.URL, req)
@@ -2633,7 +2632,7 @@ func TestWaitForResources(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
 					}, errClientFunc
 				default:
 					return nil, errClientFunc
@@ -2658,7 +2657,7 @@ func TestWaitForResources(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
 					}, errClientFunc
 				default:
 					return nil, errClientFunc
@@ -2695,7 +2694,7 @@ func TestWaitForResources(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
 					}, nil
 				default:
 					return nil, errClientFunc
@@ -2725,7 +2724,7 @@ func TestWaitForResources(t *testing.T) {
 						Header:     map[string][]string{"Content-Type": {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
+						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
 					}, nil
 				default:
 					return nil, errClientFunc
@@ -2813,7 +2812,7 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 	}
 
 	rt.executed = true
-	dataBytes, err := ioutil.ReadAll(req.Body)
+	dataBytes, err := io.ReadAll(req.Body)
 	if !assert.NoError(rt.t, err, "failed to read request body") {
 		return nil, err
 	}

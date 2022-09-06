@@ -4,7 +4,7 @@ package ssh_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -25,17 +25,17 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	tempDir := t.TempDir()
 
 	knownHostsFile := filepath.Join(tempDir, "known-hosts-file")
-	require.NoError(t, ioutil.WriteFile(
+	require.NoError(t, os.WriteFile(
 		knownHostsFile,
 		[]byte(fmt.Sprintf("[127.0.0.1]:%s %s\n", s.Port(), ssh.TestSSHKeyPair.PublicKey)),
-		0644,
+		0o644,
 	))
 
 	missingEntryKnownHostsFile := filepath.Join(tempDir, "missing-entry-known-hosts-file")
-	require.NoError(t, ioutil.WriteFile(
+	require.NoError(t, os.WriteFile(
 		missingEntryKnownHostsFile,
 		[]byte(knownHostsWithGitlabOnly),
-		0644,
+		0o644,
 	))
 
 	testCases := map[string]struct {

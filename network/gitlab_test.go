@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -99,7 +98,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	assert.NoError(t, err)
 
 	var req map[string]interface{}
@@ -349,7 +348,7 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	assert.NoError(t, err)
 
 	var req map[string]interface{}
@@ -415,7 +414,7 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	assert.NoError(t, err)
 
 	var req map[string]interface{}
@@ -486,7 +485,7 @@ func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	require.NoError(t, err)
 
 	var req map[string]interface{}
@@ -806,7 +805,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	assert.NoError(t, err)
 
 	var req map[string]interface{}
@@ -950,7 +949,7 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	assert.NoError(t, err)
 
 	var req map[string]interface{}
@@ -1040,7 +1039,7 @@ func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *te
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	assert.NoError(t, err)
 
 	var req map[string]interface{}
@@ -1115,7 +1114,7 @@ func getPatchServer(
 
 		assert.Equal(t, patchToken, r.Header.Get("JOB-TOKEN"))
 
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 
 		contentRange := r.Header.Get("Content-Range")
@@ -1714,7 +1713,7 @@ func testArtifactsUploadHandler(w http.ResponseWriter, r *http.Request, t *testi
 		return
 	}
 
-	body, err := ioutil.ReadAll(file)
+	body, err := io.ReadAll(file)
 	require.NoError(t, err)
 
 	checkTestArtifactsUploadHandlerContent(w, r, string(body))
@@ -1772,34 +1771,34 @@ func TestArtifactsUpload(t *testing.T) {
 		Token: "redirect",
 	}
 
-	tempFile, err := ioutil.TempFile("", "artifacts")
+	tempFile, err := os.CreateTemp("", "artifacts")
 	assert.NoError(t, err)
 	tempFile.Close()
 	defer os.Remove(tempFile.Name())
 
 	c := NewGitLabClient()
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("content"), 0o600))
 	state, location := uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("too-large"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("too-large"), 0o600))
 	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadTooLarge, state, "Artifacts should be not uploaded, because of too large archive")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("zip"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("zip"), 0o600))
 	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatZip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as zip")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("gzip"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("gzip"), 0o600))
 	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("junit"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("junit"), 0o600))
 	state, location = uploadArtifacts(c, config, tempFile.Name(), "junit", ArtifactFormatGzip)
 	assert.Equal(t, UploadSucceeded, state, "Artifacts should be uploaded, as gzip")
 	assert.Empty(t, location)
@@ -1812,22 +1811,22 @@ func TestArtifactsUpload(t *testing.T) {
 	assert.Equal(t, UploadForbidden, state, "Artifacts should be rejected if invalid token")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("service-unavailable"), 0o600))
 	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadServiceUnavailable, state, "Artifacts should get service unavailable")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("bad-request"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("bad-request"), 0o600))
 	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("bad-request-not-json"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("bad-request-not-json"), 0o600))
 	state, location = uploadArtifacts(c, config, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadFailed, state, "Artifacts should fail to be uploaded")
 	assert.Empty(t, location)
 
-	require.NoError(t, ioutil.WriteFile(tempFile.Name(), []byte("content"), 0600))
+	require.NoError(t, os.WriteFile(tempFile.Name(), []byte("content"), 0o600))
 	state, location = uploadArtifacts(c, redirectToken, tempFile.Name(), "", ArtifactFormatDefault)
 	assert.Equal(t, UploadRedirected, state, "Artifacts upload should be redirected")
 	assert.Equal(t, "new-location", location)
@@ -2078,7 +2077,7 @@ func TestArtifactsDownload(t *testing.T) {
 			err = buf.Flush()
 			require.NoError(t, err)
 
-			artifact, err := ioutil.ReadFile(artifactsFileName)
+			artifact, err := os.ReadFile(artifactsFileName)
 
 			assert.NoError(t, err)
 			assert.Equal(t, string(artifact), testCase.expectedArtifact)

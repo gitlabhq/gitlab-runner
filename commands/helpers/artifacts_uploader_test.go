@@ -5,7 +5,6 @@ package helpers
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -351,7 +350,7 @@ func TestFileArchiverCompressionLevel(t *testing.T) {
 			_, r, err := cmd.createReadStream()
 			require.NoError(t, err)
 			defer r.Close()
-			_, _ = io.Copy(ioutil.Discard, r)
+			_, _ = io.Copy(io.Discard, r)
 		})
 	}
 }
