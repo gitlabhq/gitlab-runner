@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 /*
 Copyright 2014 The Kubernetes Authors All rights reserved.

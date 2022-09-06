@@ -4,10 +4,9 @@
 ##
 ## This script ensures that test file names match the required build tags, so that integration tests
 ## (which run for longer) can be run in a separate job from unit tests.
-##  - Integration test files (named *integration_*test.go) should have a '// +build integration'
-##    and '//go:build integration' build constraints
-##  - Unit test files (named *_test.go) should have a '// +build !integration' and '//go:build integration'
-##    build constraints
+##  - Integration test files (named *integration_*test.go) should have a '//go:build integration' build
+##    constraints.
+##  - Unit test files (named *_test.go) should have a '// go:build !integration' build constraints.
 ##
 ## Return value: 1 if any discrepancy is found, otherwise 0
 ##

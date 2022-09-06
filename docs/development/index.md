@@ -249,14 +249,14 @@ and [integration tests](https://en.wikipedia.org/wiki/Integration_testing) in th
 - Unit test files have a suffix of `_test.go` and contain the following build directive in the header:
 
     ```golang
-    // +build !integration
+    // go:build !integration
 
     ```
 
 - Integration test files have a suffix of `_integration_test.go` and contain the following build directive in the header:
 
     ```golang
-    // +build integration
+    // go:build integration
 
     ```
 
