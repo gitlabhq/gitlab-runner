@@ -1061,7 +1061,7 @@ valid and point to the same image.
   executor = "docker"
   [runners.docker]
     (...)
-    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-${CI_RUNNER_VERSION}"
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
 ```
 
 #### When using PowerShell Core
