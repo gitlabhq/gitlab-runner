@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"net"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,5 +62,7 @@ func TestCertificate(t *testing.T) {
 
 	_, err = client.Do(req)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "certificate signed by unknown authority")
+	// Error messages provided by Linux and MacOS respectively.
+	const want = "certificate signed by unknown authority|certificate is not trusted"
+	assert.Regexp(t, regexp.MustCompile(want), err.Error())
 }

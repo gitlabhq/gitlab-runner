@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -295,7 +296,9 @@ func TestClientInvalidSSL(t *testing.T) {
 		nil,
 	)
 	assert.Equal(t, -1, statusCode, statusText)
-	assert.Contains(t, statusText, "certificate signed by unknown authority")
+	// Error messages provided by Linux and MacOS respectively.
+	const want = "certificate signed by unknown authority|certificate is not trusted"
+	assert.Regexp(t, regexp.MustCompile(want), statusText)
 }
 
 func TestClientTLSCAFile(t *testing.T) {
