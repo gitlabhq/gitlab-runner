@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
 // truncateWriter implements a misbehaving/failing io.Writer. It will stop
@@ -209,6 +212,46 @@ func TestInlineServiceLogWriter_Err(t *testing.T) {
 
 			assert.Equal(t, tt.wantWritten, n)
 			assert.Error(t, err)
+		})
+	}
+}
+
+func BenchmarkServiceLog(b *testing.B) {
+	var payloads [][]byte
+	var size int
+	for i := 0; i < 64; i++ {
+		payloads = append(payloads, append(bytes.Repeat([]byte{'a' + byte(i%26)}, i*1024), '\n'))
+		size += i*1024 + 1
+	}
+
+	benchmarks := map[string]func() io.Writer{
+		"discard": func() io.Writer { return io.Discard },
+		"trace buffer": func() io.Writer {
+			buf, err := trace.New()
+			buf.SetMasked(common.MaskOptions{Phrases: []string{"bench", "mark"}})
+			require.NoError(b, err)
+			return buf
+		},
+	}
+
+	b.ResetTimer()
+	for name, bufFn := range benchmarks {
+		b.Run(name, func(b *testing.B) {
+			b.SetBytes(int64(size))
+
+			for n := 0; n < b.N; n++ {
+				buf := bufFn()
+				if c, ok := buf.(io.Closer); ok {
+					defer c.Close()
+				}
+
+				slw := NewInlineServiceLogWriter("foo", buf)
+				for _, payload := range payloads {
+					_, err := slw.Write(payload)
+					require.NoError(b, err)
+				}
+				require.NoError(b, slw.Close())
+			}
 		})
 	}
 }
