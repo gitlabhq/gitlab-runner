@@ -147,3 +147,27 @@ func TestBash_GetConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func Test_BashWriter_cleanPath(t *testing.T) {
+	tests := map[string]struct {
+		path, want string
+	}{
+		"relative path": {
+			path: "foo/bar/KEY",
+			want: "$PWD/foo/bar/KEY",
+		},
+		"absolute path": {
+			path: "/foo/bar/KEY",
+			want: "/foo/bar/KEY",
+		},
+	}
+
+	bw := BashWriter{TemporaryPath: "foo/bar"}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := bw.cleanPath(tt.path)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
