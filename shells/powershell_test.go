@@ -473,3 +473,39 @@ func TestPowershell_GenerateScript(t *testing.T) {
 		})
 	}
 }
+
+func Test_PsWriter_cleanPath(t *testing.T) {
+	tests := map[string]struct {
+		path, wantLinux, wantWindows string
+	}{
+		"relative path": {
+			path:        "foo/bar/KEY",
+			wantLinux:   "$CurrentDirectory\\foo\\bar\\KEY",
+			wantWindows: "$CurrentDirectory\\foo\\bar\\KEY",
+		},
+		"absolute path": {
+			path:        "/foo/bar/KEY",
+			wantLinux:   "\\foo\\bar\\KEY",
+			wantWindows: "$CurrentDirectory\\foo\\bar\\KEY",
+		},
+		"absolute path with drive": {
+			path:        "C:/foo/bar/KEY",
+			wantLinux:   "$CurrentDirectory\\C:\\foo\\bar\\KEY",
+			wantWindows: "C:\\foo\\bar\\KEY",
+		},
+	}
+
+	bw := PsWriter{TemporaryPath: "foo/bar"}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := bw.cleanPath(tt.path)
+
+			if runtime.GOOS == OSWindows {
+				assert.Equal(t, tt.wantWindows, got)
+			} else {
+				assert.Equal(t, tt.wantLinux, got)
+			}
+		})
+	}
+}

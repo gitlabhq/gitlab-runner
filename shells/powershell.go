@@ -222,8 +222,15 @@ func (p *PsWriter) TmpFile(name string) string {
 		return p.Join(p.TemporaryPath, name)
 	}
 
-	filePath := p.Absolute(p.Join(p.TemporaryPath, name))
-	return p.fromSlash(filePath)
+	return p.cleanPath(p.Join(p.TemporaryPath, name))
+}
+
+func (p *PsWriter) cleanPath(name string) string {
+	if p.resolvePaths {
+		return name
+	}
+
+	return p.fromSlash(p.Absolute(name))
 }
 
 func (p *PsWriter) fromSlash(path string) string {
