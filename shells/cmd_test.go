@@ -165,3 +165,69 @@ func Test_CmdWriter_cleanPath(t *testing.T) {
 		})
 	}
 }
+
+// nolint:lll
+func Test_CmdWriter_Variable(t *testing.T) {
+	tests := map[string]struct {
+		variable               common.JobVariable
+		writer                 CmdWriter
+		wantLinux, wantWindows string
+	}{
+		"file var, relative path": {
+			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:   CmdWriter{TemporaryPath: "foo/bar"},
+			// nolint:lll
+			wantLinux:   "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+		},
+		"file var, absolute path": {
+			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:   CmdWriter{TemporaryPath: "/foo/bar"},
+			// nolint:lll
+			wantLinux:   "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > \\foo\\bar\\KEY\r\nSET KEY=\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+		},
+		"file var, absolute path with drive": {
+			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:   CmdWriter{TemporaryPath: "C:/foo/bar"},
+			// nolint:lll
+			wantLinux:   "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\C:\\foo\\bar\\KEY\r\nSET KEY=%CD%\\C:\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > C:\\foo\\bar\\KEY\r\nSET KEY=C:\\foo\\bar\\KEY\r\n",
+		},
+		"tmp file var, relative path": {
+			variable:    common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
+			writer:      CmdWriter{TemporaryPath: "foo/bar"},
+			wantLinux:   "SET KEY=%%CD%%\\foo\\bar\\KEY2\r\n",
+			wantWindows: "SET KEY=%%CD%%\\foo\\bar\\KEY2\r\n",
+		},
+		"tmp file var, absolute path": {
+			variable:    common.JobVariable{Key: "KEY", Value: "/foo/bar/KEY2"},
+			writer:      CmdWriter{TemporaryPath: "/foo/bar"},
+			wantLinux:   "SET KEY=\\foo\\bar\\KEY2\r\n",
+			wantWindows: "SET KEY=%%CD%%\\foo\\bar\\KEY2\r\n",
+		},
+		"tmp file var, absolute path with drive": {
+			variable:    common.JobVariable{Key: "KEY", Value: "C:/foo/bar/KEY2"},
+			writer:      CmdWriter{TemporaryPath: "C:/foo/bar"},
+			wantLinux:   "SET KEY=%%CD%%\\C:\\foo\\bar\\KEY2\r\n",
+			wantWindows: "SET KEY=C:\\foo\\bar\\KEY2\r\n",
+		},
+		"regular var": {
+			variable:    common.JobVariable{Key: "KEY", Value: "VALUE"},
+			writer:      CmdWriter{TemporaryPath: "C:/foo/bar"},
+			wantLinux:   "SET KEY=VALUE\r\n",
+			wantWindows: "SET KEY=VALUE\r\n",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			tt.writer.Variable(tt.variable)
+			if runtime.GOOS == OSWindows {
+				assert.Equal(t, tt.wantWindows, tt.writer.String())
+			} else {
+				assert.Equal(t, tt.wantLinux, tt.writer.String())
+			}
+		})
+	}
+}

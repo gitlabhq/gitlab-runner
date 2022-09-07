@@ -151,6 +151,9 @@ func (b *CmdWriter) Variable(variable common.JobVariable) {
 		b.Linef("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile))
 		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscape(variableFile))
 	} else {
+		if b.isTmpFile(variable.Value) {
+			variable.Value = b.cleanPath(variable.Value)
+		}
 		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscapeVariable(variable.Value))
 	}
 }
