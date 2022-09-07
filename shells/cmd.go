@@ -140,6 +140,10 @@ func (b *CmdWriter) EnvVariableKey(name string) string {
 	return fmt.Sprintf("%%%s%%", name)
 }
 
+func (b *CmdWriter) isTmpFile(path string) bool {
+	return strings.HasPrefix(path, b.TemporaryPath)
+}
+
 func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
