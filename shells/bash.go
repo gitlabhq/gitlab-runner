@@ -139,6 +139,12 @@ func (b *BashWriter) EnvVariableKey(name string) string {
 	return fmt.Sprintf("$%s", name)
 }
 
+// Intended to be used on unmodified paths only (i.e. paths that have not been
+// cleaned with cleanPath()).
+func (b *BashWriter) isTmpFile(path string) bool {
+	return strings.HasPrefix(path, b.TemporaryPath)
+}
+
 func (b *BashWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)

@@ -3,6 +3,7 @@
 package shells
 
 import (
+	"path"
 	"runtime"
 	"testing"
 
@@ -144,6 +145,25 @@ func TestBash_GetConfiguration(t *testing.T) {
 			assert.Equal(t, tc.cmd, config.Command)
 			assert.Equal(t, tc.args, config.Arguments)
 			assert.Equal(t, tn, config.CmdLine)
+		})
+	}
+}
+
+func Test_BashWriter_isTmpFile(t *testing.T) {
+	tmpDir := "/foo/bar"
+	bw := BashWriter{TemporaryPath: tmpDir}
+
+	tests := map[string]struct {
+		path string
+		want bool
+	}{
+		"tmp file var":     {path: path.Join(tmpDir, "BAZ"), want: true},
+		"not tmp file var": {path: "bla bla bla", want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, bw.isTmpFile(tt.path))
 		})
 	}
 }
