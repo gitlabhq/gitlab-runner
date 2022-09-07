@@ -249,6 +249,10 @@ func (p *PsWriter) EnvVariableKey(name string) string {
 	return fmt.Sprintf("$%s", name)
 }
 
+func (p *PsWriter) isTmpFile(path string) bool {
+	return strings.HasPrefix(path, p.TemporaryPath)
+}
+
 func (p *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := p.TmpFile(variable.Key)

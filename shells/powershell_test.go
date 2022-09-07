@@ -4,6 +4,7 @@ package shells
 
 import (
 	"fmt"
+	"path"
 	"runtime"
 	"strings"
 	"testing"
@@ -470,6 +471,25 @@ func TestPowershell_GenerateScript(t *testing.T) {
 			if tc.expectedFailure {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func Test_PsWriter_isTmpFile(t *testing.T) {
+	tmpDir := "/foo/bar"
+	bw := PsWriter{TemporaryPath: tmpDir}
+
+	tests := map[string]struct {
+		path string
+		want bool
+	}{
+		"tmp file var":     {path: path.Join(tmpDir, "BAZ"), want: true},
+		"not tmp file var": {path: "bla bla bla", want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, bw.isTmpFile(tt.path))
 		})
 	}
 }
