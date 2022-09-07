@@ -129,8 +129,11 @@ func (b *CmdWriter) buildCommand(quoter stringQuoter, command string, arguments 
 }
 
 func (b *CmdWriter) TmpFile(name string) string {
-	filePath := b.Absolute(path.Join(b.TemporaryPath, name))
-	return helpers.ToBackslash(filePath)
+	return b.cleanPath(path.Join(b.TemporaryPath, name))
+}
+
+func (b *CmdWriter) cleanPath(name string) string {
+	return helpers.ToBackslash(b.Absolute(name))
 }
 
 func (b *CmdWriter) EnvVariableKey(name string) string {

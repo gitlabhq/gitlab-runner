@@ -4,6 +4,7 @@ package shells
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"testing"
 
@@ -107,5 +108,40 @@ func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 
 				assert.Equal(t, expectedCmd, writer.String())
 			})
+	}
+}
+
+func Test_CmdWriter_cleanPath(t *testing.T) {
+	tests := map[string]struct {
+		path, wantLinux, wantWindows string
+	}{
+		"relative path": {
+			path:        "foo/bar/KEY",
+			wantLinux:   "%CD%\\foo\\bar\\KEY",
+			wantWindows: "%CD%\\foo\\bar\\KEY",
+		},
+		"absolute path": {
+			path:        "/foo/bar/KEY",
+			wantLinux:   "\\foo\\bar\\KEY",
+			wantWindows: "%CD%\\foo\\bar\\KEY",
+		},
+		"absolute path with drive": {
+			path:        "C:/foo/bar/KEY",
+			wantLinux:   "%CD%\\C:\\foo\\bar\\KEY",
+			wantWindows: "C:\\foo\\bar\\KEY",
+		},
+	}
+
+	bw := CmdWriter{TemporaryPath: "foo/bar"}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := bw.cleanPath(tt.path)
+			if runtime.GOOS == OSWindows {
+				assert.Equal(t, tt.wantWindows, got)
+			} else {
+				assert.Equal(t, tt.wantLinux, got)
+			}
+		})
 	}
 }
