@@ -412,6 +412,7 @@ $(GITLAB_CHANGELOG):
 .PHONY: clean
 clean:
 	-$(RM) -rf $(TARGET_DIR)
+	-$(RM) -rf tmp/gitlab-test
 
 print_ldflags:
 	@echo $(GO_LDFLAGS)
