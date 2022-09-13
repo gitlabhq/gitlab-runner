@@ -168,6 +168,13 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		"template doesn't overwrite token if none provided in base": {
+			templateContent: configTemplateMergeToOverwritingConfiguration,
+			config:          &common.RunnerConfig{},
+			assertConfiguration: func(t *testing.T, config *common.RunnerConfig) {
+				assert.Equal(t, "", config.Token)
+			},
+		},
 		"template adds additional content": {
 			templateContent: configTemplateMergeToAdditionalConfiguration,
 			config:          configTemplateMergeToBaseConfiguration,
