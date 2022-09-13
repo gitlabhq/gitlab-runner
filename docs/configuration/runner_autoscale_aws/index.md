@@ -301,7 +301,7 @@ Notes:
   different options to be applied.
 - The child instances will use by default Ubuntu 16.04 unless you choose a
   different AMI ID by setting `amazonec2-ami`. Set only
-  [supported base operating systems for Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/os-base)
+  [supported base operating systems for Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/os-base).
 - If you specify `amazonec2-private-address-only=true` as one of the machine
   options, your EC2 instance won't get assigned a public IP. This is ok if your
   VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
