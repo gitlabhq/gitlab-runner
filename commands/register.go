@@ -40,6 +40,7 @@ func (c *configTemplate) MergeTo(config *common.RunnerConfig) error {
 		return errors.New("configuration template must contain exactly one [[runners]] entry")
 	}
 
+	c.Runners[0].Token = ""
 	err = mergo.Merge(config, c.Runners[0])
 	if err != nil {
 		return fmt.Errorf("error while merging configuration with configuration template: %w", err)
