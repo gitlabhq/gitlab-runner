@@ -31,6 +31,9 @@ var (
 		"helpers/archives/zip_create_unix_test.go": tagOverridesMap{
 			"windows": false,
 		},
+		"executors/docker/internal/volumes/parser/windows_path_test.go": tagOverridesMap{
+			"windows": false,
+		},
 	}
 )
 
