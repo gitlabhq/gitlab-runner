@@ -34,7 +34,7 @@ check version definition:
 
 # Perform documentation linting on Markdown files
 docs lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.16-vale-2.17.0-markdownlint-0.31.1
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.16-vale-2.20.1-markdownlint-0.32.2
   stage: test
   extends:
   - .rules:merge_request_pipelines
