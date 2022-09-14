@@ -168,7 +168,7 @@ ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz $(TAR_XZ_ARGS) $<
 
-${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 8.6-754
+${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(UBI_FIPS_VERSION)
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_DOCKERFILE ?= Dockerfile.fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export HELPER_BINARY_POSTFIX ?= -fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar:
@@ -205,27 +205,27 @@ ${BASE_TAR_PATH}-alpine-latest-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-alpine-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.12.12
+${BASE_TAR_PATH}-alpine-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_312_VERSION)
 ${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-alpine3.13-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.13.10
+${BASE_TAR_PATH}-alpine3.13-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_313_VERSION)
 ${BASE_TAR_PATH}-alpine3.13-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-alpine3.14-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.14.6
+${BASE_TAR_PATH}-alpine3.14-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_314_VERSION)
 ${BASE_TAR_PATH}-alpine3.14-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-alpine3.15-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 3.15.4
+${BASE_TAR_PATH}-alpine3.15-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_315_VERSION)
 ${BASE_TAR_PATH}-alpine3.15-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@
 
-${BASE_TAR_PATH}-ubuntu-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= 20.04
+${BASE_TAR_PATH}-ubuntu-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(UBUNTU_VERSION)
 ${BASE_TAR_PATH}-ubuntu-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker ubuntu $* $@
