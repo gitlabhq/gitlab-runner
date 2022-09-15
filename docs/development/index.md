@@ -8,6 +8,19 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 ## 1. Install dependencies and Go runtime
 
+Add `$GOBIN` to your `$PATH` to ensure binaries installed via `go install` are runnable.
+Your shell looks for binaries in `$PATH` directories sequentially, so choose an order based on your preference:
+
+```shell
+export PATH="$(go env GOBIN):$PATH"
+```
+
+or
+
+```shell
+export PATH="$PATH:$(go env GOBIN)"
+```
+
 ### For Debian/Ubuntu
 
 ```shell
