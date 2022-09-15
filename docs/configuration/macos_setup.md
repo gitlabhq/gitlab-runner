@@ -37,7 +37,7 @@ You must change it to Bash.
    ```
 
 1. If the result is not `/bin/bash`, change the shell by running:
-  
+
    ```shell
    chsh -s /bin/bash
    ```
@@ -57,7 +57,7 @@ The runner needs certain environment options to connect to the machine and run a
    ```
 
 1. Set up [`rbenv`](https://github.com/rbenv/rbenv), which is a Ruby version manager, and GitLab Runner:
-  
+
    ```shell
    brew install rbenv gitlab-runner
    brew services start gitlab-runner
@@ -109,7 +109,7 @@ Now install and configure Xcode.
 
 Now register a runner to start picking up your CI/CD jobs.
 
-1. In GitLab, on the top bar, select **Main menu > Projects > View all projects** or **Main menu > Groups > View all groups** to find your project or group.
+1. In GitLab, on the top bar, select **Main menu > Projects** or **Main menu > Groups** and find your project or group.
 1. On the left sidebar, select **Settings > CI/CD**.
 1. Expand **Runners**.
 1. Note the URL and registration token.
