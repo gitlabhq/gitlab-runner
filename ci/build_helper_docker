@@ -17,7 +17,7 @@ TARGET_ARCH=$2
 TARGET_FILE=$3
 
 if [ -z "${TARGET_ARCH}" ] || [ -z "${TARGET_FILE}" ]; then
-    echo -e "${RED}Missing required arguments. Usage: build_helper_docker TARGET_ARCH TARGET_FILE${RST}"
+    echo -e "${RED}Missing required arguments. Usage: build_helper_docker TARGET_FLAVOR TARGET_ARCH TARGET_FILE [PWSH_TARGET_FLAVOR_IMAGE_VERSION]${RST}"
     exit 1
 fi
 
@@ -25,6 +25,8 @@ DOCKERFILE=${TARGET_DOCKERFILE:-"Dockerfile.${TARGET_FLAVOR}"}
 HELPER_BINARY_POSTFIX=${HELPER_BINARY_POSTFIX:-}
 
 if [[ $IMAGE_SHELL == 'pwsh' ]]; then
+    PWSH_TARGET_FLAVOR_IMAGE_VERSION=$4
+
     if [ -z "${TARGET_FLAVOR}" ] || [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" ] || [ -z "${PWSH_IMAGE_DATE}" ]; then
         echo -e "${RED}Missing required arguments. When IMAGE_SHELL is 'pwsh', PWSH_VERSION, " \
         "TARGET_FLAVOR, PWSH_TARGET_FLAVOR_IMAGE_VERSION, and PWSH_IMAGE_DATE must be defined${RST}"
@@ -43,6 +45,8 @@ if [[ $IMAGE_SHELL == 'pwsh' ]]; then
     # ```
     BASE_IMAGE="mcr.microsoft.com/powershell:${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}-${PWSH_IMAGE_DATE}"
 else
+    TARGET_FLAVOR_IMAGE_VERSION=$4
+
     if [ -z "${TARGET_FLAVOR}" ] || [ -z "${TARGET_FLAVOR_IMAGE_VERSION}" ]; then
         echo -e "${RED}Missing required arguments. TARGET_FLAVOR and TARGET_FLAVOR_IMAGE_VERSION must be defined${RST}"
         exit 1
