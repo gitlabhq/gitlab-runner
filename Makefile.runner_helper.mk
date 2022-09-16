@@ -168,64 +168,54 @@ ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz $(TAR_XZ_ARGS) $<
 
-${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(UBI_FIPS_VERSION)
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_DOCKERFILE ?= Dockerfile.fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export HELPER_BINARY_POSTFIX ?= -fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar:
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker redhat/ubi8 $* $@
+	@./ci/build_helper_docker redhat/ubi8 $* $@ $(UBI_FIPS_VERSION)
 
 # See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
-${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_TARGET_FLAVOR_IMAGE_VERSION ?= 3.12
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@
+	@./ci/build_helper_docker alpine $* $@ 3.12
 
 ${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: export PWSH_VERSION ?= 7.1.4
 ${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210927
-${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: export PWSH_TARGET_FLAVOR_IMAGE_VERSION ?= 3.13
 ${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@
+	@./ci/build_helper_docker alpine $* $@ 3.13
 
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
-${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_TARGET_FLAVOR_IMAGE_VERSION ?= 20.04
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker ubuntu $* $@
+	@./ci/build_helper_docker ubuntu $* $@ 20.04
 
-${BASE_TAR_PATH}-alpine-latest-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= latest
 ${BASE_TAR_PATH}-alpine-latest-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@
+	@./ci/build_helper_docker alpine $* $@ latest
 
-${BASE_TAR_PATH}-alpine-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_312_VERSION)
 ${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_312_VERSION)
 
-${BASE_TAR_PATH}-alpine3.13-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_313_VERSION)
 ${BASE_TAR_PATH}-alpine3.13-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_313_VERSION)
 
-${BASE_TAR_PATH}-alpine3.14-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_314_VERSION)
 ${BASE_TAR_PATH}-alpine3.14-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_314_VERSION)
 
-${BASE_TAR_PATH}-alpine3.15-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(ALPINE_315_VERSION)
 ${BASE_TAR_PATH}-alpine3.15-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_315_VERSION)
 
-${BASE_TAR_PATH}-ubuntu-%.tar: export TARGET_FLAVOR_IMAGE_VERSION ?= $(UBUNTU_VERSION)
 ${BASE_TAR_PATH}-ubuntu-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker ubuntu $* $@
+	@./ci/build_helper_docker ubuntu $* $@ $(UBUNTU_VERSION)
