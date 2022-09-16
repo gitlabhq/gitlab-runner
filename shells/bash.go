@@ -214,7 +214,7 @@ func (b *BashWriter) RmFilesRecursive(path string, name string) {
 }
 
 func (b *BashWriter) Absolute(dir string) string {
-	if path.IsAbs(dir) {
+	if path.IsAbs(dir) || strings.HasPrefix(dir, "$PWD") {
 		return dir
 	}
 	return path.Join("$PWD", dir)

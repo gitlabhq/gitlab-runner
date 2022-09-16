@@ -160,6 +160,10 @@ func Test_BashWriter_cleanPath(t *testing.T) {
 			path: "/foo/bar/KEY",
 			want: "/foo/bar/KEY",
 		},
+		"idempotent": {
+			path: "$PWD/foo/bar/KEY",
+			want: "$PWD/foo/bar/KEY",
+		},
 	}
 
 	bw := BashWriter{TemporaryPath: "foo/bar"}
