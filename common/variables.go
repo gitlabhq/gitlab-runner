@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -25,6 +26,14 @@ func (b JobVariable) String() string {
 }
 
 const tempProjectDirVariableKey = "RUNNER_TEMP_PROJECT_DIR"
+
+// tmpFile will return a canonical temp file path by prepending the job
+// variables Key with the value of `RUNNER_TEMP_PROJECT_DIR` (typically the
+// build's temporary directory). The returned path must be further expanded
+// by/for each shell that uses it.
+func (b JobVariables) tmpFile(s string) string {
+	return path.Join(b.Get(tempProjectDirVariableKey), s)
+}
 
 func (b JobVariables) PublicOrInternal() (variables JobVariables) {
 	for _, variable := range b {
@@ -51,6 +60,9 @@ func (b JobVariables) Get(key string) string {
 	}
 	for i := len(b) - 1; i >= 0; i-- {
 		if b[i].Key == key {
+			if b[i].File {
+				return b.tmpFile(b[i].Key)
+			}
 			return b[i].Value
 		}
 	}
