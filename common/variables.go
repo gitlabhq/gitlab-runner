@@ -24,6 +24,8 @@ func (b JobVariable) String() string {
 	return fmt.Sprintf("%s=%s", b.Key, b.Value)
 }
 
+const tempProjectDirVariableKey = "RUNNER_TEMP_PROJECT_DIR"
+
 func (b JobVariables) PublicOrInternal() (variables JobVariables) {
 	for _, variable := range b {
 		if variable.Public || variable.Internal {
