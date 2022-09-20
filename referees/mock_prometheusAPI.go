@@ -5,11 +5,8 @@ package referees
 import (
 	context "context"
 
-	api "github.com/prometheus/client_golang/api"
-
-	mock "github.com/stretchr/testify/mock"
-
 	model "github.com/prometheus/common/model"
+	mock "github.com/stretchr/testify/mock"
 
 	time "time"
 
@@ -51,6 +48,27 @@ func (_m *mockPrometheusAPI) Alerts(ctx context.Context) (v1.AlertsResult, error
 		r0 = rf(ctx)
 	} else {
 		r0 = ret.Get(0).(v1.AlertsResult)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Buildinfo provides a mock function with given fields: ctx
+func (_m *mockPrometheusAPI) Buildinfo(ctx context.Context) (v1.BuildinfoResult, error) {
+	ret := _m.Called(ctx)
+
+	var r0 v1.BuildinfoResult
+	if rf, ok := ret.Get(0).(func(context.Context) v1.BuildinfoResult); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(v1.BuildinfoResult)
 	}
 
 	var r1 error
@@ -135,31 +153,31 @@ func (_m *mockPrometheusAPI) Flags(ctx context.Context) (v1.FlagsResult, error) 
 	return r0, r1
 }
 
-// LabelNames provides a mock function with given fields: ctx
-func (_m *mockPrometheusAPI) LabelNames(ctx context.Context) ([]string, api.Warnings, error) {
-	ret := _m.Called(ctx)
+// LabelNames provides a mock function with given fields: ctx, matches, startTime, endTime
+func (_m *mockPrometheusAPI) LabelNames(ctx context.Context, matches []string, startTime time.Time, endTime time.Time) ([]string, v1.Warnings, error) {
+	ret := _m.Called(ctx, matches, startTime, endTime)
 
 	var r0 []string
-	if rf, ok := ret.Get(0).(func(context.Context) []string); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, []string, time.Time, time.Time) []string); ok {
+		r0 = rf(ctx, matches, startTime, endTime)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
 
-	var r1 api.Warnings
-	if rf, ok := ret.Get(1).(func(context.Context) api.Warnings); ok {
-		r1 = rf(ctx)
+	var r1 v1.Warnings
+	if rf, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time) v1.Warnings); ok {
+		r1 = rf(ctx, matches, startTime, endTime)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(api.Warnings)
+			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
-		r2 = rf(ctx)
+	if rf, ok := ret.Get(2).(func(context.Context, []string, time.Time, time.Time) error); ok {
+		r2 = rf(ctx, matches, startTime, endTime)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -167,31 +185,31 @@ func (_m *mockPrometheusAPI) LabelNames(ctx context.Context) ([]string, api.Warn
 	return r0, r1, r2
 }
 
-// LabelValues provides a mock function with given fields: ctx, label
-func (_m *mockPrometheusAPI) LabelValues(ctx context.Context, label string) (model.LabelValues, api.Warnings, error) {
-	ret := _m.Called(ctx, label)
+// LabelValues provides a mock function with given fields: ctx, label, matches, startTime, endTime
+func (_m *mockPrometheusAPI) LabelValues(ctx context.Context, label string, matches []string, startTime time.Time, endTime time.Time) (model.LabelValues, v1.Warnings, error) {
+	ret := _m.Called(ctx, label, matches, startTime, endTime)
 
 	var r0 model.LabelValues
-	if rf, ok := ret.Get(0).(func(context.Context, string) model.LabelValues); ok {
-		r0 = rf(ctx, label)
+	if rf, ok := ret.Get(0).(func(context.Context, string, []string, time.Time, time.Time) model.LabelValues); ok {
+		r0 = rf(ctx, label, matches, startTime, endTime)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(model.LabelValues)
 		}
 	}
 
-	var r1 api.Warnings
-	if rf, ok := ret.Get(1).(func(context.Context, string) api.Warnings); ok {
-		r1 = rf(ctx, label)
+	var r1 v1.Warnings
+	if rf, ok := ret.Get(1).(func(context.Context, string, []string, time.Time, time.Time) v1.Warnings); ok {
+		r1 = rf(ctx, label, matches, startTime, endTime)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(api.Warnings)
+			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, string) error); ok {
-		r2 = rf(ctx, label)
+	if rf, ok := ret.Get(2).(func(context.Context, string, []string, time.Time, time.Time) error); ok {
+		r2 = rf(ctx, label, matches, startTime, endTime)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -199,8 +217,31 @@ func (_m *mockPrometheusAPI) LabelValues(ctx context.Context, label string) (mod
 	return r0, r1, r2
 }
 
+// Metadata provides a mock function with given fields: ctx, metric, limit
+func (_m *mockPrometheusAPI) Metadata(ctx context.Context, metric string, limit string) (map[string][]v1.Metadata, error) {
+	ret := _m.Called(ctx, metric, limit)
+
+	var r0 map[string][]v1.Metadata
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) map[string][]v1.Metadata); ok {
+		r0 = rf(ctx, metric, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string][]v1.Metadata)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, metric, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Query provides a mock function with given fields: ctx, query, ts
-func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Time) (model.Value, api.Warnings, error) {
+func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Time) (model.Value, v1.Warnings, error) {
 	ret := _m.Called(ctx, query, ts)
 
 	var r0 model.Value
@@ -212,12 +253,12 @@ func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Ti
 		}
 	}
 
-	var r1 api.Warnings
-	if rf, ok := ret.Get(1).(func(context.Context, string, time.Time) api.Warnings); ok {
+	var r1 v1.Warnings
+	if rf, ok := ret.Get(1).(func(context.Context, string, time.Time) v1.Warnings); ok {
 		r1 = rf(ctx, query, ts)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(api.Warnings)
+			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
@@ -231,8 +272,31 @@ func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Ti
 	return r0, r1, r2
 }
 
+// QueryExemplars provides a mock function with given fields: ctx, query, startTime, endTime
+func (_m *mockPrometheusAPI) QueryExemplars(ctx context.Context, query string, startTime time.Time, endTime time.Time) ([]v1.ExemplarQueryResult, error) {
+	ret := _m.Called(ctx, query, startTime, endTime)
+
+	var r0 []v1.ExemplarQueryResult
+	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time, time.Time) []v1.ExemplarQueryResult); ok {
+		r0 = rf(ctx, query, startTime, endTime)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]v1.ExemplarQueryResult)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, time.Time, time.Time) error); ok {
+		r1 = rf(ctx, query, startTime, endTime)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // QueryRange provides a mock function with given fields: ctx, query, r
-func (_m *mockPrometheusAPI) QueryRange(ctx context.Context, query string, r v1.Range) (model.Value, api.Warnings, error) {
+func (_m *mockPrometheusAPI) QueryRange(ctx context.Context, query string, r v1.Range) (model.Value, v1.Warnings, error) {
 	ret := _m.Called(ctx, query, r)
 
 	var r0 model.Value
@@ -244,12 +308,12 @@ func (_m *mockPrometheusAPI) QueryRange(ctx context.Context, query string, r v1.
 		}
 	}
 
-	var r1 api.Warnings
-	if rf, ok := ret.Get(1).(func(context.Context, string, v1.Range) api.Warnings); ok {
+	var r1 v1.Warnings
+	if rf, ok := ret.Get(1).(func(context.Context, string, v1.Range) v1.Warnings); ok {
 		r1 = rf(ctx, query, r)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(api.Warnings)
+			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
@@ -284,8 +348,29 @@ func (_m *mockPrometheusAPI) Rules(ctx context.Context) (v1.RulesResult, error) 
 	return r0, r1
 }
 
+// Runtimeinfo provides a mock function with given fields: ctx
+func (_m *mockPrometheusAPI) Runtimeinfo(ctx context.Context) (v1.RuntimeinfoResult, error) {
+	ret := _m.Called(ctx)
+
+	var r0 v1.RuntimeinfoResult
+	if rf, ok := ret.Get(0).(func(context.Context) v1.RuntimeinfoResult); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(v1.RuntimeinfoResult)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Series provides a mock function with given fields: ctx, matches, startTime, endTime
-func (_m *mockPrometheusAPI) Series(ctx context.Context, matches []string, startTime time.Time, endTime time.Time) ([]model.LabelSet, api.Warnings, error) {
+func (_m *mockPrometheusAPI) Series(ctx context.Context, matches []string, startTime time.Time, endTime time.Time) ([]model.LabelSet, v1.Warnings, error) {
 	ret := _m.Called(ctx, matches, startTime, endTime)
 
 	var r0 []model.LabelSet
@@ -297,12 +382,12 @@ func (_m *mockPrometheusAPI) Series(ctx context.Context, matches []string, start
 		}
 	}
 
-	var r1 api.Warnings
-	if rf, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time) api.Warnings); ok {
+	var r1 v1.Warnings
+	if rf, ok := ret.Get(1).(func(context.Context, []string, time.Time, time.Time) v1.Warnings); ok {
 		r1 = rf(ctx, matches, startTime, endTime)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(api.Warnings)
+			r1 = ret.Get(1).(v1.Warnings)
 		}
 	}
 
@@ -330,6 +415,27 @@ func (_m *mockPrometheusAPI) Snapshot(ctx context.Context, skipHead bool) (v1.Sn
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, bool) error); ok {
 		r1 = rf(ctx, skipHead)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// TSDB provides a mock function with given fields: ctx
+func (_m *mockPrometheusAPI) TSDB(ctx context.Context) (v1.TSDBResult, error) {
+	ret := _m.Called(ctx)
+
+	var r0 v1.TSDBResult
+	if rf, ok := ret.Get(0).(func(context.Context) v1.TSDBResult); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(v1.TSDBResult)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}

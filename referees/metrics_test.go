@@ -14,9 +14,10 @@ import (
 	"testing"
 	"time"
 
+	prometheusV1 "github.com/prometheus/client_golang/api/prometheus/v1"
+
 	"github.com/prometheus/common/model"
 
-	"github.com/prometheus/client_golang/api"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -138,7 +139,7 @@ func TestMetricsRefereeExecuteQueryRangeError(t *testing.T) {
 	matrix := model.Matrix([]*model.SampleStream{})
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
-		Return(matrix, api.Warnings([]string{}), errors.New("test"))
+		Return(matrix, prometheusV1.Warnings([]string{}), errors.New("test"))
 
 	mr.prometheusAPI = prometheusAPI
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
@@ -158,7 +159,7 @@ func TestMetricsRefereeExecuteQueryRangeNonMatrixReturn(t *testing.T) {
 	prometheusAPI := new(mockPrometheusAPI)
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
-		Return(new(mockPrometheusValue), api.Warnings([]string{}), nil)
+		Return(new(mockPrometheusValue), prometheusV1.Warnings([]string{}), nil)
 
 	mr.prometheusAPI = prometheusAPI
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
@@ -179,7 +180,7 @@ func TestMetricsRefereeExecuteQueryRangeResultEmpty(t *testing.T) {
 	prometheusAPI := new(mockPrometheusAPI)
 	prometheusAPI.
 		On("QueryRange", mock.Anything, mock.Anything, mock.Anything).
-		Return(matrix, api.Warnings([]string{}), nil)
+		Return(matrix, prometheusV1.Warnings([]string{}), nil)
 
 	mr.prometheusAPI = prometheusAPI
 	_, err := mr.Execute(ctx, time.Now(), time.Now())
