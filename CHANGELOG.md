@@ -1,3 +1,9 @@
+## v15.2.2 (2022-09-21)
+
+### Security fixes
+
+- Upgrade prometheus/client-golang from v1.1.0 to v1.11.1
+
 ## v15.2.1 (2022-07-26)
 
 ### Bug fixes
