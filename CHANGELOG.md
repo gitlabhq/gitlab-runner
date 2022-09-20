@@ -27,6 +27,10 @@
 - Update redhat/ubi8 Docker tag to v8.6-943 !3605
 - Update alpine Docker tags !3604
 
+### Security fixes
+
+- Upgrade prometheus/client-golang from v1.1.0 to v1.11.1
+
 ## v15.3.0 (2022-08-19)
 
 ### New features
