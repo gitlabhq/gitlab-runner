@@ -1,3 +1,32 @@
+## v15.4.0 (2022-09-21)
+
+### New features
+
+- Add renovate support !3592
+
+### Bug fixes
+
+- Reset token in config template when set !3593
+- Remove reliance on text/transform for trace masking !3482
+
+### Maintenance
+
+- Update instructions with new menu title !3599
+- Update project for latest Vale and Markdownlint tooling and rules !3598
+- Docs: Small edit to language !3596
+- Updated title to match left nav !3588
+- Delete tmp/gitlab-test directory. !3585
+- Updated title to match our standards !3584
+- Allow setting of Docker volume label mode independent of read/write mode !3580
+- Improve clarity of runner metrics examples !3578
+- Remove 'respectively' and 'please note' !3574
+- Add io error to troubleshooting section !3573
+- Docs: Adding details about GitOps configuration for agent !3572
+- Fix runners location in docs !3555
+- Add path implementation to support Windows docker from unix !3344
+- Update redhat/ubi8 Docker tag to v8.6-943 !3605
+- Update alpine Docker tags !3604
+
 ## v15.3.0 (2022-08-19)
 
 ### New features
