@@ -31,7 +31,7 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/imdario/mergo v0.3.7
-	github.com/jpillora/backoff v0.0.0-20170222002228-06c7a16c845d
+	github.com/jpillora/backoff v1.0.0
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kardianos/service v1.2.0
 	github.com/klauspost/compress v1.15.6 // indirect
@@ -44,9 +44,9 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/prometheus/client_golang v1.1.0
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
-	github.com/prometheus/common v0.6.0
+	github.com/prometheus/client_golang v1.11.1
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/common v0.26.0
 	github.com/prometheus/procfs v0.6.0
 	github.com/rs/xid v1.4.0 // indirect
 	github.com/saracen/fastzip v0.1.9
@@ -83,6 +83,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.0 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect

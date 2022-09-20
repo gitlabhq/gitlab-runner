@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/collectors"
+
 	"github.com/kardianos/service"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -290,9 +292,9 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	// Metrics about the program's build version.
 	registry.MustRegister(common.AppVersion.NewMetricsCollector())
 	// Go-specific metrics about the process (GC stats, goroutines, etc.).
-	registry.MustRegister(prometheus.NewGoCollector())
+	registry.MustRegister(collectors.NewGoCollector())
 	// Go-unrelated process metrics (memory usage, file descriptors, etc.).
-	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	// Register all executor provider collectors
 	for _, provider := range common.GetExecutorProviders() {
