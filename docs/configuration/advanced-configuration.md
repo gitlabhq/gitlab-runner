@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#designated-technical-writers
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
 # Advanced configuration **(FREE)**
@@ -776,7 +776,7 @@ The IAM policy for this role must have permissions to do the following actions f
 - "s3:GetObject"
 - "s3:DeleteObject"
 
-If you use `ServerSideEncryption` of type `KMS`, this role must also have permission to do the following actions for the specified AWS KMS Key: 
+If you use `ServerSideEncryption` of type `KMS`, this role must also have permission to do the following actions for the specified AWS KMS Key:
 
 - "kms:Encrypt"
 - "kms:Decrypt"
@@ -784,7 +784,7 @@ If you use `ServerSideEncryption` of type `KMS`, this role must also have permis
 - "kms:GenerateDataKey*"
 - "kms:DescribeKey"
 
-`ServerSideEncryption` of type `SSE-C` is currently not supported. 
+`ServerSideEncryption` of type `SSE-C` is currently not supported.
 `SSE-C` requires that the headers, which contain the user-supplied key, are provided for the download request, in addition to the presigned URL.
 This would mean passing the key material to the job, where the key can't be kept safe. This does have the potential to leak the decryption key.
 A discussion about this issue is in [this merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295).

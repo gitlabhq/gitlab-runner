@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
 # The Kubernetes executor for GitLab Runner **(FREE)**
@@ -392,7 +392,7 @@ GitLab Runner checks if the new service accounts or secrets are available with a
 The number of times to check is equal to the value of `resource_availability_check_max_attempts`.
 
 - In GitLab 15.0 and 15.1, you cannot disable this feature and it defaults to `5` when a negative value is set.
-- In GitLab 15.0.1, 15.1.1, 15.2 and later, this feature is disabled by default and can be enabled 
+- In GitLab 15.0.1, 15.1.1, 15.2 and later, this feature is disabled by default and can be enabled
 by setting the `resource_availability_check_max_attempts` to any value other than `0`
 
 ## Using the cache with the Kubernetes executor

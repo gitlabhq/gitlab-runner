@@ -1,7 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
 # Self-signed certificates or custom Certification Authorities **(FREE)**
@@ -95,7 +95,7 @@ Notes:
     ```
 
 - If you are updating the certificate for an existing Runner, [restart it](../commands/index.md#gitlab-runner-restart).
-- If you already have a Runner configured through HTTP, update your instance path to the new HTTPS URL of your GitLab instance in your `config.toml`. 
+- If you already have a Runner configured through HTTP, update your instance path to the new HTTPS URL of your GitLab instance in your `config.toml`.
 - As a temporary and insecure workaround, to skip the verification of certificates,
 in the `variables:` section of your `.gitlab-ci.yml` file, set the CI variable `GIT_SSL_NO_VERIFY` to `true`.
 
