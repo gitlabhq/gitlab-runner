@@ -16,7 +16,7 @@
 - [ ] Ensure that the [product tier badge](https://docs.gitlab.com/ee/development/documentation/styleguide/index.html#product-tier-badges) is added to topic's `h1`.
 - [ ] [Request a review](https://docs.gitlab.com/ee/development/code_review.html#dogfooding-the-reviewers-feature) based on:
   - The documentation page's [metadata](https://docs.gitlab.com/ee/development/documentation/#metadata).
-  - The [associated Technical Writer](https://about.gitlab.com/handbook/engineering/ux/technical-writing/#assignments).
+  - The [associated Technical Writer](https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments).
 
 If you are only adding documentation, do not add any of the following labels:
 
@@ -35,7 +35,7 @@ Documentation-related MRs should be reviewed by a Technical Writer for a non-blo
 - [ ] If the content requires it, ensure the information is reviewed by a subject matter expert.
 - Technical writer review items:
   - [ ] Ensure docs metadata is present and up-to-date.
-  - [ ] Ensure the appropriate [labels](https://about.gitlab.com/handbook/engineering/ux/technical-writing/workflow/#labels) are added to this MR.
+  - [ ] Ensure the appropriate [labels](https://about.gitlab.com/handbook/product/ux/technical-writing/workflow/#labels) are added to this MR.
   - If relevant to this MR, ensure [content topic type](https://docs.gitlab.com/ee/development/documentation/structure.html) principles are in use, including:
     - [ ] The headings should be something you'd do a Google search for. Instead of `Default behavior`, say something like `Default behavior when you close an issue`.
     - [ ] The headings (other than the page title) should be active. Instead of `Configuring GDK`, say something like `Configure GDK`.
