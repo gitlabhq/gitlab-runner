@@ -197,6 +197,43 @@ type DockerConfig struct {
 	ContainerLabels            map[string]string  `toml:"container_labels,omitempty" json:"container_labels" long:"container-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create containers with the given container labels. Environment variables will be substituted for values here."`
 }
 
+type AutoscalerConfig struct {
+	CapacityPerInstance   int                             `toml:"capacity_per_instance,omitempty"`
+	MaxUseCount           int                             `toml:"max_use_count,omitempty"`
+	MaxInstances          int                             `toml:"max_instances,omitempty"`
+	Plugin                string                          `toml:"plugin,omitempty"`
+	PluginConfig          AutoscalerSettingsMap           `toml:"plugin_config,omitempty"`
+	InstanceGroupSettings AutoscalerInstanceGroupSettings `toml:"instance_group_settings,omitempty"`
+	Policy                []AutoscalerPolicyConfig        `toml:"policy,omitempty"`
+}
+
+type AutoscalerInstanceGroupSettings struct {
+	OS                   string        `toml:"os,omitempty"`
+	Arch                 string        `toml:"arch,omitempty"`
+	Protocol             string        `toml:"protocol,omitempty"`
+	Username             string        `toml:"username"`
+	Password             string        `toml:"password"`
+	KeyPathname          string        `toml:"key_path"`
+	UseStaticCredentials bool          `toml:"use_static_credentials"`
+	Keepalive            time.Duration `toml:"keepalive"`
+	Timeout              time.Duration `toml:"timeout"`
+}
+
+type AutoscalerSettingsMap map[string]interface{}
+
+func (settings AutoscalerSettingsMap) JSON() ([]byte, error) {
+	return json.Marshal(settings)
+}
+
+type AutoscalerPolicyConfig struct {
+	Periods          []string      `toml:"periods,omitempty"`
+	Timezone         string        `toml:"timezone,omitempty"`
+	IdleCount        int           `toml:"idle_count,omitempty"`
+	IdleTime         time.Duration `toml:"idle_time,omitempty"`
+	ScaleFactor      float64       `toml:"scale_factor,omitempty"`
+	ScaleFactorLimit int           `toml:"scale_factor_limit,omitempty"`
+}
+
 //nolint:lll
 type DockerMachine struct {
 	MaxGrowthRate int `toml:"MaxGrowthRate,omitzero" long:"max-growth-rate" env:"MACHINE_MAX_GROWTH_RATE" description:"Maximum machines being provisioned concurrently, set to 0 for unlimited"`
@@ -896,6 +933,8 @@ type RunnerSettings struct {
 	Machine    *DockerMachine    `toml:"machine,omitempty" json:"machine" group:"docker machine provider" namespace:"machine"`
 	Kubernetes *KubernetesConfig `toml:"kubernetes,omitempty" json:"kubernetes" group:"kubernetes executor" namespace:"kubernetes"`
 	Custom     *CustomConfig     `toml:"custom,omitempty" json:"custom" group:"custom executor" namespace:"custom"`
+
+	Autoscaler *AutoscalerConfig `toml:"autoscaler,omitempty"`
 }
 
 //nolint:lll

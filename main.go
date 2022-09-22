@@ -20,6 +20,7 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/instance"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
