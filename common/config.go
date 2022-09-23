@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -949,7 +948,7 @@ func (s *defaultConfigSaver) Save(filePath string, data []byte) error {
 	}
 
 	// write config file
-	err = ioutil.WriteFile(filePath, data, 0600)
+	err = os.WriteFile(filePath, data, 0o600)
 	if err != nil {
 		return fmt.Errorf("saving the file: %w", err)
 	}

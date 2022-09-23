@@ -3,7 +3,6 @@ package helpers
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -93,7 +92,7 @@ func (c *ArtifactsDownloaderCommand) Execute(cliContext *cli.Context) {
 	}
 
 	// Create temporary file
-	file, err := ioutil.TempFile(c.StagingDir, "artifacts")
+	file, err := os.CreateTemp(c.StagingDir, "artifacts")
 	if err != nil {
 		logrus.Fatalln(err)
 	}

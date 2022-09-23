@@ -1,11 +1,10 @@
 //go:build !integration
-// +build !integration
 
 package log
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -51,7 +50,7 @@ func TestServiceLogHook(t *testing.T) {
 
 			logger := logrus.New()
 			logger.SetLevel(logrus.InfoLevel)
-			logger.SetOutput(ioutil.Discard)
+			logger.SetOutput(io.Discard)
 
 			SetSystemLogger(logger, sysService)
 

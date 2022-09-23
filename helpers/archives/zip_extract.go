@@ -3,7 +3,6 @@ package archives
 import (
 	"archive/zip"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -28,7 +27,7 @@ func extractZipSymlinkEntry(file *zip.File) (err error) {
 	}
 	defer func() { _ = in.Close() }()
 
-	data, err = ioutil.ReadAll(in)
+	data, err = io.ReadAll(in)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func extractZipFileEntry(file *zip.File) (err error) {
 
 func extractZipFile(file *zip.File) (err error) {
 	// Create all parents to extract the file
-	err = os.MkdirAll(filepath.Dir(file.Name), 0777)
+	err = os.MkdirAll(filepath.Dir(file.Name), 0o777)
 	if err != nil {
 		return err
 	}

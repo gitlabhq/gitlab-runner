@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 package gitlab_ci_yaml_parser
 

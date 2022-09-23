@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 /*
 Copyright 2014 The Kubernetes Authors All rights reserved.
@@ -24,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"testing"
@@ -265,7 +263,7 @@ func TestAttach(t *testing.T) {
 		return url.Path == "/api/v1/namespaces/test/pods/foo/attach"
 	})
 	stdinMatcher := mock.MatchedBy(func(stdin io.Reader) bool {
-		b, _ := ioutil.ReadAll(stdin)
+		b, _ := io.ReadAll(stdin)
 		return string(b) == "sleep 1\n"
 	})
 	mockExecutor.

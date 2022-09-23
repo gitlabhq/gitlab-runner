@@ -1,10 +1,8 @@
 //go:build !integration
-// +build !integration
 
 package archives
 
 import (
-	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -16,7 +14,7 @@ import (
 )
 
 func TestCreateZipExtra(t *testing.T) {
-	testFile, err := ioutil.TempFile("", "test")
+	testFile, err := os.CreateTemp("", "test")
 	assert.NoError(t, err)
 	defer testFile.Close()
 	defer os.Remove(testFile.Name())
@@ -39,7 +37,7 @@ func TestCreateZipExtra(t *testing.T) {
 }
 
 func TestProcessZipExtra(t *testing.T) {
-	testFile, err := ioutil.TempFile("", "test")
+	testFile, err := os.CreateTemp("", "test")
 	assert.NoError(t, err)
 	defer testFile.Close()
 	defer os.Remove(testFile.Name())
@@ -51,7 +49,7 @@ func TestProcessZipExtra(t *testing.T) {
 	assert.NoError(t, err)
 	zipFile.Extra = createZipExtra(fi)
 
-	err = ioutil.WriteFile(fi.Name(), []byte{}, 0666)
+	err = os.WriteFile(fi.Name(), []byte{}, 0o666)
 	defer os.Remove(fi.Name())
 	assert.NoError(t, err)
 

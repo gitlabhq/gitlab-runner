@@ -7,7 +7,6 @@ import (
 	"hash"
 	"hash/crc32"
 	"io"
-	"io/ioutil"
 	"os"
 	"sync"
 	"unicode/utf8"
@@ -250,7 +249,7 @@ func New(opts ...Option) (*Buffer, error) {
 }
 
 func newLogFile() (*os.File, error) {
-	return ioutil.TempFile("", "trace")
+	return os.CreateTemp("", "trace")
 }
 
 // truncateSafeUTF8 truncates a job log at the capacity but avoids

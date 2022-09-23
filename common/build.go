@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -559,7 +558,7 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 		}
 
 		// referee ran successfully, upload its results to GitLab as an artifact
-		b.ArtifactUploader(jobCredentials, ioutil.NopCloser(reader), ArtifactsOptions{
+		b.ArtifactUploader(jobCredentials, io.NopCloser(reader), ArtifactsOptions{
 			BaseName: referee.ArtifactBaseName(),
 			Type:     referee.ArtifactType(),
 			Format:   ArtifactFormat(referee.ArtifactFormat()),

@@ -1,10 +1,9 @@
 //go:build !integration
-// +build !integration
 
 package commands
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -170,7 +169,7 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 			assert.Equal(t, "2", resp.Header.Get("X-List-Version"))
 			assert.Equal(t, "text/plain", resp.Header.Get("Content-Type"))
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			if len(test.expectedOutput) == 0 {

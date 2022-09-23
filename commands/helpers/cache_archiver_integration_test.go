@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package helpers_test
 
@@ -8,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -282,6 +280,6 @@ func testCacheUploadWithCustomHeaders(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeTestFile(t *testing.T, fileName string) {
-	err := ioutil.WriteFile(fileName, nil, 0600)
+	err := os.WriteFile(fileName, nil, 0600)
 	require.NoError(t, err, "Writing file:", fileName)
 }

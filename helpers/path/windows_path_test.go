@@ -1,5 +1,4 @@
 //go:build !integration && windows
-// +build !integration,windows
 
 package path
 

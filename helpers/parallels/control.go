@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -205,7 +205,7 @@ func IPAddress(mac string) (string, error) {
 		return "", fmt.Errorf("not a valid MAC address: %s. It should be exactly 12 digits", mac)
 	}
 
-	leases, err := ioutil.ReadFile(dhcpLeases)
+	leases, err := os.ReadFile(dhcpLeases)
 	if err != nil {
 		return "", err
 	}

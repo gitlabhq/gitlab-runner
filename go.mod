@@ -1,6 +1,6 @@
 module gitlab.com/gitlab-org/gitlab-runner
 
-go 1.17
+go 1.18
 
 require (
 	cloud.google.com/go v0.72.0

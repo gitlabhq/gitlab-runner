@@ -3,7 +3,6 @@ package helpers
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -55,7 +54,7 @@ func getRemoteCacheSize(resp *http.Response) int64 {
 }
 
 func (c *CacheExtractorCommand) download(_ int) error {
-	err := os.MkdirAll(filepath.Dir(c.File), 0700)
+	err := os.MkdirAll(filepath.Dir(c.File), 0o700)
 	if err != nil {
 		return err
 	}
@@ -73,7 +72,7 @@ func (c *CacheExtractorCommand) download(_ int) error {
 		return nil
 	}
 
-	file, err := ioutil.TempFile(filepath.Dir(c.File), "cache")
+	file, err := os.CreateTemp(filepath.Dir(c.File), "cache")
 	if err != nil {
 		return err
 	}

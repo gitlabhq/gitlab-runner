@@ -1,12 +1,11 @@
 //go:build !integration
-// +build !integration
 
 package kubernetes
 
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -221,7 +220,7 @@ func TestProxyRequestHTTP(t *testing.T) {
 					case p == test.endpointURI && m == http.MethodGet:
 						return &http.Response{
 							StatusCode: http.StatusOK,
-							Body:       ioutil.NopCloser(bytes.NewReader([]byte(defaultBody))),
+							Body:       io.NopCloser(bytes.NewReader([]byte(defaultBody))),
 						}, nil
 					default:
 						return mockPodRunningStatus(req, version, codec, objectInfo, test.podStatus, true)
@@ -237,7 +236,7 @@ func TestProxyRequestHTTP(t *testing.T) {
 			resp := rw.Result()
 			defer resp.Body.Close()
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Equal(t, test.expectedStatusCode, resp.StatusCode)
 			assert.Equal(t, test.expectedBody, string(b))
@@ -293,7 +292,7 @@ func TestProxyRequestHTTPError(t *testing.T) {
 					case p == endpointURI && m == http.MethodGet:
 						return &http.Response{
 							StatusCode: test.expectedErrorCode,
-							Body:       ioutil.NopCloser(bytes.NewReader([]byte(errorMessage))),
+							Body:       io.NopCloser(bytes.NewReader([]byte(errorMessage))),
 						}, nil
 					default:
 						return mockPodRunningStatus(req, version, codec, objectInfo, api.PodRunning, true)
@@ -309,7 +308,7 @@ func TestProxyRequestHTTPError(t *testing.T) {
 			resp := rw.Result()
 			defer resp.Body.Close()
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Equal(t, test.expectedErrorCode, resp.StatusCode)
 			assert.Equal(t, test.expectedErrorMsg, string(b))

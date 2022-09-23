@@ -1,10 +1,9 @@
 //go:build integration
-// +build integration
 
 package commands
 
 import (
-	"io/ioutil"
+	"io"
 	"runtime"
 	"testing"
 	"time"
@@ -41,7 +40,7 @@ func TestBuildsHelperCollect(t *testing.T) {
 			},
 		},
 	}
-	trace := &common.Trace{Writer: ioutil.Discard}
+	trace := &common.Trace{Writer: io.Discard}
 
 	done := make(chan error)
 	go func() {

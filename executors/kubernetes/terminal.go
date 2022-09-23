@@ -1,9 +1,9 @@
 package kubernetes
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
@@ -55,7 +55,7 @@ func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
 
 	caCert := ""
 	if len(config.CAFile) > 0 {
-		buf, err := ioutil.ReadFile(config.CAFile)
+		buf, err := os.ReadFile(config.CAFile)
 		if err != nil {
 			return nil, err
 		}

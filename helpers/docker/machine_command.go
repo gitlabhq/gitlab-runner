@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -169,7 +168,7 @@ func (m *machineCommand) Remove(name string) error {
 }
 
 func (m *machineCommand) List() (hostNames []string, err error) {
-	dir, err := ioutil.ReadDir(mcndirs.GetMachineDir())
+	dir, err := os.ReadDir(mcndirs.GetMachineDir())
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

@@ -2,7 +2,7 @@ package machine
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -68,7 +68,7 @@ func (m *machineDetails) writeDebugInformation() {
 	details.Time = time.Now().String()
 	details.CreatedAgo = time.Since(m.Created)
 	data := helpers.ToYAML(&details)
-	_ = ioutil.WriteFile("machines/"+details.Details.Name+".yml", []byte(data), 0600)
+	_ = os.WriteFile("machines/"+details.Details.Name+".yml", []byte(data), 0o600)
 }
 
 func (m *machineDetails) logger() *logrus.Entry {

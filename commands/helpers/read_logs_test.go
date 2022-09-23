@@ -1,11 +1,9 @@
 //go:build !integration
-// +build !integration
 
 package helpers
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -53,7 +51,7 @@ func TestNewReadLogsCommandFileSeekToInvalidLocation(t *testing.T) {
 }
 
 func setupTestFile(t *testing.T) (*os.File, func()) {
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 
 	cleanup := func() {

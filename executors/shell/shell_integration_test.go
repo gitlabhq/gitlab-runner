@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package shell_test
 
@@ -7,7 +6,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -44,7 +43,7 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("Compiling gitlab-runner binary for tests")
 
-	targetDir, err := ioutil.TempDir("", "test_executor")
+	targetDir, err := os.MkdirTemp("", "test_executor")
 	if err != nil {
 		panic("Error on preparing tmp directory for test executor binary")
 	}
@@ -340,7 +339,7 @@ func TestBuildWithIndexLock(t *testing.T) {
 		assert.NoError(t, err)
 
 		build.JobResponse.AllowGitFetch = true
-		err = ioutil.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
+		err = os.WriteFile(build.BuildDir+"/.git/index.lock", []byte{}, os.ModeSticky)
 		require.NoError(t, err)
 
 		err = buildtest.RunBuild(t, build)
@@ -363,7 +362,7 @@ func TestBuildWithShallowLock(t *testing.T) {
 		err = buildtest.RunBuild(t, build)
 		assert.NoError(t, err)
 
-		err = ioutil.WriteFile(build.BuildDir+"/.git/shallow.lock", []byte{}, os.ModeSticky)
+		err = os.WriteFile(build.BuildDir+"/.git/shallow.lock", []byte{}, os.ModeSticky)
 		require.NoError(t, err)
 
 		err = buildtest.RunBuild(t, build)
@@ -381,7 +380,7 @@ func TestBuildWithHeadLock(t *testing.T) {
 		assert.NoError(t, err)
 
 		build.JobResponse.AllowGitFetch = true
-		err = ioutil.WriteFile(build.BuildDir+"/.git/HEAD.lock", []byte{}, os.ModeSticky)
+		err = os.WriteFile(build.BuildDir+"/.git/HEAD.lock", []byte{}, os.ModeSticky)
 		require.NoError(t, err)
 
 		err = buildtest.RunBuild(t, build)
@@ -399,7 +398,7 @@ func TestBuildWithLeftoverConfigLock(t *testing.T) {
 		assert.NoError(t, err)
 
 		build.JobResponse.AllowGitFetch = true
-		err = ioutil.WriteFile(build.BuildDir+"/.git/config.lock", []byte{}, os.ModeSticky)
+		err = os.WriteFile(build.BuildDir+"/.git/config.lock", []byte{}, os.ModeSticky)
 		require.NoError(t, err)
 
 		err = buildtest.RunBuild(t, build)
@@ -420,7 +419,7 @@ func TestBuildWithGitLFSHook(t *testing.T) {
 
 		err = os.MkdirAll(build.BuildDir+"/.git/hooks/", 0755)
 		require.NoError(t, err)
-		err = ioutil.WriteFile(build.BuildDir+"/.git/hooks/post-checkout", []byte(gitLFSPostCheckoutHook), 0777)
+		err = os.WriteFile(build.BuildDir+"/.git/hooks/post-checkout", []byte(gitLFSPostCheckoutHook), 0777)
 		require.NoError(t, err)
 		build.JobResponse.AllowGitFetch = true
 
@@ -956,7 +955,7 @@ func TestBuildWithGitFetchSubmoduleStrategyRecursive(t *testing.T) {
 
 		// Create a file not tracked that should be cleaned in submodule.
 		excludedFilePath := filepath.Join(build.BuildDir, "gitlab-grack", "excluded_file")
-		err = ioutil.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
+		err = os.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
 		require.NoError(t, err)
 
 		// Run second build, to run fetch.
@@ -1112,7 +1111,7 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 
 		// modify submodule and commit
 		modifySubmoduleBeforeCommit := "committed change"
-		err = ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
+		err = os.WriteFile(submoduleReadme, []byte(modifySubmoduleBeforeCommit), os.ModeSticky)
 		require.NoError(t, err)
 		_, err = gitInDir(submoduleDir, "add", "README.md")
 		assert.NoError(t, err)
@@ -1134,7 +1133,7 @@ func TestBuildWithGitSubmoduleModified(t *testing.T) {
 
 		// modify submodule without commit before second build
 		modifySubmoduleAfterCommit := "not committed change"
-		err = ioutil.WriteFile(submoduleReadme, []byte(modifySubmoduleAfterCommit), os.ModeSticky)
+		err = os.WriteFile(submoduleReadme, []byte(modifySubmoduleAfterCommit), os.ModeSticky)
 		require.NoError(t, err)
 
 		build.JobResponse.AllowGitFetch = true
@@ -1159,6 +1158,7 @@ func TestBuildWithoutDebugTrace(t *testing.T) {
 		assert.NotRegexp(t, `[^$] echo Hello World`, out)
 	})
 }
+
 func TestBuildWithDebugTrace(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
@@ -1402,7 +1402,7 @@ func TestInteractiveTerminal(t *testing.T) {
 			}
 			conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
 			assert.Equal(t, c.expectedStatusCode, resp.StatusCode)
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			require.NoError(t, err, string(body))
 			defer resp.Body.Close()
 
@@ -1450,9 +1450,9 @@ func TestBuildWithGitCleanFlags(t *testing.T) {
 		excludedFilePath := filepath.Join(build.BuildDir, "excluded_file")
 		cleanUpFilePath := filepath.Join(build.BuildDir, "cleanup_file")
 
-		err = ioutil.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
+		err = os.WriteFile(excludedFilePath, []byte{}, os.ModePerm)
 		require.NoError(t, err)
-		err = ioutil.WriteFile(cleanUpFilePath, []byte{}, os.ModePerm)
+		err = os.WriteFile(cleanUpFilePath, []byte{}, os.ModePerm)
 		require.NoError(t, err)
 
 		// Re-run build and ensure that file still exists

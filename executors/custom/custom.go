@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -90,7 +89,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	e.tempDir, err = ioutil.TempDir("", "custom-executor")
+	e.tempDir, err = os.MkdirTemp("", "custom-executor")
 	if err != nil {
 		return err
 	}
@@ -147,7 +146,7 @@ func (e *executor) prepareConfig() error {
 
 func (e *executor) createJobResponseFile() (string, error) {
 	responseFile := filepath.Join(e.tempDir, "response.json")
-	file, err := os.OpenFile(responseFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := os.OpenFile(responseFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return "", fmt.Errorf("creating job response file %q: %w", responseFile, err)
 	}
@@ -288,13 +287,13 @@ func (e *executor) getCIJobServicesEnv() common.JobVariable {
 }
 
 func (e *executor) Run(cmd common.ExecutorCommand) error {
-	scriptDir, err := ioutil.TempDir(e.tempDir, "script")
+	scriptDir, err := os.MkdirTemp(e.tempDir, "script")
 	if err != nil {
 		return err
 	}
 
 	scriptFile := filepath.Join(scriptDir, "script."+e.BuildShell.Extension)
-	err = ioutil.WriteFile(scriptFile, []byte(cmd.Script), 0700)
+	err = os.WriteFile(scriptFile, []byte(cmd.Script), 0o700)
 	if err != nil {
 		return err
 	}

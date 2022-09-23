@@ -1,10 +1,8 @@
 //go:build integration
-// +build integration
 
 package shells_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -40,7 +38,7 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
 
 	script := writer.Finish(false)
 	scriptFile := filepath.Join(cwd, shell+"-test-script."+extension)
-	err := ioutil.WriteFile(scriptFile, []byte(script), 0700)
+	err := os.WriteFile(scriptFile, []byte(script), 0700)
 	require.NoError(t, err)
 	defer os.Remove(scriptFile)
 
@@ -67,7 +65,7 @@ func TestMkDir(t *testing.T) {
 		runShell(t, shell, tmpDir, writer)
 
 		createdPath := filepath.Join(tmpDir, testTmpDir, TestPath)
-		_, err := ioutil.ReadDir(createdPath)
+		_, err := os.ReadDir(createdPath)
 		assert.NoError(t, err)
 	})
 }
@@ -79,7 +77,7 @@ func TestRmFile(t *testing.T) {
 
 	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
 		tmpFile := path.Join(tmpDir, TestPath)
-		err := ioutil.WriteFile(tmpFile, []byte{}, 0600)
+		err := os.WriteFile(tmpFile, []byte{}, 0600)
 		require.NoError(t, err)
 
 		writer.RmFile(TestPath)
@@ -108,11 +106,11 @@ func TestRmFilesRecursive(t *testing.T) {
 
 		// lockfiles can be in multiple subdirs
 		for i := 0; i < 3; i++ {
-			tmpSubDir, err := ioutil.TempDir(tmpDir, "subdir")
+			tmpSubDir, err := os.MkdirTemp(tmpDir, "subdir")
 			require.NoError(t, err)
 
 			tmpFile := path.Join(tmpSubDir, TestPath)
-			err = ioutil.WriteFile(tmpFile, []byte{}, 0600)
+			err = os.WriteFile(tmpFile, []byte{}, 0600)
 			require.NoError(t, err)
 			tmpFiles = append(tmpFiles, tmpFile)
 		}

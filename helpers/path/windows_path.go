@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 // This implementation only works when compiled for Windows
 // as this uses the `path/filepath` which is platform dependent

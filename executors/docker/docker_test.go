@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -470,7 +470,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 
 	logger, _ := logrustest.NewNullLogger()
 	e.AbstractExecutor = executors.AbstractExecutor{
-		BuildLogger: common.NewBuildLogger(&common.Trace{Writer: ioutil.Discard}, logger.WithField("test", t.Name())),
+		BuildLogger: common.NewBuildLogger(&common.Trace{Writer: io.Discard}, logger.WithField("test", t.Name())),
 		Build: &common.Build{
 			ProjectRunnerID: 0,
 			Runner:          &c,

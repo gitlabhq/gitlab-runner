@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 package archives
 
@@ -7,7 +6,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -35,7 +33,7 @@ func testOnArchive(
 	createArchive func(t *testing.T, archive *zip.Writer),
 	testCase func(t *testing.T, fileName string),
 ) {
-	tempFile, err := ioutil.TempFile("", "archive")
+	tempFile, err := os.CreateTemp("", "archive")
 	require.NoError(t, err)
 	defer tempFile.Close()
 	defer os.Remove(tempFile.Name())

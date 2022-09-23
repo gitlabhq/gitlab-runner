@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"cloud.google.com/go/compute/metadata"
 	credentialsapiv1 "cloud.google.com/go/iam/credentials/apiv1"
@@ -86,7 +86,7 @@ func (cr *defaultCredentialsResolver) SignBytesFunc() func([]byte) ([]byte, erro
 }
 
 func (cr *defaultCredentialsResolver) readCredentialsFromFile() error {
-	data, err := ioutil.ReadFile(cr.config.CredentialsFile)
+	data, err := os.ReadFile(cr.config.CredentialsFile)
 	if err != nil {
 		return fmt.Errorf("error while reading credentials file: %w", err)
 	}

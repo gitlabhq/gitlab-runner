@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -1132,7 +1132,7 @@ func TestLogDeletionAttach(t *testing.T) {
 					Client:    client,
 					Stdin:     true,
 					In:        strings.NewReader(fmt.Sprintf("rm -rf %s/*", logsPath)),
-					Out:       ioutil.Discard,
+					Out:       io.Discard,
 					Command:   []string{"/bin/sh"},
 					Config:    config,
 					Executor:  &kubernetes.DefaultRemoteExecutor{},

@@ -1,12 +1,10 @@
 //go:build !integration
-// +build !integration
 
 package fastzip
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -94,11 +92,11 @@ func archiveTestDir(t *testing.T, fn func(string, string, error)) {
 	dir := t.TempDir()
 
 	pathname := filepath.Join(dir, "test_file")
-	require.NoError(t, ioutil.WriteFile(pathname, []byte("foobar"), 0777))
+	require.NoError(t, os.WriteFile(pathname, []byte("foobar"), 0o777))
 	fi, err := os.Stat(pathname)
 	require.NoError(t, err)
 
-	f, err := ioutil.TempFile(dir, "fastzip")
+	f, err := os.CreateTemp(dir, "fastzip")
 	require.NoError(t, err)
 	defer f.Close()
 

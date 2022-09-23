@@ -1,12 +1,10 @@
 //go:build !integration
-// +build !integration
 
 package auth
 
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -372,7 +370,7 @@ func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) func(
 	if configFileContents != "" {
 		tempHomeDir := t.TempDir()
 		dockerConfigFile := path.Join(tempHomeDir, ".dockercfg")
-		err := ioutil.WriteFile(dockerConfigFile, []byte(configFileContents), 0600)
+		err := os.WriteFile(dockerConfigFile, []byte(configFileContents), 0o600)
 		require.NoError(t, err)
 		HomeDirectory = tempHomeDir
 	} else {
@@ -576,13 +574,13 @@ func TestReadDockerAuthConfigsFromHomeDir_NoUsername(t *testing.T) {
 
 				if test.configLocation.subfolder != "" {
 					configDir = filepath.Join(dir, test.configLocation.subfolder)
-					err := os.MkdirAll(configDir, 0777)
+					err := os.MkdirAll(configDir, 0o777)
 					require.NoErrorf(t, err, "failed to create docker config subfolder: %s", err)
 				}
 
 				if test.configLocation.filename != "" {
 					f := filepath.Join(configDir, test.configLocation.filename)
-					err := ioutil.WriteFile(f, test.configContent, 0666)
+					err := os.WriteFile(f, test.configContent, 0o666)
 					require.NoError(t, err, "failed to write test docker config: %s", err)
 
 					expectedConfigFile = f

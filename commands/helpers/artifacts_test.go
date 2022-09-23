@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 package helpers
 
@@ -8,7 +7,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -89,7 +88,7 @@ func (m *testNetwork) consumeGzipUpload(reader io.Reader) common.UploadState {
 
 	// Read multiple streams
 	for {
-		_, err = io.Copy(ioutil.Discard, gz)
+		_, err = io.Copy(io.Discard, gz)
 		if err != nil {
 			logrus.Warningln("Invalid gzip stream")
 			return common.UploadForbidden
@@ -109,7 +108,7 @@ func (m *testNetwork) consumeGzipUpload(reader io.Reader) common.UploadState {
 }
 
 func (m *testNetwork) consumeRawUpload(reader io.Reader) common.UploadState {
-	_, err := io.Copy(ioutil.Discard, reader)
+	_, err := io.Copy(io.Discard, reader)
 	if err != nil {
 		return common.UploadFailed
 	}
@@ -149,6 +148,6 @@ func (m *testNetwork) UploadRawArtifacts(
 }
 
 func writeTestFile(t *testing.T, fileName string) {
-	err := ioutil.WriteFile(fileName, nil, 0600)
+	err := os.WriteFile(fileName, nil, 0o600)
 	require.NoError(t, err, "Writing file:", fileName)
 }

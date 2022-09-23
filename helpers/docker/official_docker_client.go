@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -73,7 +72,6 @@ func newOfficialDockerClient(c Credentials) (*officialDockerClient, error) {
 	}
 
 	dockerClient, err := client.NewClientWithOpts(options...)
-
 	if err != nil {
 		transport.CloseIdleConnections()
 		logrus.Errorln("Error creating Docker client:", err)
@@ -316,7 +314,7 @@ func (c *officialDockerClient) ImagePullBlocking(
 func (c *officialDockerClient) handleEventStream(rc io.ReadCloser) error {
 	defer func() { _ = rc.Close() }()
 
-	return jsonmessage.DisplayJSONMessagesStream(rc, ioutil.Discard, 0, false, nil)
+	return jsonmessage.DisplayJSONMessagesStream(rc, io.Discard, 0, false, nil)
 }
 
 func (c *officialDockerClient) Close() error {

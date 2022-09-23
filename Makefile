@@ -52,7 +52,7 @@ GOCOVER_COBERTURA = gocover-cobertura
 
 GOX = gox
 
-MOCKERY_VERSION ?= 1.1.0
+MOCKERY_VERSION ?= 2.14.0
 MOCKERY ?= .tmp/mockery-$(MOCKERY_VERSION)
 
 GOLANGLINT_VERSION ?= v1.46.2
@@ -189,18 +189,18 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
-	$(MOCKERY) -dir=./network -name='requester' -inpkg
-	$(MOCKERY) -dir=./helpers -all -inpkg
-	$(MOCKERY) -dir=./executors/docker -all -inpkg
-	$(MOCKERY) -dir=./executors/kubernetes -all -inpkg
-	$(MOCKERY) -dir=./executors/custom -all -inpkg
-	$(MOCKERY) -dir=./cache -all -inpkg
-	$(MOCKERY) -dir=./common -all -inpkg
-	$(MOCKERY) -dir=./log -all -inpkg
-	$(MOCKERY) -dir=./referees -all -inpkg
-	$(MOCKERY) -dir=./session -all -inpkg
-	$(MOCKERY) -dir=./shells -all -inpkg
-	$(MOCKERY) -dir=./commands/helpers -all -inpkg
+	$(MOCKERY) --dir=./network --name='requester' --inpackage
+	$(MOCKERY) --dir=./helpers --all --inpackage
+	$(MOCKERY) --dir=./executors/docker --all --inpackage
+	$(MOCKERY) --dir=./executors/kubernetes --all --inpackage
+	$(MOCKERY) --dir=./executors/custom --all --inpackage
+	$(MOCKERY) --dir=./cache --all --inpackage
+	$(MOCKERY) --dir=./common --all --inpackage
+	$(MOCKERY) --dir=./log --all --inpackage
+	$(MOCKERY) --dir=./referees --all --inpackage
+	$(MOCKERY) --dir=./session --all --inpackage
+	$(MOCKERY) --dir=./shells --all --inpackage
+	$(MOCKERY) --dir=./commands/helpers --all --inpackage
 
 check_mocks:
 	# Checking if mocks are up-to-date

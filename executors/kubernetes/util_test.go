@@ -1,5 +1,4 @@
 //go:build !integration
-// +build !integration
 
 package kubernetes
 
@@ -7,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -468,7 +466,7 @@ func (t testWriter) Write(b []byte) (int, error) {
 }
 
 func objBody(codec runtime.Codec, obj runtime.Object) io.ReadCloser {
-	return ioutil.NopCloser(bytes.NewReader([]byte(runtime.EncodeOrDie(codec, obj))))
+	return io.NopCloser(bytes.NewReader([]byte(runtime.EncodeOrDie(codec, obj))))
 }
 
 func testKubernetesClient(version string, httpClient *http.Client) *kubernetes.Clientset {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -143,12 +142,12 @@ func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
 }
 
 func (c *CacheArchiverCommand) createZipFile(filename string) error {
-	err := os.MkdirAll(filepath.Dir(filename), 0700)
+	err := os.MkdirAll(filepath.Dir(filename), 0o700)
 	if err != nil {
 		return err
 	}
 
-	f, err := ioutil.TempFile(filepath.Dir(filename), "archive_")
+	f, err := os.CreateTemp(filepath.Dir(filename), "archive_")
 	if err != nil {
 		return err
 	}

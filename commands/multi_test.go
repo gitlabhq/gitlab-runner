@@ -1,11 +1,10 @@
 //go:build !integration
-// +build !integration
 
 package commands
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -27,7 +26,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	defer cleanup()
 
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	cfg := common.RunnerConfig{
 		Limit:              2,

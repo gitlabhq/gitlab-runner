@@ -1,10 +1,9 @@
 //go:build !integration
-// +build !integration
 
 package archive_test
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,10 +58,10 @@ func TestRegister(t *testing.T) {
 }
 
 func TestRegisterOverride(t *testing.T) {
-	existingGzipArchiver, err := gziplegacy.NewArchiver(ioutil.Discard, "", archive.DefaultCompression)
+	existingGzipArchiver, err := gziplegacy.NewArchiver(io.Discard, "", archive.DefaultCompression)
 	assert.NoError(t, err)
 
-	existingZipArchiver, err := ziplegacy.NewArchiver(ioutil.Discard, "", archive.DefaultCompression)
+	existingZipArchiver, err := ziplegacy.NewArchiver(io.Discard, "", archive.DefaultCompression)
 	assert.NoError(t, err)
 
 	existingZipExtractor, err := ziplegacy.NewExtractor(nil, 0, "")

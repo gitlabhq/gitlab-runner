@@ -25,7 +25,7 @@ export PATH="$PATH:$(go env GOBIN)"
 
 ```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.17.9.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.6.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -34,7 +34,7 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```shell
 sudo yum install mercurial wget make
 sudo yum groupinstall 'Development Tools'
-wget https://storage.googleapis.com/golang/go1.17.9.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.6.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
@@ -43,21 +43,21 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 Using binary package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.17.9.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.6.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 ```
 
 Using installation package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.17.9.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.18.6.darwin-amd64.pkg
 open go*-*.pkg
 ```
 
 ### For FreeBSD
 
 ```shell
-pkg install go-1.17.9 gmake git mercurial
+pkg install go-1.18.6 gmake git mercurial
 ```
 
 ## 2. Install Docker Engine
@@ -262,14 +262,14 @@ and [integration tests](https://en.wikipedia.org/wiki/Integration_testing) in th
 - Unit test files have a suffix of `_test.go` and contain the following build directive in the header:
 
     ```golang
-    // +build !integration
+    // go:build !integration
 
     ```
 
 - Integration test files have a suffix of `_integration_test.go` and contain the following build directive in the header:
 
     ```golang
-    // +build integration
+    // go:build integration
 
     ```
 
