@@ -553,9 +553,6 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 				}
 			}
 
-			// force GC cycle after processing build
-			runtime.GC()
-
 		case <-stopWorker:
 			mr.log().
 				WithField("worker", id).
