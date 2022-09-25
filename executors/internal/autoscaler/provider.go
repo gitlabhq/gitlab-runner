@@ -133,11 +133,11 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 		return nil, fmt.Errorf("already at capacity, cannot accept, allow on demand is disabled")
 	}
 
-	return &acqusitionRef{}, nil
+	return &acquisitionRef{}, nil
 }
 
 func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData) {
-	acq, ok := data.(*acqusitionRef)
+	acq, ok := data.(*acquisitionRef)
 	if !ok {
 		return
 	}
