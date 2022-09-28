@@ -78,7 +78,7 @@ func TestPrepare(t *testing.T) {
 			ep := &common.MockExecutorProvider{}
 			me := common.NewMockExecutor(t)
 
-			p := New(ep).(*provider)
+			p := New(ep, Config{}).(*provider)
 			p.taskscalerNew = mockTaskscalerNew(ts, false)
 			p.fleetingRunPlugin = mockFleetingRunPlugin(false)
 

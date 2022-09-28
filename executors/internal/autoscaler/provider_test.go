@@ -90,7 +90,7 @@ func TestInit(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			ep := &common.MockExecutorProvider{}
-			p := New(ep).(*provider)
+			p := New(ep, Config{}).(*provider)
 			p.taskscalerNew = mockTaskscalerNew(tokenTaskscaler, tt.newTaskscalerErr)
 			p.fleetingRunPlugin = mockFleetingRunPlugin(tt.fleetingRunPluginErr)
 			for k, v := range tt.scalers {
@@ -178,7 +178,7 @@ func TestAcquire(t *testing.T) {
 			}
 			ts := mocks.NewTaskscaler(t)
 			ep := &common.MockExecutorProvider{}
-			p := New(ep).(*provider)
+			p := New(ep, Config{}).(*provider)
 			p.taskscalerNew = mockTaskscalerNew(ts /* wantErr */, false)
 			p.fleetingRunPlugin = mockFleetingRunPlugin( /* wantErr */ false)
 			p.generateUniqueID = func() (string, error) {

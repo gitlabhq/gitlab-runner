@@ -2,7 +2,9 @@ package autoscaler
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -11,8 +13,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/fleeting/fleeting"
+	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	flprometheus "gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
+	"gitlab.com/gitlab-org/fleeting/nesting/api"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	tsprometheus "gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus"
 
@@ -32,6 +36,7 @@ type fleetingPlugin interface {
 
 type provider struct {
 	common.ExecutorProvider
+	cfg Config
 
 	mu      sync.Mutex
 	scalers map[string]scaler
@@ -46,11 +51,27 @@ type provider struct {
 type scaler struct {
 	internal taskscaler.Taskscaler
 	shutdown func(context.Context)
+	cancel   func()
 }
 
-func New(ep common.ExecutorProvider) common.ExecutorProvider {
+type Config struct {
+	// mapJobImageToVMImage allows the job defined image to control the VM
+	// image used.
+	//
+	// Examples:
+	// - For "instance" executor and VM Isolation enabled: the job image defines
+	//   what nested VM is used on the host. We want to map the job image to
+	//   the VM image.
+	// - For "docker" executor and VM Isolation enabled: the job image defines what
+	//   container is used, inside the nested VM, on the host. We *don't* want
+	//   to map the job image to the VM image.
+	MapJobImageToVMImage bool
+}
+
+func New(ep common.ExecutorProvider, cfg Config) common.ExecutorProvider {
 	return &provider{
 		ExecutorProvider: ep,
+		cfg:              cfg,
 		scalers:          make(map[string]scaler),
 		taskscalerNew:    taskscaler.New,
 		fleetingRunPlugin: func(name string, config []byte) (fleetingPlugin, error) {
@@ -134,6 +155,8 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		config.Autoscaler.InstanceOperationTimeBuckets,
 	)
 
+	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
+
 	options := []taskscaler.Option{
 		taskscaler.WithReservations(),
 		taskscaler.WithCapacityPerInstance(config.Autoscaler.CapacityPerInstance),
@@ -144,6 +167,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		}),
 		taskscaler.WithMetricsCollector(tsMC),
 		taskscaler.WithFleetingMetricsCollector(flMC),
+		taskscaler.WithInstanceUpFunc(instanceReadyUp(shutdownCtx, config)),
 	}
 
 	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Minute)
@@ -151,6 +175,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 
 	ts, err := p.taskscalerNew(ctx, runner.InstanceGroup(), options...)
 	if err != nil {
+		shutdownFn()
 		runner.Kill()
 
 		return nil, false, fmt.Errorf("creating taskscaler: %w", err)
@@ -159,6 +184,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 	s = scaler{
 		internal: ts,
 		shutdown: func(ctx context.Context) {
+			shutdownFn()
 			ts.Shutdown(ctx)
 			runner.Kill()
 		},
@@ -207,7 +233,10 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 
 	logrus.WithField("key", key).Trace("Reserved capacity...")
 
-	return &acquisitionRef{key: key}, nil
+	return &acquisitionRef{
+		key:                  key,
+		mapJobImageToVMImage: p.cfg.MapJobImageToVMImage,
+	}, nil
 }
 
 func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData) {
@@ -271,5 +300,60 @@ func (p *provider) Collect(ch chan<- prometheus.Metric) {
 		if ok {
 			c.Collect(ch)
 		}
+	}
+}
+
+//nolint:gocognit
+func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscaler.UpFunc {
+	if !config.Autoscaler.VMIsolation.Enabled {
+		return nil
+	}
+
+	//nolint:lll
+	return func(id string, info fleetingprovider.ConnectInfo, cause fleeting.Cause) (keys []string, used int, err error) {
+		// dial host
+		dialer, err := connector.Dial(ctx, info, connector.DialOptions{
+			// todo: make this configurable
+			UseExternalAddr: true,
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("dialing host: %w", err)
+		}
+		defer dialer.Close()
+
+		//nolint:lll
+		conn, err := api.NewClientConn(config.Autoscaler.VMIsolation.NestingHost, func(ctx context.Context, network, address string) (net.Conn, error) {
+			return dialer.Dial(network, address)
+		})
+		if err != nil {
+			return nil, 0, fmt.Errorf("dialing nesting daemon: %w", err)
+		}
+
+		nc := api.New(conn)
+		defer nc.Close()
+
+		nestingInitCfg, err := config.Autoscaler.VMIsolation.NestingConfig.JSON()
+		if err != nil {
+			return nil, 0, fmt.Errorf("converting nesting init config to json: %w", err)
+		}
+
+		err = nc.Init(ctx, nestingInitCfg)
+		if err != nil && !errors.Is(err, api.ErrAlreadyInitialized) {
+			return nil, 0, fmt.Errorf("initializing nesting: %w", err)
+		}
+
+		vms, err := nc.List(ctx)
+		if err != nil {
+			return nil, 0, fmt.Errorf("listing existing vms: %w", err)
+		}
+
+		// todo: should we use a slot based system?
+		for _, vm := range vms {
+			if err := nc.Delete(ctx, vm.GetId()); err != nil {
+				return nil, 0, fmt.Errorf("deleting existing vm (%q): %w", vm.GetId(), err)
+			}
+		}
+
+		return nil, 0, nil
 	}
 }
