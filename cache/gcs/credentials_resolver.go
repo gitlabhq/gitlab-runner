@@ -15,12 +15,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+//go:generate mockery --name=credentialsResolver --inpackage
 type credentialsResolver interface {
 	Credentials() *common.CacheGCSCredentials
 	Resolve() error
 	SignBytesFunc() func([]byte) ([]byte, error)
 }
 
+//go:generate mockery --name=IamCredentialsClient --inpackage
 type IamCredentialsClient interface {
 	SignBlob(
 		context.Context,
@@ -29,6 +31,7 @@ type IamCredentialsClient interface {
 	) (*credentialspb.SignBlobResponse, error)
 }
 
+//go:generate mockery --name=MetadataClient --inpackage
 type MetadataClient interface {
 	Email(serviceAccount string) (string, error)
 }

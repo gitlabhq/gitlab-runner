@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//go:generate mockery --name=Commander --inpackage
 type Commander interface {
 	Start() error
 	Wait() error

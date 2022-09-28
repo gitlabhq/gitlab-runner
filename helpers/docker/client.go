@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 )
 
+//go:generate mockery --name=Client --inpackage
 type Client interface {
 	ClientVersion() string
 

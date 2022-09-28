@@ -10,6 +10,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+//go:generate mockery --name=Adapter --inpackage
 type Adapter interface {
 	GetDownloadURL() *url.URL
 	GetUploadURL() *url.URL

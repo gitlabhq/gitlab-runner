@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+//go:generate mockery --name=Result --inpackage
 type Result interface {
 	Data() map[string]interface{}
 	TokenID() (string, error)
