@@ -193,7 +193,7 @@ You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--kube
 
 ### Overwriting Kubernetes Namespace
 
-Additionally, Kubernetes namespace can be overwritten on `.gitlab-ci.yml` file, by using the variable
+The Kubernetes namespace can be overwritten per CI/CD job in the `.gitlab-ci.yml` file, by using the variable
 `KUBERNETES_NAMESPACE_OVERWRITE`.
 
 This approach allows you to create a new isolated namespace dedicated for CI purposes, and deploy a custom
@@ -244,7 +244,7 @@ This can be achieved by setting `rbac.create: true` or by specifying a service a
 
 ### Overwriting Kubernetes Default Service Account
 
-Additionally, the Kubernetes service account can be overwritten in the `.gitlab-ci.yml` file by using the variable
+Additionally, the Kubernetes service account can be overwritten per CI/CD job in the `.gitlab-ci.yml` file, by using the variable
 `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE`.
 
 This approach allows you to specify a service account that is attached to the namespace, which is useful when dealing
@@ -257,7 +257,7 @@ variables:
 
 To ensure only designated service accounts will be used during CI runs, set the configuration
 `service_account_overwrite_allowed` or set the environment variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE_ALLOWED`
-with an appropriate regular expression. When left empty the overwrite behavior is disabled.
+with an appropriate regular expression. When left empty, the overwrite behavior is disabled.
 
 ### Setting Bearer Token to be Used When Making Kubernetes API calls
 
@@ -273,11 +273,11 @@ variables:
 
 ### Overwriting pod labels
 
-You can overwrite Kubernetes pod labels.
+You can overwrite Kubernetes pod labels per CI/CD job.
 
 First, ensure you specify [`pod_labels_overwrite_allowed`](#the-available-configtoml-settings) in your `.config.yaml` file.
 
-Then, in your `.gitlab-ci.yml` file, use the `KUBERNETES_POD_LABELS_*` variables with `key=value`. The pod labels are overwritten to the `key=value`.
+Then, in your `.gitlab-ci.yml` file, use the `KUBERNETES_POD_LABELS_*` variables with values of `key=value`. The pod labels are overwritten to the `key=value`.
 
 You can apply multiple values. For example:
 
@@ -290,7 +290,7 @@ variables:
 
 ### Overwriting pod annotations
 
-Additionally, Kubernetes pod annotations can be overwritten on the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotations will be overwritten to the `key=value`. Multiple annotations can be applied. For example:
+Additionally, Kubernetes pod annotations can be overwritten per CI/CD job in the `.gitlab-ci.yml` file, by using `KUBERNETES_POD_ANNOTATIONS_*` for variables and `key=value` for the value. The pod annotations will be overwritten to the `key=value`. Multiple annotations can be applied. For example:
 
 ```yaml
 variables:
@@ -306,7 +306,7 @@ You must specify [`pod_annotations_overwrite_allowed`](#the-available-configtoml
 
 Additionally, Kubernetes CPU and memory allocations for requests and
 limits for the build, helper and service containers can be overwritten
-on the `.gitlab-ci.yml` file with the following variables:
+per CI/CD job, in the `.gitlab-ci.yml` file, with the following variables:
 
 ``` yaml
  variables:
