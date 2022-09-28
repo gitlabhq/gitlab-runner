@@ -63,6 +63,10 @@ func (c *ConfigExecOutput) InjectInto(executor *executor) {
 	if c.JobEnv != nil {
 		executor.jobEnv = *c.JobEnv
 	}
+
+	if c.Shell != nil {
+		executor.Config.Shell = *c.Shell
+	}
 }
 
 type executor struct {
