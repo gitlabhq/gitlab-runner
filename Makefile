@@ -189,22 +189,9 @@ dockerfiles:
 mocks: $(MOCKERY)
 	rm -rf ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
-	$(MOCKERY) --dir=./network --name='requester' --inpackage
-	$(MOCKERY) --dir=./helpers --all --inpackage
-	$(MOCKERY) --dir=./executors/docker --all --inpackage
-	$(MOCKERY) --dir=./executors/kubernetes --all --inpackage
-	$(MOCKERY) --dir=./executors/custom --all --inpackage
-	$(MOCKERY) --dir=./cache --all --inpackage
-	$(MOCKERY) --dir=./common --all --inpackage
-	$(MOCKERY) --dir=./log --all --inpackage
-	$(MOCKERY) --dir=./referees --all --inpackage
-	$(MOCKERY) --dir=./session --all --inpackage
-	$(MOCKERY) --dir=./shells --all --inpackage
-	$(MOCKERY) --dir=./commands/helpers --all --inpackage
+	go generate ./...
 
-check_mocks:
-	# Checking if mocks are up-to-date
-	@$(MAKE) mocks
+check_mocks: mocks
 	# Checking the differences
 	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
 		$(shell git ls-files | grep 'mock_') && \
