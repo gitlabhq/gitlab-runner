@@ -257,7 +257,9 @@ which is POSIX-compliant shell escaping mechanism, is used.
 
 ## The `[runners.docker]` section
 
-This defines the Docker Container parameters.
+The following settings define the Docker container parameters.
+
+[Docker-in-Docker](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker) as a service, or any container runtime configured inside a job, does not inherit these parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
