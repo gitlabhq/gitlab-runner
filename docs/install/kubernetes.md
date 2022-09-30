@@ -205,16 +205,16 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "ubuntu:16.04"
-        [runners.cache]
-          Type = "s3"
-          Path = "runner"
-          Shared = true
-          [runners.cache.s3]
-            ServerAddress = "s3.amazonaws.com"
-            BucketName = "my_bucket_name"
-            BucketLocation = "eu-west-1"
-            Insecure = false
-            AuthenticationType = "access-key"
+      [runners.cache]
+        Type = "s3"
+        Path = "runner"
+        Shared = true
+        [runners.cache.s3]
+          ServerAddress = "s3.amazonaws.com"
+          BucketName = "my_bucket_name"
+          BucketLocation = "eu-west-1"
+          Insecure = false
+          AuthenticationType = "access-key"
 
   cache:
       secretName: s3access
@@ -241,12 +241,12 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "ubuntu:16.04"
-        [runners.cache]
-          Type = "gcs"
-          Path = "runner"
-          Shared = true
-          [runners.cache.gcs]
-            BucketName = "runners-cache"
+      [runners.cache]
+        Type = "gcs"
+        Path = "runner"
+        Shared = true
+        [runners.cache.gcs]
+          BucketName = "runners-cache"
 
   cache:
     secretName: gcsaccess
@@ -273,12 +273,12 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "ubuntu:16.04"
-        [runners.cache]
-          Type = "gcs"
-          Path = "runner"
-          Shared = true
-          [runners.cache.gcs]
-            BucketName = "runners-cache"
+      [runners.cache]
+        Type = "gcs"
+        Path = "runner"
+        Shared = true
+        [runners.cache.gcs]
+          BucketName = "runners-cache"
 
   cache:
       secretName: google-application-credentials
@@ -306,13 +306,13 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "ubuntu:16.04"
-        [runners.cache]
-          Type = "azure"
-          Path = "runner"
-          Shared = true
-          [runners.cache.azure]
-            ContainerName = "CONTAINER_NAME"
-            StorageDomain = "blob.core.windows.net"
+      [runners.cache]
+        Type = "azure"
+        Path = "runner"
+        Shared = true
+        [runners.cache.azure]
+          ContainerName = "CONTAINER_NAME"
+          StorageDomain = "blob.core.windows.net"
 
   cache:
       secretName: azureaccess
