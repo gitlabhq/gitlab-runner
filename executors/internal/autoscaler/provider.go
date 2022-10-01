@@ -17,18 +17,25 @@ type provider struct {
 	common.ExecutorProvider
 
 	mu      sync.Mutex
-	scalers map[string]*taskscaler.Taskscaler
+	scalers map[string]taskscaler.Taskscaler
+
+	// Testing hooks
+	//nolint:lll
+	taskscalerNew     func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error)
+	fleetingRunPlugin func(string, []byte) (*fleeting.Runner, error)
 }
 
 func New(ep common.ExecutorProvider) common.ExecutorProvider {
 	return &provider{
-		ExecutorProvider: ep,
-		scalers:          make(map[string]*taskscaler.Taskscaler),
+		ExecutorProvider:  ep,
+		scalers:           make(map[string]taskscaler.Taskscaler),
+		taskscalerNew:     taskscaler.New,
+		fleetingRunPlugin: fleeting.RunPlugin,
 	}
 }
 
 //nolint:funlen
-func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (*taskscaler.Taskscaler, bool, error) {
+func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (taskscaler.Taskscaler, bool, error) {
 	if config.Autoscaler == nil {
 		return nil, false, fmt.Errorf("executor requires autoscaler config")
 	}
@@ -46,7 +53,7 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (*task
 		return nil, false, fmt.Errorf("marshaling plugin config: %w", err)
 	}
 
-	runner, err := fleeting.RunPlugin(config.Autoscaler.Plugin, pluginCfg)
+	runner, err := p.fleetingRunPlugin(config.Autoscaler.Plugin, pluginCfg)
 	if err != nil {
 		return nil, false, fmt.Errorf("running autoscaler plugin: %w", err)
 	}
@@ -83,7 +90,7 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (*task
 		}),
 	}
 
-	scaler, err = taskscaler.New(ctx, runner.InstanceGroup(), options...)
+	scaler, err = p.taskscalerNew(ctx, runner.InstanceGroup(), options...)
 	if err != nil {
 		return nil, false, fmt.Errorf("creating taskscaler: %w", err)
 	}
@@ -118,7 +125,7 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 
 	available, potential := scaler.Capacity()
 
-	if potential <= 0 || available <= 0 {
+	if potential <= 0 && available <= 0 {
 		return nil, fmt.Errorf("already at capacity, cannot accept")
 	}
 
@@ -150,7 +157,7 @@ func (p *provider) Create() common.Executor {
 	}
 }
 
-func (p *provider) getRunnerTaskscaler(config *common.RunnerConfig) *taskscaler.Taskscaler {
+func (p *provider) getRunnerTaskscaler(config *common.RunnerConfig) taskscaler.Taskscaler {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

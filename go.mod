@@ -38,7 +38,7 @@ require (
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.20.0
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20220920195511-c6823c0e2dd3
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20220924124102-e03d052417c7
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20220929194928-cf592a65f4fa
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gocloud.dev v0.21.1-0.20201223184910-5094f54ed8bb
