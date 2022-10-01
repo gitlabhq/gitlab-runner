@@ -208,6 +208,8 @@ type AutoscalerConfig struct {
 	PluginConfig        AutoscalerSettingsMap    `toml:"plugin_config,omitempty"`
 	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty"`
+
+	InstanceOperationTimeBuckets []float64 `toml:"instance_operation_time_buckets,omitempty"`
 }
 
 type ConnectorConfig struct {
