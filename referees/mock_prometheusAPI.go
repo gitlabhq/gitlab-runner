@@ -240,13 +240,20 @@ func (_m *mockPrometheusAPI) Metadata(ctx context.Context, metric string, limit 
 	return r0, r1
 }
 
-// Query provides a mock function with given fields: ctx, query, ts
-func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Time) (model.Value, v1.Warnings, error) {
-	ret := _m.Called(ctx, query, ts)
+// Query provides a mock function with given fields: ctx, query, ts, opts
+func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Time, opts ...v1.Option) (model.Value, v1.Warnings, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, query, ts)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 model.Value
-	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time) model.Value); ok {
-		r0 = rf(ctx, query, ts)
+	if rf, ok := ret.Get(0).(func(context.Context, string, time.Time, ...v1.Option) model.Value); ok {
+		r0 = rf(ctx, query, ts, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(model.Value)
@@ -254,8 +261,8 @@ func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Ti
 	}
 
 	var r1 v1.Warnings
-	if rf, ok := ret.Get(1).(func(context.Context, string, time.Time) v1.Warnings); ok {
-		r1 = rf(ctx, query, ts)
+	if rf, ok := ret.Get(1).(func(context.Context, string, time.Time, ...v1.Option) v1.Warnings); ok {
+		r1 = rf(ctx, query, ts, opts...)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(v1.Warnings)
@@ -263,8 +270,8 @@ func (_m *mockPrometheusAPI) Query(ctx context.Context, query string, ts time.Ti
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, string, time.Time) error); ok {
-		r2 = rf(ctx, query, ts)
+	if rf, ok := ret.Get(2).(func(context.Context, string, time.Time, ...v1.Option) error); ok {
+		r2 = rf(ctx, query, ts, opts...)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -295,13 +302,20 @@ func (_m *mockPrometheusAPI) QueryExemplars(ctx context.Context, query string, s
 	return r0, r1
 }
 
-// QueryRange provides a mock function with given fields: ctx, query, r
-func (_m *mockPrometheusAPI) QueryRange(ctx context.Context, query string, r v1.Range) (model.Value, v1.Warnings, error) {
-	ret := _m.Called(ctx, query, r)
+// QueryRange provides a mock function with given fields: ctx, query, r, opts
+func (_m *mockPrometheusAPI) QueryRange(ctx context.Context, query string, r v1.Range, opts ...v1.Option) (model.Value, v1.Warnings, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, query, r)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 model.Value
-	if rf, ok := ret.Get(0).(func(context.Context, string, v1.Range) model.Value); ok {
-		r0 = rf(ctx, query, r)
+	if rf, ok := ret.Get(0).(func(context.Context, string, v1.Range, ...v1.Option) model.Value); ok {
+		r0 = rf(ctx, query, r, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(model.Value)
@@ -309,8 +323,8 @@ func (_m *mockPrometheusAPI) QueryRange(ctx context.Context, query string, r v1.
 	}
 
 	var r1 v1.Warnings
-	if rf, ok := ret.Get(1).(func(context.Context, string, v1.Range) v1.Warnings); ok {
-		r1 = rf(ctx, query, r)
+	if rf, ok := ret.Get(1).(func(context.Context, string, v1.Range, ...v1.Option) v1.Warnings); ok {
+		r1 = rf(ctx, query, r, opts...)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(v1.Warnings)
@@ -318,8 +332,8 @@ func (_m *mockPrometheusAPI) QueryRange(ctx context.Context, query string, r v1.
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, string, v1.Range) error); ok {
-		r2 = rf(ctx, query, r)
+	if rf, ok := ret.Get(2).(func(context.Context, string, v1.Range, ...v1.Option) error); ok {
+		r2 = rf(ctx, query, r, opts...)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -480,6 +494,27 @@ func (_m *mockPrometheusAPI) TargetsMetadata(ctx context.Context, matchTarget st
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
 		r1 = rf(ctx, matchTarget, metric, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// WalReplay provides a mock function with given fields: ctx
+func (_m *mockPrometheusAPI) WalReplay(ctx context.Context) (v1.WalReplayStatus, error) {
+	ret := _m.Called(ctx)
+
+	var r0 v1.WalReplayStatus
+	if rf, ok := ret.Get(0).(func(context.Context) v1.WalReplayStatus); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(v1.WalReplayStatus)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
