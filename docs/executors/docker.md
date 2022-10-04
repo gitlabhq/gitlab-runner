@@ -482,6 +482,18 @@ This is an example `config.toml` to mount the data directory for the official My
       "/var/lib/mysql" = "rw,noexec"
 ```
 
+## Specify Docker driver operations
+
+Specify arguments to supply to the Docker volume driver when you create volumes for builds.
+For example, you can use these arguments to limit the space for each build to run, in addition to all other driver specific options.
+The following example shows a `config.toml` where the limit that each build can consume is set to 50GB.
+
+```toml
+[runners.docker]
+  [runners.docker.volume_driver_ops]
+      "size" = "50G"
+```
+
 ## Build directory in service
 
 Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.

@@ -29,6 +29,7 @@ type ManagerConfig struct {
 	TemporaryName    string
 	DisableCache     bool
 	PermissionSetter permission.Setter
+	DriverOpts       map[string]string
 }
 
 type manager struct {
@@ -144,7 +145,7 @@ func (m *manager) addCacheVolume(ctx context.Context, volume *parser.Volume) err
 		return m.createHostBasedCacheVolume(volume.Destination)
 	}
 
-	_, err := m.createCacheVolume(ctx, volume.Destination, true)
+	_, err := m.createCacheVolume(ctx, volume.Destination, true, m.config.DriverOpts)
 
 	return err
 }
@@ -170,7 +171,12 @@ func (m *manager) createHostBasedCacheVolume(destination string) error {
 	return nil
 }
 
-func (m *manager) createCacheVolume(ctx context.Context, destination string, reusable bool) (string, error) {
+func (m *manager) createCacheVolume(
+	ctx context.Context,
+	destination string,
+	reusable bool,
+	driverOps map[string]string,
+) (string, error) {
 	destination, err := m.absolutePath(destination)
 	if err != nil {
 		return "", fmt.Errorf("defining absolute path: %w", err)
@@ -188,8 +194,9 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string, reu
 
 	volumeName := fmt.Sprintf("%s-cache-%s", name, hashPath(destination))
 	vBody := volume.VolumeCreateBody{
-		Name:   volumeName,
-		Labels: m.labeler.Labels(map[string]string{"type": "cache"}),
+		Name:       volumeName,
+		DriverOpts: driverOps,
+		Labels:     m.labeler.Labels(map[string]string{"type": "cache"}),
 	}
 
 	v, err := m.client.VolumeCreate(ctx, vBody)
@@ -218,7 +225,7 @@ func (m *manager) createCacheVolume(ctx context.Context, destination string, reu
 // It's up to the caller to clean up the temporary volumes by calling
 // `RemoveTemporary`.
 func (m *manager) CreateTemporary(ctx context.Context, destination string) error {
-	volumeName, err := m.createCacheVolume(ctx, destination, false)
+	volumeName, err := m.createCacheVolume(ctx, destination, false, m.config.DriverOpts)
 	if err != nil {
 		return fmt.Errorf("creating cache volume: %w", err)
 	}
