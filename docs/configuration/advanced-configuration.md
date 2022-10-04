@@ -293,7 +293,7 @@ The following settings define the Docker container parameters.
 | `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
 | `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
-| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies), or [restrict pull policies](../executors/docker.md#restrict-docker-pull-policies). |
+| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retrying-a-failed-pull), or [restrict pull policies](../executors/docker.md#restrict-docker-pull-policies). |
 | `runtime`                      | The runtime for the Docker container. |
 | `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
 | `shm_size`                     | Shared memory size for images (in bytes). |

@@ -962,6 +962,22 @@ Attempt #2: Trying "if-not-present" pull policy
 Using locally found image version due to "if-not-present" pull policy
 ```
 
+## Retrying a failed pull
+
+You can specify the same policy again to configure a runner
+to retry a failed Docker pull.
+
+This is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci/yaml/#retry)
+in the `.gitlab-ci.yml` files of individual projects,
+but only takes effect if specifically the Docker pull fails initially.
+
+For example, this configuration retries the pull one time:
+
+```toml
+[runners.docker]
+  pull_policy = ["always", "always"]
+```
+
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
 WARNING:
