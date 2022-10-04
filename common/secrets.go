@@ -7,11 +7,13 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
+//go:generate mockery --name=logger --inpackage
 type logger interface {
 	Println(args ...interface{})
 	Warningln(args ...interface{})
 }
 
+//go:generate mockery --name=SecretsResolver --inpackage
 type SecretsResolver interface {
 	Resolve(secrets Secrets) (JobVariables, error)
 }
@@ -23,6 +25,7 @@ type SecretResolverRegistry interface {
 
 type secretResolverFactory func(secret Secret) SecretResolver
 
+//go:generate mockery --name=SecretResolver --inpackage
 type SecretResolver interface {
 	Name() string
 	IsSupported() bool

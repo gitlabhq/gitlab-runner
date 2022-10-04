@@ -14,6 +14,7 @@ var (
 	errDirectoryIsRootPath  = errors.New("build directory needs to be a non-root path")
 )
 
+//go:generate mockery --name=debugLogger --inpackage
 type debugLogger interface {
 	Debugln(args ...interface{})
 }

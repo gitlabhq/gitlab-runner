@@ -15,6 +15,7 @@ import (
 
 var ErrCacheVolumesDisabled = errors.New("cache volumes feature disabled")
 
+//go:generate mockery --name=Manager --inpackage
 type Manager interface {
 	Create(ctx context.Context, volume string) error
 	CreateTemporary(ctx context.Context, destination string) error

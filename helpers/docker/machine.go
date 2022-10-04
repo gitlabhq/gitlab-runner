@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+//go:generate mockery --name=Machine --inpackage
 type Machine interface {
 	Create(driver, name string, opts ...string) error
 	Provision(name string) error

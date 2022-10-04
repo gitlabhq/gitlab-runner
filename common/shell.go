@@ -42,6 +42,7 @@ type ShellScriptInfo struct {
 	PostBuildScript string
 }
 
+//go:generate mockery --name=Shell --inpackage
 type Shell interface {
 	GetName() string
 	GetFeatures(features *FeaturesInfo)

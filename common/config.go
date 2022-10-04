@@ -974,6 +974,7 @@ type Config struct {
 	configSaver ConfigSaver
 }
 
+//go:generate mockery --name=ConfigSaver --inpackage
 type ConfigSaver interface {
 	Save(filePath string, data []byte) error
 }

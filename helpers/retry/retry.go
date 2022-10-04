@@ -14,6 +14,7 @@ const (
 	defaultRetryMaxBackoff = 5 * time.Second
 )
 
+//go:generate mockery --name=Retryable --inpackage
 type Retryable interface {
 	Run() error
 	ShouldRetry(tries int, err error) bool

@@ -9,6 +9,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+//go:generate mockery --name=featureChecker --inpackage
 type featureChecker interface {
 	IsHostAliasSupported() (bool, error)
 }

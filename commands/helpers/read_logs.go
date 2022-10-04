@@ -27,6 +27,7 @@ var (
 	errNoAttemptsToOpenFile = errors.New("no attempts to open log file configured")
 )
 
+//go:generate mockery --name=logStreamProvider --inpackage
 type logStreamProvider interface {
 	Open() (readSeekCloser, error)
 }
@@ -81,6 +82,7 @@ func (p *fileLogStreamProvider) Open() (readSeekCloser, error) {
 	return nil, errWaitingFileTimeout
 }
 
+//go:generate mockery --name=logOutputWriter --inpackage
 type logOutputWriter interface {
 	Write(string)
 }

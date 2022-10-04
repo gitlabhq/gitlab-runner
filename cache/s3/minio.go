@@ -15,6 +15,7 @@ import (
 
 const DefaultAWSS3Server = "s3.amazonaws.com"
 
+//go:generate mockery --name=minioClient --inpackage
 type minioClient interface {
 	PresignHeader(
 		ctx context.Context,

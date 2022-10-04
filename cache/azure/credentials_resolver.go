@@ -6,6 +6,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+//go:generate mockery --name=credentialsResolver --inpackage
 type credentialsResolver interface {
 	Credentials() *common.CacheAzureCredentials
 	Resolve() error

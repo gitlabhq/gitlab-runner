@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+//go:generate mockery --name=Client --inpackage
 type Client interface {
 	Authenticate(auth AuthMethod) error
 	Write(path string, data map[string]interface{}) (Result, error)
@@ -18,6 +19,7 @@ type defaultClient struct {
 	internal apiClient
 }
 
+//go:generate mockery --name=apiClient --inpackage
 type apiClient interface {
 	Sys() apiClientSys
 	Logical() apiClientLogical
@@ -25,10 +27,12 @@ type apiClient interface {
 	SetNamespace(ns string)
 }
 
+//go:generate mockery --name=apiClientSys --inpackage
 type apiClientSys interface {
 	Health() (*api.HealthResponse, error)
 }
 
+//go:generate mockery --name=apiClientLogical --inpackage
 type apiClientLogical interface {
 	Write(path string, data map[string]interface{}) (*api.Secret, error)
 	Read(path string) (*api.Secret, error)

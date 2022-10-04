@@ -14,6 +14,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 )
 
+//go:generate mockery --name=Manager --inpackage
 type Manager interface {
 	GetDockerImage(imageName string, imagePullPolicies []common.DockerPullPolicy) (*types.ImageInspect, error)
 }
@@ -25,6 +26,7 @@ type ManagerConfig struct {
 	Credentials  []common.Credentials
 }
 
+//go:generate mockery --name=pullLogger --inpackage
 type pullLogger interface {
 	Debugln(args ...interface{})
 	Infoln(args ...interface{})

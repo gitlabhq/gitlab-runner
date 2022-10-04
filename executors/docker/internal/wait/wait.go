@@ -11,10 +11,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
+//go:generate mockery --name=Waiter --inpackage
 type Waiter interface {
 	Wait(ctx context.Context, containerID string) error
 }
 
+//go:generate mockery --name=KillWaiter --inpackage
 type KillWaiter interface {
 	Waiter
 

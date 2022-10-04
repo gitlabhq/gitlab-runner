@@ -571,6 +571,7 @@ type FailuresCollector interface {
 	RecordFailure(reason JobFailureReason, runnerDescription string)
 }
 
+//go:generate mockery --name=JobTrace --inpackage
 type JobTrace interface {
 	io.Writer
 	Success()
@@ -605,6 +606,7 @@ func NewPatchTraceResult(sentOffset int, state PatchState, newUpdateInterval int
 	}
 }
 
+//go:generate mockery --name=Network --inpackage
 type Network interface {
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials) bool

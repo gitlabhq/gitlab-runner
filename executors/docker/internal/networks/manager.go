@@ -16,6 +16,7 @@ import (
 
 var errBuildNetworkExists = errors.New("build network is not empty")
 
+//go:generate mockery --name=Manager --inpackage
 type Manager interface {
 	Create(ctx context.Context, networkMode string) (container.NetworkMode, error)
 	Inspect(ctx context.Context) (types.NetworkResource, error)
