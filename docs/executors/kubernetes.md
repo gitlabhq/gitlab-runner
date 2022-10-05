@@ -752,6 +752,13 @@ For multiple pull policies:
   pull_policy = ["always", "if-not-present"]
 ```
 
+To retry a failed pull:
+
+```toml
+[runners.kubernetes]
+  pull_policy = ["always", "always"]
+```
+
 The policy applies to the build image, helper image, and any services. It controls how an image is fetched and updated.
 
 To determine when to use which policy, see
