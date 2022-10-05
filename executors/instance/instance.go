@@ -16,7 +16,7 @@ type executor struct {
 }
 
 func (e *executor) Name() string {
-	return "shell+autoscaler"
+	return "instance"
 }
 
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
@@ -26,7 +26,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	if e.BuildShell.PassFile {
-		return errors.New("shell autoscaler doesn't support shells that require script file")
+		return errors.New("the instance executor doesn't support shells that require a script file")
 	}
 
 	environment, ok := e.Build.ExecutorData.(executors.Environment)
@@ -85,7 +85,7 @@ func init() {
 		features.Shared = true
 	}
 
-	common.RegisterExecutorProvider("shell+autoscaler", autoscaler.New(executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider("instance", autoscaler.New(executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
