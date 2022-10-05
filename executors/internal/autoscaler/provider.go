@@ -63,18 +63,18 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 	// providers have no shutdown routine.
 
 	instanceConnectConfig := fleetingprovider.ConnectorConfig{
-		OS:                   config.Autoscaler.InstanceGroupSettings.OS,
-		Arch:                 config.Autoscaler.InstanceGroupSettings.Arch,
-		Protocol:             fleetingprovider.Protocol(config.Autoscaler.InstanceGroupSettings.Protocol),
-		Username:             config.Autoscaler.InstanceGroupSettings.Username,
-		Password:             config.Autoscaler.InstanceGroupSettings.Password,
-		UseStaticCredentials: config.Autoscaler.InstanceGroupSettings.UseStaticCredentials,
-		Keepalive:            config.Autoscaler.InstanceGroupSettings.Keepalive,
-		Timeout:              config.Autoscaler.InstanceGroupSettings.Timeout,
+		OS:                   config.Autoscaler.ConnectorConfig.OS,
+		Arch:                 config.Autoscaler.ConnectorConfig.Arch,
+		Protocol:             fleetingprovider.Protocol(config.Autoscaler.ConnectorConfig.Protocol),
+		Username:             config.Autoscaler.ConnectorConfig.Username,
+		Password:             config.Autoscaler.ConnectorConfig.Password,
+		UseStaticCredentials: config.Autoscaler.ConnectorConfig.UseStaticCredentials,
+		Keepalive:            config.Autoscaler.ConnectorConfig.Keepalive,
+		Timeout:              config.Autoscaler.ConnectorConfig.Timeout,
 	}
 
-	if config.Autoscaler.InstanceGroupSettings.KeyPathname != "" {
-		key, err := os.ReadFile(config.Autoscaler.InstanceGroupSettings.KeyPathname)
+	if config.Autoscaler.ConnectorConfig.KeyPathname != "" {
+		key, err := os.ReadFile(config.Autoscaler.ConnectorConfig.KeyPathname)
 		if err != nil {
 			return nil, false, fmt.Errorf("reading instance group connector key: %w", err)
 		}
