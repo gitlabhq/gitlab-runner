@@ -199,16 +199,16 @@ type DockerConfig struct {
 }
 
 type AutoscalerConfig struct {
-	CapacityPerInstance   int                             `toml:"capacity_per_instance,omitempty"`
-	MaxUseCount           int                             `toml:"max_use_count,omitempty"`
-	MaxInstances          int                             `toml:"max_instances,omitempty"`
-	Plugin                string                          `toml:"plugin,omitempty"`
-	PluginConfig          AutoscalerSettingsMap           `toml:"plugin_config,omitempty"`
-	InstanceGroupSettings AutoscalerInstanceGroupSettings `toml:"instance_group_settings,omitempty"`
-	Policy                []AutoscalerPolicyConfig        `toml:"policy,omitempty"`
+	CapacityPerInstance int                      `toml:"capacity_per_instance,omitempty"`
+	MaxUseCount         int                      `toml:"max_use_count,omitempty"`
+	MaxInstances        int                      `toml:"max_instances,omitempty"`
+	Plugin              string                   `toml:"plugin,omitempty"`
+	PluginConfig        AutoscalerSettingsMap    `toml:"plugin_config,omitempty"`
+	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
+	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty"`
 }
 
-type AutoscalerInstanceGroupSettings struct {
+type ConnectorConfig struct {
 	OS                   string        `toml:"os,omitempty"`
 	Arch                 string        `toml:"arch,omitempty"`
 	Protocol             string        `toml:"protocol,omitempty"`
