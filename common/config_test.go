@@ -814,6 +814,19 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "priority-1", priorityClassName)
 			},
 		},
+		"setting scheduler_name to foobar": {
+			config: `
+				[[runners]]
+					[runners.kubernetes]
+						scheduler_name = 'foobar'
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Len(t, config.Runners, 1)
+
+				schedulerName := config.Runners[0].Kubernetes.SchedulerName
+				assert.Equal(t, "foobar", schedulerName)
+			},
+		},
 	}
 
 	for tn, tt := range tests {

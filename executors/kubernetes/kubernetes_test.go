@@ -4487,6 +4487,19 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "priority-1", pod.Spec.PriorityClassName)
 			},
 		},
+		"support setting Scheduler Name": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:     "default",
+						SchedulerName: "foobar",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, "foobar", pod.Spec.SchedulerName)
+			},
+		},
 	}
 
 	for testName, test := range tests {
