@@ -23,12 +23,12 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	e.build.Log().Infoln("Preparing instance...")
 
-	acqRef, ok := options.Build.ExecutorData.(*acqusitionRef)
+	acqRef, ok := options.Build.ExecutorData.(*acquisitionRef)
 	if !ok {
-		return fmt.Errorf("no acqusition ref data")
+		return fmt.Errorf("no acquisition ref data")
 	}
 
-	// generate key for acqusition
+	// generate key for acquisition
 	key := options.Build.Token + strconv.FormatInt(options.Build.ID, 10)
 
 	// todo: allow configuration of how long we're willing to wait for.

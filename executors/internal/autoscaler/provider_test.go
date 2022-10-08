@@ -118,30 +118,30 @@ func TestAquire(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		idleCount         int
-		availableCapacity int
-		potentialCapacity int
-		wantEarlyReturn   string
-		wantAcqusitionRef bool
-		wantErr           bool
+		idleCount          int
+		availableCapacity  int
+		potentialCapacity  int
+		wantEarlyReturn    string
+		wantAcquisitionRef bool
+		wantErr            bool
 	}{
 		"capacity of 1, no idle": {
-			idleCount:         0,
-			availableCapacity: 1,
-			potentialCapacity: 1,
-			wantAcqusitionRef: true,
+			idleCount:          0,
+			availableCapacity:  1,
+			potentialCapacity:  1,
+			wantAcquisitionRef: true,
 		},
 		"no available capacity, has on demand potential": {
-			idleCount:         0, // on demand ok
-			availableCapacity: 0,
-			potentialCapacity: 1,
-			wantAcqusitionRef: true,
+			idleCount:          0, // on demand ok
+			availableCapacity:  0,
+			potentialCapacity:  1,
+			wantAcquisitionRef: true,
 		},
 		"capacity of 1, idle of 1": {
-			idleCount:         1,
-			availableCapacity: 1,
-			potentialCapacity: 1,
-			wantAcqusitionRef: true,
+			idleCount:          1,
+			availableCapacity:  1,
+			potentialCapacity:  1,
+			wantAcquisitionRef: true,
 		},
 		"no available or potential capacity": {
 			idleCount:         0,
@@ -175,9 +175,9 @@ func TestAquire(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			var wantAcqusitionRef common.ExecutorData
-			if tt.wantAcqusitionRef {
-				wantAcqusitionRef = &acqusitionRef{}
+			var wantAcquisitionRef common.ExecutorData
+			if tt.wantAcquisitionRef {
+				wantAcquisitionRef = &acquisitionRef{}
 			}
 			config := common.NewTestRunnerConfig().
 				WithAutoscalerConfig(
@@ -214,7 +214,7 @@ func TestAquire(t *testing.T) {
 
 			ar, err := p.Acquire(config)
 
-			assert.Equal(t, wantAcqusitionRef, ar)
+			assert.Equal(t, wantAcquisitionRef, ar)
 			if tt.wantErr {
 				assert.NotNil(t, err)
 			} else {

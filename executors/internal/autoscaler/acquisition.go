@@ -9,26 +9,26 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
-var _ executors.Environment = (*acqusitionRef)(nil)
+var _ executors.Environment = (*acquisitionRef)(nil)
 
-type acqusitionRef struct {
+type acquisitionRef struct {
 	key string
 	acq *taskscaler.Aquisition
 }
 
-func (ref *acqusitionRef) ID() string {
+func (ref *acquisitionRef) ID() string {
 	return ref.acq.InstanceID()
 }
 
-func (ref *acqusitionRef) OS() string {
+func (ref *acquisitionRef) OS() string {
 	return ref.acq.InstanceConnectInfo().OS
 }
 
-func (ref *acqusitionRef) Arch() string {
+func (ref *acquisitionRef) Arch() string {
 	return ref.acq.InstanceConnectInfo().Arch
 }
 
-func (ref *acqusitionRef) Dial(ctx context.Context) (executors.Client, error) {
+func (ref *acquisitionRef) Dial(ctx context.Context) (executors.Client, error) {
 	info := ref.acq.InstanceConnectInfo()
 
 	dialer, err := connector.Dial(ctx, info, connector.DialOptions{
@@ -42,16 +42,16 @@ func (ref *acqusitionRef) Dial(ctx context.Context) (executors.Client, error) {
 	return &client{dialer}, nil
 }
 
-func (ref *acqusitionRef) set(key string, acq *taskscaler.Aquisition) {
+func (ref *acquisitionRef) set(key string, acq *taskscaler.Aquisition) {
 	if ref.acq != nil {
-		panic("acqusition ref already set")
+		panic("acquisition ref already set")
 	}
 
 	ref.key = key
 	ref.acq = acq
 }
 
-func (ref *acqusitionRef) get() string {
+func (ref *acquisitionRef) get() string {
 	return ref.key
 }
 
