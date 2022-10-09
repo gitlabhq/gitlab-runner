@@ -50,7 +50,7 @@ func TestCreateNetworkLabels(t *testing.T) {
 
 	ctx := context.Background()
 
-	networkMode, err := manager.Create(ctx, "")
+	networkMode, err := manager.Create(ctx, "", false)
 	assert.NoError(t, err)
 	assert.Equal(t, container.NetworkMode("runner-test-tok-project-0-concurrent-0-job-0-network"), networkMode)
 

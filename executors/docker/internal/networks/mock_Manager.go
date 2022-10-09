@@ -31,20 +31,20 @@ func (_m *MockManager) Cleanup(ctx context.Context) error {
 	return r0
 }
 
-// Create provides a mock function with given fields: ctx, networkMode
-func (_m *MockManager) Create(ctx context.Context, networkMode string) (container.NetworkMode, error) {
-	ret := _m.Called(ctx, networkMode)
+// Create provides a mock function with given fields: ctx, networkMode, enableIPv6
+func (_m *MockManager) Create(ctx context.Context, networkMode string, enableIPv6 bool) (container.NetworkMode, error) {
+	ret := _m.Called(ctx, networkMode, enableIPv6)
 
 	var r0 container.NetworkMode
-	if rf, ok := ret.Get(0).(func(context.Context, string) container.NetworkMode); ok {
-		r0 = rf(ctx, networkMode)
+	if rf, ok := ret.Get(0).(func(context.Context, string, bool) container.NetworkMode); ok {
+		r0 = rf(ctx, networkMode, enableIPv6)
 	} else {
 		r0 = ret.Get(0).(container.NetworkMode)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, networkMode)
+	if rf, ok := ret.Get(1).(func(context.Context, string, bool) error); ok {
+		r1 = rf(ctx, networkMode, enableIPv6)
 	} else {
 		r1 = ret.Error(1)
 	}

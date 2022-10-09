@@ -18,7 +18,7 @@ var errBuildNetworkExists = errors.New("build network is not empty")
 
 //go:generate mockery --name=Manager --inpackage
 type Manager interface {
-	Create(ctx context.Context, networkMode string) (container.NetworkMode, error)
+	Create(ctx context.Context, networkMode string, enableIPv6 bool) (container.NetworkMode, error)
 	Inspect(ctx context.Context) (types.NetworkResource, error)
 	Cleanup(ctx context.Context) error
 }
@@ -43,7 +43,7 @@ func NewManager(logger debugLogger, dockerClient docker.Client, build *common.Bu
 	}
 }
 
-func (m *manager) Create(ctx context.Context, networkMode string) (container.NetworkMode, error) {
+func (m *manager) Create(ctx context.Context, networkMode string, enableIPv6 bool) (container.NetworkMode, error) {
 	m.networkMode = container.NetworkMode(networkMode)
 	m.perBuild = false
 
@@ -66,7 +66,10 @@ func (m *manager) Create(ctx context.Context, networkMode string) (container.Net
 	networkResponse, err := m.client.NetworkCreate(
 		ctx,
 		networkName,
-		types.NetworkCreate{Labels: m.labeler.Labels(map[string]string{})},
+		types.NetworkCreate{
+			Labels:     m.labeler.Labels(map[string]string{}),
+			EnableIPv6: enableIPv6,
+		},
 	)
 	if err != nil {
 		return "", err

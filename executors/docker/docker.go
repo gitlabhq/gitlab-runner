@@ -554,7 +554,7 @@ func (e *executor) createBuildNetwork() error {
 		return errNetworksManagerUndefined
 	}
 
-	networkMode, err := e.networksManager.Create(e.Context, e.Config.Docker.NetworkMode)
+	networkMode, err := e.networksManager.Create(e.Context, e.Config.Docker.NetworkMode, e.Config.Docker.EnableIPv6)
 	if err != nil {
 		return err
 	}
