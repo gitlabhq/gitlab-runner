@@ -1385,7 +1385,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 			createNetworkManager: true,
 			networkPerBuild:      "false",
 			networksManagerAssertions: func(nm *networks.MockManager) {
-				nm.On("Create", mock.Anything, mock.Anything).
+				nm.On("Create", mock.Anything, mock.Anything, mock.Anything).
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
@@ -1400,7 +1400,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 			createNetworkManager: true,
 			networkPerBuild:      "true",
 			networksManagerAssertions: func(nm *networks.MockManager) {
-				nm.On("Create", mock.Anything, mock.Anything).
+				nm.On("Create", mock.Anything, mock.Anything, mock.Anything).
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
@@ -1415,7 +1415,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 			createNetworkManager: true,
 			networkPerBuild:      "true",
 			networksManagerAssertions: func(nm *networks.MockManager) {
-				nm.On("Create", mock.Anything, mock.Anything).
+				nm.On("Create", mock.Anything, mock.Anything, mock.Anything).
 					Return(container.NetworkMode("fail"), testErr).
 					Once()
 			},
@@ -1425,7 +1425,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 			createNetworkManager: true,
 			networkPerBuild:      "true",
 			networksManagerAssertions: func(nm *networks.MockManager) {
-				nm.On("Create", mock.Anything, mock.Anything).
+				nm.On("Create", mock.Anything, mock.Anything, mock.Anything).
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
@@ -1446,7 +1446,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 					Once()
 			},
 			networksManagerAssertions: func(nm *networks.MockManager) {
-				nm.On("Create", mock.Anything, mock.Anything).
+				nm.On("Create", mock.Anything, mock.Anything, mock.Anything).
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).
@@ -1469,7 +1469,7 @@ func TestDockerCreateNetwork(t *testing.T) {
 			createNetworkManager: true,
 			networkPerBuild:      "true",
 			networksManagerAssertions: func(nm *networks.MockManager) {
-				nm.On("Create", mock.Anything, mock.Anything).
+				nm.On("Create", mock.Anything, mock.Anything, mock.Anything).
 					Return(container.NetworkMode("test"), nil).
 					Once()
 				nm.On("Inspect", mock.Anything).

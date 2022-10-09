@@ -65,6 +65,7 @@ func TestCreateNetwork(t *testing.T) {
 		networkMode         string
 		networkPerBuild     string
 		buildNetwork        types.NetworkResource
+		enableIPv6          bool
 		expectedNetworkMode container.NetworkMode
 		expectedErr         error
 		clientAssertions    func(*docker.MockClient)
@@ -152,6 +153,29 @@ func TestCreateNetwork(t *testing.T) {
 			expectedNetworkMode: "",
 			expectedErr:         errBuildNetworkExists,
 		},
+		"IPv6 network created": {
+			networkMode:         "",
+			networkPerBuild:     "true",
+			expectedNetworkMode: container.NetworkMode("runner-test-tok-project-0-concurrent-0-job-0-network"),
+			enableIPv6:          true,
+			clientAssertions: func(mc *docker.MockClient) {
+				mc.On(
+					"NetworkCreate",
+					mock.Anything,
+					mock.AnythingOfType("string"),
+					mock.AnythingOfType("types.NetworkCreate"),
+				).
+					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
+					Once()
+				mc.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
+					Return(types.NetworkResource{
+						ID:         "test-network",
+						Name:       "test-network",
+						EnableIPv6: true,
+					}, nil).
+					Once()
+			},
+		},
 	}
 
 	for testName, testCase := range testCases {
@@ -172,7 +196,7 @@ func TestCreateNetwork(t *testing.T) {
 				testCase.clientAssertions(client)
 			}
 
-			networkMode, err := m.Create(context.Background(), testCase.networkMode)
+			networkMode, err := m.Create(context.Background(), testCase.networkMode, testCase.enableIPv6)
 
 			assert.Equal(t, testCase.expectedNetworkMode, networkMode)
 			assert.Equal(t, testCase.expectedErr, err)

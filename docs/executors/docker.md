@@ -288,6 +288,10 @@ The job container is resolvable by using the `build` alias as well, because the 
 
 The network is removed at the end of the job.
 
+To enable IPv6 support for this network, set `enable_ipv6` to `true` inside the Docker config.
+This feature works only when the Docker daemon is configured with IPv6 enabled.
+To enable IPv6 support on your host, see the [Docker documentation](https://docs.docker.com/config/daemon/ipv6/).
+
 ## Define image and services from `.gitlab-ci.yml`
 
 You can simply define an image that will be used for all jobs and a list of
