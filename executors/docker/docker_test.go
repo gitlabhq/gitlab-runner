@@ -964,6 +964,27 @@ func testDockerConfigurationWithJobContainer(
 	assert.NoError(t, err, "Should create container without errors")
 }
 
+func testDockerConfigurationWithPredefinedContainer(
+	t *testing.T,
+	dockerConfig *common.DockerConfig,
+	cce containerConfigExpectations,
+) {
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+	defer c.AssertExpectations(t)
+
+	c.On("ContainerInspect", mock.Anything, "abc").
+		Return(types.ContainerJSON{}, nil).Once()
+
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	err = e.createPullManager()
+	require.NoError(t, err)
+
+	_, err = e.createContainer("predefined", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	assert.NoError(t, err, "Should create container without errors")
+}
+
 func testDockerConfigurationWithServiceContainer(
 	t *testing.T,
 	dockerConfig *common.DockerConfig,
@@ -1156,6 +1177,22 @@ func TestDockerServicesExtraHostsSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
+}
+
+func TestDockerUserSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		User: "www",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "www", config.User)
+	}
+	ccePredefined := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "", config.User)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+	testDockerConfigurationWithPredefinedContainer(t, dockerConfig, ccePredefined)
 }
 
 func TestDockerServiceUserNSSetting(t *testing.T) {

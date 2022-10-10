@@ -696,6 +696,12 @@ func (e *executor) createContainerConfig(
 		StdinOnce:    true,
 		Env:          e.Build.GetAllVariables().StringList(),
 	}
+
+	// user config should only be set in build containers
+	if containerType == "build" {
+		config.User = e.Config.Docker.User
+	}
+
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 
 	return config
