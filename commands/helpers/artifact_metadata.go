@@ -79,9 +79,14 @@ type AttestationPredicateInvocationConfigSource struct {
 }
 
 type AttestationPredicateInvocationEnvironment struct {
-	Name         string `json:"name"`
-	Executor     string `json:"executor"`
-	Architecture string `json:"architecture"`
+	Name         string                                       `json:"name"`
+	Executor     string                                       `json:"executor"`
+	Architecture string                                       `json:"architecture"`
+	Job          AttestationPredicateInvocationEnvironmentJob `json:"job"`
+}
+
+type AttestationPredicateInvocationEnvironmentJob struct {
+	Id int64 `json:"id"`
 }
 
 type AttestationPredicateInvocationParameters map[string]string
@@ -120,9 +125,10 @@ func (t TimeRFC3339) MarshalJSON() ([]byte, error) {
 }
 
 type generateMetadataOptions struct {
-	files map[string]os.FileInfo
-	wd    string
-	jobID int64
+	artifactName string
+	files        map[string]os.FileInfo
+	wd           string
+	jobID        int64
 }
 
 func (g *artifactMetadataGenerator) generateMetadataToFile(opts generateMetadataOptions) (string, error) {
@@ -131,14 +137,14 @@ func (g *artifactMetadataGenerator) generateMetadataToFile(opts generateMetadata
 		return "", err
 	}
 
-	file := filepath.Join(opts.wd, fmt.Sprintf(artifactsMetadataFormat, opts.jobID))
+	file := filepath.Join(opts.wd, fmt.Sprintf(artifactsMetadataFormat, opts.artifactName))
 
 	b, err := json.MarshalIndent(metadata, "", " ")
 	if err != nil {
 		return "", err
 	}
 
-	err = os.WriteFile(file, b, 0o700)
+	err = os.WriteFile(file, b, 0o644)
 	return file, err
 }
 
@@ -175,6 +181,9 @@ func (g *artifactMetadataGenerator) metadata(opts generateMetadataOptions) (Atte
 					Name:         g.RunnerName,
 					Executor:     g.ExecutorName,
 					Architecture: common.AppVersion.Architecture,
+					Job: AttestationPredicateInvocationEnvironmentJob{
+						Id: opts.jobID,
+					},
 				},
 				Parameters: parameters,
 			},
