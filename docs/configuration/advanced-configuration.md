@@ -300,6 +300,7 @@ The following settings define the Docker container parameters.
 | `sysctls`                      | The `sysctl` options. |
 | `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Useful in `boot2docker`. |
 | `tls_verify`                   | Enable or disable TLS verification of connections to Docker daemon. Disabled by default. |
+| `user`                         | Run all commands in the container as the specified user. |
 | `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
 | `volumes`                      | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
 | `volumes_from`                 | A list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
