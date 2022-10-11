@@ -902,6 +902,40 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
 		assert.NoError(t, err, "Submodule should have been initialized")
 
+		_, err = os.Stat(filepath.Join(build.BuildDir, ".git", "modules", "gitlab-grack", "shallow"))
+		assert.Error(t, err, "Submodule should not have been shallow cloned")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.Error(t, err, "The submodule's submodule should not have been initialized")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyNormalAndGitSubmoduleDepth(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build := newBuild(t, successfulBuild, shell)
+
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "normal"},
+			common.JobVariable{Key: "GIT_SUBMODULE_DEPTH", Value: "1"},
+		)
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.Contains(t, out, "Updating/initializing submodules with git depth set to 1...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively with git depth set to 1...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, ".git", "modules", "gitlab-grack", "shallow"))
+		assert.NoError(t, err, "Submodule should have been shallow cloned")
+
 		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
 		assert.Error(t, err, "The submodule's submodule should not have been initialized")
 	})
@@ -924,8 +958,48 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
 		assert.NoError(t, err, "Submodule should have been initialized")
 
+		_, err = os.Stat(filepath.Join(build.BuildDir, ".git", "modules", "gitlab-grack", "shallow"))
+		assert.Error(t, err, "Submodule should not have been shallow cloned")
+
 		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
 		assert.NoError(t, err, "The submodule's submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, ".git", "modules", "gitlab-grack", "tests", "example", "shallow"))
+		assert.Error(t, err, "The submodule's submodule should not have been shallow cloned")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyRecursiveAndGitSubmoduleDepth(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build := newBuild(t, successfulBuild, shell)
+
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+			common.JobVariable{Key: "GIT_SUBMODULE_DEPTH", Value: "1"},
+		)
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules with git depth set to 1...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+		assert.Contains(t, out, "Updating/initializing submodules recursively with git depth set to 1...")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
+		assert.NoError(t, err, "Submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, ".git", "modules", "gitlab-grack", "shallow"))
+		assert.NoError(t, err, "Submodule should have been shallow cloned")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", ".git"))
+		assert.NoError(t, err, "The submodule's submodule should have been initialized")
+
+		_, err = os.Stat(filepath.Join(build.BuildDir, ".git", "modules", "gitlab-grack", "modules", "tests", "example", "shallow"))
+		assert.NoError(t, err, "The submodule's submodule should have been shallow cloned")
 	})
 }
 

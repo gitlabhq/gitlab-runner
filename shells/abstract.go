@@ -446,7 +446,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
-	depth := build.GitInfo.Depth
+	depth := build.GetSubmoduleDepth()
 
 	b.writeSubmoduleUpdateNoticeMsg(w, recursive, depth)
 
