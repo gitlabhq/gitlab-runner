@@ -47,7 +47,7 @@ Before configuring autoscale, you must:
 
 ## Supported cloud providers
 
-The autoscale mechanism is based on [Docker Machine](https://docs.docker.com/machine/overview/).
+The autoscale mechanism is based on [Docker Machine](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/index.md).
 All supported virtualization and cloud provider parameters are available at the
 GitLab-managed fork of [Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/).
 
@@ -587,7 +587,7 @@ Read more about how to [use a proxy for containers](../configuration/speed_up_jo
 
 ## A complete example of `config.toml`
 
-The `config.toml` below uses the [`google` Docker Machine driver](https://docs.docker.com/machine/drivers/gce/):
+The `config.toml` below uses the [`google` Docker Machine driver](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/drivers/gce.md):
 
 ```toml
 concurrent = 50   # All registered runners can run up to 50 concurrent jobs

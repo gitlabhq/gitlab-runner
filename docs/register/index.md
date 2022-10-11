@@ -112,7 +112,7 @@ To register a runner under Linux:
 ## macOS
 
 NOTE:
-Install [Docker.app](https://docs.docker.com/docker-for-mac/install/)
+Install [Docker.app](https://docs.docker.com/desktop/install/mac-install/)
 before registering a runner under macOS.
 
 To register a runner under macOS:

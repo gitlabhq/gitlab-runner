@@ -145,11 +145,11 @@ Add the following value to your `[runners.machine]` section:
 
 This most likely happens, because of the broken AUFS storage driver:
 [Java process hangs on inside container](https://github.com/moby/moby/issues/18502).
-The best solution is to change the [storage driver](https://docs.docker.com/engine/userguide/storagedriver/selectadriver/)
+The best solution is to change the [storage driver](https://docs.docker.com/storage/storagedriver/select-storage-driver/)
 to either OverlayFS (faster) or DeviceMapper (slower).
 
-Check this article about [configuring and running Docker](https://docs.docker.com/engine/articles/configuring/)
-or this article about [control and configure with systemd](https://docs.docker.com/engine/articles/systemd/).
+Check this article about [configuring and running Docker](https://docs.docker.com/config/daemon/)
+or this article about [control and configure with systemd](https://docs.docker.com/config/daemon/systemd/).
 
 ## I get 411 when uploading artifacts
 

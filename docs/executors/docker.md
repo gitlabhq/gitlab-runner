@@ -41,7 +41,7 @@ NOTE:
 GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
 Engine. This means the
-[minimum supported version](https://docs.docker.com/develop/sdk/#api-version-matrix)
+[minimum supported version](https://docs.docker.com/engine/api/#api-version-matrix)
 of Docker on a Linux server is `1.13.0`,
 [on Windows Server it needs to be more recent](#supported-docker-versions)
 to identify the Windows Server version.
@@ -188,7 +188,7 @@ this special image [in the official GitLab Runner repository](https://gitlab.com
 The `image` keyword is the name of the Docker image that is present in the
 local Docker Engine (list all images with `docker images`) or any image that
 can be found at [Docker Hub](https://hub.docker.com/). For more information about images and Docker
-Hub please read the [Docker Fundamentals](https://docs.docker.com/engine/understanding-docker/) documentation.
+Hub please read the [Docker overview](https://docs.docker.com/get-started/overview/) documentation.
 
 In short, with `image` we refer to the Docker image, which will be used to
 create a container on which your build will run.

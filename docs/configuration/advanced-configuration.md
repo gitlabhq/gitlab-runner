@@ -369,7 +369,7 @@ Example:
 
 ### Volumes in the `[runners.docker]` section
 
-[View the complete guide of Docker volume usage](https://docs.docker.com/userguide/dockervolumes/).
+[View the complete guide of Docker volume usage](https://docs.docker.com/storage/volumes/).
 
 The following examples show how to specify volumes in the `[runners.docker]` section.
 

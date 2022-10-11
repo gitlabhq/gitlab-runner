@@ -13,7 +13,7 @@ For an overview of the autoscale architecture, take a look at the
 
 ## Forked version of Docker machine
 
-Docker has [deprecated](https://docs.docker.com/machine/) Docker Machine. However,
+Docker has [deprecated Docker Machine](https://gitlab.com/gitlab-org/gitlab/-/issues/341856). However,
 GitLab maintains a fork of [`docker-machine`](https://gitlab.com/gitlab-org/ci-cd/docker-machine)
 for GitLab Runner users who rely on the Docker Machine executor. This fork is
 based on the latest `main` branch of `docker-machine` with
