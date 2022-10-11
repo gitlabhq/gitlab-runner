@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 This guide aims specifically to making GitLab Runner with Docker executor work behind a proxy.
 
 Before continuing, ensure that you've already
-[installed Docker](https://docs.docker.com/install/) and
+[installed Docker](https://docs.docker.com/get-docker/) and
 [GitLab Runner](../install/index.md) on the same machine.
 
 ## Configuring CNTLM

@@ -34,7 +34,7 @@ Packages for distributions that are not on the list are currently not available 
 ## Prerequisites
 
 If you want to use the [Docker executor](../executors/docker.md), make sure to install Docker before
-using GitLab Runner. [Read how to install Docker for your distribution](https://docs.docker.com/engine/installation/).
+using GitLab Runner. [Read how to install Docker for your distribution](https://docs.docker.com/engine/install/).
 
 ## Installing GitLab Runner
 

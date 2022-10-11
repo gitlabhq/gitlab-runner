@@ -42,7 +42,7 @@ More detail on how it works can be found [here](https://docs.docker.com/registry
 To create a Docker Hub Registry mirror:
 
 1. Log in to a dedicated machine where the proxy container registry will run.
-1. Make sure that [Docker Engine](https://docs.docker.com/install/) is installed
+1. Make sure that [Docker Engine](https://docs.docker.com/get-docker/) is installed
    on that machine.
 1. Create a new container registry:
 
@@ -110,7 +110,7 @@ to the S3 location and provide credentials for connecting.
 Instead of using AWS S3, you can create your own cache storage.
 
 1. Log in to a dedicated machine where the cache server will run.
-1. Make sure that [Docker Engine](https://docs.docker.com/install/) is installed
+1. Make sure that [Docker Engine](https://docs.docker.com/get-docker/) is installed
    on that machine.
 1. Start [MinIO](https://min.io), a simple S3-compatible server written in Go:
 

@@ -65,7 +65,7 @@ pkg install go-1.18.6 gmake git mercurial
 The Docker Engine is required to create pre-built image that is embedded into GitLab Runner and loaded when using Docker executor.
 
 To install Docker, follow the Docker
-[installation instructions](https://docs.docker.com/install/) for your OS.
+[installation instructions](https://docs.docker.com/get-docker/) for your OS.
 
 Make sure you have a `binfmt_misc` on the machine that is running your Docker Engine.
 This is required for building ARM images that are embedded into the GitLab Runner binary.
