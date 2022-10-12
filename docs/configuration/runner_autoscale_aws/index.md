@@ -271,6 +271,7 @@ under `MachineOptions`. Below you can see the most common ones.
 | `amazonec2-spot-price=xxxx_runner_machine_spot_price=x.xx` | Spot instance bid price (in US dollars). Requires the `--amazonec2-request-spot-instance flag` set to `true`. If you omit the `amazonec2-spot-price`, Docker Machine sets the maximum price to a default value of `$0.50` per hour. |
 | `amazonec2-security-group-readonly=true` | Set the security group to read-only.|
 | `amazonec2-userdata=xxxx_runner_machine_userdata_path` | Specify the runner machine `userdata` path. |
+| `amazonec2-root-size=XX` | The root disk size of the instance (in GB). |
 
 Notes:
 
