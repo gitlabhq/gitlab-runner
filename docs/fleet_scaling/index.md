@@ -196,7 +196,7 @@ To view those metrics on a runner, execute the command as noted [here](../monito
 ### Grafana dashboard configuration tips
 
 In this [public repository](https://gitlab.com/gitlab-com/runbooks/-/tree/master/dashboards/ci-runners) you will
-find the source code for the Grafana [dashboards](https://dashboards.gitlab.com/d/general-public-splashscreen/general-gitlab-dashboards?orgId=1&from=now-7d&to=now)
+find the source code for the Grafana dashboards
 that we use to operate the runner fleet on GitLab.com.
 
 We track a lot of metrics for GitLab.com. As a large provider of cloud-based CI/CD, we need many different views
