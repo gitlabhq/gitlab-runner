@@ -29,7 +29,7 @@ var requestConcurrencyDesc = prometheus.NewDesc(
 
 var requestConcurrencyExceededDesc = prometheus.NewDesc(
 	"gitlab_runner_request_concurrency_exceeded_total",
-	"Counter tracking exceeding of request concurrency",
+	"Count of excess requests above the configured request_concurrency limit",
 	[]string{"runner"},
 	nil,
 )
