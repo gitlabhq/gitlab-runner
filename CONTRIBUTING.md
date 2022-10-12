@@ -31,6 +31,28 @@ Currently we use a system of [scoped labels](https://docs.gitlab.com/ee/user/pro
 | ~"Review::P2" | Important merge requests. | When a merge request is important, but has lower impact to customers when compared to merge requests labelled ~"Review::P1". |
 | ~"Review::P3" | Default priority to review. | All incoming merge requests should default to this. |
 
+### Contributing new features that need new or updated `.gitlab-ci.yml` [keywords](https://docs.gitlab.com/ee/ci/yaml/)
+
+To execute a job, the GitLab instance processes the `gitlab-ci.yml` configuration
+and creates a data transfer object, containing only data relevant to a job's
+execution, that GitLab Runner then receives.
+
+Because of this workflow, when you add a keyword that affects the execution of a job, you must
+make changes in both repositories: GitLab Runner and [GitLab](https://gitlab.com/gitlab-org/gitlab).
+
+When a feature needs changes in both repositories, the GitLab Runner team can accept
+a merge request only if the feature has already been accepted for inclusion in the
+GitLab repository.
+
+- Reviews in both repositories can happen in parallel.
+- The GitLab project will always dictate and have authority over which keywords are added.
+- The GitLab project maintainers determine what the behavior will ultimately be.
+
+For this reason, before starting a review in the GitLab Runner project, the team
+requires confirmation that a keyword or a change to a keyword is likely to be accepted.
+This process helps save time and ensures that we end up with the best solution possible
+for the problem being solved.
+
 ### Contributing new [executors](https://docs.gitlab.com/runner/#selecting-the-executor)
 
 We are no longer accepting or developing new executors for a few
