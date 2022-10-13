@@ -330,6 +330,13 @@ func TestBuildMasking(t *testing.T) {
 	})
 }
 
+func TestBuildExpandedFileVariable(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := newBuild(t, common.JobResponse{}, shell)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+	})
+}
+
 func TestBuildWithIndexLock(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
