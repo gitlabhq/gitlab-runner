@@ -132,7 +132,9 @@ release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${PUBLISH_IMAGES}" "${IMAGE
 logout "${CI_REGISTRY}"
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-    login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
+    ECR_PUBLIC_REGISTRY_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
+
+    login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_REGISTRY_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
 fi
 release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "${PUSH_TO_ECR_PUBLIC}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 logout "${ECR_PUBLIC_REGISTRY}"
