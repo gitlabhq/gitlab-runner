@@ -626,6 +626,15 @@ func TestBuildMasking(t *testing.T) {
 	buildtest.RunBuildWithMasking(t, getRunnerConfigForOS(t), nil)
 }
 
+func TestBuildExpandedFileVariable(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := getBuildForOS(t, common.GetSuccessfulBuild)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+	})
+}
+
 func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
