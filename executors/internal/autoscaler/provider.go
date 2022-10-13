@@ -6,12 +6,18 @@ import (
 	"os"
 	"sync"
 
-	"gitlab.com/gitlab-org/fleeting/fleeting"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"github.com/prometheus/client_golang/prometheus"
 
+	"gitlab.com/gitlab-org/fleeting/fleeting"
+	flprometheus "gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
+	tsprometheus "gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
+
+var _ prometheus.Collector = &provider{}
 
 type provider struct {
 	common.ExecutorProvider
@@ -81,6 +87,18 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 		instanceConnectConfig.Key = key
 	}
 
+	constLabels := prometheus.Labels{
+		"runner":      config.ShortDescription(),
+		"runner_name": config.Name,
+	}
+
+	tsMC := tsprometheus.New(constLabels)
+	flMC := flprometheus.New(
+		constLabels,
+		config.Autoscaler.InstanceOperationTimeBuckets,
+		config.Autoscaler.InstanceOperationTimeBuckets,
+	)
+
 	options := []taskscaler.Option{
 		taskscaler.WithCapacityPerInstance(config.Autoscaler.CapacityPerInstance),
 		taskscaler.WithMaxUseCount(config.Autoscaler.MaxUseCount),
@@ -88,6 +106,8 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 		taskscaler.WithInstanceGroupSettings(fleetingprovider.Settings{
 			ConnectorConfig: instanceConnectConfig,
 		}),
+		taskscaler.WithMetricsCollector(tsMC),
+		taskscaler.WithFleetingMetricsCollector(flMC),
 	}
 
 	scaler, err = p.taskscalerNew(ctx, runner.InstanceGroup(), options...)
@@ -162,4 +182,32 @@ func (p *provider) getRunnerTaskscaler(config *common.RunnerConfig) taskscaler.T
 	defer p.mu.Unlock()
 
 	return p.scalers[config.GetToken()]
+}
+
+func (p *provider) Describe(ch chan<- *prometheus.Desc) {
+	for _, scaler := range p.scalers {
+		c, ok := scaler.MetricsCollector().(prometheus.Collector)
+		if ok {
+			c.Describe(ch)
+		}
+
+		c, ok = scaler.FleetingMetricsCollector().(prometheus.Collector)
+		if ok {
+			c.Describe(ch)
+		}
+	}
+}
+
+func (p *provider) Collect(ch chan<- prometheus.Metric) {
+	for _, scaler := range p.scalers {
+		c, ok := scaler.MetricsCollector().(prometheus.Collector)
+		if ok {
+			c.Collect(ch)
+		}
+
+		c, ok = scaler.FleetingMetricsCollector().(prometheus.Collector)
+		if ok {
+			c.Collect(ch)
+		}
+	}
 }

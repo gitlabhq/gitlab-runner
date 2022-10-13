@@ -28,23 +28,25 @@ require (
 	github.com/kardianos/service v1.2.0
 	github.com/klauspost/pgzip v1.2.5
 	github.com/minio/minio-go/v7 v7.0.28-0.20220610200644-47da873ffd36
-	github.com/prometheus/client_golang v1.11.1
+	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/common v0.26.0
-	github.com/prometheus/procfs v0.6.0
+	github.com/prometheus/common v0.37.0
+	github.com/prometheus/procfs v0.8.0
 	github.com/saracen/fastzip v0.1.9
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.2
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.20.0
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20220920195511-c6823c0e2dd3
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20220929194928-cf592a65f4fa
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221010222627-5f33b4a050fc
+	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221010222627-5f33b4a050fc
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221011225103-3b80ed781fe5
+	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221011225103-3b80ed781fe5
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gocloud.dev v0.21.1-0.20201223184910-5094f54ed8bb
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/net v0.0.0-20220923203811-8be639271d50
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8
 	golang.org/x/text v0.3.7
 	google.golang.org/genproto v0.0.0-20220923205249-dd2d53f1fffc
@@ -67,7 +69,7 @@ require (
 	github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/containerd/containerd v1.4.13 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/docker-credential-helpers v0.4.1 // indirect
@@ -81,7 +83,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/google/wire v0.4.0 // indirect
@@ -141,7 +143,7 @@ require (
 	go.opencensus.io v0.22.5 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19 // indirect
+	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	golang.org/x/tools v0.0.0-20210106214847-113979e3529a // indirect
