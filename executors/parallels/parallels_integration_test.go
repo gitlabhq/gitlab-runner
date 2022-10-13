@@ -309,3 +309,12 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 		untrackedSubSubmoduleFile,
 	)
 }
+
+func TestBuildExpandedFileVariable(t *testing.T) {
+	helpers.SkipIntegrationTests(t, prlCtl, "--version")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+	})
+}
