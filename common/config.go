@@ -953,6 +953,9 @@ type RunnerConfig struct {
 	OutputLimit        int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
 	RequestConcurrency int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests"`
 
+	UnhealthyRequestsLimit int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of 'unhealthy' responses to new job requests after which a runner worker will be disabled"`
+	UnhealthyInterval      *time.Duration `toml:"unhealthy_interval,omitzero" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
+
 	RunnerCredentials
 	RunnerSettings
 }
@@ -1589,6 +1592,22 @@ func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
 
 func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
+}
+
+func (c *RunnerConfig) GetUnhealthyRequestsLimit() int {
+	if c.UnhealthyRequestsLimit < 1 {
+		return DefaultUnhealthyRequestsLimit
+	}
+
+	return c.UnhealthyRequestsLimit
+}
+
+func (c *RunnerConfig) GetUnhealthyInterval() time.Duration {
+	if c.UnhealthyInterval == nil {
+		return DefaultUnhealthyInterval
+	}
+
+	return *c.UnhealthyInterval
 }
 
 func (c *RunnerConfig) GetRequestConcurrency() int {
