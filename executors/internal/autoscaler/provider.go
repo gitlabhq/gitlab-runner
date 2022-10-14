@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -15,6 +16,7 @@ import (
 	tsprometheus "gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 var _ prometheus.Collector = &provider{}
@@ -29,6 +31,7 @@ type provider struct {
 	//nolint:lll
 	taskscalerNew     func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error)
 	fleetingRunPlugin func(string, []byte) (*fleeting.Runner, error)
+	generateUniqueID  func() (string, error)
 }
 
 func New(ep common.ExecutorProvider) common.ExecutorProvider {
@@ -37,6 +40,9 @@ func New(ep common.ExecutorProvider) common.ExecutorProvider {
 		scalers:           make(map[string]taskscaler.Taskscaler),
 		taskscalerNew:     taskscaler.New,
 		fleetingRunPlugin: fleeting.RunPlugin,
+		generateUniqueID: func() (string, error) {
+			return helpers.GenerateRandomUUID(8)
+		},
 	}
 }
 
@@ -120,6 +126,7 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 	return scaler, true, nil
 }
 
+//nolint:gocognit
 func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, error) {
 	scaler, fresh, err := p.init(context.Background(), config)
 	if err != nil {
@@ -153,7 +160,24 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 		return nil, fmt.Errorf("already at capacity, cannot accept, allow on demand is disabled")
 	}
 
-	return &acquisitionRef{}, nil
+	// generate key for acquisition
+	key, err := p.generateUniqueID()
+	if err != nil {
+		return nil, fmt.Errorf("generating unique id for task acquisition: %w", err)
+	}
+	key = helpers.ShortenToken(config.Token) + key
+
+	// todo: allow configuration of how long we're willing to wait for. Do we have something like this already?
+	// todo: it would be good if Acquire() was provided a context, so we could stop when shutting down.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	acq, err := scaler.Acquire(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("unable to acquire instance: %w", err)
+	}
+
+	return &acquisitionRef{key: key, acq: acq}, nil
 }
 
 func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData) {
@@ -162,19 +186,11 @@ func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData
 		return
 	}
 
-	p.getRunnerTaskscaler(config).Release(acq.get())
+	p.getRunnerTaskscaler(config).Release(acq.key)
 }
 
 func (p *provider) Create() common.Executor {
-	e := p.ExecutorProvider.Create()
-	if e == nil {
-		return nil
-	}
-
-	return &executor{
-		provider: p,
-		Executor: e,
-	}
+	return p.ExecutorProvider.Create()
 }
 
 func (p *provider) getRunnerTaskscaler(config *common.RunnerConfig) taskscaler.Taskscaler {

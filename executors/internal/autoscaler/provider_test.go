@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/fleeting/fleeting"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
@@ -175,10 +176,6 @@ func TestAquire(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			var wantAcquisitionRef common.ExecutorData
-			if tt.wantAcquisitionRef {
-				wantAcquisitionRef = &acquisitionRef{}
-			}
 			config := common.NewTestRunnerConfig().
 				WithAutoscalerConfig(
 					common.NewTestAutoscalerConfig().
@@ -196,6 +193,9 @@ func TestAquire(t *testing.T) {
 			p := New(ep).(*provider)
 			p.taskscalerNew = mockTaskscalerNew(ts /* wantErr */, false)
 			p.fleetingRunPlugin = mockFleetingRunPlugin( /* wantErr */ false)
+			p.generateUniqueID = func() (string, error) {
+				return "abcdefgh", nil
+			}
 
 			switch tt.wantEarlyReturn {
 			case afterInit:
@@ -210,11 +210,21 @@ func TestAquire(t *testing.T) {
 				ts.EXPECT().ConfigureSchedule(schedule).Return(nil)
 				ts.EXPECT().Capacity().Return(tt.availableCapacity, tt.potentialCapacity)
 				ts.EXPECT().Schedule().Return(schedule)
+
+				if tt.availableCapacity > 0 || tt.idleCount == 0 && tt.potentialCapacity > 0 {
+					ts.EXPECT().Acquire(mock.Anything, mock.Anything).Return(&taskscaler.Acquisition{}, nil)
+				}
 			}
 
 			ar, err := p.Acquire(config)
 
-			assert.Equal(t, wantAcquisitionRef, ar)
+			if tt.wantAcquisitionRef {
+				if assert.IsType(t, &acquisitionRef{}, ar) {
+					assert.Equal(t, "abcdefgh", ar.(*acquisitionRef).key)
+				}
+			} else {
+				assert.Nil(t, ar)
+			}
 			if tt.wantErr {
 				assert.NotNil(t, err)
 			} else {
