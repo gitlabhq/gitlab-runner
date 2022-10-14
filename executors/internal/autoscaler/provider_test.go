@@ -9,10 +9,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"gitlab.com/gitlab-org/fleeting/fleeting"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -95,10 +95,13 @@ func TestInit(t *testing.T) {
 			p.taskscalerNew = mockTaskscalerNew(tokenTaskscaler, tt.newTaskscalerErr)
 			p.fleetingRunPlugin = mockFleetingRunPlugin(tt.fleetingRunPluginErr)
 			for k, v := range tt.scalers {
-				p.scalers[k] = v
+				p.scalers[k] = scaler{
+					internal: v,
+					shutdown: func(_ context.Context) {},
+				}
 			}
 
-			ts, created, err := p.init(context.TODO(), tt.config)
+			ts, created, err := p.init(tt.config)
 
 			assert.Equal(t, tt.wantTaskscaler, ts)
 			assert.Equal(t, tt.wantCreated, created)
@@ -246,11 +249,18 @@ func mockTaskscalerNew(
 	}
 }
 
-func mockFleetingRunPlugin(wantErr bool) func(string, []byte) (*fleeting.Runner, error) {
-	return func(string, []byte) (*fleeting.Runner, error) {
+func mockFleetingRunPlugin(wantErr bool) func(string, []byte) (fleetingPlugin, error) {
+	return func(string, []byte) (fleetingPlugin, error) {
 		if wantErr {
 			return nil, fmt.Errorf("test error")
 		}
-		return &fleeting.Runner{}, nil
+
+		return new(fakeFleetingPlugin), nil
 	}
 }
+
+type fakeFleetingPlugin struct{}
+
+func (f *fakeFleetingPlugin) InstanceGroup() fleetingprovider.InstanceGroup { return nil }
+
+func (f *fakeFleetingPlugin) Kill() {}
