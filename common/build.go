@@ -1250,6 +1250,14 @@ func (b *Build) GetSubmodulePaths() string {
 	return paths
 }
 
+func (b *Build) GetSubmoduleDepth() int {
+	depth, err := strconv.Atoi(b.GetAllVariables().Get("GIT_SUBMODULE_DEPTH"))
+	if err != nil {
+		return b.GitInfo.Depth
+	}
+	return depth
+}
+
 func (b *Build) GetGitCleanFlags() []string {
 	flags := b.GetAllVariables().Get("GIT_CLEAN_FLAGS")
 	if flags == "" {
