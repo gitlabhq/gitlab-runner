@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -303,6 +304,8 @@ func (mr *RunCommand) run() {
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
 
+	mr.initUsedExecutorProviders()
+
 	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
@@ -332,9 +335,47 @@ func (mr *RunCommand) run() {
 		mr.currentWorkers--
 	}
 
-	mr.log().Info("All workers stopped. Can exit now")
+	mr.log().Info("All workers stopped.")
+
+	mr.shutdownUsedExecutorProviders()
+
+	mr.log().Info("All executor providers shut down.")
 
 	close(mr.runFinished)
+
+	mr.log().Info("Can exit now!")
+}
+
+func (mr *RunCommand) initUsedExecutorProviders() {
+	mr.log().Info("Initializing executor providers")
+
+	for _, provider := range common.GetExecutorProviders() {
+		managedProvider, ok := provider.(common.ManagedExecutorProvider)
+		if ok {
+			managedProvider.Init()
+		}
+	}
+}
+
+func (mr *RunCommand) shutdownUsedExecutorProviders() {
+	mr.log().Info("Shutting down executor providers")
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFn()
+
+	wg := new(sync.WaitGroup)
+	for _, provider := range common.GetExecutorProviders() {
+		managedProvider, ok := provider.(common.ManagedExecutorProvider)
+		if ok {
+			wg.Add(1)
+			go func(p common.ManagedExecutorProvider) {
+				defer wg.Done()
+				managedProvider.Shutdown(ctx)
+			}(managedProvider)
+		}
+	}
+
+	wg.Wait()
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {

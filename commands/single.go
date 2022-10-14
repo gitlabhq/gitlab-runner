@@ -143,6 +143,11 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 		logrus.Fatalln("Unknown executor:", r.Executor)
 	}
 
+	managedProvider, ok := executorProvider.(common.ManagedExecutorProvider)
+	if ok {
+		managedProvider.Init()
+	}
+
 	logrus.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")
 
 	r.finished = abool.New()
@@ -170,6 +175,13 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 	}
 
 	doneSignal <- 0
+
+	providerShutdownCtx, shutdownProvider := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownProvider()
+
+	if managedProvider != nil {
+		managedProvider.Shutdown(providerShutdownCtx)
+	}
 }
 
 func init() {

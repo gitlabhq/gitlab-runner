@@ -79,6 +79,32 @@ type Executor interface {
 	Name() string
 }
 
+type ManagedExecutorProvider interface {
+	// Init initializes the executor provider.
+	//
+	// Some providers may require that a non-trivial setup will be done for them to work properly. They may also
+	// run a goroutines handling provider's state and management layer.
+	//
+	// Init method is a hook allowing to add such behavior.
+	//
+	// Init MUST BE NON-BLOCKING!
+	Init()
+
+	// Shutdown terminates the executor provider.
+	//
+	// As noted above, some executor providers may require to maintain a long-running state and management
+	// layer.
+	//
+	// Shutdown method is a hook that allows to inform the executor provider that it should terminate
+	// itself.
+	//
+	// Shutdown MUST BE BLOCKING until termination is done or provided context is canceled.
+	//
+	// First argument receive a context.Context object that will be canceled when shutting down will exceed
+	// configured timeout.
+	Shutdown(ctx context.Context)
+}
+
 // ExecutorProvider is responsible for managing the lifetime of executors, acquiring resources,
 // retrieving executor metadata, etc.
 //
