@@ -578,6 +578,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		mr.log().
 			WithField("runner", runner.ShortDescription()).
 			Errorf("Executor %q is not known; marking Runner as unhealthy", runner.Executor)
+		mr.healthHelper.makeHealthy(runner.UniqueID(), false)
 
 		return nil
 	}
