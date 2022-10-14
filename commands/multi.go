@@ -515,6 +515,7 @@ func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *comm
 		return
 	}
 
+	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Feeding runner to channel")
 	runners <- runner
 }
 
@@ -569,47 +570,61 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 // GitLab instance and finally creates and finishes the job.
 // To speed-up jobs handling before starting the job this method "requeues" the runner to another
 // worker (by feeding the channel normally handled by feedRunners).
-func (mr *RunCommand) processRunner(
-	id int,
-	runner *common.RunnerConfig,
-	runners chan *common.RunnerConfig,
-) (err error) {
+func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) error {
+	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Processing runner")
+
 	provider := common.GetExecutorProvider(runner.Executor)
 	if provider == nil {
-		return
+		mr.log().
+			WithField("runner", runner.ShortDescription()).
+			Errorf("Executor %q is not known; marking Runner as unhealthy", runner.Executor)
+
+		return nil
 	}
 
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring executor from provider")
 	executorData, err := provider.Acquire(runner)
 	if err != nil {
 		return fmt.Errorf("failed to update executor: %w", err)
 	}
 	defer provider.Release(runner, executorData)
 
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring job slot")
 	if !mr.buildsHelper.acquireBuild(runner) {
 		logrus.WithFields(logrus.Fields{
 			"runner": runner.ShortDescription(),
 			"worker": id,
 		}).Debug("Failed to request job, runner limit met")
-		return
+
+		return nil
 	}
 	defer mr.buildsHelper.releaseBuild(runner)
 
+	return mr.processBuildOnRunner(runner, runners, provider, executorData)
+}
+
+func (mr *RunCommand) processBuildOnRunner(
+	runner *common.RunnerConfig,
+	runners chan *common.RunnerConfig,
+	provider common.ExecutorProvider,
+	executorData common.ExecutorData,
+) error {
 	buildSession, sessionInfo, err := mr.createSession(provider)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Receive a new build
 	trace, jobData, err := mr.requestJob(runner, sessionInfo)
 	if err != nil || jobData == nil {
-		return
+		return err
 	}
 	defer func() { mr.traceOutcome(trace, err) }()
 
 	// Create a new build
 	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
 	if err != nil {
-		return
+		return err
 	}
 	build.Session = buildSession
 	build.ArtifactUploader = mr.network.UploadRawArtifacts
@@ -669,6 +684,7 @@ func (mr *RunCommand) requestJob(
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
 ) (common.JobTrace, *common.JobResponse, error) {
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring request slot")
 	if !mr.buildsHelper.acquireRequest(runner) {
 		mr.log().WithField("runner", runner.ShortDescription()).
 			Debugln("Failed to request job: runner requestConcurrency meet")
