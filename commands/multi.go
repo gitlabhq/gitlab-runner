@@ -360,7 +360,7 @@ func (mr *RunCommand) initUsedExecutorProviders() {
 func (mr *RunCommand) shutdownUsedExecutorProviders() {
 	mr.log().Info("Shutting down executor providers")
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancelFn := context.WithTimeout(context.Background(), mr.config.GetShutdownTimeout())
 	defer cancelFn()
 
 	wg := new(sync.WaitGroup)
@@ -498,7 +498,7 @@ func (mr *RunCommand) setupSessionServer() {
 		session.ServerConfig{
 			AdvertiseAddress: config.SessionServer.AdvertiseAddress,
 			ListenAddress:    config.SessionServer.ListenAddress,
-			ShutdownTimeout:  common.ShutdownTimeout * time.Second,
+			ShutdownTimeout:  mr.config.GetShutdownTimeout(),
 		},
 		mr.log(),
 		certificate.X509Generator{},
@@ -1013,7 +1013,7 @@ func (mr *RunCommand) handleForcefulShutdown() error {
 			mr.log().WithField("stop-signal", mr.stopSignal).Warning("[handleForcefulShutdown] received stop signal")
 			return fmt.Errorf("forced exit with stop signal: %v", mr.stopSignal)
 
-		case <-time.After(common.ShutdownTimeout * time.Second):
+		case <-time.After(mr.config.GetShutdownTimeout()):
 			return errors.New("shutdown timed out")
 
 		case <-mr.runFinished:

@@ -978,6 +978,8 @@ type Config struct {
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
 
+	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds after which the forceful shutdown operation will timeout and process will exit"`
+
 	configSaver ConfigSaver
 }
 
@@ -1712,6 +1714,14 @@ func (c *Config) GetCheckInterval() time.Duration {
 		return time.Duration(c.CheckInterval) * time.Second
 	}
 	return CheckInterval
+}
+
+func (c *Config) GetShutdownTimeout() time.Duration {
+	if c.ShutdownTimeout > 0 {
+		return time.Duration(c.ShutdownTimeout) * time.Second
+	}
+
+	return DefaultShutdownTimeout
 }
 
 // GetPullPolicySource returns the source (i.e. file) of the pull_policy

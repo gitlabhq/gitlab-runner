@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli"
 
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
+
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
@@ -26,7 +28,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
-	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 )
 
 const osTypeWindows = "windows"
@@ -600,6 +601,7 @@ func TestExecute_MergeConfigTemplate(t *testing.T) {
 
 		baseOutputConfigFmt = `concurrent = 1
 check_interval = 0
+shutdown_timeout = 0
 
 [session_server]
   session_timeout = 1800
@@ -664,6 +666,7 @@ check_interval = 0
 			errExpected: false,
 			expectedFileContentFmt: `concurrent = 1
 check_interval = 0
+shutdown_timeout = 0
 
 [session_server]
   session_timeout = 1800
