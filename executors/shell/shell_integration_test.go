@@ -911,6 +911,8 @@ func TestBuildWithGitSubmoduleStrategyNormal(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyNormalAndGitSubmoduleDepth(t *testing.T) {
+	skipOnGit(t, "< 1.9")
+
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
@@ -970,6 +972,8 @@ func TestBuildWithGitSubmoduleStrategyRecursive(t *testing.T) {
 }
 
 func TestBuildWithGitSubmoduleStrategyRecursiveAndGitSubmoduleDepth(t *testing.T) {
+	skipOnGit(t, "< 1.9")
+
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
 		assert.NoError(t, err)
