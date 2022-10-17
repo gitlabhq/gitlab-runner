@@ -33,7 +33,14 @@ func New(w io.WriteCloser, phrases []string) *Masker {
 	})
 
 	m.next = w
+
+	// Create a masker for each unique phrase
+	unique := map[string]struct{}{}
 	for i := 0; i < len(phrases); i++ {
+		if _, ok := unique[phrases[i]]; ok {
+			continue
+		}
+		unique[phrases[i]] = struct{}{}
 		m.next = &masker{next: m.next, phrase: []byte(phrases[i])}
 	}
 
