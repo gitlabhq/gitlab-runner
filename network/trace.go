@@ -66,8 +66,8 @@ func (c *clientJobTrace) Write(data []byte) (n int, err error) {
 	return c.buffer.Write(data)
 }
 
-func (c *clientJobTrace) SetMasked(masked []string) {
-	c.buffer.SetMasked(masked)
+func (c *clientJobTrace) SetMasked(opts common.MaskOptions) {
+	c.buffer.SetMasked(opts)
 }
 
 func (c *clientJobTrace) checksum() string {

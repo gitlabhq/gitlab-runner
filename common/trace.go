@@ -15,7 +15,7 @@ type Trace struct {
 }
 
 type masker interface {
-	SetMasked([]string)
+	SetMasked(MaskOptions)
 }
 
 type JobFailureData struct {
@@ -33,10 +33,10 @@ func (s *Trace) Write(p []byte) (n int, err error) {
 	return s.Writer.Write(p)
 }
 
-func (s *Trace) SetMasked(values []string) {
+func (s *Trace) SetMasked(opts MaskOptions) {
 	masker, ok := s.Writer.(masker)
 	if ok {
-		masker.SetMasked(values)
+		masker.SetMasked(opts)
 	}
 }
 

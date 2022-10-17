@@ -11,8 +11,10 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/masker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/tokensanitizer"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/urlsanitizer"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
@@ -53,7 +55,7 @@ func WithURLParamMasking(enabled bool) Option {
 	}
 }
 
-func (b *Buffer) SetMasked(values []string) {
+func (b *Buffer) SetMasked(opts common.MaskOptions) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -66,7 +68,10 @@ func (b *Buffer) SetMasked(values []string) {
 	b.w = transform.NewWriter(b.lw, encoding.Replacement.NewEncoder())
 
 	// mask values
-	b.w = masker.New(b.w, values)
+	b.w = masker.New(b.w, opts.Phrases)
+
+	// prefixes values
+	b.w = tokensanitizer.New(b.w, opts.TokenPrefixes)
 
 	// mask urls if enabled
 	if b.opts.urlParamMasking {
@@ -243,7 +248,7 @@ func New(opts ...Option) (*Buffer, error) {
 		limit:   defaultBytesLimit,
 	}
 
-	buffer.SetMasked(nil)
+	buffer.SetMasked(common.MaskOptions{})
 
 	return buffer, nil
 }

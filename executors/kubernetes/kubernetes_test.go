@@ -4936,7 +4936,7 @@ func (f FakeBuildTrace) Cancel() bool                                      { ret
 func (f FakeBuildTrace) SetAbortFunc(cancelFunc context.CancelFunc)        {}
 func (f FakeBuildTrace) Abort() bool                                       { return false }
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)  {}
-func (f FakeBuildTrace) SetMasked(masked []string)                         {}
+func (f FakeBuildTrace) SetMasked(opts common.MaskOptions)                 {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
 }
