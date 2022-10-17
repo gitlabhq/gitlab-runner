@@ -355,8 +355,9 @@ type Dependency struct {
 type Dependencies []Dependency
 
 type GitlabFeatures struct {
-	TraceSections  bool               `json:"trace_sections"`
-	FailureReasons []JobFailureReason `json:"failure_reasons"`
+	TraceSections     bool               `json:"trace_sections"`
+	TokenMaskPrefixes []string           `json:"token_mask_prefixes"`
+	FailureReasons    []JobFailureReason `json:"failure_reasons"`
 }
 
 type JobResponse struct {
@@ -581,7 +582,7 @@ type JobTrace interface {
 	SetAbortFunc(abortFunc context.CancelFunc)
 	Abort() bool
 	SetFailuresCollector(fc FailuresCollector)
-	SetMasked(values []string)
+	SetMasked(maskOptions MaskOptions)
 	IsStdout() bool
 }
 
