@@ -1225,9 +1225,3 @@ Metrics queries are in `canonical_name:query_string` format. The query string su
 | `{interval}` | Replaced with the `query_interval` parameter from the `[runners.referees.metrics]` configuration for this referee.            |
 
 For example, a shared GitLab Runner environment that uses the `docker-machine` executor would have a `{selector}` similar to `node=shared-runner-123`.
-
-## Deploy to multiple servers using GitLab CI/CD
-
-To deploy to multiple servers by using GitLab CI/CD, create a
-single script that deploys to multiple servers, or create many scripts.
-It depends on what you'd like to do.
