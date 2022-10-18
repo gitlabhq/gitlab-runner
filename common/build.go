@@ -377,7 +377,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 }
 
 // getPredefinedEnv returns whether a stage should be executed on
-//  the predefined environment that GitLab Runner provided.
+// the predefined environment that GitLab Runner provided.
 func getPredefinedEnv(buildStage BuildStage) bool {
 	env := map[BuildStage]bool{
 		BuildStagePrepare:                  true,
@@ -903,9 +903,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
 
-	trace.SetCancelFunc(cancel)
-	trace.SetAbortFunc(cancel)
-	trace.SetMasked(b.GetAllVariables().Masked())
+	b.configureTrace(trace, cancel)
 
 	options := b.createExecutorPrepareOptions(ctx, globalConfig, trace)
 	provider := GetExecutorProvider(b.Runner.Executor)
@@ -932,6 +930,15 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}
 
 	return err
+}
+
+func (b *Build) configureTrace(trace JobTrace, cancel context.CancelFunc) {
+	trace.SetCancelFunc(cancel)
+	trace.SetAbortFunc(cancel)
+	trace.SetMasked(MaskOptions{
+		Phrases:       b.GetAllVariables().Masked(),
+		TokenPrefixes: b.JobResponse.Features.TokenMaskPrefixes,
+	})
 }
 
 func (b *Build) createExecutorPrepareOptions(

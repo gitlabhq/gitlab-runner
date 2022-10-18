@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func TestRandomCopyReadback(t *testing.T) {
@@ -27,7 +28,9 @@ func TestRandomCopyReadback(t *testing.T) {
 	defer buffer.Close()
 
 	buffer.SetLimit(math.MaxInt64)
-	buffer.SetMasked([]string{"a"})
+	buffer.SetMasked(common.MaskOptions{
+		Phrases: []string{"a"},
+	})
 
 	n, err := io.Copy(buffer, bytes.NewReader(input))
 	require.NoError(t, err)

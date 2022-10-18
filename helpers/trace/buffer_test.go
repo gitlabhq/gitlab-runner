@@ -8,6 +8,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,9 @@ func TestVariablesMasking(t *testing.T) {
 	require.NoError(t, err)
 	defer buffer.Close()
 
-	buffer.SetMasked(maskedValues)
+	buffer.SetMasked(common.MaskOptions{
+		Phrases: maskedValues,
+	})
 
 	_, err = buffer.Write([]byte(input))
 	require.NoError(t, err)
@@ -181,7 +184,7 @@ func TestDelayedMask(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Greater(t, n, 0)
 
-	buffer.SetMasked([]string{"mask_me"})
+	buffer.SetMasked(common.MaskOptions{Phrases: []string{"mask_me"}})
 
 	n, err = buffer.Write([]byte("data mask_me masked\n"))
 	assert.NoError(t, err)
@@ -234,7 +237,7 @@ func TestTraceRace(t *testing.T) {
 
 	load := []func(){
 		func() { _, _ = buffer.Write([]byte("x")) },
-		func() { buffer.SetMasked([]string{"x"}) },
+		func() { buffer.SetMasked(common.MaskOptions{Phrases: []string{"x"}}) },
 		func() { buffer.SetLimit(1000) },
 		func() { buffer.Checksum() },
 		func() { buffer.Size() },
@@ -291,7 +294,7 @@ func TestFixupInvalidUTF8(t *testing.T) {
 	require.NoError(t, err)
 	defer buffer.Close()
 
-	buffer.SetMasked([]string{"hello", "\xfe"})
+	buffer.SetMasked(common.MaskOptions{Phrases: []string{"hello", "\xfe"}})
 
 	// \xfe and \xff are both invalid
 	// \xfe we're masking though, so will be replaced with [MASKED]
@@ -322,7 +325,7 @@ func BenchmarkBuffer10k(b *testing.B) {
 			defer buffer.Close()
 
 			buffer.SetLimit(math.MaxInt64)
-			buffer.SetMasked([]string{"hello"})
+			buffer.SetMasked(common.MaskOptions{Phrases: []string{"hello"}})
 
 			const N = 10000
 			b.ReportAllocs()
@@ -343,7 +346,7 @@ func BenchmarkBuffer10kWithURLScrub(b *testing.B) {
 			defer buffer.Close()
 
 			buffer.SetLimit(math.MaxInt64)
-			buffer.SetMasked([]string{"hello"})
+			buffer.SetMasked(common.MaskOptions{Phrases: []string{"hello"}})
 
 			const N = 10000
 			b.ReportAllocs()

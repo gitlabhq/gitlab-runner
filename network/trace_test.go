@@ -66,7 +66,7 @@ func newTestJobTrace(network *common.MockNetwork, config common.RunnerConfig) (*
 
 	// use long mask token to ensure that tests that check for incremental updates
 	// use \n to flush to the network.
-	trace.SetMasked([]string{"really_long_mask_token_for_tests"})
+	trace.SetMasked(common.MaskOptions{Phrases: []string{"really_long_mask_token_for_tests"}})
 
 	return trace, err
 }
@@ -237,7 +237,7 @@ func TestJobOutputLimit(t *testing.T) {
 }
 
 func TestJobMasking(t *testing.T) {
-	maskedValues := []string{"masked"}
+	maskedValues := common.MaskOptions{Phrases: []string{"masked"}}
 	traceMessage := "This string should be masked"
 	traceMaskedMessage := "This string should be [MASKED]"
 
@@ -801,7 +801,7 @@ func TestUpdateIntervalChanges(t *testing.T) {
 // `UpdateJob`. It ensures that checksum engine generates a checksum of a
 // masked content that is send in a chunks to Rails
 func TestJobChecksum(t *testing.T) {
-	maskedValues := []string{"masked"}
+	maskedValues := common.MaskOptions{Phrases: []string{"masked"}}
 	traceMessage := "This string should be masked $$$$"
 	traceMaskedMessage := "This string should be [MASKED] $$$$"
 
@@ -840,7 +840,7 @@ func TestJobChecksum(t *testing.T) {
 }
 
 func TestJobBytesize(t *testing.T) {
-	maskedValues := []string{"secret"}
+	maskedValues := common.MaskOptions{Phrases: []string{"secret"}}
 	traceMessage := "Build trace with secret and multi-byte ü character"
 	traceMaskedMessage := "Build trace with [MASKED] and multi-byte ü character"
 

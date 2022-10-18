@@ -90,3 +90,8 @@ func IncompatiblePullPolicyError(pullPolicy, allowedPullPolicies interface{}, pu
 		pullPolicySource:    pullPolicySource,
 	}
 }
+
+type MaskOptions struct {
+	Phrases       []string
+	TokenPrefixes []string
+}

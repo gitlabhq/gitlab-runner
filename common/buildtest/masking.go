@@ -19,8 +19,11 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		"CLEARTEXT_KEY",
 		"MASKED_KEY_OTHER",
 		"URL_MASKED_PARAM",
+		"TOKEN_REVEALS",
 	)
 	require.NoError(t, err)
+
+	resp.Features.TokenMaskPrefixes = []string{"glpat-", "mytoken:", "foobar-"}
 
 	build := &common.Build{
 		JobResponse: resp,
@@ -35,6 +38,8 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		common.JobVariable{Key: "CLEARTEXT_KEY", Value: "CLEARTEXT_VALUE", Masked: false},
 		common.JobVariable{Key: "MASKED_KEY_OTHER", Value: "MASKED_VALUE_OTHER", Masked: true},
 		common.JobVariable{Key: "URL_MASKED_PARAM", Value: "https://example.com/?x-amz-credential=foobar"},
+
+		common.JobVariable{Key: "TOKEN_REVEALS", Value: "glpat-abcdef mytoken:ghijklmno foobar-pqrstuvwxyz"},
 	)
 
 	if setup != nil {
@@ -65,4 +70,7 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 
 	assert.NotContains(t, string(contents), "x-amz-credential=foobar")
 	assert.Contains(t, string(contents), "x-amz-credential=[MASKED]")
+
+	assert.NotContains(t, string(contents), "glpat-abcdef mytoken:ghijklmno foobar-pqrstuvwxyz")
+	assert.Contains(t, string(contents), "glpat-[MASKED] mytoken:[MASKED] foobar-[MASKED]")
 }
