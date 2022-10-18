@@ -1123,6 +1123,47 @@ Example:
   enabled = true
 ```
 
+### Default Build Directory
+
+GitLab Runner clones the repository to a path that exists under a
+base path better known as the _Builds Directory_. The default location
+of this base directory depends on the executor. For:
+
+- [Kubernetes](../executors/kubernetes.md),
+  [Docker](../executors/docker.md) and [Docker Machine](../executors/docker_machine.md) executors, it is
+  `/builds` inside of the container.
+- [Shell](../executors/shell.md) executor, it is `$PWD/builds`.
+- [SSH](../executors/ssh.md), [VirtualBox](../executors/virtualbox.md)
+  and [Parallels](../executors/parallels.md) executors, it is
+  `~/builds` in the home directory of the user configured to handle the
+  SSH connection to the target machine.
+- [Custom](../executors/custom.md) executors, no default is provided and
+  it must be explicitly configured, otherwise, the job fails.
+
+The used _Builds Directory_ may be defined explicitly by the user with the
+[`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
+setting.
+
+NOTE:
+You can also specify
+[`GIT_CLONE_PATH`](https://docs.gitlab.com/ee/ci/yaml/index.html#custom-build-directories)
+if you want to clone to a custom directory, and the guideline below
+doesn't apply.
+
+GitLab Runner uses the _Builds Directory_ for all the jobs that it
+runs, but nests them using a specific pattern
+`{builds_dir}/$RUNNER_TOKEN_KEY/$CONCURRENT_ID/$NAMESPACE/$PROJECT_NAME`.
+For example: `/builds/2mn-ncv-/0/user/playground`.
+
+GitLab Runner does not stop you from storing things inside of the
+_Builds Directory_. For example, you can store tools inside of
+`/builds/tools` that can be used during CI execution. We **HIGHLY**
+discourage this, you should never store anything inside of the _Builds
+Directory_. GitLab Runner should have total control over it and does not
+provide stability in such cases. If you have dependencies that are
+required for your CI, we recommend installing them in some other
+place.
+
 ## The `[runners.referees]` section
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
