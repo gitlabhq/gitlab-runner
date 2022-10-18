@@ -86,7 +86,7 @@ type AttestationPredicateInvocationEnvironment struct {
 }
 
 type AttestationPredicateInvocationEnvironmentJob struct {
-	Id int64 `json:"id"`
+	ID int64 `json:"id"`
 }
 
 type AttestationPredicateInvocationParameters map[string]string
@@ -182,7 +182,7 @@ func (g *artifactMetadataGenerator) metadata(opts generateMetadataOptions) (Atte
 					Executor:     g.ExecutorName,
 					Architecture: common.AppVersion.Architecture,
 					Job: AttestationPredicateInvocationEnvironmentJob{
-						Id: opts.jobID,
+						ID: opts.jobID,
 					},
 				},
 				Parameters: parameters,

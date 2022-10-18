@@ -42,7 +42,11 @@ func TestGenerateMetadataToFile(t *testing.T) {
 	endedAt, err := time.Parse(time.RFC3339, endedAtRFC3339)
 	require.NoError(t, err)
 
-	var testMetadata = func(version string, g *artifactMetadataGenerator, opts generateMetadataOptions) AttestationMetadata {
+	var testMetadata = func(
+		version string,
+		g *artifactMetadataGenerator,
+		opts generateMetadataOptions,
+	) AttestationMetadata {
 		return AttestationMetadata{
 			Type: attestationType,
 			Subject: []AttestationSubject{
@@ -71,7 +75,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 						Name:         g.RunnerName,
 						Executor:     g.ExecutorName,
 						Architecture: common.AppVersion.Architecture,
-						Job:          AttestationPredicateInvocationEnvironmentJob{Id: opts.jobID},
+						Job:          AttestationPredicateInvocationEnvironmentJob{ID: opts.jobID},
 					},
 					Parameters: AttestationPredicateInvocationParameters{
 						"testparam": "",
@@ -202,6 +206,10 @@ func TestGenerateMetadataToFile(t *testing.T) {
 				assert.ErrorIs(t, err, tt.expectedError)
 				return
 			}
+
+			fmt.Println(f)
+
+			time.Sleep(10 * time.Second)
 
 			filename := filepath.Base(f)
 			assert.Equal(t, fmt.Sprintf(artifactsMetadataFormat, tt.opts.artifactName), filename)
