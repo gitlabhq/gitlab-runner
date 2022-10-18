@@ -123,7 +123,7 @@ For example, to force a reload of a runner's configuration file, run:
 sudo kill -SIGHUP <main_runner_pid>
 ```
 
-For [graceful shutdowns](../best_practice/index.md#graceful-shutdown):
+For [graceful shutdowns](#gitlab-runner-stop-doesnt-shut-down-gracefully):
 
 ```shell
 sudo kill -SIGQUIT <main_runner_pid>
@@ -664,3 +664,32 @@ should do either of the following:
 
 - Call `gitlab-runner` directly (assuming `/usr/bin` is in your `$PATH`).
 - Call `/usr/bin/gitlab-runner`.
+
+## `gitlab-runner stop` doesn't shut down gracefully
+
+When a runner is installed on a host and runs local executors, it starts additional processes for some operations,
+like downloading or uploading artifacts, or handling cache.
+These processes are executed as `gitlab-runner` commands, which means that you can use `pkill -QUIT gitlab-runner`
+or `killall QUIT gitlab-runner` to kill them. When you kill them, the operations they are responsible for fail.
+
+Here are two ways to prevent this:
+
+- Register the runner as a local service (like `systemd`) with `SIGQUIT` as the kill
+  signal, and use `gitlab-runner stop` or `systemctl stop gitlab-runner.service`.
+  Here is an example from the configuration of the shared runners on GitLab.com:
+
+  ```ini
+  ; /etc/systemd/system/gitlab-runner.service.d/kill.conf
+  [Service]
+  KillSignal=SIGQUIT
+  TimeoutStopSec=__REDACTED__
+  ```
+
+- Manually kill the process with `kill -SIGQUIT <pid>`. You have to find the `pid`
+  of the main `gitlab-runner` process. You can find this by looking at logs, as
+  it's displayed on startup:
+
+  ```shell
+  $ gitlab-runner run
+  Runtime platform                                    arch=amd64 os=linux pid=87858 revision=8d21977e version=12.10.0~beta.82.g8d21977e
+  ```

@@ -33,6 +33,5 @@ Learn how to configure GitLab Runner.
 - [Configure GitLab Runner to run behind a proxy](proxy.md): Set
   up a Linux proxy and configure GitLab Runner. Useful for the
   Docker executor.
-- [Best practices](../best_practice/index.md).
 - [Handling rate limited requests](proxy.md#handling-rate-limited-requests).
 - [Configure GitLab Runner Operator](configuring_runner_operator.md).
