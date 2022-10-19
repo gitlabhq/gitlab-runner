@@ -224,26 +224,26 @@ To build a `gitlab-runner` Docker image for the latest Alpine version:
 
 1. Create `alpine-upgrade/Dockerfile`.
 
-```dockerfile
-ARG GITLAB_RUNNER_IMAGE_TYPE
-ARG GITLAB_RUNNER_IMAGE_TAG
-FROM gitlab/${GITLAB_RUNNER_IMAGE_TYPE}:${GITLAB_RUNNER_IMAGE_TAG}
-
-RUN apk update
-RUN apk upgrade
-```
+   ```dockerfile
+   ARG GITLAB_RUNNER_IMAGE_TYPE
+   ARG GITLAB_RUNNER_IMAGE_TAG
+   FROM gitlab/${GITLAB_RUNNER_IMAGE_TYPE}:${GITLAB_RUNNER_IMAGE_TAG}
+   
+   RUN apk update
+   RUN apk upgrade
+   ```
 
 1. Create an upgraded `gitlab-runner` image.
 
-```shell
-GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner GITLAB_RUNNER_IMAGE_TAG=alpine-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
-```
+   ```shell
+   GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner GITLAB_RUNNER_IMAGE_TAG=alpine-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
+   ```
 
 1. Create an upgraded `gitlab-runner-helper` image.
 
-```shell
-GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper GITLAB_RUNNER_IMAGE_TAG=x86_64-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
-```
+   ```shell
+   GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper GITLAB_RUNNER_IMAGE_TAG=x86_64-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
+   ```
 
 NOTE:
 The IBM Z image does not contain the `docker-machine` dependency, as it is not yet maintained for the Linux s390x or Linux ppc64le
