@@ -13,7 +13,7 @@ var _ executors.Environment = (*acquisitionRef)(nil)
 
 type acquisitionRef struct {
 	key string
-	acq *taskscaler.Aquisition
+	acq *taskscaler.Acquisition
 }
 
 func (ref *acquisitionRef) ID() string {
@@ -42,7 +42,7 @@ func (ref *acquisitionRef) Dial(ctx context.Context) (executors.Client, error) {
 	return &client{dialer}, nil
 }
 
-func (ref *acquisitionRef) set(key string, acq *taskscaler.Aquisition) {
+func (ref *acquisitionRef) set(key string, acq *taskscaler.Acquisition) {
 	if ref.acq != nil {
 		panic("acquisition ref already set")
 	}
