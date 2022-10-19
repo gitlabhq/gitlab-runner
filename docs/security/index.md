@@ -21,6 +21,8 @@ This risk is even more acute if your self-managed runners are non-ephemeral and 
 - A job from a repository embedded with malicious code can compromise the security of other repositories serviced by the non-ephemeral runner.
 - Depending on the executor, a job can install malicious code on the virtual machine where the runner is hosted.
 - Secret variables exposed to jobs running in a compromised environment can be stolen, including but not limited to the CI_JOB_TOKEN.
+- Users with the Developer role have access to submodules associated with the project, even if they don't have access to
+  the upstream projects of the submodule.
 
 ## Security risks for different executors
 
@@ -132,6 +134,11 @@ When you set [`GIT_STRATEGY`](https://docs.gitlab.com/ee/ci/runners/configure_ru
 to `fetch`, the runner attempts to reuse the local working copy of the Git repository.
 
 Using a local copy can improve the performance of CI/CD jobs. However, any user with access to that reusable copy can add code that executes in other users' pipelines.
+
+Git stores the contents of a submodule (a repository embedded inside another repository) in the parent repository's Git
+reflog. As a result, after a project's submodules have been initially cloned, subsequent jobs can access the contents of
+the submodules by running `git submodule update` in their script. This applies even if the submodules have been deleted
+and the user that initiated the job doesn't have access to the submodule projects.
 
 Use `GIT_STRATEGY: fetch` only when you trust all users who have access to the shared environment.
 
