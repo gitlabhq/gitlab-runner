@@ -13,6 +13,7 @@ RUN dnf update -y && \
         wget \
         openssh-clients \
         hostname \
+        procps-ng \
         && dnf clean all && \
         rm -rf /var/cache/dnf
 
