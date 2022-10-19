@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	artifactsMetadataFormat   = "%v-artifacts-metadata.json"
+	artifactsMetadataFormat   = "%v-metadata.json"
 	attestationType           = "https://in-toto.io/Statement/v0.1"
 	attestationPredicateType  = "https://slsa.dev/provenance/v0.2"
 	attestationTypeFormat     = "https://gitlab.com/gitlab-org/gitlab-runner/-/blob/%v/PROVENANCE.md"
