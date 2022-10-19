@@ -22,9 +22,9 @@ Before registering a runner, you must first:
   is installed
 - Obtain a token:
   - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#shared-runners),
-    have an administrator go to the GitLab Admin Area and click **Overview > Runners**
+    have an administrator go to the GitLab Admin Area and select **Overview > Runners**
   - For a [group runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners),
-    go to **Settings > CI/CD** and expand the **Runners** section
+    go to **CI/CD > Runners**
   - For a [project-specific runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#specific-runners),
     go to **Settings > CI/CD** and expand the **Runners** section
 
