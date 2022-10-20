@@ -18,6 +18,16 @@ import (
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
+type stringQuoter func(string) string
+
+func singleQuote(s string) string {
+	return fmt.Sprintf(`'%s'`, s)
+}
+
+func doubleQuote(s string) string {
+	return `"` + s + `"`
+}
+
 type AbstractShell struct {
 }
 
@@ -87,7 +97,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		// Create list of files to extract
 		var archiverArgs []string
 		for _, path := range cacheOptions.Paths {
-			archiverArgs = append(archiverArgs, "--path", path)
+			archiverArgs = append(archiverArgs, "--path", info.Build.GetAllVariables().ExpandValue(path))
 		}
 
 		if cacheOptions.Untracked {
@@ -275,7 +285,7 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, wh
 		}
 
 		key := fmt.Sprintf("http.%s.%s", host, config)
-		w.Command("git", append(args, key, w.EnvVariableKey(variable))...)
+		w.CommandArgExpand("git", append(args, key, w.EnvVariableKey(variable))...)
 	}
 }
 
@@ -592,7 +602,15 @@ func (b *AbstractShell) writeUserScript(
 		b.writeCommands(w, info, "pre_build_script", info.PreBuildScript)
 	}
 
-	b.writeCommands(w, info, "script_step", scriptStep.Script...)
+	script := scriptStep.Script
+	// handles the release yaml field that gets converted to a step by the backend
+	if scriptStep.Name == "release" {
+		for i, s := range scriptStep.Script {
+			script[i] = info.Build.GetAllVariables().ExpandValue(s)
+		}
+	}
+
+	b.writeCommands(w, info, "script_step", script...)
 
 	if info.PostBuildScript != "" {
 		b.writeCommands(w, info, "post_build_script", info.PostBuildScript)
@@ -626,7 +644,7 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 		}
 
 		// Create list of files to archive
-		archiverArgs := b.getArchiverArgs(cacheOptions)
+		archiverArgs := b.getArchiverArgs(cacheOptions, info)
 
 		if len(archiverArgs) < 1 {
 			// Skip creating archive
@@ -655,10 +673,10 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 	return skipArchiveCache, nil
 }
 
-func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache) []string {
+func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache, info common.ShellScriptInfo) []string {
 	var archiverArgs []string
 	for _, path := range cacheOptions.Paths {
-		archiverArgs = append(archiverArgs, "--path", path)
+		archiverArgs = append(archiverArgs, "--path", info.Build.GetAllVariables().ExpandValue(path))
 	}
 
 	if cacheOptions.Untracked {
@@ -747,12 +765,12 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	// Create list of files to archive
 	var archiverArgs []string
 	for _, path := range artifact.Paths {
-		archiverArgs = append(archiverArgs, "--path", path)
+		archiverArgs = append(archiverArgs, "--path", info.Build.GetAllVariables().ExpandValue(path))
 	}
 
 	// Create list of paths to be excluded from the archive
 	for _, path := range artifact.Exclude {
-		archiverArgs = append(archiverArgs, "--exclude", path)
+		archiverArgs = append(archiverArgs, "--exclude", info.Build.GetAllVariables().ExpandValue(path))
 	}
 
 	if artifact.Untracked {
@@ -767,7 +785,7 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	args = append(args, archiverArgs...)
 
 	if artifact.Name != "" {
-		args = append(args, "--name", artifact.Name)
+		args = append(args, "--name", info.Build.GetAllVariables().ExpandValue(artifact.Name))
 	}
 
 	if artifact.ExpireIn != "" {

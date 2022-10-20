@@ -15,14 +15,14 @@ func TestBash_CommandShellEscapesLegacy(t *testing.T) {
 	writer := &BashWriter{useNewEscape: false}
 	writer.Command("foo", "x&(y)")
 
-	assert.Equal(t, `$'foo' "x&(y)"`+"\n", writer.String())
+	assert.Equal(t, `$'foo' $'x&(y)'`+"\n", writer.String())
 }
 
 func TestBash_IfCmdShellEscapesLegacy(t *testing.T) {
 	writer := &BashWriter{useNewEscape: false}
 	writer.IfCmd("foo", "x&(y)")
 
-	assert.Equal(t, `if $'foo' "x&(y)" >/dev/null 2>&1; then`+"\n", writer.String())
+	assert.Equal(t, `if $'foo' $'x&(y)' >/dev/null 2>&1; then`+"\n", writer.String())
 }
 
 func TestBash_CommandShellEscapes(t *testing.T) {
@@ -34,12 +34,17 @@ func TestBash_CommandShellEscapes(t *testing.T) {
 		{
 			command:  "foo",
 			args:     []string{"x&(y)"},
-			expected: "foo \"x&(y)\"\n",
+			expected: "foo $'x&(y)'\n",
 		},
 		{
 			command:  "echo",
 			args:     []string{"c:\\windows"},
-			expected: "echo \"c:\\\\windows\"\n",
+			expected: "echo $'c:\\\\windows'\n",
+		},
+		{
+			command:  "echo",
+			args:     []string{"'$HOME'"},
+			expected: "echo $'\\'$HOME\\''\n",
 		},
 	}
 
@@ -55,7 +60,7 @@ func TestBash_IfCmdShellEscapes(t *testing.T) {
 	writer := &BashWriter{useNewEscape: true}
 	writer.IfCmd("foo", "x&(y)")
 
-	assert.Equal(t, "if foo \"x&(y)\" >/dev/null 2>&1; then\n", writer.String())
+	assert.Equal(t, "if foo $'x&(y)' >/dev/null 2>&1; then\n", writer.String())
 }
 
 func TestBash_CheckForErrors(t *testing.T) {

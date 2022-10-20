@@ -3,6 +3,7 @@
 package shells_test
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -11,12 +12,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
-func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
+func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) string {
 	var extension string
 	var cmdArgs []string
 
@@ -48,7 +50,8 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) {
 
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "output: %s", string(output))
-	assert.Empty(t, string(output))
+
+	return string(output)
 }
 
 func TestMkDir(t *testing.T) {
@@ -62,7 +65,7 @@ func TestMkDir(t *testing.T) {
 		writer.MkDir(TestPath)
 		writer.MkDir(TestPath)
 
-		runShell(t, shell, tmpDir, writer)
+		assert.Empty(t, runShell(t, shell, tmpDir, writer))
 
 		createdPath := filepath.Join(tmpDir, testTmpDir, TestPath)
 		_, err := os.ReadDir(createdPath)
@@ -82,13 +85,13 @@ func TestRmFile(t *testing.T) {
 
 		writer.RmFile(TestPath)
 
-		runShell(t, shell, tmpDir, writer)
+		assert.Empty(t, runShell(t, shell, tmpDir, writer))
 
 		_, err = os.Stat(tmpFile)
 		require.True(t, os.IsNotExist(err), "tmpFile not deleted")
 
 		// check if the file do not exist
-		runShell(t, shell, tmpDir, writer)
+		assert.Empty(t, runShell(t, shell, tmpDir, writer))
 	})
 }
 
@@ -122,6 +125,90 @@ func TestRmFilesRecursive(t *testing.T) {
 		for _, file := range tmpFiles {
 			_, err := os.Stat(file)
 			require.True(t, os.IsNotExist(err), "tmpFile not deleted")
+		}
+	})
+}
+
+func TestCommandArgumentExpansion(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "runner-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, w shells.ShellWriter) {
+		var argumentsNoExpand []string
+		var argumentsExpand []string
+
+		switch shell {
+		case "bash", "powershell", "pwsh":
+			argumentsNoExpand = []string{"$a", "$b", "$c"}
+			argumentsExpand = []string{"$d", "$e", "$f"}
+		case "cmd":
+			argumentsNoExpand = []string{"%a%", "%b%", "%c%"}
+			argumentsExpand = []string{"%d%", "%e%", "%f%"}
+		default:
+			require.FailNow(t, "unknown shell %q", shell)
+		}
+
+		testFn := func(t *testing.T, w shells.ShellWriter) {
+			w.Variable(common.JobVariable{
+				Key:   "a",
+				Value: "ac/dc",
+			})
+			w.Variable(common.JobVariable{
+				Key:   "b",
+				Value: "beatles",
+			})
+			w.Variable(common.JobVariable{
+				Key:   "c",
+				Value: "credence clearwater revival",
+			})
+
+			w.Variable(common.JobVariable{
+				Key:   "d",
+				Value: "d_expanded",
+			})
+			w.Variable(common.JobVariable{
+				Key:   "e",
+				Value: "e_expanded",
+			})
+			w.Variable(common.JobVariable{
+				Key:   "f",
+				Value: "f_expanded",
+			})
+
+			w.Command("echo", argumentsNoExpand...)
+			w.CommandArgExpand("echo", argumentsExpand...)
+
+			output := runShell(t, shell, tmpDir, w)
+
+			assert.NotContains(t, output, "ac/dc")
+			assert.NotContains(t, output, "beatles")
+			assert.NotContains(t, output, "credence clearwater revival")
+
+			assert.Contains(t, output, "d_expanded")
+			assert.Contains(t, output, "e_expanded")
+			assert.Contains(t, output, "f_expanded")
+		}
+
+		if shell == "bash" {
+			t.Run("no posix escape", func(t *testing.T) {
+				testFn(t, w)
+			})
+			t.Run("posix escape", func(t *testing.T) {
+				build := &common.Build{
+					Runner: &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							FeatureFlags: map[string]bool{
+								featureflags.PosixlyCorrectEscapes: true,
+							},
+						},
+					},
+				}
+
+				testFn(t, shells.NewBashWriter(build, "bash"))
+			})
+		} else {
+			testFn(t, w)
 		}
 	})
 }

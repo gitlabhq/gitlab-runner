@@ -48,6 +48,18 @@ func (_m *MockShellWriter) Command(command string, arguments ...string) {
 	_m.Called(_ca...)
 }
 
+// CommandArgExpand provides a mock function with given fields: command, arguments
+func (_m *MockShellWriter) CommandArgExpand(command string, arguments ...string) {
+	_va := make([]interface{}, len(arguments))
+	for _i := range arguments {
+		_va[_i] = arguments[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, command)
+	_ca = append(_ca, _va...)
+	_m.Called(_ca...)
+}
+
 // Else provides a mock function with given fields:
 func (_m *MockShellWriter) Else() {
 	_m.Called()

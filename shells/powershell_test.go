@@ -47,7 +47,7 @@ func TestPowershell_LineBreaks(t *testing.T) {
 
 			expectedOutput :=
 				tc.expectedErrorPreference +
-					`& "foo" ""` + eol + "if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }" + eol +
+					`& "foo" ''` + eol + "if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }" + eol +
 					eol +
 					eol
 			if tc.shell == SNPwsh {
@@ -66,7 +66,7 @@ func TestPowershell_CommandShellEscapes(t *testing.T) {
 
 	assert.Equal(
 		t,
-		"& \"foo\" \"x&(y)\"\r\nif(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\r\n\r\n",
+		"& \"foo\" 'x&(y)'\r\nif(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\r\n\r\n",
 		writer.String(),
 	)
 }
@@ -76,7 +76,7 @@ func TestPowershell_IfCmdShellEscapes(t *testing.T) {
 	writer.IfCmd("foo", "x&(y)")
 
 	//nolint:lll
-	assert.Equal(t, "Set-Variable -Name cmdErr -Value $false\r\nTry {\r\n  & \"foo\" \"x&(y)\" 2>$null\r\n  if(!$?) { throw &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\r\n} Catch {\r\n  Set-Variable -Name cmdErr -Value $true\r\n}\r\nif(!$cmdErr) {\r\n", writer.String())
+	assert.Equal(t, "Set-Variable -Name cmdErr -Value $false\r\nTry {\r\n  & \"foo\" 'x&(y)' 2>$null\r\n  if(!$?) { throw &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\r\n} Catch {\r\n  Set-Variable -Name cmdErr -Value $true\r\n}\r\nif(!$cmdErr) {\r\n", writer.String())
 }
 
 func TestPowershell_MkTmpDirOnUNCShare(t *testing.T) {
@@ -254,28 +254,37 @@ func TestPowershellCmdArgs(t *testing.T) {
 
 //nolint:lll
 func TestPowershellPathResolveOperations(t *testing.T) {
+	var templateReplacer = func(escaped string) func(string) string {
+		return func(tpl string) string {
+			return fmt.Sprintf(tpl, escaped)
+		}
+	}
+
 	testCases := map[string]struct {
 		op       func(path string, w *PsWriter)
-		expected map[string]string
+		template string
+		expected map[string]func(string) string
 	}{
 		"cd": {
 			op: func(path string, w *PsWriter) {
 				w.Cd(path)
 			},
-			expected: map[string]string{
-				`path/name`: "cd $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\")\nif(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\n\n",
-				`\\unc\`:    "cd $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\\")\nif(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\n\n",
-				`C:\path\`:  "cd $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\\")\nif(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\n\n",
+			template: "cd $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\nif(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }\n\n",
+			expected: map[string]func(string) string{
+				`path/name`: templateReplacer(`"path/name"`),
+				`\\unc\`:    templateReplacer(`"\\unc\"`),
+				`C:\path\`:  templateReplacer(`"C:\path\"`),
 			},
 		},
 		"mkdir": {
 			op: func(path string, w *PsWriter) {
 				w.MkDir(path)
 			},
-			expected: map[string]string{
-				`path/name`: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") | out-null\n",
-				`\\unc\`:    "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\\") | out-null\n",
-				`C:\path\`:  "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\\") | out-null\n",
+			template: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) | out-null\n",
+			expected: map[string]func(string) string{
+				`path/name`: templateReplacer(`"path/name"`),
+				`\\unc\`:    templateReplacer(`"\\unc\"`),
+				`C:\path\`:  templateReplacer(`"C:\path\"`),
 			},
 		},
 		"mktmpdir": {
@@ -283,60 +292,66 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 				w.TemporaryPath = path
 				w.MkTmpDir("dir")
 			},
-			expected: map[string]string{
-				`path/name`: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name/dir\") | out-null\n",
-				`\\unc\`:    "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\/dir\") | out-null\n",
-				`C:\path\`:  "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\/dir\") | out-null\n",
+			template: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) | out-null\n",
+			expected: map[string]func(string) string{
+				`path/name`: templateReplacer(`"path/name/dir"`),
+				`\\unc\`:    templateReplacer(`"\\unc\/dir"`),
+				`C:\path\`:  templateReplacer(`"C:\path\/dir"`),
 			},
 		},
 		"rm": {
 			op: func(path string, w *PsWriter) {
 				w.RmFile(path)
 			},
-			expected: map[string]string{
-				`path/name`:    "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -PathType Leaf) ) {\n  Remove-Item2 -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\")\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\")) {\n  Remove-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\")\n}\n\n",
-				`\\unc\file`:   "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -PathType Leaf) ) {\n  Remove-Item2 -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\")\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\")) {\n  Remove-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\")\n}\n\n",
-				`C:\path\file`: "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -PathType Leaf) ) {\n  Remove-Item2 -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")) {\n  Remove-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")\n}\n\n",
+			template: "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Leaf) ) {\n  Remove-Item2 -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)) {\n  Remove-Item -Force $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n}\n\n",
+			expected: map[string]func(string) string{
+				`path/name`:    templateReplacer(`"path/name"`),
+				`\\unc\file`:   templateReplacer(`"\\unc\file"`),
+				`C:\path\file`: templateReplacer(`"C:\path\file"`),
 			},
 		},
 		"rmfilesrecursive": {
 			op: func(path string, w *PsWriter) {
 				w.RmFilesRecursive(path, "test")
 			},
-			expected: map[string]string{
-				`path/name`:    "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -Filter \"test\" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }\n}\n",
-				`\\unc\file`:   "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -Filter \"test\" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }\n}\n",
-				`C:\path\file`: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -Filter \"test\" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }\n}\n",
+			template: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Container) {\n  Get-ChildItem -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -Filter \"test\" -Recurse | ForEach-Object { Remove-Item -Force $_.FullName }\n}\n",
+			expected: map[string]func(string) string{
+				`path/name`:    templateReplacer(`"path/name"`),
+				`\\unc\file`:   templateReplacer(`"\\unc\file"`),
+				`C:\path\file`: templateReplacer(`"C:\path\file"`),
 			},
 		},
 		"rmdir": {
 			op: func(path string, w *PsWriter) {
 				w.RmDir(path)
 			},
-			expected: map[string]string{
-				`path/name`:    "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -PathType Container) ) {\n  Remove-Item2 -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\")\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\")) {\n  Remove-Item -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\")\n}\n\n",
-				`\\unc\file`:   "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -PathType Container) ) {\n  Remove-Item2 -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\")\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\")) {\n  Remove-Item -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\")\n}\n\n",
-				`C:\path\file`: "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -PathType Container) ) {\n  Remove-Item2 -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")) {\n  Remove-Item -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\")\n}\n\n",
+			template: "if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Container) ) {\n  Remove-Item2 -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n} elseif(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)) {\n  Remove-Item -Force -Recurse $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v)\n}\n\n",
+			expected: map[string]func(string) string{
+				`path/name`:    templateReplacer(`"path/name"`),
+				`\\unc\file`:   templateReplacer(`"\\unc\file"`),
+				`C:\path\file`: templateReplacer(`"C:\path\file"`),
 			},
 		},
 		"ifdirectory": {
 			op: func(path string, w *PsWriter) {
 				w.IfDirectory(path)
 			},
-			expected: map[string]string{
-				`path/name`:    "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -PathType Container) {\n",
-				`\\unc\file`:   "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -PathType Container) {\n",
-				`C:\path\file`: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -PathType Container) {\n",
+			template: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Container) {\n",
+			expected: map[string]func(string) string{
+				`path/name`:    templateReplacer(`"path/name"`),
+				`\\unc\file`:   templateReplacer(`"\\unc\file"`),
+				`C:\path\file`: templateReplacer(`"C:\path\file"`),
 			},
 		},
 		"iffile": {
 			op: func(path string, w *PsWriter) {
 				w.IfFile(path)
 			},
-			expected: map[string]string{
-				`path/name`:    "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") -PathType Leaf) {\n",
-				`\\unc\file`:   "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") -PathType Leaf) {\n",
-				`C:\path\file`: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") -PathType Leaf) {\n",
+			template: "if(Test-Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%[1]v) -PathType Leaf) {\n",
+			expected: map[string]func(string) string{
+				`path/name`:    templateReplacer(`"path/name"`),
+				`\\unc\file`:   templateReplacer(`"\\unc\file"`),
+				`C:\path\file`: templateReplacer(`"C:\path\file"`),
 			},
 		},
 		"file variable": {
@@ -344,10 +359,11 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 				w.TemporaryPath = path
 				w.Variable(common.JobVariable{File: true, Key: "a key", Value: "foobar"})
 			},
-			expected: map[string]string{
-				`path/name`:    "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name\") | out-null\n[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name/a key\"), \"foobar\")\n$a key=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"path/name/a key\")\n$env:a key=$a key\n",
-				`\\unc\file`:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file\") | out-null\n[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file/a key\"), \"foobar\")\n$a key=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"\\\\unc\\file/a key\")\n$env:a key=$a key\n",
-				`C:\path\file`: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file\") | out-null\n[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file/a key\"), \"foobar\")\n$a key=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:\\path\\file/a key\")\n$env:a key=$a key\n",
+			template: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v\") | out-null\n[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v/a key\"), \"foobar\")\n$a key=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"%[1]v/a key\")\n$env:a key=$a key\n",
+			expected: map[string]func(string) string{
+				`path/name`:    templateReplacer(`path/name`),
+				`\\unc\file`:   templateReplacer(`\\unc\file`),
+				`C:\path\file`: templateReplacer(`C:\path\file`),
 			},
 		},
 	}
@@ -358,7 +374,7 @@ func TestPowershellPathResolveOperations(t *testing.T) {
 				t.Run(fmt.Sprintf("%s:%s: %s", shell, tn, path), func(t *testing.T) {
 					writer := &PsWriter{TemporaryPath: "\\temp", Shell: shell, EOL: "\n", resolvePaths: true}
 					tc.op(path, writer)
-					assert.Equal(t, expected, writer.String())
+					assert.Equal(t, expected(tc.template), writer.String())
 				})
 			}
 		}
