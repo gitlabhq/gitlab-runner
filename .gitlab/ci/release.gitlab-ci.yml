@@ -7,7 +7,7 @@
   variables:
     PUBLISH_IMAGES: "true"
     PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "true"
+    PUSH_TO_ECR_PUBLIC: "false"
   before_script:
   - source ci/touch_make_dependencies
   retry: 2
