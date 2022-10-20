@@ -42,7 +42,11 @@ func TestGenerateMetadataToFile(t *testing.T) {
 	endedAt, err := time.Parse(time.RFC3339, endedAtRFC3339)
 	require.NoError(t, err)
 
-	var testMetadata = func(version string, g *artifactMetadataGenerator) AttestationMetadata {
+	var testMetadata = func(
+		version string,
+		g *artifactMetadataGenerator,
+		opts generateMetadataOptions,
+	) AttestationMetadata {
 		return AttestationMetadata{
 			Type: attestationType,
 			Subject: []AttestationSubject{
@@ -71,6 +75,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 						Name:         g.RunnerName,
 						Executor:     g.ExecutorName,
 						Architecture: common.AppVersion.Architecture,
+						Job:          AttestationPredicateInvocationEnvironmentJob{ID: opts.jobID},
 					},
 					Parameters: AttestationPredicateInvocationParameters{
 						"testparam": "",
@@ -121,40 +126,43 @@ func TestGenerateMetadataToFile(t *testing.T) {
 	tests := map[string]struct {
 		opts          generateMetadataOptions
 		newGenerator  func() *artifactMetadataGenerator
-		expected      func(*artifactMetadataGenerator) (AttestationMetadata, func())
+		expected      func(*artifactMetadataGenerator, generateMetadataOptions) (AttestationMetadata, func())
 		expectedError error
 	}{
 		"basic": {
 			newGenerator: newGenerator,
 			opts: generateMetadataOptions{
-				files: map[string]os.FileInfo{tmpFile.Name(): nil},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactName: "artifact-name",
+				files:        map[string]os.FileInfo{tmpFile.Name(): nil},
+				wd:           tmpDir,
+				jobID:        1000,
 			},
-			expected: func(g *artifactMetadataGenerator) (AttestationMetadata, func()) {
+			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
 				version, cleanup := setVersion("v1.0.0")
-				m := testMetadata(version, g)
+				m := testMetadata(version, g, opts)
 				return m, cleanup
 			},
 		},
 		"basic version isn't prefixed so use REVISION": {
 			newGenerator: newGenerator,
 			opts: generateMetadataOptions{
-				files: map[string]os.FileInfo{tmpFile.Name(): nil},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactName: "artifact-name",
+				files:        map[string]os.FileInfo{tmpFile.Name(): nil},
+				wd:           tmpDir,
+				jobID:        1000,
 			},
-			expected: func(g *artifactMetadataGenerator) (AttestationMetadata, func()) {
-				m := testMetadata(common.AppVersion.Revision, g)
+			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
+				m := testMetadata(common.AppVersion.Revision, g, opts)
 				return m, func() {}
 			},
 		},
 		"files subject doesn't exist": {
 			newGenerator: newGenerator,
 			opts: generateMetadataOptions{
-				files: map[string]os.FileInfo{tmpFile.Name(): nil, "nonexisting": nil},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactName: "artifact-name",
+				files:        map[string]os.FileInfo{tmpFile.Name(): nil, "nonexisting": nil},
+				wd:           tmpDir,
+				jobID:        1000,
 			},
 			expectedError: os.ErrNotExist,
 		},
@@ -166,12 +174,13 @@ func TestGenerateMetadataToFile(t *testing.T) {
 				return g
 			},
 			opts: generateMetadataOptions{
-				files: map[string]os.FileInfo{tmpFile.Name(): nil},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactName: "artifact-name",
+				files:        map[string]os.FileInfo{tmpFile.Name(): nil},
+				wd:           tmpDir,
+				jobID:        1000,
 			},
-			expected: func(g *artifactMetadataGenerator) (AttestationMetadata, func()) {
-				m := testMetadata(common.AppVersion.Revision, g)
+			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
+				m := testMetadata(common.AppVersion.Revision, g, opts)
 				m.Predicate.Invocation.Parameters = map[string]string{}
 				return m, func() {}
 			},
@@ -185,7 +194,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			var expected AttestationMetadata
 			if tt.expected != nil {
 				var cleanup func()
-				expected, cleanup = tt.expected(g)
+				expected, cleanup = tt.expected(g, tt.opts)
 				defer cleanup()
 			}
 
@@ -198,8 +207,12 @@ func TestGenerateMetadataToFile(t *testing.T) {
 				return
 			}
 
+			fmt.Println(f)
+
+			time.Sleep(10 * time.Second)
+
 			filename := filepath.Base(f)
-			assert.Equal(t, fmt.Sprintf(artifactsMetadataFormat, tt.opts.jobID), filename)
+			assert.Equal(t, fmt.Sprintf(artifactsMetadataFormat, tt.opts.artifactName), filename)
 
 			file, err := os.Open(f)
 			require.NoError(t, err)

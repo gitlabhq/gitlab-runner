@@ -191,9 +191,10 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 	if c.GenerateArtifactsMetadata {
 		logrus.Infof("Generating artifacts metadata")
 		metadataFile, err := c.generateMetadataToFile(generateMetadataOptions{
-			files: c.files,
-			wd:    c.wd,
-			jobID: c.ID,
+			artifactName: c.Name,
+			files:        c.files,
+			wd:           c.wd,
+			jobID:        c.ID,
 		})
 		if err != nil {
 			logrus.Fatalln(err)
