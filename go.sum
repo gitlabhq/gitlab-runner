@@ -479,8 +479,8 @@ github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 h1:2ZKn+w/BJeL43sCxI2jhPLRv73oVVOjEKZjKkflyqxg=
 github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786/go.mod h1:kCEbxUJlNDEBNbdQMkPSp6yaKcRXVI6f4ddk8Riv4bc=
-github.com/masterzen/winrm v0.0.0-20211231115050-232efb40349e h1:au+BndCo30p6G49xKTj1ZigvPn/ekiO2Gt+V+pbujfQ=
-github.com/masterzen/winrm v0.0.0-20211231115050-232efb40349e/go.mod h1:Iju3u6NzoTAvjuhsGCZc+7fReNnr/Bd6DsWj3WTokIU=
+github.com/masterzen/winrm v0.0.0-20220917170901-b07f6cb0598d h1:GXlX1g/AjI3/izilmeMvP/aHWYCuwOZXpJsS0XdGVls=
+github.com/masterzen/winrm v0.0.0-20220917170901-b07f6cb0598d/go.mod h1:Iju3u6NzoTAvjuhsGCZc+7fReNnr/Bd6DsWj3WTokIU=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-colorable v0.1.9/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
@@ -677,10 +677,10 @@ github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221019151813-a19e8c5b8220 h1:TVE8vyPfU1Vg9QUPDbCBWMqda3xiuhjvU4067L0bADM=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221019151813-a19e8c5b8220/go.mod h1:i6IQA7xKZ+GPdF8P2+MBIh5tDLgn+BRhOy4L2r+3Npk=
-gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221010222627-5f33b4a050fc h1:mxvJCzYL0VZH0D4ChkQi7ElsW2uPiCmWi24dK9DtlZc=
-gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221010222627-5f33b4a050fc/go.mod h1:dNcxkdms9+5vWfke3Infes/+R1VC226bJ43OxtPetmY=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194 h1:alDMe/jxFypk5bz5AINRR+LTKprVgSn7CXoA49hcCiA=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194/go.mod h1:GyPFxStrVhTTXXWxYUN1/kWsBX8EQlP5SK34VB2Qd1M=
+gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194 h1:ivgi7JawJmDdPVEPciF46rofcfuC4MbnROBwER87UkM=
+gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194/go.mod h1:dNcxkdms9+5vWfke3Infes/+R1VC226bJ43OxtPetmY=
 gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221019175850-9454e2072d68 h1:X09JgxbfBnpo0snji7MGhgTydnByou1YUUJXhuohv8k=
 gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221019175850-9454e2072d68/go.mod h1:lkEiGOflmz0eTDCVb0pfc6NaB1HCnmjuLw/Q7noZaU4=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221011225103-3b80ed781fe5 h1:/uIxK4fORkvU292pd7TbP5Y4JjGFv4n4Bzy7mRPQ6DQ=

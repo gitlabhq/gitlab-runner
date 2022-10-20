@@ -6,6 +6,7 @@ import (
 
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
+
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
@@ -63,8 +64,8 @@ func (c *client) Dial(n string, addr string) (net.Conn, error) {
 	return c.client.Dial(n, addr)
 }
 
-func (c *client) Run(opts executors.RunOptions) error {
-	return c.client.Run(connector.RunOptions(opts))
+func (c *client) Run(ctx context.Context, opts executors.RunOptions) error {
+	return c.client.Run(ctx, connector.RunOptions(opts))
 }
 
 func (c *client) Close() error {

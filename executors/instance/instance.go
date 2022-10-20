@@ -44,7 +44,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (e *executor) Run(cmd common.ExecutorCommand) error {
-	return e.client.Run(executors.RunOptions{
+	return e.client.Run(cmd.Context, executors.RunOptions{
 		Command: e.BuildShell.CmdLine,
 		Stdin:   strings.NewReader(cmd.Script),
 		Stdout:  e.Trace,

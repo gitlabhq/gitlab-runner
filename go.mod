@@ -37,8 +37,8 @@ require (
 	github.com/stretchr/testify v1.7.2
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.20.0
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221019151813-a19e8c5b8220
-	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221010222627-5f33b4a050fc
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194
+	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221019175850-9454e2072d68
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221011225103-3b80ed781fe5
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
@@ -114,7 +114,7 @@ require (
 	github.com/klauspost/compress v1.15.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
-	github.com/masterzen/winrm v0.0.0-20211231115050-232efb40349e // indirect
+	github.com/masterzen/winrm v0.0.0-20220917170901-b07f6cb0598d // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
