@@ -1,3 +1,56 @@
+## v15.5.0 (2022-10-21)
+
+### New features
+
+- Add shell+autoscaler executor !3617
+- Add Docker volume driver ops !3620
+- Kubernetes executor: support podspec.schedulerName !2740
+- Add IPv6 support to Docker networks !3583
+- Add Prometheus metrics to executor autoscaler !3635
+- Add GIT_SUBMODULE_DEPTH variable !3651
+- Add support for PAT masking in trace !3639
+
+### Bug fixes
+
+- Set all existing variables into the build container !3607
+- Add pgrep to ubi-fips image !3625
+- Standardize Attestation Artifact Names and Permissions !3650
+- Do not expand some CMD variables https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/38
+
+### Maintenance
+
+- Upgrade Go to version 1.18.6 !3589
+- Add TMPDIR to test's env allowlist !3603
+- Go 1.18 mod tidy !3619
+- Drop runtime.GC() after every check !3595 
+- Upgrade Go FIPS image version to 1.18 !3624
+- Add internal autoscaler executor provider unit tests !3633
+- Only generate mocks that are actually used in tests !3630
+- Fix incorrect spelling of acquisition !3621
+- Add User config setting for docker executor !2913
+- Upgrade Go FIPS image version to 1.18.7 !3640
+- Upgrade Go distribution to version 1.18.7 !3656
+
+### Documentation changes
+
+- Added GitLab Runner to title !3618
+- Clarify k8s executor overrides per CI/CD job !3626
+- Add note about docker-in-docker !3628
+- Fix indentation for [runners.cache] in kubernetes docs !3634
+- Clean up docs redirects !3632
+- Document hidden retry for failed Docker pull !3638
+- Refactor autoscaler terminology !3641
+- Update redirecting external links for Runner !3631
+- Explain metric …request_concurrency_exceeded_total !3558 
+- Update contribution details when it requires changes to both GitLab and Runner !3649
+- Disk root size parameter !3652
+- Remove Grafana dashboard link !3653
+- Move Content from best_practices page !3665
+- Remove content that didn't add value !3667
+- Updated path for group runners !3664
+- Fix ordered list display abnormal error !3663
+- Set variable to new domain for docs review apps (Runner) !3671
+
 ## v15.4.0 (2022-09-21)
 
 ### New features
