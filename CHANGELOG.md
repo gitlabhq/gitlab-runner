@@ -1,3 +1,9 @@
+## v15.4.1 (2022-10-21)
+
+### Security fixes
+
+- Do not expand variables in Command https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/38
+
 ## v15.4.0 (2022-09-21)
 
 ### New features
