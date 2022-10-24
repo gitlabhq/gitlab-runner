@@ -146,8 +146,10 @@ of `host:port`, where `host` may be an IP address (`127.0.0.1:8093`)
 or a domain (`my-runner.example.com:8093`). The runner uses this information to create
 a TLS certificate, for a secure connection.
 
-NOTE:
-Live sessions are initiated by the web browser. Make sure your web browser can connect to the `advertise_address`.
+NOTES:
+
+- Live sessions are initiated by the web browser. Make sure your web browser can connect to the `advertise_address`.
+- The address must be a public IP address, unless the [`allow_local_requests_from_web_hooks_and_services` application setting](https://docs.gitlab.com/ee/api/settings.html#list-of-settings-that-can-be-accessed-via-api-calls) is enabled.
 
 | Setting | Description |
 | ------- | ----------- |
