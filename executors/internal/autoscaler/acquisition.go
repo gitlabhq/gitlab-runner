@@ -42,19 +42,6 @@ func (ref *acquisitionRef) Dial(ctx context.Context) (executors.Client, error) {
 	return &client{dialer}, nil
 }
 
-func (ref *acquisitionRef) set(key string, acq *taskscaler.Acquisition) {
-	if ref.acq != nil {
-		panic("acquisition ref already set")
-	}
-
-	ref.key = key
-	ref.acq = acq
-}
-
-func (ref *acquisitionRef) get() string {
-	return ref.key
-}
-
 type client struct {
 	client connector.Client
 }
