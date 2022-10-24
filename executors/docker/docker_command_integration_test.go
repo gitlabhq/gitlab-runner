@@ -2064,3 +2064,39 @@ func Test_CaptureServiceLogs(t *testing.T) {
 		})
 	}
 }
+
+func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:      common.TestAlpineImage,
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+					Services: []common.Service{
+						{
+							Name: common.TestAlpineImage,
+							Environment: []string{
+								"FOO=value from [[runners.docker.services]]",
+							},
+							Entrypoint: []string{"/bin/sh", "-c", "while [ $FOO == 'value from [[runners.docker.services]]; do sleep 600; done; exit 1' ]"},
+						},
+					},
+				},
+				FeatureFlags: map[string]bool{
+					featureflags.DisableUmaskForDockerExecutor: true,
+				},
+			},
+		},
+	}
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+}
