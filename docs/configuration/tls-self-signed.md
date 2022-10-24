@@ -246,9 +246,44 @@ when performing operations like cloning and uploading artifacts, for example.
 
 #### Kubernetes
 
-Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484) in the Kubernetes executor's
-handling of the helper image's `ENTRYPOINT`, the mapped certificate file isn't automatically installed
-to the system certificate store.
+To provide a certificate file to jobs running in Kubernetes:
+
+1. Store the certificate as a Kubernetes secret in your namespace:
+
+   ```shell
+   kubectl create secret generic <SECRET_NAME> --namespace <NAMESPACE> --from-file=<CERT_FILE>
+   ```
+
+1. Mount the secret as a volume in your runner, replacing `<SECRET_NAME>`
+   and `<LOCATION>` with appropriate values:
+
+   ```toml
+   config: |
+     [[runners]]
+       [runners.kubernetes]
+         namespace = "{{.Release.Namespace}}"
+         image = "ubuntu:latest"
+       [[runners.kubernetes.volumes.secret]]
+           name = "<SECRET_NAME>"
+           mount_path = "<LOCATION>"
+   ```
+
+   The `mount_path` is the directory in the container where the certificate is stored.
+   If you used `/etc/gitlab-runner/certs/` as the `mount_path` and `ca.crt` as your
+   certificate file, your certificate is available at `/etc/gitlab-runner/certs/ca.crt`
+   inside your container.
+1. As part of the job, install the mapped certificate file to the system certificate store.
+   For example, in an Ubuntu container:
+
+   ```yaml
+   script:
+     - cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/
+     - update-ca-certificates
+   ```
+
+  Due to a [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28484) in the Kubernetes executor's
+  handling of the helper image's `ENTRYPOINT`, the mapped certificate file isn't automatically installed
+  to the system certificate store.
 
 ## Troubleshooting
 
