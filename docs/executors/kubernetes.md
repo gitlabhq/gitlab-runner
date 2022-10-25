@@ -1480,3 +1480,17 @@ To fix the issue, configure `nodeSelector` so that the Runner Manager pod is alw
 nodeSelector:
   kubernetes.io/os: linux
 ```
+
+### Build pods are assigned the worker node's IAM role instead of Runner IAM role
+
+This issue happens when the worker node IAM role does not have the permission to assume the correct role. To fix this, add the `sts:AssumeRole` permission to the trust relationship of the worker node's IAM role:
+
+```json
+{
+    "Effect": "Allow",
+    "Principal": {
+        "AWS": "arn:aws:iam::<AWS_ACCOUNT_NUMBER>:role/<IAM_ROLE_NAME>"
+    },
+    "Action": "sts:AssumeRole"
+}
+```
