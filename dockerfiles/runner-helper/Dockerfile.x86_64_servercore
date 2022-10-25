@@ -28,7 +28,8 @@ RUN powershell -File .\checksum.ps1 -TargetFile C:\Downloads\pwsh.msi -ExpectedH
 
 RUN New-Item -ItemType directory -Path C:\Temp; `
     Expand-Archive -Path git.zip -DestinationPath C:\Temp\git; `
-    Expand-Archive -Path git-lfs.zip -DestinationPath C:\Temp\git-lfs
+    Expand-Archive -Path git-lfs.zip -DestinationPath $pwd; `
+    Move-Item -Path "git-lfs-${Env:GIT_LFS_VERSION}" -Destination C:\Temp\git-lfs
 
 COPY [".\\binaries\\gitlab-runner-helper.x86_64-windows.exe", "C:\\Temp\\gitlab-runner-helper\\gitlab-runner-helper.exe"]
 
