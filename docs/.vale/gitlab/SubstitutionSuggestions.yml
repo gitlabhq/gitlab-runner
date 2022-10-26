@@ -4,7 +4,7 @@
 # Suggests better options for frequently misused terms that are often - but not always - incorrect.
 # SubstitutionWarning.yml and Substitutions.yml also exist.
 #
-# For a list of all options, see https://errata-ai.github.io/vale/styles/
+# For a list of all options, see https://vale.sh/docs/topics/styles/
 extends: substitution
 message: 'Consider %s instead of "%s".'
 link: https://docs.gitlab.com/ee/development/documentation/styleguide/word_list.html
@@ -16,7 +16,8 @@ swap:
   docs: '"documentation"'
   e-mail: '"email"'
   GLFM: '"GitLab Flavored Markdown"'
-  it is recommended: '"we recommend"'
+  it is recommended: '"you should"'
+  we recommend: '"you should"'
   navigate: go
   OAuth2: '"OAuth 2.0"'
   once that: '"after that"'

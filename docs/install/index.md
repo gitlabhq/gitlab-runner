@@ -54,7 +54,7 @@ When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS 
 
 ### FIPS compliant GitLab Runner in other systems and architectures
 
-Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to follow progress on adding other architectures and distros.
+Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to follow progress on adding other architectures and distributions.
 
 ## Repositories
 
