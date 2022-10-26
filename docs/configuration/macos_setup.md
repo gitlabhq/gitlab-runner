@@ -33,7 +33,7 @@ You must change it to Bash.
 1. Connect to your machine and determine the default shell:
 
    ```shell
-   echo $shell
+   echo $SHELL
    ```
 
 1. If the result is not `/bin/bash`, change the shell by running:
