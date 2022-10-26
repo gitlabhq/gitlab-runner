@@ -262,6 +262,7 @@
         - dockerfiles/ci/go.fips.Dockerfile
         - dockerfiles/ci/go.fips.Dockerfile.rebuild
         - .gitlab/ci/prepare.gitlab-ci.yml
+        - .gitlab/ci/_common.gitlab-ci.yml
 
 .rules:prepare:gitlab-runner-helper-entrypoint:image:merge-requests:
   rules:
