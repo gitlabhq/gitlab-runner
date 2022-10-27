@@ -11,11 +11,13 @@
   # review-docs-cleanup job will not be able to run when the branch gets
   # deleted (when merging the MR).
   - apk add --update openssl
-  - wget https://gitlab.com/gitlab-org/gitlab/-/raw/master/scripts/trigger-build
-  - chmod 755 trigger-build
+  - wget https://gitlab.com/gitlab-org/gitlab/-/raw/master/scripts/trigger-build.rb
+  - chmod 755 trigger-build.rb
   variables:
     GIT_STRATEGY: none
-    DOCS_REVIEW_APPS_DOMAIN: docs.gitlab-review-app
+    DOCS_REVIEW_APPS_DOMAIN: docs.gitlab-review.app
+    # By default, deploy the Review App using the `main` branch of the `gitlab-org/gitlab-docs` project
+    DOCS_BRANCH: main
   allow_failure: true
 
 # Trigger a docs build in gitlab-docs
@@ -29,10 +31,10 @@ review-docs-deploy:
     # DOCS_REVIEW_APPS_DOMAIN and DOCS_GITLAB_REPO_SUFFIX are CI variables
     # Discussion: https://gitlab.com/gitlab-org/gitlab-foss/merge_requests/14236/diffs#note_40140693
     auto_stop_in: 2 weeks
-    url: http://${DOCS_BRANCH}-${DOCS_GITLAB_REPO_SUFFIX}-${CI_MERGE_REQUEST_IID}.${DOCS_REVIEW_APPS_DOMAIN}/${DOCS_GITLAB_REPO_SUFFIX}
+    url: https://${DOCS_BRANCH}-${DOCS_GITLAB_REPO_SUFFIX}-${CI_MERGE_REQUEST_IID}.${DOCS_REVIEW_APPS_DOMAIN}/${DOCS_GITLAB_REPO_SUFFIX}
     on_stop: review-docs-cleanup
   script:
-  - ./trigger-build docs deploy
+  - ./trigger-build.rb docs deploy
 
 # Cleanup remote environment of gitlab-docs
 review-docs-cleanup:
@@ -42,4 +44,4 @@ review-docs-cleanup:
     name: review-docs/mr-${CI_MERGE_REQUEST_IID}
     action: stop
   script:
-  - ./trigger-build docs cleanup
+  - ./trigger-build.rb docs cleanup
