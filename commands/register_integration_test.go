@@ -615,6 +615,7 @@ check_interval = 0
   shell = "pwsh"
   [runners.custom_build_dir]
   [runners.cache]
+    MaxUploadedArchiveSize = 0
     [runners.cache.s3]
     [runners.cache.gcs]
     [runners.cache.azure]
@@ -678,6 +679,7 @@ check_interval = 0
   shell = "pwsh"
   [runners.custom_build_dir]
   [runners.cache]
+    MaxUploadedArchiveSize = 0
     [runners.cache.s3]
     [runners.cache.gcs]
     [runners.cache.azure]

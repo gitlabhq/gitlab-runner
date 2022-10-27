@@ -185,6 +185,7 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 				Image:      image,
 				PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 			},
+			Cache: &common.CacheConfig{},
 		},
 		RunnerCredentials: common.RunnerCredentials{
 			Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
@@ -889,6 +890,7 @@ func TestCacheInContainer(t *testing.T) {
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					Volumes:    []string{"/cache"},
 				},
+				Cache: &common.CacheConfig{},
 			},
 		},
 	}

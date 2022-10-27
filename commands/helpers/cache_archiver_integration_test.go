@@ -187,12 +187,17 @@ func TestCacheArchiverCompressionLevel(t *testing.T) {
 			mockArchiver := new(archive.MockArchiver)
 			defer mockArchiver.AssertExpectations(t)
 
-			archive.Register(
+			prevArchiver, _ := archive.Register(
 				"zip",
 				func(w io.Writer, dir string, level archive.CompressionLevel) (archive.Archiver, error) {
 					assert.Equal(t, helpers.GetCompressionLevel(expectedLevel), level)
 					return mockArchiver, nil
 				},
+				nil,
+			)
+			defer archive.Register(
+				"zip",
+				prevArchiver,
 				nil,
 			)
 
@@ -274,12 +279,54 @@ func testCacheUploadWithCustomHeaders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "500 Wrong x-ms-blob-type header", http.StatusInternalServerError)
 	}
 
-	if r.Header.Get("Last-Modified") != "" {
-		http.Error(w, "500 Unexpected Last-Modified header included", http.StatusInternalServerError)
+	if r.Header.Get("Last-Modified") == "" {
+		http.Error(w, "500 Expected Last-Modified header included", http.StatusInternalServerError)
 	}
 }
 
 func writeTestFile(t *testing.T, fileName string) {
 	err := os.WriteFile(fileName, nil, 0600)
 	require.NoError(t, err, "Writing file:", fileName)
+}
+
+func TestCacheArchiverUploadedSize(t *testing.T) {
+	tests := map[string]struct {
+		limit    int
+		exceeded bool
+	}{
+		"no-limit":    {limit: 0, exceeded: false},
+		"above-limit": {limit: 10, exceeded: true},
+		"equal-limit": {limit: 22, exceeded: false},
+		"below-limit": {limit: 25, exceeded: false},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			defer logrus.SetOutput(logrus.StandardLogger().Out)
+			defer testHelpers.MakeFatalToPanic()()
+
+			var buf bytes.Buffer
+			logrus.SetOutput(&buf)
+
+			ts := httptest.NewServer(http.HandlerFunc(testCacheBaseUploadHandler))
+			defer ts.Close()
+
+			defer os.Remove(cacheArchiverArchive)
+			cmd := helpers.CacheArchiverCommand{
+				File:                   cacheArchiverArchive,
+				MaxUploadedArchiveSize: int64(tc.limit),
+				URL:                    ts.URL + "/cache.zip",
+				Timeout:                0,
+			}
+			assert.NotPanics(t, func() {
+				cmd.Execute(nil)
+			})
+
+			if tc.exceeded {
+				require.Contains(t, buf.String(), "too big")
+			} else {
+				require.NotContains(t, buf.String(), "too big")
+			}
+		})
+	}
 }

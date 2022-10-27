@@ -708,8 +708,9 @@ type KubernetesHostAliases struct {
 	Hostnames []string `toml:"hostnames" json:"hostnames" long:"hostnames" description:"A list of hostnames that will be attached to the IP"`
 }
 
-//nolint:lll
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#lifecycle-v1-core
+//
+//nolint:lll
 type KubernetesContainerLifecyle struct {
 	PostStart *KubernetesLifecycleHandler `toml:"post_start,omitempty" json:"post_start,omitempty" description:"PostStart is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes"`
 	PreStop   *KubernetesLifecycleHandler `toml:"pre_stop,omitempty" json:"pre_stop,omitempty" description:"PreStop is called immediately before a container is terminated due to an API request or management event such as liveness/startup probe failure, preemption, resource contention, etc. The handler is not called if the container crashes or exits. The reason for termination is passed to the handler. The Pod's termination grace period countdown begins before the PreStop hooked is executed. Regardless of the outcome of the handler, the container will eventually terminate within the Pod's termination grace period. Other management of the container blocks until the hook completes or until the termination grace period is reached"`
@@ -893,9 +894,10 @@ type CacheAzureConfig struct {
 
 //nolint:lll
 type CacheConfig struct {
-	Type   string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method"`
-	Path   string `toml:"Path,omitempty" long:"path" env:"CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
-	Shared bool   `toml:"Shared,omitempty" long:"shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
+	Type                   string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method"`
+	Path                   string `toml:"Path,omitempty" long:"path" env:"CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
+	Shared                 bool   `toml:"Shared,omitempty" long:"shared" env:"CACHE_SHARED" description:"Enable cache sharing between runners."`
+	MaxUploadedArchiveSize int64  `toml:"MaxUploadedArchiveSize,omitempty" long:"max_uploaded_archive_size" env:"CACHE_MAXIMUM_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
 
 	S3    *CacheS3Config    `toml:"s3,omitempty" json:"s3" namespace:"s3"`
 	GCS   *CacheGCSConfig   `toml:"gcs,omitempty" json:"gcs" namespace:"gcs"`

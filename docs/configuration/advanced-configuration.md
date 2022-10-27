@@ -675,11 +675,12 @@ The following parameters define configuration for the [custom executor](../execu
 The following parameters define the distributed cache feature. View details
 in the [runner autoscale documentation](autoscale.md#distributed-runners-caching).
 
-| Parameter        | Type             | Description |
-|------------------|------------------|-------------|
-| `Type`           | string           | One of: `s3`, `gcs`, `azure`. |
-| `Path`           | string           | Name of the path to prepend to the cache URL. |
-| `Shared`         | boolean          | Enables cache sharing between runners. Default is `false`. |
+| Parameter                | Type    | Description |
+|--------------------------|---------|-------------|
+| `Type`                   | string  | One of: `s3`, `gcs`, `azure`. |
+| `Path`                   | string  | Name of the path to prepend to the cache URL. |
+| `Shared`                 | boolean | Enables cache sharing between runners. Default is `false`. |
+| `MaxUploadedArchiveSize` | int64   | Limit, in bytes, of the cache archive being uploaded to cloud storage. A malicious actor can work around this limit so the GCS adapter enforces it through the X-Goog-Content-Length-Range header in the signed URL. You should also set the limit on your cloud storage provider. |
 
 WARNING:
 In GitLab Runner 11.3, the configuration parameters related to S3 were moved to a dedicated `[runners.cache.s3]` section.

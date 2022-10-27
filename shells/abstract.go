@@ -699,6 +699,14 @@ func (b *AbstractShell) addCacheUploadCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
+	if info.Build.Runner.Cache.MaxUploadedArchiveSize > 0 {
+		args = append(
+			args,
+			"--max-uploaded-archive-size",
+			strconv.FormatInt(info.Build.Runner.Cache.MaxUploadedArchiveSize, 10),
+		)
+	}
+
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address

@@ -48,9 +48,10 @@ vvm6J1WGbnxmuhzzvGNNExeZx9dfGLmcvSAvrweiFbi2yHAc1cBLBkc5/CqfS6QW
 336Qe2lgsM61/jrYYYqu7W8l6W2juCz0SPqml6rugsP8r6IMJxfziO8=
 -----END RSA PRIVATE KEY-----`
 
-	bucketName     = "test"
-	objectName     = "key"
-	defaultTimeout = 1 * time.Hour
+	bucketName             = "test"
+	objectName             = "key"
+	defaultTimeout         = 1 * time.Hour
+	maxUploadedArchiveSize = int64(100)
 )
 
 func defaultGCSCache() *common.CacheConfig {
@@ -200,10 +201,12 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 }
 
 type adapterOperationTestCase struct {
-	returnedURL        string
-	returnedError      error
-	assertErrorMessage func(t *testing.T, message string)
-	signBlobAPITest    bool
+	returnedURL            string
+	returnedError          error
+	assertErrorMessage     func(t *testing.T, message string)
+	signBlobAPITest        bool
+	maxUploadedArchiveSize int64
+	expectedHeaders        http.Header
 }
 
 func mockSignBytesFunc() func([]byte) ([]byte, error) {
@@ -320,11 +323,21 @@ func TestAdapterOperation(t *testing.T) {
 			assertErrorMessage: nil,
 			signBlobAPITest:    true,
 		},
+		"max-cache-archive-size": {
+			returnedURL:            "https://storage.googleapis.com/test/key?Expires=123456789&GoogleAccessId=test-access-id%40X.iam.gserviceaccount.com&Signature=XYZ",
+			returnedError:          nil,
+			assertErrorMessage:     nil,
+			signBlobAPITest:        false,
+			maxUploadedArchiveSize: maxUploadedArchiveSize,
+			expectedHeaders:        http.Header{"X-Goog-Content-Length-Range": []string{"0,100"}},
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			config := defaultGCSCache()
+
+			config.MaxUploadedArchiveSize = tc.maxUploadedArchiveSize
 
 			a, err := New(config, defaultTimeout, objectName)
 			require.NoError(t, err)
@@ -352,7 +365,8 @@ func TestAdapterOperation(t *testing.T) {
 			)
 
 			headers := adapter.GetUploadHeaders()
-			assert.Nil(t, headers)
+			assert.Equal(t, headers, tc.expectedHeaders)
+
 			assert.Nil(t, adapter.GetGoCloudURL())
 			assert.Empty(t, adapter.GetUploadEnv())
 		})
