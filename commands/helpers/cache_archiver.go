@@ -30,12 +30,13 @@ type CacheArchiverCommand struct {
 	retryHelper
 	meter.TransferMeterCommand
 
-	File             string   `long:"file" description:"The path to file"`
-	URL              string   `long:"url" description:"URL of remote cache resource (pre-signed URL)"`
-	GoCloudURL       string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
-	Timeout          int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
-	Headers          []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
-	CompressionLevel string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
+	File                   string   `long:"file" description:"The path to file"`
+	URL                    string   `long:"url" description:"URL of remote cache resource (pre-signed URL)"`
+	GoCloudURL             string   `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
+	Timeout                int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
+	Headers                []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
+	CompressionLevel       string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
+	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
 
 	client *CacheClient
 	mux    *blob.URLMux
@@ -141,15 +142,15 @@ func (c *CacheArchiverCommand) handleGoCloudURL(file io.Reader) error {
 	return nil
 }
 
-func (c *CacheArchiverCommand) createZipFile(filename string) error {
+func (c *CacheArchiverCommand) createZipFile(filename string) (int64, error) {
 	err := os.MkdirAll(filepath.Dir(filename), 0o700)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	f, err := os.CreateTemp(filepath.Dir(filename), "archive_")
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer os.Remove(f.Name())
 	defer f.Close()
@@ -158,21 +159,26 @@ func (c *CacheArchiverCommand) createZipFile(filename string) error {
 
 	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, GetCompressionLevel(c.CompressionLevel))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Create archive
 	err = archiver.Archive(context.Background(), c.files)
 	if err != nil {
-		return err
+		return 0, err
+	}
+
+	info, err := f.Stat()
+	if err != nil {
+		return 0, err
 	}
 
 	err = f.Close()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return os.Rename(f.Name(), filename)
+	return info.Size(), os.Rename(f.Name(), filename)
 }
 
 func (c *CacheArchiverCommand) Execute(*cli.Context) {
@@ -196,21 +202,31 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	}
 
 	// Create archive
-	err = c.createZipFile(c.File)
+	size, err := c.createZipFile(c.File)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	// Upload archive if needed
-	if c.URL != "" || c.GoCloudURL != "" {
-		err := c.doRetry(c.upload)
-		if err != nil {
-			logrus.Fatalln(err)
-		}
-	} else {
+	c.uploadArchiveIfNeeded(size)
+}
+
+func (c *CacheArchiverCommand) uploadArchiveIfNeeded(size int64) {
+	if c.URL == "" && c.GoCloudURL == "" {
 		logrus.Infoln(
 			"No URL provided, cache will not be uploaded to shared cache server. " +
 				"Cache will be stored only locally.")
+		return
+	}
+
+	if c.MaxUploadedArchiveSize != 0 && size > c.MaxUploadedArchiveSize {
+		logrus.Infoln(fmt.Sprintf("Cache archive size (%d) is too big (Limit is set to %d). "+
+			"Cache will be stored only locally.", size, c.MaxUploadedArchiveSize))
+		return
+	}
+
+	err := c.doRetry(c.upload)
+	if err != nil {
+		logrus.Fatalln(err)
 	}
 }
 
@@ -225,12 +241,12 @@ func (c *CacheArchiverCommand) setHeaders(req *http.Request, fi os.FileInfo) {
 
 			req.Header.Set(strings.TrimSpace(parsed[0]), strings.TrimSpace(parsed[1]))
 		}
-
-		return
 	}
 
-	// Set default headers
-	req.Header.Set("Content-Type", "application/octet-stream")
+	// Set default headers. But don't override custom Content-Type.
+	if req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/octet-stream")
+	}
 	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
 }
 

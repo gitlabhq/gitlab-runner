@@ -64,13 +64,23 @@ type NewExtractorFunc func(r io.ReaderAt, size int64, dir string) (Extractor, er
 
 // Register registers a new archiver, overriding the archiver and/or extractor
 // for the format provided.
-func Register(format Format, archiver NewArchiverFunc, extractor NewExtractorFunc) {
+func Register(
+	format Format,
+	archiver NewArchiverFunc,
+	extractor NewExtractorFunc,
+) (
+	prevArchiver NewArchiverFunc,
+	prevExtractor NewExtractorFunc,
+) {
 	if archiver != nil {
+		prevArchiver = archivers[format]
 		archivers[format] = archiver
 	}
 	if extractor != nil {
+		prevExtractor = extractors[format]
 		extractors[format] = extractor
 	}
+	return
 }
 
 // NewArchiver returns a new Archiver of the specified format.

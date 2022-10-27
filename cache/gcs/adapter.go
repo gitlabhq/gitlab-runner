@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -16,9 +17,10 @@ import (
 type signedURLGenerator func(bucket string, name string, opts *storage.SignedURLOptions) (string, error)
 
 type gcsAdapter struct {
-	timeout    time.Duration
-	config     *common.CacheGCSConfig
-	objectName string
+	timeout                time.Duration
+	config                 *common.CacheGCSConfig
+	objectName             string
+	maxUploadedArchiveSize int64
 
 	generateSignedURL   signedURLGenerator
 	credentialsResolver credentialsResolver
@@ -33,6 +35,9 @@ func (a *gcsAdapter) GetUploadURL() *url.URL {
 }
 
 func (a *gcsAdapter) GetUploadHeaders() http.Header {
+	if a.maxUploadedArchiveSize > 0 {
+		return http.Header{"X-Goog-Content-Length-Range": []string{fmt.Sprintf("0,%d", a.maxUploadedArchiveSize)}}
+	}
 	return nil
 }
 
@@ -63,6 +68,13 @@ func (a *gcsAdapter) presignURL(method string, contentType string) *url.URL {
 		Method:         method,
 		Expires:        time.Now().Add(a.timeout),
 		ContentType:    contentType,
+	}
+
+	if method == http.MethodPut {
+		suo.Headers = []string{}
+		for key, values := range a.GetUploadHeaders() {
+			suo.Headers = append(suo.Headers, fmt.Sprintf("%s:%s", key, strings.Join(values, ";")))
+		}
 	}
 
 	if credentials.PrivateKey != "" {
@@ -99,11 +111,12 @@ func New(config *common.CacheConfig, timeout time.Duration, objectName string) (
 	}
 
 	a := &gcsAdapter{
-		config:              gcs,
-		timeout:             timeout,
-		objectName:          objectName,
-		generateSignedURL:   storage.SignedURL,
-		credentialsResolver: cr,
+		config:                 gcs,
+		timeout:                timeout,
+		objectName:             objectName,
+		maxUploadedArchiveSize: config.MaxUploadedArchiveSize,
+		generateSignedURL:      storage.SignedURL,
+		credentialsResolver:    cr,
 	}
 
 	return a, nil

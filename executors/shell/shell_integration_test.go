@@ -112,6 +112,7 @@ func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) *
 				Shell:               shell,
 				GracefulKillTimeout: func(i int) *int { return &i }(5),
 				ForceKillTimeout:    func(i int) *int { return &i }(1),
+				Cache:               &common.CacheConfig{},
 			},
 		},
 		SystemInterrupt: make(chan os.Signal, 1),
