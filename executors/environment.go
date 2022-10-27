@@ -15,7 +15,7 @@ type Environment interface {
 
 type Client interface {
 	Dial(n string, addr string) (net.Conn, error)
-	Run(RunOptions) error
+	Run(context.Context, RunOptions) error
 	Close() error
 }
 
