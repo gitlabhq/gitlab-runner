@@ -734,8 +734,9 @@ Prerequisites:
    ```
 
 1. Copy the socket string in the `Listen` key through which Podman's API is being accessed.
-1. Make sure that the Podman socket remains available after the GitLab Runner user is logged out:
-   ```
+1. Make sure the Podman socket remains available after the GitLab Runner user is logged out:
+
+   ```shell
    sudo loginctl enable-linger gitlab-runner
    ``` 
 
