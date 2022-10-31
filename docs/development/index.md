@@ -152,11 +152,11 @@ skipped.
 
 These are the binaries that you can install:
 
-1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://www.vagrantup.com/downloads); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://developer.hashicorp.com/vagrant/downloads); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
 1. [kubectl](https://kubernetes.io/docs/tasks/tools/) with
    [minikube](https://github.com/kubernetes/minikube)
 1. [Parallels Pro or Business edition](https://www.parallels.com/products/desktop/)
-1. [PowerShell](https://docs.microsoft.com/en-us/powershell/)
+1. [PowerShell](https://learn.microsoft.com/en-us/powershell/)
 
 After installing the binaries run:
 
@@ -281,7 +281,7 @@ To test the state of the build directives in test files, `make check_test_direct
 
 We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/tree/main/Vagrantfile)
 to help you run a Windows Server 2019 or Windows 10 instance, since we
-are using [multiple machines](https://www.vagrantup.com/docs/multi-machine) inside of Vagrant.
+are using [multiple machines](https://developer.hashicorp.com/vagrant/docs/multi-machine) inside of Vagrant.
 
 The following are required:
 

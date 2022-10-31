@@ -897,7 +897,7 @@ If you use ADC, be sure that the service account that you use has the `iam.servi
 > Introduced in GitLab Runner 13.4.0.
 
 The following parameters define native support for Azure Blob Storage. To learn more, view the
-[Azure Blob Storage documentation](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
+[Azure Blob Storage documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
 While S3 and GCS use the word `bucket` for a collection of objects, Azure uses the word
 `container` to denote a collection of blobs.
 
@@ -905,8 +905,8 @@ While S3 and GCS use the word `bucket` for a collection of objects, Azure uses t
 |-------------------|------------------|-------------|
 | `AccountName`     | string           | Name of the Azure Blob Storage account used to access the storage. |
 | `AccountKey`      | string           | Storage account access key used to access the container. |
-| `ContainerName`   | string           | Name of the [storage container](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers) to save cache data in. |
-| `StorageDomain`   | string           | Domain name [used to service Azure storage endpoints](https://docs.microsoft.com/en-us/azure/china/resources-developer-guide#check-endpoints-in-azure) (optional). Default is `blob.core.windows.net`. |
+| `ContainerName`   | string           | Name of the [storage container](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers) to save cache data in. |
+| `StorageDomain`   | string           | Domain name [used to service Azure storage endpoints](https://learn.microsoft.com/en-us/azure/china/resources-developer-guide#check-endpoints-in-azure) (optional). Default is `blob.core.windows.net`. |
 
 Example:
 

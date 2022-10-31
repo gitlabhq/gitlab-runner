@@ -77,7 +77,7 @@ Docker executor:
   additional detail.
 - `docker-windows` executor can be run only using GitLab Runner running
   on Windows.
-- [Linux containers on Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
+- [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
   are not supported, since they are still experimental. Read
   [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
   more details.
