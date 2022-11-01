@@ -1252,9 +1252,15 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 }
 
 // GetSubmodulePaths https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-ltpathgt82308203
-func (b *Build) GetSubmodulePaths() string {
+func (b *Build) GetSubmodulePaths() ([]string, error) {
 	paths := b.GetAllVariables().Get("GIT_SUBMODULE_PATHS")
-	return paths
+	toks := strings.Fields(paths)
+	for _, tok := range toks {
+		if tok == ":(exclude)" {
+			return nil, fmt.Errorf("invalid submodule pathspec '%s'", paths)
+		}
+	}
+	return toks, nil
 }
 
 func (b *Build) GetSubmoduleDepth() int {

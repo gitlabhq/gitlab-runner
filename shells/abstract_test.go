@@ -875,7 +875,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			mockWriter.On("Command", append(expectedGitForEachArgsFn(), "git lfs pull")...).Once()
 			mockWriter.On("EndIf").Once()
 
-			shell.writeSubmoduleUpdateCmd(
+			err := shell.writeSubmoduleUpdateCmd(
 				mockWriter,
 				&common.Build{
 					JobResponse: common.JobResponse{
@@ -884,6 +884,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 				},
 				tc.Recursive,
 			)
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -1034,9 +1035,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 			command = append(command, a)
 		}
 
-		paths = strings.TrimSpace(paths)
-		if paths != "" {
-			command = append(command, "--", paths)
+		subpaths := strings.Fields(paths)
+		if len(subpaths) != 0 {
+			command = append(command, "--")
+			for i := 0; i < len(subpaths); i++ {
+				command = append(command, subpaths[i])
+			}
 		}
 
 		return command
@@ -1064,7 +1068,8 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 			build := &common.Build{}
 			build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: test.paths})
-			shell.writeSubmoduleUpdateCmd(mockWriter, build, false)
+			err := shell.writeSubmoduleUpdateCmd(mockWriter, build, false)
+			assert.NoError(t, err)
 		})
 	}
 }

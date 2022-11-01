@@ -440,10 +440,10 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 
 	switch build.GetSubmoduleStrategy() {
 	case common.SubmoduleNormal:
-		b.writeSubmoduleUpdateCmd(w, build, false)
+		return b.writeSubmoduleUpdateCmd(w, build, false)
 
 	case common.SubmoduleRecursive:
-		b.writeSubmoduleUpdateCmd(w, build, true)
+		return b.writeSubmoduleUpdateCmd(w, build, true)
 
 	case common.SubmoduleNone:
 		w.Noticef("Skipping Git submodules setup")
@@ -455,16 +455,21 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 	return nil
 }
 
-func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) {
+func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) error {
 	depth := build.GetSubmoduleDepth()
 
 	b.writeSubmoduleUpdateNoticeMsg(w, recursive, depth)
 
 	var pathArgs []string
 
-	submodulePaths := strings.TrimSpace(build.GetSubmodulePaths())
-	if submodulePaths != "" {
-		pathArgs = append(pathArgs, "--", submodulePaths)
+	submodulePaths, err := build.GetSubmodulePaths()
+	if err != nil {
+		return err
+	}
+
+	if len(submodulePaths) != 0 {
+		pathArgs = append(pathArgs, "--")
+		pathArgs = append(pathArgs, submodulePaths...)
 	}
 
 	// Init submodules must occur prior to sync to ensure completeness of .git/config
@@ -504,6 +509,8 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 		w.Command("git", append(foreachArgs, "git lfs pull")...)
 		w.EndIf()
 	}
+
+	return nil
 }
 
 func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive bool, depth int) {
