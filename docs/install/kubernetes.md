@@ -163,49 +163,35 @@ These fields are marked with a `DEPRECATED:` comment above them in the default `
 
 | Field name | Description |
 | ------ | ------ |
-|image:|Default container image to use for builds when none is specified|
-|imagePullSecrets:|Specify one or more imagePullSecrets|
-|imagePullPolicy:|Specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.|
-|requestConcurrency:|Defines number of concurrent requests for new job from GitLab|
-|privileged:|Enable or disable the privileged flag for all containers|
-|namespace:|Namespace to run Kubernetes jobs in. Defaults to the namespace used for installing the Runner Manager.|
-|pollTimeout: |The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created.|
-|cacheType|Cache general settings|
-|cachePath|Cache general settings|
-|cacheShared|Cache general settings|
-|s3ServerAddress:|S3 settings|
-|s3BucketLocation:|S3 settings|
-|s3CacheInsecure:|S3 settings|
-|gcsBucketName:|GCS settings|
-|cpuLimit:|Build Container specific configuration|
-|cpuLimitOverwriteMaxAllowed:|Build Container specific configuration|
-|memoryLimit:|Build Container specific configuration|
-|memoryLimitOverwriteMaxAllowed:|Build Container specific configuration. `builds: {}`|
-|cpuRequests:|Build Container specific configuration. `builds: {}`|
-|cpuRequestsOverwriteMaxAllowed:|Build Container specific configuration. `builds: {}`|
-|memoryRequests:|Build Container specific configuration. `builds: {}`|
-|memoryRequestsOverwriteMaxAllowed: |Build Container specific configuration. `builds: {}`|
-|cpuLimit|Service Container specific configuration. `services: {}`|
-|memoryLimit:|Service Container specific configuration. `services: {}`|
-|cpuRequests:|Service Container specific configuration. `services: {}`|
-|memoryRequests:|Service Container specific configuration. `services: {}`|
-|cpuLimit:|Helper Container specific configuration. `helpers: {}`|
-|memoryLimit: |Helper Container specific configuration. `helpers: {}`|
-|cpuRequests: |Helper Container specific configuration. `helpers: {}`|
-|memoryRequests:|Helper Container specific configuration.`helpers: {}`|
-|image:|Helper Container specific configuration. `helpers: {}`|
-|run_as_non_root:|Helper container security context configuration. `pod_security_context: {}`|
-|run_as_user:|Helper container security context configuration. `pod_security_context: {}`|
-|run_as_group:|Helper container security context configuration. `pod_security_context: {}`|
-|fs_group:|Helper container security context configuration. `pod_security_context: {}`|
-|supplemental_groups: |Helper container security context configuration. `pod_security_context: {`}|
-|serviceAccountName:|Service Account to be used for runners.|
-|cloneUrl:|If Gitlab is not reachable through $CI_SERVER_URL.|
-|nodeSelector: {}|Specify node labels for CI job pods assignment|
-|nodeTolerations: {}|Specify node tolerations for CI job pods assignment.|
-|podLabels: {}|Specify pod labels for CI job pods|
-|podAnnotations: {}|Specify annotations for job pods.|
-|env:|Configure environment variables that will be injected to the pods that are created while the build is running.|
+|image:|Define the GitLab Runner Image. Usage of a single URL is deprecated|
+|rbac.resources:|Define specific rbac permissions|
+|rbac.verbs:|Define specific rbac permissions|
+|runners.image:|Default container image to use for builds when none is specified|
+|runners.imagePullSecrets:|Specify one or more imagePullSecrets|
+|runners.imagePullPolicy:|Specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.|
+|runners.requestConcurrency:|Defines number of concurrent requests for new job from GitLab|
+|runners.privileged:|Enable or disable the privileged flag for all containers|
+|runners.namespace:|Namespace to run Kubernetes jobs in. Defaults to the namespace used for installing the Runner Manager.|
+|runners.pollTimeout: |The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created.|
+|runners.outputLimit: |Set maximum build log size in kilobytes, by default set to 4096 (4MB).|
+|runners.cache.cacheType|Cache general settings|
+|runners.cache.cachePath|Cache general settings|
+|runners.cache.cacheShared|Cache general settings|
+|runners.cache.s3ServerAddress:|S3 settings|
+|runners.cache.s3BucketLocation:|S3 settings|
+|runners.cache.s3CacheInsecure:|S3 settings|
+|runners.cache.gcsBucketName:|GCS settings|
+|runners.builds:|(Property and all sub-properties) Build Container specific configuration|
+|runners.services:|(Property and all sub-properties) Service Container specific configuration.|
+|runners.helpers:|(Property and all sub-properties) Helper Container specific configuration.|
+|runners.pod_security_context:|(Property and all sub-properties) Helper container security context configuration.|
+|runners.serviceAccountName:|Service Account to be used for runners.|
+|runners.cloneUrl:|If Gitlab is not reachable through $CI_SERVER_URL.|
+|runners.nodeSelector:|(Property and all sub-properties) Specify node labels for CI job pods assignment|
+|runners.nodeTolerations:|(Property and all sub-properties) Specify node tolerations for CI job pods assignment.|
+|runners.podLabels:|(Property and all sub-properties) Specify pod labels for CI job pods|
+|runners.podAnnotations:|(Property and all sub-properties) Specify annotations for job pods.|
+|runners.env:|Configure environment variables that will be injected to the pods that are created while the build is running.|
 
 All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#the-available-configtoml-settings).
 For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-available-configtoml-settings).
