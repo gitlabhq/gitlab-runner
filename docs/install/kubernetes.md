@@ -161,37 +161,37 @@ Many fields accepted by the `values.yaml` file will be removed with the introduc
 Helm Chart version 1.0. We recommend migrating away from them as soon as possible.
 These fields are marked with a `DEPRECATED:` comment above them in the default `values.yaml`. For quick reference, the deprecated fields are in the table below.
 
-| Field name | Description |
-| ------ | ------ |
-|image:|Define the GitLab Runner Image. Usage of a single URL is deprecated|
-|rbac.resources:|Define specific rbac permissions|
-|rbac.verbs:|Define specific rbac permissions|
-|runners.image:|Default container image to use for builds when none is specified|
-|runners.imagePullSecrets:|Specify one or more imagePullSecrets|
-|runners.imagePullPolicy:|Specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.|
-|runners.requestConcurrency:|Defines number of concurrent requests for new job from GitLab|
-|runners.privileged:|Enable or disable the privileged flag for all containers|
-|runners.namespace:|Namespace to run Kubernetes jobs in. Defaults to the namespace used for installing the Runner Manager.|
-|runners.pollTimeout: |The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created.|
-|runners.outputLimit: |Set maximum build log size in kilobytes, by default set to 4096 (4MB).|
-|runners.cache.cacheType|Cache general settings|
-|runners.cache.cachePath|Cache general settings|
-|runners.cache.cacheShared|Cache general settings|
-|runners.cache.s3ServerAddress:|S3 settings|
-|runners.cache.s3BucketLocation:|S3 settings|
-|runners.cache.s3CacheInsecure:|S3 settings|
-|runners.cache.gcsBucketName:|GCS settings|
-|runners.builds:|(Property and all sub-properties) Build Container specific configuration|
-|runners.services:|(Property and all sub-properties) Service Container specific configuration.|
-|runners.helpers:|(Property and all sub-properties) Helper Container specific configuration.|
-|runners.pod_security_context:|(Property and all sub-properties) Helper container security context configuration.|
-|runners.serviceAccountName:|Service Account to be used for runners.|
-|runners.cloneUrl:|If Gitlab is not reachable through $CI_SERVER_URL.|
-|runners.nodeSelector:|(Property and all sub-properties) Specify node labels for CI job pods assignment|
-|runners.nodeTolerations:|(Property and all sub-properties) Specify node tolerations for CI job pods assignment.|
-|runners.podLabels:|(Property and all sub-properties) Specify pod labels for CI job pods|
-|runners.podAnnotations:|(Property and all sub-properties) Specify annotations for job pods.|
-|runners.env:|Configure environment variables that will be injected to the pods that are created while the build is running.|
+| Field name | Description                                                                                                                                   |
+| ------ |-----------------------------------------------------------------------------------------------------------------------------------------------|
+|image:| Define the GitLab Runner Image. Usage of a single URL is deprecated                                                                           |
+|rbac.resources:| Define specific rbac permissions                                                                                                              |
+|rbac.verbs:| Define specific rbac permissions                                                                                                              |
+|runners.image:| Default container image to use for builds when none is specified                                                                              |
+|runners.imagePullSecrets:| Specify one or more imagePullSecrets                                                                                                          |
+|runners.imagePullPolicy:| Specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.                                    |
+|runners.requestConcurrency:| Defines number of concurrent requests for new job from GitLab                                                                                 |
+|runners.privileged:| Enable or disable the privileged flag for all containers                                                                                      |
+|runners.namespace:| Namespace to run Kubernetes jobs in. Defaults to the namespace used for installing the Runner Manager.                                        |
+|runners.pollTimeout: | The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created. |
+|runners.outputLimit: | Set maximum build log size in kilobytes, by default set to 4096 (4MB).                                                                        |
+|runners.cache.cacheType| Cache general settings                                                                                                                        |
+|runners.cache.cachePath| Cache general settings                                                                                                                        |
+|runners.cache.cacheShared| Cache general settings                                                                                                                        |
+|runners.cache.s3ServerAddress:| S3 settings                                                                                                                                   |
+|runners.cache.s3BucketLocation:| S3 settings                                                                                                                                   |
+|runners.cache.s3CacheInsecure:| S3 settings                                                                                                                                   |
+|runners.cache.gcsBucketName:| GCS settings                                                                                                                                  |
+|runners.builds:| (Property and all sub-properties) Build Container specific configuration                                                                      |
+|runners.services:| (Property and all sub-properties) Service Container specific configuration.                                                                   |
+|runners.helpers:| (Property and all sub-properties) Helper Container specific configuration.                                                                    |
+|runners.pod_security_context:| (Property and all sub-properties) Helper container security context configuration.                                                            |
+|runners.serviceAccountName:| Service Account to be used for runners.                                                                                                       |
+|runners.cloneUrl:| If GitLab is not reachable through $CI_SERVER_URL.                                                                                            |
+|runners.nodeSelector:| (Property and all sub-properties) Specify node labels for CI job pods assignment                                                              |
+|runners.nodeTolerations:| (Property and all sub-properties) Specify node tolerations for CI job pods assignment.                                                        |
+|runners.podLabels:| (Property and all sub-properties) Specify pod labels for CI job pods                                                                          |
+|runners.podAnnotations:| (Property and all sub-properties) Specify annotations for job pods.                                                                           |
+|runners.env:| Configure environment variables that will be injected to the pods that are created while the build is running.                                |
 
 All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#the-available-configtoml-settings).
 For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-available-configtoml-settings).
