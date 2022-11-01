@@ -25,7 +25,7 @@ want to install a version prior to GitLab Runner 10, [visit the old docs](old.md
    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 1. Make sure to restrict the `Write` permissions on the GitLab Runner directory and executable.
    If you do not set these permissions, regular users can replace the executable with their own and run arbitrary code with elevated privileges.
-1. Run an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
+1. Run an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
 1. [Register a runner](../register/index.md).
 1. Install GitLab Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
@@ -62,7 +62,7 @@ Logs are stored in Windows Event Log.
 
 ## Update
 
-1. Stop the service (you need an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator) as before):
+1. Stop the service (you need an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator) as before):
 
    ```powershell
    cd C:\GitLab-Runner
@@ -81,7 +81,7 @@ Logs are stored in Windows Event Log.
 
 ## Uninstall
 
-From an [elevated command prompt](https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
+From an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
 
 ```powershell
 cd C:\GitLab-Runner
@@ -94,14 +94,14 @@ rmdir /s GitLab-Runner
 ## Windows version support policy
 
 We follow the same lifecycle policy as Microsoft
-[Servicing Channels](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels).
+[Servicing Channels](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels).
 
 This means that we support:
 
-- [Long-Term Servicing Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel),
+- [Long-Term Servicing Channel](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel),
   versions for 5 years after their release date. Note that we don't
   support versions that are on extended support.
-- [Semi-Annual Channel](https://docs.microsoft.com/en-us/windows/deployment/update/waas-overview#semi-annual-channel)
+- [Semi-Annual Channel](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#semi-annual-channel)
   versions for 18 months after their release date. We don't support
   these versions after mainstream support ends.
 
@@ -117,14 +117,14 @@ for more information.
 After a Windows version no longer receives mainstream support from
 Microsoft, we officially [deprecate the version](https://about.gitlab.com/handbook/product/#deprecated) and
 remove it in the next major change. For example, in 12.x we started
-supporting [`Windows 1803`](https://docs.microsoft.com/en-us/lifecycle/products/?alpha=1803)
+supporting [`Windows 1803`](https://learn.microsoft.com/en-us/lifecycle/products/?alpha=1803)
 because it came out on `2018-04-30`. Mainstream support ended on
 `2019-11-12`, so we deprecated `Windows 1803` in 12.x and it was
 [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6553) in
 GitLab 13.0.
 
 As a single source of truth we use
-<https://docs.microsoft.com/en-us/lifecycle/products/> which specifies
+<https://learn.microsoft.com/en-us/lifecycle/products/> which specifies
 both the release and mainstream support dates.
 
 Below is a list of versions that are commonly used and their end of life
@@ -139,15 +139,15 @@ date:
 ### Future releases
 
 Microsoft releases new Windows Server products in the
-[Semi-Annual Channel](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#semi-annual-channel)
+[Semi-Annual Channel](https://learn.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#semi-annual-channel)
 twice a year, and every 2 - 3 years a new major version of Windows Sever
 is released in the
-[Long-Term Servicing Channel (LTSC)](https://docs.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#long-term-servicing-channel-ltsc).
+[Long-Term Servicing Channel (LTSC)](https://learn.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#long-term-servicing-channel-ltsc).
 
 GitLab aims to test and release new GitLab Runner helper images that
 include the latest Windows Server version (Semi-Annual Channel) within 1
 month of the official Microsoft release date on the Google Cloud Platform. Refer to the
-[Windows Server current versions by servicing option list](https://docs.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
+[Windows Server current versions by servicing option list](https://learn.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
 for availability dates.
 
 ## Windows troubleshooting
@@ -168,7 +168,7 @@ If you don't have a Windows Password, the GitLab Runner service won't start but 
 use the Built-in System Account.
 
 If you have issues with the Built-in System Account, please read
-[Configure the Service to Start Up with the Built-in System Account](https://docs.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/service-startup-permissions#resolution-3-configure-the-service-to-start-up-with-the-built-in-system-account)
+[Configure the Service to Start Up with the Built-in System Account](https://learn.microsoft.com/en-us/troubleshoot/windows-server/system-management-components/service-startup-permissions#resolution-3-configure-the-service-to-start-up-with-the-built-in-system-account)
 on Microsoft's support website.
 
 ### Get runner logs
@@ -178,7 +178,7 @@ as a Windows service. You can find the logs in the Event Viewer
 with the provider name `gitlab-runner`.
 
 If you don't have access to the GUI, in PowerShell, you can run
-[`Get-WinEvent`](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-7.2).
+[`Get-WinEvent`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-7.2).
 
 ```shell
 PS C:\> Get-WinEvent -ProviderName gitlab-runner
@@ -269,7 +269,7 @@ permission for the chosen user and then try to start the service again.
 1. Click the _Add User or Group..._ button.
 1. Add the user ("by hand" or using _Advanced..._ button) and apply the settings.
 
-According to [Microsoft's documentation](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))
+According to [Microsoft's documentation](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/dn221981(v=ws.11))
 this should work for: Windows Vista, Windows Server 2008, Windows 7, Windows 8.1,
 Windows Server 2008 R2, Windows Server 2012 R2, Windows Server 2012, and Windows 8.
 
@@ -371,9 +371,9 @@ than the Windows Server release.
 If GitLab Runner is not being run under an administrator account and instead is using a
 standard user account, mapped network drives cannot be used and you'll receive an error stating
 `The system cannot find the path specified.`  This is because using a service logon session
-[creates some limitations](https://docs.microsoft.com/en-us/windows/win32/services/services-and-redirected-drives)
+[creates some limitations](https://learn.microsoft.com/en-us/windows/win32/services/services-and-redirected-drives)
 on accessing resources for security. Use the
-[UNC path](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths)
+[UNC path](https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats#unc-paths)
 of your drive instead.
 
 ### The build container is unable to connect to service containers
@@ -394,4 +394,4 @@ fatal: cannot chdir to c:/builds/gitlab/test: Permission denied`
 When this error occurs, ensure the user the Docker engine is running as has full permissions to `C:\Program Data\Docker`.
 The Docker engine must be able to write to this directory for certain actions, and without the correct permissions it will fail.
 
-[Read more about configuring Docker Engine on Windows](https://docs.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon).
+[Read more about configuring Docker Engine on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon).
