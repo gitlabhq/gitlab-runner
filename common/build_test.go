@@ -1474,6 +1474,97 @@ func TestBuild_IsLFSSmudgeDisabled(t *testing.T) {
 	}
 }
 
+func TestGitSubmodulePaths(t *testing.T) {
+	tests := map[string]struct {
+		isVariableSet  bool
+		value          string
+		expectedResult []string
+		expectedError  bool
+	}{
+		"not defined": {
+			isVariableSet:  false,
+			value:          "",
+			expectedResult: []string{},
+			expectedError:  false,
+		},
+		"empty": {
+			isVariableSet:  true,
+			value:          "",
+			expectedResult: []string{},
+			expectedError:  false,
+		},
+		"select submodule 1": {
+			isVariableSet:  true,
+			value:          "submodule1",
+			expectedResult: []string{"submodule1"},
+			expectedError:  false,
+		},
+		"select submodule 1 and 2": {
+			isVariableSet:  true,
+			value:          "submodule1 submodule2",
+			expectedResult: []string{"submodule1", "submodule2"},
+			expectedError:  false,
+		},
+		"select submodule 1 and exclude 2": {
+			isVariableSet:  true,
+			value:          "submodule1 :(exclude)submodule2",
+			expectedResult: []string{"submodule1", ":(exclude)submodule2"},
+			expectedError:  false,
+		},
+		"exclude submodule 1": {
+			isVariableSet:  true,
+			value:          " :(exclude)submodule1",
+			expectedResult: []string{":(exclude)submodule1"},
+			expectedError:  false,
+		},
+		"exclude submodule 1 and 2": {
+			isVariableSet:  true,
+			value:          " :(exclude)submodule1 :(exclude)submodule2 ",
+			expectedResult: []string{":(exclude)submodule1", ":(exclude)submodule2"},
+			expectedError:  false,
+		},
+		"exclude submodule with single space": {
+			isVariableSet:  true,
+			value:          ":(exclude) gitlab-grack",
+			expectedResult: nil,
+			expectedError:  true,
+		},
+		"exclude submodule with multiple spaces": {
+			isVariableSet:  true,
+			value:          ":(exclude)  gitlab-grack",
+			expectedResult: nil,
+			expectedError:  true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					Variables: JobVariables{},
+				},
+			}
+
+			if test.isVariableSet {
+				build.Variables = append(
+					build.Variables,
+					JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: test.value, Public: true},
+				)
+			}
+
+			result, err := build.GetSubmodulePaths()
+			if test.expectedError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "invalid submodule pathspec")
+			} else {
+				assert.Equal(t, test.expectedResult, result)
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestGitCleanFlags(t *testing.T) {
 	tests := map[string]struct {
 		value          string

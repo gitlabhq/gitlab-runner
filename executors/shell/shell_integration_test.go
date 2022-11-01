@@ -813,43 +813,58 @@ func TestBuildWithGitSubmodulePaths(t *testing.T) {
 
 	tests := map[string]struct {
 		paths                   string
-		expectedBuildError      error
-		expectedSubmoduleExists bool
+		expectedBuildError      bool
+		expectedSubmoduleExists map[string]bool
 	}{
 		"include submodule": {
 			paths:                   "gitlab-grack",
-			expectedBuildError:      nil,
-			expectedSubmoduleExists: true,
+			expectedBuildError:      false,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": true, "simplegit": false},
 		},
 		"exclude submodule": {
 			paths:                   ":(exclude)gitlab-grack",
-			expectedBuildError:      nil,
-			expectedSubmoduleExists: false,
+			expectedBuildError:      false,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": false, "simplegit": true},
+		},
+		"include multiple submodule": {
+			paths:                   "gitlab-grack simplegit",
+			expectedBuildError:      false,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": true, "simplegit": true},
+		},
+		"exclude multiple submodule": {
+			paths:                   ":(exclude)gitlab-grack :(exclude)simplegit",
+			expectedBuildError:      false,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": false, "simplegit": false},
+		},
+		"ex/include multiple submodule": {
+			paths:                   ":(exclude)gitlab-grack simplegit",
+			expectedBuildError:      false,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": false, "simplegit": true},
 		},
 		"exclude submodule with single space": {
 			paths:                   ":(exclude) gitlab-grack",
-			expectedBuildError:      nil,
-			expectedSubmoduleExists: true,
+			expectedBuildError:      true,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": false, "simplegit": false},
 		},
 		"exclude submodule with multiple spaces": {
 			paths:                   ":(exclude)  gitlab-grack",
-			expectedBuildError:      nil,
-			expectedSubmoduleExists: true,
+			expectedBuildError:      true,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": false, "simplegit": false},
 		},
 		"exclude submodule with space between all statements": {
 			paths:                   ": (exclude) gitlab-grack",
-			expectedBuildError:      &exec.ExitError{},
-			expectedSubmoduleExists: false,
+			expectedBuildError:      true,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": false, "simplegit": false},
 		},
 		"exclude submodule invalid": {
 			paths:                   "::::(exclude) gitlab-grack",
-			expectedBuildError:      &exec.ExitError{},
-			expectedSubmoduleExists: false,
+			expectedBuildError:      true,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": false, "simplegit": false},
 		},
 		"empty": {
 			paths:                   "    ",
-			expectedBuildError:      nil,
-			expectedSubmoduleExists: true,
+			expectedBuildError:      false,
+			expectedSubmoduleExists: map[string]bool{"gitlab-grack": true, "simplegit": true},
 		},
 	}
 
@@ -868,19 +883,24 @@ func TestBuildWithGitSubmodulePaths(t *testing.T) {
 				)
 
 				out, err := buildtest.RunBuildReturningOutput(t, build)
-				err = errors.Unwrap(err)
-				require.IsType(t, err, tt.expectedBuildError)
+				if tt.expectedBuildError {
+					assert.Error(t, err)
+					return
+				}
+
+				assert.NoError(t, err)
 
 				assert.NotContains(t, out, "Skipping Git submodules setup")
 				assert.Contains(t, out, "Updating/initializing submodules...")
 
-				_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", ".git"))
-				if tt.expectedSubmoduleExists {
-					require.NoError(t, err, "Submodule should have been initialized")
-					return
+				for subModule, shouldExist := range tt.expectedSubmoduleExists {
+					_, err = os.Stat(filepath.Join(build.BuildDir, subModule, ".git"))
+					if shouldExist {
+						require.NoError(t, err, "Submodule %v should have been initialized", subModule)
+					} else {
+						require.Error(t, err, "Submodule %v should not have been initialized", subModule)
+					}
 				}
-
-				require.True(t, errors.Is(err, os.ErrNotExist), "Submodule is initialized but shouldn't be")
 			})
 		})
 	}
