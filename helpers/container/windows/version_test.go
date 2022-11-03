@@ -40,6 +40,21 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
+			operatingSystem: "10.0.17763",
+			expectedVersion: V1809,
+			expectedErr:     nil,
+		},
+		{
+			operatingSystem: "10.0.19041",
+			expectedVersion: V2004,
+			expectedErr:     nil,
+		},
+		{
+			operatingSystem: "10.0.19042",
+			expectedVersion: V20H2,
+			expectedErr:     nil,
+		},
+		{
 			operatingSystem: "some random string",
 			expectedErr:     NewUnsupportedWindowsVersionError("some random string"),
 		},
