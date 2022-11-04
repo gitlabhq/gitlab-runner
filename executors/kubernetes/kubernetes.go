@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
+	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -55,6 +57,8 @@ const (
 
 	// Polling time between each attempt to check serviceAccount and imagePullSecret (in seconds)
 	resourceAvailabilityCheckMaxPollInterval = 5 * time.Second
+
+	serviceContainerPrefix = "svc-"
 )
 
 var (
@@ -482,6 +486,8 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 
 	go s.processLogs(ctx)
 
+	s.captureContainersLogs(ctx, s.pod.Spec.Containers)
+
 	return nil
 }
 
@@ -807,7 +813,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		allowedImages []string
 		envVars       []common.JobVariable
 	)
-	if strings.HasPrefix(opts.name, "svc-") {
+	if strings.HasPrefix(opts.name, serviceContainerPrefix) {
 		optionName = "services"
 		allowedImages = s.Config.Kubernetes.AllowedServices
 		envVars = s.getServiceVariables(opts.imageDefinition)
@@ -1463,7 +1469,7 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 	for i, service := range s.options.Services {
 		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
 		podServices[i], err = s.buildContainer(containerBuildOpts{
-			name:            fmt.Sprintf("svc-%d", i),
+			name:            fmt.Sprintf("%s%d", serviceContainerPrefix, i),
 			image:           resolvedImage,
 			imageDefinition: service,
 			requests:        s.configurationOverwrites.serviceRequests,
@@ -1978,6 +1984,64 @@ func (s *executor) checkDefaults() error {
 
 	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
 
+	return nil
+}
+
+// captureContainersLogs initiates capturing logs for the specified kubernetes
+// managed containers to a desired additional sink. The sink can be any
+// io.Writer. Currently the sink is the jobs main trace, which is wrapped in an
+// inlineServiceLogWriter instance to add additional context to logs. In the
+// future this could be separate file.
+func (s *executor) captureContainersLogs(ctx context.Context, containers []api.Container) {
+	if !s.Build.IsCIDebugServiceEnabled() {
+		return
+	}
+
+	for _, service := range s.Build.Services {
+		for _, container := range containers {
+			if service.Name != container.Image {
+				continue
+			}
+			aliases := []string{strings.Split(container.Image, ":")[0], service.Alias}
+			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), s.Trace)
+			if err := s.captureContainerLogs(ctx, container.Name, sink); err != nil {
+				s.Warningln(err.Error())
+			}
+		}
+	}
+}
+
+// captureContainerLogs tails (i.e. reads) logs emitted to stdout or stdin from
+// processes in the specified kubernetes managed container, and redirects them
+// to the specified sink, which can be any io.Writer (e.g. this process's
+// stdout, a file, a log aggregator). The logs are streamed as they are emitted,
+// rather than batched and written when we disconnect from the container (or it
+// is stopped). The specified sink is closed when the source is completely
+// drained.
+func (s *executor) captureContainerLogs(ctx context.Context, containerName string, sink io.WriteCloser) error {
+	podLogOpts := api.PodLogOptions{
+		Container:  containerName,
+		Follow:     true,
+		Timestamps: true,
+	}
+
+	podLogs, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
+	}
+
+	s.Debugln("streaming logs for container " + containerName)
+	go func() {
+		defer podLogs.Close()
+		defer sink.Close()
+
+		if _, err = io.Copy(sink, podLogs); err != nil {
+			if err != io.EOF && !errors.Is(err, context.Canceled) {
+				s.Warningln(fmt.Sprintf("error streaming logs for container %s: %s", containerName, err.Error()))
+			}
+		}
+		s.Debugln("stopped streaming logs for container " + containerName)
+	}()
 	return nil
 }
 

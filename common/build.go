@@ -1446,3 +1446,21 @@ func (b *Build) IsLFSSmudgeDisabled() bool {
 
 	return disabled
 }
+
+func (b *Build) IsCIDebugServiceEnabled() bool {
+	debugServices := b.GetAllVariables().Get("CI_DEBUG_SERVICES")
+
+	if debugServices == "" {
+		return false
+	}
+
+	enabled, err := strconv.ParseBool(debugServices)
+	if err != nil {
+		b.logger.Warningln(fmt.Sprintf(
+			"failed to parse value '%s' for CI_DEBUG_SERVICES variable: %s",
+			debugServices,
+			err.Error(),
+		))
+	}
+	return enabled
+}

@@ -1923,3 +1923,68 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 		})
 	}
 }
+
+func Test_CaptureServiceLogs(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		buildVars []common.JobVariable
+		assert    func(string, error)
+	}{
+		"enabled": {
+			buildVars: []common.JobVariable{
+				{
+					Key:    "CI_DEBUG_SERVICES",
+					Value:  "true",
+					Public: true,
+				}, {
+					Key:    "POSTGRES_PASSWORD",
+					Value:  "password",
+					Public: true,
+				},
+			},
+			assert: func(out string, err error) {
+				assert.NoError(t, err)
+				assert.NotContains(t, out, "WARNING: failed to parse value 'trace' for CI_DEBUG_SERVICES variable")
+				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\] .* The files belonging to this database system will be owned by user "postgres"`, out)
+				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\] .* database system is ready to accept connections`, out)
+				assert.Regexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.Regexp(t, `\[service:(redis-cache|cache-redis)\] .* Ready to accept connections`, out)
+			},
+		},
+		"not enabled": {
+			assert: func(out string, err error) {
+				assert.NoError(t, err)
+				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\] .* Error: Database is uninitialized and superuser password is not specified`, out)
+				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* Ready to accept connections`, out)
+			},
+		},
+		"bogus value": {
+			buildVars: []common.JobVariable{{
+				Key:    "CI_DEBUG_SERVICES",
+				Value:  "blammo",
+				Public: true,
+			}},
+			assert: func(out string, err error) {
+				assert.NoError(t, err)
+				assert.Contains(t, out, "WARNING: failed to parse value 'blammo' for CI_DEBUG_SERVICES variable")
+				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\] .* Error: Database is uninitialized and superuser password is not specified`, out)
+				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* Ready to accept connections`, out)
+			},
+		},
+	}
+
+	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+	build.Services = append(build.Services, common.Image{Name: "postgres:14.4", Alias: "db"})
+	build.Services = append(build.Services, common.Image{Name: "redis:7.0", Alias: "cache"})
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build.Variables = tt.buildVars
+			out, err := buildtest.RunBuildReturningOutput(t, &build)
+			tt.assert(out, err)
+		})
+	}
+}

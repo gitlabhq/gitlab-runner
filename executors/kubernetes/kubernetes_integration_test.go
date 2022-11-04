@@ -1593,6 +1593,22 @@ func getTestBuild(t *testing.T, getJobResponse func() (common.JobResponse, error
 	return getTestBuildWithImage(t, common.TestAlpineImage, getJobResponse)
 }
 
+func getTestBuildWithServices(
+	t *testing.T,
+	getJobResponse func() (common.JobResponse, error),
+	services ...string,
+) *common.Build {
+	build := getTestBuild(t, getJobResponse)
+
+	for _, service := range services {
+		build.Services = append(build.Services, common.Image{
+			Name: service,
+		})
+	}
+
+	return build
+}
+
 func getTestKubeClusterClient(t *testing.T) *k8s.Clientset {
 	config, err := kubernetes.GetKubeClientConfig(new(common.KubernetesConfig))
 	require.NoError(t, err)
@@ -1908,7 +1924,7 @@ func TestKubernetesPwshFeatureFlag(t *testing.T) {
 	}
 }
 
-func TestDockerCommandConflictingPullPolicies(t *testing.T) {
+func TestConflictingPullPolicies(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
@@ -1970,6 +1986,71 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 			require.Error(t, gotErr)
 			assert.Contains(t, gotErr.Error(), test.wantErrMsg)
 			assert.Contains(t, gotErr.Error(), "failed to pull image '"+common.TestAlpineImage)
+		})
+	}
+}
+
+func Test_CaptureServiceLogs(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		buildVars []common.JobVariable
+		assert    func(string, error)
+	}{
+		"enabled": {
+			buildVars: []common.JobVariable{
+				{
+					Key:    "CI_DEBUG_SERVICES",
+					Value:  "1",
+					Public: true,
+				}, {
+					Key:    "POSTGRES_PASSWORD",
+					Value:  "password",
+					Public: true,
+				},
+			},
+			assert: func(out string, err error) {
+				assert.NoError(t, err)
+				assert.NotContains(t, out, "WARNING: invalid value '1' for CI_DEBUG_SERVICES variable")
+				assert.Regexp(t, `\[service:postgres-db\] .* The files belonging to this database system will be owned by user "postgres"`, out)
+				assert.Regexp(t, `\[service:postgres-db\] .* database system is ready to accept connections`, out)
+				assert.Regexp(t, `\[service:redis-cache\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.Regexp(t, `\[service:redis-cache\] .* Ready to accept connections`, out)
+			},
+		},
+		"not enabled": {
+			assert: func(out string, err error) {
+				assert.NoError(t, err)
+				assert.NotContains(t, out, "WARNING: invalid value '1' for CI_DEBUG_SERVICES variable")
+				assert.NotRegexp(t, `\[service:postgres-db\] .* Error: Database is uninitialized and superuser password is not specified`, out)
+				assert.NotRegexp(t, `\[service:redis-cache\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.NotRegexp(t, `\[service:redis-cache\] .* Ready to accept connections`, out)
+			},
+		},
+		"bogus value": {
+			buildVars: []common.JobVariable{{
+				Key:    "CI_DEBUG_SERVICES",
+				Value:  "blammo",
+				Public: true,
+			}},
+			assert: func(out string, err error) {
+				assert.Contains(t, out, "WARNING: failed to parse value 'blammo' for CI_DEBUG_SERVICES variable")
+				assert.NotRegexp(t, `\[service:postgres-db\] .* Error: Database is uninitialized and superuser password is not specified`, out)
+				assert.NotRegexp(t, `\[service:redis-cache\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
+				assert.NotRegexp(t, `\[service:redis-cache\] .* Ready to accept connections`, out)
+			},
+		},
+	}
+
+	build := getTestBuildWithServices(t, common.GetRemoteSuccessfulBuild, "postgres:14.4", "redis:7.0")
+	build.Services[0].Alias = "db"
+	build.Services[1].Alias = "cache"
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build.Variables = tt.buildVars
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			tt.assert(out, err)
 		})
 	}
 }
