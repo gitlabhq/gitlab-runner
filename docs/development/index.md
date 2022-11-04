@@ -6,20 +6,65 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Contribute to GitLab Runner development
 
-## 1. Install dependencies and Go runtime
+GitLab Runner is a golang binary which can operate in two modes:
 
-Add `$GOBIN` to your `$PATH` to ensure binaries installed via `go install` are runnable.
-Your shell looks for binaries in `$PATH` directories sequentially, so choose an order based on your preference:
+1. GitLab Runner executing jobs locally ("instance" executor).
+1. GitLab Runner Manager delegating jobs to an autoscaled environment which uses GitLab Runner Helper to pull artifacts.
+
+For developing GitLab Runner in instance executor mode (1) the only setup required is a working golang environment.
+For developing GitLab Runner in Manager and Helper mode (2) setup also requires a Docker build environment.
+Additionally running the Manager or Helper in Kubernetes will require a working cluster.
+
+The following instructions setup your golang environment using `asdf` to manage the golang version. If you already have this or otherwise know what you're doing, you can skip step 2 ("Install dependencies and Go runtime").
+
+In order to provide Docker and Kubernetes locally Step 3 has you setting Rancher Desktop. If you don't need one or both you can skip step 3 ("Install Rancher Desktop") or just disable `k3s` (Kubernetes) in Rancher Desktop.
+
+The recommended environment on which to install golang and Rancher Desktop for development is a local laptop or desktop. It is possible to use nested-virtualization to run Rancher Desktop in the cloud (which runs `k3s` in a VM) but it's more tricky to setup.
+
+## Runner Shorts
+
+You can also follow along with the Runner Shorts (~20 minute videos) on setting up and making a change:
+
+1. [Setting up a GitLab Runner development environment](https://www.youtube.com/watch?v=-KlaXpUdJOI)
+1. [Code walkthrough of GitLab Runner](https://www.youtube.com/watch?v=pEtfmZ0Ssc4)
+1. [Making and testing locally a GitLab Runner change](https://www.youtube.com/watch?v=45H4WIuu8Fc)
+
+## 1. Clone GitLab Runner
 
 ```shell
-export PATH="$(go env GOBIN):$PATH"
+git clone https://gitlab.com/gitlab-org/gitlab-runner.git
 ```
 
-or
+If you are developing for GitLab Runner in autoscaled mode (Manager and Helper) you might want to check out
+one or more of Taskscaler, Fleeting and associated plugins. To make local changes from one package visible
+to the others, use golang workspaces.
 
 ```shell
-export PATH="$PATH:$(go env GOBIN)"
+git clone https://gitlab.com/gitlab-org/fleeting/taskscaler.git
+git clone https://gitlab.com/gitlab-org/fleeting/fleeting.git
+git clone https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws.git
+git clone https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute.git
+go work init
+go work use gitlab-runner
+go work use taskscaler
+go work use fleeting
+go work use fleeting-plugin-aws
+go work use fleeting-plugin-googlecompute
 ```
+
+## 2. Install dependencies and Go runtime
+
+The GitLab Runner project uses [`asdf`](https://asdf-vm.com/) to manage dependencies.
+The simplest way to get your development environment setup is to use `asdf`:
+
+```shell
+cd gitlab-runner
+asdf plugin add golang
+asdf install
+```
+
+NOTE:
+If you are not using `asdf`, follow the instructions below for the relevant distribution.
 
 ### For Debian/Ubuntu
 
@@ -27,6 +72,7 @@ export PATH="$PATH:$(go env GOBIN)"
 sudo apt-get install -y mercurial git-core wget make build-essential
 wget https://storage.googleapis.com/golang/go1.18.7.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
+export PATH="$(go env GOBIN):$PATH"
 ```
 
 ### For CentOS
@@ -36,6 +82,7 @@ sudo yum install mercurial wget make
 sudo yum groupinstall 'Development Tools'
 wget https://storage.googleapis.com/golang/go1.18.7.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
+export PATH="$(go env GOBIN):$PATH"
 ```
 
 ### For macOS
@@ -45,6 +92,7 @@ Using binary package:
 ```shell
 wget https://storage.googleapis.com/golang/go1.18.7.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
+export PATH="$(go env GOBIN):$PATH"
 ```
 
 Using installation package:
@@ -52,85 +100,67 @@ Using installation package:
 ```shell
 wget https://storage.googleapis.com/golang/go1.18.7.darwin-amd64.pkg
 open go*-*.pkg
+export PATH="$(go env GOBIN):$PATH"
 ```
 
 ### For FreeBSD
 
 ```shell
 pkg install go-1.18.7 gmake git mercurial
+export PATH="$(go env GOBIN):$PATH"
 ```
 
-## 2. Install Docker Engine
+## 3. Install Rancher Desktop
 
-The Docker Engine is required to create pre-built image that is embedded into GitLab Runner and loaded when using Docker executor.
+The Docker Engine is required to create pre-built image that is embedded into GitLab Runner and loaded when using Docker executor. A local Kubernetes cluster is helpful for developing Kubernetes executor. Rancher Desktop provides both.
 
-To install Docker, follow the Docker
-[installation instructions](https://docs.docker.com/get-docker/) for your OS.
+To install Rancher Desktop, follow the
+[installation instructions](https://docs.rancherdesktop.io/getting-started/installation/) for your OS.
 
-Make sure you have a `binfmt_misc` on the machine that is running your Docker Engine.
-This is required for building ARM images that are embedded into the GitLab Runner binary.
-
-- For Debian/Ubuntu it's sufficient to execute:
-
-  ```shell
-  sudo apt-get install binfmt-support qemu-user-static
-  ```
-
-- For Docker for MacOS/Windows `binfmt_misc` is enabled by default.
-
-- For CoreOS (but also works on Debian and Ubuntu) you need to execute the following script on system start:
-
-  ```shell
-  #!/bin/sh
-
-  set -xe
-
-  /sbin/modprobe binfmt_misc
-
-  mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
-
-  # Support for ARM binaries through Qemu:
-  { echo ':arm:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-arm-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
-  { echo ':armeb:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-armeb-static:' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
-  { echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-aarch64-static:CF' > /proc/sys/fs/binfmt_misc/register; } 2>/dev/null
-  ```
-
-## 3. Download GitLab Runner sources
-
-```shell
-go get gitlab.com/gitlab-org/gitlab-runner
-```
+NOTE:
+Be sure to configure Rancher Desktop to use `dockerd (moby)` and not `containerd`.
 
 ## 4. Install GitLab Runner dependencies
 
-After you clone GitLab Runner, `cd` into the `gitlab-runner` directory and download and restore all build dependencies:
-
 ```shell
-git clone <gitlab-runner-uri>
-cd gitlab-runner
 make deps
+asdf reshim
 ```
 
 **For FreeBSD use `gmake deps`**
 
-## 5. Run GitLab Runner
+## 5. Build GitLab Runner
 
-Normally you would use `gitlab-runner`. In order to compile and run the Go sources, use the Go toolchain:
+Set image version environment variables:
 
 ```shell
-make runner-and-helper-bin-host
-./out/binaries/gitlab-runner run
+export ALPINE_312_VERSION="3.12.12"
+export ALPINE_313_VERSION="3.13.12"
+export ALPINE_314_VERSION="3.14.8"
+export ALPINE_315_VERSION="3.15.6"
+export UBUNTU_VERSION="20.04"
 ```
 
-You can run GitLab Runner in debug-mode:
+Compile GitLab Runner using the Go toolchain:
 
 ```shell
 make runner-and-helper-bin-host
-./out/binaries/gitlab-runner --debug run
 ```
 
 `make runner-and-helper-bin-host` is a superset of `make runner-bin-host` which in addition
 takes care of building the Runner Helper Docker archive dependencies.
+
+## 6. Run GitLab Runner
+
+```shell
+./out/binaries/gitlab-runner run
+```
+
+You can use the any of the usual command-line arguments (including `--debug`):
+
+```shell
+./out/binaries/gitlab-runner --debug run
+```
 
 ### Building the Docker images
 
@@ -142,7 +172,7 @@ If you want to build the Docker images, run `make runner-and-helper-docker-host`
    and the Ubuntu image build uses the DEB package.
 1. Build the Alpine and Ubuntu versions of the `gitlab/gitlab-runner` image.
 
-## 6. Run test suite locally
+## 7. Run test suite locally
 
 GitLab Runner test suite consists of "core" tests and tests for executors.
 Tests for executors require certain binaries to be installed on your local
@@ -170,7 +200,7 @@ To execute the tests run:
 make test
 ```
 
-## 7. Run tests with helper image version of choice
+## 8. Run tests with helper image version of choice
 
 If you are developing functionality inside a helper, you'll most likely want to run tests with
 the version of the Docker image that contains the newest changes.
@@ -229,7 +259,7 @@ For example, with minikube:
 eval $(minikube docker-env)
 ```
 
-## 8. Install optional tools
+## 9. Install optional tools
 
 - Install `golangci-lint`, used for the `make lint` target.
 - Install `markdown-lint` and `vale`, used for the `make lint-docs` target.
@@ -237,7 +267,7 @@ eval $(minikube docker-env)
 Installation instructions will pop up when running a Makefile target
 if a tool is missing.
 
-## 9. Contribute
+## 10. Contribute
 
 You can start hacking `gitlab-runner` code.
 If you need an IDE to edit and debug code, there are a few free suggestions you can use:
