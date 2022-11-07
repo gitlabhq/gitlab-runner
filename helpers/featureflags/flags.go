@@ -25,6 +25,7 @@ const (
 	KubernetesHonorEntrypoint            string = "FF_KUBERNETES_HONOR_ENTRYPOINT"
 	PosixlyCorrectEscapes                string = "FF_POSIXLY_CORRECT_ESCAPES"
 	UseImprovedURLMasking                string = "FF_USE_IMPROVED_URL_MASKING"
+	ResolveFullTLSChain                  string = "FF_RESOLVE_FULL_TLS_CHAIN"
 )
 
 type FeatureFlag struct {
@@ -195,6 +196,22 @@ var flags = []FeatureFlag{
 			"log output. When this is disabled, sensitive URL parameters are only masked in select places and can " +
 			"[occasionally be revealed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4625). This feature " +
 			"flag can only be configured via Runner's config and not from a job.",
+	},
+	{
+		Name:         ResolveFullTLSChain,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, the runner resolves a full TLS " +
+			"chain all the way down to a self-signed root certificate " +
+			"for `CI_SERVER_TLS_CA_FILE`. This was previously " +
+			"[required to make Git HTTPS clones to work](tls-self-signed.md#git-cloning) " +
+			"for a Git client built with libcurl prior to v7.68.0 and OpenSSL. " +
+			"However, the process to resolve certificates may fail on " +
+			"some operating systems, such as macOS, that reject root certificates " +
+			"signed with older signature algorithms. " +
+			"If certificate resolution fails, you may need to disable this feature. " +
+			"This feature flag can only be disabled in the " +
+			"[`[runners.feature_flags]` configuration](#enable-feature-flag-in-runner-configuration).",
 	},
 }
 
