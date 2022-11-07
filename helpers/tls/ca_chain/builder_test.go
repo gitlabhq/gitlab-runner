@@ -131,15 +131,18 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 	tests := map[string]struct {
 		chains              [][]*x509.Certificate
 		setupResolverMock   func(t *testing.T) (resolver, func())
+		resolveFullChain    bool
 		expectedError       string
 		expectedChainLength int
 	}{
 		"no chains": {
 			chains:              [][]*x509.Certificate{},
+			resolveFullChain:    true,
 			expectedChainLength: 0,
 		},
 		"empty chain": {
 			chains:              [][]*x509.Certificate{{}},
+			resolveFullChain:    true,
 			expectedChainLength: 0,
 		},
 		"error on chain resolving": {
@@ -157,6 +160,7 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 
 				return mock, cleanup
 			},
+			resolveFullChain: true,
 			expectedError: "error while fetching certificates into the CA Chain: couldn't resolve certificates " +
 				"chain from the leaf certificate: test-error",
 			expectedChainLength: 0,
@@ -176,7 +180,13 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 
 				return mock, cleanup
 			},
+			resolveFullChain:    true,
 			expectedChainLength: 2,
+		},
+		"certificates chain with resolve disabled": {
+			chains:              [][]*x509.Certificate{{testCertificate}},
+			resolveFullChain:    false,
+			expectedChainLength: 1,
 		},
 	}
 
@@ -184,7 +194,7 @@ func TestDefaultBuilder_BuildChainFromTLSConnectionState(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			var err error
 
-			builder := NewBuilder(logrus.StandardLogger()).(*defaultBuilder)
+			builder := NewBuilder(logrus.StandardLogger(), tc.resolveFullChain).(*defaultBuilder)
 
 			if tc.setupResolverMock != nil {
 				resolverMock, cleanup := tc.setupResolverMock(t)
@@ -214,7 +224,7 @@ func TestDefaultBuilder_addCertificate(t *testing.T) {
 	testCertificate, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
 
-	b := NewBuilder(logrus.StandardLogger()).(*defaultBuilder)
+	b := NewBuilder(logrus.StandardLogger(), true).(*defaultBuilder)
 	b.addCertificate(testCertificate)
 	b.addCertificate(testCertificate)
 
@@ -267,7 +277,7 @@ func TestDefaultBuilder_String(t *testing.T) {
 			logger := logrus.New()
 			logger.Out = out
 
-			b := NewBuilder(logger).(*defaultBuilder)
+			b := NewBuilder(logger, true).(*defaultBuilder)
 			b.encodePEM = tc.encodePEMMock
 
 			b.addCertificate(testCertificate)
