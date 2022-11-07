@@ -1925,6 +1925,7 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 }
 
 func Test_CaptureServiceLogs(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	tests := map[string]struct {
