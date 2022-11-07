@@ -47,6 +47,7 @@ var supportedWindowsVersions = []string{
 var supportedWindowsBuilds = map[string]string{
 	"10.0.17763": V1809,
 	"10.0.19041": V2004,
+	"10.0.19042": V20H2,
 }
 
 // Version checks the specified operatingSystem to see if it's one of the
