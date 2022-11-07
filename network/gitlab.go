@@ -19,6 +19,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 const clientError = -100
@@ -215,6 +216,7 @@ func (n *GitLabClient) doJSONWithPAT(
 
 func (n *GitLabClient) getResponseTLSData(
 	credentials requestCredentials,
+	resolveFullChain bool,
 	response *http.Response,
 ) (ResponseTLSData, error) {
 	c, err := n.getClient(credentials)
@@ -222,7 +224,7 @@ func (n *GitLabClient) getResponseTLSData(
 		return ResponseTLSData{}, fmt.Errorf("couldn't get client: %w", err)
 	}
 
-	return c.getResponseTLSData(response.TLS)
+	return c.getResponseTLSData(response.TLS, resolveFullChain)
 }
 
 func (n *GitLabClient) RegisterRunner(
@@ -434,7 +436,8 @@ func (n *GitLabClient) RequestJob(
 			"repo_url": response.RepoCleanURL(),
 		}).Println("Checking for jobs...", "received")
 
-		tlsData, err := n.getResponseTLSData(&config.RunnerCredentials, httpResponse)
+		resolveFullChain := config.IsFeatureFlagOn(featureflags.ResolveFullTLSChain)
+		tlsData, err := n.getResponseTLSData(&config.RunnerCredentials, resolveFullChain, httpResponse)
 		if err != nil {
 			config.Log().
 				WithError(err).Errorln("Error on fetching TLS Data from API response...", "error")

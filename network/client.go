@@ -461,13 +461,13 @@ func getMessageFromJSONOrXMLResponse(res *http.Response) string {
 	return res.Status
 }
 
-func (n *client) getResponseTLSData(tls *tls.ConnectionState) (ResponseTLSData, error) {
+func (n *client) getResponseTLSData(tls *tls.ConnectionState, resolveFullChain bool) (ResponseTLSData, error) {
 	TLSData := ResponseTLSData{
 		CertFile: n.certFile,
 		KeyFile:  n.keyFile,
 	}
 
-	caChain, err := n.buildCAChain(tls)
+	caChain, err := n.buildCAChain(tls, resolveFullChain)
 	if err != nil {
 		return TLSData, fmt.Errorf("couldn't build CA Chain: %w", err)
 	}
@@ -477,7 +477,7 @@ func (n *client) getResponseTLSData(tls *tls.ConnectionState) (ResponseTLSData, 
 	return TLSData, nil
 }
 
-func (n *client) buildCAChain(tls *tls.ConnectionState) (string, error) {
+func (n *client) buildCAChain(tls *tls.ConnectionState, resolveFullChain bool) (string, error) {
 	if len(n.caData) != 0 {
 		return string(n.caData), nil
 	}
@@ -486,7 +486,7 @@ func (n *client) buildCAChain(tls *tls.ConnectionState) (string, error) {
 		return "", nil
 	}
 
-	builder := ca_chain.NewBuilder(logrus.StandardLogger())
+	builder := ca_chain.NewBuilder(logrus.StandardLogger(), resolveFullChain)
 	err := builder.BuildChainFromTLSConnectionState(tls)
 	if err != nil {
 		return "", fmt.Errorf("error while fetching certificates from TLS ConnectionState: %w", err)
