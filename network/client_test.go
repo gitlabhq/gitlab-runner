@@ -325,7 +325,7 @@ func TestClientTLSCAFile(t *testing.T) {
 	)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	tlsData, err := c.getResponseTLSData(resp.TLS)
+	tlsData, err := c.getResponseTLSData(resp.TLS, true)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 }
@@ -359,7 +359,7 @@ func TestClientCertificateInPredefinedDirectory(t *testing.T) {
 	)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	tlsData, err := c.getResponseTLSData(resp.TLS)
+	tlsData, err := c.getResponseTLSData(resp.TLS, true)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 }
@@ -442,7 +442,7 @@ func TestClientTLSAuth(t *testing.T) {
 	)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	tlsData, err := c.getResponseTLSData(resp.TLS)
+	tlsData, err := c.getResponseTLSData(resp.TLS, true)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 	assert.Equal(t, cert.Name(), tlsData.CertFile)
@@ -488,7 +488,7 @@ func TestClientTLSAuthCertificatesInPredefinedDirectory(t *testing.T) {
 	)
 	assert.Equal(t, http.StatusOK, statusCode, statusText)
 
-	tlsData, err := c.getResponseTLSData(resp.TLS)
+	tlsData, err := c.getResponseTLSData(resp.TLS, true)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, tlsData.CAChain)
 	assert.NotEmpty(t, tlsData.CertFile)

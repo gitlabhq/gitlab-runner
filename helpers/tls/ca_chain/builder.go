@@ -25,7 +25,7 @@ type Builder interface {
 	BuildChainFromTLSConnectionState(TLS *tls.ConnectionState) error
 }
 
-func NewBuilder(logger logrus.FieldLogger) Builder {
+func NewBuilder(logger logrus.FieldLogger, resolveFullChain bool) Builder {
 	logger = logger.
 		WithField("context", "certificate-chain-build")
 
@@ -36,14 +36,16 @@ func NewBuilder(logger logrus.FieldLogger) Builder {
 			newURLResolver(logger),
 			newVerifyResolver(logger),
 		),
-		encodePEM: pem.Encode,
-		logger:    logger,
+		encodePEM:        pem.Encode,
+		logger:           logger,
+		resolveFullChain: resolveFullChain,
 	}
 }
 
 type defaultBuilder struct {
 	certificates     []*x509.Certificate
 	seenCertificates map[string]bool
+	resolveFullChain bool
 
 	resolver  resolver
 	encodePEM pemEncoder
@@ -54,8 +56,10 @@ type defaultBuilder struct {
 func (b *defaultBuilder) BuildChainFromTLSConnectionState(tls *tls.ConnectionState) error {
 	for _, verifiedChain := range tls.VerifiedChains {
 		b.logger.
-			WithField("chain-leaf", fmt.Sprintf("%v", verifiedChain)).
-			Debug("Processing chain")
+			WithFields(logrus.Fields{
+				"chain-leaf":         fmt.Sprintf("%v", verifiedChain),
+				"resolve-full-chain": b.resolveFullChain,
+			}).Debug("Processing chain")
 		err := b.fetchCertificatesFromVerifiedChain(verifiedChain)
 		if err != nil {
 			return fmt.Errorf("error while fetching certificates into the CA Chain: %w", err)
@@ -72,9 +76,11 @@ func (b *defaultBuilder) fetchCertificatesFromVerifiedChain(verifiedChain []*x50
 		return nil
 	}
 
-	verifiedChain, err = b.resolver.Resolve(verifiedChain)
-	if err != nil {
-		return fmt.Errorf("couldn't resolve certificates chain from the leaf certificate: %w", err)
+	if b.resolveFullChain {
+		verifiedChain, err = b.resolver.Resolve(verifiedChain)
+		if err != nil {
+			return fmt.Errorf("couldn't resolve certificates chain from the leaf certificate: %w", err)
+		}
 	}
 
 	for _, certificate := range verifiedChain {
