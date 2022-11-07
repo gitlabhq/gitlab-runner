@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -41,8 +41,11 @@ func presignedURL(name string, o *signedURLOptions) (*url.URL, error) {
 		SAS:           sas,
 	}
 
-	u := parts.URL()
-	return &u, nil
+	u, err := url.Parse(parts.URL())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Azure URL '%s': %w", parts.URL(), err)
+	}
+	return u, nil
 }
 
 func getSASToken(name string, o *signedURLOptions) (string, error) {
