@@ -472,6 +472,13 @@ func (n *GitLabClient) UpdateJob(
 		ExitCode:      jobInfo.ExitCode,
 	}
 
+	log := config.Log().
+		WithField("job", jobInfo.ID).
+		WithField("checksum", request.Output.Checksum).
+		WithField("bytesize", request.Output.Bytesize)
+
+	log.Info("Updating job...")
+
 	statusCode, statusText, response := n.doJSON(
 		context.Background(),
 		&config.RunnerCredentials,
@@ -482,8 +489,6 @@ func (n *GitLabClient) UpdateJob(
 		nil,
 	)
 	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, statusCode)
-
-	log := config.Log().WithField("job", jobInfo.ID)
 
 	return n.createUpdateJobResult(log, statusCode, statusText, response)
 }

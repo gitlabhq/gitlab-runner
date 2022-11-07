@@ -304,7 +304,7 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 				Token: validToken,
 			}
 
-			h := registerRunnerLogHook{}
+			h := newLogHook(logrus.ErrorLevel)
 			logrus.AddHook(&h)
 
 			res := c.RegisterRunner(
@@ -324,15 +324,20 @@ func TestRegisterRunnerOnRunnerLimitHit(t *testing.T) {
 	}
 }
 
-type registerRunnerLogHook struct {
+func newLogHook(levels ...logrus.Level) logHook {
+	return logHook{levels: levels}
+}
+
+type logHook struct {
 	entries []*logrus.Entry
+	levels  []logrus.Level
 }
 
-func (s *registerRunnerLogHook) Levels() []logrus.Level {
-	return []logrus.Level{logrus.ErrorLevel}
+func (s *logHook) Levels() []logrus.Level {
+	return s.levels
 }
 
-func (s *registerRunnerLogHook) Fire(entry *logrus.Entry) error {
+func (s *logHook) Fire(entry *logrus.Entry) error {
 	s.entries = append(s.entries, entry)
 	return nil
 }
@@ -962,6 +967,56 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 }
 
 func TestUpdateJob(t *testing.T) {
+	output := JobTraceOutput{
+		Checksum: "checksum",
+		Bytesize: 42,
+	}
+
+	type testCase struct {
+		updateJobInfo   UpdateJobInfo
+		updateJobResult UpdateJobResult
+	}
+
+	testCases := map[string]testCase{
+		"Update continues when running": {
+			updateJobInfo:   UpdateJobInfo{ID: 200, State: Running, Output: output},
+			updateJobResult: UpdateJobResult{State: UpdateSucceeded},
+		},
+		"Update aborts if the access is forbidden": {
+			updateJobInfo:   UpdateJobInfo{ID: 403, State: Success, Output: output},
+			updateJobResult: UpdateJobResult{State: UpdateAbort},
+		},
+		"Update fails for badly formatted request": {
+			updateJobInfo:   UpdateJobInfo{ID: 200, State: "invalid-state", Output: output},
+			updateJobResult: UpdateJobResult{State: UpdateFailed},
+		},
+		"Update aborts for unknown job": {
+			updateJobInfo:   UpdateJobInfo{ID: 404, State: Success, Output: output},
+			updateJobResult: UpdateJobResult{State: UpdateAbort},
+		},
+		"Update returns accepted, but not completed if server returns `202 StatusAccepted`": {
+			updateJobInfo:   UpdateJobInfo{ID: 202, State: Success, Output: output},
+			updateJobResult: UpdateJobResult{State: UpdateAcceptedButNotCompleted},
+		},
+		"Update returns reset content requested if server returns `412 Precondition Failed`": {
+			updateJobInfo:   UpdateJobInfo{ID: 412, State: Success, Output: output},
+			updateJobResult: UpdateJobResult{State: UpdateTraceValidationFailed},
+		},
+		"Update should continue when script fails": {
+			updateJobInfo:   UpdateJobInfo{ID: 200, State: Failed, FailureReason: ScriptFailure, Output: output},
+			updateJobResult: UpdateJobResult{State: UpdateSucceeded},
+		},
+		"Update fails for invalid failure reason": {
+			updateJobInfo: UpdateJobInfo{
+				ID:            200,
+				State:         Failed,
+				FailureReason: "invalid-failure-reason",
+				Output:        output,
+			},
+			updateJobResult: UpdateJobResult{State: UpdateFailed},
+		},
+	}
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		testUpdateJobHandler(w, r, t)
 	}
@@ -981,43 +1036,21 @@ func TestUpdateJob(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	result := c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 200, State: Running})
-	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			h := newLogHook(logrus.InfoLevel)
+			logrus.AddHook(&h)
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 403, State: Success})
-	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should be aborted if the access is forbidden")
+			result := c.UpdateJob(config, jobCredentials, tc.updateJobInfo)
+			assert.Equal(t, tc.updateJobResult, result, tn)
 
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 200, State: "invalid-state"})
-	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
-
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 404, State: Success})
-	assert.Equal(t, UpdateJobResult{State: UpdateAbort}, result, "Update should abort for unknown job")
-
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 202, State: Success})
-	assert.Equal(
-		t, UpdateJobResult{State: UpdateAcceptedButNotCompleted}, result,
-		"Update should return accepted, but not completed if server returns `202 StatusAccepted`",
-	)
-
-	result = c.UpdateJob(config, jobCredentials, UpdateJobInfo{ID: 412, State: Success})
-	assert.Equal(
-		t, UpdateJobResult{State: UpdateTraceValidationFailed}, result,
-		"Update should return reset content requested if server returns `412 Precondition Failed`",
-	)
-
-	result = c.UpdateJob(
-		config,
-		jobCredentials,
-		UpdateJobInfo{ID: 200, State: Failed, FailureReason: "script_failure"},
-	)
-	assert.Equal(t, UpdateJobResult{State: UpdateSucceeded}, result, "Update should continue when running")
-
-	result = c.UpdateJob(
-		config,
-		jobCredentials,
-		UpdateJobInfo{ID: 200, State: Failed, FailureReason: "invalid-failure-reason"},
-	)
-	assert.Equal(t, UpdateJobResult{State: UpdateFailed}, result, "Update should fail for badly formatted request")
+			require.Len(t, h.entries, 1)
+			assert.Equal(t, "Updating job...", h.entries[0].Message)
+			assert.Equal(t, tc.updateJobInfo.ID, h.entries[0].Data["job"])
+			assert.Equal(t, tc.updateJobInfo.Output.Bytesize, h.entries[0].Data["bytesize"])
+			assert.Equal(t, tc.updateJobInfo.Output.Checksum, h.entries[0].Data["checksum"])
+		})
+	}
 }
 
 func testUpdateJobKeepAliveHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
