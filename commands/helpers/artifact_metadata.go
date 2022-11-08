@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -227,7 +228,13 @@ func (g *artifactMetadataGenerator) parseTimings() (time.Time, time.Time, error)
 func (g *artifactMetadataGenerator) generateSubjects(files map[string]os.FileInfo) ([]AttestationSubject, error) {
 	subjects := make([]AttestationSubject, 0, len(files))
 
-	for file := range files {
+	h := sha256.New()
+	br := bufio.NewReader(nil)
+	for file, fi := range files {
+		if !fi.Mode().IsRegular() {
+			continue
+		}
+
 		subject, err := func(file string) (AttestationSubject, error) {
 			f, err := os.Open(file)
 			if err != nil {
@@ -235,8 +242,9 @@ func (g *artifactMetadataGenerator) generateSubjects(files map[string]os.FileInf
 			}
 			defer f.Close()
 
-			h := sha256.New()
-			if _, err := io.Copy(h, f); err != nil {
+			br.Reset(f)
+			h.Reset()
+			if _, err := io.Copy(h, br); err != nil {
 				return AttestationSubject{}, err
 			}
 
