@@ -1842,3 +1842,78 @@ func benchmarkScriptStage(b *testing.B, shell common.Shell, stage common.BuildSt
 		assert.NoError(b, err, stage)
 	}
 }
+
+func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
+	info := common.ShellScriptInfo{
+		Build: &common.Build{
+			JobResponse: common.JobResponse{
+				Variables: common.JobVariables{
+					{Key: "GIT_STRATEGY", Value: "fetch"},
+					{Key: "GIT_CHECKOUT", Value: "false"},
+				},
+				GitInfo: common.GitInfo{
+					RepoURL: "repo-url",
+				},
+				Hooks: common.Hooks{
+					{
+						Name:   common.HookPreGetSourcesScript,
+						Script: common.StepScript{"job payload", "pre_get_sources"},
+					},
+					{
+						Name:   common.HookPostGetSourcesScript,
+						Script: common.StepScript{"job payload", "post_get_sources"},
+					},
+				},
+			},
+			Runner:   &common.RunnerConfig{},
+			BuildDir: "build-dir",
+		},
+		PreCloneScript:  "config pre_get_sources",
+		PostCloneScript: "config post_get_sources",
+	}
+
+	m := &MockShellWriter{}
+	defer m.AssertExpectations(t)
+
+	m.On("Variable", mock.Anything)
+
+	// Pre get sources from configuration file
+	m.On("Noticef", "$ %s", "config pre_get_sources")
+	m.On("Line", "config pre_get_sources")
+	// Pre get sources from job payload
+	m.On("Noticef", "$ %s", "job payload")
+	m.On("Line", "job payload")
+	m.On("Noticef", "$ %s", "pre_get_sources")
+	m.On("Line", "pre_get_sources")
+
+	m.On("CheckForErrors")
+	m.On("Noticef", "Fetching changes...")
+	m.On("MkTmpDir", "git-template").Return("git-template-dir").Once()
+	m.On("Join", "git-template-dir", "config").Return("git-template-dir-config").Once()
+	m.On("Command", "git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
+	m.On("RmFile", mock.Anything)
+	m.On("Command", "git", "init", "build-dir", "--template", "git-template-dir")
+	m.On("Cd", "build-dir")
+	m.On("IfCmd", "git", "remote", "add", "origin", "repo-url")
+	m.On("Noticef", "Created fresh repository.")
+	m.On("Else")
+	m.On("Command", "git", "remote", "set-url", "origin", "repo-url")
+	m.On("EndIf")
+	m.On("Command", "git", "-c", mock.Anything, "fetch", "origin", "--prune", "--quiet")
+	m.On("Noticef", "Skipping Git checkout")
+	m.On("Noticef", "Skipping Git submodules setup")
+
+	// Post get sources from job payload
+	m.On("Noticef", "$ %s", "job payload")
+	m.On("Line", "job payload")
+	m.On("Noticef", "$ %s", "post_get_sources")
+	m.On("Line", "post_get_sources")
+	// Post get sources from configuration file
+	m.On("Noticef", "$ %s", "config post_get_sources")
+	m.On("Line", "config post_get_sources")
+
+	shell := new(AbstractShell)
+
+	err := shell.writeGetSourcesScript(m, info)
+	assert.NoError(t, err)
+}
