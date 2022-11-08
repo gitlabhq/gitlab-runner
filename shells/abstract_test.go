@@ -1868,8 +1868,8 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 			Runner:   &common.RunnerConfig{},
 			BuildDir: "build-dir",
 		},
-		PreCloneScript:  "config pre_get_sources",
-		PostCloneScript: "config post_get_sources",
+		PreGetSourcesScript:  "config pre_get_sources",
+		PostGetSourcesScript: "config post_get_sources",
 	}
 
 	m := &MockShellWriter{}

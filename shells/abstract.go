@@ -236,8 +236,8 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 	b.guardGetSourcesScriptHooks(w, info, "pre_clone_script", func() []string {
 		var s []string
 
-		if info.PreCloneScript != "" {
-			s = append(s, info.PreCloneScript)
+		if info.PreGetSourcesScript != "" {
+			s = append(s, info.PreGetSourcesScript)
 		}
 
 		h := info.Build.Hooks.Get(common.HookPreGetSourcesScript)
@@ -264,8 +264,8 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 			s = append(s, h.Script...)
 		}
 
-		if info.PostCloneScript != "" {
-			s = append(s, info.PostCloneScript)
+		if info.PostGetSourcesScript != "" {
+			s = append(s, info.PostGetSourcesScript)
 		}
 
 		return s
