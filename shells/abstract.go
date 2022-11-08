@@ -310,6 +310,15 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 	for _, variable := range info.Build.GetAllVariables() {
 		w.Variable(variable)
 	}
+
+	gitlabEnvFile := w.TmpFile("gitlab_runner_env")
+
+	w.Variable(common.JobVariable{
+		Key:   "GITLAB_ENV",
+		Value: gitlabEnvFile,
+	})
+
+	w.SourceEnv(gitlabEnvFile)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {

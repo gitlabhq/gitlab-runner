@@ -109,6 +109,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesBuildCancel":                               testKubernetesBuildCancelFeatureFlag,
 		"testKubernetesBuildLogLimitExceeded":                     testKubernetesBuildLogLimitExceededFeatureFlag,
 		"testKubernetesBuildMasking":                              testKubernetesBuildMaskingFeatureFlag,
+		"testKubernetesBuildPassingEnvsMultistep":                 testKubernetesBuildPassingEnvsMultistep,
 		"testKubernetesCustomClonePath":                           testKubernetesCustomClonePathFeatureFlag,
 		"testKubernetesNoRootImage":                               testKubernetesNoRootImageFeatureFlag,
 		"testKubernetesMissingImage":                              testKubernetesMissingImageFeatureFlag,
@@ -170,6 +171,25 @@ func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, f
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := getTestBuild(t, func() (common.JobResponse, error) {
+			return common.JobResponse{}, nil
+		})
+		build.Runner.RunnerSettings.Shell = shell
+
+		buildtest.RunBuildWithPassingEnvsMultistep(
+			t,
+			build.Runner,
+			func(build *common.Build) {
+				buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			},
+		)
+	})
 }
 
 func TestBuildScriptSections(t *testing.T) {

@@ -124,6 +124,8 @@ func TestWriteWritingArtifactsOnSuccess(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+	mockWriter.On("SourceEnv", "path/to/env/file").Once()
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
 	mockWriter.On("Noticef", mock.Anything)
@@ -194,6 +196,8 @@ func TestWriteWritingArtifactsOnFailure(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+	mockWriter.On("SourceEnv", "path/to/env/file").Once()
 	mockWriter.On("Cd", mock.Anything)
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
 	mockWriter.On("Noticef", mock.Anything)
@@ -269,6 +273,8 @@ func TestWriteWritingArtifactsWithExcludedPaths(t *testing.T) {
 	mockWriter := new(MockShellWriter)
 	defer mockWriter.AssertExpectations(t)
 	mockWriter.On("Variable", mock.Anything)
+	mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+	mockWriter.On("SourceEnv", "path/to/env/file").Once()
 	mockWriter.On("Cd", mock.Anything).Once()
 	mockWriter.On("IfCmd", "gitlab-runner-helper", "--version").Once()
 	mockWriter.On("Noticef", mock.Anything).Once()
@@ -368,6 +374,11 @@ func TestWriteWritingArchiveCacheOnSuccess(t *testing.T) {
 
 			mockWriter := new(MockShellWriter)
 			defer mockWriter.AssertExpectations(t)
+			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+				return v.Key == "GITLAB_ENV"
+			})).Once()
+			mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+			mockWriter.On("SourceEnv", "path/to/env/file").Once()
 			mockWriter.On("Cd", mock.Anything)
 			mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
 			mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(3)
@@ -488,6 +499,11 @@ func TestWriteWritingArchiveCacheOnFailure(t *testing.T) {
 
 			mockWriter := new(MockShellWriter)
 			defer mockWriter.AssertExpectations(t)
+			mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+				return v.Key == "GITLAB_ENV"
+			})).Once()
+			mockWriter.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+			mockWriter.On("SourceEnv", "path/to/env/file").Once()
 			mockWriter.On("Cd", mock.Anything)
 			mockWriter.On("IfCmd", "gitlab-runner-helper", "--version")
 			mockWriter.On("Noticef", "Creating cache %s...", mock.Anything).Times(2)
@@ -1417,6 +1433,8 @@ func TestWriteUserScript(t *testing.T) {
 			buildStage:      "step_script",
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
+				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+				m.On("SourceEnv", "path/to/env/file").Once()
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("Noticef", "$ %s", "echo hello").Once()
 				m.On("Line", "echo hello").Once()
@@ -1444,6 +1462,8 @@ func TestWriteUserScript(t *testing.T) {
 			buildStage:      common.BuildStage("step_release"),
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
+				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+				m.On("SourceEnv", "path/to/env/file").Once()
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("Noticef", "$ %s", "echo prebuild").Once()
 				m.On("Noticef", "$ %s", "echo release").Once()
@@ -1499,6 +1519,8 @@ func TestScriptSections(t *testing.T) {
 			},
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
+				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+				m.On("SourceEnv", "path/to/env/file").Once()
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("SectionStart", mock.AnythingOfType("string"), "$ echo prebuild").Once()
 				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
@@ -1529,6 +1551,8 @@ func TestScriptSections(t *testing.T) {
 			},
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
+				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+				m.On("SourceEnv", "path/to/env/file").Once()
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("Noticef", "$ %s", "echo prebuild").Once()
 				m.On("Noticef", "$ %s", "script 1").Once()
@@ -1554,6 +1578,8 @@ func TestScriptSections(t *testing.T) {
 			},
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
+				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+				m.On("SourceEnv", "path/to/env/file").Once()
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("Noticef", "$ %s", "echo prebuild").Once()
 				m.On("Noticef", "$ %s", "script 1").Once()
@@ -1579,6 +1605,8 @@ func TestScriptSections(t *testing.T) {
 			},
 			setupExpectations: func(m *MockShellWriter) {
 				m.On("Variable", mock.Anything)
+				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+				m.On("SourceEnv", "path/to/env/file").Once()
 				m.On("Cd", mock.AnythingOfType("string"))
 				m.On("Noticef", "$ %s", "echo prebuild").Once()
 				m.On("Noticef", "$ %s", "script 1").Once()
@@ -2189,6 +2217,8 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	m := NewMockShellWriter(t)
 
 	m.EXPECT().Variable(mock.Anything)
+	m.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
+	m.EXPECT().SourceEnv("path/to/env/file").Once()
 
 	// Pre get sources from configuration file
 	m.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()

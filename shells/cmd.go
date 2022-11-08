@@ -198,6 +198,12 @@ func (b *CmdWriter) Variable(variable common.JobVariable) {
 	}
 }
 
+func (b *CmdWriter) SourceEnv(pathname string) {
+	b.Linef("md %s 2>NUL 1>NUL", batchQuote(helpers.ToBackslash(b.TemporaryPath)))
+	b.Linef(`IF not EXIST %s type nul>%s`, batchQuote(pathname), batchQuote(pathname))
+	b.Linef(`FOR /F "usebackq tokens=*" %%%%v in (%s) do SET %%%%v`, batchQuote(pathname))
+}
+
 func (b *CmdWriter) IfDirectory(path string) {
 	b.Linef("IF EXIST %s (", batchQuote(helpers.ToBackslash(path)))
 	b.Indent()

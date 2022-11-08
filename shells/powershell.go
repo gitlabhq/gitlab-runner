@@ -332,6 +332,13 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 	p.Linef("$env:%s=$%s", variable.Key, variable.Key)
 }
 
+func (p *PsWriter) SourceEnv(pathname string) {
+	p.MkDir(p.TemporaryPath)
+	pathname = p.resolvePath(pathname)
+	p.Linef("if(!(Test-Path %s)) { New-Item -Force %s }", pathname, pathname)
+	p.Linef("Get-Content %s | ForEach { $k, $v = $_.split('='); Set-Content env:\\$k $v}", pathname)
+}
+
 func (p *PsWriter) IfDirectory(path string) {
 	p.Linef("if(Test-Path %s -PathType Container) {", p.resolvePath(path))
 	p.Indent()

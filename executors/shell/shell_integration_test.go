@@ -139,6 +139,14 @@ func TestBuildSuccess(t *testing.T) {
 	})
 }
 
+func TestBuildPassingEnvsMultistep(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := newBuild(t, common.JobResponse{}, shell)
+
+		buildtest.RunBuildWithPassingEnvsMultistep(t, build.Runner, nil)
+	})
+}
+
 func TestMultistepBuild(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulMultistepBuild()
 	require.NoError(t, err)
