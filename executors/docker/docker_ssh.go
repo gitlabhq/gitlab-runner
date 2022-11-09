@@ -11,6 +11,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
 
+// DEPRECATED
+// TODO: Remove in 16.0. For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29406
 type sshExecutor struct {
 	executor
 	sshCommand ssh.Client
@@ -24,7 +26,7 @@ func (s *sshExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	s.Warningln(
 		"Since GitLab Runner 10.0 docker-ssh and docker-ssh+machine executors " +
-			"are marked as DEPRECATED and will be removed in one of the upcoming releases")
+			"are marked as DEPRECATED and will be removed with GitLab Runner 16.0")
 
 	if s.Config.SSH == nil {
 		return errors.New("missing SSH configuration")
@@ -84,6 +86,7 @@ func (s *sshExecutor) Cleanup() {
 	s.executor.Cleanup()
 }
 
+// TODO: Remove in 16.0. For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29406
 func init() {
 	options := executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
