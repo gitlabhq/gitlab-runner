@@ -19,35 +19,65 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-var _ prometheus.Collector = &provider{}
+var (
+	_ prometheus.Collector           = &provider{}
+	_ common.ManagedExecutorProvider = &provider{}
+)
+
+type fleetingPlugin interface {
+	InstanceGroup() fleetingprovider.InstanceGroup
+	Kill()
+}
 
 type provider struct {
 	common.ExecutorProvider
 
 	mu      sync.Mutex
-	scalers map[string]taskscaler.Taskscaler
+	scalers map[string]scaler
 
 	// Testing hooks
 	//nolint:lll
 	taskscalerNew     func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error)
-	fleetingRunPlugin func(string, []byte) (*fleeting.Runner, error)
+	fleetingRunPlugin func(string, []byte) (fleetingPlugin, error)
 	generateUniqueID  func() (string, error)
+}
+
+type scaler struct {
+	internal taskscaler.Taskscaler
+	shutdown func(context.Context)
 }
 
 func New(ep common.ExecutorProvider) common.ExecutorProvider {
 	return &provider{
-		ExecutorProvider:  ep,
-		scalers:           make(map[string]taskscaler.Taskscaler),
-		taskscalerNew:     taskscaler.New,
-		fleetingRunPlugin: fleeting.RunPlugin,
+		ExecutorProvider: ep,
+		scalers:          make(map[string]scaler),
+		taskscalerNew:    taskscaler.New,
+		fleetingRunPlugin: func(name string, config []byte) (fleetingPlugin, error) {
+			return fleeting.RunPlugin(name, config)
+		},
 		generateUniqueID: func() (string, error) {
 			return helpers.GenerateRandomUUID(8)
 		},
 	}
 }
 
+func (p *provider) Init() {}
+
+func (p *provider) Shutdown(ctx context.Context) {
+	wg := new(sync.WaitGroup)
+	for _, s := range p.scalers {
+		wg.Add(1)
+		go func(sc scaler) {
+			defer wg.Done()
+			sc.shutdown(ctx)
+		}(s)
+	}
+
+	wg.Wait()
+}
+
 //nolint:funlen
-func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (taskscaler.Taskscaler, bool, error) {
+func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, bool, error) {
 	if config.Autoscaler == nil {
 		return nil, false, fmt.Errorf("executor requires autoscaler config")
 	}
@@ -55,9 +85,9 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	scaler, ok := p.scalers[config.GetToken()]
+	s, ok := p.scalers[config.GetToken()]
 	if ok {
-		return scaler, false, nil
+		return s.internal, false, nil
 	}
 
 	pluginCfg, err := config.Autoscaler.PluginConfig.JSON()
@@ -69,10 +99,6 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 	if err != nil {
 		return nil, false, fmt.Errorf("running autoscaler plugin: %w", err)
 	}
-	// todo:
-	// The plugin can be killed/unloaded with runner.Kill().
-	// There's no mechanism in place to do this at the moment, as executor
-	// providers have no shutdown routine.
 
 	instanceConnectConfig := fleetingprovider.ConnectorConfig{
 		OS:                   config.Autoscaler.ConnectorConfig.OS,
@@ -88,6 +114,8 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 	if config.Autoscaler.ConnectorConfig.KeyPathname != "" {
 		key, err := os.ReadFile(config.Autoscaler.ConnectorConfig.KeyPathname)
 		if err != nil {
+			runner.Kill()
+
 			return nil, false, fmt.Errorf("reading instance group connector key: %w", err)
 		}
 		instanceConnectConfig.Key = key
@@ -116,19 +144,32 @@ func (p *provider) init(ctx context.Context, config *common.RunnerConfig) (tasks
 		taskscaler.WithFleetingMetricsCollector(flMC),
 	}
 
-	scaler, err = p.taskscalerNew(ctx, runner.InstanceGroup(), options...)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancelFn()
+
+	ts, err := p.taskscalerNew(ctx, runner.InstanceGroup(), options...)
 	if err != nil {
+		runner.Kill()
+
 		return nil, false, fmt.Errorf("creating taskscaler: %w", err)
 	}
 
-	p.scalers[config.GetToken()] = scaler
+	s = scaler{
+		internal: ts,
+		shutdown: func(ctx context.Context) {
+			ts.Shutdown(ctx)
+			runner.Kill()
+		},
+	}
 
-	return scaler, true, nil
+	p.scalers[config.GetToken()] = s
+
+	return s.internal, true, nil
 }
 
 //nolint:gocognit
 func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, error) {
-	scaler, fresh, err := p.init(context.Background(), config)
+	scaler, fresh, err := p.init(config)
 	if err != nil {
 		return nil, fmt.Errorf("initializing taskscaler: %w", err)
 	}
@@ -197,17 +238,17 @@ func (p *provider) getRunnerTaskscaler(config *common.RunnerConfig) taskscaler.T
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	return p.scalers[config.GetToken()]
+	return p.scalers[config.GetToken()].internal
 }
 
 func (p *provider) Describe(ch chan<- *prometheus.Desc) {
 	for _, scaler := range p.scalers {
-		c, ok := scaler.MetricsCollector().(prometheus.Collector)
+		c, ok := scaler.internal.MetricsCollector().(prometheus.Collector)
 		if ok {
 			c.Describe(ch)
 		}
 
-		c, ok = scaler.FleetingMetricsCollector().(prometheus.Collector)
+		c, ok = scaler.internal.FleetingMetricsCollector().(prometheus.Collector)
 		if ok {
 			c.Describe(ch)
 		}
@@ -216,12 +257,12 @@ func (p *provider) Describe(ch chan<- *prometheus.Desc) {
 
 func (p *provider) Collect(ch chan<- prometheus.Metric) {
 	for _, scaler := range p.scalers {
-		c, ok := scaler.MetricsCollector().(prometheus.Collector)
+		c, ok := scaler.internal.MetricsCollector().(prometheus.Collector)
 		if ok {
 			c.Collect(ch)
 		}
 
-		c, ok = scaler.FleetingMetricsCollector().(prometheus.Collector)
+		c, ok = scaler.internal.FleetingMetricsCollector().(prometheus.Collector)
 		if ok {
 			c.Collect(ch)
 		}

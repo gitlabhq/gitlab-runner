@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+//nolint:lll
 type RunSingleCommand struct {
 	common.RunnerConfig
 	network          common.Network
@@ -24,6 +25,8 @@ type RunSingleCommand struct {
 	MaxBuilds        int `long:"max-builds" description:"How many builds to process before exiting"`
 	finished         *abool.AtomicBool
 	interruptSignals chan os.Signal
+
+	shutdownTimeout int `long:"shutdown-timeout" description:"Number of seconds after which the forceful shutdown operation will timeout and process will exit"`
 }
 
 func waitForInterrupts(
@@ -31,6 +34,7 @@ func waitForInterrupts(
 	abortSignal chan os.Signal,
 	doneSignal chan int,
 	interruptSignals chan os.Signal,
+	shutdownTimeout time.Duration,
 ) {
 	if interruptSignals == nil {
 		interruptSignals = make(chan os.Signal)
@@ -59,7 +63,7 @@ func waitForInterrupts(
 	select {
 	case newSignal := <-interruptSignals:
 		logrus.Fatalln("forced exit:", newSignal)
-	case <-time.After(common.ShutdownTimeout * time.Second):
+	case <-time.After(shutdownTimeout):
 		logrus.Fatalln("shutdown timed out")
 	case <-doneSignal:
 	}
@@ -143,6 +147,11 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 		logrus.Fatalln("Unknown executor:", r.Executor)
 	}
 
+	managedProvider, ok := executorProvider.(common.ManagedExecutorProvider)
+	if ok {
+		managedProvider.Init()
+	}
+
 	logrus.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")
 
 	r.finished = abool.New()
@@ -150,7 +159,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 	doneSignal := make(chan int, 1)
 	r.runForever = r.MaxBuilds == 0
 
-	go waitForInterrupts(r.finished, abortSignal, doneSignal, r.interruptSignals)
+	go waitForInterrupts(r.finished, abortSignal, doneSignal, r.interruptSignals, r.getShutdownTimeout())
 
 	r.lastBuild = time.Now()
 
@@ -170,6 +179,21 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 	}
 
 	doneSignal <- 0
+
+	providerShutdownCtx, shutdownProvider := context.WithTimeout(context.Background(), r.getShutdownTimeout())
+	defer shutdownProvider()
+
+	if managedProvider != nil {
+		managedProvider.Shutdown(providerShutdownCtx)
+	}
+}
+
+func (r *RunSingleCommand) getShutdownTimeout() time.Duration {
+	if r.shutdownTimeout > 0 {
+		return time.Duration(r.shutdownTimeout) * time.Second
+	}
+
+	return common.DefaultShutdownTimeout
 }
 
 func init() {

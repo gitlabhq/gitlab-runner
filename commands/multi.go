@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -303,6 +304,8 @@ func (mr *RunCommand) run() {
 	runners := make(chan *common.RunnerConfig)
 	go mr.feedRunners(runners)
 
+	mr.initUsedExecutorProviders()
+
 	signal.Notify(mr.stopSignals, syscall.SIGQUIT, syscall.SIGTERM, os.Interrupt)
 	signal.Notify(mr.reloadSignal, syscall.SIGHUP)
 
@@ -332,9 +335,47 @@ func (mr *RunCommand) run() {
 		mr.currentWorkers--
 	}
 
-	mr.log().Info("All workers stopped. Can exit now")
+	mr.log().Info("All workers stopped.")
+
+	mr.shutdownUsedExecutorProviders()
+
+	mr.log().Info("All executor providers shut down.")
 
 	close(mr.runFinished)
+
+	mr.log().Info("Can exit now!")
+}
+
+func (mr *RunCommand) initUsedExecutorProviders() {
+	mr.log().Info("Initializing executor providers")
+
+	for _, provider := range common.GetExecutorProviders() {
+		managedProvider, ok := provider.(common.ManagedExecutorProvider)
+		if ok {
+			managedProvider.Init()
+		}
+	}
+}
+
+func (mr *RunCommand) shutdownUsedExecutorProviders() {
+	mr.log().Info("Shutting down executor providers")
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), mr.config.GetShutdownTimeout())
+	defer cancelFn()
+
+	wg := new(sync.WaitGroup)
+	for _, provider := range common.GetExecutorProviders() {
+		managedProvider, ok := provider.(common.ManagedExecutorProvider)
+		if ok {
+			wg.Add(1)
+			go func(p common.ManagedExecutorProvider) {
+				defer wg.Done()
+				managedProvider.Shutdown(ctx)
+			}(managedProvider)
+		}
+	}
+
+	wg.Wait()
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
@@ -457,7 +498,7 @@ func (mr *RunCommand) setupSessionServer() {
 		session.ServerConfig{
 			AdvertiseAddress: config.SessionServer.AdvertiseAddress,
 			ListenAddress:    config.SessionServer.ListenAddress,
-			ShutdownTimeout:  common.ShutdownTimeout * time.Second,
+			ShutdownTimeout:  mr.config.GetShutdownTimeout(),
 		},
 		mr.log(),
 		certificate.X509Generator{},
@@ -515,6 +556,7 @@ func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *comm
 		return
 	}
 
+	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Feeding runner to channel")
 	runners <- runner
 }
 
@@ -569,47 +611,62 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 // GitLab instance and finally creates and finishes the job.
 // To speed-up jobs handling before starting the job this method "requeues" the runner to another
 // worker (by feeding the channel normally handled by feedRunners).
-func (mr *RunCommand) processRunner(
-	id int,
-	runner *common.RunnerConfig,
-	runners chan *common.RunnerConfig,
-) (err error) {
+func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners chan *common.RunnerConfig) error {
+	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Processing runner")
+
 	provider := common.GetExecutorProvider(runner.Executor)
 	if provider == nil {
-		return
+		mr.log().
+			WithField("runner", runner.ShortDescription()).
+			Errorf("Executor %q is not known; marking Runner as unhealthy", runner.Executor)
+		mr.healthHelper.makeHealthy(runner.UniqueID(), false)
+
+		return nil
 	}
 
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring executor from provider")
 	executorData, err := provider.Acquire(runner)
 	if err != nil {
 		return fmt.Errorf("failed to update executor: %w", err)
 	}
 	defer provider.Release(runner, executorData)
 
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring job slot")
 	if !mr.buildsHelper.acquireBuild(runner) {
 		logrus.WithFields(logrus.Fields{
 			"runner": runner.ShortDescription(),
 			"worker": id,
 		}).Debug("Failed to request job, runner limit met")
-		return
+
+		return nil
 	}
 	defer mr.buildsHelper.releaseBuild(runner)
 
+	return mr.processBuildOnRunner(runner, runners, provider, executorData)
+}
+
+func (mr *RunCommand) processBuildOnRunner(
+	runner *common.RunnerConfig,
+	runners chan *common.RunnerConfig,
+	provider common.ExecutorProvider,
+	executorData common.ExecutorData,
+) error {
 	buildSession, sessionInfo, err := mr.createSession(provider)
 	if err != nil {
-		return
+		return err
 	}
 
 	// Receive a new build
 	trace, jobData, err := mr.requestJob(runner, sessionInfo)
 	if err != nil || jobData == nil {
-		return
+		return err
 	}
 	defer func() { mr.traceOutcome(trace, err) }()
 
 	// Create a new build
 	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
 	if err != nil {
-		return
+		return err
 	}
 	build.Session = buildSession
 	build.ArtifactUploader = mr.network.UploadRawArtifacts
@@ -669,6 +726,7 @@ func (mr *RunCommand) requestJob(
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
 ) (common.JobTrace, *common.JobResponse, error) {
+	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring request slot")
 	if !mr.buildsHelper.acquireRequest(runner) {
 		mr.log().WithField("runner", runner.ShortDescription()).
 			Debugln("Failed to request job: runner requestConcurrency meet")
@@ -955,7 +1013,7 @@ func (mr *RunCommand) handleForcefulShutdown() error {
 			mr.log().WithField("stop-signal", mr.stopSignal).Warning("[handleForcefulShutdown] received stop signal")
 			return fmt.Errorf("forced exit with stop signal: %v", mr.stopSignal)
 
-		case <-time.After(common.ShutdownTimeout * time.Second):
+		case <-time.After(mr.config.GetShutdownTimeout()):
 			return errors.New("shutdown timed out")
 
 		case <-mr.runFinished:
