@@ -750,8 +750,8 @@ type KubernetesLifecycleTCPSocket struct {
 
 // ToKubernetesLifecycleHandler converts our lifecycle structs to the ones from the Kubernetes API.
 // We can't use them directly since they don't suppor toml.
-func (h *KubernetesLifecycleHandler) ToKubernetesLifecycleHandler() *api.Handler {
-	kubeHandler := &api.Handler{}
+func (h *KubernetesLifecycleHandler) ToKubernetesLifecycleHandler() *api.LifecycleHandler {
+	kubeHandler := &api.LifecycleHandler{}
 
 	if h.Exec != nil {
 		kubeHandler.Exec = &api.ExecAction{
