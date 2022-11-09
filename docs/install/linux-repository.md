@@ -16,6 +16,7 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | Ubuntu        | xenial                      | [April 2021](https://wiki.ubuntu.com/Releases)            |
 | Ubuntu        | bionic                      | [April 2023](https://wiki.ubuntu.com/Releases)            |
 | Ubuntu        | focal                       | [April 2025](https://wiki.ubuntu.com/Releases)            |
+| Ubuntu        | jammy jellyfish             | [April 2032](https://wiki.ubuntu.com/Releases)            |
 | Mint          | sarah, serena, sonya, sylvia| [April 2021](https://www.linuxmint.com/download_all.php)          |
 | Mint          | tara, tessa, tina, tricia   | [April 2023](https://www.linuxmint.com/download_all.php)          |
 | Mint          | ulyana, ulyssa, uma, una    | [April 2025](https://www.linuxmint.com/download_all.php)          |
