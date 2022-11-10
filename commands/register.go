@@ -374,6 +374,12 @@ func (s *RegisterCommand) askExecutorOptions() {
 }
 
 func (s *RegisterCommand) Execute(context *cli.Context) {
+	logrus.Warningf(
+		"The 'register' command has been deprecated in GitLab Runner 15.6 " +
+			"and will be replaced with a 'deploy' command. " +
+			"For more information, see https://gitlab.com/gitlab-org/gitlab/-/issues/380872",
+	)
+
 	userModeWarning(true)
 
 	s.context = context
@@ -497,5 +503,5 @@ func accessLevelValid(levels []AccessLevel, givenLevel AccessLevel) bool {
 }
 
 func init() {
-	common.RegisterCommand2("register", "register a new runner", newRegisterCommand())
+	common.RegisterCommand2("register", "register a new runner (deprecated in 15.6)", newRegisterCommand())
 }
