@@ -126,8 +126,8 @@ in the chart repository.
 For GitLab Runner to function, your configuration file **must** specify the following:
 
 - `gitlabUrl` - the GitLab server full URL (e.g., `https://gitlab.example.com`) to register the runner against.
-- `runnerRegistrationToken` ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/381111)
-  in GitLab 15.6) - The registration token for adding new runners to GitLab.
+- `runnerRegistrationToken` ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/381111) -
+  The registration token for adding new runners to GitLab.
   This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
   Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
 
@@ -551,10 +551,10 @@ Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts
 
 ### Store registration tokens or runner tokens in secrets
 
-To register a new runner, you can specify
-`runnerRegistrationToken` in `values.yml`. To register an existing
-runner, you can use `runnerToken`. It can be a security risk to store
-tokens in `values.yml`, especially if you commit these to `git`.
+To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`
+([deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/381111) in GitLab 15.6).
+To register an existing runner, use `runnerToken`.
+It can be a security risk to store tokens in `values.yml`, especially if you commit these to `git`.
 
 Instead, you can store the values of these tokens inside of a
 [Kubernetes secret](https://kubernetes.io/docs/concepts/configuration/secret/), and

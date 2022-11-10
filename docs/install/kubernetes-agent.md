@@ -18,7 +18,7 @@ your cluster is automatically updated.
 
    ```yaml
    # The GitLab Server URL (with protocol) that you want to register the runner against
-   # ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register
+   # ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register-deprecated
    #
    gitlabUrl: https://gitlab.my.domain.example.com/
 
