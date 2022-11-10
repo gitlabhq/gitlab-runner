@@ -70,7 +70,7 @@ If you are not using `asdf`, follow the instructions below for the relevant dist
 
 ```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.18.7.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.8.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -80,7 +80,7 @@ export PATH="$(go env GOBIN):$PATH"
 ```shell
 sudo yum install mercurial wget make
 sudo yum groupinstall 'Development Tools'
-wget https://storage.googleapis.com/golang/go1.18.7.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.8.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -90,7 +90,7 @@ export PATH="$(go env GOBIN):$PATH"
 Using binary package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.18.7.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.8.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -98,7 +98,7 @@ export PATH="$(go env GOBIN):$PATH"
 Using installation package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.18.7.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.18.8.darwin-amd64.pkg
 open go*-*.pkg
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -106,7 +106,7 @@ export PATH="$(go env GOBIN):$PATH"
 ### For FreeBSD
 
 ```shell
-pkg install go-1.18.7 gmake git mercurial
+pkg install go-1.18.8 gmake git mercurial
 export PATH="$(go env GOBIN):$PATH"
 ```
 
