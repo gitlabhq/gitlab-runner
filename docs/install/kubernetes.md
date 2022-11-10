@@ -126,7 +126,8 @@ in the chart repository.
 For GitLab Runner to function, your configuration file **must** specify the following:
 
 - `gitlabUrl` - the GitLab server full URL (e.g., `https://gitlab.example.com`) to register the runner against.
-- `runnerRegistrationToken` - The registration token for adding new runners to GitLab.
+- `runnerRegistrationToken` ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/381111)
+  in GitLab 15.6) - The registration token for adding new runners to GitLab.
   This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
   Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
 
