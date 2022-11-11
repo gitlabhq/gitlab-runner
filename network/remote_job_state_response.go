@@ -12,9 +12,10 @@ const (
 	updateIntervalHeader = "X-GitLab-Trace-Update-Interval"
 	remoteStateHeader    = "Job-Status"
 
-	statusCanceling = "canceling"
 	statusCanceled  = "canceled"
+	statusCanceling = "canceling"
 	statusFailed    = "failed"
+	statusRunning   = "running"
 )
 
 type RemoteJobStateResponse struct {

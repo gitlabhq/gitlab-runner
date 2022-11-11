@@ -449,7 +449,7 @@ func (n *GitLabClient) RequestJob(
 		config.Log().Errorln("Checking for jobs...", "forbidden")
 		return nil, false
 	case http.StatusNoContent:
-		config.Log().Debugln("Checking for jobs...", "nothing")
+		config.Log().Info("Checking for jobs...", "nothing")
 		return nil, true
 	case clientError:
 		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "error")
@@ -520,13 +520,13 @@ func (n *GitLabClient) createUpdateJobResult(
 		log.Warningln("Submitting job to coordinator...", "job failed")
 		result.State = common.UpdateAbort
 	case statusCode == http.StatusOK:
-		log.Debugln("Submitting job to coordinator...", "ok")
+		log.Info("Submitting job to coordinator...", "ok")
 		result.State = common.UpdateSucceeded
 	case statusCode == http.StatusAccepted:
-		log.Debugln("Submitting job to coordinator...", "accepted, but not yet completed")
+		log.Info("Submitting job to coordinator...", "accepted, but not yet completed")
 		result.State = common.UpdateAcceptedButNotCompleted
 	case statusCode == http.StatusPreconditionFailed:
-		log.Debugln("Submitting job to coordinator...", "trace validation failed")
+		log.Info("Submitting job to coordinator...", "trace validation failed")
 		result.State = common.UpdateTraceValidationFailed
 	case statusCode == http.StatusNotFound:
 		log.Warningln("Submitting job to coordinator...", "not found")
@@ -555,7 +555,7 @@ func (n *GitLabClient) PatchTrace(
 
 	baseLog := config.Log().WithField("job", id)
 	if len(content) == 0 {
-		baseLog.Debugln("Appending trace to coordinator...", "skipped due to empty patch")
+		baseLog.Info("Appending trace to coordinator...", "skipped due to empty patch")
 		return common.NewPatchTraceResult(startOffset, common.PatchSucceeded, 0)
 	}
 
@@ -628,7 +628,7 @@ func (n *GitLabClient) createPatchTraceResult(
 		return result
 
 	case response.StatusCode == http.StatusAccepted:
-		log.Debugln("Appending trace to coordinator...", "ok")
+		log.Info("Appending trace to coordinator...", "ok")
 		result.SentOffset = endOffset
 		result.State = common.PatchSucceeded
 
