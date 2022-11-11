@@ -143,7 +143,7 @@ Supported systems by different shells:
    [`shell`](../configuration/advanced-configuration.md#the-runners-section)
    is specified.
 1. Default shell when a new runner is registered.
-1. Bash shell ng on Windows is not supported.
+1. Bash shell on Windows is not supported.
 
 Supported systems for interactive web terminals by different shells:
 
