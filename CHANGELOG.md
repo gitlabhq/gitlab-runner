@@ -1,3 +1,9 @@
+## v15.4.2 (2022-11-11)
+
+### New features
+
+- Add a feature flag to disable resolving of TLS chain !3699
+
 ## v15.4.1 (2022-10-21)
 
 ### Security fixes
