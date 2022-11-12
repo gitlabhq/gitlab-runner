@@ -2,6 +2,7 @@ package shells
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path"
@@ -12,6 +13,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"golang.org/x/text/encoding/unicode"
 )
 
 const (
@@ -63,7 +65,32 @@ type PsWriter struct {
 	resolvePaths  bool
 }
 
-func stdinCmdArgs() []string {
+var encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
+
+func stdinCmdArgs(shell string) []string {
+	// The stdin script we pass is always UTF-8 encoded, however, depending on
+	// how powershell is configured, it may not be expecting UTF-8.
+	//
+	// To get around this issue, we pass an initialization script which sets
+	// the correct input and output encoding.
+	//
+	// The initialization script then calls '<shell> -Command -', so that our
+	// main script is executed by it being passed to stdin like usual.
+	//
+	// The initilization script itself is encoded so that it can be passed with
+	// -EncodeCommand, to avoid potential issues of passing script as an
+	// argument. Confusingly, -EncodeCommand expects our initialization script
+	// to be base64-encoded utf16.
+	//
+	// Note: the encoded script, depending on powershell configurations, can be
+	// limited to a certain length. The minimum maximum length is 8190. This
+	// encoded initialization script should be kept small.
+	var sb strings.Builder
+	//nolint:lll
+	sb.WriteString("$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r\n")
+	sb.WriteString(shell + " -Command -\r\n")
+	encoded, _ := encoder.String(sb.String())
+
 	return []string{
 		"-NoProfile",
 		"-NoLogo",
@@ -74,8 +101,8 @@ func stdinCmdArgs() []string {
 		"-NonInteractive",
 		"-ExecutionPolicy",
 		"Bypass",
-		"-Command",
-		"-",
+		"-EncodedCommand",
+		base64.StdEncoding.EncodeToString([]byte(encoded)),
 	}
 }
 
@@ -88,7 +115,7 @@ func PwshJSONTerminationScript(shell string) string {
 }
 
 func PowershellDockerCmd(shell string) []string {
-	return append([]string{shell}, stdinCmdArgs()...)
+	return append([]string{shell}, stdinCmdArgs(shell)...)
 }
 
 func psReplaceSpecialChars(text string) string {
@@ -458,7 +485,7 @@ func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shel
 			script.Arguments,
 			info.User,
 			"-c",
-			b.Shell+" "+strings.Join(stdinCmdArgs(), " "),
+			b.Shell+" "+strings.Join(stdinCmdArgs(b.Shell), " "),
 		)
 	} else {
 		script.Arguments = b.scriptArgs(script)
@@ -474,7 +501,7 @@ func (b *PowerShell) scriptArgs(script *common.ShellConfiguration) []string {
 		return fileCmdArgs()
 	}
 
-	return stdinCmdArgs()
+	return stdinCmdArgs(b.Shell)
 }
 
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
