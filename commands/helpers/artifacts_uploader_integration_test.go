@@ -23,6 +23,32 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
+func TestArchiveUploadExpandArgs(t *testing.T) {
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	os.Setenv("expand", "expanded")
+	defer os.Unsetenv("expand")
+
+	cmd := &ArtifactsUploaderCommand{
+		Name: "artifact $expand",
+		JobCredentials: common.JobCredentials{
+			ID:    12345,
+			Token: "token",
+			URL:   srv.URL,
+		},
+	}
+	cmd.Paths = []string{"unexpanded", "path/${expand}"}
+	cmd.Exclude = []string{"unexpanded", "path/$expand"}
+
+	cmd.Execute(&cli.Context{})
+
+	expected := []string{"unexpanded", "path/expanded"}
+	assert.Equal(t, "artifact expanded", cmd.Name)
+	assert.Equal(t, expected, cmd.Paths)
+	assert.Equal(t, expected, cmd.Exclude)
+}
+
 func TestArchiveUploadRedirect(t *testing.T) {
 	finalRequestReceived := false
 

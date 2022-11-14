@@ -184,6 +184,14 @@ func (c *CacheArchiverCommand) createZipFile(filename string) (int64, error) {
 func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	log.SetRunnerFormatter()
 
+	for idx := range c.Paths {
+		c.Paths[idx] = os.ExpandEnv(c.Paths[idx])
+	}
+
+	for idx := range c.Exclude {
+		c.Exclude[idx] = os.ExpandEnv(c.Exclude[idx])
+	}
+
 	if c.File == "" {
 		logrus.Fatalln("Missing --file")
 	}

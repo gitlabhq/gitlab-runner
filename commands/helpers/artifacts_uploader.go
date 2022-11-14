@@ -182,6 +182,16 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 		logrus.Fatalln("Missing build ID")
 	}
 
+	c.Name = os.ExpandEnv(c.Name)
+
+	for idx := range c.Paths {
+		c.Paths[idx] = os.ExpandEnv(c.Paths[idx])
+	}
+
+	for idx := range c.Exclude {
+		c.Exclude[idx] = os.ExpandEnv(c.Exclude[idx])
+	}
+
 	// Enumerate files
 	err := c.enumerate()
 	if err != nil {
