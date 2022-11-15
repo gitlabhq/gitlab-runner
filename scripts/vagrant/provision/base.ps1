@@ -1,4 +1,4 @@
-$goVersion = "1.18.7"
+$goVersion = "1.18.8"
 $gitVersion = "2.23.0"
 $powerShellCoreVersion = "7.1.1"
 $srcFolder = "C:\GitLab-Runner"

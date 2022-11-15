@@ -235,7 +235,7 @@ fuzz variable mask:
   extends:
   - .fuzz_base
   - .rules:merge_request_pipelines:no_docs
-  image: golang:1.18.7
+  image: golang:1.18.8
   stage: test
   variables:
     COVFUZZ_SEED_CORPUS: './helpers/trace/testdata/corpus'
@@ -261,7 +261,7 @@ fuzz variable mask:
   - New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
     -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
   - go version
-  - curl -o golang.msi "https://go.dev/dl/go1.18.7.windows-amd64.msi"
+  - curl -o golang.msi "https://go.dev/dl/go1.18.8.windows-amd64.msi"
   - Start-Process msiexec.exe -Wait -ArgumentList '/I golang.msi /quiet'
   - $env:Path = "C:\Program Files\Go\bin;$env:Path"
   - go version
@@ -384,7 +384,7 @@ git 1.8.3.1:
     CGO_ENABLED: 0
   before_script:
   - yum install -y -q git make patch && git version
-  - curl https://storage.googleapis.com/golang/go1.18.7.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
+  - curl https://storage.googleapis.com/golang/go1.18.8.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
   - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx
   - mv git-lfs-${GIT_LFS_VERSION}/git-lfs /usr/bin
   - git-lfs install --skip-repo
