@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,16 +19,43 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func TestGenerateMetadataToFile(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+type fileInfo struct {
+	name string
+	mode fs.FileMode
+}
 
+func (fi fileInfo) Name() string {
+	return fi.name
+}
+
+func (fi fileInfo) Size() int64 {
+	return 0
+}
+
+func (fi fileInfo) Mode() fs.FileMode {
+	return fi.mode
+}
+
+func (fi fileInfo) ModTime() time.Time {
+	return time.Now()
+}
+
+func (fi fileInfo) IsDir() bool {
+	return fi.mode.IsDir()
+}
+
+func (fi fileInfo) Sys() any {
+	return nil
+}
+
+func TestGenerateMetadataToFile(t *testing.T) {
+	tmpDir := t.TempDir()
 	tmpFile, err := os.CreateTemp(tmpDir, "")
 	require.NoError(t, err)
 
 	_, err = tmpFile.WriteString("testdata")
 	require.NoError(t, err)
+	require.NoError(t, tmpFile.Close())
 
 	sha := sha256.New()
 	sha.Write([]byte("testdata"))
@@ -133,7 +161,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			newGenerator: newGenerator,
 			opts: generateMetadataOptions{
 				artifactName: "artifact-name",
-				files:        map[string]os.FileInfo{tmpFile.Name(): nil},
+				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
 				wd:           tmpDir,
 				jobID:        1000,
 			},
@@ -147,7 +175,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			newGenerator: newGenerator,
 			opts: generateMetadataOptions{
 				artifactName: "artifact-name",
-				files:        map[string]os.FileInfo{tmpFile.Name(): nil},
+				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
 				wd:           tmpDir,
 				jobID:        1000,
 			},
@@ -160,11 +188,29 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			newGenerator: newGenerator,
 			opts: generateMetadataOptions{
 				artifactName: "artifact-name",
-				files:        map[string]os.FileInfo{tmpFile.Name(): nil, "nonexisting": nil},
-				wd:           tmpDir,
-				jobID:        1000,
+				files: map[string]os.FileInfo{
+					tmpFile.Name(): fileInfo{name: tmpFile.Name()},
+					"nonexisting":  fileInfo{name: "nonexisting"},
+				},
+				wd:    tmpDir,
+				jobID: 1000,
 			},
 			expectedError: os.ErrNotExist,
+		},
+		"non-regular file": {
+			newGenerator: newGenerator,
+			opts: generateMetadataOptions{
+				artifactName: "artifact-name",
+				files: map[string]os.FileInfo{
+					tmpFile.Name(): fileInfo{name: tmpFile.Name()},
+					"dir":          fileInfo{name: "im-a-dir", mode: fs.ModeDir}},
+				wd:    tmpDir,
+				jobID: 1000,
+			},
+			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
+				m := testMetadata(common.AppVersion.Revision, g, opts)
+				return m, func() {}
+			},
 		},
 		"no parameters": {
 			newGenerator: func() *artifactMetadataGenerator {
@@ -175,7 +221,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			},
 			opts: generateMetadataOptions{
 				artifactName: "artifact-name",
-				files:        map[string]os.FileInfo{tmpFile.Name(): nil},
+				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
 				wd:           tmpDir,
 				jobID:        1000,
 			},
@@ -207,15 +253,12 @@ func TestGenerateMetadataToFile(t *testing.T) {
 				return
 			}
 
-			fmt.Println(f)
-
-			time.Sleep(10 * time.Second)
-
 			filename := filepath.Base(f)
 			assert.Equal(t, fmt.Sprintf(artifactsMetadataFormat, tt.opts.artifactName), filename)
 
 			file, err := os.Open(f)
 			require.NoError(t, err)
+			defer file.Close()
 
 			b, err := io.ReadAll(file)
 			require.NoError(t, err)
