@@ -42,6 +42,10 @@ const (
 	MinTraceForceSendInterval              = 30 * time.Second
 	MaxTraceForceSendInterval              = 30 * time.Minute
 	TraceForceSendUpdateIntervalMultiplier = 4
+
+	// DefaultReaderBufferSize is the size of the line buffer.
+	// Docker/Kubernetes use the same size to split lines
+	DefaultReaderBufferSize = 16 * 1024
 )
 
 var PreparationRetryInterval = 3 * time.Second
