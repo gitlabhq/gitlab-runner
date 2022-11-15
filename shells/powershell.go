@@ -62,6 +62,7 @@ type PsWriter struct {
 	indent        int
 	Shell         string
 	EOL           string
+	PassFile      bool
 	resolvePaths  bool
 }
 
@@ -450,11 +451,19 @@ func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
 	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3896#note_157830131)
 	buf.WriteString("\xef\xbb\xbf")
 
+	if p.PassFile {
+		buf.WriteString("& {" + p.EOL + p.EOL)
+	}
+
 	if trace {
 		buf.WriteString("Set-PSDebug -Trace 2" + p.EOL)
 	}
 
 	buf.WriteString(p.String() + p.EOL)
+
+	if p.PassFile {
+		buf.WriteString("}" + p.EOL + p.EOL)
+	}
 }
 
 func (b *PowerShell) GetName() string {
@@ -464,7 +473,7 @@ func (b *PowerShell) GetName() string {
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
 	script := &common.ShellConfiguration{
 		Command:       b.Shell,
-		PassFile:      b.Shell != SNPwsh && info.Build.Runner.Executor != dockerWindowsExecutor,
+		PassFile:      b.passAsFile(info),
 		Extension:     "ps1",
 		DockerCommand: PowershellDockerCmd(b.Shell),
 	}
@@ -504,10 +513,31 @@ func (b *PowerShell) scriptArgs(script *common.ShellConfiguration) []string {
 	return stdinCmdArgs(b.Shell)
 }
 
+func (b *PowerShell) passAsFile(info common.ShellScriptInfo) bool {
+	// pwsh is always passed via stdin
+	if b.Shell == SNPwsh {
+		return false
+	}
+
+	// if DisablePowershellStdin is false, powershell is passed via stdin
+	if !info.Build.IsFeatureFlagOn(featureflags.DisablePowershellStdin) {
+		return false
+	}
+
+	// we only support powershell script by a file for shell & custom executors
+	switch info.Build.Runner.Executor {
+	case "shell", "custom":
+		return true
+	}
+
+	return false
+}
+
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
 	w := &PsWriter{
 		Shell:         b.Shell,
 		EOL:           b.EOL,
+		PassFile:      b.passAsFile(info),
 		TemporaryPath: info.Build.TmpProjectDir(),
 		resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
 	}
