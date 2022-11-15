@@ -310,3 +310,32 @@ If this error is encountered when running the `gitlab-runner start` command, ens
 ```
 
 If the directories do not exist, create them and ensure that the runner service user has appropriate permissions to read and write to them.
+
+### `ERROR: Error on fetching TLS Data from API response... error  error=couldn't build CA Chain`
+
+The following error may occur if you upgrade to GitLab Runner v15.5.0 or later:
+
+```plaintext
+Certificate doesn't provide parent URL: exiting the loop  Issuer=Baltimore CyberTrust Root IssuerCertURL=[] Serial=33554617 Subject=Baltimore CyberTrust Root context=certificate-chain-build
+Verifying last certificate to find the final root certificate  Issuer=Baltimore CyberTrust Root IssuerCertURL=[] Serial=33554617 Subject=Baltimore CyberTrust Root context=certificate-chain-build
+ERROR: Error on fetching TLS Data from API response... error  error=couldn't build CA Chain: error while fetching certificates from TLS ConnectionState: error while fetching certificates into the CA Chain: couldn't resolve certificates chain from the leaf certificate: error while resolving certificates chain with verification: error while verifying last certificate from the chain: x509: “Baltimore CyberTrust Root” certificate is not permitted for this usage runner=x7kDEc9Q
+```
+
+If you encounter this error, you may need to:
+
+1. Upgrade to GitLab Runner v15.5.1 or later.
+1. Set `FF_RESOLVE_FULL_TLS_CHAIN` to `false` in the [`[runners.feature_flags]` configuration](../configuration/feature-flags.md#enable-feature-flag-in-runner-configuration). For example:
+
+```toml
+    [[runners]]
+  name = "ruby-2.7-docker"
+  url = "https://CI/"
+  token = "TOKEN"
+  executor = "docker"
+  [runners.feature_flags]
+    FF_RESOLVE_FULL_TLS_CHAIN = false
+```
+
+Disabling this feature flag may help resolve TLS connectivity issues for
+HTTPS endpoints that use a root certificate signed with a SHA-1
+signature or some other deprecated algorithm.
