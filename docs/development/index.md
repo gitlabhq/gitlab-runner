@@ -181,6 +181,7 @@ There are two new libraries being used in GitLab Runner:
 
 1. [Taskscaler](https://gitlab.com/gitlab-org/fleeting/taskscaler) and
 1. [Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting).
+
 You don't need to check out these libraries to use GitLab Runner at HEAD, but some development in the autoscaling space may take place there.
 In addition Taskscaler and Fleeting, there are a number of Fleeting Plugins which adapt GitLab Runner to a specific cloud providers (e.g. Google Computer or AWS EC2).
 The written instructions above ("Clone GitLab Runner") show how to check out the code and the videos ("Runner Shorts") show how to use it.
