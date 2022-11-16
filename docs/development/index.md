@@ -179,8 +179,8 @@ It will replace all current autoscaling mechanisms (e.g. Docker Machine).
 This new mechanism is in a pre-alpha state and actively being developed.
 There are two new libraries being used in GitLab Runner:
 
-1. [Taskscaler](https://gitlab.com/gitlab-org/fleeting/taskscaler) and
-1. [Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting).
+1. [Taskscaler](https://gitlab.com/gitlab-org/fleeting/taskscaler)
+1. [Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting)
 
 You don't need to check out these libraries to use GitLab Runner at HEAD, but some development in the autoscaling space may take place there.
 In addition Taskscaler and Fleeting, there are a number of Fleeting Plugins which adapt GitLab Runner to a specific cloud providers (e.g. Google Computer or AWS EC2).
