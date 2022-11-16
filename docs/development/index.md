@@ -228,7 +228,7 @@ When a job is picked up the configured instance runner, it will consume a runnin
       scale_factor_limit = 0
 ```
 
-[1] If you terminate GitLab Runner with SIGTERM you may see some of these processing hanging around. Instead terminate with SIGQUIT.
+[1] If you terminate GitLab Runner with SIGTERM you may see some of these processes hanging around. Instead terminate with SIGQUIT.
 [2] Note that ASGs should have autoscaling disabled. GitLab Runner takes care of autoscaling via the Taskscaler library.
 
 ## 7. Run test suite locally
