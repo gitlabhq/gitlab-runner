@@ -4671,7 +4671,7 @@ func TestProcessLogs(t *testing.T) {
 			mockLogProcessor := new(mockLogProcessor)
 			defer mockLogProcessor.AssertExpectations(t)
 
-			tc.lineCh <- "line"
+			tc.lineCh <- "line\n"
 			mockLogProcessor.On("Process", mock.Anything).
 				Return((<-chan string)(tc.lineCh), (<-chan error)(tc.errCh)).
 				Once()

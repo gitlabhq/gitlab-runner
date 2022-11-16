@@ -14,9 +14,6 @@ import (
 )
 
 const (
-	// defaultReaderBufferSize is the size of the line buffer.
-	// Docker/Kubernetes use the same size to split lines
-	defaultReaderBufferSize        = 16 * 1024
 	defaultCheckFileExistsInterval = time.Second
 	pollFileContentsTimeout        = 500 * time.Millisecond
 	outputLogFileNotExistsExitCode = 100
@@ -108,7 +105,7 @@ type ReadLogsCommand struct {
 func newReadLogsCommand() *ReadLogsCommand {
 	return &ReadLogsCommand{
 		logOutputWriter:  &streamLogOutputWriter{stream: os.Stdout},
-		readerBufferSize: defaultReaderBufferSize,
+		readerBufferSize: common.DefaultReaderBufferSize,
 		// by default check if the file exists at least once
 		WaitFileTimeout: defaultCheckFileExistsInterval,
 	}
