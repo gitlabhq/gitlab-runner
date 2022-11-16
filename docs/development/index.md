@@ -177,14 +177,17 @@ If you want to build the Docker images, run `make runner-and-helper-docker-host`
 The [Next Runner Auto-scaling Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_scaling/index.html#taskscaler-provider) adds a new mechanism for autoscaling which will work with all environments.
 It will replace all current autoscaling mechanisms (e.g. Docker Machine).
 This new mechanism is in a pre-alpha state and actively being developed.
-There are two new libraries being used in GitLab Runner: /1/ [Taskscaler](https://gitlab.com/gitlab-org/fleeting/taskscaler) and /2/ [Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting).
+There are two new libraries being used in GitLab Runner:
+
+1. [Taskscaler](https://gitlab.com/gitlab-org/fleeting/taskscaler) and
+1. [Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting).
 You don't need to check out these libraries to use GitLab Runner at HEAD, but some development in the autoscaling space may take place there.
 In addition Taskscaler and Fleeting, there are a number of Fleeting Plugins which adapt GitLab Runner to a specific cloud providers (e.g. Google Computer or AWS EC2).
 The written instructions above ("Clone GitLab Runner") show how to check out the code and the videos ("Runner Shorts") show how to use it.
 These instructions show how to use GitLab Runner with a plugin.
 
 Each plugin will come with instructions on how to build the binary and configure the underlying instance group.
-This work is being done in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29400.
+This work is being done in [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29400).
 The canonical build and configuration instructions will live with each plugin, but in the meantime, here are some general instructions.
 
 #### Build the plugin
@@ -199,7 +202,7 @@ It also specifies under `plugin_config` and `connector_config` an Instance Group
 GitLab Runner should find the Instance Group and create an initial number of idle VMs.
 When a job is picked up the configured instance runner, it will consume a running VM and replace it via AWS service calls in the `fleeting-plugin-aws` plugin.
 
-```
+```toml
 [[runners]]
   name = "local-taskrunner"
   url = "https://gitlab.com/"
