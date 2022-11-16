@@ -200,7 +200,7 @@ func testCommandShouldRetry(t *testing.T, retryable retry.Retryable) {
 		},
 		"status error different code, shouldn't retry": {
 			err: &kubeerrors.StatusError{
-				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusNotFound},
+				ErrStatus: metav1.Status{Message: "error dialing backend: not found", Code: http.StatusNotFound},
 			},
 			expectedShouldRetry: false,
 		},
@@ -212,13 +212,13 @@ func testCommandShouldRetry(t *testing.T, retryable retry.Retryable) {
 		},
 		"status error matching message, should retry": {
 			err: &kubeerrors.StatusError{
-				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusInternalServerError},
+				ErrStatus: metav1.Status{Message: "error dialing backend: EOF", Code: http.StatusInternalServerError},
 			},
 			expectedShouldRetry: true,
 		},
 		"status error matching code and message, over max tries limit": {
 			err: &kubeerrors.StatusError{
-				ErrStatus: metav1.Status{Message: errorDialingBackendEOFMessage, Code: http.StatusInternalServerError},
+				ErrStatus: metav1.Status{Message: "error dialing backend: EOF", Code: http.StatusInternalServerError},
 			},
 			tries:               commandConnectFailureMaxTries + 1,
 			expectedShouldRetry: false,
