@@ -172,7 +172,7 @@ If you want to build the Docker images, run `make runner-and-helper-docker-host`
    and the Ubuntu image build uses the DEB package.
 1. Build the Alpine and Ubuntu versions of the `gitlab/gitlab-runner` image.
 
-### Auto-scaling (Taskscaler) in the next version of GitLab Runner
+### New auto-scaling (Taskscaler) in GitLab Runner (since 15.6.0)
 
 The [Next Runner Auto-scaling Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_scaling/index.html#taskscaler-provider) adds a new mechanism for autoscaling which will work with all environments.
 It will replace all current autoscaling mechanisms (e.g. Docker Machine).
