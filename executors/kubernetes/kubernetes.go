@@ -636,7 +636,7 @@ func (s *executor) processLogs(ctx context.Context) {
 				continue
 			}
 
-			_, err := s.Trace.Write(append([]byte(line), '\n'))
+			_, err := s.writeRunnerLog(line)
 			if err != nil {
 				s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 			}
@@ -651,6 +651,16 @@ func (s *executor) processLogs(ctx context.Context) {
 			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: exitCode}
 		}
 	}
+}
+
+func (s *executor) writeRunnerLog(log string) (int, error) {
+	size := len(log)
+
+	if size > common.DefaultReaderBufferSize && string(log[size-1]) == "\n" {
+		log = log[:size-1]
+	}
+
+	return s.Trace.Write([]byte(log))
 }
 
 // getExitCode tries to extract the exit code from an inner exec.CodeExitError
