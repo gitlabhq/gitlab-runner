@@ -26,6 +26,7 @@ const (
 	PosixlyCorrectEscapes                string = "FF_POSIXLY_CORRECT_ESCAPES"
 	UseImprovedURLMasking                string = "FF_USE_IMPROVED_URL_MASKING"
 	ResolveFullTLSChain                  string = "FF_RESOLVE_FULL_TLS_CHAIN"
+	DisablePowershellStdin               string = "FF_DISABLE_POWERSHELL_STDIN"
 )
 
 type FeatureFlag struct {
@@ -212,6 +213,13 @@ var flags = []FeatureFlag{
 			"If certificate resolution fails, you may need to disable this feature. " +
 			"This feature flag can only be disabled in the " +
 			"[`[runners.feature_flags]` configuration](#enable-feature-flag-in-runner-configuration).",
+	},
+	{
+		Name:         DisablePowershellStdin,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, Powershell scripts for shell and custom executors are passed by " +
+			"file, rather than passed and executed via stdin.",
 	},
 }
 
