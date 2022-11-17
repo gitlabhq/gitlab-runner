@@ -708,7 +708,8 @@ Prerequisites:
 - To run [services](#services) with Podman as an executor, enable the
   [`FF_NETWORK_PER_BUILD` feature flag](#create-a-network-for-each-job).
   [Docker container links](https://docs.docker.com/network/links/) are legacy
-  and are not supported by [Podman](https://podman.io/).
+  and are not supported by [Podman](https://podman.io/). For services that 
+  create a network alias, you must install the `podman-plugins` package.
 
 1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
    by using your system's package manager, it automatically creates a `gitlab-runner` user.
