@@ -32,6 +32,7 @@ Add the GitLab Helm repository:
 
 ```shell
 helm repo add gitlab https://charts.gitlab.io
+helm repo update gitlab
 ```
 
 If using Helm 2, you must also initialize Helm:
