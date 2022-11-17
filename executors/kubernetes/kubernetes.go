@@ -1515,7 +1515,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 			SchedulerName:      s.Config.Kubernetes.SchedulerName,
 			ServiceAccountName: s.configurationOverwrites.serviceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
-			NodeSelector:       s.Config.Kubernetes.NodeSelector,
+			NodeSelector:       s.configurationOverwrites.nodeSelector,
 			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
 			InitContainers:     opts.initContainers,
 			Containers: append([]api.Container{

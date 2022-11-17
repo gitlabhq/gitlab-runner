@@ -24,6 +24,9 @@ const (
 	// PodAnnotationsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
 	// user overwritten PodAnnotations
 	PodAnnotationsOverwriteVariablePrefix = "KUBERNETES_POD_ANNOTATIONS_"
+	// NodeSelectorOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
+	// user overwritten NodeSelectors
+	NodeSelectorOverwriteVariablePrefix = "KUBERNETES_NODE_SELECTOR_"
 	// CPULimitOverwriteVariableValue is the key for the JobVariable containing user overwritten cpu limit
 	CPULimitOverwriteVariableValue = "KUBERNETES_CPU_LIMIT"
 	// CPURequestOverwriteVariableValue is the key for the JobVariable containing user overwritten cpu limit
@@ -110,6 +113,7 @@ type overwrites struct {
 	bearerToken    string
 	podLabels      map[string]string
 	podAnnotations map[string]string
+	nodeSelector   map[string]string
 
 	buildLimits     api.ResourceList
 	serviceLimits   api.ResourceList
@@ -184,6 +188,18 @@ func createOverwrites(
 		config.PodAnnotationsOverwriteAllowed,
 		variables,
 		PodAnnotationsOverwriteVariablePrefix,
+		logger,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	o.nodeSelector, err = o.evaluateMapOverwrite(
+		"NodeSelector",
+		config.NodeSelector,
+		config.NodeSelectorOverwriteAllowed,
+		variables,
+		NodeSelectorOverwriteVariablePrefix,
 		logger,
 	)
 	if err != nil {

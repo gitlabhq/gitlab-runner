@@ -1684,7 +1684,19 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: defaultOverwrites,
+				configurationOverwrites: &overwrites{
+					namespace: "default",
+					nodeSelector: map[string]string{
+						api.LabelArchStable: "arm64",
+						api.LabelOSStable:   "linux",
+					},
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 				helperImageInfo: helperimage.Info{
 					OSType:                  "linux",
 					Architecture:            "arm64",
@@ -1724,7 +1736,20 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: defaultOverwrites,
+				configurationOverwrites: &overwrites{
+					namespace: "default",
+					nodeSelector: map[string]string{
+						api.LabelArchStable:           "amd64",
+						api.LabelOSStable:             "windows",
+						nodeSelectorWindowsBuildLabel: "10.0.19041",
+					},
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 				helperImageInfo: helperimage.Info{
 					OSType:                  "windows",
 					Architecture:            "x86_64",
