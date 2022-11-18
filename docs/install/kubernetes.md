@@ -32,13 +32,23 @@ Add the GitLab Helm repository:
 
 ```shell
 helm repo add gitlab https://charts.gitlab.io
-helm repo update gitlab
 ```
 
 If using Helm 2, you must also initialize Helm:
 
 ```shell
 helm init
+```
+
+If you are not able to access to the latest versions of GitLab Runner we recommend updating the chart with:
+
+```shell
+helm repo update gitlab
+```
+The list of GitLab Runner versions you currently have access to can be displayed with:
+
+```shell
+helm search repo -l gitlab/gitlab-runner
 ```
 
 Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
