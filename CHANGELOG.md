@@ -102,6 +102,24 @@
 
 - Upgrade prometheus/client-golang from v1.1.0 to v1.11.1
 
+## v15.3.3 (2022-11-11)
+
+### New features
+
+- Add a feature flag to disable resolving of TLS chain !3699
+
+## v15.3.2 (2022-09-21)
+
+### Security fixes
+
+- Do not expand variables in Command https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/38
+
+## v15.3.1 (2022-09-21)
+
+### Security fixes
+
+- Upgrade prometheus/client-golang from v1.1.0 to v1.11.1
+
 ## v15.3.0 (2022-08-19)
 
 ### New features
