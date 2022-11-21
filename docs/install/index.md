@@ -20,7 +20,7 @@ GitLab Runner officially supported binaries are available for the following arch
 
 Official packages are available for the following Linux distributions:
 
-- CentOS, Debian, Ubuntu, RHEL, Fedora, Mint
+- CentOS, Debian, Ubuntu, RHEL, Fedora, Mint, Oracle, Amazon
 
 GitLab Runner officially supports the following operating systems:
 
