@@ -40,6 +40,18 @@ If using Helm 2, you must also initialize Helm:
 helm init
 ```
 
+If you are unable to access to the latest versions of GitLab Runner, you should update the chart. To update the chart, run:
+
+```shell
+helm repo update gitlab
+```
+
+To view a list of GitLab Runner versions you have access to, run:
+
+```shell
+helm search repo -l gitlab/gitlab-runner
+```
+
 Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
 run the following:
 
