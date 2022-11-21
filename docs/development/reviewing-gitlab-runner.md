@@ -50,16 +50,16 @@ To view a code coverage report for a merge request:
 
 1. Use the artifact browser to navigate to the `out/coverage/`
    directory. For example,
-   <https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/172824578/artifacts/browse/out/coverage/>.
+   `https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/172824578/artifacts/browse/out/coverage/`.
    This directory will always contain six files - three `.race.` files
    and three `.regular.` files.
 
    For reviewing changes, we're mostly interested in looking at the `.regular.` HTML
    report (the `coverprofile.regular.html` file). As you can see, all files are visible
    as external links, so for our example we will open
-   <https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/172824578/artifacts/file/out/coverage/coverprofile.regular.html>
+   `https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/172824578/artifacts/file/out/coverage/coverprofile.regular.html`
    which will redirect us to
-   <https://gitlab-org.gitlab.io/-/gitlab-runner/-/jobs/172824578/artifacts/out/coverage/coverprofile.regular.html>
+   `https://gitlab-org.gitlab.io/-/gitlab-runner/-/jobs/172824578/artifacts/out/coverage/coverprofile.regular.html`
    where the report is stored.
 
 The coverage data should be also
