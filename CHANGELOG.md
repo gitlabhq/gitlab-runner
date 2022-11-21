@@ -57,6 +57,18 @@
 - Fix ordered list display abnormal error !3663
 - Set variable to new domain for docs review apps (Runner) !3671
 
+## v15.4.2 (2022-11-11)
+
+### New features
+
+- Add a feature flag to disable resolving of TLS chain !3699
+
+## v15.4.1 (2022-10-21)
+
+### Security fixes
+
+- Do not expand variables in Command https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/38
+
 ## v15.4.0 (2022-09-21)
 
 ### New features
@@ -85,6 +97,10 @@
 - Add path implementation to support Windows docker from unix !3344
 - Update redhat/ubi8 Docker tag to v8.6-943 !3605
 - Update alpine Docker tags !3604
+
+### Security fixes
+
+- Upgrade prometheus/client-golang from v1.1.0 to v1.11.1
 
 ## v15.3.0 (2022-08-19)
 
