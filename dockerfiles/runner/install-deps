@@ -66,9 +66,8 @@ fi
 chmod +x /usr/bin/dumb-init
 dumb-init --version
 
-mkdir /tmp/git-lfs
-tar -xf /tmp/git-lfs.tar.gz -C /tmp/git-lfs/
-mv /tmp/git-lfs/git-lfs /usr/bin/git-lfs
+tar -xf /tmp/git-lfs.tar.gz -C /tmp/
+mv /tmp/git-lfs-${GIT_LFS_VERSION}/git-lfs /usr/bin/git-lfs
 rm -rf /tmp/git-lfs*
 git-lfs install --skip-repo
 git-lfs version

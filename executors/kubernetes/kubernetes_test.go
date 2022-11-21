@@ -5821,7 +5821,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 
 				assert.Eventually(t, func() bool {
 					return assert.Contains(t, logs.String(), tt.wantLog)
-				}, time.Millisecond*500, time.Millisecond+100)
+				}, time.Second*1, time.Millisecond+100)
 			}
 		})
 	}
