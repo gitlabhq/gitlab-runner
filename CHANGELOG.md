@@ -1,3 +1,65 @@
+## v15.6.0 (2022-11-21)
+
+### New features
+
+- Add support for Node Selector Overwrite !3221
+- Handle job execution interruption for the new autoscaler executor provider !3672
+- Add maximum size to uploaded cache !3552
+- Allow multiple paths in GIT_SUBMODULE_PATHS !3675
+- Capture helper service logs into job/tasks main trace log !3680
+- Add a feature flag to disable resolving of TLS chain !3699
+- Adds proper handling of ExecutorProviders initialization and shutdown !3657
+
+### Bug fixes
+
+- Detect Windows build 10.0.19042 as 20H2 !3694
+- Force powershell/pwsh input/output encoding to UTF-8 !3707
+- Skip non-regular files for artifact metadata generator inclusion !3709
+- Filter kubernetes trace to remove newline added for long logs in attach mode !3691
+- Enable powershell via stdin by default !3728
+- Kubernetes executor: redial backend on internal server errors !3732
+
+### Maintenance
+
+- Update redhat/ubi8 Docker tag to v8.7-929 !3738
+- Add OS versions supported by packagecloud 3.0.6 release !3734
+- Add tests for kubernetes scheduler name config !3643
+- Update Go distribution to version 1.18.8 !3720
+- Update logging levels from Debug to Info !3710
+- Move autoscaler Acquire() to the ExecutorProvider !3660
+- Document internal Executor Interface !3291
+- Update git to 2.38.1 and git-lfs to 3.2.0 to address CVE-2022-29187 !3674
+- Switch to markdownlint-cli2 !3683 
+- Ensure `go-fips` container is rebuilt when the version of Go is updated !3685
+- Add logging in UpdateJob to include checksum and bytesize !3693
+- Update taskscaler to newer version !3706
+- Skip docker Test_CaptureServiceLogs integration tests on windows !3703
+- Update GoCloud to v0.27.0 and update Azure cache to use new SDK !3701
+
+### Documentation changes
+
+- Explain ANSI-relevance of log_format options !3739
+- Fix broken links in runner docs !3737
+- Add podman-plugins package dependency for service container network aliases !3733
+- Add Taskscaler and Fleeting plugin instructions to Runner development !3730
+- Document macOS workaround for TLS issues !3724
+- Remove misleading statement regarding Bash in Windows planned feature support !3722
+- Deprecate register command !3702
+- Mark runnerRegistrationToken as deprecated !3704
+- Add helm repo update command to Kubernetes install docs !3736 
+- Add additional documentation around the use of submodules !3670 
+- Add Kubernetes certificate guide !3608
+- Troubleshooting for pods always assigned worker node's IAM role !3678
+- Change $shell to $SHELL in "Set up macOS runners" docs !3681
+- Fix docs review app script and domain !3682
+- Update redirected links in the runner docs !3690
+- Improve development setup docs !3661
+- Update Runner Helm chart docs to include list of deprecated fields !3686
+- Add details to Documentation MR template !3698
+- Adding Ubuntu 22 to the supported OS list !3712
+- Adds deprecation notes for docker-ssh and docker-ssh+machine executors !3714
+- Updated template to match other repo !3715
+
 ## v15.5.1 (2022-11-11)
 
 ### New features
