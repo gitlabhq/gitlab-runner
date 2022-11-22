@@ -19,12 +19,15 @@ The following instructions setup your golang environment using `asdf` to manage 
 
 In order to provide Docker and Kubernetes locally Step 3 has you setting Rancher Desktop. If you don't need one or both you can skip step 3 ("Install Rancher Desktop") or just disable `k3s` (Kubernetes) in Rancher Desktop.
 
+## Recommended Environment
+
 The recommended environment on which to install golang and Rancher Desktop for development is a local laptop or desktop. It is possible to use nested-virtualization to run Rancher Desktop in the cloud (which runs `k3s` in a VM) but it's more tricky to setup.
 
-## Runner Shorts
+## Runner Shorts Video Tutorials
 
 You can also follow along with the Runner Shorts (~20 minute videos) on setting up and making a change:
 
+1. Please read the [recommended environment](#recommended-environment) section above before beginning
 1. [Setting up a GitLab Runner development environment](https://www.youtube.com/watch?v=-KlaXpUdJOI)
 1. [Code walkthrough of GitLab Runner](https://www.youtube.com/watch?v=pEtfmZ0Ssc4)
 1. [Making and testing locally a GitLab Runner change](https://www.youtube.com/watch?v=45H4WIuu8Fc)
