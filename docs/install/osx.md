@@ -17,9 +17,6 @@ Two methods for installing GitLab Runner on macOS are available:
 
 ### Manual installation (official)
 
-NOTE:
-For documentation on GitLab Runner 9 and earlier, [visit this documentation](old.md).
-
 1. Download the binary for your system:
 
    - For Intel-based systems:
