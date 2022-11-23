@@ -97,8 +97,7 @@ It is possible to download and install via binary file, if necessary.
 ### Install
 
 WARNING:
-With GitLab Runner 10, the executable was renamed to `gitlab-runner`. If you
-want to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
+With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
 
 1. Simply download one of the binaries for your system:
 

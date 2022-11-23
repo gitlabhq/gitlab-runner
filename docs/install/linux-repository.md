@@ -44,8 +44,7 @@ using GitLab Runner. [Read how to install Docker for your distribution](https://
 
 NOTE:
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
-to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
-to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
+to [upgrade to the new version](#upgrading-to-gitlab-runner-10).
 
 To install GitLab Runner:
 
