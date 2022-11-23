@@ -37,7 +37,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.8.0
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
-	github.com/urfave/cli v1.22.2
+	github.com/urfave/cli v1.22.10
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221107182235-c41f6499e083
