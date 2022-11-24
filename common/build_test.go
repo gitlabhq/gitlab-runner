@@ -2117,7 +2117,7 @@ func TestSecretsResolving(t *testing.T) {
 }
 
 func TestResolvedSecretsSetMasked(t *testing.T) {
-	const expectedMaskPhrase = "resolved_value"
+	const expectedMaskPhrase = "resolved$value"
 
 	p, assertFn := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error {
 		return nil
@@ -2145,7 +2145,7 @@ func TestResolvedSecretsSetMasked(t *testing.T) {
 	defer secretsResolverMock.AssertExpectations(t)
 
 	secretsResolverMock.On("Resolve", successfulBuild.Secrets).Return(JobVariables{
-		{Key: "key", Value: expectedMaskPhrase, Masked: true},
+		{Key: "key", Value: expectedMaskPhrase, Masked: true, Raw: true},
 	}, nil).Once()
 
 	build.secretsResolver = func(_ logger, _ SecretResolverRegistry) (SecretsResolver, error) {

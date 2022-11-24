@@ -129,6 +129,7 @@ func (r *defaultSecretsResolver) handleSecret(variableKey string, secret Secret)
 		Value:  value,
 		File:   secret.IsFile(),
 		Masked: true,
+		Raw:    true,
 	}
 
 	return variable, nil
