@@ -1,3 +1,10 @@
+## v15.6.1 (2022-11-24)
+
+### Bug fixes
+
+- Upgrade github.com/urfave/cli to 1.22.10 !3744
+- Fix cache config needing to be provided !3747
+
 ## v15.6.0 (2022-11-21)
 
 ### New features
