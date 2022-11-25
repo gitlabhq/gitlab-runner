@@ -38,15 +38,14 @@ func TestArchiveUploadExpandArgs(t *testing.T) {
 			URL:   srv.URL,
 		},
 	}
-	cmd.Paths = []string{"unexpanded", "path/${expand}"}
-	cmd.Exclude = []string{"unexpanded", "path/$expand"}
+	cmd.Paths = []string{"unexpanded", "path/${expand}/${expand:1:3}"}
+	cmd.Exclude = []string{"unexpanded", "path/$expand/${foo:-bar}"}
 
 	cmd.Execute(&cli.Context{})
 
-	expected := []string{"unexpanded", "path/expanded"}
 	assert.Equal(t, "artifact expanded", cmd.Name)
-	assert.Equal(t, expected, cmd.Paths)
-	assert.Equal(t, expected, cmd.Exclude)
+	assert.Equal(t, []string{"unexpanded", "path/expanded/xpa"}, cmd.Paths)
+	assert.Equal(t, []string{"unexpanded", "path/expanded/bar"}, cmd.Exclude)
 }
 
 func TestArchiveUploadRedirect(t *testing.T) {
