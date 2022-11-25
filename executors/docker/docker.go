@@ -408,12 +408,17 @@ func (e *executor) createService(
 }
 
 func (e *executor) createHostConfigForService() *container.HostConfig {
+	privileged := e.Config.Docker.Privileged
+	if e.Config.Docker.PrivilegedServices != nil {
+		privileged = *e.Config.Docker.PrivilegedServices
+	}
+
 	return &container.HostConfig{
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
-		Privileged:    e.Config.Docker.Privileged,
+		Privileged:    privileged,
 		Runtime:       e.Config.Docker.Runtime,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		NetworkMode:   e.networkMode,
