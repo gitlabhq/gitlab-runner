@@ -6,7 +6,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Install and register GitLab Runner for autoscaling with Docker Machine **(FREE)**
 
-> The auto scale feature was introduced in GitLab Runner 1.1.0.
+> The autoscaling feature was introduced in GitLab Runner 1.1.0.
 
 For an overview of the autoscale architecture, take a look at the
 [comprehensive documentation on autoscaling](../configuration/autoscale.md).
@@ -14,7 +14,7 @@ For an overview of the autoscale architecture, take a look at the
 ## Forked version of Docker machine
 
 Docker has [deprecated Docker Machine](https://gitlab.com/gitlab-org/gitlab/-/issues/341856). However,
-GitLab maintains a fork of [`docker-machine`](https://gitlab.com/gitlab-org/ci-cd/docker-machine)
+GitLab maintains a [Docker Machine fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine)
 for GitLab Runner users who rely on the Docker Machine executor. This fork is
 based on the latest `main` branch of `docker-machine` with
 some additional patches for the following bugs:
@@ -27,8 +27,8 @@ some additional patches for the following bugs:
 - [Add support for using GPUs in Google Compute Engine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/48)
 - [Support running AWS instances with IMDSv2](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/merge_requests/49)
 
-The intent of this fork is to fix critical and bugs affecting running
-costs only. No new features will be added.
+The intent of the [Docker Machine fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine) is to only fix critical issues and bugs which affect running
+costs. No new features will be added.
 
 ## Preparing the environment
 
@@ -38,7 +38,7 @@ installed in the same machine:
 1. Log in to a new Linux-based machine that will serve as a bastion server
    where Docker will spawn new machines from
 1. [Install GitLab Runner](../install/index.md)
-1. Install Docker Machine from the fork
+1. Install Docker Machine from the [Docker Machine fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine)
 1. Optionally but recommended, prepare a
    [proxy container registry and a cache server](../configuration/speed_up_job_execution.md)
    to be used with the autoscaled runners
@@ -52,7 +52,7 @@ installed in the same machine:
 1. The **first time** you're using Docker Machine, it is best to manually execute the
    `docker-machine create ...` command with your [Docker Machine Driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/drivers).
    Run this command alongside with the options that you intend to configure in the
-   [MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section) section.
+   [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section) section.
    This will set up the Docker Machine environment properly and will also be a good
    validation of the specified options. After this, you can destroy the machine with
    `docker-machine rm [machine_name]` and start the runner.
