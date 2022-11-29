@@ -158,9 +158,11 @@ to use the new cache server.
 To use Google Cloud Platform as a distributed cache,
 [edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscachegcs-section) to point
 to the GCP location and provide credentials for connecting.
+Make sure the runner has a network path to the GCS endpoint.
 
 ### Use Azure Blob storage
 
 To use Azure Blob storage as a distributed cache,
 [edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscacheazure-section) to point
 to the Azure location and provide credentials for connecting.
+Make sure the runner has a network path to the Azure endpoint.
