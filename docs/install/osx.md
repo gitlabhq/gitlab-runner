@@ -43,30 +43,29 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-As the user who is to run the runners:
+1. As the user who will run the runners:
 
-1. [Register a runner](../register/index.md). When you build iOS or macOS applications on macOS, use
-   [the shell executor](../executors/shell.md). The build and tests run as the identity of the logged-in user, directly
-   on the build host. It does not run in a container, which is less secure than using container executors. For more
-   information, see the [security implications documentation](../security/index.md#usage-of-shell-executor)
-   for additional detail on what to keep in mind in this scenario.
+   1. [Register a runner](../register/index.md). When you build iOS or macOS applications on macOS, use
+      [the shell executor](../executors/shell.md). Jobs will run directly on the host and use
+      the identity of the logged-in user. The jobs will not run in a container, which is less secure than using container executors.
+      For details, see the [security implications documentation](../security/index.md#usage-of-shell-executor).
 
-1. Open a terminal and switch to the current user.
+   1. Open a terminal and switch to the current user.
 
-   ```shell
-   su - <username>
-   ```
+      ```shell
+      su - <username>
+      ```
 
-1. Install GitLab Runner as a service and start it:
+   1. Install GitLab Runner as a service and start it:
 
-   ```shell
-   cd ~
-   gitlab-runner install
-   gitlab-runner start
-   ```
+      ```shell
+      cd ~
+      gitlab-runner install
+      gitlab-runner start
+      ```
 
-GitLab Runner is installed and is run after a system reboot.
-
+1. Reboot your system.
+   
 If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/<username>/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md).
 
 ### Homebrew installation (alternative)
