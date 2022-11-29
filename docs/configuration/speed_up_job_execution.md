@@ -104,8 +104,9 @@ Learn more about GitLab CI/CD [cache dependencies and best practices](https://do
 To use AWS S3 as a distributed cache,
 [edit runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnerscaches3-section) to point
 to the S3 location and provide credentials for connecting.
+Make sure the runner has a network path to the S3 endpoint.
 
-Important, if you are using private subnets you may need to enable an S3 VPC endpoint in order to save cost on data transfer.  
+Cost saving tip: if you are using a private subnet with a NAT gateway you can enable an S3 VPC endpoint in order to save cost on data transfer.  
 
 ### Use MinIO
 
