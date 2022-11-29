@@ -77,6 +77,22 @@ func Test_windowsInfo_create(t *testing.T) {
 				expectedErr: nil,
 			},
 			{
+				operatingSystem: "Microsoft Windows Server Version 21H2 (OS Build 20348.169)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         GitLabRegistryName,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage21H1,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
 				operatingSystem: "some random string",
 				expectedErr:     windows.NewUnsupportedWindowsVersionError("some random string"),
 			},
