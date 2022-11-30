@@ -320,7 +320,7 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 
 ## Troubleshooting
 
-### `Application execution failed` error when testing the configuration
+### `No Container Instances were found in your cluster` error when testing the configuration
 
 `error="starting new Fargate task: running new task on Fargate: error starting AWS Fargate Task: InvalidParameterException: No Container Instances were found in your cluster."`
 
@@ -330,3 +330,9 @@ Further reading:
 
 - A default [capacity provider strategy](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html) is associated with each Amazon ECS cluster. If no other capacity provider strategy or launch type is specified, the cluster uses this strategy when a task runs or a service is created.
 - If a [`capacityProviderStrategy`](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy) is specified, the `launchType` parameter must be omitted. If no `capacityProviderStrategy` or `launchType` is specified, the `defaultCapacityProviderStrategy` for the cluster is used.
+
+### Metadata `file does not exist` error when running jobs
+
+`Application execution failed PID=xxxxx error="obtaining information about the running task: trying to access file \"/opt/gitlab-runner/metadata/<runner_token>-xxxxx.json\": file does not exist" cleanup_std=err job=xxxxx project=xx runner=<runner_token>`
+
+Ensure that your IAM Role policy is configured correctly and has the ability to perform write operations to create the metadata JSON file in `/opt/gitlab-runner/metadata/`. For testing and configuration purposes, you can use the `AmazonECS_FullAccess` policy. 
