@@ -106,7 +106,7 @@ To use AWS S3 as a distributed cache,
 to the S3 location and provide credentials for connecting.
 Make sure the runner has a network path to the S3 endpoint.
 
-Cost saving tip: if you are using a private subnet with a NAT gateway you can enable an S3 VPC endpoint in order to save cost on data transfer.  
+If you use a private subnet with a NAT gateway, to save cost on data transfers you can enable an S3 VPC endpoint.  
 
 ### Use MinIO
 
