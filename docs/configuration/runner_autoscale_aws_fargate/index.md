@@ -335,4 +335,4 @@ Further reading:
 
 `Application execution failed PID=xxxxx error="obtaining information about the running task: trying to access file \"/opt/gitlab-runner/metadata/<runner_token>-xxxxx.json\": file does not exist" cleanup_std=err job=xxxxx project=xx runner=<runner_token>`
 
-Ensure that your IAM Role policy is configured correctly and has the ability to perform write operations to create the metadata JSON file in `/opt/gitlab-runner/metadata/`. For testing and configuration purposes, you can use the `AmazonECS_FullAccess` policy. 
+Ensure that your IAM Role policy is configured correctly and can perform write operations to create the metadata JSON file in `/opt/gitlab-runner/metadata/`. To test in a non-production environment, use the AmazonECS_FullAccess policy. Review your IAM role policy according to your organization's security requirements. 
