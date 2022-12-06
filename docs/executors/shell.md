@@ -16,7 +16,7 @@ Always use the [latest version of Git available](https://git-scm.com/download/).
 the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the machine,
 so ensure Git LFS is up-to-date when GitLab Runner will run using the shell executor.
 
-## Overview
+## Run scripts as a privileged user
 
 The scripts can be run as unprivileged user if the `--user` is added to the
 [`gitlab-runner run` command](../commands/index.md#gitlab-runner-run). This feature is only supported by Bash.
@@ -42,7 +42,7 @@ To overwrite the `<working-directory>/builds` and `<working-directory/cache`
 specify the `builds_dir` and `cache_dir` options under the `[[runners]]` section
 in [`config.toml`](../configuration/advanced-configuration.md).
 
-## Running as unprivileged user
+## Run scripts as an unprivileged user
 
 If GitLab Runner is installed on Linux from the
 [official `.deb` or `.rpm` packages](https://packages.gitlab.com/runner/gitlab-runner),
