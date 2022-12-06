@@ -17,9 +17,9 @@ NOTE:
 GitLab Runner uses the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the remote machine.
 Ensure Git LFS is up-to-date on any remote systems where GitLab Runner runs using SSH executor.
 
-## Overview
+## Use the SSH executor
 
-To use the SSH executor you need to specify `executor = "ssh"` under the
+To use the SSH executor, specify `executor = "ssh"` in the
 [`[runners.ssh]`](../configuration/advanced-configuration.md#the-runnersssh-section) section. For example:
 
 ```toml
@@ -55,7 +55,7 @@ To overwrite the `~/builds` directory, specify the `builds_dir` options under
 If you want to upload job artifacts, install `gitlab-runner` on the host you are
 connecting to via SSH.
 
-## Security
+## Configure strict host key checking
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3074) in GitLab 14.3.
 
