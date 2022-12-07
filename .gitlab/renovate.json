@@ -4,9 +4,15 @@
   ],
   "regexManagers": [
     {
-      "fileMatch": "\\.gitlab\\/ci\\/_common\\.gitlab-ci\\.yml",
+      "fileMatch": [
+        "\\.gitlab\\/ci\\/_common\\.gitlab-ci\\.yml",
+        "\\.tool-versions",
+        "dockerfiles\\/ci\\/Dockerfile"
+      ],
       "matchStrings": [
-        "# renovate: (datasource=(?<datasource>\\S+))?\\s?(depName=(?<depName>\\S+))?\\s?(registryUrl=(?<registryUrl>\\S+))?\\s?(versioning=(?<versioning>\\S+))?\\s?(allowedVersions=(?<allowedVersions>\\S+))?\\s?.*?_VERSION:\\s?\\\"?(?<currentValue>[\\w+\\.\\-]*)"
+        "# renovate: (datasource=(?<datasource>\\S+))?\\s?(depName=(?<depName>\\S+))?\\s?(registryUrl=(?<registryUrl>\\S+))?\\s?(versioning=(?<versioning>\\S+))?\\s?(allowedVersions=(?<allowedVersions>\\S+))?\\s?.*?_VERSION:\\s?\\\"?(?<currentValue>[\\w+\\.\\-]*)",
+        "# renovate: (datasource=(?<datasource>\\S+))?\\s?(depName=(?<depName>\\S+))?\\s?(registryUrl=(?<registryUrl>\\S+))?\\s?(versioning=(?<versioning>\\S+))?\\s?(allowedVersions=(?<allowedVersions>\\S+))?\\s\\w+\\s(?<currentValue>[\\w+\\.\\-]*)",
+        "# renovate: (datasource=(?<datasource>\\S+))?\\s?(depName=(?<depName>\\S+))?\\s?(registryUrl=(?<registryUrl>\\S+))?\\s?(versioning=(?<versioning>\\S+))?\\s?(allowedVersions=(?<allowedVersions>\\S+))?\\sFROM\\s\\w+\\:(?<currentValue>[\\w+\\.\\-]*)"
       ],
       "allowedVersionsTemplate": "{{allowedVersions}}"
     }
