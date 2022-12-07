@@ -1020,7 +1020,7 @@ only published in the GitLab Container Registry.
 
 Before 15.0, you could configure this behavior to use images from Docker Hub.
 
-Self-managed instances also pull the helper image from the GitLab Container Registry on GitLab.com. You can check the status of the GitLab Container Registry at [status.gitlab.com](https://status.gitlab.com/).
+Self-managed instances also pull the helper image from the GitLab Container Registry on GitLab.com. To check the status of the GitLab Container Registry, see the [GitLab System Status](https://status.gitlab.com/).
 
 ### Override the helper image
 
