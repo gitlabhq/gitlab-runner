@@ -1,3 +1,4 @@
+# renovate: datasource=docker depName=golang allowedVersions=/1\.18\..+\-buster/
 FROM golang:1.18.8-buster
 
 # Install required dependencies
