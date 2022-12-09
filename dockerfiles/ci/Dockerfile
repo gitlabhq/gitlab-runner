@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=golang allowedVersions=/1\.18\..+\-buster/
-FROM golang:1.18.8-buster
+FROM golang:1.18.9-buster
 
 # Install required dependencies
 # hadolint ignore=DL3008,DL3015

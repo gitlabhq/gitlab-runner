@@ -1,6 +1,6 @@
 variables:
   # renovate: datasource=docker depName=golang allowedVersions=/1\.18\..+/
-  GO_VERSION: "1.18.8"
+  GO_VERSION: "1.18.9"
   CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_VERSION-1"
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
