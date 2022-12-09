@@ -230,6 +230,7 @@ When you overwrite the Kubernetes namespace, make sure that:
     | Resource          | Permissions                             |
     |-------------------|-----------------------------------------|
     | pods/attach       | create, patch, delete                   |
+    | pods/exec         | create, patch, delete                   |
     | pods              | get, watch, create, delete              |
     | services          | get, watch, create, delete              |
     | configmaps        | get, create, update, delete             |
