@@ -288,6 +288,7 @@ type VirtualBoxConfig struct {
 	BaseFolder       string   `toml:"base_folder" json:"base_folder" long:"base-folder" env:"VIRTUALBOX_BASE_FOLDER" description:"Folder in which to save the new VM. If empty, uses VirtualBox default"`
 	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
 	AllowedImages    []string `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"VIRTUALBOX_ALLOWED_IMAGES" description:"Image allowlist"`
+	StartType        string   `toml:"start_type" json:"start_type" long:"start-type" env:"VIRTUALBOX_START_TYPE" description:"Graphical front-end type"`
 }
 
 //nolint:lll
