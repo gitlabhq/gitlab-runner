@@ -504,6 +504,7 @@ your `PATH` environment variable on Windows hosts:
 | `base_folder`       | Folder to save the new VM in. If this value is empty or omitted, the default VM folder is used. |
 | `disable_snapshots` | If disabled, the VMs are destroyed when the jobs are done. |
 | `allowed_images`    | List of allowed `image`/`base_name` values, represented as regular expressions. See the [Overriding the base VM image](#overriding-the-base-vm-image) section for more details. |
+| `start_type`        | Graphical front-end type when starting the VM. |
 
 Example:
 
@@ -512,7 +513,10 @@ Example:
   base_name = "my-virtualbox-image"
   base_snapshot = "my-image-snapshot"
   disable_snapshots = false
+  start_type = "headless"
 ```
+
+The `start_type` parameter determines the graphical front end used when starting the virtual image. Valid values are `headless` (default), `gui` or `separate` as supported by the host and guest combination.
 
 ## Overriding the base VM image
 
