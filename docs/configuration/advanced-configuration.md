@@ -1043,7 +1043,7 @@ image version by using one of the
   executor = "docker"
   [runners.docker]
     (...)
-    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_REVISION}"
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
 ```
 
 With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-v${CI_RUNNER_REVISION}`,
