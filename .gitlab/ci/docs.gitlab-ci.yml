@@ -50,7 +50,9 @@ check development docs Go version:
   extends:
   - .rules:merge_request_pipelines
   stage: docs
-  image: mikefarah/yq:4.30.5
+  image:
+    name: mikefarah/yq:4.30.5
+    entrypoint: ["/bin/sh", "-c"]
   needs: []
   script:
     - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
