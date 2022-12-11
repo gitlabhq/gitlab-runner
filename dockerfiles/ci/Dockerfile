@@ -66,7 +66,7 @@ RUN wget -q https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSI
 
 # Install yq
 ARG YQ_VERSION=4.30.5
-RUN wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq &&\
+RUN wget https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq &&\
         chmod +x /usr/bin/yq
 
 COPY Makefile* /tmp/
