@@ -51,7 +51,7 @@ check development docs Go version:
   - .rules:merge_request_pipelines
   stage: docs
   image: mikefarah/yq:4.30.5
-  dependencies: []
+  needs: []
   script:
     - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
     - grep $GO_VERSION docs/development/index.md
