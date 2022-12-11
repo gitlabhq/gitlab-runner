@@ -61,7 +61,7 @@ you can disable console login for that user. Keep the tab open or copy paste the
 security credentials in an editor as we'll use them later during the
 [GitLab Runner configuration](#the-runnersmachine-section).
 
-You can also create [EC2 instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) with the required permissions (AmazonEC2FullAccess and AmazonS3FullAccess policies). This instance profile can be attached to the Runner Manager EC2 instance to provide the required privileges for provisioning of new EC2 instances for the jobs' execution.
+You can also create an [EC2 instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) with the required `AmazonEC2FullAccess` and `AmazonS3FullAccess` policies. Attach this instance profile to the Runner Manager EC2 instance to allow the provisioning of new EC2 instances for the jobs' execution.
 
 ## Prepare the Runner Manager instance
 
