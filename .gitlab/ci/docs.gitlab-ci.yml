@@ -50,12 +50,10 @@ check development docs Go version:
   extends:
   - .rules:merge_request_pipelines
   stage: docs
-  image:
-    name: mikefarah/yq:4.30.5
-    entrypoint: ["/bin/sh", "-c"]
-  needs: []
+  needs:
+    - 'prepare ci image'
   script:
     - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
-    - grep $GO_VERSION docs/development/index.md
-    - if [ $? -ne 0 ]; then echo "Make sure to update all Go versions in docs/development/index.md to $GO_VERSION"; exit 1; fi
+    - grep $GO_VERSION docs/development/index.md || export EXIT_CODE=$?
+    - if [ $EXIT_CODE -ne 0 ]; then echo "Make sure to update all Go versions in docs/development/index.md to $GO_VERSION"; exit 1; fi
 
