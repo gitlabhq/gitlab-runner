@@ -49,6 +49,7 @@ review-docs-cleanup:
 check development docs Go version:
   extends:
   - .rules:merge_request_pipelines
+  stage: docs
   image: mikefarah/yq:4.30.5
   dependencies: []
   script:
