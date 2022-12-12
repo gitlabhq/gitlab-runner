@@ -598,6 +598,12 @@ If you make the `/builds` directory **a host-bound storage**, your builds will b
 - `<concurrent-id>` is a unique number, identifying the local job ID on the
   particular runner in context of the project
 
+## IPC mode
+
+The Docker executor supports sharing the IPC namespace of containers with other
+locations. This maps to the `docker run --ipc` flag.
+More details on [IPC settings in Docker documentation](https://docs.docker.com/engine/reference/run/#ipc-settings---ipc)
+
 ## The privileged mode
 
 The Docker executor supports a number of options that allows fine-tuning of the

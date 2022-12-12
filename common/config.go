@@ -184,6 +184,7 @@ type DockerConfig struct {
 	ExtraHosts                 []string           `toml:"extra_hosts,omitempty" json:"extra_hosts" long:"extra-hosts" env:"DOCKER_EXTRA_HOSTS" description:"Add a custom host-to-IP mapping"`
 	VolumesFrom                []string           `toml:"volumes_from,omitempty" json:"volumes_from" long:"volumes-from" env:"DOCKER_VOLUMES_FROM" description:"A list of volumes to inherit from another container"`
 	NetworkMode                string             `toml:"network_mode,omitempty" json:"network_mode" long:"network-mode" env:"DOCKER_NETWORK_MODE" description:"Add container to a custom network"`
+	IpcMode                    string             `toml:"ipcmode,omitempty" json:"ipcmode" long:"ipcmode" env:"DOCKER_IPC_MODE" description:"Select IPC mode for container"`
 	Links                      []string           `toml:"links,omitempty" json:"links" long:"links" env:"DOCKER_LINKS" description:"Add link to another container"`
 	Services                   []Service          `toml:"services,omitempty" json:"services" description:"Add service that is started with container"`
 	WaitForServicesTimeout     int                `toml:"wait_for_services_timeout,omitzero" json:"wait_for_services_timeout" long:"wait-for-services-timeout" env:"DOCKER_WAIT_FOR_SERVICES_TIMEOUT" description:"How long to wait for service startup"`
