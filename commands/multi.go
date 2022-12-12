@@ -925,9 +925,10 @@ func (mr *RunCommand) Stop(_ service.Service) error {
 		return nil
 	}
 
+	//nolint:lll
 	mr.log().
 		WithError(err).
-		Warning("Graceful shutdown not finished properly")
+		Warning(`Graceful shutdown not finished properly. To gracefully clean up running plugins please use SIGQUIT (ctrl-\) instead of SIGINT (ctrl-c)`)
 
 	err = mr.handleForcefulShutdown()
 	if err == nil {
