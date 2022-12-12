@@ -17,6 +17,7 @@ variables:
   GIT_VERSION: "2.38.1"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "3.2.0"
+  YQ_VERSION: "4.30.5"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
   # We're overriding rules for the jobs that we want to run.

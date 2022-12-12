@@ -15,6 +15,7 @@ build() {
            --build-arg GIT_LFS_AMD64_CHECKSUM="${GIT_LFS_LINUX_AMD64_CHECKSUM}" \
            --build-arg KUBECTL_VERSION="${KUBECTL_VERSION}" \
            --build-arg AWS_CLI_VERSION="${AWS_CLI_VERSION}" \
+           --build-arg YQ_VERSION="${YQ_VERSION}" \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
            "${GIT_ROOT}"

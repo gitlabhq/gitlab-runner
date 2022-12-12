@@ -18,17 +18,16 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-ARG DOCKER_VERSION
-
 # Install docker client
+ARG DOCKER_VERSION
 RUN wget -q https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz -O /tmp/docker.tar.gz && \
     tar -xzf /tmp/docker.tar.gz -C /tmp/ && \
     cp /tmp/docker/docker* /usr/bin && \
     chmod +x /usr/bin/docker* && \
     rm -rf /tmp/*
 
-ARG PWSH_VERSION
 # Install Powershell Core
+ARG PWSH_VERSION
 RUN wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb && \
     dpkg -i packages-microsoft-prod.deb && \
     rm packages-microsoft-prod.deb && \
@@ -37,9 +36,8 @@ RUN wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod
     rm -rf /var/lib/apt/lists/* && \
     pwsh --version
 
-ARG BUILDX_VERSION
-
 # Install docker buildx plugin
+ARG BUILDX_VERSION
 RUN mkdir -p ~/.docker/cli-plugins && \
     wget -q https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64 -O ~/.docker/cli-plugins/docker-buildx && \
     chmod a+x ~/.docker/cli-plugins/docker-buildx
@@ -50,9 +48,8 @@ ARG GIT_LFS_AMD64_CHECKSUM
 COPY dockerfiles/ci/install_git_lfs /tmp/
 RUN /tmp/install_git_lfs
 
-ARG KUBECTL_VERSION
-
 # Install kubectl
+ARG KUBECTL_VERSION
 RUN wget -q https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl && \
     chmod +x /usr/local/bin/kubectl
 
@@ -65,7 +62,7 @@ RUN wget -q https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWS_CLI_VERSI
     rm awscliv2.zip
 
 # Install yq
-ARG YQ_VERSION=4.30.5
+ARG YQ_VERSION
 RUN wget https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq &&\
         chmod +x /usr/bin/yq
 
