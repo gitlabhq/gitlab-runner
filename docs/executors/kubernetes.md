@@ -197,14 +197,17 @@ You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--kube
 The Kubernetes namespace can be overwritten per CI/CD job in the `.gitlab-ci.yml` file, by using the variable
 `KUBERNETES_NAMESPACE_OVERWRITE`.
 
-This approach allows you to create a new isolated namespace dedicated for CI purposes, and deploy a custom
-set of Pods. The `Pods` spawned by the runner will take place on the overwritten namespace, for simple
+You can use this approach to designate a namespace for CI purposes, and deploy a custom
+set of Pods to it. The Pods spawned by the runner take place on the overwritten namespace, for simple
 and straight forward access between containers during the CI stages.
 
 ``` yaml
 variables:
   KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_SLUG}
 ```
+
+NOTE:
+This variable does not create a namespace on your cluster. Ensure that the namespace exists before you run the job.
 
 Furthermore, to ensure only designated namespaces will be used during CI runs, set the configuration
 `namespace_overwrite_allowed` with an appropriate regular expression. When left empty the overwrite behavior is
