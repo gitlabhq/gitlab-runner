@@ -51,7 +51,8 @@ check development docs Go version:
   - .rules:merge_request_pipelines
   stage: docs
   needs:
-    - 'prepare ci image'
+    - job: 'prepare ci image'
+      optional: true
   script:
     - export GO_VERSION=$(cat .gitlab/ci/_common.gitlab-ci.yml | yq '.variables.GO_VERSION')
     - export EXIT_CODE=0
