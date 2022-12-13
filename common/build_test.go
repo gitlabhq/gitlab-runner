@@ -834,6 +834,18 @@ func TestGetRemoteURL(t *testing.T) {
 			},
 			expectedURL: "https://gitlab-ci-token:job-token@test.local/my/project.git",
 		},
+		"using clone_url with ssh protocol": {
+			runner: RunnerSettings{
+				CloneURL: "ssh://git@test.local/",
+			},
+			expectedURL: "ssh://git@test.local/my/project.git",
+		},
+		"using clone_url with ssh protocol and default username": {
+			runner: RunnerSettings{
+				CloneURL: "ssh://test.local/",
+			},
+			expectedURL: "ssh://git@test.local/my/project.git",
+		},
 		"not using clone_url": {
 			runner:      RunnerSettings{},
 			expectedURL: exampleRepoURL,
