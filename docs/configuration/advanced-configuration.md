@@ -143,8 +143,8 @@ It should be defined outside the `[[runners]]` section.
 
 When you configure the `[session_server]` section:
 
-- For `listen_address` and `advertise_address`, use the format `host:port`, where `host` 
-  is the IP address (`127.0.0.1:8093`) or domain (`my-runner.example.com:8093`). The 
+- For `listen_address` and `advertise_address`, use the format `host:port`, where `host`
+  is the IP address (`127.0.0.1:8093`) or domain (`my-runner.example.com:8093`). The
   runner uses this information to create a TLS certificate for a secure connection.
 - Ensure your web browser can connect to the `advertise_address`. Live sessions are initiated by the web browser.
 - Ensure that `advertise_address` is a public IP address, unless you have enabled the application setting, [`allow_local_requests_from_web_hooks_and_services`](https://docs.gitlab.com/ee/api/settings.html#list-of-settings-that-can-be-accessed-via-api-calls).
@@ -293,7 +293,7 @@ The following settings define the Docker container parameters.
 | `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
 | `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
-| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retrying-a-failed-pull), or [restrict pull policies](../executors/docker.md#restrict-docker-pull-policies). |
+| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#restrict-docker-pull-policies). |
 | `runtime`                      | The runtime for the Docker container. |
 | `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
 | `shm_size`                     | Shared memory size for images (in bytes). |
