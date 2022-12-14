@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/nesting/api"
@@ -32,10 +33,21 @@ func (ref *acquisitionRef) Prepare(
 ) (executors.Client, error) {
 	info := ref.acq.InstanceConnectInfo()
 
+	useExternalAddr := true
+	if options.Config != nil && options.Config.Autoscaler != nil {
+		useExternalAddr = options.Config.Autoscaler.ConnectorConfig.UseExternalAddr
+	}
+
+	options.Build.Log().WithFields(logrus.Fields{
+		"internal-address":     info.InternalAddr,
+		"external-address":     info.ExternalAddr,
+		"use-external-address": useExternalAddr,
+		"instance-id":          info.ID,
+	}).Info("Dialing instance")
+
 	logger.Println(fmt.Sprintf("Dialing instance %s...", info.ID))
 	dialer, err := connector.Dial(ctx, info, connector.DialOptions{
-		// todo: make this configurable
-		UseExternalAddr: true,
+		UseExternalAddr: useExternalAddr,
 	})
 	if err != nil {
 		return nil, err

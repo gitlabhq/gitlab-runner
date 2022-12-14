@@ -248,6 +248,7 @@ type ConnectorConfig struct {
 	UseStaticCredentials bool          `toml:"use_static_credentials"`
 	Keepalive            time.Duration `toml:"keepalive"`
 	Timeout              time.Duration `toml:"timeout"`
+	UseExternalAddr      bool          `toml:"use_external_addr"`
 }
 
 type AutoscalerSettingsMap map[string]interface{}
