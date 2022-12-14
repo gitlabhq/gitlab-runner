@@ -1073,6 +1073,13 @@ func (b *Build) GetDefaultVariables() JobVariables {
 			Public:   true,
 			Internal: true,
 		},
+		{
+			Key:      "CI_JOB_TIMEOUT",
+			Value:    strconv.FormatInt(int64(b.GetBuildTimeout().Seconds()), 10),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
 	}
 }
 
