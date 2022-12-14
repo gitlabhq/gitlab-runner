@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -44,6 +45,39 @@ func TestBuildPredefinedVariables(t *testing.T) {
 
 			projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
 			assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+		})
+	}
+}
+
+func TestBuildTimeoutExposed(t *testing.T) {
+	const testTimeout = 180
+	tests := map[string]struct {
+		forceDefault    bool
+		customTimeout   int
+		expectedTimeout int
+	}{
+		"no timeout specified": {
+			forceDefault:    true,
+			expectedTimeout: DefaultTimeout,
+		},
+		"timeout with arbitrary value": {
+			customTimeout:   testTimeout,
+			expectedTimeout: testTimeout,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
+				if !tt.forceDefault {
+					options.Build.RunnerInfo.Timeout = tt.customTimeout
+				}
+				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
+			})
+
+			exposedTimeout, err := strconv.Atoi(build.GetAllVariables().Get("CI_JOB_TIMEOUT"))
+			require.NoError(t, err)
+			assert.Equal(t, exposedTimeout, tt.expectedTimeout)
 		})
 	}
 }
