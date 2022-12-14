@@ -612,6 +612,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		NetworkMode:   e.networkMode,
+		IpcMode:       container.IpcMode(e.Config.Docker.IpcMode),
 		Links:         append(e.Config.Docker.Links, e.links...),
 		Binds:         e.volumesManager.Binds(),
 		OomScoreAdj:   e.Config.Docker.OomScoreAdjust,
