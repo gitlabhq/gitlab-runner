@@ -1179,6 +1179,10 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, AppVersion.Variables()...)
 	variables = append(variables, b.secretsVariables...)
 
+	variables = append(variables, JobVariable{
+		Key: tempProjectDirVariableKey, Value: b.TmpProjectDir(), Public: true, Internal: true,
+	})
+
 	b.allVariables = variables.Expand()
 
 	return b.allVariables

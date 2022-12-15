@@ -222,8 +222,15 @@ func (p *PsWriter) TmpFile(name string) string {
 		return p.Join(p.TemporaryPath, name)
 	}
 
-	filePath := p.Absolute(p.Join(p.TemporaryPath, name))
-	return p.fromSlash(filePath)
+	return p.cleanPath(p.Join(p.TemporaryPath, name))
+}
+
+func (p *PsWriter) cleanPath(name string) string {
+	if p.resolvePaths {
+		return name
+	}
+
+	return p.fromSlash(p.Absolute(name))
 }
 
 func (p *PsWriter) fromSlash(path string) string {
@@ -242,6 +249,10 @@ func (p *PsWriter) EnvVariableKey(name string) string {
 	return fmt.Sprintf("$%s", name)
 }
 
+func (p *PsWriter) isTmpFile(path string) bool {
+	return strings.HasPrefix(path, p.TemporaryPath)
+}
+
 func (p *PsWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := p.TmpFile(variable.Key)
@@ -253,6 +264,10 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 		)
 		p.Linef("$%s=%s", variable.Key, p.resolvePath(variableFile))
 	} else {
+		if p.isTmpFile(variable.Value) {
+			variable.Value = p.cleanPath(variable.Value)
+		}
+
 		p.Linef("$%s=%s", variable.Key, psQuoteVariable(variable.Value))
 	}
 

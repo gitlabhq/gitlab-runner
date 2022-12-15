@@ -128,11 +128,21 @@ func (b *BashWriter) buildCommand(quoter stringQuoter, command string, arguments
 }
 
 func (b *BashWriter) TmpFile(name string) string {
-	return b.Absolute(path.Join(b.TemporaryPath, name))
+	return b.cleanPath(path.Join(b.TemporaryPath, name))
+}
+
+func (b *BashWriter) cleanPath(name string) string {
+	return b.Absolute(name)
 }
 
 func (b *BashWriter) EnvVariableKey(name string) string {
 	return fmt.Sprintf("$%s", name)
+}
+
+// Intended to be used on unmodified paths only (i.e. paths that have not been
+// cleaned with cleanPath()).
+func (b *BashWriter) isTmpFile(path string) bool {
+	return strings.HasPrefix(path, b.TemporaryPath)
 }
 
 func (b *BashWriter) Variable(variable common.JobVariable) {
@@ -142,6 +152,9 @@ func (b *BashWriter) Variable(variable common.JobVariable) {
 		b.Linef("printf '%%s' %s > %q", b.escape(variable.Value), variableFile)
 		b.Linef("export %s=%q", b.escape(variable.Key), variableFile)
 	} else {
+		if b.isTmpFile(variable.Value) {
+			variable.Value = b.cleanPath(variable.Value)
+		}
 		b.Linef("export %s=%s", b.escape(variable.Key), b.escape(variable.Value))
 	}
 }
@@ -210,7 +223,7 @@ func (b *BashWriter) RmFilesRecursive(path string, name string) {
 }
 
 func (b *BashWriter) Absolute(dir string) string {
-	if path.IsAbs(dir) {
+	if path.IsAbs(dir) || strings.HasPrefix(dir, "$PWD") {
 		return dir
 	}
 	return path.Join("$PWD", dir)

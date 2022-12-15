@@ -129,12 +129,19 @@ func (b *CmdWriter) buildCommand(quoter stringQuoter, command string, arguments 
 }
 
 func (b *CmdWriter) TmpFile(name string) string {
-	filePath := b.Absolute(path.Join(b.TemporaryPath, name))
-	return helpers.ToBackslash(filePath)
+	return b.cleanPath(path.Join(b.TemporaryPath, name))
+}
+
+func (b *CmdWriter) cleanPath(name string) string {
+	return helpers.ToBackslash(b.Absolute(name))
 }
 
 func (b *CmdWriter) EnvVariableKey(name string) string {
 	return fmt.Sprintf("%%%s%%", name)
+}
+
+func (b *CmdWriter) isTmpFile(path string) bool {
+	return strings.HasPrefix(path, b.TemporaryPath)
 }
 
 func (b *CmdWriter) Variable(variable common.JobVariable) {
@@ -144,6 +151,9 @@ func (b *CmdWriter) Variable(variable common.JobVariable) {
 		b.Linef("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile))
 		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscape(variableFile))
 	} else {
+		if b.isTmpFile(variable.Value) {
+			variable.Value = b.cleanPath(variable.Value)
+		}
 		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscapeVariable(variable.Value))
 	}
 }

@@ -3,6 +3,7 @@
 package shells
 
 import (
+	"path"
 	"runtime"
 	"testing"
 
@@ -144,6 +145,96 @@ func TestBash_GetConfiguration(t *testing.T) {
 			assert.Equal(t, tc.cmd, config.Command)
 			assert.Equal(t, tc.args, config.Arguments)
 			assert.Equal(t, tn, config.CmdLine)
+		})
+	}
+}
+
+func Test_BashWriter_isTmpFile(t *testing.T) {
+	tmpDir := "/foo/bar"
+	bw := BashWriter{TemporaryPath: tmpDir}
+
+	tests := map[string]struct {
+		path string
+		want bool
+	}{
+		"tmp file var":     {path: path.Join(tmpDir, "BAZ"), want: true},
+		"not tmp file var": {path: "bla bla bla", want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, bw.isTmpFile(tt.path))
+		})
+	}
+}
+
+func Test_BashWriter_cleanPath(t *testing.T) {
+	tests := map[string]struct {
+		path, want string
+	}{
+		"relative path": {
+			path: "foo/bar/KEY",
+			want: "$PWD/foo/bar/KEY",
+		},
+		"absolute path": {
+			path: "/foo/bar/KEY",
+			want: "/foo/bar/KEY",
+		},
+		"idempotent": {
+			path: "$PWD/foo/bar/KEY",
+			want: "$PWD/foo/bar/KEY",
+		},
+	}
+
+	bw := BashWriter{TemporaryPath: "foo/bar"}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := bw.cleanPath(tt.path)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_BashWriter_Variable(t *testing.T) {
+	tests := map[string]struct {
+		variable common.JobVariable
+		writer   BashWriter
+		want     string
+	}{
+		"file var, relative path": {
+			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:   BashWriter{TemporaryPath: "foo/bar"},
+			// nolint:lll
+			want: "mkdir -p \"foo/bar\"\nprintf '%s' $'the secret' > \"$PWD/foo/bar/KEY\"\nexport KEY=\"$PWD/foo/bar/KEY\"\n",
+		},
+		"file var, absolute path": {
+			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:   BashWriter{TemporaryPath: "/foo/bar"},
+			// nolint:lll
+			want: "mkdir -p \"/foo/bar\"\nprintf '%s' $'the secret' > \"/foo/bar/KEY\"\nexport KEY=\"/foo/bar/KEY\"\n",
+		},
+		"tmp file var, relative path": {
+			variable: common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
+			writer:   BashWriter{TemporaryPath: "foo/bar"},
+			want:     "export KEY=$'$PWD/foo/bar/KEY2'\n",
+		},
+		"tmp file var, absolute path": {
+			variable: common.JobVariable{Key: "KEY", Value: "/foo/bar/KEY2"},
+			writer:   BashWriter{TemporaryPath: "/foo/bar"},
+			want:     "export KEY=$'/foo/bar/KEY2'\n",
+		},
+		"regular var": {
+			variable: common.JobVariable{Key: "KEY", Value: "VALUE"},
+			writer:   BashWriter{TemporaryPath: "/foo/bar"},
+			want:     "export KEY=VALUE\n",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			tt.writer.Variable(tt.variable)
+			assert.Equal(t, tt.want, tt.writer.String())
 		})
 	}
 }
