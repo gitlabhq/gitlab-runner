@@ -995,7 +995,7 @@ Currently, `alpine3.13` is the latest supported `pwsh` image.
 In GitLab 15.0 and later, the helper image is pulled from the GitLab Container Registry. In addition, helper images are
 only published in the GitLab Container Registry.
 
-In GitLab 15.0 and earlier, you configure helper images to use images from Docker Hub. To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_REVISION}`.
+In GitLab 15.0 and earlier, you configure helper images to use images from Docker Hub. To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
 
 ### Override the helper image
 
@@ -1046,7 +1046,7 @@ image version by using one of the
     helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
 ```
 
-With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-v${CI_RUNNER_REVISION}`,
+With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-v${CI_RUNNER_VERSION}`,
 which is based on its compilation data. After updating GitLab Runner to a new version, GitLab
 Runner tries to download the proper image. The image should be uploaded to the registry
 before upgrading GitLab Runner, otherwise the jobs start failing with a "No such image" error.
