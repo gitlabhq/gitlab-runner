@@ -5,11 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const apiEndpoint = "/api/v1/distributions.json"
@@ -30,41 +30,52 @@ type (
 	Result map[string][]Distro
 )
 
-var (
-	supportedPackageTypes = []string{"deb", "rpm"}
-	token                 string
-	host                  string
-	releasesPerDistro     int
-)
+var supportedPackageTypes = [...]string{"deb", "rpm"}
 
-func must(e error) {
+type envArgs struct {
+	token             string
+	host              string
+	releasesPerDistro int
+}
+
+func exitIfErr(e error) {
 	if e != nil {
-		panic(e)
+		fmt.Println(e.Error())
+		os.Exit(1)
 	}
 }
 
-func init() {
-	getenv := func(name string) string {
-		value := os.Getenv(name)
-		if value == "" {
-			panic(name + " environment variable not defined")
-		}
-		return value
+func getEnvArgs() (envArgs, error) {
+	var err error
+	env := envArgs{}
+	env.token = os.Getenv("PACKAGECLOUD_TOKEN")
+	env.host = os.Getenv("PACKAGE_CLOUD_URL")
+	env.releasesPerDistro, err = strconv.Atoi(os.Getenv("NUM_DISTRO_RELEASES"))
+
+	if err != nil {
+		return envArgs{}, fmt.Errorf("bad or missing 'NUM_DISTRO_RELEASES': %w", err)
 	}
 
-	token = getenv("PACKAGECLOUD_TOKEN")
-	host = getenv("PACKAGE_CLOUD_URL")
-	var err error
-	releasesPerDistro, err = strconv.Atoi(getenv("NUM_DISTRO_RELEASES"))
-	must(err)
+	if env.token == "" || env.host == "" {
+		return envArgs{}, fmt.Errorf("missing 'PACKAGE_CLOUD_URL' and/or 'PACKAGECLOUD_TOKEN'")
+	}
+
+	return env, nil
 }
 
 func main() {
+	env, err := getEnvArgs()
+	exitIfErr(err)
+
 	supportedDistros := normalizeInput(os.Args[1:])
 	if len(supportedDistros) == 0 {
-		log.Fatalf("no supported distributions specified %q", strings.Join(os.Args[1:], " "))
+		exitIfErr(fmt.Errorf("no supported distributions specified %q", strings.Join(os.Args[1:], " ")))
 	}
-	versionsToPackage := getDistroVersionsToPackage(supportedDistros, getData())
+
+	allDistroReleases, err := getData(env.token, env.host)
+	exitIfErr(err)
+
+	versionsToPackage := getDistroReleasesToPackage(supportedDistros, env.releasesPerDistro, allDistroReleases)
 	fmt.Println(strings.Join(versionsToPackage, " "))
 }
 
@@ -83,7 +94,7 @@ func normalizeInput(input []string) SupportedDistros {
 
 // Return a list of the latest/newest <maxVersionsPerDistro> releases supported
 // by packagecloud for each distro in <supportedDistros>.
-func getDistroVersionsToPackage(supportedDistros SupportedDistros, data Result) []string {
+func getDistroReleasesToPackage(supportedDistros SupportedDistros, releasesPerDistro int, data Result) []string {
 	result := []string{}
 	for _, pkg := range supportedPackageTypes {
 		for _, distro := range data[pkg] {
@@ -102,26 +113,27 @@ func getDistroVersionsToPackage(supportedDistros SupportedDistros, data Result) 
 
 // Query the packagecloud API to get a list of all the os/distro/releases it
 // supports.
-func getData() Result {
+func getData(token, host string) (Result, error) {
 	basicAuth := base64.StdEncoding.EncodeToString([]byte(token + ":"))
+	result := Result{}
 
-	url := host + apiEndpoint
-
-	req, err := http.NewRequest("GET", url, nil)
-	must(err)
+	req, err := http.NewRequest("GET", host+apiEndpoint, nil)
+	if err != nil {
+		return result, err
+	}
 	req.Header.Add("Authorization", "Basic "+basicAuth)
-	resp, err := http.DefaultClient.Do(req)
-	must(err)
+
+	client := http.Client{Timeout: 20 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return result, err
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		panic("got unexpected response status code: " + resp.Status)
+		return result, fmt.Errorf("got unexpected response status code: " + resp.Status)
 	}
 
-	d := json.NewDecoder(resp.Body)
-	result := Result{}
-	err = d.Decode(&result)
-	must(err)
-
-	return result
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	return result, err
 }
