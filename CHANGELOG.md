@@ -1,3 +1,61 @@
+## v15.7.0 (2022-12-17)
+
+### New features
+
+- Add PrivilegedServices option for allowing/disallowing docker services to be privileged !2652
+- Add support for Windows Server 21H2 !3746
+- Generate global system ID !3758
+- Add start_type to virtualbox configuration !2558 
+- Update secret resolver to return raw & masked variables !3750
+- Allow Executors to clone via SSH !3518 
+- Add docker support for `IpcMode` for IPC namespace sharing !3781 
+- Expose the build timeout as an environment variable !3778
+- Improve Runner's API health checking and handling !3658
+
+### Bug fixes
+
+- Fix cache config needing to be provided !3747
+- Add gitlab-runner user during ubi-fips image building !3725
+- Fix kubernetes pod labels overwrite !3582
+- Correctly handle expansion of job file variables, and variables that reference file variables !3613
+- Artifact/cache helpers now use POSIX shell syntax for expansion !3752
+
+### Maintenance
+
+- Upgrade github.com/urfave/cli to 1.22.10 !3744
+- Unit test to catch urfave bug !3749
+- Makefile.build.mk: allow building for arm64 without overriding ARCH !3498
+- Renovate Go version !3768
+- Add warning about using SIGTERM/SIGINT over SIGQUIT !3769
+- Update golang Docker tag to v1.18.9 !3776
+- Automate for which supported distro releases we create packages. !3756
+- Fix silent docker images build failure and retry buildx !3786
+- Rename Docker's PrivilegedServices to ServicesPrivileged !3791
+
+### Documentation changes
+
+- Making things a little more obvious for those of us who may skip ahead !3697 
+- Clean up docs redirects, runner - 2022-11-23
+- Document behavior for local addresses in [session_server] configuration !3676
+- Docs: Nested guidelines for clarity !3729
+- Fix some wording in docs and add links in convenient areas !3684
+- Updated serviceaccount setting to match the code !3387
+- Update agent for Kubernetes installation docs !3748
+- Change deprecation documentation for register command !3742
+- Make pod_labels more specific !3645 
+- Added doc to inform about saving cost when using private subnets and AWS S3 cache !3453
+- Add more descriptive headings on executor pages !3763
+- Add security warning to Runner install docs !3762
+- Add troubleshooting details !3755
+- Add note for self-managed customers !3761
+- Update docs/executors/virtualbox native OpenSSH PowerShell !3775
+- Fix Kubernetes Executor docs !3770
+- Add note for AWS IAM instance profile !3774
+- Add a requirement to create a namespace before overwriting !3696
+- CTRT edits for The Docker executor part 1 !3753
+- Expanded on downloading helper images and updated a link to use a more modern file. !3562
+- Add `deprecated` to `gitlab-runner exec` !3773
+
 ## v15.6.0 (2022-11-21)
 
 ### New features
