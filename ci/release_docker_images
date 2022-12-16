@@ -145,6 +145,8 @@ buildx() {
         "${tagOpts[@]}" \
         "${buildxFlags[@]}" \
         "${contextPath}"
+    buildx_exit_code=$?
+
     trap - ERR SIGINT SIGTERM
     cleanup_docker_context
 
@@ -161,6 +163,8 @@ buildx() {
     if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]] && [[ -n "${ECR_PUBLIC_REGISTRY_PASSWORD}" ]]; then
         logout "${ECR_PUBLIC_REGISTRY}"
     fi
+
+    return $buildx_exit_code
 }
 
 add_tags() {
@@ -248,17 +252,30 @@ fi
 base_image="$(get_image_version_from_flavor "${IMAGE_FLAVOR}")"
 
 # Workaround for linux/s390x building problem when Go>=1.5 is used
-buildx_call_failed="false"
 ALLOW_IMAGE_BUILD_FAILURE=${ALLOW_IMAGE_BUILD_FAILURE:-"false"}
+DOCKER_BUILDX_RETRY=${DOCKER_BUILDX_RETRY:-5}
 
-buildx "${runner_home_dir}/${image_platform}" "$base_image" "${tags[@]}" || buildx_call_failed="true"
+for i in $(seq "${DOCKER_BUILDX_RETRY}")
+do
+  echo "Running buildx build try #$i out of $DOCKER_BUILDX_RETRY"
+  buildx_exit_code=0
+  buildx "${runner_home_dir}/${image_platform}" "$base_image" "${tags[@]}" || buildx_exit_code=$?
 
-if [[ "${buildx_call_failed}" == "true" ]]; then
-  echo -e "\033[2mImage build with buildx have failed!\033[0m"
-  if [[ "${ALLOW_IMAGE_BUILD_FAILURE}" == "true" ]]; then
-    echo "Ignoring the failure as ALLOW_IMAGE_BUILD_FAILURE is set to true"
-    exit 0
+  # Buildx failed
+  if [[ "${buildx_exit_code}" -ne 0 ]]; then
+    echo -e "\033[2mImage build with buildx have failed!\033[0m"
+    # If it's allowed to fail, disregard DOCKER_BUILDX_RETRY
+    if [[ "${ALLOW_IMAGE_BUILD_FAILURE}" == "true" ]]; then
+      echo "Ignoring the failure as ALLOW_IMAGE_BUILD_FAILURE is set to true"
+      exit 0
+    fi
+
+    # If it's not allowed to fail and we've reached the maximum amount of retries, fail
+    if [ "${i}" -eq "${DOCKER_BUILDX_RETRY}" ]; then
+      exit $buildx_exit_code
+    fi
   else
-    exit 1
+    # Buildx succeeded
+    exit $buildx_exit_code
   fi
-fi
+done
