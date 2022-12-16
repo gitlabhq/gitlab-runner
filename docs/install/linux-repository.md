@@ -6,31 +6,20 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Install GitLab Runner using the official GitLab repositories **(FREE)**
 
-We provide packages for the currently supported versions of Debian, Ubuntu, Mint, RHEL, Fedora, and CentOS. You may be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file) on other Linux distributions.
+We provide packages for the latest 6 releases of the following Linux distributions with [packagecloud](https://packages.gitlab.com/runner/gitlab-runner/):
 
-| Distribution  | Version                     | End of Life date      |
-|---------------|-----------------------------|-----------------------|
-| Debian        | stretch                     | [June 2022](https://wiki.debian.org/LTS)             |
-| Debian        | buster                      | [June 2024](https://wiki.debian.org/LTS)             |
-| Debian        | bullseye                    | [June 2026](https://wiki.debian.org/LTS)             |
-| Ubuntu        | xenial                      | [April 2021](https://wiki.ubuntu.com/Releases)            |
-| Ubuntu        | bionic                      | [April 2023](https://wiki.ubuntu.com/Releases)            |
-| Ubuntu        | focal                       | [April 2025](https://wiki.ubuntu.com/Releases)            |
-| Ubuntu        | jammy jellyfish             | [April 2032](https://wiki.ubuntu.com/Releases)            |
-| Mint          | sarah, serena, sonya, sylvia| [April 2021](https://www.linuxmint.com/download_all.php)          |
-| Mint          | tara, tessa, tina, tricia   | [April 2023](https://www.linuxmint.com/download_all.php)          |
-| Mint          | ulyana, ulyssa, uma, una    | [April 2025](https://www.linuxmint.com/download_all.php)          |
-| RHEL/CentOS   | 7                           | [June 2024](https://wiki.centos.org/About/Product)             |
-| CentOS Stream | 8                           | [May 2024](https://wiki.centos.org/About/Product)              |
-| RHEL          | 8                           | [May 2029](https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux)         |
-| RHEL          | 9                           | [May 2032](https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux)         |
-| Fedora        | 32                          | approx. May 2021      |
-| Fedora        | 33                          | approx. Nov 2021      |
-| Fedora        | 34                          | approx. June 2022     |
-| Fedora        | 35                          | approx. Dec 2022      |
-| Fedora        | 36                          | [May 2023](https://endoflife.date/fedora)      |
-| Amazon Linux  | 2                           | [June 30, 2024](https://aws.amazon.com/amazon-linux-2/faqs/) |
-| Amazon Linux  | 2022                        | [TBD](https://aws.amazon.com/linux/amazon-linux-2022/faqs/) |
+| Distribution | Support Information |
+|--------------|---------------------|
+| Debian       | <https://wiki.debian.org/LTS> |
+| Ubuntu       | <https://wiki.ubuntu.com/Releases>
+| LinuxMint    | <https://linuxmint.com/download_all.php> |
+| Raspbian     | |
+| RHEL         | <https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux> |
+| Oracle Linux | <https://endoflife.date/oraclelinux> |
+| Fedora       | <https://docs.fedoraproject.org/en-US/releases/eol/> |
+| Amazon Linux | <https://aws.amazon.com/linux/> |
+
+Derivative distributions of the above may also be incidentally supported. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file) on other Linux distributions.
 
 NOTE:
 Packages for distributions that are not on the list are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket.

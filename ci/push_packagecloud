@@ -17,8 +17,13 @@ push_packagecloud() {
   package_cloud push --verbose --url "${packageCloudURL}" "${packageCloudRepo}/${dist}" out/${packageType}/*.${packageType}
 }
 
+releases=$(go run ./scripts/packagecloud-releases.go ${@})
+
+echo "$packageType distros to package: $releases"
+
 # shellcheck disable=SC2068
-for dist in ${@}; do
+for dist in ${releases}
+do
     if [[ -z "${distFlavor}" ]] || [[ "${dist}" =~ ${distFlavor} ]]; then
         push_packagecloud "${dist}"
     fi
