@@ -191,7 +191,7 @@ Each `[[runners]]` section defines one runner.
 | `debug_trace_disabled`     | Disables the `CI_DEBUG_TRACE` feature. When set to `true`, then debug log (trace) remains disabled, even if `CI_DEBUG_TRACE` is set to `true` by the user.                                                                                                                  |
 | `referees`                 | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                            |
 | `unhealthy_requests_limit` | The number of `unhealthy` responses to new job requests after which a runner worker will be disabled.                                                                                                                                                                       |
-| `unhealthy_interval`       | Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc.                                                                                                                                   |
+| `unhealthy_interval`       | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc.                                                                                                                                   |
 
 Example:
 
