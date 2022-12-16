@@ -409,8 +409,8 @@ func (e *executor) createService(
 
 func (e *executor) createHostConfigForService() *container.HostConfig {
 	privileged := e.Config.Docker.Privileged
-	if e.Config.Docker.PrivilegedServices != nil {
-		privileged = *e.Config.Docker.PrivilegedServices
+	if e.Config.Docker.ServicesPrivileged != nil {
+		privileged = *e.Config.Docker.ServicesPrivileged
 	}
 
 	return &container.HostConfig{
