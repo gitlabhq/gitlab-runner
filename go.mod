@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/iam v0.3.0
 	cloud.google.com/go/storage v1.24.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.4.1
-	github.com/BurntSushi/toml v1.2.1
+	github.com/BurntSushi/toml v0.3.1
 	github.com/bmatcuk/doublestar v1.3.0
 	github.com/creack/pty v1.1.17
 	github.com/docker/cli v20.10.12+incompatible
