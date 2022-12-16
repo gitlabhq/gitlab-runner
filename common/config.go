@@ -164,7 +164,7 @@ type DockerConfig struct {
 	DNS                        []string           `toml:"dns,omitempty" json:"dns" long:"dns" env:"DOCKER_DNS" description:"A list of DNS servers for the container to use"`
 	DNSSearch                  []string           `toml:"dns_search,omitempty" json:"dns_search" long:"dns-search" env:"DOCKER_DNS_SEARCH" description:"A list of DNS search domains"`
 	Privileged                 bool               `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"DOCKER_PRIVILEGED" description:"Give extended privileges to container"`
-	PrivilegedServices         *bool              `toml:"privileged_services,omitempty" json:"privileged_services" long:"privileged-services" env:"DOCKER_PRIVILEGED_SERVICES" description:"When set this will give or remove extended privileges to container services"`
+	ServicesPrivileged         *bool              `toml:"services_privileged,omitempty" json:"services_privileged" long:"services_privileged" env:"DOCKER_SERVICES_PRIVILEGED" description:"When set this will give or remove extended privileges to container services"`
 	DisableEntrypointOverwrite bool               `toml:"disable_entrypoint_overwrite,omitzero" json:"disable_entrypoint_overwrite" long:"disable-entrypoint-overwrite" env:"DOCKER_DISABLE_ENTRYPOINT_OVERWRITE" description:"Disable the possibility for a container to overwrite the default image entrypoint"`
 	User                       string             `toml:"user,omitempty" json:"user" long:"user" env:"DOCKER_USER" description:"Run all commands in the container as the specified user."`
 	UsernsMode                 string             `toml:"userns_mode,omitempty" json:"userns_mode" long:"userns" env:"DOCKER_USERNS_MODE" description:"User namespace to use"`
