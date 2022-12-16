@@ -21,7 +21,7 @@ S3_UPLOAD_PATH ?= main
 
 # Keep in sync with docs/install/linux-repository.md
 # The number distro versions for which to publish runner packages.
-NUM_DISTRO_RELEASES ?= 6
+NUM_DISTRO_RELEASES ?= 10
 DEB_DISTROS ?= debian ubuntu raspbian linuxmint
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
 RPM_DISTROS ?= fedora ol el amazon
