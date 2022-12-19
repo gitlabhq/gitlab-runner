@@ -292,11 +292,13 @@ The following settings define the Docker container parameters.
 | `memory_swap`                  | The total memory limit. A string. |
 | `memory_reservation`           | The memory soft limit. A string. |
 | `network_mode`                 | Add container to a custom network. |
+| `mac_address`                  | Container MAC address (e.g., 92:d0:c6:0a:29:33). |
 | `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
 | `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
 | `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#restrict-docker-pull-policies). |
 | `runtime`                      | The runtime for the Docker container. |
+| `isolation`                    | Container isolation technology (`default`, `hyperv` and `process`). Windows only. |
 | `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
 | `shm_size`                     | Shared memory size for images (in bytes). |
 | `sysctls`                      | The `sysctl` options. |

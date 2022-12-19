@@ -578,6 +578,7 @@ func (e *executor) createContainerConfig(
 	}
 
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
+	config.MacAddress = e.Config.Docker.MacAddress
 
 	return config
 }
@@ -586,6 +587,12 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
 		return nil, err
+	}
+
+	isolation := container.Isolation(e.Config.Docker.Isolation)
+	if !isolation.IsValid() {
+		return nil, fmt.Errorf("the isolation value %q is not valid. "+
+			"the valid values are: 'process', 'hyperv', 'default' and an empty string", isolation)
 	}
 
 	return &container.HostConfig{
@@ -617,6 +624,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		Binds:         e.volumesManager.Binds(),
 		OomScoreAdj:   e.Config.Docker.OomScoreAdjust,
 		ShmSize:       e.Config.Docker.ShmSize,
+		Isolation:     isolation,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
 		VolumesFrom:   e.Config.Docker.VolumesFrom,
 		LogConfig: container.LogConfig{
