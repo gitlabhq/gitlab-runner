@@ -11,7 +11,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"mvdan.cc/sh/v3/shell"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
@@ -176,7 +175,12 @@ func (c *ArtifactsUploaderCommand) ShouldRetry(tries int, err error) bool {
 func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 	log.SetRunnerFormatter()
 
-	c.normalizeArgs()
+	if c.URL == "" || c.Token == "" {
+		logrus.Fatalln("Missing runner credentials")
+	}
+	if c.ID <= 0 {
+		logrus.Fatalln("Missing build ID")
+	}
 
 	// Enumerate files
 	err := c.enumerate()
@@ -204,37 +208,6 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 	err = retryable.Run()
 	if err != nil {
 		logrus.Fatalln(err)
-	}
-}
-
-func (c *ArtifactsUploaderCommand) normalizeArgs() {
-	if c.URL == "" || c.Token == "" {
-		logrus.Fatalln("Missing runner credentials")
-	}
-	if c.ID <= 0 {
-		logrus.Fatalln("Missing build ID")
-	}
-
-	if name, err := shell.Expand(c.Name, nil); err != nil {
-		logrus.Warnf("invalid artifact name: %v", err)
-	} else {
-		c.Name = name
-	}
-
-	for idx := range c.Paths {
-		if path, err := shell.Expand(c.Paths[idx], nil); err != nil {
-			logrus.Warnf("invalid path %q: %v", path, err)
-		} else {
-			c.Paths[idx] = path
-		}
-	}
-
-	for idx := range c.Exclude {
-		if path, err := shell.Expand(c.Exclude[idx], nil); err != nil {
-			logrus.Warnf("invalid path %q: %v", path, err)
-		} else {
-			c.Exclude[idx] = path
-		}
 	}
 }
 

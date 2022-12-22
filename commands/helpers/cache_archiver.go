@@ -13,7 +13,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"mvdan.cc/sh/v3/shell"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/meter"
@@ -185,7 +184,9 @@ func (c *CacheArchiverCommand) createZipFile(filename string) (int64, error) {
 func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	log.SetRunnerFormatter()
 
-	c.normalizeArgs()
+	if c.File == "" {
+		logrus.Fatalln("Missing --file")
+	}
 
 	// Enumerate files
 	err := c.enumerate()
@@ -207,28 +208,6 @@ func (c *CacheArchiverCommand) Execute(*cli.Context) {
 	}
 
 	c.uploadArchiveIfNeeded(size)
-}
-
-func (c *CacheArchiverCommand) normalizeArgs() {
-	if c.File == "" {
-		logrus.Fatalln("Missing --file")
-	}
-
-	for idx := range c.Paths {
-		if path, err := shell.Expand(c.Paths[idx], nil); err != nil {
-			logrus.Warnf("invalid path %q: %v", path, err)
-		} else {
-			c.Paths[idx] = path
-		}
-	}
-
-	for idx := range c.Exclude {
-		if path, err := shell.Expand(c.Exclude[idx], nil); err != nil {
-			logrus.Warnf("invalid path %q: %v", path, err)
-		} else {
-			c.Exclude[idx] = path
-		}
-	}
 }
 
 func (c *CacheArchiverCommand) uploadArchiveIfNeeded(size int64) {

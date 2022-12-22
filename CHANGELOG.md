@@ -1,3 +1,7 @@
+## v15.7.1 (2022-12-19)
+
+- Revert automate for which supported distro releases we create packages. !3794
+
 ## v15.7.0 (2022-12-17)
 
 ### New features

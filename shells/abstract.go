@@ -97,7 +97,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		// Create list of files to extract
 		var archiverArgs []string
 		for _, path := range cacheOptions.Paths {
-			archiverArgs = append(archiverArgs, "--path", path)
+			archiverArgs = append(archiverArgs, "--path", info.Build.GetAllVariables().ExpandValue(path))
 		}
 
 		if cacheOptions.Untracked {
@@ -683,7 +683,7 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache, info common.ShellScriptInfo) []string {
 	var archiverArgs []string
 	for _, path := range cacheOptions.Paths {
-		archiverArgs = append(archiverArgs, "--path", path)
+		archiverArgs = append(archiverArgs, "--path", info.Build.GetAllVariables().ExpandValue(path))
 	}
 
 	if cacheOptions.Untracked {
@@ -780,12 +780,12 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	// Create list of files to archive
 	var archiverArgs []string
 	for _, path := range artifact.Paths {
-		archiverArgs = append(archiverArgs, "--path", path)
+		archiverArgs = append(archiverArgs, "--path", info.Build.GetAllVariables().ExpandValue(path))
 	}
 
 	// Create list of paths to be excluded from the archive
 	for _, path := range artifact.Exclude {
-		archiverArgs = append(archiverArgs, "--exclude", path)
+		archiverArgs = append(archiverArgs, "--exclude", info.Build.GetAllVariables().ExpandValue(path))
 	}
 
 	if artifact.Untracked {
@@ -800,7 +800,7 @@ func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScri
 	args = append(args, archiverArgs...)
 
 	if artifact.Name != "" {
-		args = append(args, "--name", artifact.Name)
+		args = append(args, "--name", info.Build.GetAllVariables().ExpandValue(artifact.Name))
 	}
 
 	if artifact.ExpireIn != "" {
