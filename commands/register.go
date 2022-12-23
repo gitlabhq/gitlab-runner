@@ -255,7 +255,7 @@ func (s *RegisterCommand) askRunner() {
 	s.Name = s.ask("name", "Enter a description for the runner:")
 	// when a runner token is specified as a registration token, certain arguments are reserved to the server
 	if s.tokenIsRunnerToken() {
-		s.validateServerArguments()
+		s.ensureServerConfigArgsEmpty()
 	} else {
 		s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
 		s.MaintenanceNote = s.ask("maintenance-note", "Enter optional maintenance note for the runner:", true)
@@ -474,7 +474,7 @@ func (s *RegisterCommand) tokenIsRunnerToken() bool {
 	return strings.HasPrefix(s.Token, "glrt-")
 }
 
-func (s *RegisterCommand) validateServerArguments() {
+func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 	if s.Locked && s.AccessLevel == "" && !s.RunUntagged && s.MaximumTimeout == 0 && !s.Paused &&
 		s.TagList == "" && s.MaintenanceNote == "" {
 		return
