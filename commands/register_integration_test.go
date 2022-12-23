@@ -115,6 +115,163 @@ func TestAskRunnerOverrideDefaultsForExecutors(t *testing.T) {
 	}
 }
 
+func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
+	const executor = "shell"
+
+	basicValidation := func(s *commands.RegisterCommand) {
+		assert.Equal(t, "http://gitlab.example.com/", s.URL)
+		assert.Equal(t, "glrt-testtoken", s.Token)
+		assert.Equal(t, executor, s.RunnerSettings.Executor)
+	}
+
+	tests := map[string]struct {
+		answers        []string
+		arguments      []string
+		validate       func(s *commands.RegisterCommand)
+		expectedParams func(common.RegisterRunnerParameters) bool
+	}{
+		"basic answers": {
+			answers: append([]string{
+				"http://gitlab.example.com/",
+				"glrt-testtoken",
+				"name",
+			}, executorAnswers(t, executor)...),
+			validate: basicValidation,
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "name",
+					Locked:      true,
+				}
+			},
+		},
+		"basic arguments, accepting provided": {
+			answers: make([]string, 4),
+			arguments: append(
+				executorCmdLineArgs(t, executor),
+				"--url", "http://gitlab.example.com/",
+				"-r", "glrt-testtoken",
+				"--name", "name",
+			),
+			validate: basicValidation,
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "name",
+					Locked:      true,
+				}
+			},
+		},
+		"basic arguments override": {
+			answers: append([]string{"", "", "new-name"}, executorOverrideAnswers(t, executor)...),
+			arguments: append(
+				executorCmdLineArgs(t, executor),
+				"--url", "http://gitlab.example.com/",
+				"-r", "glrt-testtoken",
+				"--name", "name",
+			),
+			validate: func(s *commands.RegisterCommand) {
+				assert.Equal(t, "http://gitlab.example.com/", s.URL)
+				assert.Equal(t, "glrt-testtoken", s.Token)
+				assert.Equal(t, executor, s.RunnerSettings.Executor)
+			},
+			expectedParams: func(p common.RegisterRunnerParameters) bool {
+				return p == common.RegisterRunnerParameters{
+					Description: "new-name",
+					Locked:      true,
+				}
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			network := new(common.MockNetwork)
+			defer network.AssertExpectations(t)
+
+			network.On("RegisterRunner", mock.Anything, mock.MatchedBy(tc.expectedParams)).
+				Return(&common.RegisterRunnerResponse{
+					Token: "glrt-testtoken",
+				}).
+				Once()
+
+			cmd := commands.NewRegisterCommandForTest(
+				bufio.NewReader(strings.NewReader(strings.Join(tc.answers, "\n")+"\n")),
+				network,
+			)
+
+			app := cli.NewApp()
+			app.Commands = []cli.Command{
+				{
+					Name:   "register",
+					Action: cmd.Execute,
+					Flags:  clihelpers.GetFlagsFromStruct(cmd),
+				},
+			}
+
+			hook := test.NewGlobal()
+			err := app.Run(append([]string{"runner", "register"}, tc.arguments...))
+			output := commands.GetLogrusOutput(t, hook)
+
+			assert.NoError(t, err)
+			tc.validate(cmd)
+			assert.Contains(t, output, "Runner registered successfully.")
+		})
+	}
+}
+
+func TestAskRunnerUsingRunnerTokenOverrideForbiddenDefaults(t *testing.T) {
+	tests := map[string]interface{}{
+		"--access-level":     "not_protected",
+		"--run-untagged":     true,
+		"--maximum-timeout":  1,
+		"--paused":           true,
+		"--tag-list":         "tag",
+		"--maintenance-note": "note",
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			answers := make([]string, 4)
+			arguments := append(
+				executorCmdLineArgs(t, "shell"),
+				"--url", "http://gitlab.example.com/",
+				"-r", "glrt-testtoken",
+				tn, fmt.Sprintf("%v", tc),
+			)
+
+			network := new(common.MockNetwork)
+			cmd := commands.NewRegisterCommandForTest(
+				bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
+				network,
+			)
+
+			app := cli.NewApp()
+			app.Commands = []cli.Command{
+				{
+					Name:   "register",
+					Action: cmd.Execute,
+					Flags:  clihelpers.GetFlagsFromStruct(cmd),
+				},
+			}
+
+			fatalReceived := false
+			helpers.MakeFatalToPanic()
+
+			defer func() {
+				if r := recover(); r != nil {
+					entry, _ := r.(*logrus.Entry)
+					assert.Contains(t, entry.Message, "cannot be specified when registering with a runner token.")
+					fatalReceived = true
+				}
+				assert.True(t, fatalReceived, "fatal error expected")
+			}()
+
+			_ = app.Run(append([]string{"runner", "register"}, arguments...))
+
+			t.Fail()
+		})
+	}
+}
+
 func testRegisterCommandRun(
 	t *testing.T,
 	network common.Network,

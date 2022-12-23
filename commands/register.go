@@ -253,11 +253,16 @@ func (s *RegisterCommand) askRunner() {
 	// we store registration token as token, since we pass that to RunnerCredentials
 	s.Token = s.ask("registration-token", "Enter the registration token:")
 	s.Name = s.ask("name", "Enter a description for the runner:")
-	s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
-	s.MaintenanceNote = s.ask("maintenance-note", "Enter optional maintenance note for the runner:", true)
+	// when a runner token is specified as a registration token, certain arguments are reserved to the server
+	if s.tokenIsRunnerToken() {
+		s.ensureServerConfigArgsEmpty()
+	} else {
+		s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
+		s.MaintenanceNote = s.ask("maintenance-note", "Enter optional maintenance note for the runner:", true)
 
-	if s.TagList == "" {
-		s.RunUntagged = true
+		if s.TagList == "" {
+			s.RunUntagged = true
+		}
 	}
 
 	parameters := common.RegisterRunnerParameters{
@@ -271,7 +276,7 @@ func (s *RegisterCommand) askRunner() {
 		Paused:          s.Paused,
 	}
 
-	if s.Token != "" && !strings.HasPrefix(s.Token, "glrt-") {
+	if s.Token != "" && !s.tokenIsRunnerToken() {
 		logrus.Warningf(
 			"Support for registration tokens and runner parameters in the 'register' command has been deprecated in " +
 				"GitLab Runner 15.6 and will be replaced with support for authentication tokens. " +
@@ -463,6 +468,24 @@ func (s *RegisterCommand) mergeTemplate() {
 	if err != nil {
 		logrus.WithError(err).Fatal("Could not handle configuration merging from template file")
 	}
+}
+
+func (s *RegisterCommand) tokenIsRunnerToken() bool {
+	return strings.HasPrefix(s.Token, "glrt-")
+}
+
+func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
+	if s.Locked && s.AccessLevel == "" && !s.RunUntagged && s.MaximumTimeout == 0 && !s.Paused &&
+		s.TagList == "" && s.MaintenanceNote == "" {
+		return
+	}
+
+	logrus.Fatalln(
+		"Runner configuration other than name, description, and executor configuration is reserved " +
+			"and cannot be specified when registering with a runner token. " +
+			"This configuration is specified on the GitLab server. Please try again without specifying " +
+			"those arguments.",
+	)
 }
 
 func getHostname() string {
