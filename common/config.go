@@ -849,7 +849,7 @@ func (s *Service) ToImageDefinition() Image {
 
 //nolint:lll
 type RunnerCredentials struct {
-	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"Runner URL"`
+	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab instance URL"`
 	ID              int64     `toml:"id" json:"id" description:"Runner ID"`
 	Token           string    `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
 	TokenObtainedAt time.Time `toml:"token_obtained_at" json:"token_obtained_at" description:"When the runner token was obtained"`
