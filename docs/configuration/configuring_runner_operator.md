@@ -277,7 +277,7 @@ service account, `gitlab-runner-sa`, which is used by the GitLab Runner containe
 ```shell
 oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
 
-# Double check that the anyiud SCC is set
+# Check that the anyiud SCC is set:
 oc get scc anyuid -o yaml
 ```
 
