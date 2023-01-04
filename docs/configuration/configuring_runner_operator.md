@@ -275,7 +275,10 @@ user or to write to the root filesystem, you will need to set the `anyuid` SCC o
 service account, `gitlab-runner-sa`, which is used by the GitLab Runner container.
 
 ```shell
-oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa
+oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
+
+# Check that the anyiud SCC is set:
+oc get scc anyuid -o yaml
 ```
 
 ### Using FIPS Compliant GitLab Runner
