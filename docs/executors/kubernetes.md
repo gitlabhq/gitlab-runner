@@ -1502,3 +1502,17 @@ This issue happens when the worker node IAM role does not have the permission to
 ### Preparation failed: failed to pull image 'image-name:latest': pull_policy ([Always]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([])
 
 This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](#restrict-docker-pull-policies).
+
+## Security concern regarding job variables
+
+When using Kubernetes executor, anyone that has access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
+
+- ConfigMap - [There is an ongoing MR to change this](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3751)
+- Pod's environment section
+
+It's highly recommended to use RBAC to make sure that only the GitLab administrator can access these data in your Kubernetes cluster. The easiest way to do this is to only allow GitLab administrators to access the namespace used by GitLab Runner.
+
+If you need other users to access the GitLab Runner namespace, make sure that only **authorized** users can do the following inside the GitLab Runner namespace:
+
+- **get**, **watch**, **list** for **pods** and **configmaps**
+- **create** for **pods/exec** and **pods/attach**
