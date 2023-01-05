@@ -85,6 +85,12 @@ GO_ARCH_NAME_amd64 = x86_64
 # Go files that are used to create the helper binary.
 HELPER_GO_FILES ?= $(shell find common network -name '*.go')
 
+ALPINE_312_VERSION ?= "3.12"
+ALPINE_313_VERSION ?= "3.13"
+ALPINE_314_VERSION ?= "3.14"
+ALPINE_315_VERSION ?= "3.15"
+UBUNTU_VERSION ?= "20.04"
+
 # Build the Runner Helper binaries for the host platform.
 .PHONY: helper-bin-host
 helper-bin-host: ${BASE_BINARY_PATH}.$(shell uname -m)
