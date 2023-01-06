@@ -412,6 +412,7 @@ func (n *GitLabClient) RequestJob(
 	request := common.JobRequest{
 		Info:       n.getRunnerVersion(config),
 		Token:      config.Token,
+		SystemID:   config.SystemIDState.GetSystemID(),
 		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
 		Session:    sessionInfo,
 	}
