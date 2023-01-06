@@ -1503,9 +1503,9 @@ This issue happens when the worker node IAM role does not have the permission to
 
 This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](#restrict-docker-pull-policies).
 
-## Security concern regarding job variables
+## Restrict access to job variables
 
-When using Kubernetes executor, anyone that has access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
+When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
 
 - ConfigMap - [There is an ongoing MR to change this](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3751)
 - Pod's environment section
@@ -1516,3 +1516,19 @@ If you need other users to access the GitLab Runner namespace, make sure that on
 
 - **get**, **watch**, **list** for **pods** and **configmaps**
 - **create** for **pods/exec** and **pods/attach**
+
+Here is an example RBAC definition for **authorized** users:
+
+```yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: gitlab-runner-authorized-users
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "pods"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["pods/exec", "pods/attach"]
+  verbs: ["create"]
+```
