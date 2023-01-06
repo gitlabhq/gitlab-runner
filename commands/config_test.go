@@ -222,42 +222,39 @@ func TestRunnerByURLAndID(t *testing.T) {
 
 func Test_loadConfig(t *testing.T) {
 	testCases := map[string]struct {
-		config         string
 		runnerSystemID string
 		assertFn       func(
 			t *testing.T,
 			err error,
 			config *common.Config,
 			systemIDState *common.SystemIDState,
-			systemIDStateFile *os.File,
+			systemIDFile string,
 		)
 	}{
 		"generates and saves missing system IDs": {
-			config:         "",
 			runnerSystemID: "",
 			assertFn: func(
 				t *testing.T,
 				err error,
 				config *common.Config,
 				systemIDState *common.SystemIDState,
-				systemIDStateFile *os.File,
+				systemIDFile string,
 			) {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, systemIDState.GetSystemID())
-				content, err := os.ReadFile(systemIDStateFile.Name())
+				content, err := os.ReadFile(systemIDFile)
 				require.NoError(t, err)
 				assert.Contains(t, string(content), systemIDState.GetSystemID())
 			},
 		},
 		"preserves existing unique system IDs": {
-			config:         "",
 			runnerSystemID: "s_c2d22f638c25",
 			assertFn: func(
 				t *testing.T,
 				err error,
 				config *common.Config,
 				systemIDState *common.SystemIDState,
-				systemIDStateFile *os.File,
+				_ string,
 			) {
 				assert.NoError(t, err)
 				assert.Equal(t, "s_c2d22f638c25", systemIDState.GetSystemID())
@@ -265,30 +262,20 @@ func Test_loadConfig(t *testing.T) {
 		},
 	}
 
-	configFile, err := os.CreateTemp("", "config.toml")
-	require.NoError(t, err)
-	defer func() { _ = configFile.Close() }()
-	systemIDStateFile, err := os.Create(filepath.Join(filepath.Dir(configFile.Name()), ".runner_system_id"))
-	require.NoError(t, err)
-	defer func() { _ = systemIDStateFile.Close() }()
-
-	defer func() {
-		_ = os.Remove(configFile.Name())
-		_ = os.Remove(systemIDStateFile.Name())
-	}()
-
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
-			require.NoError(t, configFile.Truncate(0))
-			require.NoError(t, systemIDStateFile.Truncate(0))
-			_, err := configFile.WriteString(tc.config)
-			require.NoError(t, err)
-			_, err = systemIDStateFile.WriteString(tc.runnerSystemID)
-			require.NoError(t, err)
+			dir := t.TempDir()
+			cfgName := filepath.Join(dir, "config.toml")
+			systemIDFile := filepath.Join(dir, ".runner_system_id")
 
-			c := configOptions{ConfigFile: configFile.Name()}
-			err = c.loadConfig()
-			tc.assertFn(t, err, c.config, c.systemIDState, systemIDStateFile)
+			require.NoError(t, os.WriteFile(cfgName, []byte("[[runners]]\n name = \"runner\""), 0777))
+			require.NoError(t, os.WriteFile(systemIDFile, []byte(tc.runnerSystemID), 0777))
+
+			c := configOptions{ConfigFile: cfgName}
+			err := c.loadConfig()
+
+			require.Equal(t, 1, len(c.config.Runners))
+			tc.assertFn(t, err, c.config, c.config.Runners[0].SystemIDState, systemIDFile)
 		})
 	}
 }
