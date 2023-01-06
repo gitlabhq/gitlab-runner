@@ -1206,7 +1206,8 @@ func (b *Build) GetRemoteURL() string {
 		u.User = url.UserPassword("gitlab-ci-token", b.Token)
 	}
 
-	u.Path = b.GetAllVariables().Get("CI_PROJECT_PATH") + ".git"
+	projectPath := b.GetAllVariables().Get("CI_PROJECT_PATH") + ".git"
+	u.Path = path.Join(u.Path, projectPath)
 
 	return u.String()
 }
