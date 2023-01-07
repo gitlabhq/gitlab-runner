@@ -565,7 +565,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 ### Mounting volumes on service containers
 
-Volumes defined for the build container are also automatically mounted for all services containers. This can be, for example, leveraged to mount database storage in RAM to speed up tests, as an alternative to [services_tmpfs](docker.md#mounting-a-directory-in-ram) which is only available to the Docker executor.
+Volumes defined for the build container are also automatically mounted for all services containers. This can be, for example, leveraged to mount database storage in RAM to speed up tests, as an alternative to [services_tmpfs](docker.md#mount-a-directory-in-ram) which is only available to the Docker executor.
 
 Here is an example configuration:
 
