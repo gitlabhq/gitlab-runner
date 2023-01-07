@@ -119,7 +119,7 @@ Use the following keywords:
   - Enter an image from the local Docker Engine, or any image in
   Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/get-started/overview/).
   - To define the image version, use a colon (`:`) to add a tag. If you don't specify a tag,
-   Docker implies `latest` as the version.
+   Docker uses `latest` as the version.
 - `services`: The additional image that creates another container and links to the `image`. For more information about types of services, see [Services](https://docs.gitlab.com/ee/ci/services/).
 
 ### Define images and services in `.gitlab-ci.yml`
@@ -269,7 +269,7 @@ To enable IPv6 support for this network, set `enable_ipv6` to `true` inside the 
 This feature works only when the Docker daemon is configured with IPv6 enabled.
 To enable IPv6 support on your host, see the [Docker documentation](https://docs.docker.com/config/daemon/ipv6/).
 
-## Restricting Docker images and services
+## Restrict Docker images and services
 
 You can restrict the Docker images that can run your jobs.
 To do this, you specify wildcard patterns. For example, to allow images
@@ -297,32 +297,7 @@ Or, to restrict to a specific list of images from this registry:
     allowed_services = ["postgres:9.4", "postgres:latest"]
 ```
 
-## Restrict Docker pull policies
-
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
-
-In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how
-a CI/CD job should fetch images.
-
-To restrict which pull policies can be used in the `.gitlab-ci.yml` file, you can use `allowed_pull_policies`.
-
-For example, to allow only the `always` and `if-not-present` pull policies:
-
-```toml
-[[runners]]
-  (...)
-  executor = "docker"
-  [runners.docker]
-    (...)
-    allowed_pull_policies = ["always", "if-not-present"]
-```
-
-- If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
-- If you don't specify `pull_policy`, the default is `always`.
-- The existing [`pull_policy` keyword](../executors/docker.md#how-pull-policies-work) must not include a pull policy
-  that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
-
-## Accessing the services
+## Access the services
 
 Let's say that you need a Wordpress instance to test some API integration with
 your application.
@@ -366,7 +341,7 @@ All variables are passed to all services containers. It's not designed to
 distinguish which variable should go where.
 Secure variables are only passed to the build container.
 
-## Mounting a directory in RAM
+## Mount a directory in RAM
 
 You can mount a path in RAM using tmpfs. This can speed up the time required to test if there is a lot of I/O related work, such as with databases.
 If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
@@ -711,182 +686,174 @@ build:
   - whoami   # www
 ```
 
-## How pull policies work
+## Configure how runners pull images
 
-When using the `docker` or `docker+machine` executors, you can set the
-`pull_policy` parameter in the runner `config.toml` file as described in the configuration docs'
-[Docker section](../configuration/advanced-configuration.md#the-runnersdocker-section).
+Configure the pull policy in the `config.toml` to define how runners pull Docker images from registries. You can set a single policy, [a list of policies](#set-multiple-pull-policies), or [allow specific pull policies](#allow-docker-pull-policies).
 
-This parameter defines how the runner works when pulling Docker images (for both `image` and `services` keywords).
-You can set it to a single value, or a list of pull policies, which will be attempted in order
-until an image is pulled successfully.
+Use the following values for the `pull_policy`:
 
-If you don't set any value for the `pull_policy` parameter, then
-the runner will use the `always` pull policy as the default value.
+- [`always`](#set-the-always-pull-policy): Pull an image even if a local image exists. Default.
+- [`if-not-present`](#set-the-if-not-present-pull-policy): Pull an image only when a local version does not exist.
+- [`never`](#set-the-never-pull-policy): Never pull an image and use only local images.
 
-Now let's see how these policies work.
-
-### Using the `never` pull policy
-
-The `never` pull policy disables images pulling completely. If you set the
-`pull_policy` parameter of a runner to `never`, then users will be able
-to use only the images that have been manually pulled on the Docker host
-the runner runs on.
-
-If an image cannot be found locally, then the runner will fail the build
-with an error similar to:
-
-```plaintext
-Pulling docker image local_image:latest ...
-ERROR: Build failed: Error: image local_image:latest not found
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "always" # available: always, if-not-present, never
 ```
 
-#### When to use the `never` pull policy
+### Set the `always` pull policy
 
-The `never` pull policy should be used if you want or need to have a full
-control on which images are used by the runner's users. It is a good choice
-for private runners that are dedicated to a project where only specific images
-can be used (not publicly available on any registries).
+When you set the pull policy to `always`, the runner always pulls an image from a registry
+even if a local image exists. The `always` pull policy is the default setting.
 
-#### When not to use the `never` pull policy
+Use this pull policy if:
 
-The `never` pull policy will not work properly with most of [auto-scaled](../configuration/autoscale.md)
-Docker executor use cases. Because of how auto-scaling works, the `never`
-pull policy may be usable only when using a pre-defined cloud instance
-images for chosen cloud provider. The image needs to contain installed
-Docker Engine and local copy of used images.
+- Runners must always pull the most recent images.
+- Runners are publicly available and configured for [auto-scale](../configuration/autoscale.md) or as
+  a shared runner in your GitLab instance.
 
-### Using the `if-not-present` pull policy
+**Do not use** this policy if runners must use locally stored images.
 
-When the `if-not-present` pull policy is used, the runner will first check
-if the image is present locally. If it is, then the local version of
-image will be used. Otherwise, the runner will try to pull the image.
+Set `always` as the `pull policy` in the `config.toml`:
 
-#### When to use the `if-not-present` pull policy
-
-The `if-not-present` pull policy is a good choice if you want to use images pulled from
-remote registries, but you want to reduce time spent on analyzing image
-layers difference when using heavy and rarely updated images.
-In that case, you will need once in a while to manually remove the image
-from the local Docker Engine store to force the update of the image.
-
-It is also the good choice if you need to use images that are built
-and available only locally, but on the other hand, also need to allow to
-pull images from remote registries.
-
-#### When not to use the `if-not-present` pull policy
-
-The `if-not-present` pull policy should not be used if your builds use images that
-are updated frequently and need to be used in most recent versions.
-In such a situation, the network load reduction created by this policy may
-be less worthy than the necessity of the very frequent deletion of local
-copies of images.
-
-This pull policy should also not be used if your runner can be used by
-different users which should not have access to private images used
-by each other. Especially do not use this pull policy for shared runners.
-
-To understand why the `if-not-present` pull policy creates security issues
-when used with private images, read the
-[security considerations documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
-
-### Using the `always` pull policy
-
-The `always` pull policy will ensure that the image is **always** pulled.
-When `always` is used, the runner will try to pull the image even if a local
-copy is available. The [caching semantics](https://kubernetes.io/docs/concepts/configuration/overview/#container-images)
-of the underlying image provider make this policy efficient.
-The pull attempt is fast because all image layers are cached.
-
-If the image is not found, then the build will fail with an error similar to:
-
-```plaintext
-Pulling docker image registry.tld/my/image:latest ...
-ERROR: Build failed: Error: image registry.tld/my/image:latest not found
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "always"
 ```
 
-When using the `always` pull policy in GitLab Runner versions older than `v1.8`, it could
-fall back to the local copy of an image and print a warning:
+### Set the `if-not-present` pull policy
 
-```plaintext
-Pulling docker image registry.tld/my/image:latest ...
-WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
-WARNING: Locally found image will be used instead.
+When you set the pull policy to `if-not-present`, the runner first checks
+if a local image exists. If there is no local image, the runner pulls
+an image from the registry.
+
+Use the `if-not-present` policy to:
+
+- Use local images but also pull images if a local image does not exist.
+- Reduce time that runners analyze the difference in image layers for heavy and rarely updated images.
+  In this case, you must manually remove the image regularly from the local Docker Engine store to
+  force the image update.
+
+**Do not use** this policy:
+
+- For shared runners where different users that use the runner may have access to private images.
+  For more information about security issues, see
+  [Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+- If your jobs use images that are updated frequently and must run with the most recent image
+  version. This may result in a network load reduction that outweighs the value of frequent deletion
+  of local images.
+
+Set the `if-not-present` policy in the `config.toml`:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "if-not-present"
 ```
 
-This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).
+### Set the `never` pull policy
 
-#### When to use the `always` pull policy
+Prerequisites:
 
-The `always` pull policy should be used if your runner is publicly available
-and configured as a shared runner in your GitLab instance. It is the
-only pull policy that can be considered as secure when the runner will
-be used with private images.
+- Local images must contain an installed Docker Engine and a local copy of used images.
 
-This is also a good choice if you want to force users to always use
-the newest images.
+When you set the pull policy to `never`, image pulling is disabled. Users can only use images
+that have been manually pulled on the Docker host where the runner runs.
 
-Also, this will be the best solution for an [auto-scaled](../configuration/autoscale.md)
-configuration of the runner.
+Use the `never` pull policy:
 
-#### When not to use the `always` pull policy
+- To control the images used by runner users.
+- For private runners that are dedicated to a project that can only use specific images
+that are not publicly available on any registries.
 
-The `always` pull policy will definitely not work if you need to use locally
-stored images. In this case, the runner will skip the local copy of the image
-and try to pull it from the remote registry. If the image was built locally
-and doesn't exist in any public registry (and especially in the default
-Docker registry), the build will fail with:
+**Do not use** the `never` pull policy for [auto-scaled](../configuration/autoscale.md)
+Docker executors. The `never` pull policy is usable only when using a pre-defined cloud instance
+images for chosen cloud provider.
 
-```plaintext
-Pulling docker image local_image:latest ...
-ERROR: Build failed: Error: image local_image:latest not found
+Set the `never` policy in the `config.toml`:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "if-not-present"
 ```
 
-### Using multiple pull policies
+### Set multiple pull policies
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26558) in GitLab Runner 13.8.
 
-The `pull_policy` parameter allows you to specify a list of pull policies.
-The policies in the list will be attempted in order from left to right until a pull attempt
-is successful, or the list is exhausted.
+You can list multiple pull policies to execute if a pull fails. The runner processes pull policies
+in the order listed until a pull attempt is successful or the list is exhausted. For example, if a
+runner uses the `always` pull policy and the registry is not available, you can add the `if-not-present`
+as a second pull policy to use a locally cached Docker image.
 
-This functionality can be useful when the Docker registry is not available
-and you need to increase job resiliency.
-If you use the `always` policy and the registry is not available, the job fails even if the desired image is cached locally.
+For information about the security implications of this pull policy, see
+[Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 
-To overcome that behavior, you can add additional fallback pull policies
-that execute in case of failure.
-By adding a second pull policy value of `if-not-present`, the runner finds any locally-cached Docker image layers:
+To set multiple pull policies, add them as a list in the `config.toml`:
 
 ```toml
-[runners.docker]
-  pull_policy = ["always", "if-not-present"]
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = ["always", "if-not-present"]
 ```
 
-**Any** failure to fetch the Docker image causes the runner to attempt the following pull policy.
-Examples include an `HTTP 403 Forbidden` or an `HTTP 500 Internal Server Error` response from the repository.
+### Allow Docker pull policies
 
-Note that the security implications mentioned in the `When not to use this pull policy?` sub-section of the
-[Using the if-not-present pull policy](#using-the-if-not-present-pull-policy) section still apply,
-so you should be aware of the security implications and read the
-[security considerations documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
 
-```plaintext
-Using Docker executor with image alpine:latest ...
-Pulling docker image alpine:latest ...
-WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s)
-Attempt #2: Trying "if-not-present" pull policy
-Using locally found image version due to "if-not-present" pull policy
+In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how a CI/CD job
+fetches images.
+
+To restrict which pull policies can be used in the `.gitlab-ci.yml` file, use `allowed_pull_policies`.
+
+For example, to allow only the `always` and `if-not-present` pull policies, add them to the `config.toml`:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_pull_policies = ["always", "if-not-present"]
 ```
+
+- If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
+- If you don't specify `pull_policy`, the default is `always`.
+- The existing [`pull_policy` keyword](../executors/docker.md#configure-how-runners-pull-images) must not
+  include a pull policy that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
+
+### Image pull error messages
+
+| Error message               | Description                  |
+|-----------------------------|------------------------------|
+| `Pulling docker image registry.tld/my/image:latest ... ERROR: Build failed: Error: image registry.tld/my/image:latest not found`  |  The runner cannot find the image. Displays when the `always` pull policy is set  |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`   | The image was built locally and doesn't exist in any public or default Docker registry. Displays when the `always` pull policy is set.   |
+| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.` | The runner has used a local image instead of pulling an image. Displays when the `always` pull policy is set in only [GitLab Runner 1.8 and earlier](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).  |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found` | The image cannot be found locally. Displays when the `never` pull policy is set. |
+| `WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s) Attempt #2: Trying "if-not-present" pull policy Using locally found image version due to "if-not-present" pull policy`| The runner failed to pull an image and attempts to pull an image by using the next listed pull policy. Displays when multiple pull policies are set. |
 
 ## Retry a failed pull
 
-You can specify the same policy again to configure a runner
-to retry a failed Docker pull.
-
-This is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci/yaml/#retry)
-in the `.gitlab-ci.yml` files of individual projects,
-but only takes effect if specifically the Docker pull fails initially.
+To configure a runner to retry a failed image pull, specify the same policy more than once in the
+`config.toml`.
 
 For example, this configuration retries the pull one time:
 
@@ -894,6 +861,10 @@ For example, this configuration retries the pull one time:
 [runners.docker]
   pull_policy = ["always", "always"]
 ```
+
+This setting is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci/yaml/#retry)
+in the `.gitlab-ci.yml` files of individual projects,
+but only takes effect if specifically the Docker pull fails initially.
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
