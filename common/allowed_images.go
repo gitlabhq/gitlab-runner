@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bmatcuk/doublestar"
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 type VerifyAllowedImageOptions struct {
