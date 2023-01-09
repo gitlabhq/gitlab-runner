@@ -1510,14 +1510,17 @@ When using Kubernetes executor, users with access to the Kubernetes cluster can 
 - ConfigMap - [There is an ongoing MR to change this](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3751)
 - Pod's environment section
 
-It's highly recommended to use RBAC to make sure that only the GitLab administrator can access these data in your Kubernetes cluster. The easiest way to do this is to only allow GitLab administrators to access the namespace used by GitLab Runner.
+To restrict access to job variable data, you should use role-based access control (RBAC) so that only GitLab administrators have access to the namespace used by the GitLab Runner.
 
-If you need other users to access the GitLab Runner namespace, make sure that only **authorized** users can do the following inside the GitLab Runner namespace:
+If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the type of access users have in the GitLab Runner namespace:
 
-- **get**, **watch**, **list** for **pods** and **configmaps**
-- **create** for **pods/exec** and **pods/attach**
+- For `pods` and `configmaps`:
+  - `get`
+  - `watch`
+  - `list`
+- For `pods/exec` and `pods/attach`, use `create`.
 
-Here is an example RBAC definition for **authorized** users:
+Example RBAC definition for authorized users:
 
 ```yaml
 kind: Role
