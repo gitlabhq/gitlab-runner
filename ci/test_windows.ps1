@@ -9,7 +9,7 @@ function Get-Line([string]$file) {
 }
 
 $numberOfDefinitions = Get-Line -file $testsDefinitionsFile
-$executionSize = [int]($numberOfDefinitions / $env:CI_NODE_TOTAL)
+$executionSize = [math]::ceiling($numberOfDefinitions / $env:CI_NODE_TOTAL)
 $nodeIndex = $env:CI_NODE_INDEX - 1
 $executionOffset = ($nodeIndex * $executionSize)
 
