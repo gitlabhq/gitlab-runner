@@ -1596,8 +1596,8 @@ gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194 h1:al
 gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194/go.mod h1:GyPFxStrVhTTXXWxYUN1/kWsBX8EQlP5SK34VB2Qd1M=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194 h1:ivgi7JawJmDdPVEPciF46rofcfuC4MbnROBwER87UkM=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194/go.mod h1:dNcxkdms9+5vWfke3Infes/+R1VC226bJ43OxtPetmY=
-gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221107182235-c41f6499e083 h1:FmbrNk74qs1AuJUoqMlKj6fGZuGKy0u9x2m1N9OXvPY=
-gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221107182235-c41f6499e083/go.mod h1:lkEiGOflmz0eTDCVb0pfc6NaB1HCnmjuLw/Q7noZaU4=
+gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221216181558-d1e699441cd4 h1:3h0QZROJCj9CNsV2+PQ0yZ68mwyponFT3VZwEufWOrk=
+gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221216181558-d1e699441cd4/go.mod h1:lkEiGOflmz0eTDCVb0pfc6NaB1HCnmjuLw/Q7noZaU4=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083 h1:2QakJ+J1eVs3sgbZJL6dMb/Wag0GU00l9RZBuGjQWUc=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083/go.mod h1:TYPbW5w+nBr+epaz6c5Gj7qQifXAT3qW0gj+lFIAyZA=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462 h1:zq6ZD20H7/HfIORMgN5MXzctrhWUuZo5J6z1TgvR7j4=

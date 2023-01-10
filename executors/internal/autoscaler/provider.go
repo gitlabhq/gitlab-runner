@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/fleeting/fleeting"
 	flprometheus "gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus"
@@ -134,6 +135,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 	)
 
 	options := []taskscaler.Option{
+		taskscaler.WithReservations(),
 		taskscaler.WithCapacityPerInstance(config.Autoscaler.CapacityPerInstance),
 		taskscaler.WithMaxUseCount(config.Autoscaler.MaxUseCount),
 		taskscaler.WithMaxInstances(config.Autoscaler.MaxInstances),
@@ -184,21 +186,12 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 				IdleTime:         schedule.IdleTime,
 				ScaleFactor:      schedule.ScaleFactor,
 				ScaleFactorLimit: schedule.ScaleFactorLimit,
+				PreemptiveMode:   schedule.IdleCount > 0,
 			})
 		}
 		if err := scaler.ConfigureSchedule(schedules...); err != nil {
 			return nil, fmt.Errorf("configuring taskscaler schedules: %w", err)
 		}
-	}
-
-	available, potential := scaler.Capacity()
-
-	if potential <= 0 && available <= 0 {
-		return nil, fmt.Errorf("already at capacity, cannot accept")
-	}
-
-	if scaler.Schedule().IdleCount > 0 && available <= 0 {
-		return nil, fmt.Errorf("already at capacity, cannot accept, allow on demand is disabled")
 	}
 
 	// generate key for acquisition
@@ -208,30 +201,42 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 	}
 	key = helpers.ShortenToken(config.Token) + key
 
-	// todo: allow configuration of how long we're willing to wait for. Do we have something like this already?
-	// todo: it would be good if Acquire() was provided a context, so we could stop when shutting down.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	acq, err := scaler.Acquire(ctx, key)
-	if err != nil {
-		return nil, fmt.Errorf("unable to acquire instance: %w", err)
+	if err := scaler.Reserve(key); err != nil {
+		return nil, fmt.Errorf("reserving capacity: %w", err)
 	}
 
-	return &acquisitionRef{key: key, acq: acq}, nil
+	logrus.WithField("key", key).Trace("Reserved capacity...")
+
+	return &acquisitionRef{key: key}, nil
 }
 
 func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData) {
-	acq, ok := data.(*acquisitionRef)
+	acqRef, ok := data.(*acquisitionRef)
 	if !ok {
 		return
 	}
 
-	p.getRunnerTaskscaler(config).Release(acq.key)
+	if acqRef.acq != nil {
+		p.getRunnerTaskscaler(config).Release(acqRef.key)
+		logrus.WithField("key", acqRef.key).Trace("Released capacity...")
+		acqRef.acq = nil
+		return
+	}
+
+	p.getRunnerTaskscaler(config).Unreserve(acqRef.key)
+	logrus.WithField("key", acqRef.key).Trace("Unreserved capacity...")
 }
 
 func (p *provider) Create() common.Executor {
-	return p.ExecutorProvider.Create()
+	e := p.ExecutorProvider.Create()
+	if e == nil {
+		return nil
+	}
+
+	return &executor{
+		provider: p,
+		Executor: e,
+	}
 }
 
 func (p *provider) getRunnerTaskscaler(config *common.RunnerConfig) taskscaler.Taskscaler {

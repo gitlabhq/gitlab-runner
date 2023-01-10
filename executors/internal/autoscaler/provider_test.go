@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
@@ -114,59 +113,20 @@ func TestInit(t *testing.T) {
 	}
 }
 
-func TestAquire(t *testing.T) {
+func TestAcquire(t *testing.T) {
 	const (
 		afterInit      = "Init"
 		afterConfigure = "Configure"
-		afterCapacity  = "Capacity"
+		afterReserve   = "Reserve"
 	)
 
 	tests := map[string]struct {
 		idleCount          int
-		availableCapacity  int
-		potentialCapacity  int
+		canReserve         bool
 		wantEarlyReturn    string
 		wantAcquisitionRef bool
 		wantErr            bool
 	}{
-		"capacity of 1, no idle": {
-			idleCount:          0,
-			availableCapacity:  1,
-			potentialCapacity:  1,
-			wantAcquisitionRef: true,
-		},
-		"no available capacity, has on demand potential": {
-			idleCount:          0, // on demand ok
-			availableCapacity:  0,
-			potentialCapacity:  1,
-			wantAcquisitionRef: true,
-		},
-		"capacity of 1, idle of 1": {
-			idleCount:          1,
-			availableCapacity:  1,
-			potentialCapacity:  1,
-			wantAcquisitionRef: true,
-		},
-		"no available or potential capacity": {
-			idleCount:         0,
-			availableCapacity: 0,
-			potentialCapacity: 0,
-			wantEarlyReturn:   afterCapacity,
-			wantErr:           true,
-		},
-		"no available capacity, no on demand": {
-			idleCount:         10,
-			availableCapacity: 0,
-			potentialCapacity: 10,
-			wantErr:           true,
-		},
-		"negative capacity": {
-			idleCount:         0,
-			availableCapacity: -1,
-			potentialCapacity: -1,
-			wantEarlyReturn:   afterCapacity,
-			wantErr:           true,
-		},
 		"failed init": {
 			wantEarlyReturn: afterInit,
 			wantErr:         true,
@@ -175,10 +135,34 @@ func TestAquire(t *testing.T) {
 			wantEarlyReturn: afterConfigure,
 			wantErr:         true,
 		},
+		"has capacity, no idle count": {
+			idleCount:          0,
+			canReserve:         true,
+			wantAcquisitionRef: true,
+		},
+		"no capacity, no idle count": {
+			idleCount:       0,
+			canReserve:      false,
+			wantEarlyReturn: afterReserve,
+			wantErr:         true,
+		},
+		"has capacity, has idle count": {
+			idleCount:          1,
+			canReserve:         true,
+			wantAcquisitionRef: true,
+		},
+		"no capacity, has idle count": {
+			idleCount:       1,
+			canReserve:      false,
+			wantEarlyReturn: afterReserve,
+			wantErr:         true,
+		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
+			const acqRefKey = "abcdefgh"
+
 			config := common.NewTestRunnerConfig().
 				WithAutoscalerConfig(
 					common.NewTestAutoscalerConfig().
@@ -189,7 +173,8 @@ func TestAquire(t *testing.T) {
 						).AutoscalerConfig,
 				).RunnerConfig
 			schedule := taskscaler.Schedule{
-				IdleCount: tt.idleCount,
+				IdleCount:      tt.idleCount,
+				PreemptiveMode: tt.idleCount > 0,
 			}
 			ts := mocks.NewTaskscaler(t)
 			ep := &common.MockExecutorProvider{}
@@ -197,7 +182,7 @@ func TestAquire(t *testing.T) {
 			p.taskscalerNew = mockTaskscalerNew(ts /* wantErr */, false)
 			p.fleetingRunPlugin = mockFleetingRunPlugin( /* wantErr */ false)
 			p.generateUniqueID = func() (string, error) {
-				return "abcdefgh", nil
+				return acqRefKey, nil
 			}
 
 			switch tt.wantEarlyReturn {
@@ -206,24 +191,19 @@ func TestAquire(t *testing.T) {
 				p.taskscalerNew = mockTaskscalerNew(nil /* wantErr */, true)
 			case afterConfigure:
 				ts.EXPECT().ConfigureSchedule(schedule).Return(fmt.Errorf("test error"))
-			case afterCapacity:
+			case afterReserve:
 				ts.EXPECT().ConfigureSchedule(schedule).Return(nil)
-				ts.EXPECT().Capacity().Return(tt.availableCapacity, tt.potentialCapacity)
+				ts.EXPECT().Reserve(acqRefKey).Return(taskscaler.ErrNoCapacity)
 			default:
 				ts.EXPECT().ConfigureSchedule(schedule).Return(nil)
-				ts.EXPECT().Capacity().Return(tt.availableCapacity, tt.potentialCapacity)
-				ts.EXPECT().Schedule().Return(schedule)
-
-				if tt.availableCapacity > 0 || tt.idleCount == 0 && tt.potentialCapacity > 0 {
-					ts.EXPECT().Acquire(mock.Anything, mock.Anything).Return(&taskscaler.Acquisition{}, nil)
-				}
+				ts.EXPECT().Reserve(acqRefKey).Return(nil)
 			}
 
 			ar, err := p.Acquire(config)
 
 			if tt.wantAcquisitionRef {
 				if assert.IsType(t, &acquisitionRef{}, ar) {
-					assert.Equal(t, "abcdefgh", ar.(*acquisitionRef).key)
+					assert.Equal(t, acqRefKey, ar.(*acquisitionRef).key)
 				}
 			} else {
 				assert.Nil(t, ar)

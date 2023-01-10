@@ -41,7 +41,7 @@ require (
 	github.com/urfave/cli v1.22.10
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221107182235-c41f6499e083
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221216181558-d1e699441cd4
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
