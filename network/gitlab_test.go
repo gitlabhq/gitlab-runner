@@ -1324,7 +1324,11 @@ func getPatchServer(
 		RunnerCredentials: RunnerCredentials{
 			URL: server.URL,
 		},
+		SystemIDState: systemIDState,
 	}
+
+	err := config.SystemIDState.EnsureSystemID()
+	require.NoError(t, err)
 
 	return server, NewGitLabClient(), config
 }

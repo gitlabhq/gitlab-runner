@@ -38,9 +38,13 @@ func TestBuildsHelperCollect(t *testing.T) {
 				Executor:  "shell",
 				Shell:     shell,
 			},
+			SystemIDState: common.NewSystemIDState(),
 		},
 	}
 	trace := &common.Trace{Writer: io.Discard}
+
+	err = build.Runner.SystemIDState.EnsureSystemID()
+	require.NoError(t, err)
 
 	done := make(chan error)
 	go func() {

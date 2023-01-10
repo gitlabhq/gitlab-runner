@@ -34,7 +34,11 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		RunnerSettings: common.RunnerSettings{
 			Executor: "multi-runner-build-limit",
 		},
+		SystemIDState: common.NewSystemIDState(),
 	}
+
+	err := cfg.SystemIDState.EnsureSystemID()
+	require.NoError(t, err)
 
 	jobData := common.JobResponse{
 		ID: 1,

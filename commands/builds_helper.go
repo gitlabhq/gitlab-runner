@@ -16,26 +16,27 @@ import (
 var numBuildsDesc = prometheus.NewDesc(
 	"gitlab_runner_jobs",
 	"The current number of running builds.",
-	[]string{"runner", "state", "stage", "executor_stage"},
+	[]string{"runner", "system_id", "state", "stage", "executor_stage"},
 	nil,
 )
 
 var requestConcurrencyDesc = prometheus.NewDesc(
 	"gitlab_runner_request_concurrency",
 	"The current number of concurrent requests for a new job",
-	[]string{"runner"},
+	[]string{"runner", "system_id"},
 	nil,
 )
 
 var requestConcurrencyExceededDesc = prometheus.NewDesc(
 	"gitlab_runner_request_concurrency_exceeded_total",
 	"Count of excess requests above the configured request_concurrency limit",
-	[]string{"runner"},
+	[]string{"runner", "system_id"},
 	nil,
 )
 
 type statePermutation struct {
 	runner        string
+	systemID      string
 	buildState    common.BuildRuntimeState
 	buildStage    common.BuildStage
 	executorStage common.ExecutorStage
@@ -44,6 +45,7 @@ type statePermutation struct {
 func newStatePermutationFromBuild(build *common.Build) statePermutation {
 	return statePermutation{
 		runner:        build.Runner.ShortDescription(),
+		systemID:      build.Runner.SystemIDState.GetSystemID(),
 		buildState:    build.CurrentState(),
 		buildStage:    build.CurrentStage(),
 		executorStage: build.CurrentExecutorStage(),
@@ -51,6 +53,8 @@ func newStatePermutationFromBuild(build *common.Build) statePermutation {
 }
 
 type runnerCounter struct {
+	systemID string
+
 	builds   int
 	requests int
 
@@ -73,7 +77,7 @@ func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCoun
 
 	counter := b.counters[runner.Token]
 	if counter == nil {
-		counter = &runnerCounter{}
+		counter = &runnerCounter{systemID: runner.SystemIDState.GetSystemID()}
 		b.counters[runner.Token] = counter
 	}
 	return counter
@@ -185,7 +189,7 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 	}
 
 	b.builds = append(b.builds, build)
-	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription()).Inc()
+	b.jobsTotal.WithLabelValues(build.Runner.ShortDescription(), build.Runner.SystemIDState.GetSystemID()).Inc()
 }
 
 func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
@@ -193,7 +197,7 @@ func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
 	defer b.lock.Unlock()
 
 	b.jobDurationHistogram.
-		WithLabelValues(deleteBuild.Runner.ShortDescription()).
+		WithLabelValues(deleteBuild.Runner.ShortDescription(), deleteBuild.Runner.SystemIDState.GetSystemID()).
 		Observe(deleteBuild.Duration().Seconds())
 
 	for idx, build := range b.builds {
@@ -220,11 +224,12 @@ func (b *buildsHelper) statesAndStages() map[statePermutation]int {
 
 	data := make(map[statePermutation]int)
 
-	for token := range b.counters {
+	for token, counter := range b.counters {
 		// 'idle' state will ensure the metric is always present, even if no
 		// builds are being processed at the moment
 		idleState := statePermutation{
 			runner:        helpers.ShortenToken(token),
+			systemID:      counter.systemID,
 			buildState:    "idle",
 			buildStage:    "idle",
 			executorStage: "idle",
@@ -271,6 +276,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			prometheus.GaugeValue,
 			float64(count),
 			state.runner,
+			state.systemID,
 			string(state.buildState),
 			string(state.buildStage),
 			string(state.executorStage),
@@ -284,6 +290,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			prometheus.GaugeValue,
 			float64(counter.requests),
 			runner,
+			counter.systemID,
 		)
 
 		ch <- prometheus.MustNewConstMetric(
@@ -291,6 +298,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 			prometheus.CounterValue,
 			float64(counter.requestConcurrencyExceeded),
 			runner,
+			counter.systemID,
 		)
 	}
 
@@ -323,7 +331,7 @@ func newBuildsHelper() buildsHelper {
 				Name: "gitlab_runner_jobs_total",
 				Help: "Total number of handled jobs",
 			},
-			[]string{"runner"},
+			[]string{"runner", "system_id"},
 		),
 		jobDurationHistogram: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -331,7 +339,7 @@ func newBuildsHelper() buildsHelper {
 				Help:    "Histogram of job durations",
 				Buckets: []float64{30, 60, 300, 600, 1800, 3600, 7200, 10800, 18000, 36000},
 			},
-			[]string{"runner"},
+			[]string{"runner", "system_id"},
 		),
 	}
 }
