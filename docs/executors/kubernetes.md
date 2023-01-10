@@ -145,7 +145,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | Setting | Description |
 |---------|-------------|
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
-| `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/security/pod-security-policy/#privilege-escalation) behavior. |
+| `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) behavior. |
 | `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
 | `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. |
 | `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
@@ -609,7 +609,7 @@ concurrent = 4
 
 ## Using Security Context
 
-[Pod security context](https://kubernetes.io/docs/concepts/security/pod-security-policy/) configuration instructs executor to set a pod security policy on the build pod.
+[Pod security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) configuration instructs executor to set a pod security policy on the build pod.
 
 | Option               | Type       | Required | Description |
 |----------------------|------------|----------|-------------|
@@ -664,7 +664,7 @@ check_interval = 30
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/3116) in GitLab Runner 14.5.
 
-Use the [container security context](https://kubernetes.io/docs/concepts/security/pod-security-policy/) configuration to configure the executor to set a container security policy on the build, helper, or service pods.
+Use the [container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) configuration to configure the executor to set a container security policy on the build, helper, or service pods.
 
 | Option                | Type        | Required | Description |
 |-----------------------|-------------|----------|-------------|
