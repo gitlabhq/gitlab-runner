@@ -69,6 +69,14 @@ type PsWriter struct {
 var encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
 
 func stdinCmdArgs(shell string) []string {
+	if shell == SNPwsh {
+		return pwshStdinCmdArgs(shell)
+	}
+
+	return powershellStdinCmdArgs(shell)
+}
+
+func pwshStdinCmdArgs(shell string) []string {
 	// The stdin script we pass is always UTF-8 encoded, however, depending on
 	// how powershell is configured, it may not be expecting UTF-8.
 	//
@@ -104,6 +112,24 @@ func stdinCmdArgs(shell string) []string {
 		"Bypass",
 		"-EncodedCommand",
 		base64.StdEncoding.EncodeToString([]byte(encoded)),
+	}
+}
+
+// Avoid using -EncodedCommand due to the powershell progress stream leaking to
+// to the output: https://github.com/PowerShell/PowerShell/issues/5912.
+func powershellStdinCmdArgs(shell string) []string {
+	return []string{
+		"-NoProfile",
+		"-NoLogo",
+		"-InputFormat",
+		"text",
+		"-OutputFormat",
+		"text",
+		"-NonInteractive",
+		"-ExecutionPolicy",
+		"Bypass",
+		"-Command",
+		"-",
 	}
 }
 
