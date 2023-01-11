@@ -107,9 +107,10 @@ Prerequisites:
   - For Linux:
     - `sh`
     - `bash`
-    - `pwsh`. [Introduced in 13.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4021).
+    - Powershell Core (`pwsh`). [Introduced in 13.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4021).
   - For Windows:
-    - PowerShell
+    - PowerShell (`powershell`)
+    - Powershell Core (`pwsh`). [Introduced in 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139).
 
 To configure the Docker executor, you define the Docker images and services in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and [`config.toml`](../commands/index.md#configuration-file).
 
