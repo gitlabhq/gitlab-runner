@@ -44,10 +44,10 @@ func VerifyAllowedImage(options VerifyAllowedImageOptions, logger BuildLogger) e
 		return nil
 	}
 
-	errorMsg := `Please check runner's configuration:
-		https://docs.gitlab.com/runner/configuration/advanced-configuration.html
-		#restricting-docker-images-and-services`
-	logger.Println(errorMsg)
+	logger.Println(
+		`Please check runner's allowed_images configuration: ` +
+			`https://docs.gitlab.com/runner/configuration/advanced-configuration.html`,
+	)
 
 	return ErrDisallowedImage
 }

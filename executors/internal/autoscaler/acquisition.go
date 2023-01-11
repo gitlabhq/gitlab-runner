@@ -2,12 +2,18 @@ package autoscaler
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"time"
 
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
+	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
-
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
+
+	"gitlab.com/gitlab-org/fleeting/nesting/api"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 var _ executors.Environment = (*acquisitionRef)(nil)
@@ -15,21 +21,15 @@ var _ executors.Environment = (*acquisitionRef)(nil)
 type acquisitionRef struct {
 	key string
 	acq *taskscaler.Acquisition
+
+	mapJobImageToVMImage bool
 }
 
-func (ref *acquisitionRef) ID() string {
-	return ref.acq.InstanceID()
-}
-
-func (ref *acquisitionRef) OS() string {
-	return ref.acq.InstanceConnectInfo().OS
-}
-
-func (ref *acquisitionRef) Arch() string {
-	return ref.acq.InstanceConnectInfo().Arch
-}
-
-func (ref *acquisitionRef) Dial(ctx context.Context) (executors.Client, error) {
+func (ref *acquisitionRef) Prepare(
+	ctx context.Context,
+	logger common.BuildLogger,
+	options common.ExecutorPrepareOptions,
+) (executors.Client, error) {
 	info := ref.acq.InstanceConnectInfo()
 
 	dialer, err := connector.Dial(ctx, info, connector.DialOptions{
@@ -40,11 +40,38 @@ func (ref *acquisitionRef) Dial(ctx context.Context) (executors.Client, error) {
 		return nil, err
 	}
 
-	return &client{dialer}, nil
+	// if nesting is disabled, return a client for the instance
+	if !options.Config.Autoscaler.VMIsolation.Enabled {
+		return &client{dialer, nil}, nil
+	}
+
+	conn, err := api.NewClientConn(
+		options.Config.Autoscaler.VMIsolation.NestingHost,
+		func(ctx context.Context, network, address string) (net.Conn, error) {
+			return dialer.Dial(network, address)
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("dialing nesting daemon: %w", err)
+	}
+
+	nc := api.New(conn)
+
+	client, err := ref.createVMTunnel(ctx, logger, nc, dialer, options)
+	if err != nil {
+		nc.Close()
+		conn.Close()
+		dialer.Close()
+
+		return nil, fmt.Errorf("creating vm tunnel: %w", err)
+	}
+
+	return client, nil
 }
 
 type client struct {
-	client connector.Client
+	client  connector.Client
+	cleanup func() error
 }
 
 func (c *client) Dial(n string, addr string) (net.Conn, error) {
@@ -56,5 +83,73 @@ func (c *client) Run(ctx context.Context, opts executors.RunOptions) error {
 }
 
 func (c *client) Close() error {
-	return c.client.Close()
+	var err error
+	if c.cleanup != nil {
+		err = c.cleanup()
+	}
+
+	if cerr := c.client.Close(); cerr != nil {
+		return cerr
+	}
+	return err
+}
+
+func (ref *acquisitionRef) createVMTunnel(
+	ctx context.Context,
+	logger common.BuildLogger,
+	nc *api.Client,
+	dialer connector.Client,
+	options common.ExecutorPrepareOptions,
+) (executors.Client, error) {
+	nestingCfg := options.Config.Autoscaler.VMIsolation
+
+	// use nesting config defined image, unless the executor allows for the
+	// job image to override.
+	image := nestingCfg.Image
+	if options.Build.Image.Name != "" && ref.mapJobImageToVMImage {
+		image = options.Build.Image.Name
+	}
+
+	logger.Infoln("Creating vm", image)
+
+	// create vm
+	vm, err := nc.Create(ctx, image)
+	if err != nil {
+		return nil, fmt.Errorf("creating nesting vm: %w", err)
+	}
+
+	logger.Infoln("Created vm", vm.GetId(), vm.GetAddr())
+
+	// create tunneled dialer to vm
+	dialer, err = connector.Dial(ctx, fleetingprovider.ConnectInfo{
+		ConnectorConfig: fleetingprovider.ConnectorConfig{
+			OS:                   nestingCfg.ConnectorConfig.OS,
+			Arch:                 nestingCfg.ConnectorConfig.Arch,
+			Protocol:             fleetingprovider.Protocol(nestingCfg.ConnectorConfig.Protocol),
+			Username:             nestingCfg.ConnectorConfig.Username,
+			Password:             nestingCfg.ConnectorConfig.Password,
+			UseStaticCredentials: nestingCfg.ConnectorConfig.UseStaticCredentials,
+			Keepalive:            nestingCfg.ConnectorConfig.Keepalive,
+			Timeout:              nestingCfg.ConnectorConfig.Timeout,
+		},
+		InternalAddr: vm.GetAddr(),
+	}, connector.DialOptions{
+		DialFn: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.Dial(network, addr)
+		},
+	})
+	if err != nil {
+		defer func() { _ = nc.Delete(ctx, vm.GetId()) }()
+
+		return nil, fmt.Errorf("dialing nesting vm: %w", err)
+	}
+
+	return &client{dialer, func() error {
+		defer nc.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		return nc.Delete(ctx, vm.GetId())
+	}}, nil
 }

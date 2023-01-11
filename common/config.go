@@ -204,6 +204,11 @@ type DockerConfig struct {
 	EnableIPv6                 bool               `toml:"enable_ipv6,omitempty" json:"enable_ipv6" long:"enable-ipv6" description:"Enable IPv6 for automatically created networks. This is only takes affect when the feature flag FF_NETWORK_PER_BUILD is enabled."`
 }
 
+//nolint:lll
+type InstanceConfig struct {
+	AllowedImages []string `toml:"allowed_images,omitempty" description:"When VM Isolation is enabled, allowed images controls which images a job is allowed to specify"`
+}
+
 type AutoscalerConfig struct {
 	CapacityPerInstance int                      `toml:"capacity_per_instance,omitempty"`
 	MaxUseCount         int                      `toml:"max_use_count,omitempty"`
@@ -213,7 +218,17 @@ type AutoscalerConfig struct {
 	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty"`
 
+	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
+
 	InstanceOperationTimeBuckets []float64 `toml:"instance_operation_time_buckets,omitempty"`
+}
+
+type VMIsolation struct {
+	Enabled         bool                  `toml:"enabled,omitempty"`
+	NestingHost     string                `toml:"nesting_host,omitempty"`
+	NestingConfig   AutoscalerSettingsMap `toml:"nesting_config,omitempty"`
+	Image           string                `toml:"image,omitempty"`
+	ConnectorConfig ConnectorConfig       `toml:"connector_config,omitempty"`
 }
 
 type ConnectorConfig struct {
@@ -940,6 +955,7 @@ type RunnerSettings struct {
 
 	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags.html"`
 
+	Instance   *InstanceConfig   `toml:"instance,omitempty"`
 	SSH        *ssh.Config       `toml:"ssh,omitempty" json:"ssh" group:"ssh executor" namespace:"ssh"`
 	Docker     *DockerConfig     `toml:"docker,omitempty" json:"docker" group:"docker executor" namespace:"docker"`
 	Parallels  *ParallelsConfig  `toml:"parallels,omitempty" json:"parallels" group:"parallels executor" namespace:"parallels"`

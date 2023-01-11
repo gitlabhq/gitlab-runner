@@ -4,13 +4,12 @@ import (
 	"context"
 	"io"
 	"net"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type Environment interface {
-	ID() string
-	OS() string
-	Arch() string
-	Dial(ctx context.Context) (Client, error)
+	Prepare(context.Context, common.BuildLogger, common.ExecutorPrepareOptions) (Client, error)
 }
 
 type Client interface {

@@ -29,15 +29,33 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("the instance executor doesn't support shells that require a script file")
 	}
 
+	// validate if the image defined is allowed if nesting is enabled
+	// if nesting is not enabled, the image is irrelevant
+	if options.Config.Autoscaler.VMIsolation.Enabled {
+		var allowed []string
+		if options.Config.Instance != nil {
+			allowed = options.Config.Instance.AllowedImages
+		}
+
+		// verify image is allowed
+		if err := common.VerifyAllowedImage(common.VerifyAllowedImageOptions{
+			Image:         options.Build.Image.Name,
+			OptionName:    "images",
+			AllowedImages: allowed,
+		}, e.BuildLogger); err != nil {
+			return err
+		}
+	}
+
 	environment, ok := e.Build.ExecutorData.(executors.Environment)
 	if !ok {
 		return errors.New("expected environment executor data")
 	}
 
-	e.Println("Dialing remote instance...")
-	e.client, err = environment.Dial(options.Context)
+	e.Println("Preparing instance...")
+	e.client, err = environment.Prepare(options.Context, e.BuildLogger, options)
 	if err != nil {
-		return fmt.Errorf("connecting to remote environment: %w", err)
+		return fmt.Errorf("creating instance environment: %w", err)
 	}
 
 	return nil
@@ -89,5 +107,7 @@ func init() {
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		DefaultShellName: options.Shell.Shell,
+	}, autoscaler.Config{
+		MapJobImageToVMImage: true,
 	}))
 }
