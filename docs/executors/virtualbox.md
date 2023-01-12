@@ -50,7 +50,7 @@ per job using the `GIT_CLONE_PATH`.
 1. If Windows VM, see [Checklist for Windows VMs](#checklist-for-windows-vms)
 1. Install the OpenSSH server
 1. Install all other dependencies required by your build
-1. If you want to upload job artifacts, install `gitlab-runner` inside the VM
+1. If you want to download or upload job artifacts, install `gitlab-runner` inside the VM
 1. Log out and shut down the virtual machine
 
 It's completely fine to use automation tools like Vagrant to provision the
