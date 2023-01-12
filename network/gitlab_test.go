@@ -859,8 +859,7 @@ func TestRequestJob(t *testing.T) {
 	}))
 	defer s.Close()
 
-	err := systemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, systemIDState.EnsureSystemID())
 
 	validToken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
@@ -956,8 +955,7 @@ func TestRequestJob(t *testing.T) {
 
 func TestRequestJobWithSystemID(t *testing.T) {
 	systemIDState := NewSystemIDState()
-	err := systemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, systemIDState.EnsureSystemID())
 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
@@ -1033,6 +1031,8 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.NoError(t, err)
 
 	assert.Equal(t, "token", req["token"])
+	assert.NotEmpty(t, req["system_id"])
+	assert.Equal(t, systemIDState.GetSystemID(), req["system_id"])
 
 	setStateForUpdateJobHandlerResponse(w, req)
 }
@@ -1108,11 +1108,14 @@ func TestUpdateJob(t *testing.T) {
 		RunnerCredentials: RunnerCredentials{
 			URL: s.URL,
 		},
+		SystemIDState: systemIDState,
 	}
 
 	jobCredentials := &JobCredentials{
 		Token: "token",
 	}
+
+	require.NoError(t, systemIDState.EnsureSystemID())
 
 	c := NewGitLabClient()
 
@@ -1183,11 +1186,14 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 		RunnerCredentials: RunnerCredentials{
 			URL: s.URL,
 		},
+		SystemIDState: systemIDState,
 	}
 
 	jobCredentials := &JobCredentials{
 		Token: "token",
 	}
+
+	require.NoError(t, systemIDState.EnsureSystemID())
 
 	c := NewGitLabClient()
 
@@ -1818,12 +1824,15 @@ func TestUpdateIntervalHeaderHandling(t *testing.T) {
 				server := httptest.NewServer(http.HandlerFunc(handler))
 				defer server.Close()
 
-				h := newLogHook(logrus.InfoLevel, logrus.WarnLevel)
-				logrus.AddHook(&h)
-
 				config := RunnerConfig{
 					RunnerCredentials: RunnerCredentials{URL: server.URL},
+					SystemIDState:     systemIDState,
 				}
+
+				require.NoError(t, systemIDState.EnsureSystemID())
+
+				h := newLogHook(logrus.InfoLevel, logrus.WarnLevel)
+				logrus.AddHook(&h)
 
 				result := NewGitLabClient().UpdateJob(config, &JobCredentials{ID: 10}, UpdateJobInfo{State: "success"})
 				assert.Equal(t, tc.expectedUpdateInterval, result.NewUpdateInterval)
