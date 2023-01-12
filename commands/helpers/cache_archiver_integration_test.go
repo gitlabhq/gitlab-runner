@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
 
@@ -29,6 +30,27 @@ import (
 const cacheArchiverArchive = "archive.zip"
 const cacheArchiverTestArchivedFile = "archive_file"
 const cacheExtractorTestArchivedFile = "archive_file"
+
+func TestCacheArchiverUploadExpandArgs(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
+	defer srv.Close()
+
+	os.Setenv("expand", "expanded")
+	defer os.Unsetenv("expand")
+
+	cmd := helpers.CacheArchiverCommand{
+		File:    cacheArchiverArchive,
+		URL:     srv.URL + "/cache.zip",
+		Timeout: 0,
+	}
+	cmd.Paths = []string{"unexpanded", "path/${expand}/${expand:1:3}"}
+	cmd.Exclude = []string{"unexpanded", "path/$expand/${foo:-bar}"}
+
+	cmd.Execute(&cli.Context{})
+
+	assert.Equal(t, []string{"unexpanded", "path/expanded/xpa"}, cmd.Paths)
+	assert.Equal(t, []string{"unexpanded", "path/expanded/bar"}, cmd.Exclude)
+}
 
 func TestCacheArchiverIsUpToDate(t *testing.T) {
 	helpers.OnEachZipArchiver(t, func(t *testing.T) {
