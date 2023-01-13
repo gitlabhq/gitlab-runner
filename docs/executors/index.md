@@ -54,7 +54,7 @@ you decide which executor to use.
    system including the runner's token, and the cache and code of other jobs.
    Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
-   to break out of their container and access the file system hosting runner.
+   to break out of their container and access the file system hosting the runner.
 
 ### I am not sure
 
