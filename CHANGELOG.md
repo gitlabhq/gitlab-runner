@@ -1,3 +1,9 @@
+## v15.6.2 (2023-01-13)
+
+### Bug fixes
+
+- powershell: fix unwanted progress streams leaking to output !3831
+
 ## v15.6.1 (2022-11-24)
 
 ### Bug fixes
