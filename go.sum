@@ -1515,8 +1515,9 @@ github.com/stretchr/objx v0.0.0-20180129172003-8a3f7159479f/go.mod h1:HFkY916IF+
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
-github.com/stretchr/objx v0.4.0 h1:M2gUjqZET1qApGOWNSnZ49BAIMX4F/1plDv3+l31EJ4=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
+github.com/stretchr/objx v0.5.0 h1:1zr/of2m5FGMsad5YfcqgdqdWrIhu+EBEJRhR1U7z/c=
+github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
 github.com/stretchr/testify v0.0.0-20180303142811-b89eecf5ca5d/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
@@ -1527,8 +1528,9 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.7.5/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
-github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
+github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
+github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/syndtr/gocapability v0.0.0-20170704070218-db04d3cc01c8/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
 github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2/go.mod h1:hkRG7XYTFWNJGYcbNJQlaLq0fg1yr4J4t/NcTQtrfww=
@@ -1598,8 +1600,8 @@ gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194 h1:al
 gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194/go.mod h1:GyPFxStrVhTTXXWxYUN1/kWsBX8EQlP5SK34VB2Qd1M=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194 h1:ivgi7JawJmDdPVEPciF46rofcfuC4MbnROBwER87UkM=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194/go.mod h1:dNcxkdms9+5vWfke3Infes/+R1VC226bJ43OxtPetmY=
-gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221107182235-c41f6499e083 h1:FmbrNk74qs1AuJUoqMlKj6fGZuGKy0u9x2m1N9OXvPY=
-gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221107182235-c41f6499e083/go.mod h1:lkEiGOflmz0eTDCVb0pfc6NaB1HCnmjuLw/Q7noZaU4=
+gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221216181558-d1e699441cd4 h1:3h0QZROJCj9CNsV2+PQ0yZ68mwyponFT3VZwEufWOrk=
+gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221216181558-d1e699441cd4/go.mod h1:lkEiGOflmz0eTDCVb0pfc6NaB1HCnmjuLw/Q7noZaU4=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083 h1:2QakJ+J1eVs3sgbZJL6dMb/Wag0GU00l9RZBuGjQWUc=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083/go.mod h1:TYPbW5w+nBr+epaz6c5Gj7qQifXAT3qW0gj+lFIAyZA=
 gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462 h1:zq6ZD20H7/HfIORMgN5MXzctrhWUuZo5J6z1TgvR7j4=
