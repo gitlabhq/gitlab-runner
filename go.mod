@@ -8,8 +8,9 @@ require (
 	cloud.google.com/go/storage v1.24.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.4.1
 	github.com/BurntSushi/toml v0.3.1
-	github.com/bmatcuk/doublestar v1.3.0
-	github.com/creack/pty v1.1.11
+	github.com/bmatcuk/doublestar/v4 v4.4.0
+	github.com/creack/pty v1.1.17
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v20.10.12+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.17+incompatible
@@ -35,12 +36,13 @@ require (
 	github.com/prometheus/procfs v0.8.0
 	github.com/saracen/fastzip v0.1.9
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.22.10
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221107182235-c41f6499e083
+	gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20221110153304-d213f4fe1a4c
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20221216181558-d1e699441cd4
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
@@ -55,6 +57,7 @@ require (
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	k8s.io/client-go v0.24.2
+	mvdan.cc/sh/v3 v3.5.1
 )
 
 require (
@@ -80,7 +83,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484 // indirect
@@ -156,7 +158,7 @@ require (
 	github.com/saracen/zipextra v0.0.0-20220303013732-0187cb0159ea // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.4.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220722155238-128564f6959c // indirect
 	golang.org/x/term v0.1.0 // indirect
