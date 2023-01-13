@@ -9,6 +9,27 @@ type MockShell struct {
 	mock.Mock
 }
 
+// GenerateSaveScript provides a mock function with given fields: info, scriptPath, script
+func (_m *MockShell) GenerateSaveScript(info ShellScriptInfo, scriptPath string, script string) (string, error) {
+	ret := _m.Called(info, scriptPath, script)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(ShellScriptInfo, string, string) string); ok {
+		r0 = rf(info, scriptPath, script)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(ShellScriptInfo, string, string) error); ok {
+		r1 = rf(info, scriptPath, script)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GenerateScript provides a mock function with given fields: buildStage, info
 func (_m *MockShell) GenerateScript(buildStage BuildStage, info ShellScriptInfo) (string, error) {
 	ret := _m.Called(buildStage, info)

@@ -485,6 +485,74 @@ func TestPowershell_GenerateScript(t *testing.T) {
 	}
 }
 
+//nolint:lll
+func TestPowershell_GenerateSaveScript(t *testing.T) {
+	path := "path"
+	shellInfo := common.ShellScriptInfo{
+		Shell:         "pwsh",
+		Type:          common.NormalShell,
+		RunnerCommand: "/usr/bin/gitlab-runner-helper",
+		Build: &common.Build{
+			Runner: &common.RunnerConfig{},
+		},
+	}
+	shellInfo.Build.Runner.Executor = "kubernetes"
+	shellInfo.Build.Hostname = "Test Hostname"
+
+	pwshShell := common.GetShell("pwsh").(*PowerShell)
+
+	testCases := map[string]struct {
+		info            common.ShellScriptInfo
+		script          string
+		expectedFailure bool
+		expectedScript  string
+	}{
+		"normal script": {
+			info:   shellInfo,
+			script: `&{ echo "Display special characters () {} <> [] \ | ;"}`,
+			expectedScript: "& {" + pwshShell.EOL + pwshShell.EOL +
+				"$in =\"JnsgZWNobyAiRGlzcGxheSBzcGVjaWFsIGNoYXJhY3RlcnMgKCkge30gPD4gW10gXCB8IDsifQ==\"" + pwshShell.EOL +
+				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + pwshShell.EOL +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + pwshShell.EOL +
+				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + pwshShell.EOL +
+				"$sw.Flush()" + pwshShell.EOL + "$sw.Close()" + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL +
+				"}" + pwshShell.EOL + pwshShell.EOL,
+		},
+		"echo unicode script": {
+			script: "echo \"`“ `“ `” `” `„ ‘ ’ ‚ ‛ ‘ ’„",
+			info:   shellInfo,
+			expectedScript: "& {" + pwshShell.EOL + pwshShell.EOL +
+				"$in =\"ZWNobyAiYOKAnCBg4oCcIGDigJ0gYOKAnSBg4oCeIOKAmCDigJkg4oCaIOKAmyDigJgg4oCZ4oCe\"" + pwshShell.EOL +
+				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + pwshShell.EOL +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + pwshShell.EOL +
+				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + pwshShell.EOL +
+				"$sw.Flush()" + pwshShell.EOL + "$sw.Close()" + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL +
+				"}" + pwshShell.EOL + pwshShell.EOL,
+		},
+		"echo script": {
+			script: "echo normal string",
+			info:   shellInfo,
+			expectedScript: "& {" + pwshShell.EOL + pwshShell.EOL +
+				"$in =\"ZWNobyBub3JtYWwgc3RyaW5n\"" + pwshShell.EOL +
+				"$customEncoding = New-Object System.Text.UTF8Encoding $True" + pwshShell.EOL +
+				"$sw = [System.IO.StreamWriter]::new(\"path\", $customEncoding)" + pwshShell.EOL +
+				"$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))" + pwshShell.EOL +
+				"$sw.Flush()" + pwshShell.EOL + "$sw.Close()" + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL +
+				"}" + pwshShell.EOL + pwshShell.EOL,
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			script, err := pwshShell.GenerateSaveScript(tc.info, path, tc.script)
+			assert.Equal(t, tc.expectedScript, script)
+			if tc.expectedFailure {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
 func Test_PsWriter_isTmpFile(t *testing.T) {
 	tmpDir := "/foo/bar"
 	bw := PsWriter{TemporaryPath: tmpDir}
