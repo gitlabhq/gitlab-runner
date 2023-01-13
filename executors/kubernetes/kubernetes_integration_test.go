@@ -131,6 +131,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesWaitResources":                             testKubernetesWaitResources,
 		"testKubernetesPulicInternalVariabes":                     testKubernetesPulicInternalVariabes,
 		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
+		"testKubernetesHugeScriptAndAfterScriptFeatureFlag":       testKubernetesHugeScriptAndAfterScriptFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -139,16 +140,19 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 
 	for tn, tt := range tests {
 		for _, ff := range featureFlags {
-			tnn := fmt.Sprintf("%s %s", tn, ff)
+			testName := tn
+			testFunction := tt
+			featureflag := ff
+			tnn := fmt.Sprintf("%s %s", testName, featureflag)
 			t.Run(tnn, func(t *testing.T) {
 				t.Parallel()
 
 				t.Run(fmt.Sprintf("%s true", tnn), func(t *testing.T) {
-					tt(t, ff, true)
+					testFunction(t, featureflag, true)
 				})
 
 				t.Run(fmt.Sprintf("%s false", tnn), func(t *testing.T) {
-					tt(t, ff, false)
+					testFunction(t, featureflag, false)
 				})
 			})
 		}
@@ -404,6 +408,205 @@ func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, fea
 			assert.Contains(t, outBuffer.String(), fmt.Sprintf(`$ echo "%s"`, line))
 			// We check the whole line is found in the log without any newline within
 			assert.Regexp(t, regexp.MustCompile(fmt.Sprintf(`(?m)^%s$`, line)), outBuffer.String())
+		})
+	}
+}
+
+func testKubernetesHugeScriptAndAfterScriptFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	getAfterScript := func(featureFlag bool, script ...string) common.Step {
+		as := common.Step{
+			Name: "after_script",
+			Script: common.StepScript{
+				"echo $CI_JOB_STATUS",
+			},
+			Timeout:      3600,
+			When:         common.StepWhenAlways,
+			AllowFailure: true,
+		}
+
+		if !featureFlag {
+			as.Script = append(as.Script, "ls -l /scripts-0-0/*")
+		}
+
+		as.Script = append(as.Script, script...)
+
+		return as
+	}
+
+	tests := map[string]struct {
+		image       string
+		shell       string
+		getScript   func() common.StepScript
+		afterScript []string
+		verifyFn    func(t *testing.T, out string)
+	}{
+		"bash normal script": {
+			image: common.TestAlpineImage,
+			shell: "bash",
+			getScript: func() common.StepScript {
+				return []string{
+					`echo "My normal string"`,
+				}
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "success")
+				assert.Contains(t, out, "My normal string")
+			},
+		},
+		"pwsh unicode script": {
+			image: common.TestPwshImage,
+			shell: "pwsh",
+			getScript: func() common.StepScript {
+				return []string{
+					"echo \"`“ `“ `” `” `„ ‘ ’ ‚ ‛ ‘ ’ ; < ( ) & ^ # [ ] { } ' < > | @ % „",
+				}
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "success")
+				assert.Contains(t, out, "“ “ ” ” „ ‘ ’ ‚ ‛ ‘ ’ ; < ( ) & ^ # [ ] { } ' < > | @ %")
+			},
+		},
+		"bash nested here string": {
+			image:       common.TestAlpineImage,
+			shell:       "bash",
+			afterScript: []string{"cat ./print.sh"},
+			getScript: func() common.StepScript {
+				return []string{
+					`cat <<EOF > ./print.sh
+#!/bin/bash
+echo "My nested here-string"
+EOF
+`,
+				}
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "success")
+				assert.Contains(t, out, "echo \"My nested here-string\"")
+			},
+		},
+		"pwsh nested here-string": {
+			image: common.TestPwshImage,
+			shell: "pwsh",
+			getScript: func() common.StepScript {
+				return []string{
+					`echo @'
+My nested here-string
+echo @"
+My nested nested here-string
+“ “ ” ” „ ‘ ’ ‚ ‛ ‘ ’ ; < ( ) & ^ # [ ] { } ' < > | @ %
+"@
+'@`,
+				}
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "success")
+				assert.Contains(t, out, "My nested here-string")
+				assert.Contains(t, out, "My nested nested here-string")
+				assert.Contains(t, out, "“ “ ” ” „ ‘ ’ ‚ ‛ ‘ ’ ; < ( ) & ^ # [ ] { } ' < > | @ %")
+			},
+		},
+		"bash huge script": {
+			image: common.TestAlpineImage,
+			shell: "bash",
+			getScript: func() common.StepScript {
+				s := strings.Repeat(
+					"echo \"Lorem ipsum dolor sit amet, consectetur adipiscing elit\"\n",
+					10*1024,
+				)
+				return strings.Split(s, "\n")
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "success")
+				assert.Contains(t, out, "Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+			},
+		},
+		"pwsh special script with special character": {
+			image: common.TestPwshImage,
+			shell: "pwsh",
+			getScript: func() common.StepScript {
+				return []string{
+					//nolint:lll
+					`& {$Calendar = Get-Date; If ($Calendar.Month -eq '0') {"This is wrong"} Else {echo "not happening" > test.txt}; ls; Get-Content test.txt;}`,
+				}
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "test.txt")
+				assert.Contains(t, out, "not happening")
+			},
+		},
+		"pwsh multiple instructions in the script": {
+			image: common.TestPwshImage,
+			shell: "pwsh",
+			getScript: func() common.StepScript {
+				return []string{
+					`$Calendar = Get-Date`,
+					`If ($Calendar.Month -eq '0') {"This is wrong"} Else {echo "not happening" > test.txt}`,
+					`ls`,
+					`Get-Content test.txt`,
+					`&{ echo "Display special characters () {} <> [] \ | ;"}`,
+				}
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "test.txt")
+				assert.Contains(t, out, "not happening")
+				assert.Contains(t, out, "Display special characters () {} <> [] \\ | ;")
+			},
+		},
+		"pwsh instruction with arrays": {
+			image: common.TestPwshImage,
+			shell: "pwsh",
+			getScript: func() common.StepScript {
+				return []string{
+					`$data = @('Zero','One')`,
+					`$data | % {"$PSItem"}`,
+					`$data = @{two = "Two"; three = "Three"; }`,
+					`$data.values | % {"$PSItem"}`,
+				}
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.Contains(t, out, "Zero")
+				assert.Contains(t, out, "One")
+				assert.Contains(t, out, "Two")
+				assert.Contains(t, out, "Three")
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse("echo \"Hello World\"")
+			})
+
+			build.Runner.RunnerSettings.Shell = tc.shell
+			build.JobResponse.Image.Name = tc.image
+			build.JobResponse.Steps[0].Script = append(
+				build.JobResponse.Steps[0].Script,
+				tc.getScript()...,
+			)
+			build.JobResponse.Steps = append(
+				build.JobResponse.Steps,
+				getAfterScript(featureFlagValue, tc.afterScript...),
+			)
+
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			outBuffer := new(bytes.Buffer)
+			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+			fmt.Println(outBuffer.String())
+			require.NoError(t, err)
+
+			if !featureFlagValue {
+				assert.Contains(t, outBuffer.String(), "echo $CI_JOB_STATUS")
+				assert.Contains(t, outBuffer.String(), "/scripts-0-0/step_script")
+				assert.Contains(t, outBuffer.String(), "/scripts-0-0/after_script")
+			}
+
+			if tc.verifyFn != nil {
+				tc.verifyFn(t, outBuffer.String())
+			}
 		})
 	}
 }
@@ -828,11 +1031,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 		require.NoError(t, err)
 
 		assert.NotEmpty(t, credentials)
-		if !featureFlagValue {
-			assert.NotEmpty(t, configMaps)
-		} else {
-			assert.Empty(t, configMaps)
-		}
+		assert.Empty(t, configMaps)
 	}
 
 	validateResourcesDeleted := func(t *testing.T, client *k8s.Clientset, namespace string, podName string) {
@@ -1078,8 +1277,8 @@ func testKubernetesPulicInternalVariabes(t *testing.T, featureFlagName string, f
 func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	secretName := "my-secret-1"
-	saName := "my-serviceaccount"
+	secretName := fmt.Sprintf("my-secret-1-%d", rand.Uint64())
+	saName := fmt.Sprintf("my-serviceaccount-%d", rand.Uint64())
 	client := getTestKubeClusterClient(t)
 
 	tests := map[string]struct {
@@ -1319,7 +1518,7 @@ func TestPrepareIssue2583(t *testing.T) {
 
 	runnerConfig := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
-			Executor: "kubernetes",
+			Executor: common.ExecutorKubernetes,
 			Kubernetes: &common.KubernetesConfig{
 				Image:                          "an/image:latest",
 				Namespace:                      namespace,
@@ -1367,7 +1566,13 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 				assert.Contains(
 					t,
 					out,
-					fmt.Sprintf("ERROR: Job failed (system failure): pods %q not found", pod),
+					"ERROR: Job failed (system failure):",
+				)
+
+				assert.Contains(
+					t,
+					out,
+					fmt.Sprintf("pods %q not found", pod),
 				)
 			},
 		},
@@ -1618,7 +1823,7 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (co
 		JobResponse: jobResponse,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
+				Executor: common.ExecutorKubernetes,
 				Kubernetes: &common.KubernetesConfig{
 					Image:      image,
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
@@ -1770,7 +1975,7 @@ func TestKubernetesAllowedImages(t *testing.T) {
 				JobResponse: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
-						Executor: "kubernetes",
+						Executor: common.ExecutorKubernetes,
 						Kubernetes: &common.KubernetesConfig{
 							AllowedImages: test.AllowedImages,
 						},
@@ -1825,7 +2030,7 @@ func TestKubernetesAllowedServices(t *testing.T) {
 				JobResponse: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
-						Executor: "kubernetes",
+						Executor: common.ExecutorKubernetes,
 						Kubernetes: &common.KubernetesConfig{
 							AllowedServices: test.AllowedServices,
 						},
@@ -1986,7 +2191,7 @@ func TestConflictingPullPolicies(t *testing.T) {
 		JobResponse: successfulBuild,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
-				Executor: "kubernetes",
+				Executor: common.ExecutorKubernetes,
 				Kubernetes: &common.KubernetesConfig{
 					Image: common.TestAlpineImage,
 				},
