@@ -74,6 +74,10 @@ func NewBashWriter(build *common.Build, shell string) *BashWriter {
 		useNewEval:     build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
 		useNewEscape:   build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
 		usePosixEscape: build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
+		// useJSONTermination is only used for kubernetes executor when
+		// the feature flag FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY is set to false
+		useJSONTermination: build.Runner.Executor == common.ExecutorKubernetes &&
+			!build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy),
 	}
 }
 
@@ -387,6 +391,19 @@ func (b *BashShell) ensurePrepareStageHostnameMessage(
 			w.Line("echo " + strconv.Quote("Running on $(hostname)..."))
 		}
 	}
+}
+
+func (b *BashShell) GenerateSaveScript(info common.ShellScriptInfo, scriptPath, script string) (string, error) {
+	w := NewBashWriter(info.Build, b.Shell)
+	return b.generateSaveScript(w, scriptPath, script)
+}
+
+func (b *BashShell) generateSaveScript(w *BashWriter, scriptPath, script string) (string, error) {
+	w.Line(fmt.Sprintf("touch %s", scriptPath))
+	w.Line(fmt.Sprintf("chmod 777 %s", scriptPath))
+	w.Line(fmt.Sprintf("echo %s > %s", w.escape(script), scriptPath))
+
+	return w.String(), nil
 }
 
 func (b *BashShell) IsDefault() bool {

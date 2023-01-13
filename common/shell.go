@@ -50,6 +50,7 @@ type Shell interface {
 
 	GetConfiguration(info ShellScriptInfo) (*ShellConfiguration, error)
 	GenerateScript(buildStage BuildStage, info ShellScriptInfo) (string, error)
+	GenerateSaveScript(info ShellScriptInfo, scriptPath, script string) (string, error)
 }
 
 var shells map[string]Shell
