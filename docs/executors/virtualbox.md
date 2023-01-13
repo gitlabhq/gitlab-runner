@@ -88,7 +88,7 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 ### Use Cygwin
 
 - Install [Cygwin](https://cygwin.com/)
-- Install `sshd` and Git from Cygwin (do not use *Git For Windows*, you will get lots of path issues!)
+- Install `sshd` and Git from Cygwin (do not use *Git for Windows*, you will get lots of path issues!)
 - Install Git LFS
 - Configure `sshd` and set it up as a service (see [Cygwin wiki](https://cygwin.fandom.com/wiki/Sshd))
 - Create a rule for the Windows Firewall to allow incoming TCP traffic on port 22
@@ -101,7 +101,7 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 
 - Install [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2)
 - Install and configure [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)
-- Install [Git For Windows](https://git-scm.com/)
+- Install [Git for Windows](https://git-scm.com/)
 - Configure the [default shell as `pwsh`](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_server_configuration#configuring-the-default-shell-for-openssh-in-windows). Update example with the correct full path:
 
   ```powershell
