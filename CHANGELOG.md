@@ -1,4 +1,14 @@
+## v15.7.2 (2023-01-13)
+
+### Bug fixes
+
+- Fix relative URL path handling with clone_url !3815
+- powershell: fix unwanted progress streams leaking to output !3831
+- Re-merge "Artifact/cache helpers now use POSIX shell syntax for expansion" !3833
+
 ## v15.7.1 (2022-12-19)
+
+### Bug fixes
 
 - Revert automate for which supported distro releases we create packages. !3794
 
