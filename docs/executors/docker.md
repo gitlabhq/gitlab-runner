@@ -509,8 +509,32 @@ build:
 
 ## Configure a Docker ENTRYPOINT
 
-The Docker executor doesn't overwrite the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime). This means that if your image defines the `ENTRYPOINT` and doesn't allow you to run
-scripts with `CMD`, the image will not work with the Docker executor.
+By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime) and passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/reference/run/#cmd-default-command-or-options) to start a container that runs the job script.
+
+To ensure a job can run, its Docker image must:
+
+- Provide `sh` or `bash`
+- Define an `ENTRYPOINT` that starts a shell when passed `sh`/`bash` as argument
+
+The Docker Executor runs the job's container with an equivalent of the following command:
+
+```shell
+docker run <image> sh -c "echo 'It works!'" # or bash
+```
+
+If your Docker image doesn't support this mechanism, you can [override the image's ENTRYPOINT](https://docs.gitlab.com/ee/ci/yaml/#imageentrypoint) in the project configuration as follows:
+
+```yaml
+# Equivalent of 
+# docker run --entrypoint "" <image> sh -c "echo 'It works!'"
+image:
+  name: my-image
+  entrypoint: [""]
+```
+
+For more information, see [Override the Entrypoint of an image](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image) and [How CMD and ENTRYPOINT interact in Docker](https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact).
+
+### Job script as ENTRYPOINT
 
 You can use `ENTRYPOINT` to create a Docker image that
 runs the build script in a custom environment, or in secure mode.
