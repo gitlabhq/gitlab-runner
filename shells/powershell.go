@@ -473,11 +473,11 @@ func (p *PsWriter) finishPwsh(buf *strings.Builder, trace bool) {
 }
 
 func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
-	// write UTF-8 BOM (Powershell Core doesn't use a BOM as mentioned in
-	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3896#note_157830131)
-	buf.WriteString("\xef\xbb\xbf")
-
 	if p.PassFile {
+		// write UTF-8 BOM (Powershell Core doesn't use a BOM as mentioned in
+		// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3896#note_157830131)
+		buf.WriteString("\xef\xbb\xbf")
+	} else {
 		buf.WriteString("& {" + p.EOL + p.EOL)
 	}
 
@@ -487,7 +487,7 @@ func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
 
 	buf.WriteString(p.String() + p.EOL)
 
-	if p.PassFile {
+	if !p.PassFile {
 		buf.WriteString("}" + p.EOL + p.EOL)
 	}
 }
