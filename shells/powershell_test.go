@@ -21,8 +21,14 @@ func TestPowershell_LineBreaks(t *testing.T) {
 		eol                     string
 		expectedErrorPreference string
 		shebang                 string
+		passFile                bool
 	}{
-		"Windows newline on Desktop": {
+		"Windows newline on Desktop via stdin": {
+			shell:                   SNPowershell,
+			eol:                     "\r\n",
+			expectedErrorPreference: "",
+		},
+		"Windows newline on Desktop via file": {
 			shell:                   SNPowershell,
 			eol:                     "\r\n",
 			expectedErrorPreference: "",
@@ -54,7 +60,11 @@ func TestPowershell_LineBreaks(t *testing.T) {
 			if tc.shell == SNPwsh {
 				expectedOutput = tc.shebang + "& {" + eol + eol + expectedOutput + "}" + eol + eol
 			} else {
-				expectedOutput = "\xef\xbb\xbf" + expectedOutput
+				expectedOutput = "& {" + eol + eol + expectedOutput + "}" + eol + eol
+
+				if tc.passFile {
+					expectedOutput = "\xef\xbb\xbf" + expectedOutput
+				}
 			}
 			assert.Equal(t, expectedOutput, writer.Finish(false))
 		})
