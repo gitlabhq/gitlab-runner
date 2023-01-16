@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -3565,12 +3566,24 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				assert.Equal(t, "servicename-non-compatble", e.services[0].GenerateName)
-				assert.NotEmpty(t, e.ProxyPool["service,name-.non-compat!ble"])
+				sort.Slice(e.services, func(i, j int) bool {
+					return e.services[i].GenerateName > e.services[j].GenerateName
+				})
+				assert.Equal(t, "service", e.services[0].GenerateName)
+				assert.Equal(t, "name-non-compatble", e.services[1].GenerateName)
+
+				assert.NotEmpty(t, e.ProxyPool["service"])
+				assert.NotEmpty(t, e.ProxyPool["name-.non-compat!ble"])
 				assert.Equal(
 					t,
 					"port,name-.non-compat!ble",
-					e.ProxyPool["service,name-.non-compat!ble"].Settings.Ports[0].Name,
+					e.ProxyPool["name-.non-compat!ble"].Settings.Ports[0].Name,
+				)
+
+				assert.Equal(
+					t,
+					"port,name-.non-compat!ble",
+					e.ProxyPool["service"].Settings.Ports[0].Name,
 				)
 			},
 		},

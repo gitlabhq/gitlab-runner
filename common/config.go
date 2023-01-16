@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -139,11 +140,14 @@ func (p *StringOrArray) UnmarshalTOML(data interface{}) error {
 			case string:
 				*p = append(*p, item)
 			default:
-				return fmt.Errorf("unexpected data type: %v", item)
+				return fmt.Errorf(
+					"cannot load value of type %s into a StringOrArray",
+					reflect.TypeOf(item).String(),
+				)
 			}
 		}
 	default:
-		return fmt.Errorf("unexpected data type: %v", v)
+		return fmt.Errorf("cannot load value of type %s into a StringOrArray", reflect.TypeOf(v).String())
 	}
 
 	return nil
@@ -833,10 +837,12 @@ type LabelSelector struct {
 //nolint:lll
 type Service struct {
 	Name       string   `toml:"name" long:"name" description:"The image path for the service"`
-	Alias      string   `toml:"alias,omitempty" long:"alias" description:"The alias of the service"`
+	Alias      string   `toml:"alias,omitempty" long:"alias" description:"Space or comma-separated aliases of the service."`
 	Command    []string `toml:"command" long:"command" description:"Command or script that should be used as the container’s command. Syntax is similar to https://docs.docker.com/engine/reference/builder/#cmd"`
 	Entrypoint []string `toml:"entrypoint" long:"entrypoint" description:"Command or script that should be executed as the container’s entrypoint. syntax is similar to https://docs.docker.com/engine/reference/builder/#entrypoint"`
 }
+
+func (s *Service) Aliases() []string { return strings.Fields(strings.ReplaceAll(s.Alias, ",", " ")) }
 
 func (s *Service) ToImageDefinition() Image {
 	return Image{

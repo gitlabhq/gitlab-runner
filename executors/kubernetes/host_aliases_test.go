@@ -22,7 +22,7 @@ func TestCreateHostAliases(t *testing.T) {
 			services: common.Services{
 				{
 					Name:  "test-service",
-					Alias: "svc-alias",
+					Alias: "svc-alias svc-alias-alt",
 				},
 				{
 					Name: "docker:dind",
@@ -31,7 +31,7 @@ func TestCreateHostAliases(t *testing.T) {
 			expectedHostAliases: []api.HostAlias{
 				{
 					IP:        "127.0.0.1",
-					Hostnames: []string{"test-service", "svc-alias", "docker"},
+					Hostnames: []string{"test-service", "svc-alias", "svc-alias-alt", "docker"},
 				},
 			},
 		},

@@ -957,6 +957,14 @@ func TestService_ToImageDefinition(t *testing.T) {
 			service:       Service{Name: "name", Alias: "alias"},
 			expectedImage: Image{Name: "name", Alias: "alias"},
 		},
+		"only aliases": {
+			service:       Service{Alias: "alias-1 alias-2"},
+			expectedImage: Image{Alias: "alias-1 alias-2"},
+		},
+		"name and aliases": {
+			service:       Service{Name: "name", Alias: "alias-1 alias-2"},
+			expectedImage: Image{Name: "name", Alias: "alias-1 alias-2"},
+		},
 		"command specified": {
 			service:       Service{Name: "name", Command: []string{"executable", "param1", "param2"}},
 			expectedImage: Image{Name: "name", Command: []string{"executable", "param1", "param2"}},
