@@ -125,9 +125,11 @@ func (r *defaultSecretsResolver) handleSecret(variableKey string, secret Secret)
 	}
 
 	variable := &JobVariable{
-		Key:   variableKey,
-		Value: value,
-		File:  secret.IsFile(),
+		Key:    variableKey,
+		Value:  value,
+		File:   secret.IsFile(),
+		Masked: true,
+		Raw:    true,
 	}
 
 	return variable, nil

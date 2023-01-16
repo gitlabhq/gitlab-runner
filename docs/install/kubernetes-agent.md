@@ -13,12 +13,18 @@ With this [GitOps workflow](https://docs.gitlab.com/ee/user/clusters/agent/gitop
 your repository contains the GitLab Runner configuration file and
 your cluster is automatically updated.
 
+WARNING:
+Adding an unencrypted GitLab Runner secret to `runner-manifest.yaml`
+can expose the secret in your repository files. If you use a GitOps
+workflow in your public projects, see
+[Managing Kubernetes secrets in a GitOps workflow](https://docs.gitlab.com/ee/user/clusters/agent/gitops/secrets_management.html).
+
 1. Review the Helm chart values for [GitLab Runner](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 1. Create a `runner-chart-values.yaml` file. For example:
 
    ```yaml
    # The GitLab Server URL (with protocol) that you want to register the runner against
-   # ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register-deprecated
+   # ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register
    #
    gitlabUrl: https://gitlab.my.domain.example.com/
 
@@ -48,8 +54,8 @@ your cluster is automatically updated.
 
    Replace `GITLAB-NAMESPACE` with your namespace. [View an example](#example-runner-manifest).
 
-1. Edit the `runner-manifest.yaml` file to include the `namespace` for every resource. The output of `helm template` doesn't include the
-   `namespace` in the generated resources:
+1. Edit the `runner-manifest.yaml` file to include the `namespace` of your `ServiceAccount`. The output
+of `helm template` doesn't include the `ServiceAccount` namespace in the generated resources.
 
    ```yaml
    ---

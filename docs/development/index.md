@@ -19,12 +19,15 @@ The following instructions setup your golang environment using `asdf` to manage 
 
 In order to provide Docker and Kubernetes locally Step 3 has you setting Rancher Desktop. If you don't need one or both you can skip step 3 ("Install Rancher Desktop") or just disable `k3s` (Kubernetes) in Rancher Desktop.
 
+## Recommended Environment
+
 The recommended environment on which to install golang and Rancher Desktop for development is a local laptop or desktop. It is possible to use nested-virtualization to run Rancher Desktop in the cloud (which runs `k3s` in a VM) but it's more tricky to setup.
 
-## Runner Shorts
+## Runner Shorts Video Tutorials
 
 You can also follow along with the Runner Shorts (~20 minute videos) on setting up and making a change:
 
+1. Please read the [recommended environment](#recommended-environment) section above before beginning
 1. [Setting up a GitLab Runner development environment](https://www.youtube.com/watch?v=-KlaXpUdJOI)
 1. [Code walkthrough of GitLab Runner](https://www.youtube.com/watch?v=pEtfmZ0Ssc4)
 1. [Making and testing locally a GitLab Runner change](https://www.youtube.com/watch?v=45H4WIuu8Fc)
@@ -70,7 +73,7 @@ If you are not using `asdf`, follow the instructions below for the relevant dist
 
 ```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
-wget https://storage.googleapis.com/golang/go1.18.7.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.9.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -80,7 +83,7 @@ export PATH="$(go env GOBIN):$PATH"
 ```shell
 sudo yum install mercurial wget make
 sudo yum groupinstall 'Development Tools'
-wget https://storage.googleapis.com/golang/go1.18.7.linux-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.9.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -90,7 +93,7 @@ export PATH="$(go env GOBIN):$PATH"
 Using binary package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.18.7.darwin-amd64.tar.gz
+wget https://storage.googleapis.com/golang/go1.18.9.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -98,7 +101,7 @@ export PATH="$(go env GOBIN):$PATH"
 Using installation package:
 
 ```shell
-wget https://storage.googleapis.com/golang/go1.18.7.darwin-amd64.pkg
+wget https://storage.googleapis.com/golang/go1.18.9.darwin-amd64.pkg
 open go*-*.pkg
 export PATH="$(go env GOBIN):$PATH"
 ```
@@ -106,7 +109,7 @@ export PATH="$(go env GOBIN):$PATH"
 ### For FreeBSD
 
 ```shell
-pkg install go-1.18.7 gmake git mercurial
+pkg install go-1.18.9 gmake git mercurial
 export PATH="$(go env GOBIN):$PATH"
 ```
 
@@ -171,6 +174,66 @@ If you want to build the Docker images, run `make runner-and-helper-docker-host`
 1. Build a DEB package for Runner. The official GitLab Runner images are based on Alpine and Ubuntu,
    and the Ubuntu image build uses the DEB package.
 1. Build the Alpine and Ubuntu versions of the `gitlab/gitlab-runner` image.
+
+### New auto-scaling (Taskscaler) in GitLab Runner (since 15.6.0)
+
+The [Next Runner Auto-scaling Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_scaling/index.html#taskscaler-provider) adds a new mechanism for autoscaling which will work with all environments.
+It will replace all current autoscaling mechanisms (e.g. Docker Machine).
+This new mechanism is in a pre-alpha state and actively being developed.
+There are two new libraries being used in GitLab Runner:
+
+1. [Taskscaler](https://gitlab.com/gitlab-org/fleeting/taskscaler)
+1. [Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting)
+
+You don't need to check out these libraries to use GitLab Runner at HEAD, but some development in the autoscaling space may take place there.
+In addition Taskscaler and Fleeting, there are a number of Fleeting Plugins which adapt GitLab Runner to a specific cloud providers (e.g. Google Computer or AWS EC2).
+The written instructions above ("Clone GitLab Runner") show how to check out the code and the videos ("Runner Shorts") show how to use it.
+These instructions show how to use GitLab Runner with a plugin.
+
+Each plugin will come with instructions on how to build the binary and configure the underlying instance group.
+This work is being done in [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29400).
+The canonical build and configuration instructions will live with each plugin, but in the meantime, here are some general instructions.
+
+#### Build the plugin
+
+Each plugin can be built with `go build -o <plugin-name> ./cmd/`.
+The resulting binary should be placed somewhere on the local `$PATH`.
+
+#### Use the plugin
+
+GitLab Runner is started in the usual way but specifies an `instance` executor.
+It also specifies under `plugin_config` and `connector_config` an Instance Group, its location, and some details about how to connect to the underlying instances.
+GitLab Runner should find the Instance Group and create an initial number of idle VMs.
+When a job is picked up the configured instance runner, it will consume a running VM and replace it via AWS service calls in the `fleeting-plugin-aws` plugin.
+
+```toml
+[[runners]]
+  name = "local-taskrunner"
+  url = "https://gitlab.com/"
+  token = "REDACTED"
+  executor = "instance"
+  shell = "bash"
+  [runners.autoscaler]
+    max_use_count = 1
+    max_instances = 20
+    plugin = "fleeting-plugin-aws"                                 # Fleeting plugin name as built above [1].
+    [runners.autoscaler.plugin_config]
+      credentials_file = "/Users/josephburnett/.aws/credentials".  # Credentials which can scale an Autoscaling Group (ASG) [2].
+      name = "jburnett-taskrunner-asg"                             # ASG name.
+      project = "jburnett-ad8e5d54"                                # ASG project.
+      region = "us-east-2"                                         # ASG region.
+    [runners.autoscaler.connector_config]
+      username = "ubuntu"                                          # ASG instance template username for login.
+    [[runners.autoscaler.policy]]
+      idle_count = 5
+      idle_time = 0
+      scale_factor = 0.0
+      scale_factor_limit = 0
+```
+
+If you terminate GitLab Runner with SIGTERM you may see some of these processes hanging around. Instead terminate with SIGQUIT.
+
+Note that ASGs should have autoscaling disabled. GitLab Runner takes care of autoscaling via the Taskscaler library.
 
 ## 7. Run test suite locally
 

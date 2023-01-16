@@ -33,7 +33,7 @@ These settings are global. They apply to all runners.
 | ------- | ----------- |
 | `concurrent`     | Limits how many jobs can run concurrently, across all registered runners. Each `[[runners]]` section can define its own limit, but this value sets a maximum for all of those values combined. For example, a value of `10` means no more than 10 jobs can run concurrently. `0` is forbidden. If you use this value, the runner process exits with a critical error. [View how this setting works with the Docker Machine executor (for autoscaling)](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor). |
 | `log_level`      | Defines the log level. Options are `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. This setting has lower priority than the level set by the command-line arguments `--debug`, `-l`, or `--log-level`. |
-| `log_format`     | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`. |
+| `log_format`     | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`, which contains ANSI escape codes for coloring. |
 | `check_interval` | Defines the interval length, in seconds, between the runner checking for new jobs. The default value is `3`. If set to `0` or lower, the default value is used. |
 | `sentry_dsn`     | Enables tracking of all system level errors to Sentry. |
 | `listen_address` | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
@@ -141,13 +141,13 @@ It should be defined outside the `[[runners]]` section.
   session_timeout = 1800
 ```
 
-Both `listen_address` and `advertise_address` should be in the form
-of `host:port`, where `host` may be an IP address (`127.0.0.1:8093`)
-or a domain (`my-runner.example.com:8093`). The runner uses this information to create
-a TLS certificate, for a secure connection.
+When you configure the `[session_server]` section:
 
-NOTE:
-Live sessions are initiated by the web browser. Make sure your web browser can connect to the `advertise_address`.
+- For `listen_address` and `advertise_address`, use the format `host:port`, where `host`
+  is the IP address (`127.0.0.1:8093`) or domain (`my-runner.example.com:8093`). The
+  runner uses this information to create a TLS certificate for a secure connection.
+- Ensure your web browser can connect to the `advertise_address`. Live sessions are initiated by the web browser.
+- Ensure that `advertise_address` is a public IP address, unless you have enabled the application setting, [`allow_local_requests_from_web_hooks_and_services`](https://docs.gitlab.com/ee/api/settings.html#list-of-settings-that-can-be-accessed-via-api-calls).
 
 | Setting | Description |
 | ------- | ----------- |
@@ -167,29 +167,31 @@ adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
 
 Each `[[runners]]` section defines one runner.
 
-| Setting | Description |
-| ------- | ----------- |
-| `name`               | The runner's description. Informational only. |
-| `url`                | GitLab instance URL. |
-| `token`              | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens). |
-| `tls-ca-file`        | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md). |
-| `tls-cert-file`      | When using HTTPS, file that contains the certificate to authenticate with the peer. |
-| `tls-key-file`       | When using HTTPS, file that contains the private key to authenticate with the peer. |
-| `limit`              | Limit how many jobs can be handled concurrently by this registered runner. `0` (default) means do not limit. [View how this setting works with the Docker Machine executor (for autoscaling)](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor). |
-| `executor`           | Select how a project should be built. |
-| `shell`              | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md#overview). |
-| `builds_dir`         | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH. |
-| `cache_dir`          | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter. |
-| `environment`        | Append or overwrite environment variables. |
-| `request_concurrency` | Limit number of concurrent requests for new jobs from GitLab. Default is `1`. |
-| `output_limit`       | Maximum build log size in kilobytes. Default is `4096` (4MB). |
-| `pre_clone_script`   | Commands to be executed on the runner before cloning the Git repository. Use it to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
-| `post_clone_script`  | Commands to be executed on the runner after cloning the Git repository and updating submodules. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
-| `pre_build_script`   | Commands to be executed on the runner before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
-| `post_build_script`  | Commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character. |
-| `clone_url`          | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL. |
-| `debug_trace_disabled` | Disables the `CI_DEBUG_TRACE` feature. When set to `true`, then debug log (trace) remains disabled, even if `CI_DEBUG_TRACE` is set to `true` by the user. |
-| `referees` | Extra job monitoring workers that pass their results as job artifacts to GitLab. |
+| Setting                    | Description                                                                                                                                                                                                                                                                 |
+|----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`                     | The runner's description. Informational only.                                                                                                                                                                                                                               |
+| `url`                      | GitLab instance URL.                                                                                                                                                                                                                                                        |
+| `token`                    | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens).                                                              |
+| `tls-ca-file`              | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md).                                                                                             |
+| `tls-cert-file`            | When using HTTPS, file that contains the certificate to authenticate with the peer.                                                                                                                                                                                         |
+| `tls-key-file`             | When using HTTPS, file that contains the private key to authenticate with the peer.                                                                                                                                                                                         |
+| `limit`                    | Limit how many jobs can be handled concurrently by this registered runner. `0` (default) means do not limit. [View how this setting works with the Docker Machine executor (for autoscaling)](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor). |
+| `executor`                 | Select how a project should be built.                                                                                                                                                                                                                                       |
+| `shell`                    | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md#overview).                                                                                                                                                                   |
+| `builds_dir`               | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH.                                                                                                                                         |
+| `cache_dir`                | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter.                                         |
+| `environment`              | Append or overwrite environment variables.                                                                                                                                                                                                                                  |
+| `request_concurrency`      | Limit number of concurrent requests for new jobs from GitLab. Default is `1`.                                                                                                                                                                                               |
+| `output_limit`             | Maximum build log size in kilobytes. Default is `4096` (4MB).                                                                                                                                                                                                               |
+| `pre_clone_script`         | Commands to be executed on the runner before cloning the Git repository. Use it to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                          |
+| `post_clone_script`        | Commands to be executed on the runner after cloning the Git repository and updating submodules. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                     |
+| `pre_build_script`         | Commands to be executed on the runner before executing the build. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                   |
+| `post_build_script`        | Commands to be executed on the runner just after executing the build, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                          |
+| `clone_url`                | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                         |
+| `debug_trace_disabled`     | Disables the `CI_DEBUG_TRACE` feature. When set to `true`, then debug log (trace) remains disabled, even if `CI_DEBUG_TRACE` is set to `true` by the user.                                                                                                                  |
+| `referees`                 | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                            |
+| `unhealthy_requests_limit` | The number of `unhealthy` responses to new job requests after which a runner worker will be disabled.                                                                                                                                                                       |
+| `unhealthy_interval`       | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc.                                                                                                                                   |
 
 Example:
 
@@ -263,9 +265,9 @@ The following settings define the Docker container parameters.
 
 | Parameter | Description |
 | --------- | ----------- |
-| `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restricting-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
-| `allowed_pull_policies`        | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, all pull policies specified in `pull-policy` are allowed. Use with the [Docker](../executors/docker.md#restrict-docker-pull-policies) executor. |
-| `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restricting-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
+| `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
+| `allowed_pull_policies`        | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, all pull policies specified in `pull-policy` are allowed. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. |
+| `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
 | `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
 | `cap_add`                      | Add additional Linux capabilities to the container. |
 | `cap_drop`                     | Drop additional Linux capabilities from the container. |
@@ -290,11 +292,13 @@ The following settings define the Docker container parameters.
 | `memory_swap`                  | The total memory limit. A string. |
 | `memory_reservation`           | The memory soft limit. A string. |
 | `network_mode`                 | Add container to a custom network. |
+| `mac_address`                  | Container MAC address (e.g., 92:d0:c6:0a:29:33). |
 | `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
 | `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
-| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#how-pull-policies-work). You can also add [multiple pull policies](../executors/docker.md#using-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retrying-a-failed-pull), or [restrict pull policies](../executors/docker.md#restrict-docker-pull-policies). |
+| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images). You can also add [multiple pull policies](../executors/docker.md#set-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#allow-docker-pull-policies). |
 | `runtime`                      | The runtime for the Docker container. |
+| `isolation`                    | Container isolation technology (`default`, `hyperv` and `process`). Windows only. |
 | `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
 | `shm_size`                     | Shared memory size for images (in bytes). |
 | `sysctls`                      | The `sysctl` options. |
@@ -425,7 +429,7 @@ or in the `config.toml` file.
 Using private registries with the `if-not-present` pull policy may introduce
 [security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 To fully understand how pull policies work,
-read the [pull policies documentation](../executors/docker.md#how-pull-policies-work).
+read the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images).
 
 For a detailed example, visit the [Using Docker images documentation](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry).
 
@@ -504,6 +508,7 @@ your `PATH` environment variable on Windows hosts:
 | `base_folder`       | Folder to save the new VM in. If this value is empty or omitted, the default VM folder is used. |
 | `disable_snapshots` | If disabled, the VMs are destroyed when the jobs are done. |
 | `allowed_images`    | List of allowed `image`/`base_name` values, represented as regular expressions. See the [Overriding the base VM image](#overriding-the-base-vm-image) section for more details. |
+| `start_type`        | Graphical front-end type when starting the VM. |
 
 Example:
 
@@ -512,7 +517,10 @@ Example:
   base_name = "my-virtualbox-image"
   base_snapshot = "my-image-snapshot"
   disable_snapshots = false
+  start_type = "headless"
 ```
+
+The `start_type` parameter determines the graphical front end used when starting the virtual image. Valid values are `headless` (default), `gui` or `separate` as supported by the host and guest combination.
 
 ## Overriding the base VM image
 
@@ -936,8 +944,8 @@ For more parameters, see the [documentation for the Kubernetes executor](../exec
 | `key_file`       | string  | Optional. Kubernetes auth private key. |
 | `ca_file`        | string  | Optional. Kubernetes auth ca certificate. |
 | `image`          | string  | Default Docker image to use for jobs when none is specified. |
-| `allowed_images` | array   | Wildcard list of images that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restricting-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
-| `allowed_services` | array | Wildcard list of services that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restricting-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
+| `allowed_images` | array   | Wildcard list of images that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
+| `allowed_services` | array | Wildcard list of services that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restricting-docker-images-and-services) executors. |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in. |
 | `privileged`     | boolean | Run all containers with the privileged flag enabled. |
 | `allow_privilege_escalation` | boolean | Optional. Runs all containers with the `allowPrivilegeEscalation` flag enabled. |
@@ -1018,7 +1026,9 @@ Currently, `alpine3.13` is the latest supported `pwsh` image.
 In GitLab 15.0 and later, the helper image is pulled from the GitLab Container Registry. In addition, helper images are
 only published in the GitLab Container Registry.
 
-Before 15.0, you could configure this behavior to use images from Docker Hub.
+In GitLab 15.0 and earlier, you configure helper images to use images from Docker Hub. To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
+
+Self-managed instances also pull the helper image from the GitLab Container Registry on GitLab.com. To check the status of the GitLab Container Registry, see the [GitLab System Status](https://status.gitlab.com/).
 
 ### Override the helper image
 
@@ -1058,7 +1068,7 @@ API that is expected to be the same in both binaries.
 By default, GitLab Runner references a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
 on the GitLab Runner architecture and Git revision. In GitLab Runner 11.3 and later, you can define the
 image version by using one of the
-[version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/11-3-stable/common/version.go#L48-50):
+[version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/common/version.go#L48-49):
 
 ```toml
 [[runners]]
@@ -1066,10 +1076,10 @@ image version by using one of the
   executor = "docker"
   [runners.docker]
     (...)
-    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-${CI_RUNNER_REVISION}"
+    helper_image = "my.registry.local/gitlab/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}"
 ```
 
-With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-${CI_RUNNER_REVISION}`,
+With this configuration, GitLab Runner instructs the executor to use the image in version `x86_64-v${CI_RUNNER_VERSION}`,
 which is based on its compilation data. After updating GitLab Runner to a new version, GitLab
 Runner tries to download the proper image. The image should be uploaded to the registry
 before upgrading GitLab Runner, otherwise the jobs start failing with a "No such image" error.

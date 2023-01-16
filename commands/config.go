@@ -23,8 +23,9 @@ func getDefaultCertificateDirectory() string {
 }
 
 type configOptions struct {
-	configMutex sync.Mutex
-	config      *common.Config
+	configMutex   sync.Mutex
+	config        *common.Config
+	systemIDState *common.SystemIDState
 
 	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 }
@@ -61,8 +62,38 @@ func (c *configOptions) loadConfig() error {
 	if err != nil {
 		return err
 	}
+
+	systemIDState, err := c.loadSystemID(filepath.Join(filepath.Dir(c.ConfigFile), ".runner_system_id"))
+	if err != nil {
+		return fmt.Errorf("loading system ID file: %w", err)
+	}
+
 	c.config = config
+	c.systemIDState = systemIDState
 	return nil
+}
+
+func (c *configOptions) loadSystemID(filePath string) (*common.SystemIDState, error) {
+	systemIDState := common.NewSystemIDState()
+	err := systemIDState.LoadFromFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// ensure we have a system ID
+	if systemIDState.GetSystemID() == "" {
+		err = systemIDState.EnsureSystemID()
+		if err != nil {
+			return nil, err
+		}
+
+		err = systemIDState.SaveConfig(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("saving system ID state file: %w", err)
+		}
+	}
+
+	return systemIDState, nil
 }
 
 func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) {

@@ -130,6 +130,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
 		"testKubernetesWaitResources":                             testKubernetesWaitResources,
 		"testKubernetesPulicInternalVariabes":                     testKubernetesPulicInternalVariabes,
+		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -364,6 +365,47 @@ func testKubernetesTimeoutRunFeatureFlag(t *testing.T, featureFlagName string, f
 	var buildError *common.BuildError
 	assert.ErrorAs(t, err, &buildError)
 	assert.Equal(t, common.JobExecutionTimeout, buildError.FailureReason)
+}
+
+func testKubernetesLongLogsFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		getLine func() string
+	}{
+		"short log": {
+			getLine: func() string {
+				return "Regular log"
+			},
+		},
+		"buffer size log": {
+			getLine: func() string {
+				return strings.Repeat("1", common.DefaultReaderBufferSize)
+			},
+		},
+		"long log": {
+			getLine: func() string {
+				return strings.Repeat("lorem ipsum", common.DefaultReaderBufferSize)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			line := tc.getLine()
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(fmt.Sprintf(`echo "%s"`, line))
+			})
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			outBuffer := new(bytes.Buffer)
+			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+			require.NoError(t, err)
+			assert.Contains(t, outBuffer.String(), fmt.Sprintf(`$ echo "%s"`, line))
+			// We check the whole line is found in the log without any newline within
+			assert.Regexp(t, regexp.MustCompile(fmt.Sprintf(`(?m)^%s$`, line)), outBuffer.String())
+		})
+	}
 }
 
 func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
@@ -1922,6 +1964,15 @@ func TestKubernetesPwshFeatureFlag(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildExpandedFileVariable(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+	})
 }
 
 func TestConflictingPullPolicies(t *testing.T) {

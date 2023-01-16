@@ -192,7 +192,7 @@ Below we explain what each command does in detail.
 Use the following commands to register a new runner, or list and verify
 them if they are still registered.
 
-- [`gitlab-runner register`](#gitlab-runner-register-deprecated)
+- [`gitlab-runner register`](#gitlab-runner-register)
   - [Interactive registration](#interactive-registration)
   - [Non-interactive registration](#non-interactive-registration)
 - [`gitlab-runner list`](#gitlab-runner-list)
@@ -205,16 +205,7 @@ These commands support the following arguments:
 | ---------- | --------------------------------------------------------- | ---------------------------------------------- |
 | `--config` | See the [configuration file section](#configuration-file) | Specify a custom configuration file to be used |
 
-### `gitlab-runner register` (deprecated)
-
-> [Deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6.
-
-WARNING:
-This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6 and is
-planned for removal in 16.0. This change is a breaking change. GitLab plans to introduce a new
-[GitLab Runner token architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_tokens/), which introduces
-a new method for registering runners and eliminates the legacy
-[runner registration token](https://docs.gitlab.com/ee/security/token_overview.html#runner-registration-tokens).
+### `gitlab-runner register`
 
 This command registers your runner in GitLab by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#register-a-new-runner).
 
@@ -512,7 +503,11 @@ default of `0` means that the runner has no build limit and jobs run forever.
 You can also use the `--wait-timeout` option to control how long the runner waits for a job before
 exiting. The default of `0` means that the runner has no timeout and waits forever between jobs.
 
-### `gitlab-runner exec`
+### `gitlab-runner exec` (deprecated)
+
+WARNING:
+This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/385235) in GitLab 15.7
+and is planned for removal in 16.0. Pipeline syntax and validation [simulation](https://docs.gitlab.com/ee/ci/pipeline_editor/#simulate-a-cicd-pipeline) are available in the GitLab pipeline editor. This change is a breaking change.
 
 NOTE:
 Not all features of `.gitlab-ci.yml` are supported by `exec`. Please

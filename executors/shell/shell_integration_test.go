@@ -330,6 +330,13 @@ func TestBuildMasking(t *testing.T) {
 	})
 }
 
+func TestBuildExpandedFileVariable(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		build := newBuild(t, common.JobResponse{}, shell)
+		buildtest.RunBuildWithExpandedFileVariable(t, build.Runner, nil)
+	})
+}
+
 func TestBuildWithIndexLock(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
@@ -1754,5 +1761,79 @@ func TestCloneBranchExpansion(t *testing.T) {
 		assert.Contains(t, out, fmt.Sprintf("as %s...", branch))
 		assert.NotContains(t, out, "uid=")
 		assert.Contains(t, out, "Job succeeded")
+	})
+}
+
+func TestBuildCacheHelper(t *testing.T) {
+	tests := []struct {
+		name    string
+		buildFn func(dir string, build *common.Build)
+
+		expectedCacheCreated bool
+	}{
+		{
+			name: "cache settings provided, job cache provided",
+			buildFn: func(dir string, build *common.Build) {
+				build.Runner.RunnerSettings.Cache = &common.CacheConfig{}
+				build.Cache = append(build.Cache, common.Cache{
+					Key:    "cache",
+					Paths:  []string{"*"},
+					Policy: common.CachePolicyPullPush,
+				})
+			},
+			expectedCacheCreated: true,
+		},
+		{
+			name: "no cache settings defined, job cache provided",
+			buildFn: func(dir string, build *common.Build) {
+				build.Runner.RunnerSettings.Cache = nil
+				build.Cache = append(build.Cache, common.Cache{
+					Key:    "cache",
+					Paths:  []string{"*"},
+					Policy: common.CachePolicyPullPush,
+				})
+			},
+			expectedCacheCreated: true,
+		},
+		{
+			name: "cache settings provided, no job cache provided",
+			buildFn: func(dir string, build *common.Build) {
+				build.Runner.RunnerSettings.Cache = &common.CacheConfig{}
+				build.Cache = nil
+			},
+		},
+		{
+			name: "no cache settings provided, no job cache provided",
+			buildFn: func(dir string, build *common.Build) {
+				build.Runner.RunnerSettings.Cache = nil
+				build.Cache = nil
+			},
+		},
+	}
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				successfulBuild, err := common.GetRemoteSuccessfulBuild()
+				require.NoError(t, err)
+
+				build := newBuild(t, successfulBuild, shell)
+
+				dir := t.TempDir()
+				build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
+				build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
+
+				tc.buildFn(dir, build)
+
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+
+				if tc.expectedCacheCreated {
+					assert.Contains(t, out, "Created cache")
+				} else {
+					assert.NotContains(t, out, "Created cache")
+				}
+			})
+		}
 	})
 }

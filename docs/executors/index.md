@@ -54,7 +54,7 @@ you decide which executor to use.
    system including the runner's token, and the cache and code of other jobs.
    Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
-   to break out of their container and access the file system hosting runner.
+   to break out of their container and access the file system hosting the runner.
 
 ### I am not sure
 
@@ -143,9 +143,7 @@ Supported systems by different shells:
    [`shell`](../configuration/advanced-configuration.md#the-runners-section)
    is specified.
 1. Default shell when a new runner is registered.
-1. Bash shell is currently not working on Windows out of the box due to
-   [this issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1515) but is intended
-   to be supported again soon. See the issue for a workaround.
+1. Bash shell on Windows is not supported.
 
 Supported systems for interactive web terminals by different shells:
 

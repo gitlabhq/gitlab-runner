@@ -33,7 +33,7 @@ Additionally, for any non-public container registry your ECS Task will either [n
 You can use CloudFormation or Terraform to automate the provisioning and setup of your AWS infrastructure.
 
 WARNING:
-CI/CD jobs use the image defined in the ECS task, rather than the value of the `image:` keyword in your `.gitlab-ci.yml` file. This configuration can result in multiple instances of Runner Manager or in large build containers. AWS is aware of the issue and GitLab is [tracking resolution](https://gitlab.com/gitlab-com/alliances/aws/public-tracker/-/issues/22). You might consider creating an EKS cluster instead by following the official [AWS EKS Quick Start](https://aws.amazon.com/quickstart/architecture/amazon-eks/).
+CI/CD jobs use the image defined in the ECS task, rather than the value of the `image:` keyword in your `.gitlab-ci.yml` file. This configuration can result in multiple instances of Runner Manager or in large build containers. AWS is aware of the issue and GitLab is [tracking resolution](https://gitlab.com/gitlab-com/alliances/aws/public-tracker/-/issues/22). You might consider creating an EKS cluster instead by following the official [AWS EKS Quick Start](https://aws.amazon.com/solutions/implementations/amazon-eks/).
 
 WARNING:
 Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, since these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high or extreme compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
@@ -224,8 +224,16 @@ Now install GitLab Runner on the Ubuntu instance.
      In a production setting,
      follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)
      for setting up and using security groups.
+   
+   - If `EnablePublicIP` is set to true, the public IP of the task container is gathered to perform the SSH connection. 
+   - If `EnablePublicIP` is set to false:
+     - The Fargate driver uses the task container's private IP. To set up a connection when set to `false`, the VPC's Security Group must 
+     have an inbound rule for Port 22 (SSH), where the source is the VPC CIDR. 
+     - To fetch external dependencies, provisioned AWS Fargate containers must have access to the public internet. To provide
+     public internet access for AWS Fargate containers, you can use a NAT Gateway in the VPC. 
 
    - The port number of the SSH server is optional. If omitted, the default SSH port (22) is used.
+   - For more information about the section settings, see the [Fargate driver documentation](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate/-/tree/master/docs#configuration). 
 
 1. Install the Fargate driver:
 
@@ -320,7 +328,7 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 
 ## Troubleshooting
 
-### `Application execution failed` error when testing the configuration
+### `No Container Instances were found in your cluster` error when testing the configuration
 
 `error="starting new Fargate task: running new task on Fargate: error starting AWS Fargate Task: InvalidParameterException: No Container Instances were found in your cluster."`
 
@@ -330,3 +338,26 @@ Further reading:
 
 - A default [capacity provider strategy](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-capacity-providers.html) is associated with each Amazon ECS cluster. If no other capacity provider strategy or launch type is specified, the cluster uses this strategy when a task runs or a service is created.
 - If a [`capacityProviderStrategy`](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RunTask.html#ECS-RunTask-request-capacityProviderStrategy) is specified, the `launchType` parameter must be omitted. If no `capacityProviderStrategy` or `launchType` is specified, the `defaultCapacityProviderStrategy` for the cluster is used.
+
+### Metadata `file does not exist` error when running jobs
+
+`Application execution failed PID=xxxxx error="obtaining information about the running task: trying to access file \"/opt/gitlab-runner/metadata/<runner_token>-xxxxx.json\": file does not exist" cleanup_std=err job=xxxxx project=xx runner=<runner_token>`
+
+Ensure that your IAM Role policy is configured correctly and can perform write operations to create the metadata JSON file in `/opt/gitlab-runner/metadata/`. To test in a non-production environment, use the AmazonECS_FullAccess policy. Review your IAM role policy according to your organization's security requirements. 
+
+### `connection timed out` when running jobs
+
+`Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"172.x.x.x\": connecting to server: connecting to server \"172.x.x.x:22\" as user \"root\": dial tcp 172.x.x.x:22: connect: connection timed out"`
+
+If `EnablePublicIP` is configured to false, ensure that your VPC's Security Group has an inbound rule that allows SSH connectivity. Your AWS Fargate task container must be able to accept SSH traffic from the GitLab Runner EC2 instance.
+
+### `connection refused` when running jobs
+
+`Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"10.x.x.x\": connecting to server: connecting to server \"10.x.x.x:22\" as user \"root\": dial tcp 10.x.x.x:22: connect: connection refused"`
+
+Ensure that the task container has port 22 exposed and port mapping is configured based on the instructions in [Step 6: Create an ECS task definition](#step-6-create-an-ecs-task-definition). If the port is exposed and the container is configured: 
+
+1. Check to see if there are any errors for the container in **Amazon ECS > Clusters > Choose your task definition > Tasks**. 
+1. View tasks with a status of `Stopped` and check the latest one that failed. The **logs** tab has more details if there is a container failure. 
+ 
+Alternatively, ensure that you can run the Docker container locally.

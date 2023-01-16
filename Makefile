@@ -25,10 +25,10 @@ DEB_PLATFORMS ?= debian/stretch debian/buster debian/bullseye \
     raspbian/jessie raspbian/stretch raspbian/buster \
     linuxmint/sarah linuxmint/serena linuxmint/sonya linuxmint/ulyana linuxmint/ulyssa linuxmint/uma linuxmint/una
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
-RPM_PLATFORMS ?= el/7 el/8 \
+RPM_PLATFORMS ?= el/7 el/8 el/9 \
     ol/6 ol/7 ol/8 \
-    fedora/32 fedora/33 fedora/34 fedora/35 \
-    amazon/2
+    fedora/32 fedora/33 fedora/34 fedora/35 fedora/36 \
+    amazon/2 amazon/2022
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x ppc64le
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)

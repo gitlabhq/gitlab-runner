@@ -228,7 +228,9 @@ func TestParseLogs(t *testing.T) {
 }
 
 func TestListenReadLines(t *testing.T) {
-	expectedLines := []string{"line 1", "line 2"}
+	line1 := "line 1"
+	line2 := "line 2"
+	expectedLines := []string{line1 + "\n", line2 + "\n"}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -236,8 +238,8 @@ func TestListenReadLines(t *testing.T) {
 	defer mockLogStreamer.AssertExpectations(t)
 
 	logs := []log{
-		{line: expectedLines[0], offset: 10},
-		{line: expectedLines[1], offset: 20},
+		{line: line1, offset: 10},
+		{line: line2, offset: 20},
 	}
 
 	var wg sync.WaitGroup

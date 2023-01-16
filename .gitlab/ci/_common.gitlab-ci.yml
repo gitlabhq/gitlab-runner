@@ -1,5 +1,7 @@
 variables:
-  CI_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ci:1.18.7-1
+  # renovate: datasource=docker depName=golang allowedVersions=/1\.18\..+/
+  GO_VERSION: "1.18.9"
+  CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_VERSION-2"
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"
@@ -15,6 +17,7 @@ variables:
   GIT_VERSION: "2.38.1"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "3.2.0"
+  YQ_VERSION: "4.30.5"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
   # We're overriding rules for the jobs that we want to run.
@@ -35,8 +38,8 @@ variables:
   ALPINE_315_VERSION: "3.15.6"
   # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
   UBUNTU_VERSION: "20.04"
-  # renovate: datasource=docker depName=redhat/ubi8 versioning=redhat allowedVersions=/8\.6-.+/
-  UBI_FIPS_VERSION: "8.6-943"
+  # renovate: datasource=docker depName=redhat/ubi8 versioning=redhat allowedVersions=/8\.7-.+/
+  UBI_FIPS_VERSION: "8.7-929"
 
 default:
   image: $CI_IMAGE
@@ -113,9 +116,9 @@ default:
     DUMB_INIT_LINUX_S390X_CHECKSUM: "8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d"
     DUMB_INIT_LINUX_PPC64LE_CHECKSUM: "88b02a3bd014e4c30d8d54389597adc4f5a36d1d6b49200b5a4f6a71026c2246"
     GIT_LFS_LINUX_AMD64_CHECKSUM: "d6730b8036d9d99f872752489a331995930fec17b61c87c7af1945c65a482a50"
-    GIT_LFS_LINUX_ARM64_CHECKSUM: "bf0fbe944e2543cacca74749476ff3671dff178b5853489c1ca92a2d1b04118e"
+    GIT_LFS_LINUX_ARM64_CHECKSUM: "8186f0c0f69c30b55863d698e0a20cf79447a81df006b88221c2033d1e893638"
     GIT_LFS_LINUX_S390X_CHECKSUM: "16556f0b2e1097a69e75a6e1bcabfa7bfd2e7ee9b02fe6e5414e1038a223ab97"
-    GIT_LFS_LINUX_PPC64LE_CHECKSUM: "a3d41734cfafcdee67d38ff1b26f9c0e9acf5f140557dfa1e2ea0177c8bb514b"
+    GIT_LFS_LINUX_PPC64LE_CHECKSUM: "ff1eeaddde5d964d10ce607f039154fe033073f43b8ff5e7f4eb407293fe1be3"
 
 .windows-dependency-checksums:
   variables:

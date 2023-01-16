@@ -950,6 +950,51 @@ func TestDockerCPUSSetting(t *testing.T) {
 	}
 }
 
+func TestDockerIsolationWithCorrectValues(t *testing.T) {
+	isolations := []string{"default", ""}
+	if runtime.GOOS == helperimage.OSTypeWindows {
+		isolations = append(isolations, "hyperv", "process")
+	}
+
+	for _, isolation := range isolations {
+		t.Run(isolation, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				Isolation: isolation,
+			}
+
+			cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, container.Isolation(isolation), hostConfig.Isolation)
+			}
+
+			testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+		})
+	}
+}
+
+func TestDockerIsolationWithIncorrectValue(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		Isolation: "someIncorrectValue",
+	}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
+
+	_, err := executor.createHostConfig()
+
+	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
+}
+
+func TestDockerMacAddress(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		MacAddress: "92:d0:c6:0a:29:33",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "92:d0:c6:0a:29:33", config.MacAddress)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
 func TestDockerCPUSetCPUsSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		CPUSetCPUs: "1-3,5",

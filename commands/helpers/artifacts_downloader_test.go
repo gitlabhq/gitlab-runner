@@ -3,11 +3,16 @@
 package helpers
 
 import (
+	"archive/zip"
+	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -126,5 +131,51 @@ func TestArtifactsDownloader(t *testing.T) {
 				assert.Equal(t, testCase.expectedDownloadCalled, network.downloadCalled)
 			})
 		})
+	}
+}
+
+// Some version of urfave have a bug that causes it to balk when the value of an
+// argument starts with a `-`. This test is here to ensure we don't up/down
+// grade to version of urfave with this bug.
+// See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29448 and
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29193
+func Test_URFavArgParsing(t *testing.T) {
+	app := cli.NewApp()
+	app.Name = "gitlab-runner-helper"
+	app.Usage = "a GitLab Runner Helper"
+	app.Version = common.AppVersion.ShortLine()
+	app.Commands = common.GetCommands()
+
+	jobToken := "-Abajdbajdbajb"
+
+	defer os.Remove("foo.txt")
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, jobToken, r.Header.Get("Job-Token"))
+
+		w.WriteHeader(http.StatusOK)
+		zw := zip.NewWriter(w)
+		defer zw.Close()
+		w1, err := zw.Create("foo.txt")
+		require.NoError(t, err)
+		_, err = w1.Write(bytes.Repeat([]byte("198273qhnjbqwdjbqwe2109u3abcdef3"), 1024*1024))
+		require.NoError(t, err)
+	}))
+	defer s.Close()
+
+	args := []string{
+		"gitlab-runner-helper",
+		"artifacts-downloader",
+		"--url", s.URL,
+		"--token", jobToken,
+		"--id", "12345",
+	}
+
+	err := app.Run(args)
+	assert.NoError(t, err)
+
+	if err != nil {
+		assert.NotContains(t, err.Error(), "WARNING: Missing build ID (--id)")
+		assert.NotContains(t, err.Error(), "FATAL: Incomplete arguments ")
 	}
 }

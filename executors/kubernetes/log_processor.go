@@ -22,6 +22,19 @@ type logStreamer interface {
 	fmt.Stringer
 }
 
+type logScanner struct {
+	reader *bufio.Reader
+	err    error
+}
+
+// Err returns the first non-EOF error that was encountered by the Scanner.
+func (ls *logScanner) Err() error {
+	if ls.err == io.EOF {
+		return nil
+	}
+	return ls.err
+}
+
 type kubernetesLogStreamer struct {
 	kubernetesLogProcessorPodConfig
 
@@ -238,19 +251,28 @@ func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, o
 	}
 }
 
-func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*bufio.Scanner, <-chan string) {
-	logsScanner := bufio.NewScanner(logs)
+func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*logScanner, <-chan string) {
+	logsScanner := &logScanner{
+		reader: bufio.NewReaderSize(logs, bufio.MaxScanTokenSize),
+		err:    nil,
+	}
 
 	linesCh := make(chan string)
 	go func() {
 		defer close(linesCh)
 
 		// This goroutine will exit when the calling method closes the logs stream or the context is cancelled
-		for logsScanner.Scan() {
+		for {
+			data, err := logsScanner.reader.ReadString('\n')
+			if err != nil {
+				logsScanner.err = err
+				break
+			}
+
 			select {
 			case <-ctx.Done():
 				return
-			case linesCh <- logsScanner.Text():
+			case linesCh <- data:
 			}
 		}
 	}()

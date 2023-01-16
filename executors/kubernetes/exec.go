@@ -39,8 +39,15 @@ import (
 )
 
 const (
-	commandConnectFailureMaxTries = 5
-	errorDialingBackendEOFMessage = "error dialing backend: EOF"
+	// errorDialingBackendMessage is an error prefix that is encountered when
+	// connectivity to a Pod fails. This can happen for a number of reasons,
+	// such as the Pod or Node still being configured.
+	errorDialingBackendMessage = "error dialing backend"
+
+	// commandConnectFailureMaxTries is the number of attempts we retry when
+	// the connection to a Pod fails. There's an exponential backoff, which
+	// maxes out at 5 seconds.
+	commandConnectFailureMaxTries = 30
 )
 
 // RemoteExecutor defines the interface accepted by the Exec command - provided for test stubbing
@@ -133,10 +140,11 @@ func (p *AttachOptions) ShouldRetry(times int, err error) bool {
 
 func shouldRetryKubernetesError(times int, err error) bool {
 	var statusError *kubeerrors.StatusError
+
 	if times < commandConnectFailureMaxTries &&
 		errors.As(err, &statusError) &&
 		statusError.ErrStatus.Code == http.StatusInternalServerError &&
-		statusError.ErrStatus.Message == errorDialingBackendEOFMessage {
+		strings.HasPrefix(statusError.ErrStatus.Message, errorDialingBackendMessage) {
 		return true
 	}
 

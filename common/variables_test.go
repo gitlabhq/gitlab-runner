@@ -223,6 +223,38 @@ func TestVariablesExpansion(t *testing.T) {
 	assert.Equal(t, "value_of_ value_of_value_of_$undefined", expanded.ExpandValue("${public} ${private}"))
 }
 
+func TestFileVariablesExpansion(t *testing.T) {
+	all := JobVariables{
+		{Key: "a_file_var", Value: "some top secret stuff", File: true},
+		{Key: "ref_file_var", Value: "${a_file_var}.txt"},
+		{Key: "regular_var", Value: "bla bla bla"},
+		{Key: "ref_regular_var", Value: "bla bla bla"},
+		{Key: "RUNNER_TEMP_PROJECT_DIR", Value: "/foo/bar", Public: true, Internal: true},
+	}
+
+	validate := func(t *testing.T, variables JobVariables) {
+		assert.Len(t, variables, 5)
+
+		// correct expansion of file variables
+		assert.Equal(t, "/foo/bar/a_file_var", variables.Get("a_file_var"))
+
+		// correct expansion of variables that reference file variables
+		assert.Equal(t, "/foo/bar/a_file_var.txt", variables.Get("ref_file_var"))
+		assert.Equal(t, "/foo/bar/a_file_var.txt.blammo", variables.ExpandValue("${ref_file_var}.blammo"))
+		assert.Equal(t, "/foo/bar/a_file_var.blammo", variables.ExpandValue("${a_file_var}.blammo"))
+
+		// correct expansion of regular variables, and variables that reference
+		// regular variables
+		assert.Equal(t, "bla bla bla", variables.Get("regular_var"))
+		assert.Equal(t, "bla bla bla", variables.Get("ref_regular_var"))
+	}
+
+	expanded := all.Expand()
+	validate(t, expanded)
+	// calling Expand multiple times is idempotent.
+	validate(t, expanded.Expand())
+}
+
 func TestSpecialVariablesExpansion(t *testing.T) {
 	all := JobVariables{
 		{Key: "key", Value: "$$"},

@@ -11,8 +11,8 @@ const DefaultCICDConfigFile = ".gitlab-ci.yml"
 const CheckInterval = 3 * time.Second
 const NotHealthyCheckInterval = 300
 const ReloadConfigInterval = 3
-const HealthyChecks = 3
-const HealthCheckInterval = 3600
+const DefaultUnhealthyRequestsLimit = 3
+const DefaultUnhealthyInterval = 60 * time.Minute
 const DefaultWaitForServicesTimeout = 30
 const DefaultShutdownTimeout = 30 * time.Second
 const PreparationRetries = 3
@@ -42,6 +42,10 @@ const (
 	MinTraceForceSendInterval              = 30 * time.Second
 	MaxTraceForceSendInterval              = 30 * time.Minute
 	TraceForceSendUpdateIntervalMultiplier = 4
+
+	// DefaultReaderBufferSize is the size of the line buffer.
+	// Docker/Kubernetes use the same size to split lines
+	DefaultReaderBufferSize = 16 * 1024
 )
 
 var PreparationRetryInterval = 3 * time.Second

@@ -23,11 +23,14 @@ We provide packages for the currently supported versions of Debian, Ubuntu, Mint
 | RHEL/CentOS   | 7                           | [June 2024](https://wiki.centos.org/About/Product)             |
 | CentOS Stream | 8                           | [May 2024](https://wiki.centos.org/About/Product)              |
 | RHEL          | 8                           | [May 2029](https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux)         |
+| RHEL          | 9                           | [May 2032](https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux)         |
 | Fedora        | 32                          | approx. May 2021      |
 | Fedora        | 33                          | approx. Nov 2021      |
 | Fedora        | 34                          | approx. June 2022     |
-| Fedora        | 35                          | approx. Nov 2022      |
-| Amazon Linux  | 2                           | [June 30, 2023](https://aws.amazon.com/amazon-linux-2/faqs/) |
+| Fedora        | 35                          | approx. Dec 2022      |
+| Fedora        | 36                          | [May 2023](https://endoflife.date/fedora)      |
+| Amazon Linux  | 2                           | [June 30, 2024](https://aws.amazon.com/amazon-linux-2/faqs/) |
+| Amazon Linux  | 2022                        | [TBD](https://aws.amazon.com/linux/amazon-linux-2022/faqs/) |
 
 NOTE:
 Packages for distributions that are not on the list are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket.
@@ -41,8 +44,7 @@ using GitLab Runner. [Read how to install Docker for your distribution](https://
 
 NOTE:
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
-to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
-to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
+to [upgrade to the new version](#upgrading-to-gitlab-runner-10).
 
 To install GitLab Runner:
 

@@ -40,6 +40,18 @@ If using Helm 2, you must also initialize Helm:
 helm init
 ```
 
+If you are unable to access to the latest versions of GitLab Runner, you should update the chart. To update the chart, run:
+
+```shell
+helm repo update gitlab
+```
+
+To view a list of GitLab Runner versions you have access to, run:
+
+```shell
+helm search repo -l gitlab/gitlab-runner
+```
+
 Once you [have configured](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
 run the following:
 
@@ -126,7 +138,7 @@ in the chart repository.
 For GitLab Runner to function, your configuration file **must** specify the following:
 
 - `gitlabUrl` - the GitLab server full URL (e.g., `https://gitlab.example.com`) to register the runner against.
-- `runnerRegistrationToken` ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/381111) -
+- `runnerRegistrationToken` -
   The registration token for adding new runners to GitLab.
   This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
   Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
@@ -551,8 +563,16 @@ Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts
 
 ### Store registration tokens or runner tokens in secrets
 
-To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`
-([deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/381111) in GitLab 15.6).
+DISCLAIMER:
+This page contains information related to upcoming products, features, and functionality.
+It is important to note that the information presented is for informational purposes only.
+Please do not rely on this information for purchasing or planning purposes.
+As with all projects, the items mentioned on this page are subject to change or delay.
+The development, release, and timing of any products, features, or functionality remain at the
+sole discretion of GitLab Inc.
+To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`. We plan to include an authentication 
+token for runners created in the GitLab UI that you can also include in the argument. For more information, see 
+[Next GitLab Runner Token Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_tokens/).
 To register an existing runner, use `runnerToken`.
 It can be a security risk to store tokens in `values.yml`, especially if you commit these to `git`.
 

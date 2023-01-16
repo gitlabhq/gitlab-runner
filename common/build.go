@@ -1073,6 +1073,13 @@ func (b *Build) GetDefaultVariables() JobVariables {
 			Public:   true,
 			Internal: true,
 		},
+		{
+			Key:      "CI_JOB_TIMEOUT",
+			Value:    strconv.FormatInt(int64(b.GetBuildTimeout().Seconds()), 10),
+			Public:   true,
+			Internal: true,
+			File:     false,
+		},
 	}
 }
 
@@ -1172,6 +1179,10 @@ func (b *Build) GetAllVariables() JobVariables {
 	variables = append(variables, AppVersion.Variables()...)
 	variables = append(variables, b.secretsVariables...)
 
+	variables = append(variables, JobVariable{
+		Key: tempProjectDirVariableKey, Value: b.TmpProjectDir(), Public: true, Internal: true,
+	})
+
 	b.allVariables = variables.Expand()
 
 	return b.allVariables
@@ -1181,16 +1192,24 @@ func (b *Build) GetAllVariables() JobVariables {
 // configuration option: 'CloneURL'. If it is, we use that to create the clone
 // URL.
 func (b *Build) GetRemoteURL() string {
-	cloneURL := strings.TrimRight(b.Runner.CloneURL, "/")
+	u, _ := url.Parse(b.Runner.CloneURL)
 
-	if !strings.HasPrefix(cloneURL, "http") {
+	if u == nil || u.Scheme == "" {
 		return b.GitInfo.RepoURL
 	}
 
-	ciProjectPath := b.GetAllVariables().Get("CI_PROJECT_PATH")
-	splits := strings.SplitAfterN(cloneURL, "://", 2)
+	if u.Scheme == "ssh" {
+		if u.User == nil {
+			u.User = url.User("git")
+		}
+	} else {
+		u.User = url.UserPassword("gitlab-ci-token", b.Token)
+	}
 
-	return fmt.Sprintf("%sgitlab-ci-token:%s@%s/%s.git", splits[0], b.Token, splits[1], ciProjectPath)
+	projectPath := b.GetAllVariables().Get("CI_PROJECT_PATH") + ".git"
+	u.Path = path.Join(u.Path, projectPath)
+
+	return u.String()
 }
 
 func (b *Build) GetGitStrategy() GitStrategy {

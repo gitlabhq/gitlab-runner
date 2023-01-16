@@ -636,7 +636,7 @@ func (s *executor) processLogs(ctx context.Context) {
 				continue
 			}
 
-			_, err := s.Trace.Write(append([]byte(line), '\n'))
+			_, err := s.writeRunnerLog(line)
 			if err != nil {
 				s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 			}
@@ -651,6 +651,16 @@ func (s *executor) processLogs(ctx context.Context) {
 			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: exitCode}
 		}
 	}
+}
+
+func (s *executor) writeRunnerLog(log string) (int, error) {
+	size := len(log)
+
+	if size > common.DefaultReaderBufferSize && string(log[size-1]) == "\n" {
+		log = log[:size-1]
+	}
+
+	return s.Trace.Write([]byte(log))
 }
 
 // getExitCode tries to extract the exit code from an inner exec.CodeExitError
@@ -1413,6 +1423,9 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 	for k, v := range s.Build.Runner.Kubernetes.PodLabels {
 		labels[k] = sanitizeLabel(s.Build.Variables.ExpandValue(v))
 	}
+	for key, val := range s.configurationOverwrites.podLabels {
+		labels[key] = sanitizeLabel(s.Build.Variables.ExpandValue(val))
+	}
 
 	annotations := make(map[string]string)
 	for key, val := range s.configurationOverwrites.podAnnotations {
@@ -1505,7 +1518,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 			SchedulerName:      s.Config.Kubernetes.SchedulerName,
 			ServiceAccountName: s.configurationOverwrites.serviceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
-			NodeSelector:       s.Config.Kubernetes.NodeSelector,
+			NodeSelector:       s.configurationOverwrites.nodeSelector,
 			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
 			InitContainers:     opts.initContainers,
 			Containers: append([]api.Container{

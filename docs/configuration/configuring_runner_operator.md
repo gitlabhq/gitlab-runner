@@ -52,7 +52,7 @@ Some properties are only available with more recent versions of the Operator.
 | `gcs`            | all      | Options used to setup GCS cache. Refer to [Cache properties](#cache-properties). |
 | `azure`          | all      | Options used to setup Azure cache. Refer to [Cache properties](#cache-properties). |
 | `ca`             | all      | Name of TLS secret containing the custom certificate authority (CA) certificates. |
-| `serviceAccount` | all      | Use to override service account used to run the Runner pod. |
+| `serviceaccount` | all      | Use to override service account used to run the Runner pod. |
 | `config`         | all      | Use to provide a custom config map with a [configuration template](../register/index.md#runners-configuration-template-file). |
 
 ## Cache properties
@@ -275,7 +275,10 @@ user or to write to the root filesystem, you will need to set the `anyuid` SCC o
 service account, `gitlab-runner-sa`, which is used by the GitLab Runner container.
 
 ```shell
-oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa
+oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
+
+# Check that the anyiud SCC is set:
+oc get scc anyuid -o yaml
 ```
 
 ### Using FIPS Compliant GitLab Runner

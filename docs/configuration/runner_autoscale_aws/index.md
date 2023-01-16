@@ -61,6 +61,8 @@ you can disable console login for that user. Keep the tab open or copy paste the
 security credentials in an editor as we'll use them later during the
 [GitLab Runner configuration](#the-runnersmachine-section).
 
+You can also create an [EC2 instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) with the required `AmazonEC2FullAccess` and `AmazonS3FullAccess` policies. Attach this instance profile to the Runner Manager EC2 instance to allow the provisioning of new EC2 instances for the jobs' execution.
+
 ## Prepare the Runner Manager instance
 
 The first step is to install GitLab Runner in an EC2 instance that will serve
@@ -286,7 +288,7 @@ Notes:
   options, your EC2 instance won't get assigned a public IP. This is ok if your
   VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
   but it’s something to consider if you've got a more complex configuration. Read
-  more in [Docker docs about VPC connectivity](https://docs.docker.com/machine/drivers/aws/#vpc-connectivity).
+  more about [VPC connectivity](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-connectivity).
 
 [Other options](../advanced-configuration.md#the-runnersmachine-section)
 under `[runners.machine]` are also available.
@@ -373,7 +375,7 @@ In this configuration with an empty `amazonec2-spot-price`, AWS sets your
 bidding price for a Spot instance to the default On-Demand price of that
 instance class. If you omit the `amazonec2-spot-price` completely, Docker
 Machine will set the maximum price to a
-[default value of $0.50 per hour](https://docs.docker.com/machine/drivers/aws/#environment-variables-and-default-values).
+[default value of $0.50 per hour](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#environment-variables-and-default-values).
 
 You may further customize your Spot instance request:
 

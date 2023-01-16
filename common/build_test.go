@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -44,6 +45,39 @@ func TestBuildPredefinedVariables(t *testing.T) {
 
 			projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
 			assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
+		})
+	}
+}
+
+func TestBuildTimeoutExposed(t *testing.T) {
+	const testTimeout = 180
+	tests := map[string]struct {
+		forceDefault    bool
+		customTimeout   int
+		expectedTimeout int
+	}{
+		"no timeout specified": {
+			forceDefault:    true,
+			expectedTimeout: DefaultTimeout,
+		},
+		"timeout with arbitrary value": {
+			customTimeout:   testTimeout,
+			expectedTimeout: testTimeout,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
+				if !tt.forceDefault {
+					options.Build.RunnerInfo.Timeout = tt.customTimeout
+				}
+				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
+			})
+
+			exposedTimeout, err := strconv.Atoi(build.GetAllVariables().Get("CI_JOB_TIMEOUT"))
+			require.NoError(t, err)
+			assert.Equal(t, exposedTimeout, tt.expectedTimeout)
 		})
 	}
 }
@@ -833,6 +867,30 @@ func TestGetRemoteURL(t *testing.T) {
 				CloneURL: "https://test.local",
 			},
 			expectedURL: "https://gitlab-ci-token:job-token@test.local/my/project.git",
+		},
+		"using clone_url with relative URL": {
+			runner: RunnerSettings{
+				CloneURL: "https://test.local/gitlab",
+			},
+			expectedURL: "https://gitlab-ci-token:job-token@test.local/gitlab/my/project.git",
+		},
+		"using clone_url with relative URL with trailing slash": {
+			runner: RunnerSettings{
+				CloneURL: "https://test.local/gitlab/",
+			},
+			expectedURL: "https://gitlab-ci-token:job-token@test.local/gitlab/my/project.git",
+		},
+		"using clone_url with ssh protocol": {
+			runner: RunnerSettings{
+				CloneURL: "ssh://git@test.local/",
+			},
+			expectedURL: "ssh://git@test.local/my/project.git",
+		},
+		"using clone_url with ssh protocol and default username": {
+			runner: RunnerSettings{
+				CloneURL: "ssh://test.local/",
+			},
+			expectedURL: "ssh://git@test.local/my/project.git",
 		},
 		"not using clone_url": {
 			runner:      RunnerSettings{},
@@ -2114,6 +2172,58 @@ func TestSecretsResolving(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestResolvedSecretsSetMasked(t *testing.T) {
+	const expectedMaskPhrase = "resolved$value"
+
+	p, assertFn := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error {
+		return nil
+	})
+	defer assertFn()
+
+	RegisterExecutorProvider(t.Name(), p)
+
+	rc := new(RunnerConfig)
+	rc.RunnerSettings.Executor = t.Name()
+
+	successfulBuild, err := GetSuccessfulBuild()
+	require.NoError(t, err)
+
+	successfulBuild.Secrets = Secrets{
+		"TEST_SECRET": Secret{
+			Vault: &VaultSecret{},
+		},
+	}
+
+	build, err := NewBuild(successfulBuild, rc, nil, nil)
+	assert.NoError(t, err)
+
+	secretsResolverMock := new(MockSecretsResolver)
+	defer secretsResolverMock.AssertExpectations(t)
+
+	secretsResolverMock.On("Resolve", successfulBuild.Secrets).Return(JobVariables{
+		{Key: "key", Value: expectedMaskPhrase, Masked: true, Raw: true},
+	}, nil).Once()
+
+	build.secretsResolver = func(_ logger, _ SecretResolverRegistry) (SecretsResolver, error) {
+		return secretsResolverMock, nil
+	}
+
+	trace := new(MockJobTrace)
+	defer trace.AssertExpectations(t)
+	trace.On("Write", mock.Anything).Return(0, nil)
+	trace.On("IsStdout").Return(true)
+	trace.On("SetCancelFunc", mock.Anything).Once()
+	trace.On("SetAbortFunc", mock.Anything).Once()
+	trace.On("Success").Once()
+
+	// ensure that variables returned from the secrets
+	// resolver get passed to SetMasked
+	trace.On("SetMasked", MaskOptions{Phrases: []string{expectedMaskPhrase}}).Once()
+
+	err = build.Run(&Config{}, trace)
+	assert.NoError(t, err)
 }
 
 func TestBuildSupportedFailureReasons(t *testing.T) {

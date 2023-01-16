@@ -4,20 +4,23 @@ package helpers
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	fileArchiverUntrackedFile   = "untracked_test_file.txt"
-	fileArchiverArchiveZipFile  = "archive.zip"
-	fileArchiverNotExistingFile = "not_existing_file.txt"
-	fileArchiverAbsoluteFile    = "/absolute.txt"
-	fileArchiverRelativeFile    = "../../../relative.txt"
+	fileArchiverUntrackedFile          = "untracked_test_file.txt"
+	fileArchiverArchiveZipFile         = "archive.zip"
+	fileArchiverNotExistingFile        = "not_existing_file.txt"
+	fileArchiverAbsoluteFile           = "/absolute.txt"
+	fileArchiverAbsoluteDoubleStarFile = "/**/absolute.txt"
+	fileArchiverRelativeFile           = "../../../relative.txt"
 )
 
 func TestGlobbedFilePaths(t *testing.T) {
@@ -150,19 +153,90 @@ func TestFileArchiverToFailOnAbsoluteFile(t *testing.T) {
 	f := fileArchiver{
 		Paths: []string{fileArchiverAbsoluteFile},
 	}
+
+	h := newLogHook(logrus.WarnLevel)
+	logrus.AddHook(&h)
+
 	err := f.enumerate()
 	assert.NoError(t, err)
 	assert.Empty(t, f.sortedFiles())
-	assert.NotContains(t, f.sortedFiles(), fileArchiverAbsoluteFile)
+	require.Len(t, h.entries, 1)
+	assert.Contains(t, h.entries[0].Message, "artifact path is not a subpath of project directory")
+}
+
+func TestFileArchiverToNotAddFilePathOutsideProjectDirectory(t *testing.T) {
+	f := fileArchiver{
+		Paths: []string{fileArchiverAbsoluteDoubleStarFile},
+	}
+
+	h := newLogHook(logrus.WarnLevel)
+	logrus.AddHook(&h)
+
+	err := f.enumerate()
+	assert.NoError(t, err)
+	assert.Empty(t, f.sortedFiles())
+	require.Len(t, h.entries, 1)
+	assert.Contains(t, h.entries[0].Message, "artifact path is not a subpath of project directory")
 }
 
 func TestFileArchiverToFailOnRelativeFile(t *testing.T) {
 	f := fileArchiver{
 		Paths: []string{fileArchiverRelativeFile},
 	}
+
+	h := newLogHook(logrus.WarnLevel)
+	logrus.AddHook(&h)
+
 	err := f.enumerate()
 	assert.NoError(t, err)
 	assert.Empty(t, f.sortedFiles())
+	require.Len(t, h.entries, 1)
+	assert.Contains(t, h.entries[0].Message, "artifact path is not a subpath of project directory")
+}
+
+func TestFileArchiver_pathIsInProject(t *testing.T) {
+	wd, err := os.Getwd()
+	assert.NoError(t, err)
+
+	c := &fileArchiver{
+		wd: wd,
+	}
+
+	testCases := map[string]struct {
+		path          string
+		inProject     bool
+		errorExpected bool
+	}{
+		`relative path in project`: {
+			path:      "in/the/project/for/realzy",
+			inProject: true,
+		},
+		`relative path not in project`: {
+			path:          "../nope",
+			inProject:     false,
+			errorExpected: true,
+		},
+		`absolute path in project`: {
+			path:      filepath.Join(wd, "yo/i/am/in"),
+			inProject: true,
+		},
+		`absolute path not in project`: {
+			path:          "/totally/not/in/the/project",
+			inProject:     false,
+			errorExpected: true,
+		},
+	}
+
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			err := c.assertPathInProject(tc.path)
+			if tc.errorExpected {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestFileArchiverToAddNotExistingFile(t *testing.T) {
@@ -248,4 +322,22 @@ func TestFileArchiverFileDoesNotExist(t *testing.T) {
 		f.isFileChanged(fileArchiverNotExistingFile),
 		"should return true if file doesn't exist",
 	)
+}
+
+func newLogHook(levels ...logrus.Level) logHook {
+	return logHook{levels: levels}
+}
+
+type logHook struct {
+	entries []*logrus.Entry
+	levels  []logrus.Level
+}
+
+func (s *logHook) Levels() []logrus.Level {
+	return s.levels
+}
+
+func (s *logHook) Fire(entry *logrus.Entry) error {
+	s.entries = append(s.entries, entry)
+	return nil
 }

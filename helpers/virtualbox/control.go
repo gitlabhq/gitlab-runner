@@ -235,8 +235,8 @@ func GetCurrentSnapshot(vmName string) (string, error) {
 	return snapshot[1], nil
 }
 
-func Start(vmName string) error {
-	_, err := VBoxManage("startvm", vmName, "--type", "headless")
+func Start(vmName string, startType string) error {
+	_, err := VBoxManage("startvm", vmName, "--type", startType)
 	return err
 }
 

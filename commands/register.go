@@ -253,11 +253,16 @@ func (s *RegisterCommand) askRunner() {
 	// we store registration token as token, since we pass that to RunnerCredentials
 	s.Token = s.ask("registration-token", "Enter the registration token:")
 	s.Name = s.ask("name", "Enter a description for the runner:")
-	s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
-	s.MaintenanceNote = s.ask("maintenance-note", "Enter optional maintenance note for the runner:", true)
+	// when a runner token is specified as a registration token, certain arguments are reserved to the server
+	if s.tokenIsRunnerToken() {
+		s.ensureServerConfigArgsEmpty()
+	} else {
+		s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
+		s.MaintenanceNote = s.ask("maintenance-note", "Enter optional maintenance note for the runner:", true)
 
-	if s.TagList == "" {
-		s.RunUntagged = true
+		if s.TagList == "" {
+			s.RunUntagged = true
+		}
 	}
 
 	parameters := common.RegisterRunnerParameters{
@@ -269,6 +274,14 @@ func (s *RegisterCommand) askRunner() {
 		RunUntagged:     s.RunUntagged,
 		MaximumTimeout:  s.MaximumTimeout,
 		Paused:          s.Paused,
+	}
+
+	if s.Token != "" && !s.tokenIsRunnerToken() {
+		logrus.Warningf(
+			"Support for registration tokens and runner parameters in the 'register' command has been deprecated in " +
+				"GitLab Runner 15.6 and will be replaced with support for authentication tokens. " +
+				"For more information, see https://gitlab.com/gitlab-org/gitlab/-/issues/380872",
+		)
 	}
 
 	result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
@@ -374,12 +387,6 @@ func (s *RegisterCommand) askExecutorOptions() {
 }
 
 func (s *RegisterCommand) Execute(context *cli.Context) {
-	logrus.Warningf(
-		"The 'register' command has been deprecated in GitLab Runner 15.6 " +
-			"and will be replaced with a 'deploy' command. " +
-			"For more information, see https://gitlab.com/gitlab-org/gitlab/-/issues/380872",
-	)
-
 	userModeWarning(true)
 
 	s.context = context
@@ -463,6 +470,24 @@ func (s *RegisterCommand) mergeTemplate() {
 	}
 }
 
+func (s *RegisterCommand) tokenIsRunnerToken() bool {
+	return strings.HasPrefix(s.Token, "glrt-")
+}
+
+func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
+	if s.Locked && s.AccessLevel == "" && !s.RunUntagged && s.MaximumTimeout == 0 && !s.Paused &&
+		s.TagList == "" && s.MaintenanceNote == "" {
+		return
+	}
+
+	logrus.Fatalln(
+		"Runner configuration other than name, description, and executor configuration is reserved " +
+			"and cannot be specified when registering with a runner token. " +
+			"This configuration is specified on the GitLab server. Please try again without specifying " +
+			"those arguments.",
+	)
+}
+
 func getHostname() string {
 	hostname, _ := os.Hostname()
 	return hostname
@@ -503,5 +528,5 @@ func accessLevelValid(levels []AccessLevel, givenLevel AccessLevel) bool {
 }
 
 func init() {
-	common.RegisterCommand2("register", "register a new runner (deprecated in 15.6)", newRegisterCommand())
+	common.RegisterCommand2("register", "register a new runner", newRegisterCommand())
 }

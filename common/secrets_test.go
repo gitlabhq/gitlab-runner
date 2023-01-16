@@ -85,9 +85,11 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			secrets:                  secrets,
 			expectedVariables: JobVariables{
 				{
-					Key:   variableKey,
-					Value: returnValue,
-					File:  true,
+					Key:    variableKey,
+					Value:  returnValue,
+					File:   true,
+					Masked: true,
+					Raw:    true,
 				},
 			},
 			expectedError: nil,
@@ -98,9 +100,11 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			secrets:                  composeSecrets(true),
 			expectedVariables: JobVariables{
 				{
-					Key:   variableKey,
-					Value: returnValue,
-					File:  true,
+					Key:    variableKey,
+					Value:  returnValue,
+					File:   true,
+					Masked: true,
+					Raw:    true,
 				},
 			},
 			expectedError: nil,
@@ -111,9 +115,11 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			secrets:                  composeSecrets(false),
 			expectedVariables: JobVariables{
 				{
-					Key:   variableKey,
-					Value: returnValue,
-					File:  false,
+					Key:    variableKey,
+					Value:  returnValue,
+					File:   false,
+					Masked: true,
+					Raw:    true,
 				},
 			},
 			expectedError: nil,

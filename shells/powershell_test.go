@@ -4,6 +4,7 @@ package shells
 
 import (
 	"fmt"
+	"path"
 	"runtime"
 	"strings"
 	"testing"
@@ -106,17 +107,23 @@ func TestPowershell_IsDefault(t *testing.T) {
 
 //nolint:lll
 func TestPowershell_GetConfiguration(t *testing.T) {
+	const (
+		powershellStdinExpectedLine = "powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -"
+		pwshStdinExpectedLine       = "pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -EncodedCommand JABPAHUAdABwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AEkAbgBwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AE8AdQB0AHAAdQB0AEUAbgBjAG8AZABpAG4AZwAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBUAGUAeAB0AC4AVQBUAEYAOABFAG4AYwBvAGQAaQBuAGcADQAKAHAAdwBzAGgAIAAtAEMAbwBtAG0AYQBuAGQAIAAtAA0ACgA="
+	)
+
 	testCases := map[string]struct {
 		shell    string
 		executor string
 		user     string
 		os       string
+		passFile bool
 
 		expectedError        error
 		expectedPassFile     bool
 		expectedCommand      string
 		expectedCmdLine      string
-		getExpectedArguments func() []string
+		getExpectedArguments func(shell string) []string
 	}{
 		"powershell on docker-windows": {
 			shell:    SNPowershell,
@@ -125,7 +132,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile:     false,
 			expectedCommand:      SNPowershell,
 			getExpectedArguments: stdinCmdArgs,
-			expectedCmdLine:      "powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -",
+			expectedCmdLine:      powershellStdinExpectedLine,
 		},
 		"pwsh on docker-windows": {
 			shell:    SNPwsh,
@@ -134,7 +141,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile:     false,
 			expectedCommand:      SNPwsh,
 			getExpectedArguments: stdinCmdArgs,
-			expectedCmdLine:      "pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -",
+			expectedCmdLine:      pwshStdinExpectedLine,
 		},
 		"pwsh on docker": {
 			shell:    SNPwsh,
@@ -143,7 +150,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile:     false,
 			expectedCommand:      SNPwsh,
 			getExpectedArguments: stdinCmdArgs,
-			expectedCmdLine:      "pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -",
+			expectedCmdLine:      pwshStdinExpectedLine,
 		},
 		"pwsh on kubernetes": {
 			shell:    SNPwsh,
@@ -152,7 +159,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile:     false,
 			expectedCommand:      SNPwsh,
 			getExpectedArguments: stdinCmdArgs,
-			expectedCmdLine:      "pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -",
+			expectedCmdLine:      pwshStdinExpectedLine,
 		},
 		"pwsh on shell": {
 			shell:    SNPwsh,
@@ -161,16 +168,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile:     false,
 			expectedCommand:      SNPwsh,
 			getExpectedArguments: stdinCmdArgs,
-			expectedCmdLine:      "pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -",
-		},
-		"powershell on shell": {
-			shell:    SNPowershell,
-			executor: "shell",
-
-			expectedPassFile:     true,
-			expectedCommand:      SNPowershell,
-			getExpectedArguments: fileCmdArgs,
-			expectedCmdLine:      "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command",
+			expectedCmdLine:      pwshStdinExpectedLine,
 		},
 		"pwsh on shell with custom user (linux)": {
 			shell:    SNPwsh,
@@ -180,9 +178,22 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 
 			expectedPassFile: false,
 			expectedCommand:  "su",
-			expectedCmdLine:  "su -s /usr/bin/pwsh custom -c pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -",
-			getExpectedArguments: func() []string {
-				return []string{"-s", "/usr/bin/" + SNPwsh, "custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(), " ")}
+			expectedCmdLine:  "su -s /usr/bin/pwsh custom -c " + pwshStdinExpectedLine,
+			getExpectedArguments: func(shell string) []string {
+				return []string{"-s", "/usr/bin/pwsh", "custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
+			},
+		},
+		"pwsh on shell with custom user (darwin)": {
+			shell:    SNPwsh,
+			executor: "shell",
+			user:     "custom",
+			os:       "darwin",
+
+			expectedPassFile: false,
+			expectedCommand:  "su",
+			expectedCmdLine:  "su custom -c " + pwshStdinExpectedLine,
+			getExpectedArguments: func(shell string) []string {
+				return []string{"custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
 			},
 		},
 		"pwsh on shell with custom user (windows)": {
@@ -193,20 +204,33 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 
 			expectedPassFile: false,
 			expectedCommand:  "su",
-			expectedCmdLine:  "su custom -c pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command -",
-			getExpectedArguments: func() []string {
-				return []string{"-s", "custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(), " ")}
+			expectedCmdLine:  "su custom -c " + pwshStdinExpectedLine,
+			getExpectedArguments: func(shell string) []string {
+				return []string{"-s", "custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
 			},
 		},
-		"powershell docker-windows change user": {
+		"powershell on shell - FF_DISABLE_POWERSHELL_STDIN true": {
 			shell:    SNPowershell,
-			executor: "anything-but-docker-windows",
-			user:     "custom",
+			executor: "shell",
+			passFile: true,
 
-			expectedError: &powershellChangeUserError{
-				shell:    SNPowershell,
-				executor: "anything-but-docker-windows",
+			expectedPassFile: true,
+			expectedCommand:  SNPowershell,
+			getExpectedArguments: func(_ string) []string {
+				return fileCmdArgs()
 			},
+			expectedCmdLine: "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command",
+		},
+		"powershell on shell - FF_DISABLE_POWERSHELL_STDIN false": {
+			shell:    SNPowershell,
+			executor: "shell",
+
+			expectedPassFile: false,
+			expectedCommand:  SNPowershell,
+			getExpectedArguments: func(_ string) []string {
+				return stdinCmdArgs(SNPowershell)
+			},
+			expectedCmdLine: powershellStdinExpectedLine,
 		},
 	}
 
@@ -224,6 +248,17 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 					Runner: &common.RunnerConfig{},
 				},
 			}
+
+			if tc.passFile {
+				info.Build.JobResponse.Variables = append(
+					info.Build.JobResponse.Variables,
+					common.JobVariable{
+						Key:   "FF_DISABLE_POWERSHELL_STDIN",
+						Value: "true",
+					},
+				)
+			}
+
 			info.Build.Runner.Executor = tc.executor
 
 			shellConfig, err := shell.GetConfiguration(info)
@@ -233,7 +268,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tc.getExpectedArguments(), shellConfig.Arguments)
+			assert.Equal(t, tc.getExpectedArguments(tc.shell), shellConfig.Arguments)
 			assert.Equal(t, tc.expectedCommand, shellConfig.Command)
 			assert.Equal(t, PowershellDockerCmd(tc.shell), shellConfig.DockerCommand)
 			assert.Equal(t, tc.expectedCmdLine, shellConfig.CmdLine)
@@ -247,7 +282,7 @@ func TestPowershellCmdArgs(t *testing.T) {
 	for _, tc := range []string{SNPwsh, SNPowershell} {
 		t.Run(tc, func(t *testing.T) {
 			args := PowershellDockerCmd(tc)
-			assert.Equal(t, append([]string{tc}, stdinCmdArgs()...), args)
+			assert.Equal(t, append([]string{tc}, stdinCmdArgs(tc)...), args)
 		})
 	}
 }
@@ -435,6 +470,156 @@ func TestPowershell_GenerateScript(t *testing.T) {
 			assert.Equal(t, tc.expectedScript, script)
 			if tc.expectedFailure {
 				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func Test_PsWriter_isTmpFile(t *testing.T) {
+	tmpDir := "/foo/bar"
+	bw := PsWriter{TemporaryPath: tmpDir}
+
+	tests := map[string]struct {
+		path string
+		want bool
+	}{
+		"tmp file var":     {path: path.Join(tmpDir, "BAZ"), want: true},
+		"not tmp file var": {path: "bla bla bla", want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.want, bw.isTmpFile(tt.path))
+		})
+	}
+}
+
+func Test_PsWriter_cleanPath(t *testing.T) {
+	tests := map[string]struct {
+		path, wantLinux, wantWindows string
+	}{
+		"relative path": {
+			path:        "foo/bar/KEY",
+			wantLinux:   "$CurrentDirectory\\foo\\bar\\KEY",
+			wantWindows: "$CurrentDirectory\\foo\\bar\\KEY",
+		},
+		"absolute path": {
+			path:        "/foo/bar/KEY",
+			wantLinux:   "\\foo\\bar\\KEY",
+			wantWindows: "$CurrentDirectory\\foo\\bar\\KEY",
+		},
+		"absolute path with drive": {
+			path:        "C:/foo/bar/KEY",
+			wantLinux:   "$CurrentDirectory\\C:\\foo\\bar\\KEY",
+			wantWindows: "C:\\foo\\bar\\KEY",
+		},
+	}
+
+	bw := PsWriter{TemporaryPath: "foo/bar"}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := bw.cleanPath(tt.path)
+
+			if runtime.GOOS == OSWindows {
+				assert.Equal(t, tt.wantWindows, got)
+			} else {
+				assert.Equal(t, tt.wantLinux, got)
+			}
+		})
+	}
+}
+
+// nolint:lll
+func Test_PsWriter_Variable(t *testing.T) {
+	tests := map[string]struct {
+		variable               common.JobVariable
+		writer                 PsWriter
+		wantLinux, wantWindows string
+	}{
+		"file var, relative path": {
+			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:      PsWriter{TemporaryPath: "foo/bar"},
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
+		},
+		"file var, absolute path": {
+			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:      PsWriter{TemporaryPath: "/foo/bar"},
+			wantLinux:   "New-Item -ItemType directory -Force -Path \"\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"\\foo\\bar\\KEY\", \"the secret\")$KEY=\"\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).PathNew-Item -ItemType directory -Force -Path \"\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\foo\\bar\\KEY\"$env:KEY=$KEY",
+		},
+		"file var, absolute path with drive": {
+			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).PathNew-Item -ItemType directory -Force -Path \"C:\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"$CurrentDirectory\\C:\\foo\\bar\\KEY\", \"the secret\")$KEY=\"$CurrentDirectory\\C:\\foo\\bar\\KEY\"$env:KEY=$KEY",
+			wantWindows: "New-Item -ItemType directory -Force -Path \"C:\\foo\\bar\" | out-null[System.IO.File]::WriteAllText(\"C:\\foo\\bar\\KEY\", \"the secret\")$KEY=\"C:\\foo\\bar\\KEY\"$env:KEY=$KEY",
+		},
+		"tmp file var, relative path": {
+			variable:    common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
+			writer:      PsWriter{TemporaryPath: "foo/bar"},
+			wantLinux:   "$CurrentDirectory = (Resolve-Path ./).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+		},
+		"tmp file var, absolute path": {
+			variable:    common.JobVariable{Key: "KEY", Value: "/foo/bar/KEY2"},
+			writer:      PsWriter{TemporaryPath: "/foo/bar"},
+			wantLinux:   "$KEY=\"\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+			wantWindows: "$CurrentDirectory = (Resolve-Path .\\).Path$KEY=\"`$CurrentDirectory\\foo\\bar\\KEY2\"$env:KEY=$KEY",
+		},
+		"regular var": {
+			variable:    common.JobVariable{Key: "KEY", Value: "VALUE"},
+			writer:      PsWriter{TemporaryPath: "C:/foo/bar"},
+			wantLinux:   "$KEY=\"VALUE\"$env:KEY=$KEY",
+			wantWindows: "$KEY=\"VALUE\"$env:KEY=$KEY",
+		},
+
+		"file var, relative path, resolvePaths": {
+			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:      PsWriter{TemporaryPath: "foo/bar", resolvePaths: true},
+			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\")$env:KEY=$KEY",
+			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"foo/bar/KEY\")$env:KEY=$KEY",
+		},
+		"file var, absolute path, resolvePaths": {
+			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:      PsWriter{TemporaryPath: "/foo/bar", resolvePaths: true},
+			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\")$env:KEY=$KEY",
+			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"/foo/bar/KEY\")$env:KEY=$KEY",
+		},
+		"file var, absolute path with drive, resolvePaths": {
+			variable:    common.JobVariable{Key: "KEY", Value: "the secret", File: true},
+			writer:      PsWriter{TemporaryPath: "C:/foo/bar", resolvePaths: true},
+			wantLinux:   "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\")$env:KEY=$KEY",
+			wantWindows: "New-Item -ItemType directory -Force -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar\") | out-null[System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\"), \"the secret\")$KEY=$ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(\"C:/foo/bar/KEY\")$env:KEY=$KEY",
+		},
+		"tmp file var, relative path, resolvePaths": {
+			variable:    common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
+			writer:      PsWriter{TemporaryPath: "foo/bar", resolvePaths: true},
+			wantLinux:   "$KEY=\"foo/bar/KEY2\"$env:KEY=$KEY",
+			wantWindows: "$KEY=\"foo/bar/KEY2\"$env:KEY=$KEY",
+		},
+		"tmp file var, absolute path, resolvePaths": {
+			variable:    common.JobVariable{Key: "KEY", Value: "/foo/bar/KEY2"},
+			writer:      PsWriter{TemporaryPath: "/foo/bar", resolvePaths: true},
+			wantLinux:   "$KEY=\"/foo/bar/KEY2\"$env:KEY=$KEY",
+			wantWindows: "$KEY=\"/foo/bar/KEY2\"$env:KEY=$KEY",
+		},
+		"tmp file var, absolute path with drive, resolvePaths": {
+			variable:    common.JobVariable{Key: "KEY", Value: "C:/foo/bar/KEY2"},
+			writer:      PsWriter{TemporaryPath: "C:/foo/bar", resolvePaths: true},
+			wantLinux:   "$KEY=\"C:/foo/bar/KEY2\"$env:KEY=$KEY",
+			wantWindows: "$KEY=\"C:/foo/bar/KEY2\"$env:KEY=$KEY",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			tt.writer.Variable(tt.variable)
+
+			if runtime.GOOS == OSWindows {
+				assert.Equal(t, tt.wantWindows, tt.writer.String())
+			} else {
+				assert.Equal(t, tt.wantLinux, tt.writer.String())
 			}
 		})
 	}

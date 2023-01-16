@@ -13,8 +13,7 @@ describes some of the most common problems with GitLab Runner.
 
 WARNING:
 If you are using or upgrading from a version prior to GitLab Runner 10, read how
-to [upgrade to the new version](#upgrading-to-gitlab-runner-10). If you want
-to install a version prior to GitLab Runner 10, [visit the old docs](old.md).
+to [upgrade to the new version](#upgrading-to-gitlab-runner-10).
 
 ## Installing GitLab Runner
 

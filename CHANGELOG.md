@@ -1,3 +1,151 @@
+## v15.7.2 (2023-01-13)
+
+### Bug fixes
+
+- Fix relative URL path handling with clone_url !3815
+- powershell: fix unwanted progress streams leaking to output !3831
+- Re-merge "Artifact/cache helpers now use POSIX shell syntax for expansion" !3833
+
+## v15.7.1 (2022-12-19)
+
+### Bug fixes
+
+- Revert automate for which supported distro releases we create packages. !3794
+
+## v15.7.0 (2022-12-17)
+
+### New features
+
+- Add PrivilegedServices option for allowing/disallowing docker services to be privileged !2652
+- Add support for Windows Server 21H2 !3746
+- Generate global system ID !3758
+- Add start_type to virtualbox configuration !2558 
+- Update secret resolver to return raw & masked variables !3750
+- Allow Executors to clone via SSH !3518 
+- Add docker support for `IpcMode` for IPC namespace sharing !3781 
+- Expose the build timeout as an environment variable !3778
+- Improve Runner's API health checking and handling !3658
+
+## v15.6.2 (2023-01-13)
+
+### Bug fixes
+
+- powershell: fix unwanted progress streams leaking to output !3831
+
+## v15.6.1 (2022-11-24)
+
+### Bug fixes
+
+- Fix cache config needing to be provided !3747
+- Add gitlab-runner user during ubi-fips image building !3725
+- Fix kubernetes pod labels overwrite !3582
+- Correctly handle expansion of job file variables, and variables that reference file variables !3613
+- Artifact/cache helpers now use POSIX shell syntax for expansion !3752
+
+### Maintenance
+
+- Upgrade github.com/urfave/cli to 1.22.10 !3744
+- Unit test to catch urfave bug !3749
+- Makefile.build.mk: allow building for arm64 without overriding ARCH !3498
+- Renovate Go version !3768
+- Add warning about using SIGTERM/SIGINT over SIGQUIT !3769
+- Update golang Docker tag to v1.18.9 !3776
+- Automate for which supported distro releases we create packages. !3756
+- Fix silent docker images build failure and retry buildx !3786
+- Rename Docker's PrivilegedServices to ServicesPrivileged !3791
+
+### Documentation changes
+
+- Making things a little more obvious for those of us who may skip ahead !3697 
+- Clean up docs redirects, runner - 2022-11-23
+- Document behavior for local addresses in [session_server] configuration !3676
+- Docs: Nested guidelines for clarity !3729
+- Fix some wording in docs and add links in convenient areas !3684
+- Updated serviceaccount setting to match the code !3387
+- Update agent for Kubernetes installation docs !3748
+- Change deprecation documentation for register command !3742
+- Make pod_labels more specific !3645 
+- Added doc to inform about saving cost when using private subnets and AWS S3 cache !3453
+- Add more descriptive headings on executor pages !3763
+- Add security warning to Runner install docs !3762
+- Add troubleshooting details !3755
+- Add note for self-managed customers !3761
+- Update docs/executors/virtualbox native OpenSSH PowerShell !3775
+- Fix Kubernetes Executor docs !3770
+- Add note for AWS IAM instance profile !3774
+- Add a requirement to create a namespace before overwriting !3696
+- CTRT edits for The Docker executor part 1 !3753
+- Expanded on downloading helper images and updated a link to use a more modern file. !3562
+- Add `deprecated` to `gitlab-runner exec` !3773
+
+## v15.6.0 (2022-11-21)
+
+### New features
+
+- Add support for Node Selector Overwrite !3221
+- Handle job execution interruption for the new autoscaler executor provider !3672
+- Add maximum size to uploaded cache !3552
+- Allow multiple paths in GIT_SUBMODULE_PATHS !3675
+- Capture helper service logs into job/tasks main trace log !3680
+- Add a feature flag to disable resolving of TLS chain !3699
+- Adds proper handling of ExecutorProviders initialization and shutdown !3657
+
+### Bug fixes
+
+- Detect Windows build 10.0.19042 as 20H2 !3694
+- Force powershell/pwsh input/output encoding to UTF-8 !3707
+- Skip non-regular files for artifact metadata generator inclusion !3709
+- Filter kubernetes trace to remove newline added for long logs in attach mode !3691
+- Enable powershell via stdin by default !3728
+- Kubernetes executor: redial backend on internal server errors !3732
+
+### Maintenance
+
+- Update redhat/ubi8 Docker tag to v8.7-929 !3738
+- Add OS versions supported by packagecloud 3.0.6 release !3734
+- Add tests for kubernetes scheduler name config !3643
+- Update Go distribution to version 1.18.8 !3720
+- Update logging levels from Debug to Info !3710
+- Move autoscaler Acquire() to the ExecutorProvider !3660
+- Document internal Executor Interface !3291
+- Update git to 2.38.1 and git-lfs to 3.2.0 to address CVE-2022-29187 !3674
+- Switch to markdownlint-cli2 !3683 
+- Ensure `go-fips` container is rebuilt when the version of Go is updated !3685
+- Add logging in UpdateJob to include checksum and bytesize !3693
+- Update taskscaler to newer version !3706
+- Skip docker Test_CaptureServiceLogs integration tests on windows !3703
+- Update GoCloud to v0.27.0 and update Azure cache to use new SDK !3701
+
+### Documentation changes
+
+- Explain ANSI-relevance of log_format options !3739
+- Fix broken links in runner docs !3737
+- Add podman-plugins package dependency for service container network aliases !3733
+- Add Taskscaler and Fleeting plugin instructions to Runner development !3730
+- Document macOS workaround for TLS issues !3724
+- Remove misleading statement regarding Bash in Windows planned feature support !3722
+- Deprecate register command !3702
+- Mark runnerRegistrationToken as deprecated !3704
+- Add helm repo update command to Kubernetes install docs !3736 
+- Add additional documentation around the use of submodules !3670 
+- Add Kubernetes certificate guide !3608
+- Troubleshooting for pods always assigned worker node's IAM role !3678
+- Change $shell to $SHELL in "Set up macOS runners" docs !3681
+- Fix docs review app script and domain !3682
+- Update redirected links in the runner docs !3690
+- Improve development setup docs !3661
+- Update Runner Helm chart docs to include list of deprecated fields !3686
+- Add details to Documentation MR template !3698
+- Adding Ubuntu 22 to the supported OS list !3712
+- Adds deprecation notes for docker-ssh and docker-ssh+machine executors !3714
+- Updated template to match other repo !3715
+
+## v15.5.1 (2022-11-11)
+
+### New features
+
+- Add a feature flag to disable resolving of TLS chain !3699
+
 ## v15.5.0 (2022-10-21)
 
 ### New features
@@ -51,6 +199,18 @@
 - Fix ordered list display abnormal error !3663
 - Set variable to new domain for docs review apps (Runner) !3671
 
+## v15.4.2 (2022-11-11)
+
+### New features
+
+- Add a feature flag to disable resolving of TLS chain !3699
+
+## v15.4.1 (2022-10-21)
+
+### Security fixes
+
+- Do not expand variables in Command https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/38
+
 ## v15.4.0 (2022-09-21)
 
 ### New features
@@ -79,6 +239,28 @@
 - Add path implementation to support Windows docker from unix !3344
 - Update redhat/ubi8 Docker tag to v8.6-943 !3605
 - Update alpine Docker tags !3604
+
+### Security fixes
+
+- Upgrade prometheus/client-golang from v1.1.0 to v1.11.1
+
+## v15.3.3 (2022-11-11)
+
+### New features
+
+- Add a feature flag to disable resolving of TLS chain !3699
+
+## v15.3.2 (2022-09-21)
+
+### Security fixes
+
+- Do not expand variables in Command https://gitlab.com/gitlab-org/security/gitlab-runner/-/merge_requests/38
+
+## v15.3.1 (2022-09-21)
+
+### Security fixes
+
+- Upgrade prometheus/client-golang from v1.1.0 to v1.11.1
 
 ## v15.3.0 (2022-08-19)
 

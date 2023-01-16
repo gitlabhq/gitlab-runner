@@ -408,12 +408,17 @@ func (e *executor) createService(
 }
 
 func (e *executor) createHostConfigForService() *container.HostConfig {
+	privileged := e.Config.Docker.Privileged
+	if e.Config.Docker.ServicesPrivileged != nil {
+		privileged = *e.Config.Docker.ServicesPrivileged
+	}
+
 	return &container.HostConfig{
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
-		Privileged:    e.Config.Docker.Privileged,
+		Privileged:    privileged,
 		Runtime:       e.Config.Docker.Runtime,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		NetworkMode:   e.networkMode,
@@ -573,6 +578,7 @@ func (e *executor) createContainerConfig(
 	}
 
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
+	config.MacAddress = e.Config.Docker.MacAddress
 
 	return config
 }
@@ -581,6 +587,12 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
 		return nil, err
+	}
+
+	isolation := container.Isolation(e.Config.Docker.Isolation)
+	if !isolation.IsValid() {
+		return nil, fmt.Errorf("the isolation value %q is not valid. "+
+			"the valid values are: 'process', 'hyperv', 'default' and an empty string", isolation)
 	}
 
 	return &container.HostConfig{
@@ -607,10 +619,12 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		NetworkMode:   e.networkMode,
+		IpcMode:       container.IpcMode(e.Config.Docker.IpcMode),
 		Links:         append(e.Config.Docker.Links, e.links...),
 		Binds:         e.volumesManager.Binds(),
 		OomScoreAdj:   e.Config.Docker.OomScoreAdjust,
 		ShmSize:       e.Config.Docker.ShmSize,
+		Isolation:     isolation,
 		VolumeDriver:  e.Config.Docker.VolumeDriver,
 		VolumesFrom:   e.Config.Docker.VolumesFrom,
 		LogConfig: container.LogConfig{

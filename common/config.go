@@ -164,6 +164,7 @@ type DockerConfig struct {
 	DNS                        []string           `toml:"dns,omitempty" json:"dns" long:"dns" env:"DOCKER_DNS" description:"A list of DNS servers for the container to use"`
 	DNSSearch                  []string           `toml:"dns_search,omitempty" json:"dns_search" long:"dns-search" env:"DOCKER_DNS_SEARCH" description:"A list of DNS search domains"`
 	Privileged                 bool               `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"DOCKER_PRIVILEGED" description:"Give extended privileges to container"`
+	ServicesPrivileged         *bool              `toml:"services_privileged,omitempty" json:"services_privileged" long:"services_privileged" env:"DOCKER_SERVICES_PRIVILEGED" description:"When set this will give or remove extended privileges to container services"`
 	DisableEntrypointOverwrite bool               `toml:"disable_entrypoint_overwrite,omitzero" json:"disable_entrypoint_overwrite" long:"disable-entrypoint-overwrite" env:"DOCKER_DISABLE_ENTRYPOINT_OVERWRITE" description:"Disable the possibility for a container to overwrite the default image entrypoint"`
 	User                       string             `toml:"user,omitempty" json:"user" long:"user" env:"DOCKER_USER" description:"Run all commands in the container as the specified user."`
 	UsernsMode                 string             `toml:"userns_mode,omitempty" json:"userns_mode" long:"userns" env:"DOCKER_USERNS_MODE" description:"User namespace to use"`
@@ -183,6 +184,8 @@ type DockerConfig struct {
 	ExtraHosts                 []string           `toml:"extra_hosts,omitempty" json:"extra_hosts" long:"extra-hosts" env:"DOCKER_EXTRA_HOSTS" description:"Add a custom host-to-IP mapping"`
 	VolumesFrom                []string           `toml:"volumes_from,omitempty" json:"volumes_from" long:"volumes-from" env:"DOCKER_VOLUMES_FROM" description:"A list of volumes to inherit from another container"`
 	NetworkMode                string             `toml:"network_mode,omitempty" json:"network_mode" long:"network-mode" env:"DOCKER_NETWORK_MODE" description:"Add container to a custom network"`
+	IpcMode                    string             `toml:"ipcmode,omitempty" json:"ipcmode" long:"ipcmode" env:"DOCKER_IPC_MODE" description:"Select IPC mode for container"`
+	MacAddress                 string             `toml:"mac_address,omitempty" json:"mac_address" long:"mac-address" env:"DOCKER_MAC_ADDRESS" description:"Container MAC address (e.g., 92:d0:c6:0a:29:33)"`
 	Links                      []string           `toml:"links,omitempty" json:"links" long:"links" env:"DOCKER_LINKS" description:"Add link to another container"`
 	Services                   []Service          `toml:"services,omitempty" json:"services" description:"Add service that is started with container"`
 	WaitForServicesTimeout     int                `toml:"wait_for_services_timeout,omitzero" json:"wait_for_services_timeout" long:"wait-for-services-timeout" env:"DOCKER_WAIT_FOR_SERVICES_TIMEOUT" description:"How long to wait for service startup"`
@@ -190,6 +193,7 @@ type DockerConfig struct {
 	AllowedPullPolicies        []DockerPullPolicy `toml:"allowed_pull_policies,omitempty" json:"allowed_pull_policies" long:"allowed-pull-policies" env:"DOCKER_ALLOWED_PULL_POLICIES" description:"Pull policy allowlist"`
 	AllowedServices            []string           `toml:"allowed_services,omitempty" json:"allowed_services" long:"allowed-services" env:"DOCKER_ALLOWED_SERVICES" description:"Service allowlist"`
 	PullPolicy                 StringOrArray      `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"DOCKER_PULL_POLICY" description:"Image pull policy: never, if-not-present, always"`
+	Isolation                  string             `toml:"isolation,omitempty" json:"isolation" long:"isolation" env:"DOCKER_ISOLATION" description:"Container isolation technology. Windows only"`
 	ShmSize                    int64              `toml:"shm_size,omitempty" json:"shm_size" long:"shm-size" env:"DOCKER_SHM_SIZE" description:"Shared memory size for docker images (in bytes)"`
 	Tmpfs                      map[string]string  `toml:"tmpfs,omitempty" json:"tmpfs" long:"tmpfs" env:"DOCKER_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in the main container, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
 	ServicesTmpfs              map[string]string  `toml:"services_tmpfs,omitempty" json:"services_tmpfs" long:"services-tmpfs" env:"DOCKER_SERVICES_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in all the service containers, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
@@ -198,6 +202,11 @@ type DockerConfig struct {
 	HelperImageFlavor          string             `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"DOCKER_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
 	ContainerLabels            map[string]string  `toml:"container_labels,omitempty" json:"container_labels" long:"container-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create containers with the given container labels. Environment variables will be substituted for values here."`
 	EnableIPv6                 bool               `toml:"enable_ipv6,omitempty" json:"enable_ipv6" long:"enable-ipv6" description:"Enable IPv6 for automatically created networks. This is only takes affect when the feature flag FF_NETWORK_PER_BUILD is enabled."`
+}
+
+//nolint:lll
+type InstanceConfig struct {
+	AllowedImages []string `toml:"allowed_images,omitempty" description:"When VM Isolation is enabled, allowed images controls which images a job is allowed to specify"`
 }
 
 type AutoscalerConfig struct {
@@ -209,7 +218,17 @@ type AutoscalerConfig struct {
 	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty"`
 
+	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
+
 	InstanceOperationTimeBuckets []float64 `toml:"instance_operation_time_buckets,omitempty"`
+}
+
+type VMIsolation struct {
+	Enabled         bool                  `toml:"enabled,omitempty"`
+	NestingHost     string                `toml:"nesting_host,omitempty"`
+	NestingConfig   AutoscalerSettingsMap `toml:"nesting_config,omitempty"`
+	Image           string                `toml:"image,omitempty"`
+	ConnectorConfig ConnectorConfig       `toml:"connector_config,omitempty"`
 }
 
 type ConnectorConfig struct {
@@ -287,6 +306,7 @@ type VirtualBoxConfig struct {
 	BaseFolder       string   `toml:"base_folder" json:"base_folder" long:"base-folder" env:"VIRTUALBOX_BASE_FOLDER" description:"Folder in which to save the new VM. If empty, uses VirtualBox default"`
 	DisableSnapshots bool     `toml:"disable_snapshots,omitzero" json:"disable_snapshots" long:"disable-snapshots" env:"VIRTUALBOX_DISABLE_SNAPSHOTS" description:"Disable snapshoting to speedup VM creation"`
 	AllowedImages    []string `toml:"allowed_images,omitempty" json:"allowed_images" long:"allowed-images" env:"VIRTUALBOX_ALLOWED_IMAGES" description:"Image allowlist"`
+	StartType        string   `toml:"start_type" json:"start_type" long:"start-type" env:"VIRTUALBOX_START_TYPE" description:"Graphical front-end type"`
 }
 
 //nolint:lll
@@ -434,6 +454,7 @@ type KubernetesConfig struct {
 	AllowedServices                                   []string                           `toml:"allowed_services,omitempty" json:"allowed_services" long:"allowed-services" env:"KUBERNETES_ALLOWED_SERVICES" description:"Service allowlist"`
 	PullPolicy                                        StringOrArray                      `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	NodeSelector                                      map[string]string                  `toml:"node_selector,omitempty" json:"node_selector" long:"node-selector" env:"KUBERNETES_NODE_SELECTOR" description:"A toml table/json object of key:value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key:value pairs. Only one selector is supported through environment variable configuration."`
+	NodeSelectorOverwriteAllowed                      string                             `toml:"node_selector_overwrite_allowed" json:"node_selector_overwrite_allowed" long:"node_selector_overwrite_allowed" env:"KUBERNETES_NODE_SELECTOR_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NODE_SELECTOR_*' values"`
 	NodeTolerations                                   map[string]string                  `toml:"node_tolerations,omitempty" json:"node_tolerations" long:"node-tolerations" env:"KUBERNETES_NODE_TOLERATIONS" description:"A toml table/json object of key=value:effect. Value and effect are expected to be strings. When set, pods will tolerate the given taints. Only one toleration is supported through environment variable configuration."`
 	Affinity                                          KubernetesAffinity                 `toml:"affinity,omitempty" json:"affinity" long:"affinity" description:"Kubernetes Affinity setting that is used to select the node that spawns a pod"`
 	ImagePullSecrets                                  []string                           `toml:"image_pull_secrets,omitempty" json:"image_pull_secrets" long:"image-pull-secrets" env:"KUBERNETES_IMAGE_PULL_SECRETS" description:"A list of image pull secrets that are used for pulling docker image"`
@@ -843,7 +864,7 @@ func (s *Service) ToImageDefinition() Image {
 
 //nolint:lll
 type RunnerCredentials struct {
-	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"Runner URL"`
+	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab instance URL"`
 	ID              int64     `toml:"id" json:"id" description:"Runner ID"`
 	Token           string    `toml:"token" json:"token" short:"t" long:"token" env:"CI_SERVER_TOKEN" required:"true" description:"Runner token"`
 	TokenObtainedAt time.Time `toml:"token_obtained_at" json:"token_obtained_at" description:"When the runner token was obtained"`
@@ -934,6 +955,7 @@ type RunnerSettings struct {
 
 	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags.html"`
 
+	Instance   *InstanceConfig   `toml:"instance,omitempty"`
 	SSH        *ssh.Config       `toml:"ssh,omitempty" json:"ssh" group:"ssh executor" namespace:"ssh"`
 	Docker     *DockerConfig     `toml:"docker,omitempty" json:"docker" group:"docker executor" namespace:"docker"`
 	Parallels  *ParallelsConfig  `toml:"parallels,omitempty" json:"parallels" group:"parallels executor" namespace:"parallels"`
@@ -951,6 +973,9 @@ type RunnerConfig struct {
 	Limit              int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
 	OutputLimit        int    `toml:"output_limit,omitzero" long:"output-limit" env:"RUNNER_OUTPUT_LIMIT" description:"Maximum build trace size in kilobytes"`
 	RequestConcurrency int    `toml:"request_concurrency,omitzero" long:"request-concurrency" env:"RUNNER_REQUEST_CONCURRENCY" description:"Maximum concurrency for job requests"`
+
+	UnhealthyRequestsLimit int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of 'unhealthy' responses to new job requests after which a runner worker will be disabled"`
+	UnhealthyInterval      *time.Duration `toml:"unhealthy_interval,omitzero" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
 
 	RunnerCredentials
 	RunnerSettings
@@ -1588,6 +1613,22 @@ func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
 
 func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
+}
+
+func (c *RunnerConfig) GetUnhealthyRequestsLimit() int {
+	if c.UnhealthyRequestsLimit < 1 {
+		return DefaultUnhealthyRequestsLimit
+	}
+
+	return c.UnhealthyRequestsLimit
+}
+
+func (c *RunnerConfig) GetUnhealthyInterval() time.Duration {
+	if c.UnhealthyInterval == nil {
+		return DefaultUnhealthyInterval
+	}
+
+	return *c.UnhealthyInterval
 }
 
 func (c *RunnerConfig) GetRequestConcurrency() int {

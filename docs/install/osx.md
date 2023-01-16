@@ -17,9 +17,6 @@ Two methods for installing GitLab Runner on macOS are available:
 
 ### Manual installation (official)
 
-NOTE:
-For documentation on GitLab Runner 9 and earlier, [visit this documentation](old.md).
-
 1. Download the binary for your system:
 
    - For Intel-based systems:
@@ -43,30 +40,29 @@ For documentation on GitLab Runner 9 and earlier, [visit this documentation](old
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-As the user who is to run the runners:
+1. As the user who will run the runners:
 
-1. [Register a runner](../register/index.md). When you build iOS or macOS applications on macOS, use
-   [the shell executor](../executors/shell.md). The build and tests run as the identity of the logged-in user, directly
-   on the build host. It does not run in a container, which is less secure than using container executors. For more
-   information, see the [security implications documentation](../security/index.md#usage-of-shell-executor)
-   for additional detail on what to keep in mind in this scenario.
+   1. [Register a runner](../register/index.md). When you build iOS or macOS applications on macOS, use
+      [the shell executor](../executors/shell.md). Jobs will run directly on the host and use
+      the identity of the logged-in user. The jobs will not run in a container, which is less secure than using container executors.
+      For details, see the [security implications documentation](../security/index.md#usage-of-shell-executor).
 
-1. Open a terminal and switch to the current user.
+   1. Open a terminal and switch to the current user.
 
-   ```shell
-   su - <username>
-   ```
+      ```shell
+      su - <username>
+      ```
 
-1. Install GitLab Runner as a service and start it:
+   1. Install GitLab Runner as a service and start it:
 
-   ```shell
-   cd ~
-   gitlab-runner install
-   gitlab-runner start
-   ```
+      ```shell
+      cd ~
+      gitlab-runner install
+      gitlab-runner start
+      ```
 
-GitLab Runner is installed and is run after a system reboot.
-
+1. Reboot your system.
+   
 If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/<username>/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md).
 
 ### Homebrew installation (alternative)
@@ -310,3 +306,32 @@ If this error is encountered when running the `gitlab-runner start` command, ens
 ```
 
 If the directories do not exist, create them and ensure that the runner service user has appropriate permissions to read and write to them.
+
+### `ERROR: Error on fetching TLS Data from API response... error  error=couldn't build CA Chain`
+
+The following error may occur if you upgrade to GitLab Runner v15.5.0 or later:
+
+```plaintext
+Certificate doesn't provide parent URL: exiting the loop  Issuer=Baltimore CyberTrust Root IssuerCertURL=[] Serial=33554617 Subject=Baltimore CyberTrust Root context=certificate-chain-build
+Verifying last certificate to find the final root certificate  Issuer=Baltimore CyberTrust Root IssuerCertURL=[] Serial=33554617 Subject=Baltimore CyberTrust Root context=certificate-chain-build
+ERROR: Error on fetching TLS Data from API response... error  error=couldn't build CA Chain: error while fetching certificates from TLS ConnectionState: error while fetching certificates into the CA Chain: couldn't resolve certificates chain from the leaf certificate: error while resolving certificates chain with verification: error while verifying last certificate from the chain: x509: “Baltimore CyberTrust Root” certificate is not permitted for this usage runner=x7kDEc9Q
+```
+
+If you encounter this error, you may need to:
+
+1. Upgrade to GitLab Runner v15.5.1 or later.
+1. Set `FF_RESOLVE_FULL_TLS_CHAIN` to `false` in the [`[runners.feature_flags]` configuration](../configuration/feature-flags.md#enable-feature-flag-in-runner-configuration). For example:
+
+```toml
+    [[runners]]
+  name = "ruby-2.7-docker"
+  url = "https://CI/"
+  token = "TOKEN"
+  executor = "docker"
+  [runners.feature_flags]
+    FF_RESOLVE_FULL_TLS_CHAIN = false
+```
+
+Disabling this feature flag may help resolve TLS connectivity issues for
+HTTPS endpoints that use a root certificate signed with a SHA-1
+signature or some other deprecated algorithm.

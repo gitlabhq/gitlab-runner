@@ -147,7 +147,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/concepts/security/pod-security-policy/#privilege-escalation) behavior. |
 | `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
-| `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, all pull policies specified in `pull_policy` are allowed. |
+| `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. |
 | `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
 | `bearer_token` | Default bearer token used to launch build pods. |
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
@@ -164,7 +164,7 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `node_tolerations` | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
 | `pod_annotations` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
 | `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
-| `pod_labels` | A set of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. |
+| `pod_labels` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod labels can be overwritten in each build by using `pod_labels_overwrite_allowed`. |
 | `pod_labels_overwrite_allowed` | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. |
 | `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context). |
 | `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#using-security-context). |
@@ -197,14 +197,17 @@ You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--kube
 The Kubernetes namespace can be overwritten per CI/CD job in the `.gitlab-ci.yml` file, by using the variable
 `KUBERNETES_NAMESPACE_OVERWRITE`.
 
-This approach allows you to create a new isolated namespace dedicated for CI purposes, and deploy a custom
-set of Pods. The `Pods` spawned by the runner will take place on the overwritten namespace, for simple
+You can use this approach to designate a namespace for CI purposes, and deploy a custom
+set of Pods to it. The Pods spawned by the runner take place on the overwritten namespace, for simple
 and straight forward access between containers during the CI stages.
 
 ``` yaml
 variables:
   KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_SLUG}
 ```
+
+NOTE:
+This variable does not create a namespace on your cluster. Ensure that the namespace exists before you run the job.
 
 Furthermore, to ensure only designated namespaces will be used during CI runs, set the configuration
 `namespace_overwrite_allowed` with an appropriate regular expression. When left empty the overwrite behavior is
@@ -230,6 +233,7 @@ When you overwrite the Kubernetes namespace, make sure that:
     | Resource          | Permissions                             |
     |-------------------|-----------------------------------------|
     | pods/attach       | create, patch, delete                   |
+    | pods/exec         | create, patch, delete                   |
     | pods              | get, watch, create, delete              |
     | services          | get, watch, create, delete              |
     | configmaps        | get, create, update, delete             |
@@ -311,26 +315,26 @@ per CI/CD job, in the `.gitlab-ci.yml` file, with the following variables:
 
 ``` yaml
  variables:
-   KUBERNETES_CPU_REQUEST: 3
-   KUBERNETES_CPU_LIMIT: 5
-   KUBERNETES_MEMORY_REQUEST: 2Gi
-   KUBERNETES_MEMORY_LIMIT: 4Gi
-   KUBERNETES_EPHEMERAL_STORAGE_REQUEST: 512Mi
-   KUBERNETES_EPHEMERAL_STORAGE_LIMIT: 1Gi
+   KUBERNETES_CPU_REQUEST: "3"
+   KUBERNETES_CPU_LIMIT: "5"
+   KUBERNETES_MEMORY_REQUEST: "2Gi"
+   KUBERNETES_MEMORY_LIMIT: "4Gi"
+   KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "512Mi"
+   KUBERNETES_EPHEMERAL_STORAGE_LIMIT: "1Gi"
 
-   KUBERNETES_HELPER_CPU_REQUEST: 3
-   KUBERNETES_HELPER_CPU_LIMIT: 5
-   KUBERNETES_HELPER_MEMORY_REQUEST: 2Gi
-   KUBERNETES_HELPER_MEMORY_LIMIT: 4Gi
-   KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST: 512Mi
-   KUBERNETES_HELPER_EPHEMERAL_STORAGE_LIMIT: 1Gi
+   KUBERNETES_HELPER_CPU_REQUEST: "3"
+   KUBERNETES_HELPER_CPU_LIMIT: "5"
+   KUBERNETES_HELPER_MEMORY_REQUEST: "2Gi"
+   KUBERNETES_HELPER_MEMORY_LIMIT: "4Gi"
+   KUBERNETES_HELPER_EPHEMERAL_STORAGE_REQUEST: "512Mi"
+   KUBERNETES_HELPER_EPHEMERAL_STORAGE_LIMIT: "1Gi"
 
-   KUBERNETES_SERVICE_CPU_REQUEST: 3
-   KUBERNETES_SERVICE_CPU_LIMIT: 5
-   KUBERNETES_SERVICE_MEMORY_REQUEST: 2Gi
-   KUBERNETES_SERVICE_MEMORY_LIMIT: 4Gi
-   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST: 512Mi
-   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT: 1Gi
+   KUBERNETES_SERVICE_CPU_REQUEST: "3"
+   KUBERNETES_SERVICE_CPU_LIMIT: "5"
+   KUBERNETES_SERVICE_MEMORY_REQUEST: "2Gi"
+   KUBERNETES_SERVICE_MEMORY_LIMIT: "4Gi"
+   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST: "512Mi"
+   KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT: "1Gi"
 ```
 
 The values for these variables are restricted to the [max overwrite](#the-available-configtoml-settings)
@@ -561,7 +565,7 @@ to volume's mount path) where _secret's_ value should be saved. When using `item
 
 ### Mounting volumes on service containers
 
-Volumes defined for the build container are also automatically mounted for all services containers. This can be, for example, leveraged to mount database storage in RAM to speed up tests, as an alternative to [services_tmpfs](docker.md#mounting-a-directory-in-ram) which is only available to the Docker executor.
+Volumes defined for the build container are also automatically mounted for all services containers. This can be, for example, leveraged to mount database storage in RAM to speed up tests, as an alternative to [services_tmpfs](docker.md#mount-a-directory-in-ram) which is only available to the Docker executor.
 
 Here is an example configuration:
 
@@ -1494,4 +1498,41 @@ This issue happens when the worker node IAM role does not have the permission to
     },
     "Action": "sts:AssumeRole"
 }
+```
+
+### Preparation failed: failed to pull image 'image-name:latest': pull_policy ([Always]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([])
+
+This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](#restrict-docker-pull-policies).
+
+## Restrict access to job variables
+
+When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
+
+- ConfigMap - [There is an ongoing MR to change this](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3751)
+- Pod's environment section
+
+To restrict access to job variable data, you should use role-based access control (RBAC) so that only GitLab administrators have access to the namespace used by the GitLab Runner.
+
+If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the type of access users have in the GitLab Runner namespace:
+
+- For `pods` and `configmaps`:
+  - `get`
+  - `watch`
+  - `list`
+- For `pods/exec` and `pods/attach`, use `create`.
+
+Example RBAC definition for authorized users:
+
+```yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: gitlab-runner-authorized-users
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "pods"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["pods/exec", "pods/attach"]
+  verbs: ["create"]
 ```

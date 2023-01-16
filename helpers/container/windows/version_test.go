@@ -40,6 +40,11 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
+			operatingSystem: "Microsoft Windows Server Version 21H2 (OS Build 20348.169)",
+			expectedVersion: V21H2,
+			expectedErr:     nil,
+		},
+		{
 			operatingSystem: "10.0.17763",
 			expectedVersion: V1809,
 			expectedErr:     nil,

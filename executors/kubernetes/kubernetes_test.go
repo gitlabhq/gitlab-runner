@@ -1684,7 +1684,19 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: defaultOverwrites,
+				configurationOverwrites: &overwrites{
+					namespace: "default",
+					nodeSelector: map[string]string{
+						api.LabelArchStable: "arm64",
+						api.LabelOSStable:   "linux",
+					},
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 				helperImageInfo: helperimage.Info{
 					OSType:                  "linux",
 					Architecture:            "arm64",
@@ -1708,6 +1720,7 @@ func TestPrepare(t *testing.T) {
 							nodeSelectorWindowsBuildLabel: "10.0.19041",
 						},
 					},
+					Shell: "pwsh",
 				},
 			},
 			Build: &common.Build{
@@ -1724,7 +1737,20 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: defaultOverwrites,
+				configurationOverwrites: &overwrites{
+					namespace: "default",
+					nodeSelector: map[string]string{
+						api.LabelArchStable:           "amd64",
+						api.LabelOSStable:             "windows",
+						nodeSelectorWindowsBuildLabel: "10.0.19041",
+					},
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
 				helperImageInfo: helperimage.Info{
 					OSType:                  "windows",
 					Architecture:            "x86_64",
@@ -1732,7 +1758,7 @@ func TestPrepare(t *testing.T) {
 					Tag:                     fmt.Sprintf("x86_64-%s-servercore2004", helperImageTag),
 					IsSupportingLocalImport: false,
 					Cmd: []string{
-						"powershell",
+						"pwsh",
 						"-NoProfile",
 						"-NoLogo",
 						"-InputFormat",
@@ -1742,8 +1768,9 @@ func TestPrepare(t *testing.T) {
 						"-NonInteractive",
 						"-ExecutionPolicy",
 						"Bypass",
-						"-Command",
-						"-",
+						"-EncodedCommand",
+						//nolint:lll
+						"JABPAHUAdABwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AEkAbgBwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AE8AdQB0AHAAdQB0AEUAbgBjAG8AZABpAG4AZwAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBUAGUAeAB0AC4AVQBUAEYAOABFAG4AYwBvAGQAaQBuAGcADQAKAHAAdwBzAGgAIAAtAEMAbwBtAG0AYQBuAGQAIAAtAA0ACgA=",
 					},
 				},
 			},
@@ -3063,6 +3090,34 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			Variables: []common.JobVariable{
 				{Key: "test", Value: "sometestvar"},
+			},
+		},
+		"overwrite pod labels": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						PodLabels: map[string]string{
+							"test":    "label",
+							"another": "label",
+							"var":     "$test",
+						},
+						PodLabelsOverwriteAllowed: "another.*",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"test":     "label",
+					"another":  "newlabel",
+					"var":      "sometestvar",
+					"another2": "sometestvar",
+					"pod":      pod.GenerateName,
+				}, pod.ObjectMeta.Labels)
+			},
+			Variables: []common.JobVariable{
+				{Key: "test", Value: "sometestvar"},
+				{Key: "KUBERNETES_POD_LABELS_1", Value: "another=newlabel"},
+				{Key: "KUBERNETES_POD_LABELS_2", Value: "another2=$test"},
 			},
 		},
 		"expands variables for pod annotations": {
@@ -4488,6 +4543,19 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "priority-1", pod.Spec.PriorityClassName)
 			},
 		},
+		"support setting Scheduler Name": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:     "default",
+						SchedulerName: "foobar",
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, "foobar", pod.Spec.SchedulerName)
+			},
+		},
 	}
 
 	for testName, test := range tests {
@@ -4578,7 +4646,7 @@ func TestSetupBuildPod(t *testing.T) {
 				Return(api.PullAlways, nil).
 				Maybe()
 
-			err = ex.prepareOverwrites(make(common.JobVariables, 0))
+			err = ex.prepareOverwrites(test.Variables)
 			assert.NoError(t, err, "error preparing overwrites")
 
 			if test.Credentials != nil {
@@ -4670,7 +4738,7 @@ func TestProcessLogs(t *testing.T) {
 			mockLogProcessor := new(mockLogProcessor)
 			defer mockLogProcessor.AssertExpectations(t)
 
-			tc.lineCh <- "line"
+			tc.lineCh <- "line\n"
 			mockLogProcessor.On("Process", mock.Anything).
 				Return((<-chan string)(tc.lineCh), (<-chan error)(tc.errCh)).
 				Once()
@@ -5782,7 +5850,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 
 				assert.Eventually(t, func() bool {
 					return assert.Contains(t, logs.String(), tt.wantLog)
-				}, time.Millisecond*500, time.Millisecond+100)
+				}, time.Second*1, time.Millisecond+100)
 			}
 		})
 	}

@@ -4,22 +4,42 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# The Docker executor **(FREE)**
+# Docker executor **(FREE)**
 
-GitLab Runner can use Docker to run jobs on user provided images. This is
-possible with the use of **Docker** executor.
+GitLab Runner uses the Docker executor to run jobs on Docker images.
 
-The **Docker** executor when used with GitLab CI, connects to [Docker Engine](https://www.docker.com/products/container-runtime/)
-and runs each build in a separate and isolated container using the predefined
-image that is [set up in `.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and in accordance in
-[`config.toml`](../commands/index.md#configuration-file).
+You can use the Docker executor to:
 
-That way you can have a simple and reproducible build environment that can also
-run on your workstation. The added benefit is that you can test all the
-commands that we will explore later from your shell, rather than having to test
-them on a dedicated CI server.
+- Maintain the same build environment for each job.
+- Use the same image to test commands locally without the requirement of running a job in the CI server.
 
-The following configurations are supported:
+The Docker executor uses [Docker Engine](https://www.docker.com/products/container-runtime/)
+to run each job in a separate and isolated container. To connect to Docker Engine, the executor uses:
+
+- The image and services you define in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html).
+- The configurations you define in [`config.toml`](../commands/index.md#configuration-file).
+
+## Docker executor workflow
+
+The Docker executor uses a special Docker image based on [Alpine Linux](https://alpinelinux.org/) that
+contains the tools to run the prepare, pre-job, and post-job steps. To view the definition of
+the special Docker image, see the [GitLab Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
+
+The Docker executor divides the job into several steps:
+
+1. **Prepare**: Creates and starts the [services](https://docs.gitlab.com/ee/ci/yaml/#services).
+1. **Pre-job**: Clones, restores [cache](https://docs.gitlab.com/ee/ci/yaml/#cache),
+   and downloads [artifacts](https://docs.gitlab.com/ee/ci/yaml/#artifacts) from previous
+   stages. Runs on a special Docker image.
+1. **Job**: Runs your build in the Docker image you configure for the runner.
+1. **Post-job**: Create cache, upload artifacts to GitLab. Runs on
+   a special Docker Image.
+
+## Supported configurations
+
+The Docker executor supports the following configurations.
+
+For known issues and additional requirements of Windows configurations, see [Use Windows containers](#use-windows-containers).
 
 | Runner is installed on:  | Executor is:     | Container is running: |
 |--------------------------|------------------|------------------------|
@@ -46,187 +66,145 @@ of Docker on a Linux server is `1.13.0`,
 [on Windows Server it needs to be more recent](#supported-docker-versions)
 to identify the Windows Server version.
 
-## Using Windows containers
+## Use the Docker executor
 
-> [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in GitLab Runner 11.11.
+To use the Docker executor, define Docker as the executor in `config.toml`.
 
-To use Windows containers with the Docker executor, note the following
-information about limitations, supported Windows versions, and
-configuring a Windows Docker executor.
-
-### Nanoserver support
-
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2492) in GitLab Runner 13.6.
-
-With the support for Powershell Core introduced in the Windows helper image, it is now possible to leverage
-the `nanoserver` variants for the helper image.
-
-### Limitations of Docker executor on Windows
-
-The following are some limitations of using Windows containers with
-Docker executor:
-
-- Docker-in-Docker is not supported, since it's
-  [not supported](https://github.com/docker-library/docker/issues/49) by
-  Docker itself.
-- Interactive web terminals are not supported.
-- Host device mounting not supported.
-- When mounting a volume directory it has to exist, or Docker will fail
-  to start the container, see
-  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754) for
-  additional detail.
-- `docker-windows` executor can be run only using GitLab Runner running
-  on Windows.
-- [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
-  are not supported, since they are still experimental. Read
-  [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
-  more details.
-- Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
-  if the destination path drive letter is not `c:`, paths are not supported for:
-
-  - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
-  - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
-  - [`volumes`](../configuration/advanced-configuration.md#volumes-in-the-runnersdocker-section)
-
-  This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
-  However, if the destination path is on the `c:` drive, paths are also supported
-  (for example `c:\\cache_dir`).
-
-### Supported Windows versions
-
-GitLab Runner only supports the following versions of Windows which
-follows our [support lifecycle for Windows](../install/windows.md#windows-version-support-policy):
-
-- Windows Server 21H1/LTSC2022.
-- Windows Server 20H2.
-- Windows Server 2004.
-- Windows Server 1809.
-
-For future Windows Server versions, we have a
-[future version support policy](../install/windows.md#windows-version-support-policy).
-
-You can only run containers based on the same OS version that the Docker
-daemon is running on. For example, the following [`Windows Server Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
-be used:
-
-- `mcr.microsoft.com/windows/servercore:ltsc2022`
-- `mcr.microsoft.com/windows/servercore:ltsc2022-amd64`
-- `mcr.microsoft.com/windows/servercore:20H2`
-- `mcr.microsoft.com/windows/servercore:20H2-amd64`
-- `mcr.microsoft.com/windows/servercore:2004`
-- `mcr.microsoft.com/windows/servercore:2004-amd64`
-- `mcr.microsoft.com/windows/servercore:1809`
-- `mcr.microsoft.com/windows/servercore:1809-amd64`
-- `mcr.microsoft.com/windows/servercore:ltsc2019`
-
-### Supported Docker versions
-
-A Windows Server running GitLab Runner must be running a recent version of Docker
-because GitLab Runner uses Docker to detect what version of Windows Server is running.
-
-A known version of Docker that doesn't work with GitLab Runner is `Docker 17.06`
-since Docker does not identify the version of Windows Server resulting in the
-following error:
-
-```plaintext
-unsupported Windows Version: Windows Server Datacenter
-```
-
-[Read more about troubleshooting this](../install/windows.md#docker-executor-unsupported-windows-version).
-
-### Configuring a Windows Docker executor
-
-NOTE:
-When a runner is registered with `c:\\cache`
-as a source directory when passing the `--docker-volumes` or
-`DOCKER_VOLUMES` environment variable, there is a
-[known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312).
-
-Below is an example of the configuration for a simple Docker
-executor running Windows.
+The following sample shows Docker defined as the executor and example
+configurations. For more information about these values, see [Advanced configuration](../configuration/advanced-configuration.md)
 
 ```toml
+concurrent = 4
+
 [[runners]]
-  name = "windows-docker-2019"
-  url = "https://gitlab.com/"
-  token = "xxxxxxx"
-  executor = "docker-windows"
-  [runners.docker]
-    image = "mcr.microsoft.com/windows/servercore:1809_amd64"
-    volumes = ["c:\\cache"]
+name = "myRunner"
+url = "https://gitlab.com/ci"
+token = "......"
+executor = "docker"
+[runners.docker]
+  tls_verify = true
+  image = "my.registry.tld:5000/alpine:latest"
+  privileged = false
+  disable_entrypoint_overwrite = false
+  oom_kill_disable = false
+  disable_cache = false
+  volumes = [
+    "/cache",
+  ]
+  shm_size = 0
+  allowed_pull_policies = ["always", "if-not-present"]
+  allowed_images = ["my.registry.tld:5000/*:*"]
+  allowed_services = ["my.registry.tld:5000/*:*"]
+  [runners.docker.volume_driver_ops]
+    "size" = "50G"
 ```
 
-For other configuration options for the Docker executor, see the
-[advanced configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
-section.
+## Configure images and services
 
-### Services
+Prerequisites:
 
-In [GitLab Runner 12.9 and later](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042),
-you can use [services](https://docs.gitlab.com/ee/ci/services/) by
-enabling [a network for each job](#create-a-network-for-each-job).
+- The image where your job runs must have a working shell in its operating system `PATH`. Supported shells are:
+  - For Linux:
+    - `sh`
+    - `bash`
+    - Powershell Core (`pwsh`). [Introduced in 13.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4021).
+  - For Windows:
+    - PowerShell (`powershell`)
+    - Powershell Core (`pwsh`). [Introduced in 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139).
 
-## Workflow
+To configure the Docker executor, you define the Docker images and services in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and [`config.toml`](../commands/index.md#configuration-file).
 
-The Docker executor divides the job into multiple steps:
+Use the following keywords:
 
-1. **Prepare**: Create and start the [services](https://docs.gitlab.com/ee/ci/yaml/#services).
-1. **Pre-job**: Clone, restore [cache](https://docs.gitlab.com/ee/ci/yaml/#cache)
-   and download [artifacts](https://docs.gitlab.com/ee/ci/yaml/#artifacts) from previous
-   stages. This is run on a special Docker image.
-1. **Job**: User build. This is run on the user-provided Docker image.
-1. **Post-job**: Create cache, upload artifacts to GitLab. This is run on
-   a special Docker Image.
+- `image`: The name of the Docker image that the runner uses to run jobs.
+  - Enter an image from the local Docker Engine, or any image in
+  Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/get-started/overview/).
+  - To define the image version, use a colon (`:`) to add a tag. If you don't specify a tag,
+   Docker uses `latest` as the version.
+- `services`: The additional image that creates another container and links to the `image`. For more information about types of services, see [Services](https://docs.gitlab.com/ee/ci/services/).
 
-The special Docker image is based on [Alpine Linux](https://alpinelinux.org/) and contains all the tools
-required to run the prepare, pre-job, and post-job steps, like the Git and the
-GitLab Runner binaries for supporting caching and artifacts. You can find the definition of
-this special image [in the official GitLab Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
+### Define images and services in `.gitlab-ci.yml`
 
-## The `image` keyword
+Define an image that the runner uses for all jobs and a list of
+services to use during build time.
 
-The `image` keyword is the name of the Docker image that is present in the
-local Docker Engine (list all images with `docker images`) or any image that
-can be found at [Docker Hub](https://hub.docker.com/). For more information about images and Docker
-Hub please read the [Docker overview](https://docs.docker.com/get-started/overview/) documentation.
+Example:
 
-In short, with `image` we refer to the Docker image, which will be used to
-create a container on which your build will run.
+```yaml
+image: ruby:2.7
 
-If you don't specify the namespace, Docker implies `library` which includes all
-[official images](https://hub.docker.com/u/library/). That's why you'll see
-many times the `library` part omitted in `.gitlab-ci.yml` and `config.toml`.
-For example you can define an image like `image: ruby:2.7`, which is a shortcut
-for `image: library/ruby:2.7`.
+services:
+  - postgres:9.3
 
-Then, for each Docker image there are tags, denoting the version of the image.
-These are defined with a colon (`:`) after the image name. For example, for
-Ruby you can see the supported tags at <https://hub.docker.com/_/ruby/>. If you
-don't specify a tag (like `image: ruby`), `latest` is implied.
+before_script:
+  - bundle install
 
-The image you choose to run your build in via `image` directive must have a
-working shell in its operating system `PATH`. Supported shells are `sh`,
-`bash`, and `pwsh` ([since 13.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4021))
-for Linux, and PowerShell for Windows.
-GitLab Runner cannot execute a command using the underlying OS system calls
-(such as `exec`).
+test:
+  script:
+  - bundle exec rake spec
+```
 
-## The `services` keyword
+To define different images and services per job:
 
-The `services` keyword defines just another Docker image that is run during
-your build and is linked to the Docker image that the `image` keyword defines.
-This allows you to access the service image during build time.
+```yaml
+before_script:
+  - bundle install
 
-The service image can run any application, but the most common use case is to
-run a database container, e.g., `mysql`. It's easier and faster to use an
-existing image and run it as an additional container than install `mysql` every
-time the project is built.
+test:2.6:
+  image: ruby:2.6
+  services:
+  - postgres:9.3
+  script:
+  - bundle exec rake spec
 
-You can see some widely used services examples in the relevant documentation of
-[CI services examples](https://docs.gitlab.com/ee/ci/services/).
+test:2.7:
+  image: ruby:2.7
+  services:
+  - postgres:9.4
+  script:
+  - bundle exec rake spec
+```
 
-If needed, you can [assign an alias](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services)
-to each service.
+If you don't define an `image` in `.gitlab-ci.yml`, the runner uses the `image` defined in `config.toml`.
+
+### Define images and services in `config.toml`
+
+To add images and services to all jobs run by a runner, update `[runners.docker]` in the `config.toml`.
+If you don't define an `image` in `.gitlab-ci.yml`, the runner uses the image defined in `config.toml`.
+
+Example:
+
+```toml
+[runners.docker]
+  image = "ruby:2.7"
+
+[[runners.docker.services]]
+  name = "mysql:latest"
+  alias = "db"
+
+[[runners.docker.services]]
+  name = "redis:latest"
+  alias = "cache"
+```
+
+This example uses the [array of tables syntax](https://toml.io/en/v0.4.0#array-of-tables).
+
+### Define an image from a private registry
+
+Prerequisites:
+
+- To access images from a private registry, you must [authenticate GitLab Runner](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#access-an-image-from-a-private-container-registry).
+
+To define an image from a private registry, provide the registry name and the image in `.gitlab-ci.yml`.
+
+Example:
+
+```yaml
+image: my.registry.tld:5000/namepace/image:tag
+```
+
+In this example, GitLab Runner searches the registry `my.registry.tld:5000` for the
+image `namespace/image:tag`.
 
 ## Networking
 
@@ -292,87 +270,7 @@ To enable IPv6 support for this network, set `enable_ipv6` to `true` inside the 
 This feature works only when the Docker daemon is configured with IPv6 enabled.
 To enable IPv6 support on your host, see the [Docker documentation](https://docs.docker.com/config/daemon/ipv6/).
 
-## Define image and services from `.gitlab-ci.yml`
-
-You can simply define an image that will be used for all jobs and a list of
-services that you want to use during build time.
-
-```yaml
-image: ruby:2.7
-
-services:
-  - postgres:9.3
-
-before_script:
-  - bundle install
-
-test:
-  script:
-  - bundle exec rake spec
-```
-
-It is also possible to define different images and services per job:
-
-```yaml
-before_script:
-  - bundle install
-
-test:2.6:
-  image: ruby:2.6
-  services:
-  - postgres:9.3
-  script:
-  - bundle exec rake spec
-
-test:2.7:
-  image: ruby:2.7
-  services:
-  - postgres:9.4
-  script:
-  - bundle exec rake spec
-```
-
-## Define image and services in `config.toml`
-
-Look for the `[runners.docker]` section:
-
-```toml
-[runners.docker]
-  image = "ruby:2.7"
-
-[[runners.docker.services]]
-  name = "mysql:latest"
-  alias = "db"
-
-[[runners.docker.services]]
-  name = "redis:latest"
-  alias = "cache"
-```
-
-The example above uses the [array of tables syntax](https://toml.io/en/v0.4.0#array-of-tables).
-
-The image and services defined this way will be added to all builds run by
-that runner, so even if you don't define an `image` inside `.gitlab-ci.yml`,
-the one defined in `config.toml` will be used.
-
-## Define an image from a private Docker registry
-
-Starting with GitLab Runner 0.6.0, you are able to define images located to
-private registries that could also require authentication.
-
-All you have to do is be explicit on the image definition in `.gitlab-ci.yml`.
-
-```yaml
-image: my.registry.tld:5000/namepace/image:tag
-```
-
-In the example above, GitLab Runner will look at `my.registry.tld:5000` for the
-image `namespace/image:tag`.
-
-If the repository is private you need to authenticate your GitLab Runner in the
-registry. Read more on [using a private Docker registry](../configuration/advanced-configuration.md#use-a-private-container-registry).
-
-## Restricting Docker images and services
+## Restrict Docker images and services
 
 You can restrict the Docker images that can run your jobs.
 To do this, you specify wildcard patterns. For example, to allow images
@@ -400,32 +298,7 @@ Or, to restrict to a specific list of images from this registry:
     allowed_services = ["postgres:9.4", "postgres:latest"]
 ```
 
-## Restrict Docker pull policies
-
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
-
-In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how
-a CI/CD job should fetch images.
-
-To restrict which pull policies can be used in the `.gitlab-ci.yml` file, you can use `allowed_pull_policies`.
-
-For example, to allow only the `always` and `if-not-present` pull policies:
-
-```toml
-[[runners]]
-  (...)
-  executor = "docker"
-  [runners.docker]
-    (...)
-    allowed_pull_policies = ["always", "if-not-present"]
-```
-
-- If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
-- If you don't specify `pull_policy`, the default is `always`.
-- The existing [`pull_policy` keyword](../executors/docker.md#how-pull-policies-work) must not include a pull policy
-  that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
-
-## Accessing the services
+## Access the services
 
 Let's say that you need a Wordpress instance to test some API integration with
 your application.
@@ -469,7 +342,7 @@ All variables are passed to all services containers. It's not designed to
 distinguish which variable should go where.
 Secure variables are only passed to the build container.
 
-## Mounting a directory in RAM
+## Mount a directory in RAM
 
 You can mount a path in RAM using tmpfs. This can speed up the time required to test if there is a lot of I/O related work, such as with databases.
 If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
@@ -598,6 +471,12 @@ If you make the `/builds` directory **a host-bound storage**, your builds will b
 - `<concurrent-id>` is a unique number, identifying the local job ID on the
   particular runner in context of the project
 
+## IPC mode
+
+The Docker executor supports sharing the IPC namespace of containers with other
+locations. This maps to the `docker run --ipc` flag.
+More details on [IPC settings in Docker documentation](https://docs.docker.com/engine/reference/run/#ipc-settings---ipc)
+
 ## The privileged mode
 
 The Docker executor supports a number of options that allows fine-tuning of the
@@ -693,9 +572,6 @@ Consider the following example:
      - Dummy Script
    ```
 
-This is just one of the examples. With this approach the possibilities are
-limitless.
-
 ## Use Podman to run Docker commands
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27119) in GitLab 15.3.
@@ -708,7 +584,8 @@ Prerequisites:
 - To run [services](#services) with Podman as an executor, enable the
   [`FF_NETWORK_PER_BUILD` feature flag](#create-a-network-for-each-job).
   [Docker container links](https://docs.docker.com/network/links/) are legacy
-  and are not supported by [Podman](https://podman.io/).
+  and are not supported by [Podman](https://podman.io/). For services that
+  create a network alias, you must install the `podman-plugins` package.
 
 1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
    by using your system's package manager, it automatically creates a `gitlab-runner` user.
@@ -810,182 +687,174 @@ build:
   - whoami   # www
 ```
 
-## How pull policies work
+## Configure how runners pull images
 
-When using the `docker` or `docker+machine` executors, you can set the
-`pull_policy` parameter in the runner `config.toml` file as described in the configuration docs'
-[Docker section](../configuration/advanced-configuration.md#the-runnersdocker-section).
+Configure the pull policy in the `config.toml` to define how runners pull Docker images from registries. You can set a single policy, [a list of policies](#set-multiple-pull-policies), or [allow specific pull policies](#allow-docker-pull-policies).
 
-This parameter defines how the runner works when pulling Docker images (for both `image` and `services` keywords).
-You can set it to a single value, or a list of pull policies, which will be attempted in order
-until an image is pulled successfully.
+Use the following values for the `pull_policy`:
 
-If you don't set any value for the `pull_policy` parameter, then
-the runner will use the `always` pull policy as the default value.
+- [`always`](#set-the-always-pull-policy): Pull an image even if a local image exists. Default.
+- [`if-not-present`](#set-the-if-not-present-pull-policy): Pull an image only when a local version does not exist.
+- [`never`](#set-the-never-pull-policy): Never pull an image and use only local images.
 
-Now let's see how these policies work.
-
-### Using the `never` pull policy
-
-The `never` pull policy disables images pulling completely. If you set the
-`pull_policy` parameter of a runner to `never`, then users will be able
-to use only the images that have been manually pulled on the Docker host
-the runner runs on.
-
-If an image cannot be found locally, then the runner will fail the build
-with an error similar to:
-
-```plaintext
-Pulling docker image local_image:latest ...
-ERROR: Build failed: Error: image local_image:latest not found
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "always" # available: always, if-not-present, never
 ```
 
-#### When to use the `never` pull policy
+### Set the `always` pull policy
 
-The `never` pull policy should be used if you want or need to have a full
-control on which images are used by the runner's users. It is a good choice
-for private runners that are dedicated to a project where only specific images
-can be used (not publicly available on any registries).
+When you set the pull policy to `always`, the runner always pulls an image from a registry
+even if a local image exists. The `always` pull policy is the default setting.
 
-#### When not to use the `never` pull policy
+Use this pull policy if:
 
-The `never` pull policy will not work properly with most of [auto-scaled](../configuration/autoscale.md)
-Docker executor use cases. Because of how auto-scaling works, the `never`
-pull policy may be usable only when using a pre-defined cloud instance
-images for chosen cloud provider. The image needs to contain installed
-Docker Engine and local copy of used images.
+- Runners must always pull the most recent images.
+- Runners are publicly available and configured for [auto-scale](../configuration/autoscale.md) or as
+  a shared runner in your GitLab instance.
 
-### Using the `if-not-present` pull policy
+**Do not use** this policy if runners must use locally stored images.
 
-When the `if-not-present` pull policy is used, the runner will first check
-if the image is present locally. If it is, then the local version of
-image will be used. Otherwise, the runner will try to pull the image.
+Set `always` as the `pull policy` in the `config.toml`:
 
-#### When to use the `if-not-present` pull policy
-
-The `if-not-present` pull policy is a good choice if you want to use images pulled from
-remote registries, but you want to reduce time spent on analyzing image
-layers difference when using heavy and rarely updated images.
-In that case, you will need once in a while to manually remove the image
-from the local Docker Engine store to force the update of the image.
-
-It is also the good choice if you need to use images that are built
-and available only locally, but on the other hand, also need to allow to
-pull images from remote registries.
-
-#### When not to use the `if-not-present` pull policy
-
-The `if-not-present` pull policy should not be used if your builds use images that
-are updated frequently and need to be used in most recent versions.
-In such a situation, the network load reduction created by this policy may
-be less worthy than the necessity of the very frequent deletion of local
-copies of images.
-
-This pull policy should also not be used if your runner can be used by
-different users which should not have access to private images used
-by each other. Especially do not use this pull policy for shared runners.
-
-To understand why the `if-not-present` pull policy creates security issues
-when used with private images, read the
-[security considerations documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
-
-### Using the `always` pull policy
-
-The `always` pull policy will ensure that the image is **always** pulled.
-When `always` is used, the runner will try to pull the image even if a local
-copy is available. The [caching semantics](https://kubernetes.io/docs/concepts/configuration/overview/#container-images)
-of the underlying image provider make this policy efficient.
-The pull attempt is fast because all image layers are cached.
-
-If the image is not found, then the build will fail with an error similar to:
-
-```plaintext
-Pulling docker image registry.tld/my/image:latest ...
-ERROR: Build failed: Error: image registry.tld/my/image:latest not found
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "always"
 ```
 
-When using the `always` pull policy in GitLab Runner versions older than `v1.8`, it could
-fall back to the local copy of an image and print a warning:
+### Set the `if-not-present` pull policy
 
-```plaintext
-Pulling docker image registry.tld/my/image:latest ...
-WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found
-WARNING: Locally found image will be used instead.
+When you set the pull policy to `if-not-present`, the runner first checks
+if a local image exists. If there is no local image, the runner pulls
+an image from the registry.
+
+Use the `if-not-present` policy to:
+
+- Use local images but also pull images if a local image does not exist.
+- Reduce time that runners analyze the difference in image layers for heavy and rarely updated images.
+  In this case, you must manually remove the image regularly from the local Docker Engine store to
+  force the image update.
+
+**Do not use** this policy:
+
+- For shared runners where different users that use the runner may have access to private images.
+  For more information about security issues, see
+  [Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+- If your jobs use images that are updated frequently and must run with the most recent image
+  version. This may result in a network load reduction that outweighs the value of frequent deletion
+  of local images.
+
+Set the `if-not-present` policy in the `config.toml`:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "if-not-present"
 ```
 
-This was [changed in GitLab Runner `v1.8`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).
+### Set the `never` pull policy
 
-#### When to use the `always` pull policy
+Prerequisites:
 
-The `always` pull policy should be used if your runner is publicly available
-and configured as a shared runner in your GitLab instance. It is the
-only pull policy that can be considered as secure when the runner will
-be used with private images.
+- Local images must contain an installed Docker Engine and a local copy of used images.
 
-This is also a good choice if you want to force users to always use
-the newest images.
+When you set the pull policy to `never`, image pulling is disabled. Users can only use images
+that have been manually pulled on the Docker host where the runner runs.
 
-Also, this will be the best solution for an [auto-scaled](../configuration/autoscale.md)
-configuration of the runner.
+Use the `never` pull policy:
 
-#### When not to use the `always` pull policy
+- To control the images used by runner users.
+- For private runners that are dedicated to a project that can only use specific images
+that are not publicly available on any registries.
 
-The `always` pull policy will definitely not work if you need to use locally
-stored images. In this case, the runner will skip the local copy of the image
-and try to pull it from the remote registry. If the image was built locally
-and doesn't exist in any public registry (and especially in the default
-Docker registry), the build will fail with:
+**Do not use** the `never` pull policy for [auto-scaled](../configuration/autoscale.md)
+Docker executors. The `never` pull policy is usable only when using a pre-defined cloud instance
+images for chosen cloud provider.
 
-```plaintext
-Pulling docker image local_image:latest ...
-ERROR: Build failed: Error: image local_image:latest not found
+Set the `never` policy in the `config.toml`:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = "if-not-present"
 ```
 
-### Using multiple pull policies
+### Set multiple pull policies
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26558) in GitLab Runner 13.8.
 
-The `pull_policy` parameter allows you to specify a list of pull policies.
-The policies in the list will be attempted in order from left to right until a pull attempt
-is successful, or the list is exhausted.
+You can list multiple pull policies to execute if a pull fails. The runner processes pull policies
+in the order listed until a pull attempt is successful or the list is exhausted. For example, if a
+runner uses the `always` pull policy and the registry is not available, you can add the `if-not-present`
+as a second pull policy to use a locally cached Docker image.
 
-This functionality can be useful when the Docker registry is not available
-and you need to increase job resiliency.
-If you use the `always` policy and the registry is not available, the job fails even if the desired image is cached locally.
+For information about the security implications of this pull policy, see
+[Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 
-To overcome that behavior, you can add additional fallback pull policies
-that execute in case of failure.
-By adding a second pull policy value of `if-not-present`, the runner finds any locally-cached Docker image layers:
+To set multiple pull policies, add them as a list in the `config.toml`:
 
 ```toml
-[runners.docker]
-  pull_policy = ["always", "if-not-present"]
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    pull_policy = ["always", "if-not-present"]
 ```
 
-**Any** failure to fetch the Docker image causes the runner to attempt the following pull policy.
-Examples include an `HTTP 403 Forbidden` or an `HTTP 500 Internal Server Error` response from the repository.
+### Allow Docker pull policies
 
-Note that the security implications mentioned in the `When not to use this pull policy?` sub-section of the
-[Using the if-not-present pull policy](#using-the-if-not-present-pull-policy) section still apply,
-so you should be aware of the security implications and read the
-[security considerations documentation](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26753) in GitLab 15.1.
 
-```plaintext
-Using Docker executor with image alpine:latest ...
-Pulling docker image alpine:latest ...
-WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s)
-Attempt #2: Trying "if-not-present" pull policy
-Using locally found image version due to "if-not-present" pull policy
+In the `.gitlab-ci.yml` file, you can specify a pull policy. This policy determines how a CI/CD job
+fetches images.
+
+To restrict which pull policies can be used in the `.gitlab-ci.yml` file, use `allowed_pull_policies`.
+
+For example, to allow only the `always` and `if-not-present` pull policies, add them to the `config.toml`:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    (...)
+    allowed_pull_policies = ["always", "if-not-present"]
 ```
 
-## Retrying a failed pull
+- If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
+- If you don't specify `pull_policy`, the default is `always`.
+- The existing [`pull_policy` keyword](../executors/docker.md#configure-how-runners-pull-images) must not
+  include a pull policy that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
 
-You can specify the same policy again to configure a runner
-to retry a failed Docker pull.
+### Image pull error messages
 
-This is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci/yaml/#retry)
-in the `.gitlab-ci.yml` files of individual projects,
-but only takes effect if specifically the Docker pull fails initially.
+| Error message               | Description                  |
+|-----------------------------|------------------------------|
+| `Pulling docker image registry.tld/my/image:latest ... ERROR: Build failed: Error: image registry.tld/my/image:latest not found`  |  The runner cannot find the image. Displays when the `always` pull policy is set  |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found`   | The image was built locally and doesn't exist in any public or default Docker registry. Displays when the `always` pull policy is set.   |
+| `Pulling docker image registry.tld/my/image:latest ... WARNING: Cannot pull the latest version of image registry.tld/my/image:latest : Error: image registry.tld/my/image:latest not found WARNING: Locally found image will be used instead.` | The runner has used a local image instead of pulling an image. Displays when the `always` pull policy is set in only [GitLab Runner 1.8 and earlier](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1905).  |
+| `Pulling docker image local_image:latest ... ERROR: Build failed: Error: image local_image:latest not found` | The image cannot be found locally. Displays when the `never` pull policy is set. |
+| `WARNING: Failed to pull image with policy "always": Error response from daemon: received unexpected HTTP status: 502 Bad Gateway (docker.go:143:0s) Attempt #2: Trying "if-not-present" pull policy Using locally found image version due to "if-not-present" pull policy`| The runner failed to pull an image and attempts to pull an image by using the next listed pull policy. Displays when multiple pull policies are set. |
+
+## Retry a failed pull
+
+To configure a runner to retry a failed image pull, specify the same policy more than once in the
+`config.toml`.
 
 For example, this configuration retries the pull one time:
 
@@ -993,6 +862,10 @@ For example, this configuration retries the pull one time:
 [runners.docker]
   pull_policy = ["always", "always"]
 ```
+
+This setting is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci/yaml/#retry)
+in the `.gitlab-ci.yml` files of individual projects,
+but only takes effect if specifically the Docker pull fails initially.
 
 ## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
 
@@ -1009,3 +882,123 @@ Docker-SSH then connects to the SSH server that is running inside the container
 using its internal IP.
 
 This executor is no longer maintained and will be removed in the near future.
+
+## Use Windows containers
+
+> [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in GitLab Runner 11.11.
+
+To use Windows containers with the Docker executor, note the following
+information about limitations, supported Windows versions, and
+configuring a Windows Docker executor.
+
+### Nanoserver support
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2492) in GitLab Runner 13.6.
+
+With the support for Powershell Core introduced in the Windows helper image, it is now possible to leverage
+the `nanoserver` variants for the helper image.
+
+### Limitations of Docker executor on Windows
+
+The following are some limitations of using Windows containers with
+Docker executor:
+
+- Docker-in-Docker is not supported, since it's
+  [not supported](https://github.com/docker-library/docker/issues/49) by
+  Docker itself.
+- Interactive web terminals are not supported.
+- Host device mounting not supported.
+- When mounting a volume directory it has to exist, or Docker will fail
+  to start the container, see
+  [#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754) for
+  additional detail.
+- `docker-windows` executor can be run only using GitLab Runner running
+  on Windows.
+- [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
+  are not supported, since they are still experimental. Read
+  [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
+  more details.
+- Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
+  if the destination path drive letter is not `c:`, paths are not supported for:
+
+  - [`builds_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`cache_dir`](../configuration/advanced-configuration.md#the-runners-section)
+  - [`volumes`](../configuration/advanced-configuration.md#volumes-in-the-runnersdocker-section)
+
+  This means values such as `f:\\cache_dir` are not supported, but `f:` is supported.
+  However, if the destination path is on the `c:` drive, paths are also supported
+  (for example `c:\\cache_dir`).
+
+### Supported Windows versions
+
+GitLab Runner only supports the following versions of Windows which
+follows our [support lifecycle for Windows](../install/windows.md#windows-version-support-policy):
+
+- Windows Server 21H1/LTSC2022.
+- Windows Server 20H2.
+- Windows Server 2004.
+- Windows Server 1809.
+
+For future Windows Server versions, we have a
+[future version support policy](../install/windows.md#windows-version-support-policy).
+
+You can only run containers based on the same OS version that the Docker
+daemon is running on. For example, the following [`Windows Server Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
+be used:
+
+- `mcr.microsoft.com/windows/servercore:ltsc2022`
+- `mcr.microsoft.com/windows/servercore:ltsc2022-amd64`
+- `mcr.microsoft.com/windows/servercore:20H2`
+- `mcr.microsoft.com/windows/servercore:20H2-amd64`
+- `mcr.microsoft.com/windows/servercore:2004`
+- `mcr.microsoft.com/windows/servercore:2004-amd64`
+- `mcr.microsoft.com/windows/servercore:1809`
+- `mcr.microsoft.com/windows/servercore:1809-amd64`
+- `mcr.microsoft.com/windows/servercore:ltsc2019`
+
+### Supported Docker versions
+
+A Windows Server running GitLab Runner must be running a recent version of Docker
+because GitLab Runner uses Docker to detect what version of Windows Server is running.
+
+A known version of Docker that doesn't work with GitLab Runner is `Docker 17.06`
+since Docker does not identify the version of Windows Server resulting in the
+following error:
+
+```plaintext
+unsupported Windows Version: Windows Server Datacenter
+```
+
+[Read more about troubleshooting this](../install/windows.md#docker-executor-unsupported-windows-version).
+
+### Configure a Windows Docker executor
+
+NOTE:
+When a runner is registered with `c:\\cache`
+as a source directory when passing the `--docker-volumes` or
+`DOCKER_VOLUMES` environment variable, there is a
+[known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312).
+
+Below is an example of the configuration for a simple Docker
+executor running Windows.
+
+```toml
+[[runners]]
+  name = "windows-docker-2019"
+  url = "https://gitlab.com/"
+  token = "xxxxxxx"
+  executor = "docker-windows"
+  [runners.docker]
+    image = "mcr.microsoft.com/windows/servercore:1809_amd64"
+    volumes = ["c:\\cache"]
+```
+
+For other configuration options for the Docker executor, see the
+[advanced configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
+section.
+
+### Services
+
+In [GitLab Runner 12.9 and later](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042),
+you can use [services](https://docs.gitlab.com/ee/ci/services/) by
+enabling [a network for each job](#create-a-network-for-each-job).

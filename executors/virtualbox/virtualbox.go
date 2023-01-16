@@ -133,7 +133,7 @@ func (s *executor) createVM(baseImage string) (err error) {
 	s.Debugln("Using local", s.sshPort, "SSH port to connect to VM...")
 
 	s.Debugln("Bootstraping VM...")
-	err = vbox.Start(s.vmName)
+	err = s.startVM()
 	if err != nil {
 		return err
 	}
@@ -246,6 +246,19 @@ func (s *executor) getVMName(baseName string) string {
 	)
 }
 
+func (s *executor) startVM() error {
+	s.Debugln("Starting VM...")
+	startType := s.Config.VirtualBox.StartType
+	if startType == "" {
+		startType = "headless"
+	}
+	err := vbox.Start(s.vmName, startType)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *executor) tryRestoreFromSnapshot() {
 	if !vbox.Exist(s.vmName) {
 		return
@@ -273,8 +286,7 @@ func (s *executor) ensureVMStarted() error {
 	}
 
 	if !vbox.IsStatusOnlineOrTransient(status) {
-		s.Println("Starting VM...")
-		err = vbox.Start(s.vmName)
+		err = s.startVM()
 		if err != nil {
 			return err
 		}

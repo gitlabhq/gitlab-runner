@@ -50,7 +50,7 @@ per job using the `GIT_CLONE_PATH`.
 1. If Windows VM, see [Checklist for Windows VMs](#checklist-for-windows-vms)
 1. Install the OpenSSH server
 1. Install all other dependencies required by your build
-1. If you want to upload job artifacts, install `gitlab-runner` inside the VM
+1. If you want to download or upload job artifacts, install `gitlab-runner` inside the VM
 1. Log out and shut down the virtual machine
 
 It's completely fine to use automation tools like Vagrant to provision the
@@ -100,9 +100,8 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 > [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3176) GitLab Runner 14.6.
 
 - Install [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2)
-- Install [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse)
+- Install and configure [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)
 - Install [Git For Windows](https://git-scm.com/)
-- Configure [`sshd`, set it up as a service and add a rule for the Windows firewall](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui#start-and-configure-openssh-server)
 - Configure the [default shell as `pwsh`](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_server_configuration#configuring-the-default-shell-for-openssh-in-windows). Update example with the correct full path:
 
   ```powershell

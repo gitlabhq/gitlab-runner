@@ -552,7 +552,7 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
-	if !mr.isHealthy(runner.UniqueID()) {
+	if !mr.isHealthy(runner) {
 		return
 	}
 
@@ -619,7 +619,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 		mr.log().
 			WithField("runner", runner.ShortDescription()).
 			Errorf("Executor %q is not known; marking Runner as unhealthy", runner.Executor)
-		mr.healthHelper.makeHealthy(runner.UniqueID(), false)
+		mr.healthHelper.markHealth(runner, false)
 
 		return nil
 	}
@@ -735,7 +735,7 @@ func (mr *RunCommand) requestJob(
 	defer mr.buildsHelper.releaseRequest(runner)
 
 	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
-	mr.makeHealthy(runner.UniqueID(), healthy)
+	mr.markHealth(runner, healthy)
 
 	if jobData == nil {
 		return nil, nil, nil
@@ -925,9 +925,10 @@ func (mr *RunCommand) Stop(_ service.Service) error {
 		return nil
 	}
 
+	//nolint:lll
 	mr.log().
 		WithError(err).
-		Warning("Graceful shutdown not finished properly")
+		Warning(`Graceful shutdown not finished properly. To gracefully clean up running plugins please use SIGQUIT (ctrl-\) instead of SIGINT (ctrl-c)`)
 
 	err = mr.handleForcefulShutdown()
 	if err == nil {
