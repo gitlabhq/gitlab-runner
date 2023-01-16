@@ -3136,10 +3136,67 @@ func TestSetupBuildPod(t *testing.T) {
 					"test":    "annotation",
 					"another": "annotation",
 					"var":     "sometestvar",
+
+					"gitlab-runner.gitlab.com/job_id":         "0",
+					"gitlab-runner.gitlab.com/job_url":        "/-/jobs/0",
+					"gitlab-runner.gitlab.com/job_sha":        "",
+					"gitlab-runner.gitlab.com/job_before_sha": "",
+					"gitlab-runner.gitlab.com/job_ref":        "",
+					"gitlab-runner.gitlab.com/job_name":       "",
+					"gitlab-runner.gitlab.com/job_stage":      "",
+					"gitlab-runner.gitlab.com/project_id":     "0",
+					"gitlab-runner.gitlab.com/managed":        "true",
 				}, pod.ObjectMeta.Annotations)
 			},
 			Variables: []common.JobVariable{
 				{Key: "test", Value: "sometestvar"},
+			},
+		},
+		"default pod annotations": {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"gitlab-runner.gitlab.com/job_id":         "0",
+					"gitlab-runner.gitlab.com/job_url":        "/-/jobs/0",
+					"gitlab-runner.gitlab.com/job_sha":        "",
+					"gitlab-runner.gitlab.com/job_before_sha": "",
+					"gitlab-runner.gitlab.com/job_ref":        "",
+					"gitlab-runner.gitlab.com/job_name":       "",
+					"gitlab-runner.gitlab.com/job_stage":      "",
+					"gitlab-runner.gitlab.com/project_id":     "0",
+					"gitlab-runner.gitlab.com/managed":        "true",
+				}, pod.ObjectMeta.Annotations)
+			},
+		},
+		"overwrite default pod annotations": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						PodAnnotations: map[string]string{
+							"gitlab-runner.gitlab.com/job_id":         "notARealJobID",
+							"gitlab-runner.gitlab.com/job_url":        "overwriteJobURL",
+							"gitlab-runner.gitlab.com/job_sha":        "overwriteJobSHA",
+							"gitlab-runner.gitlab.com/job_before_sha": "overwriteJobBeforeSHA",
+							"gitlab-runner.gitlab.com/job_ref":        "overwriteJobRef",
+							"gitlab-runner.gitlab.com/job_name":       "overwriteJobName",
+							"gitlab-runner.gitlab.com/job_stage":      "overwriteJobStage",
+							"gitlab-runner.gitlab.com/project_id":     "overwriteProjectID",
+							"gitlab-runner.gitlab.com/managed":        "overwriteManaged",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"gitlab-runner.gitlab.com/job_id":         "notARealJobID",
+					"gitlab-runner.gitlab.com/job_url":        "overwriteJobURL",
+					"gitlab-runner.gitlab.com/job_sha":        "overwriteJobSHA",
+					"gitlab-runner.gitlab.com/job_before_sha": "overwriteJobBeforeSHA",
+					"gitlab-runner.gitlab.com/job_ref":        "overwriteJobRef",
+					"gitlab-runner.gitlab.com/job_name":       "overwriteJobName",
+					"gitlab-runner.gitlab.com/job_stage":      "overwriteJobStage",
+					"gitlab-runner.gitlab.com/project_id":     "overwriteProjectID",
+					"gitlab-runner.gitlab.com/managed":        "overwriteManaged",
+				}, pod.ObjectMeta.Annotations)
 			},
 		},
 		"expands variables for helper image": {
