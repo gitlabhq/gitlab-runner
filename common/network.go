@@ -92,6 +92,7 @@ type FeaturesInfo struct {
 	Cancelable              bool `json:"cancelable"`
 	ReturnExitCode          bool `json:"return_exit_code"`
 	ServiceVariables        bool `json:"service_variables"`
+	ServiceMultipleAliases  bool `json:"service_multiple_aliases"`
 }
 
 type ConfigInfo struct {
@@ -237,6 +238,8 @@ type Image struct {
 	Variables    JobVariables       `json:"variables,omitempty"`
 	PullPolicies []DockerPullPolicy `json:"pull_policy,omitempty"`
 }
+
+func (i *Image) Aliases() []string { return strings.Fields(strings.ReplaceAll(i.Alias, ",", " ")) }
 
 type Port struct {
 	Number   int    `json:"number,omitempty"`

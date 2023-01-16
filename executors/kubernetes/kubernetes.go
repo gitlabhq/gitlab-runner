@@ -853,16 +853,18 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	}
 
 	if len(proxyPorts) > 0 {
-		serviceName := opts.imageDefinition.Alias
-
-		if serviceName == "" {
-			serviceName = opts.name
+		aliases := opts.imageDefinition.Aliases()
+		if len(aliases) == 0 {
 			if opts.name != buildContainerName {
-				serviceName = fmt.Sprintf("proxy-%s", opts.name)
+				aliases = []string{fmt.Sprintf("proxy-%s", opts.name)}
+			} else {
+				aliases = []string{opts.name}
 			}
 		}
 
-		s.ProxyPool[serviceName] = s.newProxy(serviceName, proxyPorts)
+		for _, serviceName := range aliases {
+			s.ProxyPool[serviceName] = s.newProxy(serviceName, proxyPorts)
+		}
 	}
 
 	pullPolicy, err := s.pullManager.GetPullPolicyFor(opts.image)
@@ -2015,7 +2017,7 @@ func (s *executor) captureContainersLogs(ctx context.Context, containers []api.C
 			if service.Name != container.Image {
 				continue
 			}
-			aliases := []string{strings.Split(container.Image, ":")[0], service.Alias}
+			aliases := append([]string{strings.Split(container.Image, ":")[0]}, service.Aliases()...)
 			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), s.Trace)
 			if err := s.captureContainerLogs(ctx, container.Name, sink); err != nil {
 				s.Warningln(err.Error())
@@ -2103,6 +2105,7 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Terminal = true
 	features.Proxy = true
 	features.ServiceVariables = true
+	features.ServiceMultipleAliases = true
 }
 
 func init() {

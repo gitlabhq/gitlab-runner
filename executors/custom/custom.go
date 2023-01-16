@@ -269,7 +269,7 @@ func (e *executor) getCIJobServicesEnv() common.JobVariable {
 	for _, service := range e.Build.Services {
 		services = append(services, jsonService{
 			Name:       service.Name,
-			Alias:      service.Alias,
+			Alias:      append(service.Aliases(), "")[0],
 			Entrypoint: service.Entrypoint,
 			Command:    service.Command,
 		})

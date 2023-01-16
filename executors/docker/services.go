@@ -113,9 +113,8 @@ func (e *executor) createFromServiceDefinition(
 	var container *types.Container
 
 	serviceMeta := services.SplitNameAndVersion(serviceDefinition.Name)
-
-	if serviceDefinition.Alias != "" {
-		serviceMeta.Aliases = append(serviceMeta.Aliases, serviceDefinition.Alias)
+	if len(serviceDefinition.Aliases()) != 0 {
+		serviceMeta.Aliases = append(serviceMeta.Aliases, serviceDefinition.Aliases()...)
 	}
 
 	for _, linkName := range serviceMeta.Aliases {

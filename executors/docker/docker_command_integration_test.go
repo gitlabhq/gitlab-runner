@@ -1166,6 +1166,45 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 	assert.NotContains(t, out, ":dataend")
 }
 
+func TestDockerHandlesAliasDuplicates(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	resp, err := common.GetRemoteBuildResponse("ping -c 1 alpine && ping -c 1 svc-1")
+	assert.NoError(t, err)
+
+	build := &common.Build{
+		JobResponse: resp,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker:   &common.DockerConfig{},
+			},
+		},
+	}
+
+	build.Image = common.Image{
+		Name: common.TestAlpineImage,
+	}
+
+	build.Services = append(build.Services, common.Image{
+		Name:    common.TestAlpineImage,
+		Command: []string{"sleep", "5"},
+		Alias:   "alpine alpine svc-1 svc-1",
+	})
+
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:    "FF_NETWORK_PER_BUILD",
+		Value:  "true",
+		Public: true,
+	})
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	assert.Contains(t, out, "PING alpine")
+	assert.Contains(t, out, "PING svc-1")
+}
+
 func runDockerInDocker(version string) (id string, err error) {
 	cmd := exec.Command("docker", "run", "--detach", "--privileged", "-p", "2375", "docker:"+version+"-dind")
 	cmd.Stderr = os.Stderr

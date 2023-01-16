@@ -13,12 +13,13 @@ import (
 type invalidHostAliasDNSError struct {
 	service common.Image
 	inner   error
+	alias   string
 }
 
 func (e *invalidHostAliasDNSError) Error() string {
 	return fmt.Sprintf(
 		"provided host alias %s for service %s is invalid DNS. %s",
-		e.service.Alias,
+		e.alias,
 		e.service.Name,
 		e.inner,
 	)
@@ -69,16 +70,14 @@ func createServicesHostAlias(srvs common.Services) (*api.HostAlias, error) {
 			}
 		}
 
-		if srv.Alias == "" {
-			continue
-		}
+		for _, alias := range srv.Aliases() {
+			err := dns.ValidateDNS1123Subdomain(alias)
+			if err != nil {
+				return nil, &invalidHostAliasDNSError{service: srv, inner: err, alias: alias}
+			}
 
-		err := dns.ValidateDNS1123Subdomain(srv.Alias)
-		if err != nil {
-			return nil, &invalidHostAliasDNSError{service: srv, inner: err}
+			hostnames = append(hostnames, alias)
 		}
-
-		hostnames = append(hostnames, srv.Alias)
 	}
 
 	// no service hostnames to add to aliases

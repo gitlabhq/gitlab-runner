@@ -69,6 +69,32 @@ job2:
   - service:2
 `
 
+var testFile3 = `
+image:
+  name: global:image
+  entrypoint: [/bin/sh]
+
+job1:
+  script: job1
+  services:
+  - name: service:1
+    command: ["sleep", "30"]
+    alias: service-1 service-1-alias
+`
+
+var testFile4 = `
+image:
+  name: global:image
+  entrypoint: [/bin/sh]
+
+job1:
+  script: job1
+  services:
+  - name: service:1
+    command: ["sleep", "30"]
+    alias: service-1 42
+`
+
 func prepareTestFile(t *testing.T, fileContent string) string {
 	file, err := os.CreateTemp("", "gitlab-ci-yml")
 	require.NoError(t, err)
@@ -78,7 +104,7 @@ func prepareTestFile(t *testing.T, fileContent string) string {
 	return file.Name()
 }
 
-func getJobResponse(t *testing.T, fileContent, jobName string, expectingError bool) *common.JobResponse {
+func getJobResponse(t *testing.T, fileContent, jobName string, expectingError string) *common.JobResponse {
 	file := prepareTestFile(t, fileContent)
 	defer os.Remove(file)
 
@@ -89,8 +115,9 @@ func getJobResponse(t *testing.T, fileContent, jobName string, expectingError bo
 
 	jobResponse := &common.JobResponse{}
 	err := parser.ParseYaml(jobResponse)
-	if expectingError {
+	if expectingError != "" {
 		assert.Error(t, err)
+		assert.Equal(t, err.Error(), expectingError)
 	} else {
 		assert.NoError(t, err)
 	}
@@ -100,7 +127,7 @@ func getJobResponse(t *testing.T, fileContent, jobName string, expectingError bo
 
 func TestFileParsing(t *testing.T) {
 	// file1 - job1
-	jobResponse := getJobResponse(t, testFile1, "job1", false)
+	jobResponse := getJobResponse(t, testFile1, "job1", "")
 	require.Len(t, jobResponse.Steps, 2)
 	assert.Contains(t, jobResponse.Steps[0].Script, "line 1")
 	assert.Contains(t, jobResponse.Steps[0].Script, "line 2")
@@ -117,16 +144,16 @@ func TestFileParsing(t *testing.T) {
 	assert.Empty(t, jobResponse.Services[1].Entrypoint)
 
 	// file1 - job2
-	jobResponse = getJobResponse(t, testFile1, "job2", false)
+	jobResponse = getJobResponse(t, testFile1, "job2", "")
 	require.Len(t, jobResponse.Steps, 2)
 	assert.Contains(t, jobResponse.Steps[0].Script, "test")
 	assert.Equal(t, "global:image", jobResponse.Image.Name)
 
 	// file1 - job3
-	_ = getJobResponse(t, testFile1, "job3", true)
+	_ = getJobResponse(t, testFile1, "job3", "missing 'script' for job")
 
 	// file1 - job4
-	jobResponse = getJobResponse(t, testFile1, "job4", false)
+	jobResponse = getJobResponse(t, testFile1, "job4", "")
 	assert.Equal(t, "alpine", jobResponse.Image.Name)
 	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Image.Entrypoint)
 	require.Len(t, jobResponse.Services, 2)
@@ -140,7 +167,7 @@ func TestFileParsing(t *testing.T) {
 	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Services[1].Entrypoint)
 
 	// file2 - job1
-	jobResponse = getJobResponse(t, testFile2, "job1", false)
+	jobResponse = getJobResponse(t, testFile2, "job1", "")
 	assert.Equal(t, "global:image", jobResponse.Image.Name)
 	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Image.Entrypoint)
 	require.Len(t, jobResponse.Services, 2)
@@ -154,7 +181,7 @@ func TestFileParsing(t *testing.T) {
 	assert.Equal(t, []string{"/bin/sh"}, jobResponse.Services[1].Entrypoint)
 
 	// file2 - job2
-	jobResponse = getJobResponse(t, testFile2, "job2", false)
+	jobResponse = getJobResponse(t, testFile2, "job2", "")
 	assert.Equal(t, "job2:image", jobResponse.Image.Name)
 	assert.Empty(t, jobResponse.Image.Entrypoint)
 	require.Len(t, jobResponse.Services, 2)
@@ -166,4 +193,20 @@ func TestFileParsing(t *testing.T) {
 	assert.Empty(t, jobResponse.Services[1].Alias)
 	assert.Empty(t, jobResponse.Services[1].Command)
 	assert.Empty(t, jobResponse.Services[1].Entrypoint)
+
+	// file3 - job1
+	jobResponse = getJobResponse(t, testFile3, "job1", "")
+	assert.Equal(t, "global:image", jobResponse.Image.Name)
+	require.Len(t, jobResponse.Services, 1)
+	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
+	assert.Equal(t, "service-1 service-1-alias", jobResponse.Services[0].Alias)
+	assert.Equal(t, []string{"service-1", "service-1-alias"}, jobResponse.Services[0].Aliases())
+
+	// file4 - job1
+	jobResponse = getJobResponse(t, testFile4, "job1", "")
+	assert.Equal(t, "global:image", jobResponse.Image.Name)
+	require.Len(t, jobResponse.Services, 1)
+	assert.Equal(t, "service:1", jobResponse.Services[0].Name)
+	assert.Equal(t, "service-1 42", jobResponse.Services[0].Alias)
+	assert.Equal(t, []string{"service-1", "42"}, jobResponse.Services[0].Aliases())
 }
