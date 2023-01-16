@@ -144,7 +144,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 		}
 	}
 
-	err := mr.loadConfig()
+	err := mr.reloadConfig()
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 	return true
 }
 
-func (mr *RunCommand) loadConfig() error {
+func (mr *RunCommand) reloadConfig() error {
 	err := mr.configOptions.loadConfig()
 	if err != nil {
 		return err
@@ -255,6 +255,12 @@ func (mr *RunCommand) loadConfig() error {
 	}
 
 	mr.configReloaded <- 1
+
+	// Save changes that could be rewritten when reloading the configuration
+	err = mr.saveConfig()
+	if err != nil {
+		mr.log().WithError(err).Errorln("Failed to save config")
+	}
 
 	return nil
 }
@@ -853,7 +859,7 @@ func (mr *RunCommand) updateConfig() os.Signal {
 		}
 
 	case <-mr.reloadSignal:
-		err := mr.loadConfig()
+		err := mr.reloadConfig()
 		if err != nil {
 			mr.log().Errorln("Failed to load config", err)
 		}
@@ -876,7 +882,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 		return nil
 	}
 
-	err = mr.loadConfig()
+	err = mr.reloadConfig()
 	if err != nil {
 		mr.log().Errorln("Failed to load config", err)
 		// don't reload the same file
