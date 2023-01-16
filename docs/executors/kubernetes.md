@@ -624,7 +624,7 @@ Assigning a security context to pods provides security to your Kubernetes cluste
 image that conforms to the policy you set here.
 
 NOTE:
-If no additional requirements other than `nonroot` environment is required, the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) images can be used in place of building own helper image.
+If you only require the `nonroot` environment, you can use the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) OpenShift (OCP) images instead of building your own helper image.
 One caveat is that the images are designed so that they can work with any user ID. It's important that this user ID is part of the root group.
 Being part of the root group doesn't give it any specific privileges.
 
@@ -633,9 +633,10 @@ Example of building your own helper image:
 
 ```Dockerfile
 ARG tag
-FROM gitlab/gitlab-runner-helper:${tag}
-RUN addgroup -g 59417 -S nonroot && \
-    adduser -u 59417 -S nonroot -G nonroot
+FROM registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:${tag}
+USER root
+RUN groupadd -g 59417 nonroot && \
+    useradd -u 59417 nonroot -g nonroot
 WORKDIR /home/nonroot
 USER 59417:59417
 ```
