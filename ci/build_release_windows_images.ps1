@@ -27,6 +27,12 @@ $InformationPreference = "Continue"
 # - $Env:IS_LATEST - When we want to tag current tag as the latest, this is usually
 #   used when we are tagging a release for the runner (which is not a patch
 #   release or RC)
+# - $Env:DOCKER_HUB_USER - The user we want to login with for docker hub.
+# - $Env:DOCKER_HUB_PASSWORD - The password we want to login with for docker hub.
+# - $Env:PUSH_TO_DOCKER_HUB - If set to true, it will login to the registry and
+#   push the tags.
+# - $Env:DOCKER_HUB_NAMESPACE - Usually empty and only set for development, to
+#   use your own namespace instead of `gitlab`.
 # - $Env:SKIP_CLEANUP - By default this PowerShell script will delete the image
 #   it just build.
 # - $Env:CI_REGISTRY_IMAGE - Image name to push to GitLab registry. Usually set
@@ -67,6 +73,22 @@ function Main
         }
 
         Disconnect-Registry $env:CI_REGISTRY
+    }
+
+    if ($Env:PUSH_TO_DOCKER_HUB -eq "true")
+    {
+        $namespace = DockerHub-Namespace
+
+        Connect-Registry $Env:DOCKER_HUB_USER $Env:DOCKER_HUB_PASSWORD
+        Push-Tag $namespace $tag
+        Push-As-Ref $namespace $tag
+
+        if ($Env:IS_LATEST -eq "true")
+        {
+            Push-As-Latest $namespace $tag
+        }
+
+        Disconnect-Registry
     }
 
     if ($Env:PUSH_TO_ECR_PUBLIC -eq "true")
@@ -129,6 +151,7 @@ function Build-Image($tag)
 {
     $windowsFlavor = $env:WINDOWS_VERSION.Substring(0, $env:WINDOWS_VERSION.length -4)
     $windowsVersion = $env:WINDOWS_VERSION.Substring($env:WINDOWS_VERSION.length -4)
+    $dockerHubNamespace = DockerHub-Namespace
     $ecrPublicRegistry = ECR-Public-Registry
 
     if ($windowsVersion -eq "21H1") {
@@ -154,6 +177,7 @@ function Build-Image($tag)
 
     $imageNames = @(
         '-t', "$Env:CI_REGISTRY_IMAGE/gitlab-runner-helper:$tag",
+        '-t', "$dockerHubNamespace/gitlab-runner-helper:$tag",
         '-t', "$ecrPublicRegistry/gitlab-runner-helper:$tag"
     )
 
@@ -243,6 +267,16 @@ function Disconnect-Registry($registry)
     }
 }
 
+function DockerHub-Namespace
+{
+    if(-not (Test-Path env:DOCKER_HUB_NAMESPACE))
+    {
+        return "gitlab"
+    }
+
+    return $Env:DOCKER_HUB_NAMESPACE
+}
+
 function ECR-Public-Registry
 {
     if(-not (Test-Path env:ECR_PUBLIC_REGISTRY))
@@ -268,10 +302,12 @@ Finally
     {
         Write-Information "Cleaning up the build image"
         $tag = Get-Tag
+        $dockerHubNamespace = DockerHub-Namespace
 
         # We don't really care if these fail or not, clean up shouldn't fail
         # the pipelines.
         & 'docker' rmi -f $Env:CI_REGISTRY_IMAGE/gitlab-runner-helper:$tag
+        & 'docker' rmi -f $dockerHubNamespace/gitlab-runner-helper:$tag
         & 'docker' image prune -f
     }
 }
