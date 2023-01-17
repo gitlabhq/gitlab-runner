@@ -61,7 +61,7 @@ const (
 
 	serviceContainerPrefix = "svc-"
 
-	k8sAnnotationPrefix = "gitlab-runner.gitlab.com/"
+	k8sAnnotationPrefix = "runner.gitlab.com/"
 )
 
 var (
@@ -1431,15 +1431,13 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 	}
 
 	annotations := map[string]string{
-		k8sAnnotationPrefix + "job_id":         strconv.FormatInt(s.Build.ID, 10),
-		k8sAnnotationPrefix + "job_url":        s.Build.JobURL(),
-		k8sAnnotationPrefix + "job_sha":        s.Build.GitInfo.Sha,
-		k8sAnnotationPrefix + "job_before_sha": s.Build.GitInfo.BeforeSha,
-		k8sAnnotationPrefix + "job_ref":        s.Build.GitInfo.Ref,
-		k8sAnnotationPrefix + "job_name":       s.Build.JobInfo.Name,
-		k8sAnnotationPrefix + "job_stage":      s.Build.JobInfo.Stage,
-		k8sAnnotationPrefix + "project_id":     strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
-		k8sAnnotationPrefix + "managed":        "true",
+		"job." + k8sAnnotationPrefix + "id":         strconv.FormatInt(s.Build.ID, 10),
+		"job." + k8sAnnotationPrefix + "url":        s.Build.JobURL(),
+		"job." + k8sAnnotationPrefix + "sha":        s.Build.GitInfo.Sha,
+		"job." + k8sAnnotationPrefix + "before_sha": s.Build.GitInfo.BeforeSha,
+		"job." + k8sAnnotationPrefix + "ref":        s.Build.GitInfo.Ref,
+		"job." + k8sAnnotationPrefix + "name":       s.Build.JobInfo.Name,
+		"project." + k8sAnnotationPrefix + "id":     strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
 	}
 	for key, val := range s.configurationOverwrites.podAnnotations {
 		annotations[key] = s.Build.Variables.ExpandValue(val)
