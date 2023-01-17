@@ -155,6 +155,7 @@ type VersionInfo struct {
 type JobRequest struct {
 	Info       VersionInfo  `json:"info,omitempty"`
 	Token      string       `json:"token,omitempty"`
+	SystemID   string       `json:"system_id,omitempty"`
 	LastUpdate string       `json:"last_update,omitempty"`
 	Session    *SessionInfo `json:"session,omitempty"`
 }
@@ -539,6 +540,7 @@ func (j *JobResponse) JobURL() string {
 type UpdateJobRequest struct {
 	Info          VersionInfo      `json:"info,omitempty"`
 	Token         string           `json:"token,omitempty"`
+	SystemID      string           `json:"system_id,omitempty"`
 	State         JobState         `json:"state,omitempty"`
 	FailureReason JobFailureReason `json:"failure_reason,omitempty"`
 	Checksum      string           `json:"checksum,omitempty"` // deprecated

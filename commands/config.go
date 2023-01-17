@@ -23,9 +23,8 @@ func getDefaultCertificateDirectory() string {
 }
 
 type configOptions struct {
-	configMutex   sync.Mutex
-	config        *common.Config
-	systemIDState *common.SystemIDState
+	configMutex sync.Mutex
+	config      *common.Config
 
 	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 }
@@ -69,7 +68,10 @@ func (c *configOptions) loadConfig() error {
 	}
 
 	c.config = config
-	c.systemIDState = systemIDState
+	for _, runnerCfg := range c.config.Runners {
+		runnerCfg.SystemIDState = systemIDState
+	}
+
 	return nil
 }
 

@@ -41,12 +41,15 @@ const (
 	registerRunnerResponseRunnerProjectsLimitHit
 )
 
+var systemIDState = NewSystemIDState()
+
 var brokenCredentials = RunnerCredentials{
 	URL: "broken",
 }
 
 var brokenConfig = RunnerConfig{
 	RunnerCredentials: brokenCredentials,
+	SystemIDState:     systemIDState,
 }
 
 func TestClients(t *testing.T) {
@@ -831,6 +834,8 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
+	assert.Equal(t, systemIDState.GetSystemID(), req["system_id"])
+
 	if r.Header.Get("Accept") != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -854,11 +859,14 @@ func TestRequestJob(t *testing.T) {
 	}))
 	defer s.Close()
 
+	require.NoError(t, systemIDState.EnsureSystemID())
+
 	validToken := RunnerConfig{
 		RunnerCredentials: RunnerCredentials{
 			URL:   s.URL,
 			Token: validToken,
 		},
+		SystemIDState: systemIDState,
 	}
 
 	noJobsToken := RunnerConfig{
@@ -866,6 +874,7 @@ func TestRequestJob(t *testing.T) {
 			URL:   s.URL,
 			Token: "no-jobs",
 		},
+		SystemIDState: systemIDState,
 	}
 
 	invalidToken := RunnerConfig{
@@ -873,6 +882,7 @@ func TestRequestJob(t *testing.T) {
 			URL:   s.URL,
 			Token: invalidToken,
 		},
+		SystemIDState: systemIDState,
 	}
 
 	c := NewGitLabClient()
@@ -943,6 +953,37 @@ func TestRequestJob(t *testing.T) {
 	}
 }
 
+func TestRequestJobWithSystemID(t *testing.T) {
+	systemIDState := NewSystemIDState()
+	require.NoError(t, systemIDState.EnsureSystemID())
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		var req map[string]interface{}
+		err = json.Unmarshal(body, &req)
+		assert.NoError(t, err)
+
+		assert.NotEmpty(t, req["system_id"])
+		assert.Equal(t, systemIDState.GetSystemID(), req["system_id"])
+	}))
+	defer s.Close()
+
+	validToken := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   s.URL,
+			Token: validToken,
+		},
+		SystemIDState: systemIDState,
+	}
+
+	c := NewGitLabClient()
+
+	_, ok := c.RequestJob(context.Background(), validToken, nil)
+	assert.True(t, ok)
+}
+
 func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]interface{}) {
 	switch req["state"].(string) {
 	case statusRunning, statusCanceling:
@@ -990,6 +1031,8 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.NoError(t, err)
 
 	assert.Equal(t, "token", req["token"])
+	assert.NotEmpty(t, req["system_id"])
+	assert.Equal(t, systemIDState.GetSystemID(), req["system_id"])
 
 	setStateForUpdateJobHandlerResponse(w, req)
 }
@@ -1065,11 +1108,14 @@ func TestUpdateJob(t *testing.T) {
 		RunnerCredentials: RunnerCredentials{
 			URL: s.URL,
 		},
+		SystemIDState: systemIDState,
 	}
 
 	jobCredentials := &JobCredentials{
 		Token: "token",
 	}
+
+	require.NoError(t, systemIDState.EnsureSystemID())
 
 	c := NewGitLabClient()
 
@@ -1140,11 +1186,14 @@ func TestUpdateJobAsKeepAlive(t *testing.T) {
 		RunnerCredentials: RunnerCredentials{
 			URL: s.URL,
 		},
+		SystemIDState: systemIDState,
 	}
 
 	jobCredentials := &JobCredentials{
 		Token: "token",
 	}
+
+	require.NoError(t, systemIDState.EnsureSystemID())
 
 	c := NewGitLabClient()
 
@@ -1775,12 +1824,15 @@ func TestUpdateIntervalHeaderHandling(t *testing.T) {
 				server := httptest.NewServer(http.HandlerFunc(handler))
 				defer server.Close()
 
-				h := newLogHook(logrus.InfoLevel, logrus.WarnLevel)
-				logrus.AddHook(&h)
-
 				config := RunnerConfig{
 					RunnerCredentials: RunnerCredentials{URL: server.URL},
+					SystemIDState:     systemIDState,
 				}
+
+				require.NoError(t, systemIDState.EnsureSystemID())
+
+				h := newLogHook(logrus.InfoLevel, logrus.WarnLevel)
+				logrus.AddHook(&h)
 
 				result := NewGitLabClient().UpdateJob(config, &JobCredentials{ID: 10}, UpdateJobInfo{State: "success"})
 				assert.Equal(t, tc.expectedUpdateInterval, result.NewUpdateInterval)

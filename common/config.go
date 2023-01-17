@@ -992,6 +992,8 @@ type RunnerConfig struct {
 	UnhealthyRequestsLimit int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of 'unhealthy' responses to new job requests after which a runner worker will be disabled"`
 	UnhealthyInterval      *time.Duration `toml:"unhealthy_interval,omitzero" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
 
+	SystemIDState *SystemIDState `toml:"-"`
+
 	RunnerCredentials
 	RunnerSettings
 }

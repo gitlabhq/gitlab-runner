@@ -412,6 +412,7 @@ func (n *GitLabClient) RequestJob(
 	request := common.JobRequest{
 		Info:       n.getRunnerVersion(config),
 		Token:      config.Token,
+		SystemID:   config.SystemIDState.GetSystemID(),
 		LastUpdate: n.getLastUpdate(&config.RunnerCredentials),
 		Session:    sessionInfo,
 	}
@@ -468,6 +469,7 @@ func (n *GitLabClient) UpdateJob(
 	request := common.UpdateJobRequest{
 		Info:          n.getRunnerVersion(config),
 		Token:         jobCredentials.Token,
+		SystemID:      config.SystemIDState.GetSystemID(),
 		State:         jobInfo.State,
 		FailureReason: jobInfo.FailureReason,
 		Checksum:      jobInfo.Output.Checksum, // deprecated
