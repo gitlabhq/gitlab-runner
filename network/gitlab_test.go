@@ -1327,8 +1327,7 @@ func getPatchServer(
 		SystemIDState: systemIDState,
 	}
 
-	err := config.SystemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, config.SystemIDState.EnsureSystemID())
 
 	return server, NewGitLabClient(), config
 }

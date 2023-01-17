@@ -37,8 +37,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 		SystemIDState: common.NewSystemIDState(),
 	}
 
-	err := cfg.SystemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, cfg.SystemIDState.EnsureSystemID())
 
 	jobData := common.JobResponse{
 		ID: 1,

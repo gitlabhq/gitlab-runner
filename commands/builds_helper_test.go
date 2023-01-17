@@ -21,8 +21,7 @@ func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 		SystemIDState:      common.NewSystemIDState(),
 	}
 
-	err := runner.SystemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
@@ -50,8 +49,7 @@ func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 		SystemIDState:      common.NewSystemIDState(),
 	}
 
-	err := runner.SystemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
@@ -82,8 +80,7 @@ func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
 		SystemIDState: common.NewSystemIDState(),
 	}
 
-	err := runner.SystemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
@@ -105,8 +102,7 @@ func TestBuildsHelperAcquireBuildUnlimited(t *testing.T) {
 		SystemIDState: common.NewSystemIDState(),
 	}
 
-	err := runner.SystemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
@@ -135,8 +131,7 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 		},
 	}
 
-	err = build.Runner.SystemIDState.EnsureSystemID()
-	require.NoError(t, err)
+	require.NoError(t, build.Runner.SystemIDState.EnsureSystemID())
 
 	h := newBuildsHelper()
 	h.addBuild(&build)
@@ -185,8 +180,7 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 			b.ListJobsHandler(writer, req)
 
 			if test.build != nil {
-				err = test.build.Runner.SystemIDState.EnsureSystemID()
-				require.NoError(t, err)
+				require.NoError(t, test.build.Runner.SystemIDState.EnsureSystemID())
 			}
 
 			resp := writer.Result()
