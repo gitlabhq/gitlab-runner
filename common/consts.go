@@ -48,6 +48,10 @@ const (
 	DefaultReaderBufferSize = 16 * 1024
 )
 
+const (
+	ExecutorKubernetes = "kubernetes"
+)
+
 var PreparationRetryInterval = 3 * time.Second
 
 const (

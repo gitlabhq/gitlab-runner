@@ -66,6 +66,16 @@ type PsWriter struct {
 	resolvePaths  bool
 }
 
+func NewPsWriter(b *PowerShell, info common.ShellScriptInfo) *PsWriter {
+	return &PsWriter{
+		Shell:         b.Shell,
+		EOL:           b.EOL,
+		PassFile:      b.passAsFile(info),
+		TemporaryPath: info.Build.TmpProjectDir(),
+		resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
+	}
+}
+
 var encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
 
 func stdinCmdArgs(shell string) []string {
@@ -146,16 +156,15 @@ func PowershellDockerCmd(shell string) []string {
 }
 
 func psReplaceSpecialChars(text string) string {
-	// taken from: http://www.robvanderwoude.com/escapechars.php
+	// taken from https://ss64.com/ps/syntax-esc.html
 	text = strings.ReplaceAll(text, "`", "``")
-	// text = strings.ReplaceAll(text, "\0", "`0")
 	text = strings.ReplaceAll(text, "\a", "`a")
 	text = strings.ReplaceAll(text, "\b", "`b")
-	text = strings.ReplaceAll(text, "\f", "^f")
+	text = strings.ReplaceAll(text, "\f", "`f")
 	text = strings.ReplaceAll(text, "\r", "`r")
 	text = strings.ReplaceAll(text, "\n", "`n")
-	text = strings.ReplaceAll(text, "\t", "^t")
-	text = strings.ReplaceAll(text, "\v", "^v")
+	text = strings.ReplaceAll(text, "\t", "`t")
+	text = strings.ReplaceAll(text, "\v", "`v")
 	text = strings.ReplaceAll(text, "#", "`#")
 	text = strings.ReplaceAll(text, "'", "`'")
 	text = strings.ReplaceAll(text, "\"", "`\"")
@@ -167,8 +176,13 @@ func psSingleQuote(text string) string {
 	return singleQuote(psReplaceSpecialChars(text))
 }
 
+// github.com/PowerShell/PowerShell/blob/v7.3.1/src/System.Management.Automation/engine/parser/CharTraits.cs#L276-L282
 func psDoubleQuote(text string) string {
-	return doubleQuote(psReplaceSpecialChars(text))
+	text = psReplaceSpecialChars(text)
+	text = strings.ReplaceAll(text, "“", "`“")
+	text = strings.ReplaceAll(text, "”", "`”")
+	text = strings.ReplaceAll(text, "„", "`„")
+	return doubleQuote(text)
 }
 
 func psQuoteVariable(text string) string {
@@ -575,14 +589,7 @@ func (b *PowerShell) passAsFile(info common.ShellScriptInfo) bool {
 }
 
 func (b *PowerShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
-	w := &PsWriter{
-		Shell:         b.Shell,
-		EOL:           b.EOL,
-		PassFile:      b.passAsFile(info),
-		TemporaryPath: info.Build.TmpProjectDir(),
-		resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
-	}
-
+	w := NewPsWriter(b, info)
 	return b.generateScript(w, buildStage, info)
 }
 
@@ -599,6 +606,41 @@ func (b *PowerShell) generateScript(
 
 	script := w.Finish(info.Build.IsDebugTraceEnabled())
 	return script, nil
+}
+
+func (b *PowerShell) GenerateSaveScript(info common.ShellScriptInfo, scriptPath, script string) (string, error) {
+	w := NewPsWriter(b, info)
+	script, err := b.generateSaveScript(w, info, scriptPath, script)
+	if err != nil {
+		return "", err
+	}
+
+	return script, nil
+}
+
+func (b *PowerShell) generateSaveScript(
+	w *PsWriter,
+	info common.ShellScriptInfo,
+	scriptPath, script string,
+) (string, error) {
+	var buf strings.Builder
+	w.Line(fmt.Sprintf(`$in =%s`, psQuoteVariable(base64.StdEncoding.EncodeToString([]byte(script)))))
+	w.Line("$customEncoding = New-Object System.Text.UTF8Encoding $True")
+	w.Line(fmt.Sprintf("$sw = [System.IO.StreamWriter]::new(\"%s\", $customEncoding)", scriptPath))
+	w.Line("$sw.Write([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($in)))")
+	w.Line("$sw.Flush()")
+	w.Line("$sw.Close()")
+
+	buf.WriteString("& {" + w.EOL + w.EOL)
+
+	if info.Build.IsDebugTraceEnabled() {
+		buf.WriteString("Set-PSDebug -Trace 2" + w.EOL)
+	}
+
+	buf.WriteString(w.String())
+	buf.WriteString(w.EOL + w.EOL + "}" + w.EOL + w.EOL)
+
+	return buf.String(), nil
 }
 
 func (b *PowerShell) ensurePrepareStageHostnameMessage(

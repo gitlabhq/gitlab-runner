@@ -153,7 +153,6 @@ type executor struct {
 	kubeClient  *kubernetes.Clientset
 	kubeConfig  *restclient.Config
 	pod         *api.Pod
-	configMap   *api.ConfigMap
 	credentials *api.Secret
 	options     *kubernetesOptions
 	services    []api.Service
@@ -181,7 +180,7 @@ type serviceCreateResponse struct {
 }
 
 func (s *executor) Name() string {
-	return "kubernetes"
+	return common.ExecutorKubernetes
 }
 
 // nolint:funlen
@@ -398,7 +397,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	))
 
 	select {
-	case err := <-s.runInContainerWithExecLegacy(ctx, containerName, containerCommand, cmd.Script):
+	case err := <-s.runInContainerWithExec(ctx, containerName, containerCommand, cmd.Script):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
@@ -421,6 +420,11 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	defer cancel()
 
 	containerName, containerCommand := s.getContainerInfo(cmd)
+
+	err = s.saveScriptOnEmptyDir(ctx, fmt.Sprintf("%s/%s", s.scriptsDir(), s.scriptName(string(cmd.Stage))), cmd.Script)
+	if err != nil {
+		return err
+	}
 
 	s.Debugln(fmt.Sprintf(
 		"Starting in container %q the command %q with script: %s",
@@ -461,11 +465,6 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up credentials: %w", err)
 	}
 
-	err = s.setupScriptsConfigMap()
-	if err != nil {
-		return fmt.Errorf("setting up scripts configMap: %w", err)
-	}
-
 	permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
 	if err != nil {
 		return fmt.Errorf("building permissions init container: %w", err)
@@ -482,6 +481,11 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 
 	if status != api.PodRunning {
 		return fmt.Errorf("pod failed to enter running state: %s", status)
+	}
+
+	err = s.setupTrappingScripts(ctx)
+	if err != nil {
+		return fmt.Errorf("setting up trapping scripts on emptyDir: %w", err)
 	}
 
 	go s.processLogs(ctx)
@@ -676,46 +680,51 @@ func getExitCode(err error) int {
 	return unknownLogProcessorExitCode
 }
 
-func (s *executor) setupScriptsConfigMap() error {
-	s.Debugln("Setting up scripts config map")
+func (s *executor) setupTrappingScripts(ctx context.Context) error {
+	s.Debugln("Setting up trapping scripts on emptyDir ...")
 
-	// After issue https://gitlab.com/gitlab-org/gitlab-runner/issues/10342 is resolved and
-	// the legacy execution mode is removed we can remove the manual construction of trapShell and just use "bash+trap"
-	// in the exec options
+	scriptName, script := "", ""
+	shellName := s.Shell().Shell
+	switch shellName {
+	case shells.SNPwsh, shells.SNPowershell:
+		scriptName, script = s.scriptName(pwshJSONTerminationScriptName), shells.PwshJSONTerminationScript(shellName)
+	default:
+		scriptName, script = s.scriptName(detectShellScriptName), shells.BashDetectShellScript
+	}
+
+	return s.saveScriptOnEmptyDir(ctx, fmt.Sprintf("%s/%s", s.scriptsDir(), scriptName), script)
+}
+
+func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptPath, script string) error {
 	shell, err := s.retrieveShell()
 	if err != nil {
 		return err
 	}
 
-	scripts, err := s.generateScripts(shell)
+	saveScript, err := shell.GenerateSaveScript(*s.Shell(), scriptPath, script)
 	if err != nil {
 		return err
 	}
+	s.Debugln(fmt.Sprintf("Saving stage script %s on Container %q", saveScript, buildContainerName))
 
-	configMap := &api.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-scripts", s.Build.ProjectUniqueName()),
-			Namespace:    s.configurationOverwrites.namespace,
-		},
-		Data: scripts,
+	select {
+	case err := <-s.runInContainerWithExec(ctx, buildContainerName, s.BuildShell.DockerCommand, saveScript):
+		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", buildContainerName, err))
+		var exitError exec.CodeExitError
+		if err != nil && errors.As(err, &exitError) {
+			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
+		}
+		return err
+
+	case <-ctx.Done():
+		return fmt.Errorf("build aborted")
 	}
-
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	s.configMap, err = s.kubeClient.
-		CoreV1().
-		ConfigMaps(s.configurationOverwrites.namespace).
-		Create(context.TODO(), configMap, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("generating scripts config map: %w", err)
-	}
-
-	return nil
 }
 
 func (s *executor) retrieveShell() (common.Shell, error) {
 	bashShell, ok := common.GetShell(s.Shell().Shell).(*shells.BashShell)
 	if ok {
-		return &shells.BashTrapShell{BashShell: bashShell}, nil
+		return bashShell, nil
 	}
 
 	shell := common.GetShell(s.Shell().Shell)
@@ -724,30 +733,6 @@ func (s *executor) retrieveShell() (common.Shell, error) {
 	}
 
 	return shell, nil
-}
-
-func (s *executor) generateScripts(shell common.Shell) (map[string]string, error) {
-	scripts := map[string]string{}
-	shellName := s.Shell().Shell
-	switch shellName {
-	case shells.SNPwsh, shells.SNPowershell:
-		scripts[s.scriptName(pwshJSONTerminationScriptName)] = shells.PwshJSONTerminationScript(shellName)
-	default:
-		scripts[s.scriptName(detectShellScriptName)] = shells.BashDetectShellScript
-	}
-
-	for _, stage := range s.Build.BuildStages() {
-		script, err := shell.GenerateScript(stage, *s.Shell())
-		if errors.Is(err, common.ErrSkipBuildStage) {
-			continue
-		} else if err != nil {
-			return nil, fmt.Errorf("generating trap shell script: %w", err)
-		}
-
-		scripts[s.scriptName(string(stage))] = script
-	}
-
-	return scripts, nil
 }
 
 func (s *executor) Finish(err error) {
@@ -795,17 +780,6 @@ func (s *executor) cleanupResources() {
 			})
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
-		}
-	}
-	if s.configMap != nil && len(s.configMap.OwnerReferences) == 0 {
-		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-		err := s.kubeClient.CoreV1().
-			ConfigMaps(s.configurationOverwrites.namespace).
-			Delete(context.TODO(), s.configMap.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
-			})
-		if err != nil {
-			s.Errorln(fmt.Sprintf("Error cleaning up configmap: %s", err.Error()))
 		}
 	}
 }
@@ -941,8 +915,7 @@ func (s *executor) scriptName(name string) string {
 func (s *executor) getVolumeMounts() []api.VolumeMount {
 	var mounts []api.VolumeMount
 
-	// The configMap is nil when using legacy execution
-	if s.configMap != nil {
+	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		// These volume mounts **MUST NOT** be mounted inside another volume mount.
 		// E.g. mounting them inside the "repo" volume mount will cause the whole volume
 		// to be owned by root instead of the current user of the image. Something similar
@@ -1047,30 +1020,16 @@ func (s *executor) getVolumes() []api.Volume {
 		})
 	}
 
-	// The configMap is nil when using legacy execution
-	if s.configMap == nil {
+	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		return volumes
 	}
 
-	var mode *int32
-	if s.helperImageInfo.OSType != helperimage.OSTypeWindows {
-		defaultLinuxMode := int32(0777)
-		mode = &defaultLinuxMode
-	}
-
-	optional := false
 	volumes = append(
 		volumes,
 		api.Volume{
 			Name: "scripts",
 			VolumeSource: api.VolumeSource{
-				ConfigMap: &api.ConfigMapVolumeSource{
-					LocalObjectReference: api.LocalObjectReference{
-						Name: s.configMap.Name,
-					},
-					DefaultMode: mode,
-					Optional:    &optional,
-				},
+				EmptyDir: &api.EmptyDirVolumeSource{},
 			},
 		},
 		api.Volume{
@@ -1593,21 +1552,6 @@ func (s *executor) setOwnerReferencesForResources(ownerReferences []metav1.Owner
 		}
 	}
 
-	if s.configMap != nil {
-		configMap := s.configMap.DeepCopy()
-		configMap.ObjectMeta.SetOwnerReferences(ownerReferences)
-
-		var err error
-		s.configMap, err = s.kubeClient.
-			CoreV1().
-			ConfigMaps(s.configurationOverwrites.namespace).
-			Update(context.TODO(), configMap, metav1.UpdateOptions{})
-
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -1877,7 +1821,7 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 	return errCh
 }
 
-func (s *executor) runInContainerWithExecLegacy(
+func (s *executor) runInContainerWithExec(
 	ctx context.Context,
 	name string,
 	command []string,
@@ -2109,7 +2053,7 @@ func featuresFn(features *common.FeaturesInfo) {
 }
 
 func init() {
-	common.RegisterExecutorProvider("kubernetes", executors.DefaultExecutorProvider{
+	common.RegisterExecutorProvider(common.ExecutorKubernetes, executors.DefaultExecutorProvider{
 		Creator: func() common.Executor {
 			return newExecutor()
 		},

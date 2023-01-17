@@ -317,6 +317,10 @@ func (b *CmdShell) GenerateScript(
 	return
 }
 
+func (b *CmdShell) GenerateSaveScript(info common.ShellScriptInfo, scriptPath, script string) (string, error) {
+	return "", nil
+}
+
 func (b *CmdShell) IsDefault() bool {
 	return runtime.GOOS == OSWindows
 }
