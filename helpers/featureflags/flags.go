@@ -120,7 +120,7 @@ var flags = []FeatureFlag{
 		Description: "When disabled, processes that Runner creates on Windows (shell and custom executor) will be " +
 			"created with additional setup that should improve process termination. This is currently experimental " +
 			"and how we setup these processes may change as we continue to improve this. When set to `true`, legacy " +
-			"process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag should" +
+			"process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag should " +
 			"be set to `false`.",
 	},
 	{
@@ -136,7 +136,7 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When enabled, Powershell resolves pathnames rather than Runner using OS-specific filepath " +
+		Description: "When enabled, PowerShell resolves pathnames rather than Runner using OS-specific filepath " +
 			"functions that are specific to where Runner is hosted.",
 	},
 	{
@@ -218,7 +218,7 @@ var flags = []FeatureFlag{
 		Name:         DisablePowershellStdin,
 		DefaultValue: false,
 		Deprecated:   false,
-		Description: "When enabled, Powershell scripts for shell and custom executors are passed by " +
+		Description: "When enabled, PowerShell scripts for shell and custom executors are passed by " +
 			"file, rather than passed and executed via stdin.",
 	},
 }

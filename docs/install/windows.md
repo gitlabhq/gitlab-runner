@@ -299,7 +299,7 @@ test:
 ```
 
 In the case above, you need to manually add an exit code check to the `script:`. For example,
-you can create a powershell script:
+you can create a PowerShell script:
 
 ```powershell
 $exitCodes = 0,1
