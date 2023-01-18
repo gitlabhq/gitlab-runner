@@ -188,6 +188,25 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#pods-dns-config). |
 | `priority_class_name` | Specify the Priority Class to be set to the pod. The default one will be used if not set. |
 
+### Default Annotations for job Pods
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3845) in GitLab Runner 15.8.
+
+The following annotations are added by default on the pod running the jobs:
+
+| Key | Description |
+|-----|-------------|
+| `job.runner.gitlab.com/id` | The ID of the job, unique across all jobs in the GitLab instance. |
+| `job.runner.gitlab.com/url` | The job details URL. |
+| `job.runner.gitlab.com/sha` | The commit revision the project is built for. |
+| `job.runner.gitlab.com/before_sha` | The previous latest commit present on a branch or tag. |
+| `job.runner.gitlab.com/ref` | The branch or tag name for which project is built. |
+| `job.runner.gitlab.com/name` | The name of the job. |
+| `project.runner.gitlab.com/id` | The project ID of the job. |
+
+Default annotations can be overwritten by using the `pod_annotations` in the GitLab Runner configuration.
+[The annotations can also be overwritten per CI/CD job in the `.gitlab-ci.yml` file](#overwriting-pod-annotations).
+
 ### Configuring executor Service Account
 
 You can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use `--kubernetes-service-account` flag.
