@@ -131,6 +131,13 @@ release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${PUBLISH_IMAGES}" "${IMAGE
 # Docker exits with a 0 code if we weren't logged in previously which makes it fine to run at all times
 logout "${CI_REGISTRY}"
 
+if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
+    login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
+fi
+
+release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "${PUBLISH_IMAGES}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
+logout
+
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
     ECR_PUBLIC_REGISTRY_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
 
