@@ -107,10 +107,10 @@ Prerequisites:
   - For Linux:
     - `sh`
     - `bash`
-    - Powershell Core (`pwsh`). [Introduced in 13.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4021).
+    - PowerShell Core (`pwsh`). [Introduced in 13.9](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4021).
   - For Windows:
     - PowerShell (`powershell`)
-    - Powershell Core (`pwsh`). [Introduced in 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139).
+    - PowerShell Core (`pwsh`). [Introduced in 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/13139).
 
 To configure the Docker executor, you define the Docker images and services in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) and [`config.toml`](../commands/index.md#configuration-file).
 
@@ -895,7 +895,7 @@ configuring a Windows Docker executor.
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2492) in GitLab Runner 13.6.
 
-With the support for Powershell Core introduced in the Windows helper image, it is now possible to leverage
+With the support for PowerShell Core introduced in the Windows helper image, it is now possible to leverage
 the `nanoserver` variants for the helper image.
 
 ### Limitations of Docker executor on Windows
