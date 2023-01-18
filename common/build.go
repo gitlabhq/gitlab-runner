@@ -1450,7 +1450,12 @@ func (b *Build) getFeatureFlagInfo() string {
 func (b *Build) printRunningWithHeader() {
 	b.logger.Println("Running with", AppVersion.Line())
 	if b.Runner != nil && b.Runner.ShortDescription() != "" {
-		b.logger.Println("  on", b.Runner.Name, b.Runner.ShortDescription())
+		b.logger.Println(fmt.Sprintf(
+			"  on %s %s, system ID: %s",
+			b.Runner.Name,
+			b.Runner.ShortDescription(),
+			b.Runner.SystemIDState.GetSystemID(),
+		))
 	}
 	if featureInfo := b.getFeatureFlagInfo(); featureInfo != "" {
 		b.logger.Println("  feature flags:", featureInfo)

@@ -53,6 +53,9 @@ func TestSingleRunnerMaxBuilds(t *testing.T) {
 }
 
 func newRunSingleCommand(executorName string, network common.Network) *RunSingleCommand {
+	systemIDState := common.NewSystemIDState()
+	_ = systemIDState.EnsureSystemID()
+
 	return &RunSingleCommand{
 		network: network,
 		RunnerConfig: common.RunnerConfig{
@@ -63,6 +66,7 @@ func newRunSingleCommand(executorName string, network common.Network) *RunSingle
 				URL:   "http://example.com",
 				Token: "_test_token_",
 			},
+			SystemIDState: systemIDState,
 		},
 		interruptSignals: make(chan os.Signal),
 	}
