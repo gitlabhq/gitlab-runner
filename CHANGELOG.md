@@ -1,3 +1,9 @@
+## v15.7.3 (2023-01-19)
+
+### Bug fixes
+
+- powershell: Fix stdin handling with scripts !3843
+
 ## v15.7.2 (2023-01-13)
 
 ### Bug fixes
