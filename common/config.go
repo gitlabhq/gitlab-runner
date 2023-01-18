@@ -1733,6 +1733,8 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 		return nil, fmt.Errorf("deserialization of runner config failed: %w", err)
 	}
 
+	r.SystemIDState = c.SystemIDState
+
 	return &r, err
 }
 

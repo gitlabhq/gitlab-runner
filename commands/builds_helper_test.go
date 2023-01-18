@@ -18,7 +18,10 @@ import (
 func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 	runner := common.RunnerConfig{
 		RequestConcurrency: 2,
+		SystemIDState:      common.NewSystemIDState(),
 	}
+
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
@@ -43,7 +46,10 @@ func TestBuildsHelperAcquireRequestWithLimit(t *testing.T) {
 func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 	runner := common.RunnerConfig{
 		RequestConcurrency: 0,
+		SystemIDState:      common.NewSystemIDState(),
 	}
+
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireRequest(&runner)
@@ -70,8 +76,11 @@ func TestBuildsHelperAcquireRequestWithDefault(t *testing.T) {
 
 func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
 	runner := common.RunnerConfig{
-		Limit: 1,
+		Limit:         1,
+		SystemIDState: common.NewSystemIDState(),
 	}
+
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
@@ -89,8 +98,11 @@ func TestBuildsHelperAcquireBuildWithLimit(t *testing.T) {
 
 func TestBuildsHelperAcquireBuildUnlimited(t *testing.T) {
 	runner := common.RunnerConfig{
-		Limit: 0,
+		Limit:         0,
+		SystemIDState: common.NewSystemIDState(),
 	}
+
+	require.NoError(t, runner.SystemIDState.EnsureSystemID())
 
 	b := newBuildsHelper()
 	result := b.acquireBuild(&runner)
@@ -115,8 +127,11 @@ func TestBuildsHelperFindSessionByURL(t *testing.T) {
 			RunnerCredentials: common.RunnerCredentials{
 				Token: "abcd1234",
 			},
+			SystemIDState: common.NewSystemIDState(),
 		},
 	}
+
+	require.NoError(t, build.Runner.SystemIDState.EnsureSystemID())
 
 	h := newBuildsHelper()
 	h.addBuild(&build)
@@ -138,7 +153,9 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 		},
 		"job exists": {
 			build: &common.Build{
-				Runner: &common.RunnerConfig{},
+				Runner: &common.RunnerConfig{
+					SystemIDState: common.NewSystemIDState(),
+				},
 				JobResponse: common.JobResponse{
 					ID:      1,
 					JobInfo: common.JobInfo{ProjectID: 1},
@@ -161,6 +178,10 @@ func TestBuildsHelper_ListJobsHandler(t *testing.T) {
 			b := newBuildsHelper()
 			b.addBuild(test.build)
 			b.ListJobsHandler(writer, req)
+
+			if test.build != nil {
+				require.NoError(t, test.build.Runner.SystemIDState.EnsureSystemID())
+			}
 
 			resp := writer.Result()
 			defer resp.Body.Close()

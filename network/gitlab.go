@@ -27,7 +27,7 @@ const clientError = -100
 var apiRequestStatuses = prometheus.NewDesc(
 	"gitlab_runner_api_request_statuses_total",
 	"The total number of api requests, partitioned by runner, endpoint and status.",
-	[]string{"runner", "endpoint", "status"},
+	[]string{"runner", "system_id", "endpoint", "status"},
 	nil,
 )
 
@@ -41,6 +41,7 @@ const (
 
 type apiRequestStatusPermutation struct {
 	runnerID string
+	systemID string
 	endpoint APIEndpoint
 	status   int
 }
@@ -50,11 +51,16 @@ type APIRequestStatusesMap struct {
 	lock     sync.RWMutex
 }
 
-func (arspm *APIRequestStatusesMap) Append(runnerID string, endpoint APIEndpoint, status int) {
+func (arspm *APIRequestStatusesMap) Append(runnerID string, systemID string, endpoint APIEndpoint, status int) {
 	arspm.lock.Lock()
 	defer arspm.lock.Unlock()
 
-	permutation := apiRequestStatusPermutation{runnerID: runnerID, endpoint: endpoint, status: status}
+	permutation := apiRequestStatusPermutation{
+		runnerID: runnerID,
+		systemID: systemID,
+		endpoint: endpoint,
+		status:   status,
+	}
 
 	if _, ok := arspm.internal[permutation]; !ok {
 		arspm.internal[permutation] = 0
@@ -79,6 +85,7 @@ func (arspm *APIRequestStatusesMap) Collect(ch chan<- prometheus.Metric) {
 			prometheus.CounterValue,
 			float64(count),
 			permutation.runnerID,
+			permutation.systemID,
 			string(permutation.endpoint),
 			strconv.Itoa(permutation.status),
 		)
@@ -428,7 +435,12 @@ func (n *GitLabClient) RequestJob(
 		&response,
 	)
 
-	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointRequestJob, result)
+	n.requestsStatusesMap.Append(
+		config.RunnerCredentials.ShortDescription(),
+		config.SystemIDState.GetSystemID(),
+		APIEndpointRequestJob,
+		result,
+	)
 
 	switch result {
 	case http.StatusCreated:
@@ -493,7 +505,12 @@ func (n *GitLabClient) UpdateJob(
 		&request,
 		nil,
 	)
-	n.requestsStatusesMap.Append(config.RunnerCredentials.ShortDescription(), APIEndpointUpdateJob, statusCode)
+	n.requestsStatusesMap.Append(
+		config.RunnerCredentials.ShortDescription(),
+		config.SystemIDState.GetSystemID(),
+		APIEndpointUpdateJob,
+		statusCode,
+	)
 
 	return n.createUpdateJobResult(log, statusCode, statusText, response)
 }
@@ -587,6 +604,7 @@ func (n *GitLabClient) PatchTrace(
 
 	n.requestsStatusesMap.Append(
 		config.RunnerCredentials.ShortDescription(),
+		config.SystemIDState.GetSystemID(),
 		APIEndpointPatchTrace,
 		response.StatusCode,
 	)
