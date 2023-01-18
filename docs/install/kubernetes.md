@@ -151,7 +151,8 @@ ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)
 > [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 You can use a [configuration template file](../register/index.md#runners-configuration-template-file)
-to configure the runner. You can use the configuration template to configure any field on the runner,
+to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#the-available-configtoml-settings). 
+You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
 Here's a snippet of the default settings [found in the `values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) in the chart repository. It is important to note that, for the `config:` section, the format should be `toml` (`<parameter> = <value>` instead of `<parameter>: <value>`), as we are embedding `config.toml` in `values.yaml`.
@@ -164,7 +165,7 @@ runners:
         image = "ubuntu:16.04"
 ```
 
-The rest of the configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
+The executor-specific configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
 ### Use the configuration template to set additonal options
 
