@@ -41,6 +41,7 @@ import (
 
 var getWindowsImageOnce sync.Once
 var windowsImage string
+var systemIDState = common.NewSystemIDState()
 
 var windowsDockerImageTagMappings = map[string]string{
 	windows.V20H2: "20H2",
@@ -49,6 +50,7 @@ var windowsDockerImageTagMappings = map[string]string{
 
 func TestMain(m *testing.M) {
 	execDocker.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
+	_ = systemIDState.EnsureSystemID()
 
 	os.Exit(m.Run())
 }
@@ -177,6 +179,8 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 		image = getWindowsImage(t)
 	}
 
+	require.NoError(t, systemIDState.EnsureSystemID())
+
 	return &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Executor: executor,
@@ -190,6 +194,7 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 		RunnerCredentials: common.RunnerCredentials{
 			Token: fmt.Sprintf("%x", md5.Sum([]byte(t.Name()))),
 		},
+		SystemIDState: systemIDState,
 	}
 }
 
@@ -350,6 +355,7 @@ func TestDockerCommandNoRootImage(t *testing.T) {
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -377,6 +383,7 @@ func TestDockerCommandEntrypointWithStderrOutput(t *testing.T) {
 					featureflags.DisableUmaskForDockerExecutor: true,
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -404,6 +411,7 @@ func TestDockerCommandOwnershipOverflow(t *testing.T) {
 					featureflags.DisableUmaskForDockerExecutor: true,
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -448,6 +456,7 @@ func TestDockerCommandWithAllowedImagesRun(t *testing.T) {
 					PullPolicy:      common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -510,6 +519,7 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 							DisableEntrypointOverwrite: test.disabled,
 						},
 					},
+					SystemIDState: systemIDState,
 				},
 			}
 
@@ -671,6 +681,7 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -706,6 +717,7 @@ func TestDockerCommandOutput(t *testing.T) {
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -750,6 +762,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 						Privileged: true,
 					},
 				},
+				SystemIDState: systemIDState,
 			},
 		}
 		build.Steps = common.Steps{
@@ -794,6 +807,7 @@ func getTestDockerJob(t *testing.T) *common.Build {
 					Privileged: true,
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 	build.Steps = common.Steps{
@@ -901,6 +915,7 @@ func TestCacheInContainer(t *testing.T) {
 				},
 				Cache: &common.CacheConfig{},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -990,6 +1005,7 @@ func TestDockerImageNameFromVariable(t *testing.T) {
 					AllowedServices: []string{common.TestAlpineImage},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1024,6 +1040,7 @@ func TestDockerServiceNameFromVariable(t *testing.T) {
 					AllowedServices: []string{common.TestAlpineImage},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1089,6 +1106,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 						Executor: "docker",
 						Docker:   &common.DockerConfig{},
 					},
+					SystemIDState: systemIDState,
 				},
 			}
 
@@ -1142,6 +1160,7 @@ func TestDockerServiceHealthcheckOverflow(t *testing.T) {
 				Executor: "docker",
 				Docker:   &common.DockerConfig{},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1180,6 +1199,7 @@ func TestDockerHandlesAliasDuplicates(t *testing.T) {
 				Executor: "docker",
 				Docker:   &common.DockerConfig{},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1293,6 +1313,7 @@ func testDockerVersion(t *testing.T, version string) {
 					CPUS:        "0.1",
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1361,6 +1382,7 @@ func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1392,6 +1414,7 @@ func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1423,6 +1446,7 @@ func TestDockerCommandWithHelperImageConfig(t *testing.T) {
 					PullPolicy:  common.StringOrArray{common.PullPolicyIfNotPresent},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1496,6 +1520,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 					},
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
@@ -1775,6 +1800,7 @@ func TestChownAndUmaskUsage(t *testing.T) {
 							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 						},
 					},
+					SystemIDState: systemIDState,
 				},
 			}
 
@@ -1922,6 +1948,7 @@ func TestDockerCommandConflictingPullPolicies(t *testing.T) {
 					Image: common.TestAlpineImage,
 				},
 			},
+			SystemIDState: systemIDState,
 		},
 	}
 
