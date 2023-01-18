@@ -139,15 +139,24 @@ func (c *fileArchiver) processPaths() {
 }
 
 func (c *fileArchiver) processPath(path string) {
-	base, _ := doublestar.SplitPattern(path)
-	if err := c.assertPathInProject(base); err != nil {
+	path = filepath.ToSlash(path)
+	base, patt := doublestar.SplitPattern(path)
+	rel, err := c.findRelativePathInProject(base)
+	if err != nil {
 		// Do not fail job when a file is invalid or not found.
 		logrus.Warningf(err.Error())
 		return
 	}
 
 	fsys := os.DirFS(c.wd)
+
+	// Relative path is needed now that our fsys "root" is at the working directory
+	path = filepath.Join(rel, patt)
 	path = filepath.ToSlash(path)
+	if err != nil {
+		logrus.Warningf("%s: %v", path, err)
+		return
+	}
 	matches, err := doublestar.Glob(fsys, path)
 	if err != nil {
 		logrus.Warningf("%s: %v", path, err)
@@ -170,31 +179,32 @@ func (c *fileArchiver) processPath(path string) {
 
 	if found == 0 {
 		logrus.Warningf(
-			"%s: no matching files. Ensure that the artifact path is relative to the working directory",
+			"%s: no matching files. Ensure that the artifact path is relative to the working directory (%s)",
 			path,
+			c.wd,
 		)
 	} else {
 		logrus.Infof("%s: found %d matching artifact files and directories", path, found)
 	}
 }
 
-func (c *fileArchiver) assertPathInProject(path string) error {
+func (c *fileArchiver) findRelativePathInProject(path string) (string, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		return fmt.Errorf("could not resolve artifact absolute path %s: %v", path, err)
+		return "", fmt.Errorf("could not resolve artifact absolute path %s: %v", path, err)
 	}
 
 	rel, err := filepath.Rel(c.wd, abs)
 	if err != nil {
-		return fmt.Errorf("could not resolve artifact relative path %s: %v", path, err)
+		return "", fmt.Errorf("could not resolve artifact relative path %s: %v", path, err)
 	}
 
 	// If fully resolved relative path begins with ".." it is not a subpath of our working directory
 	if strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("artifact path is not a subpath of project directory: %s", path)
+		return "", fmt.Errorf("artifact path is not a subpath of project directory: %s", path)
 	}
 
-	return nil
+	return rel, nil
 }
 
 func (c *fileArchiver) processUntracked() {

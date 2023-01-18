@@ -33,7 +33,12 @@ func TestGlobbedFilePaths(t *testing.T) {
 	require.NoError(t, err, "Creating directory path: %s", fileArchiverGlobPath)
 	defer os.RemoveAll(strings.Split(fileArchiverGlobPath, "/")[0])
 
+	workingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+	fileArchiverAbsoluteFilePath := filepath.Join(workingDirectory, "foo/bar/*.bin")
+
 	expectedMatchingFiles := []string{
+		"foo/bar/absolute.bin",
 		"foo/bar/baz/glob1.txt",
 		"foo/bar/baz/glob2.txt",
 		"foo/bar/glob3.txt",
@@ -55,7 +60,7 @@ func TestGlobbedFilePaths(t *testing.T) {
 	defer os.RemoveAll(strings.Split(fileArchiverGlobNonMatchingPath, "/")[0])
 
 	f := fileArchiver{
-		Paths: []string{fileArchiverGlobbedFilePath},
+		Paths: []string{fileArchiverGlobbedFilePath, fileArchiverAbsoluteFilePath},
 	}
 	err = f.enumerate()
 	assert.NoError(t, err)
@@ -164,6 +169,22 @@ func TestFileArchiverToFailOnAbsoluteFile(t *testing.T) {
 	assert.Contains(t, h.entries[0].Message, "artifact path is not a subpath of project directory")
 }
 
+func TestFileArchiverToSucceedOnAbsoluteFileInProject(t *testing.T) {
+	path, err := os.Getwd()
+	require.NoError(t, err)
+	fpath := filepath.Join(path, "file.txt")
+	writeTestFile(t, fpath)
+	defer os.Remove(fpath)
+
+	f := fileArchiver{
+		Paths: []string{fpath},
+	}
+
+	err = f.enumerate()
+	assert.NoError(t, err)
+	assert.Len(t, f.sortedFiles(), 1)
+}
+
 func TestFileArchiverToNotAddFilePathOutsideProjectDirectory(t *testing.T) {
 	f := fileArchiver{
 		Paths: []string{fileArchiverAbsoluteDoubleStarFile},
@@ -229,7 +250,7 @@ func TestFileArchiver_pathIsInProject(t *testing.T) {
 
 	for n, tc := range testCases {
 		t.Run(n, func(t *testing.T) {
-			err := c.assertPathInProject(tc.path)
+			_, err := c.findRelativePathInProject(tc.path)
 			if tc.errorExpected {
 				assert.Error(t, err)
 				return
