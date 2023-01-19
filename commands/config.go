@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -22,9 +23,57 @@ func getDefaultCertificateDirectory() string {
 	return filepath.Join(getDefaultConfigDirectory(), "certs")
 }
 
+var (
+	_ prometheus.Collector = &configAccessCollector{}
+)
+
+type configAccessCollector struct {
+	loadingError prometheus.Counter
+	loaded       prometheus.Counter
+	savingError  prometheus.Counter
+	saved        prometheus.Counter
+}
+
+func newConfigAccessCollector() *configAccessCollector {
+	return &configAccessCollector{
+		loadingError: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "gitlab_runner_configuration_loading_error_total",
+			Help: "Total number of times the configuration file was not loaded by Runner process due to errors",
+		}),
+		loaded: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "gitlab_runner_configuration_loaded_total",
+			Help: "Total number of times the configuration file was loaded by Runner process",
+		}),
+		savingError: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "gitlab_runner_configuration_saving_error_total",
+			Help: "Total number of times the configuration file was not saved by Runner process due to errors",
+		}),
+		saved: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "gitlab_runner_configuration_saved_total",
+			Help: "Total number of times the configuration file was saved by Runner process",
+		}),
+	}
+}
+
+func (c *configAccessCollector) Describe(descs chan<- *prometheus.Desc) {
+	c.loadingError.Describe(descs)
+	c.loaded.Describe(descs)
+	c.savingError.Describe(descs)
+	c.saved.Describe(descs)
+}
+
+func (c *configAccessCollector) Collect(metrics chan<- prometheus.Metric) {
+	c.loadingError.Collect(metrics)
+	c.loaded.Collect(metrics)
+	c.savingError.Collect(metrics)
+	c.saved.Collect(metrics)
+}
+
 type configOptions struct {
 	configMutex sync.Mutex
 	config      *common.Config
+
+	configAccessCollector *configAccessCollector
 
 	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
 }
@@ -49,7 +98,28 @@ func (c *configOptions) getConfig() *common.Config {
 }
 
 func (c *configOptions) saveConfig() error {
-	return c.config.SaveConfig(c.ConfigFile)
+	err := c.config.SaveConfig(c.ConfigFile)
+	if err != nil {
+		c.onConfigurationAccessCollector(func(m *configAccessCollector) {
+			m.savingError.Inc()
+		})
+
+		return err
+	}
+
+	c.onConfigurationAccessCollector(func(m *configAccessCollector) {
+		m.saved.Inc()
+	})
+
+	return nil
+}
+
+func (c *configOptions) onConfigurationAccessCollector(callback func(*configAccessCollector)) {
+	if c.configAccessCollector == nil {
+		return
+	}
+
+	callback(c.configAccessCollector)
 }
 
 func (c *configOptions) loadConfig() error {
@@ -59,8 +129,15 @@ func (c *configOptions) loadConfig() error {
 	config := common.NewConfig()
 	err := config.LoadConfig(c.ConfigFile)
 	if err != nil {
+		c.onConfigurationAccessCollector(func(m *configAccessCollector) {
+			m.loadingError.Inc()
+		})
+
 		return err
 	}
+	c.onConfigurationAccessCollector(func(m *configAccessCollector) {
+		m.loaded.Inc()
+	})
 
 	systemIDState, err := c.loadSystemID(filepath.Join(filepath.Dir(c.ConfigFile), ".runner_system_id"))
 	if err != nil {
