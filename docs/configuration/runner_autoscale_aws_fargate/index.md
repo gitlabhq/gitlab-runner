@@ -224,16 +224,16 @@ Now install GitLab Runner on the Ubuntu instance.
      In a production setting,
      follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)
      for setting up and using security groups.
-   
-   - If `EnablePublicIP` is set to true, the public IP of the task container is gathered to perform the SSH connection. 
+
+   - If `EnablePublicIP` is set to true, the public IP of the task container is gathered to perform the SSH connection.
    - If `EnablePublicIP` is set to false:
-     - The Fargate driver uses the task container's private IP. To set up a connection when set to `false`, the VPC's Security Group must 
-     have an inbound rule for Port 22 (SSH), where the source is the VPC CIDR. 
+     - The Fargate driver uses the task container's private IP. To set up a connection when set to `false`, the VPC's Security Group must
+     have an inbound rule for Port 22 (SSH), where the source is the VPC CIDR.
      - To fetch external dependencies, provisioned AWS Fargate containers must have access to the public internet. To provide
-     public internet access for AWS Fargate containers, you can use a NAT Gateway in the VPC. 
+     public internet access for AWS Fargate containers, you can use a NAT Gateway in the VPC.
 
    - The port number of the SSH server is optional. If omitted, the default SSH port (22) is used.
-   - For more information about the section settings, see the [Fargate driver documentation](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate/-/tree/master/docs#configuration). 
+   - For more information about the section settings, see the [Fargate driver documentation](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate/-/tree/master/docs#configuration).
 
 1. Install the Fargate driver:
 
@@ -343,7 +343,7 @@ Further reading:
 
 `Application execution failed PID=xxxxx error="obtaining information about the running task: trying to access file \"/opt/gitlab-runner/metadata/<runner_token>-xxxxx.json\": file does not exist" cleanup_std=err job=xxxxx project=xx runner=<runner_token>`
 
-Ensure that your IAM Role policy is configured correctly and can perform write operations to create the metadata JSON file in `/opt/gitlab-runner/metadata/`. To test in a non-production environment, use the AmazonECS_FullAccess policy. Review your IAM role policy according to your organization's security requirements. 
+Ensure that your IAM Role policy is configured correctly and can perform write operations to create the metadata JSON file in `/opt/gitlab-runner/metadata/`. To test in a non-production environment, use the AmazonECS_FullAccess policy. Review your IAM role policy according to your organization's security requirements.
 
 ### `connection timed out` when running jobs
 
@@ -355,9 +355,9 @@ If `EnablePublicIP` is configured to false, ensure that your VPC's Security Grou
 
 `Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"10.x.x.x\": connecting to server: connecting to server \"10.x.x.x:22\" as user \"root\": dial tcp 10.x.x.x:22: connect: connection refused"`
 
-Ensure that the task container has port 22 exposed and port mapping is configured based on the instructions in [Step 6: Create an ECS task definition](#step-6-create-an-ecs-task-definition). If the port is exposed and the container is configured: 
+Ensure that the task container has port 22 exposed and port mapping is configured based on the instructions in [Step 6: Create an ECS task definition](#step-6-create-an-ecs-task-definition). If the port is exposed and the container is configured:
 
-1. Check to see if there are any errors for the container in **Amazon ECS > Clusters > Choose your task definition > Tasks**. 
-1. View tasks with a status of `Stopped` and check the latest one that failed. The **logs** tab has more details if there is a container failure. 
- 
+1. Check to see if there are any errors for the container in **Amazon ECS > Clusters > Choose your task definition > Tasks**.
+1. View tasks with a status of `Stopped` and check the latest one that failed. The **logs** tab has more details if there is a container failure.
+
 Alternatively, ensure that you can run the Docker container locally.
