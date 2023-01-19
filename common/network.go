@@ -364,30 +364,6 @@ type GitlabFeatures struct {
 	FailureReasons    []JobFailureReason `json:"failure_reasons"`
 }
 
-type Hooks []Hook
-
-type Hook struct {
-	Name   HookName   `json:"name"`
-	Script StepScript `json:"script"`
-}
-
-type HookName string
-
-const (
-	HookPreGetSourcesScript  HookName = "pre_get_sources_script"
-	HookPostGetSourcesScript HookName = "post_get_sources_script"
-)
-
-func (hooks Hooks) Get(name HookName) Hook {
-	for _, hook := range hooks {
-		if hook.Name == name {
-			return hook
-		}
-	}
-
-	return Hook{}
-}
-
 type JobResponse struct {
 	ID            int64          `json:"id"`
 	Token         string         `json:"token"`
@@ -405,7 +381,6 @@ type JobResponse struct {
 	Dependencies  Dependencies   `json:"dependencies"`
 	Features      GitlabFeatures `json:"features"`
 	Secrets       Secrets        `json:"secrets,omitempty"`
-	Hooks         Hooks          `json:"hooks,omitempty"`
 
 	TLSCAChain  string `json:"-"`
 	TLSAuthCert string `json:"-"`

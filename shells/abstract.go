@@ -233,20 +233,7 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 		b.writeGitSSLConfig(w, info.Build, []string{"--global"})
 	}
 
-	b.guardGetSourcesScriptHooks(w, info, "pre_clone_script", func() []string {
-		var s []string
-
-		if info.PreGetSourcesScript != "" {
-			s = append(s, info.PreGetSourcesScript)
-		}
-
-		h := info.Build.Hooks.Get(common.HookPreGetSourcesScript)
-		if len(h.Script) > 0 {
-			s = append(s, h.Script...)
-		}
-
-		return s
-	})
+	b.guardCloneScriptHooks(w, info, "pre_clone_script", info.PreCloneScript)
 
 	if err := b.writeCloneFetchCmds(w, info); err != nil {
 		return err
@@ -256,36 +243,17 @@ func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellSc
 		return err
 	}
 
-	b.guardGetSourcesScriptHooks(w, info, "post_clone_script", func() []string {
-		var s []string
-
-		h := info.Build.Hooks.Get(common.HookPostGetSourcesScript)
-		if len(h.Script) > 0 {
-			s = append(s, h.Script...)
-		}
-
-		if info.PostGetSourcesScript != "" {
-			s = append(s, info.PostGetSourcesScript)
-		}
-
-		return s
-	})
+	b.guardCloneScriptHooks(w, info, "post_clone_script", info.PostCloneScript)
 
 	return nil
 }
 
-func (b *AbstractShell) guardGetSourcesScriptHooks(
-	w ShellWriter,
-	info common.ShellScriptInfo,
-	prefix string,
-	script func() []string,
-) {
-	s := script()
-	if len(s) == 0 || info.Build.GetGitStrategy() == common.GitNone {
+func (b *AbstractShell) guardCloneScriptHooks(w ShellWriter, info common.ShellScriptInfo, prefix string, s string) {
+	if s == "" || info.Build.GetGitStrategy() == common.GitNone {
 		return
 	}
 
-	b.writeCommands(w, info, prefix, s...)
+	b.writeCommands(w, info, prefix, s)
 }
 
 func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo) {
