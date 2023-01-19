@@ -31,15 +31,15 @@ func (s *ShellConfiguration) String() string {
 }
 
 type ShellScriptInfo struct {
-	Shell                string
-	Build                *Build
-	Type                 ShellType
-	User                 string
-	RunnerCommand        string
-	PreGetSourcesScript  string
-	PostGetSourcesScript string
-	PreBuildScript       string
-	PostBuildScript      string
+	Shell           string
+	Build           *Build
+	Type            ShellType
+	User            string
+	RunnerCommand   string
+	PreCloneScript  string
+	PostCloneScript string
+	PreBuildScript  string
+	PostBuildScript string
 }
 
 //go:generate mockery --name=Shell --inpackage
