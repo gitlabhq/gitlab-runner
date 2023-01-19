@@ -347,13 +347,11 @@ func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscale
 			return nil, 0, fmt.Errorf("listing existing vms: %w", err)
 		}
 
-		// todo: should we use a slot based system?
-		for _, vm := range vms {
-			if err := nc.Delete(ctx, vm.GetId()); err != nil {
-				return nil, 0, fmt.Errorf("deleting existing vm (%q): %w", vm.GetId(), err)
-			}
+		keys = make([]string, len(vms))
+		for i, vm := range vms {
+			keys[i] = vm.GetId()
 		}
 
-		return nil, 0, nil
+		return keys, 0, nil
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
+	"gitlab.com/gitlab-org/fleeting/nesting/hypervisor"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 
@@ -113,15 +114,44 @@ func (ref *acquisitionRef) createVMTunnel(
 	logger.Infoln("Creating vm", image)
 
 	// create vm
-	vm, err := nc.Create(ctx, image)
+	var slot *int32
+	if ref.acq != nil {
+		var slot32 = int32(ref.acq.Slot())
+		slot = &slot32
+	}
+	vm, stompedVMID, err := nc.Create(ctx, image, slot)
 	if err != nil {
 		return nil, fmt.Errorf("creating nesting vm: %w", err)
 	}
 
 	logger.Infoln("Created vm", vm.GetId(), vm.GetAddr())
+	if stompedVMID != nil {
+		logger.Infoln("Stomped vm: ", *stompedVMID)
+	}
+	dialer, err = createTunneledDialer(ctx, dialer, nestingCfg, vm)
+	if err != nil {
+		defer func() { _ = nc.Delete(ctx, vm.GetId()) }()
 
-	// create tunneled dialer to vm
-	dialer, err = connector.Dial(ctx, fleetingprovider.ConnectInfo{
+		return nil, fmt.Errorf("dialing nesting vm: %w", err)
+	}
+
+	return &client{dialer, func() error {
+		defer nc.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		return nc.Delete(ctx, vm.GetId())
+	}}, nil
+}
+
+func createTunneledDialer(
+	ctx context.Context,
+	dialer connector.Client,
+	nestingCfg common.VMIsolation,
+	vm hypervisor.VirtualMachine,
+) (connector.Client, error) {
+	return connector.Dial(ctx, fleetingprovider.ConnectInfo{
 		ConnectorConfig: fleetingprovider.ConnectorConfig{
 			OS:                   nestingCfg.ConnectorConfig.OS,
 			Arch:                 nestingCfg.ConnectorConfig.Arch,
@@ -138,18 +168,4 @@ func (ref *acquisitionRef) createVMTunnel(
 			return dialer.Dial(network, addr)
 		},
 	})
-	if err != nil {
-		defer func() { _ = nc.Delete(ctx, vm.GetId()) }()
-
-		return nil, fmt.Errorf("dialing nesting vm: %w", err)
-	}
-
-	return &client{dialer, func() error {
-		defer nc.Close()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		return nc.Delete(ctx, vm.GetId())
-	}}, nil
 }
