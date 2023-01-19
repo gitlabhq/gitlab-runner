@@ -52,7 +52,6 @@
 - Adding namespace to anyuid command !3798
 - Update fargate troubleshooting !3772
 - Update using security context example !3723
-- Handle the content of the new pre_get_sources_script and post_get_sources_script job payloads in Runner !3713
 
 ## v15.7.3 (2023-01-19)
 
