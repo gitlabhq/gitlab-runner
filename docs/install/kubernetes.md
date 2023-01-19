@@ -151,7 +151,7 @@ ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)
 > [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 You can use a [configuration template file](../register/index.md#runners-configuration-template-file)
-to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#the-available-configtoml-settings). 
+to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#the-available-configtoml-settings).
 You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
@@ -571,8 +571,8 @@ Please do not rely on this information for purchasing or planning purposes.
 As with all projects, the items mentioned on this page are subject to change or delay.
 The development, release, and timing of any products, features, or functionality remain at the
 sole discretion of GitLab Inc.
-To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`. We plan to include an authentication 
-token for runners created in the GitLab UI that you can also include in the argument. For more information, see 
+To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`. We plan to include an authentication
+token for runners created in the GitLab UI that you can also include in the argument. For more information, see
 [Next GitLab Runner Token Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_tokens/).
 To register an existing runner, use `runnerToken`.
 It can be a security risk to store tokens in `values.yml`, especially if you commit these to `git`.

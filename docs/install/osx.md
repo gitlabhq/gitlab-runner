@@ -62,7 +62,7 @@ Two methods for installing GitLab Runner on macOS are available:
       ```
 
 1. Reboot your system.
-   
+
 If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/<username>/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md).
 
 ### Homebrew installation (alternative)
