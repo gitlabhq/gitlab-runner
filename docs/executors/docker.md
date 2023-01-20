@@ -708,7 +708,9 @@ Use the following values for the `pull_policy`:
 
 ### Set the `always` pull policy
 
-The `always` option always initiates a pull before creating the container. This option makes sure the image is up-to-date, and prevents you from using outdated images even if a local image exists. The `always` pull policy is the default setting.
+The `always` option, which is on by default, always initiates a pull before
+creating the container. This option makes sure the image is up-to-date, and
+prevents you from using outdated images even if a local image exists.
 
 Use this pull policy if:
 
