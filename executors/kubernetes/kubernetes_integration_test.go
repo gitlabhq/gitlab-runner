@@ -2310,3 +2310,134 @@ func Test_CaptureServiceLogs(t *testing.T) {
 		})
 	}
 }
+
+// When testing with minikube, the following commands may be used to
+// properly configure the cluster:
+//
+// minikube config set container-runtime containerd
+// minikube config set feature-gates "ProcMountType=true"
+//
+// Note that the cluster must be re-initialized after making these changes:
+//
+// minikube delete
+// minikube start
+func TestKubernetesProcMount(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	privileged := false
+
+	// Generate a temporary Pod with procMount set to Unmasked.
+	// If the cluster supports the ProcMount feature, then this will be reflected
+	// in the PodSpec. If the cluster does not support this feature, the API server
+	// will return DefaultProcMount.
+	tmpPod := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse("cat")
+	})
+
+	tmpPod.Runner.RunnerSettings.Kubernetes.BuildContainerSecurityContext = common.KubernetesContainerSecurityContext{
+		ProcMount:  v1.UnmaskedProcMount,
+		Privileged: &privileged,
+	}
+
+	shouldSkipCh := make(chan bool)
+	cleanup := buildtest.OnUserStage(tmpPod, func() {
+		client := getTestKubeClusterClient(t)
+
+		pods, err := client.
+			CoreV1().
+			Pods(kubernetes.DefaultResourceIdentifier).
+			List(context.Background(), metav1.ListOptions{
+				LabelSelector: labels.Set(tmpPod.Runner.Kubernetes.PodLabels).String(),
+			})
+
+		require.NoError(t, err)
+		require.NotEmpty(t, pods.Items)
+
+		pod := pods.Items[0]
+
+		require.NotEmpty(t, pod.Spec.Containers)
+
+		container := pod.Spec.Containers[0]
+
+		procMount := container.SecurityContext.ProcMount
+		shouldSkipCh <- procMount == nil || *procMount != v1.UnmaskedProcMount
+	})
+	defer cleanup()
+
+	buildtest.RunBuildReturningOutput(t, tmpPod)
+
+	shouldSkip := <-shouldSkipCh
+	if shouldSkip {
+		t.Skip("ProcMountType feature not supported on cluster -- skipping tests")
+		return
+	}
+
+	// If we get here, then we have validated that the cluster does indeed support the
+	// ProcMount feature, and we can proceed with a more thorough set of tests.
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse("unshare --fork -r -p --mount-proc true")
+	})
+
+	var buildErr *common.BuildError
+
+	tests := map[string]struct {
+		procMount v1.ProcMountType
+		validate  func(*testing.T, string, error)
+	}{
+		"Default": {
+			procMount: v1.DefaultProcMount,
+			validate: func(t *testing.T, out string, err error) {
+				assert.ErrorAs(t, err, &buildErr)
+				assert.Contains(t, out, "Job failed")
+			},
+		},
+		"default": {
+			procMount: v1.ProcMountType("default"),
+			validate: func(t *testing.T, out string, err error) {
+				assert.ErrorAs(t, err, &buildErr)
+				assert.Contains(t, out, "Job failed")
+			},
+		},
+		"Unmasked": {
+			procMount: v1.UnmaskedProcMount,
+			validate: func(t *testing.T, out string, err error) {
+				require.NoError(t, err)
+				assert.Contains(t, out, "Job succeeded")
+			},
+		},
+		"unmasked": {
+			procMount: v1.ProcMountType("unmasked"),
+			validate: func(t *testing.T, out string, err error) {
+				require.NoError(t, err)
+				assert.Contains(t, out, "Job succeeded")
+			},
+		},
+		"empty": {
+			procMount: v1.ProcMountType("   "),
+			validate: func(t *testing.T, out string, err error) {
+				assert.ErrorAs(t, err, &buildErr)
+				assert.Contains(t, out, "Job failed")
+			},
+		},
+		"invalid": {
+			procMount: v1.ProcMountType("invalid"),
+			validate: func(t *testing.T, out string, err error) {
+				assert.ErrorAs(t, err, &buildErr)
+				assert.Contains(t, out, "Job failed")
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build.Runner.RunnerSettings.Kubernetes.BuildContainerSecurityContext = common.KubernetesContainerSecurityContext{
+				ProcMount:  test.procMount,
+				Privileged: &privileged,
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			test.validate(t, out, err)
+		})
+	}
+}

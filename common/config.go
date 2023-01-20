@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/BurntSushi/toml"
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
@@ -594,6 +597,7 @@ type KubernetesContainerSecurityContext struct {
 	ReadOnlyRootFilesystem   *bool                            `toml:"read_only_root_filesystem" long:"read-only-root-filesystem" env:"@READ_ONLY_ROOT_FILESYSTEM" description:" Whether this container has a read-only root filesystem."`
 	AllowPrivilegeEscalation *bool                            `toml:"allow_privilege_escalation" long:"allow-privilege-escalation" env:"@ALLOW_PRIVILEGE_ESCALATION" description:"AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process"`
 	SELinuxType              string                           `toml:"selinux_type,omitempty" long:"selinux-type" description:"The SELinux type label that is associated with the container process"`
+	ProcMount                api.ProcMountType                `toml:"proc_mount,omitempty" long:"proc-mount" env:"@PROC_MOUNT" description:"Denotes the type of proc mount to use for the container. Valid values: default | unmasked. Set to unmasked if this container will be used to build OCI images."`
 }
 
 func (c *KubernetesConfig) getCapabilities(defaultCapDrop []string) *api.Capabilities {
@@ -632,6 +636,22 @@ func buildCapabilities(enabled map[string]bool) *api.Capabilities {
 	return capabilities
 }
 
+func (c *KubernetesContainerSecurityContext) getProcMount() *api.ProcMountType {
+	caser := cases.Title(language.English)
+	pm := api.ProcMountType(caser.String(strings.TrimSpace(string(c.ProcMount))))
+
+	switch pm {
+	case api.DefaultProcMount, api.UnmaskedProcMount:
+		return &pm
+	case "":
+		logrus.Debugf("proc-mount not set")
+		return nil
+	default:
+		logrus.Errorf("invalid proc-mount value: %s", c.ProcMount)
+		return nil
+	}
+}
+
 func (c *KubernetesConfig) GetContainerSecurityContext(
 	securityContext KubernetesContainerSecurityContext,
 	defaultCapDrop ...string,
@@ -655,6 +675,7 @@ func (c *KubernetesConfig) GetContainerSecurityContext(
 		RunAsNonRoot:           securityContext.RunAsNonRoot,
 		RunAsUser:              securityContext.RunAsUser,
 		ReadOnlyRootFilesystem: securityContext.ReadOnlyRootFilesystem,
+		ProcMount:              securityContext.getProcMount(),
 		SELinuxOptions:         seLinuxOptions,
 	}
 }
