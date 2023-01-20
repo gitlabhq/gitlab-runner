@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -59,6 +60,8 @@ const (
 	resourceAvailabilityCheckMaxPollInterval = 5 * time.Second
 
 	serviceContainerPrefix = "svc-"
+
+	k8sAnnotationPrefix = "runner.gitlab.com/"
 )
 
 var (
@@ -1388,7 +1391,15 @@ func (s *executor) createPodConfigPrepareOpts(initContainers []api.Container) (p
 		labels[key] = sanitizeLabel(s.Build.Variables.ExpandValue(val))
 	}
 
-	annotations := make(map[string]string)
+	annotations := map[string]string{
+		"job." + k8sAnnotationPrefix + "id":         strconv.FormatInt(s.Build.ID, 10),
+		"job." + k8sAnnotationPrefix + "url":        s.Build.JobURL(),
+		"job." + k8sAnnotationPrefix + "sha":        s.Build.GitInfo.Sha,
+		"job." + k8sAnnotationPrefix + "before_sha": s.Build.GitInfo.BeforeSha,
+		"job." + k8sAnnotationPrefix + "ref":        s.Build.GitInfo.Ref,
+		"job." + k8sAnnotationPrefix + "name":       s.Build.JobInfo.Name,
+		"project." + k8sAnnotationPrefix + "id":     strconv.FormatInt(s.Build.JobInfo.ProjectID, 10),
+	}
 	for key, val := range s.configurationOverwrites.podAnnotations {
 		annotations[key] = s.Build.Variables.ExpandValue(val)
 	}

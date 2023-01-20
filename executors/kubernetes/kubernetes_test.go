@@ -3150,10 +3150,59 @@ func TestSetupBuildPod(t *testing.T) {
 					"test":    "annotation",
 					"another": "annotation",
 					"var":     "sometestvar",
+
+					"job.runner.gitlab.com/id":         "0",
+					"job.runner.gitlab.com/url":        "/-/jobs/0",
+					"job.runner.gitlab.com/sha":        "",
+					"job.runner.gitlab.com/before_sha": "",
+					"job.runner.gitlab.com/ref":        "",
+					"job.runner.gitlab.com/name":       "",
+					"project.runner.gitlab.com/id":     "0",
 				}, pod.ObjectMeta.Annotations)
 			},
 			Variables: []common.JobVariable{
 				{Key: "test", Value: "sometestvar"},
+			},
+		},
+		"default pod annotations": {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"job.runner.gitlab.com/id":         "0",
+					"job.runner.gitlab.com/url":        "/-/jobs/0",
+					"job.runner.gitlab.com/sha":        "",
+					"job.runner.gitlab.com/before_sha": "",
+					"job.runner.gitlab.com/ref":        "",
+					"job.runner.gitlab.com/name":       "",
+					"project.runner.gitlab.com/id":     "0",
+				}, pod.ObjectMeta.Annotations)
+			},
+		},
+		"overwrite default pod annotations": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						PodAnnotations: map[string]string{
+							"job.runner.gitlab.com/id":         "notARealJobID",
+							"job.runner.gitlab.com/url":        "overwriteJobURL",
+							"job.runner.gitlab.com/sha":        "overwriteJobSHA",
+							"job.runner.gitlab.com/before_sha": "overwriteJobBeforeSHA",
+							"job.runner.gitlab.com/ref":        "overwriteJobRef",
+							"job.runner.gitlab.com/name":       "overwriteJobName",
+							"project.runner.gitlab.com/id":     "overwriteProjectID",
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, map[string]string{
+					"job.runner.gitlab.com/id":         "notARealJobID",
+					"job.runner.gitlab.com/url":        "overwriteJobURL",
+					"job.runner.gitlab.com/sha":        "overwriteJobSHA",
+					"job.runner.gitlab.com/before_sha": "overwriteJobBeforeSHA",
+					"job.runner.gitlab.com/ref":        "overwriteJobRef",
+					"job.runner.gitlab.com/name":       "overwriteJobName",
+					"project.runner.gitlab.com/id":     "overwriteProjectID",
+				}, pod.ObjectMeta.Annotations)
 			},
 		},
 		"expands variables for helper image": {
