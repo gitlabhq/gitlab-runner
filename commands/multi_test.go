@@ -6,6 +6,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1052,4 +1053,90 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 			d.finish()
 		})
 	}
+}
+
+func TestRunCommand_configReloadingRegression(t *testing.T) {
+	// Main context to handle go test interrupts and to close all the utility loops in this test function
+	nCtx, nCancelFn := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer nCancelFn()
+
+	// Preparing fake configuration file
+	configFile, err := os.CreateTemp("", "config-reload-test")
+	require.NoError(t, err)
+	err = configFile.Close()
+	require.NoError(t, err)
+
+	c := &RunCommand{
+		configOptionsWithListenAddress: configOptionsWithListenAddress{
+			configOptions: configOptions{
+				ConfigFile: configFile.Name(),
+			},
+		},
+		runInterruptSignal:   make(chan os.Signal, 1),
+		reloadSignal:         make(chan os.Signal, 1),
+		configReloaded:       make(chan int, 1),
+		reloadConfigInterval: 5 * time.Millisecond,
+	}
+
+	// Counting discovered configuration reloads
+	configReloadedCount := 0
+	go func() {
+		for {
+			select {
+			case <-nCtx.Done():
+				return
+			case <-c.configReloaded:
+				configReloadedCount++
+			}
+		}
+	}()
+
+	// Loading the configuration file and creating config object (as until now it's undefined in c
+	// This is the first expected reload to happen.
+	err = c.reloadConfig()
+	require.NoError(t, err)
+	time.Sleep(500 * time.Millisecond)
+
+	c.config.Runners = append(c.config.Runners, &common.RunnerConfig{
+		Name: "config-reload-test-runner",
+	})
+
+	// Reloading the configuration. This is the reload call that normally would happen at start when
+	// executing the gitlab-runner run command.
+	// This is the second expected reload to happen.
+	err = c.reloadConfig()
+	require.NoError(t, err)
+	time.Sleep(500 * time.Millisecond)
+
+	// Additional context to limit the time of test function execution
+	ctx, cancelFn := context.WithTimeout(nCtx, 3*time.Second)
+	defer cancelFn()
+
+	go func() {
+		time.Sleep(1 * time.Second)
+
+		timeNow := time.Now()
+
+		// Delayed external change to the modification time of the configuration file.
+		// This is to trigger the discovery of configuration changes and automatic reload.
+		// This is the third expected configuration reload.
+		err = os.Chtimes(configFile.Name(), timeNow, timeNow)
+		require.NoError(t, err)
+	}()
+
+	// Pushing interrupt signal to RunCommand to stop the updateConfig loop bellow
+	go func() {
+		<-ctx.Done()
+		for {
+			c.runInterruptSignal <- os.Interrupt
+		}
+	}()
+
+	// Simulating the updateConfig loop that normally happens inside RunCommand execution
+	var signaled os.Signal
+	for signaled == nil {
+		signaled = c.updateConfig()
+	}
+
+	assert.Equal(t, 3, configReloadedCount, "Exceeded the expected number of configReload calls")
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
 
@@ -2034,4 +2035,26 @@ func Test_GetPullPolicySource(t *testing.T) {
 			assert.Equal(t, tt.want, GetPullPolicySource(tt.imagePullPolicies, tt.pullPolicy))
 		})
 	}
+}
+
+func TestConfig_SaveConfig(t *testing.T) {
+	const (
+		configFileName = "config-file"
+	)
+
+	oldTime := time.Now().Add(-1 * time.Hour)
+
+	cs := new(MockConfigSaver)
+	defer cs.AssertExpectations(t)
+
+	cs.On("Save", configFileName, mock.Anything).Return(nil).Once()
+
+	c := new(Config)
+	c.ModTime = oldTime
+	c.configSaver = cs
+
+	err := c.SaveConfig(configFileName)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, oldTime, c.ModTime, "Expected ModTime field of Config struct to be updated")
 }

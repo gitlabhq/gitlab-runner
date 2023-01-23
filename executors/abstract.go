@@ -44,8 +44,8 @@ func (e *AbstractExecutor) updateShell() error {
 
 func (e *AbstractExecutor) generateShellConfiguration() error {
 	info := e.Shell()
-	info.PreCloneScript = e.Config.PreCloneScript
-	info.PostCloneScript = e.Config.PostCloneScript
+	info.PreGetSourcesScript = e.Config.GetPreGetSourcesScript()
+	info.PostGetSourcesScript = e.Config.GetPostGetSourcesScript()
 	info.PreBuildScript = e.Config.PreBuildScript
 	info.PostBuildScript = e.Config.PostBuildScript
 	shellConfiguration, err := common.GetShellConfiguration(*info)
