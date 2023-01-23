@@ -112,7 +112,8 @@ type RunCommand struct {
 	// runFinished is used to notify that run() did finish
 	runFinished chan bool
 
-	currentWorkers int
+	currentWorkers       int
+	reloadConfigInterval time.Duration
 
 	runAt func(time.Time, func()) runAtTask
 }
@@ -144,7 +145,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 		}
 	}
 
-	err := mr.loadConfig()
+	err := mr.reloadConfig()
 	if err != nil {
 		return err
 	}
@@ -219,8 +220,8 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 	return true
 }
 
-func (mr *RunCommand) loadConfig() error {
-	err := mr.configOptions.loadConfig()
+func (mr *RunCommand) reloadConfig() error {
+	err := mr.loadConfig()
 	if err != nil {
 		return err
 	}
@@ -255,6 +256,12 @@ func (mr *RunCommand) loadConfig() error {
 	}
 
 	mr.configReloaded <- 1
+
+	// Save changes that could be rewritten when reloading the configuration
+	err = mr.saveConfig()
+	if err != nil {
+		mr.log().WithError(err).Errorln("Failed to save config")
+	}
 
 	return nil
 }
@@ -846,14 +853,14 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 
 func (mr *RunCommand) updateConfig() os.Signal {
 	select {
-	case <-time.After(common.ReloadConfigInterval * time.Second):
+	case <-time.After(mr.reloadConfigInterval):
 		err := mr.checkConfig()
 		if err != nil {
 			mr.log().Errorln("Failed to load config", err)
 		}
 
 	case <-mr.reloadSignal:
-		err := mr.loadConfig()
+		err := mr.reloadConfig()
 		if err != nil {
 			mr.log().Errorln("Failed to load config", err)
 		}
@@ -876,7 +883,7 @@ func (mr *RunCommand) checkConfig() (err error) {
 		return nil
 	}
 
-	err = mr.loadConfig()
+	err = mr.reloadConfig()
 	if err != nil {
 		mr.log().Errorln("Failed to load config", err)
 		// don't reload the same file
@@ -1121,6 +1128,7 @@ func init() {
 			failuresCollector:               prometheus_helper.NewFailuresCollector(),
 			buildsHelper:                    newBuildsHelper(),
 			runAt:                           runAt,
+			reloadConfigInterval:            common.ReloadConfigInterval,
 		},
 	)
 }
