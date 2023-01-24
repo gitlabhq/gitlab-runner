@@ -462,7 +462,7 @@ func (n *GitLabClient) RequestJob(
 		config.Log().Errorln("Checking for jobs...", "forbidden")
 		return nil, false
 	case http.StatusNoContent:
-		config.Log().Info("Checking for jobs...", "nothing")
+		config.Log().Debug("Checking for jobs...", "nothing")
 		return nil, true
 	case clientError:
 		config.Log().WithField("status", statusText).Errorln("Checking for jobs...", "error")

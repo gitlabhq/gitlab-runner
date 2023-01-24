@@ -933,10 +933,6 @@ func TestRequestJob(t *testing.T) {
 			Message: "Checking for jobs... received",
 		},
 		{
-			Level:   logrus.InfoLevel,
-			Message: "Checking for jobs...nothing",
-		},
-		{
 			Level:   logrus.ErrorLevel,
 			Message: "Checking for jobs... forbidden",
 		},
