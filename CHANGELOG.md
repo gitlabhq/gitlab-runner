@@ -1,3 +1,9 @@
+## v15.5.2 (2023-01-24)
+
+### Security fixes
+
+- Rebuild images to pickup new Git version to address CVE-2022-41903
+
 ## v15.5.1 (2022-11-11)
 
 ### New features
