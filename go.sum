@@ -1613,6 +1613,8 @@ gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194/go.mod h1:dNcxkdms9+5vWfke3Infes/+R1VC226bJ43OxtPetmY=
 gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230117213724-d03b1bc7ce0a h1:QPPGTprAdn7BwGilgX1qg93sNjnAUATxVYKVndoDE7E=
 gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230117213724-d03b1bc7ce0a/go.mod h1:rGIEJKExcwFTHHDimaMq2+/hIxVP/Ax8gNF0+I0xVJs=
+gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230123203052-f2ad515dd353 h1:H3hOwcWjeJb3vN+2IeYQ5jCEvfLAIm44FPije8zb63w=
+gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230123203052-f2ad515dd353/go.mod h1:rGIEJKExcwFTHHDimaMq2+/hIxVP/Ax8gNF0+I0xVJs=
 gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230109235819-8d2e3fb6386d h1:aZ6UAnXk2SbRo4XAUV39vc4SyWSEEVDPniqpUZmSEA4=
 gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230109235819-8d2e3fb6386d/go.mod h1:OM0jZy4lUQNUuL4SwdfvapzbxRDYZ1KP/JtOL2QMoMQ=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083 h1:2QakJ+J1eVs3sgbZJL6dMb/Wag0GU00l9RZBuGjQWUc=

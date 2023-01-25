@@ -98,7 +98,7 @@ func (c *client) Close() error {
 func (ref *acquisitionRef) createVMTunnel(
 	ctx context.Context,
 	logger common.BuildLogger,
-	nc *api.Client,
+	nc api.Client,
 	dialer connector.Client,
 	options common.ExecutorPrepareOptions,
 ) (executors.Client, error) {
@@ -145,27 +145,37 @@ func (ref *acquisitionRef) createVMTunnel(
 	}}, nil
 }
 
-func createTunneledDialer(
+// Testing hook
+var createTunneledDialer func(
 	ctx context.Context,
 	dialer connector.Client,
 	nestingCfg common.VMIsolation,
 	vm hypervisor.VirtualMachine,
-) (connector.Client, error) {
-	return connector.Dial(ctx, fleetingprovider.ConnectInfo{
-		ConnectorConfig: fleetingprovider.ConnectorConfig{
-			OS:                   nestingCfg.ConnectorConfig.OS,
-			Arch:                 nestingCfg.ConnectorConfig.Arch,
-			Protocol:             fleetingprovider.Protocol(nestingCfg.ConnectorConfig.Protocol),
-			Username:             nestingCfg.ConnectorConfig.Username,
-			Password:             nestingCfg.ConnectorConfig.Password,
-			UseStaticCredentials: nestingCfg.ConnectorConfig.UseStaticCredentials,
-			Keepalive:            nestingCfg.ConnectorConfig.Keepalive,
-			Timeout:              nestingCfg.ConnectorConfig.Timeout,
-		},
-		InternalAddr: vm.GetAddr(),
-	}, connector.DialOptions{
-		DialFn: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return dialer.Dial(network, addr)
-		},
-	})
+) (connector.Client, error)
+
+func init() {
+	createTunneledDialer = func(
+		ctx context.Context,
+		dialer connector.Client,
+		nestingCfg common.VMIsolation,
+		vm hypervisor.VirtualMachine,
+	) (connector.Client, error) {
+		return connector.Dial(ctx, fleetingprovider.ConnectInfo{
+			ConnectorConfig: fleetingprovider.ConnectorConfig{
+				OS:                   nestingCfg.ConnectorConfig.OS,
+				Arch:                 nestingCfg.ConnectorConfig.Arch,
+				Protocol:             fleetingprovider.Protocol(nestingCfg.ConnectorConfig.Protocol),
+				Username:             nestingCfg.ConnectorConfig.Username,
+				Password:             nestingCfg.ConnectorConfig.Password,
+				UseStaticCredentials: nestingCfg.ConnectorConfig.UseStaticCredentials,
+				Keepalive:            nestingCfg.ConnectorConfig.Keepalive,
+				Timeout:              nestingCfg.ConnectorConfig.Timeout,
+			},
+			InternalAddr: vm.GetAddr(),
+		}, connector.DialOptions{
+			DialFn: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			},
+		})
+	}
 }

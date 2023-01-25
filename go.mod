@@ -41,7 +41,7 @@ require (
 	github.com/urfave/cli v1.22.10
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
-	gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230117213724-d03b1bc7ce0a
+	gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230123203052-f2ad515dd353
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230109235819-8d2e3fb6386d
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
