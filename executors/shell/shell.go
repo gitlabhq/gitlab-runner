@@ -58,7 +58,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	s.Println("Using Shell executor...")
+	s.Println("Using Shell (" + s.Shell().Shell + ") executor...")
 	return nil
 }
 

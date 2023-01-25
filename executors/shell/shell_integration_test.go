@@ -1289,7 +1289,6 @@ func TestBuildMultilineCommand(t *testing.T) {
 	// The default build shouldn't have debug tracing enabled
 	out, err := buildtest.RunBuildReturningOutput(t, build)
 	assert.NoError(t, err)
-	assert.NotContains(t, out, "bash")
 	assert.Contains(t, out, "Hello World")
 	assert.Contains(t, out, "collapsed multi-line command")
 }
