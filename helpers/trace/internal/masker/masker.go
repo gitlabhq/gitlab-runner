@@ -37,6 +37,9 @@ func New(w io.WriteCloser, phrases []string) *Masker {
 	// Create a masker for each unique phrase
 	unique := map[string]struct{}{}
 	for i := 0; i < len(phrases); i++ {
+		if phrases[i] == "" {
+			continue
+		}
 		if _, ok := unique[phrases[i]]; ok {
 			continue
 		}
