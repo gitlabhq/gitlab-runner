@@ -272,9 +272,9 @@ To enable IPv6 support on your host, see the [Docker documentation](https://docs
 
 ## Restrict Docker images and services
 
-You can restrict the Docker images that can run your jobs.
-To do this, you specify wildcard patterns. For example, to allow images
-from your private Docker registry only:
+To restrict Docker images and services, specify a wildcard pattern in the `allowed_images` and `allowed_services` parameters.
+
+For example, to allow images from your private Docker registry only:
 
 ```toml
 [[runners]]
@@ -286,7 +286,7 @@ from your private Docker registry only:
     allowed_services = ["my.registry.tld:5000/*:*"]
 ```
 
-Or, to restrict to a specific list of images from this registry:
+To restrict to a list of images from your private Docker registry:
 
 ```toml
 [[runners]]
@@ -298,55 +298,59 @@ Or, to restrict to a specific list of images from this registry:
     allowed_services = ["postgres:9.4", "postgres:latest"]
 ```
 
-## Access the services
+## Access services hostnames
 
-Let's say that you need a Wordpress instance to test some API integration with
-your application.
+To access a service hostname, add the service to `services` in `.gitlab-ci.yml`.
 
-You can then use for example the [tutum/wordpress](https://hub.docker.com/r/tutum/wordpress/) as a service image in your
-`.gitlab-ci.yml`:
+For example, to use a Wordpress instance to test an API integration with your application,
+use [tutum/wordpress](https://hub.docker.com/r/tutum/wordpress/) as the service image:
 
 ```yaml
 services:
 - tutum/wordpress:latest
 ```
 
-When the build is run, `tutum/wordpress` will be started first and you will have
-access to it from your build container under the hostname `tutum__wordpress`
+When the job runs, the `tutum/wordpress` service starts. You can
+access it from your build container under the hostname `tutum__wordpress`
 and `tutum-wordpress`.
 
-The GitLab Runner creates two alias hostnames for the service that you can use
-alternatively. The aliases are taken from the image name following these rules:
+In addition to the specified service aliases, the runner assigns the name of the service image as an alias to the service container. You can use any of these aliases.
 
-1. Everything after `:` is stripped.
-1. For the first alias, the slash (`/`) is replaced with double underscores (`__`).
-1. For the second alias, the slash (`/`) is replaced with a single dash (`-`).
+The runner uses the following rules to create the alias based on the image name:
 
-Using a private service image will strip any port given and apply the rules as
-described above. A service `registry.gitlab-wp.com:4999/tutum/wordpress` will
-result in hostname `registry.gitlab-wp.com__tutum__wordpress` and
-`registry.gitlab-wp.com-tutum-wordpress`.
+- Everything after `:` is stripped.
+- For the first alias, the slash (`/`) is replaced with double underscores (`__`).
+- For the second alias, the slash (`/`) is replaced with a single dash (`-`).
+
+If you use a private service image, the runner strips any specified port and applies the rules.
+The service `registry.gitlab-wp.com:4999/tutum/wordpress` results in the hostname
+`registry.gitlab-wp.com__tutum__wordpress` and `registry.gitlab-wp.com-tutum-wordpress`.
 
 ## Configuring services
 
-Many services accept environment variables which allow you to easily change
-database names or set account names depending on the environment.
+To change database names or set account names, you can define environment variables
+for the service.
 
-GitLab Runner 0.5.0 and up passes all YAML-defined variables to the created
-service containers.
+When the runner passes variables:
 
-For all possible configuration variables check the documentation of each image
+- Variables are passed to all containers. The runner cannot pass variables to specific
+  containers.
+- Secure variables are passed to the build container.
+
+For more information about configuration variables, see the documentation of each image
 provided in their corresponding Docker Hub page.
 
-All variables are passed to all services containers. It's not designed to
-distinguish which variable should go where.
-Secure variables are only passed to the build container.
+### Mount a directory in RAM
 
-## Mount a directory in RAM
+You can use the `tmpfs` option to mount a directory in RAM. This speeds up the time
+required to test if there is a lot of I/O related work, such as with databases.
 
-You can mount a path in RAM using tmpfs. This can speed up the time required to test if there is a lot of I/O related work, such as with databases.
-If you use the `tmpfs` and `services_tmpfs` options in the runner configuration, you can specify multiple paths, each with its own options. See the [Docker reference](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs) for details.
-This is an example `config.toml` to mount the data directory for the official Mysql container in RAM.
+If you use the `tmpfs` and `services_tmpfs` options in the runner configuration,
+you can specify multiple paths, each with its own options. For more information, see the
+[Docker documentation](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs).
+
+For example, to mount the data directory for the official MySQL container in RAM,
+configure the `config.toml`:
 
 ```toml
 [runners.docker]
@@ -358,6 +362,23 @@ This is an example `config.toml` to mount the data directory for the official My
   [runners.docker.services_tmpfs]
       "/var/lib/mysql" = "rw,noexec"
 ```
+
+### Building a directory in a service
+
+GitLab Runner mounts a `/builds` directory to all shared services.
+
+For more information about using different services see:
+
+- [Using PostgreSQL](https://docs.gitlab.com/ee/ci/services/postgres.html)
+- [Using MySQL](https://docs.gitlab.com/ee/ci/services/mysql.html)
+
+### How GitLab Runner performs the services health check
+
+After the service starts, GitLab Runner waits for the service to
+respond. The Docker executor tries to open a TCP connection to
+the first exposed service in the service container.
+
+To see how this is implemented, use the health check [Go command](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/commands/helpers/health_check.go).
 
 ## Specify Docker driver operations
 
@@ -371,105 +392,81 @@ The following example shows a `config.toml` where the limit that each build can 
       "size" = "50G"
 ```
 
-## Build directory in service
+## Configure directories for the container build and cache
 
-Since version 1.5 GitLab Runner mounts a `/builds` directory to all shared services.
+To define where data is stored in the container, configure `/builds` and `/cache`
+directories in the `[[runners]]` section in `config.toml`.
 
-See an issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1520>.
-
-### PostgreSQL service example
-
-See the specific documentation for
-[using PostgreSQL as a service](https://docs.gitlab.com/ee/ci/services/postgres.html).
-
-### MySQL service example
-
-See the specific documentation for
-[using MySQL as a service](https://docs.gitlab.com/ee/ci/services/mysql.html).
-
-### The services health check
-
-After the service is started, GitLab Runner waits some time for the service to
-be responsive. Currently, the Docker executor tries to open a TCP connection to
-the first exposed service in the service container.
-
-You can see how it is implemented by checking this [Go command](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/commands/helpers/health_check.go).
-
-## The builds and cache storage
-
-The Docker executor by default stores all builds in
-`/builds/<namespace>/<project-name>` and all caches in `/cache` (inside the
-container).
-You can overwrite the `/builds` and `/cache` directories by defining the
-`builds_dir` and `cache_dir` options under the `[[runners]]` section in
-`config.toml`. This will modify where the data are stored inside the container.
-
-If you modify the `/cache` storage path, you also need to make sure to mark this
-directory as persistent by defining it in `volumes = ["/my/cache/"]` under the
+If you modify the `/cache` storage path, to mark the path as persistent you must define it in `volumes = ["/my/cache/"]`, under the
 `[runners.docker]` section in `config.toml`.
 
-### Clearing Docker cache
+By default, the Docker executor stores builds and caches in the following directories:
+
+- Builds in `/builds/<namespace>/<project-name>`
+- Caches in `/cache` inside the container.
+
+## Clear the Docker cache
 
 > Introduced in GitLab Runner 13.9, [all created runner resources cleaned up](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2310).
 
-GitLab Runner provides the [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache)
-script to remove old containers and volumes that can unnecessarily consume disk space.
+Use [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) to remove unused containers and volumes created by the runner.
 
-Run `clear-docker-cache` regularly (using `cron` once per week, for example),
-ensuring a balance is struck between:
-
-- Maintaining some recent containers in the cache for performance.
-- Reclaiming disk space.
-
-`clear-docker-cache` can remove old or unused containers and volumes that are created by the GitLab Runner. For a list of options, run the script with `help` option:
+For a list of options, run the script with the `help` option:
 
 ```shell
 clear-docker-cache help
 ```
 
-The default option is `prune-volumes` which the script will remove all unused containers (both dangling and unreferenced) and volumes.
+The default option is `prune-volumes`, which removes all unused containers (dangling and unreferenced)
+and volumes.
 
-### Clearing old build images
+To manage cache storage efficiently, you should:
 
-The [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) script will not remove the Docker images as they are not tagged by the GitLab Runner. You can however confirm the space that can be reclaimed by running the script with the `space` option as illustrated below:
+- Run `clear-docker-cache` with `cron` regularly (for example, once a week).
+- Maintain some recent containers in the cache for performance while you
+reclaim disk space.
 
-```shell
-clear-docker-cache space
+## Clear Docker build images
 
-Show docker disk usage
-----------------------
+The [`clear-docker-cache`](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/packaging/root/usr/share/gitlab-runner/clear-docker-cache) script does not remove Docker images because they are not tagged by the GitLab Runner.
 
-TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          14        9         1.306GB   545.8MB (41%)
-Containers      19        18        115kB     0B (0%)
-Local Volumes   0         0         0B        0B
-Build Cache     0         0         0B        0B
-```
+To clear Docker build images:
 
-Once you have confirmed the reclaimable space, run the [`docker system prune`](https://docs.docker.com/engine/reference/commandline/system_prune/) command that will remove all unused containers, networks, images (both dangling and unreferenced), and optionally, volumes that are not tagged by the GitLab Runner.
+1. Confirm what disk space can be reclaimed:
 
-## The persistent storage
+    ```shell
+    clear-docker-cache space
 
-The Docker executor can provide a persistent storage when running the containers.
-All directories defined under `volumes =` will be persistent between builds.
+    Show docker disk usage
+    ----------------------
 
-The `volumes` directive supports two types of storage:
+    TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+    Images          14        9         1.306GB   545.8MB (41%)
+    Containers      19        18        115kB     0B (0%)
+    Local Volumes   0         0         0B        0B
+    Build Cache     0         0         0B        0B
+    ```
 
-1. `<path>` - **the dynamic storage**. The `<path>` is persistent between subsequent
-   runs of the same concurrent job for that project. The data is attached to a
-   custom cache volume: `runner-<short-token>-project-<id>-concurrent-<concurrency-id>-cache-<md5-of-path>`.
-1. `<host-path>:<path>[:<mode>]` - **the host-bound storage**. The `<path>` is
-   bound to `<host-path>` on the host system. The optional `<mode>` can specify
-   that this storage is read-only or read-write (default).
+1. To remove all unused containers, networks, images (dangling and unreferenced), and untagged volumes, run [`docker system prune`](https://docs.docker.com/engine/reference/commandline/system_prune/).
 
-### The persistent storage for builds
+## Persistent storage
 
-If you make the `/builds` directory **a host-bound storage**, your builds will be stored in:
+The Docker executor provides persistent storage when it runs containers.
+All directories defined in `volumes =` are persistent between builds.
+
+The `volumes` directive supports the following types of storage:
+
+- For dynamic storage, use `<path>`. The `<path>` is persistent between subsequent runs of the same concurrent job for that project. The data is attached to a custom cache volume: `runner-<short-token>-project-<id>-concurrent-<concurrency-id>-cache-<md5-of-path>`.
+- For host-bound storage, use `<host-path>:<path>[:<mode>]`. The `<path>` is bound to `<host-path>` on the host system. The optional `<mode>` specifies that this storage is read-only or read-write (default).
+
+### Persistent storage for builds
+
+If you make the `/builds` directory a host-bound storage, your builds are stored in:
 `/builds/<short-token>/<concurrent-id>/<namespace>/<project-name>`, where:
 
-- `<short-token>` is a shortened version of the Runner's token (first 8 letters)
-- `<concurrent-id>` is a unique number, identifying the local job ID on the
-  particular runner in context of the project
+- `<short-token>` is a shortened version of the Runner's token (first 8 letters).
+- `<concurrent-id>` is a unique number that identifies the local job ID of the
+  particular runner in context of the project.
 
 ## IPC mode
 
@@ -477,7 +474,7 @@ The Docker executor supports sharing the IPC namespace of containers with other
 locations. This maps to the `docker run --ipc` flag.
 More details on [IPC settings in Docker documentation](https://docs.docker.com/engine/reference/run/#ipc-settings---ipc)
 
-## The privileged mode
+## Privileged mode
 
 The Docker executor supports a number of options that allows fine-tuning of the
 build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
@@ -510,23 +507,19 @@ build:
   - docker push my-image
 ```
 
-## The ENTRYPOINT
+## Configure a Docker ENTRYPOINT
 
-The Docker executor doesn't overwrite the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime).
-
-That means that if your image defines the `ENTRYPOINT` and doesn't allow running
+The Docker executor doesn't overwrite the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime). This means that if your image defines the `ENTRYPOINT` and doesn't allow you to run
 scripts with `CMD`, the image will not work with the Docker executor.
 
-With the use of `ENTRYPOINT` it is possible to create special Docker image that
-would run the build script in a custom environment, or in secure mode.
+You can use `ENTRYPOINT` to create a Docker image that
+runs the build script in a custom environment, or in secure mode.
 
-You may think of creating a Docker image that uses an `ENTRYPOINT` that doesn't
-execute the build script, but does execute a predefined set of commands, for
-example to build the Docker image from your directory. In that case, you can
-run the build container in [privileged mode](#the-privileged-mode), and make
-the build environment of the runner secure.
-
-Consider the following example:
+For example, you can create a Docker image that uses an `ENTRYPOINT` that doesn't
+execute the build script. Instead, the Docker image executes a predefined set of commands
+to build the Docker image from your directory. You run
+the build container in [privileged mode](#privileged-mode), and secure
+the build environment of the runner.
 
 1. Create a new Dockerfile:
 
@@ -536,7 +529,7 @@ Consider the following example:
    ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
    ```
 
-1. Create a bash script (`entrypoint.sh`) that will be used as the `ENTRYPOINT`:
+1. Create a bash script (`entrypoint.sh`) that is used as the `ENTRYPOINT`:
 
    ```shell
    #!/bin/sh
@@ -576,7 +569,8 @@ Consider the following example:
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27119) in GitLab 15.3.
 
-If you have GitLab Runner installed on Linux, your jobs can use Podman to replace Docker as the container runtime in the Docker executor.
+If you have GitLab Runner installed on Linux, your jobs can use Podman to replace Docker as
+the container runtime in the Docker executor.
 
 Prerequisites:
 
@@ -626,9 +620,11 @@ Prerequisites:
        privileged = true
    ```
 
-### Using Podman to build container images from a Dockerfile
+### Use Podman to build container images from a Dockerfile
 
-The example below illustrates how to use Podman to build a container image and push the image to the GitLab Container registry. The default container image in the Runner `config.toml` is set to `quay.io/podman/stable`, which means the CI job will default to using that image to execute the included commands.
+The following example uses Podman to build a container image and push the image to the GitLab Container registry.
+
+The default container image in the Runner `config.toml` is set to `quay.io/podman/stable`, so that the CI job uses that image to execute the included commands.
 
 ```yaml
 variables:
@@ -645,9 +641,9 @@ oci-container-build:
   when: manual
 ```
 
-### Using Buildah to build container images from a Dockerfile
+### Use Buildah to build container images from a Dockerfile
 
-The example below illustrates how to use [Buildah](https://buildah.io/) to build a container image and push the image to the GitLab Container registry.
+The following example shows how to use Buildah to build a container image and push the image to the GitLab Container registry.
 
 ```yaml
 image: quay.io/buildah/stable
@@ -748,7 +744,7 @@ Use the `if-not-present` policy to:
 - For shared runners where different users that use the runner may have access to private images.
   For more information about security issues, see
   [Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
-- If your jobs use images that are updated frequently and must run with the most recent image
+- If jobs are frequently updated and must be run in the most recent image
   version. This may result in a network load reduction that outweighs the value of frequent deletion
   of local images.
 

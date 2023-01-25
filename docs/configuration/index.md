@@ -28,7 +28,7 @@ Learn how to configure GitLab Runner.
   security implications when running your jobs with GitLab Runner.
 - [Runner monitoring](../monitoring/index.md): Monitor the behavior of your
   runners.
-- [Clean up Docker cache automatically](../executors/docker.md#clearing-docker-cache):
+- [Clean up Docker cache automatically](../executors/docker.md#clear-the-docker-cache):
   If you are running low on disk space, use a cron job to clean old containers and volumes.
 - [Configure GitLab Runner to run behind a proxy](proxy.md): Set
   up a Linux proxy and configure GitLab Runner. Useful for the
