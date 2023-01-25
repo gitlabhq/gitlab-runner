@@ -1519,7 +1519,7 @@ This issue happens when the worker node IAM role does not have the permission to
 }
 ```
 
-### Preparation failed: failed to pull image 'image-name:latest': pull_policy ([Always]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([])
+### `Preparation failed: failed to pull image 'image-name:latest': pull_policy ([Always]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([])`
 
 This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](#restrict-docker-pull-policies).
 
