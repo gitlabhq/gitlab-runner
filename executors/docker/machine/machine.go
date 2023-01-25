@@ -116,7 +116,12 @@ func (e *machineExecutor) Finish(err error) {
 	if e.executor != nil {
 		e.executor.Finish(err)
 	}
-	e.log().Infoln("Finished docker-machine build:", err)
+
+	if err == nil {
+		e.log().Infoln("Finished docker-machine build")
+	} else {
+		e.log().Warningln("Finished docker-machine build with error:", err)
+	}
 }
 
 func (e *machineExecutor) Cleanup() {
