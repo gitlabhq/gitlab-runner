@@ -2,6 +2,7 @@ package autoscaler
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,7 @@ import (
 	fleetingmocks "gitlab.com/gitlab-org/fleeting/fleeting/connector/mocks"
 	nestingmocks "gitlab.com/gitlab-org/fleeting/nesting/api/mocks"
 	"gitlab.com/gitlab-org/fleeting/nesting/hypervisor"
+	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -21,25 +23,77 @@ func TestAcquisitionRefClose(t *testing.T) {
 
 }
 
-func TestAcquisitionRefCreateVMTunner(t *testing.T) {
+func TestAcquisitionRefCreateVMTunnel(t *testing.T) {
 	cases := []struct {
 		name                     string
-		ref                      *acquisitionRef
-		buildImageName           string
 		nestingCfgImage          string
+		buildImageName           string
+		mapJobImageToVMImage     bool
+		slot                     *int32
 		expect                   []expectation
 		expectTunneledDialerCall bool
 		tunneledDialerErr        error
-		err                      bool
+		expectErr                bool
 	}{
 		{
-			name: "success",
-			ref: &acquisitionRef{
-				key: "key",
-			},
+			name:            "success",
 			nestingCfgImage: "image",
 			expect: []expectation{
-				ncCreate("image", nil, hypervisor.VirtualMachineInfo{Name: "name", Id: "id"}, nil, nil),
+				ncCreate("image", nil, hypervisor.VirtualMachineInfo{Id: "id"}, nil, nil),
+				ncDelete("id", nil),
+				ncClose(nil),
+			},
+			expectTunneledDialerCall: true,
+		},
+		{
+			name:                 "build image override",
+			nestingCfgImage:      "image",
+			buildImageName:       "override-image",
+			mapJobImageToVMImage: true,
+			expect: []expectation{
+				ncCreate("override-image", nil, hypervisor.VirtualMachineInfo{Id: "id"}, nil, nil),
+				ncDelete("id", nil),
+				ncClose(nil),
+			},
+			expectTunneledDialerCall: true,
+		},
+		{
+			name:            "error create nested vm",
+			nestingCfgImage: "image",
+			expect: []expectation{
+				ncCreate("image", nil, nil, nil, fmt.Errorf("no can do")),
+			},
+			expectTunneledDialerCall: false,
+			expectErr:                true,
+		},
+		{
+			name:            "error creating tunneled dialer",
+			nestingCfgImage: "image",
+			expect: []expectation{
+				ncCreate("image", nil, hypervisor.VirtualMachineInfo{Id: "id"}, nil, nil),
+				ncDelete("id", nil),
+			},
+			expectTunneledDialerCall: true,
+			tunneledDialerErr:        fmt.Errorf("no can do"),
+			expectErr:                true,
+		},
+		{
+			name:            "success with slot",
+			nestingCfgImage: "image",
+			slot:            int32Ref(0),
+			expect: []expectation{
+				ncCreate("image", int32Ref(0), hypervisor.VirtualMachineInfo{Id: "id"}, nil, nil),
+				ncDelete("id", nil),
+				ncClose(nil),
+			},
+			expectTunneledDialerCall: true,
+		},
+		{
+			name:            "success with stomped slot",
+			nestingCfgImage: "image",
+			slot:            int32Ref(0),
+			expect: []expectation{
+				ncCreate("image", int32Ref(0), hypervisor.VirtualMachineInfo{Id: "id"}, stringRef("stomped-id"), nil),
 				ncDelete("id", nil),
 				ncClose(nil),
 			},
@@ -61,16 +115,23 @@ func TestAcquisitionRefCreateVMTunner(t *testing.T) {
 			if tc.tunneledDialerErr == nil {
 				mockCTD.dialer = dialer
 			}
-			createTunneledDialer = mockCTD.Fn()
+			createTunneledDialer = mockCTD.fn()
 			nc := nestingmocks.NewClient(t)
 			for _, e := range tc.expect {
 				e(nc)
 			}
 			options := executorPrepareOptions(tc.buildImageName, tc.nestingCfgImage)
+			ref := &acquisitionRef{
+				mapJobImageToVMImage: tc.mapJobImageToVMImage,
+			}
+			if tc.slot != nil {
+				ref.acq = &taskscaler.Acquisition{}
+				// Cannot set slot (unexported field) but defaults to 0
+			}
 
-			client, err := tc.ref.createVMTunnel(context.TODO(), common.BuildLogger{}, nc, dialer, options)
+			client, err := ref.createVMTunnel(context.TODO(), common.BuildLogger{}, nc, dialer, options)
 
-			if tc.err {
+			if tc.expectErr {
 				assert.Nil(t, client)
 				assert.Error(t, err)
 			} else {
@@ -81,6 +142,7 @@ func TestAcquisitionRefCreateVMTunner(t *testing.T) {
 				dialer.EXPECT().Close().Return(nil)
 				client.Close()
 			}
+			mockCTD.verify(t)
 		})
 	}
 }
@@ -113,7 +175,7 @@ type mockCreateTunneledDialer struct {
 	err        error
 }
 
-func (m *mockCreateTunneledDialer) Fn() func(
+func (m *mockCreateTunneledDialer) fn() func(
 	context.Context,
 	connector.Client,
 	common.VMIsolation,
@@ -125,7 +187,17 @@ func (m *mockCreateTunneledDialer) Fn() func(
 		_ common.VMIsolation,
 		_ hypervisor.VirtualMachine,
 	) (connector.Client, error) {
+		m.wasCalled = true
 		return m.dialer, m.err
+	}
+}
+
+func (m *mockCreateTunneledDialer) verify(t *testing.T) {
+	if m.expectCall && !m.wasCalled {
+		t.Errorf("wanted call. got none")
+	}
+	if !m.expectCall && m.wasCalled {
+		t.Errorf("wanted no call. got one")
 	}
 }
 
@@ -147,4 +219,12 @@ func ncClose(err error) expectation {
 	return func(nc *nestingmocks.Client) {
 		nc.EXPECT().Close().Return(err)
 	}
+}
+
+func int32Ref(i int32) *int32 {
+	return &i
+}
+
+func stringRef(s string) *string {
+	return &s
 }
