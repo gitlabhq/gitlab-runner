@@ -412,9 +412,17 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	config := s.getConfig()
 	if config.Concurrent < s.Limit {
 		logrus.Warningf(
-			"Specified limit (%d) larger then current concurrent limit (%d). "+
-				"Concurrent limit will not be enlarged.",
+			"The specified runner job concurrency limit (%d) is larger than current global concurrency limit (%d). "+
+				"The global concurrent limit will not be increased and takes precedence.",
 			s.Limit,
+			config.Concurrent,
+		)
+	}
+	if config.Concurrent < s.RequestConcurrency {
+		logrus.Warningf(
+			"The specified runner request concurrency (%d) is larger than the current global concurrent limit (%d). "+
+				"The global concurrent limit will not be increased and takes precedence.",
+			s.RequestConcurrency,
 			config.Concurrent,
 		)
 	}
