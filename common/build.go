@@ -1206,14 +1206,14 @@ func (b *Build) GetRemoteURL() string {
 		u.User = url.UserPassword("gitlab-ci-token", b.Token)
 	}
 
-	projectPath := b.GetAllVariables().Get("CI_PROJECT_PATH") + ".git"
+	projectPath := b.GetAllVariables().Value("CI_PROJECT_PATH") + ".git"
 	u.Path = path.Join(u.Path, projectPath)
 
 	return u.String()
 }
 
 func (b *Build) GetGitStrategy() GitStrategy {
-	switch b.GetAllVariables().Get("GIT_STRATEGY") {
+	switch b.GetAllVariables().Value("GIT_STRATEGY") {
 	case "clone":
 		return GitClone
 
@@ -1237,7 +1237,7 @@ func (b *Build) GetGitCheckout() bool {
 		return false
 	}
 
-	strCheckout := b.GetAllVariables().Get("GIT_CHECKOUT")
+	strCheckout := b.GetAllVariables().Value("GIT_CHECKOUT")
 	if strCheckout == "" {
 		return true
 	}
@@ -1253,7 +1253,7 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 	if b.GetGitStrategy() == GitNone {
 		return SubmoduleNone
 	}
-	switch b.GetAllVariables().Get("GIT_SUBMODULE_STRATEGY") {
+	switch b.GetAllVariables().Value("GIT_SUBMODULE_STRATEGY") {
 	case "normal":
 		return SubmoduleNormal
 
@@ -1272,7 +1272,7 @@ func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 
 // GetSubmodulePaths https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-ltpathgt82308203
 func (b *Build) GetSubmodulePaths() ([]string, error) {
-	paths := b.GetAllVariables().Get("GIT_SUBMODULE_PATHS")
+	paths := b.GetAllVariables().Value("GIT_SUBMODULE_PATHS")
 	toks := strings.Fields(paths)
 	for _, tok := range toks {
 		if tok == ":(exclude)" {
@@ -1283,7 +1283,7 @@ func (b *Build) GetSubmodulePaths() ([]string, error) {
 }
 
 func (b *Build) GetSubmoduleDepth() int {
-	depth, err := strconv.Atoi(b.GetAllVariables().Get("GIT_SUBMODULE_DEPTH"))
+	depth, err := strconv.Atoi(b.GetAllVariables().Value("GIT_SUBMODULE_DEPTH"))
 	if err != nil {
 		return b.GitInfo.Depth
 	}
@@ -1291,7 +1291,7 @@ func (b *Build) GetSubmoduleDepth() int {
 }
 
 func (b *Build) GetGitCleanFlags() []string {
-	flags := b.GetAllVariables().Get("GIT_CLEAN_FLAGS")
+	flags := b.GetAllVariables().Value("GIT_CLEAN_FLAGS")
 	if flags == "" {
 		flags = gitCleanFlagsDefault
 	}
@@ -1304,7 +1304,7 @@ func (b *Build) GetGitCleanFlags() []string {
 }
 
 func (b *Build) GetGitFetchFlags() []string {
-	flags := b.GetAllVariables().Get("GIT_FETCH_EXTRA_FLAGS")
+	flags := b.GetAllVariables().Value("GIT_FETCH_EXTRA_FLAGS")
 	if flags == "" {
 		flags = gitFetchFlagsDefault
 	}
@@ -1317,12 +1317,12 @@ func (b *Build) GetGitFetchFlags() []string {
 }
 
 func (b *Build) GetGitSubmoduleUpdateFlags() []string {
-	flags := b.GetAllVariables().Get("GIT_SUBMODULE_UPDATE_FLAGS")
+	flags := b.GetAllVariables().Value("GIT_SUBMODULE_UPDATE_FLAGS")
 	return strings.Fields(flags)
 }
 
 func (b *Build) IsDebugTraceEnabled() bool {
-	trace, err := strconv.ParseBool(b.GetAllVariables().Get("CI_DEBUG_TRACE"))
+	trace, err := strconv.ParseBool(b.GetAllVariables().Value("CI_DEBUG_TRACE"))
 	if err != nil {
 		trace = false
 	}
@@ -1339,11 +1339,11 @@ func (b *Build) IsDebugTraceEnabled() bool {
 }
 
 func (b *Build) GetDockerAuthConfig() string {
-	return b.GetAllVariables().Get("DOCKER_AUTH_CONFIG")
+	return b.GetAllVariables().Value("DOCKER_AUTH_CONFIG")
 }
 
 func (b *Build) GetGetSourcesAttempts() int {
-	retries, err := strconv.Atoi(b.GetAllVariables().Get("GET_SOURCES_ATTEMPTS"))
+	retries, err := strconv.Atoi(b.GetAllVariables().Value("GET_SOURCES_ATTEMPTS"))
 	if err != nil {
 		return DefaultGetSourcesAttempts
 	}
@@ -1351,7 +1351,7 @@ func (b *Build) GetGetSourcesAttempts() int {
 }
 
 func (b *Build) GetDownloadArtifactsAttempts() int {
-	retries, err := strconv.Atoi(b.GetAllVariables().Get("ARTIFACT_DOWNLOAD_ATTEMPTS"))
+	retries, err := strconv.Atoi(b.GetAllVariables().Value("ARTIFACT_DOWNLOAD_ATTEMPTS"))
 	if err != nil {
 		return DefaultArtifactDownloadAttempts
 	}
@@ -1359,7 +1359,7 @@ func (b *Build) GetDownloadArtifactsAttempts() int {
 }
 
 func (b *Build) GetRestoreCacheAttempts() int {
-	retries, err := strconv.Atoi(b.GetAllVariables().Get("RESTORE_CACHE_ATTEMPTS"))
+	retries, err := strconv.Atoi(b.GetAllVariables().Value("RESTORE_CACHE_ATTEMPTS"))
 	if err != nil {
 		return DefaultRestoreCacheAttempts
 	}
@@ -1367,7 +1367,7 @@ func (b *Build) GetRestoreCacheAttempts() int {
 }
 
 func (b *Build) GetCacheRequestTimeout() int {
-	timeout, err := strconv.Atoi(b.GetAllVariables().Get("CACHE_REQUEST_TIMEOUT"))
+	timeout, err := strconv.Atoi(b.GetAllVariables().Value("CACHE_REQUEST_TIMEOUT"))
 	if err != nil {
 		return DefaultCacheRequestTimeout
 	}
@@ -1375,7 +1375,7 @@ func (b *Build) GetCacheRequestTimeout() int {
 }
 
 func (b *Build) GetExecutorJobSectionAttempts() (int, error) {
-	attempts, err := strconv.Atoi(b.GetAllVariables().Get(ExecutorJobSectionAttempts))
+	attempts, err := strconv.Atoi(b.GetAllVariables().Value(ExecutorJobSectionAttempts))
 	if err != nil {
 		return DefaultExecutorStageAttempts, nil
 	}
@@ -1463,7 +1463,7 @@ func (b *Build) printRunningWithHeader() {
 }
 
 func (b *Build) IsLFSSmudgeDisabled() bool {
-	disabled, err := strconv.ParseBool(b.GetAllVariables().Get("GIT_LFS_SKIP_SMUDGE"))
+	disabled, err := strconv.ParseBool(b.GetAllVariables().Value("GIT_LFS_SKIP_SMUDGE"))
 	if err != nil {
 		return false
 	}
@@ -1472,7 +1472,7 @@ func (b *Build) IsLFSSmudgeDisabled() bool {
 }
 
 func (b *Build) IsCIDebugServiceEnabled() bool {
-	debugServices := b.GetAllVariables().Get("CI_DEBUG_SERVICES")
+	debugServices := b.GetAllVariables().Value("CI_DEBUG_SERVICES")
 
 	if debugServices == "" {
 		return false
