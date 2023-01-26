@@ -1025,8 +1025,7 @@ Currently, `alpine3.13` is the latest supported `pwsh` image.
 
 ### Helper image registry
 
-In GitLab 15.0 and later, the helper image is pulled from the GitLab Container Registry. In addition, helper images are
-only published in the GitLab Container Registry.
+In GitLab 15.0 and later, the helper image is pulled from the GitLab Container Registry.
 
 In GitLab 15.0 and earlier, you configure helper images to use images from Docker Hub. To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
 
