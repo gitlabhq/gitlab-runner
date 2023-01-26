@@ -862,6 +862,10 @@ func (n *GitLabClient) DownloadArtifacts(
 
 	if res != nil {
 		log = log.WithField("responseStatus", res.Status)
+
+		if res.Request != nil && res.Request.URL != nil {
+			log = log.WithField("host", res.Request.URL.Host)
+		}
 	}
 
 	if err != nil {
