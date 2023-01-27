@@ -27,6 +27,11 @@ func TestMasking(t *testing.T) {
 		expected string
 	}{
 		{
+			input:    "empty secrets have no affect",
+			values:   []string{""},
+			expected: "empty secrets have no affect",
+		},
+		{
 			input:    "no escaping at all",
 			expected: "no escaping at all",
 		},
