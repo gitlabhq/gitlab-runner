@@ -237,9 +237,11 @@ func TestFileVariablesExpansion(t *testing.T) {
 
 		// correct expansion of file variables
 		assert.Equal(t, "/foo/bar/a_file_var", variables.Get("a_file_var"))
+		assert.Equal(t, "some top secret stuff", variables.Value("a_file_var"))
 
 		// correct expansion of variables that reference file variables
 		assert.Equal(t, "/foo/bar/a_file_var.txt", variables.Get("ref_file_var"))
+		assert.Equal(t, "/foo/bar/a_file_var.txt", variables.Value("ref_file_var"))
 		assert.Equal(t, "/foo/bar/a_file_var.txt.blammo", variables.ExpandValue("${ref_file_var}.blammo"))
 		assert.Equal(t, "/foo/bar/a_file_var.blammo", variables.ExpandValue("${a_file_var}.blammo"))
 
@@ -247,6 +249,8 @@ func TestFileVariablesExpansion(t *testing.T) {
 		// regular variables
 		assert.Equal(t, "bla bla bla", variables.Get("regular_var"))
 		assert.Equal(t, "bla bla bla", variables.Get("ref_regular_var"))
+		assert.Equal(t, "bla bla bla", variables.Value("regular_var"))
+		assert.Equal(t, "bla bla bla", variables.Value("ref_regular_var"))
 	}
 
 	expanded := all.Expand()

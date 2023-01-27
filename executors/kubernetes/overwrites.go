@@ -239,9 +239,9 @@ func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 		config.CPURequestOverwriteMaxAllowed,
 		config.MemoryRequestOverwriteMaxAllowed,
 		config.EphemeralStorageRequestOverwriteMaxAllowed,
-		variables.Get(CPURequestOverwriteVariableValue),
-		variables.Get(MemoryRequestOverwriteVariableValue),
-		variables.Get(EphemeralStorageRequestOverwriteVariableValue),
+		variables.Value(CPURequestOverwriteVariableValue),
+		variables.Value(MemoryRequestOverwriteVariableValue),
+		variables.Value(EphemeralStorageRequestOverwriteVariableValue),
 		logger,
 	)
 	if err != nil {
@@ -258,9 +258,9 @@ func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 		config.CPULimitOverwriteMaxAllowed,
 		config.MemoryLimitOverwriteMaxAllowed,
 		config.EphemeralStorageLimitOverwriteMaxAllowed,
-		variables.Get(CPULimitOverwriteVariableValue),
-		variables.Get(MemoryLimitOverwriteVariableValue),
-		variables.Get(EphemeralStorageLimitOverwriteVariableValue),
+		variables.Value(CPULimitOverwriteVariableValue),
+		variables.Value(MemoryLimitOverwriteVariableValue),
+		variables.Value(EphemeralStorageLimitOverwriteVariableValue),
 		logger,
 	)
 	if err != nil {
@@ -285,9 +285,9 @@ func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 		config.ServiceCPURequestOverwriteMaxAllowed,
 		config.ServiceMemoryRequestOverwriteMaxAllowed,
 		config.ServiceEphemeralStorageRequestOverwriteMaxAllowed,
-		variables.Get(ServiceCPURequestOverwriteVariableValue),
-		variables.Get(ServiceMemoryRequestOverwriteVariableValue),
-		variables.Get(ServiceEphemeralStorageRequestOverwriteVariableValue),
+		variables.Value(ServiceCPURequestOverwriteVariableValue),
+		variables.Value(ServiceMemoryRequestOverwriteVariableValue),
+		variables.Value(ServiceEphemeralStorageRequestOverwriteVariableValue),
 		logger,
 	)
 	if err != nil {
@@ -304,9 +304,9 @@ func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 		config.ServiceCPULimitOverwriteMaxAllowed,
 		config.ServiceMemoryLimitOverwriteMaxAllowed,
 		config.ServiceEphemeralStorageLimitOverwriteMaxAllowed,
-		variables.Get(ServiceCPULimitOverwriteVariableValue),
-		variables.Get(ServiceMemoryLimitOverwriteVariableValue),
-		variables.Get(ServiceEphemeralStorageLimitOverwriteVariableValue),
+		variables.Value(ServiceCPULimitOverwriteVariableValue),
+		variables.Value(ServiceMemoryLimitOverwriteVariableValue),
+		variables.Value(ServiceEphemeralStorageLimitOverwriteVariableValue),
 		logger,
 	)
 	if err != nil {
@@ -331,9 +331,9 @@ func (o *overwrites) evaluateMaxHelperResourcesOverwrite(
 		config.HelperCPURequestOverwriteMaxAllowed,
 		config.HelperMemoryRequestOverwriteMaxAllowed,
 		config.HelperEphemeralStorageRequestOverwriteMaxAllowed,
-		variables.Get(HelperCPURequestOverwriteVariableValue),
-		variables.Get(HelperMemoryRequestOverwriteVariableValue),
-		variables.Get(HelperEphemeralStorageRequestOverwriteVariableValue),
+		variables.Value(HelperCPURequestOverwriteVariableValue),
+		variables.Value(HelperMemoryRequestOverwriteVariableValue),
+		variables.Value(HelperEphemeralStorageRequestOverwriteVariableValue),
 		logger,
 	)
 	if err != nil {
@@ -350,9 +350,9 @@ func (o *overwrites) evaluateMaxHelperResourcesOverwrite(
 		config.HelperCPULimitOverwriteMaxAllowed,
 		config.HelperMemoryLimitOverwriteMaxAllowed,
 		config.HelperEphemeralStorageLimitOverwriteMaxAllowed,
-		variables.Get(HelperCPULimitOverwriteVariableValue),
-		variables.Get(HelperMemoryLimitOverwriteVariableValue),
-		variables.Get(HelperEphemeralStorageLimitOverwriteVariableValue),
+		variables.Value(HelperCPULimitOverwriteVariableValue),
+		variables.Value(HelperMemoryLimitOverwriteVariableValue),
+		variables.Value(HelperEphemeralStorageLimitOverwriteVariableValue),
 		logger,
 	)
 	if err != nil {

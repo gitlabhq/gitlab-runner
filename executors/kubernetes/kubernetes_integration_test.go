@@ -805,7 +805,7 @@ func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName s
 
 	allVariables := build.GetAllVariables()
 
-	assert.Equal(t, fmt.Sprintf("/builds/%s/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", allVariables.Get("CI_CONCURRENT_ID")), build.BuildDir)
+	assert.Equal(t, fmt.Sprintf("/builds/%s/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", allVariables.Value("CI_CONCURRENT_ID")), build.BuildDir)
 }
 
 // testKubernetesGarbageCollection tests the deletion of resources via garbage collector once the owning pod is deleted
