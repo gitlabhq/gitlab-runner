@@ -32,6 +32,7 @@ func TestVariablesMasking(t *testing.T) {
 		"mask_suffix",
 		"dd",
 		"middle",
+		"",
 	}
 
 	buffer, err := New()
