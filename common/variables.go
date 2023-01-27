@@ -32,7 +32,7 @@ const tempProjectDirVariableKey = "RUNNER_TEMP_PROJECT_DIR"
 // build's temporary directory). The returned path must be further expanded
 // by/for each shell that uses it.
 func (b JobVariables) tmpFile(s string) string {
-	return path.Join(b.Get(tempProjectDirVariableKey), s)
+	return path.Join(b.Value(tempProjectDirVariableKey), s)
 }
 
 func (b JobVariables) PublicOrInternal() (variables JobVariables) {
@@ -51,7 +51,24 @@ func (b JobVariables) StringList() (variables []string) {
 	return variables
 }
 
+// Get returns the value of a variable, or if a file type variable, the
+// pathname to the saved file containing the value,
 func (b JobVariables) Get(key string) string {
+	return b.value(key, true)
+}
+
+// Value is similar to Get(), but always returns the key value, regardless
+// of the variable type. File variables therefore return the file contents
+// and not the path name of the file.
+func (b JobVariables) Value(key string) string {
+	return b.value(key, false)
+}
+
+// value returns the contents of the variable by key.
+//
+// If the variable type is 'file' and the 'pathnames' parameter is true, then
+// the pathname of the file containing the contents is returned instead.
+func (b JobVariables) value(key string, pathnames bool) string {
 	switch key {
 	case "$":
 		return key
@@ -60,7 +77,7 @@ func (b JobVariables) Get(key string) string {
 	}
 	for i := len(b) - 1; i >= 0; i-- {
 		if b[i].Key == key {
-			if b[i].File {
+			if b[i].File && pathnames {
 				return b.tmpFile(b[i].Key)
 			}
 			return b[i].Value
