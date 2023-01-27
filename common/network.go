@@ -613,6 +613,7 @@ type JobTrace interface {
 	Abort() bool
 	SetFailuresCollector(fc FailuresCollector)
 	SetMasked(maskOptions MaskOptions)
+	SetDebugModeEnabled(isEnabled bool)
 	IsStdout() bool
 }
 
@@ -646,7 +647,8 @@ type Network interface {
 	ResetTokenWithPAT(runner RunnerCredentials, pat string) *ResetTokenResponse
 	RequestJob(ctx context.Context, config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
 	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
-	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int) PatchTraceResult
+	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte,
+		startOffset int, debugModeEnabled bool) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile io.WriteCloser, directDownload *bool) DownloadState
 	UploadRawArtifacts(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string)
 	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error)

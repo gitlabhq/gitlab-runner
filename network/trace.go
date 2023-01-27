@@ -18,6 +18,8 @@ type clientJobTrace struct {
 	cancelFunc     context.CancelFunc
 	abortFunc      context.CancelFunc
 
+	debugModeEnabled bool
+
 	buffer *trace.Buffer
 
 	lock          sync.RWMutex
@@ -261,7 +263,7 @@ func (c *clientJobTrace) sendPatch() common.PatchTraceResult {
 		return common.PatchTraceResult{State: common.PatchSucceeded}
 	}
 
-	result := c.client.PatchTrace(c.config, c.jobCredentials, content, sentTrace)
+	result := c.client.PatchTrace(c.config, c.jobCredentials, content, sentTrace, c.debugModeEnabled)
 
 	c.setUpdateInterval(result.NewUpdateInterval)
 
@@ -403,6 +405,10 @@ func (c *clientJobTrace) setupLogLimit() {
 
 func (c *clientJobTrace) IsMaskingURLParams() bool {
 	return c.config.IsFeatureFlagOn(featureflags.UseImprovedURLMasking)
+}
+
+func (c *clientJobTrace) SetDebugModeEnabled(isEnabled bool) {
+	c.debugModeEnabled = isEnabled
 }
 
 func newJobTrace(

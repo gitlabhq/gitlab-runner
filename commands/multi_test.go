@@ -61,6 +61,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	mJobTrace.On("SetCancelFunc", mock.Anything)
 	mJobTrace.On("SetAbortFunc", mock.Anything)
 	mJobTrace.On("SetMasked", mock.Anything)
+	mJobTrace.On("SetDebugModeEnabled", mock.Anything)
 	mJobTrace.On("Success")
 
 	mNetwork := common.MockNetwork{}

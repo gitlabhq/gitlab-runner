@@ -1488,3 +1488,7 @@ func (b *Build) IsCIDebugServiceEnabled() bool {
 	}
 	return enabled
 }
+
+func (b *Build) IsDebugModeEnabled() bool {
+	return b.IsDebugTraceEnabled() || b.IsCIDebugServiceEnabled()
+}
