@@ -43,7 +43,7 @@ func TestBuildPredefinedVariables(t *testing.T) {
 				return options.Build.StartBuild(rootDir, "/cache/dir", false, false)
 			})
 
-			projectDir := build.GetAllVariables().Get("CI_PROJECT_DIR")
+			projectDir := build.GetAllVariables().Value("CI_PROJECT_DIR")
 			assert.NotEmpty(t, projectDir, "should have CI_PROJECT_DIR")
 		})
 	}
@@ -75,7 +75,7 @@ func TestBuildTimeoutExposed(t *testing.T) {
 				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
 			})
 
-			exposedTimeout, err := strconv.Atoi(build.GetAllVariables().Get("CI_JOB_TIMEOUT"))
+			exposedTimeout, err := strconv.Atoi(build.GetAllVariables().Value("CI_JOB_TIMEOUT"))
 			require.NoError(t, err)
 			assert.Equal(t, exposedTimeout, tt.expectedTimeout)
 		})
@@ -243,7 +243,7 @@ func TestJobImageExposed(t *testing.T) {
 			assert.Equal(t, tt.expectVarExists, actualVarExists, "CI_JOB_IMAGE exported?")
 
 			if tt.expectVarExists {
-				actualJobImage := build.GetAllVariables().Get("CI_JOB_IMAGE")
+				actualJobImage := build.GetAllVariables().Value("CI_JOB_IMAGE")
 				assert.Equal(t, tt.expectImageName, actualJobImage)
 			}
 		})

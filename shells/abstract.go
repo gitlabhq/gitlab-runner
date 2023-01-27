@@ -141,7 +141,7 @@ func (b *AbstractShell) extractCacheOrFallbackCacheWrapper(
 	cacheFile string,
 	cacheKey string,
 ) {
-	cacheFallbackKey := info.Build.GetAllVariables().Get("CACHE_FALLBACK_KEY")
+	cacheFallbackKey := info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY")
 	if strings.HasSuffix(cacheFallbackKey, "-protected") {
 		// The `-protected` suffix is reserved for protected refs, so we disallow it from user-specified values.
 		cacheFallbackKey = ""
@@ -835,7 +835,7 @@ func (b *AbstractShell) generateArtifactsMetadataArgs(info common.ShellScriptInf
 	args := []string{
 		"--generate-artifacts-metadata",
 		"--runner-id",
-		info.Build.Variables.Get("CI_RUNNER_ID"),
+		info.Build.Variables.Value("CI_RUNNER_ID"),
 		"--repo-url",
 		strings.TrimSuffix(info.Build.RepoCleanURL(), ".git"),
 		"--repo-digest",
