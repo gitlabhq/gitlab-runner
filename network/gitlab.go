@@ -569,6 +569,7 @@ func (n *GitLabClient) PatchTrace(
 	jobCredentials *common.JobCredentials,
 	content []byte,
 	startOffset int,
+	debugTraceEnabled bool,
 ) common.PatchTraceResult {
 	id := jobCredentials.ID
 
@@ -585,15 +586,12 @@ func (n *GitLabClient) PatchTrace(
 	headers.Set("Content-Range", contentRange)
 	headers.Set("JOB-TOKEN", jobCredentials.Token)
 
-	uri := fmt.Sprintf("jobs/%d/trace", id)
-	request := bytes.NewReader(content)
-
 	response, err := n.doRaw(
 		context.Background(),
 		&config.RunnerCredentials,
 		"PATCH",
-		uri,
-		request,
+		fmt.Sprintf("jobs/%d/trace?%s", id, patchTraceQuery(debugTraceEnabled)),
+		bytes.NewReader(content),
 		"text/plain",
 		headers,
 	)
@@ -625,6 +623,13 @@ func (n *GitLabClient) PatchTrace(
 	})
 
 	return n.createPatchTraceResult(startOffset, tracePatchResponse, response, endOffset, log)
+}
+
+func patchTraceQuery(debugTraceEnabled bool) string {
+	query := url.Values{}
+	query.Set("debug_trace", strconv.FormatBool(debugTraceEnabled))
+
+	return query.Encode()
 }
 
 func (n *GitLabClient) createPatchTraceResult(

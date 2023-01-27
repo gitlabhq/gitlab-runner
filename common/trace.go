@@ -40,6 +40,9 @@ func (s *Trace) SetMasked(opts MaskOptions) {
 	}
 }
 
+func (s *Trace) SetDebugModeEnabled(_ bool) {
+}
+
 func (s *Trace) Success() {
 }
 

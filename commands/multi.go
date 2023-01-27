@@ -678,6 +678,8 @@ func (mr *RunCommand) processBuildOnRunner(
 	build.Session = buildSession
 	build.ArtifactUploader = mr.network.UploadRawArtifacts
 
+	trace.SetDebugModeEnabled(build.IsDebugModeEnabled())
+
 	// Add build to list of builds to assign numbers
 	mr.buildsHelper.addBuild(build)
 	defer mr.buildsHelper.removeBuild(build)

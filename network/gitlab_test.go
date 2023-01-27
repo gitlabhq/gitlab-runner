@@ -1340,7 +1340,7 @@ func TestUnknownPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
 	assert.Equal(t, PatchNotFound, result.State)
 }
 
@@ -1352,7 +1352,7 @@ func TestForbiddenPatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
 	assert.Equal(t, PatchAbort, result.State)
 }
 
@@ -1392,17 +1392,23 @@ func TestPatchTrace(t *testing.T) {
 			h := newLogHook(logrus.InfoLevel)
 			logrus.AddHook(&h)
 
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+			result := client.PatchTrace(
+				config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false,
+			)
 			assert.Equal(t, tt.expectedResult.State, result.State)
 			assert.Equal(t, tt.expectedResult.CancelRequested, result.CancelRequested)
 			assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
-			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:], 3)
+			result = client.PatchTrace(
+				config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:], 3, false,
+			)
 			assert.Equal(t, tt.expectedResult.State, result.State)
 			assert.Equal(t, tt.expectedResult.CancelRequested, result.CancelRequested)
 			assert.Equal(t, len(patchTraceContent), result.SentOffset)
 
-			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:10], 3)
+			result = client.PatchTrace(
+				config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[3:10], 3, false,
+			)
 			assert.Equal(t, tt.expectedResult.State, result.State)
 			assert.Equal(t, tt.expectedResult.CancelRequested, result.CancelRequested)
 			assert.Equal(t, 10, result.SentOffset)
@@ -1471,13 +1477,19 @@ func TestRangeMismatchPatchTrace(t *testing.T) {
 			h := newLogHook(logrus.InfoLevel, logrus.WarnLevel)
 			logrus.AddHook(&h)
 
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[11:], 11)
+			result := client.PatchTrace(
+				config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[11:], 11, false,
+			)
 			assert.Equal(t, PatchTraceResult{State: PatchRangeMismatch, SentOffset: 10}, result)
 
-			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[15:], 15)
+			result = client.PatchTrace(
+				config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[15:], 15, false,
+			)
 			assert.Equal(t, PatchTraceResult{State: PatchRangeMismatch, SentOffset: 10}, result)
 
-			result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[5:], 5)
+			result = client.PatchTrace(
+				config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent[5:], 5, false,
+			)
 			assert.Equal(t, tt.expectedResult, result)
 
 			require.Len(t, h.entries, len(expectedLogs))
@@ -1498,7 +1510,7 @@ func TestJobFailedStatePatchTrace(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	defer server.Close()
 
-	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
 	assert.Equal(t, PatchAbort, result.State)
 }
 
@@ -1508,7 +1520,7 @@ func TestPatchTraceCantConnect(t *testing.T) {
 	server, client, config := getPatchServer(t, handler)
 	server.Close()
 
-	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
 	assert.Equal(t, PatchFailed, result.State)
 }
 
@@ -1639,7 +1651,7 @@ func TestPatchTraceUpdatedTrace(t *testing.T) {
 			traceContent = append(traceContent, update.traceUpdate...)
 			result := client.PatchTrace(
 				config, &JobCredentials{ID: 1, Token: patchToken},
-				traceContent[sentTrace:], sentTrace,
+				traceContent[sentTrace:], sentTrace, false,
 			)
 			assert.Equal(t, update.expectedResult, result)
 			require.Len(t, h.entries, 1)
@@ -1736,7 +1748,7 @@ func TestPatchTraceContentRangeAndLength(t *testing.T) {
 			h := newLogHook(logrus.InfoLevel)
 			logrus.AddHook(&h)
 
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, test.trace, 0)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, test.trace, 0, false)
 			assert.Equal(t, test.expectedResult, result)
 			require.Len(t, h.entries, 1)
 			if test.expectedContentRange == "" || test.expectedContentLength == 0 {
@@ -1771,9 +1783,29 @@ func TestPatchTraceContentRangeHeaderValues(t *testing.T) {
 	h := newLogHook(logrus.InfoLevel)
 	logrus.AddHook(&h)
 
-	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+	client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
 	require.Len(t, h.entries, 1)
 	assert.Equal(t, "Appending trace to coordinator...ok", h.entries[0].Message)
+}
+
+func TestPatchTraceUrlParams(t *testing.T) {
+	expected := "debug_trace=false"
+
+	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
+		assert.Equal(t, r.URL.Path, "/api/v4/jobs/1/trace")
+		assert.Equal(t, r.URL.RawQuery, expected)
+		w.WriteHeader(http.StatusAccepted)
+	}
+
+	server, client, config := getPatchServer(t, handler)
+	defer server.Close()
+
+	result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
+	assert.Equal(t, PatchSucceeded, result.State)
+
+	expected = "debug_trace=true"
+	result = client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, true)
+	assert.Equal(t, PatchSucceeded, result.State)
 }
 
 func TestUpdateIntervalHeaderHandling(t *testing.T) {
@@ -1879,7 +1911,9 @@ func TestUpdateIntervalHeaderHandling(t *testing.T) {
 				h := newLogHook(logrus.InfoLevel)
 				logrus.AddHook(&h)
 
-				result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+				result := client.PatchTrace(
+					config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false,
+				)
 				assert.Equal(t, tc.expectedUpdateInterval, result.NewUpdateInterval)
 				require.Len(t, h.entries, 1)
 				assert.Equal(t, "Appending trace to coordinator...ok", h.entries[0].Message)
@@ -1929,7 +1963,7 @@ func TestAbortedPatchTrace(t *testing.T) {
 			h := newLogHook(tc.expectedLogEntry.Level)
 			logrus.AddHook(&h)
 
-			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0)
+			result := client.PatchTrace(config, &JobCredentials{ID: 1, Token: patchToken}, patchTraceContent, 0, false)
 			assert.Equal(t, tc.expectedResult, result)
 			require.Len(t, h.entries, 1)
 			assert.Equal(t, tc.expectedLogEntry.Message, h.entries[0].Message)

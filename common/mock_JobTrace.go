@@ -70,6 +70,11 @@ func (_m *MockJobTrace) SetCancelFunc(cancelFunc context.CancelFunc) {
 	_m.Called(cancelFunc)
 }
 
+// SetDebugModeEnabled provides a mock function with given fields: isEnabled
+func (_m *MockJobTrace) SetDebugModeEnabled(isEnabled bool) {
+	_m.Called(isEnabled)
+}
+
 // SetFailuresCollector provides a mock function with given fields: fc
 func (_m *MockJobTrace) SetFailuresCollector(fc FailuresCollector) {
 	_m.Called(fc)
