@@ -364,6 +364,7 @@ Example:
     alias = "svc1"
     entrypoint = ["entrypoint.sh"]
     command = ["executable","param1","param2"]
+    environment = ["ENV1=value1", "ENV2=value2"]
   [[runners.docker.services]]
     name = "redis:2.8"
     alias = "cache"

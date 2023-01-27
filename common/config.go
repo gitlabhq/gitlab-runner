@@ -873,7 +873,7 @@ type LabelSelector struct {
 //nolint:lll
 type Service struct {
 	Name        string   `toml:"name" long:"name" description:"The image path for the service"`
-	Alias      string   `toml:"alias,omitempty" long:"alias" description:"Space or comma-separated aliases of the service."`
+	Alias       string   `toml:"alias,omitempty" long:"alias" description:"Space or comma-separated aliases of the service."`
 	Command     []string `toml:"command" long:"command" description:"Command or script that should be used as the container’s command. Syntax is similar to https://docs.docker.com/engine/reference/builder/#cmd"`
 	Entrypoint  []string `toml:"entrypoint" long:"entrypoint" description:"Command or script that should be executed as the container’s entrypoint. syntax is similar to https://docs.docker.com/engine/reference/builder/#entrypoint"`
 	Environment []string `toml:"environment,omitempty" json:"environment" long:"env" description:"Custom environment variables injected to service environment"`
