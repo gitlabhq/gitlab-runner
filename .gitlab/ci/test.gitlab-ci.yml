@@ -46,7 +46,7 @@ docs lint markdown:
 
 # Perform link checks on published HTML files
 docs check links:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.16-ruby-2.7.7-8ae1f7da
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.16-ruby-3.0.5-869cfc5d
   stage: test
   extends:
   - .rules:merge_request_pipelines
