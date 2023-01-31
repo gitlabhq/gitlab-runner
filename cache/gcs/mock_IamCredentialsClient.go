@@ -5,8 +5,8 @@ package gcs
 import (
 	context "context"
 
+	credentialspb "cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	gax "github.com/googleapis/gax-go/v2"
-	credentials "google.golang.org/genproto/googleapis/iam/credentials/v1"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -17,7 +17,7 @@ type MockIamCredentialsClient struct {
 }
 
 // SignBlob provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockIamCredentialsClient) SignBlob(_a0 context.Context, _a1 *credentials.SignBlobRequest, _a2 ...gax.CallOption) (*credentials.SignBlobResponse, error) {
+func (_m *MockIamCredentialsClient) SignBlob(_a0 context.Context, _a1 *credentialspb.SignBlobRequest, _a2 ...gax.CallOption) (*credentialspb.SignBlobResponse, error) {
 	_va := make([]interface{}, len(_a2))
 	for _i := range _a2 {
 		_va[_i] = _a2[_i]
@@ -27,17 +27,17 @@ func (_m *MockIamCredentialsClient) SignBlob(_a0 context.Context, _a1 *credentia
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *credentials.SignBlobResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *credentials.SignBlobRequest, ...gax.CallOption) *credentials.SignBlobResponse); ok {
+	var r0 *credentialspb.SignBlobResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *credentialspb.SignBlobRequest, ...gax.CallOption) *credentialspb.SignBlobResponse); ok {
 		r0 = rf(_a0, _a1, _a2...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*credentials.SignBlobResponse)
+			r0 = ret.Get(0).(*credentialspb.SignBlobResponse)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *credentials.SignBlobRequest, ...gax.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *credentialspb.SignBlobRequest, ...gax.CallOption) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
