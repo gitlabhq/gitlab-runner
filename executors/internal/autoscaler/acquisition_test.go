@@ -205,9 +205,9 @@ func (m *mockCreateTunneledDialer) verify(t *testing.T) {
 
 type expectation func(*nestingmocks.Client)
 
-func ncCreate(image string, slot *int32, vm hypervisor.VirtualMachine, stompedVmId *string, err error) expectation {
+func ncCreate(image string, slot *int32, vm hypervisor.VirtualMachine, stompedVMID *string, err error) expectation {
 	return func(nc *nestingmocks.Client) {
-		nc.EXPECT().Create(context.TODO(), image, slot).Return(vm, stompedVmId, err)
+		nc.EXPECT().Create(context.TODO(), image, slot).Return(vm, stompedVMID, err)
 	}
 }
 
