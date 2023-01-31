@@ -8,9 +8,9 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	credentialsapiv1 "cloud.google.com/go/iam/credentials/apiv1"
+	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/sirupsen/logrus"
-	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )

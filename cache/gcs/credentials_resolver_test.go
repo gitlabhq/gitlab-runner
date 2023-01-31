@@ -9,10 +9,10 @@ import (
 	"os"
 	"testing"
 
+	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
