@@ -1,3 +1,58 @@
+## v15.8.0 (2023-01-19)
+
+### New features
+
+- Add system_id to Prometheus metrics !3825
+- Send system_id in jobs requests !3817
+- Prepare register command to fail if runner server-side configuration options are passed together with a new glrt- token !3805
+- Add nesting client to support VM-isolated build environments !3654
+- #27863 Add mac address with isolation !3454 (Artem Makhno @artem.makhno.softsmile)
+- Display system_id on build log !3852
+
+### Bug fixes
+
+- Fix doublestar implementation to use paths relative to working directory !3849
+- Fix windows integration tests failure check !3846
+- Re-merge "Artifact/cache helpers now use POSIX shell syntax for expansion" !3833
+- powershell: fix unwanted progress streams leaking to output !3831
+- Fix skipped windows integration tests !3830
+- Fix relative URL path handling with clone_url !3815
+- Prevent new autoscaler thrashing instances !3813
+- Add a check for any artifact paths that do not fall within the project directory or its subpaths !3757
+- Use exec mode to create the scripts in attach mode !3751
+- powershell: Fix stdin handling with scripts !3843
+
+### Maintenance
+
+- Revert "Fix go.mod to downgrade doublestar to v1.3.0 to be same as main" !3842
+- Add pwsh to supported shells for docker-windows executor !3829
+- `--url` is GitLab instance URL, and not the address of the runner !3807 (Anatoli Babenia @abitrolly)
+- Revert "Merge branch 'avonbertoldi/29451/pkgcloud-auto-versions' into 'main'" !3794
+- Bump the k8s integration test timeout to 15m !3787
+- Make runner support multiple service aliases !3550 (Alessandro Chitolina @alekitto)
+
+### GitLab Runner distribution
+
+- Start pushing Helper images to DockerHub again !3847
+
+### Documentation changes
+
+- Include reference to build pod configuration documentation !3848
+- Add PowerShell to proper names list & minor formatting fixes !3837 (Ben Bodenmiller @bbodenmiller)
+- Fix Git for Windows casing !3836 (Ben Bodenmiller @bbodenmiller)
+- Improve wording !3835 (Ben Bodenmiller @bbodenmiller)
+- Clarify that gitlab-runner is required for both download and upload !3834 (Dillon Amburgey @dillon4)
+- Clarify variable type !3824
+- Docs surround KUBERNETES_ values with quotes !3820
+- Documented how to protect environment variable in Kubernetes executor !3812
+- Add clarifications for k8s pull policies !3811
+- Fix kramdown warning issue !3808
+- Update GitOps workflow warning !3806
+- CTRT edits for Docker executor part3 !3802
+- Adding namespace to anyuid command !3798
+- Update fargate troubleshooting !3772
+- Update using security context example !3723
+
 ## v15.7.3 (2023-01-19)
 
 ### Bug fixes
