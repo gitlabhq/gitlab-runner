@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 GitLab Runner contains a set of commands you use to register, manage, and
 run your builds.
 
-You can check a recent list of commands by executing:
+You can check the list of commands by executing:
 
 ```shell
 gitlab-runner --help
