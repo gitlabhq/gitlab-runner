@@ -96,10 +96,11 @@ func (c *configOptions) loadSystemID(filePath string) (*common.SystemIDState, er
 					"state_file": filePath,
 					"system_id":  systemIDState.GetSystemID(),
 				}).
-				Errorf("Couldn't save new system ID on state file. "+
+				Warningf("Couldn't save new system ID on state file. "+
+					"This file will be mandatory in GitLab Runner 16.0 and later.\n"+
 					"Please ensure there is text file at the location specified in `state_file` "+
 					"with the contents of `system_id`. Example: echo %q > %q\n", systemIDState.GetSystemID(), filePath)
-			return nil, fmt.Errorf("saving system ID state file: %w", err)
+			// TODO return error starting in %16.0
 		}
 	}
 
