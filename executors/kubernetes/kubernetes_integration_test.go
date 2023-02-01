@@ -129,7 +129,6 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
 		"testKubernetesWaitResources":                             testKubernetesWaitResources,
-		"testKubernetesPulicInternalVariabes":                     testKubernetesPulicInternalVariabes,
 		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
 		"testKubernetesHugeScriptAndAfterScriptFeatureFlag":       testKubernetesHugeScriptAndAfterScriptFeatureFlag,
 	}
@@ -1155,121 +1154,6 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 			if tc.finalize != nil {
 				tc.finalize(t, client, tc.namespace)
 			}
-		})
-	}
-}
-
-func testKubernetesPulicInternalVariabes(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
-
-	ctxTimeout := time.Minute
-	client := getTestKubeClusterClient(t)
-
-	tests := map[string]struct {
-		variables common.JobVariable
-	}{
-		"internal variable": {
-			variables: common.JobVariable{
-				Key:      "my_internal_variable",
-				Value:    "my internal variable",
-				Internal: true,
-				Public:   false,
-			},
-		},
-		"regular variable": {
-			variables: common.JobVariable{
-				Key:      "my_regular_variable",
-				Value:    "my regular variable",
-				Internal: false,
-				Public:   false,
-			},
-		},
-		"public variable": {
-			variables: common.JobVariable{
-				Key:      "my_public_variable",
-				Value:    "my public variable",
-				Internal: false,
-				Public:   true,
-			},
-		},
-	}
-
-	for tn, tc := range tests {
-		t.Run(tn, func(t *testing.T) {
-			build := getTestBuild(t, func() (common.JobResponse, error) {
-				jobResponse, err := common.GetRemoteBuildResponse(
-					"sleep 5000",
-				)
-				require.NoError(t, err)
-
-				jobResponse.Credentials = []common.Credentials{
-					{
-						Type:     "registry",
-						URL:      "http://example.com",
-						Username: "user",
-						Password: "password",
-					},
-				}
-
-				jobResponse.Variables = []common.JobVariable{
-					tc.variables,
-				}
-
-				return jobResponse, nil
-			})
-			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-
-			deletedPodNameCh := make(chan string)
-			defer buildtest.OnUserStage(build, func() {
-				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
-				defer cancel()
-				pods, err := client.CoreV1().Pods(kubernetes.DefaultResourceIdentifier).List(
-					ctx,
-					metav1.ListOptions{
-						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
-					},
-				)
-				require.NoError(t, err)
-				require.NotEmpty(t, pods.Items)
-				pod := pods.Items[0]
-
-				var c *v1.Container
-				for _, container := range pod.Spec.Containers {
-					if container.Name == "build" {
-						c = &container
-						break
-					}
-				}
-				require.NotNil(t, c)
-
-				envNames := make([]string, 0)
-				envValues := make([]string, 0)
-				for _, env := range c.Env {
-					envNames = append(envNames, env.Name)
-					envValues = append(envValues, env.Value)
-				}
-				require.NotEmpty(t, envNames)
-				require.NotEmpty(t, envValues)
-
-				assert.Contains(t, envNames, tc.variables.Key)
-				assert.Contains(t, envValues, tc.variables.Value)
-
-				err = client.
-					CoreV1().
-					Pods(kubernetes.DefaultResourceIdentifier).
-					Delete(ctx, pod.Name, metav1.DeleteOptions{
-						PropagationPolicy: &kubernetes.PropagationPolicy,
-					})
-				require.NoError(t, err)
-
-				deletedPodNameCh <- pod.Name
-			})()
-
-			_, err := buildtest.RunBuildReturningOutput(t, build)
-
-			<-deletedPodNameCh
-
-			assert.Errorf(t, err, "command terminated with exit code 137")
 		})
 	}
 }

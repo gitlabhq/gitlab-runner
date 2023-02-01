@@ -807,7 +807,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	} else if opts.name == buildContainerName {
 		optionName = "images"
 		allowedImages = s.Config.Kubernetes.AllowedImages
-		envVars = s.Build.GetAllVariables()
+		envVars = s.Build.GetAllVariables().PublicOrInternal()
 	}
 
 	verifyAllowedImageOptions := common.VerifyAllowedImageOptions{
