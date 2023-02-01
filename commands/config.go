@@ -91,6 +91,14 @@ func (c *configOptions) loadSystemID(filePath string) (*common.SystemIDState, er
 
 		err = systemIDState.SaveConfig(filePath)
 		if err != nil {
+			logrus.
+				WithFields(logrus.Fields{
+					"state_file": filePath,
+					"system_id":  systemIDState.GetSystemID(),
+				}).
+				Errorf("Couldn't save new system ID on state file. "+
+					"Please ensure there is text file at the location specified in `state_file` "+
+					"with the contents of `system_id`. Example: echo %q > %q\n", systemIDState.GetSystemID(), filePath)
 			return nil, fmt.Errorf("saving system ID state file: %w", err)
 		}
 	}
