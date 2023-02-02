@@ -1,3 +1,10 @@
+## v15.8.1 (2023-02-02)
+
+### Bug fixes
+
+- Use JobVariable.Value() for internal values !3870
+- Prevent masking panic by ignoring zero length secrets !3869
+
 ## v15.8.0 (2023-01-19)
 
 ### New features
