@@ -70,7 +70,8 @@ Where:
   [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
 
 If you want to install a specific version of GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
-to your `helm install` command.
+to your `helm install` command. You can install any version of the chart
+this way, however more recent `values.yml` may not work with an older version of the chart.
 
 ## Upgrading GitLab Runner using the Helm Chart
 
