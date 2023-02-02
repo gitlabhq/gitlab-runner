@@ -222,7 +222,7 @@ func TestConfigParse(t *testing.T) {
 				[[runners.docker.services]]
 				name = 5
 			`,
-			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
+			expectedErr: "incompatible types: TOML value has type int64; destination has type string",
 		},
 		"parse Service as table int value alias": {
 			config: `
@@ -231,7 +231,7 @@ func TestConfigParse(t *testing.T) {
 				name = "svc1"
 				alias = 5
 			`,
-			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
+			expectedErr: "incompatible types: TOML value has type int64; destination has type string",
 		},
 		"parse Service runners.docker and runners.docker.services": {
 			config: `
@@ -278,7 +278,7 @@ func TestConfigParse(t *testing.T) {
                                         [runners.docker.container_labels]
                                                 5 = 5
                 `,
-			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
+			expectedErr: "incompatible types: TOML value has type int64; destination has type string",
 		},
 		"parse Docker Container Labels with integer value": {
 			config: `
@@ -288,7 +288,7 @@ func TestConfigParse(t *testing.T) {
                                         [runners.docker.container_labels]
                                                 "my.docker.TestContainerlabel1" = 5
                 `,
-			expectedErr: "toml: cannot load TOML value of type int64 into a Go string",
+			expectedErr: "incompatible types: TOML value has type int64; destination has type string",
 		},
 		"parse Docker Container Labels with integer key": {
 			config: `
@@ -835,7 +835,7 @@ func TestConfigParse(t *testing.T) {
 			cfg := NewConfig()
 			_, err := toml.Decode(tt.config, cfg)
 			if tt.expectedErr != "" {
-				assert.EqualError(t, err, tt.expectedErr)
+				assert.ErrorContains(t, err, tt.expectedErr)
 				return
 			}
 
