@@ -38,7 +38,7 @@ type officialDockerClient struct {
 	client *client.Client
 }
 
-func newOfficialDockerClient(c Credentials) (*officialDockerClient, error) {
+func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDockerClient, error) {
 	options := []client.Opt{
 		client.WithAPIVersionNegotiation(),
 		client.WithVersionFromEnv(),
@@ -53,6 +53,8 @@ func newOfficialDockerClient(c Credentials) (*officialDockerClient, error) {
 		client.WithHost(c.Host),
 		WithCustomKeepalive(),
 	)
+
+	options = append(options, opts...)
 
 	dockerClient, err := client.NewClientWithOpts(options...)
 	if err != nil {
@@ -312,7 +314,7 @@ func (c *officialDockerClient) Close() error {
 // If no host is given in the Credentials, it will attempt to look up
 // details from the environment. If that fails, it will use the default
 // connection details for your platform.
-func New(c Credentials) (Client, error) {
+func New(c Credentials, options ...client.Opt) (Client, error) {
 	if c.Host == "" {
 		c = credentialsFromEnv()
 	}
@@ -322,5 +324,5 @@ func New(c Credentials) (Client, error) {
 		c.Host = client.DefaultDockerHost
 	}
 
-	return newOfficialDockerClient(c)
+	return newOfficialDockerClient(c, options...)
 }

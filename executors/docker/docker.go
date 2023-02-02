@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/sirupsen/logrus"
 
@@ -56,6 +58,12 @@ const (
 	labelServiceType = "service"
 	labelWaitType    = "wait"
 )
+
+// internalFakeTunnelHostname is an internal hostname we provide the Docker client
+// when we provide a tunnelled dialer implementation. Because we're overriding
+// the dialer, this domain should never be used by the client, but we use the
+// reserved TLD ".invalid" for safety.
+const internalFakeTunnelHostname = "http://internel.tunnel.invalid"
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
@@ -741,14 +749,36 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 	return nil
 }
 
-func (e *executor) connectDocker() error {
-	client, err := docker.New(e.Config.Docker.Credentials)
+func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
+	var opts []client.Opt
+
+	environment, ok := e.Build.ExecutorData.(executors.Environment)
+	if ok {
+		// We tunnel the docker connection for remote environments.
+		//
+		// To do this, we create a new dial context for Docker's client, whilst
+		// also overridding the daemon hostname it would typically use (if it were to use
+		// its own dialer).
+		//
+		// We do this because tunneling "npipe" and "unix" connections is possible, but if
+		// we don't give docker a "fake" host, it'll complain when we tunnel to an npipe
+		// connection from Linux, or a unix connection from Windows.
+		originalHost := e.Config.Docker.Credentials.Host
+		e.Config.Docker.Credentials.Host = internalFakeTunnelHostname
+
+		opts = append(
+			opts,
+			client.WithDialContext(e.environmentDialContext(options, environment, originalHost)),
+		)
+	}
+
+	dockerClient, err := docker.New(e.Config.Docker.Credentials, opts...)
 	if err != nil {
 		return err
 	}
-	e.client = client
+	e.client = dockerClient
 
-	e.info, err = client.Info(e.Context)
+	e.info, err = e.client.Info(e.Context)
 	if err != nil {
 		return err
 	}
@@ -770,6 +800,37 @@ func (e *executor) connectDocker() error {
 	e.waiter = wait.NewDockerKillWaiter(e.client)
 
 	return err
+}
+
+func (e *executor) environmentDialContext(
+	options common.ExecutorPrepareOptions,
+	environment executors.Environment,
+	host string,
+) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		if host == "" {
+			host = os.Getenv("DOCKER_HOST")
+		}
+		if host == "" {
+			host = client.DefaultDockerHost
+		}
+		u, err := client.ParseHostURL(host)
+		if err != nil {
+			return nil, fmt.Errorf("parsing docker host: %w", err)
+		}
+
+		c, err := environment.Prepare(e.Context, e.BuildLogger, options)
+		if err != nil {
+			return nil, fmt.Errorf("preparing environment: %w", err)
+		}
+
+		conn, err := c.Dial(u.Scheme, u.Host)
+		if err != nil {
+			return nil, fmt.Errorf("dialing environment connection: %w", err)
+		}
+
+		return docker.NewWrappedConnCloser(conn, c), nil
+	}
 }
 
 // validateOSType checks if the ExecutorOptions metadata matches with the docker
@@ -884,7 +945,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	e.AbstractExecutor.PrepareConfiguration(options)
 
-	err := e.connectDocker()
+	err := e.connectDocker(options)
 	if err != nil {
 		return err
 	}

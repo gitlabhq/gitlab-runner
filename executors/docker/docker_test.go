@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path"
 	"regexp"
@@ -1826,6 +1827,85 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 		err.Error(),
 		fmt.Sprintf(common.IncompatiblePullPolicy, "[never]", "GitLab pipeline config", "[always]"),
 	)
+}
+
+type env struct {
+	client *envClient
+}
+
+var _ executors.Client = &envClient{}
+
+type envClient struct {
+	dialed bool
+}
+
+func (c *envClient) Dial(n string, addr string) (net.Conn, error) {
+	c.dialed = true
+	return nil, assert.AnError
+}
+
+func (c *envClient) Run(ctx context.Context, options executors.RunOptions) error {
+	return nil
+}
+
+func (c *envClient) Close() error {
+	return nil
+}
+
+func (e *env) Prepare(
+	ctx context.Context,
+	logger common.BuildLogger,
+	options common.ExecutorPrepareOptions,
+) (executors.Client, error) {
+	e.client = &envClient{}
+	return e.client, nil
+}
+
+func TestConnectEnvironment(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+
+	e := &executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			ExecutorOptions: executors.ExecutorOptions{
+				Metadata: map[string]string{
+					metadataOSType: osTypeLinux,
+				},
+			},
+		},
+		volumeParser: parser.NewLinuxParser(),
+	}
+
+	env := &env{}
+
+	build := &common.Build{
+		JobResponse: common.JobResponse{
+			Image: common.Image{
+				Name: "test",
+			},
+		},
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Docker: &common.DockerConfig{},
+			},
+		},
+		ExecutorData: env,
+	}
+
+	err := e.Prepare(common.ExecutorPrepareOptions{
+		Config: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				BuildsDir: "/tmp",
+				CacheDir:  "/tmp",
+				Shell:     "bash",
+				Docker:    build.Runner.Docker,
+			},
+		},
+		Build:   build,
+		Context: context.Background(),
+	})
+	require.ErrorIs(t, err, assert.AnError)
+	require.NotNil(t, env.client)
+	require.True(t, env.client.dialed)
 }
 
 func init() {
