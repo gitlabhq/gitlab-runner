@@ -206,69 +206,101 @@ image: my.registry.tld:5000/namepace/image:tag
 In this example, GitLab Runner searches the registry `my.registry.tld:5000` for the
 image `namespace/image:tag`.
 
-## Networking
+## Network configurations
 
-Networking is required to connect services to a CI/CD job. Networking can also be used to run jobs in user-defined
-networks. You can use either legacy container links, or create a network for each job.
-We recommend creating a network for each job.
+You must configure a network to connect services to a CI/CD job.
 
-### Legacy container links
+To configure a network, you can either:
 
-The default network mode uses [Legacy container links](https://docs.docker.com/network/links/) with
-the default Docker `bridge` mode to link the job container with the services.
-
-This mode can be used to configure how the networking stack is set up for the containers by using `network_mode`
-[configuration parameter](../configuration/advanced-configuration.md#the-runnersdocker-section)
-with one of the following values:
-
-- One of the standard Docker [networking modes](https://docs.docker.com/engine/reference/run/#network-settings):
-  - `bridge`: use the bridge network (default)
-  - `host`: use the host's network stack inside the container
-  - `none`: no networking (not recommended)
-- Any other `network_mode` value is taken as the name of an already existing
-  Docker network, which the build container should connect to.
-
-For name resolution to work, Docker manipulates the `/etc/hosts` file in the
-container to include the service container hostname and alias. However,
-the service container is **not** able to resolve the container
-name. To resolve the container name, create a network for each job.
-
-Linked containers share their environment variables.
+- Recommended. Configure the runner to create a network for each job.
+- Define container links. Container links are a legacy feature of Docker.
 
 ### Create a network for each job
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042) in GitLab Runner 12.9.
+You can configure the runner to create a network for each job.
 
-NOTE:
-To enable network-per-build, set the `FF_NETWORK_PER_BUILD` variable. Do not set the `network_mode` variable in the `config.toml` file.
+When you enable this networking mode, the runner creates and uses a
+user-defined Docker bridge network for each job. Docker environment
+variables are not shared across the containers. For more information
+about user-defined bridge networks, see the [Docker documentation](https://docs.docker.com/network/bridge/).
 
-This networking mode creates and uses a new user-defined Docker bridge network for each job.
-[User-defined bridge networks](https://docs.docker.com/network/bridge/) are covered in detail in the Docker documentation.
+To use this networking mode, enable `FF_NETWORK_PER_BUILD` in either
+the feature flag or the environment variable in the`config.toml`.
 
-Unlike [legacy container links](#legacy-container-links) used in other network modes,
-Docker environment variables are **not** shared across the containers.
+Do not set the `network_mode`.
 
-Docker networks might conflict with other networks on the host, including other Docker networks,
-if the CIDR ranges are already in use. The default Docker address pool can be configured
-by using `default-address-pool` in [`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/).
+Example:
 
-To enable this mode you must enable the [`FF_NETWORK_PER_BUILD` feature flag](../configuration/feature-flags.md).
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  environment = ["FF_NETWORK_PER_BUILD = 1"]
+```
 
-When a job starts, a bridge network is created (similar to `docker network create <network>`).
-Upon creation, the service containers and the
-build job container are connected to this network.
+Or:
 
-Both the container running the job and the containers running the service can
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.feature_flags]
+    FF_NETWORK_PER_BUILD = true
+```
+
+To set the default Docker address pool, use `default-address-pool` in
+[`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/). If CIDR ranges
+are already used in the network, Docker networks may conflict with other networks on the host,
+including other Docker networks.
+
+This feature works only when the Docker daemon is configured with IPv6 enabled.
+To enable IPv6 support, set `enable_ipv6` to `true` in the Docker configuration.
+For more information, see the [Docker documentation](https://docs.docker.com/config/daemon/ipv6/).
+
+The runner uses the `build` alias to resolve the job container.
+
+#### How the runner creates a network for each job
+
+When a job starts, the runner:
+
+1. Creates a bridge network, similar to the Docker command `docker network create <network>`.
+1. Connects the service and containers to the bridge network.
+1. Removes the network at the end of the job.
+
+The container running the job and the containers running the service
 resolve each other's hostnames and aliases. This functionality is
 [provided by Docker](https://docs.docker.com/network/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
 
-The job container is resolvable by using the `build` alias as well, because the hostname is assigned by GitLab.
+### Configure a network with container links
 
-The network is removed at the end of the job.
+You can configure a network mode that uses Docker [legacy container links](https://docs.docker.com/network/links/) and the default Docker `bridge` to link the job container with the services. This network mode is the default
+if [`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job) is not enabled.
 
-To enable IPv6 support for this network, set `enable_ipv6` to `true` inside the Docker config.
-This feature works only when the Docker daemon is configured with IPv6 enabled.
-To enable IPv6 support on your host, see the [Docker documentation](https://docs.docker.com/config/daemon/ipv6/).
+To configure the network, specify the [networking mode](https://docs.docker.com/engine/reference/run/#network-settings) in the `config.toml` file:
+
+- `bridge`: Use the bridge network. Default.
+- `host`: Use the host's network stack inside the container.
+- `none`: No networking. Not recommended.
+
+Example:
+
+```toml
+[[runners]]
+  (...)
+  executor = "docker"
+[runners.docker]
+  network_mode = "bridge"
+```
+
+If you use any other `network_mode` value, these are taken as the name of an already existing
+Docker network, which the build container connects to.
+
+During name resolution, Docker updates the `/etc/hosts` file in the
+container with the service container hostname and alias. However,
+the service container is **not** able to resolve the container
+name. To resolve the container name, you must create a network for each job.
+
+Linked containers share their environment variables.
 
 ## Restrict Docker images and services
 
@@ -525,7 +557,7 @@ docker run <image> sh -c "echo 'It works!'" # or bash
 If your Docker image doesn't support this mechanism, you can [override the image's ENTRYPOINT](https://docs.gitlab.com/ee/ci/yaml/#imageentrypoint) in the project configuration as follows:
 
 ```yaml
-# Equivalent of 
+# Equivalent of
 # docker run --entrypoint "" <image> sh -c "echo 'It works!'"
 image:
   name: my-image
