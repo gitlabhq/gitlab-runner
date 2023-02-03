@@ -139,25 +139,14 @@ func (c *fileArchiver) processPaths() {
 }
 
 func (c *fileArchiver) processPath(path string) {
-	path = filepath.ToSlash(path)
-	base, patt := doublestar.SplitPattern(path)
-	rel, err := c.findRelativePathInProject(base)
+	rel, err := c.findRelativePathInProject(path)
 	if err != nil {
 		// Do not fail job when a file is invalid or not found.
 		logrus.Warningf(err.Error())
 		return
 	}
 
-	fsys := os.DirFS(c.wd)
-
-	// Relative path is needed now that our fsys "root" is at the working directory
-	path = filepath.Join(rel, patt)
-	path = filepath.ToSlash(path)
-	if err != nil {
-		logrus.Warningf("%s: %v", path, err)
-		return
-	}
-	matches, err := doublestar.Glob(fsys, path)
+	matches, err := doublestar.FilepathGlob(rel)
 	if err != nil {
 		logrus.Warningf("%s: %v", path, err)
 		return
@@ -189,7 +178,18 @@ func (c *fileArchiver) processPath(path string) {
 }
 
 func (c *fileArchiver) findRelativePathInProject(path string) (string, error) {
-	abs, err := filepath.Abs(path)
+	slashPath := filepath.ToSlash(path)
+	if filepath.Clean(slashPath) == filepath.Clean(c.wd) {
+		return ".", nil
+	}
+
+	base, patt := slashPath, ""
+	// check if path contains a glob pattern
+	if strings.ContainsAny(slashPath, "*?[{") {
+		base, patt = doublestar.SplitPattern(slashPath)
+	}
+
+	abs, err := filepath.Abs(base)
 	if err != nil {
 		return "", fmt.Errorf("could not resolve artifact absolute path %s: %v", path, err)
 	}
@@ -204,6 +204,9 @@ func (c *fileArchiver) findRelativePathInProject(path string) (string, error) {
 		return "", fmt.Errorf("artifact path is not a subpath of project directory: %s", path)
 	}
 
+	// Relative path is needed now that our fsys "root" is at the working directory
+	rel = filepath.Join(rel, patt)
+	rel = filepath.FromSlash(rel)
 	return rel, nil
 }
 
