@@ -221,43 +221,50 @@ func TestRunnerByURLAndID(t *testing.T) {
 }
 
 func Test_loadConfig(t *testing.T) {
+	const expectedSystemIDRegexPattern = "^[sr]_[0-9a-zA-Z]{12}$"
+
 	testCases := map[string]struct {
 		runnerSystemID string
-		assertFn       func(
-			t *testing.T,
-			err error,
-			config *common.Config,
-			systemIDState *common.SystemIDState,
-			systemIDFile string,
-		)
+		prepareFn      func(t *testing.T, systemIDFile string)
+		assertFn       func(t *testing.T, err error, config *common.Config, systemIDFile string)
 	}{
 		"generates and saves missing system IDs": {
 			runnerSystemID: "",
-			assertFn: func(
-				t *testing.T,
-				err error,
-				config *common.Config,
-				systemIDState *common.SystemIDState,
-				systemIDFile string,
-			) {
+			assertFn: func(t *testing.T, err error, config *common.Config, systemIDFile string) {
 				assert.NoError(t, err)
-				assert.NotEmpty(t, systemIDState.GetSystemID())
+				require.Equal(t, 1, len(config.Runners))
+				assert.NotEmpty(t, config.Runners[0].SystemIDState.GetSystemID())
 				content, err := os.ReadFile(systemIDFile)
 				require.NoError(t, err)
-				assert.Contains(t, string(content), systemIDState.GetSystemID())
+				assert.Contains(t, string(content), config.Runners[0].SystemIDState.GetSystemID())
 			},
 		},
 		"preserves existing unique system IDs": {
 			runnerSystemID: "s_c2d22f638c25",
-			assertFn: func(
-				t *testing.T,
-				err error,
-				config *common.Config,
-				systemIDState *common.SystemIDState,
-				_ string,
-			) {
+			assertFn: func(t *testing.T, err error, config *common.Config, _ string) {
 				assert.NoError(t, err)
-				assert.Equal(t, "s_c2d22f638c25", systemIDState.GetSystemID())
+				require.Equal(t, 1, len(config.Runners))
+				assert.Equal(t, "s_c2d22f638c25", config.Runners[0].SystemIDState.GetSystemID())
+			},
+		},
+		"regenerates system ID if file is invalid": {
+			runnerSystemID: "0123456789",
+			assertFn: func(t *testing.T, err error, config *common.Config, _ string) {
+				assert.NoError(t, err)
+				require.Equal(t, 1, len(config.Runners))
+				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemIDState.GetSystemID())
+			},
+		},
+		"succeeds if file cannot be created": {
+			runnerSystemID: "",
+			prepareFn: func(t *testing.T, systemIDFile string) {
+				require.NoError(t, os.Remove(systemIDFile))
+				require.NoError(t, os.Chmod(filepath.Dir(systemIDFile), os.ModeDir|0500))
+			},
+			assertFn: func(t *testing.T, err error, config *common.Config, _ string) {
+				require.NoError(t, err)
+				require.Equal(t, 1, len(config.Runners))
+				assert.Regexp(t, expectedSystemIDRegexPattern, config.Runners[0].SystemIDState.GetSystemID())
 			},
 		},
 	}
@@ -268,14 +275,21 @@ func Test_loadConfig(t *testing.T) {
 			cfgName := filepath.Join(dir, "config.toml")
 			systemIDFile := filepath.Join(dir, ".runner_system_id")
 
+			require.NoError(t, os.Chmod(dir, 0777))
 			require.NoError(t, os.WriteFile(cfgName, []byte("[[runners]]\n name = \"runner\""), 0777))
 			require.NoError(t, os.WriteFile(systemIDFile, []byte(tc.runnerSystemID), 0777))
+
+			if tc.prepareFn != nil {
+				tc.prepareFn(t, systemIDFile)
+			}
 
 			c := configOptions{ConfigFile: cfgName}
 			err := c.loadConfig()
 
-			require.Equal(t, 1, len(c.config.Runners))
-			tc.assertFn(t, err, c.config, c.config.Runners[0].SystemIDState, systemIDFile)
+			tc.assertFn(t, err, c.config, systemIDFile)
+
+			// Cleanup
+			require.NoError(t, os.Chmod(dir, 0777))
 		})
 	}
 }
