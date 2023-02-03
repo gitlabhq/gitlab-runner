@@ -16,6 +16,7 @@ func TestShortenToken(t *testing.T) {
 		{"GR1348941Z196cJVywzZpx_Ki_Cn2", "GR1348941Z196cJVy"},
 		{"GJ1348941Z196cJVywzZpx_Ki_Cn2", "GJ134894"},
 		{"GRveryverylongtoken", "GRveryve"},
+		{"glrt-t9Wkyj-HGRkqQ-VWTGAr", "t9Wkyj-HG"},
 	}
 
 	for _, test := range tests {
