@@ -191,7 +191,7 @@ See [an example of a user issue](https://gitlab.com/gitlab-org/gitlab-runner/-/i
 
 ## Error: `zoneinfo.zip: no such file or directory` error when using `Timezone` or `OffPeakTimezone`
 
-It's possible to configure the timezone in which `[[docker.machine.autoscaling]]` periods
+It's possible to configure the time zone in which `[[docker.machine.autoscaling]]` periods
 are described. This feature should work on most Unix systems out of the box. However on some
 Unix systems, and probably on most non-Unix systems (including Windows, for which we're providing
 GitLab Runner binaries), when used, the runner will crash at start with an error similar to:
@@ -201,7 +201,7 @@ Failed to load config Invalid OffPeakPeriods value: open /usr/local/go/lib/time/
 ```
 
 The error is caused by the `time` package in Go. Go uses the IANA Time Zone database to load
-the configuration of the specified timezone. On most Unix systems, this database is already present on
+the configuration of the specified time zone. On most Unix systems, this database is already present on
 one of well-known paths (`/usr/share/zoneinfo`, `/usr/share/lib/zoneinfo`, `/usr/lib/locale/TZ/`).
 Go's `time` package looks for the Time Zone database in all those three paths. If it doesn't find any
 of them, but the machine has a configured Go development environment, then it will fallback to
