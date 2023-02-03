@@ -772,12 +772,8 @@ shutdown_timeout = 0
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   shell = "pwsh"
-  [runners.custom_build_dir]
   [runners.cache]
     MaxUploadedArchiveSize = 0
-    [runners.cache.s3]
-    [runners.cache.gcs]
-    [runners.cache.azure]
 `
 	)
 
@@ -837,12 +833,8 @@ shutdown_timeout = 0
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   shell = "pwsh"
-  [runners.custom_build_dir]
   [runners.cache]
     MaxUploadedArchiveSize = 0
-    [runners.cache.s3]
-    [runners.cache.gcs]
-    [runners.cache.azure]
 `,
 		},
 		"incorrect config template merge": {

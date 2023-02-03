@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/iam v0.8.0
 	cloud.google.com/go/storage v1.27.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.4.1
-	github.com/BurntSushi/toml v0.3.1
+	github.com/BurntSushi/toml v1.2.2-0.20230128194507-1a6ca6e47722
 	github.com/bmatcuk/doublestar/v4 v4.4.0
 	github.com/creack/pty v1.1.17
 	github.com/denisbrodbeck/machineid v1.0.1

@@ -295,7 +295,7 @@ func (s *RegisterCommand) askRunner() {
 	// 'SA5011: possible nil pointer dereference'
 	// nolint:staticcheck
 	s.Token = result.Token
-	s.TokenObtainedAt = time.Now().UTC()
+	s.TokenObtainedAt = time.Now().UTC().Truncate(time.Second)
 	s.TokenExpiresAt = result.TokenExpiresAt
 	s.registered = true
 }
