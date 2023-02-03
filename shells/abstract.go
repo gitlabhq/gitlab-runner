@@ -457,7 +457,7 @@ func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.
 }
 
 func (b *AbstractShell) writeCheckoutCmd(w ShellWriter, build *common.Build) {
-	w.Noticef("Checking out %s as %s...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
+	w.Noticef("Checking out %s as detached HEAD (ref is %s)...", build.GitInfo.Sha[0:8], build.GitInfo.Ref)
 	w.Command("git", "checkout", "-f", "-q", build.GitInfo.Sha)
 
 	cleanFlags := build.GetGitCleanFlags()

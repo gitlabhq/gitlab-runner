@@ -1386,7 +1386,7 @@ func TestBuildChangesBranchesWhenFetchingRepo(t *testing.T) {
 		build.GitInfo = common.GetLFSGitInfo(build.GitInfo.RepoURL)
 		out, err = buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Contains(t, out, "Checking out c8f2a61d as add-lfs-object...")
+		assert.Contains(t, out, "Checking out c8f2a61d as detached HEAD (ref is add-lfs-object)...")
 	})
 }
 
@@ -1757,7 +1757,7 @@ func TestCloneBranchExpansion(t *testing.T) {
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		t.Log(out)
 		assert.NoError(t, err)
-		assert.Contains(t, out, fmt.Sprintf("as %s...", branch))
+		assert.Contains(t, out, fmt.Sprintf("(ref is %s)", branch))
 		assert.NotContains(t, out, "uid=")
 		assert.Contains(t, out, "Job succeeded")
 	})
