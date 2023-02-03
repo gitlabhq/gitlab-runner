@@ -6,15 +6,15 @@ import (
 	"net"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
+	"gitlab.com/gitlab-org/fleeting/nesting/api"
 	"gitlab.com/gitlab-org/fleeting/nesting/hypervisor"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
-	"gitlab.com/gitlab-org/gitlab-runner/executors"
-
-	"gitlab.com/gitlab-org/fleeting/nesting/api"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
 var _ executors.Environment = (*acquisitionRef)(nil)
@@ -33,22 +33,37 @@ func (ref *acquisitionRef) Prepare(
 ) (executors.Client, error) {
 	info := ref.acq.InstanceConnectInfo()
 
+	useExternalAddr := true
+	if options.Config != nil && options.Config.Autoscaler != nil {
+		useExternalAddr = options.Config.Autoscaler.ConnectorConfig.UseExternalAddr
+	}
+
+	options.Build.Log().WithFields(logrus.Fields{
+		"internal-address":     info.InternalAddr,
+		"external-address":     info.ExternalAddr,
+		"use-external-address": useExternalAddr,
+		"instance-id":          info.ID,
+	}).Info("Dialing instance")
+
+	logger.Println(fmt.Sprintf("Dialing instance %s...", info.ID))
 	dialer, err := connector.Dial(ctx, info, connector.DialOptions{
-		// todo: make this configurable
-		UseExternalAddr: true,
+		UseExternalAddr: useExternalAddr,
 	})
 	if err != nil {
 		return nil, err
 	}
+	logger.Println(fmt.Sprintf("Instance %s connected", info.ID))
 
 	// if nesting is disabled, return a client for the instance
 	if !options.Config.Autoscaler.VMIsolation.Enabled {
 		return &client{dialer, nil}, nil
 	}
 
+	logger.Println("Enforcing VM Isolation")
 	conn, err := api.NewClientConn(
 		options.Config.Autoscaler.VMIsolation.NestingHost,
 		func(ctx context.Context, network, address string) (net.Conn, error) {
+			logger.Println("Dialing nesting daemon")
 			return dialer.Dial(network, address)
 		},
 	)
@@ -58,6 +73,7 @@ func (ref *acquisitionRef) Prepare(
 
 	nc := api.New(conn)
 
+	logger.Println("Creating nesting VM tunnel")
 	client, err := ref.createVMTunnel(ctx, logger, nc, dialer, options)
 	if err != nil {
 		nc.Close()
@@ -111,7 +127,7 @@ func (ref *acquisitionRef) createVMTunnel(
 		image = options.Build.Image.Name
 	}
 
-	logger.Infoln("Creating vm", image)
+	logger.Println("Creating nesting VM", image)
 
 	// create vm
 	var slot *int32
@@ -124,9 +140,9 @@ func (ref *acquisitionRef) createVMTunnel(
 		return nil, fmt.Errorf("creating nesting vm: %w", err)
 	}
 
-	logger.Infoln("Created vm", vm.GetId(), vm.GetAddr())
+	logger.Infoln("Created nesting VM", vm.GetId(), vm.GetAddr())
 	if stompedVMID != nil {
-		logger.Infoln("Stomped vm: ", *stompedVMID)
+		logger.Infoln("Stomped nesting VM: ", *stompedVMID)
 	}
 	dialer, err = createTunneledDialer(ctx, dialer, nestingCfg, vm)
 	if err != nil {
