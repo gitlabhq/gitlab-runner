@@ -64,6 +64,8 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 ...
 ```
 
+For a complete list of available metrics see [Monitoring runners](../fleet_scaling/index.md#monitoring-runners).
+
 ## `pprof` HTTP endpoints
 
 > `pprof` integration was introduced in GitLab Runner 1.9.0.
