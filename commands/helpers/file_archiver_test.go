@@ -563,6 +563,22 @@ func TestFileArchiver_pathIsInProject(t *testing.T) {
 			inProject:     false,
 			errorExpected: true,
 		},
+		`absolute path to working directory in project`: {
+			path:      wd,
+			inProject: true,
+		},
+		`relative path to working directory in project`: {
+			path:      filepath.Join("..", filepath.Base(wd)),
+			inProject: true,
+		},
+		`absolute path to working directory in project with trailing slash`: {
+			path:      wd + "/",
+			inProject: true,
+		},
+		`relative path to working directory in project with trailing slash`: {
+			path:      filepath.Join("..", filepath.Base(wd)) + "/",
+			inProject: true,
+		},
 	}
 
 	for n, tc := range testCases {
