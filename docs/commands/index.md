@@ -507,7 +507,7 @@ exiting. The default of `0` means that the runner has no timeout and waits forev
 
 WARNING:
 This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/385235) in GitLab 15.7
-and is planned for removal in 16.0. Pipeline syntax and validation [simulation](https://docs.gitlab.com/ee/ci/pipeline_editor/#simulate-a-cicd-pipeline) are available in the GitLab pipeline editor. This change is a breaking change.
+and is planned for removal in 17.0. Pipeline syntax and validation [simulation](https://docs.gitlab.com/ee/ci/pipeline_editor/#simulate-a-cicd-pipeline) are available in the GitLab pipeline editor. This change is a breaking change.
 
 NOTE:
 Not all features of `.gitlab-ci.yml` are supported by `exec`. Please
