@@ -105,7 +105,10 @@ func (c *fileArchiver) isExcluded(path string) (bool, string) {
 	// Matching will fail with Windows machines using "\\" path separators and patterns with "/" path separators
 	path = filepath.ToSlash(path)
 	for _, pattern := range c.Exclude {
-		pattern = filepath.ToSlash(pattern)
+		pattern, err := c.findRelativePathInProject(pattern)
+		if err != nil {
+			return false, ""
+		}
 		excluded, err := doublestar.Match(pattern, path)
 		if err == nil && excluded {
 			return true, pattern
