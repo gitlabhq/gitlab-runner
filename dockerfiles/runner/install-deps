@@ -47,7 +47,7 @@ mkdir -p /etc/gitlab-runner/certs
 chmod -R 700 /etc/gitlab-runner
 
 if grep 'docker-machine' "${SCRIPTPATH}/checksums-${ARCH}"; then
-  wget -nv "https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" \
+  wget -nv "https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases/${DOCKER_MACHINE_VERSION}/downloads/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" \
     -O /usr/bin/docker-machine
 else
   echo "No checksum specified for docker-machine, skipping."
@@ -58,7 +58,7 @@ wget -nv "https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSIO
   -O /tmp/git-lfs.tar.gz
 sha256sum -c -w "${SCRIPTPATH}/checksums-${ARCH}"
 
-if [[ -f /usr/bin/docker-machine ]]; then 
+if [[ -f /usr/bin/docker-machine ]]; then
   chmod +x /usr/bin/docker-machine
   docker-machine --version
 fi
