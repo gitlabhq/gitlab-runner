@@ -362,6 +362,65 @@ func TestExcludedFilePaths(t *testing.T) {
 	assert.Equal(t, int64(2), f.excluded["foo/**/*.md"])
 }
 
+func Test_isExcluded(t *testing.T) {
+	testCases := map[string]struct {
+		pattern string
+		path    string
+		match   bool
+		log     string
+	}{
+		`direct match`: {
+			pattern: "file.txt",
+			path:    "file.txt",
+			match:   true,
+		},
+		`pattern matches`: {
+			pattern: "**/*.txt",
+			path:    "foo/bar/file.txt",
+			match:   true,
+		},
+		`no match - pattern not in project`: {
+			pattern: "../*.*",
+			path:    "file.txt",
+			match:   false,
+			log:     "isExcluded: artifact path is not a subpath of project directory: ../*.*",
+		},
+		`no match - absolute pattern not in project`: {
+			pattern: "/foo/file.txt",
+			path:    "file.txt",
+			match:   false,
+			log:     "isExcluded: artifact path is not a subpath of project directory: /foo/file.txt",
+		},
+	}
+
+	workingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			f := fileArchiver{
+				wd:      workingDirectory,
+				Exclude: []string{tc.pattern},
+			}
+
+			h := newLogHook(logrus.WarnLevel)
+			logrus.AddHook(&h)
+
+			isExcluded, rule := f.isExcluded(tc.path)
+			assert.Equal(t, tc.match, isExcluded)
+			if tc.match {
+				assert.Equal(t, tc.pattern, rule)
+			} else {
+				assert.Empty(t, rule)
+			}
+			if tc.log != "" {
+				require.Len(t, h.entries, 1)
+				assert.Contains(t, h.entries[0].Message, tc.log)
+			}
+		})
+	}
+}
+
 func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
 	writeTestFile(t, artifactsTestArchivedFile)
 	defer os.Remove(artifactsTestArchivedFile)
@@ -487,6 +546,11 @@ func TestFileArchiver_pathIsInProject(t *testing.T) {
 		},
 		`relative path not in project`: {
 			path:          "../nope",
+			inProject:     false,
+			errorExpected: true,
+		},
+		`relative path to parent directory with pattern - not in project`: {
+			path:          "../*.*",
 			inProject:     false,
 			errorExpected: true,
 		},
