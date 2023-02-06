@@ -110,7 +110,8 @@ func (c *fileArchiver) isExcluded(path string) (bool, string) {
 			logrus.Warningf("isExcluded: %v", err.Error())
 			return false, ""
 		}
-		excluded, err := doublestar.PathMatch(relPattern, path)
+		relPattern = filepath.ToSlash(relPattern)
+		excluded, err := doublestar.Match(relPattern, path)
 		if err == nil && excluded {
 			return true, pattern
 		}
