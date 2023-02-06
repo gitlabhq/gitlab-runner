@@ -298,11 +298,11 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 		return err
 	}
 
-	// TODO: Remove this translation in 14.0 - https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426
+	// TODO: Remove this translation - https://gitlab.com/groups/gitlab-org/-/epics/6112
 	stage := cmd.Stage
 	if stage == "step_script" {
-		e.BuildLogger.Warningln("Starting with version 14.0 the 'build_script' stage " +
-			"will be replaced with 'step_script': https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26426")
+		e.BuildLogger.Warningln("Starting with version 17.0 the 'build_script' stage " +
+			"will be replaced with 'step_script': https://gitlab.com/groups/gitlab-org/-/epics/6112")
 		stage = "build_script"
 	}
 
