@@ -321,11 +321,11 @@ func TestGlobbedFilePathsNew(t *testing.T) {
 }
 
 func TestExcludedFilePaths(t *testing.T) {
-	fooTestDirectory := "foo/test/bar/baz"
+	const fooTestDirectory = "foo/test/bar/baz"
 
 	err := os.MkdirAll(fooTestDirectory, 0700)
 	require.NoError(t, err, "could not create test directory")
-	defer os.RemoveAll(fooTestDirectory)
+	defer os.RemoveAll(strings.Split(fooTestDirectory, "/")[0])
 
 	existingFiles := []string{
 		"foo/test/bar/baz/1.txt",
