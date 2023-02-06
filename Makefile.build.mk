@@ -9,7 +9,7 @@ runner-bin-fips: export GOOS ?= linux
 runner-bin-fips: export GOARCH ?= amd64
 runner-bin-fips:
 	# Building $(NAME) in version $(VERSION) for FIPS $(GOOS) $(GOARCH)
-	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build \
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build \
 		   -tags fips \
 		   -ldflags "$(GO_LDFLAGS)" \
 		   -o="out/binaries/$(NAME)-$(GOOS)-$(GOARCH)-fips" \

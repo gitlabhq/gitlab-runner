@@ -104,7 +104,7 @@ ${BASE_BINARY_PATH}-fips: export GOOS ?= linux
 ${BASE_BINARY_PATH}-fips: export GOARCH ?= amd64
 ${BASE_BINARY_PATH}-fips: APP_NAME := "gitlab-runner-helper"
 ${BASE_BINARY_PATH}-fips: $(HELPER_GO_FILES)
-	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build \
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build \
     		   -tags fips \
     		   -ldflags "$(GO_LDFLAGS)" \
     		   -o="${BASE_BINARY_PATH}.$(GO_ARCH_NAME_$(GOARCH))-fips" \
