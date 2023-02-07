@@ -1042,7 +1042,7 @@ type Config struct {
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
 
-	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds after which the forceful shutdown operation will timeout and process will exit"`
+	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds until the forceful shutdown operation times out and exits the process"`
 
 	configSaver ConfigSaver
 }

@@ -29,14 +29,15 @@ You can find the `config.toml` file in:
 
 These settings are global. They apply to all runners.
 
-| Setting | Description |
-| ------- | ----------- |
-| `concurrent`     | Limits how many jobs can run concurrently, across all registered runners. Each `[[runners]]` section can define its own limit, but this value sets a maximum for all of those values combined. For example, a value of `10` means no more than 10 jobs can run concurrently. `0` is forbidden. If you use this value, the runner process exits with a critical error. [View how this setting works with the Docker Machine executor (for autoscaling)](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor). |
-| `log_level`      | Defines the log level. Options are `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. This setting has lower priority than the level set by the command-line arguments `--debug`, `-l`, or `--log-level`. |
-| `log_format`     | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`, which contains ANSI escape codes for coloring. |
-| `check_interval` | Defines the interval length, in seconds, between the runner checking for new jobs. The default value is `3`. If set to `0` or lower, the default value is used. |
-| `sentry_dsn`     | Enables tracking of all system level errors to Sentry. |
-| `listen_address` | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
+| Setting            | Description |
+|--------------------|-------------|
+| `concurrent`       | Limits how many jobs can run concurrently, across all registered runners. Each `[[runners]]` section can define its own limit, but this value sets a maximum for all of those values combined. For example, a value of `10` means no more than 10 jobs can run concurrently. `0` is forbidden. If you use this value, the runner process exits with a critical error. [View how this setting works with the Docker Machine executor (for autoscaling)](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor). |
+| `log_level`        | Defines the log level. Options are `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. This setting has lower priority than the level set by the command-line arguments `--debug`, `-l`, or `--log-level`. |
+| `log_format`       | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`, which contains ANSI escape codes for coloring. |
+| `check_interval`   | Defines the interval length, in seconds, between the runner checking for new jobs. The default value is `3`. If set to `0` or lower, the default value is used. |
+| `sentry_dsn`       | Enables tracking of all system level errors to Sentry. |
+| `listen_address`   | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
+| `shutdown_timeout` | Number of seconds until the forceful shutdown operation times out and exits the process. |
 
 Configuration example:
 
