@@ -23,7 +23,7 @@ const (
 	fileArchiverRelativeFile           = "../../../relative.txt"
 )
 
-func TestGlobbedFilePathsNew(t *testing.T) {
+func TestGlobbedFilePath(t *testing.T) {
 	// Set up directories used in all test cases
 	const (
 		fileArchiverGlobPath  = "foo/bar/baz"
