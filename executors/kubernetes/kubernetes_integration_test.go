@@ -128,8 +128,8 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesBashFeatureFlag":                           testKubernetesBashFeatureFlag,
 		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
+		"testKubernetesPublicInternalVariables":                   testKubernetesPublicInternalVariables,
 		"testKubernetesWaitResources":                             testKubernetesWaitResources,
-		"testKubernetesPulicInternalVariabes":                     testKubernetesPulicInternalVariabes,
 		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
 		"testKubernetesHugeScriptAndAfterScriptFeatureFlag":       testKubernetesHugeScriptAndAfterScriptFeatureFlag,
 	}
@@ -1159,37 +1159,45 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 	}
 }
 
-func testKubernetesPulicInternalVariabes(t *testing.T, featureFlagName string, featureFlagValue bool) {
+func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	ctxTimeout := time.Minute
 	client := getTestKubeClusterClient(t)
 
+	containsVerifyFn := func(t *testing.T, v common.JobVariable, envNames []string, envValues []string) {
+		assert.Contains(t, envNames, v.Key)
+		assert.Contains(t, envValues, v.Value)
+	}
+
 	tests := map[string]struct {
-		variables common.JobVariable
+		variable common.JobVariable
+		verifyFn func(*testing.T, common.JobVariable, []string, []string)
 	}{
 		"internal variable": {
-			variables: common.JobVariable{
+			variable: common.JobVariable{
 				Key:      "my_internal_variable",
 				Value:    "my internal variable",
 				Internal: true,
-				Public:   false,
 			},
-		},
-		"regular variable": {
-			variables: common.JobVariable{
-				Key:      "my_regular_variable",
-				Value:    "my regular variable",
-				Internal: false,
-				Public:   false,
-			},
+			verifyFn: containsVerifyFn,
 		},
 		"public variable": {
-			variables: common.JobVariable{
-				Key:      "my_public_variable",
-				Value:    "my public variable",
-				Internal: false,
-				Public:   true,
+			variable: common.JobVariable{
+				Key:    "my_public_variable",
+				Value:  "my public variable",
+				Public: true,
+			},
+			verifyFn: containsVerifyFn,
+		},
+		"regular variable": {
+			variable: common.JobVariable{
+				Key:   "my_regular_variable",
+				Value: "my regular variable",
+			},
+			verifyFn: func(t *testing.T, v common.JobVariable, envNames []string, envValues []string) {
+				assert.NotContains(t, envNames, v.Key)
+				assert.NotContains(t, envValues, v.Value)
 			},
 		},
 	}
@@ -1212,7 +1220,7 @@ func testKubernetesPulicInternalVariabes(t *testing.T, featureFlagName string, f
 				}
 
 				jobResponse.Variables = []common.JobVariable{
-					tc.variables,
+					tc.variable,
 				}
 
 				return jobResponse, nil
@@ -1251,8 +1259,7 @@ func testKubernetesPulicInternalVariabes(t *testing.T, featureFlagName string, f
 				require.NotEmpty(t, envNames)
 				require.NotEmpty(t, envValues)
 
-				assert.Contains(t, envNames, tc.variables.Key)
-				assert.Contains(t, envValues, tc.variables.Value)
+				tc.verifyFn(t, tc.variable, envNames, envValues)
 
 				err = client.
 					CoreV1().

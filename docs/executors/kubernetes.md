@@ -1341,11 +1341,21 @@ Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3095) in GitLab Runner 14.5.
 > - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3212) in GitLab Runner 15.1.
 
-- From GitLab 14.5 to 15.0, GitLab Runner honors the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
-- From GitLab 15.1, the entrypoint defined in a Docker image is honored with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
-
 NOTE:
-If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the CI job hangs.
+From GitLab 14.5 to 15.0, GitLab Runner honors the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
+From GitLab 15.1, the entrypoint defined in a Docker image is honored with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
+
+The container entry point has some limitations:
+
+- If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the job hangs.
+- [File type CI/CD variables](https://docs.gitlab.com/ee/ci/variables/index.html#use-file-type-cicd-variables)
+  are not yet written to disk when the entrypoint is executed. The file is only accessible
+  in the job during script execution.
+- The following CI/CD variables are not accessible in the entrypoint. You can use
+  [`before_script`](https://docs.gitlab.com/ee/ci/yaml/index.html#beforescript) to make
+  any setup changes before running script commands:
+  - [CI/CD variables defined in the settings](https://docs.gitlab.com/ee/ci/variables/#define-a-cicd-variable-in-the-ui).
+  - [Masked CI/CD variables](https://docs.gitlab.com/ee/ci/variables/#mask-a-cicd-variable).
 
 ## Pod cleanup
 
