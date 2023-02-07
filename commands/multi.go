@@ -428,6 +428,8 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
+	// Metrics about configuration file accessing
+	registry.MustRegister(mr.configAccessCollector)
 	registry.MustRegister(mr)
 	// Metrics about API connections
 	registry.MustRegister(mr.networkRequestStatusesCollector)
@@ -1119,18 +1121,17 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 func init() {
 	requestStatusesCollector := network.NewAPIRequestStatusesMap()
 
-	common.RegisterCommand2(
-		"run",
-		"run multi runner service",
-		&RunCommand{
-			ServiceName:                     defaultServiceName,
-			network:                         network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
-			networkRequestStatusesCollector: requestStatusesCollector,
-			prometheusLogHook:               prometheus_helper.NewLogHook(),
-			failuresCollector:               prometheus_helper.NewFailuresCollector(),
-			buildsHelper:                    newBuildsHelper(),
-			runAt:                           runAt,
-			reloadConfigInterval:            common.ReloadConfigInterval,
-		},
-	)
+	cmd := &RunCommand{
+		ServiceName:                     defaultServiceName,
+		network:                         network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
+		networkRequestStatusesCollector: requestStatusesCollector,
+		prometheusLogHook:               prometheus_helper.NewLogHook(),
+		failuresCollector:               prometheus_helper.NewFailuresCollector(),
+		buildsHelper:                    newBuildsHelper(),
+		runAt:                           runAt,
+		reloadConfigInterval:            common.ReloadConfigInterval,
+	}
+	cmd.configAccessCollector = newConfigAccessCollector()
+
+	common.RegisterCommand2("run", "run multi runner service", cmd)
 }
