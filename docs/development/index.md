@@ -134,16 +134,6 @@ asdf reshim
 
 ## 5. Build GitLab Runner
 
-Set image version environment variables:
-
-```shell
-export ALPINE_312_VERSION="3.12.12"
-export ALPINE_313_VERSION="3.13.12"
-export ALPINE_314_VERSION="3.14.8"
-export ALPINE_315_VERSION="3.15.6"
-export UBUNTU_VERSION="20.04"
-```
-
 Compile GitLab Runner using the Go toolchain:
 
 ```shell
