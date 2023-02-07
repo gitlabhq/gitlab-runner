@@ -168,7 +168,7 @@ runners:
 
 The executor-specific configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
-### Use the configuration template to set additonal options
+### Use the configuration template to set additional options
 
 > [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
