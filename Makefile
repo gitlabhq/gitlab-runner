@@ -19,16 +19,7 @@ BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= main
 
-# Keep in sync with docs/install/linux-repository.md
-DEB_PLATFORMS ?= debian/stretch debian/buster debian/bullseye \
-    ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/impish ubuntu/jammy \
-    raspbian/jessie raspbian/stretch raspbian/buster \
-    linuxmint/sarah linuxmint/serena linuxmint/sonya linuxmint/ulyana linuxmint/ulyssa linuxmint/uma linuxmint/una
 DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
-RPM_PLATFORMS ?= el/7 el/8 el/9 \
-    ol/6 ol/7 ol/8 \
-    fedora/32 fedora/33 fedora/34 fedora/35 fedora/36 \
-    amazon/2 amazon/2022
 RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x ppc64le
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
@@ -233,11 +224,11 @@ packagecloud-deps:
 
 packagecloud-deb:
 	# Sending Debian compatible packages...
-	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) deb $(DEB_PLATFORMS)
+	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) deb "$(CI_JOB_NAME)"
 
 packagecloud-rpm:
 	# Sending RedHat compatible packages...
-	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) rpm $(RPM_PLATFORMS)
+	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) rpm "$(CI_JOB_NAME)"
 
 packagecloud-yank:
 ifneq ($(YANK),)

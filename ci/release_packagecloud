@@ -5,9 +5,7 @@ set -eo pipefail
 target=$(echo "${1}" | cut -f 1 -d ' ')
 case "${target}" in
     bleeding)
-        make packagecloud PACKAGE_CLOUD="runner/unstable" \
-                          DEB_PLATFORMS="debian/stretch debian/buster debian/bullseye ubuntu/xenial ubuntu/bionic ubuntu/focal ubuntu/impish ubuntu/jammy" \
-                          RPM_PLATFORMS="el/7 el/8 el/9 fedora/32 fedora/33 fedora/34 fedora/35 fedora/36 amazon/2 amazon/2022"
+        make packagecloud PACKAGE_CLOUD="runner/unstable"
         ;;
     stable)
         make packagecloud
