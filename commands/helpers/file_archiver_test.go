@@ -23,34 +23,21 @@ const (
 	fileArchiverRelativeFile           = "../../../relative.txt"
 )
 
-func TestGlobbedFilePaths(t *testing.T) {
+func TestGlobbedFilePath(t *testing.T) {
+	// Set up directories used in all test cases
 	const (
-		fileArchiverGlobbedFilePath = "foo/**/*.txt"
-		fileArchiverGlobPath        = "foo/bar/baz"
+		fileArchiverGlobPath  = "foo/bar/baz"
+		fileArchiverGlobPath2 = "foo/bar/baz2"
 	)
-
 	err := os.MkdirAll(fileArchiverGlobPath, 0700)
 	require.NoError(t, err, "Creating directory path: %s", fileArchiverGlobPath)
 	defer os.RemoveAll(strings.Split(fileArchiverGlobPath, "/")[0])
 
-	workingDirectory, err := os.Getwd()
-	require.NoError(t, err)
-	fileArchiverAbsoluteFilePath := filepath.Join(workingDirectory, "foo/bar/*.bin")
+	err = os.MkdirAll(fileArchiverGlobPath2, 0700)
+	require.NoError(t, err, "Creating directory path: %s", fileArchiverGlobPath2)
+	defer os.RemoveAll(strings.Split(fileArchiverGlobPath2, "/")[0])
 
-	expectedMatchingFiles := []string{
-		"foo/bar/absolute.bin",
-		"foo/bar/baz/glob1.txt",
-		"foo/bar/baz/glob2.txt",
-		"foo/bar/glob3.txt",
-	}
-	for _, f := range expectedMatchingFiles {
-		writeTestFile(t, f)
-	}
-
-	// Write a file that doesn't match glob
-	writeTestFile(t, "foo/bar/baz/main.go")
-
-	// Write a dir that is outside of glob pattern
+	// Write a dir that is outside any glob patterns
 	const (
 		fileArchiverGlobNonMatchingPath = "bar/foo"
 	)
@@ -59,20 +46,286 @@ func TestGlobbedFilePaths(t *testing.T) {
 	require.NoError(t, err, "Creating directory path: %s", fileArchiverGlobNonMatchingPath)
 	defer os.RemoveAll(strings.Split(fileArchiverGlobNonMatchingPath, "/")[0])
 
-	f := fileArchiver{
-		Paths: []string{fileArchiverGlobbedFilePath, fileArchiverAbsoluteFilePath},
+	workingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+
+	testCases := map[string]struct {
+		paths   []string
+		exclude []string
+
+		// files that will be created and matched by the patterns
+		expectedMatchingFiles []string
+
+		// directories that will be matched by the patterns
+		expectedMatchingDirs []string
+
+		// files that will be created but will not be matched
+		nonMatchingFiles []string
+
+		// directories that will not be matched by the patterns
+		nonMatchingDirs []string
+
+		// files that are excluded by Exclude patterns
+		excludedFilesCount int64
+	}{
+		"files by extension at several depths": {
+			paths: []string{"foo/**/*.txt"},
+			expectedMatchingFiles: []string{
+				"foo/file.txt",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.txt",
+				"foo/bar/baz/file.extra.dots.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/file.txt.md",
+				"foo/bar/file.txt.md",
+				"foo/bar/baz/file.txt.md",
+				"foo/bar/baz/file.extra.dots.txt.md",
+			},
+		},
+		"files by extension at several depths - with exclude": {
+			paths:   []string{"foo/**/*.txt"},
+			exclude: []string{"foo/**/xfile.txt"},
+			expectedMatchingFiles: []string{
+				"foo/file.txt",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/xfile.txt",
+				"foo/bar/xfile.txt",
+				"foo/bar/baz/xfile.txt",
+			},
+			excludedFilesCount: 3,
+		},
+		"double slash matches a single slash": {
+			paths: []string{"foo//*.txt"},
+			expectedMatchingFiles: []string{
+				"foo/file.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.txt",
+			},
+		},
+		"double slash matches a single slash - with exclude": {
+			paths:   []string{"foo//*.txt"},
+			exclude: []string{"foo//*2.txt"},
+			expectedMatchingFiles: []string{
+				"foo/file.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/file2.txt",
+				"foo/bar/file.txt",
+			},
+			excludedFilesCount: 1,
+		},
+		"absolute path to working directory": {
+			paths: []string{filepath.Join(workingDirectory, "*.thing")},
+			expectedMatchingFiles: []string{
+				"file.thing",
+			},
+			nonMatchingFiles: []string{
+				"foo/file.thing",
+				"foo/bar/file.thing",
+				"foo/bar/baz/file.thing",
+			},
+		},
+		"absolute path to working directory - with exclude": {
+			paths:   []string{filepath.Join(workingDirectory, "*.thing")},
+			exclude: []string{filepath.Join(workingDirectory, "*2.thing")},
+			expectedMatchingFiles: []string{
+				"file.thing",
+			},
+			nonMatchingFiles: []string{
+				"file2.thing",
+			},
+			excludedFilesCount: 1,
+		},
+		"absolute path to nested directory": {
+			paths: []string{filepath.Join(workingDirectory, "foo/bar/*.bin")},
+			expectedMatchingFiles: []string{
+				"foo/bar/file.bin",
+			},
+			nonMatchingFiles: []string{
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.bin",
+			},
+		},
+		"absolute path to nested directory - with exclude": {
+			paths:   []string{filepath.Join(workingDirectory, "foo/bar/*.bin")},
+			exclude: []string{filepath.Join(workingDirectory, "foo/bar/*2.bin")},
+			expectedMatchingFiles: []string{
+				"foo/bar/file.bin",
+			},
+			nonMatchingFiles: []string{
+				"foo/bar/file2.bin",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.bin",
+			},
+			excludedFilesCount: 1,
+		},
+		"double slash and multiple stars - must be at least two dirs deep": {
+			paths: []string{"./foo/**//*/*.*"},
+			expectedMatchingFiles: []string{
+				"foo/bar/file.bin",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.bin",
+				"foo/bar/baz/file.txt",
+				"foo/bar/baz2/file.bin",
+				"foo/bar/baz2/file.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/file.txt",
+			},
+		},
+		"double slash and multiple stars - must be at least two dirs deep - with exclude": {
+			paths:   []string{"./foo/**//*/*.*"},
+			exclude: []string{"**/*.bin"},
+			expectedMatchingFiles: []string{
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.txt",
+				"foo/bar/baz2/file.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/file.txt",
+				"foo/bar/file.bin",
+				"foo/bar/baz/file.bin",
+				"foo/bar/baz2/file.bin",
+			},
+			excludedFilesCount: 3,
+		},
+		"all the files": {
+			paths: []string{"foo/**/*.*"},
+			expectedMatchingFiles: []string{
+				"foo/file.bin",
+				"foo/file.txt",
+				"foo/bar/file.bin",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.bin",
+				"foo/bar/baz/file.txt",
+				"foo/bar/baz2/file.bin",
+				"foo/bar/baz2/file.txt",
+			},
+			nonMatchingFiles: []string{},
+		},
+		"all the files - with exclude": {
+			paths:   []string{"foo/**/*.*"},
+			exclude: []string{"**/*.bin", "**/*even-this*"},
+			expectedMatchingFiles: []string{
+				"foo/file.txt",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.txt",
+				"foo/bar/baz2/file.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/wow-even-this.go",
+				"foo/file.bin",
+				"foo/bar/file.bin",
+				"foo/bar/baz/file.bin",
+				"foo/bar/baz2/file.bin",
+			},
+			excludedFilesCount: 5,
+		},
+		"all the things - dirs included": {
+			paths: []string{"foo/**"},
+			expectedMatchingFiles: []string{
+				"foo/file.bin",
+				"foo/file.txt",
+				"foo/bar/file.bin",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.bin",
+				"foo/bar/baz/file.txt",
+				"foo/bar/baz2/file.bin",
+				"foo/bar/baz2/file.txt",
+			},
+			expectedMatchingDirs: []string{
+				"foo",
+				"foo/bar",
+				"foo/bar/baz",
+				"foo/bar/baz2",
+			},
+			nonMatchingFiles: []string{
+				"root.txt",
+			},
+		},
+		"relative path that leaves project and returns": {
+			paths: []string{filepath.Join("..", filepath.Base(workingDirectory), "foo/*.txt")},
+			expectedMatchingFiles: []string{
+				"foo/file.txt",
+			},
+		},
+		"relative path that leaves project and returns - with exclude": {
+			paths:   []string{filepath.Join("..", filepath.Base(workingDirectory), "foo/*.txt")},
+			exclude: []string{filepath.Join("..", filepath.Base(workingDirectory), "foo/*2.txt")},
+			expectedMatchingFiles: []string{
+				"foo/file.txt",
+			},
+			nonMatchingFiles: []string{
+				"foo/file2.txt",
+			},
+			excludedFilesCount: 1,
+		},
+		"invalid path": {
+			paths: []string{">/**"},
+		},
+		"cancel out everything": {
+			paths:   []string{"**"},
+			exclude: []string{"**"},
+		},
 	}
-	err = f.enumerate()
-	assert.NoError(t, err)
-	assert.Equal(t, expectedMatchingFiles, f.sortedFiles())
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			for _, f := range tc.expectedMatchingFiles {
+				writeTestFile(t, f)
+			}
+			for _, f := range tc.nonMatchingFiles {
+				writeTestFile(t, f)
+			}
+
+			f := fileArchiver{
+				Paths:   tc.paths,
+				Exclude: tc.exclude,
+			}
+			err = f.enumerate()
+			assert.NoError(t, err)
+
+			sortedFiles := f.sortedFiles()
+			assert.Len(t, sortedFiles, len(tc.expectedMatchingFiles)+len(tc.expectedMatchingDirs))
+			for _, p := range tc.expectedMatchingFiles {
+				assert.Contains(t, f.sortedFiles(), p)
+			}
+			for _, p := range tc.expectedMatchingDirs {
+				assert.Contains(t, f.sortedFiles(), p)
+			}
+
+			var excludedFilesCount int64
+			for _, v := range f.excluded {
+				excludedFilesCount += v
+			}
+			if tc.excludedFilesCount > 0 {
+				assert.Equal(t, tc.excludedFilesCount, excludedFilesCount)
+			}
+
+			// remove test files from this test case
+			// deferred removal will still happen if needed in the os.RemoveAll call above
+			for _, f := range tc.expectedMatchingFiles {
+				removeTestFile(t, f)
+			}
+			for _, f := range tc.nonMatchingFiles {
+				removeTestFile(t, f)
+			}
+		})
+	}
 }
 
 func TestExcludedFilePaths(t *testing.T) {
-	fooTestDirectory := "foo/test/bar/baz"
+	const fooTestDirectory = "foo/test/bar/baz"
 
 	err := os.MkdirAll(fooTestDirectory, 0700)
 	require.NoError(t, err, "could not create test directory")
-	defer os.RemoveAll(fooTestDirectory)
+	defer os.RemoveAll(strings.Split(fooTestDirectory, "/")[0])
 
 	existingFiles := []string{
 		"foo/test/bar/baz/1.txt",
@@ -107,6 +360,65 @@ func TestExcludedFilePaths(t *testing.T) {
 	assert.Equal(t, int64(1), f.excluded["foo/test/bar/baz/3.txt"])
 	require.Contains(t, f.excluded, "foo/**/*.md")
 	assert.Equal(t, int64(2), f.excluded["foo/**/*.md"])
+}
+
+func Test_isExcluded(t *testing.T) {
+	testCases := map[string]struct {
+		pattern string
+		path    string
+		match   bool
+		log     string
+	}{
+		`direct match`: {
+			pattern: "file.txt",
+			path:    "file.txt",
+			match:   true,
+		},
+		`pattern matches`: {
+			pattern: "**/*.txt",
+			path:    "foo/bar/file.txt",
+			match:   true,
+		},
+		`no match - pattern not in project`: {
+			pattern: "../*.*",
+			path:    "file.txt",
+			match:   false,
+			log:     "isExcluded: artifact path is not a subpath of project directory: ../*.*",
+		},
+		`no match - absolute pattern not in project`: {
+			pattern: "/foo/file.txt",
+			path:    "file.txt",
+			match:   false,
+			log:     "isExcluded: artifact path is not a subpath of project directory: /foo/file.txt",
+		},
+	}
+
+	workingDirectory, err := os.Getwd()
+	require.NoError(t, err)
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			f := fileArchiver{
+				wd:      workingDirectory,
+				Exclude: []string{tc.pattern},
+			}
+
+			h := newLogHook(logrus.WarnLevel)
+			logrus.AddHook(&h)
+
+			isExcluded, rule := f.isExcluded(tc.path)
+			assert.Equal(t, tc.match, isExcluded)
+			if tc.match {
+				assert.Equal(t, tc.pattern, rule)
+			} else {
+				assert.Empty(t, rule)
+			}
+			if tc.log != "" {
+				require.Len(t, h.entries, 1)
+				assert.Contains(t, h.entries[0].Message, tc.log)
+			}
+		})
+	}
 }
 
 func TestCacheArchiverAddingUntrackedFiles(t *testing.T) {
@@ -234,6 +546,11 @@ func TestFileArchiver_pathIsInProject(t *testing.T) {
 		},
 		`relative path not in project`: {
 			path:          "../nope",
+			inProject:     false,
+			errorExpected: true,
+		},
+		`relative path to parent directory with pattern - not in project`: {
+			path:          "../*.*",
 			inProject:     false,
 			errorExpected: true,
 		},

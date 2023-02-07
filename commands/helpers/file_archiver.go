@@ -105,8 +105,13 @@ func (c *fileArchiver) isExcluded(path string) (bool, string) {
 	// Matching will fail with Windows machines using "\\" path separators and patterns with "/" path separators
 	path = filepath.ToSlash(path)
 	for _, pattern := range c.Exclude {
-		pattern = filepath.ToSlash(pattern)
-		excluded, err := doublestar.Match(pattern, path)
+		relPattern, err := c.findRelativePathInProject(pattern)
+		if err != nil {
+			logrus.Warningf("isExcluded: %v", err.Error())
+			return false, ""
+		}
+		relPattern = filepath.ToSlash(relPattern)
+		excluded, err := doublestar.Match(relPattern, path)
 		if err == nil && excluded {
 			return true, pattern
 		}
@@ -144,7 +149,7 @@ func (c *fileArchiver) processPath(path string) {
 	rel, err := c.findRelativePathInProject(base)
 	if err != nil {
 		// Do not fail job when a file is invalid or not found.
-		logrus.Warningf(err.Error())
+		logrus.Warningf("processPath: %v", err.Error())
 		return
 	}
 
@@ -200,7 +205,7 @@ func (c *fileArchiver) findRelativePathInProject(path string) (string, error) {
 	}
 
 	// If fully resolved relative path begins with ".." it is not a subpath of our working directory
-	if strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if strings.HasPrefix(rel, ".."+string(filepath.Separator)) || rel == ".." {
 		return "", fmt.Errorf("artifact path is not a subpath of project directory: %s", path)
 	}
 

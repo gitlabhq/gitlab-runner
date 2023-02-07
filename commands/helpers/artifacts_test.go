@@ -151,3 +151,8 @@ func writeTestFile(t *testing.T, fileName string) {
 	err := os.WriteFile(fileName, nil, 0o600)
 	require.NoError(t, err, "Writing file:", fileName)
 }
+
+func removeTestFile(t *testing.T, fileName string) {
+	err := os.Remove(fileName)
+	require.NoError(t, err, "Removing file:", fileName)
+}
