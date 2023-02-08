@@ -20,6 +20,9 @@ label_matchers:
   - runner-distribution
   scope: runner-distribution
 - labels:
+    - type::feature
+  scope: new-feature
+- labels:
   - feature::addition
   scope: new-feature
 - labels:
