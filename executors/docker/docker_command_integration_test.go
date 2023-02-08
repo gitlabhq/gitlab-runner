@@ -2064,3 +2064,50 @@ func Test_CaptureServiceLogs(t *testing.T) {
 		})
 	}
 }
+
+func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	// Adding a gitlab-ci.yml variable to test the expansion of the service env variables
+	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+		Key:    "MY_GLOBAL_VAR",
+		Value:  "my_global_var_value",
+		Public: true,
+	})
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:      common.TestAlpineImage,
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+					Services: []common.Service{
+						{
+							Name: common.TestAlpineImage,
+							Environment: []string{
+								// expanded service env var
+								"EXPANDED=$MY_GLOBAL_VAR",
+								"FOO=value from [[runners.docker.services]]",
+							},
+							Entrypoint: []string{"/bin/sh", "-c"},
+							Command:    []string{"echo -e \"FOO = $FOO\nEXPANDED = $EXPANDED\""},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	out := bytes.NewBuffer(nil)
+	err = build.Run(&common.Config{}, &common.Trace{Writer: out})
+	assert.NoError(t, err)
+	assert.Contains(t, out.String(), "FOO = value from [[runners.docker.services]]")
+	assert.Contains(t, out.String(), "EXPANDED = my_global_var_value")
+
+}

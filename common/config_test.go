@@ -249,6 +249,22 @@ func TestConfigParse(t *testing.T) {
 				assert.Equal(t, "image", config.Runners[0].Docker.Image)
 			},
 		},
+		"parse Service runners.docker.services environment": {
+			config: `
+				[[runners]]
+				[runners.docker]
+				[[runners.docker.services]]
+				name = "svc1"
+				environment = ["ENV1=value1", "ENV2=value2"]
+			`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Equal(t, 1, len(config.Runners))
+				require.Equal(t, 1, len(config.Runners[0].Docker.Services))
+				require.Equal(t, 2, len(config.Runners[0].Docker.Services[0].Environment))
+				assert.Equal(t, "ENV1=value1", config.Runners[0].Docker.Services[0].Environment[0])
+				assert.Equal(t, "ENV2=value2", config.Runners[0].Docker.Services[0].Environment[1])
+			},
+		},
 		"parse Docker Container Labels with string key and value": {
 			config: `
                         [[runners]]
@@ -985,6 +1001,13 @@ func TestService_ToImageDefinition(t *testing.T) {
 				Command:    []string{"executable", "param1", "param2"},
 				Entrypoint: []string{"executable", "param3", "param4"},
 			},
+		},
+		"environment specified": {
+			service: Service{Name: "name", Environment: []string{"ENV1=value1", "ENV2=value2"}},
+			expectedImage: Image{Name: "name", Variables: JobVariables{
+				{Key: "ENV1", Value: "value1", Internal: true},
+				{Key: "ENV2", Value: "value2", Internal: true},
+			}},
 		},
 	}
 
