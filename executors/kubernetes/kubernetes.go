@@ -653,7 +653,9 @@ func (s *executor) processLogs(ctx context.Context) {
 			}
 
 			exitCode := getExitCode(err)
-			s.Warningln(fmt.Sprintf("%v", err))
+			if err != nil {
+				s.Warningln(fmt.Sprintf("%v", err))
+			}
 			// Script can be kept to nil as not being used after the exitStatus is received L1223
 			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: exitCode}
 		}
@@ -1947,7 +1949,7 @@ func (s *executor) checkDefaults() error {
 
 	if s.configurationOverwrites.namespace == "" {
 		s.Warningln(
-			fmt.Printf("Namespace is empty, therefore assuming '%s'.", DefaultResourceIdentifier),
+			fmt.Sprintf("Namespace is empty, therefore assuming '%s'.", DefaultResourceIdentifier),
 		)
 		s.configurationOverwrites.namespace = DefaultResourceIdentifier
 	}
