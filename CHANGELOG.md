@@ -1,3 +1,10 @@
+## v15.8.2 (2023-02-09)
+
+### Maintenance
+
+- Add additional test coverage around path matching for artifacts (doublestar) !3890
+- Update Docker Machine installed in runner container image !3886
+
 ## v15.8.1 (2023-02-02)
 
 ### Bug fixes
