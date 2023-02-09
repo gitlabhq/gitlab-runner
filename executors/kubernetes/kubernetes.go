@@ -654,7 +654,7 @@ func (s *executor) processLogs(ctx context.Context) {
 
 			exitCode := getExitCode(err)
 			if err != nil {
-				s.Warningln(fmt.Sprintf("%v", err))
+				s.Warningln(fmt.Sprintf("Error processing the log file: %v", err))
 			}
 			// Script can be kept to nil as not being used after the exitStatus is received L1223
 			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: exitCode}
