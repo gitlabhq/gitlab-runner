@@ -188,6 +188,19 @@ The following settings help to define the behavior of GitLab Runner within Kuber
 | `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#pods-dns-config). |
 | `priority_class_name` | Specify the Priority Class to be set to the pod. The default one will be used if not set. |
 
+### Pod lifecycle
+
+A [pod's lifecycle](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)
+can be affected by:
+
+- Setting the `pod_termination_grace_period_seconds` property in the `TOML` configuration file.
+  The process running on the pod can run for the given duration after the `TERM` signal is sent.
+  A kill signal is sent if the Pod is not successfully terminated after this period of time.
+- Enabling the [`FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag](../configuration/feature-flags.md).
+  When enabled and the job times out, the pod running the CI/CD job is marked as
+  failed and all associated containers are killed. To have the job time out on GitLab first,
+  set `activeDeadlineSeconds` to `configured timeout + 1 second`.
+
 ### Default Annotations for job Pods
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3845) in GitLab Runner 15.9.
