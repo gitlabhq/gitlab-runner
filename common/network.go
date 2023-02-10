@@ -284,14 +284,23 @@ type Step struct {
 
 type Steps []Step
 
+type DockerOptions struct {
+	Platform string `json:"platform,omitempty"`
+}
+
+type ExecutorOptions struct {
+	DockerOptions DockerOptions `json:"docker,omitempty"`
+}
+
 type Image struct {
-	Name         string             `json:"name"`
-	Alias        string             `json:"alias,omitempty"`
-	Command      []string           `json:"command,omitempty"`
-	Entrypoint   []string           `json:"entrypoint,omitempty"`
-	Ports        []Port             `json:"ports,omitempty"`
-	Variables    JobVariables       `json:"variables,omitempty"`
-	PullPolicies []DockerPullPolicy `json:"pull_policy,omitempty"`
+	Name            string             `json:"name"`
+	Alias           string             `json:"alias,omitempty"`
+	Command         []string           `json:"command,omitempty"`
+	Entrypoint      []string           `json:"entrypoint,omitempty"`
+	Ports           []Port             `json:"ports,omitempty"`
+	Variables       JobVariables       `json:"variables,omitempty"`
+	PullPolicies    []DockerPullPolicy `json:"pull_policy,omitempty"`
+	ExecutorOptions ExecutorOptions    `json:"executor_opts,omitempty"`
 }
 
 func (i *Image) Aliases() []string { return strings.Fields(strings.ReplaceAll(i.Alias, ",", " ")) }

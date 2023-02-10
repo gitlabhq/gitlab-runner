@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 //go:generate mockery --name=Client --inpackage
@@ -30,6 +31,7 @@ type Client interface {
 		config *container.Config,
 		hostConfig *container.HostConfig,
 		networkingConfig *network.NetworkingConfig,
+		platform *v1.Platform,
 		containerName string) (container.CreateResponse, error)
 	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
 	ContainerKill(ctx context.Context, containerID, signal string) error

@@ -32,6 +32,7 @@ func TestDockerForNamedImage(t *testing.T) {
 	validSHA := "real@sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
 
 	dockerConfig := &common.DockerConfig{}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	options := buildImagePullOptions()
 
@@ -47,15 +48,15 @@ func TestDockerForNamedImage(t *testing.T) {
 		Return(os.ErrNotExist).
 		Once()
 
-	image, err := m.pullDockerImage("test", nil)
+	image, err := m.pullDockerImage("test", dockerOptions, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image)
 
-	image, err = m.pullDockerImage("tagged:tag", nil)
+	image, err = m.pullDockerImage("tagged:tag", dockerOptions, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image)
 
-	image, err = m.pullDockerImage(validSHA, nil)
+	image, err = m.pullDockerImage(validSHA, dockerOptions, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image)
 }
@@ -66,6 +67,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 	errTest := errors.New("this is a test")
 
 	dockerConfig := &common.DockerConfig{}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	options := buildImagePullOptions()
 
@@ -83,7 +85,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
-				image, err := m.pullDockerImage(imageName, nil)
+				image, err := m.pullDockerImage(imageName, dockerOptions, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
@@ -99,7 +101,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
-				image, err := m.pullDockerImage(imageName, nil)
+				image, err := m.pullDockerImage(imageName, dockerOptions, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
@@ -115,7 +117,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
-				image, err := m.pullDockerImage(imageName, nil)
+				image, err := m.pullDockerImage(imageName, dockerOptions, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
@@ -134,7 +136,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
-				image, err := m.pullDockerImage(imageName, nil)
+				image, err := m.pullDockerImage(imageName, dockerOptions, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
@@ -154,7 +156,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
-				image, err := m.pullDockerImage(imageName, nil)
+				image, err := m.pullDockerImage(imageName, dockerOptions, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
@@ -170,7 +172,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
-				image, err := m.pullDockerImage(imageName, nil)
+				image, err := m.pullDockerImage(imageName, dockerOptions, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
@@ -186,7 +188,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 			},
 			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
-				image, err := m.pullDockerImage(imageName, nil)
+				image, err := m.pullDockerImage(imageName, dockerOptions, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
@@ -208,6 +210,7 @@ func TestDockerForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	c.On("ImagePullBlocking", m.context, "existing:latest", buildImagePullOptions()).
 		Return(nil).
@@ -217,7 +220,7 @@ func TestDockerForExistingImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	image, err := m.pullDockerImage("existing", nil)
+	image, err := m.pullDockerImage("existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 }
@@ -227,6 +230,8 @@ func TestDockerGetImageById(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{}
+	dockerOptions := common.DockerOptions{}
+
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
@@ -234,7 +239,7 @@ func TestDockerGetImageById(t *testing.T) {
 		Return(types.ImageInspect{ID: "ID"}, nil, nil).
 		Once()
 
-	image, err := m.GetDockerImage("ID", nil)
+	image, err := m.GetDockerImage("ID", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 	assert.Equal(t, "ID", image.ID)
@@ -245,9 +250,10 @@ func TestDockerUnknownPolicyMode(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{"unknown"}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 
-	_, err := m.GetDockerImage("not-existing", nil)
+	_, err := m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.Error(t, err)
 }
 
@@ -256,6 +262,7 @@ func TestDockerPolicyModeNever(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyNever}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
@@ -267,11 +274,11 @@ func TestDockerPolicyModeNever(t *testing.T) {
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	image, err := m.GetDockerImage("existing", nil)
+	image, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "existing", image.ID)
 
-	_, err = m.GetDockerImage("not-existing", nil)
+	_, err = m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.Error(t, err)
 }
 
@@ -280,6 +287,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyIfNotPresent}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
@@ -287,7 +295,7 @@ func TestDockerPolicyModeIfNotPresentForExistingImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	image, err := m.GetDockerImage("existing", nil)
+	image, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 }
@@ -297,6 +305,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyIfNotPresent}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 
 	pullImageHookCalled := false
@@ -314,7 +323,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	image, err := m.GetDockerImage("not-existing", nil)
+	image, err := m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 	assert.True(t, pullImageHookCalled)
@@ -324,7 +333,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Once()
 
 	// It shouldn't execute the pull for second time
-	image, err = m.GetDockerImage("not-existing", nil)
+	image, err = m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 }
@@ -334,6 +343,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 
 	pullImageHookCalled := false
@@ -351,7 +361,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	image, err := m.GetDockerImage("existing", nil)
+	image, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 	assert.True(t, pullImageHookCalled)
@@ -362,6 +372,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 
 	pullImageHookCalled := false
@@ -375,7 +386,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 		Return(fmt.Errorf("not found")).
 		Once()
 
-	image, err := m.GetDockerImage("existing", nil)
+	image, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image)
 	assert.True(t, pullImageHookCalled)
@@ -386,6 +397,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 
 	c.On("ImageInspectWithRaw", m.context, "to-pull").
@@ -397,7 +409,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Return(os.ErrNotExist).
 		Once()
 
-	image, err := m.GetDockerImage("to-pull", nil)
+	image, err := m.GetDockerImage("to-pull", dockerOptions, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image, "Forces to authorize pulling")
 
@@ -409,7 +421,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Return(os.ErrNotExist).
 		Once()
 
-	image, err = m.GetDockerImage("not-existing", nil)
+	image, err = m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image, "No existing image")
 }
@@ -423,6 +435,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 	buildLogger := common.NewBuildLogger(&common.Trace{Writer: output}, logger.WithField("test", t.Name()))
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways, common.PullPolicyIfNotPresent}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.logger = &buildLogger
 
@@ -438,7 +451,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 		Return(types.ImageInspect{ID: "local-image-id"}, nil, nil).
 		Once()
 
-	image, err := m.GetDockerImage("existing", nil)
+	image, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.Contains(t, output.String(), `WARNING: Failed to pull image with policy "always": `+
 		`received unexpected HTTP status: 502 Bad Gateway`)
@@ -453,6 +466,7 @@ func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *tes
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways, common.PullPolicyIfNotPresent}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 
 	c.On("ImageInspectWithRaw", m.context, "not-existing").
@@ -467,7 +481,7 @@ func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *tes
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	image, err := m.GetDockerImage("not-existing", nil)
+	image, err := m.GetDockerImage("not-existing", dockerOptions, nil)
 	assert.Error(t, err)
 	assert.Nil(t, image, "No existing image")
 }
@@ -477,13 +491,14 @@ func TestPullPolicyWhenAlwaysIsSet(t *testing.T) {
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(nil, dockerConfig)
 
-	testGetDockerImage(t, m, remoteImage, addPullsRemoteImageExpectations)
-	testDeniesDockerImage(t, m, remoteImage, addDeniesPullExpectations)
+	testGetDockerImage(t, m, remoteImage, dockerOptions, addPullsRemoteImageExpectations)
+	testDeniesDockerImage(t, m, remoteImage, dockerOptions, addDeniesPullExpectations)
 
-	testGetDockerImage(t, m, gitlabImage, addPullsRemoteImageExpectations)
-	testDeniesDockerImage(t, m, gitlabImage, addDeniesPullExpectations)
+	testGetDockerImage(t, m, gitlabImage, dockerOptions, addPullsRemoteImageExpectations)
+	testDeniesDockerImage(t, m, gitlabImage, dockerOptions, addDeniesPullExpectations)
 }
 
 func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
@@ -491,10 +506,11 @@ func TestPullPolicyWhenIfNotPresentIsSet(t *testing.T) {
 	gitlabImage := "registry.gitlab.tld:1234/image/name:version"
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyIfNotPresent}}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(nil, dockerConfig)
 
-	testGetDockerImage(t, m, remoteImage, addFindsLocalImageExpectations)
-	testGetDockerImage(t, m, gitlabImage, addFindsLocalImageExpectations)
+	testGetDockerImage(t, m, remoteImage, dockerOptions, addFindsLocalImageExpectations)
+	testGetDockerImage(t, m, gitlabImage, dockerOptions, addFindsLocalImageExpectations)
 }
 
 func TestPullPolicyPassedAsIfNotPresentForExistingAndConfigAlways(t *testing.T) {
@@ -505,6 +521,7 @@ func TestPullPolicyPassedAsIfNotPresentForExistingAndConfigAlways(t *testing.T) 
 		PullPolicy:          []string{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyIfNotPresent},
 	}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
@@ -513,7 +530,7 @@ func TestPullPolicyPassedAsIfNotPresentForExistingAndConfigAlways(t *testing.T) 
 		Once()
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
-	image, err := m.GetDockerImage("existing", imagePullPolicies)
+	image, err := m.GetDockerImage("existing", dockerOptions, imagePullPolicies)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 }
@@ -526,6 +543,7 @@ func TestPullPolicyPassedAsIfNotPresentForNonExistingAndConfigAlways(t *testing.
 		PullPolicy:          []string{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, common.PullPolicyIfNotPresent},
 	}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 
 	pullImageHookCalled := false
@@ -544,7 +562,7 @@ func TestPullPolicyPassedAsIfNotPresentForNonExistingAndConfigAlways(t *testing.
 		Once()
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
-	image, err := m.GetDockerImage("not-existing", imagePullPolicies)
+	image, err := m.GetDockerImage("not-existing", dockerOptions, imagePullPolicies)
 	assert.NoError(t, err)
 	assert.NotNil(t, image)
 	assert.True(t, pullImageHookCalled, "image should have been pulled")
@@ -555,11 +573,12 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowedDefault(t *testing.T) {
 	defer c.AssertExpectations(t)
 
 	dockerConfig := &common.DockerConfig{}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
-	_, err := m.GetDockerImage("existing", imagePullPolicies)
+	_, err := m.GetDockerImage("existing", dockerOptions, imagePullPolicies)
 	assert.Contains(
 		t,
 		err.Error(),
@@ -579,11 +598,12 @@ func TestPullPolicyPassedAsIfNotPresentButNotAllowed(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
 	}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
 	imagePullPolicies := []common.DockerPullPolicy{common.PullPolicyIfNotPresent}
-	_, err := m.GetDockerImage("existing", imagePullPolicies)
+	_, err := m.GetDockerImage("existing", dockerOptions, imagePullPolicies)
 	assert.Contains(
 		t,
 		err.Error(),
@@ -604,10 +624,11 @@ func TestPullPolicyWhenConfigIsNotAllowed(t *testing.T) {
 		PullPolicy:          []string{common.PullPolicyNever, common.PullPolicyIfNotPresent},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	_, err := m.GetDockerImage("existing", nil)
+	_, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.Contains(
 		t,
 		err.Error(),
@@ -628,6 +649,7 @@ func TestPullPolicyWhenConfigIsAllowed(t *testing.T) {
 		PullPolicy:          []string{common.PullPolicyNever},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent, common.PullPolicyNever},
 	}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
@@ -635,7 +657,7 @@ func TestPullPolicyWhenConfigIsAllowed(t *testing.T) {
 		Return(types.ImageInspect{ID: "existing"}, nil, nil).
 		Once()
 
-	image, err := m.GetDockerImage("existing", nil)
+	image, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "existing", image.ID)
 }
@@ -648,10 +670,11 @@ func TestPullPolicyWhenConfigPullPolicyIsInvalid(t *testing.T) {
 		PullPolicy:          []string{"invalid"},
 		AllowedPullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	_, err := m.GetDockerImage("existing", nil)
+	_, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.EqualError(
 		t,
 		err,
@@ -667,10 +690,11 @@ func TestPullPolicyWhenConfigAllowedPullPoliciesIsInvalid(t *testing.T) {
 		PullPolicy:          []string{common.PullPolicyAlways},
 		AllowedPullPolicies: []common.DockerPullPolicy{"invalid"},
 	}
+	dockerOptions := common.DockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
 	m.onPullImageHookFunc = func() { assert.Fail(t, "image should not be pulled") }
 
-	_, err := m.GetDockerImage("existing", nil)
+	_, err := m.GetDockerImage("existing", dockerOptions, nil)
 	assert.EqualError(
 		t,
 		err,
@@ -731,6 +755,7 @@ func testGetDockerImage(
 	t *testing.T,
 	m *manager,
 	imageName string,
+	dockerOptions common.DockerOptions,
 	setClientExpectations func(c *docker.MockClient, imageName string),
 ) {
 	t.Run("get:"+imageName, func(t *testing.T) {
@@ -741,7 +766,7 @@ func testGetDockerImage(
 
 		setClientExpectations(c, imageName)
 
-		image, err := m.GetDockerImage(imageName, nil)
+		image, err := m.GetDockerImage(imageName, dockerOptions, nil)
 		assert.NoError(t, err, "Should not generate error")
 		assert.Equal(t, "this-image", image.ID, "Image ID")
 	})
@@ -751,6 +776,7 @@ func testDeniesDockerImage(
 	t *testing.T,
 	m *manager,
 	imageName string,
+	dockerOptions common.DockerOptions,
 	setClientExpectations func(c *docker.MockClient, imageName string),
 ) {
 	t.Run("deny:"+imageName, func(t *testing.T) {
@@ -761,7 +787,7 @@ func testDeniesDockerImage(
 
 		setClientExpectations(c, imageName)
 
-		_, err := m.GetDockerImage(imageName, nil)
+		_, err := m.GetDockerImage(imageName, dockerOptions, nil)
 		assert.Error(t, err, "Should generate error")
 	})
 }
@@ -839,4 +865,28 @@ func Test_manager_getPullPolicies(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestDockerGetImagePlatformSuccess(t *testing.T) {
+	c := new(docker.MockClient)
+	defer c.AssertExpectations(t)
+
+	dockerConfig := &common.DockerConfig{}
+	dockerOptions := common.DockerOptions{
+		Platform: "arm64/v8",
+	}
+	m := newDefaultTestManager(c, dockerConfig)
+
+	c.On("ImagePullBlocking", m.context, "test:latest", buildImagePullOptions()).
+		Return(nil).
+		Once()
+
+	c.On("ImageInspectWithRaw", m.context, "test").
+		Return(types.ImageInspect{Architecture: "arm64/v8"}, nil, nil).
+		Once()
+
+	image, err := m.pullDockerImage("test", dockerOptions, nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, image)
+	assert.Equal(t, "arm64/v8", image.Architecture)
 }

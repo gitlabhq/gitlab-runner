@@ -16,7 +16,8 @@ import (
 
 //go:generate mockery --name=Manager --inpackage
 type Manager interface {
-	GetDockerImage(imageName string, imagePullPolicies []common.DockerPullPolicy) (*types.ImageInspect, error)
+	GetDockerImage(imageName string, options common.DockerOptions, imagePullPolicies []common.DockerPullPolicy,
+	) (*types.ImageInspect, error)
 }
 
 type ManagerConfig struct {
@@ -63,7 +64,7 @@ func NewManager(
 }
 
 func (m *manager) GetDockerImage(
-	imageName string,
+	imageName string, options common.DockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
 	pullPolicies, err := m.getPullPolicies(imagePullPolicies)
@@ -88,7 +89,7 @@ func (m *manager) GetDockerImage(
 		}
 
 		var img *types.ImageInspect
-		img, imageErr = m.getImageUsingPullPolicy(imageName, pullPolicy)
+		img, imageErr = m.getImageUsingPullPolicy(imageName, options, pullPolicy)
 		if imageErr != nil {
 			m.logger.Warningln(fmt.Sprintf("Failed to pull image with policy %q: %v", pullPolicy, imageErr))
 			continue
@@ -155,7 +156,7 @@ func (m *manager) markImageAsUsed(imageName string, image *types.ImageInspect) {
 }
 
 func (m *manager) getImageUsingPullPolicy(
-	imageName string,
+	imageName string, options common.DockerOptions,
 	pullPolicy common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
 	m.logger.Debugln("Looking for image", imageName, "...")
@@ -189,7 +190,7 @@ func (m *manager) getImageUsingPullPolicy(
 		return nil, err
 	}
 
-	return m.pullDockerImage(imageName, authConfig)
+	return m.pullDockerImage(imageName, options, authConfig)
 }
 
 func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, error) {
@@ -219,7 +220,7 @@ func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, 
 	return authConfig, nil
 }
 
-func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.ImageInspect, error) {
+func (m *manager) pullDockerImage(imageName string, options common.DockerOptions, ac *cli.AuthConfig) (*types.ImageInspect, error) {
 	if m.onPullImageHookFunc != nil {
 		m.onPullImageHookFunc()
 	}
@@ -231,10 +232,16 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 		ref += ":latest"
 	}
 
-	options := types.ImagePullOptions{}
-	options.RegistryAuth, _ = auth.EncodeConfig(ac)
+	opts := types.ImagePullOptions{
+		Platform: options.Platform,
+	}
 
-	if err := m.client.ImagePullBlocking(m.context, ref, options); err != nil {
+	var err error
+	if opts.RegistryAuth, err = auth.EncodeConfig(ac); err != nil {
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ImagePullFailure}
+	}
+
+	if err := m.client.ImagePullBlocking(m.context, ref, opts); err != nil {
 		return nil, &common.BuildError{Inner: err, FailureReason: common.ImagePullFailure}
 	}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-units"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -217,8 +218,9 @@ func TestHelperImageWithVariable(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	runnerImageTag := "gitlab/gitlab-runner:" + common.REVISION
+	dockerOptions := common.DockerOptions{}
 
-	p.On("GetDockerImage", runnerImageTag, []common.DockerPullPolicy(nil)).
+	p.On("GetDockerImage", runnerImageTag, dockerOptions, []common.DockerPullPolicy(nil)).
 		Return(&types.ImageInspect{ID: "helper-image"}, nil).
 		Once()
 
@@ -768,6 +770,7 @@ func TestCreateDependencies(t *testing.T) {
 				mock.Anything,
 				hostConfigMatcher,
 				mock.Anything,
+				mock.Anything,
 				containerNameMatcher,
 			).
 				Return(container.CreateResponse{ID: containerID}, nil).
@@ -799,6 +802,7 @@ func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(
 	config *container.Config,
 	hostConfig *container.HostConfig,
 	networkingConfig *network.NetworkingConfig,
+	platform *v1.Platform,
 	containerName string,
 ) (container.CreateResponse, error) {
 	c.cce(c.t, config, hostConfig)

@@ -59,6 +59,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					volumeBindingsMatcher,
 					mock.Anything,
 					mock.Anything,
+					mock.Anything,
 				).
 					Return(container.CreateResponse{ID: permissionContainerID}, nil).
 					Once()
@@ -83,6 +84,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					volumeBindingsMatcher,
 					mock.Anything,
 					mock.Anything,
+					mock.Anything,
 				).
 					Return(container.CreateResponse{ID: permissionContainerID}, nil).
 					Once()
@@ -105,6 +107,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					volumeBindingsMatcher,
 					mock.Anything,
 					mock.Anything,
+					mock.Anything,
 				).
 					Return(container.CreateResponse{}, testErr).
 					Once()
@@ -119,6 +122,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					mock.Anything,
 					containerCmdMatcher,
 					volumeBindingsMatcher,
+					mock.Anything,
 					mock.Anything,
 					mock.Anything,
 				).

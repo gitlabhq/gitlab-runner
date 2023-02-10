@@ -22,6 +22,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -146,6 +147,7 @@ func (e *executor) getServiceVariables(serviceDefinition common.Image) []string 
 func (e *executor) expandAndGetDockerImage(
 	imageName string,
 	allowedImages []string,
+	dockerOptions common.DockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
 	imageName, err := e.expandImageName(imageName, allowedImages)
@@ -153,7 +155,7 @@ func (e *executor) expandAndGetDockerImage(
 		return nil, err
 	}
 
-	image, err := e.pullManager.GetDockerImage(imageName, imagePullPolicies)
+	image, err := e.pullManager.GetDockerImage(imageName, dockerOptions, imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +210,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 		e.Println("Using helper image: ", imageNameFromConfig, " (overridden, default would be ", e.helperImageInfo, ")")
 
-		return e.pullManager.GetDockerImage(imageNameFromConfig, nil)
+		return e.pullManager.GetDockerImage(imageNameFromConfig, e.Build.Image.ExecutorOptions.DockerOptions, nil)
 	}
 
 	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
@@ -225,7 +227,9 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 	e.Println("Using helper image: ", e.helperImageInfo.String())
 
-	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), nil)
+	// Fall back to getting image from registry
+	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
+	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), e.Build.Image.ExecutorOptions.DockerOptions, nil)
 }
 
 func (e *executor) getLocalHelperImage() *types.ImageInspect {
@@ -279,7 +283,7 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	imagePullPolicies := e.Build.Image.PullPolicies
 
 	// Fetch image
-	image, err := e.pullManager.GetDockerImage(imageName, imagePullPolicies)
+	image, err := e.pullManager.GetDockerImage(imageName, e.Build.Image.ExecutorOptions.DockerOptions, imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -371,11 +375,11 @@ func (e *executor) isInPrivilegedServiceList(serviceDefinition common.Image) boo
 func (e *executor) createService(
 	serviceIndex int,
 	service, version, image string,
-	serviceDefinition common.Image,
+	definition common.Image,
 	linkNames []string,
 ) (*types.Container, error) {
 	if service == "" {
-		return nil, fmt.Errorf("invalid service name: %s", serviceDefinition.Name)
+		return nil, fmt.Errorf("invalid service name: %s", definition.Name)
 	}
 
 	if e.volumesManager == nil {
@@ -383,7 +387,7 @@ func (e *executor) createService(
 	}
 
 	e.Println("Starting service", service+":"+version, "...")
-	serviceImage, err := e.pullManager.GetDockerImage(image, serviceDefinition.PullPolicies)
+	serviceImage, err := e.pullManager.GetDockerImage(image, definition.ExecutorOptions.DockerOptions, definition.PullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -403,20 +407,20 @@ func (e *executor) createService(
 	config := &container.Config{
 		Image:  serviceImage.ID,
 		Labels: e.labeler.Labels(labels),
-		Env:    e.getServiceVariables(serviceDefinition),
+		Env:    e.getServiceVariables(definition),
 	}
 
-	if len(serviceDefinition.Command) > 0 {
-		config.Cmd = serviceDefinition.Command
+	if len(definition.Command) > 0 {
+		config.Cmd = definition.Command
 	}
-	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
-
+	config.Entrypoint = e.overwriteEntrypoint(&definition)
 	hostConfig := e.createHostConfigForService()
-	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(serviceDefinition)
+	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(definition)
 	networkConfig := e.networkConfig(linkNames)
+	platform := platformForImage(*serviceImage)
 
 	e.Debugln("Creating service container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
+	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if err != nil {
 		return nil, err
 	}
@@ -429,6 +433,15 @@ func (e *executor) createService(
 	}
 
 	return fakeContainer(resp.ID, containerName), nil
+}
+
+func platformForImage(image types.ImageInspect) *v1.Platform {
+	return &v1.Platform{
+		Architecture: image.Architecture,
+		OS:           image.Os,
+		OSVersion:    image.Variant,
+		Variant:      image.OsVersion,
+	}
 }
 
 func (e *executor) createHostConfigForService() *container.HostConfig {
@@ -525,14 +538,18 @@ func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
-	cmd []string,
-	allowedInternalImages []string,
+	cmd, allowedInternalImages []string,
 ) (*types.ContainerJSON, error) {
 	if e.volumesManager == nil {
 		return nil, errVolumesManagerUndefined
 	}
 
-	image, err := e.expandAndGetDockerImage(imageDefinition.Name, allowedInternalImages, imageDefinition.PullPolicies)
+	image, err := e.expandAndGetDockerImage(
+		imageDefinition.Name,
+		allowedInternalImages,
+		imageDefinition.ExecutorOptions.DockerOptions,
+		imageDefinition.PullPolicies,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -562,12 +579,13 @@ func (e *executor) createContainer(
 
 	aliases := []string{"build", containerName}
 	networkConfig := e.networkConfig(aliases)
+	platform := platformForImage(*image)
 
 	// this will fail potentially some builds if there's name collision
 	_ = e.removeContainer(e.Context, containerName)
 
 	e.Debugln("Creating container", containerName, "...")
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
+	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if resp.ID != "" {
 		e.temporary = append(e.temporary, resp.ID)
 	}
