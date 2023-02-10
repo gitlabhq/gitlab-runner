@@ -39,6 +39,9 @@ func (e *UnsupportedWindowsVersionError) Is(err error) bool {
 	return ok
 }
 
+// supportWindowsVersions is the versions of Windows we support for Docker and
+// Kubernetes, and helps us find the required helper image. Changes to here
+// should also be updated along with the `supportedWindowsBuilds` map below.
 var supportedWindowsVersions = []string{
 	V21H2,
 	V21H1,
@@ -51,6 +54,10 @@ var supportedWindowsBuilds = map[string]string{
 	"10.0.17763": V1809,
 	"10.0.19041": V2004,
 	"10.0.19042": V20H2,
+	"10.0.19043": V21H1,
+	"10.0.19044": V21H2,
+	"10.0.20348": V21H2,
+	"10.0.22000": V21H2,
 }
 
 // Version checks the specified operatingSystem to see if it's one of the
