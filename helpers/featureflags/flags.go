@@ -27,6 +27,7 @@ const (
 	UseImprovedURLMasking                string = "FF_USE_IMPROVED_URL_MASKING"
 	ResolveFullTLSChain                  string = "FF_RESOLVE_FULL_TLS_CHAIN"
 	DisablePowershellStdin               string = "FF_DISABLE_POWERSHELL_STDIN"
+	UsePodActiveDeadlineSeconds          string = "FF_USE_POD_ACTIVE_DEADLINE_SECONDS"
 )
 
 type FeatureFlag struct {
@@ -221,6 +222,17 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, PowerShell scripts for shell and custom executors are passed by " +
 			"file, rather than passed and executed via stdin.",
+	},
+	//nolint:lll
+	{
+		Name:            UsePodActiveDeadlineSeconds,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, the [pod `activeDeadlineSeconds`]" +
+			"(https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)" +
+			" is set to the CI/CD job timeout. This flag affects the " +
+			"[pod's lifecycle](../executors/kubernetes.md#pod-lifecycle).",
 	},
 }
 
