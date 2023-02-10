@@ -31,7 +31,10 @@ func (ref *acquisitionRef) Prepare(
 	logger common.BuildLogger,
 	options common.ExecutorPrepareOptions,
 ) (executors.Client, error) {
-	info := ref.acq.InstanceConnectInfo()
+	info, err := ref.acq.InstanceConnectInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	useExternalAddr := true
 	if options.Config != nil && options.Config.Autoscaler != nil {

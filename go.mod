@@ -39,10 +39,10 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.22.10
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230131194740-7cd6987acc69
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230131195851-9d90f0aee0e7
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230126192551-f2211a1d15b0
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230109235819-8d2e3fb6386d
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230203200315-65d720c30abf
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
