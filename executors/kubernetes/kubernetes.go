@@ -637,26 +637,32 @@ func (s *executor) processLogs(ctx context.Context) {
 			if !ok {
 				return
 			}
-			var status shells.TrapCommandExitStatus
-			if status.TryUnmarshal(line) {
-				s.remoteProcessTerminated <- status
-				continue
-			}
-
-			_, err := s.writeRunnerLog(line)
-			if err != nil {
-				s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
-			}
+			s.forwardLogLine(line)
 		case err, ok := <-errCh:
 			if !ok {
 				continue
 			}
 
+			if err != nil {
+				s.Warningln(fmt.Sprintf("Error processing the log file: %v", err))
+			}
+
 			exitCode := getExitCode(err)
-			s.Warningln(fmt.Sprintf("%v", err))
 			// Script can be kept to nil as not being used after the exitStatus is received L1223
 			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: exitCode}
 		}
+	}
+}
+
+func (s *executor) forwardLogLine(line string) {
+	var status shells.TrapCommandExitStatus
+	if status.TryUnmarshal(line) {
+		s.remoteProcessTerminated <- status
+		return
+	}
+
+	if _, err := s.writeRunnerLog(line); err != nil {
+		s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 	}
 }
 
@@ -1947,7 +1953,7 @@ func (s *executor) checkDefaults() error {
 
 	if s.configurationOverwrites.namespace == "" {
 		s.Warningln(
-			fmt.Printf("Namespace is empty, therefore assuming '%s'.", DefaultResourceIdentifier),
+			fmt.Sprintf("Namespace is empty, therefore assuming '%s'.", DefaultResourceIdentifier),
 		)
 		s.configurationOverwrites.namespace = DefaultResourceIdentifier
 	}
