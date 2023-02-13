@@ -28,6 +28,16 @@ accepting new ones. Please check
 [CONTRIBUTION.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md#contributing-a-new-executors)
 to check the details.
 
+## Prerequisites for non-Docker executors
+
+Executors that do not [rely on a helper image](../configuration/advanced-configuration.md#helper-image) require a Git
+installation on the target machine and in the `PATH`. Always use the [latest available version of Git](https://git-scm.com/download/).
+
+GitLab Runner uses the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed
+on the target machine. Ensure Git LFS is up to date on any systems where GitLab Runner uses these executors.
+
+Be sure to initialize Git LFS for the user that executes GitLab Runner commands with `git lfs install`. You can initialize Git LFS on an entire system with `git lfs install --system`.
+
 ## Selecting the executor
 
 The executors support different platforms and methodologies for building a
