@@ -12,9 +12,8 @@ which the Runner can be installed. That means that it's possible to use scripts
 generated for Bash, PowerShell Core, Windows PowerShell, and Windows Batch (deprecated).
 
 NOTE:
-Always use the [latest version of Git available](https://git-scm.com/download/). Additionally, GitLab Runner will use
-the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the machine,
-so ensure Git LFS is up-to-date when GitLab Runner will run using the shell executor.
+Ensure you meet [common prerequisites](index.md#prerequisites-for-non-docker-executors)
+on the machine where GitLab Runner uses the shell executor.
 
 ## Run scripts as a privileged user
 

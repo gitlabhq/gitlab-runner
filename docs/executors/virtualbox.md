@@ -16,8 +16,8 @@ be run on VirtualBox. The only requirement is that the virtual machine exposes
 an SSH server and provides a shell compatible with Bash or PowerShell.
 
 NOTE:
-GitLab Runner will use the `git lfs` command if [Git LFS](https://git-lfs.github.com) is installed on the virtual machine.
-Ensure Git LFS is up-to-date on any virtual machine where GitLab Runner will run using VirtualBox executor.
+Ensure you meet [common prerequisites](index.md#prerequisites-for-non-docker-executors)
+on any virtual machine where GitLab Runner uses the VirtualBox executor.
 
 ## Overview
 
