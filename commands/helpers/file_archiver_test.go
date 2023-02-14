@@ -67,7 +67,20 @@ func TestGlobbedFilePath(t *testing.T) {
 
 		// files that are excluded by Exclude patterns
 		excludedFilesCount int64
+
+		warningLog string
 	}{
+		"find nothing with empty path": {
+			paths: []string{""},
+			nonMatchingFiles: []string{
+				"file.txt",
+				"foo/file.txt",
+				"foo/bar/file.txt",
+				"foo/bar/baz/file.txt",
+				"foo/bar/baz/file.extra.dots.txt",
+			},
+			warningLog: "No matching files. Path is empty.",
+		},
 		"files by extension at several depths": {
 			paths: []string{"foo/**/*.txt"},
 			expectedMatchingFiles: []string{
@@ -267,16 +280,21 @@ func TestGlobbedFilePath(t *testing.T) {
 			excludedFilesCount: 1,
 		},
 		"invalid path": {
-			paths: []string{">/**"},
+			paths:      []string{">/**"},
+			warningLog: "no matching files. Ensure that the artifact path is relative to the working directory",
 		},
 		"cancel out everything": {
-			paths:   []string{"**"},
-			exclude: []string{"**"},
+			paths:      []string{"**"},
+			exclude:    []string{"**"},
+			warningLog: "no matching files. Ensure that the artifact path is relative to the working directory",
 		},
 	}
 
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
+			h := newLogHook(logrus.WarnLevel)
+			logrus.AddHook(&h)
+
 			for _, f := range tc.expectedMatchingFiles {
 				writeTestFile(t, f)
 			}
@@ -306,6 +324,11 @@ func TestGlobbedFilePath(t *testing.T) {
 			}
 			if tc.excludedFilesCount > 0 {
 				assert.Equal(t, tc.excludedFilesCount, excludedFilesCount)
+			}
+
+			if tc.warningLog != "" {
+				require.Len(t, h.entries, 1)
+				assert.Contains(t, h.entries[0].Message, tc.warningLog)
 			}
 
 			// remove test files from this test case
@@ -540,6 +563,10 @@ func TestFileArchiver_pathIsInProject(t *testing.T) {
 		inProject     bool
 		errorExpected bool
 	}{
+		`empty path not in project`: {
+			path:      "",
+			inProject: false,
+		},
 		`relative path in project`: {
 			path:      "in/the/project/for/realzy",
 			inProject: true,
