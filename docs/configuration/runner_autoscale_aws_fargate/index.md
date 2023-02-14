@@ -326,6 +326,79 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 - ECS Fargate cluster created in [step 5](#step-5-create-an-ecs-fargate-cluster).
 - ECS task definition created in [step 6](#step-6-create-an-ecs-task-definition).
 
+## Configure a private AWS Fargate task
+
+To ensure a high level of security, configure
+[a private AWS Fargate task](https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-tasks-private-subnet).
+In this configuration, executors use only internal AWS IP addresses, and allow
+outbound traffic only from AWS so that CI jobs run on a private AWS Fargate
+instance.
+
+To configure a private AWS Fargate task, complete the following steps to configure AWS and run the AWS Fargate task in
+the private subnet:
+
+1. Ensure the existing public subnet has not reserved all IP addresses in the VPC address range. Inspect the CIRD
+   address ranges of the VPC and subnet. If the subnet CIRD address range is a subset of the VPC's CIRD address range,
+   skip steps 2 and 4. Otherwise your VPC has no free address range, so you must delete and
+   recreate the VPC and the public subnet:
+   1. Delete your existing subnet and VPC.
+   1. [Create a VPC](https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html#create-interface-endpoint)
+      with the same configuration as the VPC you deleted and update the CIRD address, for example `10.0.0.0/23`.
+   1. [Create a public subnet](https://docs.aws.amazon.com/vpc/latest/privatelink/interface-endpoints.html) with the same configuration as the subnet you deleted. Use a CIRD address that is a subset
+      of the VPC's address range, for example `10.0.0.0/24`.
+1. [Create a private subnet](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-subnets.html#create-subnets) with the same
+   configuration as the public subnet. Use a CIRD address range that does not overlap the public subnet range, for
+   example `10.0.1.0/24`.
+1. [Create a NAT gateway](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html), and place it inside
+   the public subnet.
+1. Modify the private subnet routing table so that the destination `0.0.0.0/0` points to the NAT gateway.
+1. Update the `farget.toml` configuration:
+
+   ```toml
+   Subnet = "private-subnet-id"
+   EnablePublicIP = false
+   UsePublicIP = false
+   ```
+
+1. Add the following inline policy to the IAM role associated with your fargate task (the IAM role associated with
+   fargate tasks is typically named `ecsTaskExecutionRole` and should already exist.)
+
+   ```json
+   {
+       "Statement": [
+           {
+               "Sid": "VisualEditor0",
+               "Effect": "Allow",
+               "Action": [
+                   "secretsmanager:GetSecretValue",
+                   "kms:Decrypt",
+                   "ssm:GetParameters"
+               ],
+               "Resource": [
+                   "arn:aws:secretsmanager:*:<account-id>:secret:*",
+                   "arn:aws:kms:*:<account-id>:key/*"
+               ]
+           }
+       ]
+   }
+   ```
+
+1. Change the "inbound rules" of your security group to reference the security-group itself. In the AWS configuration dialogue:
+   - Set `Type` to `ssh`.
+   - Set `Source` to `Custom`.
+   - Select the security group.
+   - Remove the exiting inbound rule that allows SSH access from any host.
+
+WARNING:
+When you remove the exiting inbound rule, you cannot use SSH to connect to the Amazon Elastic Compute Cloud instance.
+
+For more information, see the following AWS documentation:
+
+- [Amazon ECS task execution IAM role](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html)
+- [Amazon ECR interface VPC endpoints (AWS PrivateLink)](https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html)
+- [Amazon ECS interface VPC endpoints](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/vpc-endpoints.html)
+- [VPC with public and private subnets](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Scenario2.html)
+
 ## Troubleshooting
 
 ### `No Container Instances were found in your cluster` error when testing the configuration
