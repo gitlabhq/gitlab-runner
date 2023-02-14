@@ -1533,6 +1533,13 @@ This issue happens when the worker node IAM role does not have the permission to
 
 This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](#restrict-docker-pull-policies).
 
+### Background processes cause jobs to hang and timeout
+
+Background processes started during job execution can [prevent the build job from exiting](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2880). To avoid this you can:
+
+- Double fork the process. For example, `command_to_run < /dev/null &> /dev/null &`.
+- Kill the process before exiting the job script.
+
 ## Restrict access to job variables
 
 When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
