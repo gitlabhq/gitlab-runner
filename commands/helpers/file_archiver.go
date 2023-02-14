@@ -144,6 +144,11 @@ func (c *fileArchiver) processPaths() {
 }
 
 func (c *fileArchiver) processPath(path string) {
+	if path == "" {
+		logrus.Warningf("No matching files. Path is empty.")
+		return
+	}
+
 	rel, err := c.findRelativePathInProject(path)
 	if err != nil {
 		// Do not fail job when a file is invalid or not found.
