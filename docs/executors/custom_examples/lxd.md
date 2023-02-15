@@ -110,7 +110,7 @@ start_container () {
 install_dependencies () {
     # Install Git LFS, git comes pre installed with ubuntu image.
     lxc exec "$CONTAINER_ID" -- sh -c 'curl -s "https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh" | sudo bash'
-    lxc exec "$CONTAINER_ID" -- sh -c "apt-get install git-lfs"
+    lxc exec "$CONTAINER_ID" -- sh -c "apt-get install -y git-lfs"
 
     # Install gitlab-runner binary since we need for cache/artifacts.
     lxc exec "$CONTAINER_ID" -- sh -c 'curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"'
