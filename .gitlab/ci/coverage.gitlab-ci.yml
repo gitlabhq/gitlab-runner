@@ -102,7 +102,7 @@ check windows 1809 unexpected unit test failures:
 check windows 1809 unexpected integration test failures:
   extends:
   - .check windows unexpected test failures
-  - .rules:merge_request_pipelines:no_docs:always
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - windows 1809 integration tests
 
@@ -151,7 +151,7 @@ check windows 1809 integration test failures:
   extends:
   - .check windows test failures
   - .windows1809_variables
-  - .rules:merge_request_pipelines:no_docs
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - windows 1809 integration tests
 

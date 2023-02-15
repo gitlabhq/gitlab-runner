@@ -312,7 +312,7 @@ windows 1809 integration tests:
   extends:
   - .windows integration test
   - .windows1809
-  - .rules:merge_request_pipelines:no_docs
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - 'integration test definitions'
   - 'clone test repo'
