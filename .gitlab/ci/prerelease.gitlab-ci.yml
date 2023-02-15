@@ -59,7 +59,7 @@ bleeding edge servercore1809 helper docker images:
   extends:
     - .windows1809
     - .release_windows_docker_images
-    - .rules:release-or-security:bleeding-edge
+    - .rules:release-or-security:bleeding-edge-or-stable
     - .docker_images_registry_base_variables_overwrite
   environment:
     name: bleeding_edge/docker_images/windows1809
@@ -69,7 +69,7 @@ bleeding edge servercore2004 helper docker images:
   extends:
     - .windows2004
     - .release_windows_docker_images
-    - .rules:release-or-security:bleeding-edge
+    - .rules:release-or-security:bleeding-edge-or-stable
     - .docker_images_registry_base_variables_overwrite
   environment:
     name: bleeding_edge/docker_images/windows2004
@@ -79,7 +79,7 @@ bleeding edge servercore20H2 helper docker images:
   extends:
     - .windows20H2
     - .release_windows_docker_images
-    - .rules:release-or-security:bleeding-edge
+    - .rules:release-or-security:bleeding-edge-or-stable
     - .docker_images_registry_base_variables_overwrite
   environment:
     name: bleeding_edge/docker_images/windows20H2
@@ -89,7 +89,7 @@ bleeding edge servercore21H1 helper docker images:
   extends:
     - .windows21H1
     - .release_windows_docker_images
-    - .rules:release-or-security:bleeding-edge
+    - .rules:release-or-security:bleeding-edge-or-stable
     - .docker_images_registry_base_variables_overwrite
   environment:
     name: bleeding_edge/docker_images/windows21H1
