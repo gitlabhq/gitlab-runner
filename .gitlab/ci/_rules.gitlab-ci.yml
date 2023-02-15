@@ -177,11 +177,13 @@
   - <<: *if-runner-bleeding-edge-release-ref
     changes: *code-backstage-patterns
 
-.rules:release-or-security:bleeding-edge:
+.rules:release-or-security:bleeding-edge-or-stable:
   rules:
     - <<: *if-runner-or-security-runner-default-branch
       changes: *code-backstage-patterns
     - <<: *if-runner-or-security-bleeding-edge-release-ref
+      changes: *code-backstage-patterns
+    - <<: *if-runner-or-security-runner-stable-ref
       changes: *code-backstage-patterns
 
 .rules:release:stable-or-rc:
