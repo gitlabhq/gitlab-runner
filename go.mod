@@ -23,6 +23,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0
 	github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
 	github.com/gorilla/websocket v1.4.2
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-version v1.2.1
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/imdario/mergo v0.3.12
@@ -104,7 +105,6 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.4.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-plugin v1.4.8 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.1 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
