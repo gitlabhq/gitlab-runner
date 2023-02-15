@@ -275,11 +275,12 @@ func (n *GitLabClient) RegisterRunner(
 	}
 }
 
-func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
+func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) *common.VerifyRunnerResponse {
 	request := common.VerifyRunnerRequest{
 		Token: runner.Token,
 	}
 
+	var response common.VerifyRunnerResponse
 	result, statusText, resp := n.doJSON(
 		context.Background(),
 		&runner,
@@ -287,8 +288,20 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 		"runners/verify",
 		http.StatusOK,
 		&request,
-		nil,
+		&response,
 	)
+	if result == -1 {
+		// if server is not able to return JSON, let's try plain text (the legacy response format)
+		result, statusText, resp = n.doJSON(
+			context.Background(),
+			&runner,
+			http.MethodPost,
+			"runners/verify",
+			http.StatusOK,
+			&request,
+			nil,
+		)
+	}
 	if resp != nil {
 		defer func() { _ = resp.Body.Close() }()
 	}
@@ -297,16 +310,16 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) bool {
 	case http.StatusOK:
 		// this is expected due to fact that we ask for non-existing job
 		runner.Log().Println("Verifying runner...", "is alive")
-		return true
+		return &response
 	case http.StatusForbidden:
 		runner.Log().Errorln("Verifying runner...", "is removed")
-		return false
+		return nil
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "error")
-		return true
+		return &response
 	default:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "failed")
-		return true
+		return &response
 	}
 }
 

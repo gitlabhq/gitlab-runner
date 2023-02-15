@@ -37,7 +37,7 @@ func (c *VerifyCommand) Execute(context *cli.Context) {
 
 	// verify if runner exist
 	for _, runner := range toVerify {
-		if c.network.VerifyRunner(runner.RunnerCredentials) {
+		if c.network.VerifyRunner(runner.RunnerCredentials) != nil {
 			okRunners = append(okRunners, runner)
 		}
 	}
