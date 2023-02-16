@@ -28,9 +28,10 @@ import (
 )
 
 const (
-	validToken    = "valid"
-	expiringToken = "expiring"
-	invalidToken  = "invalid"
+	validToken     = "valid"
+	validGlrtToken = "glrt-valid-token"
+	expiringToken  = "expiring"
+	invalidToken   = "invalid"
 )
 
 type registerRunnerResponse int
@@ -411,7 +412,7 @@ func TestUnregisterRunner(t *testing.T) {
 	assert.False(t, state)
 }
 
-func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, legacyServer bool, t *testing.T) {
 	if r.URL.Path != "/api/v4/runners/verify" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -429,19 +430,47 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, t *testing.
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
 
+	res := make(map[string]interface{})
+
 	switch req["token"].(string) {
 	case validToken:
-		w.WriteHeader(http.StatusOK) // since the job id is broken, we should not find this job
+		if legacyServer {
+			w.Header().Set("Content-Type", "plain/text")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	case validGlrtToken:
+		if legacyServer {
+			w.Header().Set("Content-Type", "plain/text")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 	case invalidToken:
 		w.WriteHeader(http.StatusForbidden)
+		return
 	default:
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK) // since the job id is broken, we should not find this job
+	res["id"] = 54321
+	res["token"] = req["token"].(string)
+	res["token_expires_at"] = "2684-10-16T13:25:59Z"
+
+	output, err := json.Marshal(res)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_, _ = w.Write(output)
 }
 
-func TestVerifyRunner(t *testing.T) {
+func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		testVerifyRunnerHandler(w, r, t)
+		testVerifyRunnerHandler(w, r, true, t)
 	}
 
 	s := httptest.NewServer(http.HandlerFunc(handler))
@@ -450,6 +479,11 @@ func TestVerifyRunner(t *testing.T) {
 	validToken := RunnerCredentials{
 		URL:   s.URL,
 		Token: validToken,
+	}
+
+	validGlrtToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: validGlrtToken,
 	}
 
 	invalidToken := RunnerCredentials{
@@ -464,17 +498,97 @@ func TestVerifyRunner(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	state := c.VerifyRunner(validToken)
-	assert.True(t, state)
+	res := c.VerifyRunner(validToken)
+	require.NotNil(t, res)
+	assert.Equal(t, int64(0), res.ID)
 
-	state = c.VerifyRunner(invalidToken)
-	assert.False(t, state)
+	res = c.VerifyRunner(validGlrtToken)
+	require.NotNil(t, res)
 
-	state = c.VerifyRunner(otherToken)
-	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
+	res = c.VerifyRunner(invalidToken)
+	assert.Nil(t, res)
 
-	state = c.VerifyRunner(brokenCredentials)
-	assert.True(t, state, "in other cases where we can't explicitly say that runner is valid we say that it's")
+	res = c.VerifyRunner(otherToken)
+	assert.NotNil(
+		t,
+		res,
+		"in other cases where we can't explicitly say that runner is valid we say that it is",
+	)
+
+	res = c.VerifyRunner(brokenCredentials)
+	assert.NotNil(
+		t,
+		res,
+		"in other cases where we can't explicitly say that runner is valid we say that it is",
+	)
+}
+
+func TestVerifyRunner(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testVerifyRunnerHandler(w, r, false, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	validToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: validToken,
+	}
+
+	validGlrtToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: validGlrtToken,
+	}
+
+	invalidToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: invalidToken,
+	}
+
+	otherToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "other",
+	}
+
+	c := NewGitLabClient()
+
+	res := c.VerifyRunner(validToken)
+	require.NotNil(t, res)
+	assert.Equal(t, int64(54321), res.ID)
+	assert.Equal(t, validToken.Token, res.Token)
+	assert.Equal(
+		t,
+		time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+		res.TokenExpiresAt,
+	)
+
+	res = c.VerifyRunner(validGlrtToken)
+	require.NotNil(t, res)
+	assert.Equal(t, int64(54321), res.ID)
+	assert.Equal(t, validGlrtToken.Token, res.Token)
+	assert.Equal(
+		t,
+		time.Date(2684, 10, 16, 13, 25, 59, 0, time.UTC),
+		res.TokenExpiresAt,
+	)
+
+	res = c.VerifyRunner(invalidToken)
+	assert.Nil(t, res)
+
+	res = c.VerifyRunner(otherToken)
+	assert.NotNil(
+		t,
+		res,
+		"in other cases where we can't explicitly say that runner is valid we say that it is",
+	)
+
+	res = c.VerifyRunner(brokenCredentials)
+	assert.NotNil(
+		t,
+		res,
+		"in other cases where we can't explicitly say that runner is valid we say that it is",
+	)
 }
 
 func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {

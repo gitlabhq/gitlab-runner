@@ -126,6 +126,12 @@ type VerifyRunnerRequest struct {
 	Token string `json:"token,omitempty"`
 }
 
+type VerifyRunnerResponse struct {
+	ID             int64     `json:"id,omitempty"`
+	Token          string    `json:"token,omitempty"`
+	TokenExpiresAt time.Time `json:"token_expires_at,omitempty"`
+}
+
 type UnregisterRunnerRequest struct {
 	Token string `json:"token,omitempty"`
 }
@@ -640,7 +646,7 @@ func NewPatchTraceResult(sentOffset int, state PatchState, newUpdateInterval int
 //go:generate mockery --name=Network --inpackage
 type Network interface {
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
-	VerifyRunner(config RunnerCredentials) bool
+	VerifyRunner(config RunnerCredentials) *VerifyRunnerResponse
 	UnregisterRunner(config RunnerCredentials) bool
 	ResetToken(runner RunnerCredentials) *ResetTokenResponse
 	ResetTokenWithPAT(runner RunnerCredentials, pat string) *ResetTokenResponse

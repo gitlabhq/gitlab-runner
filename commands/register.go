@@ -244,7 +244,7 @@ func (s *RegisterCommand) askRunner() {
 	if s.Token != "" {
 		logrus.Infoln("Token specified trying to verify runner...")
 		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
-		if !s.network.VerifyRunner(s.RunnerCredentials) {
+		if s.network.VerifyRunner(s.RunnerCredentials) == nil {
 			logrus.Panicln("Failed to verify the runner. You may be having network problems.")
 		}
 		return
