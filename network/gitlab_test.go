@@ -1027,8 +1027,6 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	assert.NoError(t, err)
 
 	assert.Equal(t, "token", req["token"])
-	assert.NotEmpty(t, req["system_id"])
-	assert.Equal(t, systemIDState.GetSystemID(), req["system_id"])
 
 	setStateForUpdateJobHandlerResponse(w, req)
 }
