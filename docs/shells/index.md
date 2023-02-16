@@ -7,10 +7,8 @@ comments: false
 
 # Types of shells supported by GitLab Runner **(FREE)**
 
-GitLab Runner implements a few shell script generators that allow executing
+GitLab Runner implements shell script generators that allow executing
 builds on different systems.
-
-## Overview
 
 The shell scripts contain commands to execute all steps of the build:
 
