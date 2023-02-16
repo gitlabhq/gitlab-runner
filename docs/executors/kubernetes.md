@@ -201,6 +201,13 @@ can be affected by:
   failed and all associated containers are killed. To have the job time out on GitLab first,
   set `activeDeadlineSeconds` to `configured timeout + 1 second`.
 
+NOTE:
+
+If both the `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag is enabled and the
+`pod_termination_grace_period_seconds` is set with a non zero value, the CI job pod is not
+immediately terminated when the job times out. The pod `terminationGracePeriods`
+ensures the pod is terminated only when it expired.
+
 ### Default Annotations for job Pods
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3845) in GitLab Runner 15.9.
