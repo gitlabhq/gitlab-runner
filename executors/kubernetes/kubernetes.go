@@ -421,7 +421,12 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 	containerName, containerCommand := s.getContainerInfo(cmd)
 
-	err = s.saveScriptOnEmptyDir(ctx, fmt.Sprintf("%s/%s", s.scriptsDir(), s.scriptName(string(cmd.Stage))), cmd.Script)
+	err = s.saveScriptOnEmptyDir(
+		ctx,
+		containerName,
+		fmt.Sprintf("%s/%s", s.scriptsDir(), s.scriptName(string(cmd.Stage))),
+		cmd.Script,
+	)
 	if err != nil {
 		return err
 	}
@@ -692,10 +697,10 @@ func (s *executor) setupTrappingScripts(ctx context.Context) error {
 		scriptName, script = s.scriptName(detectShellScriptName), shells.BashDetectShellScript
 	}
 
-	return s.saveScriptOnEmptyDir(ctx, fmt.Sprintf("%s/%s", s.scriptsDir(), scriptName), script)
+	return s.saveScriptOnEmptyDir(ctx, buildContainerName, fmt.Sprintf("%s/%s", s.scriptsDir(), scriptName), script)
 }
 
-func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptPath, script string) error {
+func (s *executor) saveScriptOnEmptyDir(ctx context.Context, containerName, scriptPath, script string) error {
 	shell, err := s.retrieveShell()
 	if err != nil {
 		return err
@@ -705,11 +710,11 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptPath, script 
 	if err != nil {
 		return err
 	}
-	s.Debugln(fmt.Sprintf("Saving stage script %s on Container %q", saveScript, buildContainerName))
+	s.Debugln(fmt.Sprintf("Saving stage script %s on Container %q", saveScript, containerName))
 
 	select {
-	case err := <-s.runInContainerWithExec(ctx, buildContainerName, s.BuildShell.DockerCommand, saveScript):
-		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", buildContainerName, err))
+	case err := <-s.runInContainerWithExec(ctx, containerName, s.BuildShell.DockerCommand, saveScript):
+		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
 			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
