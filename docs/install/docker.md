@@ -284,4 +284,4 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 |Alpine|3.14.8|2023-05-22|
 |Alpine|3.15.6|2023-11-01
 |Alpine|3.16|05-22-24|
-|Red Hat Universal Base Image 8||
+|Red Hat Universal Base Image 8|8.7-1054|
