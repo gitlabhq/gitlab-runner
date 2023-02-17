@@ -59,6 +59,7 @@ func TestRunTestsWithFeatureFlag(t *testing.T) {
 		"testVolumes":                           testVolumesFeatureFlag,
 		"testSetupBuildPodServiceCreationError": testSetupBuildPodServiceCreationErrorFeatureFlag,
 		"testSetupBuildPodFailureGetPullPolicy": testSetupBuildPodFailureGetPullPolicyFeatureFlag,
+		"testGetPodActiveDeadlineSeconds":       testGetPodActiveDeadlineSecondsFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -838,6 +839,60 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 			err = e.setupBuildPod(nil)
 			assert.ErrorIs(t, err, assert.AnError)
 			assert.Error(t, err)
+		})
+	}
+}
+
+func testGetPodActiveDeadlineSecondsFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	tests := map[string]struct {
+		featureFlagValue bool
+		timeoutSeconds   int
+		expectedTimeout  func(int) *int64
+	}{
+
+		"FF_USE_POD_ACTIVE_DEADLINE_SECONDS disabled": {
+			timeoutSeconds: 30,
+		},
+		"FF_USE_POD_ACTIVE_DEADLINE_SECONDS enabled": {
+			featureFlagValue: true,
+			timeoutSeconds:   30,
+			expectedTimeout: func(timeout int) *int64 {
+				t := int64(timeout + 1)
+				return &t
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							RunnerInfo: common.RunnerInfo{
+								Timeout: tc.timeoutSeconds,
+							},
+						},
+						Runner: &common.RunnerConfig{},
+					},
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{},
+						},
+					},
+				},
+			}
+
+			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
+			buildtest.SetBuildFeatureFlag(e.Build, "FF_USE_POD_ACTIVE_DEADLINE_SECONDS", tc.featureFlagValue)
+
+			if !tc.featureFlagValue {
+				assert.Nil(t, e.getPodActiveDeadlineSeconds())
+				return
+			}
+
+			assert.EqualValues(t, *tc.expectedTimeout(tc.timeoutSeconds), *e.getPodActiveDeadlineSeconds())
 		})
 	}
 }

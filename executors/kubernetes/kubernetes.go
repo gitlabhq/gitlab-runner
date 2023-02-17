@@ -1509,6 +1509,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 				helperContainer,
 			}, opts.services...),
 			TerminationGracePeriodSeconds: s.Config.Kubernetes.GetPodTerminationGracePeriodSeconds(),
+			ActiveDeadlineSeconds:         s.getPodActiveDeadlineSeconds(),
 			ImagePullSecrets:              opts.imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),
 			HostAliases:                   opts.hostAliases,
@@ -1521,6 +1522,28 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 	}
 
 	return pod, nil
+}
+
+// getPodActiveDeadlineSeconds returns the effective build/job timeout
+// The feature is behind a FF and return a nil pointer when
+// FF_POD_ACTIVE_DEADLINE_SECONDS is disabled
+// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29279.
+func (s *executor) getPodActiveDeadlineSeconds() *int64 {
+	if !s.Build.IsFeatureFlagOn(featureflags.UsePodActiveDeadlineSeconds) {
+		return nil
+	}
+
+	s.Println(fmt.Sprintf(
+		"Using FF_USE_POD_ACTIVE_DEADLINE_SECONDS, the Pod activeDeadlineSeconds will be set to the job timeout: %v...",
+		time.Duration(s.Build.RunnerInfo.Timeout)*time.Second,
+	))
+
+	// We do not set the exact timeout as activeDeadlineSeconds
+	// 1 second is added to allow the job to timeout on GitLab side
+	// before the pod can be marked as failed and the container killed
+	timeout := int64(s.Build.RunnerInfo.Timeout + 1)
+
+	return &timeout
 }
 
 func (s *executor) createBuildAndHelperContainers() (api.Container, api.Container, error) {
