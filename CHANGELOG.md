@@ -1,3 +1,12 @@
+## v15.8.3 (2023-02-19)
+
+### Bug fixes
+
+- Handle empty artifact paths !3912
+- Execute the script from the right container !3900
+- Generate random system_id for run-single mode !3881 (Helio Machado @0x2b3bfa0)
+- Fix bug with project dir not resolving as in the project !3877
+
 ## v15.8.2 (2023-02-09)
 
 ### Maintenance
