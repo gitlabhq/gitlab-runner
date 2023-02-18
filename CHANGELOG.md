@@ -1,4 +1,4 @@
-## v15.9.0 (2023-02-08)
+## v15.9.0 (2023-02-19)
 
 ### New features
 
@@ -8,6 +8,8 @@
 
 ### Bug fixes
 
+- Handle empty artifact paths !3912
+- Execute the script from the right container !3900
 - Update removal milestone in warning log message for step_script !3893
 - Generate random system_id for run-single mode !3881 (Helio Machado @0x2b3bfa0)
 - Clarify checking out message to reduce confusion !3880
