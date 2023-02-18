@@ -317,35 +317,3 @@ export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner
 NOTE:
 Shell configuration added to the `$HOME` directory with the usage of `skel` may
 interfere with the job execution and introduce unexpected problems like the ones mentioned above.
-
-## Upgrading to GitLab Runner 10
-
-To upgrade GitLab Runner from a version prior to 10.0:
-
-1. Remove the old repository:
-
-   For Debian/Ubuntu/Mint:
-
-   ```shell
-   sudo rm /etc/apt/sources.list.d/runner_gitlab-ci-multi-runner.list
-   ```
-
-   For RHEL/CentOS/Fedora:
-
-   ```shell
-   sudo rm /etc/yum.repos.d/runner_gitlab-ci-multi-runner.repo
-   ```
-
-1. Follow the same steps when [installing GitLab Runner](#installing-gitlab-runner),
-   **without registering it** and using the new repository.
-
-1. For RHEL/CentOS/Fedora, run:
-
-   ```shell
-   sudo /usr/share/gitlab-runner/post-install
-   ```
-
-   WARNING:
-   If you don't run the above command, you will be left
-   with no service file. Follow [issue #2786](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2786)
-   for more information.
