@@ -257,12 +257,6 @@ func (mr *RunCommand) reloadConfig() error {
 
 	mr.configReloaded <- 1
 
-	// Save changes that could be rewritten when reloading the configuration
-	err = mr.saveConfig()
-	if err != nil {
-		mr.log().WithError(err).Errorln("Failed to save config")
-	}
-
 	return nil
 }
 
