@@ -1,3 +1,9 @@
+## v15.9.1 (2023-02-20)
+
+### Bug fixes
+
+- Remove re-writing config.toml file on configuration reload !3934
+
 ## v15.9.0 (2023-02-19)
 
 ### New features
