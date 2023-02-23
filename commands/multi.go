@@ -999,14 +999,14 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 // It calls mr.abortAllBuilds which will broadcast abort signal which finally
 // ends with jobs termination.
 // Next it waits for one of the following events:
-// 1. Another signal was sent to process, which is handled as force exit and
-//    triggers exit of the method and finally process termination without
-//    waiting for anything else.
-// 2. ShutdownTimeout is exceeded. If waiting for shutdown will take more than
-//    defined time, the process will be forceful terminated just like in the
-//    case when second signal is sent.
-// 3. mr.runFinished was closed, which means that all termination was done
-//    properly.
+//  1. Another signal was sent to process, which is handled as force exit and
+//     triggers exit of the method and finally process termination without
+//     waiting for anything else.
+//  2. ShutdownTimeout is exceeded. If waiting for shutdown will take more than
+//     defined time, the process will be forceful terminated just like in the
+//     case when second signal is sent.
+//  3. mr.runFinished was closed, which means that all termination was done
+//     properly.
 //
 // After this method exits, Stop returns it error and finally the
 // `github.com/kardianos/service` service mechanism will finish
