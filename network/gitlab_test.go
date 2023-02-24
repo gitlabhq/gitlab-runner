@@ -559,22 +559,22 @@ func TestResetToken(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.ResetToken(validToken)
+	res := c.ResetToken(validToken, "system-id-1")
 	if assert.NotNil(t, res) {
 		assert.Equal(t, "reset-token", res.Token)
 		assert.True(t, res.TokenExpiresAt.IsZero())
 	}
 
-	res = c.ResetToken(expiringToken)
+	res = c.ResetToken(expiringToken, "system-id-1")
 	if assert.NotNil(t, res) {
 		assert.Equal(t, "reset-expiring-token", res.Token)
 		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
 	}
 
-	res = c.ResetToken(invalidToken)
+	res = c.ResetToken(invalidToken, "system-id-1")
 	assert.Nil(t, res)
 
-	res = c.ResetToken(otherToken)
+	res = c.ResetToken(otherToken, "system-id-1")
 	assert.Nil(t, res)
 }
 
@@ -671,28 +671,28 @@ func TestResetTokenWithPAT(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.ResetTokenWithPAT(validToken, "valid-pat")
+	res := c.ResetTokenWithPAT(validToken, "system-id-1", "valid-pat")
 	if assert.NotNil(t, res) {
 		assert.Equal(t, validToken.Token, res.Token)
 		assert.True(t, res.TokenExpiresAt.IsZero())
 	}
 
-	res = c.ResetTokenWithPAT(expiringToken, "valid-pat")
+	res = c.ResetTokenWithPAT(expiringToken, "system-id-1", "valid-pat")
 	if assert.NotNil(t, res) {
 		assert.Equal(t, expiringToken.Token, res.Token)
 		assert.Equal(t, expiringToken.TokenExpiresAt, res.TokenExpiresAt)
 	}
 
-	res = c.ResetTokenWithPAT(validToken, "")
+	res = c.ResetTokenWithPAT(validToken, "system-id-1", "")
 	assert.Nil(t, res)
 
-	res = c.ResetTokenWithPAT(validToken, "invalid-pat")
+	res = c.ResetTokenWithPAT(validToken, "system-id-1", "invalid-pat")
 	assert.Nil(t, res)
 
-	res = c.ResetTokenWithPAT(invalidToken, "valid-pat")
+	res = c.ResetTokenWithPAT(invalidToken, "system-id-1", "valid-pat")
 	assert.Nil(t, res)
 
-	res = c.ResetTokenWithPAT(otherToken, "valid-pat")
+	res = c.ResetTokenWithPAT(otherToken, "system-id-1", "valid-pat")
 	assert.Nil(t, res)
 }
 
@@ -1788,8 +1788,8 @@ func TestPatchTraceUrlParams(t *testing.T) {
 	expected := "debug_trace=false"
 
 	handler := func(w http.ResponseWriter, r *http.Request, body []byte, offset, limit int) {
-		assert.Equal(t, r.URL.Path, "/api/v4/jobs/1/trace")
-		assert.Equal(t, r.URL.RawQuery, expected)
+		assert.Equal(t, "/api/v4/jobs/1/trace", r.URL.Path)
+		assert.Equal(t, expected, r.URL.RawQuery)
 		w.WriteHeader(http.StatusAccepted)
 	}
 

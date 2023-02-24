@@ -23,7 +23,7 @@ type ResetTokenCommand struct {
 func (c *ResetTokenCommand) resetAllRunnerTokens() {
 	logrus.Warningln("Resetting all runner tokens")
 	for _, r := range c.config.Runners {
-		if !common.ResetToken(c.network, &r.RunnerCredentials, c.PAT) {
+		if !common.ResetToken(c.network, &r.RunnerCredentials, "", c.PAT) {
 			logrus.WithField("name", r.Name).Errorln("Failed to reset runner token")
 		}
 	}
@@ -41,7 +41,7 @@ func (c *ResetTokenCommand) resetSingleRunnerToken() bool {
 	}
 
 	// Reset Token of the runner
-	if !common.ResetToken(c.network, runnerCredentials, c.PAT) {
+	if !common.ResetToken(c.network, runnerCredentials, "", c.PAT) {
 		logrus.WithFields(logrus.Fields{
 			"name": c.Name,
 			"id":   c.ID,
