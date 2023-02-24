@@ -228,7 +228,7 @@ To build a `gitlab-runner` Docker image for the latest Alpine version:
    ARG GITLAB_RUNNER_IMAGE_TYPE
    ARG GITLAB_RUNNER_IMAGE_TAG
    FROM gitlab/${GITLAB_RUNNER_IMAGE_TYPE}:${GITLAB_RUNNER_IMAGE_TAG}
-   
+
    RUN apk update
    RUN apk upgrade
    ```
