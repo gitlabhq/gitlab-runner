@@ -163,7 +163,7 @@ runners:
   config: |
     [[runners]]
       [runners.kubernetes]
-        image = "ubuntu:16.04"
+        image = "ubuntu:22.04"
 ```
 
 The executor-specific configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
@@ -224,7 +224,7 @@ runners:
   config: |
     [[runners]]
       [runners.kubernetes]
-        image = "ubuntu:16.04"
+        image = "ubuntu:22.04"
         helper_cpu_limit = "200m"
 
 ## helpers:
@@ -251,7 +251,7 @@ runners:
   config: |
     [[runners]]
       [runners.kubernetes]
-        image = "ubuntu:16.04"
+        image = "ubuntu:22.04"
       [runners.cache]
         Type = "s3"
         Path = "runner"
@@ -287,7 +287,7 @@ runners:
   config: |
     [[runners]]
       [runners.kubernetes]
-        image = "ubuntu:16.04"
+        image = "ubuntu:22.04"
       [runners.cache]
         Type = "gcs"
         Path = "runner"
@@ -319,7 +319,7 @@ runners:
   config: |
     [[runners]]
       [runners.kubernetes]
-        image = "ubuntu:16.04"
+        image = "ubuntu:22.04"
       [runners.cache]
         Type = "gcs"
         Path = "runner"
@@ -352,7 +352,7 @@ runners:
   config: |
     [[runners]]
       [runners.kubernetes]
-        image = "ubuntu:16.04"
+        image = "ubuntu:22.04"
       [runners.cache]
         Type = "azure"
         Path = "runner"
