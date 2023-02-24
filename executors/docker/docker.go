@@ -419,6 +419,7 @@ func (e *executor) createHostConfigForService() *container.HostConfig {
 		RestartPolicy: neverRestartPolicy,
 		ExtraHosts:    e.Config.Docker.ExtraHosts,
 		Privileged:    privileged,
+		SecurityOpt:   e.Config.Docker.ServicesSecurityOpt,
 		Runtime:       e.Config.Docker.Runtime,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		NetworkMode:   e.networkMode,

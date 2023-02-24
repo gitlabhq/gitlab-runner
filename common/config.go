@@ -180,6 +180,7 @@ type DockerConfig struct {
 	OomKillDisable             bool               `toml:"oom_kill_disable,omitzero" json:"oom_kill_disable" long:"oom-kill-disable" env:"DOCKER_OOM_KILL_DISABLE" description:"Do not kill processes in a container if an out-of-memory (OOM) error occurs"`
 	OomScoreAdjust             int                `toml:"oom_score_adjust,omitzero" json:"oom_score_adjust" long:"oom-score-adjust" env:"DOCKER_OOM_SCORE_ADJUST" description:"Adjust OOM score"`
 	SecurityOpt                []string           `toml:"security_opt" json:"security_opt,omitempty" long:"security-opt" env:"DOCKER_SECURITY_OPT" description:"Security Options"`
+	ServicesSecurityOpt        []string           `toml:"services_security_opt" json:"services_security_opt,omitempty" long:"services-security-opt" env:"DOCKER_SERVICES_SECURITY_OPT" description:"Security Options for container services"`
 	Devices                    []string           `toml:"devices" json:"devices" long:"devices,omitempty" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
 	DeviceCgroupRules          []string           `toml:"device_cgroup_rules,omitempty" json:"device_cgroup_rules" long:"device-cgroup-rules" env:"DOCKER_DEVICE_CGROUP_RULES" description:"Add a device cgroup rule to the container"`
 	Gpus                       string             `toml:"gpus,omitempty" json:"gpus" long:"gpus" env:"DOCKER_GPUS" description:"Request GPUs to be used by Docker"`
