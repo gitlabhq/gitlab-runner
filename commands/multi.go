@@ -33,6 +33,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
+const (
+	unknownSystemID = "unknown"
+)
+
 var (
 	concurrentDesc = prometheus.NewDesc(
 		"gitlab_runner_concurrent",
@@ -84,8 +88,8 @@ type RunCommand struct {
 	sentryLogHook     sentry.LogHook
 	prometheusLogHook prometheus_helper.LogHook
 
-	failuresCollector               *prometheus_helper.FailuresCollector
-	networkRequestStatusesCollector prometheus.Collector
+	failuresCollector    *prometheus_helper.FailuresCollector
+	apiRequestsCollector prometheus.Collector
 
 	sessionServer *session.Server
 
@@ -199,7 +203,12 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 
 	select {
 	case runner := <-runnerResetCh:
-		if common.ResetToken(mr.network, &runner.RunnerCredentials, "") {
+		systemID := unknownSystemID
+		if runner.SystemIDState != nil {
+			systemID = runner.SystemIDState.GetSystemID()
+		}
+
+		if common.ResetToken(mr.network, &runner.RunnerCredentials, systemID, "") {
 			err := mr.saveConfig()
 			if err != nil {
 				mr.log().WithError(err).Errorln("Failed to save config")
@@ -426,7 +435,7 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry.MustRegister(mr.configAccessCollector)
 	registry.MustRegister(mr)
 	// Metrics about API connections
-	registry.MustRegister(mr.networkRequestStatusesCollector)
+	registry.MustRegister(mr.apiRequestsCollector)
 	// Metrics about jobs failures
 	registry.MustRegister(mr.failuresCollector)
 	// Metrics about catched errors
@@ -1113,17 +1122,17 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 }
 
 func init() {
-	requestStatusesCollector := network.NewAPIRequestStatusesMap()
+	apiRequestsCollector := network.NewAPIRequestsCollector()
 
 	cmd := &RunCommand{
-		ServiceName:                     defaultServiceName,
-		network:                         network.NewGitLabClientWithRequestStatusesMap(requestStatusesCollector),
-		networkRequestStatusesCollector: requestStatusesCollector,
-		prometheusLogHook:               prometheus_helper.NewLogHook(),
-		failuresCollector:               prometheus_helper.NewFailuresCollector(),
-		buildsHelper:                    newBuildsHelper(),
-		runAt:                           runAt,
-		reloadConfigInterval:            common.ReloadConfigInterval,
+		ServiceName:          defaultServiceName,
+		network:              network.NewGitLabClientWithAPIRequestsCollector(apiRequestsCollector),
+		apiRequestsCollector: apiRequestsCollector,
+		prometheusLogHook:    prometheus_helper.NewLogHook(),
+		failuresCollector:    prometheus_helper.NewFailuresCollector(),
+		buildsHelper:         newBuildsHelper(),
+		runAt:                runAt,
+		reloadConfigInterval: common.ReloadConfigInterval,
 	}
 	cmd.configAccessCollector = newConfigAccessCollector()
 

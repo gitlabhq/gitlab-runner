@@ -1,11 +1,11 @@
 package common
 
-func ResetToken(network Network, runner *RunnerCredentials, pat string) bool {
+func ResetToken(network Network, runner *RunnerCredentials, systemID string, pat string) bool {
 	var res *ResetTokenResponse
 	if pat == "" {
-		res = network.ResetToken(*runner)
+		res = network.ResetToken(*runner, systemID)
 	} else {
-		res = network.ResetTokenWithPAT(*runner, pat)
+		res = network.ResetTokenWithPAT(*runner, systemID, pat)
 	}
 
 	if res == nil {

@@ -332,7 +332,8 @@ type runAtCall struct {
 }
 
 type resetTokenRequest struct {
-	runner common.RunnerCredentials
+	runner   common.RunnerCredentials
+	systemID string
 }
 
 type resetRunnerTokenTestController struct {
@@ -405,11 +406,13 @@ func (c *resetRunnerTokenTestController) mockResetToken(runnerID int64, response
 			mock.MatchedBy(func(runner common.RunnerCredentials) bool {
 				return runnerID == runner.ID
 			}),
+			unknownSystemID,
 		).
-		Return(func(runner common.RunnerCredentials) *common.ResetTokenResponse {
+		Return(func(runner common.RunnerCredentials, systemID string) *common.ResetTokenResponse {
 			// Sending is a blocking operation, so this blocks until the other thread receives it.
 			c.eventChan <- resetTokenRequest{
-				runner: runner,
+				runner:   runner,
+				systemID: systemID,
 			}
 
 			return response
@@ -460,10 +463,11 @@ func (c *resetRunnerTokenTestController) handleRunAtCall(t *testing.T, time time
 }
 
 // handleResetTokenRequest asserts whether the request to the API is the one expected
-// (basing on the ID of the Runner)
-func (c *resetRunnerTokenTestController) handleResetTokenRequest(t *testing.T, runnerID int64) {
+// (basing on the ID and systemID of the Runner)
+func (c *resetRunnerTokenTestController) handleResetTokenRequest(t *testing.T, runnerID int64, systemID string) {
 	event := c.awaitResetTokenRequest(t)
 	assert.Equal(t, runnerID, event.runner.ID)
+	assert.Equal(t, systemID, event.systemID)
 }
 
 // pushToWaitGroup ensures that the callback function is executed in context
@@ -541,7 +545,7 @@ func (c *resetRunnerTokenTestController) assertConfigSaveNotCalled(t *testing.T)
 //
 // Use only when API call for token reset is not expected. Otherwise - check mockResetToken
 func (c *resetRunnerTokenTestController) assertResetTokenNotCalled(t *testing.T) {
-	c.networkMock.AssertNotCalled(t, "ResetToken", mock.Anything)
+	c.networkMock.AssertNotCalled(t, "ResetToken", mock.Anything, mock.Anything)
 }
 
 type resetRunnerTokenTestCase struct {
@@ -595,7 +599,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
 				})
 				d.handleRunAtCall(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(t, 1)
+				d.handleResetTokenRequest(t, 1, unknownSystemID)
 				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
@@ -651,7 +655,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
 				})
 				d.handleRunAtCall(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(t, 1)
+				d.handleResetTokenRequest(t, 1, unknownSystemID)
 				d.wait()
 
 				d.pushToWaitGroup(func() {
@@ -664,7 +668,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
 				})
 				d.handleRunAtCall(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(t, 2)
+				d.handleResetTokenRequest(t, 2, unknownSystemID)
 				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
@@ -706,7 +710,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
 				})
 				d.handleRunAtCall(t, time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(t, 2)
+				d.handleResetTokenRequest(t, 2, unknownSystemID)
 				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
@@ -833,7 +837,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					assert.True(t, d.runCommand.resetOneRunnerToken())
 				})
 				d.handleRunAtCall(t, time.Date(2022, 1, 14, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(t, 1)
+				d.handleResetTokenRequest(t, 1, unknownSystemID)
 				d.wait()
 
 				runner = d.runCommand.config.Runners[0]
@@ -897,7 +901,7 @@ func TestRunCommand_resetOneRunnerToken(t *testing.T) {
 					d.assertConfigSaveNotCalled(t)
 				})
 				d.handleRunAtCall(t, time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(t, 1)
+				d.handleResetTokenRequest(t, 1, unknownSystemID)
 				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
@@ -996,7 +1000,7 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 
 				d.handleRunAtCall(t, time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC))
 				d.stop()
-				d.handleResetTokenRequest(t, 1)
+				d.handleResetTokenRequest(t, 1, unknownSystemID)
 				d.wait()
 
 				runner := d.runCommand.config.Runners[0]
@@ -1026,7 +1030,7 @@ func TestRunCommand_resetRunnerTokens(t *testing.T) {
 				})
 
 				d.handleRunAtCall(t, time.Date(2022, 1, 13, 0, 0, 0, 0, time.UTC))
-				d.handleResetTokenRequest(t, 1)
+				d.handleResetTokenRequest(t, 1, unknownSystemID)
 
 				event := d.awaitRunAtCall(t)
 

@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -24,85 +23,11 @@ import (
 
 const clientError = -100
 
-var apiRequestStatuses = prometheus.NewDesc(
-	"gitlab_runner_api_request_statuses_total",
-	"The total number of api requests, partitioned by runner, endpoint and status.",
-	[]string{"runner", "system_id", "endpoint", "status"},
-	nil,
-)
-
-type APIEndpoint string
-
-const (
-	APIEndpointRequestJob APIEndpoint = "request_job"
-	APIEndpointUpdateJob  APIEndpoint = "update_job"
-	APIEndpointPatchTrace APIEndpoint = "patch_trace"
-)
-
-type apiRequestStatusPermutation struct {
-	runnerID string
-	systemID string
-	endpoint APIEndpoint
-	status   int
-}
-
-type APIRequestStatusesMap struct {
-	internal map[apiRequestStatusPermutation]int
-	lock     sync.RWMutex
-}
-
-func (arspm *APIRequestStatusesMap) Append(runnerID string, systemID string, endpoint APIEndpoint, status int) {
-	arspm.lock.Lock()
-	defer arspm.lock.Unlock()
-
-	permutation := apiRequestStatusPermutation{
-		runnerID: runnerID,
-		systemID: systemID,
-		endpoint: endpoint,
-		status:   status,
-	}
-
-	if _, ok := arspm.internal[permutation]; !ok {
-		arspm.internal[permutation] = 0
-	}
-
-	arspm.internal[permutation]++
-}
-
-// Describe implements prometheus.Collector.
-func (arspm *APIRequestStatusesMap) Describe(ch chan<- *prometheus.Desc) {
-	ch <- apiRequestStatuses
-}
-
-// Collect implements prometheus.Collector.
-func (arspm *APIRequestStatusesMap) Collect(ch chan<- prometheus.Metric) {
-	arspm.lock.RLock()
-	defer arspm.lock.RUnlock()
-
-	for permutation, count := range arspm.internal {
-		ch <- prometheus.MustNewConstMetric(
-			apiRequestStatuses,
-			prometheus.CounterValue,
-			float64(count),
-			permutation.runnerID,
-			permutation.systemID,
-			string(permutation.endpoint),
-			strconv.Itoa(permutation.status),
-		)
-	}
-}
-
-func NewAPIRequestStatusesMap() *APIRequestStatusesMap {
-	return &APIRequestStatusesMap{
-		internal: make(map[apiRequestStatusPermutation]int),
-	}
-}
-
 type GitLabClient struct {
 	clients map[string]*client
 	lock    sync.Mutex
 
-	requestsStatusesMap *APIRequestStatusesMap
+	apiRequestsCollector *APIRequestsCollector
 }
 
 func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
@@ -177,6 +102,60 @@ func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.Versi
 	return info
 }
 
+type doRawParams struct {
+	credentials requestCredentials
+	method      string
+	uri         string
+	request     io.Reader
+	requestType string
+	headers     http.Header
+}
+
+// doMeasuredRaw is a decorator that adds metrics measurements through
+// n.apiRequestsCollector to the doRaw() call
+func (n *GitLabClient) doMeasuredRaw(
+	ctx context.Context,
+	log logrus.FieldLogger,
+	runnerID string,
+	systemID string,
+	endpoint apiEndpoint,
+	params doRawParams,
+) (*http.Response, error) {
+	var response *http.Response
+	var err error
+
+	fn := func() int {
+		// Response body is handled after doMeasuredJSON() decorator call
+		// Linting violation here is a false-positive.
+		// nolint:bodyclose
+		response, err = n.doRaw(
+			ctx,
+			params.credentials,
+			params.method,
+			params.uri,
+			params.request,
+			params.requestType,
+			params.headers,
+		)
+
+		if err != nil {
+			return clientError
+		}
+
+		return response.StatusCode
+	}
+
+	n.apiRequestsCollector.Observe(
+		log,
+		runnerID,
+		systemID,
+		endpoint,
+		fn,
+	)
+
+	return response, err
+}
+
 func (n *GitLabClient) doRaw(
 	ctx context.Context,
 	credentials requestCredentials,
@@ -193,6 +172,57 @@ func (n *GitLabClient) doRaw(
 	return c.do(ctx, uri, method, request, requestType, headers)
 }
 
+type doJSONParams struct {
+	credentials requestCredentials
+	method      string
+	uri         string
+	statusCode  int
+	request     interface{}
+	response    interface{}
+}
+
+// doMeasuredJSON is a decorator that adds metrics measurements through
+// n.apiRequestsCollector to the doJSON() call
+func (n *GitLabClient) doMeasuredJSON(
+	ctx context.Context,
+	log logrus.FieldLogger,
+	runnerID string,
+	systemID string,
+	endpoint apiEndpoint,
+	params doJSONParams,
+) (int, string, *http.Response) {
+	var result int
+	var statusText string
+	var httpResponse *http.Response
+
+	fn := func() int {
+		// Response body is handled after doMeasuredJSON() decorator call
+		// Linting violation here is a false-positive.
+		// nolint:bodyclose
+		result, statusText, httpResponse = n.doJSON(
+			ctx,
+			params.credentials,
+			params.method,
+			params.uri,
+			params.statusCode,
+			params.request,
+			params.response,
+		)
+
+		return result
+	}
+
+	n.apiRequestsCollector.Observe(
+		log,
+		runnerID,
+		systemID,
+		endpoint,
+		fn,
+	)
+
+	return result, statusText, httpResponse
+}
+
 func (n *GitLabClient) doJSON(
 	ctx context.Context,
 	credentials requestCredentials,
@@ -202,6 +232,59 @@ func (n *GitLabClient) doJSON(
 	response interface{},
 ) (int, string, *http.Response) {
 	return n.doJSONWithPAT(ctx, credentials, method, uri, statusCode, "", request, response)
+}
+
+type doJSONWithPATParams struct {
+	credentials requestCredentials
+	method      string
+	uri         string
+	statusCode  int
+	pat         string
+	request     interface{}
+	response    interface{}
+}
+
+// doMeasuredJSONWithPAT is a decorator that adds metrics measurements through
+// n.apiRequestsCollector to the doJSONWithPAT() call
+func (n *GitLabClient) doMeasuredJSONWithPAT(
+	ctx context.Context,
+	log logrus.FieldLogger,
+	runnerID string,
+	systemID string,
+	endpoint apiEndpoint,
+	params doJSONWithPATParams,
+) (int, string, *http.Response) {
+	var result int
+	var statusText string
+	var httpResponse *http.Response
+
+	fn := func() int {
+		// Response body is handled after doJSONWithPATParams() decorator call
+		// Linting violation here is a false-positive.
+		// nolint:bodyclose
+		result, statusText, httpResponse = n.doJSONWithPAT(
+			ctx,
+			params.credentials,
+			params.method,
+			params.uri,
+			params.statusCode,
+			params.pat,
+			params.request,
+			params.response,
+		)
+
+		return result
+	}
+
+	n.apiRequestsCollector.Observe(
+		log,
+		runnerID,
+		systemID,
+		endpoint,
+		fn,
+	)
+
+	return result, statusText, httpResponse
 }
 
 func (n *GitLabClient) doJSONWithPAT(
@@ -358,15 +441,24 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 	}
 }
 
-func (n *GitLabClient) ResetToken(runner common.RunnerCredentials) *common.ResetTokenResponse {
-	return n.resetToken(runner, "runners/reset_authentication_token", "")
+func (n *GitLabClient) ResetToken(runner common.RunnerCredentials, systemID string) *common.ResetTokenResponse {
+	return n.resetToken(runner, systemID, "runners/reset_authentication_token", "")
 }
 
-func (n *GitLabClient) ResetTokenWithPAT(runner common.RunnerCredentials, pat string) *common.ResetTokenResponse {
-	return n.resetToken(runner, fmt.Sprintf("runners/%d/reset_authentication_token", runner.ID), pat)
+func (n *GitLabClient) ResetTokenWithPAT(
+	runner common.RunnerCredentials,
+	systemID string,
+	pat string,
+) *common.ResetTokenResponse {
+	return n.resetToken(runner, systemID, fmt.Sprintf("runners/%d/reset_authentication_token", runner.ID), pat)
 }
 
-func (n *GitLabClient) resetToken(runner common.RunnerCredentials, uri string, pat string) *common.ResetTokenResponse {
+func (n *GitLabClient) resetToken(
+	runner common.RunnerCredentials,
+	systemID string,
+	uri string,
+	pat string,
+) *common.ResetTokenResponse {
 	var request *common.ResetTokenRequest
 	if pat == "" {
 		request = &common.ResetTokenRequest{
@@ -375,16 +467,24 @@ func (n *GitLabClient) resetToken(runner common.RunnerCredentials, uri string, p
 	}
 
 	var response common.ResetTokenResponse
-	result, statusText, resp := n.doJSONWithPAT(
+
+	result, statusText, resp := n.doMeasuredJSONWithPAT(
 		context.Background(),
-		&runner,
-		http.MethodPost,
-		uri,
-		http.StatusCreated,
-		pat,
-		request,
-		&response,
+		runner.Log(),
+		runner.ShortDescription(),
+		systemID,
+		apiEndpointResetToken,
+		doJSONWithPATParams{
+			credentials: &runner,
+			method:      http.MethodPost,
+			uri:         uri,
+			statusCode:  http.StatusCreated,
+			pat:         pat,
+			request:     request,
+			response:    &response,
+		},
 	)
+
 	if resp != nil {
 		defer func() { _ = resp.Body.Close() }()
 	}
@@ -438,21 +538,20 @@ func (n *GitLabClient) RequestJob(
 	}
 
 	var response common.JobResponse
-	result, statusText, httpResponse := n.doJSON(
-		ctx,
-		&config.RunnerCredentials,
-		http.MethodPost,
-		"jobs/request",
-		http.StatusCreated,
-		&request,
-		&response,
-	)
 
-	n.requestsStatusesMap.Append(
+	result, statusText, httpResponse := n.doMeasuredJSON(
+		ctx,
+		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
 		config.SystemIDState.GetSystemID(),
-		APIEndpointRequestJob,
-		result,
+		apiEndpointRequestJob,
+		doJSONParams{
+			credentials: &config.RunnerCredentials,
+			method:      http.MethodPost,
+			uri:         "jobs/request",
+			statusCode:  http.StatusCreated,
+			request:     &request, response: &response,
+		},
 	)
 
 	switch result {
@@ -508,20 +607,20 @@ func (n *GitLabClient) UpdateJob(
 
 	log.Info("Updating job...")
 
-	statusCode, statusText, response := n.doJSON(
+	statusCode, statusText, response := n.doMeasuredJSON(
 		context.Background(),
-		&config.RunnerCredentials,
-		http.MethodPut,
-		fmt.Sprintf("jobs/%d", jobInfo.ID),
-		http.StatusOK,
-		&request,
-		nil,
-	)
-	n.requestsStatusesMap.Append(
+		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
 		config.SystemIDState.GetSystemID(),
-		APIEndpointUpdateJob,
-		statusCode,
+		apiEndpointUpdateJob,
+		doJSONParams{
+			credentials: &config.RunnerCredentials,
+			method:      http.MethodPut,
+			uri:         fmt.Sprintf("jobs/%d", jobInfo.ID),
+			statusCode:  http.StatusOK,
+			request:     &request,
+			response:    nil,
+		},
 	)
 
 	return n.createUpdateJobResult(log, statusCode, statusText, response)
@@ -598,26 +697,25 @@ func (n *GitLabClient) PatchTrace(
 	headers.Set("Content-Range", contentRange)
 	headers.Set("JOB-TOKEN", jobCredentials.Token)
 
-	response, err := n.doRaw(
+	response, err := n.doMeasuredRaw(
 		context.Background(),
-		&config.RunnerCredentials,
-		"PATCH",
-		fmt.Sprintf("jobs/%d/trace?%s", id, patchTraceQuery(debugTraceEnabled)),
-		bytes.NewReader(content),
-		"text/plain",
-		headers,
+		config.Log(),
+		config.RunnerCredentials.ShortDescription(),
+		config.SystemIDState.GetSystemID(),
+		apiEndpointPatchTrace,
+		doRawParams{
+			credentials: &config.RunnerCredentials,
+			method:      "PATCH",
+			uri:         fmt.Sprintf("jobs/%d/trace?%s", id, patchTraceQuery(debugTraceEnabled)),
+			request:     bytes.NewReader(content),
+			requestType: "text/plain",
+			headers:     headers,
+		},
 	)
 	if err != nil {
 		config.Log().Errorln("Appending trace to coordinator...", "error", err.Error())
 		return common.NewPatchTraceResult(startOffset, common.PatchFailed, 0)
 	}
-
-	n.requestsStatusesMap.Append(
-		config.RunnerCredentials.ShortDescription(),
-		config.SystemIDState.GetSystemID(),
-		APIEndpointPatchTrace,
-		response.StatusCode,
-	)
 
 	defer func() {
 		_, _ = io.Copy(io.Discard, response.Body)
@@ -944,12 +1042,12 @@ func (n *GitLabClient) ProcessJob(
 	return trace, nil
 }
 
-func NewGitLabClientWithRequestStatusesMap(rsMap *APIRequestStatusesMap) *GitLabClient {
+func NewGitLabClientWithAPIRequestsCollector(c *APIRequestsCollector) *GitLabClient {
 	return &GitLabClient{
-		requestsStatusesMap: rsMap,
+		apiRequestsCollector: c,
 	}
 }
 
 func NewGitLabClient() *GitLabClient {
-	return NewGitLabClientWithRequestStatusesMap(NewAPIRequestStatusesMap())
+	return NewGitLabClientWithAPIRequestsCollector(NewAPIRequestsCollector())
 }
