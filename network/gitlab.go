@@ -358,9 +358,10 @@ func (n *GitLabClient) RegisterRunner(
 	}
 }
 
-func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials) *common.VerifyRunnerResponse {
+func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID string) *common.VerifyRunnerResponse {
 	request := common.VerifyRunnerRequest{
-		Token: runner.Token,
+		Token:    runner.Token,
+		SystemID: systemID,
 	}
 
 	var response common.VerifyRunnerResponse

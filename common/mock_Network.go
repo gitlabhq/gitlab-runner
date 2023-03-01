@@ -185,13 +185,13 @@ func (_m *MockNetwork) UploadRawArtifacts(config JobCredentials, reader io.ReadC
 	return r0, r1
 }
 
-// VerifyRunner provides a mock function with given fields: config
-func (_m *MockNetwork) VerifyRunner(config RunnerCredentials) *VerifyRunnerResponse {
-	ret := _m.Called(config)
+// VerifyRunner provides a mock function with given fields: config, systemID
+func (_m *MockNetwork) VerifyRunner(config RunnerCredentials, systemID string) *VerifyRunnerResponse {
+	ret := _m.Called(config, systemID)
 
 	var r0 *VerifyRunnerResponse
-	if rf, ok := ret.Get(0).(func(RunnerCredentials) *VerifyRunnerResponse); ok {
-		r0 = rf(config)
+	if rf, ok := ret.Get(0).(func(RunnerCredentials, string) *VerifyRunnerResponse); ok {
+		r0 = rf(config, systemID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*VerifyRunnerResponse)

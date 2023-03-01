@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -77,7 +78,7 @@ func TestAccessLevelSetting(t *testing.T) {
 				"--access-level", string(testCase.accessLevel),
 			}
 
-			_, output, err := testRegisterCommandRun(t, network, nil, arguments...)
+			_, output, err := testRegisterCommandRun(t, network, nil, "test-runner-token", arguments...)
 
 			if testCase.failureExpected {
 				assert.EqualError(t, err, "command error: Given access-level is not valid. "+
@@ -115,20 +116,28 @@ func TestAskRunnerOverrideDefaultsForExecutors(t *testing.T) {
 	}
 }
 
+func isValidToken(systemID string) bool {
+	ok, _ := regexp.MatchString("^[sr]_[0-9a-zA-Z]{12}$", systemID)
+	return ok
+}
+
 func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
-	const executor = "shell"
+	const executor = "docker"
 
 	basicValidation := func(s *commands.RegisterCommand) {
 		assert.Equal(t, "http://gitlab.example.com/", s.URL)
 		assert.Equal(t, "glrt-testtoken", s.Token)
 		assert.Equal(t, executor, s.RunnerSettings.Executor)
 	}
+	expectedParamsFn := func(p common.RunnerCredentials) bool {
+		return p.URL == "http://gitlab.example.com/" && p.Token == "glrt-testtoken"
+	}
 
 	tests := map[string]struct {
 		answers        []string
 		arguments      []string
 		validate       func(s *commands.RegisterCommand)
-		expectedParams func(common.RegisterRunnerParameters) bool
+		expectedParams func(common.RunnerCredentials) bool
 	}{
 		"basic answers": {
 			answers: append([]string{
@@ -136,32 +145,25 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 				"glrt-testtoken",
 				"name",
 			}, executorAnswers(t, executor)...),
-			validate: basicValidation,
-			expectedParams: func(p common.RegisterRunnerParameters) bool {
-				return p == common.RegisterRunnerParameters{
-					Description: "name",
-					Locked:      true,
-				}
-			},
+			validate:       basicValidation,
+			expectedParams: expectedParamsFn,
 		},
 		"basic arguments, accepting provided": {
-			answers: make([]string, 4),
+			answers: make([]string, 9),
 			arguments: append(
 				executorCmdLineArgs(t, executor),
 				"--url", "http://gitlab.example.com/",
 				"-r", "glrt-testtoken",
 				"--name", "name",
 			),
-			validate: basicValidation,
-			expectedParams: func(p common.RegisterRunnerParameters) bool {
-				return p == common.RegisterRunnerParameters{
-					Description: "name",
-					Locked:      true,
-				}
-			},
+			validate:       basicValidation,
+			expectedParams: expectedParamsFn,
 		},
 		"basic arguments override": {
-			answers: append([]string{"", "", "new-name"}, executorOverrideAnswers(t, executor)...),
+			answers: append(
+				[]string{"http://gitlab.example2.com/", "glrt-testtoken2", "new-name", executor},
+				executorOverrideAnswers(t, executor)...,
+			),
 			arguments: append(
 				executorCmdLineArgs(t, executor),
 				"--url", "http://gitlab.example.com/",
@@ -169,15 +171,15 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 				"--name", "name",
 			),
 			validate: func(s *commands.RegisterCommand) {
-				assert.Equal(t, "http://gitlab.example.com/", s.URL)
-				assert.Equal(t, "glrt-testtoken", s.Token)
+				assert.Equal(t, "http://gitlab.example2.com/", s.URL)
+				assert.Equal(t, "glrt-testtoken2", s.Token)
+				assert.Equal(t, "new-name", s.Name)
 				assert.Equal(t, executor, s.RunnerSettings.Executor)
+				require.NotNil(t, s.RunnerSettings.Docker)
+				assert.Equal(t, "nginx:latest", s.RunnerSettings.Docker.Image)
 			},
-			expectedParams: func(p common.RegisterRunnerParameters) bool {
-				return p == common.RegisterRunnerParameters{
-					Description: "new-name",
-					Locked:      true,
-				}
+			expectedParams: func(p common.RunnerCredentials) bool {
+				return p.URL == "http://gitlab.example2.com/" && p.Token == "glrt-testtoken2"
 			},
 		},
 	}
@@ -187,8 +189,9 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 			network := new(common.MockNetwork)
 			defer network.AssertExpectations(t)
 
-			network.On("RegisterRunner", mock.Anything, mock.MatchedBy(tc.expectedParams)).
-				Return(&common.RegisterRunnerResponse{
+			network.On("VerifyRunner", mock.MatchedBy(tc.expectedParams), mock.MatchedBy(isValidToken)).
+				Return(&common.VerifyRunnerResponse{
+					ID:    12345,
 					Token: "glrt-testtoken",
 				}).
 				Once()
@@ -208,7 +211,8 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 			}
 
 			hook := test.NewGlobal()
-			err := app.Run(append([]string{"runner", "register"}, tc.arguments...))
+			args := append(tc.arguments, "--leave-runner")
+			err := app.Run(append([]string{"runner", "register"}, args...))
 			output := commands.GetLogrusOutput(t, hook)
 
 			assert.NoError(t, err)
@@ -276,11 +280,12 @@ func testRegisterCommandRun(
 	t *testing.T,
 	network common.Network,
 	env []kv,
+	token string,
 	args ...string,
 ) (content, output string, err error) {
 	config := &common.RunnerConfig{
 		RunnerCredentials: common.RunnerCredentials{
-			Token: "test-runner-token",
+			Token: token,
 		},
 		RunnerSettings: common.RunnerSettings{
 			Executor: "shell",
@@ -337,7 +342,7 @@ func testRegisterCommandRun(
 		"-n",
 		"--config", configFile.Name(),
 		"--url", "http://gitlab.example.com/",
-		"--registration-token", "test-registration-token",
+		"--registration-token", token,
 	}, args...)
 	if !contains(args, "--executor") {
 		args = append(args, "--executor", config.RunnerSettings.Executor)
@@ -350,7 +355,7 @@ func testRegisterCommandRun(
 
 	err = commandErr
 
-	return string(fileContent), "", err
+	return string(fileContent), output, err
 }
 
 func contains(args []string, s string) bool {
@@ -868,7 +873,7 @@ shutdown_timeout = 0
 
 			tt.networkAssertions(network)
 
-			fileContent, _, err := testRegisterCommandRun(t, network, nil, args...)
+			fileContent, _, err := testRegisterCommandRun(t, network, nil, "test-runner-token", args...)
 			if tt.errExpected {
 				require.Error(t, err)
 				return
@@ -961,6 +966,7 @@ func TestUnregisterOnFailure(t *testing.T) {
 func TestRegisterCommand(t *testing.T) {
 	type testCase struct {
 		condition       func() bool
+		token           string
 		arguments       []string
 		environment     []kv
 		expectedConfigs []string
@@ -968,12 +974,21 @@ func TestRegisterCommand(t *testing.T) {
 
 	testCases := map[string]testCase{
 		"runner ID is included in config": {
+			token: "glrt-test-runner-token",
 			arguments: []string{
 				"--name", "test-runner",
 			},
-			expectedConfigs: []string{`id = 12345`},
+			expectedConfigs: []string{`id = 12345`, `token = "glrt-test-runner-token"`},
+		},
+		"registration token is accepted": {
+			token: "test-runner-token",
+			arguments: []string{
+				"--name", "test-runner",
+			},
+			expectedConfigs: []string{`id = 12345`, `token = "test-runner-token"`},
 		},
 		"feature flags are included in config": {
+			token: "glrt-test-runner-token",
 			arguments: []string{
 				"--name", "test-runner",
 				"--feature-flags", "FF_TEST_1:true",
@@ -985,6 +1000,7 @@ func TestRegisterCommand(t *testing.T) {
 		},
 		"shell defaults to pwsh on Windows with shell executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			token:     "glrt-test-runner-token",
 			arguments: []string{
 				"--name", "test-runner",
 				"--executor", "shell",
@@ -993,6 +1009,7 @@ func TestRegisterCommand(t *testing.T) {
 		},
 		"shell defaults to pwsh on Windows with docker-windows executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			token:     "glrt-test-runner-token",
 			arguments: []string{
 				"--name", "test-runner",
 				"--executor", "docker-windows",
@@ -1002,6 +1019,7 @@ func TestRegisterCommand(t *testing.T) {
 		},
 		"shell can be overridden to powershell on Windows with shell executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			token:     "glrt-test-runner-token",
 			arguments: []string{
 				"--name", "test-runner",
 				"--executor", "shell",
@@ -1011,6 +1029,7 @@ func TestRegisterCommand(t *testing.T) {
 		},
 		"shell can be overridden to powershell on Windows with docker-windows executor": {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
+			token:     "glrt-test-runner-token",
 			arguments: []string{
 				"--name", "test-runner",
 				"--executor", "docker-windows",
@@ -1020,6 +1039,7 @@ func TestRegisterCommand(t *testing.T) {
 			expectedConfigs: []string{`shell = "powershell"`},
 		},
 		"kubernetes security context namespace": {
+			token: "glrt-test-runner-token",
 			arguments: []string{
 				"--executor", "kubernetes",
 			},
@@ -1053,6 +1073,7 @@ func TestRegisterCommand(t *testing.T) {
 			},
 		},
 		"s3 cache AuthenticationType arg": {
+			token: "glrt-test-runner-token",
 			arguments: []string{
 				"--cache-s3-authentication_type=iam",
 			},
@@ -1062,6 +1083,7 @@ func TestRegisterCommand(t *testing.T) {
 			`},
 		},
 		"s3 cache AuthenticationType env": {
+			token: "glrt-test-runner-token",
 			environment: []kv{
 				{
 					key:   "CACHE_S3_AUTHENTICATION_TYPE",
@@ -1084,14 +1106,23 @@ func TestRegisterCommand(t *testing.T) {
 			network := new(common.MockNetwork)
 			defer network.AssertExpectations(t)
 
-			network.On("RegisterRunner", mock.Anything, mock.Anything).
-				Return(&common.RegisterRunnerResponse{
-					ID:    12345,
-					Token: "test-runner-token",
-				}).
-				Once()
+			if strings.HasPrefix(tc.token, "glrt-") {
+				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+					Return(&common.VerifyRunnerResponse{
+						ID:    12345,
+						Token: tc.token,
+					}).
+					Once()
+			} else {
+				network.On("RegisterRunner", mock.Anything, mock.Anything).
+					Return(&common.RegisterRunnerResponse{
+						ID:    12345,
+						Token: tc.token,
+					}).
+					Once()
+			}
 
-			gotConfig, _, err := testRegisterCommandRun(t, network, tc.environment, tc.arguments...)
+			gotConfig, _, err := testRegisterCommandRun(t, network, tc.environment, tc.token, tc.arguments...)
 			require.NoError(t, err)
 
 			for _, expectedConfig := range tc.expectedConfigs {
@@ -1103,19 +1134,35 @@ func TestRegisterCommand(t *testing.T) {
 
 func TestRegisterTokenExpiresAt(t *testing.T) {
 	type testCase struct {
+		token          string
 		expiration     time.Time
 		expectedConfig string
 	}
 
 	testCases := map[string]testCase{
 		"no expiration": {
+			token: "test-runner-token",
 			expectedConfig: `token = "test-runner-token"
 				token_obtained_at = %s
 				token_expires_at = 0001-01-01T00:00:00Z`,
 		},
 		"token expiration": {
+			token:      "test-runner-token",
 			expiration: time.Date(2594, 7, 21, 15, 42, 53, 0, time.UTC),
 			expectedConfig: `token = "test-runner-token"
+				token_obtained_at = %s
+				token_expires_at = 2594-07-21T15:42:53Z`,
+		},
+		"no expiration with authentication token": {
+			token: "glrt-test-runner-token",
+			expectedConfig: `token = "glrt-test-runner-token"
+				token_obtained_at = %s
+				token_expires_at = 0001-01-01T00:00:00Z`,
+		},
+		"token expiration with authentication token": {
+			token:      "glrt-test-runner-token",
+			expiration: time.Date(2594, 7, 21, 15, 42, 53, 0, time.UTC),
+			expectedConfig: `token = "glrt-test-runner-token"
 				token_obtained_at = %s
 				token_expires_at = 2594-07-21T15:42:53Z`,
 		},
@@ -1126,14 +1173,24 @@ func TestRegisterTokenExpiresAt(t *testing.T) {
 			network := new(common.MockNetwork)
 			defer network.AssertExpectations(t)
 
-			network.On("RegisterRunner", mock.Anything, mock.Anything).
-				Return(&common.RegisterRunnerResponse{
-					Token:          "test-runner-token",
-					TokenExpiresAt: tc.expiration,
-				}).
-				Once()
+			if strings.HasPrefix(tc.token, "glrt-") {
+				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+					Return(&common.VerifyRunnerResponse{
+						ID:             12345,
+						Token:          tc.token,
+						TokenExpiresAt: tc.expiration,
+					}).
+					Once()
+			} else {
+				network.On("RegisterRunner", mock.Anything, mock.Anything).
+					Return(&common.RegisterRunnerResponse{
+						Token:          tc.token,
+						TokenExpiresAt: tc.expiration,
+					}).
+					Once()
+			}
 
-			gotConfig, _, err := testRegisterCommandRun(t, network, []kv{}, "--name", "test-runner")
+			gotConfig, _, err := testRegisterCommandRun(t, network, []kv{}, tc.token, "--name", "test-runner")
 			require.NoError(t, err)
 
 			assert.Contains(

@@ -70,8 +70,9 @@ func (c *configAccessCollector) Collect(metrics chan<- prometheus.Metric) {
 }
 
 type configOptions struct {
-	configMutex sync.Mutex
-	config      *common.Config
+	configMutex         sync.Mutex
+	config              *common.Config
+	loadedSystemIDState *common.SystemIDState
 
 	configAccessCollector *configAccessCollector
 
@@ -154,6 +155,8 @@ func (c *configOptions) loadConfig() error {
 	for _, runnerCfg := range c.config.Runners {
 		runnerCfg.SystemIDState = systemIDState
 	}
+
+	c.loadedSystemIDState = systemIDState
 
 	return nil
 }
