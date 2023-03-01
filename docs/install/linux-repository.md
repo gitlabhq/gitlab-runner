@@ -6,7 +6,9 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Install GitLab Runner using the official GitLab repositories **(FREE)**
 
-We provide packages for the currently supported versions of the following Linux distributions with [packagecloud](https://packages.gitlab.com/runner/gitlab-runner/):
+We provide packages for the following supported versions of Linux distributions with [packagecloud](https://packages.gitlab.com/runner/gitlab-runner/).
+Depending on your setup, other `deb` or `rpm` based distributions may also be supported. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file).
+on other Linux distributions.
 
 | Distribution | Support Information |
 |--------------|---------------------|
@@ -18,8 +20,6 @@ We provide packages for the currently supported versions of the following Linux 
 | Oracle Linux | <https://endoflife.date/oraclelinux> |
 | Fedora       | <https://docs.fedoraproject.org/en-US/releases/eol/> |
 | Amazon Linux | <https://aws.amazon.com/linux/> |
-
-Derivative distributions of the above may also be incidentally supported. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file) on other Linux distributions.
 
 NOTE:
 Packages for distributions that are not on the list are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket.
