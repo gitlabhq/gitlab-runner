@@ -152,7 +152,7 @@ ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)
 > [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 You can use a [configuration template file](../register/index.md#runners-configuration-template-file)
-to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#the-available-configtoml-settings).
+to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#configuration-settings).
 You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
@@ -208,8 +208,8 @@ These fields are marked with a `DEPRECATED:` comment above them in the default `
 |runners.podAnnotations:| (Property and all sub-properties) Specify annotations for job pods.                                                                           |
 |runners.env:| Configure environment variables that will be injected to the pods that are created while the build is running.                                |
 
-All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#the-available-configtoml-settings).
-For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#the-available-configtoml-settings).
+All the configuration options supported by the Kubernetes executor are listed in [the Kubernetes executor docs](../executors/kubernetes.md#configuration-settings).
+For many of the fields, the old name in `values.yaml` is the same as [the keyword](../executors/kubernetes.md#configuration-settings).
 For some, you must rename them. For example, if you are using `helpers` to set CPU limits:
 
 ```yaml
