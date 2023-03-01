@@ -27,7 +27,7 @@ COPY checksums-* install-deps install-gitlab-runner /tmp/
 RUN apk add --no-cache --virtual .fetch-deps wget && \
     /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}" "${GIT_LFS_VERSION}" && \
     apk del .fetch-deps
-RUN rm -rf /tmp/*
+RUN rm -rf /tmp/* /etc/gitlab-runner/.runner_system_id
 
 FROM $BASE_IMAGE
 
