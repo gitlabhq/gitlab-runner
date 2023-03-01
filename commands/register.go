@@ -241,28 +241,44 @@ func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
 func (s *RegisterCommand) askRunner() {
 	s.URL = s.ask("url", "Enter the GitLab instance URL (for example, https://gitlab.com/):")
 
-	if s.Token != "" {
+	if s.Token != "" && !s.tokenIsRunnerToken() {
 		logrus.Infoln("Token specified trying to verify runner...")
 		logrus.Warningln("If you want to register use the '-r' instead of '-t'.")
-		if s.network.VerifyRunner(s.RunnerCredentials) == nil {
+		if s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID()) == nil {
 			logrus.Panicln("Failed to verify the runner. You may be having network problems.")
 		}
 		return
 	}
 
-	// we store registration token as token, since we pass that to RunnerCredentials
 	s.Token = s.ask("registration-token", "Enter the registration token:")
 	s.Name = s.ask("name", "Enter a description for the runner:")
-	// when a runner token is specified as a registration token, certain arguments are reserved to the server
-	if s.tokenIsRunnerToken() {
-		s.ensureServerConfigArgsEmpty()
-	} else {
-		s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
-		s.MaintenanceNote = s.ask("maintenance-note", "Enter optional maintenance note for the runner:", true)
+	if !s.tokenIsRunnerToken() {
+		s.doLegacyRegisterRunner()
+		return
+	}
 
-		if s.TagList == "" {
-			s.RunUntagged = true
-		}
+	// when a runner token is specified as a registration token, certain arguments are reserved to the server
+	s.ensureServerConfigArgsEmpty()
+
+	// If a runner token is specified in place of a registration token, let's accept it and process it as an
+	// authentication token. This allows for an easier transition for users by simply replacing the
+	// registration token with the new authentication token.
+	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID())
+	if result == nil || result.ID == 0 {
+		logrus.Panicln("Failed to verify the runner.")
+	}
+	s.ID = result.ID
+	s.TokenObtainedAt = time.Now().UTC().Truncate(time.Second)
+	s.TokenExpiresAt = result.TokenExpiresAt
+	s.registered = true
+}
+
+func (s *RegisterCommand) doLegacyRegisterRunner() {
+	s.TagList = s.ask("tag-list", "Enter tags for the runner (comma-separated):", true)
+	s.MaintenanceNote = s.ask("maintenance-note", "Enter optional maintenance note for the runner:", true)
+
+	if s.TagList == "" {
+		s.RunUntagged = true
 	}
 
 	parameters := common.RegisterRunnerParameters{
@@ -276,7 +292,7 @@ func (s *RegisterCommand) askRunner() {
 		Paused:          s.Paused,
 	}
 
-	if s.Token != "" && !s.tokenIsRunnerToken() {
+	if s.Token != "" {
 		logrus.Warningf(
 			"Support for registration tokens and runner parameters in the 'register' command has been deprecated in " +
 				"GitLab Runner 15.6 and will be replaced with support for authentication tokens. " +
@@ -285,15 +301,15 @@ func (s *RegisterCommand) askRunner() {
 	}
 
 	result := s.network.RegisterRunner(s.RunnerCredentials, parameters)
+	// golangci-lint doesn't recognize logrus.Panicln() call as breaking the execution
+	// flow which causes the following assignment to throw false-positive report for
+	// 'SA5011: possible nil pointer dereference'
+	// nolint:staticcheck
 	if result == nil {
 		logrus.Panicln("Failed to register the runner.")
 	}
 
 	s.ID = result.ID
-	// golangci-lint doesn't recognize logrus.Panicln() call as breaking the execution
-	// flow which causes the following assignment to throw false-positive report for
-	// 'SA5011: possible nil pointer dereference'
-	// nolint:staticcheck
 	s.Token = result.Token
 	s.TokenObtainedAt = time.Now().UTC().Truncate(time.Second)
 	s.TokenExpiresAt = result.TokenExpiresAt
@@ -394,6 +410,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	if err != nil {
 		logrus.Panicln(err)
 	}
+	s.SystemIDState = s.loadedSystemIDState
 
 	validAccessLevels := []AccessLevel{NotProtected, RefProtected}
 	if !accessLevelValid(validAccessLevels, AccessLevel(s.AccessLevel)) {

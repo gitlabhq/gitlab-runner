@@ -498,24 +498,24 @@ func TestVerifyRunnerOnLegacyServer(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.VerifyRunner(validToken)
+	res := c.VerifyRunner(validToken, "")
 	require.NotNil(t, res)
 	assert.Equal(t, int64(0), res.ID)
 
-	res = c.VerifyRunner(validGlrtToken)
+	res = c.VerifyRunner(validGlrtToken, "")
 	require.NotNil(t, res)
 
-	res = c.VerifyRunner(invalidToken)
+	res = c.VerifyRunner(invalidToken, "")
 	assert.Nil(t, res)
 
-	res = c.VerifyRunner(otherToken)
+	res = c.VerifyRunner(otherToken, "")
 	assert.NotNil(
 		t,
 		res,
 		"in other cases where we can't explicitly say that runner is valid we say that it is",
 	)
 
-	res = c.VerifyRunner(brokenCredentials)
+	res = c.VerifyRunner(brokenCredentials, "")
 	assert.NotNil(
 		t,
 		res,
@@ -553,7 +553,7 @@ func TestVerifyRunner(t *testing.T) {
 
 	c := NewGitLabClient()
 
-	res := c.VerifyRunner(validToken)
+	res := c.VerifyRunner(validToken, "")
 	require.NotNil(t, res)
 	assert.Equal(t, int64(54321), res.ID)
 	assert.Equal(t, validToken.Token, res.Token)
@@ -563,7 +563,7 @@ func TestVerifyRunner(t *testing.T) {
 		res.TokenExpiresAt,
 	)
 
-	res = c.VerifyRunner(validGlrtToken)
+	res = c.VerifyRunner(validGlrtToken, "")
 	require.NotNil(t, res)
 	assert.Equal(t, int64(54321), res.ID)
 	assert.Equal(t, validGlrtToken.Token, res.Token)
@@ -573,17 +573,17 @@ func TestVerifyRunner(t *testing.T) {
 		res.TokenExpiresAt,
 	)
 
-	res = c.VerifyRunner(invalidToken)
+	res = c.VerifyRunner(invalidToken, "")
 	assert.Nil(t, res)
 
-	res = c.VerifyRunner(otherToken)
+	res = c.VerifyRunner(otherToken, "")
 	assert.NotNil(
 		t,
 		res,
 		"in other cases where we can't explicitly say that runner is valid we say that it is",
 	)
 
-	res = c.VerifyRunner(brokenCredentials)
+	res = c.VerifyRunner(brokenCredentials, "")
 	assert.NotNil(
 		t,
 		res,
