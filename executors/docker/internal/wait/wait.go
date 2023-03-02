@@ -20,7 +20,7 @@ type Waiter interface {
 type KillWaiter interface {
 	Waiter
 
-	StopKillWait(ctx context.Context, containerID string, timeout *time.Duration) error
+	StopKillWait(ctx context.Context, containerID string, timeout *int) error
 }
 
 type dockerWaiter struct {
@@ -41,11 +41,14 @@ func (d *dockerWaiter) Wait(ctx context.Context, containerID string) error {
 // StopKillWait blocks (periodically attempting to stop and kill the container)
 // until the specified container has stopped.
 //
-// A nil timeout uses the container or daemon's default value. A negative timeout
-// immediately kills the container.
-func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, timeout *time.Duration) error {
+// Timeout is the timeout (in seconds) to wait for the container to stop
+// gracefully before forcibly terminating it with SIGKILL.
+//
+// A nil timeout uses the daemon's or containers default timeout, -1 will wait
+// indefinitely. Use 0 to not wait at all.
+func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int) error {
 	return d.retryWait(ctx, containerID, func() {
-		_ = d.client.ContainerStop(ctx, containerID, timeout)
+		_ = d.client.ContainerStop(ctx, containerID, container.StopOptions{Timeout: timeout})
 	})
 }
 

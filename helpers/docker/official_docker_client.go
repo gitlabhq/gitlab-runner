@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"os"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -17,7 +15,6 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/docker/go-connections/tlsconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,48 +36,32 @@ func IsErrNotFound(err error) bool {
 // giving it the methods it needs to satisfy the docker.Client interface
 type officialDockerClient struct {
 	client *client.Client
-
-	// Close() means "close idle connections held by engine-api's transport"
-	Transport *http.Transport
 }
 
 func newOfficialDockerClient(c Credentials) (*officialDockerClient, error) {
-	transport, err := newHTTPTransport(c)
-	if err != nil {
-		logrus.Errorln("Error creating TLS Docker client:", err)
-		return nil, err
-	}
-	httpClient := &http.Client{
-		Transport: transport,
-		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-			return ErrRedirectNotAllowed
-		},
-	}
-
 	options := []client.Opt{
-		client.WithHost(c.Host),
 		client.WithAPIVersionNegotiation(),
-		client.WithHTTPClient(httpClient),
+		client.WithVersionFromEnv(),
 	}
 
-	// TODO: Newer versions of the docker client support `client.WithVersionFromEnv()` but this has not yet been
-	// released. When it is, we can directly use that option instead.
-	// https://github.com/moby/moby/blob/eae20b1a1bce8ba699a8458a527f444df366d4c1/client/options.go#L191-L198
-	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28984
-	if version := os.Getenv("DOCKER_API_VERSION"); version != "" {
-		options = append(options, client.WithVersion(version))
-	}
+	// options acting upon the client and transport need to be done in a
+	// specific order.
+	options = append(
+		options,
+		WithCustomHTTPClient(),
+		WithCustomTLSClientConfig(c),
+		client.WithHost(c.Host),
+		WithCustomKeepalive(),
+	)
 
 	dockerClient, err := client.NewClientWithOpts(options...)
 	if err != nil {
-		transport.CloseIdleConnections()
 		logrus.Errorln("Error creating Docker client:", err)
 		return nil, err
 	}
 
 	return &officialDockerClient{
-		client:    dockerClient,
-		Transport: transport,
+		client: dockerClient,
 	}, nil
 }
 
@@ -126,7 +107,7 @@ func (c *officialDockerClient) ContainerCreate(
 	hostConfig *container.HostConfig,
 	networkingConfig *network.NetworkingConfig,
 	containerName string,
-) (container.ContainerCreateCreatedBody, error) {
+) (container.CreateResponse, error) {
 	started := time.Now()
 	container, err := c.client.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
 	return container, wrapError("ContainerCreate", err, started)
@@ -148,9 +129,13 @@ func (c *officialDockerClient) ContainerKill(ctx context.Context, containerID st
 	return wrapError("ContainerKill", err, started)
 }
 
-func (c *officialDockerClient) ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error {
+func (c *officialDockerClient) ContainerStop(
+	ctx context.Context,
+	containerID string,
+	options container.StopOptions,
+) error {
 	started := time.Now()
-	err := c.client.ContainerStop(ctx, containerID, timeout)
+	err := c.client.ContainerStop(ctx, containerID, options)
 	return wrapError("ContainerStop", err, started)
 }
 
@@ -184,7 +169,7 @@ func (c *officialDockerClient) ContainerWait(
 	ctx context.Context,
 	containerID string,
 	condition container.WaitCondition,
-) (<-chan container.ContainerWaitOKBody, <-chan error) {
+) (<-chan container.WaitResponse, <-chan error) {
 	return c.client.ContainerWait(ctx, containerID, condition)
 }
 
@@ -257,8 +242,8 @@ func (c *officialDockerClient) NetworkInspect(ctx context.Context, networkID str
 
 func (c *officialDockerClient) VolumeCreate(
 	ctx context.Context,
-	options volume.VolumeCreateBody,
-) (types.Volume, error) {
+	options volume.CreateOptions,
+) (volume.Volume, error) {
 	started := time.Now()
 	v, err := c.client.VolumeCreate(ctx, options)
 	return v, wrapError("VolumeCreate", err, started)
@@ -270,7 +255,7 @@ func (c *officialDockerClient) VolumeRemove(ctx context.Context, volumeID string
 	return wrapError("VolumeRemove", err, started)
 }
 
-func (c *officialDockerClient) VolumeInspect(ctx context.Context, volumeID string) (types.Volume, error) {
+func (c *officialDockerClient) VolumeInspect(ctx context.Context, volumeID string) (volume.Volume, error) {
 	started := time.Now()
 	v, err := c.client.VolumeInspect(ctx, volumeID)
 	return v, wrapError("VolumeInspect", err, started)
@@ -318,8 +303,7 @@ func (c *officialDockerClient) handleEventStream(rc io.ReadCloser) error {
 }
 
 func (c *officialDockerClient) Close() error {
-	c.Transport.CloseIdleConnections()
-	return nil
+	return c.client.Close()
 }
 
 // New attempts to create a new Docker client of the specified version. If the
@@ -339,38 +323,4 @@ func New(c Credentials) (Client, error) {
 	}
 
 	return newOfficialDockerClient(c)
-}
-
-func newHTTPTransport(c Credentials) (*http.Transport, error) {
-	url, err := client.ParseHostURL(c.Host)
-	if err != nil {
-		return nil, err
-	}
-
-	tr := &http.Transport{}
-
-	if err := configureTransport(tr, url.Scheme, url.Host); err != nil {
-		return nil, err
-	}
-
-	// FIXME: is a TLS connection with InsecureSkipVerify == true ever wanted?
-	if c.TLSVerify {
-		options := tlsconfig.Options{}
-
-		if c.CertPath != "" {
-			options.CAFile = filepath.Join(c.CertPath, "ca.pem")
-			options.CertFile = filepath.Join(c.CertPath, "cert.pem")
-			options.KeyFile = filepath.Join(c.CertPath, "key.pem")
-		}
-
-		tlsConfig, err := tlsconfig.Client(options)
-		if err != nil {
-			tr.CloseIdleConnections()
-			return nil, err
-		}
-
-		tr.TLSClientConfig = tlsConfig
-	}
-
-	return tr, nil
 }

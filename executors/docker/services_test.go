@@ -103,7 +103,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		Once()
 
 	c.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{ID: realServiceContainerName}, nil).
+		Return(container.CreateResponse{ID: realServiceContainerName}, nil).
 		Once()
 
 	c.On("ContainerStart", e.Context, mock.Anything, mock.Anything).

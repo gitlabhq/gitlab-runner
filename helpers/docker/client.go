@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -31,10 +30,10 @@ type Client interface {
 		config *container.Config,
 		hostConfig *container.HostConfig,
 		networkingConfig *network.NetworkingConfig,
-		containerName string) (container.ContainerCreateCreatedBody, error)
+		containerName string) (container.CreateResponse, error)
 	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
 	ContainerKill(ctx context.Context, containerID, signal string) error
-	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error
+	ContainerStop(ctx context.Context, containerID string, opions container.StopOptions) error
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ContainerAttach(
 		ctx context.Context,
@@ -46,7 +45,7 @@ type Client interface {
 		ctx context.Context,
 		containerID string,
 		condition container.WaitCondition,
-	) (<-chan container.ContainerWaitOKBody, <-chan error)
+	) (<-chan container.WaitResponse, <-chan error)
 	ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error)
 	ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error)
 	ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error)
@@ -61,9 +60,9 @@ type Client interface {
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
 	NetworkInspect(ctx context.Context, networkID string) (types.NetworkResource, error)
 
-	VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error)
+	VolumeCreate(ctx context.Context, options volume.CreateOptions) (volume.Volume, error)
 	VolumeRemove(ctx context.Context, volumeID string, force bool) error
-	VolumeInspect(ctx context.Context, volumeID string) (types.Volume, error)
+	VolumeInspect(ctx context.Context, volumeID string) (volume.Volume, error)
 
 	Info(ctx context.Context) (types.Info, error)
 

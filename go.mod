@@ -11,11 +11,11 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.4.0
 	github.com/creack/pty v1.1.17
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/cli v20.10.12+incompatible
+	github.com/docker/cli v23.0.1+incompatible
 	github.com/docker/distribution v2.7.1+incompatible
-	github.com/docker/docker v20.10.17+incompatible
+	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/docker/go-units v0.4.0
+	github.com/docker/go-units v0.5.0
 	github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/sentry-go v0.11.0

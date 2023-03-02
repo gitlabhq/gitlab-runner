@@ -21,13 +21,13 @@ func TestDockerWaiter_Wait(t *testing.T) {
 	testErr := errors.New("testErr")
 
 	tests := map[string]struct {
-		containerOKBody container.ContainerWaitOKBody
+		containerOKBody container.WaitResponse
 		waitErr         error
 		attempts        int
 		expectedErr     error
 	}{
 		"container exited successfully": {
-			containerOKBody: container.ContainerWaitOKBody{
+			containerOKBody: container.WaitResponse{
 				StatusCode: 0,
 			},
 			waitErr:     nil,
@@ -35,13 +35,13 @@ func TestDockerWaiter_Wait(t *testing.T) {
 			expectedErr: nil,
 		},
 		"container wait failed": {
-			containerOKBody: container.ContainerWaitOKBody{},
+			containerOKBody: container.WaitResponse{},
 			waitErr:         testErr,
 			attempts:        5,
 			expectedErr:     testErr,
 		},
 		"container not found": {
-			containerOKBody: container.ContainerWaitOKBody{},
+			containerOKBody: container.WaitResponse{},
 			waitErr:         new(test.NotFoundError),
 			attempts:        1,
 			expectedErr:     new(test.NotFoundError),
@@ -53,7 +53,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 			mClient := new(docker.MockClient)
 			defer mClient.AssertExpectations(t)
 
-			bodyCh := make(chan container.ContainerWaitOKBody, 1)
+			bodyCh := make(chan container.WaitResponse, 1)
 			errCh := make(chan error, tt.attempts)
 
 			if tt.expectedErr != nil {
@@ -65,7 +65,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 			}
 
 			mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-				Return((<-chan container.ContainerWaitOKBody)(bodyCh), (<-chan error)(errCh)).
+				Return((<-chan container.WaitResponse)(bodyCh), (<-chan error)(errCh)).
 				Times(tt.attempts)
 
 			waiter := NewDockerKillWaiter(mClient)
@@ -80,9 +80,9 @@ func TestDockerWaiter_StopKillWait(t *testing.T) {
 	mClient := new(docker.MockClient)
 	defer mClient.AssertExpectations(t)
 
-	bodyCh := make(chan container.ContainerWaitOKBody)
+	bodyCh := make(chan container.WaitResponse)
 	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-		Return((<-chan container.ContainerWaitOKBody)(bodyCh), nil).
+		Return((<-chan container.WaitResponse)(bodyCh), nil).
 		Once()
 
 	var wg sync.WaitGroup
@@ -99,7 +99,7 @@ func TestDockerWaiter_StopKillWait(t *testing.T) {
 
 	go func() {
 		wg.Wait()
-		bodyCh <- container.ContainerWaitOKBody{
+		bodyCh <- container.WaitResponse{
 			StatusCode: 0,
 		}
 	}()
@@ -123,17 +123,17 @@ func TestDockerWaiter_WaitContextCanceled(t *testing.T) {
 
 func TestDockerWaiter_WaitNonZeroExitCode(t *testing.T) {
 	exitCode := 1
-	failedContainer := container.ContainerWaitOKBody{
+	failedContainer := container.WaitResponse{
 		StatusCode: int64(exitCode),
 	}
 
 	mClient := new(docker.MockClient)
 	defer mClient.AssertExpectations(t)
 
-	bodyCh := make(chan container.ContainerWaitOKBody, 1)
+	bodyCh := make(chan container.WaitResponse, 1)
 	bodyCh <- failedContainer
 	mClient.On("ContainerWait", mock.Anything, mock.Anything, container.WaitConditionNotRunning).
-		Return((<-chan container.ContainerWaitOKBody)(bodyCh), nil)
+		Return((<-chan container.WaitResponse)(bodyCh), nil)
 
 	waiter := NewDockerKillWaiter(mClient)
 

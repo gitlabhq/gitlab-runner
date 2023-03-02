@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -77,11 +76,11 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_Windows(t *tes
 				mClient.On(
 					"VolumeCreate",
 					mock.Anything,
-					mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-						return testVolumeCreateBodyContent(v, testCase.expectedVolumeName)
+					mock.MatchedBy(func(v volume.CreateOptions) bool {
+						return testCreateOptionsContent(v, testCase.expectedVolumeName)
 					}),
 				).
-					Return(types.Volume{Name: testCase.expectedVolumeName}, nil).
+					Return(volume.Volume{Name: testCase.expectedVolumeName}, nil).
 					Once()
 			}
 
