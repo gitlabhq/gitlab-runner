@@ -194,7 +194,7 @@ func (m *manager) createCacheVolume(
 	}
 
 	volumeName := fmt.Sprintf("%s-cache-%s", name, hashPath(destination))
-	vBody := volume.VolumeCreateBody{
+	vBody := volume.CreateOptions{
 		Name:       volumeName,
 		DriverOpts: driverOps,
 		Labels:     m.labeler.Labels(map[string]string{"type": "cache"}),

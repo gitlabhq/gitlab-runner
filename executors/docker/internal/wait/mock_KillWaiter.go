@@ -4,7 +4,6 @@ package wait
 
 import (
 	context "context"
-	time "time"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -15,11 +14,11 @@ type MockKillWaiter struct {
 }
 
 // StopKillWait provides a mock function with given fields: ctx, containerID, timeout
-func (_m *MockKillWaiter) StopKillWait(ctx context.Context, containerID string, timeout *time.Duration) error {
+func (_m *MockKillWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int) error {
 	ret := _m.Called(ctx, containerID, timeout)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, *time.Duration) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, *int) error); ok {
 		r0 = rf(ctx, containerID, timeout)
 	} else {
 		r0 = ret.Error(0)

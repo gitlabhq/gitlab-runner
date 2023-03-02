@@ -60,7 +60,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 				).
-					Return(container.ContainerCreateCreatedBody{ID: permissionContainerID}, nil).
+					Return(container.CreateResponse{ID: permissionContainerID}, nil).
 					Once()
 				c.On("ContainerStart", mock.Anything, permissionContainerID, mock.Anything).
 					Return(nil).
@@ -84,7 +84,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 				).
-					Return(container.ContainerCreateCreatedBody{ID: permissionContainerID}, nil).
+					Return(container.CreateResponse{ID: permissionContainerID}, nil).
 					Once()
 				c.On("ContainerStart", mock.Anything, permissionContainerID, mock.Anything).
 					Return(testErr).
@@ -106,7 +106,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 				).
-					Return(container.ContainerCreateCreatedBody{}, testErr).
+					Return(container.CreateResponse{}, testErr).
 					Once()
 			},
 			waitAssertions: func(w *wait.MockWaiter) {},
@@ -122,7 +122,7 @@ func TestDockerLinuxSetter_Set(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 				).
-					Return(container.ContainerCreateCreatedBody{ID: permissionContainerID}, nil).
+					Return(container.CreateResponse{ID: permissionContainerID}, nil).
 					Once()
 				c.On("ContainerStart", mock.Anything, permissionContainerID, mock.Anything).
 					Return(nil).

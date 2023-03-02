@@ -13,8 +13,6 @@ import (
 
 	network "github.com/docker/docker/api/types/network"
 
-	time "time"
-
 	types "github.com/docker/docker/api/types"
 
 	volume "github.com/docker/docker/api/types/volume"
@@ -75,14 +73,14 @@ func (_m *MockClient) ContainerAttach(ctx context.Context, _a1 string, options t
 }
 
 // ContainerCreate provides a mock function with given fields: ctx, config, hostConfig, networkingConfig, containerName
-func (_m *MockClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.ContainerCreateCreatedBody, error) {
+func (_m *MockClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.CreateResponse, error) {
 	ret := _m.Called(ctx, config, hostConfig, networkingConfig, containerName)
 
-	var r0 container.ContainerCreateCreatedBody
-	if rf, ok := ret.Get(0).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, string) container.ContainerCreateCreatedBody); ok {
+	var r0 container.CreateResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, string) container.CreateResponse); ok {
 		r0 = rf(ctx, config, hostConfig, networkingConfig, containerName)
 	} else {
-		r0 = ret.Get(0).(container.ContainerCreateCreatedBody)
+		r0 = ret.Get(0).(container.CreateResponse)
 	}
 
 	var r1 error
@@ -246,13 +244,13 @@ func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, op
 	return r0
 }
 
-// ContainerStop provides a mock function with given fields: ctx, containerID, timeout
-func (_m *MockClient) ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error {
-	ret := _m.Called(ctx, containerID, timeout)
+// ContainerStop provides a mock function with given fields: ctx, containerID, opions
+func (_m *MockClient) ContainerStop(ctx context.Context, containerID string, opions container.StopOptions) error {
+	ret := _m.Called(ctx, containerID, opions)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, *time.Duration) error); ok {
-		r0 = rf(ctx, containerID, timeout)
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.StopOptions) error); ok {
+		r0 = rf(ctx, containerID, opions)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -261,15 +259,15 @@ func (_m *MockClient) ContainerStop(ctx context.Context, containerID string, tim
 }
 
 // ContainerWait provides a mock function with given fields: ctx, containerID, condition
-func (_m *MockClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+func (_m *MockClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
 	ret := _m.Called(ctx, containerID, condition)
 
-	var r0 <-chan container.ContainerWaitOKBody
-	if rf, ok := ret.Get(0).(func(context.Context, string, container.WaitCondition) <-chan container.ContainerWaitOKBody); ok {
+	var r0 <-chan container.WaitResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.WaitCondition) <-chan container.WaitResponse); ok {
 		r0 = rf(ctx, containerID, condition)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan container.ContainerWaitOKBody)
+			r0 = ret.Get(0).(<-chan container.WaitResponse)
 		}
 	}
 
@@ -458,18 +456,18 @@ func (_m *MockClient) NetworkRemove(ctx context.Context, networkID string) error
 }
 
 // VolumeCreate provides a mock function with given fields: ctx, options
-func (_m *MockClient) VolumeCreate(ctx context.Context, options volume.VolumeCreateBody) (types.Volume, error) {
+func (_m *MockClient) VolumeCreate(ctx context.Context, options volume.CreateOptions) (volume.Volume, error) {
 	ret := _m.Called(ctx, options)
 
-	var r0 types.Volume
-	if rf, ok := ret.Get(0).(func(context.Context, volume.VolumeCreateBody) types.Volume); ok {
+	var r0 volume.Volume
+	if rf, ok := ret.Get(0).(func(context.Context, volume.CreateOptions) volume.Volume); ok {
 		r0 = rf(ctx, options)
 	} else {
-		r0 = ret.Get(0).(types.Volume)
+		r0 = ret.Get(0).(volume.Volume)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, volume.VolumeCreateBody) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, volume.CreateOptions) error); ok {
 		r1 = rf(ctx, options)
 	} else {
 		r1 = ret.Error(1)
@@ -479,14 +477,14 @@ func (_m *MockClient) VolumeCreate(ctx context.Context, options volume.VolumeCre
 }
 
 // VolumeInspect provides a mock function with given fields: ctx, volumeID
-func (_m *MockClient) VolumeInspect(ctx context.Context, volumeID string) (types.Volume, error) {
+func (_m *MockClient) VolumeInspect(ctx context.Context, volumeID string) (volume.Volume, error) {
 	ret := _m.Called(ctx, volumeID)
 
-	var r0 types.Volume
-	if rf, ok := ret.Get(0).(func(context.Context, string) types.Volume); ok {
+	var r0 volume.Volume
+	if rf, ok := ret.Get(0).(func(context.Context, string) volume.Volume); ok {
 		r0 = rf(ctx, volumeID)
 	} else {
-		r0 = ret.Get(0).(types.Volume)
+		r0 = ret.Get(0).(volume.Volume)
 	}
 
 	var r1 error

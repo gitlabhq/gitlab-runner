@@ -7,7 +7,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -393,11 +392,11 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased(t *testing.T) 
 				mClient.On(
 					"VolumeCreate",
 					mock.Anything,
-					mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-						return testVolumeCreateBodyContent(v, testCase.expectedVolumeName)
+					mock.MatchedBy(func(v volume.CreateOptions) bool {
+						return testCreateOptionsContent(v, testCase.expectedVolumeName)
 					}),
 				).
-					Return(types.Volume{Name: testCase.expectedVolumeName}, nil).
+					Return(volume.Volume{Name: testCase.expectedVolumeName}, nil).
 					Once()
 			}
 
@@ -436,11 +435,11 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_VolumeBased_WithError(t *t
 	mClient.On(
 		"VolumeCreate",
 		mock.Anything,
-		mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-			return testVolumeCreateBodyContent(v, "unique-cache-f69aef9fb01e88e6213362a04877452d")
+		mock.MatchedBy(func(v volume.CreateOptions) bool {
+			return testCreateOptionsContent(v, "unique-cache-f69aef9fb01e88e6213362a04877452d")
 		}),
 	).
-		Return(types.Volume{}, testErr).
+		Return(volume.Volume{}, testErr).
 		Once()
 
 	volumeParser.On("ParseVolume", "volume").
@@ -529,11 +528,11 @@ func TestDefaultManager_CreateTemporary(t *testing.T) {
 				mClient.On(
 					"VolumeCreate",
 					mock.Anything,
-					mock.MatchedBy(func(v volume.VolumeCreateBody) bool {
-						return testVolumeCreateBodyContent(v, testCase.expectedVolumeName)
+					mock.MatchedBy(func(v volume.CreateOptions) bool {
+						return testCreateOptionsContent(v, testCase.expectedVolumeName)
 					}),
 				).
-					Return(types.Volume{Name: testCase.expectedVolumeName}, testCase.volumeCreateErr).
+					Return(volume.Volume{Name: testCase.expectedVolumeName}, testCase.volumeCreateErr).
 					Once()
 			}
 
@@ -617,7 +616,7 @@ func TestDefaultManager_Binds(t *testing.T) {
 	assert.Equal(t, expectedElements, m.Binds())
 }
 
-func testVolumeCreateBodyContent(v volume.VolumeCreateBody, expectedVolumeName string) bool {
+func testCreateOptionsContent(v volume.CreateOptions, expectedVolumeName string) bool {
 	return v.Name == expectedVolumeName &&
 		// ensure labeler has been used
 		// test for the full list of labels is part of the labels package.

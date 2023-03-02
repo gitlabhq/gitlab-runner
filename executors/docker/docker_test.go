@@ -754,7 +754,7 @@ func TestCreateDependencies(t *testing.T) {
 				mock.Anything,
 				containerNameMatcher,
 			).
-				Return(container.ContainerCreateCreatedBody{ID: containerID}, nil).
+				Return(container.CreateResponse{ID: containerID}, nil).
 				Once()
 			c.On("ContainerStart", mock.Anything, containerID, mock.Anything).
 				Return(testError).
@@ -784,9 +784,9 @@ func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(
 	hostConfig *container.HostConfig,
 	networkingConfig *network.NetworkingConfig,
 	containerName string,
-) (container.ContainerCreateCreatedBody, error) {
+) (container.CreateResponse, error) {
 	c.cce(c.t, config, hostConfig)
-	return container.ContainerCreateCreatedBody{ID: "abc"}, nil
+	return container.CreateResponse{ID: "abc"}, nil
 }
 
 func createExecutorForTestDockerConfiguration(
