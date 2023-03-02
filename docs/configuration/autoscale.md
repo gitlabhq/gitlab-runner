@@ -47,7 +47,7 @@ Before configuring autoscale, you must:
 
 ## Supported cloud providers
 
-The autoscale mechanism is based on [Docker Machine](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/index.md).
+The autoscale mechanism is based on [Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/).
 All supported virtualization and cloud provider parameters are available at the
 GitLab-managed fork of [Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/).
 
