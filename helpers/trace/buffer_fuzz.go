@@ -9,6 +9,8 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 func Fuzz(data []byte) int {
@@ -18,16 +20,30 @@ func Fuzz(data []byte) int {
 	}
 	defer buffer.Close()
 
-	masks := []string{
-		strings.Repeat("A", 1024),
-		strings.Repeat("B", 4*1024),
-		strings.Repeat("C", 8*1024),
-		"secret",
-		"prefix_secret",
-		"secret_suffix",
-		"ssecret",
-		"secrett",
-		"ssecrett",
+	masks := common.MaskOptions{
+		Phrases: []string{
+			strings.Repeat("A", 1024),
+			strings.Repeat("B", 4*1024),
+			strings.Repeat("C", 8*1024),
+			"secret",
+			"secret_suffix",
+			"ssecret",
+			"secrett",
+			"ssecrett",
+		},
+		TokenPrefixes: []string{
+			"secret_prefix",
+			"secret-prefix",
+			"secret_prefix-",
+			"secret-prefix-",
+			"secret_prefix_",
+			"secret-prefix_",
+		},
+	}
+	// to be combined with TokenPrefixes
+	secretSuffixes := []string{
+		"THIS_IS_SECRET",
+		"ALSO-SECRET",
 	}
 
 	buffer.SetMasked(masks)
@@ -43,7 +59,12 @@ func Fuzz(data []byte) int {
 	chunk(r, data, func(part []byte) {
 		src = append(src, part...)
 		if r.Intn(2) == 1 {
-			src = append(src, []byte(masks[r.Intn(len(masks))])...)
+			src = append(src, []byte(masks.Phrases[r.Intn(len(masks.Phrases))])...)
+		}
+		if r.Intn(2) == 1 {
+			pref := masks.TokenPrefixes[r.Intn(len(masks.TokenPrefixes))]
+			suf := secretSuffixes[r.Intn(len(secretSuffixes))]
+			src = append(src, []byte(pref+suf)...)
 		}
 	})
 
@@ -62,9 +83,16 @@ func Fuzz(data []byte) int {
 	if err != nil {
 		panic(err)
 	}
-	for _, mask := range masks {
+
+	for _, mask := range masks.Phrases {
 		if bytes.Contains(contents, []byte(mask)) {
 			panic(fmt.Sprintf("mask %q present in %q", mask, contents))
+		}
+	}
+
+	for _, mask := range secretSuffixes {
+		if bytes.Contains(contents, []byte(mask)) {
+			panic(fmt.Sprintf("prefix mask %q present in %q", mask, contents))
 		}
 	}
 
