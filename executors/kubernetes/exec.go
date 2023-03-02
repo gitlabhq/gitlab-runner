@@ -80,12 +80,14 @@ func (*DefaultRemoteExecutor) Execute(
 		return err
 	}
 
-	return exec.Stream(remotecommand.StreamOptions{
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: stderr,
-		Tty:    tty,
-	})
+	return exec.StreamWithContext(
+		context.TODO(),
+		remotecommand.StreamOptions{
+			Stdin:  stdin,
+			Stdout: stdout,
+			Stderr: stderr,
+			Tty:    tty,
+		})
 }
 
 // AttachOptions declare the arguments accepted by the Attach command
