@@ -276,12 +276,12 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 
 ### Container images and end of publishing date
 
-| Base Container  | Base Container Version|End of Publishing Date|
-|--------------|---------------------|---------------------|
-|Ubuntu|20.04|2025-05-22|
-|Alpine|3.12.12|2023-05-22|
-|Alpine|3.13.12|2023-05-22|
-|Alpine|3.14.8|2023-05-22|
-|Alpine|3.15.6|2023-11-01
-|Alpine|3.16|05-22-24|
-|Red Hat Universal Base Image 8|8.7-1054|
+|Base Container  | Base Container Version|Vendor EOL Date|GitLab EOL Date|
+|--------------|---------------------|---------------------|---------------------|
+|Ubuntu|20.04|2030-04-09|2030-04-22|
+|Alpine|3.12|2022-05-01|2023-05-22|
+|Alpine|3.13|2022-11-01|2023-05-22|
+|Alpine|3.14|2023-05-01|2023-05-22|
+|Alpine|3.15|2023-11-01|2023-11-22|
+|Alpine|3.16|2024-05-23|2024-06-22|
+|Red Hat Universal Base Image 8|8.7-1054|2024-05-31|2024-06-22|
