@@ -268,15 +268,15 @@ docker run -d --name gitlab-runner --restart always \
   gitlab/gitlab-runner:latest
 ```
 
-## GitLab Runner Container Images Support Lifecycle 
+## GitLab Runner container images support lifecycle 
 
 We will follow the support lifecycle of the base distributions (Ubuntu, Alpine, Red Hat Universal Base Image ) used for creating the GitLab Runner container images. 
 
-The end-of-publishing dates for the base distributions will not necessarily align with GitLab's major release cycle. This means we will stop publishing a version of the GitLab Runner container image in a minor release. One of the goals of this approach is to ensure that we are not publishing images that the upstream distribution will no longer update.
+The end-of-publishing dates for the base distributions will not necessarily align with GitLab's major release cycle. This means we will stop publishing a version of the GitLab Runner container image in a minor release. This ensures that we do not publish images that the upstream distribution no longer updates.
 
 ### Container images and end of publishing date
 
-|Base Container  | Base Container Version|Vendor EOL Date|GitLab EOL Date|
+|Base container  | Base container version|Vendor EOL date|GitLab EOL date|
 |--------------|---------------------|---------------------|---------------------|
 |Ubuntu|20.04|2030-04-09|2030-04-22|
 |Alpine|3.12|2022-05-01|2023-05-22|
