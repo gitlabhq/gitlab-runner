@@ -7,10 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	"gitlab.com/gitlab-org/gitlab-runner/boring"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	cli_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+	"gitlab.com/gitlab-org/labkit/fips"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/azure"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"
@@ -41,7 +41,7 @@ func main() {
 		}
 	}()
 
-	boring.CheckBoring()
+	fips.Check()
 
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
