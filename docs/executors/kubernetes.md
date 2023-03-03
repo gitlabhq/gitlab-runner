@@ -181,7 +181,7 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
 | `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#using-services). |
 | `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. [Deprecated in favour of `cleanup_grace_period_seconds` and `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165). |
-| `volumes` | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#using-volumes). |
+| `volumes` | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#configure-volume-types). |
 
 ### Pod lifecycle
 
@@ -460,14 +460,18 @@ To set the cache volume, use the [`cache_dir`](../configuration/advanced-configu
 - If not available, the cached data is downloaded from the configured storage and saved into the `cache dir` as a compressed file.
   The compressed file is then extracted into the `build` folder.
 
-## Using volumes
+## Configure volume types
 
-As described earlier, volumes can be mounted in the build container.
-At this time _hostPath_, _PVC_, _configMap_, _secret_, and _CSI_ volume types
-are supported. Users can configure any number of volumes for each of
-mentioned types.
+You can mount the following volume types:
 
-Here is an example configuration:
+- `hostPath`
+- `persistentVolumeClaim`
+- `configMap`
+- `secret`
+- `emptyDir`
+- `csi`
+
+Here is an example of a configuration with multiple volume types:
 
 ```toml
 concurrent = 4
@@ -512,61 +516,68 @@ concurrent = 4
         size = "2Gi"
 ```
 
-### Host Path volumes
+### `hostPath` volume
 
-[_HostPath_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath) configuration instructs Kubernetes to mount
-a specified host path inside of the container. The volume can be configured with
-following options:
+Configure the [`hostPath` volume](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath) to instruct Kubernetes to mount
+a specified host path in the container.
+
+Use the following options in the `config.toml` file:
 
 | Option       | Type      | Required | Description |
 |--------------|-----------|----------|-------------|
 | `name`       | string    | Yes    | The name of the volume. |
-| `mount_path` | string    | Yes    | Path inside of container where the volume should be mounted. |
-| `sub_path`   | string    | No     | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| `host_path`  | string    | No     | Host's path that should be mounted as volume. If not specified then set to the same path as `mount_path`. |
+| `mount_path` | string    | Yes    | Path inside of the container where the volume is mounted. |
+| `sub_path`   | string    | No     | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `host_path`  | string    | No     | Host path to mount as the volume. If not specified, then this is set to the same path as `mount_path`. |
 | `read_only`  | boolean   | No     | Sets the volume in read-only mode (defaults to false). |
 
-### PVC volumes
+### `persistentVolumeClaim` volume
 
-[_PVC_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim) configuration instructs Kubernetes to use a _PersistentVolumeClaim_
-that is defined in Kubernetes cluster and mount it inside of the container. The volume
-can be configured with following options:
+Configure the [`persistentVolumeClaim` volume](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim) to
+instruct Kubernetes to use a `persistentVolumeClaim` defined in a Kubernetes cluster and mount it in the container.
+
+Use the following options in the `config.toml` file:
 
 | Option       | Type      | Required | Description |
 |--------------|-----------|----------|-------------|
 | `name`       | string    | Yes      | The name of the volume and at the same time the name of _PersistentVolumeClaim_ that should be used. |
-| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
-| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
-| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `mount_path` | string    | Yes      | Path in the container where the volume is mounted. |
+| `read_only`  | boolean   | No       | Sets the volume to read-only mode (defaults to false). |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
 
-### ConfigMap volumes
+### `configMap` volume
 
-_ConfigMap_ volume configuration instructs Kubernetes to use a [_configMap_](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
-that is defined in Kubernetes cluster and mount it inside of the container.
+Configure the `configMap` volume to instruct Kubernetes to use a [`configMap`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
+defined in a Kubernetes cluster and mount it in the container.
 
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | The name of the volume and at the same time the name of _configMap_ that should be used. |
-| `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
-| `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
-| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| `items`      | `map[string]string` | no   | Key-to-path mapping for keys from the _configMap_ that should be used. |
+Use the following options in the `config.toml`:
 
-When using _configMap_ volume, each key from selected _configMap_ will be changed into a file
-stored inside of the selected mount path. By default all keys are present, _configMap's_ key
-is used as file's name and value is stored as file's content. The default behavior can be
-changed with `items` option.
+| Option       | Type                | Required | Description                                                                                                               |
+|--------------|---------------------|----------|---------------------------------------------------------------------------------------------------------------------------|
+| `name`       | string              | Yes      | The name of the volume and at the same time the name of _configMap_ that should be used.                                  |
+| `mount_path` | string              | Yes      | Path in the container where the volume is mounted.                                                                        |
+| `read_only`  | boolean             | No       | Sets the volume to read-only mode (defaults to false).                                                                    |
+| `sub_path`   | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `items`      | `map[string]string` | no       | Key-to-path mapping for keys from the _configMap_ that should be used.                                                    |
 
-`items` option is defining a mapping between key that should be used and path (relative
-to volume's mount path) where _configMap's_ value should be saved. When using `items` option
-**only selected keys** will be added to the volumes and all other will be skipped.
+Each key from the `configMap` is changed into a file and stored in the mount path. By default:
 
-> **Notice**: If a non-existing key will be used then job will fail on Pod creation stage.
+- All keys are included.
+- The `configMap` key is used as the filename.
+- The value is stored in the file contents.
 
-### Secret volumes
+To change the default key and value storage, use the `items` option . If you use the `items` option, **only specified keys**
+are added to the volumes and all other keys are skipped.
 
-[_Secret_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#secret) configuration instructs Kubernetes to use
-a _secret_ that is defined in Kubernetes cluster and mount it inside of the container.
+NOTE:
+If you use a key that doesn't exist, the job fails on the pod creation stage.
+
+### `secret` volume
+
+Configure a [`secret` volume](https://kubernetes.io/docs/concepts/storage/volumes/#secret) to instruct Kubernetes to use
+a `secret` defined in a Kubernetes cluster and mount it in the container.
+
+Use the following options in the `config.toml` file:
 
 | Option       | Type      | Required | Description |
 |--------------|-----------|----------|-------------|
@@ -576,45 +587,52 @@ a _secret_ that is defined in Kubernetes cluster and mount it inside of the cont
 | `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | `items`      | `map[string]string` | No   | Key-to-path mapping for keys from the _configMap_ that should be used. |
 
-When using _secret_ volume each key from selected _secret_ will be changed into a file
-stored inside of the selected mount path. By default all keys are present, _secret's_ key
-is used as file's name and value is stored as file's content. The default behavior can be
-changed with `items` option.
+Each key from selected `secret` is changed into a file stored in the selected mount path. By default:
 
-`items` option is defining a mapping between key that should be used and path (relative
-to volume's mount path) where _secret's_ value should be saved. When using `items` option
-**only selected keys** will be added to the volumes and all other will be skipped.
+- All keys are included.
+- The `configMap` key is used as the filename.
+- The value is stored in the file contents.
 
-> **Notice**: If a non-existing key will be used then job will fail on Pod creation stage.
+To change default key and value storage, use the `items` option. If you use the `items` option, **only specified keys**
+are added to the volumes and all other keys are skipped.
 
-### Empty Dir volumes
+NOTE:
+If you use a key that doesn't exist, the job fails on the pod creation stage.
 
-[_emptyDir_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) configuration instructs Kubernetes to mount an empty directory inside of the container.
+### `emptyDir` volume
+
+Configure an [`emptyDir` volume](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)
+to instruct Kubernetes to mount an empty directory in the container.
+
+Use the following options in the `config.toml` file:
 
 | Option       | Type    | Required | Description |
 |--------------|---------|----------|-------------|
 | `name`       | string  | Yes      | The name of the volume. |
 | `mount_path` | string  | Yes      | Path inside of container where the volume should be mounted. |
-| `sub_path`   | string  | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| `medium`     | string  | No       | "Memory" will provide a tmpfs, otherwise it defaults to the node disk storage (defaults to ""). |
+| `sub_path`   | string  | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `medium`     | string  | No       | "Memory" provides a `tmpfs`, otherwise it defaults to the node disk storage (defaults to ""). |
 
-### CSI volumes
+### `csi` volume
 
-[_CSI_ volume](https://kubernetes.io/docs/concepts/storage/volumes/#csi) configuration instructs Kubernetes to use a custom CSI driver to mount an arbitrary storage system inside of the container.
+Configure a [Container Storage Interface (`csi`) volume](https://kubernetes.io/docs/concepts/storage/volumes/#csi) to instruct
+Kubernetes to use a custom `csi` driver to mount an arbitrary storage system in the container.
+
+Use the following options in the `config.toml`:
 
 | Option              | Type                | Required | Description |
 |---------------------|---------------------|----------|-------------|
 | `name`              | string              | Yes      | The name of the volume. |
 | `mount_path`        | string              | Yes      | Path inside of container where the volume should be mounted. |
 | `driver`            | string              | Yes      | A string value that specifies the name of the volume driver to use. |
-| `fs_type`           | string              | No       | A string value that specifies the name of the filesystem type (Ex. "ext4", "xfs", "ntfs".). |
+| `fs_type`           | string              | No       | A string value that specifies the name of the file system type (Ex. "ext4", "xfs", "ntfs".). |
 | `volume_attributes` | `map[string]string` | No       | Key-value pair mapping for attributes of the CSI volume. |
 | `sub_path`          | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | `read_only`         | boolean             | No       | Sets the volume in read-only mode (defaults to false). |
 
-### Mounting volumes on service containers
+### Mount volumes on service containers
 
-Volumes defined for the build container are also automatically mounted for all services containers. This can be, for example, leveraged to mount database storage in RAM to speed up tests, as an alternative to [services_tmpfs](docker.md#mount-a-directory-in-ram) which is only available to the Docker executor.
+Volumes defined for the build container are also automatically mounted for all services containers. You can use this functionality as an alternative to [`services_tmpfs`](docker.md#mount-a-directory-in-ram) (available only to Docker executor), to mount database storage in RAM to speed up tests.
 
 Here is an example configuration:
 
@@ -636,9 +654,9 @@ Here is an example configuration:
 To store the builds directory for the job, define custom volume mounts to the
 configured `builds_dir` (`/builds` by default).
 To use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
-be aware that depending on the
+be aware that based on the
 [access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes),
-you might be limited to running jobs on 1 node.
+you might be limited to running jobs on one node.
 
 Here is an example configuration:
 
