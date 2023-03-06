@@ -572,13 +572,12 @@ Please do not rely on this information for purchasing or planning purposes.
 As with all projects, the items mentioned on this page are subject to change or delay.
 The development, release, and timing of any products, features, or functionality remain at the
 sole discretion of GitLab Inc.
-To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`. We plan to include an authentication
-token for runners created in the GitLab UI that you can also include in the argument. For more information, see
-[Next GitLab Runner Token Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_tokens/).
-To register an existing runner, use `runnerToken`.
-It can be a security risk to store tokens in `values.yml`, especially if you commit these to `git`.
 
-Instead, you can store the values of these tokens inside of a
+To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`
+
+To register an existing runner, use `runnerToken`.
+
+It can be a security risk to store tokens in `values.yml`, especially if you commit these to `git`. Instead, you can store the values of these tokens inside of a
 [Kubernetes secret](https://kubernetes.io/docs/concepts/configuration/secret/), and
 then update the `runners.secret` value in `values.yml` with the name of
 the secret.
@@ -588,6 +587,11 @@ If you have an existing registered runner and want to use that, set the
 to have a new runner registered you can set the
 `runner-registration-token` with the
 [registration token that you would like](https://docs.gitlab.com/ee/ci/runners/).
+
+NOTE:
+We plan to include an authentication
+token for runners created in the GitLab UI that you can also include in the argument. For more information, see
+[Next GitLab Runner Token Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_tokens/).
 
 For example:
 
