@@ -2,22 +2,37 @@ ARG UBI_VERSION
 
 FROM redhat/ubi8:${UBI_VERSION}
 
-RUN INSTALL_PKGS="openssl-devel glibc-devel gcc git golang" &&  \
+RUN INSTALL_PKGS="openssl-devel glibc-devel gcc git wget" &&  \
     dnf update -y && \
     dnf install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     dnf clean all -y
 
-ARG GO_VERSION=1.18
+ARG GO_VERSION=1.19
+ARG GO_FULL_VERSION=${GO_VERSION}.6
+
+RUN wget https://go.dev/dl/go${GO_FULL_VERSION}.linux-amd64.tar.gz && \
+    tar -C /usr/ -xzf go${GO_FULL_VERSION}.linux-amd64.tar.gz
+
+ENV PATH="$PATH:/usr/go/bin"
 
 RUN git clone \
     https://github.com/golang-fips/go \
-    --branch go${GO_VERSION}-openssl-fips \
+    --branch go${GO_VERSION}-fips-release \
     --single-branch \
     --depth 1 \
-    /usr/local/go
+    /tmp/go
+
+RUN cd /tmp/go && \
+    chmod +x scripts/* && \
+    git config --global user.email "you@example.com" && \
+    git config --global user.name "Your Name" && \
+    scripts/full-initialize-repo.sh && \
+    pushd go/src && \
+    CGO_ENABLED=1 ./make.bash && \
+    popd && \
+    mv go /usr/local/
 
 RUN cd /usr/local/go/src && \
-    CGO_ENABLED=1 ./make.bash && \
     rm -rf \
         /usr/local/go/pkg/*/cmd \
         /usr/local/go/pkg/bootstrap \

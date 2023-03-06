@@ -9,13 +9,13 @@ runner-bin-fips: export GOOS ?= linux
 runner-bin-fips: export GOARCH ?= amd64
 runner-bin-fips:
 	# Building $(NAME) in version $(VERSION) for FIPS $(GOOS) $(GOARCH)
-	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build \
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build \
 		   -tags fips \
 		   -ldflags "$(GO_LDFLAGS)" \
 		   -o="out/binaries/$(NAME)-$(GOOS)-$(GOARCH)-fips" \
 		   $(PKG)
 
-go-fips-docker: export GO_VERSION ?= 1.18
+go-fips-docker: export GO_VERSION ?= 1.19
 go-fips-docker: export UBI_VERSION ?= $(UBI_FIPS_VERSION)
 go-fips-docker: export BUILD_IMAGE ?= registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$(GO_VERSION)
 go-fips-docker: export BUILD_DOCKERFILE ?= ./dockerfiles/ci/go.fips.Dockerfile
@@ -23,7 +23,7 @@ go-fips-docker:
 	# Building Go FIPS Docker image
 	@./ci/build_go_fips_image
 
-runner-bin-fips-docker: export GO_VERSION ?= 1.18
+runner-bin-fips-docker: export GO_VERSION ?= 1.19
 runner-bin-fips-docker: export GOOS ?= linux
 runner-bin-fips-docker: export GOARCH ?= amd64
 runner-bin-fips-docker: export BUILD_IMAGE ?= go-fips

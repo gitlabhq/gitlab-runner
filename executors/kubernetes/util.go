@@ -311,6 +311,7 @@ func buildVariables(bv common.JobVariables) []api.EnvVar {
 
 // Sanitize labels to match Kubernetes restrictions from https://kubernetes.io/
 // /docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+//
 //nolint:gocognit
 func sanitizeLabel(value string) string {
 	mapFn := func(r rune) rune {

@@ -14,9 +14,9 @@ import (
 // having that struct with specific logger settings that doesn't effect the
 // logger in another part of the application. For example:
 //
-// type MyNewStruct struct {
-// 		logger   logrus.FieldLogger
-// }
+//	type MyNewStruct struct {
+//			logger   logrus.FieldLogger
+//	}
 //
 // The more hooks we add to the tests the more memory we are leaking.
 func NewHook() (*test.Hook, func()) {
