@@ -135,7 +135,7 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            UsePowershellPathResolver,
-		DefaultValue:    false,
+		DefaultValue:    true,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "When enabled, PowerShell resolves pathnames rather than Runner using OS-specific filepath " +
