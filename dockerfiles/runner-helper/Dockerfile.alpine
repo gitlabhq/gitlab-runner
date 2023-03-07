@@ -15,6 +15,9 @@ RUN apk update && \
     apk add --no-cache bash dumb-init miniperl \
     && ln -s miniperl /usr/bin/perl
 
+# TODO revisit use of alternate repository above and manual installation of git-lfs bellow.
+# See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29944
+
 RUN wget https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz -O /tmp/git-lfs.tgz && \
     cd /tmp && \
     tar -zxf git-lfs.tgz && \
