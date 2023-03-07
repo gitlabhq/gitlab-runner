@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +22,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
+// CreatedRunnerTokenPrefix is the token prefix used for GitLab UI-created runner tokens
+const CreatedRunnerTokenPrefix = "glrt-"
 const clientError = -100
 
 type GitLabClient struct {
@@ -393,7 +396,11 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	switch result {
 	case http.StatusOK:
 		// this is expected due to fact that we ask for non-existing job
-		runner.Log().Println("Verifying runner...", "is alive")
+		if strings.HasPrefix(runner.Token, CreatedRunnerTokenPrefix) {
+			runner.Log().Println("Verifying runner...", "is valid")
+		} else {
+			runner.Log().Println("Verifying runner...", "is alive")
+		}
 		return &response
 	case http.StatusForbidden:
 		runner.Log().Errorln("Verifying runner...", "is removed")
