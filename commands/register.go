@@ -231,6 +231,20 @@ func (s *RegisterCommand) askSSHLogin() {
 	)
 }
 
+func (s *RegisterCommand) verifyRunner() {
+	// If a runner token is specified in place of a registration token, let's accept it and process it as an
+	// authentication token. This allows for an easier transition for users by simply replacing the
+	// registration token with the new authentication token.
+	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID())
+	if result == nil || result.ID == 0 {
+		logrus.Panicln("Failed to verify the runner.")
+	}
+	s.ID = result.ID
+	s.TokenObtainedAt = time.Now().UTC().Truncate(time.Second)
+	s.TokenExpiresAt = result.TokenExpiresAt
+	s.registered = true
+}
+
 func (s *RegisterCommand) addRunner(runner *common.RunnerConfig) {
 	s.configMutex.Lock()
 	defer s.configMutex.Unlock()
@@ -259,18 +273,6 @@ func (s *RegisterCommand) askRunner() {
 
 	// when a runner token is specified as a registration token, certain arguments are reserved to the server
 	s.ensureServerConfigArgsEmpty()
-
-	// If a runner token is specified in place of a registration token, let's accept it and process it as an
-	// authentication token. This allows for an easier transition for users by simply replacing the
-	// registration token with the new authentication token.
-	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID())
-	if result == nil || result.ID == 0 {
-		logrus.Panicln("Failed to verify the runner.")
-	}
-	s.ID = result.ID
-	s.TokenObtainedAt = time.Now().UTC().Truncate(time.Second)
-	s.TokenExpiresAt = result.TokenExpiresAt
-	s.registered = true
 }
 
 func (s *RegisterCommand) doLegacyRegisterRunner() {
@@ -422,7 +424,7 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 	s.askRunner()
 
-	if !s.LeaveRunner {
+	if !s.tokenIsRunnerToken() && !s.LeaveRunner {
 		defer s.unregisterRunner()()
 	}
 
@@ -447,6 +449,9 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.askExecutor()
 	s.askExecutorOptions()
 
+	if s.tokenIsRunnerToken() {
+		s.verifyRunner()
+	}
 	s.addRunner(&s.RunnerConfig)
 	err = s.saveConfig()
 	if err != nil {
@@ -496,7 +501,7 @@ func (s *RegisterCommand) mergeTemplate() {
 }
 
 func (s *RegisterCommand) tokenIsRunnerToken() bool {
-	return strings.HasPrefix(s.Token, "glrt-")
+	return strings.HasPrefix(s.Token, network.CreatedRunnerTokenPrefix)
 }
 
 func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
