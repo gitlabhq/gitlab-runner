@@ -287,7 +287,7 @@ To provide a certificate file to jobs running in Kubernetes:
 
 ## Troubleshooting
 
-Refer to the general [SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl.html#troubleshooting)
+Refer to the general [SSL troubleshooting](https://docs.gitlab.com/omnibus/settings/ssl/ssl_troubleshooting.html)
 documentation.
 
 In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/tlsctl) tool to debug GitLab certificates from the Runner's end.
