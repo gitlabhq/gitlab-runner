@@ -610,19 +610,10 @@ func (b *PowerShell) generateScript(
 
 func (b *PowerShell) GenerateSaveScript(info common.ShellScriptInfo, scriptPath, script string) (string, error) {
 	w := NewPsWriter(b, info)
-	script, err := b.generateSaveScript(w, info, scriptPath, script)
-	if err != nil {
-		return "", err
-	}
-
-	return script, nil
+	return b.generateSaveScript(w, info, scriptPath, script), nil
 }
 
-func (b *PowerShell) generateSaveScript(
-	w *PsWriter,
-	info common.ShellScriptInfo,
-	scriptPath, script string,
-) (string, error) {
+func (b *PowerShell) generateSaveScript(w *PsWriter, info common.ShellScriptInfo, scriptPath, script string) string {
 	var buf strings.Builder
 	w.Line(fmt.Sprintf(`$in =%s`, psQuoteVariable(base64.StdEncoding.EncodeToString([]byte(script)))))
 	w.Line("$customEncoding = New-Object System.Text.UTF8Encoding $True")
@@ -640,7 +631,7 @@ func (b *PowerShell) generateSaveScript(
 	buf.WriteString(w.String())
 	buf.WriteString(w.EOL + w.EOL + "}" + w.EOL + w.EOL)
 
-	return buf.String(), nil
+	return buf.String()
 }
 
 func (b *PowerShell) ensurePrepareStageHostnameMessage(
