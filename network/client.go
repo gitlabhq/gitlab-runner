@@ -28,9 +28,11 @@ import (
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
-const jsonMimeType = "application/json"
-const applicationXMLMimeType = "application/xml"
-const textXMLMimeType = "text/xml"
+const (
+	jsonMimeType           = "application/json"
+	applicationXMLMimeType = "application/xml"
+	textXMLMimeType        = "text/xml"
+)
 
 type requestCredentials interface {
 	GetURL() string
@@ -156,6 +158,7 @@ func (n *client) addTLSAuth(tlsConfig *tls.Config) {
 	}
 
 	tlsConfig.Certificates = []tls.Certificate{certificate}
+	//nolint:staticcheck
 	tlsConfig.BuildNameToCertificate()
 }
 
