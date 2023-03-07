@@ -18,11 +18,9 @@ import (
 )
 
 func TestAcquisitionRefPrepare(t *testing.T) {
-
 }
 
 func TestAcquisitionRefClose(t *testing.T) {
-
 }
 
 func TestAcquisitionRefCreateVMTunnel(t *testing.T) {
@@ -211,12 +209,14 @@ func ncCreate(image string, slot *int32, vm hypervisor.VirtualMachine, stompedVM
 	}
 }
 
+//nolint:unparam
 func ncDelete(vmID string, err error) expectation {
 	return func(nc *nestingmocks.Client) {
 		nc.EXPECT().Delete(mock.Anything, vmID).Return(err)
 	}
 }
 
+//nolint:unparam
 func ncClose(err error) expectation {
 	return func(nc *nestingmocks.Client) {
 		nc.EXPECT().Close().Return(err)

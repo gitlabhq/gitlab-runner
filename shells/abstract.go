@@ -28,8 +28,7 @@ func doubleQuote(s string) string {
 	return `"` + s + `"`
 }
 
-type AbstractShell struct {
-}
+type AbstractShell struct{}
 
 func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.Artifacts = true
@@ -712,7 +711,7 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 	return skipArchiveCache, nil
 }
 
-func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache, info common.ShellScriptInfo) []string {
+func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache, _ common.ShellScriptInfo) []string {
 	var archiverArgs []string
 	for _, path := range cacheOptions.Paths {
 		archiverArgs = append(archiverArgs, "--path", path)
