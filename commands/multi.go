@@ -378,7 +378,7 @@ func (mr *RunCommand) shutdownUsedExecutorProviders() {
 		managedProvider, ok := provider.(common.ManagedExecutorProvider)
 		if ok {
 			wg.Add(1)
-			go func(p common.ManagedExecutorProvider) {
+			go func(_ common.ManagedExecutorProvider) {
 				defer wg.Done()
 				managedProvider.Shutdown(ctx)
 			}(managedProvider)
@@ -390,7 +390,6 @@ func (mr *RunCommand) shutdownUsedExecutorProviders() {
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
 	listenAddress, err := mr.listenAddress()
-
 	if err != nil {
 		mr.log().Errorf("invalid listen address: %s", err.Error())
 		return
@@ -412,7 +411,6 @@ func (mr *RunCommand) setupMetricsAndDebugServer() {
 
 	go func() {
 		err := http.Serve(listener, mux)
-
 		if err != nil {
 			mr.log().WithError(err).Fatal("Metrics server terminated")
 		}

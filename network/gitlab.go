@@ -547,6 +547,7 @@ func (n *GitLabClient) RequestJob(
 
 	var response common.JobResponse
 
+	//nolint:bodyclose
 	result, statusText, httpResponse := n.doMeasuredJSON(
 		ctx,
 		config.Log(),
@@ -615,6 +616,7 @@ func (n *GitLabClient) UpdateJob(
 
 	log.Info("Updating job...")
 
+	//nolint:bodyclose
 	statusCode, statusText, response := n.doMeasuredJSON(
 		context.Background(),
 		config.Log(),

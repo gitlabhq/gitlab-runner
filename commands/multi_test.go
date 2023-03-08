@@ -464,6 +464,8 @@ func (c *resetRunnerTokenTestController) handleRunAtCall(t *testing.T, time time
 
 // handleResetTokenRequest asserts whether the request to the API is the one expected
 // (basing on the ID and systemID of the Runner)
+//
+//nolint:unparam
 func (c *resetRunnerTokenTestController) handleResetTokenRequest(t *testing.T, runnerID int64, systemID string) {
 	event := c.awaitResetTokenRequest(t)
 	assert.Equal(t, runnerID, event.runner.ID)
