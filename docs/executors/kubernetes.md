@@ -139,47 +139,47 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 
 | Setting | Description |
 |---------|-------------|
-| `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#using-affinity). |
+| `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#define-a-list-of-node-affinities). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) behavior. |
 | `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
 | `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. |
 | `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
 | `bearer_token` | Default bearer token used to launch build pods. |
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
-| `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#using-security-context). |
-| `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
-| `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#capabilities-configuration). |
+| `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#set-a-security-policy-for-the-pod). |
+| `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
+| `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
 | `cleanup_grace_period_seconds` | When a job completes, the duration in seconds that the pod has to terminate gracefully. After this period, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
 | `dns_policy` | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) is used if not set. |
-| `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#pods-dns-config). |
-| `helper_container_security_context` | Sets a container security context for the helper container. [Read more about security context](#using-security-context). |
+| `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#configure-pod-dns-settings). |
+| `helper_container_security_context` | Sets a container security context for the helper container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `helper_image` | (Advanced) [Override the default helper image](../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
 | `helper_image_flavor` | Sets the helper image flavor (`alpine`, `alpine3.12`, `alpine3.13`, `alpine3.14`, `alpine3.15`, or `ubuntu`). Defaults to `alpine`. Using `alpine` is the same as `alpine3.12`. |
-| `host_aliases` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases](#adding-extra-host-aliases). |
+| `host_aliases` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases](#add-extra-host-aliases). |
 | `image_pull_secrets` | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
-| `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#using-security-context). |
+| `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
 | `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
-| `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#using-node-selectors). |
+| `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#specify-the-node-to-execute-builds). |
 | `node_tolerations` | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
 | `pod_annotations` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
 | `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
 | `pod_labels` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod labels can be overwritten in each build by using `pod_labels_overwrite_allowed`. |
 | `pod_labels_overwrite_allowed` | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. |
-| `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#using-security-context). |
+| `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `pod_termination_grace_period_seconds` | Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
 | `poll_interval` | How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3). |
 | `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180). |
 | `priority_class_name` | Specify the Priority Class to be set to the pod. The default one is used if not set. |
 | `privileged` | Run containers with the privileged flag. |
-| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#using-pull-policies). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
+| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#set-pull-policies). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
 | `resource_availability_check_max_attempts` | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. [Read more about resources check during prepare step](#resources-check-during-prepare-step). |
 | `runtime_class_name` | A Runtime class to use for all created pods. If the feature is unsupported by the cluster, jobs exit or fail. |
-| `service_container_security_context` | Sets a container security context for the service containers. [Read more about security context](#using-security-context). |
+| `service_container_security_context` | Sets a container security context for the service containers. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `scheduler_name` | Scheduler to use for scheduling build pods. |
 | `service_account` | Default service account job/executor pods use to talk to Kubernetes API. |
 | `service_account_overwrite_allowed` | Regular expression to validate the contents of the service account overwrite environment variable. When empty, it disables the service account overwrite feature. |
-| `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#using-services). |
+| `services` | [Since GitLab Runner 12.5](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470), list of [services](https://docs.gitlab.com/ee/ci/services/) attached to the build container using the [sidecar pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sidecar). Read more about [using services](#define-a-list-of-services). |
 | `terminationGracePeriodSeconds` | Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. [Deprecated in favour of `cleanup_grace_period_seconds` and `pod_termination_grace_period_seconds`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165). |
 | `volumes` | Configured through the configuration file, the list of volumes that is mounted in the build container. [Read more about using volumes](#configure-volume-types). |
 
@@ -471,7 +471,7 @@ You can mount the following volume types:
 - `emptyDir`
 - `csi`
 
-Here is an example of a configuration with multiple volume types:
+Example of a configuration with multiple volume types:
 
 ```toml
 concurrent = 4
@@ -634,7 +634,7 @@ Use the following options in the `config.toml`:
 
 Volumes defined for the build container are also automatically mounted for all services containers. You can use this functionality as an alternative to [`services_tmpfs`](docker.md#mount-a-directory-in-ram) (available only to Docker executor), to mount database storage in RAM to speed up tests.
 
-Here is an example configuration:
+Example configuration in the `config.toml` file:
 
 ```toml
 [[runners]]
@@ -647,18 +647,18 @@ Here is an example configuration:
       medium = "Memory"
 ```
 
-## Custom builds directory mount
+### Custom volume mount
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2862) in GitLab Runner 13.12.
 
 To store the builds directory for the job, define custom volume mounts to the
 configured `builds_dir` (`/builds` by default).
-To use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
-be aware that based on the
+If you use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
+based on the
 [access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes),
 you might be limited to running jobs on one node.
 
-Here is an example configuration:
+Example configuration in the `config.toml` file:
 
 ```toml
 concurrent = 4
@@ -674,43 +674,23 @@ concurrent = 4
       medium = "Memory"
 ```
 
-## Using Security Context
+## Set a security policy for the pod
 
-[Pod security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) configuration instructs executor to set a pod security policy on the build pod.
+Configure the [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+in the `config.toml` to set a security policy for the build pod.
 
-| Option               | Type       | Required | Description |
-|----------------------|------------|----------|-------------|
-| `fs_group`           | `int`      | No       | A special supplemental group that applies to all containers in a pod. |
-| `run_as_group`       | `int`      | No       | The GID to run the entry point of the container process. |
-| `run_as_non_root`    | boolean    | No       | Indicates that the container must run as a non-root user. |
-| `run_as_user`        | `int`      | No       | The UID to run the entry point of the container process. |
-| `supplemental_groups`| `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
-| `selinux_type`       | `string`   | No       | The SELinux type label that applies to all containers in a pod. |
+Use the following options:
 
-Assigning a security context to pods provides security to your Kubernetes cluster. For this to work you'll need to provide a helper
-image that conforms to the policy you set here.
+| Option                | Type       | Required | Description                                                                                                      |
+|-----------------------|------------|----------|------------------------------------------------------------------------------------------------------------------|
+| `fs_group`            | `int`      | No       | A special supplemental group that applies to all containers in a pod.                                            |
+| `run_as_group`        | `int`      | No       | The GID to run the entry point of the container process.                                                         |
+| `run_as_non_root`     | boolean    | No       | Indicates that the container must run as a non-root user.                                                        |
+| `run_as_user`         | `int`      | No       | The UID to run the entry point of the container process.                                                         |
+| `supplemental_groups` | `int` list | No       | A list of groups applied to the first process run in each container, in addition to the container's primary GID. |
+| `selinux_type`        | `string`   | No       | The SELinux type label that applies to all containers in a pod.                                                  |
 
-NOTE:
-If you only require the `nonroot` environment, you can use the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433) OpenShift (OCP) images instead of building your own helper image.
-One caveat is that the images are designed so that they can work with any user ID. It's important that this user ID is part of the root group.
-Being part of the root group doesn't give it any specific privileges.
-
-[Read more about the helper image](../configuration/advanced-configuration.md#helper-image).
-Example of building your own helper image:
-
-```Dockerfile
-ARG tag
-FROM registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:${tag}
-USER root
-RUN groupadd -g 59417 nonroot && \
-    useradd -u 59417 nonroot -g nonroot
-WORKDIR /home/nonroot
-USER 59417:59417
-```
-
-This example creates a user and group called `nonroot` and sets the image to run as that user.
-
-Example of setting pod security context in your `config.toml`:
+Example of a pod security context in the `config.toml`:
 
 ```toml
 concurrent = %(concurrent)s
@@ -728,11 +708,36 @@ check_interval = 30
         fs_group = 59417
 ```
 
-### Container security context
+### Use a helper image
+
+After you set the security policy, the [helper image](../configuration/advanced-configuration.md#helper-image) must conform to the policy.
+The image does not receive privileges from the root group, so you must ensure that the user ID is part of the root group.
+
+NOTE:
+If you only need the `nonroot` environment, you can use the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421)
+and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
+OpenShift (OCP) images instead of a helper image.
+
+The following example creates a user and group called `nonroot` and sets the helper image to run as that user.
+
+```Dockerfile
+ARG tag
+FROM registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:${tag}
+USER root
+RUN groupadd -g 59417 nonroot && \
+    useradd -u 59417 nonroot -g nonroot
+WORKDIR /home/nonroot
+USER 59417:59417
+```
+
+## Set a security policy for the container
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/3116) in GitLab Runner 14.5.
 
-Use the [container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) configuration to configure the executor to set a container security policy on the build, helper, or service pods.
+Configure the [container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
+in the `config.toml` executor to set a container security policy for the build, helper, or service pods.
+
+Use the following options:
 
 | Option                | Type        | Required | Description |
 |-----------------------|-------------|----------|-------------|
@@ -743,9 +748,11 @@ Use the [container security context](https://kubernetes.io/docs/tasks/configure-
 | `capabilities.drop`   | string list | No       | The capabilities to drop when running the container. |
 | `selinux_type`        | string      | No       | The SELinux type label that is associated with the container process. |
 
-The example below sets a pod security context, then overrides `run_as_user` and `run_as_group` for both the build and helper containers. In the example, all service containers would inherit `run_as_user` and `run_as_group` from the pod security context.
+In the following example in the `config.toml`, the security context configuration:
 
-Example of setting pod security context in your `config.toml`:
+- Sets a pod security context.
+- Overrides `run_as_user` and `run_as_group` for the build and helper containers.
+- Specifies that all service containers inherit `run_as_user` and `run_as_group` from the pod security context.
 
 ```toml
 concurrent = 4
@@ -777,13 +784,13 @@ check_interval = 30
         run_as_group = 1000
 ```
 
-## Using services
+## Define a list of services
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470) in GitLab Runner 12.5.
 > - [Introduced support for `alias`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4829) in GitLab Runner 12.9
 > - [Introduced support for `command` and `entrypoint`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173) in GitLab Runner 13.6.
 
-Define a list of [services](https://docs.gitlab.com/ee/ci/services/).
+Define a list of [services](https://docs.gitlab.com/ee/ci/services/) in the `config.toml`.
 
 ```toml
 concurrent = 1
@@ -804,11 +811,15 @@ check_interval = 30
         command = ["executable","param1","param2"]
 ```
 
-## Using pull policies
+## Set pull policies
 
 > Support for multiple pull policies [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2807) in GitLab 13.11.
 
-Use the `pull_policy` parameter to specify a single or multiple pull policies.
+Use the `pull_policy` parameter in the `config.toml` file to specify a single or multiple pull policies.
+The policy controls how an image is fetched and updated, and applies to the build image, helper image, and any services.
+
+To determine which policy to use, see
+[the Kubernetes documentation about pull policies](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
 
 For a single pull policy:
 
@@ -825,6 +836,9 @@ For multiple pull policies:
   pull_policy = ["always", "if-not-present"]
 ```
 
+When you define multiple policies, each policy is attempted until the image is obtained successfully.
+For example, when you use `[ always, if-not-present ]`, the policy `if-not-present` is used if the `always` policy fails due to a temporary registry problem.
+
 To retry a failed pull:
 
 ```toml
@@ -832,35 +846,25 @@ To retry a failed pull:
   pull_policy = ["always", "always"]
 ```
 
-The policy applies to the build image, helper image, and any services. It controls how an image is fetched and updated.
-
-To determine when to use which policy, see
-[the documentation on Kubernetes pull policies](https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy).
-
-The GitLab naming convention is slightly different than the Kubernetes one.
+The GitLab naming convention is different to the Kubernetes one.
 
 | Runner pull policy | Kubernetes pull policy | Description |
 |--------------------|------------------------|-------------|
 | _blank_ | _blank_ | Uses the default policy, as specified by Kubernetes. |
-| `if-not-present` | `IfNotPresent` | The image is pulled only if it is not already present on the node that executes the job. See [security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). |
+| `if-not-present` | `IfNotPresent` | The image is pulled only if it is not already present on the node that executes the job. There are [security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) you should be aware of. |
 | `always` | `Always` | The image is pulled every time the job is executed. |
 | `never` | `Never` | The image is never pulled and requires the node to already have it. |
 
-When multiple policies are defined, each policy is attempted until the image is obtained successfully.
-For example, when you use `[ always, if-not-present ]`, you can use the policy `if-not-present` if `always` fails due to a temporary registry problem.
+## Specify the node to execute builds
 
-Beware of the [security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) when using `if-not-present`.
-
-## Using node selectors
-
-The `node_selector` option can be used to specify which node in a Kubernetes cluster you want builds to be executed on.
+Use the `node_selector` option to specify which node in a Kubernetes cluster to execute builds on.
 It is a table of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables).
 
-Runner additionally uses the information provided to determine the OS and architecture for the build. This ensures that
+The runner uses the information provided to determine the OS and architecture for the build. This ensures that
 the correct [helper image](../configuration/advanced-configuration.md#helper-image) is used. By default, the OS and
 architecture is assumed to be `linux/amd64`.
 
-By using certain labels, builds can be scheduled on nodes with different operating systems and architectures:
+You can use specific labels to schedule nodes with different operating systems and architectures.
 
 ### Example for `linux/arm64`
 
@@ -878,7 +882,7 @@ By using certain labels, builds can be scheduled on nodes with different operati
 ### Example for `windows/amd64`
 
 Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support),
-so if process-isolation is used, you must additionally provide the specific windows build version with the
+so if process isolation is used, you must also provide the specific windows build version with the
 [`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
 
 ```toml
@@ -898,44 +902,13 @@ so if process-isolation is used, you must additionally provide the specific wind
       "node.kubernetes.io/windows-build" = "10.0.19041"
 ```
 
-## Adding extra host aliases
-
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab Runner 13.7.
-
-This feature is available in Kubernetes 1.7+.
-
-[Host aliases](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/) configuration
-instructs Kubernetes to add entries to `/etc/hosts` file inside of the container. The host aliases can be configured with the following options:
-
-| Option       | Type          | Required | Description |
-|--------------|---------------|----------|-------------|
-| `IP`         | string        | Yes      | The IP address you want to attach hosts too. |
-| `Hostnames`  | `string` list | Yes      | A list of host name aliases that will be attached to the IP. |
-
-Here is an example configuration:
-
-```toml
-concurrent = 4
-
-[[runners]]
-  # usual configuration
-  executor = "kubernetes"
-  [runners.kubernetes]
-    [[runners.kubernetes.host_aliases]]
-      ip = "127.0.0.1"
-      hostnames = ["web1", "web2"]
-    [[runners.kubernetes.host_aliases]]
-      ip = "192.168.1.1"
-      hostnames = ["web14", "web15"]
-```
-
-## Using Affinity
-
-### Node Affinity
+## Define a list of node affinities
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 13.4.
 
-Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to be added to a pod specification at build time.
+Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to add to a pod specification at build time.
+
+Example configuration in the `config.toml`:
 
 ```toml
 concurrent = 1
@@ -979,11 +952,15 @@ concurrent = 1
             ]
 ```
 
-### Pod affinity and anti-affinity
+## Define nodes where pods are scheduled
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 14.3.
 
-Use these affinities to constrain which nodes [your pod is eligible](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) to be scheduled on based on the labels on other pods.
+Use pod affinity and anti-affinity to constrain the nodes
+[your pod is eligible](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity)
+to be scheduled on, based on labels on other pods.
+
+Example configuration in the `config.toml`:
 
 ```toml
 concurrent = 1
@@ -1041,14 +1018,49 @@ concurrent = 1
               values = ["S2"]
 ```
 
-## Container lifecycle hooks
+## Add extra host aliases
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2818) in GitLab Runner 13.7.
+
+This feature is available in Kubernetes 1.7 and higher.
+
+Configure a [host aliases](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/) to
+instruct Kubernetes to add entries to `/etc/hosts` file in the container.
+
+Use the following options:
+
+| Option       | Type          | Required | Description |
+|--------------|---------------|----------|-------------|
+| `IP`         | string        | Yes      | The IP address you want to attach hosts to. |
+| `Hostnames`  | `string` list | Yes      | A list of host name aliases that will be attached to the IP. |
+
+Example configuration in the `config.toml` file:
+
+```toml
+concurrent = 4
+
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [[runners.kubernetes.host_aliases]]
+      ip = "127.0.0.1"
+      hostnames = ["web1", "web2"]
+    [[runners.kubernetes.host_aliases]]
+      ip = "192.168.1.1"
+      hostnames = ["web14", "web15"]
+```
+
+## Configure a container lifecycle hook
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
 
-Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run code configured for a handler when the corresponding lifecycle hook is executed.
+Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run
+code configured for a handler when the corresponding lifecycle hook is executed.
+
 You can configure two types of hooks: `PreStop` and `PostStart`. Each of them allows only one type of handler to be set.
 
-Here is an example configuration:
+Example configuration in the `config.toml` file:
 
 ```toml
 [[runners]]
@@ -1074,7 +1086,7 @@ Here is an example configuration:
         value = "header_value_2"
 ```
 
-Each lifecycle hook is configured through the following settings:
+Use the following settings to configure each lifecycle hook:
 
 | Option       | Type                           | Required | Description |
 |--------------|--------------------------------|----------|-------------|
@@ -1112,11 +1124,20 @@ Each lifecycle hook is configured through the following settings:
 | `port`       | `int`     | Yes      | The number of the port to access on the container. |
 | `host`       | string    | No       | The host name to connect to, defaults to the pod IP (optional). |
 
-## Pod's DNS Config
+## Configure pod DNS settings
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6562) in GitLab Runner 13.7.
 
-[Pod's DNS Config](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config) gives users more control on the DNS settings of the created build Pods.
+Use the following options to configure the [DNS settings](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config)
+of the pods.
+
+| Option       | Type                        | Required | Description |
+|--------------|-----------------------------|----------|-------------|
+| `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
+| `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
+| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod.
+
+Example configuration in the `config.toml` file:
 
 ```toml
 concurrent = 1
@@ -1145,12 +1166,6 @@ check_interval = 30
         name = "edns0"
 ```
 
-| Option       | Type                        | Required | Description |
-|--------------|-----------------------------|----------|-------------|
-| `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
-| `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
-| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
-
 ### KubernetesDNSConfigOption
 
 | Option       | Type      | Required | Description |
@@ -1158,56 +1173,19 @@ check_interval = 30
 | `name`       | string    | Yes      | Configuration option name.  |
 | `value`      | `*string` | No       | Configuration option value. |
 
-## Capabilities configuration
+## Specify container capabilities
 
-[Kubernetes allows](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container)
-to configure different [Linux capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) that should be
-added or dropped from a container.
+You can specify the [Kubernetes capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container)
+to use in the container.
 
-GitLab Runner supports configuration of capabilities with the `cap_add` and `cap_drop` settings in the `[runners.kubernetes]`
-section of the configuration file. By default, GitLab Runner provides
-a [list of capabilities](#default-list-of-dropped-capabilities) that should be dropped.
+To specify the container capabilities, use the `cap_add` and `cap_drop` options in the `config.toml`. Container runtimes can also
+define a default list of capabilities, like those in [Docker](https://github.com/moby/moby/blob/19.03/oci/defaults.go#L14-L32)
+or the [container](https://github.com/containerd/containerd/blob/v1.4.0/oci/spec.go#L93-L110).
 
-Because the default list of dropped capabilities can intersect with user-defined capabilities, the following rules are
-applied to determine the final list:
+There is a [list of capabilities](#default-list-of-dropped-capabilities) that the runner drops by default.
+Capabilities that you list in `cap_add` option are excluded from being dropped.
 
-1. User-defined `cap_drop` has priority over user-defined `cap_add`. If
-   you define the same capability in both settings, only the one from `cap_drop` is passed
-   to the container.
-
-1. User-defined `cap_add` has priority over the default list of dropped capabilities.
-   If you want to add the capability that is dropped by default, explicitly add it to
-   `cap_add`.
-
-The final list of capabilities is added to all containers in the job's pod.
-
-A few notes:
-
-- Remove the `CAP_` prefix from capability identifiers passed to the container configuration.
-  For example, if you want to add or drop the `CAP_SYS_TIME` capability,
-  in the configuration file, set a `SYS_TIME` string for `cap_add` or `cap_drop`.
-
-- The owner of the Kubernetes cluster
-  [can define a PodSecurityPolicy](https://kubernetes.io/docs/concepts/security/pod-security-policy/#capabilities),
-  where specific capabilities are allowed, restricted, or added by default.
-  These rules take precedence over any user-defined configuration.
-
-  Container runtimes can also define a default list of capabilities that you can add,
-  like those seen in
-  [Docker](https://github.com/moby/moby/blob/19.03/oci/defaults.go#L14-L32)
-  or [containerd](https://github.com/containerd/containerd/blob/v1.4.0/oci/spec.go#L93-L110).
-
-### Default list of dropped capabilities
-
-GitLab Runner tries to drop these capabilities by default. If any of them are required for the job
-to be executed properly, you should explicitly add the capability with the `cap_add` setting:
-
-<!-- kubernetes_default_cap_drop_list_start -->
-- `NET_RAW`
-
-<!-- kubernetes_default_cap_drop_list_end -->
-
-### Example configuration
+Example configuration in the `config.toml` file:
 
 ```toml
 concurrent = 1
@@ -1223,13 +1201,39 @@ check_interval = 30
     # ...
 ```
 
-## Using Runtime Class
+When you specify the capabilities:
+
+- User-defined `cap_drop` has priority over user-defined `cap_add`. If
+   you define the same capability in both settings, only the capability from `cap_drop` is passed
+   to the container.
+
+- Remove the `CAP_` prefix from capability identifiers passed to the container configuration.
+  For example, if you want to add or drop the `CAP_SYS_TIME` capability,
+  in the configuration file, enter the string, `SYS_TIME`.
+
+- The owner of the Kubernetes cluster
+  [can define a PodSecurityPolicy](https://kubernetes.io/docs/concepts/security/pod-security-policy/#capabilities),
+  where specific capabilities are allowed, restricted, or added by default. These rules take precedence over any user-defined configuration.
+
+### Default list of dropped capabilities
+
+GitLab Runner drops the following capabilities by default.
+
+User-defined `cap_add` has priority over the default list of dropped capabilities.
+If you want to add the capability that is dropped by default, add it to `cap_add`.
+
+<!-- kubernetes_default_cap_drop_list_start -->
+- `NET_RAW`
+
+<!-- kubernetes_default_cap_drop_list_end -->
+
+## Set the RuntimeClass
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26646) in GitLab Runner 14.9.
 
-Use `runtime_class_name` to set the [**RuntimeClass**](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
+Use `runtime_class_name` to set the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
 
-If you specify `runtime_class_name` and it's not configured in your cluster or the feature is not supported, job pods fail to create.
+If you specify a RuntimeClass name and it's not configured in the cluster or the feature is not supported, the executor fails to create jobs.
 
 ```toml
 concurrent = 1
@@ -1367,7 +1371,7 @@ For example, to allow only the `always` and `if-not-present` pull policies:
 
 - If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
 - If you don't specify `pull_policy`, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used.
-- The existing [`pull_policy` keyword](../executors/kubernetes.md#using-pull-policies) must not include a pull policy
+- The existing [`pull_policy` keyword](../executors/kubernetes.md#set-pull-policies)) must not include a pull policy
   that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
 
 ## Job execution
@@ -1554,7 +1558,7 @@ When you run your CI/CD job, you might receive an error like the following:
 MountVolume.SetUp failed for volume "kube-api-access-xxxxx" : chown c:\var\lib\kubelet\pods\xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\volumes\kubernetes.io~projected\kube-api-access-xxxxx\..2022_07_07_20_52_19.102630072\token: not supported by windows
 ```
 
-This issue occurs when you [use node selectors](#using-node-selectors) to run builds on nodes with different operating systems and architectures.
+This issue occurs when you [use node selectors](#specify-the-node-to-execute-builds) to run builds on nodes with different operating systems and architectures.
 
 To fix the issue, configure `nodeSelector` so that the Runner Manager pod is always scheduled on a Linux node. For example, your [`values.yaml` file](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml) should contain the following:
 
