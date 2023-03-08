@@ -3,6 +3,7 @@ ARG BASE_IMAGE
 FROM $BASE_IMAGE
 
 ARG GIT_LFS_VERSION=3.3.0
+ARG ARCH
 
 # gitlab-runner-helper will try to resolve `sh` from the path. We ensure the PATH is populated by default, as some container runtimes do no longer set a default (e.g. containerd v1.2.8)
 ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
@@ -18,7 +19,7 @@ RUN apk update && \
 # TODO revisit use of alternate repository above and manual installation of git-lfs bellow.
 # See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29944
 
-RUN wget https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz -O /tmp/git-lfs.tgz && \
+RUN wget https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-${ARCH}-v${GIT_LFS_VERSION}.tar.gz -O /tmp/git-lfs.tgz && \
     cd /tmp && \
     tar -zxf git-lfs.tgz && \
     git-lfs-${GIT_LFS_VERSION}/install.sh && \
