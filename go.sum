@@ -1556,8 +1556,8 @@ github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43/go.mod h1:aX
 github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50/go.mod h1:NUSPSUX/bi6SeDMUh6brw0nXpxHnc96TguQh0+r/ssA=
 github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f/go.mod h1:GlGEuHIJweS1mbCqG+7vt2nvWLzLLnRHbXz5JKd/Qbg=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230131195851-9d90f0aee0e7 h1:3wguLSetaGsRKXA9GSXKOTxbZaVnHeiuMw1X+lOWKOw=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230131195851-9d90f0aee0e7/go.mod h1:SYIXjS9LpBIT4YSKVUWE9a00/Yn7hCsQ0gcKXwwh3Uo=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230307201357-79627713430a h1:fKjqmZ1fvfwyeQT729G99oAisLijdMm2QEXpGTWBxvo=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230307201357-79627713430a/go.mod h1:xOBTeCqc9dT8t2jMu+gsVIG2cwFWCq8xGclvxUv5VwI=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194 h1:ivgi7JawJmDdPVEPciF46rofcfuC4MbnROBwER87UkM=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194/go.mod h1:dNcxkdms9+5vWfke3Infes/+R1VC226bJ43OxtPetmY=
 gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230126192551-f2211a1d15b0 h1:B/xDldwXNMku23k1yYMpZwB+05GQ8q0yjSo3U/GL1pc=
