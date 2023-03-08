@@ -92,6 +92,7 @@ _docker_buildx build \
     --platform "${platform}" \
     --no-cache \
     --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+    --build-arg "ARCH=${platform_arch}" \
     --build-arg "http_proxy=${http_proxy}" \
     --output "type=tar,dest=$TARGET_FILE" \
     --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
