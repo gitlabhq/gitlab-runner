@@ -27,13 +27,16 @@ import (
 	testHelpers "gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-const cacheArchiverArchive = "archive.zip"
-const cacheArchiverTestArchivedFile = "archive_file"
-const cacheExtractorTestArchivedFile = "archive_file"
+const (
+	cacheArchiverArchive           = "archive.zip"
+	cacheArchiverTestArchivedFile  = "archive_file"
+	cacheExtractorTestArchivedFile = "archive_file"
+)
 
 func TestCacheArchiverUploadExpandArgs(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(testCacheUploadHandler))
 	defer srv.Close()
+	defer os.Remove(cacheArchiverArchive)
 
 	os.Setenv("expand", "expanded")
 	defer os.Unsetenv("expand")
