@@ -41,7 +41,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.22.10
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230131195851-9d90f0aee0e7
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230307201357-79627713430a
 	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
 	gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230126192551-f2211a1d15b0
 	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230203200315-65d720c30abf

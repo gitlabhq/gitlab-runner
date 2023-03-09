@@ -2,6 +2,7 @@ package autoscaler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -99,7 +100,17 @@ func (c *client) Dial(n string, addr string) (net.Conn, error) {
 }
 
 func (c *client) Run(ctx context.Context, opts executors.RunOptions) error {
-	return c.client.Run(ctx, connector.RunOptions(opts))
+	err := c.client.Run(ctx, connector.RunOptions(opts))
+
+	var exitErr *connector.ExitError
+	if errors.As(err, &exitErr) {
+		return &common.BuildError{
+			Inner:    err,
+			ExitCode: exitErr.ExitCode(),
+		}
+	}
+
+	return err
 }
 
 func (c *client) Close() error {
