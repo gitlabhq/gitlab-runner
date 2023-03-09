@@ -28,6 +28,7 @@ const (
 	ResolveFullTLSChain                  string = "FF_RESOLVE_FULL_TLS_CHAIN"
 	DisablePowershellStdin               string = "FF_DISABLE_POWERSHELL_STDIN"
 	UsePodActiveDeadlineSeconds          string = "FF_USE_POD_ACTIVE_DEADLINE_SECONDS"
+	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
 )
 
 type FeatureFlag struct {
@@ -233,6 +234,13 @@ var flags = []FeatureFlag{
 			"(https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)" +
 			" is set to the CI/CD job timeout. This flag affects the " +
 			"[pod's lifecycle](../executors/kubernetes.md#pod-lifecycle).",
+	},
+	{
+		Name:         SetPermissionsBeforeCleanup,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, permissions on directories and files in the project directory are " +
+			"set first, to ensure that deletions during cleanup are successful.",
 	},
 }
 

@@ -64,6 +64,8 @@ type BashWriter struct {
 	useNewEscape       bool
 	usePosixEscape     bool
 	useJSONTermination bool
+
+	setPermissionsBeforeCleanup bool
 }
 
 func NewBashWriter(build *common.Build, shell string) *BashWriter {
@@ -78,6 +80,7 @@ func NewBashWriter(build *common.Build, shell string) *BashWriter {
 		// the feature flag FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY is set to false
 		useJSONTermination: build.Runner.Executor == common.ExecutorKubernetes &&
 			!build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy),
+		setPermissionsBeforeCleanup: build.IsFeatureFlagOn(featureflags.SetPermissionsBeforeCleanup),
 	}
 }
 
@@ -212,6 +215,11 @@ func (b *BashWriter) MkTmpDir(name string) string {
 }
 
 func (b *BashWriter) RmDir(path string) {
+	if b.setPermissionsBeforeCleanup {
+		b.IfDirectory(path)
+		b.Command("chmod", "-R", "u+rwX", path)
+		b.EndIf()
+	}
 	b.Command("rm", "-r", "-f", path)
 }
 
