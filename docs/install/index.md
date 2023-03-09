@@ -39,6 +39,8 @@ GitLab Runner runs the CI/CD jobs that are defined in GitLab.
 
 As of GitLab Runner 14.7, we provide a FIPS 140-12 compliant GitLab Runner binary. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
 
+As of GitLab Runner 15.10, we use [UBI-8 minimal](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) as the base for creating the GitLab Runner FIPS image.
+
 NOTE:
 Only Red Hat Enterprise Linux (RHEL) distributions are supported.
 
