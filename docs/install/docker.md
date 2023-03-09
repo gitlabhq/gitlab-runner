@@ -116,7 +116,7 @@ NOTE:
 To set the container's timezone, in the `docker run` command, use the flag `--env TZ=<TIMEZONE>`. [View a list of available time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 NOTE:
-For a [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) image, based on `redhat/ubi8`, use the `gitlab/gitlab-runner:ubi-fips` tags.
+For a [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) image, based on `redhat/ubi8-minimal`, use the `gitlab/gitlab-runner:ubi-fips` tags.
 
 ### Register the runner
 

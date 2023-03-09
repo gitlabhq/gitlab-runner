@@ -6,8 +6,8 @@ FROM $BASE_IMAGE
 ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 
 # hadolint ignore=DL3018
-RUN dnf update -y && \
-    dnf install -y \
+RUN microdnf update -y && \
+    microdnf install -y \
     bash \
     ca-certificates \
     git \

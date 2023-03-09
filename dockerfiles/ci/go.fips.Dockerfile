@@ -1,17 +1,19 @@
 ARG UBI_VERSION
 
-FROM redhat/ubi8:${UBI_VERSION}
+FROM redhat/ubi8-minimal:${UBI_VERSION}
 
-RUN INSTALL_PKGS="openssl-devel glibc-devel gcc git wget" &&  \
-    dnf update -y && \
-    dnf install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
-    dnf clean all -y
+ARG PLATFORM_ARCH=amd64
+
+RUN INSTALL_PKGS="openssl-devel glibc-devel gcc git wget tar" &&  \
+    microdnf update -y && \
+    microdnf install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    microdnf clean all -y
 
 ARG GO_VERSION=1.19
 ARG GO_FULL_VERSION=${GO_VERSION}.6
 
-RUN wget https://go.dev/dl/go${GO_FULL_VERSION}.linux-amd64.tar.gz && \
-    tar -C /usr/ -xzf go${GO_FULL_VERSION}.linux-amd64.tar.gz
+RUN wget https://go.dev/dl/go${GO_FULL_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && \
+    tar -C /usr/ -xzf go${GO_FULL_VERSION}.linux-${PLATFORM_ARCH}.tar.gz
 
 ENV PATH="$PATH:/usr/go/bin"
 
@@ -42,11 +44,11 @@ RUN cd /usr/local/go/src && \
         /usr/local/go/src/cmd/dist/dist \
         /usr/local/go/.git*
 
-FROM redhat/ubi8:${UBI_VERSION}
+FROM redhat/ubi8-minimal:${UBI_VERSION}
 
-RUN dnf update -y && \
-    dnf install -y patch gcc openssl openssl-devel make git && \
-    dnf clean all -y
+RUN microdnf update -y && \
+    microdnf install -y patch gcc openssl openssl-devel make git && \
+    microdnf clean all -y
 
 COPY --from=0 /usr/local/go /usr/local/go
 ENV GOPATH /go
