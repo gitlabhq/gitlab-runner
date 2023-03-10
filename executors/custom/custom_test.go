@@ -374,7 +374,8 @@ func TestExecutor_Prepare(t *testing.T) {
 				"driver": {
 					"name": "test driver",
 					"version": "v0.0.1"
-				}
+				},
+				"shell": "cmd"
 			}`,
 			commandErr: nil,
 			assertCommandFactory: func(
@@ -395,6 +396,9 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.Equal(t, "custom-hostname", b.Hostname)
 				assert.Equal(t, "/some/build/directory/RuNnErTo/0/project-0", b.BuildDir)
 				assert.Equal(t, "/some/cache/directory/project-0", b.CacheDir)
+			},
+			assertExecutor: func(t *testing.T, e *executor) {
+				assert.Equal(t, "cmd", e.Shell().Shell)
 			},
 		},
 		"custom executor set with PrepareExec": {
