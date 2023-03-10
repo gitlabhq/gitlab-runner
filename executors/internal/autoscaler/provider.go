@@ -311,10 +311,14 @@ func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscale
 
 	//nolint:lll
 	return func(id string, info fleetingprovider.ConnectInfo, cause fleeting.Cause) (keys []string, used int, err error) {
+		useExternalAddr := true
+		if config.Autoscaler != nil {
+			useExternalAddr = config.Autoscaler.ConnectorConfig.UseExternalAddr
+		}
+
 		// dial host
 		dialer, err := connector.Dial(ctx, info, connector.DialOptions{
-			// todo: make this configurable
-			UseExternalAddr: true,
+			UseExternalAddr: useExternalAddr,
 		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("dialing host: %w", err)
