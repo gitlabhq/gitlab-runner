@@ -32,6 +32,15 @@ if awk "BEGIN {exit !(\"$DOCKER_API_VERSION\" < \"$REQUIRED_DOCKER_API_VERSION\"
   exit 1
 fi
 
+# Docker 23.0 changed the existing `docker system prune` behaviour, and the workaround
+# for now is to fallback to the older behaviour by explicitly specifying the older API
+# version: https://github.com/docker/cli/issues/4028#issuecomment-1429538145
+# We should be able to use DOCKER_API_VERSION 1.41, as this problem was only introduced
+# in Docker 23.0 which uses 1.42.
+PRUNE_DOCKER_API_VERSION=$DOCKER_API_VERSION
+if awk "BEGIN {exit !(\"$DOCKER_API_VERSION\" > \"1.41\")}"; then
+  PRUNE_DOCKER_API_VERSION=1.41
+fi
 
 COMMAND="${1:-prune-volumes}"
 
@@ -53,7 +62,7 @@ case "$COMMAND" in
         docker rm "${CONTAINERS}"
       fi
     else
-      docker system prune -af --filter "$FILTER_FLAG"
+      DOCKER_API_VERSION=$PRUNE_DOCKER_API_VERSION docker system prune -af --filter "$FILTER_FLAG"
     fi
 
     exit 0
@@ -97,7 +106,7 @@ case "$COMMAND" in
         exit 0
       fi
     fi
-    docker system prune "$VOLUMES_FLAG" -af --filter "$FILTER_FLAG"
+    DOCKER_API_VERSION=$PRUNE_DOCKER_API_VERSION docker system prune "$VOLUMES_FLAG" -af --filter "$FILTER_FLAG"
 
     exit 0
     ;;
