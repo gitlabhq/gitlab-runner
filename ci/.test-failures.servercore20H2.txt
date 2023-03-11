@@ -17,8 +17,6 @@ TestPrepare
 TestDockerServiceHealthcheck
 TestDockerServiceHealthcheck/successful_service_(FF_NETWORK_PER_BUILD=true)
 TestDockerServiceHealthcheck/failed_service_(FF_NETWORK_PER_BUILD=true)
-TestPowershellUTF8EncodingStdin
-TestPowershellUTF8EncodingStdin/powershell
 TestCommandArgumentExpansion
 TestCommandArgumentExpansion/cmd
 TestBuildCancel
