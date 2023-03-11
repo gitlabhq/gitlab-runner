@@ -26,7 +26,16 @@ func TestPowershellUTF8EncodingStdin(t *testing.T) {
 			cmd.Stderr = buf
 
 			require.NoError(t, cmd.Run())
-			require.Contains(t, buf.String(), "Actual: ∅ 226, 136, 133")
+
+			switch shell {
+			case SNPwsh:
+				require.Contains(t, buf.String(), "Actual: ∅ 226, 136, 133")
+			case SNPowershell:
+				// Ideally, we'd have the same output as Powershell Core, however
+				// there doesn't appear to be a way to set the input encoding for
+				// Windows Powershell that would correct this.
+				require.Contains(t, buf.String(), "Actual: ∅ 63")
+			}
 		})
 	}
 }
