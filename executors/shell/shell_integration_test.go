@@ -1489,8 +1489,8 @@ func TestInteractiveTerminal(t *testing.T) {
 				buildOut <- buf.String()
 			}()
 
-			// Wait until the build starts.
-			for build.Session.Handler() == nil {
+			// Wait until the session terminal is available
+			for build.Session.Handler() == nil && !build.Session.TerminalAvailable() {
 				time.Sleep(10 * time.Millisecond)
 			}
 

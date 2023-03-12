@@ -143,7 +143,7 @@ func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
 	logger := s.log.WithField("uri", r.RequestURI)
 	logger.Debug("Exec terminal session request")
 
-	if !s.terminalAvailable() {
+	if !s.TerminalAvailable() {
 		logger.Error("Interactive terminal not set")
 		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return
@@ -173,7 +173,7 @@ func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
 	terminalConn.Start(w, r, s.TimeoutCh, s.DisconnectCh)
 }
 
-func (s *Session) terminalAvailable() bool {
+func (s *Session) TerminalAvailable() bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
