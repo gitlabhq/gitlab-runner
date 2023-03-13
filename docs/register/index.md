@@ -32,7 +32,7 @@ Before registering a runner, you must first:
     have an administrator go to the GitLab Admin Area and select **Overview > Runners**
   - For a [group runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners),
     go to **CI/CD > Runners**
-  - For a [project-specific runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#specific-runners),
+  - For a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#project-runners),
     go to **Settings > CI/CD** and expand the **Runners** section
 
 NOTE:

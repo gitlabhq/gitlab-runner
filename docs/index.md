@@ -91,9 +91,9 @@ There are three types of runners, based on who you want to have access:
 
 - [Shared runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#shared-runners) are for use by all projects
 - [Group runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners) are for all projects and subgroups in a group
-- [Specific runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#specific-runners) are for individual projects
+- [Project runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#project-runners) are for individual projects
 
-When you register a runner, you specify a token for the GitLab instance, group, or project.
+The scope of a runner is defined during the registration.
 This is how the runner knows which projects it's available for.
 
 ### Tags

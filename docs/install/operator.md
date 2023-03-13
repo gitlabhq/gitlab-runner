@@ -61,11 +61,11 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
 #### Install GitLab Runner
 
 1. Obtain a token that you'll use to register the runner:
-   - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/#shared-runners),
+   - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#shared-runners),
      have an administrator go to the GitLab Admin Area and click **Overview > Runners**.
-   - For a [group runner](https://docs.gitlab.com/ee/ci/runners/index.html#group-runners),
+   - For a [group runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners),
      go to **Settings > CI/CD** and expand the **Runners** section.
-   - For a [project-specific runner](https://docs.gitlab.com/ee/ci/runners/index.html#specific-runners),
+   - For a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#project-runners),
      go to **Settings > CI/CD** and expand the **Runners** section.
 1. Under **Use the following registration token during setup:**, copy the token.
 1. Go to the namespace where you want to create GitLab Runner.
