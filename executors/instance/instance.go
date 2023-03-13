@@ -15,10 +15,6 @@ type executor struct {
 	client executors.Client
 }
 
-func (e *executor) Name() string {
-	return "instance"
-}
-
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	err := e.AbstractExecutor.Prepare(options)
 	if err != nil {

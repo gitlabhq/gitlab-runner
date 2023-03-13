@@ -33,20 +33,6 @@ func (_m *MockExecutor) GetCurrentStage() ExecutorStage {
 	return r0
 }
 
-// Name provides a mock function with given fields:
-func (_m *MockExecutor) Name() string {
-	ret := _m.Called()
-
-	var r0 string
-	if rf, ok := ret.Get(0).(func() string); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
 // Prepare provides a mock function with given fields: options
 func (_m *MockExecutor) Prepare(options ExecutorPrepareOptions) error {
 	ret := _m.Called(options)

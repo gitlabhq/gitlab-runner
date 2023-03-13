@@ -126,10 +126,6 @@ func init() {
 	}
 }
 
-func (e *executor) Name() string {
-	return "docker"
-}
-
 func (e *executor) getServiceVariables(serviceDefinition common.Image) []string {
 	variables := e.Build.GetAllVariables().PublicOrInternal()
 	variables = append(variables, serviceDefinition.Variables...)

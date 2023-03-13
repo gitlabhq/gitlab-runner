@@ -75,8 +75,6 @@ type Executor interface {
 	GetCurrentStage() ExecutorStage
 	// SetCurrentStage sets the current stage of build execution.
 	SetCurrentStage(stage ExecutorStage)
-	// Name returns the name of the executor
-	Name() string
 }
 
 type ManagedExecutorProvider interface {
