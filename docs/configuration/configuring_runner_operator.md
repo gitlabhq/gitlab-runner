@@ -37,7 +37,7 @@ Some properties are only available with more recent versions of the Operator.
 | `tags`           | all      | List of comma-separated tags to be applied to the runner. |
 | `concurrent`     | all      | Limits how many jobs can run concurrently. The maximum number is all defined runners. 0 does not mean unlimited. Default is `10`. |
 | `interval`       | all      | Defines the number of seconds between checks for new jobs. Default is `30`. |
-| `locked`         | 1.8      | Defines if the runner should be locked to a specific project. Default is `false`. |
+| `locked`         | 1.8      | Defines if the runner should be locked to a project. Default is `false`. |
 | `runUntagged`    | 1.8      | Defines if jobs without tags should be run. Default is `true` if no tags were specified. Otherwise, it's `false`. |
 | `protected`      | 1.8      | Defines if the runner should run jobs on protected branches only. Default is `false`. |
 | `cloneURL`       | all      | Overwrite the URL for the GitLab instance. Used only if the runner can’t connect to the GitLab URL. |
@@ -233,7 +233,7 @@ Set the `concurrent` property of the `Runner` resource:
      concurrent: 2
    ```
 
-Job concurrency is dictated by the requirements of the specific project.
+Job concurrency is dictated by the requirements of the project.
 
 1. Start by trying to determine the compute and memory resources required to execute a CI job.
 1. Calculate how many times that job would be able to execute given the resources in the cluster.

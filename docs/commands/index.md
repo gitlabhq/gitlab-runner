@@ -322,7 +322,7 @@ NOTE:
 Runners can be unregistered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner) but
 configuration is not modified for the user.
 
-To unregister a specific runner, first get the runner's details by executing
+To unregister a single runner, first get the runner's details by executing
 `gitlab-runner list`:
 
 ```plaintext
