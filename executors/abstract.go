@@ -21,7 +21,7 @@ type ExecutorOptions struct {
 
 type AbstractExecutor struct {
 	ExecutorOptions
-	common.BuildLogger
+	BuildLogger  common.BuildLogger
 	Config       common.RunnerConfig
 	Build        *common.Build
 	Trace        common.JobTrace
@@ -57,7 +57,7 @@ func (e *AbstractExecutor) generateShellConfiguration() error {
 		return err
 	}
 	e.BuildShell = shellConfiguration
-	e.Debugln("Shell configuration:", shellConfiguration)
+	e.BuildLogger.Debugln("Shell configuration:", shellConfiguration)
 	return nil
 }
 

@@ -47,7 +47,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	s.Debugln("Starting Docker command...")
+	s.BuildLogger.Debugln("Starting Docker command...")
 
 	if len(s.BuildShell.DockerCommand) == 0 {
 		return errors.New("script is not compatible with Docker")
@@ -64,7 +64,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	if s.isUmaskDisabled() {
-		s.Println("Not using umask - FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR is set!")
+		s.BuildLogger.Println("Not using umask - FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR is set!")
 	}
 
 	return nil
@@ -92,7 +92,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 	var runErr error
 	for attempts := 1; attempts <= maxAttempts; attempts++ {
 		if attempts > 1 {
-			s.Infoln(fmt.Sprintf("Retrying %s", cmd.Stage))
+			s.BuildLogger.Infoln(fmt.Sprintf("Retrying %s", cmd.Stage))
 		}
 
 		ctr, err := s.getContainer(cmd)
@@ -100,7 +100,7 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 			return err
 		}
 
-		s.Debugln("Executing on", ctr.Name, "the", cmd.Script)
+		s.BuildLogger.Debugln("Executing on", ctr.Name, "the", cmd.Script)
 		s.SetCurrentStage(ExecutorStageRun)
 
 		runErr = s.startAndWatchContainer(cmd.Context, ctr.ID, bytes.NewBufferString(cmd.Script))
@@ -108,11 +108,11 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 			return runErr
 		}
 
-		s.Errorln(fmt.Sprintf("Container %q not found or removed. Will retry...", ctr.ID))
+		s.BuildLogger.Errorln(fmt.Sprintf("Container %q not found or removed. Will retry...", ctr.ID))
 	}
 
 	if runErr != nil && maxAttempts > 1 {
-		s.Errorln("Execution attempts exceeded")
+		s.BuildLogger.Errorln("Execution attempts exceeded")
 	}
 
 	return runErr
@@ -140,7 +140,7 @@ func (s *commandExecutor) hasExistingContainer(containerType string, container *
 		return false
 	}
 
-	s.Warningln("Failed to inspect", containerType, "container", container.ID, err.Error())
+	s.BuildLogger.Warningln("Failed to inspect", containerType, "container", container.ID, err.Error())
 
 	return false
 }
@@ -301,7 +301,7 @@ func (s *commandExecutor) executeChownOnDir(
 	gid int,
 	dir string,
 ) error {
-	s.Println(fmt.Sprintf("Changing ownership of files at %q to %d:%d", dir, uid, gid))
+	s.BuildLogger.Println(fmt.Sprintf("Changing ownership of files at %q to %d:%d", dir, uid, gid))
 
 	output := new(bytes.Buffer)
 	// limit how much data we read from the container log to

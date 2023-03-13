@@ -212,16 +212,16 @@ func (e *executor) logStartupMessage() {
 
 	info := e.driverInfo
 	if info == nil || info.Name == nil {
-		e.Println(fmt.Sprintf("%s...", usageLine))
+		e.BuildLogger.Println(fmt.Sprintf("%s...", usageLine))
 		return
 	}
 
 	if info.Version == nil {
-		e.Println(fmt.Sprintf("%s with driver %s...", usageLine, *info.Name))
+		e.BuildLogger.Println(fmt.Sprintf("%s with driver %s...", usageLine, *info.Name))
 		return
 	}
 
-	e.Println(fmt.Sprintf("%s with driver %s %s...", usageLine, *info.Name, *info.Version))
+	e.BuildLogger.Println(fmt.Sprintf("%s with driver %s %s...", usageLine, *info.Name, *info.Version))
 }
 
 func (e *executor) defaultCommandOutputs() commandOutputs {
@@ -281,7 +281,7 @@ func (e *executor) getCIJobServicesEnv() common.JobVariable {
 
 	servicesSerialized, err := json.Marshal(services)
 	if err != nil {
-		e.Warningln("Unable to serialize CI_JOB_SERVICES json:", err)
+		e.BuildLogger.Warningln("Unable to serialize CI_JOB_SERVICES json:", err)
 	}
 
 	return common.JobVariable{
@@ -326,7 +326,7 @@ func (e *executor) Cleanup() {
 
 	err := e.prepareConfig()
 	if err != nil {
-		e.Warningln(err)
+		e.BuildLogger.Warningln(err)
 
 		// at this moment we don't care about the errors
 		return
@@ -358,7 +358,7 @@ func (e *executor) Cleanup() {
 
 	err = e.prepareCommand(ctx, opts).Run()
 	if err != nil {
-		e.Warningln("Cleanup script failed:", err)
+		e.BuildLogger.Warningln("Cleanup script failed:", err)
 	}
 }
 

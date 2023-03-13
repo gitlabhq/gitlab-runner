@@ -20,7 +20,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return fmt.Errorf("prearing AbstractExecutor: %w", err)
 	}
 
-	s.Println("Using SSH executor...")
+	s.BuildLogger.Println("Using SSH executor...")
 	if s.BuildShell.PassFile {
 		return errors.New("SSH doesn't support shells that require script file")
 	}
@@ -29,7 +29,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("missing SSH configuration")
 	}
 
-	s.Debugln("Starting SSH command...")
+	s.BuildLogger.Debugln("Starting SSH command...")
 
 	// Create SSH command
 	s.sshCommand = ssh.Client{
@@ -38,7 +38,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		Stderr: s.Trace,
 	}
 
-	s.Debugln("Connecting to SSH server...")
+	s.BuildLogger.Debugln("Connecting to SSH server...")
 	err = s.sshCommand.Connect()
 	if err != nil {
 		return fmt.Errorf("ssh command Connect() error: %w", err)
