@@ -626,7 +626,7 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	buildFinish := make(chan error, 1)
 	buildPanic := make(chan error, 1)
 
-	runContext, runCancel := context.WithCancel(context.Background())
+	runContext, runCancel := context.WithCancel(ctx)
 	defer runCancel()
 
 	if term, ok := executor.(terminal.InteractiveTerminal); b.Session != nil && ok {
