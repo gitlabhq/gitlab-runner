@@ -276,7 +276,7 @@ The following settings define the Docker container parameters.
 | `cap_drop`                     | Drop additional Linux capabilities from the container. |
 | `cpuset_cpus`                  | The control group's `CpusetCpus`. A string. |
 | `cpu_shares`                   | Number of CPU shares used to set relative CPU usage. Default is `1024`. |
-| `cpus`                         | Number of CPUs (available in Docker 1.13 or later. A string.  |
+| `cpus`                         | Number of CPUs (available in Docker 1.13 or later). A string.  |
 | `devices`                      | Share additional host devices with the container. |
 | `device_cgroup_rules`          | Custom device `cgroup` rules (available in Docker 1.28 or later). |
 | `disable_cache`                | The Docker executor has two levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
