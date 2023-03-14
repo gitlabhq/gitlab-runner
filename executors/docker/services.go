@@ -265,7 +265,9 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
 	buffer.WriteString("\n")
-	_, _ = io.Copy(e.Trace, &buffer)
+
+	_, _ = e.BuildLogger.Stderr().Write(buffer.Bytes())
+
 	return err
 }
 
@@ -288,7 +290,9 @@ func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[strin
 			}
 		}
 
-		sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), e.Trace)
+		logger := e.BuildLogger.StreamID(common.StreamStartingServiceLevel)
+
+		sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger.Stdout())
 		if err := e.captureContainerLogs(ctx, service.ID, service.Names[0], sink); err != nil {
 			e.BuildLogger.Warningln(err.Error())
 		}

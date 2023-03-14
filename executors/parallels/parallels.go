@@ -61,8 +61,8 @@ func (s *executor) verifyMachine(vmName string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		Config:         *s.Config.SSH,
-		Stdout:         s.Trace,
-		Stderr:         s.Trace,
+		Stdout:         s.BuildLogger.Stdout(),
+		Stderr:         s.BuildLogger.Stderr(),
 		ConnectRetries: 30,
 	}
 	sshCommand.Host = ipAddr
@@ -353,10 +353,12 @@ func (s *executor) sshConnect() error {
 	}
 
 	s.BuildLogger.Debugln("Starting SSH command...")
+
+	logger := s.BuildLogger.StreamID(common.StreamWorkLevel)
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.Trace,
-		Stderr: s.Trace,
+		Stdout: logger.Stdout(),
+		Stderr: logger.Stderr(),
 	}
 	s.sshCommand.Host = ipAddr
 

@@ -717,10 +717,12 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
 	dockerExec := exec.NewDocker(e.Context, e.client, e.waiter, e.Build.Log())
 
+	logger := e.BuildLogger.StreamID(common.StreamWorkLevel)
+
 	streams := exec.IOStreams{
 		Stdin:  input,
-		Stderr: e.Trace,
-		Stdout: e.Trace,
+		Stderr: logger.Stderr(),
+		Stdout: logger.Stdout(),
 	}
 
 	var gracefulExitFunc wait.GracefulExitFunc

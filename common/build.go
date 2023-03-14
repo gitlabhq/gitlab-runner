@@ -928,7 +928,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.configureTrace(trace, cancel)
 
-	options := b.createExecutorPrepareOptions(ctx, globalConfig, trace)
+	options := b.createExecutorPrepareOptions(ctx, globalConfig)
 	provider := GetExecutorProvider(b.Runner.Executor)
 	if provider == nil {
 		return errors.New("executor not found")
@@ -978,17 +978,13 @@ func (b *Build) configureTrace(trace JobTrace, cancel context.CancelFunc) {
 	})
 }
 
-func (b *Build) createExecutorPrepareOptions(
-	ctx context.Context,
-	globalConfig *Config,
-	trace JobTrace,
-) ExecutorPrepareOptions {
+func (b *Build) createExecutorPrepareOptions(ctx context.Context, globalConfig *Config) ExecutorPrepareOptions {
 	return ExecutorPrepareOptions{
-		Config:  b.Runner,
-		Build:   b,
-		Trace:   trace,
-		User:    globalConfig.User,
-		Context: ctx,
+		Config:      b.Runner,
+		Build:       b,
+		BuildLogger: b.logger,
+		User:        globalConfig.User,
+		Context:     ctx,
 	}
 }
 

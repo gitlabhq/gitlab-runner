@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -75,8 +76,7 @@ func prepareExecutorForCleanup(t *testing.T, tt executorTestCase) (*executor, *b
 
 	e.Config = *options.Config
 	e.Build = options.Build
-	e.Trace = options.Trace
-	e.BuildLogger = common.NewBuildLogger(e.Trace, e.Build.Log())
+	e.BuildLogger = options.BuildLogger
 
 	return e, out
 }
@@ -108,9 +108,9 @@ func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.Execu
 			JobResponse: successfulBuild,
 			Runner:      &tt.config,
 		},
-		Config:  &tt.config,
-		Context: context.Background(),
-		Trace:   trace,
+		Config:      &tt.config,
+		Context:     context.Background(),
+		BuildLogger: common.NewBuildLogger(trace, logrus.WithFields(logrus.Fields{})),
 	}
 
 	e := new(executor)
@@ -911,8 +911,7 @@ func TestExecutor_Env(t *testing.T) {
 			e, options, _ := prepareExecutor(t, tt)
 			e.Config = *options.Config
 			e.Build = options.Build
-			e.Trace = options.Trace
-			e.BuildLogger = common.NewBuildLogger(e.Trace, e.Build.Log())
+			e.BuildLogger = options.BuildLogger
 			if tt.adjustExecutor != nil {
 				tt.adjustExecutor(t, e)
 			}
@@ -1087,8 +1086,7 @@ func TestExecutor_ServicesEnv(t *testing.T) {
 			e, options, _ := prepareExecutor(t, tt)
 			e.Config = *options.Config
 			e.Build = options.Build
-			e.Trace = options.Trace
-			e.BuildLogger = common.NewBuildLogger(e.Trace, e.Build.Log())
+			e.BuildLogger = options.BuildLogger
 			if tt.adjustExecutor != nil {
 				tt.adjustExecutor(t, e)
 			}

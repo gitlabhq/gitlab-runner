@@ -172,7 +172,7 @@ func (e *executor) dynamicConfig() error {
 	buf := bytes.NewBuffer(nil)
 	outputs := commandOutputs{
 		stdout: buf,
-		stderr: e.Trace,
+		stderr: e.BuildLogger.Stderr(),
 	}
 
 	opts := prepareCommandOpts{
@@ -226,8 +226,8 @@ func (e *executor) logStartupMessage() {
 
 func (e *executor) defaultCommandOutputs() commandOutputs {
 	return commandOutputs{
-		stdout: e.Trace,
-		stderr: e.Trace,
+		stdout: e.BuildLogger.Stdout(),
+		stderr: e.BuildLogger.Stderr(),
 	}
 }
 
@@ -312,10 +312,15 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 
 	args := append(e.config.RunArgs, scriptFile, string(stage))
 
+	logger := e.BuildLogger.StreamID(common.StreamWorkLevel)
+
 	opts := prepareCommandOpts{
 		executable: e.config.RunExec,
 		args:       args,
-		out:        e.defaultCommandOutputs(),
+		out: commandOutputs{
+			stdout: logger.Stdout(),
+			stderr: logger.Stderr(),
+		},
 	}
 
 	return e.prepareCommand(cmd.Context, opts).Run()

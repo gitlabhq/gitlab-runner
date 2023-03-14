@@ -31,11 +31,13 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	s.BuildLogger.Debugln("Starting SSH command...")
 
+	logger := s.BuildLogger.StreamID(common.StreamWorkLevel)
+
 	// Create SSH command
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.Trace,
-		Stderr: s.Trace,
+		Stdout: logger.Stdout(),
+		Stderr: logger.Stderr(),
 	}
 
 	s.BuildLogger.Debugln("Connecting to SSH server...")

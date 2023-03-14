@@ -24,7 +24,6 @@ type AbstractExecutor struct {
 	BuildLogger  common.BuildLogger
 	Config       common.RunnerConfig
 	Build        *common.Build
-	Trace        common.JobTrace
 	BuildShell   *common.ShellConfiguration
 	currentStage common.ExecutorStage
 	Context      context.Context
@@ -123,8 +122,7 @@ func (e *AbstractExecutor) PrepareConfiguration(options common.ExecutorPrepareOp
 	e.Context = options.Context
 	e.Config = *options.Config
 	e.Build = options.Build
-	e.Trace = options.Trace
-	e.BuildLogger = common.NewBuildLogger(options.Trace, options.Build.Log())
+	e.BuildLogger = options.BuildLogger
 	e.ProxyPool = proxy.NewPool()
 }
 

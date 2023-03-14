@@ -1128,7 +1128,6 @@ func TestCleanup(t *testing.T) {
 					},
 				},
 			}
-			ex.AbstractExecutor.Trace = buildTrace
 			ex.AbstractExecutor.BuildLogger = common.NewBuildLogger(buildTrace, logrus.WithFields(logrus.Fields{}))
 
 			if test.Config == nil {
@@ -5299,6 +5298,11 @@ func TestProcessLogs(t *testing.T) {
 				Return(0, nil).
 				Once()
 
+			mockTrace.On("IsStdout").Return(true).Maybe()
+			mockTrace.On("Write", mock.Anything).
+				Return(0, nil).
+				Maybe()
+
 			mockLogProcessor := new(mockLogProcessor)
 			defer mockLogProcessor.AssertExpectations(t)
 
@@ -5310,7 +5314,7 @@ func TestProcessLogs(t *testing.T) {
 			tc.run(tc.lineCh, tc.errCh)
 
 			e := newExecutor()
-			e.Trace = mockTrace
+			e.BuildLogger = common.NewBuildLogger(mockTrace, logrus.WithFields(logrus.Fields{}))
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod_name"
 			e.pod.Namespace = "namespace"
@@ -5472,7 +5476,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			}
 			e.kubeClient = client
 			e.remoteProcessTerminated = make(chan shells.StageCommandStatus)
-			e.Trace = &common.Trace{Writer: os.Stdout}
+			e.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}))
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod"
 			e.pod.Namespace = "namespace"

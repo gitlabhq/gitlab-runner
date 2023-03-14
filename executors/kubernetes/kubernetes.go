@@ -527,7 +527,7 @@ func (s *executor) watchPodEvents() error {
 }
 
 func (s *executor) printPodEvents() {
-	w := tabwriter.NewWriter(s.Trace, 3, 1, 3, ' ', 0)
+	w := tabwriter.NewWriter(s.BuildLogger.Stderr(), 3, 1, 3, ' ', 0)
 	_, _ = fmt.Fprintln(w, "Type\tReason\tMessage")
 
 	// The s.eventsStream.Stop method will be called by the caller
@@ -701,7 +701,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		}
 	}
 
-	var out io.Writer = s.Trace
+	var out io.Writer = s.BuildLogger.Stderr()
 	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
 		out = io.Discard
 	}
@@ -912,7 +912,9 @@ func (s *executor) writeRunnerLog(log string) (int, error) {
 		log = log[:size-1]
 	}
 
-	return s.Trace.Write([]byte(log))
+	// todo:
+	// build logger: update kubernetes log processor to support separate stdout/stderr streams
+	return s.BuildLogger.Stdout().Write([]byte(log))
 }
 
 // getExitCode tries to extract the exit code from an inner exec.CodeExitError
@@ -2303,7 +2305,7 @@ func (s *executor) runInContainerWithExec(
 	go func() {
 		defer close(errCh)
 
-		var out io.Writer = s.Trace
+		var out io.Writer = s.BuildLogger.Stderr()
 		if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
 			out = io.Discard
 		}
@@ -2325,8 +2327,8 @@ func (s *executor) runInContainerWithExec(
 			ContainerName: name,
 			Command:       command,
 			In:            strings.NewReader(script),
-			Out:           s.Trace,
-			Err:           s.Trace,
+			Out:           s.BuildLogger.Stdout(),
+			Err:           s.BuildLogger.Stderr(),
 			Stdin:         true,
 			Config:        s.kubeConfig,
 			Client:        s.kubeClient,
@@ -2474,8 +2476,11 @@ func (s *executor) captureContainersLogs(ctx context.Context, containers []api.C
 			if service.Name != container.Image {
 				continue
 			}
+
+			logger := s.BuildLogger.StreamID(common.StreamStartingServiceLevel)
+
 			aliases := append([]string{strings.Split(container.Image, ":")[0]}, service.Aliases()...)
-			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), s.Trace)
+			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger.Stdout())
 			if err := s.captureContainerLogs(ctx, container.Name, sink); err != nil {
 				s.BuildLogger.Warningln(err.Error())
 			}

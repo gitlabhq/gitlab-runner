@@ -12,9 +12,19 @@ import (
 )
 
 type BuildLogger struct {
-	log   JobTrace
-	entry *logrus.Entry
+	log      JobTrace
+	entry    *logrus.Entry
+	streamID int
 }
+
+const (
+	// StreamExecutorLevel is the stream number for an executor log line
+	StreamExecutorLevel = 0
+	// StreamWorkLevel is the stream number for a work log line
+	StreamWorkLevel = 1
+	// StreamStartingServiceLevel is the starting stream number for a service log line
+	StreamStartingServiceLevel = 15
+)
 
 type jobTraceIsMaskingURLParams interface {
 	IsMaskingURLParams() bool
@@ -24,6 +34,22 @@ func NewBuildLogger(log JobTrace, entry *logrus.Entry) BuildLogger {
 	return BuildLogger{
 		log:   log,
 		entry: entry,
+	}
+}
+
+func (e *BuildLogger) Stdout() io.Writer {
+	return e.log
+}
+
+func (e *BuildLogger) Stderr() io.Writer {
+	return e.log
+}
+
+func (e *BuildLogger) StreamID(streamID int) BuildLogger {
+	return BuildLogger{
+		log:      e.log,
+		entry:    e.entry,
+		streamID: streamID,
 	}
 }
 
