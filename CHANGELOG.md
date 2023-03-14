@@ -1,3 +1,70 @@
+## v15.9.1 (2023-02-20)
+
+### Bug fixes
+
+- Remove re-writing config.toml file on configuration reload !3934
+
+## v15.9.0 (2023-02-19)
+
+### New features
+
+- Ignore glrt prefix for runner short token !3888
+- Log artifact download request host !3872
+- Use taskscaler and nesting slots !3818
+
+### Bug fixes
+
+- Handle empty artifact paths !3912
+- Execute the script from the right container !3900
+- Update removal milestone in warning log message for step_script !3893
+- Generate random system_id for run-single mode !3881 (Helio Machado @0x2b3bfa0)
+- Clarify checking out message to reduce confusion !3880
+- Allow runner to start when config directory is not writeable !3879
+- Fix bug with project dir not resolving as in the project !3877
+- Use JobVariable.Value() for internal values !3870
+- Prevent masking panic by ignoring zero length secrets !3869
+- Sending debug_trace param on PATCH job_trace requests !3857
+
+### Maintenance
+
+- Fix misspelling in documentation !3896 (Shafiullah Khan @gitshafi)
+- Add additional test coverage around path matching for artifacts (doublestar) !3890
+- Add documetnation for shutdown_timeout config.toml setting !3887
+- Update Docker Machine installed in runner container image !3886
+- Upgrade github.com/BurntSushi/toml !3883
+- Clarify the use of --version when installing the Helm chart !3882
+- Fixed wording for help command in docs !3878 (E Jo Zim @designerzim)
+- Use new Ruby 3.0.5-based Docker images !3876
+- Drop Windows exemption for warning about system cert pool !3871
+- Improve Docker Machine executor finish message !3868
+- Add link to all metrics available !3867
+- Update documentation about helper image being pushed on dockerhub !3866
+- Update documentation to highlight access to CI Variables from container entrypoint with k8s executor !3865
+- Add backticks to fix kramdown warning !3864
+- Reduce log level to reduce noise in logging !3863
+- Clean up docs redirects, runner - 2023-01-23 !3861
+- Add metrics for counting configuration file access !3859
+- Handle the content of the new pre_get_sources_script and post_get_sources_script job payloads in Runner !3858
+- Use latest docs linting images for project !3856
+- Update always policy to match the docker wording !3851
+- Log type of shell when using Shell executor !3850 (Anatoli Babenia @abitrolly)
+- Add default annotations to Kubernetes build pods !3845 (Adrian Rasokat @adrian.rasokat.tui)
+- Update removal milestone in deprecation warning !3844
+- Document requirement for Docker executor image ENTRYPOINT to support sh/bash COMMAND !3839 (Pierre Beucher @pbeucher)
+- Update golang Docker tag to v1.18.10 !3828
+- Docker executor CTRT part 4 !3826
+- Automate keeping up to date with packagecloud release !3821
+- Automatically set Alpine and Ubuntu version defaults in make !3816
+- Warn about exceeding the global concurrency limit when setting up a new runner !3797
+- CTRT docker executor part 2 !3788
+- Make external address usage configurable !3783
+- Update redhat/ubi8 Docker tag to v8.7-1054 !3764
+- Add support for setting procMount of build container !3546 (Alex Wied @alex-cm)
+
+### Documentation changes
+
+- Change removal date to 17.0 for gitlab-runner exec (docs only) !3884
+
 ## v15.8.0 (2023-01-19)
 
 ### New features
