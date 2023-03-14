@@ -17,6 +17,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -154,7 +155,7 @@ type Build struct {
 
 	Session *session.Session
 
-	logger BuildLogger
+	logger buildlogger.Logger
 
 	allVariables     JobVariables
 	secretsVariables JobVariables
@@ -745,7 +746,7 @@ func (b *Build) waitForBuildFinish(buildFinish <-chan error, timeout time.Durati
 func (b *Build) retryCreateExecutor(
 	options ExecutorPrepareOptions,
 	provider ExecutorProvider,
-	logger BuildLogger,
+	logger buildlogger.Logger,
 ) (Executor, error) {
 	var err error
 
@@ -899,7 +900,7 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.logUsedImages()
 
-	b.logger = NewBuildLogger(trace, b.Log())
+	b.logger = buildlogger.New(trace, b.Log())
 	b.printRunningWithHeader()
 
 	b.setCurrentState(BuildRunStatePending)

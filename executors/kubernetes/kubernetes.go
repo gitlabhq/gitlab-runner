@@ -36,6 +36,7 @@ import (
 	"github.com/samber/lo"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -2477,7 +2478,7 @@ func (s *executor) captureContainersLogs(ctx context.Context, containers []api.C
 				continue
 			}
 
-			logger := s.BuildLogger.StreamID(common.StreamStartingServiceLevel)
+			logger := s.BuildLogger.StreamID(buildlogger.StreamStartingServiceLevel)
 
 			aliases := append([]string{strings.Split(container.Image, ":")[0]}, service.Aliases()...)
 			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger.Stdout())

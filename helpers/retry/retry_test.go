@@ -11,8 +11,7 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 func TestRetry_Run(t *testing.T) {
@@ -124,7 +123,7 @@ func TestRetryableBuildLoggerDecorator(t *testing.T) {
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
 	logger, hook := test.NewNullLogger()
-	buildLogger := common.NewBuildLogger(nil, logger.WithContext(context.Background()))
+	buildLogger := buildlogger.New(nil, logger.WithContext(context.Background()))
 	r := New(m.Run).WithCheck(m.ShouldRetry).WithBuildLog(&buildLogger)
 
 	assert.Equal(t, err, r.Run())

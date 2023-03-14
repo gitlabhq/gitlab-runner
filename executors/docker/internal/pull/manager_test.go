@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
@@ -433,7 +434,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 
 	logger, _ := logrustest.NewNullLogger()
 	output := bytes.NewBufferString("")
-	buildLogger := common.NewBuildLogger(&common.Trace{Writer: output}, logger.WithField("test", t.Name()))
+	buildLogger := buildlogger.New(&common.Trace{Writer: output}, logger.WithField("test", t.Name()))
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways, common.PullPolicyIfNotPresent}}
 	dockerOptions := common.ImageDockerOptions{}

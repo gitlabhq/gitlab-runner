@@ -23,6 +23,7 @@ import (
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
@@ -229,7 +230,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			}
 
 			logger, _ := test.NewNullLogger()
-			bl := common.NewBuildLogger(nil, logrus.NewEntry(logger))
+			bl := buildlogger.New(nil, logrus.NewEntry(logger))
 
 			options := executorPrepareOptions(tc.jobImage, tc.nestingCfgImage, testNestingHost, testVariableValue)
 			options.Config.Autoscaler.VMIsolation.Enabled = tc.vmIsolationEnabled
@@ -238,7 +239,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			ref := newAcquisitionRef("test-key", true)
 			ref.dialAcquisitionInstance = mockAcqInstD.fn()
 			ref.dialTunnel = mockTunnelD.fn()
-			ref.connectNestingFn = func(host string, _ common.BuildLogger, _ connector.Client) (nestingapi.Client, io.Closer, error) {
+			ref.connectNestingFn = func(host string, _ buildlogger.Logger, _ connector.Client) (nestingapi.Client, io.Closer, error) {
 				assert.Equal(t, testNestingHost, host)
 				return nestingClient, nestingConn, tc.connectNestingErr
 			}

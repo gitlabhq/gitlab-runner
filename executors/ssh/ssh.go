@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
@@ -31,7 +32,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	s.BuildLogger.Debugln("Starting SSH command...")
 
-	logger := s.BuildLogger.StreamID(common.StreamWorkLevel)
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 
 	// Create SSH command
 	s.sshCommand = ssh.Client{

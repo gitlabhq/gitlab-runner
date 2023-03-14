@@ -1,6 +1,6 @@
 //go:build !integration
 
-package common
+package buildlogger
 
 import (
 	"bytes"
@@ -8,38 +8,34 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 type fakeJobTrace struct {
-	*MockJobTrace
 	buffer *bytes.Buffer
+}
+
+func (fjt *fakeJobTrace) Write(p []byte) (int, error) {
+	return fjt.buffer.Write(p)
+}
+
+func (fjt *fakeJobTrace) IsStdout() bool {
+	return false
 }
 
 func (fjt *fakeJobTrace) Read() string {
 	return fjt.buffer.String()
 }
 
-func newFakeJobTrace() fakeJobTrace {
-	e := new(MockJobTrace)
+func newFakeJobTrace() *fakeJobTrace {
 	buf := new(bytes.Buffer)
 
-	e.On("IsStdout").Return(false).Maybe()
-	call := e.On("Write", mock.Anything).Maybe()
-
-	call.RunFn = func(args mock.Arguments) {
-		n, err := buf.Write(args.Get(0).([]byte))
-		call.ReturnArguments = mock.Arguments{n, err}
-	}
-
-	return fakeJobTrace{
-		MockJobTrace: e,
-		buffer:       buf,
+	return &fakeJobTrace{
+		buffer: buf,
 	}
 }
 
-func newBuildLogger(testName string, jt JobTrace) BuildLogger {
-	return NewBuildLogger(jt, logrus.WithField("test", testName))
+func newBuildLogger(testName string, jt Trace) Logger {
+	return New(jt, logrus.WithField("test", testName))
 }
 
 func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *bytes.Buffer)) {
@@ -55,7 +51,6 @@ func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *
 func TestLogLineWithoutSecret(t *testing.T) {
 	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
 		jt := newFakeJobTrace()
-		defer jt.AssertExpectations(t)
 
 		l := newBuildLogger("log-line-without-secret", jt)
 
@@ -68,7 +63,6 @@ func TestLogLineWithoutSecret(t *testing.T) {
 func TestLogLineWithSecret(t *testing.T) {
 	runOnHijackedLogrusOutput(t, func(t *testing.T, output *bytes.Buffer) {
 		jt := newFakeJobTrace()
-		defer jt.AssertExpectations(t)
 
 		l := newBuildLogger("log-line-with-secret", jt)
 
@@ -112,9 +106,8 @@ func TestLogPrinters(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			trace := newFakeJobTrace()
-			defer trace.AssertExpectations(t)
 
-			logger := NewBuildLogger(trace, tc.entry)
+			logger := New(trace, tc.entry)
 
 			logger.Println("print")
 			logger.Infoln("info")

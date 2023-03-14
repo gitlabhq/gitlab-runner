@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
 )
@@ -110,7 +111,7 @@ func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.Execu
 		},
 		Config:      &tt.config,
 		Context:     context.Background(),
-		BuildLogger: common.NewBuildLogger(trace, logrus.WithFields(logrus.Fields{})),
+		BuildLogger: buildlogger.New(trace, logrus.WithFields(logrus.Fields{})),
 	}
 
 	e := new(executor)

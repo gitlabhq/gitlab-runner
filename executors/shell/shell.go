@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
@@ -61,7 +62,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 func (s *executor) Run(cmd common.ExecutorCommand) error {
 	s.BuildLogger.Debugln("Using new shell command execution")
 
-	logger := s.BuildLogger.StreamID(common.StreamWorkLevel)
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 	cmdOpts := process.CommandOptions{
 		Env:                             os.Environ(),
 		Stdout:                          logger.Stdout(),

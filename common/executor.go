@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 // ExecutorData is an empty interface representing free-form data
@@ -42,7 +43,7 @@ const (
 type ExecutorPrepareOptions struct {
 	Config      *RunnerConfig
 	Build       *Build
-	BuildLogger BuildLogger
+	BuildLogger buildlogger.Logger
 	User        string
 	Context     context.Context
 }

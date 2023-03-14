@@ -16,6 +16,7 @@ import (
 	"gitlab.com/gitlab-org/fleeting/nesting/hypervisor"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 )
 
@@ -39,7 +40,7 @@ type acquisitionRef struct {
 
 	connectNestingFn func(
 		host string,
-		logger common.BuildLogger,
+		logger buildlogger.Logger,
 		fleetingDialer connector.Client,
 	) (nestingapi.Client, io.Closer, error)
 }
@@ -55,7 +56,7 @@ func newAcquisitionRef(key string, mapJobImageToVMImage bool) *acquisitionRef {
 
 func (ref *acquisitionRef) Prepare(
 	ctx context.Context,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 	options common.ExecutorPrepareOptions,
 ) (executors.Client, error) {
 	if ref.acq == nil {
@@ -118,7 +119,7 @@ func (ref *acquisitionRef) Prepare(
 
 func (ref *acquisitionRef) connectNesting(
 	host string,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 	fleetingDialer connector.Client,
 ) (nestingapi.Client, io.Closer, error) {
 	if ref.connectNestingFn != nil {
@@ -142,7 +143,7 @@ func (ref *acquisitionRef) connectNesting(
 
 func (ref *acquisitionRef) createVMTunnel(
 	ctx context.Context,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 	nc nestingapi.Client,
 	fleetingDialer connector.Client,
 	options common.ExecutorPrepareOptions,

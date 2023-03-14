@@ -6,10 +6,11 @@ import (
 	"net"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 type Environment interface {
-	Prepare(context.Context, common.BuildLogger, common.ExecutorPrepareOptions) (Client, error)
+	Prepare(context.Context, buildlogger.Logger, common.ExecutorPrepareOptions) (Client, error)
 }
 
 type Client interface {

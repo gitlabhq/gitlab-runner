@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 type allowedImageTestCase struct {
@@ -55,7 +56,7 @@ var allowedImageTestCases = []allowedImageTestCase{
 }
 
 func TestVerifyAllowedImage(t *testing.T) {
-	logger := BuildLogger{}
+	logger := buildlogger.Logger{}
 
 	for _, test := range allowedImageTestCases {
 		options := VerifyAllowedImageOptions{

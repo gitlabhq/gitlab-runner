@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/api"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
@@ -312,7 +313,7 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 
 	args := append(e.config.RunArgs, scriptFile, string(stage))
 
-	logger := e.BuildLogger.StreamID(common.StreamWorkLevel)
+	logger := e.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 
 	opts := prepareCommandOpts{
 		executable: e.config.RunExec,

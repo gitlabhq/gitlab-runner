@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/autoscaler"
 )
@@ -72,7 +73,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (e *executor) Run(cmd common.ExecutorCommand) error {
-	logger := e.BuildLogger.StreamID(common.StreamWorkLevel)
+	logger := e.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 
 	return e.client.Run(cmd.Context, executors.RunOptions{
 		Command: e.BuildShell.CmdLine,

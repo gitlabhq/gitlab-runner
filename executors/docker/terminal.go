@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	terminalsession "gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 	terminal "gitlab.com/gitlab-org/gitlab-terminal"
@@ -78,7 +78,7 @@ func (s *commandExecutor) Connect() (terminalsession.Conn, error) {
 }
 
 type terminalConn struct {
-	logger   *common.BuildLogger
+	logger   *buildlogger.Logger
 	ctx      context.Context
 	cancelFn func()
 

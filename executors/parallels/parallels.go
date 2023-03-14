@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/vm"
 	prl "gitlab.com/gitlab-org/gitlab-runner/helpers/parallels"
@@ -354,7 +355,7 @@ func (s *executor) sshConnect() error {
 
 	s.BuildLogger.Debugln("Starting SSH command...")
 
-	logger := s.BuildLogger.StreamID(common.StreamWorkLevel)
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
 		Stdout: logger.Stdout(),

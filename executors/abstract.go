@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
@@ -21,7 +22,7 @@ type ExecutorOptions struct {
 
 type AbstractExecutor struct {
 	ExecutorOptions
-	BuildLogger  common.BuildLogger
+	BuildLogger  buildlogger.Logger
 	Config       common.RunnerConfig
 	Build        *common.Build
 	BuildShell   *common.ShellConfiguration

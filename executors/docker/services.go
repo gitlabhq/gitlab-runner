@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
@@ -290,7 +291,7 @@ func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[strin
 			}
 		}
 
-		logger := e.BuildLogger.StreamID(common.StreamStartingServiceLevel)
+		logger := e.BuildLogger.StreamID(buildlogger.StreamStartingServiceLevel)
 
 		sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger.Stdout())
 		if err := e.captureContainerLogs(ctx, service.ID, service.Names[0], sink); err != nil {
