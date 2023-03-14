@@ -13,18 +13,19 @@ GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pi
 
 If you use GitLab.com, you can run your CI/CD jobs on runners hosted by GitLab.
 These runners are [managed](https://docs.gitlab.com/ee/ci/runners/index.html) by GitLab and
-fully integrated with GitLab.com. These runners are enabled for all projects, though
-[you can disable them](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners).
+fully integrated with GitLab.com. By default these runners are enabled for all projects.
+You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners) if you have
+the Owner role for the project.
 
 Alternatively, you can install GitLab Runner and register your own runners on GitLab.com or
 on your own instance.
 
-## Install your own runners
+## Use self-managed runners **(FREE SELF)**
 
-You can choose to [**install**](install/index.md) the GitLab Runner application
-on infrastructure that you own or manage.
+To use self-managed runners, you [**install**](install/index.md) GitLab Runner on infrastructure
+that you own or manage.
 
-### Scale your fleet of runners
+### Scale a fleet of runners
 
 When your organization scales to having a fleet of runners, you
 should [plan for how you will monitor and adjust performance for these runners](fleet_scaling/index.md).
@@ -49,7 +50,7 @@ If you host your own runners but host your repositories on GitLab.com,
 keep GitLab Runner [updated](install/index.md) to the latest version, as GitLab.com is
 [updated continuously](https://gitlab.com/gitlab-org/release/tasks/-/issues).
 
-### Register your runners
+### Runner registration
 
 After you install the application, you [**register**](register/index.md)
 individual runners. Runners are the agents that run the CI/CD jobs that come from GitLab.
@@ -129,7 +130,7 @@ You can use Prometheus to [**monitor**](monitoring/index.md) your runners.
 You can view things like the number of currently-running jobs and how
 much CPU your runners are using.
 
-### Use a runner to run your job
+### Use a runner to run jobs
 
 After a runner is configured and available for your project, your
 [CI/CD](https://docs.gitlab.com/ee/ci/index.html) jobs can use the runner.
