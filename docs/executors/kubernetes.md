@@ -732,7 +732,7 @@ USER 59417:59417
 
 ## Set a security policy for the container
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/merge_requests/3116) in GitLab Runner 14.5.
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3116) in GitLab Runner 14.5.
 
 Configure the [container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 in the `config.toml` executor to set a container security policy for the build, helper, or service pods.
