@@ -61,7 +61,7 @@ WARNING:
 Debug logging can be a serious security risk. The output contains the content of
 all variables and other secrets available to the job.
 
-### In the GitLab Runner `config.toml`
+### In the command line
 
 From a terminal, logged in as root, run:
 
@@ -69,6 +69,8 @@ From a terminal, logged in as root, run:
 gitlab-runner stop
 gitlab-runner --debug run
 ```
+
+### In the GitLab Runner `config.toml`
 
 Debug logging can be enabled in the [global section of the `config.toml`](../configuration/advanced-configuration.md#the-global-section) by setting the `log_level` setting to `debug`. Add the following line at the very top of your `config.toml`, before/after the concurrent line:
 
