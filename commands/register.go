@@ -264,12 +264,15 @@ func (s *RegisterCommand) askRunner() {
 		return
 	}
 
-	s.Token = s.ask("registration-token", "Enter the registration token:")
-	s.Name = s.ask("name", "Enter a description for the runner:")
+	if s.Token == "" || !s.tokenIsRunnerToken() {
+		s.Token = s.ask("registration-token", "Enter the registration token:")
+	}
 	if !s.tokenIsRunnerToken() {
+		s.Name = s.ask("name", "Enter a description for the runner:")
 		s.doLegacyRegisterRunner()
 		return
 	}
+	s.Name = s.ask("name", "Enter a name for the runner (stored locally only):")
 
 	// when a runner token is specified as a registration token, certain arguments are reserved to the server
 	s.ensureServerConfigArgsEmpty()
@@ -511,7 +514,7 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 	}
 
 	logrus.Fatalln(
-		"Runner configuration other than name, description, and executor configuration is reserved " +
+		"Runner configuration other than name and executor configuration is reserved " +
 			"and cannot be specified when registering with a runner token. " +
 			"This configuration is specified on the GitLab server. Please try again without specifying " +
 			"those arguments.",
