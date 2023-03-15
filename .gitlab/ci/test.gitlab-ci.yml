@@ -256,6 +256,7 @@ fuzz variable mask:
   stage: test
   parallel: 6
   before_script:
+  - start-service docker
   - Set-MpPreference -DisableRealtimeMonitoring $true
   - git config --system core.longpaths true
   - New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
