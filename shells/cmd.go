@@ -35,10 +35,12 @@ const (
 	batchQuoteModeVariable
 )
 
+//nolint:funlen,gocognit
 func batchEscapeMode(input string, mode batchQuoteMode) string {
 	var sb strings.Builder
 	sb.Grow(len(input) * 2)
 
+	quote := false
 	for _, c := range []byte(input) {
 		switch c {
 		case '^', '&', '<', '>', '|':
@@ -55,6 +57,13 @@ func batchEscapeMode(input string, mode batchQuoteMode) string {
 
 		case '\n':
 			sb.WriteString("!nl!")
+			continue
+
+		// other special characters that don't need escaping, but can
+		// need quoting
+		case ' ', '=', ';', ',', '/':
+			sb.WriteByte(c)
+			quote = true
 			continue
 		}
 
@@ -87,7 +96,9 @@ func batchEscapeMode(input string, mode batchQuoteMode) string {
 	output := sb.String()
 
 	if mode != batchQuoteModeVariable && mode != batchQuoteModeEscape {
-		return `"` + output + `"`
+		if quote || len(output) != len(input) {
+			return `"` + output + `"`
+		}
 	}
 
 	return output

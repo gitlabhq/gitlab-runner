@@ -50,13 +50,13 @@ func TestCMD_CDShellEscapes(t *testing.T) {
 	for i, tc := range []testCase{
 		{`c:\`, `c:\`},
 		{`c:/`, `c:\`},
-		{`c:\Program Files`, `c:\Program Files`},
-		{`c:\Program Files (x86)`, `c:\Program Files (x86)`},      // Don't escape the parens
-		{`c: | rd Windows\System32`, `c: ^| rd Windows\System32`}, // Escape the |
+		{`c:\Program Files`, `"c:\Program Files"`},
+		{`c:\Program Files (x86)`, `"c:\Program Files (x86)"`},      // Don't escape the parens
+		{`c: | rd Windows\System32`, `"c: ^| rd Windows\System32"`}, // Escape the |
 	} {
 		writer := &CmdWriter{}
 		writer.Cd(tc.in)
-		expected := fmt.Sprintf("cd /D \"%s\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", tc.out)
+		expected := fmt.Sprintf("cd /D %s\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", tc.out)
 		assert.Equal(t, expected, writer.String(), "case %d", i)
 	}
 }
@@ -65,14 +65,14 @@ func TestCMD_CommandShellEscapes(t *testing.T) {
 	writer := &CmdWriter{}
 	writer.Command("foo", "x&(y)")
 
-	assert.Equal(t, "\"foo\" \"x^&(y)\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", writer.String())
+	assert.Equal(t, "foo \"x^&(y)\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", writer.String())
 }
 
 func TestCMD_CommandShellNoEscapes(t *testing.T) {
 	writer := &CmdWriter{}
 	writer.CommandArgExpand("foo", "x&(y)")
 
-	assert.Equal(t, "\"foo\" \"x^&(y)\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", writer.String())
+	assert.Equal(t, "foo \"x^&(y)\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n", writer.String())
 }
 
 func TestCMD_CommandEscapeVariable(t *testing.T) {
@@ -83,20 +83,20 @@ func TestCMD_CommandEscapeVariable(t *testing.T) {
 	})
 	writer.Command("echo", "%A%")
 
-	assert.Contains(t, writer.String(), `"echo" "^%A^%"`)
+	assert.Contains(t, writer.String(), `echo "^%A^%"`)
 }
 
 func TestCMD_IfCmdShellEscapes(t *testing.T) {
 	writer := &CmdWriter{}
 	writer.IfCmd("foo", "x&(y)")
 
-	assert.Equal(t, "\"foo\" \"x^&(y)\" 2>NUL 1>NUL\r\nIF !errorlevel! EQU 0 (\r\n", writer.String())
+	assert.Equal(t, "foo \"x^&(y)\" 2>NUL 1>NUL\r\nIF !errorlevel! EQU 0 (\r\n", writer.String())
 }
 
 func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 	cases := map[bool]string{
-		true:  "\"foo\"\r\nIF %errorlevel% NEQ 0 exit /b %errorlevel%\r\n\r\n",
-		false: "\"foo\"\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n",
+		true:  "foo\r\nIF %errorlevel% NEQ 0 exit /b %errorlevel%\r\n\r\n",
+		false: "foo\r\nIF !errorlevel! NEQ 0 exit /b !errorlevel!\r\n\r\n",
 	}
 
 	for disableDelayedErrorLevelExpansion, expectedCmd := range cases {

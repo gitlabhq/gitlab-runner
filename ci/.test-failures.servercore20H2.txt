@@ -12,7 +12,5 @@ TestPrepare
 TestDockerServiceHealthcheck
 TestDockerServiceHealthcheck/successful_service_(FF_NETWORK_PER_BUILD=true)
 TestDockerServiceHealthcheck/failed_service_(FF_NETWORK_PER_BUILD=true)
-TestCommandArgumentExpansion
-TestCommandArgumentExpansion/cmd
 TestBuildCancel
 TestBuildCancel/cmd
