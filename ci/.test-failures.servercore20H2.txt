@@ -1,8 +1,3 @@
-TestBuildOnCustomDirectory
-TestBuildOnCustomDirectory/powershell
-TestBuildOnCustomDirectory/powershell/custom_directory_defined
-TestBuildOnCustomDirectory/pwsh
-TestBuildOnCustomDirectory/pwsh/custom_directory_defined
 TestBuildWithDebugTrace
 TestBuildWithDebugTrace/cmd
 TestList
