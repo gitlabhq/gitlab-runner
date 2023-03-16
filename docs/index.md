@@ -9,27 +9,28 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
-You can choose to [**install**](install/index.md) the GitLab Runner application
-on infrastructure that you own or manage. If you do, you should install
-GitLab Runner on a machine that's separate from the one that hosts the GitLab instance
-for security and performance reasons. When you use separate machines, you can have
-different operating systems and tools, like Kubernetes or Docker, on each.
+## Use GitLab.com runners
 
-GitLab Runner is open-source and written in [Go](https://go.dev). It can be run
-as a single binary; no language-specific requirements are needed.
+If you use GitLab.com, you can run your CI/CD jobs on runners hosted by GitLab.
+These runners are [managed](https://docs.gitlab.com/ee/ci/runners/index.html) by GitLab and
+fully integrated with GitLab.com. By default these runners are enabled for all projects.
+You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners) if you have
+the Owner role for the project.
 
-You can install GitLab Runner on several different supported operating systems.
-Other operating systems may also work, as long as you can compile a Go
-binary on them.
+Alternatively, you can install GitLab Runner and register your own runners on GitLab.com or
+on your own instance.
 
-GitLab Runner can also run inside a Docker container or be deployed into a Kubernetes cluster.
+## Use self-managed runners **(FREE SELF)**
 
-## Scaling a fleet of runners
+To use self-managed runners, you [**install**](install/index.md) GitLab Runner on infrastructure
+that you own or manage.
+
+### Scale a fleet of runners
 
 When your organization scales to having a fleet of runners, you
 should [plan for how you will monitor and adjust performance for these runners](fleet_scaling/index.md).
 
-## GitLab Runner versions
+### GitLab Runner versions
 
 For compatibility reasons, the GitLab Runner [major.minor](https://en.wikipedia.org/wiki/Software_versioning) version
 should stay in sync with the GitLab major and minor version. Older runners may still work
@@ -49,7 +50,7 @@ If you host your own runners but host your repositories on GitLab.com,
 keep GitLab Runner [updated](install/index.md) to the latest version, as GitLab.com is
 [updated continuously](https://gitlab.com/gitlab-org/release/tasks/-/issues).
 
-## Runner registration
+### Runner registration
 
 After you install the application, you [**register**](register/index.md)
 individual runners. Runners are the agents that run the CI/CD jobs that come from GitLab.
@@ -113,7 +114,7 @@ job:
 
 When the job runs, it uses the runner with the `ruby` tag.
 
-## Configuring runners
+### Configuring runners
 
 You can [**configure**](configuration/advanced-configuration.md)
 the runner by editing the `config.toml` file. This is a file that is installed during the runner installation process.
@@ -123,13 +124,13 @@ In this file you can edit settings for a specific runner, or for all runners.
 You can specify settings like logging and cache. You can set concurrency,
 memory, CPU limits, and more.
 
-## Monitoring runners
+### Monitoring runners
 
 You can use Prometheus to [**monitor**](monitoring/index.md) your runners.
 You can view things like the number of currently-running jobs and how
 much CPU your runners are using.
 
-## Use a runner to run your job
+### Use a runner to run jobs
 
 After a runner is configured and available for your project, your
 [CI/CD](https://docs.gitlab.com/ee/ci/index.html) jobs can use the runner.
@@ -138,16 +139,6 @@ Specify the name of the runner or its tags in your
 [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html) file.
 Then, when you commit to your repository, the pipeline runs, and
 the runner's executor processes the commands.
-
-## Runners on GitLab.com
-
-If you use GitLab.com, you can run your CI/CD jobs on runners hosted by GitLab.
-These runners are [managed](https://docs.gitlab.com/ee/ci/runners/index.html) by GitLab and fully integrated with GitLab.com.
-These runners are enabled for all projects, though
-[you can disable them](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners).
-
-If you don't want to use runners managed by GitLab, you can install GitLab Runner and
-register your own runners on GitLab.com.
 
 ## Features
 

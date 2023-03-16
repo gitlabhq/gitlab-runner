@@ -7,6 +7,13 @@ comments: false
 
 # Install GitLab Runner **(FREE)**
 
+You can install GitLab Runner on your infrastructure.
+
+GitLab Runner is open-source and written in [Go](https://go.dev). It can run
+as a single binary and does has no language-specific requirements.
+
+GitLab Runner can also run inside a Docker container or be deployed to a Kubernetes cluster.
+
 GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD, and Windows.
 You can install it:
 
@@ -22,9 +29,14 @@ Official packages are available for the following Linux distributions:
 
 - CentOS, Debian, Ubuntu, RHEL, Fedora, Mint, Oracle, Amazon
 
-GitLab Runner officially supports the following operating systems:
+GitLab Runner officially supports the following operating systems. If you prefer to use a
+different a operating system that is not officially supported, it must be able to compile a
+Go binary.
 
 - Linux, Windows, macOS, FreeBSD
+
+NOTE:
+For security and performance reasons, you should install GitLab Runner on a machine that is separate to the machine that hosts your GitLab instance.
 
 You can find information on the different installation methods below.
 You can also view installation instructions in GitLab by going to your project's
