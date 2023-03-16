@@ -41,11 +41,11 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.22.10
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230307201357-79627713430a
-	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20221026185329-fbd954429194
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20230315211154-eb24c2383aef
+	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20230315211154-eb24c2383aef
 	gitlab.com/gitlab-org/fleeting/nesting v0.0.0-20230126192551-f2211a1d15b0
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230203200315-65d720c30abf
-	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20221107182235-c41f6499e083
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230316132741-d02e56f3a10f
+	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20230316132741-d02e56f3a10f
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.17.0

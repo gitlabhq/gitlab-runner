@@ -147,12 +147,19 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		"runner":      config.ShortDescription(),
 		"runner_name": config.Name,
 	}
+	if config.SystemIDState != nil {
+		constLabels["system_id"] = config.SystemIDState.GetSystemID()
+	}
 
-	tsMC := tsprometheus.New(constLabels)
+	tsMC := tsprometheus.New(
+		tsprometheus.WithConstLabels(constLabels),
+		tsprometheus.WithInstanceReadinessTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
+	)
 	flMC := flprometheus.New(
-		constLabels,
-		config.Autoscaler.InstanceOperationTimeBuckets,
-		config.Autoscaler.InstanceOperationTimeBuckets,
+		flprometheus.WithConstLabels(constLabels),
+		flprometheus.WithInstanceCreationTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
+		flprometheus.WithInstanceIsRunningTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
+		flprometheus.WithInstanceDeletionTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
 	)
 
 	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
