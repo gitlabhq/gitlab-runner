@@ -10,12 +10,15 @@
   dependencies:
     - 'helper images binaries'
   before_script:
+    - Set-MpPreference -DisableRealtimeMonitoring $true
     - start-service docker
   script:
     - choco install awscli -y
     - $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
     - .\ci\build_release_windows_images.ps1
   retry: 2
+  needs:
+  - 'helper images binaries'
 
 development servercore1809 helper docker images:
   extends:
