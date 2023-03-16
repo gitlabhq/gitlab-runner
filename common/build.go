@@ -902,6 +902,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return err
 	}
 
+	b.expandContainerOptions()
+
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
 
@@ -1178,6 +1180,18 @@ func (b *Build) GetAllVariables() JobVariables {
 	b.allVariables = variables.Expand()
 
 	return b.allVariables
+}
+
+// Users might specify image and service-image name and aliases as Variables, so we must expand them before they are
+// used.
+func (b *Build) expandContainerOptions() {
+	allVars := b.GetAllVariables()
+	b.Image.Name = allVars.ExpandValue(b.Image.Name)
+	b.Image.Alias = allVars.ExpandValue(b.Image.Alias)
+	for i := range b.Services {
+		b.Services[i].Name = allVars.ExpandValue(b.Services[i].Name)
+		b.Services[i].Alias = allVars.ExpandValue(b.Services[i].Alias)
+	}
 }
 
 func (b *Build) getURLWithAuth(URL string) string {
