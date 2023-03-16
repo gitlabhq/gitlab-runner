@@ -1,8 +1,5 @@
 TestBuildCancel
 TestBuildCancel/cmd
-TestBuildOnCustomDirectory
-TestBuildOnCustomDirectory/powershell
-TestBuildOnCustomDirectory/powershell/custom_directory_defined
 TestBuildWithDebugTrace
 TestBuildWithDebugTrace/cmd
 TestList

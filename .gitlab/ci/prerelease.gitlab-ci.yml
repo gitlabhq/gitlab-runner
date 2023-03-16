@@ -9,6 +9,8 @@
     PWSH_VERSION: 7.1.1
   dependencies:
     - 'helper images binaries'
+  before_script:
+    - start-service docker
   script:
     - choco install awscli -y
     - $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
