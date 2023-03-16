@@ -52,19 +52,17 @@ func (e *executor) getServicesDefinitions() (common.Services, error) {
 	var internalServiceImages []string
 	serviceDefinitions := common.Services{}
 
-	for _, service := range e.Config.Docker.Services {
+	for _, service := range e.Config.Docker.GetExpandedServices(e.Build.GetAllVariables()) {
 		internalServiceImages = append(internalServiceImages, service.Name)
 		serviceDefinitions = append(serviceDefinitions, service.ToImageDefinition())
 	}
 
 	for _, service := range e.Build.Services {
-		serviceName := e.Build.GetAllVariables().ExpandValue(service.Name)
-		err := e.verifyAllowedImage(serviceName, "services", e.Config.Docker.AllowedServices, internalServiceImages)
+		err := e.verifyAllowedImage(service.Name, "services", e.Config.Docker.AllowedServices, internalServiceImages)
 		if err != nil {
 			return nil, err
 		}
 
-		service.Name = serviceName
 		serviceDefinitions = append(serviceDefinitions, service)
 	}
 
