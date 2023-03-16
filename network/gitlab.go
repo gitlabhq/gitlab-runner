@@ -403,7 +403,11 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 		}
 		return &response
 	case http.StatusForbidden:
-		runner.Log().Errorln("Verifying runner...", "is removed")
+		if strings.HasPrefix(runner.Token, CreatedRunnerTokenPrefix) {
+			runner.Log().Println("Verifying runner...", "is not valid")
+		} else {
+			runner.Log().Errorln("Verifying runner...", "is removed")
+		}
 		return nil
 	case clientError:
 		runner.Log().WithField("status", statusText).Errorln("Verifying runner...", "error")
