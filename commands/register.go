@@ -272,7 +272,7 @@ func (s *RegisterCommand) askRunner() {
 		s.doLegacyRegisterRunner()
 		return
 	}
-	s.Name = s.ask("name", "Enter a name for the runner (stored locally only):")
+	s.Name = s.ask("name", "Enter a name for the runner. This is stored only in the local config.toml file:")
 
 	// when a runner token is specified as a registration token, certain arguments are reserved to the server
 	s.ensureServerConfigArgsEmpty()
