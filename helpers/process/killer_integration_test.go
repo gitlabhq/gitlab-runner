@@ -23,6 +23,7 @@ func newKillerWithLoggerAndCommand(
 	t *testing.T,
 	duration string,
 	skipTerminate bool,
+	useWindowsLegacyProcessStrategy bool,
 ) (process.Killer, *process.MockLogger, process.Commander, func()) {
 	t.Helper()
 
@@ -34,7 +35,8 @@ func newKillerWithLoggerAndCommand(
 		args = append(args, "skip-terminate-signals")
 	}
 
-	command := process.NewOSCmd(sleepBinary, args, process.CommandOptions{})
+	command := process.NewOSCmd(sleepBinary, args,
+		process.CommandOptions{UseWindowsLegacyProcessStrategy: useWindowsLegacyProcessStrategy})
 	err := command.Start()
 	require.NoError(t, err)
 
@@ -75,9 +77,10 @@ func prepareTestBinary(t *testing.T) string {
 // Unix and Windows have different test cases expecting different data, check
 // killer_unix_test.go and killer_windows_test.go for each system test case.
 type testKillerTestCase struct {
-	alreadyStopped bool
-	skipTerminate  bool
-	expectedError  string
+	alreadyStopped                  bool
+	skipTerminate                   bool
+	expectedError                   string
+	useWindowsLegacyProcessStrategy bool
 }
 
 func TestKiller(t *testing.T) {
@@ -85,7 +88,7 @@ func TestKiller(t *testing.T) {
 
 	for testName, testCase := range testKillerTestCases() {
 		t.Run(testName, func(t *testing.T) {
-			k, loggerMock, cmd, cleanup := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate)
+			k, loggerMock, cmd, cleanup := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate, testCase.useWindowsLegacyProcessStrategy)
 			defer cleanup()
 
 			waitCh := make(chan error)
