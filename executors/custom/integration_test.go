@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -518,8 +520,15 @@ func TestBuildOnCustomDirectory(t *testing.T) {
 				cmd, ok := commands[shell]
 				require.Truef(t, ok, "Missing command for shell %q", shell)
 
-				dir := filepath.Join(os.TempDir(), "custom", "directory")
+				tempDir := os.TempDir()
+				dir := filepath.Join(tempDir, "custom", "directory")
 				expectedDirectory := filepath.Join(dir, "0")
+
+				// On Windows we don't check for the full path because Go can sometimes produce
+				// a Windows short path and the shell a full path, resulting in a mismatch.
+				if runtime.GOOS == "windows" {
+					expectedDirectory = strings.TrimPrefix(expectedDirectory, tempDir)
+				}
 
 				successfulBuild, err := common.GetSuccessfulBuild()
 				require.NoError(t, err)
