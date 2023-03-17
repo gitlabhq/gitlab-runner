@@ -17,6 +17,7 @@
 - Allow configuration of environment variables for runner services !3784
 - Docker executor: add services_security_opt config option !3760 (Glenn Dirkx @juravenator)
 - Add api requests latency metric !3316
+- Support for custom Kubernetes PodSpec !3114
 
 ### Security fixes
 
