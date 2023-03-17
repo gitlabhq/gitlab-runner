@@ -4665,6 +4665,50 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "foobar", pod.Spec.SchedulerName)
 			},
 		},
+		"add custom podSpec": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Environment: []string{"FF_USE_ADVANCED_POD_SPEC_CONFIGURATION=true"},
+					Kubernetes: &common.KubernetesConfig{
+						Namespace:      "default",
+						SchedulerName:  "foobar",
+						ServiceAccount: "my-service-account",
+						PodSpec: []common.KubernetesPodSpec{
+							{
+								Patch:     `serviceAccountName: null`,
+								PatchType: common.PatchTypeMergePatchType,
+							},
+							{
+								Patch:     `[{"op": "add", "path": "/nodeSelector", "value": { key1: "val1" }}]`,
+								PatchType: common.PatchTypeJSONPatchType,
+							},
+							{
+								Patch: `
+containers:
+  - name: "new-container"
+`,
+								PatchType: common.PatchTypeStrategicMergePatchType,
+							},
+						},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Equal(t, "", pod.Spec.ServiceAccountName)
+				assert.NotNil(t, pod.Spec.NodeSelector["key1"])
+				assert.Equal(t, "val1", pod.Spec.NodeSelector["key1"])
+
+				assert.Len(t, pod.Spec.Containers, 3)
+
+				var names []string
+				for _, n := range pod.Spec.Containers {
+					names = append(names, n.Name)
+				}
+				assert.Contains(t, names, "helper")
+				assert.Contains(t, names, "build")
+				assert.Contains(t, names, "new-container")
+			},
+		},
 	}
 
 	for testName, test := range tests {
@@ -5900,6 +5944,149 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 
 			e.captureContainersLogs(ctx, containers)
 			tt.assert(t)
+		})
+	}
+}
+
+func TestDoPodSpecMerge(t *testing.T) {
+	verifyFn := func(t *testing.T, patchedPodSpec *api.PodSpec) {
+		assert.NotNil(t, patchedPodSpec)
+		assert.Equal(t, "", patchedPodSpec.NodeName)
+		assert.Equal(t, "my-service-account-name", patchedPodSpec.ServiceAccountName)
+		assert.NotNil(t, patchedPodSpec.NodeSelector["key1"])
+		assert.Equal(t, "val1", patchedPodSpec.NodeSelector["key1"])
+	}
+
+	tests := map[string]struct {
+		getOriginal func() *api.PodSpec
+		podSpec     common.KubernetesPodSpec
+		verifyFn    func(*testing.T, *api.PodSpec)
+		expectedErr error
+	}{
+		// Merge strategy as documented : https://datatracker.ietf.org/doc/html/rfc7386
+		"successful simple yaml with merge patch type": {
+			getOriginal: func() *api.PodSpec {
+				return &api.PodSpec{NodeName: "my-node-name"}
+			},
+			podSpec: common.KubernetesPodSpec{
+				Patch: `
+nodeName: null
+serviceAccountName: "my-service-account-name"
+nodeSelector:
+  key1: val1
+`,
+				PatchType: common.PatchTypeMergePatchType,
+			},
+			verifyFn: verifyFn,
+		},
+		"successful simple json with merge patch type": {
+			getOriginal: func() *api.PodSpec {
+				return &api.PodSpec{NodeName: "my-node-name"}
+			},
+			podSpec: common.KubernetesPodSpec{
+				Patch: `
+{
+	nodeName: null,
+	serviceAccountName: "my-service-account-name",
+	nodeSelector: {
+		key1: "val1"
+	}
+}`,
+				PatchType: common.PatchTypeMergePatchType,
+			},
+			verifyFn: verifyFn,
+		},
+		// JSON strategy as documented : https://datatracker.ietf.org/doc/html/rfc7386
+		"successful simple json with json patch type": {
+			getOriginal: func() *api.PodSpec {
+				return &api.PodSpec{NodeName: "my-node-name"}
+			},
+			podSpec: common.KubernetesPodSpec{
+				Patch: `
+[
+	{ "op": "remove", "path": "/nodeName" },
+	{ "op": "add", "path": "/serviceAccountName", "value": "my-service-account-name" },
+	{ "op": "add", "path": "/nodeSelector", "value": { key1: "val1" } }
+]
+`,
+				PatchType: common.PatchTypeJSONPatchType,
+			},
+			verifyFn: verifyFn,
+		},
+		//nolint:lll
+		// strategic strategy as documented
+		// https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#notes-on-the-strategic-merge-patch
+		"successful simple json with strategic patch type on containers": {
+			getOriginal: func() *api.PodSpec {
+				return &api.PodSpec{
+					NodeName: "my-node-name",
+					Containers: []api.Container{
+						{
+							Name: "first-container",
+						},
+					},
+				}
+			},
+			podSpec: common.KubernetesPodSpec{
+				Patch: `
+containers:
+  - name: "second-container"
+`,
+				PatchType: common.PatchTypeStrategicMergePatchType,
+			},
+			verifyFn: func(t *testing.T, patchedPodSpec *api.PodSpec) {
+				assert.NotNil(t, patchedPodSpec)
+				assert.Len(t, patchedPodSpec.Containers, 2)
+
+				var names []string
+				for _, n := range patchedPodSpec.Containers {
+					names = append(names, n.Name)
+				}
+				assert.Contains(t, names, "first-container")
+				assert.Contains(t, names, "second-container")
+			},
+		},
+		"unsupported patch type": {
+			getOriginal: func() *api.PodSpec {
+				return &api.PodSpec{
+					NodeName: "my-node-name",
+					Containers: []api.Container{
+						{
+							Name: "first-container",
+						},
+					},
+				}
+			},
+			podSpec: common.KubernetesPodSpec{
+				Patch: `
+containers:
+  - name: "second-container"
+`,
+				PatchType: "unknown",
+			},
+			expectedErr: fmt.Errorf("unsupported patch type unknown"),
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			patchedData, err := json.Marshal(tc.getOriginal())
+			require.NoError(t, err)
+
+			patchedData, err = doPodSpecMerge(patchedData, tc.podSpec)
+			if tc.expectedErr != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.expectedErr.Error(), err.Error())
+				return
+			}
+
+			require.NoError(t, err)
+
+			var patchedPodSpec api.PodSpec
+			err = json.Unmarshal(patchedData, &patchedPodSpec)
+			assert.NoError(t, err)
+
+			tc.verifyFn(t, &patchedPodSpec)
 		})
 	}
 }

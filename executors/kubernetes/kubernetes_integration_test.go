@@ -132,6 +132,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesWaitResources":                             testKubernetesWaitResources,
 		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
 		"testKubernetesHugeScriptAndAfterScriptFeatureFlag":       testKubernetesHugeScriptAndAfterScriptFeatureFlag,
+		"testKubernetesCustomPodSpec":                             testKubernetesCustomPodSpec,
 	}
 
 	featureFlags := []string{
@@ -607,6 +608,143 @@ My nested nested here-string
 			if tc.verifyFn != nil {
 				tc.verifyFn(t, outBuffer.String())
 			}
+		})
+	}
+}
+
+func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	ctxTimeout := time.Minute
+	client := getTestKubeClusterClient(t)
+
+	init := func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
+		err := retry.New(newNamespaceManager(client, createNamespace, namespace)).Run()
+		require.NoError(t, err)
+
+		credentials, err := getSecrets(client, namespace, "")
+		require.NoError(t, err)
+		configMaps, err := getConfigMaps(client, namespace, "")
+		require.NoError(t, err)
+
+		assert.Empty(t, credentials)
+		assert.Empty(t, configMaps)
+	}
+
+	finalize := func(t *testing.T, client *k8s.Clientset, namespace string) {
+		err := retry.New(newNamespaceManager(client, deleteNamespace, namespace)).Run()
+		require.NoError(t, err)
+	}
+
+	tests := map[string]struct {
+		namespace string
+		podSpec   []common.KubernetesPodSpec
+		verifyFn  func(*testing.T, v1.Pod)
+	}{
+		"change hostname with custom podSpec": {
+			namespace: generateRandomNamespace("gc"),
+			podSpec: []common.KubernetesPodSpec{
+				{
+					Patch: `
+[
+	{
+		"op": "add",
+		"path": "/hostname",
+		"value": "my-custom-hostname"
+	}
+]
+`,
+					PatchType: common.PatchTypeJSONPatchType,
+				},
+			},
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				assert.Equal(t, "my-custom-hostname", pod.Spec.Hostname)
+			},
+		},
+		"update build container with resources limit through custom podSpec using strategic patch type": {
+			namespace: generateRandomNamespace("custom-pod-spec"),
+			podSpec: []common.KubernetesPodSpec{
+				{
+					Patch: `
+containers:
+- name: "build"
+  securityContext:
+    runAsUser: 1010
+`,
+					PatchType: common.PatchTypeStrategicMergePatchType,
+				},
+			},
+			verifyFn: func(t *testing.T, pod v1.Pod) {
+				var buildContainer v1.Container
+				var user int64 = 1010
+
+				for _, c := range pod.Spec.Containers {
+					if c.Name == "build" {
+						buildContainer = c
+						break
+					}
+				}
+				assert.Equal(t, user, *buildContainer.SecurityContext.RunAsUser)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				jobResponse, err := common.GetRemoteBuildResponse(
+					"sleep 5000",
+				)
+				require.NoError(t, err)
+
+				return jobResponse, nil
+			})
+			build.Runner.Kubernetes.Namespace = tc.namespace
+			build.Runner.Kubernetes.PodSpec = tc.podSpec
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			buildtest.SetBuildFeatureFlag(build, featureflags.UseAdvancedPodSpecConfiguration, true)
+
+			init(t, build, client, tc.namespace)
+
+			deletedPodNameCh := make(chan string)
+			defer buildtest.OnUserStage(build, func() {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				defer cancel()
+				pods, err := client.CoreV1().Pods(tc.namespace).List(
+					ctx,
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+
+				tc.verifyFn(t, pod)
+
+				err = client.
+					CoreV1().
+					Pods(tc.namespace).
+					Delete(ctx, pod.Name, metav1.DeleteOptions{
+						PropagationPolicy: &kubernetes.PropagationPolicy,
+					})
+				require.NoError(t, err)
+
+				deletedPodNameCh <- pod.Name
+			})()
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			assert.Error(t, err)
+
+			podName := <-deletedPodNameCh
+
+			assert.Contains(
+				t,
+				out,
+				fmt.Sprintf("pods %q not found", podName),
+			)
+
+			finalize(t, client, tc.namespace)
 		})
 	}
 }

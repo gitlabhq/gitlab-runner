@@ -24,6 +24,9 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/util/exec"
 
+	jsonpatch "github.com/evanphx/json-patch"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
@@ -1328,6 +1331,16 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 		return err
 	}
 
+	if s.Build.IsFeatureFlagOn(featureflags.UseAdvancedPodSpecConfiguration) {
+		s.Warningln("Advanced Pod Spec configuration enabled, merging the provided PodSpec to the generated one. " +
+			"This is an alpha feature and is subject to change. Feedback is collected in this issue: " +
+			"https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29659 ...")
+		podConfig.Spec, err = s.applyPodSpecMerge(&podConfig.Spec)
+		if err != nil {
+			return err
+		}
+	}
+
 	s.Debugln("Creating build pod")
 
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
@@ -1581,6 +1594,68 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 	return buildContainer, helperContainer, nil
 }
 
+// Inspired by
+// https://github.com/kubernetes/kubernetes/blob/cde45fb161c5a4bfa7cfe45dfd814f6cc95433f7/cmd/kubeadm/app/util/patches/patches.go#L171
+//
+//nolint:lll
+func (s *executor) applyPodSpecMerge(podSpec *api.PodSpec) (api.PodSpec, error) {
+	patchedData, err := json.Marshal(podSpec)
+	if err != nil {
+		return api.PodSpec{}, err
+	}
+
+	for _, spec := range s.Config.Kubernetes.PodSpec {
+		patchedData, err = doPodSpecMerge(patchedData, spec)
+		if err != nil {
+			return api.PodSpec{}, err
+		}
+	}
+
+	var patchedPodSpec api.PodSpec
+	err = json.Unmarshal(patchedData, &patchedPodSpec)
+	return patchedPodSpec, err
+}
+
+func doPodSpecMerge(original []byte, spec common.KubernetesPodSpec) ([]byte, error) {
+	var data []byte
+
+	patchBytes, patchType, err := spec.PodSpecPatch()
+	if err != nil {
+		return nil, err
+	}
+
+	switch patchType {
+	case common.PatchTypeJSONPatchType:
+		var patchObj jsonpatch.Patch
+		patchObj, err = jsonpatch.DecodePatch(patchBytes)
+		if err == nil {
+			data, err = patchObj.Apply(original)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+	case common.PatchTypeMergePatchType:
+		data, err = jsonpatch.MergePatch(original, patchBytes)
+		if err != nil {
+			return nil, err
+		}
+	case common.PatchTypeStrategicMergePatchType:
+		data, err = strategicpatch.StrategicMergePatch(
+			original,
+			patchBytes,
+			api.PodSpec{},
+		)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported patch type %v", patchType)
+	}
+
+	return data, nil
+}
+
 func (s *executor) setOwnerReferencesForResources(ownerReferences []metav1.OwnerReference) error {
 	if s.credentials != nil {
 		credentials := s.credentials.DeepCopy()
@@ -1616,7 +1691,6 @@ func (s *executor) waitForResource(
 	resourceType string,
 	resourceName string,
 	checkExists func(context.Context, string) bool,
-
 ) error {
 	attempt := -1
 

@@ -17,6 +17,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.5.0
 	github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
+	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/golang/mock v1.6.0
@@ -60,6 +61,7 @@ require (
 	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.26.1
 	mvdan.cc/sh/v3 v3.5.1
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -177,5 +179,4 @@ require (
 	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )

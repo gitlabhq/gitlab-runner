@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -14,6 +15,8 @@ import (
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/go-units"
@@ -47,6 +50,12 @@ const (
 	DNSPolicyClusterFirstWithHostNet KubernetesDNSPolicy = "cluster-first-with-host-net"
 
 	GenerateArtifactsMetadataVariable = "RUNNER_GENERATE_ARTIFACTS_METADATA"
+)
+
+var (
+	errPatchConversion = errors.New("converting patch to json")
+	errPatchAmbiguous  = errors.New("ambiguous patch: both patch path and patch provided")
+	errPatchFileFail   = errors.New("loading patch file")
 )
 
 // InvalidTimePeriodsError represents that the time period specified is not valid.
@@ -496,7 +505,51 @@ type KubernetesConfig struct {
 	DNSConfig                                         KubernetesDNSConfig                `toml:"dns_config" json:"dns_config" description:"Pod DNS config"`
 	ContainerLifecycle                                KubernetesContainerLifecyle        `toml:"container_lifecycle,omitempty" json:"container_lifecycle,omitempty" description:"Actions that the management system should take in response to container lifecycle events"`
 	PriorityClassName                                 string                             `toml:"priority_class_name,omitempty" json:"priority_class_name" long:"priority_class_name" env:"KUBERNETES_PRIORITY_CLASS_NAME" description:"If set, the Kubernetes Priority Class to be set to the Pods"`
+	PodSpec                                           []KubernetesPodSpec                `toml:"pod_spec"`
 }
+
+type KubernetesPodSpec struct {
+	Name      string                     `toml:"name"`
+	PatchPath string                     `toml:"patch_path"`
+	Patch     string                     `toml:"patch"`
+	PatchType KubernetesPodSpecPatchType `toml:"patch_type"`
+}
+
+// PodSpecPatch returns the patch data (JSON encoded) and type
+func (s *KubernetesPodSpec) PodSpecPatch() ([]byte, KubernetesPodSpecPatchType, error) {
+	patchBytes := []byte(s.Patch)
+	patchType := s.PatchType
+	if patchType == "" {
+		patchType = PatchTypeStrategicMergePatchType
+	}
+
+	if s.PatchPath != "" {
+		if len(s.Patch) > 0 {
+			return nil, "", fmt.Errorf("%w (%s)", errPatchAmbiguous, s.Name)
+		}
+
+		var err error
+		patchBytes, err = os.ReadFile(s.PatchPath)
+		if err != nil {
+			return nil, "", fmt.Errorf("%w (%s): %v", errPatchFileFail, s.Name, err)
+		}
+	}
+
+	patchBytes, err := yaml.YAMLToJSON(patchBytes)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w (%s): %v", errPatchConversion, s.Name, err)
+	}
+
+	return patchBytes, patchType, nil
+}
+
+type KubernetesPodSpecPatchType string
+
+const (
+	PatchTypeJSONPatchType           = KubernetesPodSpecPatchType("json")
+	PatchTypeMergePatchType          = KubernetesPodSpecPatchType("merge")
+	PatchTypeStrategicMergePatchType = KubernetesPodSpecPatchType("strategic")
+)
 
 //nolint:lll
 type KubernetesDNSConfig struct {
