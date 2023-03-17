@@ -37,3 +37,4 @@ debug.test
 
 # Ignore the generated binary
 /gitlab-runner*
+node_modules
