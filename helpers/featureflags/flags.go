@@ -28,6 +28,7 @@ const (
 	ResolveFullTLSChain                  string = "FF_RESOLVE_FULL_TLS_CHAIN"
 	DisablePowershellStdin               string = "FF_DISABLE_POWERSHELL_STDIN"
 	UsePodActiveDeadlineSeconds          string = "FF_USE_POD_ACTIVE_DEADLINE_SECONDS"
+	UseAdvancedPodSpecConfiguration      string = "FF_USE_ADVANCED_POD_SPEC_CONFIGURATION"
 	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
 )
 
@@ -224,7 +225,6 @@ var flags = []FeatureFlag{
 		Description: "When enabled, PowerShell scripts for shell and custom executors are passed by " +
 			"file, rather than passed and executed via stdin.",
 	},
-	//nolint:lll
 	{
 		Name:            UsePodActiveDeadlineSeconds,
 		DefaultValue:    false,
@@ -234,6 +234,15 @@ var flags = []FeatureFlag{
 			"(https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)" +
 			" is set to the CI/CD job timeout. This flag affects the " +
 			"[pod's lifecycle](../executors/kubernetes.md#pod-lifecycle).",
+	},
+	{
+		Name:            UseAdvancedPodSpecConfiguration,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, the user can set an entire whole pod specification in the `config.toml` file. " +
+			"For more information, see [Overwrite generated pod specifications (Alpha)]" +
+			"(../executors/kubernetes.md#overwrite-generated-pod-specifications-alpha)..",
 	},
 	{
 		Name:         SetPermissionsBeforeCleanup,

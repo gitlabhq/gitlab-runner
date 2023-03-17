@@ -1763,6 +1763,76 @@ func TestContainerSecurityContext(t *testing.T) {
 	}
 }
 
+func TestKubernetesPodSpecContents(t *testing.T) {
+	tests := map[string]struct {
+		patchPath     string
+		patchContents string
+		patchType     KubernetesPodSpecPatchType
+
+		expectedContents string
+		expectedType     KubernetesPodSpecPatchType
+		expectedErr      error
+	}{
+		"yaml to json": {
+			patchContents:    `hostname: "test"`,
+			expectedContents: `{"hostname":"test"}`,
+			expectedType:     PatchTypeStrategicMergePatchType,
+		},
+		"json without format to json": {
+			patchContents:    `{"hostname":"test"}`,
+			expectedContents: `{"hostname":"test"}`,
+			expectedType:     PatchTypeStrategicMergePatchType,
+		},
+		"json to json": {
+			patchContents:    `{"hostname": {"test": "value"}}`,
+			expectedContents: `{"hostname":{"test":"value"}}`,
+			expectedType:     PatchTypeStrategicMergePatchType,
+		},
+		"invalid json": {
+			patchContents: `{"hostname": {{}"test": "value"}}`,
+			expectedType:  PatchTypeStrategicMergePatchType,
+			expectedErr:   errPatchConversion,
+		},
+		"invalid yaml": {
+			patchContents: `[invalid yaml`,
+			expectedErr:   errPatchConversion,
+		},
+		"missing file": {
+			patchPath:   "missing/file",
+			expectedErr: errPatchFileFail,
+		},
+		"patch_path and patch ambiguous": {
+			patchPath:     "missing/file",
+			patchContents: `{"hostname": {"test": "value"}}`,
+			expectedErr:   errPatchAmbiguous,
+		},
+		"explicit patch type": {
+			patchContents:    `hostname: "test"`,
+			patchType:        PatchTypeMergePatchType,
+			expectedContents: `{"hostname":"test"}`,
+			expectedType:     PatchTypeMergePatchType,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			s := KubernetesPodSpec{
+				PatchPath: tc.patchPath,
+				Patch:     tc.patchContents,
+				PatchType: tc.patchType,
+			}
+			patchBytes, patchType, err := s.PodSpecPatch()
+			if tc.expectedErr != nil {
+				require.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedContents, string(patchBytes))
+				assert.Equal(t, tc.expectedType, patchType)
+			}
+		})
+	}
+}
+
 func TestContainerSecurityCapabilities(t *testing.T) {
 	tests := map[string]struct {
 		getCapabilitiesFn    func(c *KubernetesConfig) *api.Capabilities
