@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/docker/machine/commands/mcndirs"
@@ -81,6 +82,9 @@ func mockDockerMachineExecutable(t *testing.T) func() {
 	tempDir := t.TempDir()
 
 	dmExecutable := filepath.Join(tempDir, "docker-machine")
+	if runtime.GOOS == "windows" {
+		dmExecutable += ".exe"
+	}
 
 	err := os.WriteFile(dmExecutable, []byte{}, 0o777)
 	require.NoError(t, err)
