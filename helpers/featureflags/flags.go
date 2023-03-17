@@ -209,7 +209,7 @@ var flags = []FeatureFlag{
 		Description: "When enabled, the runner resolves a full TLS " +
 			"chain all the way down to a self-signed root certificate " +
 			"for `CI_SERVER_TLS_CA_FILE`. This was previously " +
-			"[required to make Git HTTPS clones to work](tls-self-signed.md#git-cloning) " +
+			"[required to make Git HTTPS clones work](tls-self-signed.md#git-cloning) " +
 			"for a Git client built with libcurl prior to v7.68.0 and OpenSSL. " +
 			"However, the process to resolve certificates may fail on " +
 			"some operating systems, such as macOS, that reject root certificates " +
