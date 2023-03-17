@@ -1,4 +1,4 @@
-## v15.10.0 (2023-03-15)
+## v15.10.0 (2023-03-17)
 
 ### New features
 
@@ -38,6 +38,7 @@
 
 ### Maintenance
 
+- Fix TestBuildOnCustomDirectory for powershell/pwsh !3992
 - Fix merge request link with missing '-' scope !3987 (Niklas @Taucher2003)
 - Indicate that Command Line and Config.toml are separate for debug !3986
 - Fix missing parenthesis in the runners.docker section !3981 (Tugdual Saunier @tucksaun)
