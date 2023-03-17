@@ -30,7 +30,7 @@ func (d *machinesData) Total() int {
 	return d.Acquired + d.Creating + d.Idle + d.Used + d.Removing + d.StuckOnRemoving
 }
 
-func (d *machinesData) Add(details *machineDetails) {
+func (d *machinesData) Add(details machineInfo) {
 	switch details.State {
 	case machineStateIdle:
 		d.Idle++

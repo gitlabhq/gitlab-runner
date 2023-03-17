@@ -293,7 +293,7 @@ func TestShouldRemoveIdle(t *testing.T) {
 			result := shouldRemoveIdle(
 				ilsNewRunnerConfig(tt.config),
 				ilsNewMachinesData(tt.data),
-				ilsNewMachineDetails(tt.details),
+				ilsNewMachineDetails(tt.details).info(),
 			)
 			assert.Equal(t, tt.expectedReason, result)
 		})

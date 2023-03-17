@@ -24,7 +24,7 @@ func canCreateIdle(config *common.RunnerConfig, data *machinesData) bool {
 	return ils.canCreate()
 }
 
-func shouldRemoveIdle(config *common.RunnerConfig, data *machinesData, details *machineDetails) removeIdleReason {
+func shouldRemoveIdle(config *common.RunnerConfig, data *machinesData, details machineInfo) removeIdleReason {
 	ils := &idleLimitStrategy{
 		config:  config,
 		data:    data,
@@ -37,7 +37,7 @@ func shouldRemoveIdle(config *common.RunnerConfig, data *machinesData, details *
 type idleLimitStrategy struct {
 	config  *common.RunnerConfig
 	data    *machinesData
-	details *machineDetails
+	details machineInfo
 }
 
 // canCreate checks if any of the defined filters detected

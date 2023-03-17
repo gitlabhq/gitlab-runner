@@ -3,6 +3,7 @@ package machine
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -19,6 +20,40 @@ type machineDetails struct {
 	Reason     string
 	RetryCount int
 	LastSeen   time.Time
+
+	lock sync.Mutex
+}
+
+type machineInfo struct {
+	Name       string
+	Created    time.Time `yaml:"-"`
+	Used       time.Time `yaml:"-"`
+	UsedCount  int
+	State      machineState
+	Reason     string
+	RetryCount int
+	LastSeen   time.Time
+}
+
+func (m *machineDetails) Lock() {
+	m.lock.Lock()
+}
+
+func (m *machineDetails) Unlock() {
+	m.lock.Unlock()
+}
+
+func (m *machineDetails) info() machineInfo {
+	return machineInfo{
+		Name:       m.Name,
+		Created:    m.Created,
+		Used:       m.Used,
+		UsedCount:  m.UsedCount,
+		State:      m.State,
+		Reason:     m.Reason,
+		RetryCount: m.RetryCount,
+		LastSeen:   m.LastSeen,
+	}
 }
 
 func (m *machineDetails) isPersistedOnDisk() bool {
@@ -33,11 +68,11 @@ func (m *machineDetails) isUsed() bool {
 	return m.State != machineStateIdle
 }
 
-func (m *machineDetails) isStuckOnRemove() bool {
+func (m machineInfo) isStuckOnRemove() bool {
 	return m.State == machineStateRemoving && m.RetryCount >= removeRetryTries
 }
 
-func (m *machineDetails) isDead() bool {
+func (m machineInfo) isDead() bool {
 	return m.State == machineStateIdle &&
 		time.Since(m.LastSeen) > machineDeadInterval
 }
@@ -60,11 +95,12 @@ func (m *machineDetails) writeDebugInformation() {
 	}
 
 	var details struct {
-		Details    machineDetails
+		Details    machineInfo
 		Time       string
 		CreatedAgo time.Duration
 	}
-	details.Details = *m
+
+	details.Details = m.info()
 	details.Time = time.Now().String()
 	details.CreatedAgo = time.Since(m.Created)
 	data := helpers.ToYAML(&details)
