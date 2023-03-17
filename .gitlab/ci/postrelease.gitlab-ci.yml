@@ -19,7 +19,9 @@ trigger runner-incept tests:
   stage: postrelease
   variables:
     UPSTREAM_CI_COMMIT_REF: $UPSTREAM_CI_COMMIT_REF
-  trigger: gitlab-org/ci-cd/tests/runner-incept
+  trigger:
+    project: gitlab-org/ci-cd/tests/runner-incept
+    strategy: depend
 
 static QA:
   extends:
