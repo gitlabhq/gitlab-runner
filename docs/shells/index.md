@@ -63,7 +63,15 @@ is executed in your job.
 
 If a [job fails on the `Prepare environment`](../faq/index.md#job-failed-system-failure-preparing-environment) stage, it
 is likely that something in the shell profile is causing the failure. A common
-failure is when you have a `.bash_logout` that tries to clear the console.
+failure is when there is a `.bash_logout` that tries to clear the console.
+
+To troubleshoot this error, check `/home/gitlab-runner/.bash_logout`. For example, if the `.bash_logout` file has a script section like the following, comment it out and restart the pipeline:
+
+```shell
+if [ "$SHLVL" = 1 ]; then
+    [ -x /usr/bin/clear_console ] && /usr/bin/clear_console -q
+fi
+```
 
 Executors that load shell profiles:
 
