@@ -23,8 +23,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 )
 
+const (
+	buildContainerType      = "build"
+	predefinedContainerType = "predefined"
+)
+
 type commandExecutor struct {
 	executor
+	helperContainer                 *types.ContainerJSON
 	buildContainer                  *types.ContainerJSON
 	lock                            sync.Mutex
 	terminalWaitForContainerTimeout time.Duration
@@ -116,13 +122,36 @@ func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
 
 func (s *commandExecutor) getContainer(cmd common.ExecutorCommand) (*types.ContainerJSON, error) {
 	if cmd.Predefined {
-		return s.requestNewPredefinedContainer()
+		return s.requestPredefinedContainer()
 	}
 
 	return s.requestBuildContainer()
 }
 
-func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON, error) {
+func (s *commandExecutor) hasExistingContainer(containerType string, container *types.ContainerJSON) bool {
+	if container == nil {
+		return false
+	}
+
+	_, err := s.client.ContainerInspect(s.Context, container.ID)
+	if err == nil {
+		return true
+	}
+
+	if docker.IsErrNotFound(err) {
+		return false
+	}
+
+	s.Warningln("Failed to inspect", containerType, "container", container.ID, err.Error())
+
+	return false
+}
+
+func (s *commandExecutor) requestPredefinedContainer() (*types.ContainerJSON, error) {
+	if s.hasExistingContainer(predefinedContainerType, s.helperContainer) {
+		return s.helperContainer, nil
+	}
+
 	prebuildImage, err := s.getPrebuiltImage()
 	if err != nil {
 		return nil, err
@@ -132,12 +161,17 @@ func (s *commandExecutor) requestNewPredefinedContainer() (*types.ContainerJSON,
 		Name: prebuildImage.ID,
 	}
 
-	containerJSON, err := s.createContainer("predefined", buildImage, s.getHelperImageCmd(), []string{prebuildImage.ID})
+	s.helperContainer, err = s.createContainer(
+		predefinedContainerType,
+		buildImage,
+		s.getHelperImageCmd(),
+		[]string{prebuildImage.ID},
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return containerJSON, err
+	return s.helperContainer, nil
 }
 
 func (s *commandExecutor) getHelperImageCmd() []string {
@@ -152,19 +186,17 @@ func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) 
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if s.buildContainer != nil {
-		_, inspectErr := s.client.ContainerInspect(s.Context, s.buildContainer.ID)
-		if inspectErr == nil {
-			return s.buildContainer, nil
-		}
-
-		if !docker.IsErrNotFound(inspectErr) {
-			s.Warningln("Failed to inspect build container", s.buildContainer.ID, inspectErr.Error())
-		}
+	if s.hasExistingContainer(buildContainerType, s.buildContainer) {
+		return s.buildContainer, nil
 	}
 
 	var err error
-	s.buildContainer, err = s.createContainer("build", s.Build.Image, s.BuildShell.DockerCommand, []string{})
+	s.buildContainer, err = s.createContainer(
+		buildContainerType,
+		s.Build.Image,
+		s.BuildShell.DockerCommand,
+		[]string{},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +278,7 @@ func getUIDandGID(
 }
 
 func (s *commandExecutor) executeChown(dockerExec exec.Docker, uid int, gid int) error {
-	c, err := s.requestNewPredefinedContainer()
+	c, err := s.requestPredefinedContainer()
 	if err != nil {
 		return fmt.Errorf("requesting new predefined container: %w", err)
 	}

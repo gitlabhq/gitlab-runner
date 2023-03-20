@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -75,7 +74,6 @@ type executor struct {
 
 	temporary []string // IDs of containers that should be removed
 
-	builds   []string // IDs of successfully created build containers
 	services []*types.Container
 
 	links []string
@@ -514,9 +512,15 @@ func (e *executor) createContainer(
 		hostname = e.Build.ProjectUniqueName()
 	}
 
-	// Always create unique, but sequential name
-	containerIndex := len(e.builds)
-	containerName := e.getProjectUniqRandomizedName() + "-" + containerType + "-" + strconv.Itoa(containerIndex)
+	// Build and predefined container names are comprised of:
+	// - A runner project scoped ID (runner-<description>-project-<project_id>-concurrent-<concurrent>)
+	// - A unique randomized ID for each execution
+	// - The container's type (build, predefined)
+	//
+	// For example: runner-linux-project-123-concurrent-2-0a1b2c3d-predefined
+	//
+	// A container of the same type is created _once_ per execution and re-used.
+	containerName := e.getProjectUniqRandomizedName() + "-" + containerType
 
 	config := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
 
@@ -533,22 +537,15 @@ func (e *executor) createContainer(
 
 	e.Debugln("Creating container", containerName, "...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, containerName)
+	if resp.ID != "" {
+		e.temporary = append(e.temporary, resp.ID)
+	}
 	if err != nil {
-		if resp.ID != "" {
-			e.temporary = append(e.temporary, resp.ID)
-		}
 		return nil, err
 	}
 
 	inspect, err := e.client.ContainerInspect(e.Context, resp.ID)
-	if err != nil {
-		e.temporary = append(e.temporary, resp.ID)
-		return nil, err
-	}
-
-	e.builds = append(e.builds, resp.ID)
-	e.temporary = append(e.temporary, resp.ID)
-	return &inspect, nil
+	return &inspect, err
 }
 
 func (e *executor) createContainerConfig(
@@ -574,7 +571,7 @@ func (e *executor) createContainerConfig(
 	}
 
 	// user config should only be set in build containers
-	if containerType == "build" {
+	if containerType == buildContainerType {
 		config.User = e.Config.Docker.User
 	}
 
