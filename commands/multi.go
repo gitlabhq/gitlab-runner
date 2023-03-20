@@ -37,6 +37,16 @@ const (
 	unknownSystemID = "unknown"
 )
 
+const (
+	workerSlotOperationStarted = "started"
+	workerSlotOperationStopped = "stopped"
+)
+
+const (
+	workerProcessingFailureOther          = "other"
+	workerProcessingFailureNoFreeExecutor = "no_free_executor"
+)
+
 var (
 	concurrentDesc = prometheus.NewDesc(
 		"gitlab_runner_concurrent",
@@ -120,6 +130,12 @@ type RunCommand struct {
 	reloadConfigInterval time.Duration
 
 	runAt func(time.Time, func()) runAtTask
+
+	runnerWorkerSlots             prometheus.Gauge
+	runnerWorkersFeeds            *prometheus.CounterVec
+	runnerWorkersFeedFailures     *prometheus.CounterVec
+	runnerWorkerSlotOperations    *prometheus.CounterVec
+	runnerWorkerProcessingFailure *prometheus.CounterVec
 }
 
 func (mr *RunCommand) log() *logrus.Entry {
@@ -140,6 +156,8 @@ func (mr *RunCommand) Start(_ service.Service) error {
 
 	mr.log().Info("Starting multi-runner from ", mr.ConfigFile, "...")
 
+	mr.setupInternalMetrics()
+
 	userModeWarning(false)
 
 	if len(mr.WorkingDirectory) > 0 {
@@ -154,10 +172,69 @@ func (mr *RunCommand) Start(_ service.Service) error {
 		return err
 	}
 
+	config := mr.getConfig()
+	for _, runner := range config.Runners {
+		systemID := unknownSystemID
+		if runner.SystemIDState != nil {
+			systemID = runner.SystemIDState.GetSystemID()
+		}
+
+		mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Add(0)
+		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Add(0)
+		mr.runnerWorkerProcessingFailure.
+			WithLabelValues(workerProcessingFailureOther, runner.ShortDescription(), runner.Name, systemID).
+			Add(0)
+		mr.runnerWorkerProcessingFailure.
+			WithLabelValues(workerProcessingFailureNoFreeExecutor, runner.ShortDescription(), runner.Name, systemID).
+			Add(0)
+	}
+	mr.runnerWorkerSlots.Set(0)
+	mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStarted).Add(0)
+	mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStopped).Add(0)
+
 	// Start should not block. Do the actual work async.
 	go mr.run()
 
 	return nil
+}
+
+func (mr *RunCommand) setupInternalMetrics() {
+	mr.runnerWorkersFeeds = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_feeds_total",
+			Help: "Total number of times that runner worker is fed to the main loop",
+		},
+		[]string{"runner", "runner_name", "system_id"},
+	)
+
+	mr.runnerWorkersFeedFailures = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_feed_failures_total",
+			Help: "Total number of times that runner worker feeding have failed",
+		},
+		[]string{"runner", "runner_name", "system_id"},
+	)
+
+	mr.runnerWorkerSlots = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "gitlab_runner_worker_slots_number",
+		Help: "Current number of runner worker slots",
+	})
+
+	mr.runnerWorkerSlotOperations = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_slot_operations_total",
+			Help: "Total number of runner workers slot operations (starting and stopping slots)",
+		},
+		[]string{"operation"},
+	)
+
+	mr.runnerWorkerProcessingFailure = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_processing_failures_total",
+			Help: "Total number of failures when processing runner worker",
+		},
+		[]string{"failure_type", "runner", "runner_name", "system_id"},
+	)
 }
 
 func nextRunnerToReset(config *common.Config) (*common.RunnerConfig, time.Time) {
@@ -559,10 +636,17 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
+	systemID := unknownSystemID
+	if runner.SystemIDState != nil {
+		systemID = runner.SystemIDState.GetSystemID()
+	}
+
 	if !mr.healthHelper.isHealthy(runner) {
+		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Inc()
 		return
 	}
 
+	mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Inc()
 	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Feeding runner to channel")
 	runners <- runner
 }
@@ -584,28 +668,46 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 		WithField("worker", id).
 		Debugln("Starting worker")
 
+	mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStarted).Inc()
+
 	for mr.stopSignal == nil {
 		select {
 		case runner := <-runners:
 			err := mr.processRunner(id, runner, runners)
 			if err != nil {
-				logger := mr.log().WithFields(logrus.Fields{
-					"runner":   runner.ShortDescription(),
-					"executor": runner.Executor,
-				}).WithError(err)
+				logger := mr.log().
+					WithFields(logrus.Fields{
+						"runner":   runner.ShortDescription(),
+						"executor": runner.Executor,
+					}).WithError(err)
+
+				l := logger.Warn
+				failureType := workerProcessingFailureOther
 
 				var NoFreeExecutorError *common.NoFreeExecutorError
 				if errors.As(err, &NoFreeExecutorError) {
-					logger.Debug("Failed to process runner")
-				} else {
-					logger.Warn("Failed to process runner")
+					l = logger.Debug
+					failureType = workerProcessingFailureNoFreeExecutor
 				}
+
+				systemID := unknownSystemID
+				if runner.SystemIDState != nil {
+					systemID = runner.SystemIDState.GetSystemID()
+				}
+
+				l("Failed to process runner")
+				mr.runnerWorkerProcessingFailure.
+					WithLabelValues(failureType, runner.ShortDescription(), runner.Name, systemID).
+					Inc()
 			}
 
 		case <-stopWorker:
 			mr.log().
 				WithField("worker", id).
 				Debugln("Stopping worker")
+
+			mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStopped).Inc()
+
 			return
 		}
 	}
@@ -836,6 +938,7 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 			return signaled
 		}
 		mr.currentWorkers--
+		mr.runnerWorkerSlots.Set(float64(mr.currentWorkers))
 	}
 
 	for mr.currentWorkers < concurrentLimit {
@@ -847,6 +950,8 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 			return signaled
 		}
 		mr.currentWorkers++
+		mr.runnerWorkerSlots.Set(float64(mr.currentWorkers))
+
 		*workerIndex++
 	}
 
@@ -857,6 +962,7 @@ func (mr *RunCommand) stopWorkers(stopWorker chan bool) {
 	for mr.currentWorkers > 0 {
 		stopWorker <- true
 		mr.currentWorkers--
+		mr.runnerWorkerSlots.Set(float64(mr.currentWorkers))
 	}
 }
 
@@ -1100,6 +1206,12 @@ func (mr *RunCommand) runWait() {
 func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
 	ch <- concurrentDesc
 	ch <- limitDesc
+
+	mr.runnerWorkersFeeds.Describe(ch)
+	mr.runnerWorkersFeedFailures.Describe(ch)
+	mr.runnerWorkerSlots.Describe(ch)
+	mr.runnerWorkerSlotOperations.Describe(ch)
+	mr.runnerWorkerProcessingFailure.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -1121,6 +1233,12 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 			runner.SystemIDState.GetSystemID(),
 		)
 	}
+
+	mr.runnerWorkersFeeds.Collect(ch)
+	mr.runnerWorkersFeedFailures.Collect(ch)
+	mr.runnerWorkerSlots.Collect(ch)
+	mr.runnerWorkerSlotOperations.Collect(ch)
+	mr.runnerWorkerProcessingFailure.Collect(ch)
 }
 
 func init() {
