@@ -2,7 +2,6 @@ TestBuildWithDebugTrace
 TestBuildWithDebugTrace/cmd
 TestList
 TestList/machines_directory_is_invalid
-TestMachineProviderDeadInterval
 TestPowershell_GetConfiguration
 TestPowershell_GetConfiguration/pwsh_on_shell_with_custom_user_(windows)
 TestPrepare
