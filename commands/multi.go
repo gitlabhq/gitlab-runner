@@ -429,6 +429,8 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
+	// Metrics about runner workers health
+	registry.MustRegister(&mr.healthHelper)
 	// Metrics about configuration file accessing
 	registry.MustRegister(mr.configAccessCollector)
 	registry.MustRegister(mr)
