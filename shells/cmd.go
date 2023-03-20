@@ -26,42 +26,77 @@ type CmdWriter struct {
 	disableDelayedErrorLevelExpansion bool
 }
 
+type batchQuoteMode int
+
+const (
+	batchQuoteModeNormal batchQuoteMode = iota
+	batchQuoteModeEscape
+	batchQuoteModeCommand
+	batchQuoteModeVariable
+)
+
+//nolint:funlen,gocognit
+func batchEscapeMode(input string, mode batchQuoteMode) string {
+	var sb strings.Builder
+	sb.Grow(len(input) * 2)
+
+	quote := false
+	for _, c := range []byte(input) {
+		switch c {
+		case '^', '&', '<', '>', '|':
+			sb.WriteByte('^')
+			sb.WriteByte(c)
+		case '!':
+			sb.WriteString("^^!")
+		case '\r':
+		case '\n':
+			sb.WriteString("!nl!")
+		// other special characters that don't need escaping, but can
+		// need quoting
+		case ' ', '=', ';', ',', '/':
+			sb.WriteByte(c)
+			quote = true
+		default:
+			switch {
+			case (mode == batchQuoteModeEscape || mode == batchQuoteModeVariable) && (c == '(' || c == ')'):
+				sb.WriteByte('^')
+				sb.WriteByte(c)
+			case mode == batchQuoteModeCommand && c == '%':
+				sb.WriteString("^%")
+			case mode == batchQuoteModeVariable && c == '%':
+				sb.WriteString("%%")
+			default:
+				sb.WriteByte(c)
+			}
+		}
+	}
+
+	output := sb.String()
+
+	if mode != batchQuoteModeVariable && mode != batchQuoteModeEscape {
+		if quote || len(output) != len(input) {
+			return `"` + output + `"`
+		}
+	}
+
+	return output
+}
+
 func batchQuote(text string) string {
-	// can't use doubleQuoter here since that causes the backlashes to be escaped which doesn't work well
-	return "\"" + batchEscapeInsideQuotedString(text) + "\""
+	return batchEscapeMode(text, batchQuoteModeNormal)
 }
 
 func batchQuoteEscapeCommand(text string) string {
-	text = batchEscapeInsideQuotedString(text)
-	text = strings.ReplaceAll(text, "%", "^%")
-	return "\"" + text + "\""
-}
-
-func batchEscapeInsideQuotedString(text string) string {
-	// taken from: http://www.robvanderwoude.com/escapechars.php
-	text = strings.ReplaceAll(text, "^", "^^")
-	text = strings.ReplaceAll(text, "!", "^^!")
-	text = strings.ReplaceAll(text, "&", "^&")
-	text = strings.ReplaceAll(text, "<", "^<")
-	text = strings.ReplaceAll(text, ">", "^>")
-	text = strings.ReplaceAll(text, "|", "^|")
-	text = strings.ReplaceAll(text, "\r", "")
-	text = strings.ReplaceAll(text, "\n", "!nl!")
-	return text
+	return batchEscapeMode(text, batchQuoteModeCommand)
 }
 
 func batchEscapeVariable(text string) string {
-	text = strings.ReplaceAll(text, "%", "%%")
-	text = batchEscape(text)
-	return text
+	return batchEscapeMode(text, batchQuoteModeVariable)
 }
 
 // If not inside a quoted string (e.g., echo text), escape more things
 func batchEscape(text string) string {
-	text = batchEscapeInsideQuotedString(text)
-	text = strings.ReplaceAll(text, "(", "^(")
-	text = strings.ReplaceAll(text, ")", "^)")
-	return text
+	return batchEscapeMode(text, batchQuoteModeEscape)
 }
 
 func (b *CmdShell) GetName() string {
