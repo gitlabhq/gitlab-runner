@@ -339,16 +339,11 @@ func (mr *RunCommand) run() {
 		}
 	}
 
-	// Wait for workers to shutdown
-	for mr.currentWorkers > 0 {
-		stopWorker <- true
-		mr.currentWorkers--
-	}
-
+	// Wait for workers to shut down
+	mr.stopWorkers(stopWorker)
 	mr.log().Info("All workers stopped.")
 
 	mr.shutdownUsedExecutorProviders()
-
 	mr.log().Info("All executor providers shut down.")
 
 	close(mr.runFinished)
@@ -856,6 +851,13 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 	}
 
 	return nil
+}
+
+func (mr *RunCommand) stopWorkers(stopWorker chan bool) {
+	for mr.currentWorkers > 0 {
+		stopWorker <- true
+		mr.currentWorkers--
+	}
 }
 
 func (mr *RunCommand) updateConfig() os.Signal {
