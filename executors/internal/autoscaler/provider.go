@@ -160,6 +160,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		flprometheus.WithInstanceCreationTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
 		flprometheus.WithInstanceIsRunningTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
 		flprometheus.WithInstanceDeletionTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
+		flprometheus.WithInstanceLifeDurationBuckets(config.Autoscaler.InstanceLifeDurationBuckets),
 	)
 
 	shutdownCtx, shutdownFn := context.WithCancel(context.Background())

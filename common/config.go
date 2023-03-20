@@ -238,6 +238,7 @@ type AutoscalerConfig struct {
 	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
 
 	InstanceOperationTimeBuckets []float64 `toml:"instance_operation_time_buckets,omitempty" json:",omitempty"`
+	InstanceLifeDurationBuckets  []float64 `toml:"instance_life_duration_buckets,omitempty" json:",omitempty"`
 }
 
 type VMIsolation struct {
