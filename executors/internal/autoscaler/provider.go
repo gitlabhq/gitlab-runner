@@ -235,7 +235,11 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 	key = helpers.ShortenToken(config.Token) + key
 
 	if err := scaler.Reserve(key); err != nil {
-		return nil, fmt.Errorf("reserving capacity: %w", err)
+		if errors.Is(err, taskscaler.ErrNoCapacity) {
+			err = &common.NoFreeExecutorError{Message: fmt.Sprintf("reserving taskscaler capacity: %v", err)}
+		}
+
+		return nil, err
 	}
 
 	logrus.WithField("key", key).Trace("Reserved capacity...")
