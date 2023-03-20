@@ -51,8 +51,8 @@ create_package() {
     read -r -a customOptions <<< "${@}"
 
     if [ -z "${PACKAGE_ARCH}" ]; then
-      echo "PACKAGE_ARCH not specified, aborting."
-      exit 1
+        echo "PACKAGE_ARCH not specified, aborting."
+        exit 1
     fi
 
     local uname_s
@@ -64,6 +64,9 @@ create_package() {
     fi
 
     mkdir -p "out/${packageType}/"
+
+    # shellcheck disable=SC2153
+    # ${PACKAGE_NAME} is defined as an env variable in the Makefile
 
     fpm \
         --package "out/${packageType}/${PACKAGE_NAME}_${PACKAGE_ARCH}${package_postfix}.${packageType}" \
@@ -81,7 +84,6 @@ create_package() {
         --architecture "${PACKAGE_ARCH}" \
         \
         --conflicts "${PACKAGE_NAME}-beta" \
-        --conflicts "${PACKAGE_NAME}-fips" \
         --conflicts gitlab-ci-multi-runner \
         --conflicts gitlab-ci-multi-runner-beta \
         --provides gitlab-ci-multi-runner \
@@ -125,6 +127,7 @@ create_rpm() {
     options+=("--rpm-compression bzip2")
     options+=("--rpm-os linux")
     options+=("--rpm-digest sha256")
+    options+=("--conflicts ${PACKAGE_NAME}-fips")
 
     create_package rpm "${prebuilt_images_list}" "" "${options[@]}"
     sign_rpm "${PACKAGE_NAME}_${PACKAGE_ARCH}.rpm"
@@ -136,22 +139,23 @@ create_rpm_fips() {
     options+=("--rpm-os linux")
     options+=("--depends openssl")
     options+=("--rpm-digest sha256")
+    options+=("--conflicts ${PACKAGE_NAME}")
 
     create_package rpm "${prebuilt_images_list_fips}" "-fips" "${options[@]}"
     sign_rpm "${PACKAGE_NAME}_${PACKAGE_ARCH}-fips.rpm"
 }
 
 sign_rpm() {
-  local package_name=${1}
+    local package_name=${1}
 
-  if [ -n "${GPG_KEYID}" ] ; then
-          echo "yes" | setsid rpm \
-              --define "_gpg_name ${GPG_KEYID}" \
-              --define "_signature gpg" \
-              --define "__gpg_check_password_cmd /bin/true" \
-              --define "__gpg_sign_cmd $(command -v gpg) --batch --no-armor --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}' --pinentry-mode=loopback --no-secmem-warning -u '%{_gpg_name}' --sign --detach-sign --output %{__signature_filename} %{__plaintext_filename}" \
-              --addsign "out/rpm/${package_name}"
-      fi
+    if [ -n "${GPG_KEYID}" ] ; then
+            echo "yes" | setsid rpm \
+                --define "_gpg_name ${GPG_KEYID}" \
+                --define "_signature gpg" \
+                --define "__gpg_check_password_cmd /bin/true" \
+                --define "__gpg_sign_cmd $(command -v gpg) --batch --no-armor --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}' --pinentry-mode=loopback --no-secmem-warning -u '%{_gpg_name}' --sign --detach-sign --output %{__signature_filename} %{__plaintext_filename}" \
+                --addsign "out/rpm/${package_name}"
+        fi
 }
 
 case "${1}" in
