@@ -19,6 +19,10 @@ type healthHelper struct {
 	healthyLock sync.Mutex
 }
 
+func newHealthHelper() healthHelper {
+	return healthHelper{}
+}
+
 func (mr *healthHelper) getHealth(id string) *healthData {
 	if mr.healthy == nil {
 		mr.healthy = map[string]*healthData{}

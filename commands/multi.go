@@ -76,8 +76,8 @@ func runAt(t time.Time, f func()) runAtTask {
 type RunCommand struct {
 	configOptionsWithListenAddress
 	network common.Network
-	healthHelper
 
+	healthHelper healthHelper
 	buildsHelper buildsHelper
 
 	ServiceName      string `short:"n" long:"service" description:"Use different names for different services"`
@@ -249,7 +249,7 @@ func (mr *RunCommand) reloadConfig() error {
 	}
 
 	config := mr.getConfig()
-	mr.healthy = nil
+	mr.healthHelper.healthy = nil
 	mr.log().Println("Configuration loaded")
 	mr.log().Debugln(helpers.ToYAML(config))
 
@@ -562,7 +562,7 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
-	if !mr.isHealthy(runner) {
+	if !mr.healthHelper.isHealthy(runner) {
 		return
 	}
 
@@ -747,7 +747,7 @@ func (mr *RunCommand) requestJob(
 	defer mr.buildsHelper.releaseRequest(runner)
 
 	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
-	mr.markHealth(runner, healthy)
+	mr.healthHelper.markHealth(runner, healthy)
 
 	if jobData == nil {
 		return nil, nil, nil
@@ -1128,6 +1128,7 @@ func init() {
 		apiRequestsCollector: apiRequestsCollector,
 		prometheusLogHook:    prometheus_helper.NewLogHook(),
 		failuresCollector:    prometheus_helper.NewFailuresCollector(),
+		healthHelper:         newHealthHelper(),
 		buildsHelper:         newBuildsHelper(),
 		runAt:                runAt,
 		reloadConfigInterval: common.ReloadConfigInterval,
