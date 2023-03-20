@@ -146,9 +146,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 	constLabels := prometheus.Labels{
 		"runner":      config.ShortDescription(),
 		"runner_name": config.Name,
-	}
-	if config.SystemIDState != nil {
-		constLabels["system_id"] = config.SystemIDState.GetSystemID()
+		"system_id":   config.GetSystemID(),
 	}
 
 	tsMC := tsprometheus.New(

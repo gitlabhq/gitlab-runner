@@ -50,6 +50,8 @@ const (
 	DNSPolicyClusterFirstWithHostNet KubernetesDNSPolicy = "cluster-first-with-host-net"
 
 	GenerateArtifactsMetadataVariable = "RUNNER_GENERATE_ARTIFACTS_METADATA"
+
+	UnknownSystemID = "unknown"
 )
 
 var (
@@ -1734,6 +1736,14 @@ func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {
 
 func (c *RunnerConfig) String() string {
 	return fmt.Sprintf("%v url=%v token=%v executor=%v", c.Name, c.URL, c.Token, c.Executor)
+}
+
+func (c *RunnerConfig) GetSystemID() string {
+	if c.SystemIDState == nil {
+		return UnknownSystemID
+	}
+
+	return c.SystemIDState.GetSystemID()
 }
 
 func (c *RunnerConfig) GetUnhealthyRequestsLimit() int {

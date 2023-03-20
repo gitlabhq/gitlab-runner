@@ -34,10 +34,6 @@ import (
 )
 
 const (
-	unknownSystemID = "unknown"
-)
-
-const (
 	workerSlotOperationStarted = "started"
 	workerSlotOperationStopped = "stopped"
 )
@@ -174,18 +170,21 @@ func (mr *RunCommand) Start(_ service.Service) error {
 
 	config := mr.getConfig()
 	for _, runner := range config.Runners {
-		systemID := unknownSystemID
-		if runner.SystemIDState != nil {
-			systemID = runner.SystemIDState.GetSystemID()
-		}
-
-		mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Add(0)
-		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Add(0)
-		mr.runnerWorkerProcessingFailure.
-			WithLabelValues(workerProcessingFailureOther, runner.ShortDescription(), runner.Name, systemID).
+		mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Add(0)
+		mr.runnerWorkersFeedFailures.
+			WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).
 			Add(0)
 		mr.runnerWorkerProcessingFailure.
-			WithLabelValues(workerProcessingFailureNoFreeExecutor, runner.ShortDescription(), runner.Name, systemID).
+			WithLabelValues(
+				workerProcessingFailureOther,
+				runner.ShortDescription(), runner.Name, runner.GetSystemID(),
+			).
+			Add(0)
+		mr.runnerWorkerProcessingFailure.
+			WithLabelValues(
+				workerProcessingFailureNoFreeExecutor,
+				runner.ShortDescription(), runner.Name, runner.GetSystemID(),
+			).
 			Add(0)
 	}
 	mr.runnerWorkerSlots.Set(0)
@@ -280,12 +279,7 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 
 	select {
 	case runner := <-runnerResetCh:
-		systemID := unknownSystemID
-		if runner.SystemIDState != nil {
-			systemID = runner.SystemIDState.GetSystemID()
-		}
-
-		if common.ResetToken(mr.network, &runner.RunnerCredentials, systemID, "") {
+		if common.ResetToken(mr.network, &runner.RunnerCredentials, runner.GetSystemID(), "") {
 			err := mr.saveConfig()
 			if err != nil {
 				mr.log().WithError(err).Errorln("Failed to save config")
@@ -636,17 +630,12 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
-	systemID := unknownSystemID
-	if runner.SystemIDState != nil {
-		systemID = runner.SystemIDState.GetSystemID()
-	}
-
 	if !mr.healthHelper.isHealthy(runner) {
-		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Inc()
+		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Inc()
 		return
 	}
 
-	mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, systemID).Inc()
+	mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Inc()
 	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Feeding runner to channel")
 	runners <- runner
 }
@@ -690,14 +679,9 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 					failureType = workerProcessingFailureNoFreeExecutor
 				}
 
-				systemID := unknownSystemID
-				if runner.SystemIDState != nil {
-					systemID = runner.SystemIDState.GetSystemID()
-				}
-
 				l("Failed to process runner")
 				mr.runnerWorkerProcessingFailure.
-					WithLabelValues(failureType, runner.ShortDescription(), runner.Name, systemID).
+					WithLabelValues(failureType, runner.ShortDescription(), runner.Name, runner.GetSystemID()).
 					Inc()
 			}
 

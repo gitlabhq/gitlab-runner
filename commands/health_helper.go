@@ -78,12 +78,7 @@ func (mr *healthHelper) isHealthy(runner *common.RunnerConfig) bool {
 }
 
 func (mr *healthHelper) runnerHealthCheckFailures(runner *common.RunnerConfig) prometheus.Counter {
-	systemID := unknownSystemID
-	if runner.SystemIDState != nil {
-		systemID = runner.SystemIDState.GetSystemID()
-	}
-
-	return mr.healthCheckFailures.WithLabelValues(runner.ShortDescription(), runner.Name, systemID)
+	return mr.healthCheckFailures.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID())
 }
 
 func (mr *healthHelper) markHealth(runner *common.RunnerConfig, healthy bool) {
