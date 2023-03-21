@@ -86,12 +86,12 @@ func (m *machineProvider) runnerMachinesCoordinator(config *common.RunnerConfig)
 func (m *machineProvider) create(config *common.RunnerConfig, state machineState) (*machineDetails, chan error) {
 	name := newMachineName(config)
 	details := m.machineDetails(name, true)
-	m.lock.Lock()
+	details.Lock()
 	details.State = machineStateCreating
 	details.UsedCount = 0
 	details.RetryCount = 0
 	details.LastSeen = time.Now()
-	m.lock.Unlock()
+	details.Unlock()
 	errCh := make(chan error, 1)
 
 	// Create machine with the required configuration asynchronously
@@ -127,17 +127,18 @@ func (m *machineProvider) createWithGrowthCapacity(
 		m.failedCreationHistogram.Observe(time.Since(started).Seconds())
 		_ = m.remove(details.Name, "Failed to create")
 	} else {
-		m.lock.Lock()
+		details.Lock()
 		details.State = state
 		details.Used = time.Now()
-		m.lock.Unlock()
+		retryCount := details.RetryCount
+		details.Unlock()
+
 		creationTime := time.Since(started)
-		m.lock.RLock()
 		logger.WithField("duration", creationTime).
 			WithField("now", time.Now()).
-			WithField("retries", details.RetryCount).
+			WithField("retries", retryCount).
 			Infoln("Machine created")
-		m.lock.RUnlock()
+
 		m.totalActions.WithLabelValues("created").Inc()
 		m.creationHistogram.Observe(creationTime.Seconds())
 
@@ -234,8 +235,8 @@ func (m *machineProvider) tryGetFreeExistingMachineFromCoordinator(
 }
 
 func (m *machineProvider) tryAcquireMachineDetails(details *machineDetails) *machineDetails {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	details.Lock()
+	defer details.Unlock()
 
 	if details.isUsed() {
 		return nil
@@ -258,34 +259,40 @@ func (m *machineProvider) retryUseMachine(config *common.RunnerConfig) (details 
 }
 
 func (m *machineProvider) removeMachine(details *machineDetails) (err error) {
+	details.Lock()
+	logger := details.logger()
+	info := details.info()
+	details.Unlock()
+
 	if !m.machine.Exist(details.Name) {
-		details.logger().
-			Warningln("Skipping machine removal, because it doesn't exist")
+		logger.Warningln("Skipping machine removal, because it doesn't exist")
 		return nil
 	}
 
 	// This code limits amount of removal of stuck machines to one machine per interval
-	if details.isStuckOnRemove() {
+	if info.isStuckOnRemove() {
 		m.stuckRemoveLock.Lock()
 		defer m.stuckRemoveLock.Unlock()
 	}
 
-	details.logger().Warningln("Stopping machine")
+	logger.Warningln("Stopping machine")
 	err = runHistogramCountedOperation(m.stoppingHistogram, func() error {
 		return m.machine.Stop(details.Name, machineStopCommandTimeout)
 	})
 	if err != nil {
-		details.logger().
+		logger.
 			WithError(err).
 			Warningln("Error while stopping machine")
 	}
 
-	details.logger().Warningln("Removing machine")
+	logger.Warningln("Removing machine")
 	err = runHistogramCountedOperation(m.removalHistogram, func() error {
 		return m.machine.Remove(details.Name)
 	})
 	if err != nil {
+		details.Lock()
 		details.RetryCount++
+		details.Unlock()
 		time.Sleep(removeRetryInterval)
 		return err
 	}
@@ -313,9 +320,13 @@ func (m *machineProvider) finalizeRemoval(details *machineDetails) {
 	defer m.lock.Unlock()
 	delete(m.details, details.Name)
 
+	details.Lock()
+	retryCount := details.RetryCount
+	details.Unlock()
+
 	details.logger().
 		WithField("now", time.Now()).
-		WithField("retries", details.RetryCount).
+		WithField("retries", retryCount).
 		Infoln("Machine removed")
 
 	m.totalActions.WithLabelValues("removed").Inc()
@@ -330,16 +341,20 @@ func (m *machineProvider) remove(machineName string, reason ...interface{}) erro
 		return errors.New("machine not found")
 	}
 
+	now := time.Now()
+
+	details.Lock()
 	details.Reason = fmt.Sprint(reason...)
 	details.State = machineStateRemoving
 	details.RetryCount = 0
 
 	details.logger().
-		WithField("now", time.Now()).
+		WithField("now", now).
 		Warningln("Requesting machine removal")
 
-	details.Used = time.Now()
+	details.Used = now
 	details.writeDebugInformation()
+	details.Unlock()
 
 	go m.finalizeRemoval(details)
 	return nil
@@ -354,16 +369,25 @@ func (m *machineProvider) updateMachines(
 
 	for _, name := range machines {
 		details := m.machineDetails(name, false)
-		details.LastSeen = time.Now()
 
-		reason := shouldRemoveIdle(config, &data, details)
+		details.Lock()
+		details.LastSeen = time.Now()
+		info := details.info()
+		details.Unlock()
+
+		reason := shouldRemoveIdle(config, &data, info)
 		if reason == dontRemoveIdleMachine {
 			validMachines = append(validMachines, name)
 		} else {
 			_ = m.remove(details.Name, reason)
 		}
 
-		data.Add(details)
+		// remove() above can mutate details, so we re-create info:
+		details.Lock()
+		info = details.info()
+		details.Unlock()
+
+		data.Add(info)
 	}
 	return
 }
@@ -395,7 +419,11 @@ func (m *machineProvider) intermediateMachineList(excludedMachines []string) []s
 	defer m.lock.Unlock()
 
 	for _, details := range m.details {
-		if details.isPersistedOnDisk() {
+		details.Lock()
+		persisted := details.isPersistedOnDisk()
+		details.Unlock()
+
+		if persisted {
 			continue
 		}
 
@@ -481,7 +509,15 @@ func (m *machineProvider) Use(
 ) (newConfig common.RunnerConfig, newData common.ExecutorData, err error) {
 	// Find a new machine
 	details, _ := data.(*machineDetails)
-	if details == nil || !details.canBeUsed() || !m.machine.CanConnect(details.Name, true) {
+
+	canBeUsed := false
+	if details != nil {
+		details.Lock()
+		canBeUsed = details.canBeUsed()
+		details.Unlock()
+	}
+
+	if !canBeUsed || !m.machine.CanConnect(details.Name, true) {
 		details, err = m.retryUseMachine(config)
 		if err != nil {
 			return
@@ -510,9 +546,12 @@ func (m *machineProvider) Use(
 	newConfig.Docker.Credentials = dc
 
 	// Mark machine as used
+	details.Lock()
 	details.State = machineStateUsed
 	details.Used = time.Now()
 	details.UsedCount++
+	details.Unlock()
+
 	m.totalActions.WithLabelValues("used").Inc()
 	return
 }
@@ -524,24 +563,25 @@ func (m *machineProvider) Release(config *common.RunnerConfig, data common.Execu
 		return
 	}
 
-	m.lock.Lock()
+	details.Lock()
 	// Mark last used time when is Used
 	if details.State == machineStateUsed {
 		details.Used = time.Now()
 	}
-	m.lock.Unlock()
+	usedCount := details.UsedCount
+	details.Unlock()
 
 	// Remove machine if we already used it
 	if config != nil && config.Machine != nil &&
-		config.Machine.MaxBuilds > 0 && details.UsedCount >= config.Machine.MaxBuilds {
+		config.Machine.MaxBuilds > 0 && usedCount >= config.Machine.MaxBuilds {
 		err := m.remove(details.Name, "Too many builds")
 		if err == nil {
 			return
 		}
 	}
-	m.lock.Lock()
+	details.Lock()
 	details.State = machineStateIdle
-	m.lock.Unlock()
+	details.Unlock()
 
 	// Signal pending builds that a new machine is available.
 	if err := m.signalRelease(config); err != nil {

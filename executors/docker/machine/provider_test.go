@@ -179,9 +179,11 @@ func countIdleMachines(p *machineProvider) (count int) {
 	defer p.lock.RUnlock()
 
 	for _, details := range p.details {
+		details.Lock()
 		if details.State == machineStateIdle {
 			count++
 		}
+		details.Unlock()
 	}
 	return
 }
@@ -677,6 +679,8 @@ func TestMachineIdleLimits(t *testing.T) {
 	d, errCh := p.create(config, machineStateIdle)
 	assert.NoError(t, <-errCh, "machine creation should not fail")
 
+	time.Sleep(time.Second)
+
 	d2, err := p.Acquire(config)
 	p.Release(config, d2)
 	assert.NoError(t, err)
@@ -692,6 +696,7 @@ func TestMachineIdleLimits(t *testing.T) {
 	d4, err := p.Acquire(config)
 	p.Release(config, d4)
 	assert.NoError(t, err)
+
 	assert.Equal(t, machineStateRemoving, d.State, "machine should be removed, because there are no idle")
 	assert.Equal(t, "too many idle machines", d.Reason)
 }

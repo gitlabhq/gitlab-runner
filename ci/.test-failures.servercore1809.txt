@@ -4,7 +4,6 @@ TestBuildWithDebugTrace
 TestBuildWithDebugTrace/cmd
 TestList
 TestList/machines_directory_is_invalid
-TestMachineIdleLimits
 TestMachineProviderDeadInterval
 TestNewDockerMachineCommandCtx
 TestNewDockerMachineCommandCtx/MACHINE_BUGSNAG_API_TOKEN_is_defined_by_the_user
