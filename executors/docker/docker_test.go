@@ -862,7 +862,7 @@ func testDockerConfigurationWithJobContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer("build", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -883,7 +883,7 @@ func testDockerConfigurationWithPredefinedContainer(
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer("predefined", common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(predefinedContainerType, common.Image{Name: "alpine"}, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -1787,7 +1787,7 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer("build", imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
 	assert.NoError(t, err, "Should create container without errors")
 }
 
@@ -1815,7 +1815,7 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	err = e.createPullManager()
 	require.NoError(t, err)
 
-	_, err = e.createContainer("build", imageConfig, []string{"/bin/sh"}, []string{})
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
 	assert.Contains(
 		t,
 		err.Error(),
