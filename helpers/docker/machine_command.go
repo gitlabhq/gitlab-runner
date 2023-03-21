@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -170,9 +171,20 @@ func (m *machineCommand) Remove(name string) error {
 func (m *machineCommand) List() (hostNames []string, err error) {
 	dir, err := os.ReadDir(mcndirs.GetMachineDir())
 	if err != nil {
-		if os.IsNotExist(err) {
+		errExist := err
+		// On Windows, ReadDir() on a regular file will satisfy ErrNotExist,
+		// due to this bug: https://github.com/golang/go/issues/46734
+		//
+		// For a workaround, we explicitly check whether the directory
+		// exists or not with a Stat call.
+		//nolint:goconst
+		if runtime.GOOS == "windows" {
+			_, errExist = os.Stat(mcndirs.GetMachineDir())
+		}
+		if os.IsNotExist(errExist) {
 			return nil, nil
 		}
+
 		return nil, err
 	}
 
