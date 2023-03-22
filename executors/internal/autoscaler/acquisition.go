@@ -34,7 +34,7 @@ func (ref *acquisitionRef) Prepare(
 ) (executors.Client, error) {
 	info, err := ref.acq.InstanceConnectInfo(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting instance connect info: %w", err)
 	}
 
 	useExternalAddr := true

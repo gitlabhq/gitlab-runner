@@ -315,15 +315,22 @@ func (p *provider) Collect(ch chan<- prometheus.Metric) {
 
 //nolint:gocognit
 func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscaler.UpFunc {
-	if !config.Autoscaler.VMIsolation.Enabled {
-		return nil
-	}
-
 	//nolint:lll
 	return func(id string, info fleetingprovider.ConnectInfo, cause fleeting.Cause) (keys []string, used int, err error) {
 		useExternalAddr := true
 		if config.Autoscaler != nil {
 			useExternalAddr = config.Autoscaler.ConnectorConfig.UseExternalAddr
+		}
+
+		// If VMIsolation is disabled, we cannot trust an existing instance that we have no data of,
+		// because we don't know how many times it's been used/its internal state. etc.
+		//
+		// If VMIsolation is enabled, we can trust the instance and re-use it.
+		if !config.Autoscaler.VMIsolation.Enabled {
+			if cause == fleeting.CausePreexisted {
+				return nil, 0, fmt.Errorf("no data on pre-existing instance so removing for safety")
+			}
+			return nil, 0, nil
 		}
 
 		// dial host
