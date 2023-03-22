@@ -1009,7 +1009,7 @@ The GitLab Runner revision and architecture define which tag to download.
 
 ### Helper image configuration for Kubernetes on Arm
 
-To use the `arm64` helper image on `arm64` Kubernetes clusters, set the following values in your [configuration file](#kubernetes.md#additonal-configuration).
+To use the `arm64` helper image on `arm64` Kubernetes clusters, set the following values in your [configuration file](../executors/kubernetes.md#configuration-settings).
 
 ```toml
 [runners.kubernetes]
