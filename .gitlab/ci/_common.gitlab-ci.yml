@@ -14,7 +14,9 @@ variables:
   KUBECTL_VERSION: 1.23.0
   AWS_CLI_VERSION: 2.4.19
   DUMB_INIT_VERSION: "1.2.2"
-  GIT_VERSION: "2.38.1"
+  # Git version 2.38.x is broken for Windows Nano Server, should be resolved with 2.39 release
+  # https://github.com/git-for-windows/git/issues/4052
+  GIT_VERSION: "2.39.2"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "3.2.0"
   YQ_VERSION: "4.30.5"
@@ -122,7 +124,7 @@ default:
 
 .windows-dependency-checksums:
   variables:
-    GIT_WINDOWS_AMD64_CHECKSUM: "77b14610d92e717ac025e5409e2e713553435bfad224753baf6858ebd0f7d96d"
+    GIT_WINDOWS_AMD64_CHECKSUM: "a53b90a42d9a5e3ac992f525b5805c4dbb8a013b09a32edfdcf9a551fd8cfe2d"
     GIT_LFS_WINDOWS_AMD64_CHECKSUM: "c2ee1f7b22d98f614cab94e1033052143f4dbf1207c09ce57e9390acc4bbf86e"
     PWSH_WINDOWS_AMD64_CHECKSUM: "D234CFD6E9DD4A2CA68BFBC64C416DE42F31760E954812E8ADE02B6D57FE243F"
 
@@ -138,6 +140,12 @@ default:
   - windows
   - windows-1809
 
+.windows1809_nano:
+  extends:
+  - .windows1809
+  variables:
+    WINDOWS_VERSION: nanoserver1809
+
 .windows2004_variables:
   variables:
     WINDOWS_VERSION: servercore2004
@@ -148,6 +156,12 @@ default:
   tags:
   - windows
   - windows-2004
+
+.windows2004_nano:
+  extends:
+  - .windows2004
+  variables:
+    WINDOWS_VERSION: nanoserver2004
 
 .windows20H2_variables:
   variables:
@@ -160,6 +174,12 @@ default:
   - windows
   - windows-20h2
 
+.windows20H2_nano:
+  extends:
+  - .windows20H2
+  variables:
+    WINDOWS_VERSION: nanoserver20H2
+
 .windows21H1_variables:
   variables:
     WINDOWS_VERSION: servercore21H1
@@ -170,6 +190,12 @@ default:
   tags:
   - windows
   - windows-21h1
+
+.windows21H1_nano:
+  extends:
+  - .windows21H1
+  variables:
+    WINDOWS_VERSION: nanoserver21H1
 
 # .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
 # without explicitly waiting for the completion of the n-1 stage

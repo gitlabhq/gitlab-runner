@@ -158,6 +158,12 @@ function Build-Image($tag)
         $windowsVersion = "ltsc2022"
     }
 
+    $baseWindowsFlavor = $windowsFlavor
+    if ($windowsFlavor -eq "nanoserver") {
+        $baseWindowsFlavor = "servercore"
+    }
+    $pwshImageTag = "${windowsFlavor}-${windowsVersion}".ToLower()
+
     Write-Information "Build image for x86_64_${env:WINDOWS_VERSION}"
 
     $dockerFile = "${imagesBasePath}_${windowsFlavor}"
@@ -165,7 +171,8 @@ function Build-Image($tag)
     New-Item -ItemType Directory -Force -Path $context\binaries
     Copy-Item -Path "out\binaries\gitlab-runner-helper\gitlab-runner-helper.x86_64-windows.exe" -Destination "$context/binaries"
     $buildArgs = @(
-        '--build-arg', "BASE_IMAGE_TAG=mcr.microsoft.com/windows/${windowsFlavor}:${windowsVersion}-amd64",
+        '--build-arg', "BASE_IMAGE_TAG=mcr.microsoft.com/windows/${baseWindowsFlavor}:${windowsVersion}-amd64",
+        '--build-arg', "PWSH_IMAGE_TAG=mcr.microsoft.com/powershell:$pwshImageTag",
         '--build-arg', "PWSH_VERSION=$Env:PWSH_VERSION",
         '--build-arg', "PWSH_AMD64_CHECKSUM=$Env:PWSH_WINDOWS_AMD64_CHECKSUM",
         '--build-arg', "GIT_VERSION=$Env:GIT_VERSION",
