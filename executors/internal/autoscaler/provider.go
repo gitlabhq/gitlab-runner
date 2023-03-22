@@ -146,9 +146,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 	constLabels := prometheus.Labels{
 		"runner":      config.ShortDescription(),
 		"runner_name": config.Name,
-	}
-	if config.SystemIDState != nil {
-		constLabels["system_id"] = config.SystemIDState.GetSystemID()
+		"system_id":   config.GetSystemID(),
 	}
 
 	tsMC := tsprometheus.New(
@@ -160,6 +158,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		flprometheus.WithInstanceCreationTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
 		flprometheus.WithInstanceIsRunningTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
 		flprometheus.WithInstanceDeletionTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
+		flprometheus.WithInstanceLifeDurationBuckets(config.Autoscaler.InstanceLifeDurationBuckets),
 	)
 
 	shutdownCtx, shutdownFn := context.WithCancel(context.Background())
@@ -235,7 +234,11 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 	key = helpers.ShortenToken(config.Token) + key
 
 	if err := scaler.Reserve(key); err != nil {
-		return nil, fmt.Errorf("reserving capacity: %w", err)
+		if errors.Is(err, taskscaler.ErrNoCapacity) {
+			err = &common.NoFreeExecutorError{Message: fmt.Sprintf("reserving taskscaler capacity: %v", err)}
+		}
+
+		return nil, err
 	}
 
 	logrus.WithField("key", key).Trace("Reserved capacity...")

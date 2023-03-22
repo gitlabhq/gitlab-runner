@@ -34,7 +34,13 @@ import (
 )
 
 const (
-	unknownSystemID = "unknown"
+	workerSlotOperationStarted = "started"
+	workerSlotOperationStopped = "stopped"
+)
+
+const (
+	workerProcessingFailureOther          = "other"
+	workerProcessingFailureNoFreeExecutor = "no_free_executor"
 )
 
 var (
@@ -76,8 +82,8 @@ func runAt(t time.Time, f func()) runAtTask {
 type RunCommand struct {
 	configOptionsWithListenAddress
 	network common.Network
-	healthHelper
 
+	healthHelper healthHelper
 	buildsHelper buildsHelper
 
 	ServiceName      string `short:"n" long:"service" description:"Use different names for different services"`
@@ -120,6 +126,12 @@ type RunCommand struct {
 	reloadConfigInterval time.Duration
 
 	runAt func(time.Time, func()) runAtTask
+
+	runnerWorkerSlots             prometheus.Gauge
+	runnerWorkersFeeds            *prometheus.CounterVec
+	runnerWorkersFeedFailures     *prometheus.CounterVec
+	runnerWorkerSlotOperations    *prometheus.CounterVec
+	runnerWorkerProcessingFailure *prometheus.CounterVec
 }
 
 func (mr *RunCommand) log() *logrus.Entry {
@@ -140,6 +152,8 @@ func (mr *RunCommand) Start(_ service.Service) error {
 
 	mr.log().Info("Starting multi-runner from ", mr.ConfigFile, "...")
 
+	mr.setupInternalMetrics()
+
 	userModeWarning(false)
 
 	if len(mr.WorkingDirectory) > 0 {
@@ -154,10 +168,72 @@ func (mr *RunCommand) Start(_ service.Service) error {
 		return err
 	}
 
+	config := mr.getConfig()
+	for _, runner := range config.Runners {
+		mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Add(0)
+		mr.runnerWorkersFeedFailures.
+			WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).
+			Add(0)
+		mr.runnerWorkerProcessingFailure.
+			WithLabelValues(
+				workerProcessingFailureOther,
+				runner.ShortDescription(), runner.Name, runner.GetSystemID(),
+			).
+			Add(0)
+		mr.runnerWorkerProcessingFailure.
+			WithLabelValues(
+				workerProcessingFailureNoFreeExecutor,
+				runner.ShortDescription(), runner.Name, runner.GetSystemID(),
+			).
+			Add(0)
+	}
+	mr.runnerWorkerSlots.Set(0)
+	mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStarted).Add(0)
+	mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStopped).Add(0)
+
 	// Start should not block. Do the actual work async.
 	go mr.run()
 
 	return nil
+}
+
+func (mr *RunCommand) setupInternalMetrics() {
+	mr.runnerWorkersFeeds = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_feeds_total",
+			Help: "Total number of times that runner worker is fed to the main loop",
+		},
+		[]string{"runner", "runner_name", "system_id"},
+	)
+
+	mr.runnerWorkersFeedFailures = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_feed_failures_total",
+			Help: "Total number of times that runner worker feeding have failed",
+		},
+		[]string{"runner", "runner_name", "system_id"},
+	)
+
+	mr.runnerWorkerSlots = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "gitlab_runner_worker_slots_number",
+		Help: "Current number of runner worker slots",
+	})
+
+	mr.runnerWorkerSlotOperations = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_slot_operations_total",
+			Help: "Total number of runner workers slot operations (starting and stopping slots)",
+		},
+		[]string{"operation"},
+	)
+
+	mr.runnerWorkerProcessingFailure = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gitlab_runner_worker_processing_failures_total",
+			Help: "Total number of failures when processing runner worker",
+		},
+		[]string{"failure_type", "runner", "runner_name", "system_id"},
+	)
 }
 
 func nextRunnerToReset(config *common.Config) (*common.RunnerConfig, time.Time) {
@@ -203,12 +279,7 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 
 	select {
 	case runner := <-runnerResetCh:
-		systemID := unknownSystemID
-		if runner.SystemIDState != nil {
-			systemID = runner.SystemIDState.GetSystemID()
-		}
-
-		if common.ResetToken(mr.network, &runner.RunnerCredentials, systemID, "") {
+		if common.ResetToken(mr.network, &runner.RunnerCredentials, runner.GetSystemID(), "") {
 			err := mr.saveConfig()
 			if err != nil {
 				mr.log().WithError(err).Errorln("Failed to save config")
@@ -249,7 +320,7 @@ func (mr *RunCommand) reloadConfig() error {
 	}
 
 	config := mr.getConfig()
-	mr.healthy = nil
+	mr.healthHelper.healthy = nil
 	mr.log().Println("Configuration loaded")
 	mr.log().Debugln(helpers.ToYAML(config))
 
@@ -339,16 +410,11 @@ func (mr *RunCommand) run() {
 		}
 	}
 
-	// Wait for workers to shutdown
-	for mr.currentWorkers > 0 {
-		stopWorker <- true
-		mr.currentWorkers--
-	}
-
+	// Wait for workers to shut down
+	mr.stopWorkers(stopWorker)
 	mr.log().Info("All workers stopped.")
 
 	mr.shutdownUsedExecutorProviders()
-
 	mr.log().Info("All executor providers shut down.")
 
 	close(mr.runFinished)
@@ -429,6 +495,8 @@ func (mr *RunCommand) serveMetrics(mux *http.ServeMux) {
 	registry := prometheus.NewRegistry()
 	// Metrics about the runner's business logic.
 	registry.MustRegister(&mr.buildsHelper)
+	// Metrics about runner workers health
+	registry.MustRegister(&mr.healthHelper)
 	// Metrics about configuration file accessing
 	registry.MustRegister(mr.configAccessCollector)
 	registry.MustRegister(mr)
@@ -562,10 +630,12 @@ func (mr *RunCommand) feedRunners(runners chan *common.RunnerConfig) {
 }
 
 func (mr *RunCommand) feedRunner(runner *common.RunnerConfig, runners chan *common.RunnerConfig) {
-	if !mr.isHealthy(runner) {
+	if !mr.healthHelper.isHealthy(runner) {
+		mr.runnerWorkersFeedFailures.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Inc()
 		return
 	}
 
+	mr.runnerWorkersFeeds.WithLabelValues(runner.ShortDescription(), runner.Name, runner.GetSystemID()).Inc()
 	mr.log().WithField("runner", runner.ShortDescription()).Debugln("Feeding runner to channel")
 	runners <- runner
 }
@@ -587,28 +657,41 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 		WithField("worker", id).
 		Debugln("Starting worker")
 
+	mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStarted).Inc()
+
 	for mr.stopSignal == nil {
 		select {
 		case runner := <-runners:
 			err := mr.processRunner(id, runner, runners)
 			if err != nil {
-				logger := mr.log().WithFields(logrus.Fields{
-					"runner":   runner.ShortDescription(),
-					"executor": runner.Executor,
-				}).WithError(err)
+				logger := mr.log().
+					WithFields(logrus.Fields{
+						"runner":   runner.ShortDescription(),
+						"executor": runner.Executor,
+					}).WithError(err)
+
+				l := logger.Warn
+				failureType := workerProcessingFailureOther
 
 				var NoFreeExecutorError *common.NoFreeExecutorError
 				if errors.As(err, &NoFreeExecutorError) {
-					logger.Debug("Failed to process runner")
-				} else {
-					logger.Warn("Failed to process runner")
+					l = logger.Debug
+					failureType = workerProcessingFailureNoFreeExecutor
 				}
+
+				l("Failed to process runner")
+				mr.runnerWorkerProcessingFailure.
+					WithLabelValues(failureType, runner.ShortDescription(), runner.Name, runner.GetSystemID()).
+					Inc()
 			}
 
 		case <-stopWorker:
 			mr.log().
 				WithField("worker", id).
 				Debugln("Stopping worker")
+
+			mr.runnerWorkerSlotOperations.WithLabelValues(workerSlotOperationStopped).Inc()
+
 			return
 		}
 	}
@@ -747,7 +830,7 @@ func (mr *RunCommand) requestJob(
 	defer mr.buildsHelper.releaseRequest(runner)
 
 	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
-	mr.markHealth(runner, healthy)
+	mr.healthHelper.markHealth(runner, healthy)
 
 	if jobData == nil {
 		return nil, nil, nil
@@ -839,6 +922,7 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 			return signaled
 		}
 		mr.currentWorkers--
+		mr.runnerWorkerSlots.Set(float64(mr.currentWorkers))
 	}
 
 	for mr.currentWorkers < concurrentLimit {
@@ -850,10 +934,20 @@ func (mr *RunCommand) updateWorkers(workerIndex *int, startWorker chan int, stop
 			return signaled
 		}
 		mr.currentWorkers++
+		mr.runnerWorkerSlots.Set(float64(mr.currentWorkers))
+
 		*workerIndex++
 	}
 
 	return nil
+}
+
+func (mr *RunCommand) stopWorkers(stopWorker chan bool) {
+	for mr.currentWorkers > 0 {
+		stopWorker <- true
+		mr.currentWorkers--
+		mr.runnerWorkerSlots.Set(float64(mr.currentWorkers))
+	}
 }
 
 func (mr *RunCommand) updateConfig() os.Signal {
@@ -1096,6 +1190,12 @@ func (mr *RunCommand) runWait() {
 func (mr *RunCommand) Describe(ch chan<- *prometheus.Desc) {
 	ch <- concurrentDesc
 	ch <- limitDesc
+
+	mr.runnerWorkersFeeds.Describe(ch)
+	mr.runnerWorkersFeedFailures.Describe(ch)
+	mr.runnerWorkerSlots.Describe(ch)
+	mr.runnerWorkerSlotOperations.Describe(ch)
+	mr.runnerWorkerProcessingFailure.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -1117,6 +1217,12 @@ func (mr *RunCommand) Collect(ch chan<- prometheus.Metric) {
 			runner.SystemIDState.GetSystemID(),
 		)
 	}
+
+	mr.runnerWorkersFeeds.Collect(ch)
+	mr.runnerWorkersFeedFailures.Collect(ch)
+	mr.runnerWorkerSlots.Collect(ch)
+	mr.runnerWorkerSlotOperations.Collect(ch)
+	mr.runnerWorkerProcessingFailure.Collect(ch)
 }
 
 func init() {
@@ -1128,6 +1234,7 @@ func init() {
 		apiRequestsCollector: apiRequestsCollector,
 		prometheusLogHook:    prometheus_helper.NewLogHook(),
 		failuresCollector:    prometheus_helper.NewFailuresCollector(),
+		healthHelper:         newHealthHelper(),
 		buildsHelper:         newBuildsHelper(),
 		runAt:                runAt,
 		reloadConfigInterval: common.ReloadConfigInterval,
