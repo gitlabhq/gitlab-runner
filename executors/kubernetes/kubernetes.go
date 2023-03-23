@@ -228,7 +228,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	s.featureChecker = &kubeClientFeatureChecker{kubeClient: s.kubeClient}
 
-	imageName := s.Build.GetAllVariables().ExpandValue(s.options.Image.Name)
+	imageName := s.options.Image.Name
 
 	s.Println("Using Kubernetes executor with image", imageName, "...")
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
@@ -324,7 +324,7 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 		Shell:        s.Config.Shell,
-		Flavor:       s.Config.Kubernetes.HelperImageFlavor,
+		Flavor:       s.ExpandValue(s.Config.Kubernetes.HelperImageFlavor),
 	}
 
 	// use node selector labels to better select the correct image
@@ -801,8 +801,8 @@ func (s *executor) cleanupResources() {
 func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error) {
 	// check if the image/service is allowed
 	internalImages := []string{
-		s.Config.Kubernetes.Image,
-		s.helperImageInfo.Name,
+		s.ExpandValue(s.Config.Kubernetes.Image),
+		s.ExpandValue(s.helperImageInfo.Name),
 	}
 
 	var (
@@ -1472,10 +1472,9 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 	podServices := make([]api.Container, len(s.options.Services))
 
 	for i, service := range s.options.Services {
-		resolvedImage := s.Build.GetAllVariables().ExpandValue(service.Name)
 		podServices[i], err = s.buildContainer(containerBuildOpts{
 			name:            fmt.Sprintf("%s%d", serviceContainerPrefix, i),
-			image:           resolvedImage,
+			image:           service.Name,
 			imageDefinition: service,
 			requests:        s.configurationOverwrites.serviceRequests,
 			limits:          s.configurationOverwrites.serviceLimits,
@@ -1558,7 +1557,7 @@ func (s *executor) getPodActiveDeadlineSeconds() *int64 {
 func (s *executor) createBuildAndHelperContainers() (api.Container, api.Container, error) {
 	buildContainer, err := s.buildContainer(containerBuildOpts{
 		name:            buildContainerName,
-		image:           s.Build.GetAllVariables().ExpandValue(s.options.Image.Name),
+		image:           s.options.Image.Name,
 		imageDefinition: s.options.Image,
 		requests:        s.configurationOverwrites.buildRequests,
 		limits:          s.configurationOverwrites.buildLimits,
@@ -1756,7 +1755,7 @@ func (s *executor) getDNSPolicy() api.DNSPolicy {
 
 func (s *executor) getHelperImage() string {
 	if len(s.Config.Kubernetes.HelperImage) > 0 {
-		return common.AppVersion.Variables().ExpandValue(s.Config.Kubernetes.HelperImage)
+		return s.ExpandValue(s.Config.Kubernetes.HelperImage)
 	}
 
 	return s.helperImageInfo.String()
@@ -2015,7 +2014,7 @@ func (s *executor) prepareLifecycleHooks() *api.Lifecycle {
 }
 
 func (s *executor) getServices(build *common.Build) {
-	for _, service := range s.Config.Kubernetes.Services {
+	for _, service := range s.Config.Kubernetes.GetExpandedServices(s.Build.GetAllVariables()) {
 		if service.Name == "" {
 			continue
 		}
@@ -2039,13 +2038,14 @@ func (s *executor) getServiceVariables(serviceDefinition common.Image) common.Jo
 
 // checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults() error {
+	k8sConfigImageName := s.ExpandValue(s.Config.Kubernetes.Image)
 	if s.options.Image.Name == "" {
-		if s.Config.Kubernetes.Image == "" {
+		if k8sConfigImageName == "" {
 			return fmt.Errorf("no image specified and no default set in config")
 		}
 
 		s.options.Image = common.Image{
-			Name: s.Config.Kubernetes.Image,
+			Name: k8sConfigImageName,
 		}
 	}
 

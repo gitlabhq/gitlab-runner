@@ -5937,6 +5937,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
 	}
 	e.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry))
+	e.Config.Kubernetes = &common.KubernetesConfig{}
 
 	ctx := context.Background()
 
