@@ -1490,7 +1490,7 @@ func TestInteractiveTerminal(t *testing.T) {
 			}()
 
 			// Wait until the session terminal is available
-			for build.Session.Handler() == nil && !build.Session.TerminalAvailable() {
+			for build.Session.Handler() == nil || !build.Session.TerminalAvailable() {
 				time.Sleep(10 * time.Millisecond)
 			}
 
