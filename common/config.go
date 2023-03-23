@@ -1328,6 +1328,23 @@ func (c *DockerConfig) GetOomKillDisable() *bool {
 	return &c.OomKillDisable
 }
 
+func getExpandedServices(services []Service, vars JobVariables) []Service {
+	result := []Service{}
+	for _, s := range services {
+		s.Name = vars.ExpandValue(s.Name)
+		s.Alias = vars.ExpandValue(s.Alias)
+		result = append(result, s)
+	}
+	return result
+}
+
+// GetExpandedServices returns the executor-configured services, with the values expanded. This is necessary because
+// some of the values in service definition can point to job variables, so the final value is job-dependant.
+// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29499
+func (c *DockerConfig) GetExpandedServices(vars JobVariables) []Service {
+	return getExpandedServices(c.Services, vars)
+}
+
 func (c *KubernetesConfig) GetPollAttempts() int {
 	if c.PollTimeout <= 0 {
 		c.PollTimeout = KubernetesPollTimeout
@@ -1647,6 +1664,13 @@ func (c *KubernetesConfig) GetHostAliases() []api.HostAlias {
 	}
 
 	return hostAliases
+}
+
+// GetExpandedServices returns the executor-configured services, with the values expanded. This is necessary because
+// some of the values in service definition can point to job variables, so the final value is job-dependant.
+// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29499
+func (c *KubernetesConfig) GetExpandedServices(vars JobVariables) []Service {
+	return getExpandedServices(c.Services, vars)
 }
 
 func (c *DockerMachine) GetIdleCount() int {

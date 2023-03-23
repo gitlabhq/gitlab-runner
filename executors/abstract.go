@@ -41,6 +41,10 @@ func (e *AbstractExecutor) updateShell() error {
 	return nil
 }
 
+func (e *AbstractExecutor) ExpandValue(value string) string {
+	return e.Build.GetAllVariables().ExpandValue(value)
+}
+
 func (e *AbstractExecutor) generateShellConfiguration() error {
 	info := e.Shell()
 	info.PreGetSourcesScript = e.Config.GetPreGetSourcesScript()
