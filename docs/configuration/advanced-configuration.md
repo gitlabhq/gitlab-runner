@@ -27,7 +27,7 @@ You can find the `config.toml` file in:
 
 ## Configuration validation
 
-Introduced in GitLab Runner 15.10, config validation checks the structure of the Runner `config.toml` file. The validator pricing `info` level messages only. 
+Introduced in GitLab Runner 15.10, config validation checks the structure of the Runner `config.toml` file. The validator prints `info` level messages only. 
 
 {some other blurb}
 
