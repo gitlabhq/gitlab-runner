@@ -25,6 +25,12 @@ You can find the `config.toml` file in:
    executed as non-root
 - `./` on other systems
 
+## Configuration validation
+
+Introduced in GitLab Runner 15.0, config validation checks the structure of the Runner `config.toml` file. The validator pricing `info` level messages only. 
+
+{some other blurb}
+
 ## The global section
 
 These settings are global. They apply to all runners.
