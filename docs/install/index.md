@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 You can install GitLab Runner on your infrastructure.
 
 GitLab Runner is open-source and written in [Go](https://go.dev). It can run
-as a single binary and does has no language-specific requirements.
+as a single binary and has no language-specific requirements.
 
 GitLab Runner can also run inside a Docker container or be deployed to a Kubernetes cluster.
 
