@@ -151,13 +151,13 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 
 	tsMC := tsprometheus.New(
 		tsprometheus.WithConstLabels(constLabels),
-		tsprometheus.WithInstanceReadinessTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
+		tsprometheus.WithInstanceReadinessTimeBuckets(config.Autoscaler.GetInstanceReadinessTimeBuckets()),
 	)
 	flMC := flprometheus.New(
 		flprometheus.WithConstLabels(constLabels),
-		flprometheus.WithInstanceCreationTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
-		flprometheus.WithInstanceIsRunningTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
-		flprometheus.WithInstanceDeletionTimeBuckets(config.Autoscaler.InstanceOperationTimeBuckets),
+		flprometheus.WithInstanceCreationTimeBuckets(config.Autoscaler.GetInstanceCreationTimeBuckets()),
+		flprometheus.WithInstanceIsRunningTimeBuckets(config.Autoscaler.GetInstanceIsRunningTimeBuckets()),
+		flprometheus.WithInstanceDeletionTimeBuckets(config.Autoscaler.GetInstanceDeletionTimeBuckets()),
 		flprometheus.WithInstanceLifeDurationBuckets(config.Autoscaler.InstanceLifeDurationBuckets),
 	)
 
