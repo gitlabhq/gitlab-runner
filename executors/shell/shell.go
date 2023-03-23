@@ -25,10 +25,6 @@ type executor struct {
 	executors.AbstractExecutor
 }
 
-func (s *executor) Name() string {
-	return "shell"
-}
-
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if options.User != "" {
 		s.Shell().User = options.User

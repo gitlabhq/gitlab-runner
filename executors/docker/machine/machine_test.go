@@ -41,10 +41,6 @@ type machineCredentialsUsageFakeExecutor struct {
 	expectedRunnerConfig       *common.RunnerConfig
 }
 
-func (e *machineCredentialsUsageFakeExecutor) Name() string {
-	return "fake"
-}
-
 func (e *machineCredentialsUsageFakeExecutor) assertRunnerConfiguration(runnerConfig *common.RunnerConfig) {
 	assert.Equal(e.t, e.expectedRunnerConfig.Name, runnerConfig.Name)
 	assert.Equal(e.t, e.expectedRunnerConfig.RunnerSettings.Executor, runnerConfig.RunnerSettings.Executor)

@@ -874,7 +874,7 @@ func (b *AbstractShell) generateArtifactsMetadataArgs(info common.ShellScriptInf
 		"--job-name",
 		info.Build.JobInfo.Name,
 		"--executor-name",
-		info.Build.ExecutorName(),
+		info.Build.Runner.Executor,
 		"--runner-name",
 		info.Build.Runner.Name,
 		"--started-at",

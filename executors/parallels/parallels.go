@@ -21,10 +21,6 @@ type executor struct {
 	machineVerified bool
 }
 
-func (s *executor) Name() string {
-	return "parallels"
-}
-
 func (s *executor) waitForIPAddress(vmName string, seconds int) (string, error) {
 	var lastError error
 

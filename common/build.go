@@ -132,7 +132,6 @@ type Build struct {
 	Runner           *RunnerConfig  `json:"runner"`
 	ExecutorData     ExecutorData
 	ExecutorFeatures FeaturesInfo `json:"-" yaml:"-"`
-	ExecutorName     func() string
 
 	// Unique ID for all running builds on this runner
 	RunnerID int `json:"runner_id"`
@@ -872,12 +871,6 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 }
 
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
-	var executor Executor
-
-	b.ExecutorName = func() string {
-		return executor.Name()
-	}
-
 	b.logger = NewBuildLogger(trace, b.Log())
 	b.printRunningWithHeader()
 
@@ -892,8 +885,6 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 			err = &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
 		}
 	}()
-
-	defer func() { b.cleanupBuild(executor) }()
 
 	err = b.resolveSecrets()
 	if err != nil {
@@ -916,18 +907,17 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return fmt.Errorf("retrieving executor features: %w", err)
 	}
 
-	executor, err = b.executeBuildSection(executor, options, provider)
-
-	if err == nil {
-		err = b.run(ctx, executor)
-		if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
-			b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
-		}
+	executor, err := b.executeBuildSection(options, provider)
+	if err != nil {
+		return err
 	}
+	defer executor.Cleanup()
 
-	if executor != nil {
-		executor.Finish(err)
+	err = b.run(ctx, executor)
+	if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
+		b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
 	}
+	executor.Finish(err)
 
 	return err
 }
@@ -986,11 +976,8 @@ func (b *Build) resolveSecrets() error {
 	return section.Execute(&b.logger)
 }
 
-func (b *Build) executeBuildSection(
-	executor Executor,
-	options ExecutorPrepareOptions,
-	provider ExecutorProvider,
-) (Executor, error) {
+func (b *Build) executeBuildSection(options ExecutorPrepareOptions, provider ExecutorProvider) (Executor, error) {
+	var executor Executor
 	var err error
 	section := helpers.BuildSection{
 		Name:        string(BuildStagePrepareExecutor),
@@ -1009,12 +996,6 @@ func (b *Build) executeBuildSection(
 	}
 	err = section.Execute(&b.logger)
 	return executor, err
-}
-
-func (b *Build) cleanupBuild(executor Executor) {
-	if executor != nil {
-		executor.Cleanup()
-	}
 }
 
 func (b *Build) String() string {

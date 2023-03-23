@@ -1607,12 +1607,11 @@ func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{})
 			},
 			Runner: &common.RunnerConfig{
 				Name: "testrunner",
+				RunnerSettings: common.RunnerSettings{
+					Executor: "testexecutor",
+				},
 			},
 		},
-	}
-
-	info.Build.ExecutorName = func() string {
-		return "testexecutor"
 	}
 
 	parseRFC3339Mock := func(t string) bool {
