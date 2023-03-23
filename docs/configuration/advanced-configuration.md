@@ -1007,6 +1007,15 @@ The `kubernetes` executor and manual installations of GitLab Runner work differe
 In both cases, GitLab Runner [downloads the helper image](#helper-image-registry).
 The GitLab Runner revision and architecture define which tag to download.
 
+### Helper image configuration for Kubernetes on Arm
+
+To use the `arm64` helper image on `arm64` Kubernetes clusters, set the following values in your [configuration file](../executors/kubernetes.md#configuration-settings).
+
+```toml
+[runners.kubernetes]
+        helper_image = "gitlab/gitlab-runner-helper:arm64-latest"
+```
+
 ### Runner images that use an old version of Alpine Linux
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3122) in GitLab Runner 14.5.
