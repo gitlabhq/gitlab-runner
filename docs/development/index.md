@@ -58,7 +58,11 @@ go work use fleeting-plugin-googlecompute
 ## 2. Install dependencies and Go runtime
 
 The GitLab Runner project uses [`asdf`](https://asdf-vm.com/) to manage dependencies.
-The simplest way to get your development environment setup is to use `asdf`:
+The simplest way to get your development environment setup is to use `asdf`.
+
+::Tabs
+
+:::TabTitle asdf
 
 ```shell
 cd gitlab-runner
@@ -66,10 +70,7 @@ asdf plugin add golang
 asdf install
 ```
 
-NOTE:
-If you are not using `asdf`, follow the instructions below for the relevant distribution.
-
-### For Debian/Ubuntu
+:::TabTitle Debian/Ubuntu
 
 ```shell
 sudo apt-get install -y mercurial git-core wget make build-essential
@@ -78,7 +79,7 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
 
-### For CentOS
+:::TabTitle CentOS
 
 ```shell
 sudo yum install mercurial wget make
@@ -88,7 +89,7 @@ sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
 ```
 
-### For macOS
+:::TabTitle macOS
 
 Using binary package:
 
@@ -106,12 +107,14 @@ open go*-*.pkg
 export PATH="$(go env GOBIN):$PATH"
 ```
 
-### For FreeBSD
+:::TabTitle FreeBSD
 
 ```shell
 pkg install go-1.19.6 gmake git mercurial
 export PATH="$(go env GOBIN):$PATH"
 ```
+
+::EndTabs
 
 ## 3. Install Rancher Desktop
 
