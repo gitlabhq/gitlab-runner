@@ -60,12 +60,6 @@ var (
 	errPatchFileFail   = errors.New("loading patch file")
 )
 
-var (
-	errPatchConversion = errors.New("converting patch to json")
-	errPatchAmbiguous  = errors.New("ambiguous patch: both patch path and patch provided")
-	errPatchFileFail   = errors.New("loading patch file")
-)
-
 // InvalidTimePeriodsError represents that the time period specified is not valid.
 type InvalidTimePeriodsError struct {
 	periods []string
