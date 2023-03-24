@@ -1,4 +1,2 @@
-TestPowershell_GetConfiguration
-TestPowershell_GetConfiguration/pwsh_on_shell_with_custom_user_(windows)
 TestBuildCancel
 TestBuildCancel/cmd

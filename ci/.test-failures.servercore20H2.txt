@@ -1,5 +1,3 @@
-TestPowershell_GetConfiguration
-TestPowershell_GetConfiguration/pwsh_on_shell_with_custom_user_(windows)
 TestDockerServiceHealthcheck
 TestDockerServiceHealthcheck/successful_service_(FF_NETWORK_PER_BUILD=true)
 TestDockerServiceHealthcheck/failed_service_(FF_NETWORK_PER_BUILD=true)

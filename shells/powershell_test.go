@@ -216,7 +216,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedCommand:  "su",
 			expectedCmdLine:  "su custom -c " + pwshStdinExpectedLine,
 			getExpectedArguments: func(shell string) []string {
-				return []string{"-s", "custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
+				return []string{"custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
 			},
 		},
 		"powershell on shell - FF_DISABLE_POWERSHELL_STDIN true": {
