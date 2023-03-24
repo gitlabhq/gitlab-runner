@@ -619,6 +619,7 @@ func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	}
 }
 
+//nolint:funlen
 func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	b.setCurrentState(BuildRunRuntimeRunning)
 
@@ -661,6 +662,16 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 		b.setCurrentState(BuildRunRuntimeTerminated)
 
 	case err = <-buildFinish:
+		// It's possible that the parent context being cancelled will
+		// terminate the build early, bringing us here, and although we handle
+		// `ctx.Done()` above, select statements are not ordered.
+		// We handle this the same as if we received ctx.Done(), but
+		// return early because we're no longer waiting for the build
+		// to finish.
+		if ctx.Err() != nil {
+			return b.handleError(ctx.Err())
+		}
+
 		if err != nil {
 			b.setCurrentState(BuildRunRuntimeFailed)
 		} else {
