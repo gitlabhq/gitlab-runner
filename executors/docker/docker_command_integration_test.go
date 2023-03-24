@@ -786,6 +786,12 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 		build.Services = common.Services{
 			common.Image{
 				Name: common.TestDockerDindImage,
+				// set bip manually to prevent DinD-ception networking problems
+				// and avoid collision with:
+				// - docker daemon on the host
+				// - dind as a service to the CI job running this test
+				// - dind as a service to this test
+				Command: []string{"--bip", "172.30.0.1/16"},
 			},
 		}
 		build.Variables = append(build.Variables, common.JobVariable{
