@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -2893,12 +2894,17 @@ type setupBuildPodTestDef struct {
 }
 
 type setupBuildPodFakeRoundTripper struct {
-	t        *testing.T
-	test     setupBuildPodTestDef
+	t    *testing.T
+	test setupBuildPodTestDef
+
+	mu       sync.Mutex
 	executed bool
 }
 
 func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+
 	if req.Method == http.MethodGet && strings.Contains(req.URL.Path, "secrets") {
 		part := strings.Split(req.URL.Path, "/")
 		return buildSecretAPIResponse(rt.t, part[len(part)-1])
