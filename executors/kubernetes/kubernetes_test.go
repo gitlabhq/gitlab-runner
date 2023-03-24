@@ -1166,14 +1166,24 @@ func TestPrepare(t *testing.T) {
 		IsSupportingLocalImport: true,
 		Cmd:                     []string{"gitlab-runner-build"},
 	}
-	os := helperimage.OSTypeLinux
+
+	osType := helperimage.OSTypeLinux
+	os := ""
+	nodeSelector := map[string]string{}
 	if runtime.GOOS == helperimage.OSTypeWindows {
-		os = helperimage.OSTypeWindows
+		os = "10.0.19041"
+		osType = helperimage.OSTypeWindows
+		nodeSelector = map[string]string{
+			api.LabelArchStable:           "amd64",
+			api.LabelOSStable:             "windows",
+			nodeSelectorWindowsBuildLabel: os,
+		}
 	}
 	pwshHelperImage, err := helperimage.Get(helperImageTag, helperimage.Config{
-		Architecture: "x86_64",
-		OSType:       os,
-		Shell:        shells.SNPwsh,
+		Architecture:    "x86_64",
+		OSType:          osType,
+		Shell:           shells.SNPwsh,
+		OperatingSystem: os,
 	})
 	require.NoError(t, err)
 
@@ -1501,8 +1511,9 @@ func TestPrepare(t *testing.T) {
 				RunnerSettings: common.RunnerSettings{
 					Shell: shells.SNPwsh,
 					Kubernetes: &common.KubernetesConfig{
-						Image: "test-image",
-						Host:  "test-server",
+						Image:        "test-image",
+						Host:         "test-server",
+						NodeSelector: nodeSelector,
 					},
 				},
 			},
@@ -1520,8 +1531,17 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				configurationOverwrites: defaultOverwrites,
-				helperImageInfo:         pwshHelperImage,
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					nodeSelector:    nodeSelector,
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+				helperImageInfo: pwshHelperImage,
 			},
 		},
 		{
@@ -1718,7 +1738,7 @@ func TestPrepare(t *testing.T) {
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo: helperimage.Info{
-					OSType:                  os,
+					OSType:                  helperimage.OSTypeLinux,
 					Architecture:            "x86_64",
 					Name:                    helperimage.GitLabRegistryName,
 					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
