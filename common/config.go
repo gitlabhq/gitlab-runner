@@ -182,7 +182,7 @@ type DockerConfig struct {
 	DNS                        []string           `toml:"dns,omitempty" json:"dns,omitempty" long:"dns" env:"DOCKER_DNS" description:"A list of DNS servers for the container to use"`
 	DNSSearch                  []string           `toml:"dns_search,omitempty" json:"dns_search,omitempty" long:"dns-search" env:"DOCKER_DNS_SEARCH" description:"A list of DNS search domains"`
 	Privileged                 bool               `toml:"privileged,omitzero" json:"privileged" long:"privileged" env:"DOCKER_PRIVILEGED" description:"Give extended privileges to container"`
-	ServicesPrivileged         *bool              `toml:"services_privileged,omitempty" json:"services_privileged" long:"services_privileged" env:"DOCKER_SERVICES_PRIVILEGED" description:"When set this will give or remove extended privileges to container services"`
+	ServicesPrivileged         *bool              `toml:"services_privileged,omitempty" json:"services_privileged,omitempty" long:"services_privileged" env:"DOCKER_SERVICES_PRIVILEGED" description:"When set this will give or remove extended privileges to container services"`
 	DisableEntrypointOverwrite bool               `toml:"disable_entrypoint_overwrite,omitzero" json:"disable_entrypoint_overwrite" long:"disable-entrypoint-overwrite" env:"DOCKER_DISABLE_ENTRYPOINT_OVERWRITE" description:"Disable the possibility for a container to overwrite the default image entrypoint"`
 	User                       string             `toml:"user,omitempty" json:"user" long:"user" env:"DOCKER_USER" description:"Run all commands in the container as the specified user."`
 	UsernsMode                 string             `toml:"userns_mode,omitempty" json:"userns_mode" long:"userns" env:"DOCKER_USERNS_MODE" description:"User namespace to use"`
@@ -192,8 +192,8 @@ type DockerConfig struct {
 	OomScoreAdjust             int                `toml:"oom_score_adjust,omitzero" json:"oom_score_adjust" long:"oom-score-adjust" env:"DOCKER_OOM_SCORE_ADJUST" description:"Adjust OOM score"`
 	SecurityOpt                []string           `toml:"security_opt" json:"security_opt,omitempty" long:"security-opt" env:"DOCKER_SECURITY_OPT" description:"Security Options"`
 	ServicesSecurityOpt        []string           `toml:"services_security_opt" json:"services_security_opt,omitempty" long:"services-security-opt" env:"DOCKER_SERVICES_SECURITY_OPT" description:"Security Options for container services"`
-	Devices                    []string           `toml:"devices" json:"devices" long:"devices,omitempty" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
-	DeviceCgroupRules          []string           `toml:"device_cgroup_rules,omitempty" json:"device_cgroup_rules" long:"device-cgroup-rules" env:"DOCKER_DEVICE_CGROUP_RULES" description:"Add a device cgroup rule to the container"`
+	Devices                    []string           `toml:"devices" json:"devices,omitempty" long:"devices,omitempty" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
+	DeviceCgroupRules          []string           `toml:"device_cgroup_rules,omitempty" json:"device_cgroup_rules,omitempty" long:"device-cgroup-rules" env:"DOCKER_DEVICE_CGROUP_RULES" description:"Add a device cgroup rule to the container"`
 	Gpus                       string             `toml:"gpus,omitempty" json:"gpus" long:"gpus" env:"DOCKER_GPUS" description:"Request GPUs to be used by Docker"`
 	DisableCache               bool               `toml:"disable_cache,omitzero" json:"disable_cache" long:"disable-cache" env:"DOCKER_DISABLE_CACHE" description:"Disable all container caching"`
 	Volumes                    []string           `toml:"volumes,omitempty" json:"volumes,omitempty" long:"volumes" env:"DOCKER_VOLUMES" description:"Bind-mount a volume and create it if it doesn't exist prior to mounting. Can be specified multiple times once per mountpoint, e.g. --docker-volumes 'test0:/test0' --docker-volumes 'test1:/test1'"`
@@ -211,21 +211,21 @@ type DockerConfig struct {
 	AllowedImages              []string           `toml:"allowed_images,omitempty" json:"allowed_images,omitempty" long:"allowed-images" env:"DOCKER_ALLOWED_IMAGES" description:"Image allowlist"`
 	AllowedPullPolicies        []DockerPullPolicy `toml:"allowed_pull_policies,omitempty" json:"allowed_pull_policies,omitempty" long:"allowed-pull-policies" env:"DOCKER_ALLOWED_PULL_POLICIES" description:"Pull policy allowlist"`
 	AllowedServices            []string           `toml:"allowed_services,omitempty" json:"allowed_services,omitempty" long:"allowed-services" env:"DOCKER_ALLOWED_SERVICES" description:"Service allowlist"`
-	PullPolicy                 StringOrArray      `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"DOCKER_PULL_POLICY" description:"Image pull policy: never, if-not-present, always"`
+	PullPolicy                 StringOrArray      `toml:"pull_policy,omitempty" json:"pull_policy,omitempty" long:"pull-policy" env:"DOCKER_PULL_POLICY" description:"Image pull policy: never, if-not-present, always"`
 	Isolation                  string             `toml:"isolation,omitempty" json:"isolation" long:"isolation" env:"DOCKER_ISOLATION" description:"Container isolation technology. Windows only"`
 	ShmSize                    int64              `toml:"shm_size,omitempty" json:"shm_size" long:"shm-size" env:"DOCKER_SHM_SIZE" description:"Shared memory size for docker images (in bytes)"`
-	Tmpfs                      map[string]string  `toml:"tmpfs,omitempty" json:"tmpfs" long:"tmpfs" env:"DOCKER_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in the main container, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
-	ServicesTmpfs              map[string]string  `toml:"services_tmpfs,omitempty" json:"services_tmpfs" long:"services-tmpfs" env:"DOCKER_SERVICES_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in all the service containers, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
-	SysCtls                    DockerSysCtls      `toml:"sysctls,omitempty" json:"sysctls" long:"sysctls" env:"DOCKER_SYSCTLS" description:"Sysctl options, a toml table/json object of key=value. Value is expected to be a string."`
+	Tmpfs                      map[string]string  `toml:"tmpfs,omitempty" json:"tmpfs,omitempty" long:"tmpfs" env:"DOCKER_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in the main container, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
+	ServicesTmpfs              map[string]string  `toml:"services_tmpfs,omitempty" json:"services_tmpfs,omitempty" long:"services-tmpfs" env:"DOCKER_SERVICES_TMPFS" description:"A toml table/json object with the format key=values. When set this will mount the specified path in the key as a tmpfs volume in all the service containers, using the options specified as key. For the supported options, see the documentation for the unix 'mount' command"`
+	SysCtls                    DockerSysCtls      `toml:"sysctls,omitempty" json:"sysctls,omitempty" long:"sysctls" env:"DOCKER_SYSCTLS" description:"Sysctl options, a toml table/json object of key=value. Value is expected to be a string."`
 	HelperImage                string             `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"DOCKER_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 	HelperImageFlavor          string             `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"DOCKER_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
-	ContainerLabels            map[string]string  `toml:"container_labels,omitempty" json:"container_labels" long:"container-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create containers with the given container labels. Environment variables will be substituted for values here."`
+	ContainerLabels            map[string]string  `toml:"container_labels,omitempty" json:"container_labels,omitempty" long:"container-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create containers with the given container labels. Environment variables will be substituted for values here."`
 	EnableIPv6                 bool               `toml:"enable_ipv6,omitempty" json:"enable_ipv6" long:"enable-ipv6" description:"Enable IPv6 for automatically created networks. This is only takes affect when the feature flag FF_NETWORK_PER_BUILD is enabled."`
 }
 
 //nolint:lll
 type InstanceConfig struct {
-	AllowedImages []string `toml:"allowed_images,omitempty" description:"When VM Isolation is enabled, allowed images controls which images a job is allowed to specify"`
+	AllowedImages []string `toml:"allowed_images,omitempty" json:",omitempty" description:"When VM Isolation is enabled, allowed images controls which images a job is allowed to specify"`
 }
 
 type AutoscalerConfig struct {
@@ -297,7 +297,7 @@ type DockerMachine struct {
 	OffPeakIdleCount int      `toml:"OffPeakIdleCount,omitzero" description:"Maximum idle machines when the scheduler is in the OffPeak mode. DEPRECATED"`                      // DEPRECATED
 	OffPeakIdleTime  int      `toml:"OffPeakIdleTime,omitzero" description:"Minimum time after machine can be destroyed when the scheduler is in the OffPeak mode. DEPRECATED"` // DEPRECATED
 
-	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
+	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" json:",omitempty" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
 }
 
 //nolint:lll
@@ -341,7 +341,7 @@ type CustomConfig struct {
 	PrepareExecTimeout *int     `toml:"prepare_exec_timeout,omitempty" json:"prepare_exec_timeout,omitempty" long:"prepare-exec-timeout" env:"CUSTOM_PREPARE_EXEC_TIMEOUT" description:"Timeout for the prepare executable (in seconds)"`
 
 	RunExec string   `toml:"run_exec" json:"run_exec" long:"run-exec" env:"CUSTOM_RUN_EXEC" description:"Executable that runs the job script in executor"`
-	RunArgs []string `toml:"run_args,omitempty" json:"run_args" long:"run-args" description:"Arguments for the run executable"`
+	RunArgs []string `toml:"run_args,omitempty" json:"run_args,omitempty" long:"run-args" description:"Arguments for the run executable"`
 
 	CleanupExec        string   `toml:"cleanup_exec,omitempty" json:"cleanup_exec" long:"cleanup-exec" env:"CUSTOM_CLEANUP_EXEC" description:"Executable that cleanups after executor run"`
 	CleanupArgs        []string `toml:"cleanup_args,omitempty" json:"cleanup_args,omitempty" long:"cleanup-args" description:"Arguments for the cleanup executable"`
@@ -476,7 +476,7 @@ type KubernetesConfig struct {
 	PullPolicy                                        StringOrArray                      `toml:"pull_policy,omitempty" json:"pull_policy" long:"pull-policy" env:"KUBERNETES_PULL_POLICY" description:"Policy for if/when to pull a container image (never, if-not-present, always). The cluster default will be used if not set"`
 	NodeSelector                                      map[string]string                  `toml:"node_selector,omitempty" json:"node_selector,omitempty" long:"node-selector" env:"KUBERNETES_NODE_SELECTOR" description:"A toml table/json object of key:value. Value is expected to be a string. When set this will create pods on k8s nodes that match all the key:value pairs. Only one selector is supported through environment variable configuration."`
 	NodeSelectorOverwriteAllowed                      string                             `toml:"node_selector_overwrite_allowed" json:"node_selector_overwrite_allowed" long:"node_selector_overwrite_allowed" env:"KUBERNETES_NODE_SELECTOR_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_NODE_SELECTOR_*' values"`
-	NodeTolerations                                   map[string]string                  `toml:"node_tolerations,omitempty" json:"node_tolerations" long:"node-tolerations" env:"KUBERNETES_NODE_TOLERATIONS" description:"A toml table/json object of key=value:effect. Value and effect are expected to be strings. When set, pods will tolerate the given taints. Only one toleration is supported through environment variable configuration."`
+	NodeTolerations                                   map[string]string                  `toml:"node_tolerations,omitempty" json:"node_tolerations,omitempty" long:"node-tolerations" env:"KUBERNETES_NODE_TOLERATIONS" description:"A toml table/json object of key=value:effect. Value and effect are expected to be strings. When set, pods will tolerate the given taints. Only one toleration is supported through environment variable configuration."`
 	Affinity                                          KubernetesAffinity                 `toml:"affinity,omitempty" json:"affinity" long:"affinity" description:"Kubernetes Affinity setting that is used to select the node that spawns a pod"`
 	ImagePullSecrets                                  []string                           `toml:"image_pull_secrets,omitempty" json:"image_pull_secrets,omitempty" long:"image-pull-secrets" env:"KUBERNETES_IMAGE_PULL_SECRETS" description:"A list of image pull secrets that are used for pulling docker image"`
 	HelperImage                                       string                             `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
@@ -500,7 +500,7 @@ type KubernetesConfig struct {
 	HelperContainerSecurityContext                    KubernetesContainerSecurityContext `toml:"helper_container_security_context,omitempty" namespace:"helper_container_security_context" description:"A security context attached to the helper container inside the build pod"`
 	ServiceContainerSecurityContext                   KubernetesContainerSecurityContext `toml:"service_container_security_context,omitempty" namespace:"service_container_security_context" description:"A security context attached to the service containers inside the build pod"`
 	Volumes                                           KubernetesVolumes                  `toml:"volumes"`
-	HostAliases                                       []KubernetesHostAliases            `toml:"host_aliases,omitempty" json:"host_aliases" long:"host_aliases" description:"Add a custom host-to-IP mapping"`
+	HostAliases                                       []KubernetesHostAliases            `toml:"host_aliases,omitempty" json:"host_aliases,omitempty" long:"host_aliases" description:"Add a custom host-to-IP mapping"`
 	Services                                          []Service                          `toml:"services,omitempty" json:"services,omitempty" description:"Add service that is started with container"`
 	CapAdd                                            []string                           `toml:"cap_add" json:"cap_add,omitempty" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                           `toml:"cap_drop" json:"cap_drop,omitempty" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
@@ -508,7 +508,7 @@ type KubernetesConfig struct {
 	DNSConfig                                         KubernetesDNSConfig                `toml:"dns_config" json:"dns_config" description:"Pod DNS config"`
 	ContainerLifecycle                                KubernetesContainerLifecyle        `toml:"container_lifecycle,omitempty" json:"container_lifecycle,omitempty" description:"Actions that the management system should take in response to container lifecycle events"`
 	PriorityClassName                                 string                             `toml:"priority_class_name,omitempty" json:"priority_class_name" long:"priority_class_name" env:"KUBERNETES_PRIORITY_CLASS_NAME" description:"If set, the Kubernetes Priority Class to be set to the Pods"`
-	PodSpec                                           []KubernetesPodSpec                `toml:"pod_spec"`
+	PodSpec                                           []KubernetesPodSpec                `toml:"pod_spec" json:",omitempty"`
 }
 
 type KubernetesPodSpec struct {
@@ -810,7 +810,7 @@ type KubernetesPodAntiAffinity struct {
 //nolint:lll
 type KubernetesHostAliases struct {
 	IP        string   `toml:"ip" json:"ip" long:"ip" description:"The IP address you want to attach hosts to"`
-	Hostnames []string `toml:"hostnames" json:"hostnames" long:"hostnames" description:"A list of hostnames that will be attached to the IP"`
+	Hostnames []string `toml:"hostnames" json:"hostnames,omitempty" long:"hostnames" description:"A list of hostnames that will be attached to the IP"`
 }
 
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#lifecycle-v1-core
@@ -830,13 +830,13 @@ type KubernetesLifecycleHandler struct {
 
 //nolint:lll
 type KubernetesLifecycleExecAction struct {
-	Command []string `toml:"command" json:"command" description:"Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy"`
+	Command []string `toml:"command" json:"command,omitempty" description:"Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy"`
 }
 
 //nolint:lll
 type KubernetesLifecycleHTTPGet struct {
 	Host        string                             `toml:"host" json:"host" description:"Host name to connect to, defaults to the pod IP. You probably want to set \"Host\" in httpHeaders instead"`
-	HTTPHeaders []KubernetesLifecycleHTTPGetHeader `toml:"http_headers" json:"http_headers" description:"Custom headers to set in the request. HTTP allows repeated headers"`
+	HTTPHeaders []KubernetesLifecycleHTTPGetHeader `toml:"http_headers" json:"http_headers,omitempty" description:"Custom headers to set in the request. HTTP allows repeated headers"`
 	Path        string                             `toml:"path" json:"path" description:"Path to access on the HTTP server"`
 	Port        int                                `toml:"port" json:"port" description:"Number of the port to access on the container. Number must be in the range 1 to 65535"`
 	Scheme      string                             `toml:"scheme" json:"scheme" description:"Scheme to use for connecting to the host. Defaults to HTTP"`
@@ -892,7 +892,7 @@ func (h *KubernetesLifecycleHandler) ToKubernetesLifecycleHandler() *api.Lifecyc
 }
 
 type NodeSelector struct {
-	NodeSelectorTerms []NodeSelectorTerm `toml:"node_selector_terms" json:"node_selector_terms"`
+	NodeSelectorTerms []NodeSelectorTerm `toml:"node_selector_terms" json:"node_selector_terms,omitempty"`
 }
 
 type PreferredSchedulingTerm struct {
@@ -906,27 +906,27 @@ type WeightedPodAffinityTerm struct {
 }
 
 type NodeSelectorTerm struct {
-	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions"`
-	MatchFields      []NodeSelectorRequirement `toml:"match_fields,omitempty" json:"match_fields"`
+	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions,omitempty"`
+	MatchFields      []NodeSelectorRequirement `toml:"match_fields,omitempty" json:"match_fields,omitempty"`
 }
 
 //nolint:lll
 type NodeSelectorRequirement struct {
 	Key      string   `toml:"key,omitempty" json:"key"`
 	Operator string   `toml:"operator,omitempty" json:"operator"`
-	Values   []string `toml:"values,omitempty" json:"values"`
+	Values   []string `toml:"values,omitempty" json:"values,omitempty"`
 }
 
 type PodAffinityTerm struct {
 	LabelSelector     *LabelSelector `toml:"label_selector,omitempty" json:"label_selector,omitempty"`
-	Namespaces        []string       `toml:"namespaces,omitempty" json:"namespaces"`
+	Namespaces        []string       `toml:"namespaces,omitempty" json:"namespaces,omitempty"`
 	TopologyKey       string         `toml:"topology_key,omitempty" json:"topology_key"`
 	NamespaceSelector *LabelSelector `toml:"namespace_selector,omitempty" json:"namespace_selector,omitempty"`
 }
 
 type LabelSelector struct {
-	MatchLabels      map[string]string         `toml:"match_labels,omitempty" json:"match_labels"`
-	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions"`
+	MatchLabels      map[string]string         `toml:"match_labels,omitempty" json:"match_labels,omitempty"`
+	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions,omitempty"`
 }
 
 //nolint:lll
@@ -1105,7 +1105,7 @@ type Config struct {
 	LogLevel      *string         `toml:"log_level" json:"log_level,omitempty" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
 	LogFormat     *string         `toml:"log_format" json:"log_format,omitempty" description:"Define log format (one of: runner, text, json)"`
 	User          string          `toml:"user,omitempty" json:"user"`
-	Runners       []*RunnerConfig `toml:"runners" json:"runners"`
+	Runners       []*RunnerConfig `toml:"runners" json:"runners,omitempty"`
 	SentryDSN     *string         `toml:"sentry_dsn" json:",omitempty"`
 	ModTime       time.Time       `toml:"-"`
 	Loaded        bool            `toml:"-"`
