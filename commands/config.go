@@ -139,7 +139,12 @@ func (c *configOptions) loadConfig() error {
 
 	// Config validation is best-effort
 	if err := common.Validate(config); err != nil {
-		logrus.Warningf("There might be a problem with your config\n%v", err)
+		logrus.Infof(
+			"There might be a problem with your config based on "+
+				"jsonschema annotations in common/config.go "+
+				"(experimental feature):\n%v\n",
+			err,
+		)
 	}
 
 	c.onConfigurationAccessCollector(func(m *configAccessCollector) {
