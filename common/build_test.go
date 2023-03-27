@@ -2537,3 +2537,67 @@ func Test_GetDebugServicePolicy(t *testing.T) {
 		})
 	}
 }
+
+func Test_expandContainerOptions(t *testing.T) {
+	testCases := map[string]struct {
+		jobVars  JobVariables
+		image    Image
+		services Services
+	}{
+		"no expansion required": {
+			image: Image{Name: "alpine:latest", Alias: "jobctr"},
+			services: Services{
+				{Name: "postgres:latest", Alias: "db, pg"},
+				{Name: "redis:latest", Alias: "cache"},
+			},
+		},
+		"expansion required": {
+			jobVars: JobVariables{
+				{Key: "JOB_IMAGE", Value: "alpine:latest"},
+				{Key: "JOB_ALIAS", Value: "jobctr"},
+				{Key: "DB_IMAGE", Value: "postgres:latest"},
+				{Key: "DB_IMAGE_ALIAS", Value: "db"},
+				{Key: "CACHE_IMAGE", Value: "redis:latest"},
+				{Key: "CACHE_IMAGE_ALIAS", Value: "cache"},
+			},
+			image: Image{Name: "$JOB_IMAGE", Alias: "$JOB_ALIAS"},
+			services: Services{
+				{Name: "$DB_IMAGE", Alias: "$DB_IMAGE_ALIAS, pg"},
+				{Name: "$CACHE_IMAGE", Alias: "$CACHE_IMAGE_ALIAS"},
+			},
+		},
+	}
+
+	logs := bytes.Buffer{}
+	lentry := logrus.New()
+	lentry.Out = &logs
+	logger := NewBuildLogger(nil, logrus.NewEntry(lentry))
+
+	for name, tt := range testCases {
+		t.Run(name, func(t *testing.T) {
+			logs.Reset()
+
+			b := &Build{
+				Runner: &RunnerConfig{},
+				logger: logger,
+				JobResponse: JobResponse{
+					Variables: tt.jobVars,
+					Image:     tt.image,
+					Services:  tt.services,
+				},
+			}
+			b.GetAllVariables()
+			b.expandContainerOptions()
+
+			assert.Equal(t, "alpine:latest", b.Image.Name)
+			assert.Equal(t, "jobctr", b.Image.Alias)
+
+			assert.Len(t, b.Services, 2)
+
+			assert.Equal(t, "postgres:latest", b.Services[0].Name)
+			assert.Equal(t, []string{"db", "pg"}, b.Services[0].Aliases())
+			assert.Equal(t, "redis:latest", b.Services[1].Name)
+			assert.Equal(t, []string{"cache"}, b.Services[1].Aliases())
+		})
+	}
+}
