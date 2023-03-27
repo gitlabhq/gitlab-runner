@@ -1261,7 +1261,13 @@ func TestBuildWithoutDebugTrace(t *testing.T) {
 		// The default build shouldn't have debug tracing enabled
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.NotRegexp(t, `[^$] echo Hello World`, out)
+
+		switch shell {
+		case "pwsh", "powershell", "cmd":
+			assert.NotRegexp(t, `>\s?echo Hello World`, out)
+		default:
+			assert.NotRegexp(t, `[^$] echo Hello World`, out)
+		}
 	})
 }
 
@@ -1275,7 +1281,12 @@ func TestBuildWithDebugTrace(t *testing.T) {
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
-		assert.Regexp(t, `[^$] echo Hello World`, out)
+		switch shell {
+		case "pwsh", "powershell", "cmd":
+			assert.Regexp(t, `>\s?echo Hello World`, out)
+		default:
+			assert.Regexp(t, `[^$] echo Hello World`, out)
+		}
 	})
 }
 

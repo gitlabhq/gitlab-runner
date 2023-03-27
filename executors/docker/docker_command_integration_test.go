@@ -135,15 +135,6 @@ func TestDockerCommandMultistepBuild(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			build := getBuildForOS(t, tt.buildGetter)
 
-			// we skip git-lfs for this test, because otherwise it is quite flaky
-			// see: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27473#note_1324057143
-			if runtime.GOOS == "windows" {
-				build.Variables = append(build.Variables, common.JobVariable{
-					Key:   "GIT_LFS_SKIP_SMUDGE",
-					Value: "1",
-				})
-			}
-
 			var buf bytes.Buffer
 			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
 
@@ -171,10 +162,23 @@ func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) 
 	jobResp, err := getJobResp()
 	require.NoError(t, err)
 
-	return common.Build{
+	build := common.Build{
 		JobResponse: jobResp,
 		Runner:      getRunnerConfigForOS(t),
 	}
+
+	// There's a problem with some of our Windows docker tests and git-lfs that makes them flaky.
+	//
+	// To avoid this, for now we're skipping git-lfs calls where possible. This can eventually be removed.
+	// see: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/30865
+	if runtime.GOOS == "windows" {
+		build.Variables = append(build.Variables, common.JobVariable{
+			Key:   "GIT_LFS_SKIP_SMUDGE",
+			Value: "1",
+		})
+	}
+
+	return build
 }
 
 func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
