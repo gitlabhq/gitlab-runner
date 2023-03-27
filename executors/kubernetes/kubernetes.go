@@ -2071,7 +2071,7 @@ func (s *executor) captureContainersLogs(ctx context.Context, containers []api.C
 		return
 	}
 
-	for _, service := range s.Build.Services {
+	for _, service := range s.options.Services {
 		for _, container := range containers {
 			if service.Name != container.Image {
 				continue
