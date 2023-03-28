@@ -239,8 +239,46 @@ type AutoscalerConfig struct {
 
 	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
 
+	// instance_operation_time_buckets was introduced some time ago, so we can't just delete it.
+	// Someone can already depend on that setting.
+	// Instead, it's now used as a way to define "default" buckets for the different operation
+	// types, and more specific settings can be used to adjust what's needed to be adjusted.
 	InstanceOperationTimeBuckets []float64 `toml:"instance_operation_time_buckets,omitempty" json:",omitempty"`
-	InstanceLifeDurationBuckets  []float64 `toml:"instance_life_duration_buckets,omitempty" json:",omitempty"`
+
+	InstanceCreationTimeBuckets  []float64 `toml:"instance_creation_time_buckets,omitempty" json:",omitempty"`
+	InstanceIsRunningTimeBuckets []float64 `toml:"instance_is_running_time_buckets,omitempty" json:",omitempty"`
+	InstanceDeletionTimeBuckets  []float64 `toml:"instance_deletion_time_buckets,omitempty" json:",omitempty"`
+	InstanceReadinessTimeBuckets []float64 `toml:"instance_readiness_time_buckets,omitempty" json:",omitempty"`
+
+	InstanceLifeDurationBuckets []float64 `toml:"instance_life_duration_buckets,omitempty" json:",omitempty"`
+}
+
+func (c AutoscalerConfig) GetInstanceCreationTimeBuckets() []float64 {
+	if len(c.InstanceCreationTimeBuckets) > 0 {
+		return c.InstanceCreationTimeBuckets
+	}
+	return c.InstanceOperationTimeBuckets
+}
+
+func (c AutoscalerConfig) GetInstanceIsRunningTimeBuckets() []float64 {
+	if len(c.InstanceIsRunningTimeBuckets) > 0 {
+		return c.InstanceIsRunningTimeBuckets
+	}
+	return c.InstanceOperationTimeBuckets
+}
+
+func (c AutoscalerConfig) GetInstanceDeletionTimeBuckets() []float64 {
+	if len(c.InstanceDeletionTimeBuckets) > 0 {
+		return c.InstanceDeletionTimeBuckets
+	}
+	return c.InstanceOperationTimeBuckets
+}
+
+func (c AutoscalerConfig) GetInstanceReadinessTimeBuckets() []float64 {
+	if len(c.InstanceReadinessTimeBuckets) > 0 {
+		return c.InstanceReadinessTimeBuckets
+	}
+	return c.InstanceOperationTimeBuckets
 }
 
 type VMIsolation struct {
