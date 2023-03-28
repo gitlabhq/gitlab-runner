@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
@@ -14,11 +15,16 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+var RegisterTimeNowDate = time.Date(2020, 01, 01, 10, 10, 10, 0, time.UTC)
+
 // NewRegisterCommandForTest exposes RegisterCommand to integration tests
 func NewRegisterCommandForTest(reader *bufio.Reader, network common.Network) *RegisterCommand {
 	cmd := newRegisterCommand()
 	cmd.reader = reader
 	cmd.network = network
+	cmd.timeNowFn = func() time.Time {
+		return RegisterTimeNowDate
+	}
 
 	return cmd
 }

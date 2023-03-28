@@ -68,6 +68,7 @@ type RegisterCommand struct {
 	network    common.Network
 	reader     *bufio.Reader
 	registered bool
+	timeNowFn  func() time.Time
 
 	configOptions
 
@@ -240,7 +241,7 @@ func (s *RegisterCommand) verifyRunner() {
 		logrus.Panicln("Failed to verify the runner.")
 	}
 	s.ID = result.ID
-	s.TokenObtainedAt = time.Now().UTC().Truncate(time.Second)
+	s.TokenObtainedAt = s.timeNowFn().UTC().Truncate(time.Second)
 	s.TokenExpiresAt = result.TokenExpiresAt
 	s.registered = true
 }
@@ -316,7 +317,7 @@ func (s *RegisterCommand) doLegacyRegisterRunner() {
 
 	s.ID = result.ID
 	s.Token = result.Token
-	s.TokenObtainedAt = time.Now().UTC().Truncate(time.Second)
+	s.TokenObtainedAt = s.timeNowFn().UTC().Truncate(time.Second)
 	s.TokenExpiresAt = result.TokenExpiresAt
 	s.registered = true
 }
@@ -540,9 +541,10 @@ func newRegisterCommand() *RegisterCommand {
 				VirtualBox: &common.VirtualBoxConfig{},
 			},
 		},
-		Locked:  true,
-		Paused:  false,
-		network: network.NewGitLabClient(),
+		Locked:    true,
+		Paused:    false,
+		network:   network.NewGitLabClient(),
+		timeNowFn: time.Now,
 	}
 }
 
