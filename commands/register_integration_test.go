@@ -882,7 +882,7 @@ shutdown_timeout = 0
 			require.NoError(t, err)
 			name, err := os.Hostname()
 			require.NoError(t, err)
-			assert.Equal(t, fmt.Sprintf(tt.expectedFileContentFmt, name, time.Now().UTC().Format(time.RFC3339)), fileContent)
+			assert.Equal(t, fmt.Sprintf(tt.expectedFileContentFmt, name, commands.RegisterTimeNowDate.Format(time.RFC3339)), fileContent)
 		})
 	}
 }
@@ -1195,7 +1195,7 @@ func TestRegisterTokenExpiresAt(t *testing.T) {
 
 			assert.Contains(
 				t, spaceReplacer.Replace(gotConfig),
-				spaceReplacer.Replace(fmt.Sprintf(tc.expectedConfig, time.Now().UTC().Format(time.RFC3339))),
+				spaceReplacer.Replace(fmt.Sprintf(tc.expectedConfig, commands.RegisterTimeNowDate.Format(time.RFC3339))),
 			)
 		})
 	}
