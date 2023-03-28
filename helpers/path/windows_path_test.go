@@ -136,7 +136,7 @@ func TestWindowsIsRoot(t *testing.T) {
 		},
 		"UNC share name": {
 			arg:      `\\server\path`,
-			expected: false,
+			expected: true,
 		},
 		"UNC share root path": {
 			arg:      `\\server\path\`,
