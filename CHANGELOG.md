@@ -1,3 +1,81 @@
+## v15.10.0 (2023-03-29)
+
+### New features
+
+- Change runner type "specific" to "project" !3979
+- Configure external address usage for autoscaler provider readiness check !3973
+- Use UBI Minimal for GitLab Runner UBI-FIPS image !3966
+- Make the `gitlab-runner register` command happen in a single operation !3957
+- Do not send system_id in UpdateJob call !3925
+- Best-effort config validation !3924
+- Implement ability to parse JSON payload from /runners/verify !3923
+- Add -y to apt-get install git-lfs to prevent stalling the installation. !3921 (Antoon Huiskens @antoonhu)
+- Handle registration for runners created in GitLab UI !3910
+- Add support for activeDeadlineSeconds on CI Job Pod with k8s executor !3897
+- Documentation for private fargate setup !3803
+- Allow custom executor to specify the shell used !3789 (Robin Lambertz @roblabla)
+- Allow configuration of environment variables for runner services !3784
+- Docker executor: add services_security_opt config option !3760 (Glenn Dirkx @juravenator)
+- Add api requests latency metric !3316
+- Support for custom Kubernetes PodSpec !3114
+
+### Security fixes
+
+- Address vulnerability reports against runner-helper alpine images !3958
+- Fix CVE-2022-1996 by upgrading k8s.io/client-go !3951
+
+### Bug fixes
+
+- Reduce config validation message noise !4016
+- Fix inconsiderate test !3971
+- Fix non-amd64 alpine runner-helper images !3965
+- Return BuildError from instance executor's client Run !3964
+- Fix 'clear-docker-cache' script for Docker 23.0 !3960
+- Remove .runner_system_id from Docker images !3950
+- Remove re-writing config.toml file on configuration reload !3934
+- Add Windows Build Number to version mapping for Windows 2022 !3917
+- Handle empty artifact paths !3912
+- Execute the script from the right container !3900
+- Shells/bash.go: set permissions before dir/file deletion !3726 (Karl Wette @karl-wette)
+
+### Maintenance
+
+- Fix TestBuildOnCustomDirectory for powershell/pwsh !3992
+- Fix merge request link with missing '-' scope !3987 (Niklas @Taucher2003)
+- Indicate that Command Line and Config.toml are separate for debug !3986
+- Fix missing parenthesis in the runners.docker section !3981 (Tugdual Saunier @tucksaun)
+- Fix Windows Powershell encoding test !3977
+- Fix flaky interactive terminal test !3975
+- Slightly change message shown when .runner_system_id cannot be written !3969
+- Update SSL troubleshooting link !3961
+- Remove link to Docker Machine on GitHub - docs !3956
+- Fix failing fuzzing test !3955
+- Use Labkit for FIPS check !3954
+- Kubernetes executor CTRT edits part 3 !3949
+- Corrected minor typo !3948
+- Bump Ubuntu version, ease quickstart with Runner !3947
+- CTRT edits kubernetes executor part 2 !3944
+- Use latest docs Docker images !3941
+- Fix deprecation notice legal disclaimer !3936
+- Update docker engine client to v23.0.1 !3935
+- Remove reference to GitLab Runner 10 [docs] !3933
+- Add container images support lifecycle [docs] !3931
+- CTRT refactor for Kubernetes executor page part 1 !3928
+- Fix typo in the post_clone_script deprecated warning message !3927 (Tamás Dévai @dorionka)
+- Remove overview heading from shell docs !3926
+- Avoid running 1809 integration tests in CC !3922
+- Language edits for "Automate keeping up to date with packagecloud release"" !3914
+- Add troubleshooting item for background processes and hung job !3913
+- Update golangci-lint version to 1.51.2 !3911
+- Update the URL for the docker-machine version from .11 to .19 !3909
+- Update taskscaler version in gitlab-runner !3903
+- Fix Warning log during prepare stage for the Kubernetes executor !3902
+- Add type::feature as a new feature section for changelog !3898
+- Expand and consolidate Git LFS docs for non-docker executors !3892 (Nejc Habjan @nejc)
+- Upgrade Go version to 1.19.6 !3889
+- Update documentation links for pod security context !3823
+- Add step to enable linger to gitlab-runner !3688 (Peter Harsfalvi @peterh.six)
+
 ## v15.10.1 (2023-03-29)
 
 ### Bug fixes
