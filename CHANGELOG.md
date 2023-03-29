@@ -1,4 +1,4 @@
-## v15.10.0 (2023-03-17)
+## v15.10.0 (2023-03-29)
 
 ### New features
 
@@ -26,6 +26,7 @@
 
 ### Bug fixes
 
+- Reduce config validation message noise !4016
 - Fix inconsiderate test !3971
 - Fix non-amd64 alpine runner-helper images !3965
 - Return BuildError from instance executor's client Run !3964
