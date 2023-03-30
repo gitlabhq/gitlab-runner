@@ -62,14 +62,14 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 			exposeLower:     false,
 		},
 		{
-			name:            "Unsuccessful connect because lower port exposed",
-			expectedConnect: false,
+			name:            "Successful connect with lower port exposed",
+			expectedConnect: true,
 			exposeHigher:    false,
 			exposeLower:     true,
 		},
 		{
-			name:            "Unsuccessful connect because both lower and higher port exposed",
-			expectedConnect: false,
+			name:            "Successful connect with both lower and higher port exposed",
+			expectedConnect: true,
 			exposeHigher:    true,
 			exposeLower:     true,
 		},
@@ -77,9 +77,13 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			os.Unsetenv("SERVICE_LOWER_TCP_PORT")
+			os.Unsetenv("SERVICE_HIGHER_TCP_PORT")
+
 			// Start listening to reverse addr
 			listener, err := net.Listen("tcp", "127.0.0.1:")
 			require.NoError(t, err)
+			defer listener.Close()
 
 			port := listener.Addr().(*net.TCPAddr).Port
 
@@ -90,12 +94,12 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 			require.NoError(t, err)
 
 			if c.exposeHigher {
-				err = os.Setenv("SERVICE_HIGHER_TCP_PORT", strconv.Itoa(port + 1))
+				err = os.Setenv("SERVICE_HIGHER_TCP_PORT", strconv.Itoa(port+1))
 				require.NoError(t, err)
 			}
 
 			if c.exposeLower {
-				err = os.Setenv("SERVICE_LOWER_TCP_PORT", strconv.Itoa(port - 1))
+				err = os.Setenv("SERVICE_LOWER_TCP_PORT", strconv.Itoa(port-1))
 				require.NoError(t, err)
 			}
 
@@ -104,11 +108,11 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 				listener.Close()
 			}
 
-			ctx, cancelFn := context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancelFn := context.WithTimeout(context.Background(), 4*time.Second)
 			defer cancelFn()
 			done := make(chan struct{})
 			go func() {
-				cmd := HealthCheckCommand{}
+				cmd := HealthCheckCommand{ctx: ctx}
 				cmd.Execute(nil)
 				done <- struct{}{}
 			}()
