@@ -1,12 +1,12 @@
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -15,11 +15,17 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-type HealthCheckCommand struct{}
+type HealthCheckCommand struct {
+	ctx context.Context
+}
 
-func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
-	var ports []int
-	var addr, port string
+func (c *HealthCheckCommand) Execute(_ *cli.Context) {
+	var ports []string
+	var addr string
+
+	if c.ctx == nil {
+		c.ctx = context.Background()
+	}
 
 	for _, e := range os.Environ() {
 		parts := strings.Split(e, "=")
@@ -30,33 +36,52 @@ func (c *HealthCheckCommand) Execute(ctx *cli.Context) {
 		case strings.HasSuffix(parts[0], "_TCP_ADDR"):
 			addr = parts[1]
 		case strings.HasSuffix(parts[0], "_TCP_PORT"):
-			portNumber, err := strconv.Atoi(parts[1])
-			if err != nil {
-				continue
-			}
-			ports = append(ports, portNumber)
+			ports = append(ports, parts[1])
 		}
 	}
 
-	sort.Ints(ports)
-	if len(ports) > 0 {
-		port = strconv.Itoa(ports[0])
-	}
-
-	if addr == "" || port == "" {
+	if addr == "" || len(ports) == 0 {
 		logrus.Fatalln("No HOST or PORT found")
 	}
 
-	_, _ = fmt.Fprintf(os.Stdout, "waiting for TCP connection to %s:%s...", addr, port)
+	fmt.Printf("waiting for TCP connection to %s on %v...\n", addr, ports)
+	wg := sync.WaitGroup{}
+	wg.Add(len(ports))
+	ctx, cancel := context.WithCancel(c.ctx)
+	defer cancel()
+
+	for _, port := range ports {
+		go checkPort(ctx, addr, port, cancel, wg.Done)
+	}
+
+	wg.Wait()
+}
+
+// checkPort will attempt to Dial the specified addr:port until successful. This function is intended to be run as a
+// go-routine and has the following exit criteria:
+//  1. A call to net.Dial is successful (i.e. does not return an error). A successful dial will also result in the
+//     the passed context being cancelled.
+//  2. The passed context is cancelled.
+func checkPort(parentCtx context.Context, addr, port string, cancel func(), done func()) {
+	defer done()
+	defer cancel()
 
 	for {
-		conn, err := net.Dial("tcp", net.JoinHostPort(addr, port))
+		ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
+		defer cancel()
+
+		fmt.Printf("dialing %s:%s...\n", addr, port)
+		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(addr, port))
 		if err != nil {
+			if parentCtx.Err() != nil {
+				return
+			}
 			time.Sleep(time.Second)
 			continue
 		}
 
 		_ = conn.Close()
+		fmt.Printf("dial succeeded on %s:%s. Exiting...\n", addr, port)
 		return
 	}
 }
