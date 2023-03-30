@@ -1,10 +1,12 @@
 package session
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -28,6 +30,7 @@ type Session struct {
 
 	interactiveTerminal terminal.InteractiveTerminal
 	terminalConn        terminal.Conn
+	terminalSetCh       chan struct{}
 
 	proxyPool proxy.Pool
 
@@ -53,10 +56,11 @@ func NewSession(logger *logrus.Entry) (*Session, error) {
 	logger = logger.WithField("uri", endpoint)
 
 	sess := &Session{
-		Endpoint:     endpoint,
-		Token:        token,
-		DisconnectCh: make(chan error),
-		TimeoutCh:    make(chan error),
+		Endpoint:      endpoint,
+		Token:         token,
+		DisconnectCh:  make(chan error),
+		TimeoutCh:     make(chan error),
+		terminalSetCh: make(chan struct{}),
 
 		log: logger,
 	}
@@ -143,15 +147,28 @@ func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
 	logger := s.log.WithField("uri", r.RequestURI)
 	logger.Debug("Exec terminal session request")
 
-	if !s.TerminalAvailable() {
-		logger.Error("Interactive terminal not set")
-		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
-		return
-	}
-
 	if !websocket.IsWebSocketUpgrade(r) {
 		logger.Error("Request is not a web socket connection")
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), time.Minute)
+	defer cancel()
+
+	// There's a chance we'll get a interactive terminal connection before
+	// we've hooked up the terminal to the underlying executor.
+	//
+	// When this occurs, we effectively wait for the terminal to be hooked up,
+	// the request to be cancelled, or 1 minute (whichever comes first).
+	select {
+	case <-s.terminalSetCh:
+	case <-ctx.Done():
+	}
+
+	if !s.terminalAvailable() {
+		logger.Error("Interactive terminal not set")
+		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return
 	}
 
@@ -173,7 +190,7 @@ func (s *Session) execHandler(w http.ResponseWriter, r *http.Request) {
 	terminalConn.Start(w, r, s.TimeoutCh, s.DisconnectCh)
 }
 
-func (s *Session) TerminalAvailable() bool {
+func (s *Session) terminalAvailable() bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -216,6 +233,12 @@ func (s *Session) closeTerminalConn(conn terminal.Conn) {
 func (s *Session) SetInteractiveTerminal(interactiveTerminal terminal.InteractiveTerminal) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	if s.interactiveTerminal == nil && s.terminalSetCh != nil {
+		// we only close if the terminal was previously nil, otherwise multiple calls to
+		// SetInteractiveTerminal would cause us to panic (closing channel more than once)
+		defer close(s.terminalSetCh)
+	}
 	s.interactiveTerminal = interactiveTerminal
 }
 

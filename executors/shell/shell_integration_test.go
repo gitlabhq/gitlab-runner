@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/go-version"
@@ -1499,11 +1498,6 @@ func TestInteractiveTerminal(t *testing.T) {
 
 				buildOut <- buf.String()
 			}()
-
-			// Wait until the session terminal is available
-			for build.Session.Handler() == nil || !build.Session.TerminalAvailable() {
-				time.Sleep(10 * time.Millisecond)
-			}
 
 			srv := httptest.NewServer(build.Session.Handler())
 			defer srv.Close()
