@@ -26,6 +26,7 @@ You can find the `config.toml` file in:
 - `./` on other systems
 
 ## Configuration validation
+
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
 Configuration validation is a process that checks the structure of the `config.toml` file. The output from the configuration
 validator provides only `info` level messages. 
