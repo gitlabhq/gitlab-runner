@@ -30,9 +30,12 @@ You can find the `config.toml` file in:
 Configuration validation is a process that checks the structure of the `config.toml` file. The output from the configuration
 validator provides only `info` level messages. 
 
-Please note that the GitLab Runner configuration validation is a _best effort_ and is currently only for informational purposes. It aims to assist users in identifying potential issues with their Runner configuration. However, it may not catch all possible problems, and the absence of any messages does not guarantee a flawless configuration.
+The configuration validation is a _best effort_ and is currently only for informational purposes. It assists users
+to identify potential issues with their runner configuration. It may not catch all possible problems and the absence of 
+any messages does not guarantee that the `config.toml` file is flawless.
 
-Over time, the validation process will be refined to provide more accurate, comprehensive and useful feedback. It is recommended to keep your GitLab Runner updated to benefit from the latest improvements and enhancements.
+Over time, the validation process will be refined to provide more accurate, comprehensive, and useful feedback. You should keep your 
+GitLab Runner updated to benefit from the latest improvements and enhancements.
 
 ## The global section
 
