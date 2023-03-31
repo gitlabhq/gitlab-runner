@@ -1,3 +1,9 @@
+## v15.10.1 (2023-03-31)
+
+### Bug fixes
+
+- Reduce config validation message noise !4016
+
 ## v15.10.0 (2023-03-31)
 
 ### New features
