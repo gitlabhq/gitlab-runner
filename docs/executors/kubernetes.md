@@ -141,9 +141,9 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 |---------|-------------|
 | `affinity` | Specify affinity rules that determine which node runs the build. Read more about [using affinity](#define-a-list-of-node-affinities). |
 | `allow_privilege_escalation` | Run all containers with the `allowPrivilegeEscalation` flag enabled. When empty, it does not define the `allowPrivilegeEscalation` flag in the container `SecurityContext` and allows Kubernetes to use the default [privilege escalation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) behavior. |
-| `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
+| `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
 | `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. |
-| `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restricting-docker-images-and-services). |
+| `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
 | `bearer_token` | Default bearer token used to launch build pods. |
 | `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
 | `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#set-a-security-policy-for-the-pod). |
@@ -172,7 +172,7 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180). |
 | `priority_class_name` | Specify the Priority Class to be set to the pod. The default one is used if not set. |
 | `privileged` | Run containers with the privileged flag. |
-| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#set-pull-policies). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
+| `pull_policy` | Specify the image pull policy: `never`, `if-not-present`, `always`. If not set, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used. For more information and instructions on how to set multiple pull policies, see [using pull policies](#set-a-pull-policy). See also [`if-not-present`, `never` security considerations](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy). You can also [restrict pull policies](#restrict-docker-pull-policies). |
 | `resource_availability_check_max_attempts` | The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0. [Read more about resources check during prepare step](#resources-check-during-prepare-step). |
 | `runtime_class_name` | A Runtime class to use for all created pods. If the feature is unsupported by the cluster, jobs exit or fail. |
 | `service_container_security_context` | Sets a container security context for the service containers. [Read more about security context](#set-a-security-policy-for-the-pod). |
@@ -1033,7 +1033,7 @@ check_interval = 30
         command = ["executable","param1","param2"]
 ```
 
-## Set pull policies
+## Set a pull policy
 
 > Support for multiple pull policies [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2807) in GitLab 13.11.
 
@@ -1468,80 +1468,76 @@ check_interval = 30
       runtime_class_name = "myclass"
 ```
 
-## Using Docker in your builds
+## Using Docker in builds
 
-There are a couple of caveats when using Docker in your builds while running on
-a Kubernetes cluster. Most of these issues are already discussed in the
-[**Using Docker Build**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
-section of the GitLab CI
-documentation but it is worthwhile to revisit them here as you might run into
-some slightly different things when running this on your cluster.
+When you use Docker in your builds, there are several considerations
+you should be aware of.
 
-### Exposing `/var/run/docker.sock`
+### Exposed `/var/run/docker.sock`
 
-Exposing your host's `/var/run/docker.sock` into your build container, using the
-`runners.kubernetes.volumes.host_path` option, brings the same risks with it as
-always. That node's containers are accessible from the build container and
-depending if you are running builds in the same cluster as your production
-containers it might not be wise to do that.
+There are certain risks if you use the `runners.kubernetes.volumes.host_path` option
+to expose the `/var/run/docker.sock` of your host into your build container.
+The node's containers are accessible from the build container, and
+depending on if you are running builds in the same cluster as your production
+containers, it might not be wise to do that.
 
 ### Using `docker:dind`
 
-Running the `docker:dind` also known as the `docker-in-docker` image is also
-possible but sadly needs the containers to be run in privileged mode.
-If you're willing to take that risk other problems will arise that might not
-seem as straight forward at first glance. Because the Docker daemon is started
-as a `service` usually in your `.gitlab-ci.yml` it will be run as a separate
-container in your Pod. Basically containers in Pods only share volumes assigned
-to them and an IP address by which they can reach each other using `localhost`.
-`/var/run/docker.sock` is not shared by the `docker:dind` container and the `docker`
-binary tries to use it by default.
+If you run the `docker:dind`, also called the `docker-in-docker` image,
+containers must run in privileged mode. This may have potential risks
+and cause additional issues.
 
-To overwrite this and make the client use TCP to contact the Docker daemon,
-in the other container, be sure to include the environment variables of
+The Docker daemon runs as a separate container in the pod because it is started as a `service`,
+typically in the `.gitlab-ci.yml`. Containers in pods only share volumes assigned to them and
+an IP address, that they use to communicate with each other with `localhost`. The `docker:dind`
+container does not share `/var/run/docker.sock` and the `docker` binary tries to use it by default.
+
+To configure the client use TCP to contact the Docker daemon,
+in the other container, include the environment variables of
 the build container:
 
 - `DOCKER_HOST=tcp://<hostname>:2375` for no TLS connection.
 - `DOCKER_HOST=tcp://<hostname>:2376` for TLS connection.
 
-If you are using GitLab Runner 12.7 or earlier and Kubernetes 1.6 or earlier, the value of
-`hostname` must be set to `localhost`. Otherwise it should be set to `docker`.
+For `hostname` set the value to:
 
-Make sure to configure those properly. As of Docker 19.03, TLS is enabled by
-default but it requires mapping
-certificates to your client. You can enable non-TLS connection for DIND or
-mount certificates as described in
-[**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor)
+- `localhost` for GitLab Runner 12.7 and earlier, and Kubernetes 1.6 and earlier.
+- `docker` for GitLab Runner 12.8 and later, and Kubernetes 1.7 and later.
 
-### Resource separation
+In Docker 19.03 and later, TLS is enabled by
+default but you must map certificates to your client.
+You can enable non-TLS connection for DIND or
+mount certificates. For more information, see
+[**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor).
 
-In both the `docker:dind` and `/var/run/docker.sock` cases the Docker daemon
+### Prevent host kernel exposure
+
+If you use `docker:dind` or `/var/run/docker.sock`, the Docker daemon
 has access to the underlying kernel of the host machine. This means that any
-`limits` that had been set in the Pod will not work when building Docker images.
-The Docker daemon will report the full capacity of the node regardless of
-the limits imposed on the Docker build containers spawned by Kubernetes.
+`limits` set in the pod do not work when Docker images are built.
+The Docker daemon reports the full capacity of the node, regardless of
+limits imposed on the Docker build containers spawned by Kubernetes.
 
-One way to help minimize the exposure of the host's kernel to any build container
-when running in privileged mode or by exposing `/var/run/docker.sock` is to use
-the `node_selector` option to set one or more labels that have to match a node
-before any containers are deployed to it. For example build containers may only run
-on nodes that are labeled with `role=ci` while running all other production services
-on other nodes. Further separation of build containers can be achieved using node
+If you run build containers in privileged mode, or if `/var/run/docker.sock` is exposed, 
+the host kernel may become exposed to build containers. To minimize exposure, specify a label 
+in the `node_selector` option. This ensures that the node matches the labels before any containers 
+can be deployed to the node. For example, if you specify the label `role=ci`, the build containers 
+only run on nodes labeled `role=ci`, and all other production services run on other nodes.
+
+To further separate build containers, you can use node
 [taints](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
-This prevents other pods from scheduling on the same nodes as the
-build pods without extra configuration for the other pods.
+Taints prevent other pods from scheduling on the same nodes as the
+build pods, without extra configuration for the other pods.
 
-### Using kaniko
+### Use kaniko to build Docker images
 
-Another approach for building Docker images inside a Kubernetes cluster is using [kaniko](https://github.com/GoogleContainerTools/kaniko).
-kaniko:
+You can use [kaniko](https://github.com/GoogleContainerTools/kaniko) to build Docker images inside a Kubernetes cluster.
 
-- Allows you to build images without privileged access.
-- Works without the Docker daemon.
+Kaniko works without the Docker daemon and builds images without privileged access.
 
 For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
 
-### Restricting Docker images and services
+### Restrict Docker images and services
 
 > Added for the Kubernetes executor in GitLab Runner 14.2.
 
@@ -1593,7 +1589,7 @@ For example, to allow only the `always` and `if-not-present` pull policies:
 
 - If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
 - If you don't specify `pull_policy`, the cluster's image [default pull policy](https://kubernetes.io/docs/concepts/containers/images/#updating-images) is used.
-- The existing [`pull_policy` keyword](../executors/kubernetes.md#set-pull-policies)) must not include a pull policy
+- The existing [`pull_policy` keyword](../executors/kubernetes.md#set-a-pull-policy) must not include a pull policy
   that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
 
 ## Job execution
@@ -1610,20 +1606,20 @@ to `true` and [submit an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/is
 
 Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress on legacy execution strategy removal.
 
-### Container entrypoint
+### Container entrypoint known issues
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3095) in GitLab Runner 14.5.
 > - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3212) in GitLab Runner 15.1.
 
 NOTE:
-From GitLab 14.5 to 15.0, GitLab Runner honors the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
-From GitLab 15.1, the entrypoint defined in a Docker image is honored with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
+In GitLab 14.5 to 15.0, GitLab Runner uses the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
+In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
 
-The container entry point has some limitations:
+The container entry point has the following known issues:
 
 - If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the job hangs.
 - [File type CI/CD variables](https://docs.gitlab.com/ee/ci/variables/index.html#use-file-type-cicd-variables)
-  are not yet written to disk when the entrypoint is executed. The file is only accessible
+  are not written to disk when the entrypoint is executed. The file is only accessible
   in the job during script execution.
 - The following CI/CD variables are not accessible in the entrypoint. You can use
   [`before_script`](https://docs.gitlab.com/ee/ci/yaml/index.html#beforescript) to make
@@ -1631,7 +1627,7 @@ The container entry point has some limitations:
   - [CI/CD variables defined in the settings](https://docs.gitlab.com/ee/ci/variables/#define-a-cicd-variable-in-the-ui).
   - [Masked CI/CD variables](https://docs.gitlab.com/ee/ci/variables/#mask-a-cicd-variable).
 
-## Pod cleanup
+## Remove old runner pods
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27870) in GitLab Runner 14.6.
 
