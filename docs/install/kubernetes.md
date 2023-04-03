@@ -413,7 +413,7 @@ concurrent: 10
 ### Running Docker-in-Docker containers with GitLab Runner
 
 See [running privileged containers for the runners](#running-privileged-containers-for-the-runners) for how to enable it,
-and the [GitLab Runner documentation](../executors/kubernetes.md#using-docker-in-your-builds) on running dind.
+and the [GitLab Runner documentation](../executors/kubernetes.md#using-docker-in-builds) on running dind.
 
 ### Running privileged containers for the runners
 
@@ -421,7 +421,7 @@ You can tell the GitLab Runner to run using privileged containers. You may need
 this enabled if you need to use the Docker executable within your GitLab CI/CD jobs.
 
 This comes with several risks that you can read about in the
-[GitLab CI/CD Runner documentation](../executors/kubernetes.md#using-docker-in-your-builds).
+[GitLab CI/CD Runner documentation](../executors/kubernetes.md#using-docker-in-builds).
 
 If you are okay with the risks, and your GitLab Runner instance is registered
 against a specific project in GitLab that you trust the CI jobs of, you can
