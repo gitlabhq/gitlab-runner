@@ -19,8 +19,10 @@ To jump into the specific documentation for each executor, visit:
 - [Parallels](parallels.md)
 - [VirtualBox](virtualbox.md)
 - [Docker](docker.md)
+- [Docker Autoscaler (alpha)](docker_autoscaler.md)
 - [Docker Machine (auto-scaling)](docker_machine.md)
 - [Kubernetes](kubernetes.md)
+- [Instance (alpha)](instance.md)
 - [Custom](custom.md)
 
 The list of executors above is locked. We no longer are developing or
