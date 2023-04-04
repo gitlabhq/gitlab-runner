@@ -661,6 +661,96 @@ following fields:
 Like in the standard cron configuration file, the fields can contain single
 values, ranges, lists, and asterisks. View [a detailed description of the syntax](https://github.com/gorhill/cronexpr#implementation).
 
+## The `[runners.instance]` section (Alpha)
+
+The following parameters define the configuration for the [instance executor](../executors/instance.md).
+
+| Parameter        | Type         | Description |
+|------------------|--------------|-------------|
+| `allowed_images` | string       | When VM Isolation is enabled, `allowed_images` controls which images a job is allowed to specify. |
+
+## The `[runners.autoscaler]` section
+
+> Added in GitLab Runner v15.10.0.
+
+The following parameters configure the new and experimental autoscaler feature and can only be used with the
+[Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors.
+
+| Parameter                               | Description |
+|-----------------------------------------|-------------|
+| `capacity_per_instance`                 | The number of jobs that can be executed concurrently by a single instance. |
+| `max_use_count`                         | The maximum number of times an instance can be used before it is scheduled for removal. |
+| `max_instances`                         | The maximum number of instances that are allowed, this is regardless of the instance state (pending, running, deleting). Default: `0` (unlimited). |
+| `plugin`                                | The [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugin to use. Binary must be discoverable via the `PATH` environment variable. |
+
+## The `[runners.autoscaler.plugin_config]` section
+
+This hash table is re-encoded to JSON and passed directly to the configured plugin.
+
+[fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins typically have accompanying documentation on
+the supported configuration.
+
+## The `[runners.autoscaler.connector_config]` section
+
+[fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins typically have accompanying documentation on
+the supported connection options.
+
+Plugins automatically update the connector configuration. You can use the `[runners.autoscaler.connector_config]` 
+to override automatic update of the connector configuration, or to fill in
+the empty values that the plugin cannot determine.
+
+| Parameter                | Description |
+|--------------------------|-------------|
+| `os`                     | The operating system of the instance. |
+| `arch`                   | The architecture of the instance. |
+| `protocol`               | The protocol to use: `ssh` or `winrm`. |
+| `username`               | The username used to connect with. |
+| `password`               | The password used to connect with. |
+| `key_pathname`           | The TLS key used to connect with or dynamically provision credentials with. |
+| `use_static_credentials` | Disabled automatic credential provisioning. Default: `false`. |
+| `keepalive`              | The connection keepalive duration. |
+| `timeout`                | The connection timeout duration. |
+| `use_external_addr`      | Whether to use the external address provided by the plugin. If the plugin only returns an internal address, this will be used regardless of this setting. Default: `false`. |
+
+## The `[[runners.autoscaler.policy]]` sections
+
+**Note** - `idle_count` in this context refers to the number of jobs, not the number of autoscaled machines as in the legacy autoscaling method. 
+
+| `periods`              | An array of unix-cron formatted strings to denote the period this policy is enabled for. Default: `* * * * *` |
+| `timezone`             | The timezone used when evaluating the unix-cron period. Default: The system's local timezone. |
+| `idle_count`           | The target idle capacity we want to be immediately available for jobs.  |
+| `scale_factor`         | The target idle capacity we want to be immediately available for jobs, on top of the `idle_count`, as a factor of the current in use capacity. Defaults to `0.0`. |
+| `scale_factor_limit`   | The maximum capacity the scale_factor calculation can yield. |
+
+When `scale_factor` is set, `idle_count` becomes the minimum `idle` capacity and the `scaler_factor_limit` the maximum `idle` capacity.
+
+### Periods syntax
+
+The `periods` setting contains an array of unix-cron formatted strings to denote the period a policy is enabled for. The
+cron format consists of 5 fields:
+
+```plaintext
+ ┌────────── minute (0 - 59)
+ │ ┌──────── hour (0 - 23)
+ │ │ ┌────── day of month (1 - 31)
+ │ │ │ ┌──── month (1 - 12)
+ │ │ │ │ ┌── day of week (1 - 7 or MON-SUN, 0 is an alias for Sunday)
+ * * * * *
+```
+
+- `-` can be used between two numbers to specify a range.
+- `*` can be used to represent the whole range of valid values for that field.
+- `/` followed by a number or can be used after a range to skip that number through the range. For example, 0-12/2 for the hour field would activate the period every 2 hours between the hours of 00:00 and 00:12.
+- `,` can be used to separate a list of valid numbers or ranges for the field. For example, `1,2,6-9`.
+
+It's worth keeping in mind that this cron job represents a range in time. For example:
+
+| Period               | Affect |
+|----------------------|--------|
+| `1 * * * * *`        | Rule enabled for the period of 1 minute every hour (unlikely to be very useful) |
+| `* 0-12 * * *`       | Rule enabled for the period of 12 hours at the beginning of each day |
+| `0-30 13,16 * * SUN` | Rule enabled for the period of each Sunday for 30 minutes at 1pm and 30 minutes at 4pm. |
+
 ## The `[runners.custom]` section
 
 The following parameters define configuration for the [custom executor](../executors/custom.md).
