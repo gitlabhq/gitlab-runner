@@ -185,6 +185,16 @@ sequenceDiagram
     end
 ```
 
+## Glossary
+
+This glossary provides definitions for terms related to GitLab Runner.
+
+- **GitLab Runner**: The application that you install that executes GitLab CI jobs on a target computing platform.
+- **runner**: The agent that runs the code on the host platform and displays in the UI. If a runner is registered with the same token,
+  the runner could represent a collection of runners and runner managers.
+- **runner manager**: A type of runner that can create multiple runners for autoscaling. Specific to the type of executor used.
+- **runner worker**: The process created by the runner on the host computing platform to run jobs.
+
 ## Troubleshooting
 
 Learn how to [troubleshoot](faq/index.md) common issues.
