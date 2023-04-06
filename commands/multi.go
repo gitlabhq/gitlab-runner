@@ -434,9 +434,12 @@ func (mr *RunCommand) initUsedExecutorProviders() {
 }
 
 func (mr *RunCommand) shutdownUsedExecutorProviders() {
-	mr.log().Info("Shutting down executor providers")
+	shutdownTimeout := mr.config.GetShutdownTimeout()
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), mr.config.GetShutdownTimeout())
+	logger := mr.log().WithField("shutdown-timeout", shutdownTimeout)
+	logger.Info("Shutting down executor providers")
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancelFn()
 
 	wg := new(sync.WaitGroup)
@@ -452,6 +455,10 @@ func (mr *RunCommand) shutdownUsedExecutorProviders() {
 	}
 
 	wg.Wait()
+
+	if ctx.Err() != nil {
+		logger.Warn("Executor providers shutdown timeout exceeded")
+	}
 }
 
 func (mr *RunCommand) setupMetricsAndDebugServer() {
@@ -1107,6 +1114,7 @@ func (mr *RunCommand) handleGracefulShutdown() error {
 // process execution.
 func (mr *RunCommand) handleForcefulShutdown() error {
 	mr.log().
+		WithField("shutdown-timeout", mr.config.GetShutdownTimeout()).
 		WithField("StopSignal", mr.stopSignal).
 		Warning("Starting forceful shutdown")
 
