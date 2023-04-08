@@ -365,6 +365,20 @@ Operating System: Windows Server Datacenter
 The fix in this case is to upgrade the Docker version of similar age, or later,
 than the Windows Server release.
 
+### Kubernetes executor: `unsupported Windows Version`
+
+Kubernetes executor on Windows might fail with the following error:
+
+```plaintext
+Using Kubernetes namespace: gitlab-runner
+ERROR: Preparation failed: prepare helper image: detecting base image: unsupported Windows Version: 
+Will be retried in 3s ...
+ERROR: Job failed (system failure): prepare helper image: detecting base image: unsupported Windows Version: 
+```
+
+To fix it, add `node.kubernetes.io/windows-build` nodeSelector in the section `[runners.kubernetes.node_selector]`
+of your GitLab Runner config file. Additional info can be found in the issue [#29201](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29201).
+
 ### I'm using a mapped network drive and my build cannot find the correct path
 
 If GitLab Runner is not being run under an administrator account and instead is using a
