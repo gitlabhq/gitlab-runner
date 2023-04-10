@@ -53,10 +53,10 @@ require (
 	gitlab.com/gitlab-org/labkit v1.17.0
 	gocloud.dev v0.27.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
-	golang.org/x/net v0.5.0
+	golang.org/x/net v0.7.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/sys v0.4.0
-	golang.org/x/text v0.6.0
+	golang.org/x/sys v0.5.0
+	golang.org/x/text v0.7.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
@@ -162,7 +162,7 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
-	golang.org/x/term v0.4.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.103.0 // indirect
