@@ -1,0 +1,7 @@
+actions:
+  - write:
+      file: VERSION
+      contents: "{{ .Release.VersionObject.NextMinor.StringNoPrefix }}"
+  - commit:
+      files: [VERSION]
+      message: Bump version to {{ .Release.VersionObject.NextMinor }}
