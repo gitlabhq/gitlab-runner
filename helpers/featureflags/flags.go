@@ -147,8 +147,8 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When enabled, the trace force send interval is dynamically adjusted based on the trace " +
-			"update interval.",
+		Description: "When enabled, the trace force send interval for logs is dynamically adjusted based on the " +
+			"trace update interval.",
 	},
 	{
 		Name:            ScriptSections,
