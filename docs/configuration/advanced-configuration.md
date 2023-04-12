@@ -30,13 +30,13 @@ You can find the `config.toml` file in:
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
 
 Configuration validation is a process that checks the structure of the `config.toml` file. The output from the configuration
-validator provides only `info` level messages. 
+validator provides only `info` level messages.
 
 The configuration validation is a _best effort_ and is currently only for informational purposes. It assists users
-to identify potential issues with their runner configuration. It may not catch all possible problems and the absence of 
+to identify potential issues with their runner configuration. It may not catch all possible problems and the absence of
 any messages does not guarantee that the `config.toml` file is flawless.
 
-Over time, the validation process will be refined to provide more accurate, comprehensive, and useful feedback. You should keep your 
+Over time, the validation process will be refined to provide more accurate, comprehensive, and useful feedback. You should keep your
 GitLab Runner updated to benefit from the latest improvements and enhancements.
 
 ## The global section
@@ -709,7 +709,7 @@ the supported configuration.
 [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins typically have accompanying documentation on
 the supported connection options.
 
-Plugins automatically update the connector configuration. You can use the `[runners.autoscaler.connector_config]` 
+Plugins automatically update the connector configuration. You can use the `[runners.autoscaler.connector_config]`
 to override automatic update of the connector configuration, or to fill in
 the empty values that the plugin cannot determine.
 
@@ -728,7 +728,7 @@ the empty values that the plugin cannot determine.
 
 ## The `[[runners.autoscaler.policy]]` sections
 
-**Note** - `idle_count` in this context refers to the number of jobs, not the number of autoscaled machines as in the legacy autoscaling method. 
+**Note** - `idle_count` in this context refers to the number of jobs, not the number of autoscaled machines as in the legacy autoscaling method.
 
 | `periods`              | An array of unix-cron formatted strings to denote the period this policy is enabled for. Default: `* * * * *` |
 | `timezone`             | The timezone used when evaluating the unix-cron period. Default: The system's local timezone. |
@@ -1297,7 +1297,7 @@ place.
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
 > - Requires [GitLab v12.6](https://about.gitlab.com/releases/2019/12/22/gitlab-12-6-released/) or later.
 
-Use GitLab Runner referees to pass extra job monitoring data to GitLab. Referees are workers in the Runner Manager that query and collect additional data related to a job. The results
+Use GitLab Runner referees to pass extra job monitoring data to GitLab. Referees are workers in the runner manager that query and collect additional data related to a job. The results
 are uploaded to GitLab as job artifacts.
 
 ### Use the Metrics Runner referee
@@ -1312,7 +1312,7 @@ Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml`
 
 | Setting              | Description                                                                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `prometheus_address` | The server that collects metrics from GitLab Runner instances. It must be accessible by the Runner Manager when the job finishes.   |
+| `prometheus_address` | The server that collects metrics from GitLab Runner instances. It must be accessible by the runner manager when the job finishes.   |
 | `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
 | `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that are executed for each interval.    |
 

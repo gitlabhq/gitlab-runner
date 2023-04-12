@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 > The instance executor autoscaler feature (alpha) was introduced in GitLab Runner 15.10.0.
 
-The instance executor is an autoscale-enabled executor that creates instances on-demand to accommodate the expected volume of CI jobs that the Runner Manager will process.
+The instance executor is an autoscale-enabled executor that creates instances on-demand to accommodate the expected volume of CI jobs that the runner manager will process.
 
 You can use the instance executor when jobs need full access to the host instance, operating system, and attached devices. The instance executor can also be configured to accommodate single and multi-tenant jobs with various levels of isolation and security.
 

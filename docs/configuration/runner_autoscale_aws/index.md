@@ -15,7 +15,7 @@ scalable solution.
 ## Introduction
 
 In this tutorial, we'll explore how to properly configure GitLab Runner in
-AWS. The instance in AWS will serve as a Runner Manager that spawns new Docker instances on
+AWS. The instance in AWS will serve as a runner manager that spawns new Docker instances on
 demand. The runners on these instances are automatically created. They use the parameters
 covered in this guide and do not require manual configuration after creation.
 
@@ -61,15 +61,15 @@ you can disable console login for that user. Keep the tab open or copy paste the
 security credentials in an editor as we'll use them later during the
 [GitLab Runner configuration](#the-runnersmachine-section).
 
-You can also create an [EC2 instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) with the required `AmazonEC2FullAccess` and `AmazonS3FullAccess` policies. Attach this instance profile to the Runner Manager EC2 instance to allow the provisioning of new EC2 instances for the jobs' execution.
+You can also create an [EC2 instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) with the required `AmazonEC2FullAccess` and `AmazonS3FullAccess` policies. Attach this instance profile to the runner manager EC2 instance to allow the provisioning of new EC2 instances for the jobs' execution.
 
-## Prepare the Runner Manager instance
+## Prepare the runner manager instance
 
 The first step is to install GitLab Runner in an EC2 instance that will serve
-as the Runner Manager that spawns new machines. Choose a distribution that both
+as the runner manager that spawns new machines. Choose a distribution that both
 Docker and GitLab Runner support, like Ubuntu, Debian, CentOS, or RHEL.
 
-This doesn't have to be a powerful machine because a Runner Manager instance doesn't run jobs itself.
+This doesn't have to be a powerful machine because a runner manager instance doesn't run jobs itself.
 For your initial configuration, you can start with a smaller instance. This machine is a dedicated host
 because we need it always up and running. Therefore, it is the only host with an ongoing baseline cost.
 
@@ -415,7 +415,7 @@ it will continue to request new instances. This eventually will make 60 requests
 and then AWS won't accept any more. Then once the Spot price is acceptable, you
 are locked out for a bit because the call amount limit is exceeded.
 
-If you encounter that case, you can use the following command in the Runner Manager
+If you encounter that case, you can use the following command in the runner manager
 machine to see the Docker Machines state:
 
 ```shell
