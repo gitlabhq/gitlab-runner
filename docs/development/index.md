@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 GitLab Runner is a golang binary which can operate in two modes:
 
 1. GitLab Runner executing jobs locally ("instance" executor).
-1. GitLab Runner Manager delegating jobs to an autoscaled environment which uses GitLab Runner Helper to pull artifacts.
+1. Runner manager delegating jobs to an autoscaled environment which uses GitLab Runner Helper to pull artifacts.
 
 For developing GitLab Runner in instance executor mode (1) the only setup required is a working golang environment.
 For developing GitLab Runner in Manager and Helper mode (2) setup also requires a Docker build environment.

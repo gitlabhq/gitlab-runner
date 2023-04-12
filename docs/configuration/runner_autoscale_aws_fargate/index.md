@@ -33,7 +33,7 @@ Additionally, for any non-public container registry your ECS Task will either [n
 You can use CloudFormation or Terraform to automate the provisioning and setup of your AWS infrastructure.
 
 WARNING:
-CI/CD jobs use the image defined in the ECS task, rather than the value of the `image:` keyword in your `.gitlab-ci.yml` file. This configuration can result in multiple instances of Runner Manager or in large build containers. AWS is aware of the issue and GitLab is [tracking resolution](https://gitlab.com/gitlab-com/alliances/aws/public-tracker/-/issues/22). You might consider creating an EKS cluster instead by following the official [AWS EKS Quick Start](https://aws.amazon.com/solutions/implementations/amazon-eks/).
+CI/CD jobs use the image defined in the ECS task, rather than the value of the `image:` keyword in your `.gitlab-ci.yml` file. This configuration can result in multiple instances of runner manager or in large build containers. AWS is aware of the issue and GitLab is [tracking resolution](https://gitlab.com/gitlab-com/alliances/aws/public-tracker/-/issues/22). You might consider creating an EKS cluster instead by following the official [AWS EKS Quick Start](https://aws.amazon.com/solutions/implementations/amazon-eks/).
 
 WARNING:
 Fargate abstracts container hosts, which limits configurability for container host properties. This affects runner workloads that require high IO to disk or network, since these properties have limited or no configurability with Fargate. Before you use GitLab Runner on Fargate, ensure runner workloads with high or extreme compute characteristics on CPU, memory, disk IO, or network IO are suitable for Fargate.
@@ -214,7 +214,7 @@ Now install GitLab Runner on the Ubuntu instance.
 
    - Note the value of `Cluster`, as well as the name of the `TaskDefinition`. This example shows `test-task`
      with `:1` as the revision number. If a revision number is not specified, the latest **active** revision is used.
-   - Choose your region. Take the `Subnet` value from the Runner Manager instance.
+   - Choose your region. Take the `Subnet` value from the runner manager instance.
    - To find the security group ID:
 
      1. In AWS, in the list of instances, select the EC2 instance you created. The details are displayed.
@@ -294,7 +294,7 @@ Refer to the AWS documentation [Amazon ECS task execution IAM role](https://docs
 
 Refer to the AWS documentation [Private registry authentication for tasks](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/private-auth.html) for information on having ECS authenticate to private registries including any hosted on a GitLab instance.
 
-At this point the GitLab Runner Manager and Fargate Driver are configured and ready
+At this point the runner manager and Fargate Driver are configured and ready
 to start executing jobs on AWS Fargate.
 
 ## Step 7: Test the configuration

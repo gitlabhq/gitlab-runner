@@ -186,7 +186,7 @@ These fields are marked with a `DEPRECATED:` comment above them in the default `
 |runners.imagePullPolicy:| Specify the image pull policy: never, if-not-present, always. The cluster default will be used if not set.                                    |
 |runners.requestConcurrency:| Defines number of concurrent requests for new job from GitLab                                                                                 |
 |runners.privileged:| Enable or disable the privileged flag for all containers                                                                                      |
-|runners.namespace:| Namespace to run Kubernetes jobs in. Defaults to the namespace used for installing the Runner Manager.                                        |
+|runners.namespace:| Namespace to run Kubernetes jobs in. Defaults to the namespace used for installing the runner manager.                                        |
 |runners.pollTimeout: | The amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the container it has just created. |
 |runners.outputLimit: | Set maximum build log size in kilobytes, by default set to 4096 (4MB).                                                                        |
 |runners.cache.cacheType| Cache general settings                                                                                                                        |
