@@ -988,6 +988,11 @@ Docker executor:
   However, if the destination path is on the `c:` drive, paths are also supported
   (for example `c:\\cache_dir`).
 
+  To configure where the Docker daemon keeps images and containers, update
+  the `data-root` parameter in the `daemon.json` file of the Docker daemon.
+
+  For more information, see [Configure Docker with a configuration file](https://learn.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon#configure-docker-with-a-configuration-file).
+
 ### Supported Windows versions
 
 GitLab Runner only supports the following versions of Windows which
