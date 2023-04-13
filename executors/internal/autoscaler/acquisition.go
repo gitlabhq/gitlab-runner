@@ -149,7 +149,14 @@ func (ref *acquisitionRef) createVMTunnel(
 		var slot32 = int32(ref.acq.Slot())
 		slot = &slot32
 	}
-	vm, stompedVMID, err := nc.Create(ctx, image, slot)
+
+	var vm hypervisor.VirtualMachine
+	var stompedVMID *string
+	var err error
+	err = withInit(ctx, options.Config, nc, func() error {
+		vm, stompedVMID, err = nc.Create(ctx, image, slot)
+		return err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("creating nesting vm: %w", err)
 	}
