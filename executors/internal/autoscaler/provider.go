@@ -17,6 +17,7 @@ import (
 	flprometheus "gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/nesting/api"
+	"gitlab.com/gitlab-org/fleeting/nesting/hypervisor"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	tsprometheus "gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus"
 
@@ -353,17 +354,11 @@ func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscale
 		nc := api.New(conn)
 		defer nc.Close()
 
-		nestingInitCfg, err := config.Autoscaler.VMIsolation.NestingConfig.JSON()
-		if err != nil {
-			return nil, 0, fmt.Errorf("converting nesting init config to json: %w", err)
-		}
-
-		err = nc.Init(ctx, nestingInitCfg)
-		if err != nil && !errors.Is(err, api.ErrAlreadyInitialized) {
-			return nil, 0, fmt.Errorf("initializing nesting: %w", err)
-		}
-
-		vms, err := nc.List(ctx)
+		var vms []hypervisor.VirtualMachine
+		err = withInit(ctx, config, nc, func() error {
+			vms, err = nc.List(ctx)
+			return err
+		})
 		if err != nil {
 			return nil, 0, fmt.Errorf("listing existing vms: %w", err)
 		}
