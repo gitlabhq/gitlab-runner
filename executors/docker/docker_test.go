@@ -29,6 +29,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
@@ -802,7 +803,6 @@ func createExecutorForTestDockerConfiguration(
 
 	e := new(executor)
 	e.client = c
-	e.volumeParser = parser.NewLinuxParser()
 	e.info = types.Info{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
@@ -1318,28 +1318,18 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) (*executor
 
 func TestCheckOSType(t *testing.T) {
 	cases := map[string]struct {
-		executorMetadata map[string]string
 		dockerInfoOSType string
 		expectedErr      string
 	}{
-		"executor and docker info mismatch": {
-			executorMetadata: map[string]string{
-				metadataOSType: osTypeWindows,
-			},
+		"linux type": {
 			dockerInfoOSType: osTypeLinux,
-			expectedErr:      "executor requires OSType=windows, but Docker Engine supports only OSType=linux",
 		},
-		"executor and docker info match": {
-			executorMetadata: map[string]string{
-				metadataOSType: osTypeLinux,
-			},
-			dockerInfoOSType: osTypeLinux,
-			expectedErr:      "",
+		"windows type": {
+			dockerInfoOSType: osTypeWindows,
 		},
-		"executor OSType not defined": {
-			executorMetadata: nil,
-			dockerInfoOSType: osTypeLinux,
-			expectedErr:      " does not have any OSType specified",
+		"unknown": {
+			dockerInfoOSType: "foobar",
+			expectedErr:      "unsupported os type: foobar",
 		},
 	}
 
@@ -1349,11 +1339,7 @@ func TestCheckOSType(t *testing.T) {
 				info: types.Info{
 					OSType: c.dockerInfoOSType,
 				},
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executors.ExecutorOptions{
-						Metadata: c.executorMetadata,
-					},
-				},
+				AbstractExecutor: executors.AbstractExecutor{},
 			}
 
 			err := e.validateOSType()
@@ -1367,11 +1353,6 @@ func TestCheckOSType(t *testing.T) {
 }
 
 func TestHelperImageRegistry(t *testing.T) {
-	dockerOS := helperimage.OSTypeLinux
-	if runtime.GOOS == helperimage.OSTypeWindows {
-		dockerOS = runtime.GOOS
-	}
-
 	tests := map[string]struct {
 		build *common.Build
 		// We only validate the name because we only care if the right image is
@@ -1421,22 +1402,17 @@ func TestHelperImageRegistry(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			e := &executor{
 				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executors.ExecutorOptions{
-						Metadata: map[string]string{
-							metadataOSType: dockerOS,
-						},
-					},
+					ExecutorOptions: executors.ExecutorOptions{},
 				},
-				volumeParser: parser.NewLinuxParser(),
+				newVolumePermissionSetter: func() (permission.Setter, error) {
+					return nil, nil
+				},
 			}
 
 			prepareOptions := common.ExecutorPrepareOptions{
 				Config: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
-						BuildsDir: "/tmp",
-						CacheDir:  "/tmp",
-						Shell:     "bash",
-						Docker:    tt.build.Runner.Docker,
+						Docker: tt.build.Runner.Docker,
 					},
 				},
 				Build:   tt.build,
@@ -1672,7 +1648,6 @@ func TestLocalHelperImage(t *testing.T) {
 					},
 				},
 				client:          c,
-				volumeParser:    parser.NewLinuxParser(),
 				helperImageInfo: tt.helperImageInfo,
 			}
 
@@ -1866,11 +1841,7 @@ func TestConnectEnvironment(t *testing.T) {
 
 	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
-			ExecutorOptions: executors.ExecutorOptions{
-				Metadata: map[string]string{
-					metadataOSType: osTypeLinux,
-				},
-			},
+			ExecutorOptions: executors.ExecutorOptions{},
 		},
 		volumeParser: parser.NewLinuxParser(),
 	}

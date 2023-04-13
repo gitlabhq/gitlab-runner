@@ -16,7 +16,6 @@ type ExecutorOptions struct {
 	SharedBuildsDir               bool
 	Shell                         common.ShellScriptInfo
 	ShowHostname                  bool
-	Metadata                      map[string]string
 }
 
 type AbstractExecutor struct {

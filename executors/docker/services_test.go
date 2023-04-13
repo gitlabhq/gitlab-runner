@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	service_test "gitlab.com/gitlab-org/gitlab-runner/helpers/container/services/test"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -51,8 +50,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 			OSType:       helperimage.OSTypeLinux,
 			Architecture: "amd64",
 		},
-		volumeParser: parser.NewLinuxParser(),
-		pullManager:  p,
+		pullManager: p,
 	}
 
 	e.Config = common.RunnerConfig{}

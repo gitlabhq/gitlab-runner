@@ -16,8 +16,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/user"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
-	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
@@ -74,7 +72,7 @@ func (s *commandExecutor) Prepare(options common.ExecutorPrepareOptions) error {
 
 func (s *commandExecutor) isUmaskDisabled() bool {
 	// Not usable with docker-windows executor
-	if s.AbstractExecutor.ExecutorOptions.Metadata[metadataOSType] == osTypeWindows {
+	if s.info.OSType == osTypeWindows {
 		return false
 	}
 
@@ -343,9 +341,6 @@ func init() {
 			RunnerCommand: "/usr/bin/gitlab-runner-helper",
 		},
 		ShowHostname: true,
-		Metadata: map[string]string{
-			metadataOSType: osTypeLinux,
-		},
 	}
 
 	creator := func() common.Executor {
@@ -354,17 +349,7 @@ func init() {
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: options,
 				},
-				volumeParser: parser.NewLinuxParser(),
 			},
-		}
-
-		e.newVolumePermissionSetter = func() (permission.Setter, error) {
-			helperImage, err := e.getPrebuiltImage()
-			if err != nil {
-				return nil, err
-			}
-
-			return permission.NewDockerLinuxSetter(e.client, e.Build.Log(), helperImage), nil
 		}
 
 		e.SetCurrentStage(common.ExecutorStageCreated)
@@ -382,6 +367,13 @@ func init() {
 	}
 
 	common.RegisterExecutorProvider("docker", executors.DefaultExecutorProvider{
+		Creator:          creator,
+		FeaturesUpdater:  featuresUpdater,
+		ConfigUpdater:    configUpdater,
+		DefaultShellName: options.Shell.Shell,
+	})
+
+	common.RegisterExecutorProvider("docker-windows", executors.DefaultExecutorProvider{
 		Creator:          creator,
 		FeaturesUpdater:  featuresUpdater,
 		ConfigUpdater:    configUpdater,
