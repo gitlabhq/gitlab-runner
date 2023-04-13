@@ -303,12 +303,6 @@ windows 1809 unit tests:
   - .windows1809
   - .rules:merge_request_pipelines:no_docs
 
-windows 21H1 unit tests:
-  extends:
-  - .windows unit test
-  - .windows21H1
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-
 windows 1809 integration tests:
   extends:
   - .windows integration test
@@ -355,22 +349,6 @@ windows 20H2 integration tests:
   - job: 'bleeding edge servercore20H2 helper docker images'
     optional: true
   - job: 'stable servercore20H2 helper docker images'
-    optional: true
-
-windows 21H1 integration tests:
-  extends:
-  - .windows integration test
-  - .windows21H1
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - 'integration test definitions'
-  - 'clone test repo'
-  - 'prepare done'
-  - job: 'development servercore21H1 helper docker images'
-    optional: true
-  - job: 'bleeding edge servercore21H1 helper docker images'
-    optional: true
-  - job: 'stable servercore21H1 helper docker images'
     optional: true
 
 git 1.8.3.1:

@@ -106,20 +106,6 @@ check windows 1809 unexpected integration test failures:
   needs:
   - windows 1809 integration tests
 
-check windows 21H1 unexpected unit test failures:
-  extends:
-  - .check windows unexpected test failures
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-    - windows 21H1 unit tests
-
-check windows 21H1 unexpected integration test failures:
-  extends:
-  - .check windows unexpected test failures
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-    - windows 21H1 integration tests
-
 .check windows test failures:
   stage: coverage
   script:
@@ -138,14 +124,6 @@ check windows 1809 unit test failures:
   - .rules:merge_request_pipelines:no_docs
   needs:
   - windows 1809 unit tests
-
-check windows 21H1 unit test failures:
-  extends:
-  - .check windows test failures
-  - .windows21H1_variables
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-    - windows 21H1 unit tests
 
 check windows 1809 integration test failures:
   extends:
@@ -170,11 +148,3 @@ check windows 20H2 integration test failures:
   - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - windows 20H2 integration tests
-
-check windows 21H1 integration test failures:
-  extends:
-  - .check windows test failures
-  - .windows21H1_variables
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - windows 21H1 integration tests
