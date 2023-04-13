@@ -939,6 +939,153 @@ func TestGetRemoteURL(t *testing.T) {
 	}
 }
 
+func TestGetURLInsteadOfArgs(t *testing.T) {
+	const (
+		exampleJobToken   = "job-token"
+		exampleServerHost = "test.local"
+		exampleServerURL  = "https://test.local"
+	)
+
+	testCases := map[string]struct {
+		cloneURL     string
+		serverURL    string
+		serverPort   string
+		expectedArgs []string
+		forceHTTPS   bool
+	}{
+		"with default url": {
+			expectedArgs: []string{
+				"-c", "url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
+			},
+		},
+		"with clone_url": {
+			cloneURL: "https://custom.local",
+			expectedArgs: []string{
+				"-c", "url.https://gitlab-ci-token:job-token@custom.local.insteadOf=https://custom.local",
+			},
+		},
+		"with http protocol": {
+			serverURL: "http://test.local",
+			expectedArgs: []string{
+				"-c", "url.http://gitlab-ci-token:job-token@test.local.insteadOf=http://test.local",
+			},
+		},
+		"with clone_url and http protocol": {
+			cloneURL: "http://test.local",
+			expectedArgs: []string{
+				"-c", "url.http://gitlab-ci-token:job-token@test.local.insteadOf=http://test.local",
+			},
+		},
+		"with directory URL": {
+			serverURL: "https://test.local/gitlab",
+			expectedArgs: []string{
+				"-c", "url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=https://test.local/gitlab",
+			},
+		},
+		"with directory URL with trailing slash stripped": {
+			cloneURL: "https://test.local/gitlab/",
+			expectedArgs: []string{
+				"-c", "url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=https://test.local/gitlab",
+			},
+		},
+		"with clone_url and ssh protocol ignored": {
+			cloneURL:     "ssh://git@test.local",
+			expectedArgs: []string{},
+		},
+		"with default url and force HTTPS": {
+			forceHTTPS: true,
+			expectedArgs: []string{
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local/.insteadOf=git@test.local:",
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=ssh://git@test.local",
+			},
+		},
+		"with default url and custom SSH port and force HTTPS": {
+			forceHTTPS: true,
+			serverPort: "8022",
+			expectedArgs: []string{
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=ssh://git@test.local:8022",
+			},
+		},
+		"with default url and trailing slash stripped and force HTTPS": {
+			forceHTTPS: true,
+			serverURL:  "https://test.local/",
+			expectedArgs: []string{
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local/.insteadOf=git@test.local:",
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=ssh://git@test.local",
+			},
+		},
+		"with default url and directory URL and force HTTPS": {
+			forceHTTPS: true,
+			serverURL:  "https://test.local/gitlab",
+			expectedArgs: []string{
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=https://test.local/gitlab",
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local/gitlab/.insteadOf=git@test.local:",
+				"-c",
+				"url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=ssh://git@test.local",
+			},
+		},
+		"with clone_url and ssh protocol and force HTTPS ignored": {
+			forceHTTPS:   true,
+			cloneURL:     "ssh://git@test.local",
+			expectedArgs: []string{},
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						URL: exampleServerURL,
+					},
+					RunnerSettings: RunnerSettings{
+						CloneURL: tc.cloneURL,
+					},
+				},
+				allVariables: JobVariables{
+					JobVariable{Key: "CI_SERVER_SHELL_SSH_HOST", Value: exampleServerHost},
+				},
+				JobResponse: JobResponse{
+					Token: exampleJobToken,
+				},
+			}
+
+			if tc.serverURL != "" {
+				build.Runner.RunnerCredentials.URL = tc.serverURL
+			}
+
+			if tc.forceHTTPS {
+				build.allVariables = append(build.allVariables, JobVariable{
+					Key:   "GIT_SUBMODULE_FORCE_HTTPS",
+					Value: "true",
+				})
+			}
+
+			if tc.serverPort != "" {
+				build.allVariables = append(build.allVariables, JobVariable{
+					Key:   "CI_SERVER_SHELL_SSH_PORT",
+					Value: tc.serverPort,
+				})
+			}
+
+			assert.Equal(t, tc.expectedArgs, build.GetURLInsteadOfArgs())
+		})
+	}
+}
+
 func TestIsFeatureFlagOn(t *testing.T) {
 	const testFF = "FF_TEST_FEATURE"
 

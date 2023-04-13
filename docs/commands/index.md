@@ -599,6 +599,7 @@ The following features are supported. If a feature is not listed in this table, 
 | GIT_SUBMODULE_PATHS        | yes                   |                              |
 | GIT_SUBMODULE_UPDATE_FLAGS | yes                   |                              |
 | GIT_SUBMODULE_DEPTH        | yes                   |                              |
+| GIT_SUBMODULE_FORCE_HTTPS  | yes                   |                              |
 | GET_SOURCES_ATTEMPTS       | yes                   |                              |
 | ARTIFACT_DOWNLOAD_ATTEMPTS | no                    | Artifacts are not supported. |
 | RESTORE_CACHE_ATTEMPTS     | yes                   |                              |

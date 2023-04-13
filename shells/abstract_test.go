@@ -798,6 +798,12 @@ func TestGitFetchFlags(t *testing.T) {
 }
 
 func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
+	const (
+		exampleBaseURL  = "http://test.remote"
+		exampleJobToken = "job-token"
+		insteadOf       = "url.http://gitlab-ci-token:job-token@test.remote.insteadOf=http://test.remote"
+	)
+
 	tests := map[string]struct {
 		Recursive               bool
 		Depth                   int
@@ -861,7 +867,8 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			mockWriter.
 				On(
 					"Command",
-					append([]interface{}{"git", "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...,
+					append([]interface{}{
+						"git", "-c", insteadOf, "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...,
 				).Once()
 			cleanCmd := mockWriter.
 				On("Command", append(expectedGitForEachArgsFn(), "git clean -ffxd")...).
@@ -880,6 +887,10 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 				&common.Build{
 					JobResponse: common.JobResponse{
 						GitInfo: common.GitInfo{Depth: tc.Depth},
+						Token:   exampleJobToken,
+					},
+					Runner: &common.RunnerConfig{
+						RunnerCredentials: common.RunnerCredentials{URL: exampleBaseURL},
 					},
 				},
 				tc.Recursive,
@@ -1026,10 +1037,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 	}
 
 	submoduleCommand := func(paths string, args ...string) []interface{} {
-		command := []interface{}{
-			"git",
-			"submodule",
-		}
+		command := []interface{}{"git"}
 
 		for _, a := range args {
 			command = append(command, a)
@@ -1046,6 +1054,8 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 		return command
 	}
 
+	insteadOf := "url.https://gitlab-ci-token:xxx@example.com.insteadOf=https://example.com"
+
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			shell := AbstractShell{}
@@ -1054,8 +1064,11 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 			mockWriter.On("Noticef", mock.Anything).Once()
 			mockWriter.On("Command", "git", "submodule", "init").Once()
-			mockWriter.On("Command", submoduleCommand(test.paths, "sync")...).Once()
-			mockWriter.On("Command", submoduleCommand(test.paths, "update", "--init")...).Once()
+			mockWriter.On("Command", submoduleCommand(test.paths, "submodule", "sync")...).Once()
+			mockWriter.On("Command", submoduleCommand(
+				test.paths, "-c", insteadOf, "submodule", "update", "--init",
+			)...,
+			).Once()
 			cleanCmd := mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
 			mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").
 				Run(func(args mock.Arguments) {
@@ -1066,7 +1079,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 			mockWriter.On("Command", "git", "submodule", "foreach", "git lfs pull").Once()
 			mockWriter.On("EndIf").Once()
 
-			build := &common.Build{}
+			build := &common.Build{
+				JobResponse: common.JobResponse{Token: "xxx"},
+				Runner: &common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{URL: "https://example.com"},
+				},
+			}
 			build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_SUBMODULE_PATHS", Value: test.paths})
 			err := shell.writeSubmoduleUpdateCmd(mockWriter, build, false)
 			assert.NoError(t, err)

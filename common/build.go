@@ -1180,6 +1180,20 @@ func (b *Build) GetAllVariables() JobVariables {
 	return b.allVariables
 }
 
+func (b *Build) getURLWithAuth(URL string) string {
+	u, _ := url.Parse(URL)
+
+	if u.Scheme == "ssh" {
+		if u.User == nil {
+			u.User = url.User("git")
+		}
+	} else {
+		u.User = url.UserPassword("gitlab-ci-token", b.Token)
+	}
+
+	return u.String()
+}
+
 // GetRemoteURL checks if the default clone URL is overwritten by the runner
 // configuration option: 'CloneURL'. If it is, we use that to create the clone
 // URL.
@@ -1190,18 +1204,62 @@ func (b *Build) GetRemoteURL() string {
 		return b.GitInfo.RepoURL
 	}
 
-	if u.Scheme == "ssh" {
-		if u.User == nil {
-			u.User = url.User("git")
-		}
-	} else {
-		u.User = url.UserPassword("gitlab-ci-token", b.Token)
-	}
-
 	projectPath := b.GetAllVariables().Value("CI_PROJECT_PATH") + ".git"
 	u.Path = path.Join(u.Path, projectPath)
 
+	return b.getURLWithAuth(u.String())
+}
+
+func (b *Build) getBaseURL() string {
+	u, _ := url.Parse(b.Runner.CloneURL)
+
+	if u == nil || u.Scheme == "" {
+		return b.Runner.RunnerCredentials.URL
+	}
+
 	return u.String()
+}
+
+func (b *Build) getURLInsteadOf(target string, source string) []string {
+	return []string{"-c", fmt.Sprintf("url.%s.insteadOf=%s", target, source)}
+}
+
+// GetURLInsteadOfArgs rewrites a plain HTTPS base URL and the most commonly used SSH/Git
+// protocol URLs (including custom SSH ports) into an HTTPS URL with injected job token
+// auth, and returns an array of strings to pass as options to git commands.
+func (b *Build) GetURLInsteadOfArgs() []string {
+	baseURL := strings.TrimRight(b.getBaseURL(), "/")
+	if !strings.HasPrefix(baseURL, "http") {
+		return []string{}
+	}
+
+	baseURLWithAuth := b.getURLWithAuth(baseURL)
+
+	// https://example.com/ 		-> https://gitlab-ci-token:abc123@example.com/
+	args := b.getURLInsteadOf(baseURLWithAuth, baseURL)
+
+	if b.IsForceHTTPSEnabled() {
+		ciServerPort := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_PORT")
+		ciServerHost := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_HOST")
+		if ciServerHost == "" {
+			ciServerHost = b.GetAllVariables().Value("CI_SERVER_HOST")
+		}
+
+		if ciServerPort == "" || ciServerPort == "22" {
+			// git@example.com: 		-> https://gitlab-ci-token:abc123@example.com/
+			baseGitURL := fmt.Sprintf("git@%s:", ciServerHost)
+
+			args = append(args, b.getURLInsteadOf(baseURLWithAuth+"/", baseGitURL)...)
+			// ssh://git@example.com/ 	-> https://gitlab-ci-token:abc123@example.com/
+			baseSSHGitURL := fmt.Sprintf("ssh://git@%s", ciServerHost)
+			args = append(args, b.getURLInsteadOf(baseURLWithAuth, baseSSHGitURL)...)
+		} else {
+			// ssh://git@example.com:8022/ 	-> https://gitlab-ci-token:abc123@example.com/
+			baseSSHGitURLWithPort := fmt.Sprintf("ssh://git@%s:%s", ciServerHost, ciServerPort)
+			args = append(args, b.getURLInsteadOf(baseURLWithAuth, baseSSHGitURLWithPort)...)
+		}
+	}
+	return args
 }
 
 func (b *Build) GetGitStrategy() GitStrategy {
@@ -1483,4 +1541,13 @@ func (b *Build) IsCIDebugServiceEnabled() bool {
 
 func (b *Build) IsDebugModeEnabled() bool {
 	return b.IsDebugTraceEnabled() || b.IsCIDebugServiceEnabled()
+}
+
+func (b *Build) IsForceHTTPSEnabled() bool {
+	enabled, err := strconv.ParseBool(b.GetAllVariables().Value("GIT_SUBMODULE_FORCE_HTTPS"))
+	if err != nil {
+		return false
+	}
+
+	return enabled
 }
