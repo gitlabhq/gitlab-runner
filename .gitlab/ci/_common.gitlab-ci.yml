@@ -180,6 +180,23 @@ default:
   variables:
     WINDOWS_VERSION: nanoserver20H2
 
+.windows21H2_variables:
+  variables:
+    WINDOWS_VERSION: servercore21H2
+
+.windows21H2:
+  extends:
+  - .windows21H2_variables
+  tags:
+  - windows
+  - windows-21h1 # todo: use windows-2022 when ready (https://gitlab.com/gitlab-org/ci-cd/shared-runners/infrastructure/-/issues/61)
+
+.windows21H2_nano:
+  extends:
+  - .windows21H2
+  variables:
+    WINDOWS_VERSION: nanoserver21H2
+
 # .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:
