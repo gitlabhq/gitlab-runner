@@ -4,46 +4,62 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Instance executor (Alpha)
+# Instance executor (Experiment)
 
-> The instance executor autoscaler feature (alpha) was introduced in GitLab Runner 15.10.0.
+> Introduced in GitLab Runner 15.10.0. It is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html)
 
-The instance executor is an autoscale-enabled executor that creates instances on-demand to accommodate the expected volume of CI jobs that the runner manager will process.
+The instance executor is an autoscale-enabled executor that creates instances on-demand to accommodate
+the expected volume of CI jobs that the runner manager processes.
 
-You can use the instance executor when jobs need full access to the host instance, operating system, and attached devices. The instance executor can also be configured to accommodate single and multi-tenant jobs with various levels of isolation and security.
+You can use the instance executor when jobs need full access to the host instance, operating system, and
+attached devices. The instance executor can also be configured to accommodate single and multi-tenant jobs
+with various levels of isolation and security.
 
-## Nested Virtualization
+## Nested virtualization
 
-The instance executor supports nested virtualization, through [nesting](https://gitlab.com/gitlab-org/fleeting/nesting). Nesting is GitLab developed daemon that enables creating and deleting pre-configured Vritual Machines on a host system intended for isolated and short-lived workloads such as CI jobs. Nesting is currently only supported on Apple macOS Apple Silicon instances.
+The instance executor supports nested virtualization through [nesting](https://gitlab.com/gitlab-org/fleeting/nesting).
+Nesting is a GitLab developed daemon. It enables creating and deleting pre-configured Virtual Machines on a host system
+intended for isolated and short-lived workloads such as CI jobs. Nesting is only supported on Apple macOS Apple Silicon instances.
 
-## Preparing the environment
+## Prepare the environment
 
-### Step 1: Install a fleeting plugin
+To prepare the environment, you must:
 
-To get started with the Instance executor, select a `fleeting` plugin that targets the public cloud platform you want to autoscale on. An Alpha version of the [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws) is currently available. We also plan to release and maintain GCP, and Azure fleeting plugins. However, the goal of the fleeting plugin system is to enable community members to build and contribute plugins for other cloud providers.
+1. Install a fleeting plugin.
+1. Create an Amazon Machine Image.
 
-To install the AWS plugin, check the
-[release page](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases) and download the binary for your
-host platform. The `fleeting` plugin binaries need to be discoverable via the `PATH` environment variable.
+### Install a fleeting plugin
 
-### Step 2: Create an Amazon Machine Image
+To prepare your environment for autoscaling, install the AWS fleeting plugin. The fleeting plugin
+targets the platform that you want to autoscale on. The AWS fleeting plugin is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+
+To install the AWS plugin:
+
+1. [Download the binary](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases) for your host platform.
+1. Ensure that the plugin binaries are discoverable through the `PATH` environment variable.
+
+### Create an Amazon Machine Image
 
 Create an Amazon Machine Image (AMI) that includes the following:
 
-- Any dependencies required by the CI jobs you plan to run
+- Dependencies required by the CI jobs you plan to run
 - Git
 - GitLab Runner
 
-## Autoscaler Configuration
+## Configure the executor to autoscale
 
-The autoscaler configuration provides most of the functionality for the instance executor. Administrators can use the autoscaler configuration to specify settings like concurrency, the amount of times an instance can be use, and when to create idle capacity.
+Prerequisites:
 
-- [Instance Executor configuration](../configuration/advanced-configuration.md#the-runnersinstance-section-alpha)
-- [Autoscaler configuration](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
+- You must be an administrator.
+
+To configure the instance executor for autoscaling, update the following sections in the `config.toml`:
+
+- [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
+- [`[runners.instance]`](../configuration/advanced-configuration.md#the-runnersinstance-section-alpha)
 
 ## Examples
 
-### 1 job per instance using an AWS Autoscaling Group
+### 1 job per instance using an AWS Autoscaling group
 
 Prerequisites:
 
@@ -62,8 +78,8 @@ This configuration supports:
 By setting the capacity and use count to both 1, each job is given a secure ephemeral instance that cannot be
 affected by other jobs. As soon the job is complete the instance it was executed on is immediately deleted.
 
-With an idle scale of 5, the runner will try to keep 5 whole instances (because the capacity per instance is 1)
-available for future demand. These instances will stay for at least 20 minutes.
+With an idle scale of 5, the runner keeps 5 whole instances
+available for future demand (because the capacity per instance is 1). These instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
 
@@ -117,15 +133,15 @@ This configuration supports:
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
-By setting the capacity per instance to 5 and an unlimited use count, each instance will be able to concurrently
-execute 5 jobs for the lifetime of the instance.
+By setting the capacity per instance to 5 and an unlimited use count, each instance concurrently
+executes 5 jobs for the lifetime of the instance.
 
 Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
 can affect the performance of another.
 
-With an idle scale of 5, 1 idle instance will be created to accomodate an idle capacity of 5
+With an idle scale of 5, 1 idle instance is created to accommodate an idle capacity of 5
 (due to the capacity per instance) whenever the in use capacity is lower than 5. Idle instances
-will stay for at least 20 minutes.
+stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
 
@@ -164,7 +180,7 @@ concurrent = 50
       idle_time = "20m0s"
 ```
 
-### 2 jobs per instance, unlimited uses, nested virtualization on EC2 Mac instances, using AWS Autoscaling Group
+### 2 jobs per instance, unlimited uses, nested virtualization on EC2 Mac instances, using AWS Autoscaling group
 
 Prerequisites:
 
@@ -182,16 +198,16 @@ This configuration supports:
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
-By setting the capacity per instance to 2 and an unlimited use count, each instance will be able to concurrently
-execute 2 jobs for the lifetime of the instance.
+By setting the capacity per instance to 2 and an unlimited use count, each instance concurrently
+executes 2 jobs for the lifetime of the instance.
 
 Jobs executed in this environment do not need to be trusted because we're using
-[nesting](https://gitlab.com/gitlab-org/fleeting/nesting) for nested virtualization of each job. This currently
+[nesting](https://gitlab.com/gitlab-org/fleeting/nesting) for nested virtualization of each job. This
 only works on MacOS AppleSilcon instances.
 
-With an idle scale of 2, 1 idle instance will be created to accomodate an idle capacity 2
-(due to the capacity per instance) whenever the in use capacity is lower than 2. Idle instances will stay for at
-least 24 hours. We set this to 24 hours because AWS's MacOS instance hosts have a 24 hour minimal allocation period.
+With an idle scale of 2, 1 idle instance is created to accommodate an idle capacity 2
+(due to the capacity per instance) whenever the in use capacity is lower than 2. Idle instances stay for at
+least 24 hours. We set this to 24 hours because the AWS MacOS instance hosts have a 24 hour minimal allocation period.
 
 The runner `concurrent` field is set to 8 (maximum number instances * capacity per instance).
 
