@@ -46,6 +46,7 @@ var systemIDState = common.NewSystemIDState()
 var windowsDockerImageTagMappings = map[string]string{
 	windows.V20H2: "20H2",
 	windows.V21H1: "ltsc2022",
+	windows.V21H2: "ltsc2022",
 }
 
 func TestMain(m *testing.M) {
@@ -210,12 +211,12 @@ func getRunnerConfigForOS(t *testing.T) *common.RunnerConfig {
 	}
 }
 
-// windowsDockerImageTag checks the specified operatingSystem to see if it's one of the
-// supported Windows version. If true, it maps the os version to the corresponding mcr.microsoft.com Docker image tag.
+// windowsDockerImageTag checks the specified kernel version to see if it's one of the
+// supported Windows version. If true, it maps a compatible mcr.microsoft.com Docker image tag.
 // UnsupportedWindowsVersionError is returned when no supported Windows version
 // is found in the string.
-func windowsDockerImageTag(operatingSystem string) (string, error) {
-	version, err := windows.Version(operatingSystem)
+func windowsDockerImageTag(version string) (string, error) {
+	version, err := windows.Version(version)
 	if err != nil {
 		return "", err
 	}
@@ -237,7 +238,7 @@ func getWindowsImage(t *testing.T) string {
 		info, err := client.Info(context.Background())
 		require.NoError(t, err, "docker info")
 
-		dockerImageTag, err := windowsDockerImageTag(info.OperatingSystem)
+		dockerImageTag, err := windowsDockerImageTag(info.KernelVersion)
 		require.NoError(t, err)
 
 		windowsImage = fmt.Sprintf(common.TestWindowsImage, dockerImageTag)

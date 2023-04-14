@@ -332,7 +332,7 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 		for label, option := range map[string]*string{
 			api.LabelArchStable:           &config.Architecture,
 			api.LabelOSStable:             &config.OSType,
-			nodeSelectorWindowsBuildLabel: &config.OperatingSystem,
+			nodeSelectorWindowsBuildLabel: &config.KernelVersion,
 		} {
 			value := s.Config.Kubernetes.NodeSelector[label]
 			if value != "" {

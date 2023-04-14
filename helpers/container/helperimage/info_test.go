@@ -23,14 +23,14 @@ func TestGetInfo(t *testing.T) {
 		{
 			osType:        OSTypeWindows,
 			version:       unsupportedVersion,
-			expectedError: windows.NewUnsupportedWindowsVersionError(unsupportedVersion),
+			expectedError: windows.ErrUnsupportedWindowsVersion,
 		},
 		{osType: "unsupported", expectedError: errors.NewErrOSNotSupported("unsupported")},
 	}
 
 	for _, test := range tests {
 		t.Run(test.osType, func(t *testing.T) {
-			_, err := Get(headRevision, Config{OSType: test.osType, OperatingSystem: test.version})
+			_, err := Get(headRevision, Config{OSType: test.osType, KernelVersion: test.version})
 
 			assert.ErrorIs(t, err, test.expectedError)
 		})

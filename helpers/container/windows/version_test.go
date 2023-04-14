@@ -10,64 +10,53 @@ import (
 
 func TestVersion(t *testing.T) {
 	tests := []struct {
-		operatingSystem string
+		kernelVersion   string
 		expectedVersion string
 		expectedErr     error
 	}{
 		{
-			operatingSystem: "Windows Server 2019 Datacenter Evaluation Version 1809 (OS Build 17763.316)",
+			kernelVersion:   "10.0 17763 (17763.1.amd64fre.rs5_release.180914-1434)",
 			expectedVersion: V1809,
 			expectedErr:     nil,
 		},
 		{
-			operatingSystem: "Windows Server Datacenter Version 1809 (OS Build 1803.590)",
-			expectedVersion: V1809,
-			expectedErr:     nil,
-		},
-		{
-			operatingSystem: "Windows 10 Pro Version 2004 (OS Build 19041.329)",
+			kernelVersion:   "10.0 19041 (19041.1.amd64fre.vb_release.191206-1406)",
 			expectedVersion: V2004,
 			expectedErr:     nil,
 		},
 		{
-			operatingSystem: "Windows Server Datacenter Version 2009 (OS Build 19042.985)",
-			expectedVersion: V20H2,
-			expectedErr:     nil,
-		},
-		{
-			operatingSystem: "Windows Server 2022 Datacenter Version 2009 (OS Build 20348.643)",
-			expectedVersion: V21H1,
-			expectedErr:     nil,
-		},
-		{
-			operatingSystem: "Microsoft Windows Server Version 21H2 (OS Build 20348.169)",
+			kernelVersion:   "10.0 20348 (20348.1.amd64fre.fe_release.210507-1500)",
 			expectedVersion: V21H2,
 			expectedErr:     nil,
 		},
 		{
-			operatingSystem: "10.0.17763",
+			kernelVersion:   "10.0.17763",
 			expectedVersion: V1809,
 			expectedErr:     nil,
 		},
 		{
-			operatingSystem: "10.0.19041",
+			kernelVersion:   "10.0.19041",
 			expectedVersion: V2004,
 			expectedErr:     nil,
 		},
 		{
-			operatingSystem: "10.0.19042",
+			kernelVersion:   "10.0.19042",
 			expectedVersion: V20H2,
 			expectedErr:     nil,
 		},
 		{
-			operatingSystem: "some random string",
-			expectedErr:     NewUnsupportedWindowsVersionError("some random string"),
+			kernelVersion: "10.0 17134 (17134.1.amd64fre.rs4_release.180410-1804)",
+			expectedErr:   ErrUnsupportedWindowsVersion,
+		},
+		{
+			kernelVersion: "some random string",
+			expectedErr:   ErrUnsupportedWindowsVersion,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.operatingSystem, func(t *testing.T) {
-			version, err := Version(tt.operatingSystem)
+		t.Run(tt.kernelVersion, func(t *testing.T) {
+			version, err := Version(tt.kernelVersion)
 
 			assert.Equal(t, tt.expectedVersion, version)
 			assert.ErrorIs(t, err, tt.expectedErr)

@@ -46,11 +46,11 @@ func (i Info) String() string {
 // Config specifies details about the consumer of this package that need to be
 // taken in consideration when building Container.
 type Config struct {
-	OSType          string
-	Architecture    string
-	OperatingSystem string
-	Shell           string
-	Flavor          string
+	OSType        string
+	Architecture  string
+	KernelVersion string
+	Shell         string
+	Flavor        string
 }
 
 type creator interface {

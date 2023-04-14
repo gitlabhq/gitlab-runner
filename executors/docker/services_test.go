@@ -64,9 +64,9 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.Context = context.Background()
 
 	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
-		OSType:          e.info.OSType,
-		Architecture:    e.info.Architecture,
-		OperatingSystem: e.info.OperatingSystem,
+		OSType:        e.info.OSType,
+		Architecture:  e.info.Architecture,
+		KernelVersion: e.info.KernelVersion,
 	})
 	require.NoError(t, err)
 
