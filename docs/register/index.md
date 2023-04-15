@@ -4,18 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Registering runners (deprecated) **(FREE)**
+# Registering runners **(FREE)**
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) in GitLab Runner 15.0, a change to the registration request format prevents the GitLab Runner from communicating with GitLab versions lower than 14.8. You must use a Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
 
-WARNING:
-The ability to pass a runner registration token was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6 and is
-planned for removal in 17.0, along with support for certain configuration arguments. This change is a breaking change. GitLab plans to introduce a new
-[GitLab Runner token architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_tokens/), which introduces
-a new method for registering runners and eliminates the legacy
-[runner registration token](https://docs.gitlab.com/ee/security/token_overview.html#runner-registration-tokens).
-
-Registering a runner is the process that binds the runner with one or more GitLab instances.
+Runner registration is the process that links the runner with one or more GitLab instances.
 
 You can register multiple runners on the same host machine,
 each with a different configuration, by repeating the `register` command.
@@ -26,13 +19,7 @@ Before registering a runner, you must first:
 
 - [Install it](../install/index.md) on a server separate than where GitLab
   is installed
-- Obtain a token:
-  - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#shared-runners),
-    have an administrator go to the GitLab Admin Area and select **Overview > Runners**
-  - For a [group runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners),
-    go to **CI/CD > Runners**
-  - For a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#project-runners),
-    go to **Settings > CI/CD** and expand the **Runners** section
+- [Obtain a token](https://docs.gitlab.com/ee/ci/runners/register_runner.html)
 
 NOTE:
 When registering a runner on GitLab.com, the `gitlab-ci coordinator URL`
