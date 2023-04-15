@@ -149,7 +149,7 @@ ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)
 
 ### Additional configuration
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 You can use a [configuration template file](../register/index.md#runners-configuration-template-file)
 to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#configuration-settings).
@@ -170,7 +170,7 @@ The executor-specific configuration [is documented in the `values.yaml`](https:/
 
 ### Use the configuration template to set additional options
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 Many fields accepted by the `values.yaml` file will be removed with the introduction of
 Helm Chart version 1.0. We recommend migrating away from them as soon as possible.
