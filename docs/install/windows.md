@@ -379,11 +379,11 @@ ERROR: Job failed (system failure): prepare helper image: detecting base image: 
 To fix it, add `node.kubernetes.io/windows-build` nodeSelector in the section `[runners.kubernetes.node_selector]`
 of your GitLab Runner config file, For example:
 
- ```toml
-    [runners.kubernetes.node_selector]
-      "kubernetes.io/arch" = "amd64"
-      "kubernetes.io/os" = "windows"
-      "node.kubernetes.io/windows-build" = "10.0.17763"
+```toml
+   [runners.kubernetes.node_selector]
+     "kubernetes.io/arch" = "amd64"
+     "kubernetes.io/os" = "windows"
+     "node.kubernetes.io/windows-build" = "10.0.17763"
 ```
 
 ### I'm using a mapped network drive and my build cannot find the correct path
