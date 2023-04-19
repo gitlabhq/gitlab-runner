@@ -25,3 +25,8 @@ include:
 - local: /.gitlab/ci/release.gitlab-ci.yml
 - local: /.gitlab/ci/postrelease.gitlab-ci.yml
 - local: /.gitlab/ci/docs.gitlab-ci.yml
+- project: 'gitlab-org/quality/pipeline-common'
+  file:
+    - '/ci/danger-review.yml'
+  rules:
+    - if: '$CI_SERVER_HOST == "gitlab.com"'
