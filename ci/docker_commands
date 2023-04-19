@@ -31,7 +31,7 @@ tag() {
 # Push the image to the registry when the condition is met.
 # The arguments received by this function are
 # 1. the NAME[:TAG] of the image to push
-# 2. a flag telling if the image should be pushed to the registry or not. I tried to add this flag where the push 
+# 2. a flag telling if the image should be pushed to the registry or not. I tried to add this flag where the push
 # function is used. However to keep the previous behavior, when the second argument is not provided, the image is
 # pushed to the registry.
 push() {
@@ -58,7 +58,7 @@ setup_docker_context() {
     # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
     # Otherwise, we get the following error:
     # > could not create a builder instance with TLS data loaded from environment.
-    local docker="host=unix:///var/run/docker.sock"
+    local docker="host=${DOCKER_HOST:-unix:///var/run/docker.sock}"
     if [ -n "${DOCKER_CERT_PATH}" ]; then
         docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
     fi
