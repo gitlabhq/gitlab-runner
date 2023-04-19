@@ -58,10 +58,7 @@ setup_docker_context() {
     # In order for `docker buildx create` to work, we need to replace DOCKER_HOST with a Docker context.
     # Otherwise, we get the following error:
     # > could not create a builder instance with TLS data loaded from environment.
-    local docker="host=unix:///var/run/docker.sock"
-    if [ -n "${DOCKER_HOST}" ]; then
-        docker="host=${DOCKER_HOST}"
-    fi
+    local docker="host=${DOCKER_HOST:-unix:///var/run/docker.sock}"
     if [ -n "${DOCKER_CERT_PATH}" ]; then
         docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
     fi
