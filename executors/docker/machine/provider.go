@@ -494,7 +494,7 @@ func (m *machineProvider) Acquire(config *common.RunnerConfig) (common.ExecutorD
 	}
 
 	if config.Machine.GetIdleCount() == 0 {
-		logger.Info("IdleCount is set to 0 so the machine will be created on demand in job context")
+		logger.Debug("IdleCount is set to 0 so the machine will be created on demand in job context")
 	} else if machinesData.Idle == 0 {
 		return nil, &common.NoFreeExecutorError{Message: "no free machines that can process builds"}
 	}
