@@ -1029,11 +1029,6 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 		outCh <- outBuffer.String()
 	}()
 
-	// Wait until the session terminal is available
-	for build.Session.Handler() == nil || !build.Session.TerminalAvailable() {
-		time.Sleep(10 * time.Millisecond)
-	}
-
 	srv := httptest.NewServer(build.Session.Handler())
 	defer srv.Close()
 
