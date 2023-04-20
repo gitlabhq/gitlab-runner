@@ -191,13 +191,13 @@ The canonical build and configuration instructions will live with each plugin, b
 
 To run GitLab Runner with a plugin, generate an executable binary and place it on your system's `PATH`.
 
-To generate the binary, ensure `$GOPATH/bin` is on your `PATH`, then use `go install`. 
+To generate the binary, ensure `$GOPATH/bin` is on your `PATH`, then use `go install`.
 
 Each plugin contains a path to `./cmd/<plugin-name>`. For example, from the `fleeting-plugin-aws` directory:
 
 ```shell
-cd cmd/fleeting-plugin-aws/ 
-go install 
+cd cmd/fleeting-plugin-aws/
+go install
 ```
 
 If you manage go versions with asdf, run this command after the binary generates:
