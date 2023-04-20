@@ -192,7 +192,7 @@ type DockerConfig struct {
 	OomScoreAdjust             int                `toml:"oom_score_adjust,omitzero" json:"oom_score_adjust" long:"oom-score-adjust" env:"DOCKER_OOM_SCORE_ADJUST" description:"Adjust OOM score"`
 	SecurityOpt                []string           `toml:"security_opt" json:"security_opt,omitempty" long:"security-opt" env:"DOCKER_SECURITY_OPT" description:"Security Options"`
 	ServicesSecurityOpt        []string           `toml:"services_security_opt" json:"services_security_opt,omitempty" long:"services-security-opt" env:"DOCKER_SERVICES_SECURITY_OPT" description:"Security Options for container services"`
-	Devices                    []string           `toml:"devices" json:"devices,omitempty" long:"devices,omitempty" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
+	Devices                    []string           `toml:"devices" json:"devices,omitempty" long:"devices" env:"DOCKER_DEVICES" description:"Add a host device to the container"`
 	DeviceCgroupRules          []string           `toml:"device_cgroup_rules,omitempty" json:"device_cgroup_rules,omitempty" long:"device-cgroup-rules" env:"DOCKER_DEVICE_CGROUP_RULES" description:"Add a device cgroup rule to the container"`
 	Gpus                       string             `toml:"gpus,omitempty" json:"gpus" long:"gpus" env:"DOCKER_GPUS" description:"Request GPUs to be used by Docker"`
 	DisableCache               bool               `toml:"disable_cache,omitzero" json:"disable_cache" long:"disable-cache" env:"DOCKER_DISABLE_CACHE" description:"Disable all container caching"`
