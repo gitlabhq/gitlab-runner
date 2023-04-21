@@ -815,9 +815,9 @@ func createExecutorForTestDockerConfiguration(
 	e.BuildShell = &common.ShellConfiguration{}
 	var err error
 	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
-		OSType:          e.info.OSType,
-		Architecture:    e.info.Architecture,
-		OperatingSystem: e.info.OperatingSystem,
+		OSType:        e.info.OSType,
+		Architecture:  e.info.Architecture,
+		KernelVersion: e.info.KernelVersion,
 	})
 	require.NoError(t, err)
 

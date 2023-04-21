@@ -154,7 +154,7 @@ function Build-Image($tag)
     $dockerHubNamespace = DockerHub-Namespace
     $ecrPublicRegistry = ECR-Public-Registry
 
-    if ($windowsVersion -eq "21H1") {
+    if ($windowsVersion -eq "21H2") {
         $windowsVersion = "ltsc2022"
     }
 

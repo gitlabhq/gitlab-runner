@@ -1180,10 +1180,10 @@ func TestPrepare(t *testing.T) {
 		}
 	}
 	pwshHelperImage, err := helperimage.Get(helperImageTag, helperimage.Config{
-		Architecture:    "x86_64",
-		OSType:          osType,
-		Shell:           shells.SNPwsh,
-		OperatingSystem: os,
+		Architecture:  "x86_64",
+		OSType:        osType,
+		Shell:         shells.SNPwsh,
+		KernelVersion: os,
 	})
 	require.NoError(t, err)
 
