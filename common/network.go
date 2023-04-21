@@ -74,6 +74,7 @@ type FeaturesInfo struct {
 	Services                bool `json:"services"`
 	Artifacts               bool `json:"artifacts"`
 	Cache                   bool `json:"cache"`
+	FallbackCacheKeys       bool `json:"fallback_cache_keys"`
 	Shared                  bool `json:"shared"`
 	UploadMultipleArtifacts bool `json:"upload_multiple_artifacts"`
 	UploadRawArtifacts      bool `json:"upload_raw_artifacts"`
@@ -300,14 +301,16 @@ type Artifact struct {
 type Artifacts []Artifact
 
 type Cache struct {
-	Key       string        `json:"key"`
-	Untracked bool          `json:"untracked"`
-	Policy    CachePolicy   `json:"policy"`
-	Paths     ArtifactPaths `json:"paths"`
-	When      CacheWhen     `json:"when"`
+	Key          string            `json:"key"`
+	Untracked    bool              `json:"untracked"`
+	Policy       CachePolicy       `json:"policy"`
+	Paths        ArtifactPaths     `json:"paths"`
+	When         CacheWhen         `json:"when"`
+	FallbackKeys CacheFallbackKeys `json:"fallback_keys"`
 }
 
 type CacheWhen string
+type CacheFallbackKeys []string
 
 const (
 	CacheWhenOnFailure CacheWhen = "on_failure"

@@ -2160,6 +2160,7 @@ func featuresFn(features *common.FeaturesInfo) {
 	features.Services = true
 	features.Artifacts = true
 	features.Cache = true
+	features.FallbackCacheKeys = true
 	features.Session = true
 	features.Terminal = true
 	features.Proxy = true
