@@ -35,6 +35,7 @@ func (b *AbstractShell) GetFeatures(features *common.FeaturesInfo) {
 	features.UploadMultipleArtifacts = true
 	features.UploadRawArtifacts = true
 	features.Cache = true
+	features.FallbackCacheKeys = true
 	features.Refspecs = true
 	features.Masking = true
 	features.RawVariables = true
@@ -124,7 +125,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
-		b.extractCacheOrFallbackCacheWrapper(w, info, cacheFile, cacheKey)
+		b.extractCacheOrFallbackCachesWrapper(w, info, cacheFile, cacheKey, cacheOptions)
 	}
 
 	if skipRestoreCache {
@@ -134,21 +135,29 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 	return nil
 }
 
-func (b *AbstractShell) extractCacheOrFallbackCacheWrapper(
+func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	cacheFile string,
 	cacheKey string,
+	cacheOptions common.Cache,
 ) {
-	cacheFallbackKey := info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY")
-	if strings.HasSuffix(cacheFallbackKey, "-protected") {
-		// The `-protected` suffix is reserved for protected refs, so we disallow it from user-specified values.
-		cacheFallbackKey = ""
+	allCacheKeys := append(
+		cacheOptions.FallbackKeys,
+		info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY"),
+	)
+	allowedCacheKeys := []string{cacheKey}
+
+	for _, cacheKey := range allCacheKeys {
+		if cacheKey != "" && !strings.HasSuffix(cacheKey, "-protected") {
+			// The `-protected` suffix is reserved for protected refs, so we disallow it from user-specified values.
+			allowedCacheKeys = append(allowedCacheKeys, cacheKey)
+		}
 	}
 
 	// Execute cache-extractor command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		b.addExtractCacheCommand(w, info, cacheFile, cacheKey, cacheFallbackKey)
+		b.addExtractCacheCommand(w, info, cacheFile, allowedCacheKeys)
 	})
 }
 
@@ -156,28 +165,26 @@ func (b *AbstractShell) addExtractCacheCommand(
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	cacheFile string,
-	cacheKey string,
-	cacheFallbackKey string,
+	cacheKeys []string,
 ) {
-	args := []string{
-		"cache-extractor",
-		"--file", cacheFile,
-		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
-	}
+	for _, cacheKey := range cacheKeys {
+		args := []string{
+			"cache-extractor",
+			"--file", cacheFile,
+			"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
+		}
 
-	if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
-		args = append(args, "--url", url.String())
-	}
+		if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
+			args = append(args, "--url", url.String())
+		}
 
-	w.Noticef("Checking cache for %s...", cacheKey)
-	w.IfCmdWithOutput(info.RunnerCommand, args...)
-	w.Noticef("Successfully extracted cache")
-	w.Else()
-	w.Warningf("Failed to extract cache")
-	if cacheFallbackKey != "" {
-		b.addExtractCacheCommand(w, info, cacheFile, cacheFallbackKey, "")
+		w.Noticef("Checking cache for %s...", cacheKey)
+		w.IfCmdWithOutput(info.RunnerCommand, args...)
+		w.Noticef("Successfully extracted cache")
+		w.Else()
+		w.Warningf("Failed to extract cache")
+		w.EndIf()
 	}
-	w.EndIf()
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
