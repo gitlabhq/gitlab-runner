@@ -1,3 +1,79 @@
+## v15.11.0 (2023-04-21)
+
+### New features
+
+- Add Config Validation section to runner Docs !4017
+- Add fine grained configuration of autoscaler histograms !4014
+- Update runner internal metrics !4001
+- Update taskscaler/fleeting metric collectors configuration !3984
+- Reorganize index sections for runner use cases !3980
+- Add high-level docs for Instance and Docker Autoscaler executors !3953
+- Add docker-autoscaler. !3885
+- Implement fallback cache keys !3875 (René Hernández Remedios @renehernandez)
+- Support remote Windows docker environments from Linux hosts !3345
+- Add support for absolute submodule URLs !3198 (Nejc Habjan @nejc)
+- Support for custom Kubernetes PodSpec !3114
+
+### Bug fixes
+
+- Add hostname and find commands to UBI FIPS image !4040
+- Remove stray omitempty in long form for --docker-devices !4029 (Robin Voetter @Snektron)
+- Interactive terminal: Wait for terminal to be set !4027
+- Initialize nesting client lazily !4020
+- Handle build's parent context cancelation correctly !4018
+- Reduce config validation message noise !4016
+- Try all specified TCP ports when doing a service container health-check !4010
+- Fix docker-machine detail races !3999
+- Do not ask for registration token if runner token is specified !3995
+- Explicitly start docker service in windows tests !3994
+- Resolve "Runner FIPS RPM packages conflicts itself" !3974
+- Gracefully terminate Windows processes with Ctrl-C event !3920 (Chris Wright @inkychris)
+
+### Maintenance
+
+- Update Docker Autoscaler introduction milestone !4050
+- Add missing code block end in docs/install/windows.md !4049 (Celeste Fox @celestefox)
+- Add container support for Windows 2022 21H2 !4047
+- Add reference to CI_CONCURRENT_PROJECT_ID variable !4046
+- Remove Windows 21H1 !4045
+- Add merge release config to bump the VERSION file after the stable branches are merged into main !4041
+- Upgrade golang.org/x/net to v0.7.0 !4039
+- Add troubleshooting of the error "unsupported Windows Version" for k8s on Windows !4038
+- Experiment: Add reviewer roulette !4037
+- Use DOCKER_HOST if set in the build time !4036
+- Docker daemon change data-root directory !4034
+- Post-merge edits for Executor pages !4033
+- Make runner manager lowercase !4032
+- Add GitLab Runner autoscaling page !4031
+- Use a fixed time in register command integration tests !4023
+- Update version in docs !4022
+- Add note about runner registration permission !4021
+- Fix flaky racy tests !4019
+- Update index.md to remove typo in the second paragraph !4013 (vsvincent @vsvincent)
+- Fix flaky TestDockerPrivilegedServiceAccessingBuildsFolder !4012
+- Fix flaky interactive terminal test - ensure terminal connected !4011
+- Temporarily skip git-lfs for TestDockerCommandMultistepBuild !4009
+- Remove comments metadata !4008
+- Fix Test_Executor_captureContainerLogs race !4007
+- Add note about Arm64 helper image for runner on arm64 Kubernetes clusters (docs) !4006
+- Fix docker-machine Windows tests !4003
+- Re-use helper container for docker executor's predefined stages !4000
+- Improve troubleshooting documentation for the Job failed: prepare environment error with the Shell executor (docs) !3998
+- Start prebuild stage earlier !3997
+- Add a Runner glossary to the documentation (docs) !3996
+- Remove note about selecting runner by name !3993
+- Fix TestBuildOnCustomDirectory for powershell/pwsh !3992
+- Only quote cmd batch strings where necessary !3991
+- Use Ruby 3.2.1-based docs Docker images !3988
+- Restructure registering runners page !3985
+- Refactor executor setup/executor name function !3982
+- CTRT edits Kubernetes part 4 !3963
+- Drop extraneous "to" in feature flag docs !3946
+- Update pipeline to depend on runner-incept passing !3940
+- Improve layout with tabs !3894
+- Update instructions to suggest go install rather than go build for building plugins !3819
+- Building runner helper images with Windows nanoserver !3460 (Hoff_IO @82phil)
+
 ## v15.10.0 (2023-03-17)
 
 ### New features
