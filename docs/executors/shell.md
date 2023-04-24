@@ -33,7 +33,7 @@ Where:
   running
 - `<short-token>` is a shortened version of the Runner's token (first 8 letters)
 - `<concurrent-id>` is a unique number, identifying the local job ID on the
-  particular Runner in context of the project (accessible via the 
+  particular Runner in context of the project (accessible via the
   `CI_CONCURRENT_PROJECT_ID` [pre-defined variable](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html))
 - `<namespace>` is the namespace where the project is stored on GitLab
 - `<project-name>` is the name of the project as it is stored on GitLab
