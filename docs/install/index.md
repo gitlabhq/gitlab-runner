@@ -29,7 +29,7 @@ Official packages are available for the following Linux distributions:
 - CentOS, Debian, Ubuntu, RHEL, Fedora, Mint, Oracle, Amazon
 
 GitLab Runner officially supports the following operating systems. If you prefer to use a
-different a operating system that is not officially supported, it must be able to compile a
+different operating system that is not officially supported, it must be able to compile a
 Go binary.
 
 - Linux, Windows, macOS, FreeBSD
