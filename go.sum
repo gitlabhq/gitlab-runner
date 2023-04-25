@@ -1248,7 +1248,6 @@ github.com/onsi/ginkgo v1.12.0/go.mod h1:oUhWkIvk5aDxtKvDDuw8gItl8pKl42LzjC9KZE0
 github.com/onsi/ginkgo v1.12.1/go.mod h1:zj2OWP4+oCPe1qIXoGWkgMRwljMUYCdkwsT2108oapk=
 github.com/onsi/ginkgo v1.13.0/go.mod h1:+REjRxOmWfHCjfv9TTWB1jD1Frx4XydAD3zm1lskyM0=
 github.com/onsi/ginkgo v1.14.0/go.mod h1:iSB4RoI2tjJc9BBv4NKIKWKya62Rps+oPG/Lv9klQyY=
-github.com/onsi/ginkgo v1.14.2/go.mod h1:iSB4RoI2tjJc9BBv4NKIKWKya62Rps+oPG/Lv9klQyY=
 github.com/onsi/ginkgo v1.16.4 h1:29JGrr5oVBm5ulCWet69zQkzWipVXIol6ygQUe/EzNc=
 github.com/onsi/ginkgo v1.16.4/go.mod h1:dX+/inL/fNMqNlz0e9LfyB9TswhZpCVdJM/Z6Vvnwo0=
 github.com/onsi/ginkgo/v2 v2.4.0 h1:+Ig9nvqgS5OBSACXNk15PLdp0U9XPYROt9CFzVdFGIs=
@@ -1261,7 +1260,6 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
 github.com/onsi/gomega v1.9.0/go.mod h1:Ho0h+IUsWyvy1OpqCwxlQ/21gkhVunqlU8fDGcoTdcA=
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/onsi/gomega v1.10.3/go.mod h1:V9xEwhxec5O8UDM77eCW8vLymOMltsqPVYWrpDsH8xc=
-github.com/onsi/gomega v1.10.4/go.mod h1:g/HbgYopi++010VEqkFgJHKC09uJiW9UkXvMUuKHUCQ=
 github.com/onsi/gomega v1.15.0/go.mod h1:cIuvLEne0aoVhAgh/O6ac0Op8WWw9H6eYCriF+tEHG0=
 github.com/onsi/gomega v1.23.0 h1:/oxKu9c2HVap+F3PfKort2Hw5DEU+HGlW8n+tguWsys=
 github.com/op/go-logging v0.0.0-20160315200505-970db520ece7/go.mod h1:HzydrMdWErDVzsI23lYNej1Htcns9BCg93Dk0bBINWk=
@@ -1567,8 +1565,8 @@ gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230320181402-3e77bc595f4a h1:
 gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20230320181402-3e77bc595f4a/go.mod h1:+SFjLAqgo7BBYDjCgUN4O6Rax7rc2s/OzctdLy/khes=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20230320181402-3e77bc595f4a h1:NLxjCdVDiEgty3NkkwjraJ/Day7XTT2E4rLFATa9GKs=
 gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20230320181402-3e77bc595f4a/go.mod h1:TYPbW5w+nBr+epaz6c5Gj7qQifXAT3qW0gj+lFIAyZA=
-gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462 h1:zq6ZD20H7/HfIORMgN5MXzctrhWUuZo5J6z1TgvR7j4=
-gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20210104151801-2a71b03b4462/go.mod h1:se8TSJQp4al+oC4Wqpsdqx87UMPgJOPd3MsMcOkGHXQ=
+gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd h1:K0ECR+mbcgKDXPoqqR0bJYKn3y1d/hW/M0/thQxQorI=
+gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd/go.mod h1:rZppW2NZDE5UqI/qwCDxMyj0UIy21FsmX3rVuGQH30s=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a h1:YJih+edJDiMUqLZJalahqTikYkZ+5lKKPFaJxGdZcR0=
 gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a/go.mod h1:pKFT8nwdU5KuJYosKMGgMATMrV4AP6p9jRu4HobZaBA=
 gitlab.com/gitlab-org/labkit v1.17.0 h1:mEkoLzXorLNdt8NkfgYS5xMDhdqCsIJaeEVtSf7d8cU=
