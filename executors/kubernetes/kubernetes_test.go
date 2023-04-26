@@ -5850,6 +5850,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 			e := &executor{
 				pod: &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
 			}
+			e.options = &kubernetesOptions{}
 
 			buf, err := trace.New()
 			require.NoError(t, err)
@@ -5936,6 +5937,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
 	}
 	e.BuildLogger = common.NewBuildLogger(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry))
+	e.Config.Kubernetes = &common.KubernetesConfig{}
 
 	ctx := context.Background()
 
@@ -5977,6 +5979,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 				{Key: "CI_DEBUG_SERVICES", Value: tt.debugServicePolicy, Public: true},
 			}
 
+			e.prepareOptions(e.Build)
 			e.captureContainersLogs(ctx, containers)
 			tt.assert(t)
 		})

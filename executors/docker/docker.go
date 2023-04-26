@@ -195,9 +195,7 @@ func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect
 }
 
 func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
-	if imageNameFromConfig := e.Config.Docker.HelperImage; imageNameFromConfig != "" {
-		imageNameFromConfig = common.AppVersion.Variables().ExpandValue(imageNameFromConfig)
-
+	if imageNameFromConfig := e.ExpandValue(e.Config.Docker.HelperImage); imageNameFromConfig != "" {
 		e.Debugln(
 			"Pull configured helper_image for predefined container instead of import bundled image",
 			imageNameFromConfig,
@@ -234,7 +232,7 @@ func (e *executor) getLocalHelperImage() *types.ImageInspect {
 
 	var flavor string
 	if e.Config.Docker != nil {
-		flavor = e.Config.Docker.HelperImageFlavor
+		flavor = e.ExpandValue(e.Config.Docker.HelperImageFlavor)
 	}
 
 	architecture := e.helperImageInfo.Architecture
@@ -719,9 +717,10 @@ func (e *executor) verifyAllowedImage(image, optionName string, allowedImages, i
 }
 
 func (e *executor) expandImageName(imageName string, allowedInternalImages []string) (string, error) {
+	defaultDockerImage := e.ExpandValue(e.Config.Docker.Image)
 	if imageName != "" {
-		image := e.Build.GetAllVariables().ExpandValue(imageName)
-		allowedInternalImages = append(allowedInternalImages, e.Config.Docker.Image)
+		image := e.ExpandValue(imageName)
+		allowedInternalImages = append(allowedInternalImages, defaultDockerImage)
 		err := e.verifyAllowedImage(image, "images", e.Config.Docker.AllowedImages, allowedInternalImages)
 		if err != nil {
 			return "", err
@@ -729,11 +728,11 @@ func (e *executor) expandImageName(imageName string, allowedInternalImages []str
 		return image, nil
 	}
 
-	if e.Config.Docker.Image == "" {
+	if defaultDockerImage == "" {
 		return "", errors.New("no Docker image specified to run the build in")
 	}
 
-	return e.Config.Docker.Image, nil
+	return defaultDockerImage, nil
 }
 
 func (e *executor) overwriteEntrypoint(image *common.Image) []string {
@@ -1027,7 +1026,7 @@ func (e *executor) prepareHelperImage() (helperimage.Info, error) {
 		Architecture:  e.info.Architecture,
 		KernelVersion: e.info.KernelVersion,
 		Shell:         e.Config.Shell,
-		Flavor:        e.Config.Docker.HelperImageFlavor,
+		Flavor:        e.ExpandValue(e.Config.Docker.HelperImageFlavor),
 	})
 }
 

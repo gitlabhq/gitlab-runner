@@ -2580,3 +2580,44 @@ func TestKubernetesProcMount(t *testing.T) {
 		})
 	}
 }
+
+func Test_ContainerOptionsExpansion(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	jobVars := common.JobVariables{
+		{Key: "CI_DEBUG_SERVICES", Value: "true", Public: true},
+		{Key: "POSTGRES_PASSWORD", Value: "password", Public: true},
+		{Key: "JOB_IMAGE", Value: "alpine:latest"},
+		{Key: "HELPER_IMAGE", Value: "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"},
+		{Key: "HELPER_IMAGE_FLAVOR", Value: "alpine"},
+		{Key: "SRVS_IMAGE", Value: "postgres:latest"},
+		{Key: "SRVS_IMAGE_ALIAS", Value: "db"},
+	}
+	successfulBuild.Variables = append(successfulBuild.Variables, jobVars...)
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: common.ExecutorKubernetes,
+				Kubernetes: &common.KubernetesConfig{
+					Image:             "$JOB_IMAGE",
+					HelperImage:       "$HELPER_IMAGE",
+					HelperImageFlavor: "$HELPER_IMAGE_FLAVOR",
+					Services: []common.Service{
+						{Name: "$SRVS_IMAGE", Alias: "$SRVS_IMAGE_ALIAS"},
+					},
+				},
+			},
+		},
+	}
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	assert.NoError(t, err)
+	// the helper image name does not appeart in the logs, but the build will fail if the option was not expanded.
+	assert.Contains(t, out, "Using Kubernetes executor with image alpine:latest")
+	assert.Regexp(t, `\[service:postgres-db\]`, out)
+}
