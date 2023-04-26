@@ -200,7 +200,7 @@ The GitLab Runner differences are:
   (for the stable release) or `/etc/yum.repos.d/runner_unstable.repo` (for the unstable releases).
 
 - The [package signing public key](#current-gpg-public-key) can be imported from
-  <https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-4C80FB51394521E9.pub.gpg>.
+  <https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg>.
 
 #### DEB-based distributions
 
@@ -217,8 +217,8 @@ method supports only manual verification of packages.
 1. Download and import the [package signing public key](#current-gpg-public-key)
 
     ```shell
-    curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-4C80FB51394521E9.pub.gpg"
-    gpg --import runner-gitlab-runner-4C80FB51394521E9.pub.gpg
+    curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg"
+    gpg --import runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg
     ```
 
 1. Verify downloaded package with `dpkg-sig`
@@ -226,7 +226,7 @@ method supports only manual verification of packages.
     ```shell
     dpkg-sig --verify gitlab-runner_amd64.deb
     Processing gitlab-runner_amd64.deb...
-    GOODSIG _gpgbuilder 09E57083F34CCA94D541BC58A674BF8135DFA027 1623755049
+    GOODSIG _gpgbuilder 931DA69CFA3AFEBBC97DAA8C6C57C29C6BA75A4E 1623755049
     ```
 
    Verification of package with invalid signature or signed with an invalid key (for example
@@ -249,14 +249,14 @@ method supports only manual verification of packages.
 #### Current GPG public key
 
 The current public GPG key used for packages signing can be downloaded from
-<https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-4C80FB51394521E9.pub.gpg>.
+<https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg>.
 
 | Key Attribute | Value                                                |
 |---------------|------------------------------------------------------|
 | Name          | `GitLab, Inc.`                                       |
 | EMail         | `support@gitlab.com`                                 |
-| Fingerprint   | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` |
-| Expiry        | `2023-06-04`                                         |
+| Fingerprint   | `931D A69C FA3A FEBB C97D  AA8C 6C57 C29C 6BA7 5A4E` |
+| Expiry        | `2025-04-25`                                         |
 
 NOTE:
 The same key is used by the GitLab Runner project to sign `release.sha256` files for the S3 releases
@@ -274,6 +274,7 @@ Signatures made by these keys should not be trusted anymore.
 | Sl. No. | Key Fingerprint                                      | Status    | Expiry Date  | Download (revoked keys only)                     |
 |---------|------------------------------------------------------|-----------|--------------|--------------------------------------------------|
 | 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [revoked key](gpg-keys/9CE45ABC880721D4.pub.gpg) |
+| 2       | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` | `revoked` | `2023-04-26` | [revoked key](gpg-keys/A674BF8135DFA027.pub.gpg) |
 
 ## Manually download packages
 
