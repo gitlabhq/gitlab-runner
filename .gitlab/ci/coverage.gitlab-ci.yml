@@ -10,9 +10,18 @@ test coverage report:
   needs:
   - unit test
   - integration test
+  - windows 1809 integration tests
+  - windows 2004 integration tests
+  - windows 20H2 integration tests
+  - windows 21H2 integration tests
+  - windows 1809 unit tests
+  - windows 21H2 unit tests
   script:
-  - source ci/touch_make_dependencies
-  - make parallel_test_coverage_report cobertura_report
+  - make cobertura_report
+  - splitic junit-check -quarantined ci/.test-failures.servercore1809.txt .splitic/junit_servercore1809_*.xml
+  - splitic junit-check -quarantined ci/.test-failures.servercore2004.txt .splitic/junit_servercore2004_*.xml
+  - splitic junit-check -quarantined ci/.test-failures.servercore20H2.txt .splitic/junit_servercore20H2_*.xml
+  - splitic junit-check -quarantined ci/.test-failures.servercore21H2.txt .splitic/junit_servercore21H2_*.xml
   artifacts:
     reports:
       coverage_report:
@@ -22,44 +31,6 @@ test coverage report:
     - out/coverage/
     expire_in: 7d
     expose_as: 'Code Coverage'
-
-integration test coverage report:
-  extends:
-  - .coverage_job
-  needs:
-  - integration test
-  script:
-  - source ci/touch_make_dependencies
-  - make parallel_test_coverage_report
-  artifacts:
-    paths:
-    - out/coverage/
-    expire_in: 7d
-    expose_as: 'Integration Test Code Coverage'
-
-test junit report:
-  extends:
-  - .coverage_job
-  image: $CI_IMAGE
-  needs:
-  - unit test
-  - integration test
-  script:
-  - source ci/touch_make_dependencies
-  - make parallel_test_junit_report
-  artifacts:
-    reports:
-      junit: out/junit/report.xml
-
-race conditions detector:
-  extends:
-  - .coverage_job
-  needs:
-  - unit test with race
-  - integration test with race
-  script:
-  - source ci/touch_make_dependencies
-  - make check_race_conditions
 
 # Disable this for now since
 # https://gitlab.com/gitlab-org/gitlab/-/issues/365885 block us from upgrading
@@ -76,105 +47,3 @@ race conditions detector:
   #artifacts:
     #reports:
       #lsif: dump.lsif
-
-check race unexpected test failures:
-  extends:
-  - .rules:merge_request_pipelines:no_docs:always
-  stage: coverage
-  needs:
-  - unit test with race
-  - integration test with race
-  script:
-  - ./scripts/check_unexpected_test_failures
-
-.check windows unexpected test failures:
-  stage: coverage
-  script:
-  - ./scripts/check_unexpected_test_failures
-
-check windows 1809 unexpected unit test failures:
-  extends:
-  - .check windows unexpected test failures
-  - .rules:merge_request_pipelines:no_docs:always
-  needs:
-  - windows 1809 unit tests
-
-check windows 1809 unexpected integration test failures:
-  extends:
-  - .check windows unexpected test failures
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - windows 1809 integration tests
-
-check windows 21H2 unexpected unit test failures:
-  extends:
-  - .check windows unexpected test failures
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-    - windows 21H2 unit tests
-
-check windows 21H2 unexpected integration test failures:
-  extends:
-  - .check windows unexpected test failures
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-    - windows 21H2 integration tests
-
-.check windows test failures:
-  stage: coverage
-  script:
-  - ./scripts/check_windows_failures
-  artifacts:
-    paths:
-    - .test-failures.*.txt.updated
-    expire_in: 7d
-
-# Only test the oldest supported version in merge requests,
-# but test all versions in the default branch.
-check windows 1809 unit test failures:
-  extends:
-  - .check windows test failures
-  - .windows1809_variables
-  - .rules:merge_request_pipelines:no_docs
-  needs:
-  - windows 1809 unit tests
-
-check windows 21H2 unit test failures:
-  extends:
-  - .check windows test failures
-  - .windows21H2_variables
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-    - windows 21H2 unit tests
-
-check windows 1809 integration test failures:
-  extends:
-  - .check windows test failures
-  - .windows1809_variables
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - windows 1809 integration tests
-
-check windows 2004 integration test failures:
-  extends:
-  - .check windows test failures
-  - .windows2004_variables
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - windows 2004 integration tests
-
-check windows 20H2 integration test failures:
-  extends:
-  - .check windows test failures
-  - .windows20H2_variables
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - windows 20H2 integration tests
-
-check windows 21H2 integration test failures:
-  extends:
-  - .check windows test failures
-  - .windows21H2_variables
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - windows 21H2 integration tests

@@ -1094,7 +1094,9 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
-						Docker:   &common.DockerConfig{},
+						Docker: &common.DockerConfig{
+							WaitForServicesTimeout: 15,
+						},
 					},
 					SystemIDState: systemIDState,
 				},

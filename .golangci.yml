@@ -14,11 +14,6 @@ output:
   print-linter-name: true
 
 linters-settings:
-  custom:
-    goargs:
-      path: .tmp/goargs.so
-      description: Checks for consistent formatting on argument lists
-      original-url: gitlab.com/gitlab-org/language-tools/go/linters/goargs
   errcheck:
     check-type-assertions: true
   gocognit:
@@ -79,7 +74,6 @@ linters:
   - dogsled
   - errcheck
   - funlen
-  - goargs
   - gocognit
   - goconst
   - gocritic
