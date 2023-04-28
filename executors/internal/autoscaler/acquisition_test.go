@@ -6,21 +6,185 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	fleetingmocks "gitlab.com/gitlab-org/fleeting/fleeting/connector/mocks"
+	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
+	nestingapi "gitlab.com/gitlab-org/fleeting/nesting/api"
 	nestingmocks "gitlab.com/gitlab-org/fleeting/nesting/api/mocks"
 	"gitlab.com/gitlab-org/fleeting/nesting/hypervisor"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
+	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
+
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestAcquisitionRefPrepare(t *testing.T) {
+func TestAcquisitionRef_Prepare(t *testing.T) {
+	testCases := map[string]struct {
+		vmIsolationEnabled     bool
+		useExternalAddr        bool
+		expectDialerCall       bool
+		instanceConnectInfoErr error
+		dialerErr              error
+		createVMTunnelErr      error
+		expectedPrepareErr     error
+	}{
+		"Error when getting InstanceConnectInfo": {
+			instanceConnectInfoErr: assert.AnError,
+			expectedPrepareErr:     assert.AnError,
+		},
+		"Error when dialing VM": {
+			expectDialerCall:   true,
+			dialerErr:          assert.AnError,
+			expectedPrepareErr: assert.AnError,
+		},
+		"Error when creating VM tunnel": {
+			vmIsolationEnabled: true,
+			expectDialerCall:   true,
+			createVMTunnelErr:  assert.AnError,
+			expectedPrepareErr: fmt.Errorf("creating vm tunnel: %w", assert.AnError),
+		},
+		"No error and VM isolation disabled": {
+			expectDialerCall:   true,
+			vmIsolationEnabled: false,
+		},
+		"No error and VM isolation enabled": {
+			expectDialerCall:   true,
+			vmIsolationEnabled: true,
+		},
+	}
+
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Minute))
+			defer cancel()
+			logger, _ := test.NewNullLogger()
+			bl := common.NewBuildLogger(nil, logrus.NewEntry(logger))
+			options := executorPrepareOptions("build-image-name", "image")
+
+			acq := mocks.NewAcquisition(t)
+			acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, tc.instanceConnectInfoErr)
+
+			dialer := fleetingmocks.NewClient(t)
+			// dialer is closed if createVMTunnel errors
+			if tc.expectDialerCall {
+				dialer.EXPECT().Close().Return(nil)
+			}
+
+			mockD := &mockDialer{
+				expectCall:            tc.expectDialerCall,
+				expectUseExternalAddr: tc.useExternalAddr,
+				dialer:                dialer,
+				err:                   tc.dialerErr,
+			}
+
+			var nestingClient nestingapi.Client
+			ref := &acquisitionRef{
+				key:                     "test-key",
+				acq:                     acq,
+				mapJobImageToVMImage:    true,
+				dialAcquisitionInstance: mockD.fn(),
+				createVMTunnelFunc: func(
+					_ context.Context,
+					_ common.BuildLogger,
+					nc nestingapi.Client,
+					_ connector.Client,
+					_ common.ExecutorPrepareOptions,
+				) (executors.Client, error) {
+					nestingClient = nc
+					return &client{client: dialer, cleanup: nil}, tc.createVMTunnelErr
+				},
+			}
+
+			options.Config.Autoscaler = &common.AutoscalerConfig{
+				VMIsolation: common.VMIsolation{
+					Enabled: tc.vmIsolationEnabled,
+				},
+				ConnectorConfig: common.ConnectorConfig{
+					UseExternalAddr: tc.useExternalAddr,
+				},
+			}
+
+			c, err := ref.Prepare(ctx, bl, options)
+
+			if tc.expectedPrepareErr != nil {
+				assert.Nil(t, c)
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			if c != nil {
+				// Make sure the tunneled client calls delete on close (cleanup)
+				assert.NoError(t, c.Close())
+			}
+			if tc.expectDialerCall {
+				// If there is an error, we won't have a client, but will still need to close the dialer
+				assert.NoError(t, dialer.Close())
+			}
+			if tc.vmIsolationEnabled && tc.createVMTunnelErr == nil {
+				assert.NoError(t, nestingClient.Close())
+			}
+			mockD.verify(t)
+			acq.AssertExpectations(t)
+			dialer.AssertExpectations(t)
+		})
+	}
 }
 
-func TestAcquisitionRefClose(t *testing.T) {
+func TestClientClose(t *testing.T) {
+	cleanupError := fmt.Errorf("cleanup error")
+	clientCloseError := fmt.Errorf("client close error")
+
+	testCases := []struct {
+		name     string
+		cleanup  func() error
+		closeErr error
+		wantErr  error
+	}{
+		{
+			name:     "No cleanup and client close without error",
+			cleanup:  nil,
+			closeErr: nil,
+			wantErr:  nil,
+		},
+		{
+			name:     "Cleanup with error and client close without error",
+			cleanup:  func() error { return cleanupError },
+			closeErr: nil,
+			wantErr:  cleanupError,
+		},
+		{
+			name:     "No cleanup and client close with error",
+			cleanup:  nil,
+			closeErr: clientCloseError,
+			wantErr:  clientCloseError,
+		},
+		{
+			name:     "Cleanup with error and client close with error",
+			cleanup:  func() error { return cleanupError },
+			closeErr: clientCloseError,
+			wantErr:  clientCloseError,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mc := &fleetingmocks.Client{}
+			mc.On("Close").Return(tc.closeErr)
+			c := &client{
+				client:  mc,
+				cleanup: tc.cleanup,
+			}
+			err := c.Close()
+			assert.Equal(t, tc.wantErr, err)
+		})
+	}
 }
 
 func TestAcquisitionRefCreateVMTunnel(t *testing.T) {
@@ -121,11 +285,9 @@ func TestAcquisitionRefCreateVMTunnel(t *testing.T) {
 				e(nc)
 			}
 			options := executorPrepareOptions(tc.buildImageName, tc.nestingCfgImage)
-			ref := &acquisitionRef{
-				mapJobImageToVMImage: tc.mapJobImageToVMImage,
-			}
+			ref := newAcquisitionRef("key", tc.mapJobImageToVMImage)
 			if tc.slot != nil {
-				ref.acq = &taskscaler.Acquisition{}
+				ref.acq = taskscaler.NewAcquisition()
 				// Cannot set slot (unexported field) but defaults to 0
 			}
 
@@ -164,8 +326,36 @@ func executorPrepareOptions(buildImageName, nestingCfgImage string) common.Execu
 					Name: buildImageName,
 				},
 			},
+			Runner: &common.RunnerConfig{},
 		},
 	}
+}
+
+type mockDialer struct {
+	expectCall            bool
+	wasCalled             bool
+	expectUseExternalAddr bool
+	useExternalAddrTrue   bool
+	dialer                connector.Client
+	err                   error
+}
+
+func (m *mockDialer) fn() connector.DialFn {
+	return func(
+		ctx context.Context,
+		info fleetingprovider.ConnectInfo,
+		options connector.DialOptions,
+	) (connector.Client, error) {
+		m.wasCalled = true
+		m.useExternalAddrTrue = options.UseExternalAddr
+		return m.dialer, m.err
+	}
+}
+
+func (m *mockDialer) verify(t *testing.T) {
+	assert.Equal(t, m.expectCall, m.wasCalled)
+	assert.Equal(t, m.expectUseExternalAddr, m.useExternalAddrTrue)
+
 }
 
 type mockCreateTunneledDialer struct {
