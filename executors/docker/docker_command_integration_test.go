@@ -24,7 +24,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -554,22 +553,6 @@ func TestDockerCommandDisableEntrypointOverwrite(t *testing.T) {
 	}
 }
 
-func isDockerOlderThan17_07(t *testing.T) bool {
-	client, err := docker.New(docker.Credentials{})
-	require.NoError(t, err, "should be able to connect to docker")
-
-	types, err := client.Info(context.Background())
-	require.NoError(t, err, "should be able to get docker info")
-
-	localVersion, err := version.NewVersion(types.ServerVersion)
-	require.NoError(t, err)
-
-	checkedVersion, err := version.NewVersion("17.07.0-ce")
-	require.NoError(t, err)
-
-	return localVersion.LessThan(checkedVersion)
-}
-
 func TestDockerCommandMissingImage(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
@@ -579,13 +562,7 @@ func TestDockerCommandMissingImage(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
-
-	contains := "repository does not exist"
-	if isDockerOlderThan17_07(t) {
-		contains = "not found"
-	}
-
-	assert.Contains(t, err.Error(), contains)
+	assert.Regexp(t, regexp.MustCompile("not found|repository does not exist|invalid repository name"), err.Error())
 }
 
 func TestDockerCommandMissingTag(t *testing.T) {
@@ -613,13 +590,7 @@ func TestDockerCommandMissingServiceImage(t *testing.T) {
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ScriptFailure})
-
-	contains := "repository does not exist"
-	if isDockerOlderThan17_07(t) {
-		contains = "not found"
-	}
-
-	assert.Contains(t, err.Error(), contains)
+	assert.Regexp(t, regexp.MustCompile("not found|repository does not exist|invalid repository name"), err.Error())
 }
 
 // TestDockerCommandPullingImageNoHost tests if the DNS resolution failure for the registry host
