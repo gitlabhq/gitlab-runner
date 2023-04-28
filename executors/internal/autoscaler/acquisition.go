@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"github.com/sirupsen/logrus"
+
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	nestingapi "gitlab.com/gitlab-org/fleeting/nesting/api"
@@ -21,6 +21,10 @@ import (
 
 var _ executors.Environment = (*acquisitionRef)(nil)
 
+var (
+	errRefAcqNotSet = errors.New("ref.acq is not set")
+)
+
 type acquisitionRef struct {
 	key string
 	acq taskscaler.Acquisition
@@ -29,13 +33,13 @@ type acquisitionRef struct {
 
 	// test hooks
 	dialAcquisitionInstance connector.DialFn
-	createVMTunnelFunc      func(
-		ctx context.Context,
+	dialTunnel              connector.DialFn
+
+	connectNestingFn func(
+		host string,
 		logger common.BuildLogger,
-		nc nestingapi.Client,
-		dialer connector.Client,
-		options common.ExecutorPrepareOptions,
-	) (executors.Client, error)
+		fleetingDialer connector.Client,
+	) (nestingapi.Client, io.Closer, error)
 }
 
 func newAcquisitionRef(key string, mapJobImageToVMImage bool) *acquisitionRef {
@@ -43,6 +47,7 @@ func newAcquisitionRef(key string, mapJobImageToVMImage bool) *acquisitionRef {
 		key:                     key,
 		mapJobImageToVMImage:    mapJobImageToVMImage,
 		dialAcquisitionInstance: connector.Dial,
+		dialTunnel:              connector.Dial,
 	}
 }
 
@@ -51,7 +56,10 @@ func (ref *acquisitionRef) Prepare(
 	logger common.BuildLogger,
 	options common.ExecutorPrepareOptions,
 ) (executors.Client, error) {
-	// Get acquisition connection info
+	if ref.acq == nil {
+		return nil, errRefAcqNotSet
+	}
+
 	info, err := ref.acq.InstanceConnectInfo(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting instance connect info: %w", err)
@@ -62,36 +70,39 @@ func (ref *acquisitionRef) Prepare(
 		useExternalAddr = options.Config.Autoscaler.ConnectorConfig.UseExternalAddr
 	}
 
-	logOptions(options, info, useExternalAddr)
+	options.Build.Log().WithFields(logrus.Fields{
+		"internal-address":     info.InternalAddr,
+		"external-address":     info.ExternalAddr,
+		"use-external-address": useExternalAddr,
+		"instance-id":          info.ID,
+	}).Info("Dialing instance")
 
-	// Dial the acquisition instance
-	logger.Println(fmt.Sprintf("Dialing instance %s...", info.ID))
-	fleetingDialer, err := ref.dialAcquisitionInstance(ctx, info, connector.DialOptions{
+	fleetingDialOpts := connector.DialOptions{
 		UseExternalAddr: useExternalAddr,
-	})
+	}
+
+	logger.Println(fmt.Sprintf("Dialing instance %s...", info.ID))
+	fleetingDialer, err := ref.dialAcquisitionInstance(ctx, info, fleetingDialOpts)
 	if err != nil {
 		return nil, err
 	}
-	// Connection established
 	logger.Println(fmt.Sprintf("Instance %s connected", info.ID))
 
-	// if nesting is disabled, return a client for the host instance
-	// I.e. VM Isolation and VM tunnel not needed
+	// if nesting is disabled, return a client for the host instance, for example VM Isolation and VM tunnel not needed
 	if !options.Config.Autoscaler.VMIsolation.Enabled {
-		return &client{fleetingDialer, nil}, nil
+		return &client{client: fleetingDialer, cleanup: nil}, nil
 	}
 
 	// Enforce VM Isolation by dialing nesting daemon with gRPC
-	nc, conn, err := dialNestingDaemon(fleetingDialer, logger, options)
+	logger.Println("Enforcing VM Isolation")
+	nc, conn, err := ref.connectNesting(options.Config.Autoscaler.VMIsolation.NestingHost, logger, fleetingDialer)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create VM tunnel to isolated VM
 	logger.Println("Creating nesting VM tunnel")
 	client, err := ref.createVMTunnel(ctx, logger, nc, fleetingDialer, options)
 	if err != nil {
-		// Could not tunnel into VM
 		nc.Close()
 		conn.Close()
 		fleetingDialer.Close()
@@ -102,23 +113,17 @@ func (ref *acquisitionRef) Prepare(
 	return client, nil
 }
 
-func logOptions(options common.ExecutorPrepareOptions, info fleetingprovider.ConnectInfo, useExternalAddr bool) {
-	options.Build.Log().WithFields(logrus.Fields{
-		"internal-address":     info.InternalAddr,
-		"external-address":     info.ExternalAddr,
-		"use-external-address": useExternalAddr,
-		"instance-id":          info.ID,
-	}).Info("Dialing instance")
-}
-
-func dialNestingDaemon(
-	fleetingDialer connector.Client,
+func (ref *acquisitionRef) connectNesting(
+	host string,
 	logger common.BuildLogger,
-	options common.ExecutorPrepareOptions,
-) (nestingapi.Client, *grpc.ClientConn, error) {
-	logger.Println("Enforcing VM Isolation")
+	fleetingDialer connector.Client,
+) (nestingapi.Client, io.Closer, error) {
+	if ref.connectNestingFn != nil {
+		return ref.connectNestingFn(host, logger, fleetingDialer)
+	}
+
 	conn, err := nestingapi.NewClientConn(
-		options.Config.Autoscaler.VMIsolation.NestingHost,
+		host,
 		func(ctx context.Context, network, address string) (net.Conn, error) {
 			logger.Println("Dialing nesting daemon")
 			return fleetingDialer.Dial(network, address)
@@ -129,8 +134,94 @@ func dialNestingDaemon(
 		return nil, nil, fmt.Errorf("dialing nesting daemon: %w", err)
 	}
 
-	nc := nestingapi.New(conn)
-	return nc, conn, nil
+	return nestingapi.New(conn), conn, nil
+}
+
+func (ref *acquisitionRef) createVMTunnel(
+	ctx context.Context,
+	logger common.BuildLogger,
+	nc nestingapi.Client,
+	dialer connector.Client,
+	options common.ExecutorPrepareOptions,
+) (executors.Client, error) {
+	nestingCfg := options.Config.Autoscaler.VMIsolation
+
+	// use nesting config defined image, unless the executor allows for the
+	// job image to override.
+	image := nestingCfg.Image
+	if options.Build.Image.Name != "" && ref.mapJobImageToVMImage {
+		image = options.Build.Image.Name
+	}
+
+	logger.Println("Creating nesting VM", image)
+
+	// create vm
+	var slot *int32
+
+	var slot32 = int32(ref.acq.Slot())
+	slot = &slot32
+
+	var vm hypervisor.VirtualMachine
+	var stompedVMID *string
+	var err error
+	err = withInit(ctx, options.Config, nc, func() error {
+		vm, stompedVMID, err = nc.Create(ctx, image, slot)
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating nesting vm: %w", err)
+	}
+
+	logger.Infoln("Created nesting VM", vm.GetId(), vm.GetAddr())
+	if stompedVMID != nil {
+		logger.Infoln("Stomped nesting VM: ", *stompedVMID)
+	}
+	dialer, err = ref.createTunneledDialer(ctx, dialer, nestingCfg, vm)
+	if err != nil {
+		defer func() { _ = nc.Delete(ctx, vm.GetId()) }()
+
+		return nil, fmt.Errorf("dialing nesting vm: %w", err)
+	}
+
+	cl := &client{dialer, func() error {
+		defer nc.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		return nc.Delete(ctx, vm.GetId())
+	}}
+
+	return cl, nil
+}
+
+func (ref *acquisitionRef) createTunneledDialer(
+	ctx context.Context,
+	dialer connector.Client,
+	nestingCfg common.VMIsolation,
+	vm hypervisor.VirtualMachine,
+) (connector.Client, error) {
+	info := fleetingprovider.ConnectInfo{
+		ConnectorConfig: fleetingprovider.ConnectorConfig{
+			OS:                   nestingCfg.ConnectorConfig.OS,
+			Arch:                 nestingCfg.ConnectorConfig.Arch,
+			Protocol:             fleetingprovider.Protocol(nestingCfg.ConnectorConfig.Protocol),
+			Username:             nestingCfg.ConnectorConfig.Username,
+			Password:             nestingCfg.ConnectorConfig.Password,
+			UseStaticCredentials: nestingCfg.ConnectorConfig.UseStaticCredentials,
+			Keepalive:            nestingCfg.ConnectorConfig.Keepalive,
+			Timeout:              nestingCfg.ConnectorConfig.Timeout,
+		},
+		InternalAddr: vm.GetAddr(),
+	}
+
+	options := connector.DialOptions{
+		DialFn: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.Dial(network, addr)
+		},
+	}
+
+	return ref.dialTunnel(ctx, info, options)
 }
 
 type client struct {
@@ -166,99 +257,4 @@ func (c *client) Close() error {
 		return cerr
 	}
 	return err
-}
-
-func (ref *acquisitionRef) createVMTunnel(
-	ctx context.Context,
-	logger common.BuildLogger,
-	nc nestingapi.Client,
-	dialer connector.Client,
-	options common.ExecutorPrepareOptions,
-) (executors.Client, error) {
-	if ref.createVMTunnelFunc != nil {
-		return ref.createVMTunnelFunc(ctx, logger, nc, dialer, options)
-	}
-
-	nestingCfg := options.Config.Autoscaler.VMIsolation
-
-	// use nesting config defined image, unless the executor allows for the
-	// job image to override.
-	image := nestingCfg.Image
-	if options.Build.Image.Name != "" && ref.mapJobImageToVMImage {
-		image = options.Build.Image.Name
-	}
-
-	logger.Println("Creating nesting VM", image)
-
-	// create vm
-	var slot *int32
-	if ref.acq != nil {
-		var slot32 = int32(ref.acq.Slot())
-		slot = &slot32
-	}
-
-	var vm hypervisor.VirtualMachine
-	var stompedVMID *string
-	var err error
-	err = withInit(ctx, options.Config, nc, func() error {
-		vm, stompedVMID, err = nc.Create(ctx, image, slot)
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("creating nesting vm: %w", err)
-	}
-
-	logger.Infoln("Created nesting VM", vm.GetId(), vm.GetAddr())
-	if stompedVMID != nil {
-		logger.Infoln("Stomped nesting VM: ", *stompedVMID)
-	}
-	dialer, err = createTunneledDialer(ctx, dialer, nestingCfg, vm)
-	if err != nil {
-		defer func() { _ = nc.Delete(ctx, vm.GetId()) }()
-
-		return nil, fmt.Errorf("dialing nesting vm: %w", err)
-	}
-
-	return &client{dialer, func() error {
-		defer nc.Close()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		return nc.Delete(ctx, vm.GetId())
-	}}, nil
-}
-
-var createTunneledDialer func(
-	ctx context.Context,
-	dialer connector.Client,
-	nestingCfg common.VMIsolation,
-	vm hypervisor.VirtualMachine,
-) (connector.Client, error)
-
-func init() {
-	createTunneledDialer = func(
-		ctx context.Context,
-		dialer connector.Client,
-		nestingCfg common.VMIsolation,
-		vm hypervisor.VirtualMachine,
-	) (connector.Client, error) {
-		return connector.Dial(ctx, fleetingprovider.ConnectInfo{
-			ConnectorConfig: fleetingprovider.ConnectorConfig{
-				OS:                   nestingCfg.ConnectorConfig.OS,
-				Arch:                 nestingCfg.ConnectorConfig.Arch,
-				Protocol:             fleetingprovider.Protocol(nestingCfg.ConnectorConfig.Protocol),
-				Username:             nestingCfg.ConnectorConfig.Username,
-				Password:             nestingCfg.ConnectorConfig.Password,
-				UseStaticCredentials: nestingCfg.ConnectorConfig.UseStaticCredentials,
-				Keepalive:            nestingCfg.ConnectorConfig.Keepalive,
-				Timeout:              nestingCfg.ConnectorConfig.Timeout,
-			},
-			InternalAddr: vm.GetAddr(),
-		}, connector.DialOptions{
-			DialFn: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return dialer.Dial(network, addr)
-			},
-		})
-	}
 }
