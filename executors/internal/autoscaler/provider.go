@@ -243,10 +243,7 @@ func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, er
 
 	logrus.WithField("key", key).Trace("Reserved capacity...")
 
-	return &acquisitionRef{
-		key:                  key,
-		mapJobImageToVMImage: p.cfg.MapJobImageToVMImage,
-	}, nil
+	return newAcquisitionRef(key, p.cfg.MapJobImageToVMImage), nil
 }
 
 func (p *provider) Release(config *common.RunnerConfig, data common.ExecutorData) {
