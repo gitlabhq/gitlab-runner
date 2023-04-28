@@ -22,7 +22,6 @@ const (
 
 var ErrUnsupportedWindowsVersion = errors.New("unsupported windows version")
 
-//nolint:lll
 var supportedWindowsBuilds = map[string]string{
 	// Windows server versions: https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions#Server_versions
 	// Compatibility: https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility#windows-server-host-os-compatibility

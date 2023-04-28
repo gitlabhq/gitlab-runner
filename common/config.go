@@ -167,7 +167,6 @@ func (p *StringOrArray) UnmarshalTOML(data interface{}) error {
 	return nil
 }
 
-//nolint:lll
 type DockerConfig struct {
 	docker.Credentials
 	Hostname                   string             `toml:"hostname,omitempty" json:"hostname" long:"hostname" env:"DOCKER_HOSTNAME" description:"Custom container hostname"`
@@ -223,7 +222,6 @@ type DockerConfig struct {
 	EnableIPv6                 bool               `toml:"enable_ipv6,omitempty" json:"enable_ipv6" long:"enable-ipv6" description:"Enable IPv6 for automatically created networks. This is only takes affect when the feature flag FF_NETWORK_PER_BUILD is enabled."`
 }
 
-//nolint:lll
 type InstanceConfig struct {
 	AllowedImages []string `toml:"allowed_images,omitempty" json:",omitempty" description:"When VM Isolation is enabled, allowed images controls which images a job is allowed to specify"`
 }
@@ -317,7 +315,6 @@ type AutoscalerPolicyConfig struct {
 	ScaleFactorLimit int           `toml:"scale_factor_limit,omitempty"`
 }
 
-//nolint:lll
 type DockerMachine struct {
 	MaxGrowthRate int `toml:"MaxGrowthRate,omitzero" long:"max-growth-rate" env:"MACHINE_MAX_GROWTH_RATE" description:"Maximum machines being provisioned concurrently, set to 0 for unlimited"`
 
@@ -338,7 +335,6 @@ type DockerMachine struct {
 	AutoscalingConfigs []*DockerMachineAutoscaling `toml:"autoscaling" json:",omitempty" description:"Ordered list of configurations for autoscaling periods (last match wins)"`
 }
 
-//nolint:lll
 type DockerMachineAutoscaling struct {
 	Periods         []string `long:"periods" json:",omitempty" description:"List of crontab expressions for this autoscaling configuration"`
 	Timezone        string   `long:"timezone" description:"Timezone for the periods (defaults to Local)"`
@@ -349,7 +345,6 @@ type DockerMachineAutoscaling struct {
 	compiledPeriods *timeperiod.TimePeriod
 }
 
-//nolint:lll
 type ParallelsConfig struct {
 	BaseName         string   `toml:"base_name" json:"base_name" long:"base-name" env:"PARALLELS_BASE_NAME" description:"VM name to be used"`
 	TemplateName     string   `toml:"template_name,omitempty" json:"template_name" long:"template-name" env:"PARALLELS_TEMPLATE_NAME" description:"VM template to be created"`
@@ -358,7 +353,6 @@ type ParallelsConfig struct {
 	AllowedImages    []string `toml:"allowed_images,omitempty" json:"allowed_images,omitempty" long:"allowed-images" env:"PARALLELS_ALLOWED_IMAGES" description:"Image (base_name) allowlist"`
 }
 
-//nolint:lll
 type VirtualBoxConfig struct {
 	BaseName         string   `toml:"base_name" json:"base_name" long:"base-name" env:"VIRTUALBOX_BASE_NAME" description:"VM name to be used"`
 	BaseSnapshot     string   `toml:"base_snapshot,omitempty" json:"base_snapshot" long:"base-snapshot" env:"VIRTUALBOX_BASE_SNAPSHOT" description:"Name or UUID of a specific VM snapshot to clone"`
@@ -368,7 +362,6 @@ type VirtualBoxConfig struct {
 	StartType        string   `toml:"start_type" json:"start_type" long:"start-type" env:"VIRTUALBOX_START_TYPE" description:"Graphical front-end type"`
 }
 
-//nolint:lll
 type CustomConfig struct {
 	ConfigExec        string   `toml:"config_exec,omitempty" json:"config_exec" long:"config-exec" env:"CUSTOM_CONFIG_EXEC" description:"Executable that allows to inject configuration values to the executor"`
 	ConfigArgs        []string `toml:"config_args,omitempty" json:"config_args,omitempty" long:"config-args" description:"Arguments for the config executable"`
@@ -458,7 +451,6 @@ func (p KubernetesDNSPolicy) Get() (api.DNSPolicy, error) {
 	return "", fmt.Errorf("unsupported kubernetes-dns-policy: %q", p)
 }
 
-//nolint:lll
 type KubernetesConfig struct {
 	Host                                              string                             `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
 	CertFile                                          string                             `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
@@ -592,7 +584,6 @@ const (
 	PatchTypeStrategicMergePatchType = KubernetesPodSpecPatchType("strategic")
 )
 
-//nolint:lll
 type KubernetesDNSConfig struct {
 	Nameservers []string                    `toml:"nameservers" json:",omitempty" description:"A list of IP addresses that will be used as DNS servers for the Pod."`
 	Options     []KubernetesDNSConfigOption `toml:"options" json:",omitempty" description:"An optional list of objects where each object may have a name property (required) and a value property (optional)."`
@@ -604,7 +595,6 @@ type KubernetesDNSConfigOption struct {
 	Value *string `toml:"value,omitempty"`
 }
 
-//nolint:lll
 type KubernetesVolumes struct {
 	HostPaths  []KubernetesHostPath  `toml:"host_path" json:",omitempty" description:"The host paths which will be mounted"`
 	PVCs       []KubernetesPVC       `toml:"pvc" json:",omitempty" description:"The persistent volume claims that will be mounted"`
@@ -614,7 +604,6 @@ type KubernetesVolumes struct {
 	CSIs       []KubernetesCSI       `toml:"csi" json:",omitempty" description:"The CSI volumes which will be mounted"`
 }
 
-//nolint:lll
 type KubernetesConfigMap struct {
 	Name      string            `toml:"name" json:"name" description:"The name of the volume and ConfigMap to use"`
 	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -623,7 +612,6 @@ type KubernetesConfigMap struct {
 	Items     map[string]string `toml:"items,omitempty" json:",omitempty" description:"Key-to-path mapping for keys from the config map that should be used."`
 }
 
-//nolint:lll
 type KubernetesHostPath struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume"`
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -632,7 +620,6 @@ type KubernetesHostPath struct {
 	HostPath  string `toml:"host_path,omitempty" description:"Path from the host that should be mounted as a volume"`
 }
 
-//nolint:lll
 type KubernetesPVC struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume and PVC to use"`
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -640,7 +627,6 @@ type KubernetesPVC struct {
 	ReadOnly  bool   `toml:"read_only,omitempty" description:"If this volume should be mounted read only"`
 }
 
-//nolint:lll
 type KubernetesSecret struct {
 	Name      string            `toml:"name" json:"name" description:"The name of the volume and Secret to use"`
 	MountPath string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -649,7 +635,6 @@ type KubernetesSecret struct {
 	Items     map[string]string `toml:"items,omitempty" json:",omitempty" description:"Key-to-path mapping for keys from the secret that should be used."`
 }
 
-//nolint:lll
 type KubernetesEmptyDir struct {
 	Name      string `toml:"name" json:"name" description:"The name of the volume and EmptyDir to use"`
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -657,7 +642,6 @@ type KubernetesEmptyDir struct {
 	Medium    string `toml:"medium,omitempty" description:"Set to 'Memory' to have a tmpfs"`
 }
 
-//nolint:lll
 type KubernetesCSI struct {
 	Name             string            `toml:"name" json:"name" description:"The name of the CSI volume and volumeMount to use"`
 	MountPath        string            `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
@@ -668,7 +652,6 @@ type KubernetesCSI struct {
 	VolumeAttributes map[string]string `toml:"volume_attributes,omitempty" json:",omitempty" description:"Key-value pair mapping for attributes of the CSI volume."`
 }
 
-//nolint:lll
 type KubernetesPodSecurityContext struct {
 	FSGroup            *int64  `toml:"fs_group,omitempty" json:",omitempty" long:"fs-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_FS_GROUP" description:"A special supplemental group that applies to all containers in a pod"`
 	RunAsGroup         *int64  `toml:"run_as_group,omitempty" json:",omitempty" long:"run-as-group" env:"KUBERNETES_POD_SECURITY_CONTEXT_RUN_AS_GROUP" description:"The GID to run the entrypoint of the container process"`
@@ -678,13 +661,11 @@ type KubernetesPodSecurityContext struct {
 	SELinuxType        string  `toml:"selinux_type,omitempty" long:"selinux-type" description:"The SELinux type label that applies to all containers in a pod"`
 }
 
-//nolint:lll
 type KubernetesContainerCapabilities struct {
 	Add  []api.Capability `toml:"add" json:",omitempty" long:"add" env:"@ADD" description:"List of capabilities to add to the build container"`
 	Drop []api.Capability `toml:"drop" json:",omitempty" long:"drop" env:"@DROP" description:"List of capabilities to drop from the build container"`
 }
 
-//nolint:lll
 type KubernetesContainerSecurityContext struct {
 	Capabilities             *KubernetesContainerCapabilities `toml:"capabilities,omitempty" json:",omitempty" namespace:"capabilities" description:"The capabilities to add/drop when running the container"`
 	Privileged               *bool                            `toml:"privileged" json:",omitempty" long:"privileged" env:"@PRIVILEGED" description:"Run container in privileged mode"`
@@ -820,58 +801,48 @@ func (c *KubernetesContainerSecurityContext) getCapabilities() *api.Capabilities
 	}
 }
 
-//nolint:lll
 type KubernetesAffinity struct {
 	NodeAffinity    *KubernetesNodeAffinity    `toml:"node_affinity,omitempty" json:"node_affinity,omitempty" long:"node-affinity" description:"Node affinity is conceptually similar to nodeSelector -- it allows you to constrain which nodes your pod is eligible to be scheduled on, based on labels on the node."`
 	PodAffinity     *KubernetesPodAffinity     `toml:"pod_affinity,omitempty" json:"pod_affinity,omitempty" description:"Pod affinity allows to constrain which nodes your pod is eligible to be scheduled on based on the labels on other pods."`
 	PodAntiAffinity *KubernetesPodAntiAffinity `toml:"pod_anti_affinity,omitempty" json:"pod_anti_affinity,omitempty" description:"Pod anti-affinity allows to constrain which nodes your pod is eligible to be scheduled on based on the labels on other pods."`
 }
 
-//nolint:lll
 type KubernetesNodeAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution,omitempty"`
 	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
 }
 
-//nolint:lll
 type KubernetesPodAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
 }
 
-//nolint:lll
 type KubernetesPodAntiAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
 }
 
-//nolint:lll
 type KubernetesHostAliases struct {
 	IP        string   `toml:"ip" json:"ip" long:"ip" description:"The IP address you want to attach hosts to"`
 	Hostnames []string `toml:"hostnames" json:"hostnames,omitempty" long:"hostnames" description:"A list of hostnames that will be attached to the IP"`
 }
 
 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#lifecycle-v1-core
-//
-//nolint:lll
 type KubernetesContainerLifecyle struct {
 	PostStart *KubernetesLifecycleHandler `toml:"post_start,omitempty" json:"post_start,omitempty" description:"PostStart is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes"`
 	PreStop   *KubernetesLifecycleHandler `toml:"pre_stop,omitempty" json:"pre_stop,omitempty" description:"PreStop is called immediately before a container is terminated due to an API request or management event such as liveness/startup probe failure, preemption, resource contention, etc. The handler is not called if the container crashes or exits. The reason for termination is passed to the handler. The Pod's termination grace period countdown begins before the PreStop hooked is executed. Regardless of the outcome of the handler, the container will eventually terminate within the Pod's termination grace period. Other management of the container blocks until the hook completes or until the termination grace period is reached"`
 }
 
-//nolint:lll
 type KubernetesLifecycleHandler struct {
 	Exec      *KubernetesLifecycleExecAction `toml:"exec"  json:"exec,omitempty" description:"Exec specifies the action to take"`
 	HTTPGet   *KubernetesLifecycleHTTPGet    `toml:"http_get"  json:"http_get,omitempty" description:"HTTPGet specifies the http request to perform."`
 	TCPSocket *KubernetesLifecycleTCPSocket  `toml:"tcp_socket"  json:"tcp_socket,omitempty" description:"TCPSocket specifies an action involving a TCP port"`
 }
 
-//nolint:lll
 type KubernetesLifecycleExecAction struct {
 	Command []string `toml:"command" json:"command,omitempty" description:"Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy"`
 }
 
-//nolint:lll
 type KubernetesLifecycleHTTPGet struct {
 	Host        string                             `toml:"host" json:"host" description:"Host name to connect to, defaults to the pod IP. You probably want to set \"Host\" in httpHeaders instead"`
 	HTTPHeaders []KubernetesLifecycleHTTPGetHeader `toml:"http_headers" json:"http_headers,omitempty" description:"Custom headers to set in the request. HTTP allows repeated headers"`
@@ -885,7 +856,6 @@ type KubernetesLifecycleHTTPGetHeader struct {
 	Value string `toml:"value" json:"value" description:"The header field value"`
 }
 
-//nolint:lll
 type KubernetesLifecycleTCPSocket struct {
 	Host string `toml:"host" json:"host" description:"Host name to connect to, defaults to the pod IP. You probably want to set \"Host\" in httpHeaders instead"`
 	Port int    `toml:"port" json:"port" description:"Number of the port to access on the container. Number must be in the range 1 to 65535"`
@@ -948,7 +918,6 @@ type NodeSelectorTerm struct {
 	MatchFields      []NodeSelectorRequirement `toml:"match_fields,omitempty" json:"match_fields,omitempty"`
 }
 
-//nolint:lll
 type NodeSelectorRequirement struct {
 	Key      string   `toml:"key,omitempty" json:"key"`
 	Operator string   `toml:"operator,omitempty" json:"operator"`
@@ -967,7 +936,6 @@ type LabelSelector struct {
 	MatchExpressions []NodeSelectorRequirement `toml:"match_expressions,omitempty" json:"match_expressions,omitempty"`
 }
 
-//nolint:lll
 type Service struct {
 	Name        string   `toml:"name" long:"name" description:"The image path for the service"`
 	Alias       string   `toml:"alias,omitempty" long:"alias" description:"Space or comma-separated aliases of the service."`
@@ -996,7 +964,6 @@ func (s *Service) ToImageDefinition() Image {
 	return image
 }
 
-//nolint:lll
 type RunnerCredentials struct {
 	URL             string    `toml:"url" json:"url" short:"u" long:"url" env:"CI_SERVER_URL" required:"true" description:"GitLab instance URL" jsonschema:"minLength=1"`
 	ID              int64     `toml:"id" json:"id" description:"Runner ID"`
@@ -1008,20 +975,17 @@ type RunnerCredentials struct {
 	TLSKeyFile      string    `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
 }
 
-//nolint:lll
 type CacheGCSCredentials struct {
 	AccessID   string `toml:"AccessID,omitempty" long:"access-id" env:"CACHE_GCS_ACCESS_ID" description:"ID of GCP Service Account used to access the storage"`
 	PrivateKey string `toml:"PrivateKey,omitempty" long:"private-key" env:"CACHE_GCS_PRIVATE_KEY" description:"Private key used to sign GCS requests"`
 }
 
-//nolint:lll
 type CacheGCSConfig struct {
 	CacheGCSCredentials
 	CredentialsFile string `toml:"CredentialsFile,omitempty" long:"credentials-file" env:"GOOGLE_APPLICATION_CREDENTIALS" description:"File with GCP credentials, containing AccessID and PrivateKey"`
 	BucketName      string `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_GCS_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
 }
 
-//nolint:lll
 type CacheS3Config struct {
 	ServerAddress             string     `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
 	AccessKey                 string     `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
@@ -1034,20 +998,17 @@ type CacheS3Config struct {
 	ServerSideEncryptionKeyID string     `toml:"ServerSideEncryptionKeyID,omitempty" long:"server-side-encryption-key-id" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID" description:"Server side encryption key ID (alias or Key ID)"`
 }
 
-//nolint:lll
 type CacheAzureCredentials struct {
 	AccountName string `toml:"AccountName,omitempty" long:"account-name" env:"CACHE_AZURE_ACCOUNT_NAME" description:"Account name for Azure Blob Storage"`
 	AccountKey  string `toml:"AccountKey,omitempty" long:"account-key" env:"CACHE_AZURE_ACCOUNT_KEY" description:"Access key for Azure Blob Storage"`
 }
 
-//nolint:lll
 type CacheAzureConfig struct {
 	CacheAzureCredentials
 	ContainerName string `toml:"ContainerName,omitempty" long:"container-name" env:"CACHE_AZURE_CONTAINER_NAME" description:"Name of the Azure container where cache will be stored"`
 	StorageDomain string `toml:"StorageDomain,omitempty" long:"storage-domain" env:"CACHE_AZURE_STORAGE_DOMAIN" description:"Domain name of the Azure storage (e.g. blob.core.windows.net)"`
 }
 
-//nolint:lll
 type CacheConfig struct {
 	Type                   string `toml:"Type,omitempty" long:"type" env:"CACHE_TYPE" description:"Select caching method"`
 	Path                   string `toml:"Path,omitempty" long:"path" env:"CACHE_PATH" description:"Name of the path to prepend to the cache URL"`
@@ -1059,7 +1020,6 @@ type CacheConfig struct {
 	Azure *CacheAzureConfig `toml:"azure,omitempty" json:"azure,omitempty" namespace:"azure"`
 }
 
-//nolint:lll
 type RunnerSettings struct {
 	Executor  string `toml:"executor" json:"executor" long:"executor" env:"RUNNER_EXECUTOR" required:"true" description:"Select executor, eg. shell, docker, etc."`
 	BuildsDir string `toml:"builds_dir,omitempty" json:"builds_dir" long:"builds-dir" env:"RUNNER_BUILDS_DIR" description:"Directory where builds are stored"`
@@ -1110,7 +1070,6 @@ type RunnerSettings struct {
 	Autoscaler *AutoscalerConfig `toml:"autoscaler,omitempty" json:",omitempty"`
 }
 
-//nolint:lll
 type RunnerConfig struct {
 	Name               string `toml:"name" json:"name" short:"name" long:"description" env:"RUNNER_NAME" description:"Runner name" jsonschema:"minLength=1"`
 	Limit              int    `toml:"limit,omitzero" json:"limit" long:"limit" env:"RUNNER_LIMIT" description:"Maximum number of builds processed by this runner"`
@@ -1126,14 +1085,12 @@ type RunnerConfig struct {
 	RunnerSettings
 }
 
-//nolint:lll
 type SessionServer struct {
 	ListenAddress    string `toml:"listen_address,omitempty" json:"listen_address" description:"Address that the runner will communicate directly with"`
 	AdvertiseAddress string `toml:"advertise_address,omitempty" json:"advertise_address" description:"Address the runner will expose to the world to connect to the session server"`
 	SessionTimeout   int    `toml:"session_timeout,omitempty" json:"session_timeout" description:"How long a terminal session can be active after a build completes, in seconds"`
 }
 
-//nolint:lll
 type Config struct {
 	ListenAddress string        `toml:"listen_address,omitempty" json:"listen_address"`
 	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
@@ -1176,7 +1133,6 @@ func (s *defaultConfigSaver) Save(filePath string, data []byte) error {
 	return nil
 }
 
-//nolint:lll
 type CustomBuildDir struct {
 	Enabled bool `toml:"enabled,omitempty" json:"enabled" long:"enabled" env:"CUSTOM_BUILD_DIR_ENABLED" description:"Enable job specific build directories"`
 }
@@ -1444,7 +1400,6 @@ func (c *KubernetesConfig) GetPodTerminationGracePeriodSeconds() *int64 {
 	}
 
 	// For backwards compatibility, the default value of the Pod termination should remain zero since that means
-	//nolint:lll
 	// "terminate immediately" as opposed to nil, which by default is a timeout of 30 seconds as per http://gitlab.com/gitlab-org/gitlab-runner/blob/45472cdf02591942c9a95d2ce38ef5ff3a38d842/vendor/k8s.io/api/core/v1/types.go#L2988-2988.
 	// For details refer to https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2130.
 	// Will be removed with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.

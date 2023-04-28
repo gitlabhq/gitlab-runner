@@ -15,7 +15,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
-//nolint:lll
 type RunSingleCommand struct {
 	common.RunnerConfig
 	network          common.Network

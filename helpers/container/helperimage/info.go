@@ -11,7 +11,6 @@ const (
 	OSTypeLinux   = "linux"
 	OSTypeWindows = "windows"
 
-	//nolint:lll
 	// DockerHubWarningMessage is the message that is printed to the user when
 	// it's using the helper image hosted in Docker Hub. It is up to the caller
 	// to print this message.

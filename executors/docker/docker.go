@@ -202,7 +202,6 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 			"...",
 		)
 
-		//nolint:lll
 		e.Println("Using helper image: ", imageNameFromConfig, " (overridden, default would be ", e.helperImageInfo, ")")
 
 		return e.pullManager.GetDockerImage(imageNameFromConfig, nil)

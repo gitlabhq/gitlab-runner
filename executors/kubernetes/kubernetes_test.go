@@ -451,7 +451,6 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 	}
 	csiVolFSType := "ext4"
 	csiVolReadOnly := false
-	//nolint:lll
 	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
@@ -1860,7 +1859,6 @@ func TestPrepare(t *testing.T) {
 						"-ExecutionPolicy",
 						"Bypass",
 						"-EncodedCommand",
-						//nolint:lll
 						"JABPAHUAdABwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AEkAbgBwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AE8AdQB0AHAAdQB0AEUAbgBjAG8AZABpAG4AZwAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBUAGUAeAB0AC4AVQBUAEYAOABFAG4AYwBvAGQAaQBuAGcADQAKAHAAdwBzAGgAIAAtAEMAbwBtAG0AYQBuAGQAIAAtAA0ACgA=",
 					},
 				},
@@ -2151,7 +2149,6 @@ func TestPrepare(t *testing.T) {
 				helperImageInfo:         defaultHelperImage,
 			},
 			Error: "failed to pull image 'test-image': " +
-				//nolint:lll
 				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]"),
 		},
 		{
@@ -3890,7 +3887,6 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				},
 			},
-			//nolint:lll
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				require.NotNil(t, pod.Spec.Affinity)
 				require.NotNil(t, pod.Spec.Affinity.NodeAffinity)
@@ -6051,7 +6047,6 @@ nodeSelector:
 			},
 			verifyFn: verifyFn,
 		},
-		//nolint:lll
 		// strategic strategy as documented
 		// https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/#notes-on-the-strategic-merge-patch
 		"successful simple json with strategic patch type on containers": {

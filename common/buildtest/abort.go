@@ -83,7 +83,7 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 
 			err := RunBuildWithTrace(t, build, trace)
 			t.Log(buf.String())
-			//nolint:lll
+
 			assert.True(t, errors.Is(err, tc.expectedErr), "expected: %[1]T (%[1]v), got: %[2]T (%[2]v)", tc.expectedErr, err)
 
 			for _, stage := range tc.includesStage {

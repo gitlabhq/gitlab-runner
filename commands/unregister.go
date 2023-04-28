@@ -8,7 +8,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
-//nolint:lll
 type UnregisterCommand struct {
 	configOptions
 	common.RunnerCredentials

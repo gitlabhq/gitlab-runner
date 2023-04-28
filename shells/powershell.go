@@ -105,7 +105,7 @@ func pwshStdinCmdArgs(shell string) []string {
 	// limited to a certain length. The minimum maximum length is 8190. This
 	// encoded initialization script should be kept small.
 	var sb strings.Builder
-	//nolint:lll
+
 	sb.WriteString("$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r\n")
 	sb.WriteString(shell + " -Command -\r\n")
 	encoded, _ := encoder.String(sb.String())

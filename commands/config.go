@@ -226,7 +226,6 @@ func (c *configOptions) RunnerByURLAndID(url string, id int64) (*common.RunnerCo
 	return nil, fmt.Errorf("could not find a runner with the URL %q and ID %d", url, id)
 }
 
-//nolint:lll
 type configOptionsWithListenAddress struct {
 	configOptions
 

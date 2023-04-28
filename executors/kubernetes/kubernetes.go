@@ -595,7 +595,6 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 	// future folders and files.
 	switch os {
 	case helperimage.OSTypeWindows:
-		//nolint:lll
 		chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /t /q | out-null"
 		commands := []string{
 			fmt.Sprintf(chmod, s.logsDir()),
@@ -1591,8 +1590,6 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 
 // Inspired by
 // https://github.com/kubernetes/kubernetes/blob/cde45fb161c5a4bfa7cfe45dfd814f6cc95433f7/cmd/kubeadm/app/util/patches/patches.go#L171
-//
-//nolint:lll
 func (s *executor) applyPodSpecMerge(podSpec *api.PodSpec) (api.PodSpec, error) {
 	patchedData, err := json.Marshal(podSpec)
 	if err != nil {

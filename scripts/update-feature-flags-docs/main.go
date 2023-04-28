@@ -18,7 +18,6 @@ const (
 	endPlaceholder   = "<!-- feature_flags_list_end -->"
 )
 
-//nolint:lll
 var ffTableTemplate = `{{ placeholder "start" }}
 
 | Feature flag | Default value | Deprecated | To be removed with | Description |

@@ -15,7 +15,6 @@ type allowedImageTestCase struct {
 	expectedAllowed bool
 }
 
-//nolint:lll
 var allowedImageTestCases = []allowedImageTestCase{
 	{image: "alpine", allowedImages: []string{"alpine"}, internalImages: []string{}, expectedAllowed: true},
 	{image: "alpine", allowedImages: []string{"ubuntu"}, internalImages: []string{}, expectedAllowed: false},
