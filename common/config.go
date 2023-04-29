@@ -235,6 +235,8 @@ type AutoscalerConfig struct {
 	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty" json:",omitempty"`
 
+	DeleteInstancesOnShutdown bool `toml:"delete_instances_on_shutdown,omitempty" json:",omitempty"`
+
 	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
 
 	// instance_operation_time_buckets was introduced some time ago, so we can't just delete it.
