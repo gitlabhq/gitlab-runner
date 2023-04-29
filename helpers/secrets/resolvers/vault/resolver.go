@@ -52,6 +52,10 @@ func (v *resolver) Resolve() (string, error) {
 		return "", err
 	}
 
+	if data == nil {
+		return "", common.ErrSecretNotFound
+	}
+
 	return fmt.Sprintf("%v", data), nil
 }
 

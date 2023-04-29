@@ -30,6 +30,7 @@ const (
 	UsePodActiveDeadlineSeconds          string = "FF_USE_POD_ACTIVE_DEADLINE_SECONDS"
 	UseAdvancedPodSpecConfiguration      string = "FF_USE_ADVANCED_POD_SPEC_CONFIGURATION"
 	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
+	EnableSecretResolvingFailsIfMissing  string = "FF_SECRET_RESOLVING_FAILS_IF_MISSING"
 )
 
 type FeatureFlag struct {
@@ -248,6 +249,12 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, permissions on directories and files in the project directory are " +
 			"set first, to ensure that deletions during cleanup are successful.",
+	},
+	{
+		Name:         EnableSecretResolvingFailsIfMissing,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description:  "When enabled, secret resolving fails if the value cannot be found.",
 	},
 }
 

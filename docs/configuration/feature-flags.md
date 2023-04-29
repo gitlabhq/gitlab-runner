@@ -68,6 +68,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` | `false` | **{dotted-circle}** No |  | When enabled, the [pod `activeDeadlineSeconds`](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle) is set to the CI/CD job timeout. This flag affects the [pod's lifecycle](../executors/kubernetes.md#pod-lifecycle). |
 | `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` | `false` | **{dotted-circle}** No |  | When enabled, the user can set an entire whole pod specification in the `config.toml` file. For more information, see [Overwrite generated pod specifications (Alpha)](../executors/kubernetes.md#overwrite-generated-pod-specifications-alpha).. |
 | `FF_SET_PERMISSIONS_BEFORE_CLEANUP` | `true` | **{dotted-circle}** No |  | When enabled, permissions on directories and files in the project directory are set first, to ensure that deletions during cleanup are successful. |
+| `FF_SECRET_RESOLVING_FAILS_IF_MISSING` | `true` | **{dotted-circle}** No |  | When enabled, secret resolving fails if the value cannot be found. |
 
 <!-- feature_flags_list_end -->
 

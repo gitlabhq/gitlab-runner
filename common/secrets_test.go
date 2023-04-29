@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 func TestDefaultResolver_Resolve(t *testing.T) {
@@ -53,6 +54,7 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 		supportedResolverPresent      bool
 		secrets                       Secrets
 		resolvedVariable              *JobVariable
+		failIfSecretMissing           bool
 		errorOnSecretResolving        error
 		expectedResolverCreationError error
 		expectedVariables             JobVariables
@@ -137,6 +139,32 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			expectedVariables:        JobVariables{},
 			expectedError:            nil,
 		},
+		"secret not found - fail if missing": {
+			getLogger:                getLogger,
+			supportedResolverPresent: true,
+			secrets:                  secrets,
+			failIfSecretMissing:      true,
+			errorOnSecretResolving:   ErrSecretNotFound,
+			expectedVariables:        nil,
+			expectedError:            ErrSecretNotFound,
+		},
+		"secret not found - succeed if missing": {
+			getLogger:                getLogger,
+			supportedResolverPresent: true,
+			secrets:                  secrets,
+			failIfSecretMissing:      false,
+			errorOnSecretResolving:   ErrSecretNotFound,
+			expectedVariables: JobVariables{
+				{
+					Key:    variableKey,
+					Value:  returnValue,
+					File:   true,
+					Masked: true,
+					Raw:    true,
+				},
+			},
+			expectedError: nil,
+		},
 	}
 
 	for tn, tt := range tests {
@@ -171,7 +199,12 @@ func TestDefaultResolver_Resolve(t *testing.T) {
 			logger, loggerCleanup := tt.getLogger(t)
 			defer loggerCleanup()
 
-			r, err := newSecretsResolver(logger, registry)
+			r, err := newSecretsResolver(logger, registry, func(s string) bool {
+				if s == featureflags.EnableSecretResolvingFailsIfMissing {
+					return tt.failIfSecretMissing
+				}
+				return false
+			})
 			if tt.expectedResolverCreationError != nil {
 				assert.ErrorAs(t, err, &tt.expectedResolverCreationError)
 				return

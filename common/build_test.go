@@ -2276,6 +2276,14 @@ func TestSecretsResolving(t *testing.T) {
 			expectedVariables: exampleVariables,
 			expectedError:     nil,
 		},
+		"secret not found - FF_SECRET_RESOLVING_FAILS_IF_MISSING enabled": {
+			secrets:                 secrets,
+			prepareExecutorProvider: setupFailureExecutorMocks,
+			returnVariables:         nil,
+			resolvingError:          fmt.Errorf("%w: %s", ErrSecretNotFound, "secret_key"),
+			expectedVariables:       nil,
+			expectedError:           ErrSecretNotFound,
+		},
 	}
 
 	for tn, tt := range tests {
@@ -2305,7 +2313,7 @@ func TestSecretsResolving(t *testing.T) {
 			build, err := NewBuild(successfulBuild, rc, nil, nil)
 			assert.NoError(t, err)
 
-			build.secretsResolver = func(_ logger, _ SecretResolverRegistry) (SecretsResolver, error) {
+			build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
 				return secretsResolverMock, tt.resolverCreationError
 			}
 
@@ -2314,7 +2322,7 @@ func TestSecretsResolving(t *testing.T) {
 			assert.Equal(t, tt.expectedVariables, build.secretsVariables)
 
 			if tt.expectedError != nil {
-				assert.ErrorAs(t, err, &tt.expectedError)
+				assert.ErrorIs(t, err, tt.expectedError)
 				return
 			}
 			assert.NoError(t, err)
@@ -2354,7 +2362,7 @@ func TestResolvedSecretsSetMasked(t *testing.T) {
 		{Key: "key", Value: expectedMaskPhrase, Masked: true, Raw: true},
 	}, nil).Once()
 
-	build.secretsResolver = func(_ logger, _ SecretResolverRegistry) (SecretsResolver, error) {
+	build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
 		return secretsResolverMock, nil
 	}
 
