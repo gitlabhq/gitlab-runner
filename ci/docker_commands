@@ -20,7 +20,12 @@ logout() {
 
 import() {
     echo -e "\033[1mImporting image: \033[32m${2}\033[0m"
-    _docker import "${1}" "${2}"
+    local -a args
+    if [[ -n "${3:-}" ]]; then
+      args+=("--platform=${3}")
+    fi
+    args+=("${1}" "${2}")
+    _docker import "${args[@]}"
 }
 
 tag() {
