@@ -150,6 +150,20 @@ func (_m *MockNetwork) UnregisterRunner(config RunnerCredentials) bool {
 	return r0
 }
 
+// UnregisterRunnerManager provides a mock function with given fields: config, systemID
+func (_m *MockNetwork) UnregisterRunnerManager(config RunnerCredentials, systemID string) bool {
+	ret := _m.Called(config, systemID)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(RunnerCredentials, string) bool); ok {
+		r0 = rf(config, systemID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // UpdateJob provides a mock function with given fields: config, jobCredentials, jobInfo
 func (_m *MockNetwork) UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult {
 	ret := _m.Called(config, jobCredentials, jobInfo)

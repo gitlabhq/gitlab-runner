@@ -22,9 +22,13 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
-// CreatedRunnerTokenPrefix is the token prefix used for GitLab UI-created runner tokens
-const CreatedRunnerTokenPrefix = "glrt-"
+// createdRunnerTokenPrefix is the token prefix used for GitLab UI-created runner tokens
+const createdRunnerTokenPrefix = "glrt-"
 const clientError = -100
+
+func TokenIsCreatedRunnerToken(token string) bool {
+	return strings.HasPrefix(token, createdRunnerTokenPrefix)
+}
 
 type GitLabClient struct {
 	clients map[string]*client
@@ -396,14 +400,14 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	switch result {
 	case http.StatusOK:
 		// this is expected due to fact that we ask for non-existing job
-		if strings.HasPrefix(runner.Token, CreatedRunnerTokenPrefix) {
+		if TokenIsCreatedRunnerToken(runner.Token) {
 			runner.Log().Println("Verifying runner...", "is valid")
 		} else {
 			runner.Log().Println("Verifying runner...", "is alive")
 		}
 		return &response
 	case http.StatusForbidden:
-		if strings.HasPrefix(runner.Token, CreatedRunnerTokenPrefix) {
+		if TokenIsCreatedRunnerToken(runner.Token) {
 			runner.Log().Println("Verifying runner...", "is not valid")
 		} else {
 			runner.Log().Errorln("Verifying runner...", "is removed")
@@ -428,6 +432,42 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		&runner,
 		http.MethodDelete,
 		"runners",
+		http.StatusNoContent,
+		&request,
+		nil,
+	)
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
+
+	const baseLogText = "Unregistering runner from GitLab"
+	switch result {
+	case http.StatusNoContent:
+		runner.Log().Println(baseLogText, "succeeded")
+		return true
+	case http.StatusForbidden:
+		runner.Log().Errorln(baseLogText, "forbidden")
+		return false
+	case clientError:
+		runner.Log().WithField("status", statusText).Errorln(baseLogText, "error")
+		return false
+	default:
+		runner.Log().WithField("status", statusText).Errorln(baseLogText, "failed")
+		return false
+	}
+}
+
+func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, systemID string) bool {
+	request := common.UnregisterRunnerManagerRequest{
+		Token:    runner.Token,
+		SystemID: systemID,
+	}
+
+	result, statusText, resp := n.doJSON(
+		context.Background(),
+		&runner,
+		http.MethodDelete,
+		"runners/managers",
 		http.StatusNoContent,
 		&request,
 		nil,

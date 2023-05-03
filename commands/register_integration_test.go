@@ -234,6 +234,14 @@ func TestAskRunnerUsingRunnerTokenOverrideForbiddenDefaults(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
+			network := new(common.MockNetwork)
+			network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+				Return(&common.VerifyRunnerResponse{
+					ID:    1,
+					Token: "glrt-testtoken",
+				}).
+				Once()
+
 			answers := make([]string, 4)
 			arguments := append(
 				executorCmdLineArgs(t, "shell"),
@@ -242,7 +250,6 @@ func TestAskRunnerUsingRunnerTokenOverrideForbiddenDefaults(t *testing.T) {
 				tn, fmt.Sprintf("%v", tc),
 			)
 
-			network := new(common.MockNetwork)
 			cmd := commands.NewRegisterCommandForTest(
 				bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
 				network,
@@ -889,21 +896,43 @@ shutdown_timeout = 0
 
 func TestUnregisterOnFailure(t *testing.T) {
 	tests := map[string]struct {
+		token                 string
 		leaveRunner           bool
 		registrationFails     bool
 		expectsLeftRegistered bool
 	}{
+		"ui created runner, verification succeeds, runner left registered": {
+			token:                 "glrt-test-runner-token",
+			leaveRunner:           false,
+			registrationFails:     false,
+			expectsLeftRegistered: true,
+		},
+		"ui created runner, verification fails, LeaveRunner is false, runner machine is unregistered": {
+			token:                 "glrt-test-runner-token",
+			leaveRunner:           false,
+			registrationFails:     true,
+			expectsLeftRegistered: false,
+		},
+		"ui created runner, verification fails, LeaveRunner is true, runner machine left registered": {
+			token:                 "glrt-test-runner-token",
+			leaveRunner:           true,
+			registrationFails:     true,
+			expectsLeftRegistered: true,
+		},
 		"registration succeeds, runner left registered": {
+			token:                 "test-runner-token",
 			leaveRunner:           false,
 			registrationFails:     false,
 			expectsLeftRegistered: true,
 		},
 		"registration fails, LeaveRunner is false, runner is unregistered": {
+			token:                 "test-runner-token",
 			leaveRunner:           false,
 			registrationFails:     true,
 			expectsLeftRegistered: false,
 		},
 		"registration fails, LeaveRunner is true, runner left registered": {
+			token:                 "test-runner-token",
 			leaveRunner:           true,
 			registrationFails:     true,
 			expectsLeftRegistered: true,
@@ -912,22 +941,37 @@ func TestUnregisterOnFailure(t *testing.T) {
 
 	for testName, testCase := range tests {
 		t.Run(testName, func(t *testing.T) {
+			runnerUICreated := strings.HasPrefix(testCase.token, "glrt-")
 			network := new(common.MockNetwork)
 			defer network.AssertExpectations(t)
 
-			const token = "test-runner-token"
-			network.On("RegisterRunner", mock.Anything, mock.Anything).
-				Return(&common.RegisterRunnerResponse{
-					Token: token,
-				}).
-				Once()
+			if runnerUICreated {
+				network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+					Return(&common.VerifyRunnerResponse{
+						ID:    1,
+						Token: testCase.token,
+					}).
+					Once()
+			} else {
+				network.On("RegisterRunner", mock.Anything, mock.Anything).
+					Return(&common.RegisterRunnerResponse{
+						Token: testCase.token,
+					}).
+					Once()
+			}
 			if !testCase.expectsLeftRegistered {
 				credsMocker := mock.MatchedBy(func(credentials common.RunnerCredentials) bool {
-					return credentials.Token == token
+					return credentials.Token == testCase.token
 				})
-				network.On("UnregisterRunner", credsMocker).
-					Return(true).
-					Once()
+				if runnerUICreated {
+					network.On("UnregisterRunnerManager", credsMocker, mock.Anything).
+						Return(true).
+						Once()
+				} else {
+					network.On("UnregisterRunner", credsMocker).
+						Return(true).
+						Once()
+				}
 			}
 
 			var arguments []string
@@ -935,7 +979,10 @@ func TestUnregisterOnFailure(t *testing.T) {
 				arguments = append(arguments, "--leave-runner")
 			}
 
-			answers := []string{"https://gitlab.com/", token, "description", "", ""}
+			answers := []string{"https://gitlab.com/", testCase.token, "description"}
+			if !runnerUICreated {
+				answers = append(answers, "", "")
+			}
 			if testCase.registrationFails {
 				defer func() { _ = recover() }()
 			} else {
