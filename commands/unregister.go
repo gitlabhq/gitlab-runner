@@ -19,7 +19,7 @@ type UnregisterCommand struct {
 func (c *UnregisterCommand) unregisterAllRunners() (runners []*common.RunnerConfig) {
 	logrus.Warningln("Unregistering all runners")
 	for _, r := range c.getConfig().Runners {
-		if !c.network.UnregisterRunner(r.RunnerCredentials) {
+		if !c.unregisterRunner(r.RunnerCredentials) {
 			logrus.Errorln("Failed to unregister runner", r.Name)
 			// If unregister fails, leave the runner in the config
 			runners = append(runners, r)
@@ -38,7 +38,7 @@ func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
 	}
 
 	// Unregister given Token and URL of the runner
-	if !c.network.UnregisterRunner(c.RunnerCredentials) {
+	if !c.unregisterRunner(c.RunnerCredentials) {
 		logrus.Fatalln("Failed to unregister runner", c.Name)
 	}
 
@@ -49,6 +49,14 @@ func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
 		}
 	}
 	return runners
+}
+
+func (c *UnregisterCommand) unregisterRunner(r common.RunnerCredentials) bool {
+	if !network.TokenIsCreatedRunnerToken(r.Token) {
+		return c.network.UnregisterRunner(r)
+	}
+
+	return c.network.UnregisterRunnerManager(r, c.loadedSystemIDState.GetSystemID())
 }
 
 func (c *UnregisterCommand) Execute(context *cli.Context) {

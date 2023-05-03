@@ -363,6 +363,40 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 	assert.NoError(t, err)
 
 	switch req["token"].(string) {
+	case validGlrtToken, validToken:
+		w.WriteHeader(http.StatusNoContent)
+	case invalidToken:
+		w.WriteHeader(http.StatusForbidden)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
+func testUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	if r.URL.Path != "/api/v4/runners/managers" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if r.Method != http.MethodDelete {
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	assert.NoError(t, err)
+
+	var req map[string]interface{}
+	err = json.Unmarshal(body, &req)
+	assert.NoError(t, err)
+
+	switch req["token"].(string) {
+	case validGlrtToken:
+		if systemID, ok := req["system_id"].(string); ok && systemID == "s_some_system_id" {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+		}
 	case validToken:
 		w.WriteHeader(http.StatusNoContent)
 	case invalidToken:
@@ -407,6 +441,55 @@ func TestUnregisterRunner(t *testing.T) {
 	assert.False(t, state)
 
 	state = c.UnregisterRunner(brokenCredentials)
+	assert.False(t, state)
+}
+
+func TestUnregisterRunnerManager(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		testUnregisterRunnerManagerHandler(w, r, t)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	validGlrtToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: validGlrtToken,
+	}
+
+	validToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: validToken,
+	}
+
+	invalidToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: invalidToken,
+	}
+
+	otherToken := RunnerCredentials{
+		URL:   s.URL,
+		Token: "other",
+	}
+
+	c := NewGitLabClient()
+
+	state := c.UnregisterRunnerManager(validGlrtToken, "s_some_system_id")
+	assert.True(t, state)
+
+	state = c.UnregisterRunnerManager(validGlrtToken, "s_unknown_system_id")
+	assert.False(t, state)
+
+	state = c.UnregisterRunnerManager(validToken, "s_some_system_id")
+	assert.True(t, state)
+
+	state = c.UnregisterRunnerManager(invalidToken, "s_some_system_id")
+	assert.False(t, state)
+
+	state = c.UnregisterRunnerManager(otherToken, "s_some_system_id")
+	assert.False(t, state)
+
+	state = c.UnregisterRunnerManager(brokenCredentials, "s_some_system_id")
 	assert.False(t, state)
 }
 

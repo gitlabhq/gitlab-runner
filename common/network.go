@@ -138,6 +138,11 @@ type UnregisterRunnerRequest struct {
 	Token string `json:"token,omitempty"`
 }
 
+type UnregisterRunnerManagerRequest struct {
+	Token    string `json:"token,omitempty"`
+	SystemID string `json:"system_id"`
+}
+
 type ResetTokenRequest struct {
 	Token string `json:"token,omitempty"`
 }
@@ -651,6 +656,7 @@ type Network interface {
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials, systemID string) *VerifyRunnerResponse
 	UnregisterRunner(config RunnerCredentials) bool
+	UnregisterRunnerManager(config RunnerCredentials, systemID string) bool
 	ResetToken(runner RunnerCredentials, systemID string) *ResetTokenResponse
 	ResetTokenWithPAT(runner RunnerCredentials, systemID string, pat string) *ResetTokenResponse
 	RequestJob(ctx context.Context, config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)

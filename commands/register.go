@@ -272,6 +272,8 @@ func (s *RegisterCommand) askRunner() {
 		s.doLegacyRegisterRunner()
 		return
 	}
+
+	s.verifyRunner()
 	s.Name = s.ask("name", "Enter a name for the runner. This is stored only in the local config.toml file:")
 
 	// when a runner token is specified as a registration token, certain arguments are reserved to the server
@@ -427,8 +429,8 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 
 	s.askRunner()
 
-	if !s.tokenIsRunnerToken() && !s.LeaveRunner {
-		defer s.unregisterRunner()()
+	if !s.LeaveRunner {
+		defer s.unregisterRunnerFunc()()
 	}
 
 	config := s.getConfig()
@@ -452,9 +454,6 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	s.askExecutor()
 	s.askExecutorOptions()
 
-	if s.tokenIsRunnerToken() {
-		s.verifyRunner()
-	}
 	s.addRunner(&s.RunnerConfig)
 	err = s.saveConfig()
 	if err != nil {
@@ -467,13 +466,13 @@ func (s *RegisterCommand) Execute(context *cli.Context) {
 	logrus.Printf("Configuration (with the authentication token) was saved in %q", s.ConfigFile)
 }
 
-func (s *RegisterCommand) unregisterRunner() func() {
+func (s *RegisterCommand) unregisterRunnerFunc() func() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
 	go func() {
 		signal := <-signals
-		s.network.UnregisterRunner(s.RunnerCredentials)
+		s.unregisterRunner()
 		logrus.Fatalf("RECEIVED SIGNAL: %v", signal)
 	}()
 
@@ -481,12 +480,20 @@ func (s *RegisterCommand) unregisterRunner() func() {
 		// De-register runner on panic
 		if r := recover(); r != nil {
 			if s.registered {
-				s.network.UnregisterRunner(s.RunnerCredentials)
+				s.unregisterRunner()
 			}
 
 			// pass panic to next defer
 			panic(r)
 		}
+	}
+}
+
+func (s *RegisterCommand) unregisterRunner() {
+	if s.tokenIsRunnerToken() {
+		s.network.UnregisterRunnerManager(s.RunnerCredentials, s.SystemIDState.GetSystemID())
+	} else {
+		s.network.UnregisterRunner(s.RunnerCredentials)
 	}
 }
 
@@ -504,7 +511,7 @@ func (s *RegisterCommand) mergeTemplate() {
 }
 
 func (s *RegisterCommand) tokenIsRunnerToken() bool {
-	return strings.HasPrefix(s.Token, network.CreatedRunnerTokenPrefix)
+	return network.TokenIsCreatedRunnerToken(s.Token)
 }
 
 func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
