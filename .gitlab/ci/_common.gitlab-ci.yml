@@ -41,7 +41,7 @@ variables:
   # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
   UBUNTU_VERSION: "20.04"
   # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.7-.+/
-  UBI_FIPS_VERSION: "8.7-1085"
+  UBI_FIPS_VERSION: "8.7-1107"
 
 default:
   image: $CI_IMAGE
