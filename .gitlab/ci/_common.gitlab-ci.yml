@@ -8,7 +8,7 @@ variables:
   FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
-  DOCKER_VERSION: 20.10.24
+  DOCKER_VERSION: 23.0.5
   DOCKER_MACHINE_VERSION: "v0.16.2-gitlab.21"
   BUILDX_VERSION: 0.10.4
   KUBECTL_VERSION: 1.23.0
