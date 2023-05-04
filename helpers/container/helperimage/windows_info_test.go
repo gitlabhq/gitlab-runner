@@ -45,22 +45,6 @@ func Test_windowsInfo_create(t *testing.T) {
 				expectedErr: nil,
 			},
 			{
-				kernelVersion: "10.0 19041 (19041.1.amd64fre.vb_release.191206-1406)",
-				expectedInfo: Info{
-					Architecture: windowsSupportedArchitecture,
-					Name:         GitLabRegistryName,
-					Tag: fmt.Sprintf(
-						"%s-%s-%s",
-						windowsSupportedArchitecture,
-						revision,
-						baseImage2004,
-					),
-					IsSupportingLocalImport: false,
-					Cmd:                     expectedPowershellCmdLine,
-				},
-				expectedErr: nil,
-			},
-			{
 				kernelVersion: "10.0 20348 (20348.1.amd64fre.fe_release.210507-1500)",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
@@ -77,7 +61,7 @@ func Test_windowsInfo_create(t *testing.T) {
 				expectedErr: nil,
 			},
 			{
-				kernelVersion: "10.0.19042",
+				kernelVersion: "10.0.20348",
 				expectedInfo: Info{
 					Architecture: windowsSupportedArchitecture,
 					Name:         GitLabRegistryName,
@@ -85,7 +69,7 @@ func Test_windowsInfo_create(t *testing.T) {
 						"%s-%s-%s",
 						windowsSupportedArchitecture,
 						revision,
-						baseImage20H2,
+						baseImage21H2,
 					),
 					IsSupportingLocalImport: false,
 					Cmd:                     expectedPowershellCmdLine,

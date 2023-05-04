@@ -998,10 +998,8 @@ Docker executor:
 GitLab Runner only supports the following versions of Windows which
 follows our [support lifecycle for Windows](../install/windows.md#windows-version-support-policy):
 
-- Windows Server 21H1/LTSC2022.
-- Windows Server 20H2.
-- Windows Server 2004.
-- Windows Server 1809.
+- Windows Server 2022 LTSC (21H2)
+- Windows Server 2019 LTSC (1809)
 
 For future Windows Server versions, we have a
 [future version support policy](../install/windows.md#windows-version-support-policy).
@@ -1012,10 +1010,6 @@ be used:
 
 - `mcr.microsoft.com/windows/servercore:ltsc2022`
 - `mcr.microsoft.com/windows/servercore:ltsc2022-amd64`
-- `mcr.microsoft.com/windows/servercore:20H2`
-- `mcr.microsoft.com/windows/servercore:20H2-amd64`
-- `mcr.microsoft.com/windows/servercore:2004`
-- `mcr.microsoft.com/windows/servercore:2004-amd64`
 - `mcr.microsoft.com/windows/servercore:1809`
 - `mcr.microsoft.com/windows/servercore:1809-amd64`
 - `mcr.microsoft.com/windows/servercore:ltsc2019`

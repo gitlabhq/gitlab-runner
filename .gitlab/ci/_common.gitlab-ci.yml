@@ -146,40 +146,6 @@ default:
   variables:
     WINDOWS_VERSION: nanoserver1809
 
-.windows2004_variables:
-  variables:
-    WINDOWS_VERSION: servercore2004
-
-.windows2004:
-  extends:
-  - .windows2004_variables
-  tags:
-  - windows
-  - windows-2004
-
-.windows2004_nano:
-  extends:
-  - .windows2004
-  variables:
-    WINDOWS_VERSION: nanoserver2004
-
-.windows20H2_variables:
-  variables:
-    WINDOWS_VERSION: servercore20H2
-
-.windows20H2:
-  extends:
-  - .windows20H2_variables
-  tags:
-  - windows
-  - windows-20h2
-
-.windows20H2_nano:
-  extends:
-  - .windows20H2
-  variables:
-    WINDOWS_VERSION: nanoserver20H2
-
 .windows21H2_variables:
   variables:
     WINDOWS_VERSION: servercore21H2

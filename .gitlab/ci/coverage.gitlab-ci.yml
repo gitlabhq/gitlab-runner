@@ -11,16 +11,12 @@ test coverage report:
   - unit test
   - integration test
   - windows 1809 integration tests
-  - windows 2004 integration tests
-  - windows 20H2 integration tests
   - windows 21H2 integration tests
   - windows 1809 unit tests
   - windows 21H2 unit tests
   script:
   - make cobertura_report
   - splitic junit-check -quarantined ci/.test-failures.servercore1809.txt .splitic/junit_servercore1809_*.xml
-  - splitic junit-check -quarantined ci/.test-failures.servercore2004.txt .splitic/junit_servercore2004_*.xml
-  - splitic junit-check -quarantined ci/.test-failures.servercore20H2.txt .splitic/junit_servercore20H2_*.xml
   - splitic junit-check -quarantined ci/.test-failures.servercore21H2.txt .splitic/junit_servercore21H2_*.xml
   artifacts:
     reports:

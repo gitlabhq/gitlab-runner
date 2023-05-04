@@ -43,8 +43,7 @@ var windowsImage string
 var systemIDState = common.NewSystemIDState()
 
 var windowsDockerImageTagMappings = map[string]string{
-	windows.V20H2: "20H2",
-	windows.V21H1: "ltsc2022",
+	windows.V1809: "ltsc2019",
 	windows.V21H2: "ltsc2022",
 }
 
