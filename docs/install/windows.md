@@ -113,7 +113,7 @@ requirements, because containers have to match the version of the host
 OS. See the [list of supported Windows containers](../executors/docker.md#supported-windows-versions)
 for more information.
 
-GitLab provides Windows operating system Runner images until the OS EOL (End-Of-Life) date. After the EOL date of the Windows OS, GitLab stops releasing runner images with the EOL Windows OS version. 
+GitLab provides Windows operating system runner images until the EOL (End-Of-Life) date for the operating system. After the EOL date of the Windows OS, GitLab stops releasing runner images with the EOL Windows OS version.
 
 The EOL date for a Windows OS version will not necessarily align with a GitLab major release; therefore, we will typically stop releasing an EOL image in a GitLab minor release. A removal notice will be included in the release post of the GitLab version in which we stopped publishing the image with the EOL Windows version.
 
