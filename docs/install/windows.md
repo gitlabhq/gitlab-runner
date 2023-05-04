@@ -92,8 +92,8 @@ rmdir /s GitLab-Runner
 
 ## Windows version support policy
 
-We follow the same lifecycle policy as Microsoft
-[Servicing Channels](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels).
+GitLab officially supports LTS versions of Microsoft Windows operating systems and so we follow the Microsoft
+[Servicing Channels](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels) lifecycle policy.
 
 This means that we support:
 
@@ -113,14 +113,9 @@ requirements, because containers have to match the version of the host
 OS. See the [list of supported Windows containers](../executors/docker.md#supported-windows-versions)
 for more information.
 
-After a Windows version no longer receives mainstream support from
-Microsoft, we officially [deprecate the version](https://about.gitlab.com/handbook/product/#deprecated) and
-remove it in the next major change. For example, in 12.x we started
-supporting [`Windows 1803`](https://learn.microsoft.com/en-us/lifecycle/products/?alpha=1803)
-because it came out on `2018-04-30`. Mainstream support ended on
-`2019-11-12`, so we deprecated `Windows 1803` in 12.x and it was
-[removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/6553) in
-GitLab 13.0.
+GitLab provides Windows operating system Runner images until the OS EOL (End-Of-Life) date. After the EOL date of the Windows OS, GitLab stops releasing runner images with the EOL Windows OS version. 
+
+The EOL date for a Windows OS version will not necessarily align with a GitLab major release; therefore, we will typically stop releasing an EOL image in a GitLab minor release. A removal notice will be included in the release post of the GitLab version in which we stopped publishing the image with the EOL Windows versio
 
 As a single source of truth we use
 <https://learn.microsoft.com/en-us/lifecycle/products/> which specifies
@@ -133,7 +128,6 @@ date:
 |-------------------------------------|-------------------------------------|
 | Windows 10 1809/2019                | January 2024                        |
 | Windows Server Datacenter 1809/2019 | January 2024                        |
-| Windows Server Datacenter 1903      | December 2020                       |
 
 ### Future releases
 
