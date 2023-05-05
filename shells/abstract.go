@@ -49,32 +49,34 @@ func (b *AbstractShell) writeCdBuildDir(w ShellWriter, info common.ShellScriptIn
 	w.Cd(info.Build.FullProjectDir())
 }
 
-func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (key, file string) {
+func (b *AbstractShell) cacheFile(build *common.Build, userKey string) (string, string, error) {
 	if build.CacheDir == "" {
-		return
+		return "", "", fmt.Errorf("unset cache directory")
 	}
 
 	// Deduce cache key
-	key = path.Join(build.JobInfo.Name, build.GitInfo.Ref)
+	key := path.Join(build.JobInfo.Name, build.GitInfo.Ref)
 	if userKey != "" {
 		key = build.GetAllVariables().ExpandValue(userKey)
 	}
 
 	// Ignore cache without the key
 	if key == "" {
-		return
+		return "", "", fmt.Errorf("empty cache key")
 	}
 
-	file = path.Join(build.CacheDir, key, "cache.zip")
+	file := path.Join(build.CacheDir, key, "cache.zip")
 	if build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver) {
-		return key, file
+		return key, file, nil
 	}
 
 	file, err := filepath.Rel(build.BuildDir, file)
 	if err != nil {
-		return "", ""
+		return "", "", fmt.Errorf("inability to make the cache file path relative to the build directory" +
+			" (is the build directory absolute?)")
 	}
-	return
+
+	return key, file, nil
 }
 
 func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, action string, f func()) {
@@ -112,9 +114,9 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 		skipRestoreCache = false
 
 		// Skip extraction if no cache is defined
-		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
-		if cacheKey == "" {
-			w.Noticef("Skipping cache extraction due to empty cache key")
+		cacheKey, cacheFile, err := b.cacheFile(info.Build, cacheOptions.Key)
+		if err != nil {
+			w.Noticef("Skipping cache extraction due to %v", err)
 			continue
 		}
 
@@ -700,9 +702,9 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 		skipArchiveCache = false
 
 		// Skip archiving if no cache is defined
-		cacheKey, cacheFile := b.cacheFile(info.Build, cacheOptions.Key)
-		if cacheKey == "" {
-			w.Noticef("Skipping cache archiving due to empty cache key")
+		cacheKey, cacheFile, err := b.cacheFile(info.Build, cacheOptions.Key)
+		if err != nil {
+			w.Noticef("Skipping cache archiving due to %v", err)
 			continue
 		}
 
