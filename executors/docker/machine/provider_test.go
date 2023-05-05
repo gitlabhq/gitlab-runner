@@ -239,7 +239,7 @@ func testMachineProvider(machine ...string) (*machineProvider, *testMachine) {
 		Removed:  make(chan bool, 10),
 		Stopped:  make(chan bool, 10),
 	}
-	p := newMachineProvider("docker+machine", "docker")
+	p := newMachineProvider()
 	p.machine = t
 	return p, t
 }
@@ -346,7 +346,7 @@ func TestMachineReuse(t *testing.T) {
 		},
 	}
 
-	p := newMachineProvider("docker+machine", "docker")
+	p := newMachineProvider()
 
 	machineMock := &docker.MockMachine{}
 	defer machineMock.AssertExpectations(t)
@@ -405,7 +405,7 @@ func TestMachineReuseWithContention(t *testing.T) {
 		},
 	}
 
-	p := newMachineProvider("docker+machine", "docker")
+	p := newMachineProvider()
 
 	machineMock := &docker.MockMachine{}
 	defer machineMock.AssertExpectations(t)

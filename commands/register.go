@@ -351,13 +351,6 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.Docker = docker
 			s.askDocker()
 		},
-		"docker-ssh+machine": func() {
-			s.Machine = machine
-			s.Docker = docker
-			s.SSH = ssh
-			s.askDocker()
-			s.askSSHLogin()
-		},
 		"docker": func() {
 			s.Docker = docker
 			s.askDocker()
@@ -369,12 +362,6 @@ func (s *RegisterCommand) askExecutorOptions() {
 
 			s.Docker = docker
 			s.askDockerWindows()
-		},
-		"docker-ssh": func() {
-			s.Docker = docker
-			s.SSH = ssh
-			s.askDocker()
-			s.askSSHLogin()
 		},
 		"ssh": func() {
 			s.SSH = ssh

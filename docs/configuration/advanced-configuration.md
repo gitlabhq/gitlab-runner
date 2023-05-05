@@ -245,12 +245,10 @@ The following executors are available.
 | `shell` |  | Local shell. The default executor. |
 | `docker` | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) | A Docker container. |
 | `docker-windows` | `[runners.docker]` and [Docker Engine](https://docs.docker.com/engine/) | A Windows Docker container. |
-| `docker-ssh` | `[runners.docker]`, `[runners.ssh]`, and  [Docker Engine](https://docs.docker.com/engine/) | A Docker container, but connect with SSH.  **The Docker container runs on the local machine. This setting changes how the commands are run inside that container. If you want to run Docker commands on an external machine, change the  `host`  parameter in the  `runners.docker`  section.** |
 | `ssh` | `[runners.ssh]` | SSH, remotely. |
 | `parallels` | `[runners.parallels]` and `[runners.ssh]` | Parallels VM, but connect with SSH. |
 | `virtualbox` | `[runners.virtualbox]` and `[runners.ssh]` | VirtualBox VM, but connect with SSH. |
 | `docker+machine` | `[runners.docker]` and `[runners.machine]` | Like `docker`, but use [auto-scaled Docker machines](autoscale.md). |
-| `docker-ssh+machine` | `[runners.docker]` and `[runners.machine]` | Like `docker-ssh`, but use [auto-scaled Docker machines](autoscale.md). |
 | `kubernetes` | `[runners.kubernetes]` | Kubernetes pods. |
 
 ## The shells
@@ -577,7 +575,7 @@ The following parameters define the SSH connection.
 
 | Parameter  | Description |
 | ---------- | ----------- |
-| `host`     | Where to connect. Overridden when you use `docker-ssh`. |
+| `host`     | Where to connect. |
 | `port`     | Port. Default is `22`. |
 | `user`     | Username. |
 | `password` | Password. |
@@ -1228,8 +1226,8 @@ which contains PowerShell Core, is published with the `gitlab/gitlab-runner-help
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#custom-build-directories) parameters.
 
 This feature, if not configured explicitly, is
-enabled by default for `kubernetes`, `docker`, `docker-ssh`, `docker+machine`,
-and `docker-ssh+machine` executors. For all other executors, it is disabled by default.
+enabled by default for `kubernetes`, `docker` and `docker+machine`
+executors. For all other executors, it is disabled by default.
 
 This feature requires that `GIT_CLONE_PATH` is in a path defined
 in `runners.builds_dir`. To use the `builds_dir`, use the
