@@ -10,12 +10,6 @@ const (
 	// V1809 is the Windows version that is 1809 and also known as Windows 2019
 	// ltsc.
 	V1809 = "1809"
-	// V2004 is the Windows version that is 2004 sac.
-	V2004 = "2004"
-	// V20H2 is the Windows version that is 2009 sac.
-	V20H2 = "2009"
-	// V21H1 is the Windows version that is 21H1 sac.
-	V21H1 = "21H1"
 	// V21H2 is the Windows version that is 21H2 also known as Windows 2022 LTSC.
 	V21H2 = "21H2"
 )
@@ -26,8 +20,6 @@ var supportedWindowsBuilds = map[string]string{
 	// Windows server versions: https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions#Server_versions
 	// Compatibility: https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility#windows-server-host-os-compatibility
 	"10.0.17763": V1809,
-	"10.0.19041": V2004,
-	"10.0.19042": V20H2,
 	"10.0.20348": V21H2,
 
 	// Windows client versions: https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions#Personal_computer_versions

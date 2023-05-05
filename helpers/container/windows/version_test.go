@@ -20,11 +20,6 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
-			kernelVersion:   "10.0 19041 (19041.1.amd64fre.vb_release.191206-1406)",
-			expectedVersion: V2004,
-			expectedErr:     nil,
-		},
-		{
 			kernelVersion:   "10.0 20348 (20348.1.amd64fre.fe_release.210507-1500)",
 			expectedVersion: V21H2,
 			expectedErr:     nil,
@@ -35,13 +30,8 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
-			kernelVersion:   "10.0.19041",
-			expectedVersion: V2004,
-			expectedErr:     nil,
-		},
-		{
-			kernelVersion:   "10.0.19042",
-			expectedVersion: V20H2,
+			kernelVersion:   "10.0.20348",
+			expectedVersion: V21H2,
 			expectedErr:     nil,
 		},
 		{

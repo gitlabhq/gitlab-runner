@@ -1121,7 +1121,7 @@ so if process isolation is used, you must also provide the specific windows buil
     [runners.kubernetes.node_selector]
       "kubernetes.io/arch" = "amd64"
       "kubernetes.io/os" = "windows"
-      "node.kubernetes.io/windows-build" = "10.0.19041"
+      "node.kubernetes.io/windows-build" = "10.0.20348"
 ```
 
 ## Define a list of node affinities

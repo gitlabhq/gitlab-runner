@@ -1170,7 +1170,7 @@ func TestPrepare(t *testing.T) {
 	os := ""
 	nodeSelector := map[string]string{}
 	if runtime.GOOS == helperimage.OSTypeWindows {
-		os = "10.0.19041"
+		os = "10.0.20348"
 		osType = helperimage.OSTypeWindows
 		nodeSelector = map[string]string{
 			api.LabelArchStable:           "amd64",
@@ -1807,7 +1807,7 @@ func TestPrepare(t *testing.T) {
 						NodeSelector: map[string]string{
 							api.LabelArchStable:           "amd64",
 							api.LabelOSStable:             "windows",
-							nodeSelectorWindowsBuildLabel: "10.0.19041",
+							nodeSelectorWindowsBuildLabel: "10.0.20348",
 						},
 					},
 					Shell: "pwsh",
@@ -1832,7 +1832,7 @@ func TestPrepare(t *testing.T) {
 					nodeSelector: map[string]string{
 						api.LabelArchStable:           "amd64",
 						api.LabelOSStable:             "windows",
-						nodeSelectorWindowsBuildLabel: "10.0.19041",
+						nodeSelectorWindowsBuildLabel: "10.0.20348",
 					},
 					serviceLimits:   api.ResourceList{},
 					buildLimits:     api.ResourceList{},
@@ -1845,7 +1845,7 @@ func TestPrepare(t *testing.T) {
 					OSType:                  "windows",
 					Architecture:            "x86_64",
 					Name:                    helperimage.GitLabRegistryName,
-					Tag:                     fmt.Sprintf("x86_64-%s-servercore2004", helperImageTag),
+					Tag:                     fmt.Sprintf("x86_64-%s-servercore21H2", helperImageTag),
 					IsSupportingLocalImport: false,
 					Cmd: []string{
 						"pwsh",

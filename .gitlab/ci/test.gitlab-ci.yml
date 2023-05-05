@@ -321,36 +321,6 @@ windows 1809 integration tests:
   - job: 'stable servercore1809 helper docker images'
     optional: true
 
-windows 2004 integration tests:
-  extends:
-  - .windows integration test
-  - .windows2004
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - 'clone test repo'
-  - 'prepare done'
-  - job: 'development servercore2004 helper docker images'
-    optional: true
-  - job: 'bleeding edge servercore2004 helper docker images'
-    optional: true
-  - job: 'stable servercore2004 helper docker images'
-    optional: true
-
-windows 20H2 integration tests:
-  extends:
-  - .windows integration test
-  - .windows20H2
-  - .rules:merge_request_pipelines:no_docs:no-community-mr
-  needs:
-  - 'clone test repo'
-  - 'prepare done'
-  - job: 'development servercore20H2 helper docker images'
-    optional: true
-  - job: 'bleeding edge servercore20H2 helper docker images'
-    optional: true
-  - job: 'stable servercore20H2 helper docker images'
-    optional: true
-
 windows 21H2 integration tests:
   extends:
   - .windows integration test
