@@ -142,17 +142,19 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	cacheKey string,
 	cacheOptions common.Cache,
 ) {
-	allCacheKeys := append(
-		cacheOptions.FallbackKeys,
-		info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY"),
-	)
 	allowedCacheKeys := []string{cacheKey}
 
-	for _, cacheKey := range allCacheKeys {
-		if cacheKey != "" && !strings.HasSuffix(cacheKey, "-protected") {
-			// The `-protected` suffix is reserved for protected refs, so we disallow it from user-specified values.
+	for _, cacheKey := range cacheOptions.FallbackKeys {
+		if cacheKey != "" {
 			allowedCacheKeys = append(allowedCacheKeys, cacheKey)
 		}
+	}
+
+	defaultFallbackCacheKey := info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY")
+
+	if defaultFallbackCacheKey != "" && !strings.HasSuffix(defaultFallbackCacheKey, "-protected") {
+		// The `-protected` suffix is reserved for protected refs, so we disallow it in the global variable.
+		allowedCacheKeys = append(allowedCacheKeys, defaultFallbackCacheKey)
 	}
 
 	// Execute cache-extractor command. Failure is not fatal.
@@ -167,24 +169,27 @@ func (b *AbstractShell) addExtractCacheCommand(
 	cacheFile string,
 	cacheKeys []string,
 ) {
-	for _, cacheKey := range cacheKeys {
-		args := []string{
-			"cache-extractor",
-			"--file", cacheFile,
-			"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
-		}
-
-		if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
-			args = append(args, "--url", url.String())
-		}
-
-		w.Noticef("Checking cache for %s...", cacheKey)
-		w.IfCmdWithOutput(info.RunnerCommand, args...)
-		w.Noticef("Successfully extracted cache")
-		w.Else()
-		w.Warningf("Failed to extract cache")
-		w.EndIf()
+	cacheKey := cacheKeys[0]
+	args := []string{
+		"cache-extractor",
+		"--file", cacheFile,
+		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
+
+	if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
+		args = append(args, "--url", url.String())
+	}
+
+	w.Noticef("Checking cache for %s...", cacheKey)
+	w.IfCmdWithOutput(info.RunnerCommand, args...)
+	w.Noticef("Successfully extracted cache")
+	w.Else()
+	w.Warningf("Failed to extract cache")
+	// We check that there is another key than the one we just used
+	if len(cacheKeys) > 1 {
+		b.addExtractCacheCommand(w, info, cacheFile, cacheKeys[1:])
+	}
+	w.EndIf()
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {
