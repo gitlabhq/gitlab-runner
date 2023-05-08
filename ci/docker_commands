@@ -6,6 +6,11 @@ DOCKER_CERT_PATH=${DOCKER_CERT_PATH:-}
 docker_buildx_ctx_name='docker-buildx'
 docker_builder_name='buildx-builder'
 
+_die() {
+    echo "${@}" >&2
+    exit 1
+}
+
 _docker() {
     docker "${@}"
 }
@@ -20,12 +25,24 @@ logout() {
 
 import() {
     echo -e "\033[1mImporting image: \033[32m${2}\033[0m"
-    _docker import "${1}" "${2}"
+    local -a args
+    if [[ -n "${3:-}" ]]; then
+        args+=("--platform=${3}")
+    fi
+    args+=("${1}" "${2}")
+    if ! _docker import "${args[@]}"; then
+        _die "could not import ${2}"
+    fi
+    inspected_platform=$(_docker inspect ${2} -f '{{.Os}}/{{.Architecture}}{{if .Variant}}/{{.Variant}}{{end}}')
+    if [[ -n "${3:-}" && "${inspected_platform}" != "${3}" ]]; then
+        _die -e "ERROR: platform mismatch for \033[1;32m${2}\033[0m: "'"'"${inspected_platform}"'"'" != "'"'"$3"'"'""
+    fi
 }
 
 tag() {
     echo -e "\033[1mTagging image: \033[32m${2}\033[0m"
     _docker tag "${1}" "${2}"
+
 }
 
 # Push the image to the registry when the condition is met.
