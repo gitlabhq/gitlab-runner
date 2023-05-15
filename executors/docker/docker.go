@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -1157,28 +1158,53 @@ func (e *executor) addServiceHealthCheckEnvironment(service *types.Container) ([
 			return nil, fmt.Errorf("service %q has no exposed ports", service.Names[0])
 		}
 
-		environment = append(environment, fmt.Sprintf("WAIT_FOR_SERVICE_TCP_PORT=%d", ports[0]))
+		for _, port := range ports {
+			environment = append(environment, fmt.Sprintf("WAIT_FOR_SERVICE_%d_TCP_PORT=%d", port, port))
+		}
 	}
 
 	return environment, nil
 }
 
+//nolint:gocognit
 func (e *executor) getContainerExposedPorts(container *types.Container) ([]int, error) {
-	var ports []int
-
 	inspect, err := e.client.ContainerInspect(e.Context, container.ID)
 	if err != nil {
 		return nil, err
 	}
 
+	for _, env := range inspect.Config.Env {
+		key, val, ok := strings.Cut(env, "=")
+		if !ok {
+			continue
+		}
+
+		if strings.EqualFold(key, "HEALTHCHECK_TCP_PORT") {
+			port, err := strconv.ParseInt(val, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid health check tcp port: %v", val)
+			}
+
+			return []int{int(port)}, nil
+		}
+	}
+
+	// maxPortsCheck is the maximum number of ports that we'll check to see
+	// if a service is running
+	const maxPortsCheck = 20
+
+	var ports []int
 	for port := range inspect.Config.ExposedPorts {
-		start, _, err := port.Range()
+		start, end, err := port.Range()
 		if err == nil && port.Proto() == "tcp" {
-			ports = append(ports, start)
+			for i := start; i <= end && len(ports) < maxPortsCheck; i++ {
+				ports = append(ports, i)
+			}
 		}
 	}
 
 	sort.Ints(ports)
+
 	return ports, nil
 }
 

@@ -534,7 +534,7 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			},
 			expectedEnvironment: []string{
 				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
-				"WAIT_FOR_SERVICE_TCP_PORT=1000",
+				"WAIT_FOR_SERVICE_1000_TCP_PORT=1000",
 			},
 		},
 		"get port from many": {
@@ -544,10 +544,12 @@ func TestAddServiceHealthCheck(t *testing.T) {
 					Return(types.ContainerJSON{
 						Config: &container.Config{
 							ExposedPorts: nat.PortSet{
-								"1000/tcp": {},
-								"500/udp":  {},
-								"600/tcp":  {},
-								"1500/tcp": {},
+								"1000/tcp":  {},
+								"500/udp":   {},
+								"600/tcp":   {},
+								"1500/tcp":  {},
+								"1600-1601": {},
+								"1700-1705": {},
 							},
 						},
 					}, nil).
@@ -555,8 +557,115 @@ func TestAddServiceHealthCheck(t *testing.T) {
 			},
 			expectedEnvironment: []string{
 				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
-				"WAIT_FOR_SERVICE_TCP_PORT=600",
+				"WAIT_FOR_SERVICE_600_TCP_PORT=600",
+				"WAIT_FOR_SERVICE_1000_TCP_PORT=1000",
+				"WAIT_FOR_SERVICE_1500_TCP_PORT=1500",
+				"WAIT_FOR_SERVICE_1600_TCP_PORT=1600",
+				"WAIT_FOR_SERVICE_1601_TCP_PORT=1601",
+				"WAIT_FOR_SERVICE_1700_TCP_PORT=1700",
+				"WAIT_FOR_SERVICE_1701_TCP_PORT=1701",
+				"WAIT_FOR_SERVICE_1702_TCP_PORT=1702",
+				"WAIT_FOR_SERVICE_1703_TCP_PORT=1703",
+				"WAIT_FOR_SERVICE_1704_TCP_PORT=1704",
+				"WAIT_FOR_SERVICE_1705_TCP_PORT=1705",
 			},
+		},
+		"get port from many (limited to 20)": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{
+						Config: &container.Config{
+							ExposedPorts: nat.PortSet{
+								"1000-1100": {},
+							},
+						},
+					}, nil).
+					Once()
+			},
+			expectedEnvironment: []string{
+				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
+				"WAIT_FOR_SERVICE_1000_TCP_PORT=1000",
+				"WAIT_FOR_SERVICE_1001_TCP_PORT=1001",
+				"WAIT_FOR_SERVICE_1002_TCP_PORT=1002",
+				"WAIT_FOR_SERVICE_1003_TCP_PORT=1003",
+				"WAIT_FOR_SERVICE_1004_TCP_PORT=1004",
+				"WAIT_FOR_SERVICE_1005_TCP_PORT=1005",
+				"WAIT_FOR_SERVICE_1006_TCP_PORT=1006",
+				"WAIT_FOR_SERVICE_1007_TCP_PORT=1007",
+				"WAIT_FOR_SERVICE_1008_TCP_PORT=1008",
+				"WAIT_FOR_SERVICE_1009_TCP_PORT=1009",
+				"WAIT_FOR_SERVICE_1010_TCP_PORT=1010",
+				"WAIT_FOR_SERVICE_1011_TCP_PORT=1011",
+				"WAIT_FOR_SERVICE_1012_TCP_PORT=1012",
+				"WAIT_FOR_SERVICE_1013_TCP_PORT=1013",
+				"WAIT_FOR_SERVICE_1014_TCP_PORT=1014",
+				"WAIT_FOR_SERVICE_1015_TCP_PORT=1015",
+				"WAIT_FOR_SERVICE_1016_TCP_PORT=1016",
+				"WAIT_FOR_SERVICE_1017_TCP_PORT=1017",
+				"WAIT_FOR_SERVICE_1018_TCP_PORT=1018",
+				"WAIT_FOR_SERVICE_1019_TCP_PORT=1019",
+			},
+		},
+		"get port from container variable": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{
+						Config: &container.Config{
+							ExposedPorts: nat.PortSet{
+								"1000/tcp": {},
+							},
+							Env: []string{
+								"HEALTHCHECK_TCP_PORT=2000",
+							},
+						},
+					}, nil).
+					Once()
+			},
+			expectedEnvironment: []string{
+				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
+				"WAIT_FOR_SERVICE_2000_TCP_PORT=2000",
+			},
+		},
+		"get port from container variable - case insensitive": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{
+						Config: &container.Config{
+							ExposedPorts: nat.PortSet{
+								"1000/tcp": {},
+							},
+							Env: []string{
+								"healthcheck_TCP_PORT=2000",
+							},
+						},
+					}, nil).
+					Once()
+			},
+			expectedEnvironment: []string{
+				"WAIT_FOR_SERVICE_TCP_ADDR=000000000000",
+				"WAIT_FOR_SERVICE_2000_TCP_PORT=2000",
+			},
+		},
+		"get port from container variable (invalid)": {
+			networkMode: "test",
+			dockerClientAssertions: func(c *docker.MockClient) {
+				c.On("ContainerInspect", mock.Anything, mock.Anything).
+					Return(types.ContainerJSON{
+						Config: &container.Config{
+							ExposedPorts: nat.PortSet{
+								"1000/tcp": {},
+							},
+							Env: []string{
+								"HEALTHCHECK_TCP_PORT=hello",
+							},
+						},
+					}, nil).
+					Once()
+			},
+			expectedErr: fmt.Errorf("get container exposed ports: invalid health check tcp port: %v", "hello"),
 		},
 		"no ports defined": {
 			networkMode: "test",
