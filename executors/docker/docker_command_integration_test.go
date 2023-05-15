@@ -1048,6 +1048,8 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 		serviceStarted  bool
 		networkPerBuild string
 		skip            bool
+		port            int
+		variables       common.JobVariables
 	}{
 		"successful service (FF_NETWORK_PER_BUILD=false)": {
 			command:         []string{"server"},
@@ -1060,6 +1062,22 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			serviceStarted:  true,
 			networkPerBuild: "true",
 			skip:            false,
+		},
+		"successful service explicit port (FF_NETWORK_PER_BUILD=false)": {
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  true,
+			networkPerBuild: "false",
+			skip:            runtime.GOOS == "windows",
+			port:            8888,
+			variables:       []common.JobVariable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
+		},
+		"successful service explicit port (FF_NETWORK_PER_BUILD=true)": {
+			command:         []string{"server", "--addr", ":8888"},
+			serviceStarted:  true,
+			networkPerBuild: "true",
+			skip:            false,
+			port:            8888,
+			variables:       []common.JobVariable{{Key: "HEALTHCHECK_TCP_PORT", Value: "8888"}},
 		},
 		"failed service (FF_NETWORK_PER_BUILD=false)": {
 			command:         []string{"server", "--addr", ":8888"},
@@ -1081,10 +1099,14 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 				t.Skipf("OS %q does not support 'link' networking", runtime.GOOS)
 			}
 
+			if tc.port == 0 {
+				tc.port = 80
+			}
+
 			resp, err := common.GetRemoteBuildResponse(
-				"liveness client db",
-				"liveness client registry.gitlab.com__gitlab-org__ci-cd__tests__liveness",
-				"liveness client registry.gitlab.com-gitlab-org-ci-cd-tests-liveness",
+				fmt.Sprintf("liveness client db:%d", tc.port),
+				fmt.Sprintf("liveness client registry.gitlab.com__gitlab-org__ci-cd__tests__liveness:%d", tc.port),
+				fmt.Sprintf("liveness client registry.gitlab.com-gitlab-org-ci-cd-tests-liveness:%d", tc.port),
 			)
 			require.NoError(t, err)
 
@@ -1112,9 +1134,10 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			}
 
 			build.Services = append(build.Services, common.Image{
-				Name:    common.TestLivenessImage,
-				Alias:   "db",
-				Command: tc.command,
+				Name:      common.TestLivenessImage,
+				Alias:     "db",
+				Command:   tc.command,
+				Variables: tc.variables,
 			})
 
 			build.Variables = append(build.Variables, common.JobVariable{

@@ -406,9 +406,24 @@ For more information about using different services see:
 
 ### How GitLab Runner performs the services health check
 
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4079) multiple port checks in GitLab 16.0.
+
 After the service starts, GitLab Runner waits for the service to
-respond. The Docker executor tries to open a TCP connection to
-the first exposed service in the service container.
+respond. The Docker executor tries to open a TCP connection to the
+exposed service port in the service container.
+
+- In GitLab 15.11 and earlier, only the first exposed port is checked. 
+- In GitLab 16.0 and later, the first 20 exposed ports are checked.
+
+The `HEALTHCHECK_TCP_PORT` service variable can be used to perform the health check on a specific port:
+
+```yaml
+job:
+  services:
+    - name: mongo
+      variables:
+        HEALTHCHECK_TCP_PORT: "27017"
+```
 
 To see how this is implemented, use the health check [Go command](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/commands/helpers/health_check.go).
 
