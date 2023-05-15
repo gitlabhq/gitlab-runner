@@ -6,11 +6,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # GitLab Runner Helm Chart **(FREE)**
 
-NOTE:
-This chart has been tested on Google Kubernetes Engine and Azure Kubernetes Service.
-Other Kubernetes installations may work as well, if not please
-[open an issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues).
-
 The official way of deploying a GitLab Runner instance into your
 Kubernetes cluster is by using the `gitlab-runner` Helm chart.
 
