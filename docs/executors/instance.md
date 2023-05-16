@@ -23,24 +23,38 @@ intended for isolated and short-lived workloads such as CI jobs. Nesting is only
 
 ## Prepare the environment
 
-To prepare the environment, you must:
+To prepare your environment for autoscaling, first select a fleeting plugin that will enable scaling for your target
+platform.
 
-1. Install a fleeting plugin.
-1. Create an Amazon Machine Image.
+The AWS and GCP fleeting plugins are an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
-### Install a fleeting plugin
+You can find our other official plugins [here](https://gitlab.com/gitlab-org/fleeting).
 
-To prepare your environment for autoscaling, install the AWS fleeting plugin. The fleeting plugin
-targets the platform that you want to autoscale on. The AWS fleeting plugin is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+### Installation
+
+::Tabs
+
+:::TabTitle AWS
 
 To install the AWS plugin:
 
 1. [Download the binary](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases) for your host platform.
-1. Ensure that the plugin binaries are discoverable through the `PATH` environment variable.
+1. Ensure that the plugin binaries are discoverable through the PATH environment variable.
 
-### Create an Amazon Machine Image
+:::TabTitle GCP
 
-Create an Amazon Machine Image (AMI) that includes the following:
+To install the GCP plugin:
+
+1. [Download the binary](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases) for your host platform.
+1. Ensure that the plugin binaries are discoverable through the PATH environment variable.
+
+::EndTabs
+
+### Create CI job image
+
+The instances that fleeting provisions are used for each job's environment. 
+
+An Amazon Machine Image (AMI) or GCP Custom Image should include the following:
 
 - Dependencies required by the CI jobs you plan to run
 - Git
@@ -58,6 +72,10 @@ To configure the instance executor for autoscaling, update the following section
 - [`[runners.instance]`](../configuration/advanced-configuration.md#the-runnersinstance-section-alpha)
 
 ## Examples
+
+::Tabs
+
+:::TabTitle AWS
 
 ### 1 job per instance using an AWS Autoscaling group
 
@@ -252,3 +270,128 @@ concurrent = 8
       password = "nested-vm-password"
       timeout  = "20m"
 ```
+
+:::TabTitle GCP
+
+### 1 job per instance using an GCP Instance group
+
+Prerequisites:
+
+- A custom image with at least `git` and GitLab Runner installed.
+- An Instance group. For the "Autoscaling mode" select "do not autoscale", as Runner handles the scaling.
+- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
+
+This configuration supports:
+
+- A capacity per instance of 1
+- A use count of 1
+- An idle scale of 5
+- An idle time of 20 minutes
+- A maximum instance count of 10
+
+By setting the capacity and use count to both 1, each job is given a secure ephemeral instance that cannot be
+affected by other jobs. As soon the job is complete the instance it was executed on is immediately deleted.
+
+With an idle scale of 5, the runner keeps 5 whole instances
+available for future demand (because the capacity per instance is 1). These instances stay for at least 20 minutes.
+
+The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
+
+```toml
+concurrent = 10
+
+[[runners]]
+  name = "instance autoscaler example"
+  url = "https://gitlab.com"
+  token = "<token>"
+  shell = "sh"
+
+  executor = "instance"
+
+  # Autoscaler config
+  [runners.autoscaler]
+    plugin = "fleeting-plugin-googlecompute"
+
+    capacity_per_instance = 1
+    max_use_count = 1
+    max_instances = 10
+
+    [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
+      name             = "my-linux-instance-group" # GCP Instance Group name
+      project          = "my-gcp-project"
+      zone             = "europe-west1"
+      credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
+
+    [runners.autoscaler.connector_config]
+      username          = "runner"
+      use_external_addr = true
+
+    [[runners.autoscaler.policy]]
+      idle_count = 5
+      idle_time = "20m0s"
+```
+
+### 5 jobs per instance, unlimited uses, using GCP Instance group
+
+Prerequisites:
+
+- A custom image with at least `git` and GitLab Runner installed.
+- An Instance group. For the "Autoscaling mode" select "do not autoscale", as Runner handles the scaling.
+- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
+
+This configuration supports:
+
+- A capacity per instance of 5
+- An unlimited use count
+- An idle scale of 5
+- An idle time of 20 minutes
+- A maximum instance count of 10
+
+By setting the capacity per instance to 5 and an unlimited use count, each instance concurrently
+executes 5 jobs for the lifetime of the instance.
+
+Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
+can affect the performance of another.
+
+With an idle scale of 5, 1 idle instance is created to accommodate an idle capacity of 5
+(due to the capacity per instance) whenever the in use capacity is lower than 5. Idle instances
+stay for at least 20 minutes.
+
+The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
+
+```toml
+concurrent = 50
+
+[[runners]]
+  name = "instance autoscaler example"
+  url = "https://gitlab.com"
+  token = "<token>"
+  shell = "sh"
+
+  executor = "instance"
+
+  # Autoscaler config
+  [runners.autoscaler]
+    plugin = "fleeting-plugin-googlecompute"
+
+    capacity_per_instance = 5
+    max_use_count = 0
+    max_instances = 10
+
+    [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
+      name             = "my-windows-instance-group" # GCP Instance Group name
+      project          = "my-gcp-project"
+      zone             = "europe-west1"
+      credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
+
+    [runners.autoscaler.connector_config]
+      username          = "Administrator"
+      timeout           = "5m0s"
+      use_external_addr = true
+
+    [[runners.autoscaler.policy]]
+      idle_count = 5
+      idle_time = "20m0s"
+```
+
+::EndTabs
