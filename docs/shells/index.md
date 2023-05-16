@@ -78,8 +78,6 @@ Executors that load shell profiles:
 - [`parallels`](../executors/parallels.md)  (The shell profile of the *target* virtual machine is loaded)
 - [`virtualbox`](../executors/virtualbox.md)  (The shell profile of the *target* virtual machine is loaded)
 - [`ssh`](../executors/ssh.md) (The shell profile of the *target* machine is loaded)
-- [`docker-ssh`](../executors/docker.md#docker-vs-docker-ssh-and-dockermachine-vs-docker-sshmachine) (The shell profile of the *target* machine is loaded)
-- [`docker-ssh+machine`](../executors/docker.md#docker-vs-docker-ssh-and-dockermachine-vs-docker-sshmachine) (The shell profile of the *target* machine is loaded)
 
 ## PowerShell
 

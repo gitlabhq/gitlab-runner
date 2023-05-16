@@ -163,8 +163,5 @@ func (e *machineExecutor) GetMetricsSelector() string {
 }
 
 func init() {
-	common.RegisterExecutorProvider("docker+machine", newMachineProvider("docker+machine", "docker"))
-
-	// TODO: Remove in 16.0. For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29406
-	common.RegisterExecutorProvider("docker-ssh+machine", newMachineProvider("docker-ssh+machine", "docker-ssh"))
+	common.RegisterExecutorProvider("docker+machine", newMachineProvider())
 }

@@ -20,7 +20,7 @@ func TestIfMachineProviderExposesCollectInterface(t *testing.T) {
 }
 
 func TestMachineProviderDeadInterval(t *testing.T) {
-	provider := newMachineProvider("docker_machines", "docker")
+	provider := newMachineProvider()
 	assert.Equal(t, 0, provider.collectDetails().Idle)
 
 	details := provider.machineDetails("test", false)

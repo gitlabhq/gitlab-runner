@@ -98,9 +98,7 @@ func TestAskRunnerOverrideDefaultsForExecutors(t *testing.T) {
 	executors := []string{
 		"kubernetes",
 		"docker+machine",
-		"docker-ssh+machine",
 		"docker",
-		"docker-ssh",
 		"ssh",
 		"custom",
 		"parallels",
@@ -570,15 +568,6 @@ func assertExecutorDefaultValues(t *testing.T, executor string, s *commands.Regi
 		assert.NotNil(t, s.RunnerSettings.Machine)
 		require.NotNil(t, s.RunnerSettings.Docker)
 		assert.Equal(t, "busybox:latest", s.RunnerSettings.Docker.Image)
-	case "docker-ssh":
-		assertDefaultSSHLogin(t, s.RunnerSettings.SSH)
-		require.NotNil(t, s.RunnerSettings.Docker)
-		assert.Equal(t, "busybox:latest", s.RunnerSettings.Docker.Image)
-	case "docker-ssh+machine":
-		assert.NotNil(t, s.RunnerSettings.Machine)
-		assertDefaultSSHLogin(t, s.RunnerSettings.SSH)
-		require.NotNil(t, s.RunnerSettings.Docker)
-		assert.Equal(t, "busybox:latest", s.RunnerSettings.Docker.Image)
 	case "ssh":
 		assertDefaultSSHLogin(t, s.RunnerSettings.SSH)
 		assertDefaultSSHServer(t, s.RunnerSettings.SSH)
@@ -633,15 +622,6 @@ func assertExecutorOverridenValues(t *testing.T, executor string, s *commands.Re
 		assert.NotNil(t, s.RunnerSettings.Machine)
 		require.NotNil(t, s.RunnerSettings.Docker)
 		assert.Equal(t, "nginx:latest", s.RunnerSettings.Docker.Image)
-	case "docker-ssh":
-		assertOverridenSSHLogin(t, s.RunnerSettings.SSH)
-		require.NotNil(t, s.RunnerSettings.Docker)
-		assert.Equal(t, "nginx:latest", s.RunnerSettings.Docker.Image)
-	case "docker-ssh+machine":
-		assert.NotNil(t, s.Machine)
-		assertOverridenSSHLogin(t, s.RunnerSettings.SSH)
-		require.NotNil(t, s.RunnerSettings.Docker)
-		assert.Equal(t, "nginx:latest", s.RunnerSettings.Docker.Image)
 	case "ssh":
 		assertOverridenSSHLogin(t, s.RunnerSettings.SSH)
 		assertOverridenSSHServer(t, s.RunnerSettings.SSH)
@@ -673,17 +653,15 @@ func assertOverridenSSHServer(t *testing.T, sshCfg *ssh.Config) {
 
 func executorAnswers(t *testing.T, executor string) []string {
 	values := map[string][]string{
-		"kubernetes":         {executor},
-		"custom":             {executor},
-		"shell":              {executor},
-		"docker":             {executor, "busybox:latest"},
-		"docker-windows":     {executor, "mcr.microsoft.com/windows/servercore:YYH1"},
-		"docker+machine":     {executor, "busybox:latest"},
-		"docker-ssh":         {executor, "busybox:latest", "user", "password", "/home/user/.ssh/id_rsa"},
-		"docker-ssh+machine": {executor, "busybox:latest", "user", "password", "/home/user/.ssh/id_rsa"},
-		"ssh":                {executor, "gitlab.example.com", "22", "user", "password", "/home/user/.ssh/id_rsa"},
-		"parallels":          {executor, "parallels-vm-name", "gitlab.example.com", "22"},
-		"virtualbox":         {executor, "virtualbox-vm-name", "user", "password", "/home/user/.ssh/id_rsa"},
+		"kubernetes":     {executor},
+		"custom":         {executor},
+		"shell":          {executor},
+		"docker":         {executor, "busybox:latest"},
+		"docker-windows": {executor, "mcr.microsoft.com/windows/servercore:YYH1"},
+		"docker+machine": {executor, "busybox:latest"},
+		"ssh":            {executor, "gitlab.example.com", "22", "user", "password", "/home/user/.ssh/id_rsa"},
+		"parallels":      {executor, "parallels-vm-name", "gitlab.example.com", "22"},
+		"virtualbox":     {executor, "virtualbox-vm-name", "user", "password", "/home/user/.ssh/id_rsa"},
 	}
 
 	answers, ok := values[executor]
@@ -695,17 +673,15 @@ func executorAnswers(t *testing.T, executor string) []string {
 
 func executorOverrideAnswers(t *testing.T, executor string) []string {
 	values := map[string][]string{
-		"kubernetes":         {""},
-		"custom":             {""},
-		"shell":              {""},
-		"docker":             {"nginx:latest"},
-		"docker-windows":     {"mcr.microsoft.com/windows/servercore:YYH2"},
-		"docker+machine":     {"nginx:latest"},
-		"docker-ssh":         {"nginx:latest", "root", "admin", "/root/.ssh/id_rsa"},
-		"docker-ssh+machine": {"nginx:latest", "root", "admin", "/root/.ssh/id_rsa"},
-		"ssh":                {"ssh.gitlab.example.com", "8822", "root", "admin", "/root/.ssh/id_rsa"},
-		"parallels":          {"override-parallels-vm-name", "ssh.gitlab.example.com", "8822"},
-		"virtualbox":         {"override-virtualbox-vm-name", "root", "admin", "/root/.ssh/id_rsa"},
+		"kubernetes":     {""},
+		"custom":         {""},
+		"shell":          {""},
+		"docker":         {"nginx:latest"},
+		"docker-windows": {"mcr.microsoft.com/windows/servercore:YYH2"},
+		"docker+machine": {"nginx:latest"},
+		"ssh":            {"ssh.gitlab.example.com", "8822", "root", "admin", "/root/.ssh/id_rsa"},
+		"parallels":      {"override-parallels-vm-name", "ssh.gitlab.example.com", "8822"},
+		"virtualbox":     {"override-virtualbox-vm-name", "root", "admin", "/root/.ssh/id_rsa"},
 	}
 
 	answers, ok := values[executor]
@@ -723,16 +699,6 @@ func executorCmdLineArgs(t *testing.T, executor string) []string {
 		"docker":         {"--executor", executor, "--docker-image", "busybox:latest"},
 		"docker-windows": {"--executor", executor, "--docker-image", "mcr.microsoft.com/windows/servercore:YYH1"},
 		"docker+machine": {"--executor", executor, "--docker-image", "busybox:latest"},
-		"docker-ssh": {
-			"--executor", executor, "--docker-image", "busybox:latest", "--ssh-user", "user",
-			"--ssh-password", "password",
-			"--ssh-identity-file", "/home/user/.ssh/id_rsa",
-		},
-		"docker-ssh+machine": {
-			"--executor", executor, "--docker-image", "busybox:latest", "--ssh-user", "user",
-			"--ssh-password", "password",
-			"--ssh-identity-file", "/home/user/.ssh/id_rsa",
-		},
 		"ssh": {
 			"--executor", executor, "--ssh-host", "gitlab.example.com", "--ssh-port", "22", "--ssh-user", "user",
 			"--ssh-password", "password", "--ssh-identity-file", "/home/user/.ssh/id_rsa",

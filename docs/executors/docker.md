@@ -941,21 +941,14 @@ This setting is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci
 in the `.gitlab-ci.yml` files of individual projects,
 but only takes effect if specifically the Docker pull fails initially.
 
-## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine)
+<!--- start_remove The following content will be removed on remove_date: '2023-08-22' -->
 
-WARNING:
-Starting with GitLab Runner 10.0, both Docker-SSH and Docker-SSH+machine executors
-are **deprecated** and will be removed in one of the upcoming releases.
+## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine) (removed) **(ULTIMATE SELF)**
 
-We provided a support for a special type of Docker executor, namely Docker-SSH
-(and the autoscaled version: Docker-SSH+Machine). Docker-SSH uses the same logic
-as the Docker executor, but instead of executing the script directly, it uses an
-SSH client to connect to the build container.
+This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/681) in GitLab Runner 10.0
+and [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4060) in 16.0.
 
-Docker-SSH then connects to the SSH server that is running inside the container
-using its internal IP.
-
-This executor is no longer maintained and will be removed in the near future.
+<!--- end_remove -->
 
 ## Use Windows containers
 
