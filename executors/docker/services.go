@@ -40,6 +40,10 @@ func (e *executor) createServices() error {
 
 	e.waitForServices()
 
+	if e.networkMode.UserDefined() != "" {
+		return nil
+	}
+
 	if e.networkMode.IsBridge() || e.networkMode.NetworkName() == "" {
 		e.Debugln("Building service links...")
 		e.links = e.buildServiceLinks(linksMap)
