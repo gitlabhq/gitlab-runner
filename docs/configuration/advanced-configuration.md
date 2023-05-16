@@ -731,6 +731,7 @@ the empty values that the plugin cannot determine.
 | `periods`              | An array of unix-cron formatted strings to denote the period this policy is enabled for. Default: `* * * * *` |
 | `timezone`             | The timezone used when evaluating the unix-cron period. Default: The system's local timezone. |
 | `idle_count`           | The target idle capacity we want to be immediately available for jobs.  |
+| `idle_time`            | The amount of time that an instance can be idle before it is terminated.  |
 | `scale_factor`         | The target idle capacity we want to be immediately available for jobs, on top of the `idle_count`, as a factor of the current in use capacity. Defaults to `0.0`. |
 | `scale_factor_limit`   | The maximum capacity the scale_factor calculation can yield. |
 
