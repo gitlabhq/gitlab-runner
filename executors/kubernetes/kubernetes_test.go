@@ -1898,6 +1898,61 @@ func TestPrepare(t *testing.T) {
 			Error: `prepare helper image: unsupported OSType "freebsd"`,
 		},
 		{
+			Name:         "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+						NodeSelector: map[string]string{
+							api.LabelArchStable: "amd64",
+							api.LabelOSStable:   "linux",
+						},
+						NodeSelectorOverwriteAllowed: ".*",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					Image: common.Image{
+						Name: "test-image",
+					},
+					Variables: []common.JobVariable{
+						{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: api.LabelArchStable + "=arm64"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace: "default",
+					nodeSelector: map[string]string{
+						api.LabelArchStable: "arm64",
+						api.LabelOSStable:   "linux",
+					},
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+				helperImageInfo: helperimage.Info{
+					OSType:                  "linux",
+					Architecture:            "arm64",
+					Name:                    helperimage.GitLabRegistryName,
+					Tag:                     fmt.Sprintf("arm64-%s", helperImageTag),
+					IsSupportingLocalImport: true,
+					Cmd:                     []string{"gitlab-runner-build"},
+				},
+			},
+		},
+		{
 			Name:         "builds dir default",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{

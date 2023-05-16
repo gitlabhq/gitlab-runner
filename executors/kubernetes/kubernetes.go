@@ -341,6 +341,20 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 		}
 	}
 
+	// Also consider node selector overwrites as they may change arch or os
+	if s.configurationOverwrites.nodeSelector != nil {
+		for label, option := range map[string]*string{
+			api.LabelArchStable:           &config.Architecture,
+			api.LabelOSStable:             &config.OSType,
+			nodeSelectorWindowsBuildLabel: &config.KernelVersion,
+		} {
+			value := s.configurationOverwrites.nodeSelector[label]
+			if value != "" {
+				*option = value
+			}
+		}
+	}
+
 	return helperimage.Get(common.REVISION, config)
 }
 
