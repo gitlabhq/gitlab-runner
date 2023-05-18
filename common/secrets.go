@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 //go:generate mockery --name=logger --inpackage
@@ -38,6 +39,8 @@ var (
 	ErrMissingLogger = errors.New("logger not provided")
 
 	ErrMissingSecretResolver = errors.New("no resolver that can handle the secret")
+
+	ErrSecretNotFound = errors.New("secret not found")
 )
 
 func GetSecretResolverRegistry() SecretResolverRegistry {
@@ -63,7 +66,7 @@ func (r *defaultSecretResolverRegistry) GetFor(secret Secret) (SecretResolver, e
 	return nil, ErrMissingSecretResolver
 }
 
-func newSecretsResolver(l logger, registry SecretResolverRegistry) (SecretsResolver, error) {
+func newSecretsResolver(l logger, registry SecretResolverRegistry, featureFlagOn func(string) bool) (SecretsResolver, error) {
 	if l == nil {
 		return nil, ErrMissingLogger
 	}
@@ -71,6 +74,7 @@ func newSecretsResolver(l logger, registry SecretResolverRegistry) (SecretsResol
 	sr := &defaultSecretsResolver{
 		logger:                 l,
 		secretResolverRegistry: registry,
+		featureFlagOn:          featureFlagOn,
 	}
 
 	return sr, nil
@@ -79,6 +83,7 @@ func newSecretsResolver(l logger, registry SecretResolverRegistry) (SecretsResol
 type defaultSecretsResolver struct {
 	logger                 logger
 	secretResolverRegistry SecretResolverRegistry
+	featureFlagOn          func(string) bool
 }
 
 func (r *defaultSecretsResolver) Resolve(secrets Secrets) (JobVariables, error) {
@@ -120,6 +125,13 @@ func (r *defaultSecretsResolver) handleSecret(variableKey string, secret Secret)
 	r.logger.Println(fmt.Sprintf("Using %q secret resolver...", sr.Name()))
 
 	value, err := sr.Resolve()
+	if errors.Is(err, ErrSecretNotFound) {
+		if !r.featureFlagOn(featureflags.EnableSecretResolvingFailsIfMissing) {
+			err = nil
+		} else {
+			err = fmt.Errorf("%w: %v", err, variableKey)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
