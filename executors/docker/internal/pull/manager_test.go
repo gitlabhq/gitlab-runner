@@ -72,7 +72,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 	tests := map[string]struct {
 		imageName string
 		initMock  func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument)
-		assert    func(m *manager, imageName string)
+		assert    func(t *testing.T, m *manager, imageName string)
 	}{
 		"ImagePullBlocking unwrapped system failure": {
 			imageName: "unwrapped-system:failure",
@@ -81,13 +81,13 @@ func TestDockerForImagePullFailures(t *testing.T) {
 					Return(errdefs.System(errTest)).
 					Once()
 			},
-			assert: func(m *manager, imageName string) {
+			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
 				image, err := m.pullDockerImage(imageName, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
 		"ImagePullBlocking wrapped system failure": {
@@ -97,13 +97,13 @@ func TestDockerForImagePullFailures(t *testing.T) {
 					Return(fmt.Errorf("wrapped error: %w", errdefs.System(errTest))).
 					Once()
 			},
-			assert: func(m *manager, imageName string) {
+			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
 				image, err := m.pullDockerImage(imageName, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
 		"ImagePullBlocking two level wrapped system failure": {
@@ -113,13 +113,13 @@ func TestDockerForImagePullFailures(t *testing.T) {
 					Return(fmt.Errorf("wrapped error: %w", fmt.Errorf("wrapped error: %w", errdefs.System(errTest)))).
 					Once()
 			},
-			assert: func(m *manager, imageName string) {
+			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
 				image, err := m.pullDockerImage(imageName, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
 		"ImagePullBlocking wrapped request timeout failure": {
@@ -132,13 +132,13 @@ func TestDockerForImagePullFailures(t *testing.T) {
 						)))).
 					Once()
 			},
-			assert: func(m *manager, imageName string) {
+			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
 				image, err := m.pullDockerImage(imageName, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
 		"ImagePullBlocking two level wrapped request timeout failure": {
@@ -152,13 +152,13 @@ func TestDockerForImagePullFailures(t *testing.T) {
 							))))).
 					Once()
 			},
-			assert: func(m *manager, imageName string) {
+			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
 				image, err := m.pullDockerImage(imageName, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
 		"ImagePullBlocking unwrapped script failure": {
@@ -168,13 +168,13 @@ func TestDockerForImagePullFailures(t *testing.T) {
 					Return(errdefs.NotFound(errTest)).
 					Once()
 			},
-			assert: func(m *manager, imageName string) {
+			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
 				image, err := m.pullDockerImage(imageName, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
 		"ImagePullBlocking wrapped script failure": {
@@ -184,13 +184,13 @@ func TestDockerForImagePullFailures(t *testing.T) {
 					Return(fmt.Errorf("wrapped error: %w", errdefs.NotFound(errTest))).
 					Once()
 			},
-			assert: func(m *manager, imageName string) {
+			assert: func(t *testing.T, m *manager, imageName string) {
 				var buildError *common.BuildError
 				image, err := m.pullDockerImage(imageName, nil)
 				assert.Nil(t, image)
 				assert.Error(t, err)
 				require.ErrorAs(t, err, &buildError)
-				assert.Equal(t, buildError.FailureReason, common.ScriptFailure)
+				assert.Equal(t, buildError.FailureReason, common.ImagePullFailure)
 			},
 		},
 	}
@@ -198,7 +198,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			tc.initMock(c, tc.imageName, options)
-			tc.assert(m, tc.imageName)
+			tc.assert(t, m, tc.imageName)
 		})
 	}
 }
