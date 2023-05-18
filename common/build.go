@@ -830,8 +830,9 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 
 		logger.SoftErrorln(msg)
 
+		trace.SetSupportedFailureReasonMapper(newFailureReasonMapper(b.Features.FailureReasons))
 		trace.Fail(err, JobFailureData{
-			Reason:   b.ensureSupportedFailureReason(buildError.FailureReason),
+			Reason:   buildError.FailureReason,
 			ExitCode: buildError.ExitCode,
 		})
 
@@ -840,27 +841,6 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 
 	logger.Errorln("Job failed (system failure):", err)
 	trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure})
-}
-
-func (b *Build) ensureSupportedFailureReason(reason JobFailureReason) JobFailureReason {
-	if reason == "" {
-		return ScriptFailure
-	}
-
-	// GitLab provides a list of supported failure reasons with the job. Should the list be empty, we use
-	// the minmum subset of failure reasons we know all GitLab instances support.
-	for _, supported := range append(
-		b.Features.FailureReasons,
-		ScriptFailure,
-		RunnerSystemFailure,
-		JobExecutionTimeout,
-	) {
-		if reason == supported {
-			return reason
-		}
-	}
-
-	return UnknownFailure
 }
 
 func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {

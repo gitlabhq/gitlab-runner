@@ -31,8 +31,45 @@ const (
 	JobExecutionTimeout JobFailureReason = "job_execution_timeout"
 	ImagePullFailure    JobFailureReason = "image_pull_failure"
 	UnknownFailure      JobFailureReason = "unknown_failure"
+
+	// When defining new job failure reasons, consider if its meaning is
+	// extracted from the scope of already existing one. If yes - update
+	// the failureReasonsCompatibilityMap variable below.
+
+	// Always update the allFailureReasons list
+
 	// JobCanceled is only internal to runner, and not used inside of rails.
 	JobCanceled JobFailureReason = "job_canceled"
+)
+
+var (
+	// allFailureReasons contains the list of all failure reasons known to runner.
+	allFailureReasons = []JobFailureReason{
+		ScriptFailure,
+		RunnerSystemFailure,
+		JobExecutionTimeout,
+		ImagePullFailure,
+		UnknownFailure,
+	}
+
+	// failureReasonsCompatibilityMap contains a mapping of new failure reasons
+	// to old failure reasons.
+	//
+	// Some new failure reasons may be extracted from old failure reasons
+	// If they are not yet recognized by GitLab, we may try to use the older, wider
+	// category for them (yet we still need to pass the that value through
+	// supported list check).
+	failureReasonsCompatibilityMap = map[JobFailureReason]JobFailureReason{
+		ImagePullFailure: RunnerSystemFailure,
+	}
+
+	// A small list of failure reasons that are supported by all
+	// GitLab instances.
+	alwaysSupportedFailureReasons = []JobFailureReason{
+		ScriptFailure,
+		RunnerSystemFailure,
+		JobExecutionTimeout,
+	}
 )
 
 const (
@@ -616,6 +653,10 @@ type FailuresCollector interface {
 	RecordFailure(reason JobFailureReason, runnerDescription string)
 }
 
+type SupportedFailureReasonMapper interface {
+	Map(fr JobFailureReason) JobFailureReason
+}
+
 //go:generate mockery --name=JobTrace --inpackage
 type JobTrace interface {
 	io.Writer
@@ -626,6 +667,7 @@ type JobTrace interface {
 	SetAbortFunc(abortFunc context.CancelFunc)
 	Abort() bool
 	SetFailuresCollector(fc FailuresCollector)
+	SetSupportedFailureReasonMapper(f SupportedFailureReasonMapper)
 	SetMasked(maskOptions MaskOptions)
 	SetDebugModeEnabled(isEnabled bool)
 	IsStdout() bool

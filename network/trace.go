@@ -22,10 +22,12 @@ type clientJobTrace struct {
 
 	buffer *trace.Buffer
 
-	lock          sync.RWMutex
-	state         common.JobState
-	failureReason common.JobFailureReason
-	finished      chan bool
+	lock     sync.RWMutex
+	state    common.JobState
+	finished chan bool
+
+	failureReason                common.JobFailureReason
+	supportedFailureReasonMapper common.SupportedFailureReasonMapper
 
 	sentTrace int
 	sentTime  time.Time
@@ -139,17 +141,30 @@ func (c *clientJobTrace) SetFailuresCollector(fc common.FailuresCollector) {
 	c.failuresCollector = fc
 }
 
+func (c *clientJobTrace) SetSupportedFailureReasonMapper(f common.SupportedFailureReasonMapper) {
+	c.supportedFailureReasonMapper = f
+}
+
 func (c *clientJobTrace) IsStdout() bool {
 	return false
 }
 
 func (c *clientJobTrace) setFailure(data common.JobFailureData) {
 	c.state = common.Failed
-	c.failureReason = data.Reason
 	c.exitCode = data.ExitCode
+	c.failureReason = c.ensureSupportedFailureReason(data.Reason)
+
 	if c.failuresCollector != nil {
 		c.failuresCollector.RecordFailure(data.Reason, c.config.ShortDescription())
 	}
+}
+
+func (c *clientJobTrace) ensureSupportedFailureReason(reason common.JobFailureReason) common.JobFailureReason {
+	if c.supportedFailureReasonMapper == nil {
+		return reason
+	}
+
+	return c.supportedFailureReasonMapper.Map(reason)
 }
 
 func (c *clientJobTrace) start() {

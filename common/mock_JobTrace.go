@@ -85,6 +85,11 @@ func (_m *MockJobTrace) SetMasked(maskOptions MaskOptions) {
 	_m.Called(maskOptions)
 }
 
+// SetSupportedFailureReasonMapper provides a mock function with given fields: f
+func (_m *MockJobTrace) SetSupportedFailureReasonMapper(f SupportedFailureReasonMapper) {
+	_m.Called(f)
+}
+
 // Success provides a mock function with given fields:
 func (_m *MockJobTrace) Success() {
 	_m.Called()
