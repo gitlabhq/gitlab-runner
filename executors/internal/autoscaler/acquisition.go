@@ -23,6 +23,8 @@ var _ executors.Environment = (*acquisitionRef)(nil)
 
 var (
 	errRefAcqNotSet = errors.New("ref.acq is not set")
+
+	errNoNestingImageSpecified = errors.New("no nesting VM image specified to run the job in")
 )
 
 type acquisitionRef struct {
@@ -151,6 +153,11 @@ func (ref *acquisitionRef) createVMTunnel(
 	image := nestingCfg.Image
 	if options.Build.Image.Name != "" && ref.mapJobImageToVMImage {
 		image = options.Build.Image.Name
+	}
+
+	image = options.Build.GetAllVariables().ExpandValue(image)
+	if image == "" {
+		return nil, errNoNestingImageSpecified
 	}
 
 	logger.Println("Creating nesting VM", image)

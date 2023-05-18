@@ -38,18 +38,26 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 
 	testNestingHost := "nesting-host"
 	testBuildImageName := "build-image-name"
+	testNestingCfgImageName := "nesting-cfg-image-name"
 	testSlot := 8765
 	testVM := &dummyVM{id: "id", name: "name", addr: "addr"}
 	testTunnelClient := fleetingmocks.NewClient(t)
+	testVariableValue := "test-variable-value"
 
 	testCases := map[string]struct {
 		doNotSetAcq        bool
 		vmIsolationEnabled bool
 		useExternalAddr    bool
 
+		jobImage        string
+		nestingCfgImage string
+
 		dialAcquisitionInstanceCallExpected bool
 		connectNestingCallExpected          bool
 		dialTunnelCallExpected              bool
+
+		mockDialerClose         bool
+		mockNestingClientCreate bool
 
 		instanceConnectInfoErr     error
 		dialAcquisitionInstanceErr error
@@ -59,8 +67,9 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 
 		assertClient assertClientFunc
 
-		expectedNestingImage string
-		expectedError        error
+		expectedNestingConnCloseCall bool
+		expectedNestingImage         string
+		expectedError                error
 	}{
 		"ref.acq is not set": {
 			doNotSetAcq:   true,
@@ -91,24 +100,42 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			connectNestingErr:                   assert.AnError,
 			expectedError:                       assert.AnError,
 		},
-		"Error when creating nesting VM": {
+		"Error when no image is specified": {
 			vmIsolationEnabled:                  true,
 			dialAcquisitionInstanceCallExpected: true,
+			mockDialerClose:                     true,
+			expectedNestingConnCloseCall:        true,
+			expectedError:                       errNoNestingImageSpecified,
+		},
+		"Error when creating nesting VM": {
+			vmIsolationEnabled:                  true,
+			nestingCfgImage:                     testNestingCfgImageName,
+			dialAcquisitionInstanceCallExpected: true,
+			mockDialerClose:                     true,
+			mockNestingClientCreate:             true,
 			nestingCreateErr:                    assert.AnError,
-			expectedNestingImage:                testBuildImageName,
+			expectedNestingConnCloseCall:        true,
+			expectedNestingImage:                testNestingCfgImageName,
 			expectedError:                       assert.AnError,
 		},
 		"Error when dialing tunnel": {
 			vmIsolationEnabled:                  true,
+			jobImage:                            testBuildImageName,
 			dialAcquisitionInstanceCallExpected: true,
 			dialTunnelCallExpected:              true,
+			mockDialerClose:                     true,
+			mockNestingClientCreate:             true,
 			tunnelDialErr:                       assert.AnError,
+			expectedNestingConnCloseCall:        true,
 			expectedNestingImage:                testBuildImageName,
 			expectedError:                       assert.AnError,
 		},
 		"preparation completed": {
-			dialAcquisitionInstanceCallExpected: true,
 			vmIsolationEnabled:                  true,
+			jobImage:                            testBuildImageName,
+			nestingCfgImage:                     testNestingCfgImageName,
+			dialAcquisitionInstanceCallExpected: true,
+			mockNestingClientCreate:             true,
 			assertClient: assertClient(func(t *testing.T, c executors.Client) {
 				cl, ok := c.(*client)
 				require.True(t, ok, "expected to be %T, got %T", &client{}, c)
@@ -117,6 +144,20 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 				assert.NotNil(t, cl.cleanup)
 			}),
 			expectedNestingImage: testBuildImageName,
+		},
+		"variables expansion works for image": {
+			vmIsolationEnabled:                  true,
+			jobImage:                            "${TEST_VARIABLE}",
+			dialAcquisitionInstanceCallExpected: true,
+			mockNestingClientCreate:             true,
+			assertClient: assertClient(func(t *testing.T, c executors.Client) {
+				cl, ok := c.(*client)
+				require.True(t, ok, "expected to be %T, got %T", &client{}, c)
+
+				assert.Equal(t, testTunnelClient, cl.client)
+				assert.NotNil(t, cl.cleanup)
+			}),
+			expectedNestingImage: testVariableValue,
 		},
 	}
 
@@ -148,19 +189,18 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 
 			nestingClient := nestingmocks.NewClient(t)
 			nestingConn := &mockCloser{
-				name: "nestingConn",
-				expectCall: tc.dialAcquisitionInstanceCallExpected &&
-					tc.nestingCreateErr != nil || tc.tunnelDialErr != nil,
+				name:       "nestingConn",
+				expectCall: tc.dialAcquisitionInstanceCallExpected && tc.expectedNestingConnCloseCall,
 			}
 			defer nestingConn.assertExpectations(t)
 
 			if tc.vmIsolationEnabled {
-				if tc.nestingCreateErr != nil || tc.tunnelDialErr != nil {
+				if tc.mockDialerClose {
 					fleetingDialer.EXPECT().Close().Return(nil).Once()
 					nestingClient.EXPECT().Close().Return(nil).Once()
 				}
 
-				if tc.connectNestingErr == nil {
+				if tc.mockNestingClientCreate {
 					nestingClient.EXPECT().Create(mock.Anything, tc.expectedNestingImage, int32Ref(int32(testSlot))).Return(testVM, stringRef("stomped"), tc.nestingCreateErr).Once()
 				}
 
@@ -172,7 +212,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			logger, _ := test.NewNullLogger()
 			bl := common.NewBuildLogger(nil, logrus.NewEntry(logger))
 
-			options := executorPrepareOptions(testBuildImageName, "image", testNestingHost)
+			options := executorPrepareOptions(tc.jobImage, tc.nestingCfgImage, testNestingHost, testVariableValue)
 			options.Config.Autoscaler.VMIsolation.Enabled = tc.vmIsolationEnabled
 			options.Config.Autoscaler.ConnectorConfig.UseExternalAddr = tc.useExternalAddr
 
@@ -186,7 +226,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 
 			if setAcq {
 				acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, tc.instanceConnectInfoErr).Once()
-				if tc.vmIsolationEnabled && tc.connectNestingErr == nil {
+				if tc.vmIsolationEnabled && tc.mockNestingClientCreate {
 					acq.EXPECT().Slot().Return(testSlot).Once()
 				}
 
@@ -259,7 +299,7 @@ func TestClientClose(t *testing.T) {
 	}
 }
 
-func executorPrepareOptions(buildImageName, nestingCfgImage, host string) common.ExecutorPrepareOptions {
+func executorPrepareOptions(buildImageName, nestingCfgImage, host, variableValue string) common.ExecutorPrepareOptions {
 	return common.ExecutorPrepareOptions{
 		Config: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
@@ -275,6 +315,13 @@ func executorPrepareOptions(buildImageName, nestingCfgImage, host string) common
 			JobResponse: common.JobResponse{
 				Image: common.Image{
 					Name: buildImageName,
+				},
+				Variables: common.JobVariables{
+					{
+						Key:    "TEST_VARIABLE",
+						Value:  variableValue,
+						Public: true,
+					},
 				},
 			},
 			Runner: &common.RunnerConfig{},
