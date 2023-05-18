@@ -25,9 +25,12 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("the instance executor doesn't support shells that require a script file")
 	}
 
-	// validate if the image defined is allowed if nesting is enabled
-	// if nesting is not enabled, the image is irrelevant
-	if options.Config.Autoscaler.VMIsolation.Enabled {
+	// Validate if the image defined in a job is allowed
+	//
+	// If nesting is not enabled, the image is irrelevant.
+	// If image is not defined on a job level there is no need for validation - runner config
+	// variable will be enforced later.
+	if options.Config.Autoscaler.VMIsolation.Enabled && options.Build.Image.Name != "" {
 		var allowed []string
 		if options.Config.Instance != nil {
 			allowed = options.Config.Instance.AllowedImages
