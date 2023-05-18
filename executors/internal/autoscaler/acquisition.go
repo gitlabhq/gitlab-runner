@@ -155,6 +155,7 @@ func (ref *acquisitionRef) createVMTunnel(
 		image = options.Build.Image.Name
 	}
 
+	image = options.Build.GetAllVariables().ExpandValue(image)
 	if image == "" {
 		return nil, errNoNestingImageSpecified
 	}
