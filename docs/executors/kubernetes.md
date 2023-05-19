@@ -414,7 +414,7 @@ Kubernetes allows to create an ephemeral [PersistentVolumeClaim](https://kuberne
 This will work if [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled on your Kubernetes cluster allowing
 each `PVC` to request a new [Volume](https://kubernetes.io/docs/concepts/storage/volumes/), the volume too will be tied to the lifetime of the Pod.
 
-After [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled the `config.toml` can be modified as follows to create an
+After [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled, the `config.toml` can be modified as follows to create an
 ephemeral `PVC`:
 
 ```toml
