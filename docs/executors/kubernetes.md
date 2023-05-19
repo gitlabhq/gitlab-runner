@@ -405,6 +405,44 @@ shutdown_timeout = 0
       patch_type = "strategic"
 ```
 
+#### Create a PVC for each build job by modifying the Pod Spec
+
+To create a [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) for each build job make sure to check out how to enable
+the [Pod Spec functionality](#overwrite-generated-pod-specifications-alpha).
+
+Kubernetes allows to create an ephemeral [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) attached to the lifecycle of a Pod.
+This will work if [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled on your Kubernetes cluster allowing
+each `PVC` to request a new [Volume](https://kubernetes.io/docs/concepts/storage/volumes/), the volume too will be tied to the lifetime of the Pod.
+
+After [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled the `config.toml` can be modified as follows to create an
+ephemeral `PVC`:
+
+```toml
+[[runners.kubernetes.pod_spec]]
+  name = "ephemeral-pvc"
+  patch = '''
+    containers:
+    - name: build
+      volumeMounts:
+      - name: builds
+        mountPath: /builds
+    - name: helper
+      volumeMounts:
+      - name: builds
+        mountPath: /builds
+    volumes:
+    - name: builds
+      ephemeral:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: <The Storage Class that will dynamically provision a Volume>
+            accessModes: [ ReadWriteOnce ]
+            resources:
+              requests:
+                storage: 1Gi
+  '''
+```
+
 ### Pod lifecycle
 
 A [pod's lifecycle](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)
