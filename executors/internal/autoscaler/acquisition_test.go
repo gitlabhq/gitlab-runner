@@ -200,6 +200,10 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 					nestingClient.EXPECT().Close().Return(nil).Once()
 				}
 
+				if tc.connectNestingErr != nil {
+					fleetingDialer.EXPECT().Close().Return(nil).Once()
+				}
+
 				if tc.mockNestingClientCreate {
 					nestingClient.EXPECT().Create(mock.Anything, tc.expectedNestingImage, int32Ref(int32(testSlot))).Return(testVM, stringRef("stomped"), tc.nestingCreateErr).Once()
 				}
