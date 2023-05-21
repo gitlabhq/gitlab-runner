@@ -1,17 +1,23 @@
 package ziplegacy
 
 import (
+	"archive/zip"
 	"context"
 	"io"
 	"os"
 	"sort"
 
+	"github.com/klauspost/compress/zstd"
+	"github.com/saracen/fastzip"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/archives"
 )
 
 func init() {
+	zip.RegisterDecompressor(zstd.ZipMethodWinZip, fastzip.ZstdDecompressor())
+
 	archive.Register(archive.Zip, NewArchiver, NewExtractor)
+	archive.Register(archive.ZipZstd, nil, NewExtractor)
 }
 
 // archiver is a zip stream archiver.

@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/saracen/fastzip"
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
@@ -19,6 +20,18 @@ var flateLevels = map[archive.CompressionLevel]int{
 	archive.DefaultCompression: 5,
 	archive.SlowCompression:    7,
 	archive.SlowestCompression: 9,
+}
+
+var zstdLevels = map[archive.CompressionLevel]int{
+	archive.FastestCompression: 0,
+	archive.FastCompression:    int(zstd.SpeedFastest),
+	archive.DefaultCompression: int(zstd.SpeedDefault),
+	archive.SlowCompression:    int(zstd.SpeedBetterCompression),
+	archive.SlowestCompression: int(zstd.SpeedBestCompression),
+}
+
+func init() {
+	archive.Register(archive.ZipZstd, NewZstdArchiver, nil)
 }
 
 const (
@@ -33,6 +46,7 @@ type archiver struct {
 	w     io.Writer
 	dir   string
 	level archive.CompressionLevel
+	zstd  bool
 }
 
 // NewArchiver returns a new Zip Archiver.
@@ -41,6 +55,16 @@ func NewArchiver(w io.Writer, dir string, level archive.CompressionLevel) (archi
 		w:     w,
 		dir:   dir,
 		level: level,
+	}, nil
+}
+
+// NewArchiver returns a new Zip Archiver (with zstd compression).
+func NewZstdArchiver(w io.Writer, dir string, level archive.CompressionLevel) (archive.Archiver, error) {
+	return &archiver{
+		w:     w,
+		dir:   dir,
+		level: level,
+		zstd:  true,
 	}, nil
 }
 
@@ -62,13 +86,21 @@ func (a *archiver) Archive(ctx context.Context, files map[string]os.FileInfo) er
 		opts = append(opts, fastzip.WithArchiverMethod(zip.Store))
 	}
 
+	if a.zstd {
+		opts = append(opts, fastzip.WithArchiverMethod(zstd.ZipMethodWinZip))
+	}
+
 	fa, err := fastzip.NewArchiver(a.w, a.dir, opts...)
 	if err != nil {
 		return err
 	}
 
 	if a.level != archive.FastestCompression {
-		fa.RegisterCompressor(zip.Deflate, fastzip.FlateCompressor(flateLevels[a.level]))
+		if a.zstd {
+			fa.RegisterCompressor(zstd.ZipMethodWinZip, fastzip.ZstdCompressor(zstdLevels[a.level]))
+		} else {
+			fa.RegisterCompressor(zip.Deflate, fastzip.FlateCompressor(flateLevels[a.level]))
+		}
 	}
 
 	err = fa.Archive(ctx, files)

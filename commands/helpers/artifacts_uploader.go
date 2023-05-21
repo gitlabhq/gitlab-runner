@@ -54,11 +54,14 @@ func (c *ArtifactsUploaderCommand) artifactFilename(name string, format common.A
 	}
 
 	switch format {
-	case common.ArtifactFormatZip:
+	case common.ArtifactFormatZip, common.ArtifactFormatZipZstd:
 		return name + ".zip"
 
 	case common.ArtifactFormatGzip:
 		return name + ".gz"
+
+	case common.ArtifactFormatTarZstd:
+		return name + ".tar.zst"
 	}
 	return name
 }

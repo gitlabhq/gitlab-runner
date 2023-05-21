@@ -1,8 +1,10 @@
 package helpers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -106,13 +108,13 @@ func (c *ArtifactsDownloaderCommand) Execute(cliContext *cli.Context) {
 		logrus.Fatalln(err)
 	}
 
-	f, size, err := openZip(file.Name())
+	f, size, format, err := openArchive(file.Name())
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 	defer f.Close()
 
-	extractor, err := archive.NewExtractor(archive.Zip, f, size, wd)
+	extractor, err := archive.NewExtractor(format, f, size, wd)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -124,19 +126,36 @@ func (c *ArtifactsDownloaderCommand) Execute(cliContext *cli.Context) {
 	}
 }
 
-func openZip(filename string) (*os.File, int64, error) {
+var (
+	zstMagic  = []byte{0x28, 0xB5, 0x2F, 0xFD}
+	gzipMagic = []byte{0x1F, 0x8B}
+)
+
+func openArchive(filename string) (*os.File, int64, archive.Format, error) {
+	format := archive.Zip
+
 	f, err := os.Open(filename)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, format, err
+	}
+
+	var magic [4]byte
+	_, _ = f.Read(magic[:])
+	_, _ = f.Seek(0, io.SeekStart)
+	switch {
+	case bytes.HasPrefix(magic[:], zstMagic):
+		format = archive.TarZstd
+	case bytes.HasPrefix(magic[:], gzipMagic):
+		format = archive.Gzip
 	}
 
 	fi, err := f.Stat()
 	if err != nil {
 		f.Close()
-		return nil, 0, err
+		return nil, 0, format, err
 	}
 
-	return f, fi.Size(), nil
+	return f, fi.Size(), format, nil
 }
 
 func init() {

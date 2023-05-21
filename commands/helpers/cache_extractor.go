@@ -153,7 +153,7 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 				"Instead a local version of cache will be extracted.")
 	}
 
-	f, size, err := openZip(c.File)
+	f, size, format, err := openArchive(c.File)
 	if os.IsNotExist(err) {
 		return
 	}
@@ -162,7 +162,7 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 	}
 	defer f.Close()
 
-	extractor, err := archive.NewExtractor(archive.Zip, f, size, wd)
+	extractor, err := archive.NewExtractor(format, f, size, wd)
 	if err != nil {
 		logrus.Fatalln(err)
 	}

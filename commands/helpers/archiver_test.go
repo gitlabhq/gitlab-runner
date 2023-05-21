@@ -34,6 +34,58 @@ func TestCompressionLevel(t *testing.T) {
 	}
 }
 
+func TestArchiver(t *testing.T) {
+	small := []byte("12345678")
+	large := bytes.Repeat([]byte("198273qhnjbqwdjbqwe2109u3abcdef3"), 1024*1024)
+
+	originalDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(originalDir) }()
+
+	OnEachArchiver(t, func(t *testing.T, format archive.Format) {
+		dir := t.TempDir()
+		buf := new(bytes.Buffer)
+
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "small"), small, 0777))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "large"), large, 0777))
+
+		archiver, err := archive.NewArchiver(format, buf, dir, archive.DefaultCompression)
+		require.NoError(t, err)
+
+		files := make(map[string]fs.FileInfo)
+		_ = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+			files[path] = info
+			return nil
+		})
+
+		assert.Equal(t, 2, len(files))
+		require.NoError(t, archiver.Archive(context.Background(), files))
+
+		input := buf.Bytes()
+		out := t.TempDir()
+
+		// hack: legacy archiver require being in the correct working dir
+		_ = os.Chdir(out)
+
+		// for Windows: change directory on exit so that we're not "using" the directory we're removing
+		defer func() { _ = os.Chdir(originalDir) }()
+
+		extractor, err := archive.NewExtractor(format, bytes.NewReader(input), int64(len(input)), out)
+		require.NoError(t, err)
+		require.NoError(t, extractor.Extract(context.Background()))
+
+		smallEq, err := os.ReadFile(filepath.Join(out, "small"))
+		require.NoError(t, err)
+		assert.Equal(t, small, smallEq)
+
+		largeEq, err := os.ReadFile(filepath.Join(out, "large"))
+		require.NoError(t, err)
+		assert.Equal(t, large, largeEq)
+	})
+}
+
 func TestZipArchiveExtract(t *testing.T) {
 	small := []byte("12345678")
 	large := bytes.Repeat([]byte("198273qhnjbqwdjbqwe2109u3abcdef3"), 1024*1024)
