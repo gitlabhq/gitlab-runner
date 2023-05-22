@@ -99,6 +99,7 @@ func (ref *acquisitionRef) Prepare(
 	logger.Println("Enforcing VM Isolation")
 	nc, conn, err := ref.connectNesting(options.Config.Autoscaler.VMIsolation.NestingHost, logger, fleetingDialer)
 	if err != nil {
+		fleetingDialer.Close()
 		return nil, err
 	}
 
