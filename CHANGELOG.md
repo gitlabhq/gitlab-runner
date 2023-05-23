@@ -1,3 +1,9 @@
+## v15.11.1 (2023-05-23)
+
+### Bug fixes
+
+- Fix cache keys processing by improving the handling of the fallback keys !4069 (René Hernández Remedios @renehernandez)
+
 ## v15.11.0 (2023-04-21)
 
 ### New features
