@@ -4,21 +4,28 @@ FROM redhat/ubi8-minimal:${UBI_VERSION}
 
 ARG PLATFORM_ARCH=amd64
 
-RUN DEV_PKGS="gzip expat-devel zlib-devel perl-CPAN perl-devel autoconf which gettext diffutils rpm-build" && \
-microdnf update -y && \
+RUN microdnf update -y && \
     microdnf install -y --setopt=tsflags=nodocs \
             openssl \
-            openssl-devel \
             curl \
-            git \
             wget \
             openssh-clients \
             hostname \
             procps-ng \
             tar \
             gcc \
-            python3 && \
-    microdnf install -y --setopt=tsflags=nodocs $DEV_PKGS && \
+            python3 \
+            openssl-devel \
+            gzip \
+            expat-devel \
+            zlib-devel \
+            perl-CPAN \
+            perl-devel \
+            autoconf \
+            which \
+            gettext \
+            diffutils \
+            rpm-build && \
     microdnf clean all -y && \
     rm -rf /var/cache/yum
 
@@ -33,7 +40,7 @@ RUN wget https://github.com/git/git/archive/refs/tags/v${GIT_VERSION}.tar.gz && 
     make install && \
     git --version && \
     rm -rf /git-${GIT_VERSION} && \
-    microdnf remove $DEV_PKGS emacs-filesystem
+    microdnf remove autoconf emacs-filesystem
 
 RUN cd /tmp && \
     git clone https://github.com/larsks/fakeprovide.git && \
