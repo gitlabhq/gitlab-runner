@@ -17,6 +17,7 @@ RUN microdnf update -y && \
             python3 \
             openssl-devel \
             gzip \
+            libcurl-devel \
             expat-devel \
             zlib-devel \
             perl-CPAN \
