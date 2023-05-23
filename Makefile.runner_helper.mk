@@ -178,7 +178,7 @@ ${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_DOCKERFILE ?= Dockerfile.fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export HELPER_BINARY_POSTFIX ?= -fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar:
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker redhat/ubi8-minimal $* $@ $(UBI_FIPS_VERSION)
+	@./ci/build_helper_docker registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base $* $@ $(UBI_FIPS_VERSION)
 
 # See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export IMAGE_SHELL := pwsh
