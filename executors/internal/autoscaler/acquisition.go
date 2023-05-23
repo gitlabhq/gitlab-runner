@@ -144,7 +144,7 @@ func (ref *acquisitionRef) createVMTunnel(
 	ctx context.Context,
 	logger common.BuildLogger,
 	nc nestingapi.Client,
-	dialer connector.Client,
+	fleetingDialer connector.Client,
 	options common.ExecutorPrepareOptions,
 ) (executors.Client, error) {
 	nestingCfg := options.Config.Autoscaler.VMIsolation
@@ -164,16 +164,12 @@ func (ref *acquisitionRef) createVMTunnel(
 	logger.Println("Creating nesting VM", image)
 
 	// create vm
-	var slot *int32
-
-	var slot32 = int32(ref.acq.Slot())
-	slot = &slot32
-
 	var vm hypervisor.VirtualMachine
 	var stompedVMID *string
 	var err error
 	err = withInit(ctx, options.Config, nc, func() error {
-		vm, stompedVMID, err = nc.Create(ctx, image, slot)
+		slot := int32(ref.acq.Slot())
+		vm, stompedVMID, err = nc.Create(ctx, image, &slot)
 		return err
 	})
 	if err != nil {
@@ -184,7 +180,7 @@ func (ref *acquisitionRef) createVMTunnel(
 	if stompedVMID != nil {
 		logger.Infoln("Stomped nesting VM: ", *stompedVMID)
 	}
-	dialer, err = ref.createTunneledDialer(ctx, dialer, nestingCfg, vm)
+	dialer, err := ref.createTunneledDialer(ctx, fleetingDialer, nestingCfg, vm)
 	if err != nil {
 		defer func() { _ = nc.Delete(ctx, vm.GetId()) }()
 
@@ -192,6 +188,7 @@ func (ref *acquisitionRef) createVMTunnel(
 	}
 
 	cl := &client{dialer, func() error {
+		defer fleetingDialer.Close()
 		defer nc.Close()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)

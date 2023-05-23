@@ -58,6 +58,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 
 		mockDialerClose         bool
 		mockNestingClientCreate bool
+		mockNestingClientDelete bool
 
 		instanceConnectInfoErr     error
 		dialAcquisitionInstanceErr error
@@ -86,6 +87,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 		},
 		"No error and VM isolation disabled": {
 			dialAcquisitionInstanceCallExpected: true,
+			mockDialerClose:                     true,
 			assertClient: assertClient(func(t *testing.T, c executors.Client) {
 				cl, ok := c.(*client)
 				require.True(t, ok, "expected to be %T, got %T", &client{}, c)
@@ -135,7 +137,9 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			jobImage:                            testBuildImageName,
 			nestingCfgImage:                     testNestingCfgImageName,
 			dialAcquisitionInstanceCallExpected: true,
+			mockDialerClose:                     true,
 			mockNestingClientCreate:             true,
+			mockNestingClientDelete:             true,
 			assertClient: assertClient(func(t *testing.T, c executors.Client) {
 				cl, ok := c.(*client)
 				require.True(t, ok, "expected to be %T, got %T", &client{}, c)
@@ -149,7 +153,9 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			vmIsolationEnabled:                  true,
 			jobImage:                            "${TEST_VARIABLE}",
 			dialAcquisitionInstanceCallExpected: true,
+			mockDialerClose:                     true,
 			mockNestingClientCreate:             true,
+			mockNestingClientDelete:             true,
 			assertClient: assertClient(func(t *testing.T, c executors.Client) {
 				cl, ok := c.(*client)
 				require.True(t, ok, "expected to be %T, got %T", &client{}, c)
@@ -194,7 +200,12 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			}
 			defer nestingConn.assertExpectations(t)
 
+			//nolint:nestif
 			if tc.vmIsolationEnabled {
+				if tc.expectedError == nil {
+					testTunnelClient.EXPECT().Close().Return(nil).Once()
+				}
+
 				if tc.mockDialerClose {
 					fleetingDialer.EXPECT().Close().Return(nil).Once()
 					nestingClient.EXPECT().Close().Return(nil).Once()
@@ -208,8 +219,12 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 					nestingClient.EXPECT().Create(mock.Anything, tc.expectedNestingImage, int32Ref(int32(testSlot))).Return(testVM, stringRef("stomped"), tc.nestingCreateErr).Once()
 				}
 
-				if tc.tunnelDialErr != nil {
+				if tc.tunnelDialErr != nil || tc.mockNestingClientDelete {
 					nestingClient.EXPECT().Delete(mock.Anything, testVM.id).Return(nil).Once()
+				}
+			} else {
+				if tc.mockDialerClose {
+					fleetingDialer.EXPECT().Close().Return(nil).Once()
 				}
 			}
 
@@ -248,6 +263,8 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			assert.NoError(t, err)
 			require.NotNil(t, tc.assertClient, "missing assertClient definition in the test case")
 			tc.assertClient(t, c)
+
+			require.NoError(t, c.Close())
 		})
 	}
 }
