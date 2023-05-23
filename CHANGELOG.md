@@ -4,11 +4,60 @@
 
 - Build git from source for UBI images !4110
 
-## v16.0.0 (2023-05-23)
+## v16.0.0 (2023-05-22)
+
+### New features
+
+- Add docs how to create an ephemeral PVC !4100
+- Update autoscaler image handling !4097
+- Send system_id when unregistering runner !4053
+- Consider node selector overwrites for the helper image !4048 (Mike Hobbs @mike554)
+- Improve autoscaling executor providers shutdown !4035
+
+### Security fixes
+
+- Upgrade github.com/kardianos/service to v1.2.2 !4105
+
+### Bug fixes
+
+- Close connection to instance on nesting client connect fail !4104
+- Support health checking multiple service ports for Docker !4079
+- Fix helper images being published with the wrong architecture !4073 (Anthony Juckel @ajuckel)
+- Fix cache keys processing by improving the handling of the fallback keys !4069 (René Hernández Remedios @renehernandez)
+- Unresolved secrets now return error by default !4064
+- Expand container related options before they are used !4002
 
 ### Maintenance
 
-- Build git from source for UBI images !4110
+- Update git lfs checksums in release_docker_images !4106
+- Upgrade git-lfs to 3.3.0 !4101
+- Remove note on tested K8s's environments from Runner k8s docs !4087
+- Upgrade github.com/docker/docker to 23.0.6 !4086
+- Remove section: Use the configuration template to set additional options !4084
+- Upgrade github.com/emicklei/go-restful/v3 to 3.10.2 !4082
+- Update Windows version support policy for Runner !4074
+- Fixed link that was breaking UI !4071
+- GCP fleeting docs for Instance and Docker Autoscaler executors !4068
+- Update alpha to experiment in executor page !4067
+- Remove deprecated gosec-sast job !4065
+- Update docker-machine version !4061
+- Remove reference to docker-ssh and docker-ssh+machine !4060
+- Update GPG verification details !4059
+- Upgrade gitlab-terminal dependency !4057
+- Update grammar, remove extra word !4054 (Rasheed Babatunde @rasheed)
+- Remove trailing whitespaces !4052
+- Make clearer that force send interval is related to logs !4043
+- Update redhat/ubi8-minimal Docker tag to v8.7-1107 !4025
+- Update version of docker-machine bundled in runner images !4024
+- Add tests for internal autoscaler acquisition !4005
+- Use Splitic test runner !3967
+- Update golang Docker tag to v1.19.9 !3962
+- Update alpine Docker tag !3918
+- Remove lll linter !2837
+
+### Documentation changes
+
+- Add idle_time entry to docs !4093
 
 ## v15.11.0 (2023-04-21)
 
