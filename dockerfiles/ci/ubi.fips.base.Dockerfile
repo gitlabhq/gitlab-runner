@@ -33,8 +33,7 @@ RUN wget https://github.com/git/git/archive/refs/tags/v${GIT_VERSION}.tar.gz && 
     make install && \
     git --version && \
     rm -rf /git-${GIT_VERSION} && \
-    microdnf remove emacs-filesystem && \
-    microdnf remove $DEV_PKGS
+    microdnf remove $DEV_PKGS emacs-filesystem
 
 RUN cd /tmp && \
     git clone https://github.com/larsks/fakeprovide.git && \
