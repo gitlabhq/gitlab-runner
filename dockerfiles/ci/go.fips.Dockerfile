@@ -1,12 +1,11 @@
-ARG UBI_VERSION
+ARG GO_FIPS_BASE_IMAGE
 
-FROM redhat/ubi8-minimal:${UBI_VERSION}
+FROM ${GO_FIPS_BASE_IMAGE}
 
 ARG PLATFORM_ARCH=amd64
 
-RUN INSTALL_PKGS="openssl-devel glibc-devel gcc git wget tar" &&  \
-    microdnf update -y && \
-    microdnf install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+RUN microdnf update -y && \
+    microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel && \
     microdnf clean all -y
 
 ARG GO_VERSION=1.19
@@ -44,7 +43,7 @@ RUN cd /usr/local/go/src && \
         /usr/local/go/src/cmd/dist/dist \
         /usr/local/go/.git*
 
-FROM redhat/ubi8-minimal:${UBI_VERSION}
+FROM ${GO_FIPS_BASE_IMAGE}
 
 RUN microdnf update -y && \
     microdnf install -y patch gcc openssl openssl-devel make git && \

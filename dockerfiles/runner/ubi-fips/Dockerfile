@@ -4,20 +4,6 @@ FROM $BASE_IMAGE
 
 ARG TARGETPLATFORM
 
-# hadolint ignore=DL3008
-RUN microdnf update -y && \
-    microdnf install -y \
-        openssl \
-        curl \
-        git \
-        wget \
-        openssh-clients \
-        hostname \
-        procps-ng \
-        tar \
-        && microdnf clean all && \
-        rm -rf /var/cache/yum
-
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
 ARG GIT_LFS_VERSION

@@ -42,6 +42,7 @@ variables:
   UBUNTU_VERSION: "20.04"
   # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.7-.+/
   UBI_FIPS_VERSION: "8.7-1107"
+  UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base:$UBI_FIPS_VERSION
 
 default:
   image: $CI_IMAGE
