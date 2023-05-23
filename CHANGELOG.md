@@ -1,3 +1,9 @@
+## v16.0.1 (2023-05-24)
+
+### Maintenance
+
+- Build git from source for UBI images !4110
+
 ## v16.0.0 (2023-05-23)
 
 ### Maintenance
