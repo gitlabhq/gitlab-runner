@@ -311,6 +311,9 @@ func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	for _, job := range b.builds {
 		_, _ = fmt.Fprintf(
 			w,
