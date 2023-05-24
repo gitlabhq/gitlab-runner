@@ -107,15 +107,14 @@ helm search repo -l gitlab/gitlab-runner
 Example of the output is shown below:
 
 ```plaintext
-NAME                    CHART VERSION   APP VERSION DESCRIPTION
-...
-gitlab/gitlab-runner    0.14.0          12.8.0      GitLab Runner
-gitlab/gitlab-runner    0.13.1          12.7.1      GitLab Runner
-gitlab/gitlab-runner    0.13.0          12.7.0      GitLab Runner
-gitlab/gitlab-runner    0.12.0          12.6.0      GitLab Runner
-gitlab/gitlab-runner    0.11.0          12.5.0      GitLab Runner
-gitlab/gitlab-runner    0.10.1          12.4.1      GitLab Runner
-gitlab/gitlab-runner    0.10.0          12.4.0      GitLab Runner
+NAME                 CHART VERSION APP VERSION DESCRIPTION
+gitlab/gitlab-runner 0.51.0        15.10.0     GitLab Runner
+gitlab/gitlab-runner 0.50.1        15.9.1      GitLab Runner
+gitlab/gitlab-runner 0.50.0        15.9.0      GitLab Runner
+gitlab/gitlab-runner 0.49.3        15.8.3      GitLab Runner
+gitlab/gitlab-runner 0.49.2        15.8.2      GitLab Runner
+gitlab/gitlab-runner 0.49.1        15.8.1      GitLab Runner
+gitlab/gitlab-runner 0.49.0        15.8.0      GitLab Runner
 ...
 ```
 
@@ -561,7 +560,7 @@ To do so, update your `values.yaml` file with the following values:
 
 ```yaml
 # Specify the Ubuntu image. Remember to set the version. You can also use the `ubuntu` or `latest` tags.
-image: gitlab/gitlab-runner:v13.0.0
+image: gitlab/gitlab-runner:v15.11.0
 
 # Update the security context values to the user ID in the ubuntu image
 securityContext:
@@ -579,7 +578,7 @@ The images are designed so that they can work with any user ID. It's important t
 Being part of the root group doesn't give it any specific privileges.
 
 ```yaml
-image: registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-ocp:v13.11.0
+image: registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-ocp:v15.11.0
 
 securityContext:
     runAsNonRoot: true
@@ -589,7 +588,7 @@ runners:
     config: |
         [[runners]]
           [runners.kubernetes]
-            helper_image = "registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:x86_64-v13.11.0"
+            helper_image = "registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:x86_64-v15.11.0"
             [runners.kubernetes.pod_security_context]
               run_as_non_root = true
               run_as_user = 59417
@@ -647,7 +646,7 @@ If you see mount volume failures for a required secret, ensure that you've follo
 
 ### Slow artifact uploads to Google Cloud Storage
 
-<!-- See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28393#note_722733798 -->
+<!-- See https://GitLab.com/GitLab-org/GitLab-runner/-/issues/28393#note_722733798 -->
 
 Artifact uploads to Google Cloud Storage can experience reduced performance due to the runner helper pod becoming CPU bound. This will appear in the form of a slow bandwidth rate.
 
