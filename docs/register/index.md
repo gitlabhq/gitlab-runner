@@ -308,7 +308,7 @@ $ sudo gitlab-runner register \
      --executor kubernetes \
      --kubernetes-host http://localhost:9876/
 
-Runtime platform                                    arch=amd64 os=linux pid=1684 revision=88310882 version=11.10.0~beta.1251.g88310882
+Runtime platform                                    arch=amd64 os=linux pid=1684 revision=436955cb version=15.11.0
 
 Registering runner... succeeded                     runner=__REDACTED__
 Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
@@ -405,7 +405,7 @@ $ sudo gitlab-runner register \
      --executor kubernetes \
      --kubernetes-host http://localhost:9876/
 
-Runtime platform                                    arch=amd64 os=linux pid=8798 revision=88310882 version=11.10.0~beta.1251.g88310882
+Runtime platform                                    arch=amd64 os=linux pid=8798 revision=436955cb version=15.11.0
 
 Registering runner... succeeded                     runner=__REDACTED__
 Merging configuration from template file
@@ -478,7 +478,7 @@ $ sudo gitlab-runner register \
      --paused \
      --executor shell
 
-Runtime platform                                    arch=amd64 os=linux pid=12359 revision=88310882 version=11.10.0~beta.1251.g88310882
+Runtime platform                                    arch=amd64 os=linux pid=12359 revision=436955cb version=15.11.0
 
 Registering runner... succeeded                     runner=__REDACTED__
 Merging configuration from template file

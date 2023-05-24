@@ -81,14 +81,14 @@ To install GitLab Runner:
 
    ```shell
    apt-cache madison gitlab-runner
-   sudo apt-get install gitlab-runner=10.0.0
+   sudo apt-get install gitlab-runner=15.11.0
    ```
 
    For RPM based systems:
 
    ```shell
    yum list gitlab-runner --showduplicates | sort -r
-   sudo yum install gitlab-runner-10.0.0-1
+   sudo yum install gitlab-runner-15.11.0-1
    ```
 
 1. [Register a runner](../register/index.md).
