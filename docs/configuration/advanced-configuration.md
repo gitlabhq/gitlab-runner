@@ -322,7 +322,7 @@ The following settings define the Docker container parameters.
 | `user`                         | Run all commands in the container as the specified user. |
 | `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
 | `volumes`                      | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
-| `volumes_from`                 | A list of volumes to inherit from another container in the form `<container name>[:<ro|rw>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
+| `volumes_from`                 | A list of volumes to inherit from another container in the form ``<container name>[:<ro|rw>]``. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
 | `volume_driver`                | The volume driver to use for the container. |
 | `wait_for_services_timeout`    | How long to wait for Docker services. Set to `-1` to disable. Default is `30`. |
 | `container_labels`             | A set of labels to add to each container created by the runner. The label value can include environment variables for expansion. |
