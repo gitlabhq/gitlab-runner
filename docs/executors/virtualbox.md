@@ -41,8 +41,8 @@ per job using the `GIT_CLONE_PATH`.
 1. Install [VirtualBox](https://www.virtualbox.org).
    - If running from Windows and VirtualBox is installed at the
      default location (for example `%PROGRAMFILES%\Oracle\VirtualBox`),
-     GitLab Runner will automatically detect it.
-     Otherwise, you will need to add the installation folder to the `PATH` environment variable of the `gitlab-runner` process.
+     GitLab Runner automatically detects it.
+     Otherwise, you must add the installation folder to the `PATH` environment variable of the `gitlab-runner` process.
 1. Import or create a new virtual machine in VirtualBox
 1. Configure Network Adapter 1 as "NAT" (that's currently the only way the GitLab Runner is able to connect over SSH into the guest)
 1. (optional) Configure another Network Adapter as "Bridged networking" to get access to the internet from the guest (for example)

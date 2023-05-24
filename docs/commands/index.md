@@ -593,17 +593,17 @@ The following features are supported. If a feature is not listed in this table, 
 
 | GitLab CI feature          | Available with `exec` | Comments                     |
 | -------------------------- | --------------------- | ---------------------------- |
-| GIT_STRATEGY               | yes                   |                              |
-| GIT_CHECKOUT               | yes                   |                              |
-| GIT_SUBMODULE_STRATEGY     | yes                   |                              |
-| GIT_SUBMODULE_PATHS        | yes                   |                              |
-| GIT_SUBMODULE_UPDATE_FLAGS | yes                   |                              |
-| GIT_SUBMODULE_DEPTH        | yes                   |                              |
-| GIT_SUBMODULE_FORCE_HTTPS  | yes                   |                              |
-| GET_SOURCES_ATTEMPTS       | yes                   |                              |
-| ARTIFACT_DOWNLOAD_ATTEMPTS | no                    | Artifacts are not supported. |
-| RESTORE_CACHE_ATTEMPTS     | yes                   |                              |
-| GIT_DEPTH                  | yes                   |                              |
+| `GIT_STRATEGY`               | yes                   |                              |
+| `GIT_CHECKOUT`               | yes                   |                              |
+| `GIT_SUBMODULE_STRATEGY`     | yes                   |                              |
+| `GIT_SUBMODULE_PATHS`        | yes                   |                              |
+| `GIT_SUBMODULE_UPDATE_FLAGS` | yes                   |                              |
+| `GIT_SUBMODULE_DEPTH`        | yes                   |                              |
+| `GIT_SUBMODULE_FORCE_HTTPS`  | yes                   |                              |
+| `GET_SOURCES_ATTEMPTS`       | yes                   |                              |
+| `ARTIFACT_DOWNLOAD_ATTEMPTS` | no                    | Artifacts are not supported. |
+| `RESTORE_CACHE_ATTEMPTS`     | yes                   |                              |
+| `GIT_DEPTH`                  | yes                   |                              |
 
 **Compatibility table - other features**
 
