@@ -1,5 +1,9 @@
 ## v15.11.1 (2023-05-23)
 
+### Maintenance
+
+- Fix Docker missing image integration tests !4062
+
 ### Bug fixes
 
 - Fix cache keys processing by improving the handling of the fallback keys !4069 (René Hernández Remedios @renehernandez)
@@ -306,10 +310,10 @@
 - Add PrivilegedServices option for allowing/disallowing docker services to be privileged !2652
 - Add support for Windows Server 21H2 !3746
 - Generate global system ID !3758
-- Add start_type to virtualbox configuration !2558 
+- Add start_type to virtualbox configuration !2558
 - Update secret resolver to return raw & masked variables !3750
-- Allow Executors to clone via SSH !3518 
-- Add docker support for `IpcMode` for IPC namespace sharing !3781 
+- Allow Executors to clone via SSH !3518
+- Add docker support for `IpcMode` for IPC namespace sharing !3781
 - Expose the build timeout as an environment variable !3778
 - Improve Runner's API health checking and handling !3658
 
@@ -349,7 +353,7 @@
 
 ### Documentation changes
 
-- Making things a little more obvious for those of us who may skip ahead !3697 
+- Making things a little more obvious for those of us who may skip ahead !3697
 - Clean up docs redirects, runner - 2022-11-23
 - Document behavior for local addresses in [session_server] configuration !3676
 - Docs: Nested guidelines for clarity !3729
@@ -357,7 +361,7 @@
 - Updated serviceaccount setting to match the code !3387
 - Update agent for Kubernetes installation docs !3748
 - Change deprecation documentation for register command !3742
-- Make pod_labels more specific !3645 
+- Make pod_labels more specific !3645
 - Added doc to inform about saving cost when using private subnets and AWS S3 cache !3453
 - Add more descriptive headings on executor pages !3763
 - Add security warning to Runner install docs !3762
@@ -402,7 +406,7 @@
 - Move autoscaler Acquire() to the ExecutorProvider !3660
 - Document internal Executor Interface !3291
 - Update git to 2.38.1 and git-lfs to 3.2.0 to address CVE-2022-29187 !3674
-- Switch to markdownlint-cli2 !3683 
+- Switch to markdownlint-cli2 !3683
 - Ensure `go-fips` container is rebuilt when the version of Go is updated !3685
 - Add logging in UpdateJob to include checksum and bytesize !3693
 - Update taskscaler to newer version !3706
@@ -419,8 +423,8 @@
 - Remove misleading statement regarding Bash in Windows planned feature support !3722
 - Deprecate register command !3702
 - Mark runnerRegistrationToken as deprecated !3704
-- Add helm repo update command to Kubernetes install docs !3736 
-- Add additional documentation around the use of submodules !3670 
+- Add helm repo update command to Kubernetes install docs !3736
+- Add additional documentation around the use of submodules !3670
 - Add Kubernetes certificate guide !3608
 - Troubleshooting for pods always assigned worker node's IAM role !3678
 - Change $shell to $SHELL in "Set up macOS runners" docs !3681
@@ -463,7 +467,7 @@
 - Upgrade Go to version 1.18.6 !3589
 - Add TMPDIR to test's env allowlist !3603
 - Go 1.18 mod tidy !3619
-- Drop runtime.GC() after every check !3595 
+- Drop runtime.GC() after every check !3595
 - Upgrade Go FIPS image version to 1.18 !3624
 - Add internal autoscaler executor provider unit tests !3633
 - Only generate mocks that are actually used in tests !3630
@@ -482,7 +486,7 @@
 - Document hidden retry for failed Docker pull !3638
 - Refactor autoscaler terminology !3641
 - Update redirecting external links for Runner !3631
-- Explain metric …request_concurrency_exceeded_total !3558 
+- Explain metric …request_concurrency_exceeded_total !3558
 - Update contribution details when it requires changes to both GitLab and Runner !3649
 - Disk root size parameter !3652
 - Remove Grafana dashboard link !3653
