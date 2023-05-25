@@ -1,8 +1,4 @@
-## v15.11.1 (2023-05-23)
-
-### Maintenance
-
-- Fix Docker missing image integration tests !4062
+## v15.11.1 (2023-05-25)
 
 ### Bug fixes
 
