@@ -118,6 +118,8 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
+		cacheOptions.Policy = common.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
+
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPull); err != nil {
 			return fmt.Errorf("%w for %s", err, cacheKey)
 		} else if !ok {
@@ -710,6 +712,8 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 			w.Noticef("Skipping cache archiving due to empty cache key")
 			continue
 		}
+
+		cacheOptions.Policy = common.CachePolicy(info.Build.GetAllVariables().ExpandValue(string(cacheOptions.Policy)))
 
 		if ok, err := cacheOptions.CheckPolicy(common.CachePolicyPush); err != nil {
 			return false, fmt.Errorf("%w for %s", err, cacheKey)
