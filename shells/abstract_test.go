@@ -1132,6 +1132,120 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 	}
 }
 
+func TestAbstractShell_cachePolicy(t *testing.T) {
+	testCacheKey := "test-cache-key"
+
+	tests := map[string]struct {
+		policy    string
+		variables common.JobVariables
+		invalid   bool
+	}{
+		"using pull policy": {
+			policy:    "pull",
+			variables: common.JobVariables{},
+			invalid:   false,
+		},
+		"using push policy": {
+			policy:    "push",
+			variables: common.JobVariables{},
+			invalid:   false,
+		},
+		"using pull-push policy": {
+			policy:    "pull-push",
+			variables: common.JobVariables{},
+			invalid:   false,
+		},
+		"using variable with pull-push value": {
+			policy: "$CACHE_POLICY",
+			variables: common.JobVariables{
+				{
+					Key:   "CACHE_POLICY",
+					Value: "pull-push",
+				},
+			},
+			invalid: false,
+		},
+		"using variable with invalid value": {
+			policy: "$CACHE_POLICY",
+			variables: common.JobVariables{
+				{
+					Key:   "CACHE_POLICY",
+					Value: "blah",
+				},
+			},
+			invalid: true,
+		},
+		"using hardcoded value matching variable name": {
+			policy: "CACHE_POLICY",
+			variables: common.JobVariables{
+				{
+					Key:   "CACHE_POLICY",
+					Value: "pull",
+				},
+			},
+			invalid: true,
+		},
+	}
+
+	type cacheFunc func(AbstractShell, common.ShellScriptInfo) error
+
+	functions := map[string]cacheFunc{
+		"cacheExtractor": func(shell AbstractShell, info common.ShellScriptInfo) error {
+			return shell.cacheExtractor(&BashWriter{}, info)
+		},
+		"cacheArchiver": func(shell AbstractShell, info common.ShellScriptInfo) error {
+			return shell.cacheArchiver(&BashWriter{}, info, true)
+		},
+	}
+
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Cache: &common.CacheConfig{
+				Type:   "test",
+				Shared: true,
+			},
+		},
+	}
+	shell := AbstractShell{}
+
+	for ft, fn := range functions {
+		for tn, tc := range tests {
+			t.Run(fmt.Sprintf("%s-%s", ft, tn), func(t *testing.T) {
+				build := &common.Build{
+					BuildDir: "/builds",
+					CacheDir: "/cache",
+					Runner:   runnerConfig,
+					JobResponse: common.JobResponse{
+						ID: 1000,
+						JobInfo: common.JobInfo{
+							ProjectID: 1000,
+						},
+						Cache: common.Caches{
+							{
+								Key:    testCacheKey,
+								Policy: common.CachePolicy(tc.policy),
+								Paths:  []string{"path1", "path2"},
+							},
+						},
+						Variables: tc.variables,
+					},
+				}
+				info := common.ShellScriptInfo{
+					RunnerCommand: "runner-command",
+					Build:         build,
+				}
+
+				err := fn(shell, info)
+				if tc.invalid {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
+	}
+}
+
 func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 	tests := map[string]struct {
 		paths string
