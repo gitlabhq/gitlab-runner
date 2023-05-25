@@ -6,7 +6,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Plan and operate a fleet of shared runners
 
-This document contains best practices for scaling a fleet of runners in a shared service model.
+This guide contains best practices for scaling a fleet of runners in a shared service model.
 
 When you host a fleet of shared runners, you need a well-planned infrastructure that takes
 into consideration your:
@@ -136,6 +136,14 @@ manager-only configuration, the runner agent is itself not executing any CI/CD j
 - The runner manager provisions pods on the target Kubernetes cluster.
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.
 - The pods used for job execution typically require more compute and memory resources than the pod that hosts the runner manager.
+
+### Reusing runners across multiple runner managers
+
+Runner managers with the same authentication token and different `system_id` values become grouped under a single runner. Grouped runners can be reused to run different jobs by multiple runner managers.
+
+The `system_id` is generated each time the GitLab Runner application starts and when the
+configuration is saved, and identifies the machine where the runner is being used.
+The `system_id` is saved to the `.runner_system_id` file, in the same folder as the `config.toml`.
 
 ## Configure instance-level shared runners
 
