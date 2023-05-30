@@ -52,7 +52,7 @@ To install the GCP plugin:
 
 ### Create CI job image
 
-The instances that fleeting provisions are used for each job's environment. 
+The instances that fleeting provisions are used for each job's environment.
 
 An Amazon Machine Image (AMI) or GCP Custom Image should include the following:
 
