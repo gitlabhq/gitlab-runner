@@ -412,7 +412,7 @@ After the service starts, GitLab Runner waits for the service to
 respond. The Docker executor tries to open a TCP connection to the
 exposed service port in the service container.
 
-- In GitLab 15.11 and earlier, only the first exposed port is checked. 
+- In GitLab 15.11 and earlier, only the first exposed port is checked.
 - In GitLab 16.0 and later, the first 20 exposed ports are checked.
 
 The `HEALTHCHECK_TCP_PORT` service variable can be used to perform the health check on a specific port:
