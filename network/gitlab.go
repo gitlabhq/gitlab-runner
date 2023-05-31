@@ -26,6 +26,8 @@ import (
 const createdRunnerTokenPrefix = "glrt-"
 const clientError = -100
 
+const retryAfterHeader = "Retry-After"
+
 func TokenIsCreatedRunnerToken(token string) bool {
 	return strings.HasPrefix(token, createdRunnerTokenPrefix)
 }
@@ -345,9 +347,7 @@ func (n *GitLabClient) RegisterRunner(
 		&request,
 		&response,
 	)
-	if resp != nil {
-		defer func() { _ = resp.Body.Close() }()
-	}
+	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
 	switch result {
 	case http.StatusCreated:
@@ -393,9 +393,7 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 			nil,
 		)
 	}
-	if resp != nil {
-		defer func() { _ = resp.Body.Close() }()
-	}
+	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
 	switch result {
 	case http.StatusOK:
@@ -436,9 +434,7 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		&request,
 		nil,
 	)
-	if resp != nil {
-		defer func() { _ = resp.Body.Close() }()
-	}
+	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
 	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
@@ -472,9 +468,7 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 		&request,
 		nil,
 	)
-	if resp != nil {
-		defer func() { _ = resp.Body.Close() }()
-	}
+	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
 	const baseLogText = "Unregistering runner from GitLab"
 	switch result {
@@ -537,9 +531,7 @@ func (n *GitLabClient) resetToken(
 		},
 	)
 
-	if resp != nil {
-		defer func() { _ = resp.Body.Close() }()
-	}
+	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
 	const baseLogText = "Resetting runner token..."
 	switch result {
@@ -606,6 +598,7 @@ func (n *GitLabClient) RequestJob(
 			request:     &request, response: &response,
 		},
 	)
+	defer func() { n.handleResponse(ctx, httpResponse, false) }()
 
 	switch result {
 	case http.StatusCreated:
@@ -686,6 +679,8 @@ func (n *GitLabClient) createUpdateJobResult(
 	statusText string,
 	response *http.Response,
 ) common.UpdateJobResult {
+	defer func() { n.handleResponse(context.TODO(), response, false) }()
+
 	remoteJobStateResponse := NewRemoteJobStateResponse(response, log)
 
 	result := common.UpdateJobResult{
@@ -771,10 +766,7 @@ func (n *GitLabClient) PatchTrace(
 		return common.NewPatchTraceResult(startOffset, common.PatchFailed, 0)
 	}
 
-	defer func() {
-		_, _ = io.Copy(io.Discard, response.Body)
-		_ = response.Body.Close()
-	}()
+	defer func() { n.handleResponse(context.TODO(), response, true) }()
 
 	tracePatchResponse := NewTracePatchResponse(response, baseLog)
 	log := baseLog.WithFields(logrus.Fields{
@@ -922,6 +914,8 @@ func (n *GitLabClient) UploadRawArtifacts(
 		headers,
 	)
 
+	defer func() { n.handleResponse(context.TODO(), res, true) }()
+
 	log := logrus.WithFields(logrus.Fields{
 		"id":    config.ID,
 		"token": helpers.ShortenToken(config.Token),
@@ -943,11 +937,6 @@ func (n *GitLabClient) UploadRawArtifacts(
 		log.WithError(err).Errorln(messagePrefix, "error")
 		return common.UploadFailed, ""
 	}
-
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
 
 	return n.determineUploadState(res, log, messagePrefix)
 }
@@ -1036,10 +1025,7 @@ func (n *GitLabClient) DownloadArtifacts(
 		log.Errorln("Downloading artifacts from coordinator...", "error", err.Error())
 		return common.DownloadFailed
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, res.Body)
-		_ = res.Body.Close()
-	}()
+	defer func() { n.handleResponse(context.TODO(), res, true) }()
 
 	switch res.StatusCode {
 	case http.StatusOK:
@@ -1094,6 +1080,30 @@ func (n *GitLabClient) ProcessJob(
 
 	trace.start()
 	return trace, nil
+}
+
+func (n *GitLabClient) handleResponse(ctx context.Context, res *http.Response, discardBody bool) {
+	if res == nil {
+		return
+	}
+
+	defer func() {
+		if discardBody {
+			_, _ = io.Copy(io.Discard, res.Body)
+		}
+		_ = res.Body.Close()
+	}()
+
+	if res.StatusCode != http.StatusTooManyRequests {
+		return
+	}
+
+	if retryAfter, err := strconv.Atoi(res.Header.Get(retryAfterHeader)); err == nil {
+		select {
+		case <-ctx.Done():
+		case <-time.After(time.Duration(retryAfter) * time.Second):
+		}
+	}
 }
 
 func NewGitLabClientWithAPIRequestsCollector(c *APIRequestsCollector) *GitLabClient {
