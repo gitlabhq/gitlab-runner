@@ -1175,6 +1175,35 @@ func TestRequestJobWithSystemID(t *testing.T) {
 	assert.True(t, ok)
 }
 
+func TestRequestJobAfterTooManyRequests(t *testing.T) {
+	systemIDState := NewSystemIDState()
+	require.NoError(t, systemIDState.EnsureSystemID())
+
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set(retryAfterHeader, "60")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer s.Close()
+
+	validToken := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   s.URL,
+			Token: validToken,
+		},
+		SystemIDState: systemIDState,
+	}
+
+	c := NewGitLabClient()
+
+	testStart := time.Now()
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancelFunc()
+
+	_, ok := c.RequestJob(ctx, validToken, nil)
+	assert.True(t, ok)
+	assert.WithinDuration(t, testStart, time.Now(), 1500*time.Millisecond)
+}
+
 func setStateForUpdateJobHandlerResponse(w http.ResponseWriter, req map[string]interface{}) {
 	switch req["state"].(string) {
 	case statusRunning, statusCanceling:
