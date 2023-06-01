@@ -132,11 +132,12 @@ in the chart repository.
 
 For GitLab Runner to function, your configuration file **must** specify the following:
 
-- `gitlabUrl` - the GitLab server full URL (e.g., `https://gitlab.example.com`) to register the runner against.
-- `runnerRegistrationToken` -
-  The registration token for adding new runners to GitLab.
-  This must be [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
-  Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
+- `gitlabUrl`: The GitLab server full URL to register the runner against. For example, `https://gitlab.example.com`.
+- `runnerRegistrationToken`:
+  - The authentication token you obtain when you create a runner in the GitLab UI.
+  - Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
+  - You can also use a registration token [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/). Registration tokens
+  have been deprecated and will be removed in GitLab 17.0.
 
 Unless you need to specify any additional configuration, you are
 ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart).
