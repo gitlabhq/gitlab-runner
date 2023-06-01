@@ -6,10 +6,10 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Instance executor (Experiment)
 
-> Introduced in GitLab Runner 15.10.0. It is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html)
+> Introduced in GitLab Runner 15.10.0. This feature is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
 The instance executor is an autoscale-enabled executor that creates instances on-demand to accommodate
-the expected volume of CI jobs that the runner manager processes.
+the expected volume of jobs that the runner manager processes.
 
 You can use the instance executor when jobs need full access to the host instance, operating system, and
 attached devices. The instance executor can also be configured to accommodate single and multi-tenant jobs
@@ -17,48 +17,28 @@ with various levels of isolation and security.
 
 ## Nested virtualization
 
-The instance executor supports nested virtualization through [nesting](https://gitlab.com/gitlab-org/fleeting/nesting).
-Nesting is a GitLab developed daemon. It enables creating and deleting pre-configured Virtual Machines on a host system
-intended for isolated and short-lived workloads such as CI jobs. Nesting is only supported on Apple macOS Apple Silicon instances.
+The instance executor supports nested virtualization with the GitLab-developed
+[nesting daemon](https://gitlab.com/gitlab-org/fleeting/nesting). The nesting daemon enables creation
+and deletion of pre-configured virtual machines on host systems used for isolated and short-lived workloads, like jobs.
+Nesting is only supported on Apple Silicon instances.
 
-## Prepare the environment
+## Prepare the environment for autoscaling
 
-To prepare your environment for autoscaling, first select a fleeting plugin that will enable scaling for your target
-platform.
+To enable scaling for your target platform, install a fleeting plugin. You can install either the AWS or GCP fleeting plugins.
+Both plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
-The AWS and GCP fleeting plugins are an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
 
-You can find our other official plugins [here](https://gitlab.com/gitlab-org/fleeting).
+To prepare the environment for autoscaling:
 
-### Installation
-
-::Tabs
-
-:::TabTitle AWS
-
-To install the AWS plugin:
-
-1. [Download the binary](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases) for your host platform.
-1. Ensure that the plugin binaries are discoverable through the PATH environment variable.
-
-:::TabTitle GCP
-
-To install the GCP plugin:
-
-1. [Download the binary](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases) for your host platform.
-1. Ensure that the plugin binaries are discoverable through the PATH environment variable.
-
-::EndTabs
-
-### Create CI job image
-
-The instances that fleeting provisions are used for each job's environment.
-
-An Amazon Machine Image (AMI) or GCP Custom Image should include the following:
-
-- Dependencies required by the CI jobs you plan to run
-- Git
-- GitLab Runner
+1. Install the binary for your host platform:
+   - [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases)
+   - [GCP fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
+1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
+1. Create an Amazon Machine Image (AMI) or GCP custom image. The image must include:
+   - Git
+   - GitLab Runner
+   - Dependencies required by the jobs you plan to run
 
 ## Configure the executor to autoscale
 
