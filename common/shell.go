@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -49,7 +50,7 @@ type Shell interface {
 	IsDefault() bool
 
 	GetConfiguration(info ShellScriptInfo) (*ShellConfiguration, error)
-	GenerateScript(buildStage BuildStage, info ShellScriptInfo) (string, error)
+	GenerateScript(ctx context.Context, buildStage BuildStage, info ShellScriptInfo) (string, error)
 	GenerateSaveScript(info ShellScriptInfo, scriptPath, script string) (string, error)
 }
 
@@ -84,13 +85,13 @@ func GetShellConfiguration(info ShellScriptInfo) (*ShellConfiguration, error) {
 	return shell.GetConfiguration(info)
 }
 
-func GenerateShellScript(buildStage BuildStage, info ShellScriptInfo) (string, error) {
+func GenerateShellScript(ctx context.Context, buildStage BuildStage, info ShellScriptInfo) (string, error) {
 	shell := GetShell(info.Shell)
 	if shell == nil {
 		return "", fmt.Errorf("shell %s not found", info.Shell)
 	}
 
-	return shell.GenerateScript(buildStage, info)
+	return shell.GenerateScript(ctx, buildStage, info)
 }
 
 func GetDefaultShell() string {

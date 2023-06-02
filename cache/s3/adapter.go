@@ -22,9 +22,9 @@ type s3Adapter struct {
 	client     minioClient
 }
 
-func (a *s3Adapter) GetDownloadURL() *url.URL {
+func (a *s3Adapter) GetDownloadURL(ctx context.Context) *url.URL {
 	URL, err := a.client.PresignHeader(
-		context.Background(), http.MethodGet, a.config.BucketName,
+		ctx, http.MethodGet, a.config.BucketName,
 		a.objectName, a.timeout, nil, nil,
 	)
 	if err != nil {
@@ -36,9 +36,9 @@ func (a *s3Adapter) GetDownloadURL() *url.URL {
 	return URL
 }
 
-func (a *s3Adapter) GetUploadURL() *url.URL {
+func (a *s3Adapter) GetUploadURL(ctx context.Context) *url.URL {
 	URL, err := a.client.PresignHeader(
-		context.Background(), http.MethodPut, a.config.BucketName,
+		ctx, http.MethodPut, a.config.BucketName,
 		a.objectName, a.timeout, nil, a.GetUploadHeaders(),
 	)
 	if err != nil {
@@ -79,7 +79,7 @@ func (a *s3Adapter) GetUploadHeaders() http.Header {
 	return headers
 }
 
-func (a *s3Adapter) GetGoCloudURL() *url.URL {
+func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
 	return nil
 }
 

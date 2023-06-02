@@ -19,7 +19,7 @@ import (
 type credentialsResolver interface {
 	Credentials() *common.CacheGCSCredentials
 	Resolve() error
-	SignBytesFunc() func([]byte) ([]byte, error)
+	SignBytesFunc(context.Context) func([]byte) ([]byte, error)
 }
 
 //go:generate mockery --name=IamCredentialsClient --inpackage
@@ -66,9 +66,8 @@ func (cr *defaultCredentialsResolver) Resolve() error {
 	return cr.readCredentialsFromConfig()
 }
 
-func (cr *defaultCredentialsResolver) SignBytesFunc() func([]byte) ([]byte, error) {
+func (cr *defaultCredentialsResolver) SignBytesFunc(ctx context.Context) func([]byte) ([]byte, error) {
 	return func(payload []byte) ([]byte, error) {
-		ctx := context.Background()
 		req := &credentialspb.SignBlobRequest{
 			Name:    cr.credentials.AccessID,
 			Payload: payload,

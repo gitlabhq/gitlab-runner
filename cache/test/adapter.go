@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"time"
@@ -14,11 +15,11 @@ type testAdapter struct {
 	useGoCloud bool
 }
 
-func (t *testAdapter) GetDownloadURL() *url.URL {
+func (t *testAdapter) GetDownloadURL(ctx context.Context) *url.URL {
 	return t.getURL("download")
 }
 
-func (t *testAdapter) GetUploadURL() *url.URL {
+func (t *testAdapter) GetUploadURL(ctx context.Context) *url.URL {
 	return t.getURL("upload")
 }
 
@@ -29,7 +30,7 @@ func (t *testAdapter) GetUploadHeaders() http.Header {
 	return headers
 }
 
-func (t *testAdapter) GetGoCloudURL() *url.URL {
+func (t *testAdapter) GetGoCloudURL(ctx context.Context) *url.URL {
 	if t.useGoCloud {
 		u, _ := url.Parse("gocloud://test")
 		return u

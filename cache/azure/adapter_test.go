@@ -3,6 +3,7 @@
 package azure
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -92,13 +93,13 @@ func testAdapterOperationWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *azureAdapter,
-	operation func() *url.URL,
+	operation func(context.Context) *url.URL,
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 		hook := test.NewGlobal()
 
-		u := operation()
+		u := operation(context.Background())
 		assert.Nil(t, u)
 
 		message, err := hook.LastEntry().String()
@@ -112,12 +113,12 @@ func testGoCloudURLWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *azureAdapter,
-	operation func() *url.URL,
+	operation func(context.Context) *url.URL,
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 
-		u := operation()
+		u := operation(context.Background())
 
 		if u != nil {
 			assert.Equal(t, tc.expectedGoCloudURL, u.String())
@@ -280,7 +281,7 @@ func testAdapterOperation(
 	name string,
 	expectedMethod string,
 	adapter *azureAdapter,
-	operation func() *url.URL,
+	operation func(context.Context) *url.URL,
 ) {
 	t.Run(name, func(t *testing.T) {
 		cleanupCredentialsResolverMock := prepareMockedCredentialsResolver(adapter)
@@ -289,7 +290,7 @@ func testAdapterOperation(
 		prepareMockedSignedURLGenerator(t, tc, expectedMethod, adapter)
 		hook := test.NewGlobal()
 
-		u := operation()
+		u := operation(context.Background())
 
 		if tc.expectedError != "" {
 			message, err := hook.LastEntry().String()
@@ -365,7 +366,7 @@ func TestAdapterOperation(t *testing.T) {
 			assert.Equal(t, "application/octet-stream", headers.Get("Content-Type"))
 			assert.Equal(t, "BlockBlob", headers.Get("x-ms-blob-type"))
 
-			u := adapter.GetGoCloudURL()
+			u := adapter.GetGoCloudURL(context.Background())
 			assert.Equal(t, "azblob://test/key", u.String())
 
 			env := adapter.GetUploadEnv()
