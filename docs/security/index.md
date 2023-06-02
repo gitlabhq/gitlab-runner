@@ -37,7 +37,7 @@ projects that are run on this server. Use it only for running trusted builds.
 
 **Docker can be considered safe when running in non-privileged mode.** To make
 such a configuration more secure, run jobs as a non-root user in Docker
-containers with disabled sudo or dropped `SETUID` and `SETGID` capabilities.
+containers with disabled `sudo` or dropped `SETUID` and `SETGID` capabilities.
 
 More granular permissions can be configured in non-privileged mode via the
 `cap_add`/`cap_drop` settings.
