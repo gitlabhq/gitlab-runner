@@ -1,3 +1,9 @@
+## v16.0.2 (2023-06-02)
+
+### Bug fixes
+
+- Upgrade taskscaler to latest version !4114
+
 ## v16.0.1 (2023-05-24)
 
 ### Maintenance
