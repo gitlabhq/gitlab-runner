@@ -258,14 +258,15 @@ To provide a certificate file to jobs running in Kubernetes:
    and `<LOCATION>` with appropriate values:
 
    ```toml
-   config: |
-     [[runners]]
-       [runners.kubernetes]
-         namespace = "{{.Release.Namespace}}"
-         image = "ubuntu:latest"
-       [[runners.kubernetes.volumes.secret]]
-           name = "<SECRET_NAME>"
-           mount_path = "<LOCATION>"
+   gitlab-runner:
+     config: |
+       [[runners]]
+         [runners.kubernetes]
+           namespace = "{{.Release.Namespace}}"
+           image = "ubuntu:latest"
+         [[runners.kubernetes.volumes.secret]]
+             name = "<SECRET_NAME>"
+             mount_path = "<LOCATION>"
    ```
 
    The `mount_path` is the directory in the container where the certificate is stored.
