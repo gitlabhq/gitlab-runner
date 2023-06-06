@@ -197,6 +197,7 @@ Coursier
 CPU
 CPUs
 CRAN
+CRI-O
 cron
 crond
 cronjob
@@ -275,6 +276,8 @@ desugar
 desugars
 desynchronized
 Dev
+devfile
+devfiles
 DevOps
 Dhall
 dialogs
@@ -292,6 +295,7 @@ Dockerfiles
 Dockerize
 Dockerized
 Dockerizing
+Docusaurus
 dogfood
 dogfooding
 dogfoods
@@ -305,6 +309,7 @@ dput
 Dreamweaver
 DRIs
 DSLs
+DSN
 Dynatrace
 Ecto
 eden
@@ -327,6 +332,7 @@ ETag
 ETags
 Etsy
 Excon
+exfiltrate
 exfiltration
 ExifTool
 expirable
@@ -392,6 +398,8 @@ Gitter
 GLab
 globals
 globbing
+globstar
+globstars
 Gmail
 Godep
 Golang
@@ -433,6 +441,7 @@ hotfixed
 hotfixes
 hotfixing
 hotspots
+HTMLHint
 http
 https
 hyperparameter
@@ -577,7 +586,7 @@ mitigations
 mitmproxy
 mixin
 mixins
-MLFlow
+MLflow
 Mmap
 mockup
 mockups
@@ -1055,6 +1064,7 @@ unencoded
 unencoder
 unencodes
 unencrypted
+unescaped
 unfollow
 unfollowed
 unfollows
@@ -1074,6 +1084,7 @@ unoptimize
 unoptimized
 unoptimizes
 unoptimizing
+unparsable
 unpatched
 unpause
 unprioritized
