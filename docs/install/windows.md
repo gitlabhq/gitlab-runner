@@ -24,7 +24,7 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
    [Bleeding Edge - download any other tagged release](bleeding-edge.md#download-any-other-tagged-release).
 1. Make sure to restrict the `Write` permissions on the GitLab Runner directory and executable.
    If you do not set these permissions, regular users can replace the executable with their own and run arbitrary code with elevated privileges.
-1. Run an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
+1. Run an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.3#with-administrative-privileges-run-as-administrator):
 1. [Register a runner](../register/index.md).
 1. Install GitLab Runner as a service and start it. You can either run the service
    using the Built-in System Account (recommended) or using a user account.
@@ -61,7 +61,7 @@ Logs are stored in Windows Event Log.
 
 ## Update
 
-1. Stop the service (you need an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator) as before):
+1. Stop the service (you need an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.3#with-administrative-privileges-run-as-administrator) as before):
 
    ```powershell
    cd C:\GitLab-Runner
@@ -80,7 +80,7 @@ Logs are stored in Windows Event Log.
 
 ## Uninstall
 
-From an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7#with-administrative-privileges-run-as-administrator):
+From an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.3#with-administrative-privileges-run-as-administrator):
 
 ```powershell
 cd C:\GitLab-Runner

@@ -1758,7 +1758,7 @@ Admission control webhooks are a cluster-level administrative control intercept 
 
 Admission control webhooks support filters that can finely control which API requests and namespace sources it intercepts. If the Kubernetes API calls from GitLab Runner do not need to pass through an admission control webhook then you may alter the [webhook's selector/filter configuration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector) to ignore the GitLab Runner namespace, or apply exclusion labels/annotations over the GitLab Runner pod by configuring `podAnnotations` or `podLabels` in the [GitLab Runner Helm Chart `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/57e026d7f43f63adc32cdd2b21e6d450abcf0686/values.yaml#L490-500).
 
-For example, to avoid [DataDog Admission Controller webhook](https://docs.datadoghq.com/agent/cluster_agent/admission_controller/) from intercepting API requests made by the GitLab Runner manager pod, the following can be added:
+For example, to avoid [DataDog Admission Controller webhook](https://docs.datadoghq.com/containers/cluster_agent/admission_controller/?tab=operator) from intercepting API requests made by the GitLab Runner manager pod, the following can be added:
 
 ```yaml
 podLabels:

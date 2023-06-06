@@ -260,7 +260,7 @@ The current public GPG key used for packages signing can be downloaded from
 
 NOTE:
 The same key is used by the GitLab Runner project to sign `release.sha256` files for the S3 releases
-available in the <https://gitlab-runner-downloads.s3.amazonaws.com/> bucket.
+available in the `<https://gitlab-runner-downloads.s3.amazonaws.com/>` bucket.
 
 #### Previous GPG public keys
 

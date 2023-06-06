@@ -222,7 +222,7 @@ You can configure the runner to create a network for each job.
 When you enable this networking mode, the runner creates and uses a
 user-defined Docker bridge network for each job. Docker environment
 variables are not shared across the containers. For more information
-about user-defined bridge networks, see the [Docker documentation](https://docs.docker.com/network/bridge/).
+about user-defined bridge networks, see the [Docker documentation](https://docs.docker.com/network/drivers/bridge/).
 
 To use this networking mode, enable `FF_NETWORK_PER_BUILD` in either
 the feature flag or the environment variable in the`config.toml`.
@@ -269,7 +269,7 @@ When a job starts, the runner:
 
 The container running the job and the containers running the service
 resolve each other's hostnames and aliases. This functionality is
-[provided by Docker](https://docs.docker.com/network/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
+[provided by Docker](https://docs.docker.com/network/drivers/bridge/#differences-between-user-defined-bridges-and-the-default-bridge).
 
 ### Configure a network with container links
 
