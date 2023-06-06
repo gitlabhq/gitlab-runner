@@ -18,11 +18,12 @@ swap:
   GitLabber: GitLab team member
   GitLabbers: GitLab team members
   GitLab-shell: GitLab Shell
-  gitlab omnibus: Omnibus GitLab
+  gitlab omnibus: Linux package
   param: parameter
   params: parameters
   pg: PostgreSQL
   'postgres$': PostgreSQL
+  golang: Go
   raketask: Rake task
   raketasks: Rake tasks
   rspec: RSpec

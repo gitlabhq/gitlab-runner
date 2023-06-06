@@ -28,7 +28,7 @@ Before you deploy runners, consider your workload and environment requirements.
 
 - Create a list of the teams that you plan to onboard to GitLab.
 - Catalog the programming languages, web frameworks, and libraries in use
-  at your organization. For example, GoLang, C++, PHP, Java, Python, JavaScript, React, Node.js.
+  at your organization. For example, Go, C++, PHP, Java, Python, JavaScript, React, Node.js.
 - Estimate the number of CI/CD jobs each team may execute per hour, per day.
 - Validate if any team has build environment requirements that cannot be
   addressed by using containers.
@@ -176,7 +176,7 @@ we process millions of jobs per month. You can view
 
 An essential step in operating a runner fleet at scale is to set up and use the [runner monitoring](../monitoring/index.md) capabilities included with GitLab.
 
-The following table includes a summary of GitLab Runner metrics. The list does not include the GoLang-specific process metrics.
+The following table includes a summary of GitLab Runner metrics. The list does not include the Go-specific process metrics.
 To view those metrics on a runner, execute the command as noted [here](../monitoring/index.md#available-metrics).
 
 | Metric name | Description |

@@ -31,7 +31,7 @@ and job execution are:
 - `Executor`
 - `ExecutorProvider`
 
-```golang
+```go
 type Executor interface {
     // Shell returns data about the shell and scripts this executor is bound to.
     Shell() *ShellScriptInfo
@@ -161,7 +161,7 @@ List of features that can be reported to GitLab can be found in the `FeaturesInf
 As `DefaultExecutorProvider` is currently one of two existing implementations of `ExecutorProvider`
 interface and is used by most of the executors, let's describe how it's built.
 
-```golang
+```go
 type DefaultExecutorProvider struct {
     Creator          func() common.Executor
     FeaturesUpdater  func(features *common.FeaturesInfo)

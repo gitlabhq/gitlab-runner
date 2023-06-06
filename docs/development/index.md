@@ -6,22 +6,22 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Contribute to GitLab Runner development
 
-GitLab Runner is a golang binary which can operate in two modes:
+GitLab Runner is a Go binary which can operate in two modes:
 
 1. GitLab Runner executing jobs locally ("instance" executor).
 1. Runner manager delegating jobs to an autoscaled environment which uses GitLab Runner Helper to pull artifacts.
 
-For developing GitLab Runner in instance executor mode (1) the only setup required is a working golang environment.
+For developing GitLab Runner in instance executor mode (1) the only setup required is a working Go environment.
 For developing GitLab Runner in Manager and Helper mode (2) setup also requires a Docker build environment.
 Additionally running the Manager or Helper in Kubernetes will require a working cluster.
 
-The following instructions setup your golang environment using `asdf` to manage the golang version. If you already have this or otherwise know what you're doing, you can skip step 2 ("Install dependencies and Go runtime").
+The following instructions setup your Go environment using `asdf` to manage the Go version. If you already have this or otherwise know what you're doing, you can skip step 2 ("Install dependencies and Go runtime").
 
 In order to provide Docker and Kubernetes locally Step 3 has you setting Rancher Desktop. If you don't need one or both you can skip step 3 ("Install Rancher Desktop") or just disable `k3s` (Kubernetes) in Rancher Desktop.
 
 ## Recommended Environment
 
-The recommended environment on which to install golang and Rancher Desktop for development is a local laptop or desktop. It is possible to use nested-virtualization to run Rancher Desktop in the cloud (which runs `k3s` in a VM) but it's more tricky to setup.
+The recommended environment on which to install Go and Rancher Desktop for development is a local laptop or desktop. It is possible to use nested-virtualization to run Rancher Desktop in the cloud (which runs `k3s` in a VM) but it's more tricky to setup.
 
 ## Runner Shorts Video Tutorials
 
@@ -40,7 +40,7 @@ git clone https://gitlab.com/gitlab-org/gitlab-runner.git
 
 If you are developing for GitLab Runner in autoscaled mode (Manager and Helper) you might want to check out
 one or more of Taskscaler, Fleeting and associated plugins. To make local changes from one package visible
-to the others, use golang workspaces.
+to the others, use Go workspaces.
 
 ```shell
 git clone https://gitlab.com/gitlab-org/fleeting/taskscaler.git
@@ -383,14 +383,14 @@ and [integration tests](https://en.wikipedia.org/wiki/Integration_testing) in th
 
 - Unit test files have a suffix of `_test.go` and contain the following build directive in the header:
 
-    ```golang
+    ```go
     // go:build !integration
 
     ```
 
 - Integration test files have a suffix of `_integration_test.go` and contain the following build directive in the header:
 
-    ```golang
+    ```go
     // go:build integration
 
     ```

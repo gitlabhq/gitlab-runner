@@ -57,6 +57,7 @@ exceptions:
   - DHCP
   - DML
   - DNS
+  - DSN
   - DOM
   - DORA
   - DSA
@@ -147,6 +148,7 @@ exceptions:
   - NPM
   - NTP
   - OCI
+  - OIDC
   - OKD
   - OKR
   - ONLY
