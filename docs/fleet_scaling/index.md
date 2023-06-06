@@ -137,9 +137,9 @@ manager-only configuration, the runner agent is itself not executing any CI/CD j
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.
 - The pods used for job execution typically require more compute and memory resources than the pod that hosts the runner manager.
 
-### Reusing runners across multiple runner managers
+### Reusing a GitLab Runner configuration
 
-Runner managers with the same authentication token and different `system_id` values become grouped under a single runner. Grouped runners can be reused to run different jobs by multiple runner managers.
+Runners registered with the same authentication token and different `system_id` values become grouped under a single runner. Grouped runners can be reused to run different jobs by multiple runner managers.
 
 The `system_id` is generated each time the GitLab Runner application starts and when the
 configuration is saved, and identifies the machine where the runner is being used.
