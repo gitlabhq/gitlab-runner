@@ -8,20 +8,19 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
-## Use GitLab.com runners
+## Use GitLab.com SaaS runners
 
-If you use GitLab.com, you can run your CI/CD jobs on runners hosted by GitLab.
-These runners are [managed](https://docs.gitlab.com/ee/ci/runners/index.html) by GitLab and
-fully integrated with GitLab.com. By default these runners are enabled for all projects.
+If you use GitLab.com, you can run your CI/CD jobs on [SaaS runners](https://docs.gitlab.com/ee/ci/runners/index.html)
+hosted by GitLab.
+These runners are managed by GitLab and fully integrated with GitLab.com.
+By default these runners are enabled for all projects.
 You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners) if you have
 the Owner role for the project.
 
-Alternatively, you can install GitLab Runner and register your own runners on GitLab.com or
-on your own instance.
-
 ## Use self-managed runners **(FREE SELF)**
 
-To use self-managed runners, you [**install**](install/index.md) GitLab Runner on infrastructure
+Alternatively, you can install GitLab Runner and register your own runners on GitLab.com or
+on your own instance. To use self-managed runners, you [install](install/index.md) GitLab Runner on infrastructure
 that you own or manage.
 
 ### Scale a fleet of runners
