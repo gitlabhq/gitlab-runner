@@ -235,7 +235,7 @@ func (m *manager) pullDockerImage(imageName string, ac *cli.AuthConfig) (*types.
 	options.RegistryAuth, _ = auth.EncodeConfig(ac)
 
 	if err := m.client.ImagePullBlocking(m.context, ref, options); err != nil {
-		return nil, &common.BuildError{Inner: err, FailureReason: common.ScriptFailure}
+		return nil, &common.BuildError{Inner: err, FailureReason: common.ImagePullFailure}
 	}
 
 	image, _, err := m.client.ImageInspectWithRaw(m.context, imageName)

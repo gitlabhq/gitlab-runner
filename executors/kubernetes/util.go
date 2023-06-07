@@ -174,7 +174,7 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 			return podPhaseResponse{
 				true,
 				api.PodUnknown,
-				&common.BuildError{Inner: imagePullErr, FailureReason: common.ScriptFailure},
+				&common.BuildError{Inner: imagePullErr, FailureReason: common.ImagePullFailure},
 			}
 		}
 	}
