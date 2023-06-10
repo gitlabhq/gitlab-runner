@@ -51,6 +51,7 @@ require (
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.17.0
+	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.27.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	golang.org/x/net v0.7.0
