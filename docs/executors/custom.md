@@ -361,7 +361,7 @@ The table below is a detailed explanation of what each script does and
 what the main goal of that script is.
 
 | Script Name | Script Contents |
-|:-----------:|:---------------:|
+|-------------|-----------------|
 | `prepare_script` | Simple debug information which machine the Job is running on. |
 | `get_sources`    | Prepares the Git configuration, and clone/fetch the repository. We suggest you keep this as is since you get all of the benefits of Git strategies that GitLab provides. |
 | `restore_cache` | Extract the cache if any are defined. This expects the `gitlab-runner` binary is available in `$PATH`. |
