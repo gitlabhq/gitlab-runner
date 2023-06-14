@@ -21,7 +21,7 @@ trigger runner-incept tests:
     UPSTREAM_CI_COMMIT_REF: $UPSTREAM_CI_COMMIT_REF
   trigger:
     project: gitlab-org/ci-cd/tests/runner-incept
-    strategy: depend
+    # strategy: depend
 
 static QA:
   extends:
