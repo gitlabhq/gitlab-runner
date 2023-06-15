@@ -187,13 +187,50 @@ To display a list of all the `register` subcommands, run the following command:
 gitlab-runner register -h
 ```
 
+### Register a runner created in the UI with an authentication token
+
+> Introduced in [GitLab Runner 15.10](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29670).
+
 To register a runner using the most common options, you would do:
 
 ```shell
 sudo gitlab-runner register \
   --non-interactive \
   --url "https://gitlab.com/" \
-  --registration-token "PROJECT_REGISTRATION_TOKEN" \
+  --token "$RUNNER_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "docker-runner"
+```
+
+If you're running the runner in a Docker container, run the `register` command
+with a structure similar to the following example:
+
+```shell
+docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
+  --non-interactive \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --url "https://gitlab.com/" \
+  --token "$RUNNER_TOKEN" \
+  --description "docker-runner"
+```
+
+### Register a runner with a registration token (deprecated)
+
+> [Deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/102561) in GitLab 15.6.
+
+WARNING:
+This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743) in GitLab 15.6 and is planned for removal in 17.0. This change is a breaking change.
+
+To register a runner using the most common options, run the `register` command
+with a structure similar to the following example:
+
+```shell
+sudo gitlab-runner register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
   --description "docker-runner" \
