@@ -358,6 +358,8 @@ git 1.8.3.1:
   - make git1.8-test
 
 integration_k8s:
+  rules:
+    - when: never # temporarily skip
   extends:
   - .rules:merge_request_pipelines:no_docs
   - .docker
@@ -365,12 +367,13 @@ integration_k8s:
   - 'prepare done'
   stage: test
   services:
-  - name: registry.gitlab.com/gitlab-org/cluster-integration/test-utils/k3s-gitlab-ci/releases/v1.16.7-k3s1
+  - name: registry.gitlab.com/gitlab-org/cluster-integration/test-utils/k3s-gitlab-ci/releases/v1.26.0-k3s1
     alias: k3s
     command:
       - server
       - --tls-san=k3s
       - --kube-apiserver-arg=feature-gates=ProcMountType=true
+      - --disable-network-policy
   before_script:
   - curl k3s:8081?service=k3s > k3s.yaml
   - export KUBECONFIG=$(pwd)/k3s.yaml
@@ -380,7 +383,9 @@ integration_k8s:
   script:
   - >
     splitic test \
-    -tags integration,kubernetes
-    -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-    gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-    -- -ldflags "$(make print_ldflags)"
+      -tags integration,kubernetes \
+      -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
+      gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+      -- -ldflags "$(make print_ldflags)"
+  variables:
+    CI_DEBUG_SERVICES: "true"

@@ -598,7 +598,7 @@ func TestDockerCommandPullingImageNoHost(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	build := getBuildForOS(t, common.GetSuccessfulBuild)
-	build.Runner.RunnerSettings.Docker.Image = "docker.repo.example.com/docker:18.09.7-dind"
+	build.Runner.RunnerSettings.Docker.Image = "docker.repo.example.com/docker:23-dind"
 
 	var buildError *common.BuildError
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
@@ -719,11 +719,12 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	commands := []string{
+	job, err := common.GetRemoteBuildResponse(
 		"docker info",
 		"docker run -v $(pwd):$(pwd) -w $(pwd) busybox touch test",
 		"cat test",
-	}
+	)
+	assert.NoError(t, err)
 
 	strategies := []string{
 		"fetch",
@@ -732,30 +733,8 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 
 	for _, strategy := range strategies {
 		t.Log("Testing", strategy, "strategy...")
-		longRunningBuild, err := common.GetRemoteLongRunningBuild()
-		assert.NoError(t, err)
-		build := &common.Build{
-			JobResponse: longRunningBuild,
-			Runner: &common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Executor: "docker",
-					Docker: &common.DockerConfig{
-						Image:      common.TestAlpineImage,
-						PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
-						Privileged: true,
-					},
-				},
-				SystemIDState: systemIDState,
-			},
-		}
-		build.Steps = common.Steps{
-			common.Step{
-				Name:         common.StepNameScript,
-				Script:       common.StepScript(commands),
-				When:         common.StepWhenOnSuccess,
-				AllowFailure: false,
-			},
-		}
+
+		build := getTestDockerJob(t, job)
 		build.Image.Name = common.TestDockerGitImage
 		build.Services = common.Services{
 			common.Image{
@@ -768,6 +747,7 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 				Command: []string{"--bip", "172.30.0.1/16"},
 			},
 		}
+
 		build.Variables = append(build.Variables, common.JobVariable{
 			Key: "GIT_STRATEGY", Value: strategy,
 		})
@@ -777,16 +757,15 @@ func TestDockerPrivilegedServiceAccessingBuildsFolder(t *testing.T) {
 	}
 }
 
-func getTestDockerJob(t *testing.T) *common.Build {
-	commands := []string{
-		"docker info",
-	}
-
-	longRunningBuild, err := common.GetRemoteLongRunningBuild()
-	assert.NoError(t, err)
+func getTestDockerJob(t *testing.T, job common.JobResponse) *common.Build {
+	job.Variables = append(job.Variables,
+		common.JobVariable{Key: "DOCKER_TLS_VERIFY", Value: "1"},
+		common.JobVariable{Key: "DOCKER_TLS_CERTDIR", Value: "/certs"},
+		common.JobVariable{Key: "DOCKER_CERT_PATH", Value: "/certs/client"},
+	)
 
 	build := &common.Build{
-		JobResponse: longRunningBuild,
+		JobResponse: job,
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
@@ -794,17 +773,10 @@ func getTestDockerJob(t *testing.T) *common.Build {
 					Image:      common.TestAlpineImage,
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					Privileged: true,
+					Volumes:    []string{"/certs"},
 				},
 			},
 			SystemIDState: systemIDState,
-		},
-	}
-	build.Steps = common.Steps{
-		common.Step{
-			Name:         common.StepNameScript,
-			Script:       common.StepScript(commands),
-			When:         common.StepWhenOnSuccess,
-			AllowFailure: false,
 		},
 	}
 
@@ -834,7 +806,7 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 				},
 			},
 			variables: common.JobVariables{
-				{Key: "DOCKER_HOST", Value: "tcp://my-docker-service:2375"},
+				{Key: "DOCKER_HOST", Value: "tcp://docker:2376"},
 				{Key: "IMAGE_NAME", Value: common.TestDockerGitImage},
 				{Key: "SERVICE_NAME", Value: common.TestDockerDindImage},
 			},
@@ -849,7 +821,7 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 				},
 			},
 			variables: common.JobVariables{
-				{Key: "DOCKER_HOST", Value: "tcp://docker:2375"},
+				{Key: "DOCKER_HOST", Value: "tcp://docker:2376"},
 				{Key: "IMAGE_NAME", Value: common.TestDockerGitImage},
 				{Key: "SERVICE_NAME", Value: common.TestDockerDindImage},
 			},
@@ -858,12 +830,15 @@ func TestDockerExtendedConfigurationFromJob(t *testing.T) {
 
 	for exampleID, example := range examples {
 		t.Run(fmt.Sprintf("example-%d", exampleID), func(t *testing.T) {
-			build := getTestDockerJob(t)
+			job, err := common.GetRemoteBuildResponse("docker info")
+			assert.NoError(t, err)
+
+			build := getTestDockerJob(t, job)
 			build.Image = example.image
 			build.Services = example.services
 			build.Variables = append(build.Variables, example.variables...)
 
-			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 			assert.NoError(t, err)
 		})
 	}
