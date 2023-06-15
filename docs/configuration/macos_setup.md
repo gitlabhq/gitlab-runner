@@ -109,8 +109,8 @@ Now install and configure Xcode.
 
 Now register a runner to start picking up your CI/CD jobs.
 
-1. In GitLab, on the top bar, select **Main menu > Projects** or **Main menu > Groups** and find your project or group.
-1. On the left sidebar, select **Settings > CI/CD**.
+1. On the left sidebar, at the top, select **Search GitLab** (**{search}**) to find your project or group.
+1. Select **Settings > CI/CD**.
 1. Expand **Runners**.
 1. Note the URL and registration token.
 1. In a terminal, start the interactive setup:
