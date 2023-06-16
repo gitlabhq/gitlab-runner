@@ -531,10 +531,8 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", args...)
 
 	// Update / initialize submodules
-	updateArgs := []string{"submodule", "update", "--init"}
-	updateArgs = append(build.GetURLInsteadOfArgs(), updateArgs...)
+	updateArgs := append(build.GetURLInsteadOfArgs(), "submodule", "update", "--init")
 	foreachArgs := []string{"submodule", "foreach"}
-	gitSubmoduleUpdateFlags := build.GetGitSubmoduleUpdateFlags()
 	if recursive {
 		updateArgs = append(updateArgs, "--recursive")
 		foreachArgs = append(foreachArgs, "--recursive")
@@ -542,15 +540,20 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	if depth > 0 {
 		updateArgs = append(updateArgs, "--depth", strconv.Itoa(depth))
 	}
-	updateArgs = append(updateArgs, gitSubmoduleUpdateFlags...)
+	updateArgs = append(updateArgs, build.GetGitSubmoduleUpdateFlags()...)
 	updateArgs = append(updateArgs, pathArgs...)
 
 	// Clean changed files in submodules
-	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
+	cleanFlags := []string{"-ffdx"}
+	if len(build.GetGitCleanFlags()) > 0 {
+		cleanFlags = build.GetGitCleanFlags()
+	}
+	cleanCommand := []string{"git clean " + strings.Join(cleanFlags, " ")}
+
+	w.Command("git", append(foreachArgs, cleanCommand...)...)
 	w.Command("git", append(foreachArgs, "git reset --hard")...)
 	w.Command("git", updateArgs...)
-	// Clean changed files in sub-submodules
-	w.Command("git", append(foreachArgs, "git clean -ffxd")...)
+	w.Command("git", append(foreachArgs, cleanCommand...)...)
 
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
