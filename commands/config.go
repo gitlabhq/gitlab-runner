@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 )
 
@@ -210,6 +211,21 @@ func (c *configOptions) RunnerByName(name string) (*common.RunnerConfig, error) 
 	}
 
 	return nil, fmt.Errorf("could not find a runner with the name '%s'", name)
+}
+
+func (c *configOptions) RunnerByToken(token string) (*common.RunnerConfig, error) {
+	config := c.getConfig()
+	if config == nil {
+		return nil, fmt.Errorf("config has not been loaded")
+	}
+
+	for _, runner := range config.Runners {
+		if runner.Token == token {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the token '%s'", helpers.ShortenToken(token))
 }
 
 func (c *configOptions) RunnerByURLAndID(url string, id int64) (*common.RunnerConfig, error) {
