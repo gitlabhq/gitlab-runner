@@ -109,7 +109,7 @@ func TestWindowsIsRoot(t *testing.T) {
 		},
 		"root path without drive": {
 			arg:      "/",
-			expected: false,
+			expected: true,
 		},
 		"root path with drive": {
 			arg:      "c:/",
@@ -125,6 +125,10 @@ func TestWindowsIsRoot(t *testing.T) {
 		},
 		"named pipe path with forward slashes": {
 			arg:      `//./pipe/docker_engine`,
+			expected: false,
+		},
+		"default builds dir": {
+			arg:      `C:\builds`,
 			expected: false,
 		},
 		"UNC share name": {

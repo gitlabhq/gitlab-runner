@@ -54,9 +54,12 @@ func (p *windowsPath) IsRoot(path string) bool {
 		return false
 	}
 
-	path = p.convert(path, false)
-
-	return len(path) > 1 && strings.Count(path, "/") < 3
+	unc := strings.HasPrefix(path, "//") || strings.HasPrefix(path, "\\")
+	components := strings.Count(p.convert(path, false), "/")
+	if unc {
+		return components < 3
+	}
+	return components < 2
 }
 
 func (p *windowsPath) Contains(basePath, targetPath string) bool {
