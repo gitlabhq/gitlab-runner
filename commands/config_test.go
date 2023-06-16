@@ -132,6 +132,67 @@ func TestRunnerByName(t *testing.T) {
 	}
 }
 
+func TestRunnerByToken(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*common.RunnerConfig
+		runnerToken   string
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by token": {
+			runners: []*common.RunnerConfig{
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "runner1",
+					},
+				},
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "runner2",
+					},
+				},
+			},
+			runnerToken:   "runner2",
+			expectedIndex: 1,
+		},
+		"does not find non-existent runner token": {
+			runners: []*common.RunnerConfig{
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "runner1",
+					},
+				},
+				{
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "runner2",
+					},
+				},
+			},
+			runnerToken:   "runner3",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf("could not find a runner with the token 'runner3'"),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := configOptions{
+				config: &common.Config{
+					Runners: tt.runners,
+				},
+			}
+
+			runner, err := config.RunnerByToken(tt.runnerToken)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
 func TestRunnerByURLAndID(t *testing.T) {
 	examples := map[string]struct {
 		runners       []*common.RunnerConfig

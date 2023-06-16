@@ -78,7 +78,7 @@ func TestAccessLevelSetting(t *testing.T) {
 				"--access-level", string(testCase.accessLevel),
 			}
 
-			_, output, err := testRegisterCommandRun(t, network, nil, "test-runner-token", arguments...)
+			_, output, err := testRegisterCommandRun(t, network, nil, "", "test-runner-token", arguments...)
 
 			if testCase.failureExpected {
 				assert.EqualError(t, err, "command error: Given access-level is not valid. "+
@@ -210,6 +210,8 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 
 			hook := test.NewGlobal()
 			args := append(tc.arguments, "--leave-runner")
+			args, cleanTempFile := useTempConfigFile(t, args)
+			defer cleanTempFile()
 			err := app.Run(append([]string{"runner", "register"}, args...))
 			output := commands.GetLogrusOutput(t, hook)
 
@@ -285,6 +287,7 @@ func testRegisterCommandRun(
 	t *testing.T,
 	network common.Network,
 	env []kv,
+	initialConfig string,
 	token string,
 	args ...string,
 ) (content, output string, err error) {
@@ -335,6 +338,8 @@ func testRegisterCommandRun(
 	}
 
 	configFile, err := os.CreateTemp("", "config.toml")
+	require.NoError(t, err)
+	_, err = configFile.WriteString(initialConfig)
 	require.NoError(t, err)
 
 	err = configFile.Close()
@@ -846,7 +851,7 @@ shutdown_timeout = 0
 
 			tt.networkAssertions(network)
 
-			fileContent, _, err := testRegisterCommandRun(t, network, nil, "test-runner-token", args...)
+			fileContent, _, err := testRegisterCommandRun(t, network, nil, "", "test-runner-token", args...)
 			if tt.errExpected {
 				require.Error(t, err)
 				return
@@ -945,6 +950,9 @@ func TestUnregisterOnFailure(t *testing.T) {
 				arguments = append(arguments, "--leave-runner")
 			}
 
+			arguments, cleanTempFile := useTempConfigFile(t, arguments)
+			defer cleanTempFile()
+
 			answers := []string{"https://gitlab.com/", testCase.token, "description"}
 			if !runnerUICreated {
 				answers = append(answers, "", "")
@@ -974,6 +982,16 @@ func TestUnregisterOnFailure(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func useTempConfigFile(t *testing.T, arguments []string) ([]string, func()) {
+	configFile, err := os.CreateTemp("", "config.toml")
+	require.NoError(t, err)
+	err = configFile.Close()
+	require.NoError(t, err)
+	arguments = append(arguments, "--config", configFile.Name())
+
+	return arguments, func() { os.Remove(configFile.Name()) }
 }
 
 func TestRegisterCommand(t *testing.T) {
@@ -1135,7 +1153,7 @@ func TestRegisterCommand(t *testing.T) {
 					Once()
 			}
 
-			gotConfig, _, err := testRegisterCommandRun(t, network, tc.environment, tc.token, tc.arguments...)
+			gotConfig, _, err := testRegisterCommandRun(t, network, tc.environment, "", tc.token, tc.arguments...)
 			require.NoError(t, err)
 
 			for _, expectedConfig := range tc.expectedConfigs {
@@ -1143,6 +1161,32 @@ func TestRegisterCommand(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegisterWithAuthenticationTokenTwice(t *testing.T) {
+	token := "glrt-test-runner-token"
+	arguments := []string{
+		"--name", "test-runner",
+	}
+
+	network := new(common.MockNetwork)
+	defer network.AssertExpectations(t)
+
+	network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+		Return(&common.VerifyRunnerResponse{
+			ID:    12345,
+			Token: token,
+		}).
+		Once()
+
+	config, output, err := testRegisterCommandRun(t, network, []kv{}, "", token, arguments...)
+	require.NoError(t, err)
+	require.NotContains(t, output, "A runner with this system ID and token has already been registered.")
+
+	// Second time should result in a warning
+	_, output, err = testRegisterCommandRun(t, network, []kv{}, config, token, arguments...)
+	require.NoError(t, err)
+	require.Contains(t, output, "A runner with this system ID and token has already been registered.")
 }
 
 func TestRegisterTokenExpiresAt(t *testing.T) {
@@ -1203,7 +1247,7 @@ func TestRegisterTokenExpiresAt(t *testing.T) {
 					Once()
 			}
 
-			gotConfig, _, err := testRegisterCommandRun(t, network, []kv{}, tc.token, "--name", "test-runner")
+			gotConfig, _, err := testRegisterCommandRun(t, network, []kv{}, "", tc.token, "--name", "test-runner")
 			require.NoError(t, err)
 
 			assert.Contains(

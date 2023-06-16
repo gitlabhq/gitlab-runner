@@ -267,12 +267,16 @@ func (s *RegisterCommand) askRunner() {
 	if s.Token == "" || !s.tokenIsRunnerToken() {
 		s.Token = s.ask("registration-token", "Enter the registration token:")
 	}
+
 	if !s.tokenIsRunnerToken() {
 		s.Name = s.ask("name", "Enter a description for the runner:")
 		s.doLegacyRegisterRunner()
 		return
 	}
 
+	if r, err := s.RunnerByToken(s.Token); err == nil && r != nil {
+		logrus.Warningln("A runner with this system ID and token has already been registered.")
+	}
 	s.verifyRunner()
 	s.Name = s.ask("name", "Enter a name for the runner. This is stored only in the local config.toml file:")
 
