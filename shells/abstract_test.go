@@ -810,11 +810,14 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 		ExpectedNoticeArgs      []interface{}
 		ExpectedGitUpdateFlags  []interface{}
 		ExpectedGitForEachFlags []interface{}
+		GitCleanFlags           string
+		ExpectedGitCleanFlags   []string
 	}{
 		"no recursion, no depth limit": {
-			Recursive:          false,
-			Depth:              0,
-			ExpectedNoticeArgs: []interface{}{"Updating/initializing submodules..."},
+			Recursive:             false,
+			Depth:                 0,
+			ExpectedNoticeArgs:    []interface{}{"Updating/initializing submodules..."},
+			ExpectedGitCleanFlags: []string{"-ffdx"},
 		},
 		"no recursion, depth limit 10": {
 			Recursive:               false,
@@ -822,6 +825,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			ExpectedNoticeArgs:      []interface{}{"Updating/initializing submodules with git depth set to %d...", 10},
 			ExpectedGitUpdateFlags:  []interface{}{"--depth", "10"},
 			ExpectedGitForEachFlags: []interface{}{},
+			ExpectedGitCleanFlags:   []string{"-ffdx"},
 		},
 		"with recursion, no depth limit": {
 			Recursive:               true,
@@ -829,6 +833,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			ExpectedNoticeArgs:      []interface{}{"Updating/initializing submodules recursively..."},
 			ExpectedGitUpdateFlags:  []interface{}{"--recursive"},
 			ExpectedGitForEachFlags: []interface{}{"--recursive"},
+			ExpectedGitCleanFlags:   []string{"-ffdx"},
 		},
 		"with recursion, depth limit 1": {
 			Recursive: true,
@@ -839,6 +844,14 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			},
 			ExpectedGitUpdateFlags:  []interface{}{"--recursive", "--depth", "1"},
 			ExpectedGitForEachFlags: []interface{}{"--recursive"},
+			ExpectedGitCleanFlags:   []string{"-ffdx"},
+		},
+		"with custom git clean flags": {
+			Recursive:             false,
+			Depth:                 0,
+			ExpectedNoticeArgs:    []interface{}{"Updating/initializing submodules..."},
+			GitCleanFlags:         "custom-flags",
+			ExpectedGitCleanFlags: []string{"custom-flags"},
 		},
 	}
 
@@ -871,7 +884,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 						"git", "-c", insteadOf, "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...,
 				).Once()
 			cleanCmd := mockWriter.
-				On("Command", append(expectedGitForEachArgsFn(), "git clean -ffxd")...).
+				On("Command", append(expectedGitForEachArgsFn(), "git clean "+strings.Join(tc.ExpectedGitCleanFlags, " "))...).
 				Once()
 			mockWriter.On("Command", append(expectedGitForEachArgsFn(), "git reset --hard")...).
 				Run(func(args mock.Arguments) {
@@ -888,6 +901,9 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					JobResponse: common.JobResponse{
 						GitInfo: common.GitInfo{Depth: tc.Depth},
 						Token:   exampleJobToken,
+						Variables: common.JobVariables{
+							{Key: "GIT_CLEAN_FLAGS", Value: tc.GitCleanFlags},
+						},
 					},
 					Runner: &common.RunnerConfig{
 						RunnerCredentials: common.RunnerCredentials{URL: exampleBaseURL},
@@ -1337,7 +1353,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 				test.paths, "-c", insteadOf, "submodule", "update", "--init",
 			)...,
 			).Once()
-			cleanCmd := mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffxd").Once()
+			cleanCmd := mockWriter.On("Command", "git", "submodule", "foreach", "git clean -ffdx").Once()
 			mockWriter.On("Command", "git", "submodule", "foreach", "git reset --hard").
 				Run(func(args mock.Arguments) {
 					cleanCmd.Once()
