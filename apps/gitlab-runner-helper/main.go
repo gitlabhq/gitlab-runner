@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"go.uber.org/automaxprocs/maxprocs"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -13,6 +14,10 @@ import (
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
 )
+
+func init() {
+	_, _ = maxprocs.Set()
+}
 
 func main() {
 	defer func() {
