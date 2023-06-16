@@ -1012,6 +1012,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 		cacheFallbackKeyVarValue string
 		cacheFallbackKeysValues  []string
 		allowedCacheKeys         []string
+		variables                common.JobVariables
 	}{
 		"multiple fallback keys": {
 			cacheFallbackKeyVarValue: "test-var-fallback-cache-key",
@@ -1024,6 +1025,30 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 				"test-fallback-cache-key-1",
 				"test-fallback-cache-key-2",
 				"test-var-fallback-cache-key",
+			},
+			variables: common.JobVariables{},
+		},
+		"fallback keys with variables": {
+			cacheFallbackKeyVarValue: "test-var-fallback-cache-key",
+			cacheFallbackKeysValues: []string{
+				"test-fallback-cache-$CACHE_FALLBACK_1",
+				"test-fallback-cache-$CACHE_FALLBACK_2",
+			},
+			allowedCacheKeys: []string{
+				"test-cache-key",
+				"test-fallback-cache-key-1",
+				"test-fallback-cache-key-2",
+				"test-var-fallback-cache-key",
+			},
+			variables: common.JobVariables{
+				{
+					Key:   "CACHE_FALLBACK_1",
+					Value: "key-1",
+				},
+				{
+					Key:   "CACHE_FALLBACK_2",
+					Value: "key-2",
+				},
 			},
 		},
 		"protected fallback keys": {
@@ -1038,6 +1063,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 				"test-fallback-protected-2",
 				"test-var-fallback-cache-key",
 			},
+			variables: common.JobVariables{},
 		},
 		"invalid global protected fallback key": {
 			cacheFallbackKeyVarValue: "test-var-fallback-key-protected",
@@ -1050,6 +1076,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 				"test-fallback-cache-key-1",
 				"test-fallback-cache-key-2",
 			},
+			variables: common.JobVariables{},
 		},
 	}
 
@@ -1065,6 +1092,12 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
+			variables := common.JobVariables{
+				{
+					Key:   "CACHE_FALLBACK_KEY",
+					Value: tc.cacheFallbackKeyVarValue,
+				},
+			}
 			build := &common.Build{
 				BuildDir: "/builds",
 				CacheDir: "/cache",
@@ -1082,12 +1115,7 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 							FallbackKeys: tc.cacheFallbackKeysValues,
 						},
 					},
-					Variables: common.JobVariables{
-						{
-							Key:   "CACHE_FALLBACK_KEY",
-							Value: tc.cacheFallbackKeyVarValue,
-						},
-					},
+					Variables: append(variables, tc.variables...),
 				},
 			}
 			info := common.ShellScriptInfo{

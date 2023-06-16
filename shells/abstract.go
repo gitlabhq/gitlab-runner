@@ -150,7 +150,7 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 
 	for _, cacheKey := range cacheOptions.FallbackKeys {
 		if cacheKey != "" {
-			allowedCacheKeys = append(allowedCacheKeys, cacheKey)
+			allowedCacheKeys = append(allowedCacheKeys, info.Build.GetAllVariables().ExpandValue(cacheKey))
 		}
 	}
 
