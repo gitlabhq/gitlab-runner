@@ -225,7 +225,8 @@ type DockerConfig struct {
 }
 
 type InstanceConfig struct {
-	AllowedImages []string `toml:"allowed_images,omitempty" json:",omitempty" description:"When VM Isolation is enabled, allowed images controls which images a job is allowed to specify"`
+	AllowedImages     []string `toml:"allowed_images,omitempty" json:",omitempty" description:"When VM Isolation is enabled, allowed images controls which images a job is allowed to specify"`
+	UseCommonBuildDir bool     `toml:"use_common_build_dir,omitempty" json:"use_common_build_dir,omitempty" description:"When use common build dir is enabled, all jobs will use the same build directory. This can only be enabled when VM isolation is enabled or a max use count is 1."`
 }
 
 type AutoscalerConfig struct {
