@@ -2,6 +2,7 @@ package virtualbox
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -72,10 +73,10 @@ func IsStatusOnlineOrTransient(vmStatus StatusType) bool {
 	return false
 }
 
-func VboxManageOutput(exe string, args ...string) (string, error) {
+func VboxManageOutput(ctx context.Context, exe string, args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	logrus.Debugf("Executing VBoxManageOutput: %#v", args)
-	cmd := exec.Command(exe, args...)
+	cmd := exec.CommandContext(ctx, exe, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
@@ -89,20 +90,20 @@ func VboxManageOutput(exe string, args ...string) (string, error) {
 	return stdout.String(), err
 }
 
-func VBoxManage(args ...string) (string, error) {
-	return VboxManageOutput("vboxmanage", args...)
+func VBoxManage(ctx context.Context, args ...string) (string, error) {
+	return VboxManageOutput(ctx, "vboxmanage", args...)
 }
 
-func Version() (string, error) {
-	version, err := VBoxManage("--version")
+func Version(ctx context.Context) (string, error) {
+	version, err := VBoxManage(ctx, "--version")
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(version), nil
 }
 
-func FindSSHPort(vmName string) (port string, err error) {
-	info, err := VBoxManage("showvminfo", vmName)
+func FindSSHPort(ctx context.Context, vmName string) (port string, err error) {
+	info, err := VBoxManage(ctx, "showvminfo", vmName)
 	if err != nil {
 		return
 	}
@@ -116,12 +117,18 @@ func FindSSHPort(vmName string) (port string, err error) {
 	return
 }
 
-func Exist(vmName string) bool {
-	_, err := VBoxManage("showvminfo", vmName)
+func Exist(ctx context.Context, vmName string) bool {
+	_, err := VBoxManage(ctx, "showvminfo", vmName)
 	return err == nil
 }
 
-func CreateOsVM(vmName string, templateName string, templateSnapshot string, baseFolder string) error {
+func CreateOsVM(
+	ctx context.Context,
+	vmName string,
+	templateName string,
+	templateSnapshot string,
+	baseFolder string,
+) error {
 	args := []string{"clonevm", vmName, "--mode", "machine", "--name", templateName, "--register"}
 	if templateSnapshot != "" {
 		args = append(args, "--snapshot", templateSnapshot, "--options", "link")
@@ -129,7 +136,7 @@ func CreateOsVM(vmName string, templateName string, templateSnapshot string, bas
 	if baseFolder != "" {
 		args = append(args, "--basefolder", baseFolder)
 	}
-	_, err := VBoxManage(args...)
+	_, err := VBoxManage(ctx, args...)
 	return err
 }
 
@@ -142,8 +149,8 @@ func isPortUnassigned(testPort string, usedPorts [][]string) bool {
 	return true
 }
 
-func getUsedVirtualBoxPorts() (usedPorts [][]string, err error) {
-	output, err := VBoxManage("list", "vms", "-l")
+func getUsedVirtualBoxPorts(ctx context.Context) (usedPorts [][]string, err error) {
+	output, err := VBoxManage(ctx, "list", "vms", "-l")
 	if err != nil {
 		return
 	}
@@ -152,7 +159,7 @@ func getUsedVirtualBoxPorts() (usedPorts [][]string, err error) {
 	return
 }
 
-func allocatePort(handler func(port string) error) (port string, err error) {
+func allocatePort(ctx context.Context, handler func(port string) error) (port string, err error) {
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
 		logrus.Debugln("VirtualBox ConfigureSSH:", err)
@@ -160,7 +167,7 @@ func allocatePort(handler func(port string) error) (port string, err error) {
 	}
 	defer func() { _ = ln.Close() }()
 
-	usedPorts, err := getUsedVirtualBoxPorts()
+	usedPorts, err := getUsedVirtualBoxPorts(ctx)
 	if err != nil {
 		logrus.Debugln("VirtualBox ConfigureSSH:", err)
 		return
@@ -177,12 +184,13 @@ func allocatePort(handler func(port string) error) (port string, err error) {
 	return
 }
 
-func ConfigureSSH(vmName string, vmSSHPort string) (port string, err error) {
+func ConfigureSSH(ctx context.Context, vmName string, vmSSHPort string) (port string, err error) {
 	for {
 		port, err = allocatePort(
+			ctx,
 			func(port string) error {
 				rule := fmt.Sprintf("guestssh,tcp,127.0.0.1,%s,,%s", port, vmSSHPort)
-				_, err = VBoxManage("modifyvm", vmName, "--natpf1", rule)
+				_, err = VBoxManage(ctx, "modifyvm", vmName, "--natpf1", rule)
 				return err
 			},
 		)
@@ -192,13 +200,13 @@ func ConfigureSSH(vmName string, vmSSHPort string) (port string, err error) {
 	}
 }
 
-func CreateSnapshot(vmName string, snapshotName string) error {
-	_, err := VBoxManage("snapshot", vmName, "take", snapshotName)
+func CreateSnapshot(ctx context.Context, vmName string, snapshotName string) error {
+	_, err := VBoxManage(ctx, "snapshot", vmName, "take", snapshotName)
 	return err
 }
 
-func RevertToSnapshot(vmName string) error {
-	_, err := VBoxManage("snapshot", vmName, "restorecurrent")
+func RevertToSnapshot(ctx context.Context, vmName string) error {
+	_, err := VBoxManage(ctx, "snapshot", vmName, "restorecurrent")
 	return err
 }
 
@@ -210,8 +218,8 @@ func matchSnapshotName(snapshotName string, snapshotList string) bool {
 	return snapshot != nil
 }
 
-func HasSnapshot(vmName string, snapshotName string) bool {
-	output, err := VBoxManage("snapshot", vmName, "list", "--machinereadable")
+func HasSnapshot(ctx context.Context, vmName string, snapshotName string) bool {
+	output, err := VBoxManage(ctx, "snapshot", vmName, "list", "--machinereadable")
 	if err != nil {
 		return false
 	}
@@ -223,8 +231,8 @@ func matchCurrentSnapshotName(snapshotList string) []string {
 	return snapshotRe.FindStringSubmatch(snapshotList)
 }
 
-func GetCurrentSnapshot(vmName string) (string, error) {
-	output, err := VBoxManage("snapshot", vmName, "list", "--machinereadable")
+func GetCurrentSnapshot(ctx context.Context, vmName string) (string, error) {
+	output, err := VBoxManage(ctx, "snapshot", vmName, "list", "--machinereadable")
 	if err != nil {
 		return "", err
 	}
@@ -235,23 +243,23 @@ func GetCurrentSnapshot(vmName string) (string, error) {
 	return snapshot[1], nil
 }
 
-func Start(vmName string, startType string) error {
-	_, err := VBoxManage("startvm", vmName, "--type", startType)
+func Start(ctx context.Context, vmName string, startType string) error {
+	_, err := VBoxManage(ctx, "startvm", vmName, "--type", startType)
 	return err
 }
 
-func Kill(vmName string) error {
-	_, err := VBoxManage("controlvm", vmName, "poweroff")
+func Kill(ctx context.Context, vmName string) error {
+	_, err := VBoxManage(ctx, "controlvm", vmName, "poweroff")
 	return err
 }
 
-func Delete(vmName string) error {
-	_, err := VBoxManage("unregistervm", vmName, "--delete")
+func Delete(ctx context.Context, vmName string) error {
+	_, err := VBoxManage(ctx, "unregistervm", vmName, "--delete")
 	return err
 }
 
-func Status(vmName string) (StatusType, error) {
-	output, err := VBoxManage("showvminfo", vmName, "--machinereadable")
+func Status(ctx context.Context, vmName string) (StatusType, error) {
+	output, err := VBoxManage(ctx, "showvminfo", vmName, "--machinereadable")
 	statusRe := regexp.MustCompile(`VMState="(\w+)"`)
 	status := statusRe.FindStringSubmatch(output)
 	if err != nil {
@@ -260,11 +268,11 @@ func Status(vmName string) (StatusType, error) {
 	return StatusType(status[1]), nil
 }
 
-func WaitForStatus(vmName string, vmStatus StatusType, seconds int) error {
+func WaitForStatus(ctx context.Context, vmName string, vmStatus StatusType, seconds int) error {
 	var status StatusType
 	var err error
 	for i := 0; i < seconds; i++ {
-		status, err = Status(vmName)
+		status, err = Status(ctx, vmName)
 		if err != nil {
 			return err
 		}
@@ -276,7 +284,7 @@ func WaitForStatus(vmName string, vmStatus StatusType, seconds int) error {
 	return errors.New("VM " + vmName + " is in " + string(status) + " where it should be in " + string(vmStatus))
 }
 
-func Unregister(vmName string) error {
-	_, err := VBoxManage("unregistervm", vmName)
+func Unregister(ctx context.Context, vmName string) error {
+	_, err := VBoxManage(ctx, "unregistervm", vmName)
 	return err
 }
