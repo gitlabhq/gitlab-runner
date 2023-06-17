@@ -189,6 +189,18 @@ func TestVerifyAllowedImage(t *testing.T) {
 	}
 }
 
+func TestIsInAllowedPrivilegedImages(t *testing.T) {
+	for _, test := range testAllowedImages {
+		res := isInAllowedPrivilegedImages(test.image, test.allowedImages)
+
+		if !res && test.allowed {
+			t.Errorf("%q must be allowed by %q", test.image, test.allowedImages)
+		} else if res && !test.allowed {
+			t.Errorf("%q must not be allowed by %q", test.image, test.allowedImages)
+		}
+	}
+}
+
 func executorWithMockClient(c *docker.MockClient) *executor {
 	e := &executor{client: c}
 	e.Context = context.Background()
@@ -1106,6 +1118,64 @@ func TestDockerSysctlsSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+type testAllowedPrivilegedJobDescription struct {
+	expectedPrivileged bool
+	privileged         bool
+	allowedImages      []string
+}
+
+var testAllowedPrivilegedJob = []testAllowedPrivilegedJobDescription{
+	{true, true, []string{}},
+	{true, true, []string{"*"}},
+	{false, true, []string{"*:*"}},
+	{false, true, []string{"*/*"}},
+	{false, true, []string{"*/*:*"}},
+	{true, true, []string{"**/*"}},
+	{false, true, []string{"**/*:*"}},
+	{true, true, []string{"alpine"}},
+	{false, true, []string{"debian"}},
+	{true, true, []string{"alpi*"}},
+	{true, true, []string{"*alpi*"}},
+	{true, true, []string{"*alpi*"}},
+	{true, true, []string{"debian", "alpine"}},
+	{true, true, []string{"debian", "*"}},
+	{false, false, []string{}},
+	{false, false, []string{"*"}},
+	{false, false, []string{"*:*"}},
+	{false, false, []string{"*/*"}},
+	{false, false, []string{"*/*:*"}},
+	{false, false, []string{"**/*"}},
+	{false, false, []string{"**/*:*"}},
+	{false, false, []string{"alpine"}},
+	{false, false, []string{"debian"}},
+	{false, false, []string{"alpi*"}},
+	{false, false, []string{"*alpi*"}},
+	{false, false, []string{"*alpi*"}},
+	{false, false, []string{"debian", "alpine"}},
+	{false, false, []string{"debian", "*"}},
+}
+
+func TestDockerPrivilegedJobSetting(t *testing.T) {
+	for _, test := range testAllowedPrivilegedJob {
+		dockerConfig := &common.DockerConfig{
+			Privileged:              test.privileged,
+			AllowedPrivilegedImages: test.allowedImages,
+		}
+
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			var message string
+			if test.expectedPrivileged {
+				message = "%q must be allowed by %q"
+			} else {
+				message = "%q must not be allowed by %q"
+			}
+			assert.Equal(t, test.expectedPrivileged, hostConfig.Privileged, message, "alpine", test.allowedImages)
+		}
+
+		testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+	}
 }
 
 type networksTestCase struct {

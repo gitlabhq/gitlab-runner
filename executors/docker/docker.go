@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/docker/cli/opts"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -348,6 +349,23 @@ func (e *executor) bindDeviceRequests() error {
 	return nil
 }
 
+func isInAllowedPrivilegedImages(image string, allowedPrivilegedImages []string) bool {
+	if len(allowedPrivilegedImages) == 0 {
+		return true
+	}
+	for _, allowedImage := range allowedPrivilegedImages {
+		ok, _ := doublestar.Match(allowedImage, image)
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *executor) isInPrivilegedServiceList(serviceDefinition common.Image) bool {
+	return isInAllowedPrivilegedImages(serviceDefinition.Name, e.Config.Docker.AllowedPrivilegedServices)
+}
+
 func (e *executor) createService(
 	serviceIndex int,
 	service, version, image string,
@@ -392,6 +410,7 @@ func (e *executor) createService(
 	config.Entrypoint = e.overwriteEntrypoint(&serviceDefinition)
 
 	hostConfig := e.createHostConfigForService()
+	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(serviceDefinition)
 	networkConfig := e.networkConfig(linkNames)
 
 	e.Debugln("Creating service container", containerName, "...")
@@ -497,6 +516,10 @@ func (e *executor) cleanupNetwork(ctx context.Context) error {
 	return e.networksManager.Cleanup(ctx)
 }
 
+func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
+	return isInAllowedPrivilegedImages(imageDefinition.Name, e.Config.Docker.AllowedPrivilegedImages)
+}
+
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
@@ -533,6 +556,7 @@ func (e *executor) createContainer(
 	if err != nil {
 		return nil, err
 	}
+	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedImageList(imageDefinition)
 
 	aliases := []string{"build", containerName}
 	networkConfig := e.networkConfig(aliases)

@@ -148,7 +148,7 @@ func testDockerConfigurationWithServiceContainer(
 		"build",
 		"latest",
 		"alpine",
-		common.Image{Command: []string{"/bin/sh"}},
+		common.Image{Name: "alpine", Command: []string{"/bin/sh"}},
 		nil,
 	)
 	assert.NoError(t, err, "Should create service container without errors")
@@ -219,6 +219,77 @@ func TestDockerServiceUserNSSetting(t *testing.T) {
 
 	testDockerConfigurationWithServiceContainer(t, dockerConfig, cce)
 	testDockerConfigurationWithServiceContainer(t, dockerConfigWithHostUsernsMode, cceWithHostUsernsMode)
+}
+
+type testAllowedPrivilegedServiceDescription struct {
+	expectedPrivileged bool
+	privileged         bool
+	allowedImages      []string
+}
+
+var testAllowedPrivilegedService = []testAllowedPrivilegedServiceDescription{
+	{true, true, []string{}},
+	{true, true, []string{"*"}},
+	{false, true, []string{"*:*"}},
+	{false, true, []string{"*/*"}},
+	{false, true, []string{"*/*:*"}},
+	{true, true, []string{"**/*"}},
+	{false, true, []string{"**/*:*"}},
+	{true, true, []string{"alpine"}},
+	{false, true, []string{"debian"}},
+	{true, true, []string{"alpi*"}},
+	{true, true, []string{"*alpi*"}},
+	{true, true, []string{"*alpi*"}},
+	{true, true, []string{"debian", "alpine"}},
+	{true, true, []string{"debian", "*"}},
+	{false, false, []string{}},
+	{false, false, []string{"*"}},
+	{false, false, []string{"*:*"}},
+	{false, false, []string{"*/*"}},
+	{false, false, []string{"*/*:*"}},
+	{false, false, []string{"**/*"}},
+	{false, false, []string{"**/*:*"}},
+	{false, false, []string{"alpine"}},
+	{false, false, []string{"debian"}},
+	{false, false, []string{"alpi*"}},
+	{false, false, []string{"*alpi*"}},
+	{false, false, []string{"*alpi*"}},
+	{false, false, []string{"debian", "alpine"}},
+	{false, false, []string{"debian", "*"}},
+}
+
+func TestDockerServicePrivilegedSetting(t *testing.T) {
+	for _, test := range testAllowedPrivilegedService {
+		dockerConfigWithoutServicePrivileged := &common.DockerConfig{
+			Privileged:                test.privileged,
+			ServicesPrivileged:        nil,
+			AllowedPrivilegedServices: test.allowedImages,
+		}
+		dockerConfigWithPrivileged := &common.DockerConfig{
+			Privileged:                true,
+			ServicesPrivileged:        &test.privileged,
+			AllowedPrivilegedServices: test.allowedImages,
+		}
+		dockerConfigWithoutPrivileged := &common.DockerConfig{
+			Privileged:                false,
+			ServicesPrivileged:        &test.privileged,
+			AllowedPrivilegedServices: test.allowedImages,
+		}
+
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			var message string
+			if test.expectedPrivileged {
+				message = "%q must be allowed by %q"
+			} else {
+				message = "%q must not be allowed by %q"
+			}
+			assert.Equal(t, test.expectedPrivileged, hostConfig.Privileged, message, "alpine", test.allowedImages)
+		}
+
+		testDockerConfigurationWithServiceContainer(t, dockerConfigWithoutServicePrivileged, cce)
+		testDockerConfigurationWithServiceContainer(t, dockerConfigWithPrivileged, cce)
+		testDockerConfigurationWithServiceContainer(t, dockerConfigWithoutPrivileged, cce)
+	}
 }
 
 func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.T) {
