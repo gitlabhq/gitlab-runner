@@ -554,6 +554,55 @@ build:
   - docker push my-image
 ```
 
+WARNING:
+Containers that run in privileged mode have security risks.
+When your containers run in privileged mode, you disable the 
+container security mechanisms and expose your host to privilege escalation.
+Running containers in privileged mode can lead to container breakout. For more information,
+see the Docker documentation about 
+[runtime privilege and Linux capabilities](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
+
+### Use rootless Docker-in-Docker with restricted privileged mode
+
+In this version, only Docker-in-Docker rootless images are allowed to run as services in privileged mode.
+
+The `services_privileged` and `allowed_privileged_services` configuration parameters
+limit which containers are allowed to run in privileged mode.
+
+To use rootless Docker-in-Docker with restricted privileged mode:
+
+1. In the `config.toml`, configure the runner to use `services_privileged` and `allowed_privileged_services`:
+
+   ```toml
+   [[runners]]
+     executor = "docker"
+     [runners.docker]
+       services_privileged = true
+       allowed_privileged_services = [docker.io/library/docker:*-dind-rootless, docker.io/library/docker:dind-rootless, docker:*-dind-rootless, docker:*-dind-rootless]
+   ```
+
+1. In `.gitlab-ci.yml`, edit your build script to use Docker-in-Docker rootless container:
+
+   ```yaml
+   image: docker:git
+   services:
+   - docker:dind-rooless
+
+   build:
+     script:
+     - docker build -t my-image .
+     - docker push my-image
+   ```
+
+Only the Docker-in-Docker rootless images you list in `allowed_privileged_services` are allowed to run in privileged mode.
+All other containers for jobs and services run in unprivileged mode.
+
+Because they run as non-root, it's _almost safe_ to use with privileged mode
+images like Docker-in-Docker rootless or Buildkit rootless.
+
+For more information about security issues,
+see [Security risks for Docker executors](../security/index.md#usage-of-docker-executor).
+
 ## Configure a Docker ENTRYPOINT
 
 By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime) and passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/reference/run/#cmd-default-command-or-options) to start a container that runs the job script.

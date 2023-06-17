@@ -281,8 +281,10 @@ The following settings define the Docker container parameters.
 | Parameter | Description |
 | --------- | ----------- |
 | `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restrict-docker-images-and-services) executors. |
+| `allowed_privileged_images`    | Wildcard subset of `allowed_images` that runs in privileged mode when `privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. |
 | `allowed_pull_policies`        | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, all pull policies specified in `pull-policy` are allowed. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. |
 | `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes.md#restrict-docker-images-and-services) executors. |
+| `allowed_privileged_services`  | Wildcard subset of `allowed_services` that is allowed to run in privileged mode, when `privileged` or `services_privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. |
 | `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
 | `cap_add`                      | Add additional Linux capabilities to the container. |
 | `cap_drop`                     | Drop additional Linux capabilities from the container. |
@@ -311,6 +313,7 @@ The following settings define the Docker container parameters.
 | `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
 | `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
+| `services_privileged`          | Allow services to run in privileged mode. If unset (default) `privileged` value is used instead. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. Insecure. |
 | `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images). You can also add [multiple pull policies](../executors/docker.md#set-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#allow-docker-pull-policies). |
 | `runtime`                      | The runtime for the Docker container. |
 | `isolation`                    | Container isolation technology (`default`, `hyperv` and `process`). Windows only. |
