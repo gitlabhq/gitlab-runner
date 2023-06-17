@@ -1,6 +1,7 @@
 package virtualbox
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	vbox "gitlab.com/gitlab-org/gitlab-runner/helpers/virtualbox"
 )
+
+const virtualboxCleanupTimeout = 5 * time.Minute
 
 type executor struct {
 	vm.Executor
@@ -52,7 +55,7 @@ func (s *executor) verifyMachine(sshPort string) error {
 
 func (s *executor) restoreFromSnapshot() error {
 	s.Debugln("Reverting VM to current snapshot...")
-	err := vbox.RevertToSnapshot(s.vmName)
+	err := vbox.RevertToSnapshot(s.Context, s.vmName)
 	if err != nil {
 		return err
 	}
@@ -64,7 +67,7 @@ func (s *executor) determineBaseSnapshot(baseImage string) string {
 	var err error
 	baseSnapshot := s.Config.VirtualBox.BaseSnapshot
 	if baseSnapshot == "" {
-		baseSnapshot, err = vbox.GetCurrentSnapshot(baseImage)
+		baseSnapshot, err = vbox.GetCurrentSnapshot(s.Context, baseImage)
 		if err != nil {
 			if s.Config.VirtualBox.DisableSnapshots {
 				s.Debugln("No snapshots found for base VM", baseImage)
@@ -75,14 +78,14 @@ func (s *executor) determineBaseSnapshot(baseImage string) string {
 		}
 	}
 
-	if baseSnapshot != "" && !vbox.HasSnapshot(baseImage, baseSnapshot) {
+	if baseSnapshot != "" && !vbox.HasSnapshot(s.Context, baseImage, baseSnapshot) {
 		if s.Config.VirtualBox.DisableSnapshots {
 			s.Warningln("Snapshot", baseSnapshot, "not found in base VM", baseImage)
 			return ""
 		}
 
 		s.Debugln("Creating snapshot", baseSnapshot, "from current base VM", baseImage, "state...")
-		err = vbox.CreateSnapshot(baseImage, baseSnapshot)
+		err = vbox.CreateSnapshot(s.Context, baseImage, baseSnapshot)
 		if err != nil {
 			s.Warningln("Failed to create snapshot", baseSnapshot, "from base VM", baseImage)
 			return ""
@@ -94,12 +97,12 @@ func (s *executor) determineBaseSnapshot(baseImage string) string {
 
 // virtualbox doesn't support templates
 func (s *executor) createVM(baseImage string) (err error) {
-	_, err = vbox.Status(s.vmName)
+	_, err = vbox.Status(s.Context, s.vmName)
 	if err != nil {
-		_ = vbox.Unregister(s.vmName)
+		_ = vbox.Unregister(s.Context, s.vmName)
 	}
 
-	if !vbox.Exist(s.vmName) {
+	if !vbox.Exist(s.Context, s.vmName) {
 		baseSnapshot := s.determineBaseSnapshot(baseImage)
 		if baseSnapshot == "" {
 			s.Debugln("Creating testing VM from VM", baseImage, "...")
@@ -107,21 +110,21 @@ func (s *executor) createVM(baseImage string) (err error) {
 			s.Debugln("Creating testing VM from VM", baseImage, "snapshot", baseSnapshot, "...")
 		}
 
-		err = vbox.CreateOsVM(baseImage, s.vmName, baseSnapshot, s.Config.VirtualBox.BaseFolder)
+		err = vbox.CreateOsVM(s.Context, baseImage, s.vmName, baseSnapshot, s.Config.VirtualBox.BaseFolder)
 		if err != nil {
 			return err
 		}
 	}
 
 	s.Debugln("Identify SSH Port...")
-	s.sshPort, err = vbox.FindSSHPort(s.vmName)
+	s.sshPort, err = vbox.FindSSHPort(s.Context, s.vmName)
 	if err != nil {
 		s.Debugln("Creating localhost ssh forwarding...")
 		vmSSHPort := s.Config.SSH.Port
 		if vmSSHPort == "" {
 			vmSSHPort = "22"
 		}
-		s.sshPort, err = vbox.ConfigureSSH(s.vmName, vmSSHPort)
+		s.sshPort, err = vbox.ConfigureSSH(s.Context, s.vmName, vmSSHPort)
 		if err != nil {
 			return err
 		}
@@ -168,14 +171,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	s.vmName = s.getVMName(baseName)
 
-	if s.Config.VirtualBox.DisableSnapshots && vbox.Exist(s.vmName) {
+	if s.Config.VirtualBox.DisableSnapshots && vbox.Exist(s.Context, s.vmName) {
 		s.Debugln("Deleting old VM...")
-		killAndUnregisterVM(s.vmName)
+		killAndUnregisterVM(s.Context, s.vmName)
 	}
 
 	s.tryRestoreFromSnapshot()
 
-	if !vbox.Exist(s.vmName) {
+	if !vbox.Exist(s.Context, s.vmName) {
 		s.Println("Creating new VM...")
 		err = s.createVM(baseName)
 		if err != nil {
@@ -184,7 +187,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 		if !s.Config.VirtualBox.DisableSnapshots {
 			s.Println("Creating default snapshot...")
-			err = vbox.CreateSnapshot(s.vmName, "Started")
+			err = vbox.CreateSnapshot(s.Context, s.vmName, "Started")
 			if err != nil {
 				return err
 			}
@@ -200,7 +203,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (s *executor) printVersion() error {
-	version, err := vbox.Version()
+	version, err := vbox.Version(s.Context)
 	if err != nil {
 		return err
 	}
@@ -248,7 +251,7 @@ func (s *executor) startVM() error {
 	if startType == "" {
 		startType = "headless"
 	}
-	err := vbox.Start(s.vmName, startType)
+	err := vbox.Start(s.Context, s.vmName, startType)
 	if err != nil {
 		return err
 	}
@@ -256,7 +259,7 @@ func (s *executor) startVM() error {
 }
 
 func (s *executor) tryRestoreFromSnapshot() {
-	if !vbox.Exist(s.vmName) {
+	if !vbox.Exist(s.Context, s.vmName) {
 		return
 	}
 
@@ -264,19 +267,19 @@ func (s *executor) tryRestoreFromSnapshot() {
 	err := s.restoreFromSnapshot()
 	if err != nil {
 		s.Println("Previous VM failed. Deleting, because", err)
-		killAndUnregisterVM(s.vmName)
+		killAndUnregisterVM(s.Context, s.vmName)
 	}
 }
 
-func killAndUnregisterVM(vmName string) {
-	_ = vbox.Kill(vmName)
-	_ = vbox.Delete(vmName)
-	_ = vbox.Unregister(vmName)
+func killAndUnregisterVM(ctx context.Context, vmName string) {
+	_ = vbox.Kill(ctx, vmName)
+	_ = vbox.Delete(ctx, vmName)
+	_ = vbox.Unregister(ctx, vmName)
 }
 
 func (s *executor) ensureVMStarted() error {
 	s.Debugln("Checking VM status...")
-	status, err := vbox.Status(s.vmName)
+	status, err := vbox.Status(s.Context, s.vmName)
 	if err != nil {
 		return err
 	}
@@ -290,14 +293,14 @@ func (s *executor) ensureVMStarted() error {
 
 	if status != vbox.Running {
 		s.Debugln("Waiting for VM to run...")
-		err = vbox.WaitForStatus(s.vmName, vbox.Running, 60)
+		err = vbox.WaitForStatus(s.Context, s.vmName, vbox.Running, 60)
 		if err != nil {
 			return err
 		}
 	}
 
 	s.Debugln("Identify SSH Port...")
-	sshPort, err := vbox.FindSSHPort(s.vmName)
+	sshPort, err := vbox.FindSSHPort(s.Context, s.vmName)
 	s.sshPort = sshPort
 	if err != nil {
 		return err
@@ -343,10 +346,13 @@ func (s *executor) Cleanup() {
 	s.sshCommand.Cleanup()
 
 	if s.vmName != "" {
-		_ = vbox.Kill(s.vmName)
+		ctx, cancel := context.WithTimeout(context.Background(), virtualboxCleanupTimeout)
+		defer cancel()
+
+		_ = vbox.Kill(ctx, s.vmName)
 
 		if s.Config.VirtualBox.DisableSnapshots || !s.provisioned {
-			_ = vbox.Delete(s.vmName)
+			_ = vbox.Delete(ctx, s.vmName)
 		}
 	}
 }
