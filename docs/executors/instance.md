@@ -51,35 +51,31 @@ To configure the instance executor for autoscaling, update the following section
 - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 - [`[runners.instance]`](../configuration/advanced-configuration.md#the-runnersinstance-section-alpha)
 
-## Examples
+## AWS autoscaling group configuration examples
 
-::Tabs
-
-:::TabTitle AWS
-
-### 1 job per instance using an AWS Autoscaling group
+### One job per instance
 
 Prerequisites:
 
 - An AMI with at least `git` and GitLab Runner installed.
-- An AWS Autoscaling group. For the scaling policy use "none", because runner handles the scaling.
+- An AWS Autoscaling group. For the scaling policy use `none`. The runner handles the scaling.
 - An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy).
 
 This configuration supports:
 
-- A capacity per instance of 1
-- A use count of 1
-- An idle scale of 5
-- An idle time of 20 minutes
-- A maximum instance count of 10
+- A capacity of `1` for each instance.
+- A use count of `1`.
+- An idle scale of `5`.
+- An idle time of 20 minutes.
+- A maximum instance count of `10`.
 
-By setting the capacity and use count to both 1, each job is given a secure ephemeral instance that cannot be
-affected by other jobs. As soon the job is complete the instance it was executed on is immediately deleted.
+When the capacity and use count are set to `1`, each job is given a secure ephemeral instance that cannot be
+affected by other jobs. When the job completes, the instance it was executed on is deleted immediately.
 
-With an idle scale of 5, the runner keeps 5 whole instances
-available for future demand (because the capacity per instance is 1). These instances stay for at least 20 minutes.
+When the capacity for each instance is `1`, and the idle scale is `5`, the runner keeps 5 whole instances
+available for future demand. These instances remain for at least 20 minutes.
 
-The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
+The runner `concurrent` field is set to 10 (maximum number of instances * capacity per instance).
 
 ```toml
 concurrent = 10
@@ -115,31 +111,31 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### 5 jobs per instance, unlimited uses, using AWS Autoscaling Group
+### Five jobs per instance with unlimited uses
 
 Prerequisites:
 
 - An AMI with at least `git` and GitLab Runner installed.
-- An AWS Autoscaling group. For the scaling policy use "none", because runner handles the scaling.
+- An AWS Autoscaling group with the scaling policy set to `none`. The runner handles the scaling.
 - An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy).
 
 This configuration supports:
 
-- A capacity per instance of 5
-- An unlimited use count
-- An idle scale of 5
-- An idle time of 20 minutes
-- A maximum instance count of 10
+- A capacity of `5` for each instance.
+- An unlimited use count.
+- An idle scale of `5`.
+- An idle time of 20 minutes.
+- A maximum instance count of `10`.
 
-By setting the capacity per instance to 5 and an unlimited use count, each instance concurrently
+When the capacity per instance is set to `5` and the use count is unlimited, each instance concurrently
 executes 5 jobs for the lifetime of the instance.
 
-Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
-can affect the performance of another.
+When the idle scale is `5`, 1 idle instance is created to accommodate an idle capacity of 5
+(due to the capacity for each instance) whenever the in-use capacity is lower than 5. Idle
+instances remain for at least 20 minutes.
 
-With an idle scale of 5, 1 idle instance is created to accommodate an idle capacity of 5
-(due to the capacity per instance) whenever the in use capacity is lower than 5. Idle instances
-stay for at least 20 minutes.
+Jobs executed in these environments should be **trusted** as there is little isolation between
+them and each job can affect the performance of another.
 
 The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
 
@@ -178,34 +174,38 @@ concurrent = 50
       idle_time = "20m0s"
 ```
 
-### 2 jobs per instance, unlimited uses, nested virtualization on EC2 Mac instances, using AWS Autoscaling group
+### Two jobs per instance, unlimited uses, nested virtualization on EC2 Mac instances
 
 Prerequisites:
 
-- An MacOS AppleSilicon AMI with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) and [Tart](https://github.com/cirruslabs/tart) installed.
-- The Tart VM images that runner needs to use. The VM images are specified by the `image` keyword of the job. The VM images should have at least `git` and GitLab Runner installed.
-- An AWS Autoscaling group. For the scaling policy use "none", because runner handles the scaling. To set up an ASG for MacOS, see [this Amazon guide](https://aws.amazon.com/blogs/compute/implementing-autoscaling-for-ec2-mac-instances/).
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy)
+- An Apple Silicon AMI with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting)
+  and [Tart](https://github.com/cirruslabs/tart) installed.
+- The Tart VM images that the runner uses. The VM images are specified by the `image` keyword
+  of the job. The VM images should have at least `git` and GitLab Runner installed.
+- An AWS Autoscaling group. For the scaling policy use `none`, because runner handles the scaling.
+  For information about how to set up an ASG for MacOS, see [Implementing autoscaling for EC2 Mac instances](https://aws.amazon.com/blogs/compute/implementing-autoscaling-for-ec2-mac-instances/).
+- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy).
 
 This configuration supports:
 
-- A capacity per instance of 2
-- An unlimited use count
-- Nested virtualization to support isolated jobs (currently only available for **MacOS** AppleSilicon instances with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) installed)
-- An idle scale of 5
-- An idle time of 20 minutes
-- A maximum instance count of 10
+- A capacity of `2` for each instance.
+- An unlimited use count.
+- Nested virtualization to support isolated jobs. Nested virtualization is only available
+for Apple silicon instances with [nesting](https://gitlab.com/gitlab-org/fleeting/nesting) installed.
+- An idle scale of `5`.
+- An idle time of 20 minutes.
+- A maximum instance count of `10`.
 
-By setting the capacity per instance to 2 and an unlimited use count, each instance concurrently
+When the capacity for each instance is `2` and the use count is unlimited, each instance concurrently
 executes 2 jobs for the lifetime of the instance.
 
-Jobs executed in this environment do not need to be trusted because we're using
-[nesting](https://gitlab.com/gitlab-org/fleeting/nesting) for nested virtualization of each job. This
-only works on MacOS AppleSilcon instances.
+When the idle scale is `2`, 1 idle instance is created to accommodate an idle capacity of 2
+(due to the capacity per instance) whenever the in use capacity is lower than 2. Idle instances remain for at
+least 24 hours. This time frame is due to the 24 hour minimal allocation period of AWS MacOS instance hosts.
 
-With an idle scale of 2, 1 idle instance is created to accommodate an idle capacity 2
-(due to the capacity per instance) whenever the in use capacity is lower than 2. Idle instances stay for at
-least 24 hours. We set this to 24 hours because the AWS MacOS instance hosts have a 24 hour minimal allocation period.
+Jobs executed in this environment do not need to be trusted because
+[nesting](https://gitlab.com/gitlab-org/fleeting/nesting) is used for nested virtualization of each job. This
+only works on Apple silicon instances.
 
 The runner `concurrent` field is set to 8 (maximum number instances * capacity per instance).
 
@@ -251,9 +251,9 @@ concurrent = 8
       timeout  = "20m"
 ```
 
-:::TabTitle GCP
+## GCP instance group configuration examples
 
-### 1 job per instance using an GCP Instance group
+### One job per instance using a GCP Instance group
 
 Prerequisites:
 
@@ -311,7 +311,7 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### 5 jobs per instance, unlimited uses, using GCP Instance group
+### Five jobs per instance, unlimited uses, using GCP Instance group
 
 Prerequisites:
 
@@ -373,5 +373,3 @@ concurrent = 50
       idle_count = 5
       idle_time = "20m0s"
 ```
-
-::EndTabs
