@@ -72,10 +72,6 @@ else
     TARGET_ARCHS=('amd64')
 fi
 
-if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]]; then
-  ECR_PUBLIC_REGISTRY_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
-fi
-
 join_by() {
     local IFS="$1"
     shift
@@ -125,13 +121,6 @@ buildx() {
     if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]]; then
         login "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
     fi
-    if [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]] && [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
-        login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
-    fi
-    if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]] && [[ -n "${ECR_PUBLIC_REGISTRY_PASSWORD}" ]]; then
-        ECR_PUBLIC_REGISTRY_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
-        login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_REGISTRY_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
-    fi
 
     local formatted_platforms
     formatted_platforms=$(join_by , "${platforms[@]}")
@@ -156,12 +145,6 @@ buildx() {
 
     if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY_USER}" ]] && [[ -n "${CI_REGISTRY_PASSWORD}" ]]; then
         logout "${CI_REGISTRY}"
-    fi
-    if [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]] && [[ -n "${DOCKER_HUB_USER}" ]] && [[ -n "${DOCKER_HUB_PASSWORD}" ]]; then
-        logout
-    fi
-    if [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]] && [[ -n "${ECR_PUBLIC_USER}" ]] && [[ -n "${ECR_PUBLIC_REGISTRY_PASSWORD}" ]]; then
-        logout "${ECR_PUBLIC_REGISTRY}"
     fi
 
     return $buildx_exit_code
@@ -237,14 +220,6 @@ aliases="$(get_flavor_aliases "$IMAGE_FLAVOR")"
 
 if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ -n "${CI_REGISTRY}" ]] && [[ -n "${CI_REGISTRY_IMAGE}" ]]; then
    add_tags tags "${aliases}" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY_IMAGE}" "${ref_tag}"
-fi
-
-if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
-   add_tags tags "${aliases}" "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}" "${DOCKER_HUB_NAMESPACE}/gitlab-runner" "${ref_tag}"
-fi
-
-if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-   add_tags tags "${aliases}" "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_REGISTRY_PASSWORD}" "${ECR_PUBLIC_REGISTRY}/gitlab-runner" "${ref_tag}"
 fi
 
 # Build and publish multi-platform images using `docker buildx`

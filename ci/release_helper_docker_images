@@ -31,7 +31,7 @@ push_latest() {
 # prefix for the image name, which is useful to push do a different registry.
 # For example `registry.gitlab.com/gitlab-org/gitlab-runner` and `gitlab`.
 # This function will perform all actions needed for pushing except for the
-# pushing itself depending on the `PUBLISH_IMAGES` and `PUSH_TO_ECR_PUBLIC` variables
+# pushing itself depending on the `PUBLISH_IMAGES` variable
 # which is checked inside the `push` function.
 # The second argument tells if the push is actually enabled.
 # This argument is then forwarded to the `push` function.
@@ -130,18 +130,3 @@ fi
 release_docker_helper_images "${CI_REGISTRY_IMAGE}" "${PUBLISH_IMAGES}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
 # Docker exits with a 0 code if we weren't logged in previously which makes it fine to run at all times
 logout "${CI_REGISTRY}"
-
-if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_DOCKER_HUB}" == "true" ]]; then
-    login "${DOCKER_HUB_USER}" "${DOCKER_HUB_PASSWORD}"
-fi
-
-release_docker_helper_images "${DOCKER_HUB_NAMESPACE}" "${PUBLISH_IMAGES}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
-logout
-
-if [[ "${PUBLISH_IMAGES}" == "true" ]] && [[ "${PUSH_TO_ECR_PUBLIC}" == "true" ]]; then
-    ECR_PUBLIC_REGISTRY_PASSWORD=$(aws --region us-east-1 ecr-public get-login-password)
-
-    login "${ECR_PUBLIC_USER}" "${ECR_PUBLIC_REGISTRY_PASSWORD}" "${ECR_PUBLIC_REGISTRY}"
-fi
-release_docker_helper_images "${ECR_PUBLIC_REGISTRY}" "${PUSH_TO_ECR_PUBLIC}" "${IMAGE_FLAVOR}" "${IMAGE_TAG}"
-logout "${ECR_PUBLIC_REGISTRY}"
