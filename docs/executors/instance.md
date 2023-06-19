@@ -299,7 +299,7 @@ concurrent = 10
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
       name             = "my-linux-instance-group" # GCP Instance Group name
       project          = "my-gcp-project"
-      zone             = "europe-west1"
+      zone             = "europe-west1-c"
       credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
 
     [runners.autoscaler.connector_config]
@@ -361,7 +361,7 @@ concurrent = 50
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
       name             = "my-windows-instance-group" # GCP Instance Group name
       project          = "my-gcp-project"
-      zone             = "europe-west1"
+      zone             = "europe-west1-c"
       credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
 
     [runners.autoscaler.connector_config]
