@@ -6,8 +6,6 @@
   - .linux-dependency-checksums
   variables:
     PUBLISH_IMAGES: "true"
-    PUSH_TO_DOCKER_HUB: "true"
-    PUSH_TO_ECR_PUBLIC: "false"
   before_script:
   - source ci/touch_make_dependencies
   retry: 2
@@ -36,6 +34,20 @@
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.15
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
+
+.sync_docker_images:
+  stage: release
+  extends:
+    - .docker
+  variables:
+    SKOPEO_VERSION: v1.12.0
+    SKOPEO_IMAGE: "quay.io/skopeo/stable:$SKOPEO_VERSION"
+    SYNC_DOCKER_IMAGES_CONCURRENCY: 3
+    SYNC_DOCKER_IMAGES_COMMAND: "docker run -v /tmp:/tmp $SKOPEO_IMAGE"
+    PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
+  script:
+    - make sync_docker_images
 
 .release_helper_docker_images:
   extends:
@@ -114,8 +126,6 @@ development docker images:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
 
 development helper docker images:
   extends:
@@ -123,8 +133,6 @@ development helper docker images:
   - .rules:release:development:merge-requests
   variables:
     PUBLISH_IMAGES: "false"
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
 
 bleeding edge S3:
   extends:
@@ -150,7 +158,7 @@ bleeding edge packagecloud:
       - fedora
       - amazon
 
-.bleding_edge_docker_images_base:
+.bleeding_edge_docker_images_base:
   extends:
   - .rules:release:bleeding-edge
   environment:
@@ -159,13 +167,24 @@ bleeding edge packagecloud:
 
 bleeding edge docker images:
   extends:
-  - .bleding_edge_docker_images_base
+  - .bleeding_edge_docker_images_base
   - .release_docker_images
 
 bleeding edge helper docker images:
   extends:
-  - .bleding_edge_docker_images_base
+  - .bleeding_edge_docker_images_base
   - .release_helper_docker_images
+
+bleeding edge sync docker images:
+  extends:
+    - .sync_docker_images
+    - .bleeding_edge_docker_images_base
+  needs:
+    - bleeding edge docker images
+    - bleeding edge helper docker images
+  variables:
+    PUSH_TO_DOCKER_HUB: "false"
+    PUSH_TO_ECR_PUBLIC: "false"
 
 stable S3:
   extends:
@@ -219,6 +238,17 @@ stable helper docker images:
   extends:
   - .stable_docker_images_base
   - .release_helper_docker_images
+
+stable sync docker images:
+  extends:
+    - .sync_docker_images
+    - .stable_docker_images_base
+  needs:
+    - stable docker images
+    - stable helper docker images
+  variables:
+    PUSH_TO_DOCKER_HUB: "true"
+    PUSH_TO_ECR_PUBLIC: "true"
 
 stable gitlab release:
   stage: postrelease

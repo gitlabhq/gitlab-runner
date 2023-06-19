@@ -4,8 +4,6 @@
   stage: prerelease
   variables:
     PUBLISH_IMAGES: "true"
-    PUSH_TO_DOCKER_HUB: "true"
-    PUSH_TO_ECR_PUBLIC: "false"
     PWSH_VERSION: 7.1.1
   dependencies:
     - 'helper images binaries'
@@ -26,9 +24,6 @@ development servercore1809 helper docker images:
     - .release_windows_docker_images
     - .rules:release:development:merge-requests
     - .docker_images_registry_base_variables_overwrite
-  variables:
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
 
 development nanoserver1809 helper docker images:
   extends:
@@ -36,9 +31,6 @@ development nanoserver1809 helper docker images:
     - .release_windows_docker_images
     - .rules:release:development:merge-requests
     - .docker_images_registry_base_variables_overwrite
-  variables:
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
 
 development servercore21H2 helper docker images:
   extends:
@@ -46,9 +38,6 @@ development servercore21H2 helper docker images:
     - .release_windows_docker_images
     - .rules:release:development:merge-requests:no-community-mr
     - .docker_images_registry_base_variables_overwrite
-  variables:
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
 
 development nanoserver21H2 helper docker images:
   extends:
@@ -56,9 +45,6 @@ development nanoserver21H2 helper docker images:
     - .release_windows_docker_images
     - .rules:release:development:merge-requests:no-community-mr
     - .docker_images_registry_base_variables_overwrite
-  variables:
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
 
 bleeding edge servercore1809 helper docker images:
   extends:
