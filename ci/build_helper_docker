@@ -27,23 +27,30 @@ HELPER_BINARY_POSTFIX=${HELPER_BINARY_POSTFIX:-}
 if [[ $IMAGE_SHELL == 'pwsh' ]]; then
     PWSH_TARGET_FLAVOR_IMAGE_VERSION=$4
 
-    if [ -z "${TARGET_FLAVOR}" ] || [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" ] || [ -z "${PWSH_IMAGE_DATE}" ]; then
+    if [ -z "${TARGET_FLAVOR}" ] || [ -z "${PWSH_VERSION}" ] || [ -z "${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" ]; then
         echo -e "${RED}Missing required arguments. When IMAGE_SHELL is 'pwsh', PWSH_VERSION, " \
-        "TARGET_FLAVOR, PWSH_TARGET_FLAVOR_IMAGE_VERSION, and PWSH_IMAGE_DATE must be defined${RST}"
+        "TARGET_FLAVOR, and PWSH_TARGET_FLAVOR_IMAGE_VERSION must be defined${RST}"
          exit 1
     fi
 
     # NOTE: To find the most recent Powershell Core tag that supports the desired Powershell Core version on the
     # desired ${TARGET_FLAVOR} version, run the following command:
     # ```
-    # export PWSH_VERSION="7.1.1"
-    # export PWSH_TARGET_FLAVOR_IMAGE_VERSION="3.12"
+    # export PWSH_VERSION="7.3"
+    # export PWSH_TARGET_FLAVOR_IMAGE_VERSION="3.18"
     # curl -sL https://mcr.microsoft.com/v2/powershell/tags/list | \
     #   jq -r '.tags[]' | \
     #   grep "${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" | \
     #   tail -n 1
     # ```
-    BASE_IMAGE="mcr.microsoft.com/powershell:${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}-${PWSH_IMAGE_DATE}"
+    # Currently PWSH_IMAGE_DATE isn't being used anywhere but the convention is still used in the Powershell images
+    # Right now no Alpine or Ubuntu image we need has a date in the tag but if that changes in the future we can use it
+    # and not add the code all over again
+    if [ -z "${PWSH_IMAGE_DATE}" ]; then
+      BASE_IMAGE="registry.gitlab.com/gitlab-org/gitlab-runner/powershell:${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}"
+    else
+      BASE_IMAGE="registry.gitlab.com/gitlab-org/gitlab-runner/powershell:${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}-${PWSH_IMAGE_DATE}"
+    fi
 else
     TARGET_FLAVOR_IMAGE_VERSION=$4
 

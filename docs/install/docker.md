@@ -218,7 +218,7 @@ source for possible build instructions for both Ubuntu and Alpine images.
 
 ### Creating a GitLab Runner Docker image
 
-As of 2021-08-03, the GitLab Runner Docker image based on Alpine uses Alpine 3.12.0. However, you can upgrade the image's OS before it is available in the GitLab repositories.
+As of GitLab Runner 16.1, the GitLab Runner Docker image based on Alpine uses Alpine 3.18.2. However, you can upgrade the image's OS before it is available in the GitLab repositories.
 
 To build a `gitlab-runner` Docker image for the latest Alpine version:
 
@@ -236,13 +236,14 @@ To build a `gitlab-runner` Docker image for the latest Alpine version:
 1. Create an upgraded `gitlab-runner` image.
 
    ```shell
-   GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner GITLAB_RUNNER_IMAGE_TAG=alpine-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
+   GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner GITLAB_RUNNER_IMAGE_TAG=alpine-v16.1.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
+
    ```
 
 1. Create an upgraded `gitlab-runner-helper` image.
 
    ```shell
-   GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper GITLAB_RUNNER_IMAGE_TAG=x86_64-v13.12.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
+   GITLAB_RUNNER_IMAGE_TYPE=gitlab-runner-helper GITLAB_RUNNER_IMAGE_TAG=x86_64-v16.1.0 docker build -t $GITLAB_RUNNER_IMAGE_TYPE:$GITLAB_RUNNER_IMAGE_TAG --build-arg GITLAB_RUNNER_IMAGE_TYPE=$GITLAB_RUNNER_IMAGE_TYPE --build-arg GITLAB_RUNNER_IMAGE_TAG=$GITLAB_RUNNER_IMAGE_TAG -f alpine-upgrade/Dockerfile alpine-upgrade
    ```
 
 NOTE:
@@ -284,4 +285,6 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 |Alpine|3.14|2023-05-01|2023-05-22|
 |Alpine|3.15|2023-11-01|2023-11-22|
 |Alpine|3.16|2024-05-23|2024-06-22|
+|Alpine|3.17|2024‑11‑22|2024-12-22|
+|Alpine|3.18|2025‑05‑09|2025-05-22|
 |Red Hat Universal Base Image 8|8.7-1054|2024-05-31|2024-06-22|
