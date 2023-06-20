@@ -160,7 +160,7 @@ You can customize the runner's `config.toml` file by using the [configuration te
 1. Create a `ConfigMap` named `custom-config-toml` from our `custom-config.toml` file:
 
    ```shell
-    oc create configmap custom-config-toml --from-file config.toml=custom-config-toml
+    oc create configmap custom-config-toml --from-file config.toml=custom-config.toml
    ```
 
 1. Set the `config` property of the `Runner`:
