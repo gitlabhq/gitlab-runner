@@ -535,14 +535,21 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 			s.buildRedirectionCmd(shell),
 		}
 	default:
-		// Translates to roughly "sh /detect/shell/path.sh /stage/script/path.sh"
+		// Translates to roughly "sh -c '(/detect/shell/path.sh /stage/script/path.sh 2>&1 | tee) &'"
 		// which when the detect shell exits becomes something like "bash /stage/script/path.sh".
 		// This works unlike "gitlab-runner-build" since the detect shell passes arguments with "$@"
 		containerCommand = []string{
 			"sh",
-			s.scriptPath(detectShellScriptName),
-			s.scriptPath(cmd.Stage),
-			s.buildRedirectionCmd(shell),
+
+			// We have to run the command in a background subshell. Unfortunately,
+			// explaining why in a comment fails the code quality check of
+			// function length not exceeding 60 lines, so `git blame` this instead.
+			"-c",
+			fmt.Sprintf("'(%s %s %s) &'",
+				s.scriptPath(detectShellScriptName),
+				s.scriptPath(cmd.Stage),
+				s.buildRedirectionCmd(shell),
+			),
 		}
 		if cmd.Predefined {
 			// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args

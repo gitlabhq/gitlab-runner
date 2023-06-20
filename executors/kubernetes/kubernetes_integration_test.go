@@ -2309,6 +2309,55 @@ func TestKubernetesPwshFeatureFlag(t *testing.T) {
 	}
 }
 
+func TestKubernetesProcessesInBackground(t *testing.T) {
+	// Check fix for https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2880
+
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		shell  string
+		image  string
+		script []string
+	}{
+		"bash shell": {
+			shell: "bash",
+			image: common.TestAlpineImage,
+		},
+		"pwsh shell": {
+			shell: shells.SNPwsh,
+			image: common.TestPwshImage,
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+
+			build.Image.Name = common.TestPwshImage
+			build.Runner.Shell = tc.shell
+			build.JobResponse.Steps = common.Steps{
+				common.Step{
+					Name: common.StepNameScript,
+					Script: []string{
+						`sleep infinity &`,
+						`mkdir out && echo "Hello, world" > out/greeting`,
+					},
+				},
+				common.Step{
+					Name: common.StepNameAfterScript,
+					Script: []string{
+						`echo I should be running`,
+					},
+				},
+			}
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			assert.Contains(t, out, "I should be running")
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestBuildExpandedFileVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
