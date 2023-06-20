@@ -174,6 +174,8 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		taskscaler.WithMetricsCollector(tsMC),
 		taskscaler.WithFleetingMetricsCollector(flMC),
 		taskscaler.WithInstanceUpFunc(instanceReadyUp(shutdownCtx, config)),
+		taskscaler.WithUpdateInterval(time.Minute),
+		taskscaler.WithUpdateIntervalWhenExpecting(time.Second),
 	}
 
 	if config.Autoscaler.DeleteInstancesOnShutdown {
