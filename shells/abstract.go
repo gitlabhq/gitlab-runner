@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,8 @@ import (
 )
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
+
+var protectedCachePattern = regexp.MustCompile(`-protected\/*$`)
 
 type stringQuoter func(string) string
 
@@ -158,7 +161,7 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 
 	defaultFallbackCacheKey := info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY")
 
-	if defaultFallbackCacheKey != "" && !strings.HasSuffix(defaultFallbackCacheKey, "-protected") {
+	if defaultFallbackCacheKey != "" && !protectedCachePattern.MatchString(defaultFallbackCacheKey) {
 		// The `-protected` suffix is reserved for protected refs, so we disallow it in the global variable.
 		allowedCacheKeys = append(allowedCacheKeys, defaultFallbackCacheKey)
 	}
