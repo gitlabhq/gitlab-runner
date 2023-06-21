@@ -443,7 +443,7 @@ well.
 
 To use private registries as a source of images for your jobs,
 you can set the authorization configuration in a [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/)
-named `DOCKER_AUTH_CONFIG`. You can set the variable in the project's CI/CD settings as [type `Variable`](https://docs.gitlab.com/ee/ci/variables/#cicd-variable-types)
+named `DOCKER_AUTH_CONFIG`. You can set the variable in the project's CI/CD settings as [type `File`](https://docs.gitlab.com/ee/ci/variables/#use-file-type-cicd-variables)
 or in the `config.toml` file.
 
 Using private registries with the `if-not-present` pull policy may introduce
