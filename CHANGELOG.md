@@ -1,3 +1,66 @@
+## v16.1.0 (2023-06-21)
+
+### New features
+
+- Enable variable expansion in fallback cache keys !4152 (René Hernández Remedios @renehernandez)
+- Automatically set GOMAXPROCS based on CPU Quotas !4142
+- Allow Instance executor to use a common build directory !4136
+- Pass clean command args to sub modules !4135 (Markus Ferrell @markus.ferrell)
+- Add dedicated failure reason for image pulling failures !4098
+- Support allowed images for privileged jobs and services !4089 (Stéphane Talbot @stalb)
+- Variable expansion implementation in cache policy field !4085 (René Hernández Remedios @renehernandez)
+- Use executor's context to enforce timeouts on VirtualBox commands !4026 (Patrick Pirringer @patrick-pirringer)
+
+### Bug fixes
+
+- Fix Windows IsRoot() path utility !4153
+- Warn if runner with same token being registered multiple times !4122
+- Upgrade taskscaler to latest version !4114
+- Ensure lock for builds when listing jobs via debug api !4111
+- Ensure instance connection is closed when vm isolation is enabled !4108
+- Fix community Merge Request pipeline parse errors !4077 (Anthony Juckel @ajuckel)
+- Fix cache keys processing by improving the handling of the fallback keys !4069 (René Hernández Remedios @renehernandez)
+
+### Maintenance
+
+- Docs maintenance: Delete trailing whitespace !4166
+- Bump version of markdownlint-cli2 in project !4164
+- Correct the filename of configmap !4163
+- In UBI-fips helper images remove installation of extra packages since they are... !4159
+- Fix k8s integration tests !4156
+- Update code example with proper nesting !4155
+- Expand Runner helm chart troubleshooting section !4149
+- Update documentation to mention that --registration-token is deprecated !4148
+- Improve readability of table !4144 (Bastien ANTOINE @bastantoine)
+- Upgrade fastzip to v0.1.11 !4141
+- Update Runner docs for consistent SaaS runner naming !4138
+- Docs maintenance: Update redirects !4134
+- Refresh Vale and Markdownlint rules !4133
+- Add gitlab-runner section to values example !4132
+- Removing podman references !4131
+- Change heading used to describe reusing an authentication token !4129
+- Refactor instance executor page !4124
+- Correct example AWS zone used in an example !4123 (Nabil ZOUABI @nabil_zouabi)
+- Improve formatting !4121 (Ben Bodenmiller @bbodenmiller)
+- Mention use of runner tokens in Kubernetes runnerRegistrationToken !4120
+- Follow up edits instance executor !4119
+- Remove trailing spaces !4115
+- Update project to use Ruby 3.2.2-based Docker images !4112
+- Build git from source for UBI images !4110
+- Make GitLab network client respect Retry-After header !4102
+- Documentation versions update !4096
+- Improve cacheFile() errors !4078 (Nikolay Edigaryev @edigaryev)
+- Update alpine and pwsh versions !4072
+- Add info about grouped runners to docs !4056
+
+### GitLab Runner distribution
+
+- Sync ci images to dockerhub and ecr !4139
+
+### Documentation changes
+
+- Update nav step !4154
+
 ## v16.0.2 (2023-06-02)
 
 ### Bug fixes
