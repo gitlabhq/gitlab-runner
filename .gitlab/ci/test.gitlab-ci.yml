@@ -356,8 +356,6 @@ git 1.8.3.1:
   - make git1.8-test
 
 integration_k8s:
-  rules:
-    - when: never # temporarily skip
   extends:
   - .rules:merge_request_pipelines:no_docs
   - .docker
@@ -384,6 +382,4 @@ integration_k8s:
       -tags integration,kubernetes \
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-      -- -ldflags "$(make print_ldflags)"
-  variables:
-    CI_DEBUG_SERVICES: "true"
+      -- -timeout=30m
