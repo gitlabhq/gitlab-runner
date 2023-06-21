@@ -32,6 +32,13 @@ func New(retry Retryable) *Retry {
 	}
 }
 
+func NewWithBackoffDuration(retry Retryable, min, max time.Duration) *Retry {
+	return &Retry{
+		retryable: retry,
+		backoff:   &backoff.Backoff{Min: min, Max: max},
+	}
+}
+
 func (r *Retry) Run() error {
 	var err error
 	var tries int

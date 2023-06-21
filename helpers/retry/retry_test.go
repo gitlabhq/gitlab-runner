@@ -72,9 +72,7 @@ func TestRunBackoff(t *testing.T) {
 	mockRetryable.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
 	mockRetryable.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
-	retry := New(mockRetryable)
-	retry.backoff.Min = sleepTime
-	retry.backoff.Max = sleepTime
+	retry := NewWithBackoffDuration(mockRetryable, sleepTime, sleepTime)
 
 	start := time.Now()
 	err := retry.Run()
