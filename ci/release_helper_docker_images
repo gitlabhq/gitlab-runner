@@ -109,11 +109,8 @@ release_docker_helper_images() {
     push "${helper_image_s390x_version}" "${PUSH_ENABLED}"
     push "${helper_image_ppc64le_version}" "${PUSH_ENABLED}"
 
-    if [[ "$FLAVOR" != "alpine3.14" ]] && [[ "$FLAVOR" != "alpine3.15" ]] && [[ "$FLAVOR" != "alpine-latest" ]]; then
-        # Special case until pwsh adds the alpine 3.14 and 3.15 docker images
-        # The two versions can be removed when pwsh adds support for them but the latest flavour must stay
-        # As there's no corresponding version for alpine
-        # Alpine-latest is a special case pwsh don't support an alpine:latest image
+    if [[ "$FLAVOR" != "alpine-latest" ]]; then
+        # Alpine-latest is a special case, the powershell DockerHub repo (https://hub.docker.com/_/microsoft-powershell) doesn't support an alpine:latest image
         import "out/helper-images/prebuilt-${FLAVOR}-x86_64-pwsh.tar.xz" "${helper_image_x86_64_pwsh}" "linux/amd64"
         tag_latest "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_latest}"
         tag "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_version}"

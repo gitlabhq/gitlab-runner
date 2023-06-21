@@ -28,11 +28,11 @@ RUN wget -q https://download.docker.com/linux/static/stable/x86_64/docker-${DOCK
 
 # Install Powershell Core
 ARG PWSH_VERSION
-RUN wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb && \
+RUN wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb && \
     dpkg -i packages-microsoft-prod.deb && \
     rm packages-microsoft-prod.deb && \
     apt-get update && \
-    apt-get install -y powershell=${PWSH_VERSION}-1.debian.10 && \
+    apt-get install -y powershell=${PWSH_VERSION}.deb && \
     rm -rf /var/lib/apt/lists/* && \
     pwsh --version
 

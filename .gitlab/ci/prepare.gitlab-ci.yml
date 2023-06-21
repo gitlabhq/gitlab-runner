@@ -15,7 +15,7 @@ prepare ci image:
   variables:
     BUILD_IMAGE: $CI_IMAGE
     BUILD_DOCKERFILE: ./dockerfiles/ci/Dockerfile
-    PWSH_VERSION: 7.1.1
+    PWSH_VERSION: "7.3.4-1"
 
 prepare alpine-no-root image:
   extends:

@@ -39,10 +39,10 @@ fi
 declare -A base_images_from_flavor
 base_images_from_flavor=(
   ["ubuntu"]="ubuntu:${UBUNTU_VERSION}"
-  ["alpine3.12"]="alpine:${ALPINE_312_VERSION}"
-  ["alpine3.13"]="alpine:${ALPINE_313_VERSION}"
-  ["alpine3.14"]="alpine:${ALPINE_314_VERSION}"
   ["alpine3.15"]="alpine:${ALPINE_315_VERSION}"
+  ["alpine3.16"]="alpine:${ALPINE_316_VERSION}"
+  ["alpine3.17"]="alpine:${ALPINE_317_VERSION}"
+  ["alpine3.18"]="alpine:${ALPINE_318_VERSION}"
   ["alpine-latest"]="alpine:latest"
   ["ubi-fips"]="$UBI_FIPS_BASE_IMAGE"
 )
@@ -52,10 +52,10 @@ get_image_version_from_flavor() {
   echo "${base_images_from_flavor[${flavor}]}"
 }
 
-# This marks the alpine3.15 to be aliased to alpine,
-# which makes 3.15 the default alpine version for users
+# This marks the alpine3.18 to be aliased to alpine,
+# which makes 3.18 the default alpine version for users
 declare -A flavor_aliases
-flavor_aliases=( ["alpine3.15"]="alpine,alpine3.15" )
+flavor_aliases=( ["alpine3.18"]="alpine,alpine3.18" )
 
 get_flavor_aliases() {
   local flavor="$1"

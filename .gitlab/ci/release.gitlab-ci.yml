@@ -26,13 +26,13 @@
       TARGET_ARCHS: amd64
     - IMAGE_FLAVOR: ubuntu
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.12
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.13
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.14
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.15
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
+    - IMAGE_FLAVOR: alpine3.16
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
+    - IMAGE_FLAVOR: alpine3.17
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
+    - IMAGE_FLAVOR: alpine3.18
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
 
 .sync_docker_images:
@@ -61,13 +61,15 @@
   parallel:
     matrix:
     - IMAGE_FLAVOR: "alpine"
-      IMAGE_TAG: ["alpine3.12-"]
-    - IMAGE_FLAVOR: "alpine3.13"
-      IMAGE_TAG: ["alpine3.13-"]
-    - IMAGE_FLAVOR: "alpine3.14"
-      IMAGE_TAG: ["alpine3.14-"]
+      IMAGE_TAG: ["", "alpine3.18-"]
     - IMAGE_FLAVOR: "alpine3.15"
-      IMAGE_TAG: ["", "alpine3.15-"]
+      IMAGE_TAG: ["alpine3.15-"]
+    - IMAGE_FLAVOR: "alpine3.16"
+      IMAGE_TAG: ["alpine3.16-"]
+    - IMAGE_FLAVOR: "alpine3.17"
+      IMAGE_TAG: ["alpine3.17-"]
+    - IMAGE_FLAVOR: "alpine3.18"
+      IMAGE_TAG: ["alpine3.18-" ]
     - IMAGE_FLAVOR: "alpine-latest"
       IMAGE_TAG: ["alpine-latest-"]
     - IMAGE_FLAVOR: "ubuntu"

@@ -23,24 +23,33 @@ TAR_XZ_ALPINE += ${BASE_TAR_PATH}-alpine-arm64.tar.xz
 TAR_XZ_ALPINE += ${BASE_TAR_PATH}-alpine-s390x.tar.xz
 TAR_XZ_ALPINE += ${BASE_TAR_PATH}-alpine-ppc64le.tar.xz
 
-TAR_XZ_ALPINE_313 += ${BASE_TAR_PATH}-alpine3.13-x86_64.tar.xz
-TAR_XZ_ALPINE_313 += ${BASE_TAR_PATH}-alpine3.13-x86_64-pwsh.tar.xz
-TAR_XZ_ALPINE_313 += ${BASE_TAR_PATH}-alpine3.13-arm.tar.xz
-TAR_XZ_ALPINE_313 += ${BASE_TAR_PATH}-alpine3.13-arm64.tar.xz
-TAR_XZ_ALPINE_313 += ${BASE_TAR_PATH}-alpine3.13-s390x.tar.xz
-TAR_XZ_ALPINE_313 += ${BASE_TAR_PATH}-alpine3.13-ppc64le.tar.xz
-
-TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-x86_64.tar.xz
-TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-arm.tar.xz
-TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-arm64.tar.xz
-TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-s390x.tar.xz
-TAR_XZ_ALPINE_314 += ${BASE_TAR_PATH}-alpine3.14-ppc64le.tar.xz
-
 TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-x86_64.tar.xz
+TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-x86_64-pwsh.tar.xz
 TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-arm.tar.xz
 TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-arm64.tar.xz
 TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-s390x.tar.xz
 TAR_XZ_ALPINE_315 += ${BASE_TAR_PATH}-alpine3.15-ppc64le.tar.xz
+
+TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-x86_64.tar.xz
+TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-x86_64-pwsh.tar.xz
+TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-arm.tar.xz
+TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-arm64.tar.xz
+TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-s390x.tar.xz
+TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-ppc64le.tar.xz
+
+TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-x86_64.tar.xz
+TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-x86_64-pwsh.tar.xz
+TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-arm.tar.xz
+TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-arm64.tar.xz
+TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-s390x.tar.xz
+TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-ppc64le.tar.xz
+
+TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-x86_64.tar.xz
+TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-x86_64-pwsh.tar.xz
+TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-arm.tar.xz
+TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-arm64.tar.xz
+TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-s390x.tar.xz
+TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-ppc64le.tar.xz
 
 TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-x86_64.tar.xz
 TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-arm.tar.xz
@@ -85,10 +94,10 @@ GO_ARCH_NAME_amd64 = x86_64
 # Go files that are used to create the helper binary.
 HELPER_GO_FILES ?= $(shell find common network -name '*.go')
 
-ALPINE_312_VERSION ?= "3.12"
-ALPINE_313_VERSION ?= "3.13"
-ALPINE_314_VERSION ?= "3.14"
 ALPINE_315_VERSION ?= "3.15"
+ALPINE_316_VERSION ?= "3.16"
+ALPINE_317_VERSION ?= "3.17"
+ALPINE_318_VERSION ?= "3.18"
 UBUNTU_VERSION ?= "20.04"
 
 # Build the Runner Helper binaries for the host platform.
@@ -142,19 +151,22 @@ helper-dockerarchive-host:
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive
-helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.13 helper-dockerarchive-alpine3.14 helper-dockerarchive-alpine3.15 helper-dockerarchive-alpine-latest helper-dockerarchive-ubuntu
+helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.15 helper-dockerarchive-alpine3.16 helper-dockerarchive-alpine3.17 helper-dockerarchive-alpine3.18 helper-dockerarchive-alpine-latest helper-dockerarchive-ubuntu
 
 .PHONY: helper-dockerarchive-alpine
 helper-dockerarchive-alpine: $(TAR_XZ_ALPINE)
 
-.PHONY: helper-dockerarchive-alpine3.13
-helper-dockerarchive-alpine3.13: $(TAR_XZ_ALPINE_313)
-
-.PHONY: helper-dockerarchive-alpine3.14
-helper-dockerarchive-alpine3.14: $(TAR_XZ_ALPINE_314)
-
 .PHONY: helper-dockerarchive-alpine3.15
 helper-dockerarchive-alpine3.15: $(TAR_XZ_ALPINE_315)
+
+.PHONY: helper-dockerarchive-alpine3.16
+helper-dockerarchive-alpine3.16: $(TAR_XZ_ALPINE_316)
+
+.PHONY: helper-dockerarchive-alpine3.17
+helper-dockerarchive-alpine3.17: $(TAR_XZ_ALPINE_317)
+
+.PHONY: helper-dockerarchive-alpine3.18
+helper-dockerarchive-alpine3.18: $(TAR_XZ_ALPINE_318)
 
 .PHONY: helper-dockerarchive-alpine-latest
 helper-dockerarchive-alpine-latest: $(TAR_XZ_ALPINE_LATEST)
@@ -182,22 +194,37 @@ ${BASE_TAR_PATH}-ubi-fips-%.tar:
 
 # See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
-${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_VERSION ?= 7.3
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ 3.12
+	@./ci/build_helper_docker alpine $* $@ 3.18
 
-${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: export PWSH_VERSION ?= 7.1.4
-${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210927
-${BASE_TAR_PATH}-alpine3.13-%-pwsh.tar: ${BASE_BINARY_PATH}.%
+${BASE_TAR_PATH}-alpine3.15-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-alpine3.15-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine3.15-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ 3.13
+	@./ci/build_helper_docker alpine $* $@ 3.15
+
+${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ 3.16
+
+${BASE_TAR_PATH}-alpine3.17-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-alpine3.17-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine3.17-%-pwsh.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ 3.17
+
+${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ 3.18
 
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.1.1
-${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_IMAGE_DATE ?= 20210114
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.3
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker ubuntu $* $@ 20.04
@@ -208,19 +235,23 @@ ${BASE_TAR_PATH}-alpine-latest-%.tar: ${BASE_BINARY_PATH}.%
 
 ${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ $(ALPINE_312_VERSION)
-
-${BASE_TAR_PATH}-alpine3.13-%.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ $(ALPINE_313_VERSION)
-
-${BASE_TAR_PATH}-alpine3.14-%.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ $(ALPINE_314_VERSION)
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_318_VERSION)
 
 ${BASE_TAR_PATH}-alpine3.15-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ $(ALPINE_315_VERSION)
+
+${BASE_TAR_PATH}-alpine3.16-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_316_VERSION)
+
+${BASE_TAR_PATH}-alpine3.17-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_317_VERSION)
+
+${BASE_TAR_PATH}-alpine3.18-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_318_VERSION)
 
 ${BASE_TAR_PATH}-ubuntu-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
