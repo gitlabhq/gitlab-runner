@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -53,6 +54,7 @@ func getRemoteCacheSize(resp *http.Response) int64 {
 	return int64(length)
 }
 
+//nolint:funlen
 func (c *CacheExtractorCommand) download(_ int) error {
 	err := os.MkdirAll(filepath.Dir(c.File), 0o700)
 	if err != nil {
@@ -82,7 +84,12 @@ func (c *CacheExtractorCommand) download(_ int) error {
 		_ = os.Remove(file.Name())
 	}()
 
-	logrus.Infoln("Downloading", filepath.Base(c.File), "from", url_helpers.CleanURL(c.URL))
+	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
+
+	// For legacy purposes, caches written to disk use the extension `.zip`
+	// even when a different compression format is used. To avoid confusion,
+	// we avoid the extension name in logs.
+	logrus.Infoln("Downloading", name, "from", url_helpers.CleanURL(c.URL))
 
 	writer := meter.NewWriter(
 		file,
