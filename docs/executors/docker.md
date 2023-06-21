@@ -556,10 +556,10 @@ build:
 
 WARNING:
 Containers that run in privileged mode have security risks.
-When your containers run in privileged mode, you disable the 
+When your containers run in privileged mode, you disable the
 container security mechanisms and expose your host to privilege escalation.
 Running containers in privileged mode can lead to container breakout. For more information,
-see the Docker documentation about 
+see the Docker documentation about
 [runtime privilege and Linux capabilities](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
 
 ### Use rootless Docker-in-Docker with restricted privileged mode
