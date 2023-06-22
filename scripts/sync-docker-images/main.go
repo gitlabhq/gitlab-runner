@@ -19,6 +19,9 @@ const (
 	gitlabRunnerImage       image = "gitlab-runner"
 	gitlabRunnerHelperImage image = "gitlab-runner/gitlab-runner-helper"
 
+	gitlabRunnerDockerHubImage       image = "gitlab-runner"
+	gitlabRunnerHelperDockerHubImage image = "gitlab-runner-helper"
+
 	archARM     arch = "arm"
 	archARM64   arch = "arm64"
 	archPPC64LE arch = "ppc64le"
@@ -111,10 +114,10 @@ func (f flavor) formatHelperTag(version string, arch arch, variant variant) stri
 
 var runnerFlavors = []flavor{
 	{name: "alpine"},
-	{name: "alpine3.12"},
-	{name: "alpine3.13"},
-	{name: "alpine3.14"},
 	{name: "alpine3.15"},
+	{name: "alpine3.16"},
+	{name: "alpine3.17"},
+	{name: "alpine3.18"},
 	{name: "ubi-fips"},
 	{name: "ubuntu"},
 	{name: "latest"},
@@ -126,21 +129,21 @@ var helperFlavors = []flavor{
 		compatibleArchs: supportedArchitectures,
 	},
 	{
-		name:            "alpine3.12",
-		compatibleArchs: supportedArchitectures,
-		variantsMap:     variantMapX8664toPWSH,
-	},
-	{
-		name:            "alpine3.13",
-		compatibleArchs: supportedArchitectures,
-		variantsMap:     variantMapX8664toPWSH,
-	},
-	{
-		name:            "alpine3.14",
-		compatibleArchs: supportedArchitectures,
-	},
-	{
 		name:            "alpine3.15",
+		compatibleArchs: supportedArchitectures,
+		variantsMap:     variantMapX8664toPWSH,
+	},
+	{
+		name:            "alpine3.16",
+		compatibleArchs: supportedArchitectures,
+		variantsMap:     variantMapX8664toPWSH,
+	},
+	{
+		name:            "alpine3.17",
+		compatibleArchs: supportedArchitectures,
+	},
+	{
+		name:            "alpine3.18",
 		compatibleArchs: supportedArchitectures,
 	},
 	{
@@ -165,19 +168,32 @@ var helperFlavors = []flavor{
 	},
 }
 
-var targetImages = map[image][]flavor{
-	gitlabRunnerImage:       runnerFlavors,
-	gitlabRunnerHelperImage: helperFlavors,
+var targetImages = map[image]struct {
+	flavors          []flavor
+	imageForRegistry map[registry]image
+}{
+	gitlabRunnerImage: {
+		flavors: runnerFlavors,
+		imageForRegistry: map[registry]image{
+			registryDockerHub: gitlabRunnerDockerHubImage,
+		},
+	},
+	gitlabRunnerHelperImage: {
+		flavors: helperFlavors,
+		imageForRegistry: map[registry]image{
+			registryDockerHub: gitlabRunnerHelperDockerHubImage,
+		},
+	},
 }
 
 type imageSyncPair struct {
 	from, to string
 }
 
-func newImageSyncPair(sourceRegistry, toRegistry string, img image, tag string) imageSyncPair {
+func newImageSyncPair(sourceRegistry, toRegistry string, fromImg, toImg image, tag string) imageSyncPair {
 	return imageSyncPair{
-		from: fmt.Sprintf("%s/%s:%s", sourceRegistry, img, tag),
-		to:   fmt.Sprintf("%s/%s:%s", toRegistry, img, tag),
+		from: fmt.Sprintf("%s/%s:%s", sourceRegistry, fromImg, tag),
+		to:   fmt.Sprintf("%s/%s:%s", toRegistry, toImg, tag),
 	}
 }
 
@@ -266,11 +282,12 @@ func syncImages(args args) error {
 		return err
 	}
 
-	for img, f := range targetImages {
-		tags := generateTags(args.Version, f)
-		for _, registry := range registries {
+	for img, target := range targetImages {
+		tags := generateTags(args.Version, target.flavors)
+		for registryName, registry := range registries {
 			for _, tag := range tags {
-				images = append(images, newImageSyncPair(sourceRegistry, registry, img, tag))
+				targetImage := target.imageForRegistry[registryName]
+				images = append(images, newImageSyncPair(sourceRegistry, registry, img, targetImage, tag))
 			}
 		}
 	}
