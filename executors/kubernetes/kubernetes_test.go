@@ -3591,7 +3591,16 @@ func TestSetupBuildPod(t *testing.T) {
 					},
 				}
 
-				assert.ElementsMatch(t, expectedServices, e.services)
+				// The name of each service is generated beforehand
+				// We reset it to empty string before the assert
+				// Everything else should be as expected.
+				srvs := make([]api.Service, 0)
+				for _, s := range e.services {
+					s.ObjectMeta.Name = ""
+					srvs = append(srvs, *s.DeepCopy())
+				}
+
+				assert.ElementsMatch(t, expectedServices, srvs)
 			},
 		},
 		"the default service name for the build container is build": {
