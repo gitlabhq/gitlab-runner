@@ -20,7 +20,6 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,25 +28,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	api "k8s.io/api/core/v1"
-	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-)
-
-const (
-	// errorDialingBackendMessage is an error prefix that is encountered when
-	// connectivity to a Pod fails. This can happen for a number of reasons,
-	// such as the Pod or Node still being configured.
-	errorDialingBackendMessage = "error dialing backend"
-
-	// commandConnectFailureMaxTries is the number of attempts we retry when
-	// the connection to a Pod fails. There's an exponential backoff, which
-	// maxes out at 5 seconds.
-	commandConnectFailureMaxTries = 30
 )
 
 // RemoteExecutor defines the interface accepted by the Exec command - provided for test stubbing
@@ -136,23 +122,6 @@ func (p *AttachOptions) Run() error {
 	return p.Executor.Execute(http.MethodPost, req.URL(), p.Config, stdin, nil, nil, false)
 }
 
-func (p *AttachOptions) ShouldRetry(times int, err error) bool {
-	return shouldRetryKubernetesError(times, err)
-}
-
-func shouldRetryKubernetesError(times int, err error) bool {
-	var statusError *kubeerrors.StatusError
-
-	if times < commandConnectFailureMaxTries &&
-		errors.As(err, &statusError) &&
-		statusError.ErrStatus.Code == http.StatusInternalServerError &&
-		strings.HasPrefix(statusError.ErrStatus.Message, errorDialingBackendMessage) {
-		return true
-	}
-
-	return false
-}
-
 // ExecOptions declare the arguments accepted by the Exec command
 type ExecOptions struct {
 	Namespace     string
@@ -215,10 +184,6 @@ func (p *ExecOptions) executeRequest() error {
 	}, scheme.ParameterCodec)
 
 	return p.Executor.Execute(http.MethodPost, req.URL(), p.Config, stdin, p.Out, p.Err, false)
-}
-
-func (p *ExecOptions) ShouldRetry(times int, err error) bool {
-	return shouldRetryKubernetesError(times, err)
 }
 
 func init() {
