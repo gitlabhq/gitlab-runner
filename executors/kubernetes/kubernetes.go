@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -480,7 +482,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	))
 
 	select {
-	case err := <-s.runInContainerWithExec(ctx, containerName, containerCommand, cmd.Script):
+	case err := <-s.runInContainerWithExec(ctx, cmd.Stage, containerName, containerCommand, cmd.Script):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
@@ -504,12 +506,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 	containerName, containerCommand := s.getContainerInfo(cmd)
 
-	err = s.saveScriptOnEmptyDir(
-		ctx,
-		containerName,
-		fmt.Sprintf("%s/%s", s.scriptsDir(), s.scriptName(string(cmd.Stage))),
-		cmd.Script,
-	)
+	err = s.saveScriptOnEmptyDir(ctx, s.scriptName(string(cmd.Stage)), containerName, cmd.Script)
 	if err != nil {
 		return err
 	}
@@ -524,7 +521,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	podStatusCh := s.watchPodStatus(ctx)
 
 	select {
-	case err := <-s.runInContainer(containerName, containerCommand):
+	case err := <-s.runInContainer(cmd.Stage, containerName, containerCommand):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var terminatedError *commandTerminatedError
 		if err != nil && errors.As(err, &terminatedError) {
@@ -792,15 +789,16 @@ func (s *executor) setupTrappingScripts(ctx context.Context) error {
 		scriptName, script = s.scriptName(detectShellScriptName), shells.BashDetectShellScript
 	}
 
-	return s.saveScriptOnEmptyDir(ctx, buildContainerName, fmt.Sprintf("%s/%s", s.scriptsDir(), scriptName), script)
+	return s.saveScriptOnEmptyDir(ctx, scriptName, buildContainerName, script)
 }
 
-func (s *executor) saveScriptOnEmptyDir(ctx context.Context, containerName, scriptPath, script string) error {
+func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptName, containerName, script string) error {
 	shell, err := s.retrieveShell()
 	if err != nil {
 		return err
 	}
 
+	scriptPath := fmt.Sprintf("%s/%s", s.scriptsDir(), scriptName)
 	saveScript, err := shell.GenerateSaveScript(*s.Shell(), scriptPath, script)
 	if err != nil {
 		return err
@@ -808,7 +806,13 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, containerName, scri
 	s.Debugln(fmt.Sprintf("Saving stage script %s on Container %q", saveScript, containerName))
 
 	select {
-	case err := <-s.runInContainerWithExec(ctx, containerName, s.BuildShell.DockerCommand, saveScript):
+	case err := <-s.runInContainerWithExec(
+		ctx,
+		common.BuildStage(scriptName),
+		containerName,
+		s.BuildShell.DockerCommand,
+		saveScript,
+	):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
@@ -2116,7 +2120,7 @@ func (s *executor) checkPodStatus() error {
 	return nil
 }
 
-func (s *executor) runInContainer(name string, command []string) <-chan error {
+func (s *executor) runInContainer(stage common.BuildStage, name string, command []string) <-chan error {
 	errCh := make(chan error, 1)
 	go func() {
 		defer close(errCh)
@@ -2136,7 +2140,8 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 			&retryableKubeAPICall{
 				maxTries: commandConnectFailureMaxTries,
 				fn: func() error {
-					return attach.Run()
+					err := attach.Run()
+					return s.checkScriptExecution(stage, name, command, err)
 				},
 			},
 			&s.BuildLogger,
@@ -2163,6 +2168,7 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 
 func (s *executor) runInContainerWithExec(
 	ctx context.Context,
+	stage common.BuildStage,
 	name string,
 	command []string,
 	script string,
@@ -2200,7 +2206,8 @@ func (s *executor) runInContainerWithExec(
 			&retryableKubeAPICall{
 				maxTries: commandConnectFailureMaxTries,
 				fn: func() error {
-					return exec.Run()
+					err := exec.Run()
+					return s.checkScriptExecution(stage, name, command, err)
 				},
 			},
 			&s.BuildLogger,
@@ -2210,6 +2217,58 @@ func (s *executor) runInContainerWithExec(
 	}()
 
 	return errCh
+}
+
+func (s *executor) checkScriptExecution(stage common.BuildStage, name string, command []string, err error) error {
+	// Retrying attach and exec commands is a bit different from regular Kubernetes requests.
+	// Since the attach / exec commands are executed by openning an HTTP stream to the Kubernetes server
+	// and piping the command into that stream and then expecting a response there's no good place to check
+	// whether the whole command execution was successful.
+	// If we check whether the Stdin stream was read - the connection might have broken up after during transit of that
+	// meaning that the command was never executed.
+	// It could have also been broken during the reading of the response stream - meaning that it was executed, but we can't know that.
+	// The only solution is to check for certain whether the process is already running.
+	// For attach that is easy since the process is completely running in the background, and we receive the status of it through
+	// the log file and the log processor moves things forward.
+
+	// Non-network errors don't concern this function
+	if err == nil || !isNetworkError(err) {
+		return err
+	}
+
+	// List all the processes inside the container
+	out := &bytes.Buffer{}
+	exec := ExecOptions{
+		PodName:       s.pod.Name,
+		Namespace:     s.pod.Namespace,
+		ContainerName: name,
+		Command:       command,
+		In:            strings.NewReader("ps aux"),
+		Out:           out,
+		Err:           s.Trace,
+		Stdin:         true,
+		Config:        s.kubeConfig,
+		Client:        s.kubeClient,
+		Executor:      &DefaultRemoteExecutor{},
+	}
+
+	if e := exec.Run(); e != nil {
+		s.Debugln(fmt.Sprintf("Checking running processes for a failed command: %v", e))
+		return e
+	}
+
+	// Check the running processes for the current script stage, the output looks something like this:
+	// $ ps aux
+	// 29 root      0:00 /bin/sh /scripts-15339497-4517415631/step_script
+	// If the current stage script is already running we don't need to retry this command
+	// We need to return an empty err so that we can wait for the s.remoteProcessTerminated channel
+	// instead of returning early and causing us to go to the next stage, which with an error is going to be
+	// cleaning up.
+	if strings.Contains(out.String(), filepath.Join(s.scriptsDir(), string(stage))) {
+		return nil
+	}
+
+	return err
 }
 
 func (s *executor) prepareOverwrites(variables common.JobVariables) error {
