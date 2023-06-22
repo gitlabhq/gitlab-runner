@@ -622,6 +622,11 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 			"the valid values are: 'process', 'hyperv', 'default' and an empty string", isolation)
 	}
 
+	ulimits, err := e.Config.Docker.GetUlimits()
+	if err != nil {
+		return nil, err
+	}
+
 	return &container.HostConfig{
 		Resources: container.Resources{
 			Memory:            e.Config.Docker.GetMemory(),
@@ -634,6 +639,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 			DeviceRequests:    e.deviceRequests,
 			OomKillDisable:    e.Config.Docker.GetOomKillDisable(),
 			DeviceCgroupRules: e.Config.Docker.DeviceCgroupRules,
+			Ulimits:           ulimits,
 		},
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,

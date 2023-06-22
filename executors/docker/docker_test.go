@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-units"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1118,6 +1119,63 @@ func TestDockerSysctlsSetting(t *testing.T) {
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
+func TestDockerUlimitSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{}
+
+	tests := map[string]struct {
+		ulimit         map[string]string
+		expectedUlimit []*units.Ulimit
+		expectedError  bool
+	}{
+		"soft and hard values": {
+			ulimit: map[string]string{
+				"nofile": "1024:2048",
+			},
+			expectedUlimit: []*units.Ulimit{
+				{
+					Name: "nofile",
+					Soft: 1024,
+					Hard: 2048,
+				},
+			},
+			expectedError: false,
+		},
+		"single limit value": {
+			ulimit: map[string]string{
+				"nofile": "1024",
+			},
+			expectedUlimit: []*units.Ulimit{
+				{
+					Name: "nofile",
+					Soft: 1024,
+					Hard: 1024,
+				},
+			},
+			expectedError: false,
+		},
+		"invalid limit value": {
+			ulimit: map[string]string{
+				"nofile": "a",
+			},
+			expectedError: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			dockerConfig.Ulimit = test.ulimit
+
+			ulimits, err := dockerConfig.GetUlimits()
+			if test.expectedError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.Equal(t, ulimits, test.expectedUlimit)
+		})
+	}
 }
 
 type testAllowedPrivilegedJobDescription struct {

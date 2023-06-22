@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -222,6 +223,7 @@ type DockerConfig struct {
 	HelperImageFlavor          string             `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"DOCKER_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
 	ContainerLabels            map[string]string  `toml:"container_labels,omitempty" json:"container_labels,omitempty" long:"container-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create containers with the given container labels. Environment variables will be substituted for values here."`
 	EnableIPv6                 bool               `toml:"enable_ipv6,omitempty" json:"enable_ipv6" long:"enable-ipv6" description:"Enable IPv6 for automatically created networks. This is only takes affect when the feature flag FF_NETWORK_PER_BUILD is enabled."`
+	Ulimit                     map[string]string  `toml:"ulimit,omitempty" json:"ulimit" long:"ulimit" env:"DOCKER_ULIMIT" description:"Ulimit options for container"`
 }
 
 type InstanceConfig struct {
@@ -430,6 +432,35 @@ func (c KubernetesConfig) ConvertFromDockerPullPolicy(dockerPullPolicies []Docke
 	}
 
 	return policies, nil
+}
+
+func (c *DockerConfig) GetUlimits() ([]*units.Ulimit, error) {
+	ulimits := make([]*units.Ulimit, 0, len(c.Ulimit))
+
+	for tp, limits := range c.Ulimit {
+		ulimit := units.Ulimit{
+			Name: tp,
+		}
+
+		before, after, ok := strings.Cut(limits, ":")
+
+		var err error
+		ulimit.Soft, err = strconv.ParseInt(before, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid soft limit value: %w", err)
+		}
+
+		ulimit.Hard = ulimit.Soft
+		if ok {
+			ulimit.Hard, err = strconv.ParseInt(after, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid soft limit value: %w", err)
+			}
+		}
+
+		ulimits = append(ulimits, &ulimit)
+	}
+	return ulimits, nil
 }
 
 type KubernetesDNSPolicy string
