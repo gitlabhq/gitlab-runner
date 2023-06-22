@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"path"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/docker/cli/cli/config/types"
@@ -65,6 +67,35 @@ const (
 	serviceContainerPrefix = "svc-"
 
 	k8sAnnotationPrefix = "runner.gitlab.com/"
+
+	defaultTries           = 5
+	defaultRetryMinBackoff = 10 * time.Millisecond
+	defaultRetryMaxBackoff = 2 * time.Second
+
+	// commandConnectFailureMaxTries is the number of attempts we retry when
+	// the connection to a Pod fails. There's an exponential backoff, which
+	// maxes out at 5 seconds.
+	commandConnectFailureMaxTries = 30
+
+	// The suffix is built using alphanumeric character
+	// that means there is 34^8 possibilities for a resource name using the same pattern
+	// Considering that the k8s resources are deleted after they run,
+	k8sResourcesNameSuffixLength = 8
+	k8sResourcesNameMaxLength    = 63
+
+	// errorDialingBackendMessage is an error prefix that is encountered when
+	// connectivity to a Pod fails. This can happen for a number of reasons,
+	// such as the Pod or Node still being configured.
+	errorDialingBackendMessage = "error dialing backend"
+
+	errorTLSHandshakeTimeoutMessage = "TLS handshake timeout"
+	errorUnexpectedEOFMessage       = "unexpected EOF"
+
+	// errorDialingBackendMessage is an error message that is encountered when
+	// we fail to create a resource because it already exists.
+	// Because of a connectivity issue, an attempt to create a resource can fail while the request itself
+	// was successfully executed. We then monitor the conflict error message to retrieve the already create resource
+	errorAlreadyExistsMessage = "the server was not able to generate a unique name for the object"
 )
 
 var (
@@ -87,6 +118,8 @@ var (
 	DefaultResourceIdentifier  = "default"
 	resourceTypeServiceAccount = "ServiceAccount"
 	resourceTypePullSecret     = "ImagePullSecret"
+
+	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 )
 
 type commandTerminatedError struct {
@@ -100,6 +133,40 @@ func (c *commandTerminatedError) Error() string {
 func (c *commandTerminatedError) Is(err error) bool {
 	_, ok := err.(*commandTerminatedError)
 	return ok
+}
+
+type retryableKubeAPICall struct {
+	maxTries  int
+	fn        func() error
+	errFilter func(err error) bool
+}
+
+func (r *retryableKubeAPICall) Run() error {
+	err := r.fn()
+	if r.errFilter != nil && !r.errFilter(err) {
+		return nil
+	}
+
+	return err
+}
+
+func (r *retryableKubeAPICall) ShouldRetry(tries int, err error) bool {
+	if tries >= r.maxTries {
+		return false
+	}
+
+	return isNetworkError(err)
+}
+
+func isNetworkError(err error) bool {
+	return errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.ECONNABORTED) ||
+		errors.Is(err, syscall.EPIPE) ||
+		errors.Is(err, io.ErrUnexpectedEOF) ||
+		strings.Contains(err.Error(), errorDialingBackendMessage) ||
+		strings.Contains(err.Error(), errorTLSHandshakeTimeoutMessage) ||
+		strings.Contains(err.Error(), errorUnexpectedEOFMessage)
 }
 
 type podPhaseError struct {
@@ -791,26 +858,45 @@ func (s *executor) Cleanup() {
 // thus deletion of the pod automatically means deletion of the services if any
 func (s *executor) cleanupResources() {
 	if s.pod != nil {
-		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-		err := s.kubeClient.
-			CoreV1().
-			Pods(s.pod.Namespace).
-			Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
-				PropagationPolicy:  &PropagationPolicy,
-			})
+		r := retry.WithBuildLog(
+			&retryableKubeAPICall{
+				maxTries: defaultTries,
+				fn: func() error {
+					// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+					return s.kubeClient.CoreV1().
+						Pods(s.pod.Namespace).
+						Delete(context.TODO(), s.pod.Name, metav1.DeleteOptions{
+							GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
+							PropagationPolicy:  &PropagationPolicy,
+						})
+				},
+			},
+			&s.BuildLogger,
+		)
+		retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+		err := retryable.Run()
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
 		}
 	}
 
 	if s.credentials != nil && len(s.credentials.OwnerReferences) == 0 {
-		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-		err := s.kubeClient.CoreV1().
-			Secrets(s.configurationOverwrites.namespace).
-			Delete(context.TODO(), s.credentials.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
-			})
+		r := retry.WithBuildLog(
+			&retryableKubeAPICall{
+				maxTries: defaultTries,
+				fn: func() error {
+					// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+					return s.kubeClient.CoreV1().
+						Secrets(s.configurationOverwrites.namespace).
+						Delete(context.TODO(), s.credentials.Name, metav1.DeleteOptions{
+							GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
+						})
+				},
+			},
+			&s.BuildLogger,
+		)
+		retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+		err := retryable.Run()
 		if err != nil {
 			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
@@ -1295,22 +1381,47 @@ func (s *executor) setupCredentials() error {
 
 	secret := api.Secret{}
 	secret.GenerateName = s.Build.ProjectUniqueName()
+	secret.Name = generateNameForK8sResources(s.Build.ProjectUniqueName(), int64(s.Build.ProjectRunnerID))
 	secret.Namespace = s.configurationOverwrites.namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
+	r := retry.WithBuildLog(
+		&retryableKubeAPICall{
+			maxTries: defaultTries,
+			fn: func() error {
+				creds, err := s.requestSecretCreation(&secret, s.configurationOverwrites.namespace)
+				if err == nil {
+					s.credentials = creds
+				}
+				return err
+			},
+		},
+		&s.BuildLogger,
+	)
+	retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+	err = retryable.Run()
+	return err
+}
+
+func (s *executor) requestSecretCreation(secret *api.Secret, namespace string) (*api.Secret, error) {
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	creds, err := s.kubeClient.
-		CoreV1().
-		Secrets(s.configurationOverwrites.namespace).
-		Create(context.TODO(), &secret, metav1.CreateOptions{})
-	if err != nil {
-		return err
+	creds, err := s.kubeClient.CoreV1().
+		Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	if isConflict(err) {
+		s.Debugln(
+			fmt.Sprintf(
+				"Conflict while trying to create the secret  %s ... Retrieving the existing resource",
+				secret.Name,
+			),
+		)
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+		creds, err = s.kubeClient.CoreV1().
+			Secrets(namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
 	}
 
-	s.credentials = creds
-	return nil
+	return creds, err
 }
 
 func (s *executor) getHostAliases() ([]api.HostAlias, error) {
@@ -1359,16 +1470,24 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 
 	s.Debugln("Creating build pod")
 
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := s.kubeClient.
-		CoreV1().
-		Pods(s.configurationOverwrites.namespace).
-		Create(context.TODO(), &podConfig, metav1.CreateOptions{})
+	r := retry.WithBuildLog(
+		&retryableKubeAPICall{
+			maxTries: defaultTries,
+			fn: func() error {
+				pod, err := s.requestPodCreation(&podConfig, s.configurationOverwrites.namespace)
+				if err == nil {
+					s.pod = pod
+				}
+				return err
+			},
+		},
+		&s.BuildLogger,
+	)
+	retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+	err = retryable.Run()
 	if err != nil {
 		return err
 	}
-
-	s.pod = pod
 
 	ownerReferences := s.buildPodReferences()
 	err = s.setOwnerReferencesForResources(ownerReferences)
@@ -1377,11 +1496,26 @@ func (s *executor) setupBuildPod(initContainers []api.Container) error {
 	}
 
 	s.services, err = s.makePodProxyServices(ownerReferences)
-	if err != nil {
-		return err
+	return err
+}
+
+func (s *executor) requestPodCreation(pod *api.Pod, namespace string) (*api.Pod, error) {
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	p, err := s.kubeClient.CoreV1().
+		Pods(namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
+	if isConflict(err) {
+		s.Debugln(
+			fmt.Sprintf(
+				"Conflict while trying to create the pod  %s ... Retrieving the existing resource",
+				pod.Name,
+			),
+		)
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+		p, err = s.kubeClient.CoreV1().
+			Pods(namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
 	}
 
-	return nil
+	return p, err
 }
 
 func (s *executor) checkDependantResources() error {
@@ -1520,6 +1654,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: s.Build.ProjectUniqueName(),
+			Name:         generateNameForK8sResources(s.Build.ProjectUniqueName(), int64(s.Build.ProjectRunnerID)),
 			Namespace:    s.configurationOverwrites.namespace,
 			Labels:       opts.labels,
 			Annotations:  opts.annotations,
@@ -1670,22 +1805,31 @@ func doPodSpecMerge(original []byte, spec common.KubernetesPodSpec) ([]byte, err
 }
 
 func (s *executor) setOwnerReferencesForResources(ownerReferences []metav1.OwnerReference) error {
-	if s.credentials != nil {
-		credentials := s.credentials.DeepCopy()
-		credentials.SetOwnerReferences(ownerReferences)
-
-		var err error
-		s.credentials, err = s.kubeClient.
-			CoreV1().
-			Secrets(s.configurationOverwrites.namespace).
-			Update(context.TODO(), credentials, metav1.UpdateOptions{})
-
-		if err != nil {
-			return err
-		}
+	if s.credentials == nil {
+		return nil
 	}
 
-	return nil
+	r := retry.WithBuildLog(
+		&retryableKubeAPICall{
+			maxTries: defaultTries,
+			fn: func() error {
+				credentials := s.credentials.DeepCopy()
+				credentials.SetOwnerReferences(ownerReferences)
+
+				// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+				creds, err := s.kubeClient.CoreV1().
+					Secrets(s.configurationOverwrites.namespace).
+					Update(context.TODO(), credentials, metav1.UpdateOptions{})
+				if err == nil {
+					s.credentials = creds
+				}
+				return err
+			},
+		},
+		&s.BuildLogger,
+	)
+	retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+	return retryable.Run()
 }
 
 func (s *executor) buildPodReferences() []metav1.OwnerReference {
@@ -1743,23 +1887,37 @@ func (s *executor) serviceAccountExists() func(context.Context, string) bool {
 			return true
 		}
 
-		_, err := s.kubeClient.
-			CoreV1().
-			ServiceAccounts(s.configurationOverwrites.namespace).
-			Get(ctx, saName, metav1.GetOptions{})
-
-		return err == nil
+		r := retry.WithBuildLog(
+			&retryableKubeAPICall{
+				maxTries: defaultTries,
+				fn: func() error {
+					_, err := s.kubeClient.CoreV1().
+						ServiceAccounts(s.configurationOverwrites.namespace).Get(ctx, saName, metav1.GetOptions{})
+					return err
+				},
+			},
+			&s.BuildLogger,
+		)
+		retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+		return retryable.Run() == nil
 	}
 }
 
 func (s *executor) secretExists() func(context.Context, string) bool {
 	return func(ctx context.Context, secretName string) bool {
-		_, err := s.kubeClient.
-			CoreV1().
-			Secrets(s.configurationOverwrites.namespace).
-			Get(ctx, secretName, metav1.GetOptions{})
-
-		return err == nil
+		r := retry.WithBuildLog(
+			&retryableKubeAPICall{
+				maxTries: defaultTries,
+				fn: func() error {
+					_, err := s.kubeClient.CoreV1().
+						Secrets(s.configurationOverwrites.namespace).Get(ctx, secretName, metav1.GetOptions{})
+					return err
+				},
+			},
+			&s.BuildLogger,
+		)
+		retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+		return retryable.Run() == nil
 	}
 }
 
@@ -1831,6 +1989,7 @@ func (s *executor) prepareServiceConfig(
 	return api.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName:    name,
+			Name:            generateNameForK8sResources(name, int64(s.Build.ProjectRunnerID)),
 			Namespace:       s.configurationOverwrites.namespace,
 			OwnerReferences: ownerReferences,
 		},
@@ -1850,17 +2009,46 @@ func (s *executor) createKubernetesService(
 ) {
 	defer wg.Done()
 
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	service, err := s.kubeClient.
-		CoreV1().
-		Services(s.pod.Namespace).
-		Create(context.TODO(), service, metav1.CreateOptions{})
+	r := retry.WithBuildLog(
+		&retryableKubeAPICall{
+			maxTries: defaultTries,
+			fn: func() error {
+				srv, err := s.requestServiceCreation(service, s.pod.Namespace)
+				if err == nil {
+					service = srv
+				}
+				return err
+			},
+		},
+		&s.BuildLogger,
+	)
+	retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+	err := retryable.Run()
 	if err == nil {
 		// Updating the internal service name reference and activating the proxy
 		proxySettings.ServiceName = service.Name
 	}
 
 	ch <- serviceCreateResponse{service: service, err: err}
+}
+
+func (s *executor) requestServiceCreation(service *api.Service, namespace string) (*api.Service, error) {
+	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+	srv, err := s.kubeClient.CoreV1().
+		Services(namespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	if isConflict(err) {
+		s.Debugln(
+			fmt.Sprintf(
+				"Conflict while trying to create the service  %s ... Retrieving the existing resource",
+				service.Name,
+			),
+		)
+		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+		srv, err = s.kubeClient.CoreV1().
+			Services(namespace).Get(context.TODO(), service.Name, metav1.GetOptions{})
+	}
+
+	return srv, err
 }
 
 func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
@@ -1892,11 +2080,22 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 }
 
 func (s *executor) checkPodStatus() error {
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := s.kubeClient.
-		CoreV1().
-		Pods(s.pod.Namespace).
-		Get(context.TODO(), s.pod.Name, metav1.GetOptions{})
+	var pod *api.Pod
+	r := retry.WithBuildLog(
+		&retryableKubeAPICall{
+			maxTries: defaultTries,
+			fn: func() error {
+				// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+				p, err := s.kubeClient.CoreV1().
+					Pods(s.pod.Namespace).Get(context.TODO(), s.pod.Name, metav1.GetOptions{})
+				pod = p
+				return err
+			},
+		},
+		&s.BuildLogger,
+	)
+	retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+	err := retryable.Run()
 	if IsKubernetesPodNotFoundError(err) {
 		return err
 	}
@@ -1933,7 +2132,16 @@ func (s *executor) runInContainer(name string, command []string) <-chan error {
 			Executor: &DefaultRemoteExecutor{},
 		}
 
-		retryable := retry.New(retry.WithBuildLog(&attach, &s.BuildLogger))
+		r := retry.WithBuildLog(
+			&retryableKubeAPICall{
+				maxTries: commandConnectFailureMaxTries,
+				fn: func() error {
+					return attach.Run()
+				},
+			},
+			&s.BuildLogger,
+		)
+		retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
 		err := retryable.Run()
 		if err != nil {
 			errCh <- err
@@ -1988,7 +2196,16 @@ func (s *executor) runInContainerWithExec(
 			Executor:      &DefaultRemoteExecutor{},
 		}
 
-		retryable := retry.New(retry.WithBuildLog(&exec, &s.BuildLogger))
+		r := retry.WithBuildLog(
+			&retryableKubeAPICall{
+				maxTries: commandConnectFailureMaxTries,
+				fn: func() error {
+					return exec.Run()
+				},
+			},
+			&s.BuildLogger,
+		)
+		retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
 		errCh <- retryable.Run()
 	}()
 
@@ -2116,8 +2333,24 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		Follow:     true,
 		Timestamps: true,
 	}
-
-	podLogs, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
+	var podLogs io.ReadCloser
+	r := retry.WithBuildLog(
+		&retryableKubeAPICall{
+			maxTries: defaultTries,
+			fn: func() error {
+				// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+				pl, err := s.kubeClient.CoreV1().
+					Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
+				if err == nil {
+					podLogs = pl
+				}
+				return err
+			},
+		},
+		&s.BuildLogger,
+	)
+	retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+	err := retryable.Run()
 	if err != nil {
 		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
 	}
@@ -2135,6 +2368,32 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		s.Debugln("stopped streaming logs for container " + containerName)
 	}()
 	return nil
+}
+
+func generateNameForK8sResources(pattern string, concurrency int64) string {
+	rand.Seed(time.Now().UnixNano() + concurrency)
+
+	suffix := make([]rune, k8sResourcesNameSuffixLength)
+	for i := range suffix {
+		suffix[i] = chars[rand.Intn(len(chars))]
+	}
+
+	if len(pattern) > (k8sResourcesNameMaxLength - k8sResourcesNameSuffixLength - 1) {
+		pattern = pattern[:k8sResourcesNameMaxLength-k8sResourcesNameSuffixLength-1]
+	}
+
+	return fmt.Sprintf("%s-%s", pattern, string(suffix))
+}
+
+// When calling the k8s API request, it can happen that despite the failure of the request,
+// the resource was actually created. When it comes to POST method, the following retries will get
+// a 409 status code (conflits because of the name that must be unique)
+// When such status code is received, we stop the retries
+func isConflict(err error) bool {
+	var statusError *kubeerrors.StatusError
+	return errors.As(err, &statusError) &&
+		statusError.ErrStatus.Code == http.StatusConflict &&
+		strings.HasPrefix(statusError.ErrStatus.Message, errorAlreadyExistsMessage)
 }
 
 func IsKubernetesPodNotFoundError(err error) bool {
