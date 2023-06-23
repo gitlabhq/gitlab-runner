@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,7 +69,7 @@ const (
 	k8sAnnotationPrefix = "runner.gitlab.com/"
 
 	defaultTries           = 5
-	defaultRetryMinBackoff = 10 * time.Millisecond
+	defaultRetryMinBackoff = 500 * time.Millisecond
 	defaultRetryMaxBackoff = 2 * time.Second
 
 	// commandConnectFailureMaxTries is the number of attempts we retry when
@@ -241,12 +239,15 @@ type executor struct {
 
 	newLogProcessor func() logProcessor
 
-	remoteProcessTerminated chan shells.TrapCommandExitStatus
+	remoteProcessTerminated chan shells.StageCommandStatus
 
 	requireSharedBuildsDir *bool
 
 	// Flag if a repo mount and emptyDir volume are needed
 	requireDefaultBuildsDirVolume *bool
+
+	remoteStageStatusMutex sync.Mutex
+	remoteStageStatus      shells.StageCommandStatus
 }
 
 type serviceCreateResponse struct {
@@ -482,7 +483,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	))
 
 	select {
-	case err := <-s.runInContainerWithExec(ctx, cmd.Stage, containerName, containerCommand, cmd.Script):
+	case err := <-s.runInContainerWithExec(ctx, containerName, containerCommand, cmd.Script):
 		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
@@ -736,21 +737,29 @@ func (s *executor) processLogs(ctx context.Context) {
 			}
 
 			exitCode := getExitCode(err)
-			// Script can be kept to nil as not being used after the exitStatus is received L1223
-			s.remoteProcessTerminated <- shells.TrapCommandExitStatus{CommandExitCode: exitCode}
+			// Script can be kept to nil as not being used after the exitStatus is received
+			s.remoteProcessTerminated <- shells.StageCommandStatus{CommandExitCode: &exitCode}
 		}
 	}
 }
 
 func (s *executor) forwardLogLine(line string) {
-	var status shells.TrapCommandExitStatus
-	if status.TryUnmarshal(line) {
-		s.remoteProcessTerminated <- status
+	var status shells.StageCommandStatus
+	if !status.TryUnmarshal(line) {
+		if _, err := s.writeRunnerLog(line); err != nil {
+			s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+		}
+
 		return
 	}
 
-	if _, err := s.writeRunnerLog(line); err != nil {
-		s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+	s.Debugln(fmt.Sprintf("Setting remote stage status: %s", status))
+	s.remoteStageStatusMutex.Lock()
+	s.remoteStageStatus = status
+	s.remoteStageStatusMutex.Unlock()
+
+	if status.IsExited() {
+		s.remoteProcessTerminated <- status
 	}
 }
 
@@ -808,7 +817,6 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptName, contain
 	select {
 	case err := <-s.runInContainerWithExec(
 		ctx,
-		common.BuildStage(scriptName),
 		containerName,
 		s.BuildShell.DockerCommand,
 		saveScript,
@@ -2141,7 +2149,8 @@ func (s *executor) runInContainer(stage common.BuildStage, name string, command 
 				maxTries: commandConnectFailureMaxTries,
 				fn: func() error {
 					err := attach.Run()
-					return s.checkScriptExecution(stage, name, command, err)
+					s.Debugln(fmt.Sprintf("Trying to execute stage %v, got error %v", stage, err))
+					return s.checkScriptExecution(stage, err)
 				},
 			},
 			&s.BuildLogger,
@@ -2155,12 +2164,13 @@ func (s *executor) runInContainer(stage common.BuildStage, name string, command 
 		exitStatus := <-s.remoteProcessTerminated
 		s.Debugln("Remote process exited with the status:", exitStatus)
 
-		if exitStatus.CommandExitCode == 0 {
+		// CommandExitCode is guaranteed to be non nil when sent over the remoteProcessTerminated channel
+		if *exitStatus.CommandExitCode == 0 {
 			errCh <- nil
 			return
 		}
 
-		errCh <- &commandTerminatedError{exitCode: exitStatus.CommandExitCode}
+		errCh <- &commandTerminatedError{exitCode: *exitStatus.CommandExitCode}
 	}()
 
 	return errCh
@@ -2168,7 +2178,6 @@ func (s *executor) runInContainer(stage common.BuildStage, name string, command 
 
 func (s *executor) runInContainerWithExec(
 	ctx context.Context,
-	stage common.BuildStage,
 	name string,
 	command []string,
 	script string,
@@ -2206,8 +2215,7 @@ func (s *executor) runInContainerWithExec(
 			&retryableKubeAPICall{
 				maxTries: commandConnectFailureMaxTries,
 				fn: func() error {
-					err := exec.Run()
-					return s.checkScriptExecution(stage, name, command, err)
+					return exec.Run()
 				},
 			},
 			&s.BuildLogger,
@@ -2219,9 +2227,9 @@ func (s *executor) runInContainerWithExec(
 	return errCh
 }
 
-func (s *executor) checkScriptExecution(stage common.BuildStage, name string, command []string, err error) error {
-	// Retrying attach and exec commands is a bit different from regular Kubernetes requests.
-	// Since the attach / exec commands are executed by openning an HTTP stream to the Kubernetes server
+func (s *executor) checkScriptExecution(stage common.BuildStage, err error) error {
+	// Retrying attach command is a bit different from regular Kubernetes requests.
+	// Since the attach commands are executed by openning an HTTP stream to the Kubernetes server
 	// and piping the command into that stream and then expecting a response there's no good place to check
 	// whether the whole command execution was successful.
 	// If we check whether the Stdin stream was read - the connection might have broken up after during transit of that
@@ -2236,38 +2244,17 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, name string, co
 		return err
 	}
 
-	// List all the processes inside the container
-	out := &bytes.Buffer{}
-	exec := ExecOptions{
-		PodName:       s.pod.Name,
-		Namespace:     s.pod.Namespace,
-		ContainerName: name,
-		Command:       command,
-		In:            strings.NewReader("ps aux"),
-		Out:           out,
-		Err:           s.Trace,
-		Stdin:         true,
-		Config:        s.kubeConfig,
-		Client:        s.kubeClient,
-		Executor:      &DefaultRemoteExecutor{},
-	}
+	s.remoteStageStatusMutex.Lock()
+	s.Debugln(fmt.Sprintf("Checking remote stage status after trying attach with err %v. Remote stage status: %v", err, s.remoteStageStatus))
+	defer s.remoteStageStatusMutex.Unlock()
 
-	if e := exec.Run(); e != nil {
-		s.Debugln(fmt.Sprintf("Checking running processes for a failed command: %v", e))
-		return e
-	}
-
-	// Check the running processes for the current script stage, the output looks something like this:
-	// $ ps aux
-	// 29 root      0:00 /bin/sh /scripts-15339497-4517415631/step_script
-	// If the current stage script is already running we don't need to retry this command
-	// We need to return an empty err so that we can wait for the s.remoteProcessTerminated channel
-	// instead of returning early and causing us to go to the next stage, which with an error is going to be
-	// cleaning up.
-	if strings.Contains(out.String(), filepath.Join(s.scriptsDir(), string(stage))) {
+	// If the remote stage is the one we are trying to retry it means that it was already executed.
+	s.Debugln(fmt.Sprintf("Remote stage: %v, trying to execute stage %v", s.remoteStageStatus.BuildStage(), stage))
+	if s.remoteStageStatus.BuildStage() == stage {
 		return nil
 	}
 
+	// If the remote stage is not the same, then we can retry
 	return err
 }
 
@@ -2468,7 +2455,7 @@ func newExecutor() *executor {
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
-		remoteProcessTerminated: make(chan shells.TrapCommandExitStatus),
+		remoteProcessTerminated: make(chan shells.StageCommandStatus),
 	}
 
 	e.newLogProcessor = func() logProcessor {

@@ -5157,7 +5157,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 				PollTimeout:  2,
 			}
 			e.kubeClient = client
-			e.remoteProcessTerminated = make(chan shells.TrapCommandExitStatus)
+			e.remoteProcessTerminated = make(chan shells.StageCommandStatus)
 			e.Trace = &common.Trace{Writer: os.Stdout}
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod"

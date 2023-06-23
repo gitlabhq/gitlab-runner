@@ -3,12 +3,14 @@ package shells
 import (
 	"encoding/json"
 	"fmt"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"strings"
 )
 
-// trapCommandExitStatusImpl is a private struct used to unmarshall the log line read.
+// stageCommandExitStatusImpl is a private struct used to unmarshall the log line read.
 // All of its fields are optional, so it can check to make sure against the required and optional ones.
-// The fields are then applied to TrapCommandExitStatus which is the exposed, ready-to-use struct.
-type trapCommandExitStatusImpl struct {
+// The fields are then applied to StageCommandStatus which is the exposed, ready-to-use struct.
+type stageCommandExitStatusImpl struct {
 	// CommandExitCode is the exit code of the last command.
 	CommandExitCode *int `json:"command_exit_code"`
 	// Script is the script which was executed as an entrypoint for the current execution step.
@@ -20,35 +22,35 @@ type trapCommandExitStatusImpl struct {
 
 // tryUnmarshal tries to unmarshal a json string into its pointer receiver.
 // It's safe to use the struct only if this method returns no error.
-func (cmd *trapCommandExitStatusImpl) tryUnmarshal(line string) error {
+func (cmd *stageCommandExitStatusImpl) tryUnmarshal(line string) error {
 	return json.Unmarshal([]byte(line), cmd)
 }
 
-func (cmd trapCommandExitStatusImpl) hasRequiredFields() bool {
-	return cmd.CommandExitCode != nil
+func (cmd stageCommandExitStatusImpl) isEmpty() bool {
+	return cmd.CommandExitCode == nil || cmd.Script == nil
 }
 
-func (cmd trapCommandExitStatusImpl) applyTo(to *TrapCommandExitStatus) {
-	to.CommandExitCode = *cmd.CommandExitCode
+func (cmd stageCommandExitStatusImpl) applyTo(to *StageCommandStatus) {
+	to.CommandExitCode = cmd.CommandExitCode
 	to.Script = cmd.Script
 }
 
-type TrapCommandExitStatus struct {
-	CommandExitCode int
+type StageCommandStatus struct {
+	CommandExitCode *int
 	Script          *string
 }
 
 // TryUnmarshal tries to unmarshal a json string into its pointer receiver.
 // It wil return true only if the unmarshalled struct has all of its required fields be non-nil.
 // It's safe to use the struct only if this method returns true.
-func (c *TrapCommandExitStatus) TryUnmarshal(line string) bool {
-	var status trapCommandExitStatusImpl
+func (c *StageCommandStatus) TryUnmarshal(line string) bool {
+	var status stageCommandExitStatusImpl
 	err := status.tryUnmarshal(line)
 	if err != nil {
 		return false
 	}
 
-	if !status.hasRequiredFields() {
+	if status.isEmpty() {
 		return false
 	}
 
@@ -57,12 +59,32 @@ func (c *TrapCommandExitStatus) TryUnmarshal(line string) bool {
 	return true
 }
 
-func (c TrapCommandExitStatus) String() string {
-	str := fmt.Sprintf("CommandExitCode: %v", c.CommandExitCode)
+func (c StageCommandStatus) String() string {
+	// TODO: needs to be better
+	var str string
+	if c.CommandExitCode != nil {
+		str = fmt.Sprintf("CommandExitCode: %v", c.CommandExitCode)
+	}
 
 	if c.Script != nil {
 		str = fmt.Sprintf("%s, Script: %v", str, *c.Script)
 	}
 
 	return str
+}
+
+func (c StageCommandStatus) IsExited() bool {
+	return c.CommandExitCode != nil
+}
+
+func (c StageCommandStatus) BuildStage() common.BuildStage {
+	if c.Script == nil {
+		return ""
+	}
+
+	// TODO: windows?
+	split := strings.Split(*c.Script, "/")
+	stage := split[len(split)-1]
+
+	return common.BuildStage(stage)
 }
