@@ -126,14 +126,14 @@ development docker images:
   - .release_docker_images
   - .rules:release:development:merge-requests
   variables:
-    PUBLISH_IMAGES: "false"
+    PUBLISH_IMAGES: "true"
 
 development helper docker images:
   extends:
   - .release_helper_docker_images
   - .rules:release:development:merge-requests
   variables:
-    PUBLISH_IMAGES: "false"
+    PUBLISH_IMAGES: "true"
 
 bleeding edge S3:
   extends:
