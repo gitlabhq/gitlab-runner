@@ -3,8 +3,9 @@ package shells
 import (
 	"encoding/json"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 // stageCommandExitStatusImpl is a private struct used to unmarshall the log line read.
