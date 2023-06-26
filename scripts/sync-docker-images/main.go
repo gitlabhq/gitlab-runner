@@ -19,8 +19,8 @@ const (
 	gitlabRunnerImage       image = "gitlab-runner"
 	gitlabRunnerHelperImage image = "gitlab-runner/gitlab-runner-helper"
 
-	gitlabRunnerDockerHubImage       image = "gitlab-runner"
-	gitlabRunnerHelperDockerHubImage image = "gitlab-runner-helper"
+	gitlabRunnerDestinationImage       image = "gitlab-runner"
+	gitlabRunnerHelperDestinationImage image = "gitlab-runner-helper"
 
 	archARM     arch = "arm"
 	archARM64   arch = "arm64"
@@ -170,19 +170,15 @@ var helperFlavors = []flavor{
 
 var targetImages = map[image]struct {
 	flavors          []flavor
-	imageForRegistry map[registry]image
+	destinationImage image
 }{
 	gitlabRunnerImage: {
-		flavors: runnerFlavors,
-		imageForRegistry: map[registry]image{
-			registryDockerHub: gitlabRunnerDockerHubImage,
-		},
+		flavors:          runnerFlavors,
+		destinationImage: gitlabRunnerDestinationImage,
 	},
 	gitlabRunnerHelperImage: {
-		flavors: helperFlavors,
-		imageForRegistry: map[registry]image{
-			registryDockerHub: gitlabRunnerHelperDockerHubImage,
-		},
+		flavors:          helperFlavors,
+		destinationImage: gitlabRunnerHelperDestinationImage,
 	},
 }
 
@@ -284,10 +280,9 @@ func syncImages(args args) error {
 
 	for img, target := range targetImages {
 		tags := generateTags(args.Version, target.flavors)
-		for registryName, registry := range registries {
+		for _, registry := range registries {
 			for _, tag := range tags {
-				targetImage := target.imageForRegistry[registryName]
-				images = append(images, newImageSyncPair(sourceRegistry, registry, img, targetImage, tag))
+				images = append(images, newImageSyncPair(sourceRegistry, registry, img, target.destinationImage, tag))
 			}
 		}
 	}
