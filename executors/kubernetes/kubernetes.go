@@ -2245,8 +2245,8 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 	}
 
 	s.remoteStageStatusMutex.Lock()
-	s.Debugln(fmt.Sprintf("Checking remote stage status after trying attach with err %v. Remote stage status: %v", err, s.remoteStageStatus))
 	defer s.remoteStageStatusMutex.Unlock()
+	s.Debugln(fmt.Sprintf("Checking remote stage status after trying attach with err %v. Remote stage status: %v", err, s.remoteStageStatus))
 
 	// If the remote stage is the one we are trying to retry it means that it was already executed.
 	s.Debugln(fmt.Sprintf("Remote stage: %v, trying to execute stage %v", s.remoteStageStatus.BuildStage(), stage))

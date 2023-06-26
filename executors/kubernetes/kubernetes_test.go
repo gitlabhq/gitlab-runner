@@ -5007,7 +5007,7 @@ func TestProcessLogs(t *testing.T) {
 			go e.processLogs(context.Background())
 
 			exitStatus := <-e.remoteProcessTerminated
-			assert.Equal(t, tc.expectedExitCode, exitStatus.CommandExitCode)
+			assert.Equal(t, tc.expectedExitCode, *exitStatus.CommandExitCode)
 			if tc.expectedScript != "" {
 				assert.Equal(t, tc.expectedScript, *exitStatus.Script)
 			}

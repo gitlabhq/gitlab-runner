@@ -52,7 +52,7 @@ func TestTryDecode(t *testing.T) {
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
 				assert.True(t, decoded)
-				assert.Equal(t, exitCode, c.CommandExitCode)
+				assert.Equal(t, exitCode, *c.CommandExitCode)
 			},
 		},
 		"TryUnmarshal only json prefix incorrect": {
@@ -78,7 +78,7 @@ func TestTryDecode(t *testing.T) {
 				assert.Equal(t, script, *c.Script)
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
-				assert.False(t, decoded)
+				assert.True(t, decoded)
 				assert.Zero(t, c.CommandExitCode)
 			},
 		},
@@ -91,7 +91,7 @@ func TestTryDecode(t *testing.T) {
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
 				assert.True(t, decoded)
-				assert.Equal(t, exitCode, c.CommandExitCode)
+				assert.Equal(t, exitCode, *c.CommandExitCode)
 			},
 		},
 		"TryUnmarshal no fields": {
@@ -115,7 +115,7 @@ func TestTryDecode(t *testing.T) {
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
 				assert.True(t, decoded)
-				assert.Equal(t, exitCode, c.CommandExitCode)
+				assert.Equal(t, exitCode, *c.CommandExitCode)
 			},
 		},
 		"TryUnmarshal hand crafted json missing exit code": {
@@ -126,7 +126,7 @@ func TestTryDecode(t *testing.T) {
 				assert.Equal(t, script, *c.Script)
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
-				assert.False(t, decoded)
+				assert.True(t, decoded)
 				assert.Zero(t, c.CommandExitCode)
 			},
 		},
@@ -139,7 +139,7 @@ func TestTryDecode(t *testing.T) {
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
 				assert.True(t, decoded)
-				assert.Equal(t, exitCode, c.CommandExitCode)
+				assert.Equal(t, exitCode, *c.CommandExitCode)
 			},
 		},
 		"TryUnmarshal hand crafted empty json": {
@@ -151,7 +151,7 @@ func TestTryDecode(t *testing.T) {
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
 				assert.False(t, decoded)
-				assert.Zero(t, c.CommandExitCode)
+				assert.Nil(t, c.CommandExitCode)
 			},
 		},
 		"TryUnmarshal hand crafted invalid json": {
@@ -163,7 +163,7 @@ func TestTryDecode(t *testing.T) {
 			},
 			verifyTrapCommandExitFn: func(t *testing.T, decoded bool, c StageCommandStatus) {
 				assert.False(t, decoded)
-				assert.Zero(t, c.CommandExitCode)
+				assert.Nil(t, c.CommandExitCode)
 			},
 		},
 	}

@@ -27,7 +27,7 @@ func (cmd *stageCommandExitStatusImpl) tryUnmarshal(line string) error {
 }
 
 func (cmd stageCommandExitStatusImpl) isEmpty() bool {
-	return cmd.CommandExitCode == nil || cmd.Script == nil
+	return cmd.CommandExitCode == nil && cmd.Script == nil
 }
 
 func (cmd stageCommandExitStatusImpl) applyTo(to *StageCommandStatus) {
