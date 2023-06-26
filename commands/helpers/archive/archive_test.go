@@ -10,8 +10,10 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/fastzip"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/gziplegacy"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/raw"
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/tarzstd"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/ziplegacy"
 )
 
@@ -19,9 +21,11 @@ func TestDefaultRegistration(t *testing.T) {
 	tests := map[archive.Format]struct {
 		hasArchiver, hasExtractor bool
 	}{
-		archive.Raw:  {hasArchiver: true, hasExtractor: false},
-		archive.Gzip: {hasArchiver: true, hasExtractor: false},
-		archive.Zip:  {hasArchiver: true, hasExtractor: true},
+		archive.Raw:     {hasArchiver: true, hasExtractor: false},
+		archive.Gzip:    {hasArchiver: true, hasExtractor: false},
+		archive.Zip:     {hasArchiver: true, hasExtractor: true},
+		archive.ZipZstd: {hasArchiver: true, hasExtractor: true},
+		archive.TarZstd: {hasArchiver: true, hasExtractor: true},
 	}
 
 	for tn, tc := range tests {

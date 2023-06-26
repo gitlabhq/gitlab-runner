@@ -7,8 +7,30 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/fastzip"
+	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/tarzstd"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/ziplegacy"
 )
+
+func OnEachArchiver(t *testing.T, f func(t *testing.T, format archive.Format)) {
+	archivers := map[string]struct {
+		format    archive.Format
+		archiver  archive.NewArchiverFunc
+		extractor archive.NewExtractorFunc
+	}{
+		"fastzip->legacy":  {archive.Zip, fastzip.NewArchiver, ziplegacy.NewExtractor},
+		"fastzip->fastzip": {archive.Zip, fastzip.NewArchiver, fastzip.NewExtractor},
+		"zstd->legacy":     {archive.ZipZstd, fastzip.NewZstdArchiver, ziplegacy.NewExtractor},
+		"zstd->fastzip":    {archive.ZipZstd, fastzip.NewZstdArchiver, fastzip.NewExtractor},
+		"tarzstd":          {archive.TarZstd, tarzstd.NewArchiver, tarzstd.NewExtractor},
+	}
+
+	for name, a := range archivers {
+		t.Run(name, func(t *testing.T) {
+			archive.Register(a.format, a.archiver, a.extractor)
+			f(t, a.format)
+		})
+	}
+}
 
 func OnEachZipArchiver(t *testing.T, f func(t *testing.T), include ...string) {
 	archivers := map[string]archive.NewArchiverFunc{

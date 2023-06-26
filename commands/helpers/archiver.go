@@ -10,6 +10,7 @@ import (
 	// auto-register default archivers/extractors
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/gziplegacy"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/raw"
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/tarzstd"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive/ziplegacy"
 
 	"github.com/sirupsen/logrus"
@@ -20,6 +21,18 @@ func init() {
 	logger := logrus.WithField("name", featureflags.UseFastzip)
 	if on := featureflags.IsOn(logger, os.Getenv(featureflags.UseFastzip)); on {
 		archive.Register(archive.Zip, fastzip.NewArchiver, fastzip.NewExtractor)
+
+		// The default zstd compressor is fastzip, this is registered via the
+		// fastzip implementation (helpers/archive/fastzip).
+		//
+		// The default zstd decompressor is the legacy zip implementation (helpers/archive/ziplegacy).
+		// This intended to allow the default zip implementation to still be able to decompress zstd,
+		// even if it is unable to compress it (only fastzip can compress). This also allows the older
+		// extraction behaviour to be enabled.
+		//
+		// Here we're registering the decompress only if FF_USE_FASTZIP is enabled. This overrides
+		// the ziplegacy zstd support.
+		archive.Register(archive.ZipZstd, nil, fastzip.NewExtractor)
 	}
 }
 

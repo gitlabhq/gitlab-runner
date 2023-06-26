@@ -31,6 +31,7 @@ require (
 	github.com/invopop/jsonschema v0.7.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/service v1.2.2
+	github.com/klauspost/compress v1.16.5
 	github.com/klauspost/pgzip v1.2.5
 	github.com/minio/minio-go/v7 v7.0.28-0.20220610200644-47da873ffd36
 	github.com/prometheus/client_golang v1.13.0
@@ -125,7 +126,6 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect

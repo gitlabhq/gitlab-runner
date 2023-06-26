@@ -32,9 +32,11 @@ type Format string
 
 // Formats supported by GitLab.
 const (
-	Raw  Format = "raw"
-	Gzip Format = "gzip"
-	Zip  Format = "zip"
+	Raw     Format = "raw"
+	Gzip    Format = "gzip"
+	Zip     Format = "zip"
+	ZipZstd Format = "zipzstd"
+	TarZstd Format = "tarzstd"
 )
 
 var (

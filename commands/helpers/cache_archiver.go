@@ -36,6 +36,7 @@ type CacheArchiverCommand struct {
 	Timeout                int      `long:"timeout" description:"Overall timeout for cache uploading request (in minutes)"`
 	Headers                []string `long:"header" description:"HTTP headers to send with PUT request (in form of 'key:value')"`
 	CompressionLevel       string   `long:"compression-level" env:"CACHE_COMPRESSION_LEVEL" description:"Compression level (fastest, fast, default, slow, slowest)"`
+	CompressionFormat      string   `long:"compression-format" env:"CACHE_COMPRESSION_FORMAT" description:"Compression format (zip, tarzstd)"`
 	MaxUploadedArchiveSize int64    `long:"max-uploaded-archive-size" env:"CACHE_MAX_UPLOADED_ARCHIVE_SIZE" description:"Limit the size of the cache archive being uploaded to cloud storage, in bytes."`
 
 	client *CacheClient
@@ -157,7 +158,14 @@ func (c *CacheArchiverCommand) createZipFile(filename string) (int64, error) {
 
 	logrus.Debugln("Temporary file:", f.Name())
 
-	archiver, err := archive.NewArchiver(archive.Zip, f, c.wd, GetCompressionLevel(c.CompressionLevel))
+	switch strings.ToLower(c.CompressionFormat) {
+	case string(common.ArtifactFormatTarZstd):
+		c.CompressionFormat = string(common.ArtifactFormatTarZstd)
+	default:
+		c.CompressionFormat = string(common.ArtifactFormatZip)
+	}
+
+	archiver, err := archive.NewArchiver(archive.Format(c.CompressionFormat), f, c.wd, GetCompressionLevel(c.CompressionLevel))
 	if err != nil {
 		return 0, err
 	}

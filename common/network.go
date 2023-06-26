@@ -328,6 +328,8 @@ const (
 	ArtifactFormatZip     ArtifactFormat = "zip"
 	ArtifactFormatGzip    ArtifactFormat = "gzip"
 	ArtifactFormatRaw     ArtifactFormat = "raw"
+	ArtifactFormatZipZstd ArtifactFormat = "zipzstd"
+	ArtifactFormatTarZstd ArtifactFormat = "tarzstd"
 )
 
 type Artifact struct {
