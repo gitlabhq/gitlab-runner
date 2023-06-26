@@ -284,6 +284,11 @@ SELinux can also be the culprit of this error. You can confirm this by looking a
 sealert -a /var/log/audit/audit.log
 ```
 
+## Runner abruptly terminates after `Cleaning up` stage
+
+CrowdStrike Falcon Sensor has been reported to kill pods after the `Cleaning up files` stage of a job
+when the "container drift detection" setting was enabled. To ensure that jobs are able to complete, you must disable this setting.
+
 ## Helm Chart: `ERROR .. Unauthorized`
 
 Before uninstalling or upgrading runners deployed with Helm, pause them in GitLab and
