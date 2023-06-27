@@ -511,6 +511,18 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 		return
 	}
 
+	if s.RegistrationToken == s.Token {
+		logrus.Warningln(
+			"You have specified an authentication token in the legacy parameter --registration-token. " +
+				"To ensure minimal disruption to your workflow, this has triggered the 'legacy-compatible registration " +
+				"process' which has resulted in the following command line parameters being ignored: --locked, " +
+				"--access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note. " +
+				"These parameters and the legacy-compatible registration process will be removed " +
+				"in GitLab Runner 17.0.",
+		)
+		return
+	}
+
 	logrus.Fatalln(
 		"Runner configuration other than name and executor configuration is reserved " +
 			"and cannot be specified when registering with a runner token. " +

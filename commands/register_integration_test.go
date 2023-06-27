@@ -75,10 +75,11 @@ func TestAccessLevelSetting(t *testing.T) {
 			}
 
 			arguments := []string{
+				"--registration-token", "test-runner-token",
 				"--access-level", string(testCase.accessLevel),
 			}
 
-			_, output, err := testRegisterCommandRun(t, network, nil, "", "test-runner-token", arguments...)
+			_, output, err := testRegisterCommandRun(t, network, nil, "", arguments...)
 
 			if testCase.failureExpected {
 				assert.EqualError(t, err, "command error: Given access-level is not valid. "+
@@ -255,6 +256,7 @@ func TestAskRunnerUsingRunnerTokenOverrideForbiddenDefaults(t *testing.T) {
 				network,
 			)
 
+			hook := test.NewGlobal()
 			app := cli.NewApp()
 			app.Commands = []cli.Command{
 				{
@@ -264,21 +266,13 @@ func TestAskRunnerUsingRunnerTokenOverrideForbiddenDefaults(t *testing.T) {
 				},
 			}
 
-			fatalReceived := false
-			helpers.MakeFatalToPanic()
-
-			defer func() {
-				if r := recover(); r != nil {
-					entry, _ := r.(*logrus.Entry)
-					assert.Contains(t, entry.Message, "cannot be specified when registering with a runner token.")
-					fatalReceived = true
-				}
-				assert.True(t, fatalReceived, "fatal error expected")
-			}()
-
 			_ = app.Run(append([]string{"runner", "register"}, arguments...))
 
-			t.Fail()
+			assert.Contains(
+				t,
+				commands.GetLogrusOutput(t, hook),
+				"this has triggered the 'legacy-compatible registration process'",
+			)
 		})
 	}
 }
@@ -288,18 +282,8 @@ func testRegisterCommandRun(
 	network common.Network,
 	env []kv,
 	initialConfig string,
-	token string,
 	args ...string,
 ) (content, output string, err error) {
-	config := &common.RunnerConfig{
-		RunnerCredentials: common.RunnerCredentials{
-			Token: token,
-		},
-		RunnerSettings: common.RunnerSettings{
-			Executor: "shell",
-		},
-	}
-
 	for _, kv := range env {
 		err := os.Setenv(kv.key, kv.value)
 		if err != nil {
@@ -352,10 +336,9 @@ func testRegisterCommandRun(
 		"-n",
 		"--config", configFile.Name(),
 		"--url", "http://gitlab.example.com/",
-		"--registration-token", token,
 	}, args...)
 	if !contains(args, "--executor") {
-		args = append(args, "--executor", config.RunnerSettings.Executor)
+		args = append(args, "--executor", "shell")
 	}
 
 	commandErr := app.Run(args)
@@ -843,6 +826,7 @@ shutdown_timeout = 0
 
 			args := []string{
 				"--shell", shells.SNPwsh,
+				"--registration-token", "test-runner-token",
 			}
 
 			if tt.configTemplate != "" {
@@ -851,7 +835,7 @@ shutdown_timeout = 0
 
 			tt.networkAssertions(network)
 
-			fileContent, _, err := testRegisterCommandRun(t, network, nil, "", "test-runner-token", args...)
+			fileContent, _, err := testRegisterCommandRun(t, network, nil, "", args...)
 			if tt.errExpected {
 				require.Error(t, err)
 				return
@@ -1007,6 +991,7 @@ func TestRegisterCommand(t *testing.T) {
 		"runner ID is included in config": {
 			token: "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--name", "test-runner",
 			},
 			expectedConfigs: []string{`id = 12345`, `token = "glrt-test-runner-token"`},
@@ -1014,13 +999,23 @@ func TestRegisterCommand(t *testing.T) {
 		"registration token is accepted": {
 			token: "test-runner-token",
 			arguments: []string{
+				"--registration-token", "test-runner-token",
 				"--name", "test-runner",
 			},
 			expectedConfigs: []string{`id = 12345`, `token = "test-runner-token"`},
 		},
+		"authentication token is accepted in --registration-token": {
+			token: "glrt-test-runner-token",
+			arguments: []string{
+				"--registration-token", "glrt-test-runner-token",
+				"--name", "test-runner",
+			},
+			expectedConfigs: []string{`id = 12345`, `token = "glrt-test-runner-token"`},
+		},
 		"feature flags are included in config": {
 			token: "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--name", "test-runner",
 				"--feature-flags", "FF_TEST_1:true",
 				"--feature-flags", "FF_TEST_2:false",
@@ -1033,6 +1028,7 @@ func TestRegisterCommand(t *testing.T) {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
 			token:     "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--name", "test-runner",
 				"--executor", "shell",
 			},
@@ -1042,6 +1038,7 @@ func TestRegisterCommand(t *testing.T) {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
 			token:     "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--name", "test-runner",
 				"--executor", "docker-windows",
 				"--docker-image", "abc",
@@ -1052,6 +1049,7 @@ func TestRegisterCommand(t *testing.T) {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
 			token:     "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--name", "test-runner",
 				"--executor", "shell",
 				"--shell", "powershell",
@@ -1062,6 +1060,7 @@ func TestRegisterCommand(t *testing.T) {
 			condition: func() bool { return runtime.GOOS == osTypeWindows },
 			token:     "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--name", "test-runner",
 				"--executor", "docker-windows",
 				"--shell", "powershell",
@@ -1072,6 +1071,7 @@ func TestRegisterCommand(t *testing.T) {
 		"kubernetes security context namespace": {
 			token: "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--executor", "kubernetes",
 			},
 			environment: []kv{
@@ -1106,6 +1106,7 @@ func TestRegisterCommand(t *testing.T) {
 		"s3 cache AuthenticationType arg": {
 			token: "glrt-test-runner-token",
 			arguments: []string{
+				"--token", "glrt-test-runner-token",
 				"--cache-s3-authentication_type=iam",
 			},
 			expectedConfigs: []string{`
@@ -1115,6 +1116,9 @@ func TestRegisterCommand(t *testing.T) {
 		},
 		"s3 cache AuthenticationType env": {
 			token: "glrt-test-runner-token",
+			arguments: []string{
+				"--token", "glrt-test-runner-token",
+			},
 			environment: []kv{
 				{
 					key:   "CACHE_S3_AUTHENTICATION_TYPE",
@@ -1153,7 +1157,7 @@ func TestRegisterCommand(t *testing.T) {
 					Once()
 			}
 
-			gotConfig, _, err := testRegisterCommandRun(t, network, tc.environment, "", tc.token, tc.arguments...)
+			gotConfig, _, err := testRegisterCommandRun(t, network, tc.environment, "", tc.arguments...)
 			require.NoError(t, err)
 
 			for _, expectedConfig := range tc.expectedConfigs {
@@ -1166,6 +1170,7 @@ func TestRegisterCommand(t *testing.T) {
 func TestRegisterWithAuthenticationTokenTwice(t *testing.T) {
 	token := "glrt-test-runner-token"
 	arguments := []string{
+		"--token", token,
 		"--name", "test-runner",
 	}
 
@@ -1179,12 +1184,12 @@ func TestRegisterWithAuthenticationTokenTwice(t *testing.T) {
 		}).
 		Once()
 
-	config, output, err := testRegisterCommandRun(t, network, []kv{}, "", token, arguments...)
+	config, output, err := testRegisterCommandRun(t, network, []kv{}, "", arguments...)
 	require.NoError(t, err)
 	require.NotContains(t, output, "A runner with this system ID and token has already been registered.")
 
 	// Second time should result in a warning
-	_, output, err = testRegisterCommandRun(t, network, []kv{}, config, token, arguments...)
+	_, output, err = testRegisterCommandRun(t, network, []kv{}, config, arguments...)
 	require.NoError(t, err)
 	require.Contains(t, output, "A runner with this system ID and token has already been registered.")
 }
@@ -1247,7 +1252,7 @@ func TestRegisterTokenExpiresAt(t *testing.T) {
 					Once()
 			}
 
-			gotConfig, _, err := testRegisterCommandRun(t, network, []kv{}, "", tc.token, "--name", "test-runner")
+			gotConfig, _, err := testRegisterCommandRun(t, network, []kv{}, "", "--registration-token", tc.token, "--name", "test-runner")
 			require.NoError(t, err)
 
 			assert.Contains(
