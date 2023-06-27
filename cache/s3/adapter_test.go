@@ -3,6 +3,7 @@
 package s3
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -121,7 +122,7 @@ func testCacheOperation(
 			assert.Nil(t, uploadHeaders)
 		}
 
-		assert.Nil(t, adapter.GetGoCloudURL())
+		assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
 		assert.Empty(t, adapter.GetUploadEnv())
 	})
 }
@@ -150,14 +151,14 @@ func TestCacheOperation(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
+				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL(context.Background()) },
 				test,
 				defaultCacheFactory(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
+				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL(context.Background()) },
 				test,
 				defaultCacheFactory(),
 			)
@@ -194,14 +195,14 @@ func TestCacheOperationEncryptionAES(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
+				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionAES(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
+				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionAES(),
 			)
@@ -239,14 +240,14 @@ func TestCacheOperationEncryptionKMS(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL() },
+				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionKMS(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL() },
+				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionKMS(),
 			)

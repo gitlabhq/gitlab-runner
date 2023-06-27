@@ -2,6 +2,7 @@ package shells
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"path"
 	"runtime"
@@ -371,18 +372,23 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 	return script, nil
 }
 
-func (b *BashShell) GenerateScript(buildStage common.BuildStage, info common.ShellScriptInfo) (string, error) {
+func (b *BashShell) GenerateScript(
+	ctx context.Context,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) (string, error) {
 	w := NewBashWriter(info.Build, b.Shell)
-	return b.generateScript(w, buildStage, info)
+	return b.generateScript(ctx, w, buildStage, info)
 }
 
 func (b *BashShell) generateScript(
+	ctx context.Context,
 	w ShellWriter,
 	buildStage common.BuildStage,
 	info common.ShellScriptInfo,
 ) (string, error) {
 	b.ensurePrepareStageHostnameMessage(w, buildStage, info)
-	err := b.writeScript(w, buildStage, info)
+	err := b.writeScript(ctx, w, buildStage, info)
 	script := w.Finish(info.Build.IsDebugTraceEnabled())
 	return script, err
 }

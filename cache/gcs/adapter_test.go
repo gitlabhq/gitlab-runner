@@ -3,6 +3,7 @@
 package gcs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -105,7 +107,7 @@ func prepareMockedCredentialsResolverForInvalidConfig(adapter *gcsAdapter, tc ad
 		PrivateKey: tc.privateKey,
 	})
 
-	cr.On("SignBytesFunc").Return(func(payload []byte) ([]byte, error) {
+	cr.On("SignBytesFunc", mock.Anything).Return(func(payload []byte) ([]byte, error) {
 		return []byte("output"), nil
 	})
 
@@ -117,13 +119,13 @@ func testAdapterOperationWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *gcsAdapter,
-	operation func() *url.URL,
+	operation func(context.Context) *url.URL,
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 		hook := test.NewGlobal()
 
-		u := operation()
+		u := operation(context.Background())
 		assert.Nil(t, u)
 
 		message, err := hook.LastEntry().String()
@@ -209,7 +211,7 @@ type adapterOperationTestCase struct {
 	expectedHeaders        http.Header
 }
 
-func mockSignBytesFunc() func([]byte) ([]byte, error) {
+func mockSignBytesFunc(_ context.Context) func([]byte) ([]byte, error) {
 	return func(payload []byte) ([]byte, error) {
 		return []byte("output"), nil
 	}
@@ -222,7 +224,7 @@ func prepareMockedCredentialsResolver(adapter *gcsAdapter, tc adapterOperationTe
 	pk := privateKey
 	if tc.signBlobAPITest {
 		pk = ""
-		cr.On("SignBytesFunc").Return(mockSignBytesFunc)
+		cr.On("SignBytesFunc", mock.Anything).Return(mockSignBytesFunc)
 	}
 	cr.On("Credentials").Return(&common.CacheGCSCredentials{
 		AccessID:   accessID,
@@ -266,7 +268,7 @@ func testAdapterOperation(
 	expectedMethod string,
 	expectedContentType string,
 	adapter *gcsAdapter,
-	operation func() *url.URL,
+	operation func(context.Context) *url.URL,
 ) {
 	t.Run(name, func(t *testing.T) {
 		cleanupCredentialsResolverMock := prepareMockedCredentialsResolver(adapter, tc)
@@ -275,7 +277,7 @@ func testAdapterOperation(
 		prepareMockedSignedURLGenerator(t, tc, expectedMethod, expectedContentType, adapter)
 		hook := test.NewGlobal()
 
-		u := operation()
+		u := operation(context.Background())
 
 		if tc.assertErrorMessage != nil {
 			message, err := hook.LastEntry().String()
@@ -366,7 +368,7 @@ func TestAdapterOperation(t *testing.T) {
 			headers := adapter.GetUploadHeaders()
 			assert.Equal(t, headers, tc.expectedHeaders)
 
-			assert.Nil(t, adapter.GetGoCloudURL())
+			assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
 			assert.Empty(t, adapter.GetUploadEnv())
 		})
 	}

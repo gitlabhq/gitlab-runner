@@ -3,6 +3,7 @@ package shells
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"path"
@@ -328,6 +329,7 @@ func (b *CmdShell) GetConfiguration(info common.ShellScriptInfo) (script *common
 }
 
 func (b *CmdShell) GenerateScript(
+	ctx context.Context,
 	buildStage common.BuildStage,
 	info common.ShellScriptInfo,
 ) (script string, err error) {
@@ -346,7 +348,7 @@ func (b *CmdShell) GenerateScript(
 		w.Warningf("DEPRECATION: CMD shell is deprecated and will no longer be supported")
 	}
 
-	err = b.writeScript(w, buildStage, info)
+	err = b.writeScript(ctx, w, buildStage, info)
 	script = w.Finish(info.Build.IsDebugTraceEnabled())
 	return
 }

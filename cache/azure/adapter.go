@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -26,11 +27,11 @@ type azureAdapter struct {
 	credentialsResolver credentialsResolver
 }
 
-func (a *azureAdapter) GetDownloadURL() *url.URL {
+func (a *azureAdapter) GetDownloadURL(_ context.Context) *url.URL {
 	return a.presignURL(http.MethodGet)
 }
 
-func (a *azureAdapter) GetUploadURL() *url.URL {
+func (a *azureAdapter) GetUploadURL(_ context.Context) *url.URL {
 	return a.presignURL(http.MethodPut)
 }
 
@@ -42,7 +43,7 @@ func (a *azureAdapter) GetUploadHeaders() http.Header {
 	return httpHeaders
 }
 
-func (a *azureAdapter) GetGoCloudURL() *url.URL {
+func (a *azureAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	if a.config.ContainerName == "" {
 		logrus.Error("ContainerName can't be empty")
 		return nil

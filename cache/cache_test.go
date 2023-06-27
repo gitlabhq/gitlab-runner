@@ -3,6 +3,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"testing"
@@ -35,7 +36,7 @@ func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperat
 		a := new(MockAdapter)
 
 		if tc.adapterURL != nil {
-			a.On(operationName).Return(tc.adapterURL)
+			a.On(operationName, mock.Anything).Return(tc.adapterURL)
 		}
 
 		assertAdapterExpectations = a.AssertExpectations
@@ -75,17 +76,18 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 func testCacheOperation(
 	t *testing.T,
 	operationName string,
-	operation func(build *common.Build, key string) *url.URL,
+	operation func(ctx context.Context, build *common.Build, key string) *url.URL,
 	tc cacheOperationTest,
 ) {
 	t.Run(operationName, func(t *testing.T) {
+		ctx := context.Background()
 		hook := test.NewGlobal()
 
 		cleanupCreateAdapter := prepareFakeCreateAdapter(t, operationName, tc)
 		defer cleanupCreateAdapter()
 
 		build := prepareFakeBuild(tc)
-		generatedURL := operation(build, tc.key)
+		generatedURL := operation(ctx, build, tc.key)
 		assert.Equal(t, tc.expectedURL, generatedURL)
 
 		if len(tc.expectedOutput) == 0 {

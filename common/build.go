@@ -331,7 +331,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		return errors.New("no shell defined")
 	}
 
-	script, err := GenerateShellScript(buildStage, *shell)
+	script, err := GenerateShellScript(ctx, buildStage, *shell)
 	if errors.Is(err, ErrSkipBuildStage) {
 		if b.IsFeatureFlagOn(featureflags.SkipNoOpBuildStages) {
 			b.Log().WithField("build_stage", buildStage).Debug("Skipping stage (nothing to do)")

@@ -1,6 +1,7 @@
 package gcs
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -26,12 +27,12 @@ type gcsAdapter struct {
 	credentialsResolver credentialsResolver
 }
 
-func (a *gcsAdapter) GetDownloadURL() *url.URL {
-	return a.presignURL(http.MethodGet, "")
+func (a *gcsAdapter) GetDownloadURL(ctx context.Context) *url.URL {
+	return a.presignURL(ctx, http.MethodGet, "")
 }
 
-func (a *gcsAdapter) GetUploadURL() *url.URL {
-	return a.presignURL(http.MethodPut, "application/octet-stream")
+func (a *gcsAdapter) GetUploadURL(ctx context.Context) *url.URL {
+	return a.presignURL(ctx, http.MethodPut, "application/octet-stream")
 }
 
 func (a *gcsAdapter) GetUploadHeaders() http.Header {
@@ -41,7 +42,7 @@ func (a *gcsAdapter) GetUploadHeaders() http.Header {
 	return nil
 }
 
-func (a *gcsAdapter) GetGoCloudURL() *url.URL {
+func (a *gcsAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	return nil
 }
 
@@ -49,7 +50,7 @@ func (a *gcsAdapter) GetUploadEnv() map[string]string {
 	return nil
 }
 
-func (a *gcsAdapter) presignURL(method string, contentType string) *url.URL {
+func (a *gcsAdapter) presignURL(ctx context.Context, method string, contentType string) *url.URL {
 	if a.config.BucketName == "" {
 		logrus.Error("BucketName can't be empty")
 		return nil
@@ -81,7 +82,7 @@ func (a *gcsAdapter) presignURL(method string, contentType string) *url.URL {
 		suo.PrivateKey = []byte(credentials.PrivateKey)
 	} else {
 		logrus.Debug("No private key was provided for GCS cache. Attempting to use instance credentials.")
-		suo.SignBytes = a.credentialsResolver.SignBytesFunc()
+		suo.SignBytes = a.credentialsResolver.SignBytesFunc(ctx)
 	}
 
 	rawURL, err := a.generateSignedURL(a.config.BucketName, a.objectName, &suo)

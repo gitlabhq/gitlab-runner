@@ -1,6 +1,7 @@
 package shells
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -92,7 +93,7 @@ func (b *AbstractShell) guardRunnerCommand(w ShellWriter, runnerCommand string, 
 	w.EndIf()
 }
 
-func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	skipRestoreCache := true
 
 	for _, cacheOptions := range info.Build.Cache {
@@ -129,7 +130,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 			continue
 		}
 
-		b.extractCacheOrFallbackCachesWrapper(w, info, cacheFile, cacheKey, cacheOptions)
+		b.extractCacheOrFallbackCachesWrapper(ctx, w, info, cacheFile, cacheKey, cacheOptions)
 	}
 
 	if skipRestoreCache {
@@ -140,6 +141,7 @@ func (b *AbstractShell) cacheExtractor(w ShellWriter, info common.ShellScriptInf
 }
 
 func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
+	ctx context.Context,
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	cacheFile string,
@@ -163,11 +165,12 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 
 	// Execute cache-extractor command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		b.addExtractCacheCommand(w, info, cacheFile, allowedCacheKeys)
+		b.addExtractCacheCommand(ctx, w, info, cacheFile, allowedCacheKeys)
 	})
 }
 
 func (b *AbstractShell) addExtractCacheCommand(
+	ctx context.Context,
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	cacheFile string,
@@ -180,7 +183,7 @@ func (b *AbstractShell) addExtractCacheCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	if url := cache.GetCacheDownloadURL(info.Build, cacheKey); url != nil {
+	if url := cache.GetCacheDownloadURL(ctx, info.Build, cacheKey); url != nil {
 		args = append(args, "--url", url.String())
 	}
 
@@ -191,7 +194,7 @@ func (b *AbstractShell) addExtractCacheCommand(
 	w.Warningf("Failed to extract cache")
 	// We check that there is another key than the one we just used
 	if len(cacheKeys) > 1 {
-		b.addExtractCacheCommand(w, info, cacheFile, cacheKeys[1:])
+		b.addExtractCacheCommand(ctx, w, info, cacheFile, cacheKeys[1:])
 	}
 	w.EndIf()
 }
@@ -237,11 +240,11 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScr
 	return nil
 }
 
-func (b *AbstractShell) writePrepareScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writePrepareScript(ctx context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	return nil
 }
 
-func (b *AbstractShell) writeGetSourcesScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	b.writeExports(w, info)
 
 	if !info.Build.IsSharedEnv() {
@@ -577,15 +580,23 @@ func (b *AbstractShell) writeSubmoduleUpdateNoticeMsg(w ShellWriter, recursive b
 	}
 }
 
-func (b *AbstractShell) writeRestoreCacheScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeRestoreCacheScript(
+	ctx context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+) error {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
 	// Try to restore from main cache, if not found cache for default branch
-	return b.cacheExtractor(w, info)
+	return b.cacheExtractor(ctx, w, info)
 }
 
-func (b *AbstractShell) writeDownloadArtifactsScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeDownloadArtifactsScript(
+	_ context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+) error {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
@@ -677,11 +688,16 @@ func (b *AbstractShell) writeUserScript(
 	return nil
 }
 
-func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) error {
+func (b *AbstractShell) cacheArchiver(
+	ctx context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	onSuccess bool,
+) error {
 	b.writeExports(w, info)
 	b.writeCdBuildDir(w, info)
 
-	skipArchiveCache, err := b.archiveCache(w, info, onSuccess)
+	skipArchiveCache, err := b.archiveCache(ctx, w, info, onSuccess)
 	if err != nil {
 		return err
 	}
@@ -693,7 +709,12 @@ func (b *AbstractShell) cacheArchiver(w ShellWriter, info common.ShellScriptInfo
 	return nil
 }
 
-func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo, onSuccess bool) (bool, error) {
+func (b *AbstractShell) archiveCache(
+	ctx context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+	onSuccess bool,
+) (bool, error) {
 	skipArchiveCache := true
 
 	for _, cacheOptions := range info.Build.Cache {
@@ -727,7 +748,7 @@ func (b *AbstractShell) archiveCache(w ShellWriter, info common.ShellScriptInfo,
 			continue
 		}
 
-		b.addCacheUploadCommand(w, info, cacheFile, archiverArgs, cacheKey)
+		b.addCacheUploadCommand(ctx, w, info, cacheFile, archiverArgs, cacheKey)
 	}
 
 	return skipArchiveCache, nil
@@ -747,6 +768,7 @@ func (b *AbstractShell) getArchiverArgs(cacheOptions common.Cache, _ common.Shel
 }
 
 func (b *AbstractShell) addCacheUploadCommand(
+	ctx context.Context,
 	w ShellWriter,
 	info common.ShellScriptInfo,
 	cacheFile string,
@@ -770,7 +792,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address
-	args = append(args, getCacheUploadURL(info.Build, cacheKey)...)
+	args = append(args, getCacheUploadURL(ctx, info.Build, cacheKey)...)
 
 	env := cache.GetCacheUploadEnv(info.Build, cacheKey)
 
@@ -792,14 +814,14 @@ func (b *AbstractShell) addCacheUploadCommand(
 
 // getCacheUploadURL will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
-func getCacheUploadURL(build *common.Build, cacheKey string) []string {
+func getCacheUploadURL(ctx context.Context, build *common.Build, cacheKey string) []string {
 	// Prefer Go Cloud URL if supported
-	goCloudURL := cache.GetCacheGoCloudURL(build, cacheKey)
+	goCloudURL := cache.GetCacheGoCloudURL(ctx, build, cacheKey)
 	if goCloudURL != nil {
 		return []string{"--gocloud-url", goCloudURL.String()}
 	}
 
-	uploadURL := cache.GetCacheUploadURL(build, cacheKey)
+	uploadURL := cache.GetCacheUploadURL(ctx, build, cacheKey)
 	if uploadURL == nil {
 		return []string{}
 	}
@@ -942,7 +964,7 @@ func (b *AbstractShell) writeUploadArtifacts(w ShellWriter, info common.ShellScr
 	return nil
 }
 
-func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeAfterScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	var afterScriptStep *common.Step
 	for _, step := range info.Build.Steps {
 		if step.Name == common.StepNameAfterScript {
@@ -965,23 +987,39 @@ func (b *AbstractShell) writeAfterScript(w ShellWriter, info common.ShellScriptI
 	return nil
 }
 
-func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeUploadArtifactsOnSuccessScript(
+	_ context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+) error {
 	return b.writeUploadArtifacts(w, info, true)
 }
 
-func (b *AbstractShell) writeUploadArtifactsOnFailureScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeUploadArtifactsOnFailureScript(
+	_ context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+) error {
 	return b.writeUploadArtifacts(w, info, false)
 }
 
-func (b *AbstractShell) writeArchiveCacheOnSuccessScript(w ShellWriter, info common.ShellScriptInfo) error {
-	return b.cacheArchiver(w, info, true)
+func (b *AbstractShell) writeArchiveCacheOnSuccessScript(
+	ctx context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+) error {
+	return b.cacheArchiver(ctx, w, info, true)
 }
 
-func (b *AbstractShell) writeArchiveCacheOnFailureScript(w ShellWriter, info common.ShellScriptInfo) error {
-	return b.cacheArchiver(w, info, false)
+func (b *AbstractShell) writeArchiveCacheOnFailureScript(
+	ctx context.Context,
+	w ShellWriter,
+	info common.ShellScriptInfo,
+) error {
+	return b.cacheArchiver(ctx, w, info, false)
 }
 
-func (b *AbstractShell) writeCleanupScript(w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	skipCleanupStage := true
 
 	for _, variable := range info.Build.GetAllVariables() {
@@ -1053,8 +1091,13 @@ func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info com
 	return nil
 }
 
-func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage, info common.ShellScriptInfo) error {
-	methods := map[common.BuildStage]func(ShellWriter, common.ShellScriptInfo) error{
+func (b *AbstractShell) writeScript(
+	ctx context.Context,
+	w ShellWriter,
+	buildStage common.BuildStage,
+	info common.ShellScriptInfo,
+) error {
+	methods := map[common.BuildStage]func(context.Context, ShellWriter, common.ShellScriptInfo) error{
 		common.BuildStagePrepare:                  b.writePrepareScript,
 		common.BuildStageGetSources:               b.writeGetSourcesScript,
 		common.BuildStageRestoreCache:             b.writeRestoreCacheScript,
@@ -1071,5 +1114,5 @@ func (b *AbstractShell) writeScript(w ShellWriter, buildStage common.BuildStage,
 	if !ok {
 		return b.writeUserScript(w, info, buildStage)
 	}
-	return fn(w, info)
+	return fn(ctx, w, info)
 }

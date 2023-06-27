@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,11 +13,11 @@ import (
 
 //go:generate mockery --name=Adapter --inpackage
 type Adapter interface {
-	GetDownloadURL() *url.URL
-	GetUploadURL() *url.URL
+	GetDownloadURL(context.Context) *url.URL
+	GetUploadURL(context.Context) *url.URL
 	GetUploadHeaders() http.Header
 
-	GetGoCloudURL() *url.URL
+	GetGoCloudURL(context.Context) *url.URL
 	GetUploadEnv() map[string]string
 }
 

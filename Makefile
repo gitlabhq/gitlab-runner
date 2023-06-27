@@ -43,7 +43,7 @@ GOCOVER_COBERTURA = gocover-cobertura
 
 GOX = gox
 
-MOCKERY_VERSION ?= 2.14.0
+MOCKERY_VERSION ?= 2.28.2
 MOCKERY = mockery
 
 SPLITIC = splitic

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -69,22 +70,22 @@ func getAdaptorForBuild(build *common.Build, key string) Adapter {
 	return adapter
 }
 
-func GetCacheDownloadURL(build *common.Build, key string) *url.URL {
+func GetCacheDownloadURL(ctx context.Context, build *common.Build, key string) *url.URL {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
 		return nil
 	}
 
-	return adaptor.GetDownloadURL()
+	return adaptor.GetDownloadURL(ctx)
 }
 
-func GetCacheUploadURL(build *common.Build, key string) *url.URL {
+func GetCacheUploadURL(ctx context.Context, build *common.Build, key string) *url.URL {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
 		return nil
 	}
 
-	return adaptor.GetUploadURL()
+	return adaptor.GetUploadURL(ctx)
 }
 
 func GetCacheUploadHeaders(build *common.Build, key string) http.Header {
@@ -96,13 +97,13 @@ func GetCacheUploadHeaders(build *common.Build, key string) http.Header {
 	return adaptor.GetUploadHeaders()
 }
 
-func GetCacheGoCloudURL(build *common.Build, key string) *url.URL {
+func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string) *url.URL {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
 		return nil
 	}
 
-	return adaptor.GetGoCloudURL()
+	return adaptor.GetGoCloudURL(ctx)
 }
 
 func GetCacheUploadEnv(build *common.Build, key string) map[string]string {
