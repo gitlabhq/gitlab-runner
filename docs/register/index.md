@@ -1,7 +1,10 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: >-
+  To determine the technical writer assigned to the Stage/Group associated with
+  this page, see
+  https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
 # Registering runners **(FREE)**
@@ -27,7 +30,7 @@ is `https://gitlab.com`.
 
 ## Docker
 
-The instructions in this section are meant to be used *after* you
+The instructions in this section are meant to be used _after_ you
 [install GitLab Runner in a container](../install/docker.md).
 
 The following steps describe launching a short-lived `gitlab-runner` container to
@@ -222,6 +225,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 WARNING:
 This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743) in GitLab 15.6 and is planned for removal in 17.0. This change is a breaking change.
+In GitLab 16.2 and later, legacy-compatible registration processing automatically ignores several deprecated parameters if they are passed during registration. For more information, see [Legacy-compatible registration process](#legacy-compatible-registration-processing).
 
 To register a runner using the most common options, run the `register` command
 with a structure similar to the following example:
@@ -267,6 +271,23 @@ This value can later be toggled on or off in the project's **Settings > CI/CD** 
 
 The `--maintenance-note` parameter was [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3268) in GitLab Runner 14.8.
 You can use it to add information related to runner maintenance. The maximum allowed length is 255 characters.
+
+#### Legacy-compatible registration processing
+
+Registration tokens and several runner configuration arguments were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743) in GitLab 15.6 and will be removed in GitLab 17.0.
+
+To ensure minimal disruption to your automation workflow, the `legacy-compatible registration process` triggers
+if an authentication token is specified in the legacy parameter `--registration-token`.
+This process causes the following command-line parameters to be ignored.
+These parameters can only be configured when a runner is created in the UI or with the API.
+
+- `--locked`
+- `--access-level`
+- `--run-untagged`
+- `--maximum-timeout`
+- `--paused`
+- `--tag-list`
+- `--maintenance-note`
 
 ## `Check registration token` error
 
