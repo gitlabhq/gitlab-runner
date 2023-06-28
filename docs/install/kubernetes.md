@@ -133,11 +133,16 @@ in the chart repository.
 For GitLab Runner to function, your configuration file **must** specify the following:
 
 - `gitlabUrl`: The GitLab server full URL to register the runner against. For example, `https://gitlab.example.com`.
-- `runnerRegistrationToken`:
-  - The authentication token you obtain when you create a runner in the GitLab UI.
+- `runnerToken`:
+  - The authentication token you obtain when you [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/register_runner.html#generate-an-authentication-token).
   - Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
-  - You can also use a registration token [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/). Registration tokens
-  have been deprecated and will be removed in GitLab 17.0.
+
+  \- or -
+
+- `runnerRegistrationToken` ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/102681) in GitLab 15.6):
+  - The registration token [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
+  - Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
+  - Registration tokens have been deprecated and will be removed in GitLab 17.0.
 
 Unless you need to specify any additional configuration, you are
 ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart).
@@ -511,9 +516,8 @@ As with all projects, the items mentioned on this page are subject to change or 
 The development, release, and timing of any products, features, or functionality remain at the
 sole discretion of GitLab Inc.
 
-To register a new runner, you can specify `runnerRegistrationToken` in `values.yml`
-
-To register an existing runner, use `runnerToken`.
+To register a runner that was created in the GitLab UI, you specify the `runnerToken` in `values.yml`. The `runnerToken` is displayed briefly in 
+the UI when you create the runner. 
 
 It can be a security risk to store tokens in `values.yml`, especially if you commit these to `git`. Instead, you can store the values of these tokens inside of a
 [Kubernetes secret](https://kubernetes.io/docs/concepts/configuration/secret/), and
@@ -523,13 +527,8 @@ the secret.
 If you have an existing registered runner and want to use that, set the
 `runner-token` with the token used to identify that runner. If you want
 to have a new runner registered you can set the
-`runner-registration-token` with the
-[registration token that you would like](https://docs.gitlab.com/ee/ci/runners/).
-
-NOTE:
-We plan to include an authentication
-token for runners created in the GitLab UI that you can also include in the argument. For more information, see
-[Next GitLab Runner Token Architecture](https://docs.gitlab.com/ee/architecture/blueprints/runner_tokens/).
+`runner-registration-token` with a
+[registration token](https://docs.gitlab.com/ee/ci/runners/) ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/102681).
 
 For example:
 
@@ -540,8 +539,8 @@ metadata:
   name: gitlab-runner-secret
 type: Opaque
 data:
-  runner-registration-token: "NlZrN1pzb3NxUXlmcmVBeFhUWnIK" #base64 encoded registration token
-  runner-token: ""
+  runner-registration-token: "" # need to leave as an empty string for compatibility reasons
+  runner-token: "REDACTED"
 ```
 
 ```yaml
@@ -550,7 +549,7 @@ runners:
 ```
 
 This example uses the secret `gitlab-runner-secret` and takes the value of
-`runner-registration-token` to register the new runner.
+`runner-token` to register the runner.
 
 ### Switching to the Ubuntu-based `gitlab-runner` Docker image
 
