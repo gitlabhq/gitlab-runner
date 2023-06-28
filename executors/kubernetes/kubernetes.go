@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -86,12 +87,13 @@ const (
 	// errorDialingBackendMessage is an error prefix that is encountered when
 	// connectivity to a Pod fails. This can happen for a number of reasons,
 	// such as the Pod or Node still being configured.
-	errorDialingBackendMessage = "error dialing backend"
-
+	errorDialingBackendMessage      = "error dialing backend"
 	errorTLSHandshakeTimeoutMessage = "TLS handshake timeout"
 	errorUnexpectedEOFMessage       = "unexpected EOF"
+	errorConnectionTimedOutMessage  = "read: connection timed out"
+	errorTimeoutOccuredMessage      = "Timeout occurred"
 
-	// errorDialingBackendMessage is an error message that is encountered when
+	// errorAlreadyExistsMessage is an error message that is encountered when
 	// we fail to create a resource because it already exists.
 	// Because of a connectivity issue, an attempt to create a resource can fail while the request itself
 	// was successfully executed. We then monitor the conflict error message to retrieve the already create resource
@@ -159,14 +161,23 @@ func (r *retryableKubeAPICall) ShouldRetry(tries int, err error) bool {
 }
 
 func isNetworkError(err error) bool {
+	matchError, _ := regexp.MatchString(
+		fmt.Sprintf(
+			"%s|%s|%s|%s|%s",
+			errorDialingBackendMessage,
+			errorTLSHandshakeTimeoutMessage,
+			errorUnexpectedEOFMessage,
+			errorConnectionTimedOutMessage,
+			errorTimeoutOccuredMessage,
+		),
+		err.Error())
+
 	return errors.Is(err, syscall.ECONNRESET) ||
 		errors.Is(err, syscall.ECONNREFUSED) ||
 		errors.Is(err, syscall.ECONNABORTED) ||
 		errors.Is(err, syscall.EPIPE) ||
 		errors.Is(err, io.ErrUnexpectedEOF) ||
-		strings.Contains(err.Error(), errorDialingBackendMessage) ||
-		strings.Contains(err.Error(), errorTLSHandshakeTimeoutMessage) ||
-		strings.Contains(err.Error(), errorUnexpectedEOFMessage)
+		matchError
 }
 
 type podPhaseError struct {
@@ -2439,7 +2450,7 @@ func isConflict(err error) bool {
 	var statusError *kubeerrors.StatusError
 	return errors.As(err, &statusError) &&
 		statusError.ErrStatus.Code == http.StatusConflict &&
-		strings.HasPrefix(statusError.ErrStatus.Message, errorAlreadyExistsMessage)
+		strings.Contains(statusError.ErrStatus.Message, errorAlreadyExistsMessage)
 }
 
 func IsKubernetesPodNotFoundError(err error) bool {
