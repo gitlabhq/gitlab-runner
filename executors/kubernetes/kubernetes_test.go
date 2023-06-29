@@ -4962,9 +4962,19 @@ func TestProcessLogs(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			waitForLineWritten := make(chan struct{})
+
 			mockTrace := &common.MockJobTrace{}
 			defer mockTrace.AssertExpectations(t)
-			mockTrace.On("Write", []byte("line\n")).Return(0, nil).Once()
+			mockTrace.On("Write", []byte("line\n")).
+				Run(func(args mock.Arguments) {
+					close(waitForLineWritten)
+				}).
+				Return(0, nil).
+				Once()
 
 			mockLogProcessor := new(mockLogProcessor)
 			defer mockLogProcessor.AssertExpectations(t)
@@ -4991,6 +5001,11 @@ func TestProcessLogs(t *testing.T) {
 			assert.Equal(t, tc.expectedExitCode, exitStatus.CommandExitCode)
 			if tc.expectedScript != "" {
 				assert.Equal(t, tc.expectedScript, *exitStatus.Script)
+			}
+
+			select {
+			case <-waitForLineWritten:
+			case <-ctx.Done():
 			}
 		})
 	}
