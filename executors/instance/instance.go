@@ -17,7 +17,7 @@ type executor struct {
 
 //nolint:gocognit
 func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
-	if options.Config.Instance.UseCommonBuildDir {
+	if options.Config.Instance != nil && options.Config.Instance.UseCommonBuildDir {
 		// a common build directory can only be used if the build is isolated
 		// max use count 1 or if VM isolation is on.
 		if e.Config.Autoscaler.VMIsolation.Enabled || e.Config.Autoscaler.MaxUseCount == 1 {
