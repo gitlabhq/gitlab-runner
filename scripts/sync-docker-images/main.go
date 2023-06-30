@@ -207,6 +207,7 @@ type args struct {
 	Command     []string `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
 	Images      []image  `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
 	Filters     []string `arg:"--filters" help:"Comma separated list of tag filters to be applied to the images to be synced. Empty by default"`
+	DryRun      bool     `arg:"-n,--dry-run" help:"Print commands to be run without actually running them"`
 }
 
 func main() {
@@ -245,6 +246,15 @@ func parseArgs() args {
 	log.Println(fmt.Sprintf("Will sync images: %+v", args.Images))
 
 	return args
+}
+
+func runCmd(args args, cmd *exec.Cmd) error {
+	if args.DryRun {
+		fmt.Printf("Cmd: %s\n", cmd)
+		return nil
+	} else {
+		return cmd.Run()
+	}
 }
 
 func generateTags(filters []string, version string, flavors []flavor) []string {
@@ -341,7 +351,7 @@ func syncImages(args args) error {
 					}...)...,
 			)
 
-			return cmd.Run()
+			return runCmd(args, cmd)
 		})
 	}
 
@@ -353,7 +363,7 @@ func loginRegistries(args args, registries map[registry]string) error {
 		log.Printf("Logging into %s:%s", registry, addr)
 		switch registry {
 		case registryDockerHub:
-			if err := loginRegistry(args.Command, addr, os.Getenv(envDockerHubUser), os.Getenv(envDockerHubPassword)); err != nil {
+			if err := loginRegistry(args, addr, os.Getenv(envDockerHubUser), os.Getenv(envDockerHubPassword)); err != nil {
 				return err
 			}
 		case registryECR:
@@ -368,7 +378,7 @@ func loginRegistries(args args, registries map[registry]string) error {
 				return fmt.Errorf("getting ecr password for %s: %w", addr, err)
 			}
 
-			if err := loginRegistry(args.Command, addr, ecrPublicRegistryUser, string(ecrPassword)); err != nil {
+			if err := loginRegistry(args, addr, ecrPublicRegistryUser, string(ecrPassword)); err != nil {
 				return err
 			}
 		default:
@@ -378,9 +388,9 @@ func loginRegistries(args args, registries map[registry]string) error {
 	return nil
 }
 
-func loginRegistry(command []string, addr string, username, password string) error {
+func loginRegistry(args args, addr string, username, password string) error {
 	cmd := buildCmd(
-		append(command, []string{
+		append(args.Command, []string{
 			"login",
 			addr,
 			"-u",
@@ -390,7 +400,7 @@ func loginRegistry(command []string, addr string, username, password string) err
 		}...)...,
 	)
 
-	return cmd.Run()
+	return runCmd(args, cmd)
 }
 
 func buildCmd(commandAndArgs ...string) *exec.Cmd {
