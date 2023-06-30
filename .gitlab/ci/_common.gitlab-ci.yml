@@ -16,7 +16,7 @@ variables:
   DUMB_INIT_VERSION: "1.2.2"
   # Git version 2.38.x is broken for Windows Nano Server, should be resolved with 2.39 release
   # https://github.com/git-for-windows/git/issues/4052
-  GIT_VERSION: "2.39.2"
+  GIT_VERSION: "2.41.0"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "3.3.0"
   YQ_VERSION: "4.30.5"
@@ -40,8 +40,8 @@ variables:
   ALPINE_318_VERSION: "3.18.2"
   # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
   UBUNTU_VERSION: "20.04"
-  # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.7-.+/
-  UBI_FIPS_VERSION: "8.7-1107"
+  # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.8-.+/
+  UBI_FIPS_VERSION: "8.8-860"
   UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base:$UBI_FIPS_VERSION
 
 default:
