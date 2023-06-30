@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/alexflint/go-arg"
+	"github.com/samber/lo"
 	"github.com/sourcegraph/conc/pool"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 type arch string
@@ -101,7 +103,9 @@ func (f flavor) formatRunnerTag(version string) string {
 }
 
 func (f flavor) formatHelperTag(version string, arch arch, variant variant) string {
-	if f.name != "" && variant != "" {
+	if f.name == "latest" {
+		return fmt.Sprintf("%s-latest", arch)
+	} else if f.name != "" && variant != "" {
 		return fmt.Sprintf("%s-%s-%s-%s", f.name, arch, version, variant)
 	} else if f.name == "" && variant != "" {
 		return fmt.Sprintf("%s-%s-%s", arch, version, variant)
@@ -126,6 +130,10 @@ var runnerFlavors = []flavor{
 var helperFlavors = []flavor{
 	{
 		name:            "alpine-latest",
+		compatibleArchs: supportedArchitectures,
+	},
+	{
+		name:            "latest",
 		compatibleArchs: supportedArchitectures,
 	},
 	{
@@ -197,6 +205,8 @@ type args struct {
 	Version     string   `arg:"--version, required" help:"Version or commit of images to sync e.g. (e.g. v16.0.0 | a54hf6)"`
 	Concurrency int      `arg:"--concurrency" help:"The amount of concurrent image pushes to be done" default:"1"`
 	Command     []string `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
+	Images      []image  `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
+	Filters     []string `arg:"--filters" help:"Comma separated list of tag filters to be applied to the images to be synced. Empty by default"`
 }
 
 func main() {
@@ -219,10 +229,25 @@ func parseArgs() args {
 		args.Command = []string{"skopeo"}
 	}
 
+	if len(args.Images) == 0 {
+		args.Images = []image{"runner", "helper"}
+	}
+
+	for i, img := range args.Images {
+		switch img {
+		case "runner":
+			args.Images[i] = gitlabRunnerImage
+		case "helper":
+			args.Images[i] = gitlabRunnerHelperImage
+		}
+	}
+
+	log.Println(fmt.Sprintf("Will sync images: %+v", args.Images))
+
 	return args
 }
 
-func generateTags(version string, flavors []flavor) []string {
+func generateTags(filters []string, version string, flavors []flavor) []string {
 	var tags []string
 
 	for _, f := range flavors {
@@ -243,7 +268,15 @@ func generateTags(version string, flavors []flavor) []string {
 		}
 	}
 
-	return tags
+	if len(filters) == 0 {
+		return tags
+	}
+
+	return lo.Filter(tags, func(tag string, _ int) bool {
+		return lo.SomeBy(filters, func(filter string) bool {
+			return strings.Contains(tag, filter)
+		})
+	})
 }
 
 func filterTargetRegistries() map[registry]string {
@@ -279,7 +312,11 @@ func syncImages(args args) error {
 	}
 
 	for img, target := range targetImages {
-		tags := generateTags(args.Version, target.flavors)
+		if !lo.Contains(args.Images, img) {
+			continue
+		}
+
+		tags := generateTags(args.Filters, args.Version, target.flavors)
 		for _, registry := range registries {
 			for _, tag := range tags {
 				images = append(images, newImageSyncPair(sourceRegistry, registry, img, target.destinationImage, tag))

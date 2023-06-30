@@ -276,12 +276,16 @@ release_docker_images:
 
 sync_docker_images: export SYNC_DOCKER_IMAGES_CONCURRENCY ?= 3
 sync_docker_images: export SYNC_DOCKER_IMAGES_COMMAND ?= skopeo
+sync_docker_images: export SYNC_DOCKER_IMAGES_FILTERS ?=
+sync_docker_images: export SYNC_DOCKER_IMAGES_IMAGES ?=
 sync_docker_images:
 	@cd ./scripts/sync-docker-images && \
 		go run . \
 		-version $(REVISION) \
 		-concurrency $(SYNC_DOCKER_IMAGES_CONCURRENCY) \
-		-command "$(SYNC_DOCKER_IMAGES_COMMAND)"
+		-command "$(SYNC_DOCKER_IMAGES_COMMAND)" \
+		-filters "$(SYNC_DOCKER_IMAGES_FILTERS)" \
+		-images "$(SYNC_DOCKER_IMAGES_IMAGES)"
 
 release_helper_docker_images:
 	# Releasing GitLab Runner Helper images
