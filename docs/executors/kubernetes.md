@@ -1848,6 +1848,22 @@ Background processes started during job execution can [prevent the build job fro
 - Double fork the process. For example, `command_to_run < /dev/null &> /dev/null &`.
 - Kill the process before exiting the job script.
 
+### Cache-related `permission denied` errors
+
+Files and folders that are generated in your job have certain UNIX ownerships and permissions.
+When your files and folders are archived or extracted, UNIX details are retained.
+However, the files and folders may mismatch with the `USER` configurations of
+[helper images](../configuration/advanced-configuration.md#helper-image).
+
+If you encounter permission-related errors in the `Creating cache ...` step,
+you can:
+
+- As a solution, investigate whether the source data is modified,
+  for example in the job script that creates the cached files.
+- As a workaround, add matching [chown](https://linux.die.net/man/1/chown) and
+  [chmod](https://linux.die.net/man/1/chmod) commands.
+  to your [(`before_`/`after_`)`script:` directives](https://docs.gitlab.com/ee/ci/yaml/index.html#default).
+
 ## Restrict access to job variables
 
 When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
