@@ -142,7 +142,7 @@ function Build-Image($tag)
 
     & 'docker' build $imageNames --force-rm --no-cache $buildArgs -f $dockerFile $context
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to build docker image" )
+        throw ("Failed to build docker image")
     }
 }
 
