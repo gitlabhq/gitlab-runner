@@ -257,6 +257,15 @@ func runCmd(args args, cmd *exec.Cmd) error {
 	}
 }
 
+func outputCmd(args args, cmd *exec.Cmd) ([]byte, error) {
+	if args.DryRun {
+		fmt.Printf("Cmd: %s\n", cmd)
+		return nil, nil
+	} else {
+		return cmd.Output()
+	}
+}
+
 func generateTags(filters []string, version string, flavors []flavor) []string {
 	var tags []string
 
@@ -368,13 +377,15 @@ func loginRegistries(args args, registries map[registry]string) error {
 				return err
 			}
 		case registryECR:
-			ecrPassword, err := buildCmdNoStdout(
+			cmd := buildCmdNoStdout(
 				"aws",
 				"--region",
 				"us-east-1",
 				"ecr-public",
 				"get-login-password",
-			).Output()
+			)
+
+			ecrPassword, err := outputCmd(args, cmd)
 			if err != nil {
 				return fmt.Errorf("getting ecr password for %s: %w", addr, err)
 			}
