@@ -337,6 +337,7 @@ func syncImages(args args) error {
 	pool := pool.New().WithErrors().WithMaxGoroutines(args.Concurrency)
 
 	for _, pair := range images {
+		pair := pair // Create local copy to avoid data race with loop variable
 		pool.Go(func() error {
 			log.Printf("Copying image %s => %s", pair.from, pair.to)
 
