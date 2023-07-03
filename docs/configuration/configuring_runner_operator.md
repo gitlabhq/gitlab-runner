@@ -282,9 +282,10 @@ oc get scc anyuid -o yaml
 ```
 
 #### Configure SETFCAP
-If using Red Hat Openshift Container Platform (RHOCP) 4.11 or later, you might get an error message. 
 
-```
+If using Red Hat OpenShift Container Platform (RHOCP) 4.11 or later, you might get an error message. 
+
+```shell
 error reading allowed ID mappings:error reading subuid mappings for user
 ```
 
@@ -292,33 +293,32 @@ Some jobs (e.g. buildah) need the `SETFCAP` capability granted to run correctly,
 
 1. Add the SETFCAP capability to the scc that Gitlab runner is using (replace the gitlab-scc name with the correct one):
 
+    ```shell
+    oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'  
+    ```
 
-```
-oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'  
-```
+1. Update your `config.toml` and add the `SETFCAP` capability under the `kubernetes` section.
 
-2. Update your `config.toml` and add the `SETFCAP` capability under the `kubernetes` section.
+    ```yaml
+    [[runners]]
+      [runners.kubernetes]
+      [runners.kubernetes.pod_security_context]
+        [runners.kubernetes.build_container_security_context]
+        [runners.kubernetes.build_container_security_context.capabilities]
+          add = ["SETFCAP"]
+    ```
 
-```
-[[runners]]
-  [runners.kubernetes]
-   [runners.kubernetes.pod_security_context]
-    [runners.kubernetes.build_container_security_context]
-     [runners.kubernetes.build_container_security_context.capabilities]
-      add = ["SETFCAP"]
-```
+1. Create a configmap using this file in the namespace where GitLab Runner is deployed:
 
-3. Create a configmap using this file in the namespace where Gitlab runner is deployed:
+    ```shell
+    oc create configmap custom-config-toml --from-file config.toml=config.toml 
+    ```
 
-```
-oc create configmap custom-config-toml --from-file config.toml=config.toml 
-```
+1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner name)
 
-4. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner name)
-
-```
-oc patch runner my-runner --type merge -p '{"spec": {"config": "custom-config-toml"}}'
-```
+    ```shell
+    oc patch runner my-runner --type merge -p '{"spec": {"config": "custom-config-toml"}}'
+    ```
 
 Read more about this solution in the [Red Hat documentation](https://access.redhat.com/solutions/7016013).
 
