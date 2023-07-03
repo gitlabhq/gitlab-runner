@@ -291,7 +291,7 @@ error reading allowed ID mappings:error reading subuid mappings for user
 
 Some jobs (e.g. buildah) need the `SETFCAP` capability granted to run correctly, to fix this issue you need to:
 
-1. Add the SETFCAP capability to the scc that GitLab Runner is using (replace the gitlab-scc name with the correct one):
+1. Add the SETFCAP capability to the scc that GitLab Runner is using (replace the `gitlab-scc` name with the correct one):
 
     ```shell
     oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'  
