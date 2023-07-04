@@ -46,6 +46,20 @@ After you install GitLab Runner, you must [register individual runners](../regis
 
 GitLab Runner runs the CI/CD jobs that are defined in GitLab.
 
+## System Requirements
+
+GitLab Runner system requirements vary widely and depend on a number of variables unique to each use-case. GitLab Runner instances can be sized individually given these variables and scaled higher or lower as necessary. These variables include:
+
+- The anticipated:
+  - CPU load of CI jobs.
+  - Memory usage of CI jobs.
+- The number of:
+  - Concurrent CI jobs.
+  - Projects in active development.
+  - Developers expected to work in parallel.
+
+For more information, see what [machine types are available for Linux (x86-64)](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#machine-types-available-for-linux-x86-64) on SaaS.
+
 ## FIPS compliant GitLab Runner
 
 As of GitLab Runner 14.7, we provide a FIPS 140-12 compliant GitLab Runner binary. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
