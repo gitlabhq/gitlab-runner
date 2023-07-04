@@ -143,6 +143,10 @@ oc get services --namespace default --field-selector='metadata.name=kubernetes' 
 
 ## Customize `config.toml` with a configuration template
 
+NOTE:
+The use of a configuration template to customize `config.toml` is currently limited to specifying `[runners.kubernetes.volumes]` settings.
+Support to extend this to other settings is proposed in [issue 49](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/49).
+
 You can customize the runner's `config.toml` file by using the [configuration template](../register/index.md#runners-configuration-template-file).
 
 1. Create a custom config template file. For example, let's instruct our runner to mount an `EmptyDir` volume. Create the `custom-config.toml` file:
