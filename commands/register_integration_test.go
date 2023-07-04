@@ -223,7 +223,7 @@ func TestAskRunnerUsingRunnerTokenOverrideDefaults(t *testing.T) {
 	}
 }
 
-func TestAskRunnerUsingRunnerTokenOverrideForbiddenDefaults(t *testing.T) {
+func TestAskRunnerUsingRunnerTokenOnRegistrationTokenOverridingForbiddenDefaults(t *testing.T) {
 	tests := map[string]interface{}{
 		"--access-level":     "not_protected",
 		"--run-untagged":     true,
@@ -273,6 +273,69 @@ func TestAskRunnerUsingRunnerTokenOverrideForbiddenDefaults(t *testing.T) {
 				commands.GetLogrusOutput(t, hook),
 				"this has triggered the 'legacy-compatible registration process'",
 			)
+		})
+	}
+}
+
+func TestAskRunnerUsingRunnerTokenOverridingForbiddenDefaults(t *testing.T) {
+	tests := map[string]interface{}{
+		"--access-level":     "not_protected",
+		"--run-untagged":     true,
+		"--maximum-timeout":  1,
+		"--paused":           true,
+		"--tag-list":         "tag",
+		"--maintenance-note": "note",
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			removeHooksFn := helpers.MakeFatalToPanic()
+			defer removeHooksFn()
+
+			network := new(common.MockNetwork)
+			network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).
+				Panic("VerifyRunner should not be called")
+
+			answers := make([]string, 4)
+			arguments := append(
+				executorCmdLineArgs(t, "shell"),
+				"--url", "http://gitlab.example.com/",
+				"-t", "glrt-testtoken",
+				tn, fmt.Sprintf("%v", tc),
+			)
+
+			cmd := commands.NewRegisterCommandForTest(
+				bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
+				network,
+			)
+
+			hook := test.NewGlobal()
+			app := cli.NewApp()
+			app.Commands = []cli.Command{
+				{
+					Name:   "register",
+					Action: cmd.Execute,
+					Flags:  clihelpers.GetFlagsFromStruct(cmd),
+				},
+			}
+
+			defer func() {
+				var output string
+				if r := recover(); r != nil {
+					// log panics force exit
+					if e, ok := r.(*logrus.Entry); ok {
+						output = e.Message
+					}
+				}
+				if output == "" {
+					output = commands.GetLogrusOutput(t, hook)
+				}
+				assert.Contains(t, output, "Runner configuration other than name and executor configuration is reserved")
+			}()
+
+			_ = app.Run(append([]string{"runner", "register"}, arguments...))
+
+			assert.Fail(t, "Should not reach this point")
 		})
 	}
 }
@@ -976,6 +1039,52 @@ func useTempConfigFile(t *testing.T, arguments []string) ([]string, func()) {
 	arguments = append(arguments, "--config", configFile.Name())
 
 	return arguments, func() { os.Remove(configFile.Name()) }
+}
+
+func TestNameIsNotRequestedOnServerFailureRegisterCommandWithAuthToken(t *testing.T) {
+	network := new(common.MockNetwork)
+	defer network.AssertExpectations(t)
+
+	network.On("VerifyRunner", mock.Anything, mock.MatchedBy(isValidToken)).Return(nil).Once()
+
+	var arguments []string
+	arguments, cleanTempFile := useTempConfigFile(t, arguments)
+	defer cleanTempFile()
+
+	answers := []string{"https://gitlab.com/", "glrt-test-runner-token"}
+	hook := test.NewGlobal()
+
+	defer func() {
+		var output string
+		if r := recover(); r != nil {
+			// log panics force exit
+			if e, ok := r.(*logrus.Entry); ok {
+				output = e.Message
+			}
+		}
+		if output == "" {
+			output = commands.GetLogrusOutput(t, hook)
+		}
+		assert.Equal(t, "Failed to verify the runner.", output)
+	}()
+
+	cmd := commands.NewRegisterCommandForTest(
+		bufio.NewReader(strings.NewReader(strings.Join(answers, "\n")+"\n")),
+		network,
+	)
+
+	app := cli.NewApp()
+	app.Commands = []cli.Command{
+		{
+			Name:   "register",
+			Action: cmd.Execute,
+			Flags:  clihelpers.GetFlagsFromStruct(cmd),
+		},
+	}
+
+	_ = app.Run(append([]string{"runner", "register"}, arguments...))
+
+	assert.Fail(t, "Should not reach this point")
 }
 
 func TestRegisterCommand(t *testing.T) {
