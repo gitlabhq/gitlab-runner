@@ -5477,9 +5477,12 @@ func TestGetContainerInfo(t *testing.T) {
 			getExpectedCommand: func(e *executor, cmd common.ExecutorCommand) []string {
 				return []string{
 					"sh",
-					e.scriptPath(detectShellScriptName),
-					e.scriptPath(cmd.Stage),
-					e.buildRedirectionCmd("bash"),
+					"-c",
+					fmt.Sprintf("'(%s %s %s) &'",
+						e.scriptPath(detectShellScriptName),
+						e.scriptPath(cmd.Stage),
+						e.buildRedirectionCmd("bash"),
+					),
 				}
 			},
 		},
