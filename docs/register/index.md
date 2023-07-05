@@ -18,11 +18,11 @@ each with a different configuration, by repeating the `register` command.
 
 ## Requirements
 
-Before registering a runner, you must first:
+Before you register a runner, you must first:
 
-- [Install it](../install/index.md) on a server separate than where GitLab
+- [Install GitLab Runner](../install/index.md) on a server separate than where GitLab
   is installed
-- [Obtain a token](https://docs.gitlab.com/ee/ci/runners/register_runner.html)
+- [Create a runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html)
 
 NOTE:
 When registering a runner on GitLab.com, the `gitlab-ci coordinator URL`
@@ -30,8 +30,9 @@ is `https://gitlab.com`.
 
 ## Docker
 
-The instructions in this section are meant to be used _after_ you
-[install GitLab Runner in a container](../install/docker.md).
+Prerequisites:
+
+- [Install GitLab Runner in a container](../install/docker.md).
 
 The following steps describe launching a short-lived `gitlab-runner` container to
 register the container you created during install. After you finish
