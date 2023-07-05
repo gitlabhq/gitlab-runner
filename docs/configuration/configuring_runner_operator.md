@@ -285,6 +285,47 @@ oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
 oc get scc anyuid -o yaml
 ```
 
+#### Configure SETFCAP
+
+If you use Red Hat OpenShift Container Platform (RHOCP) 4.11 or later, you may get the following error message:
+
+```shell
+error reading allowed ID mappings:error reading subuid mappings for user
+```
+
+Some jobs (for example, buildah) need the `SETFCAP` capability granted to run correctly. To fix this issue:
+
+1. Add the SETFCAP capability to the SCC that GitLab Runner is using (replace the `gitlab-scc` with the SCC assigned to your GitLab Runner pod):
+
+    ```shell
+    oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'  
+    ```
+
+1. Update your `config.toml` and add the `SETFCAP` capability under the `kubernetes` section:
+
+    ```yaml
+    [[runners]]
+      [runners.kubernetes]
+      [runners.kubernetes.pod_security_context]
+        [runners.kubernetes.build_container_security_context]
+        [runners.kubernetes.build_container_security_context.capabilities]
+          add = ["SETFCAP"]
+    ```
+
+1. Create a configmap using this `config.toml` in the namespace where GitLab Runner is deployed:
+
+    ```shell
+    oc create configmap custom-config-toml --from-file config.toml=config.toml 
+    ```
+
+1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner pod name)
+
+    ```shell
+    oc patch runner my-runner --type merge -p '{"spec": {"config": "custom-config-toml"}}'
+    ```
+
+For more inforamtion, see the [Red Hat documentation](https://access.redhat.com/solutions/7016013).
+
 ### Using FIPS Compliant GitLab Runner
 
 NOTE:
