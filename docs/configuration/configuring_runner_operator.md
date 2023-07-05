@@ -291,7 +291,7 @@ error reading allowed ID mappings:error reading subuid mappings for user
 
 Some jobs (for example, buildah) need the `SETFCAP` capability granted to run correctly. To fix this issue:
 
-1. Add the SETFCAP capability to the scc that GitLab Runner is using (replace the `gitlab-scc` name with the correct one):
+1. Add the SETFCAP capability to the SCC that GitLab Runner is using (replace the `gitlab-scc` with the SCC assigned to your GitLab Runner pod):
 
     ```shell
     oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'  
@@ -308,13 +308,13 @@ Some jobs (for example, buildah) need the `SETFCAP` capability granted to run co
           add = ["SETFCAP"]
     ```
 
-1. Create a configmap using this file in the namespace where GitLab Runner is deployed:
+1. Create a configmap using this `config.toml` in the namespace where GitLab Runner is deployed:
 
     ```shell
     oc create configmap custom-config-toml --from-file config.toml=config.toml 
     ```
 
-1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner name)
+1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner pod name)
 
     ```shell
     oc patch runner my-runner --type merge -p '{"spec": {"config": "custom-config-toml"}}'
