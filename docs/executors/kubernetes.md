@@ -1575,6 +1575,24 @@ Kaniko works without the Docker daemon and builds images without privileged acce
 
 For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
 
+There is a know issue when using kaniko to build _multi-stage_ `Dockerfiles`. If a pipeline job includes an
+`after_script` section, when the `after_script` section is executed it fails with the following error message. The job still completes successfully.
+
+```shell
+OCI runtime exec failed: exec failed: container_linux.go:380: starting container process caused: chdir to cwd
+("/workspace") set in config.json failed: no such file or directory: unknown
+```
+
+The section fails because kaniko deletes its container's `WORKDIR` when building multi-stage `Dockerfile`s. This prevents
+`kubectl exec` (and the analogous SDK API) from attaching to the container.
+
+Two workarounds exists for this issue:
+
+- Add `--ignore-path /workspace` to the kaniko executor invocation.
+- Add `mkdir -p /workspace` to the job's `script` _after_ the kaniko executor invocation.
+
+For more information, see [issue 30769](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/30769#note_1452088669).
+
 ### Restrict Docker images and services
 
 > Added for the Kubernetes executor in GitLab Runner 14.2.
