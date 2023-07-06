@@ -18,11 +18,12 @@ import (
 
 func TestPowershell_LineBreaks(t *testing.T) {
 	testCases := map[string]struct {
-		shell                   string
-		eol                     string
-		expectedErrorPreference string
-		shebang                 string
-		passFile                bool
+		shell                            string
+		eol                              string
+		expectedErrorPreference          string
+		shebang                          string
+		passFile                         bool
+		useJSONInitializationTermination bool
 	}{
 		"Windows newline on Desktop via stdin": {
 			shell:                   SNPowershell,
@@ -45,12 +46,41 @@ func TestPowershell_LineBreaks(t *testing.T) {
 			shebang:                 `#!/usr/bin/env pwsh` + "\n",
 			expectedErrorPreference: `$ErrorActionPreference = "Stop"` + "\n",
 		},
+		"Windows newline on Desktop via stdin with json initialization termination": {
+			shell:                            SNPowershell,
+			eol:                              "\r\n",
+			expectedErrorPreference:          "",
+			useJSONInitializationTermination: true,
+		},
+		"Windows newline on Desktop via file with json initialization termination": {
+			shell:                            SNPowershell,
+			eol:                              "\r\n",
+			expectedErrorPreference:          "",
+			useJSONInitializationTermination: true,
+		},
+		"Windows newline on Core with json initialization termination": {
+			shell:                            SNPwsh,
+			eol:                              "\r\n",
+			expectedErrorPreference:          `$ErrorActionPreference = "Stop"` + "\r\n",
+			useJSONInitializationTermination: true,
+		},
+		"Linux newline on Core with json initialization termination": {
+			shell:                            SNPwsh,
+			eol:                              "\n",
+			shebang:                          `#!/usr/bin/env pwsh` + "\n",
+			expectedErrorPreference:          `$ErrorActionPreference = "Stop"` + "\n",
+			useJSONInitializationTermination: true,
+		},
 	}
 
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
 			eol := tc.eol
-			writer := &PsWriter{Shell: tc.shell, EOL: eol}
+			writer := &PsWriter{
+				Shell:                            tc.shell,
+				EOL:                              eol,
+				useJSONInitializationTermination: tc.useJSONInitializationTermination,
+			}
 			writer.Command("foo", "")
 
 			expectedOutput :=
@@ -59,10 +89,19 @@ func TestPowershell_LineBreaks(t *testing.T) {
 					eol +
 					eol
 			if tc.shell == SNPwsh {
-				expectedOutput = tc.shebang + "& {" + eol + eol + expectedOutput + "}" + eol + eol
+				out := tc.shebang + "& {" + eol + eol
+				if tc.useJSONInitializationTermination {
+					out += pwshJSONInitializationScript + eol + eol
+				}
+				out += expectedOutput + "}" + eol + eol
+				expectedOutput = out
 			} else {
-				expectedOutput = "& {" + eol + eol + expectedOutput + "}" + eol + eol
-
+				out := "& {" + eol + eol
+				if tc.useJSONInitializationTermination {
+					out += pwshJSONInitializationScript + eol + eol
+				}
+				out += expectedOutput + "}" + eol + eol
+				expectedOutput = out
 				if tc.passFile {
 					expectedOutput = "\xef\xbb\xbf" + expectedOutput
 				}
@@ -454,6 +493,7 @@ func TestPowershell_GenerateScript(t *testing.T) {
 			expectedFailure: false,
 			expectedScript: shebang + "& {" +
 				pwshShell.EOL + pwshShell.EOL +
+				pwshJSONInitializationScript + pwshShell.EOL + pwshShell.EOL +
 				`$ErrorActionPreference = "Stop"` + pwshShell.EOL +
 				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` +
 				pwshShell.EOL + pwshShell.EOL + "}" + pwshShell.EOL + pwshShell.EOL,

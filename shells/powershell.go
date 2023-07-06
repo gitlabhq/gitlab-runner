@@ -23,6 +23,10 @@ const (
 	SNPwsh       = "pwsh"
 	SNPowershell = "powershell"
 
+	pwshJSONInitializationScript = `$start_json= '{"script": "' + $PSCommandPath + '"}'
+echo "$start_json"
+`
+
 	// Before executing a script, powershell parses it.
 	// A `ParserError` can then be thrown if a parsing error is found.
 	// Those errors are not catched by the powershell_trap_script thus causing the job to hang
@@ -35,7 +39,7 @@ param (
 )
 
 %s -File $Path
-$out_json= '{"command_exit_code": ' + $LASTEXITCODE + ', "script": "' + $MyInvocation.MyCommand.Name + '"}'
+$out_json= '{"command_exit_code": ' + $LASTEXITCODE + ', "script": "' + $PSCommandPath + '"}'
 echo ""
 echo "$out_json"
 Exit 0
@@ -65,6 +69,8 @@ type PsWriter struct {
 	EOL           string
 	PassFile      bool
 	resolvePaths  bool
+
+	useJSONInitializationTermination bool
 }
 
 func NewPsWriter(b *PowerShell, info common.ShellScriptInfo) *PsWriter {
@@ -74,6 +80,10 @@ func NewPsWriter(b *PowerShell, info common.ShellScriptInfo) *PsWriter {
 		PassFile:      b.passAsFile(info),
 		TemporaryPath: info.Build.TmpProjectDir(),
 		resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
+		// useJSONInitializationTermination is only used for kubernetes executor when
+		// the feature flag FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY is set to false
+		useJSONInitializationTermination: info.Build.Runner.Executor == common.ExecutorKubernetes &&
+			!info.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy),
 	}
 }
 
@@ -493,6 +503,10 @@ func (p *PsWriter) finishPwsh(buf *strings.Builder, trace bool) {
 	// allows us to bypass file permissions when changing the current user.
 	buf.WriteString("& {" + p.EOL + p.EOL)
 
+	if p.useJSONInitializationTermination {
+		buf.WriteString(pwshJSONInitializationScript + p.EOL + p.EOL)
+	}
+
 	if trace {
 		buf.WriteString("Set-PSDebug -Trace 2" + p.EOL)
 	}
@@ -509,6 +523,10 @@ func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
 		buf.WriteString("\xef\xbb\xbf")
 	} else {
 		buf.WriteString("& {" + p.EOL + p.EOL)
+	}
+
+	if p.useJSONInitializationTermination {
+		buf.WriteString(pwshJSONInitializationScript + p.EOL + p.EOL)
 	}
 
 	if trace {
