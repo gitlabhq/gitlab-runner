@@ -122,6 +122,15 @@ var (
 	resourceTypePullSecret     = "ImagePullSecret"
 
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+
+	errorRegex = fmt.Sprintf(
+		"%s|%s|%s|%s|%s",
+		errorDialingBackendMessage,
+		errorTLSHandshakeTimeoutMessage,
+		errorUnexpectedEOFMessage,
+		errorConnectionTimedOutMessage,
+		errorTimeoutOccuredMessage,
+	)
 )
 
 type commandTerminatedError struct {
@@ -138,18 +147,12 @@ func (c *commandTerminatedError) Is(err error) bool {
 }
 
 type retryableKubeAPICall struct {
-	maxTries  int
-	fn        func() error
-	errFilter func(err error) bool
+	maxTries int
+	fn       func() error
 }
 
 func (r *retryableKubeAPICall) Run() error {
-	err := r.fn()
-	if r.errFilter != nil && !r.errFilter(err) {
-		return nil
-	}
-
-	return err
+	return r.fn()
 }
 
 func (r *retryableKubeAPICall) ShouldRetry(tries int, err error) bool {
@@ -161,17 +164,11 @@ func (r *retryableKubeAPICall) ShouldRetry(tries int, err error) bool {
 }
 
 func isNetworkError(err error) bool {
-	matchError, _ := regexp.MatchString(
-		fmt.Sprintf(
-			"%s|%s|%s|%s|%s",
-			errorDialingBackendMessage,
-			errorTLSHandshakeTimeoutMessage,
-			errorUnexpectedEOFMessage,
-			errorConnectionTimedOutMessage,
-			errorTimeoutOccuredMessage,
-		),
-		err.Error())
+	if err == nil {
+		return false
+	}
 
+	matchError, _ := regexp.MatchString(errorRegex, err.Error())
 	return errors.Is(err, syscall.ECONNRESET) ||
 		errors.Is(err, syscall.ECONNREFUSED) ||
 		errors.Is(err, syscall.ECONNABORTED) ||
@@ -2251,7 +2248,7 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 	// the log file and the log processor moves things forward.
 
 	// Non-network errors don't concern this function
-	if err == nil || !isNetworkError(err) {
+	if !isNetworkError(err) {
 		return err
 	}
 
