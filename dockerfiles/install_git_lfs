@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -exo pipefail
+
+SCRIPTPATH="$(
+        cd "$(dirname "$0")"
+        pwd -P
+)"
+
+downloadURL="https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-${ARCH}-v${GIT_LFS_VERSION}.tar.gz"
+destFile="/tmp/git-lfs.tar.gz"
+
+curl -L "$downloadURL" -o "$destFile"
+
+if [[ ! -z "$GIT_LFS_CHECKSUM" ]]; then
+        echo "$GIT_LFS_CHECKSUM $destFile" >/tmp/checksums
+        sha256sum -c /tmp/checksums
+elif [[ -f "${SCRIPTPATH}/checksums-$ARCH" ]]; then
+        # the checksum file was created elsewhere
+        sha256sum -c -w "${SCRIPTPATH}/checksums-${ARCH}"
+else
+        echo "GIT_LFS_CHECKSUM not defined; skipping checksum check."
+fi
+
+tar -xzf /tmp/git-lfs.tar.gz -C /tmp/
+cp /tmp/git-lfs-${GIT_LFS_VERSION}/git-lfs /usr/bin/git-lfs
+rm -rf /tmp/git-lfs*
+git lfs install --skip-repo
+git lfs version
