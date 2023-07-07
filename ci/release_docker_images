@@ -198,9 +198,9 @@ for arch in "${TARGET_ARCHS[@]}"; do
     writeChecksum 'GIT_LFS' "${arch}" '/tmp/git-lfs.tar.gz'
 done
 
-cp "${runner_home_dir}/install-deps" "${runner_home_dir}/ubuntu/"
-cp "${runner_home_dir}/install-deps" "${runner_home_dir}/alpine/"
-cp "${runner_home_dir}/install-deps" "${runner_home_dir}/ubi-fips/"
+cp "${runner_home_dir}/install-deps" "${runner_home_dir}/../install_git_lfs" "${runner_home_dir}/ubuntu/"
+cp "${runner_home_dir}/install-deps" "${runner_home_dir}/../install_git_lfs" "${runner_home_dir}/alpine/"
+cp "${runner_home_dir}/install-deps" "${runner_home_dir}/../install_git_lfs" "${runner_home_dir}/ubi-fips/"
 for arch in "${TARGET_ARCHS[@]}"; do
     deb_arch=$(if [ "${arch}" == "ppc64le" ]; then echo "ppc64el"; else echo "${arch}"; fi)
     cp "${runner_home_dir}/checksums-${arch}" "out/deb/gitlab-runner_${deb_arch}.deb" \

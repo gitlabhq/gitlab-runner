@@ -3,11 +3,15 @@ ARG BASE_IMAGE
 FROM $BASE_IMAGE
 
 ARG TARGETPLATFORM
+ARG ARCH
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
+ARG GIT_LFS_VERSION
 
 COPY gitlab-runner_*.rpm checksums-* install-deps install-gitlab-runner /tmp/
+RUN microdnf install --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs \
+        wget tar openssl
 RUN /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}"
 RUN rm -rf /tmp/* /etc/gitlab-runner/.runner_system_id
 
@@ -17,6 +21,9 @@ COPY --from=0 / /
 COPY --chmod=777 entrypoint /
 
 ENV FIPS_ENABLED=1
+
+RUN microdnf install --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs \
+        openssl # required by gitlab-runner
 
 ENV HOME /home/gitlab-runner
 
