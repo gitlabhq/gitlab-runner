@@ -274,18 +274,32 @@ release_docker_images:
 	# Releasing GitLab Runner images
 	@./ci/release_docker_images
 
-sync_docker_images: export SYNC_DOCKER_IMAGES_CONCURRENCY ?= 3
-sync_docker_images: export SYNC_DOCKER_IMAGES_COMMAND ?= skopeo
-sync_docker_images: export SYNC_DOCKER_IMAGES_FILTERS ?=
-sync_docker_images: export SYNC_DOCKER_IMAGES_IMAGES ?=
+test_go_scripts: export LIST ?= sync-docker-images
+test_go_scripts:
+	cd scripts && find . -name "*_test.go" -execdir go test -v ./... \;
+
+run_go_script: export SCRIPT_NAME ?=
+run_go_script: export DEFAULT_ARGS ?=
+run_go_script: export ARGS ?=
+run_go_script:
+	@cd scripts && go run $(SCRIPT_NAME)/main.go \
+		$(DEFAULT_ARGS) \
+		$(ARGS)
+
+sync_docker_images: export ARGS ?= --concurrency=3
 sync_docker_images:
-	@cd ./scripts/sync-docker-images && \
-		go run . \
-		-version $(REVISION) \
-		-concurrency $(SYNC_DOCKER_IMAGES_CONCURRENCY) \
-		-command "$(SYNC_DOCKER_IMAGES_COMMAND)" \
-		-filters "$(SYNC_DOCKER_IMAGES_FILTERS)" \
-		-images "$(SYNC_DOCKER_IMAGES_IMAGES)"
+	@$(MAKE) \
+		SCRIPT_NAME=sync-docker-images \
+		DEFAULT_ARGS="--revision $(REVISION)" \
+		ARGS="$(ARGS)" \
+		run_go_script
+
+packagecloud_releases: export ARGS ?=
+packagecloud_releases:
+	@$(MAKE) \
+		SCRIPT_NAME=packagecloud-releases \
+		ARGS="$(ARGS)" \
+		run_go_script
 
 release_helper_docker_images:
 	# Releasing GitLab Runner Helper images

@@ -201,13 +201,24 @@ func newImageSyncPair(sourceRegistry, toRegistry string, fromImg, toImg image, t
 	}
 }
 
+type commaSeparatedList []string
+
+func (c *commaSeparatedList) UnmarshalText(b []byte) error {
+	values := lo.Map(strings.Split(string(b), ","), func(val string, _ int) string {
+		return strings.TrimSpace(val)
+	})
+	*c = values
+
+	return nil
+}
+
 type args struct {
-	Version     string   `arg:"--version, required" help:"Version or commit of images to sync e.g. (e.g. v16.0.0 | a54hf6)"`
-	Concurrency int      `arg:"--concurrency" help:"The amount of concurrent image pushes to be done" default:"1"`
-	Command     []string `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
-	Images      []image  `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
-	Filters     []string `arg:"--filters" help:"Comma separated list of tag filters to be applied to the images to be synced. Empty by default"`
-	DryRun      bool     `arg:"-n,--dry-run" help:"Print commands to be run without actually running them"`
+	Revision    string             `arg:"--revision, required" help:"Revision or commit of images to sync e.g. (e.g. v16.0.0 | a54hf6)"`
+	Concurrency int                `arg:"--concurrency" help:"The amount of concurrent image pushes to be done" default:"1"`
+	Command     commaSeparatedList `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
+	Images      commaSeparatedList `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
+	Filters     commaSeparatedList `arg:"--filters" help:"Comma separated list of tag filters to be applied to the images to be synced. Empty by default"`
+	DryRun      bool               `arg:"-n,--dry-run" help:"Print commands to be run without actually running them"`
 }
 
 func main() {
@@ -231,15 +242,15 @@ func parseArgs() args {
 	}
 
 	if len(args.Images) == 0 {
-		args.Images = []image{"runner", "helper"}
+		args.Images = []string{"runner", "helper"}
 	}
 
 	for i, img := range args.Images {
 		switch img {
 		case "runner":
-			args.Images[i] = gitlabRunnerImage
+			args.Images[i] = string(gitlabRunnerImage)
 		case "helper":
-			args.Images[i] = gitlabRunnerHelperImage
+			args.Images[i] = string(gitlabRunnerHelperImage)
 		}
 	}
 
@@ -331,11 +342,11 @@ func syncImages(args args) error {
 	}
 
 	for img, target := range targetImages {
-		if !lo.Contains(args.Images, img) {
+		if !lo.Contains(args.Images, string(img)) {
 			continue
 		}
 
-		tags := generateTags(args.Filters, args.Version, target.flavors)
+		tags := generateTags(args.Filters, args.Revision, target.flavors)
 		for _, registry := range registries {
 			for _, tag := range tags {
 				images = append(images, newImageSyncPair(sourceRegistry, registry, img, target.destinationImage, tag))

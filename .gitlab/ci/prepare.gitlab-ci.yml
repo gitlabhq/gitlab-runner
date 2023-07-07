@@ -100,3 +100,13 @@ prepare runner-incept variables:
   artifacts:
     reports:
       dotenv: incept.env
+
+test ci scripts:
+  stage: prepare
+  extends:
+    - .rules:prepare:test-ci-scripts:merge-requests
+  needs:
+    - job: "prepare ci image"
+      optional: true
+  script:
+    - make test_go_scripts
