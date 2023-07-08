@@ -1083,7 +1083,7 @@ func TestRunCommand_configReloadingRegression(t *testing.T) {
 	defer cancel()
 
 	// Counting discovered configuration reloads
-	configReloadedCount := 0
+	var configReloadedCount atomic.Int64
 	done := make(chan struct{})
 	go func() {
 		for {
@@ -1092,7 +1092,7 @@ func TestRunCommand_configReloadingRegression(t *testing.T) {
 				close(done)
 				return
 			case <-c.configReloaded:
-				configReloadedCount++
+				configReloadedCount.Add(1)
 			default:
 				c.updateConfig()
 			}
@@ -1114,9 +1114,9 @@ func TestRunCommand_configReloadingRegression(t *testing.T) {
 	cancel()
 	for len(c.configReloaded) > 0 {
 		<-c.configReloaded
-		configReloadedCount++
+		configReloadedCount.Add(1)
 	}
 	<-done
 
-	assert.Equal(t, 3, configReloadedCount)
+	assert.Equal(t, int64(3), configReloadedCount.Load())
 }

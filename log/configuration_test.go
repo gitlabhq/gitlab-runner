@@ -99,6 +99,7 @@ func TestHandleCliCtx(t *testing.T) {
 
 			defer prepareFakeConfiguration(logger)()
 			defer helpers.MakeFatalToPanic()()
+			defer Configuration().disableGoroutinesDump()
 
 			testFunc := func() {
 				testCommandRun(testCase.args...)
