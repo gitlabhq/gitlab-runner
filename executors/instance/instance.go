@@ -20,7 +20,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	if options.Config.Instance.UseCommonBuildDir {
 		// a common build directory can only be used if the build is isolated
 		// max use count 1 or if VM isolation is on.
-		if e.Config.Autoscaler.VMIsolation.Enabled || e.Config.Autoscaler.MaxUseCount == 1 {
+		if options.Config.Autoscaler.VMIsolation.Enabled || options.Config.Autoscaler.MaxUseCount == 1 {
 			e.SharedBuildsDir = false
 		} else {
 			e.Warningln("use_common_build_dir has no effect: requires vm isolation or max_use_count = 1")
