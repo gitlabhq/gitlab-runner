@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/alexflint/go-arg"
 	"github.com/samber/lo"
@@ -8,14 +9,55 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
-type arch string
-type variant string
+type args struct {
+	Revision    string             `arg:"--revision, required" help:"Revision or commit of images to sync e.g. (e.g. v16.0.0 | a54hf6)"`
+	Concurrency int                `arg:"--concurrency" help:"The amount of concurrent image pushes to be done" default:"1"`
+	Command     commaSeparatedList `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
+	Images      commaSeparatedList `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
+	Filters     commaSeparatedList `arg:"--filters" help:"Comma separated list of tag regexp filters to be applied to the images to be synced. Empty by default"`
+	IsLatest    bool               `arg:"--is-latest" help:"Also sync -latest images"`
+	DryRun      bool               `arg:"-n,--dry-run" help:"Print commands to be run without actually running them"`
+
+	compiledFilters []*regexp.Regexp
+}
+
+func (a *args) compileFilters() {
+	a.compiledFilters = lo.Map(a.Filters, func(filter string, _ int) *regexp.Regexp {
+		return regexp.MustCompile(filter)
+	})
+}
+
 type image string
 type registry string
+
+type registryInfo struct {
+	url string
+	env string
+}
+
+type targetImage struct {
+	variants    []string
+	destination image
+	from        image
+}
+
+type tag struct {
+	name        string
+	destination image
+	from        image
+}
+
+type imageSyncPair struct {
+	from, to string
+}
+
+type commaSeparatedList []string
 
 const (
 	gitlabRunnerImage       image = "gitlab-runner"
@@ -23,19 +65,6 @@ const (
 
 	gitlabRunnerDestinationImage       image = "gitlab-runner"
 	gitlabRunnerHelperDestinationImage image = "gitlab-runner-helper"
-
-	archARM     arch = "arm"
-	archARM64   arch = "arm64"
-	archPPC64LE arch = "ppc64le"
-	archS390X   arch = "s390x"
-	archX8664   arch = "x86_64"
-
-	variantPWSH           variant = "pwsh"
-	variantServerCore1809 variant = "servercore1809"
-	variantServerCore21H2 variant = "servercore21H2"
-
-	variantNanoServer1809 variant = "nanoserver1809"
-	variantNanoServer21H2 variant = "nanoserver21H2"
 
 	registryDockerHub registry = "DockerHub"
 	registryECR       registry = "ECR"
@@ -55,6 +84,20 @@ const (
 var (
 	sourceRegistry        = envOr(envCIRegistryImage, "registry.gitlab.com/gitlab-org")
 	ecrPublicRegistryUser = envOr(envECRPublicUser, "AWS")
+
+	targetRegistries = map[registry]registryInfo{
+		registryDockerHub: {
+			url: envOr(envDockerHubRegistry, "registry.hub.docker.com/gitlab"),
+			env: envPushToDockerHub,
+		},
+		registryECR: {
+			url: envOr(envECRPublicRegistry, "public.ecr.aws/gitlab"),
+			env: envPushToECR,
+		},
+	}
+
+	runnerVariantsTemplatePath = "runner_variants_list.tpl"
+	helperVariantsTemplatePath = "runner_helper_variants_list.tpl"
 )
 
 func envOr(env, fallback string) string {
@@ -65,153 +108,62 @@ func envOr(env, fallback string) string {
 	return fallback
 }
 
-var targetRegistries = map[registry]string{
-	registryDockerHub: envOr(envDockerHubRegistry, "registry.hub.docker.com/gitlab"),
-	registryECR:       envOr(envECRPublicRegistry, "public.ecr.aws/gitlab"),
-}
-
-var supportedArchitectures = []arch{
-	archARM, archARM64, archPPC64LE, archS390X, archX8664,
-}
-
-func variantMapX8664toPWSH(arch arch) []variant {
-	if arch == archX8664 {
-		return []variant{variantPWSH}
+func getVariantsFromTemplate(path string, revision string) ([]string, error) {
+	tpl, err := template.New(path).ParseFiles(path)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
-}
-
-type flavor struct {
-	name            string
-	compatibleArchs []arch
-	variantsMap     func(arch arch) []variant
-}
-
-func (f flavor) format(version string, arch arch, variant variant) string {
-	if arch == "" {
-		return f.formatRunnerTag(version)
+	type context struct {
+		Revision string
 	}
 
-	return f.formatHelperTag(version, arch, variant)
-}
+	var out bytes.Buffer
 
-func (f flavor) formatRunnerTag(version string) string {
-	// latest is a special tag
-	if f.name == "latest" {
-		return "latest"
+	if err := tpl.Execute(&out, context{Revision: revision}); err != nil {
+		return nil, err
 	}
 
-	return fmt.Sprintf("%s-%s", f.name, version)
+	return lo.Filter(strings.Split(out.String(), "\n"), func(variant string, _ int) bool {
+		// Ignore empty lines and comments
+		return variant != "" && !strings.HasPrefix(variant, "#")
+	}), nil
 }
 
-func (f flavor) formatHelperTag(version string, arch arch, variant variant) string {
-	if f.name == "latest" {
-		return fmt.Sprintf("%s-latest", arch)
-	} else if f.name != "" && variant != "" {
-		return fmt.Sprintf("%s-%s-%s-%s", f.name, arch, version, variant)
-	} else if f.name == "" && variant != "" {
-		return fmt.Sprintf("%s-%s-%s", arch, version, variant)
-	} else if f.name == "" && variant == "" {
-		return fmt.Sprintf("%s-%s", arch, version)
+func generateTargetImages(args *args) (map[image]targetImage, error) {
+	runnerVariants, err := getVariantsFromTemplate(runnerVariantsTemplatePath, args.Revision)
+	if err != nil {
+		return nil, err
 	}
 
-	return fmt.Sprintf("%s-%s-%s", f.name, arch, version)
-}
+	helperVariants, err := getVariantsFromTemplate(helperVariantsTemplatePath, args.Revision)
+	if err != nil {
+		return nil, err
+	}
 
-var runnerFlavors = []flavor{
-	{name: "alpine"},
-	{name: "alpine3.15"},
-	{name: "alpine3.16"},
-	{name: "alpine3.17"},
-	{name: "alpine3.18"},
-	{name: "ubi-fips"},
-	{name: "ubuntu"},
-	{name: "latest"},
-}
+	if args.IsLatest {
+		runnerVariants = append(runnerVariants, "latest")
 
-var helperFlavors = []flavor{
-	{
-		name:            "alpine-latest",
-		compatibleArchs: supportedArchitectures,
-	},
-	{
-		name:            "latest",
-		compatibleArchs: supportedArchitectures,
-	},
-	{
-		name:            "alpine3.15",
-		compatibleArchs: supportedArchitectures,
-		variantsMap:     variantMapX8664toPWSH,
-	},
-	{
-		name:            "alpine3.16",
-		compatibleArchs: supportedArchitectures,
-		variantsMap:     variantMapX8664toPWSH,
-	},
-	{
-		name:            "alpine3.17",
-		compatibleArchs: supportedArchitectures,
-		variantsMap:     variantMapX8664toPWSH,
-	},
-	{
-		name:            "alpine3.18",
-		compatibleArchs: supportedArchitectures,
-		variantsMap:     variantMapX8664toPWSH,
-	},
-	{
-		name:            "ubuntu",
-		compatibleArchs: supportedArchitectures,
-		variantsMap:     variantMapX8664toPWSH,
-	},
-	{
-		name:            "ubi-fips",
-		compatibleArchs: []arch{archX8664},
-	},
-	{
-		name:            "",
-		compatibleArchs: supportedArchitectures,
-		variantsMap: func(arch arch) []variant {
-			if arch == archX8664 {
-				return []variant{
-					variantServerCore1809,
-					variantServerCore21H2,
-					variantNanoServer1809,
-					variantNanoServer21H2,
-				}
-			}
+		helperVariantsLatest, err := getVariantsFromTemplate(helperVariantsTemplatePath, "latest")
+		if err != nil {
+			return nil, err
+		}
 
-			return nil
+		helperVariants = append(helperVariants, helperVariantsLatest...)
+	}
+
+	return map[image]targetImage{
+		gitlabRunnerImage: {
+			variants:    runnerVariants,
+			destination: gitlabRunnerDestinationImage,
+			from:        gitlabRunnerImage,
 		},
-	},
-}
-
-type targetImage struct {
-	flavors     []flavor
-	destination image
-	from        image
-}
-
-type tag struct {
-	name  string
-	image targetImage
-}
-
-var targetImages = map[image]targetImage{
-	gitlabRunnerImage: {
-		flavors:     runnerFlavors,
-		destination: gitlabRunnerDestinationImage,
-		from:        gitlabRunnerImage,
-	},
-	gitlabRunnerHelperImage: {
-		flavors:     helperFlavors,
-		destination: gitlabRunnerHelperDestinationImage,
-		from:        gitlabRunnerHelperImage,
-	},
-}
-
-type imageSyncPair struct {
-	from, to string
+		gitlabRunnerHelperImage: {
+			variants:    helperVariants,
+			destination: gitlabRunnerHelperDestinationImage,
+			from:        gitlabRunnerHelperImage,
+		},
+	}, nil
 }
 
 func newImageSyncPair(sourceRegistry, toRegistry string, fromImg, toImg image, tag string) imageSyncPair {
@@ -220,8 +172,6 @@ func newImageSyncPair(sourceRegistry, toRegistry string, fromImg, toImg image, t
 		to:   fmt.Sprintf("%s/%s:%s", toRegistry, toImg, tag),
 	}
 }
-
-type commaSeparatedList []string
 
 func (c *commaSeparatedList) UnmarshalText(b []byte) error {
 	values := lo.Map(strings.Split(string(b), ","), func(val string, _ int) string {
@@ -232,16 +182,6 @@ func (c *commaSeparatedList) UnmarshalText(b []byte) error {
 	return nil
 }
 
-type args struct {
-	Revision    string             `arg:"--revision, required" help:"Revision or commit of images to sync e.g. (e.g. v16.0.0 | a54hf6)"`
-	Concurrency int                `arg:"--concurrency" help:"The amount of concurrent image pushes to be done" default:"1"`
-	Command     commaSeparatedList `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
-	Images      commaSeparatedList `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
-	Filters     commaSeparatedList `arg:"--filters" help:"Comma separated list of tag filters to be applied to the images to be synced. Empty by default"`
-	IsLatest    bool               `arg:"--is-latest" help:"Also sync -latest images"`
-	DryRun      bool               `arg:"-n,--dry-run" help:"Print commands to be run without actually running them"`
-}
-
 func main() {
 	args := parseArgs()
 
@@ -250,7 +190,7 @@ func main() {
 	}
 }
 
-func parseArgs() args {
+func parseArgs() *args {
 	var args args
 
 	arg.MustParse(&args)
@@ -275,12 +215,14 @@ func parseArgs() args {
 		}
 	}
 
+	args.compileFilters()
+
 	log.Println(fmt.Sprintf("Will sync images: %+v", args.Images))
 
-	return args
+	return &args
 }
 
-func runCmd(args args, cmd *exec.Cmd) error {
+func runCmd(args *args, cmd *exec.Cmd) error {
 	if args.DryRun {
 		fmt.Printf("Cmd: %s\n", cmd)
 		return nil
@@ -289,7 +231,7 @@ func runCmd(args args, cmd *exec.Cmd) error {
 	}
 }
 
-func outputCmd(args args, cmd *exec.Cmd) ([]byte, error) {
+func outputCmd(args *args, cmd *exec.Cmd) ([]byte, error) {
 	if args.DryRun {
 		fmt.Printf("Cmd: %s\n", cmd)
 		return nil, nil
@@ -303,90 +245,65 @@ func generateImageSyncPairs(tags []tag, registries map[registry]string) []imageS
 
 	for _, registry := range registries {
 		for _, tag := range tags {
-			images = append(images, newImageSyncPair(sourceRegistry, registry, tag.image.from, tag.image.destination, tag.name))
+			images = append(images, newImageSyncPair(sourceRegistry, registry, tag.from, tag.destination, tag.name))
 		}
 	}
 
 	return images
 }
 
-func generateAllTags(args args) []tag {
-	var tags []tag
-
-	versions := []string{args.Revision}
-	if args.IsLatest {
-		versions = append(versions, "latest")
+func generateAllTags(args *args) ([]tag, error) {
+	targets, err := generateTargetImages(args)
+	if err != nil {
+		return nil, err
 	}
 
-	for img, target := range targetImages {
+	var tags []tag
+
+	for img, target := range targets {
 		if !lo.Contains(args.Images, string(img)) {
 			continue
 		}
 
-		for _, v := range versions {
-			tags = append(tags, lo.Map(generateFlavorTags(args.Filters, v, target.flavors), func(tagName string, _ int) tag {
-				return tag{
-					name:  tagName,
-					image: target,
-				}
-			})...)
+		for _, variant := range target.variants {
+			if !filterVariant(variant, args.compiledFilters) {
+				continue
+			}
+
+			tags = append(tags, tag{
+				name:        variant,
+				from:        target.from,
+				destination: target.destination,
+			})
 		}
 	}
 
-	return tags
+	return tags, nil
 }
 
-func generateFlavorTags(filters []string, version string, flavors []flavor) []string {
-	var tags []string
-
-	for _, f := range flavors {
-		if len(f.compatibleArchs) == 0 {
-			tags = append(tags, f.format(version, "", ""))
-		}
-
-		for _, arch := range f.compatibleArchs {
-			tags = append(tags, f.format(version, arch, ""))
-
-			if f.variantsMap != nil {
-				if variants := f.variantsMap(arch); len(variants) > 0 {
-					for _, variant := range variants {
-						tags = append(tags, f.format(version, arch, variant))
-					}
-				}
-			}
+func filterVariant(variant string, filters []*regexp.Regexp) bool {
+	for _, filter := range filters {
+		if !filter.MatchString(variant) {
+			return false
 		}
 	}
 
-	if len(filters) == 0 {
-		return tags
-	}
-
-	return lo.Filter(tags, func(tag string, _ int) bool {
-		return lo.SomeBy(filters, func(filter string) bool {
-			return strings.Contains(tag, filter)
-		})
-	})
+	return true
 }
 
 func filterTargetRegistries() map[registry]string {
-	isEnv := func(env string) bool {
-		b, _ := strconv.ParseBool(os.Getenv(env))
-		return b
-	}
-
 	registries := make(map[registry]string)
-	if isEnv(envPushToDockerHub) {
-		registries[registryDockerHub] = targetRegistries[registryDockerHub]
-	}
 
-	if isEnv(envPushToECR) {
-		registries[registryECR] = targetRegistries[registryECR]
+	for registry, info := range targetRegistries {
+		if enabled, _ := strconv.ParseBool(os.Getenv(info.env)); enabled {
+			registries[registry] = info.url
+		}
 	}
 
 	return registries
 }
 
-func syncImages(args args) error {
+func syncImages(args *args) error {
 	registries := filterTargetRegistries()
 	if len(registries) == 0 {
 		log.Printf("Warn: No registries to push to, check the values of %q and %q\n", envPushToDockerHub, envPushToECR)
@@ -398,7 +315,10 @@ func syncImages(args args) error {
 		return err
 	}
 
-	tags := generateAllTags(args)
+	tags, err := generateAllTags(args)
+	if err != nil {
+		return err
+	}
 
 	images := generateImageSyncPairs(tags, registries)
 
@@ -427,7 +347,7 @@ func syncImages(args args) error {
 	return pool.Wait()
 }
 
-func loginRegistries(args args, registries map[registry]string) error {
+func loginRegistries(args *args, registries map[registry]string) error {
 	for registry, addr := range registries {
 		log.Printf("Logging into %s:%s", registry, addr)
 		switch registry {
@@ -459,7 +379,7 @@ func loginRegistries(args args, registries map[registry]string) error {
 	return nil
 }
 
-func loginRegistry(args args, addr string, username, password string) error {
+func loginRegistry(args *args, addr string, username, password string) error {
 	cmd := buildCmd(
 		append(args.Command, []string{
 			"login",

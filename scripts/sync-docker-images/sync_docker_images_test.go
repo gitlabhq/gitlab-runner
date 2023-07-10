@@ -113,18 +113,23 @@ func TestParseArgs(t *testing.T) {
 				os.Args = append(os.Args, fmt.Sprintf("--%s=%s", arg.A, arg.B))
 			}
 
-			parsedArgs := parseArgs()
+			parsedArgs := *parseArgs()
+
+			compiledFilters := parsedArgs.compiledFilters
+			parsedArgs.compiledFilters = nil
 
 			assert.Equal(t, expectedArgs, parsedArgs)
+			assert.Len(t, compiledFilters, len(parsedArgs.Filters))
 		})
 	}
 }
 
 func TestGenerateTags(t *testing.T) {
 	tests := map[string]struct {
-		image              image
-		expectedImagesFile string
-		filter             string
+		image                image
+		expectedImagesFile   string
+		filter               string
+		shouldGenerateLatest bool
 	}{
 		"gitlab-runner": {
 			image:              gitlabRunnerImage,
@@ -133,12 +138,12 @@ func TestGenerateTags(t *testing.T) {
 		"gitlab-runner-helper": {
 			image:              gitlabRunnerHelperImage,
 			expectedImagesFile: "dockerhub_tags_gitlab_runner_helper_test.txt",
-			filter:             "v16.1.0",
+			filter:             `v16\.1\.0`,
 		},
 		"gitlab-runner-helper-latest": {
 			image:              gitlabRunnerHelperImage,
 			expectedImagesFile: "dockerhub_tags_gitlab_runner_helper_latest_test.txt",
-			filter:             "latest",
+			filter:             "(latest-pwsh|latest$|latest-servercore|latest-nanoserver)",
 		},
 	}
 
@@ -150,16 +155,20 @@ func TestGenerateTags(t *testing.T) {
 			f, err := os.ReadFile(filepath.Join(dir, tt.expectedImagesFile))
 			require.NoError(t, err)
 
-			args := args{
+			args := &args{
 				Revision: "v16.1.0",
 				Images:   commaSeparatedList{string(tt.image)},
+				IsLatest: true,
 			}
 
 			if tt.filter != "" {
 				args.Filters = commaSeparatedList{tt.filter}
 			}
 
-			tags := generateAllTags(args)
+			args.compileFilters()
+
+			tags, err := generateAllTags(args)
+			require.NoError(t, err)
 
 			expectedTags := lo.Filter(strings.Split(string(f), "\n"), func(tag string, _ int) bool {
 				return tag != ""
