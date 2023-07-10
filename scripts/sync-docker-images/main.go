@@ -34,6 +34,9 @@ const (
 	variantServerCore1809 variant = "servercore1809"
 	variantServerCore21H2 variant = "servercore21H2"
 
+	variantNanoServer1809 variant = "nanoserver1809"
+	variantNanoServer21H2 variant = "nanoserver21H2"
+
 	registryDockerHub registry = "DockerHub"
 	registryECR       registry = "ECR"
 
@@ -149,10 +152,12 @@ var helperFlavors = []flavor{
 	{
 		name:            "alpine3.17",
 		compatibleArchs: supportedArchitectures,
+		variantsMap:     variantMapX8664toPWSH,
 	},
 	{
 		name:            "alpine3.18",
 		compatibleArchs: supportedArchitectures,
+		variantsMap:     variantMapX8664toPWSH,
 	},
 	{
 		name:            "ubuntu",
@@ -168,7 +173,12 @@ var helperFlavors = []flavor{
 		compatibleArchs: supportedArchitectures,
 		variantsMap: func(arch arch) []variant {
 			if arch == archX8664 {
-				return []variant{variantServerCore1809, variantServerCore21H2}
+				return []variant{
+					variantServerCore1809,
+					variantServerCore21H2,
+					variantNanoServer1809,
+					variantNanoServer21H2,
+				}
 			}
 
 			return nil
@@ -176,17 +186,27 @@ var helperFlavors = []flavor{
 	},
 }
 
-var targetImages = map[image]struct {
-	flavors          []flavor
-	destinationImage image
-}{
+type targetImage struct {
+	flavors     []flavor
+	destination image
+	from        image
+}
+
+type tag struct {
+	name  string
+	image targetImage
+}
+
+var targetImages = map[image]targetImage{
 	gitlabRunnerImage: {
-		flavors:          runnerFlavors,
-		destinationImage: gitlabRunnerDestinationImage,
+		flavors:     runnerFlavors,
+		destination: gitlabRunnerDestinationImage,
+		from:        gitlabRunnerImage,
 	},
 	gitlabRunnerHelperImage: {
-		flavors:          helperFlavors,
-		destinationImage: gitlabRunnerHelperDestinationImage,
+		flavors:     helperFlavors,
+		destination: gitlabRunnerHelperDestinationImage,
+		from:        gitlabRunnerHelperImage,
 	},
 }
 
@@ -218,6 +238,7 @@ type args struct {
 	Command     commaSeparatedList `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
 	Images      commaSeparatedList `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
 	Filters     commaSeparatedList `arg:"--filters" help:"Comma separated list of tag filters to be applied to the images to be synced. Empty by default"`
+	IsLatest    bool               `arg:"--is-latest" help:"Also sync -latest images"`
 	DryRun      bool               `arg:"-n,--dry-run" help:"Print commands to be run without actually running them"`
 }
 
@@ -277,7 +298,45 @@ func outputCmd(args args, cmd *exec.Cmd) ([]byte, error) {
 	}
 }
 
-func generateTags(filters []string, version string, flavors []flavor) []string {
+func generateImageSyncPairs(tags []tag, registries map[registry]string) []imageSyncPair {
+	var images []imageSyncPair
+
+	for _, registry := range registries {
+		for _, tag := range tags {
+			images = append(images, newImageSyncPair(sourceRegistry, registry, tag.image.from, tag.image.destination, tag.name))
+		}
+	}
+
+	return images
+}
+
+func generateAllTags(args args) []tag {
+	var tags []tag
+
+	versions := []string{args.Revision}
+	if args.IsLatest {
+		versions = append(versions, "latest")
+	}
+
+	for img, target := range targetImages {
+		if !lo.Contains(args.Images, string(img)) {
+			continue
+		}
+
+		for _, v := range versions {
+			tags = append(tags, lo.Map(generateFlavorTags(args.Filters, v, target.flavors), func(tagName string, _ int) tag {
+				return tag{
+					name:  tagName,
+					image: target,
+				}
+			})...)
+		}
+	}
+
+	return tags
+}
+
+func generateFlavorTags(filters []string, version string, flavors []flavor) []string {
 	var tags []string
 
 	for _, f := range flavors {
@@ -328,8 +387,6 @@ func filterTargetRegistries() map[registry]string {
 }
 
 func syncImages(args args) error {
-	var images []imageSyncPair
-
 	registries := filterTargetRegistries()
 	if len(registries) == 0 {
 		log.Printf("Warn: No registries to push to, check the values of %q and %q\n", envPushToDockerHub, envPushToECR)
@@ -341,18 +398,9 @@ func syncImages(args args) error {
 		return err
 	}
 
-	for img, target := range targetImages {
-		if !lo.Contains(args.Images, string(img)) {
-			continue
-		}
+	tags := generateAllTags(args)
 
-		tags := generateTags(args.Filters, args.Revision, target.flavors)
-		for _, registry := range registries {
-			for _, tag := range tags {
-				images = append(images, newImageSyncPair(sourceRegistry, registry, img, target.destinationImage, tag))
-			}
-		}
-	}
+	images := generateImageSyncPairs(tags, registries)
 
 	pool := pool.New().WithErrors().WithMaxGoroutines(args.Concurrency)
 

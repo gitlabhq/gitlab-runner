@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -113,6 +116,64 @@ func TestParseArgs(t *testing.T) {
 			parsedArgs := parseArgs()
 
 			assert.Equal(t, expectedArgs, parsedArgs)
+		})
+	}
+}
+
+func TestGenerateTags(t *testing.T) {
+	tests := map[string]struct {
+		image              image
+		expectedImagesFile string
+		filter             string
+	}{
+		"gitlab-runner": {
+			image:              gitlabRunnerImage,
+			expectedImagesFile: "dockerhub_tags_gitlab_runner_test.txt",
+		},
+		"gitlab-runner-helper": {
+			image:              gitlabRunnerHelperImage,
+			expectedImagesFile: "dockerhub_tags_gitlab_runner_helper_test.txt",
+			filter:             "v16.1.0",
+		},
+		"gitlab-runner-helper-latest": {
+			image:              gitlabRunnerHelperImage,
+			expectedImagesFile: "dockerhub_tags_gitlab_runner_helper_latest_test.txt",
+			filter:             "latest",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			dir, err := os.Getwd()
+			require.NoError(t, err)
+
+			f, err := os.ReadFile(filepath.Join(dir, tt.expectedImagesFile))
+			require.NoError(t, err)
+
+			args := args{
+				Revision: "v16.1.0",
+				Images:   commaSeparatedList{string(tt.image)},
+			}
+
+			if tt.filter != "" {
+				args.Filters = commaSeparatedList{tt.filter}
+			}
+
+			tags := generateAllTags(args)
+
+			expectedTags := lo.Filter(strings.Split(string(f), "\n"), func(tag string, _ int) bool {
+				return tag != ""
+			})
+
+			for _, tag := range tags {
+				assert.True(t, lo.Contains(expectedTags, tag.name), "expected %s to be in expected tags", tag.name)
+			}
+
+			for _, expectedTag := range expectedTags {
+				assert.True(t, lo.ContainsBy(tags, func(t tag) bool {
+					return t.name == expectedTag
+				}), "expected %s to be in generated tags", expectedTag)
+			}
 		})
 	}
 }
