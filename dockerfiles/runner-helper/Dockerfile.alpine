@@ -10,9 +10,7 @@ ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 # hadolint ignore=DL3018
 RUN apk update && \
     apk upgrade --no-cache && \
-    apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
-    --no-cache -fu ca-certificates curl git busybox zlib pcre2 && \
-    apk add --no-cache bash dumb-init miniperl \
+    apk add --no-cache -u ca-certificates curl git busybox zlib pcre2 bash dumb-init miniperl \
     && ln -s miniperl /usr/bin/perl
 
 ARG GIT_LFS_VERSION
