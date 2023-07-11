@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,13 +45,13 @@ type registryInfo struct {
 type targetImage struct {
 	variants    []string
 	destination image
-	from        image
+	source      image
 }
 
 type tag struct {
 	name        string
 	destination image
-	from        image
+	source      image
 }
 
 type imageSyncPair struct {
@@ -79,6 +80,7 @@ const (
 	envDockerHubRegistry = "DOCKER_HUB_REGISTRY"
 	envDockerHubUser     = "DOCKER_HUB_USER"
 	envDockerHubPassword = "DOCKER_HUB_PASSWORD"
+	envIsLatest          = "IS_LATEST"
 )
 
 var (
@@ -108,19 +110,25 @@ func envOr(env, fallback string) string {
 	return fallback
 }
 
-func getVariantsFromTemplate(path string, revision string) ([]string, error) {
-	tpl, err := template.New(path).ParseFiles(path)
+func getVariantsFromTemplate(path string, revision string, isLatest bool) ([]string, error) {
+	fullpath := path
+	if _, err := os.Stat(fullpath); os.IsNotExist(err) {
+		fullpath = filepath.Join("sync-docker-images", path)
+	}
+
+	tpl, err := template.New(path).ParseFiles(fullpath)
 	if err != nil {
 		return nil, err
 	}
 
 	type context struct {
 		Revision string
+		IsLatest bool
 	}
 
 	var out bytes.Buffer
 
-	if err := tpl.Execute(&out, context{Revision: revision}); err != nil {
+	if err := tpl.Execute(&out, context{Revision: revision, IsLatest: isLatest}); err != nil {
 		return nil, err
 	}
 
@@ -131,37 +139,26 @@ func getVariantsFromTemplate(path string, revision string) ([]string, error) {
 }
 
 func generateTargetImages(args *args) (map[image]targetImage, error) {
-	runnerVariants, err := getVariantsFromTemplate(runnerVariantsTemplatePath, args.Revision)
+	runnerVariants, err := getVariantsFromTemplate(runnerVariantsTemplatePath, args.Revision, args.IsLatest)
 	if err != nil {
 		return nil, err
 	}
 
-	helperVariants, err := getVariantsFromTemplate(helperVariantsTemplatePath, args.Revision)
+	helperVariants, err := getVariantsFromTemplate(helperVariantsTemplatePath, args.Revision, args.IsLatest)
 	if err != nil {
 		return nil, err
-	}
-
-	if args.IsLatest {
-		runnerVariants = append(runnerVariants, "latest")
-
-		helperVariantsLatest, err := getVariantsFromTemplate(helperVariantsTemplatePath, "latest")
-		if err != nil {
-			return nil, err
-		}
-
-		helperVariants = append(helperVariants, helperVariantsLatest...)
 	}
 
 	return map[image]targetImage{
 		gitlabRunnerImage: {
 			variants:    runnerVariants,
 			destination: gitlabRunnerDestinationImage,
-			from:        gitlabRunnerImage,
+			source:      gitlabRunnerImage,
 		},
 		gitlabRunnerHelperImage: {
 			variants:    helperVariants,
 			destination: gitlabRunnerHelperDestinationImage,
-			from:        gitlabRunnerHelperImage,
+			source:      gitlabRunnerHelperImage,
 		},
 	}, nil
 }
@@ -217,7 +214,11 @@ func parseArgs() *args {
 
 	args.compileFilters()
 
-	log.Println(fmt.Sprintf("Will sync images: %+v", args.Images))
+	if !args.IsLatest {
+		args.IsLatest, _ = strconv.ParseBool(envOr(envIsLatest, "false"))
+	}
+
+	log.Printf("Will sync images: %+v\n", args.Images)
 
 	return &args
 }
@@ -245,7 +246,7 @@ func generateImageSyncPairs(tags []tag, registries map[registry]string) []imageS
 
 	for _, registry := range registries {
 		for _, tag := range tags {
-			images = append(images, newImageSyncPair(sourceRegistry, registry, tag.from, tag.destination, tag.name))
+			images = append(images, newImageSyncPair(sourceRegistry, registry, tag.source, tag.destination, tag.name))
 		}
 	}
 
@@ -272,7 +273,7 @@ func generateAllTags(args *args) ([]tag, error) {
 
 			tags = append(tags, tag{
 				name:        variant,
-				from:        target.from,
+				source:      target.source,
 				destination: target.destination,
 			})
 		}

@@ -8,16 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-
-	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
 var images = []string{
-	common.TestAlpineImage,
-	common.TestAlpineNoRootImage,
-	common.TestDockerGitImage,
-	common.TestDockerDindImage,
+	"alpine:3.14.2",
+	"registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest",
+	"docker:23-git",
+	"docker:23-dind",
 }
 
 type rewriter struct {
@@ -59,7 +56,7 @@ func (rw *rewriter) rewriteInput() <-chan error {
 }
 
 func (rw *rewriter) writeToOutput(line string) {
-	fmt.Printf("%s[%s]%s %s", helpers.ANSI_YELLOW, rw.prefix, helpers.ANSI_RESET, line)
+	fmt.Printf("\u001B[0;33m[%s]\u001B[0;m %s", rw.prefix, line)
 }
 
 func newRewriter(ctx context.Context, prefix string) io.Writer {

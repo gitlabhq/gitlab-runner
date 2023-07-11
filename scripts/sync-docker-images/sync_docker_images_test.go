@@ -152,7 +152,7 @@ func TestGenerateTags(t *testing.T) {
 			dir, err := os.Getwd()
 			require.NoError(t, err)
 
-			f, err := os.ReadFile(filepath.Join(dir, tt.expectedImagesFile))
+			f, err := os.ReadFile(filepath.Join(dir, "testdata", tt.expectedImagesFile))
 			require.NoError(t, err)
 
 			args := &args{

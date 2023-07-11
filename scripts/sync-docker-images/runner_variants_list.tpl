@@ -7,7 +7,14 @@ alpine3.18-{{ .Revision }}
 alpine-{{ .Revision }}
 ubi-fips-{{ .Revision }}
 
-# The "latest" variant is added programatically in the code for Runner images only for simplicity
-# in the `generateTargetImages` function
-# latest
+{{ if .IsLatest }}
+ubuntu
+alpine3.15
+alpine3.16
+alpine3.17
+alpine3.18
+alpine
+ubi-fips
+latest
+{{ end }}
 

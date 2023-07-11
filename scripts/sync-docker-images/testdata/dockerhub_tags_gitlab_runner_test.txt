@@ -6,4 +6,11 @@ alpine3.17-v16.1.0
 alpine3.18-v16.1.0
 alpine-v16.1.0
 ubi-fips-v16.1.0
+ubuntu
+alpine3.15
+alpine3.16
+alpine3.17
+alpine3.18
+alpine
+ubi-fips
 latest

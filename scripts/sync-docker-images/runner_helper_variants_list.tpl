@@ -1,4 +1,3 @@
-# This template is rendered twice - once with the current revision and once with the `latest` revision
 ubuntu-x86_64-{{ .Revision }}-pwsh
 ubuntu-ppc64le-{{ .Revision }}
 ubuntu-s390x-{{ .Revision }}
@@ -44,3 +43,51 @@ x86_64-{{ .Revision }}-servercore1809
 x86_64-{{ .Revision }}-servercore21H2
 x86_64-{{ .Revision }}-nanoserver1809
 x86_64-{{ .Revision }}-nanoserver21H2
+
+{{ if .IsLatest }}
+ubuntu-x86_64-latest-pwsh
+ubuntu-ppc64le-latest
+ubuntu-s390x-latest
+ubuntu-arm64-latest
+ubuntu-arm-latest
+ubuntu-x86_64-latest
+alpine3.15-x86_64-latest-pwsh
+alpine3.16-x86_64-latest-pwsh
+alpine3.17-x86_64-latest-pwsh
+alpine3.18-x86_64-latest-pwsh
+alpine3.15-ppc64le-latest
+alpine3.15-s390x-latest
+alpine3.15-arm64-latest
+alpine3.15-arm-latest
+alpine3.15-x86_64-latest
+alpine3.16-ppc64le-latest
+alpine3.16-s390x-latest
+alpine3.16-arm64-latest
+alpine3.16-arm-latest
+alpine3.16-x86_64-latest
+alpine3.17-ppc64le-latest
+alpine3.17-s390x-latest
+alpine3.17-arm64-latest
+alpine3.17-arm-latest
+alpine3.17-x86_64-latest
+alpine3.18-ppc64le-latest
+alpine3.18-s390x-latest
+alpine3.18-arm64-latest
+alpine3.18-arm-latest
+alpine3.18-x86_64-latest
+alpine-latest-ppc64le-latest
+alpine-latest-s390x-latest
+alpine-latest-arm64-latest
+alpine-latest-arm-latest
+alpine-latest-x86_64-latest
+ppc64le-latest
+s390x-latest
+arm64-latest
+arm-latest
+x86_64-latest
+ubi-fips-x86_64-latest
+x86_64-latest-servercore1809
+x86_64-latest-servercore21H2
+x86_64-latest-nanoserver1809
+x86_64-latest-nanoserver21H2
+{{ end }}
