@@ -14,7 +14,6 @@ RUN microdnf update -y && \
             procps-ng \
             tar \
             gcc \
-            python3 \
             openssl-devel \
             gzip \
             libcurl-devel \
@@ -36,8 +35,8 @@ RUN wget https://github.com/git/git/archive/refs/tags/v${GIT_VERSION}.tar.gz && 
     tar xf v${GIT_VERSION}.tar.gz && \
     cd git-${GIT_VERSION} && \
     make configure && \
-    ./configure --prefix=/usr/local --with-python=`which python3` && \
-    PYTHON_PATH=`which python3` NO_TCLTK=1 make all && \
+    ./configure --prefix=/usr/local && \
+    NO_TCLTK=1 make all && \
     make install && \
     git --version && \
     rm -rf /git-${GIT_VERSION} && \
