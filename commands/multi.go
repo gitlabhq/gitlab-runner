@@ -135,7 +135,16 @@ type RunCommand struct {
 }
 
 func (mr *RunCommand) log() *logrus.Entry {
-	return logrus.WithField("builds", mr.buildsHelper.buildsCount())
+	config := mr.getConfig()
+	concurrent := 0
+	if config != nil {
+		concurrent = config.Concurrent
+	}
+
+	return logrus.WithFields(logrus.Fields{
+		"builds":     mr.buildsHelper.buildsCount(),
+		"max_builds": concurrent,
+	})
 }
 
 // Start is the method implementing `github.com/kardianos/service`.`Interface`
@@ -775,7 +784,19 @@ func (mr *RunCommand) processBuildOnRunner(
 
 	// Add build to list of builds to assign numbers
 	mr.buildsHelper.addBuild(build)
-	defer mr.buildsHelper.removeBuild(build)
+
+	fields := logrus.Fields{
+		"job":      build.ID,
+		"project":  build.JobInfo.ProjectID,
+		"repo_url": build.RepoCleanURL(),
+	}
+
+	mr.log().WithFields(fields).Infoln("Added job to processing list")
+	defer func() {
+		if mr.buildsHelper.removeBuild(build) {
+			mr.log().WithFields(fields).Infoln("Removed job from processing list")
+		}
+	}()
 
 	// Process the same runner by different worker again
 	// to speed up taking the builds
