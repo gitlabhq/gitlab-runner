@@ -370,7 +370,7 @@ type VirtualBoxConfig struct {
 type CustomConfig struct {
 	ConfigExec        string   `toml:"config_exec,omitempty" json:"config_exec" long:"config-exec" env:"CUSTOM_CONFIG_EXEC" description:"Executable that allows to inject configuration values to the executor"`
 	ConfigArgs        []string `toml:"config_args,omitempty" json:"config_args,omitempty" long:"config-args" description:"Arguments for the config executable"`
-	ConfigExecTimeout *int     `toml:"config_exec_timeout,omitempty" json:"config_exec_timeout" long:"config-exec-timeout" env:"CUSTOM_CONFIG_EXEC_TIMEOUT" description:"Timeout for the config executable (in seconds)"`
+	ConfigExecTimeout *int     `toml:"config_exec_timeout,omitempty" json:"config_exec_timeout,omitempty" long:"config-exec-timeout" env:"CUSTOM_CONFIG_EXEC_TIMEOUT" description:"Timeout for the config executable (in seconds)"`
 
 	PrepareExec        string   `toml:"prepare_exec,omitempty" json:"prepare_exec" long:"prepare-exec" env:"CUSTOM_PREPARE_EXEC" description:"Executable that prepares executor"`
 	PrepareArgs        []string `toml:"prepare_args,omitempty" json:"prepare_args,omitempty" long:"prepare-args" description:"Arguments for the prepare executable"`
