@@ -272,7 +272,7 @@ release_docker_images:
 
 test_go_scripts: export LIST ?= sync-docker-images
 test_go_scripts:
-	cd scripts && find . -name "*_test.go" -execdir go test -v ./... \;
+	cd scripts && find . -name "*_test.go" -execdir go test -v -tags scripts ./... \;
 
 run_go_script: export SCRIPT_NAME ?=
 run_go_script: export DEFAULT_ARGS ?=
