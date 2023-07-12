@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"io"
 	"os"
 	"os/exec"
 	"sync"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
