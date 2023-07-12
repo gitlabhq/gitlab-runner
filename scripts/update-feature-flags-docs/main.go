@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -12,8 +13,6 @@ import (
 )
 
 const (
-	docsFile = "./docs/configuration/feature-flags.md"
-
 	startPlaceholder = "<!-- feature_flags_list_start -->"
 	endPlaceholder   = "<!-- feature_flags_list_end -->"
 )
@@ -29,15 +28,22 @@ var ffTableTemplate = `{{ placeholder "start" }}
 `
 
 func main() {
-	fileContent := getFileContent()
+	root, _ := os.Getwd()
+	if len(os.Args) > 1 {
+		root = os.Args[1]
+	}
+
+	docsFilePath := filepath.Join(root, "docs/configuration/feature-flags.md")
+
+	fileContent := getFileContent(docsFilePath)
 	tableContent := prepareTable()
 
 	newFileContent := replace(fileContent, tableContent)
 
-	saveFileContent(newFileContent)
+	saveFileContent(docsFilePath, newFileContent)
 }
 
-func getFileContent() string {
+func getFileContent(docsFile string) string {
 	data, err := os.ReadFile(docsFile)
 	if err != nil {
 		panic(fmt.Sprintf("Error while reading file %q: %v", docsFile, err))
@@ -100,7 +106,7 @@ func replace(fileContent, tableContent string) string {
 	return newContent
 }
 
-func saveFileContent(newFileContent string) {
+func saveFileContent(docsFile string, newFileContent string) {
 	err := os.WriteFile(docsFile, []byte(newFileContent), 0o644)
 	if err != nil {
 		panic(fmt.Sprintf("Error while writing new content for %q file: %v", docsFile, err))

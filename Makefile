@@ -107,10 +107,6 @@ version:
 .PHONY: deps
 deps: $(DEVELOPMENT_TOOLS)
 
-.PHONY: check_test_directives
-check_test_directives:
-	@scripts/check_test_directives
-
 .PHONY: lint
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
@@ -294,6 +290,18 @@ sync_docker_images:
 		ARGS="$(ARGS)" \
 		run_go_script
 
+check_test_directives:
+	@$(MAKE) \
+		SCRIPT_NAME=check-test-directives \
+		ARGS="$(shell pwd)" \
+		run_go_script
+
+update_feature_flags_docs:
+	@$(MAKE) \
+		SCRIPT_NAME=update-feature-flags-docs \
+		ARGS="$(shell pwd)" \
+		run_go_script
+
 packagecloud_releases: export ARGS ?=
 packagecloud_releases:
 	@$(MAKE) \
@@ -323,9 +331,6 @@ check-tags-in-changelog:
 		[ "$$?" -eq 1 ] || state="OK"; \
 		echo "$$tag:   \t $$state"; \
 	done
-
-update_feature_flags_docs:
-	go run ./scripts/update-feature-flags-docs/main.go
 
 development_setup:
 	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test tmp/gitlab-test

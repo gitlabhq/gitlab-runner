@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"io"
 	"os"
 	"os/exec"
@@ -11,10 +12,10 @@ import (
 )
 
 var images = []string{
-	"alpine:3.14.2",
-	"registry.gitlab.com/gitlab-org/gitlab-runner/alpine-no-root:latest",
-	"docker:23-git",
-	"docker:23-dind",
+	common.TestAlpineImage,
+	common.TestAlpineNoRootImage,
+	common.TestDockerGitImage,
+	common.TestDockerDindImage,
 }
 
 type rewriter struct {
