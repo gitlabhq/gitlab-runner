@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"io"
 	"os"
 	"os/exec"
 	"sync"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 var images = []string{

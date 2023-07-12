@@ -3,9 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/alexflint/go-arg"
-	"github.com/samber/lo"
-	"github.com/sourcegraph/conc/pool"
 	"log"
 	"os"
 	"os/exec"
@@ -14,6 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/alexflint/go-arg"
+	"github.com/samber/lo"
+	"github.com/sourcegraph/conc/pool"
 )
 
 type args struct {
@@ -170,6 +171,7 @@ func newImageSyncPair(sourceRegistry, toRegistry string, fromImg, toImg image, t
 	}
 }
 
+//nolint:unparam
 func (c *commaSeparatedList) UnmarshalText(b []byte) error {
 	values := lo.Map(strings.Split(string(b), ","), func(val string, _ int) string {
 		return strings.TrimSpace(val)
@@ -227,18 +229,18 @@ func runCmd(args *args, cmd *exec.Cmd) error {
 	if args.DryRun {
 		fmt.Printf("Cmd: %s\n", cmd)
 		return nil
-	} else {
-		return cmd.Run()
 	}
+
+	return cmd.Run()
 }
 
 func outputCmd(args *args, cmd *exec.Cmd) ([]byte, error) {
 	if args.DryRun {
 		fmt.Printf("Cmd: %s\n", cmd)
 		return nil, nil
-	} else {
-		return cmd.Output()
 	}
+
+	return cmd.Output()
 }
 
 func generateImageSyncPairs(tags []tag, registries map[registry]string) []imageSyncPair {
