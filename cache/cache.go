@@ -46,8 +46,11 @@ func generateObjectName(build *common.Build, config *common.CacheConfig, key str
 }
 
 func getAdaptorForBuild(build *common.Build, key string) Adapter {
-	if build == nil || build.Runner == nil || build.Runner.Cache == nil {
-		logrus.Warning("Cache config not defined. Skipping cache operation.")
+	if build == nil || build.Runner == nil {
+		return nil
+	}
+
+	if build.Runner.Cache == nil || build.Runner.Cache.Type == "" {
 		return nil
 	}
 

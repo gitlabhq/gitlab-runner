@@ -68,6 +68,10 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 
 	if tc.configExists {
 		build.Runner.Cache = &common.CacheConfig{}
+
+		if tc.adapterExists {
+			build.Runner.Cache.Type = "test"
+		}
 	}
 
 	return build
@@ -112,7 +116,7 @@ func TestCacheOperations(t *testing.T) {
 			adapterExists:  true,
 			adapterURL:     nil,
 			expectedURL:    nil,
-			expectedOutput: []string{"Cache config not defined. Skipping cache operation."},
+			expectedOutput: nil,
 		},
 		"key-not-specified": {
 			configExists:   true,
@@ -131,11 +135,11 @@ func TestCacheOperations(t *testing.T) {
 		"adapter-error-on-factorization": {
 			key:                    "key",
 			configExists:           true,
+			adapterExists:          true,
 			errorOnAdapterCreation: true,
 			adapterURL:             exampleURL,
-			expectedURL:            nil,
+			expectedURL:            exampleURL,
 			expectedOutput: []string{
-				"Could not create cache adapter",
 				"test error",
 			},
 		},
@@ -297,7 +301,7 @@ func TestCacheUploadEnv(t *testing.T) {
 	}{
 		"full map": {
 			key:                "key",
-			cacheConfig:        &common.CacheConfig{},
+			cacheConfig:        &common.CacheConfig{Type: "test"},
 			createCacheAdapter: true,
 			getUploadEnvResult: map[string]string{"TEST1": "123", "TEST2": "456"},
 			expectedEnvs:       map[string]string{"TEST1": "123", "TEST2": "456"},
@@ -305,7 +309,7 @@ func TestCacheUploadEnv(t *testing.T) {
 		"nil": {
 			key:                "key",
 			cacheConfig:        &common.CacheConfig{},
-			createCacheAdapter: true,
+			createCacheAdapter: false,
 			getUploadEnvResult: nil,
 			expectedEnvs:       nil,
 		},
@@ -315,23 +319,22 @@ func TestCacheUploadEnv(t *testing.T) {
 			createCacheAdapter: true,
 			getUploadEnvResult: nil,
 			expectedEnvs:       nil,
-			expectedLogEntry:   "Cache config not defined",
 		},
 		"no key": {
 			key:                "",
-			cacheConfig:        &common.CacheConfig{},
+			cacheConfig:        &common.CacheConfig{Type: "test"},
 			createCacheAdapter: true,
 			getUploadEnvResult: nil,
 			expectedEnvs:       nil,
 		},
 		"adapter not exists": {
-			cacheConfig:        &common.CacheConfig{},
+			cacheConfig:        &common.CacheConfig{Type: "doesnt-exist"},
 			createCacheAdapter: false,
 			getUploadEnvResult: nil,
 			expectedEnvs:       nil,
 		},
 		"adapter creation error": {
-			cacheConfig:           &common.CacheConfig{},
+			cacheConfig:           &common.CacheConfig{Type: "test"},
 			createCacheAdapter:    true,
 			createCacheAdapterErr: errors.New("test error"),
 			getUploadEnvResult:    nil,
