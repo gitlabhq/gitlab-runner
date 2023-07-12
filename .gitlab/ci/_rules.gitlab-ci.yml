@@ -273,6 +273,10 @@
     - tests/dockerfiles/gitlab-runner-helper-entrypoint/*
     - .gitlab/ci/prepare.gitlab-ci.yml
 
+.rules:prepare:test-ci-scripts:merge-requests:
+  rules:
+    - <<: *if-runner-merge-request-pipeline
+
 ##############
 # Docs rules #
 ##############

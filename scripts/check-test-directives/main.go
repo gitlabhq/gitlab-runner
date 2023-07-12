@@ -100,7 +100,7 @@ func walkTestFiles(testType string, rootPath string, walkFunc filepath.WalkFunc)
 	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
 		name := info.Name()
 		if info.IsDir() {
-			if name == ".git" {
+			if name == ".git" || name == "scripts" {
 				return filepath.SkipDir
 			}
 		}

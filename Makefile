@@ -107,10 +107,6 @@ version:
 .PHONY: deps
 deps: $(DEVELOPMENT_TOOLS)
 
-.PHONY: check_test_directives
-check_test_directives:
-	@scripts/check_test_directives
-
 .PHONY: lint
 lint: OUT_FORMAT ?= colored-line-number
 lint: LINT_FLAGS ?=
@@ -274,14 +270,44 @@ release_docker_images:
 	# Releasing GitLab Runner images
 	@./ci/release_docker_images
 
-sync_docker_images: export SYNC_DOCKER_IMAGES_CONCURRENCY ?= 3
-sync_docker_images: export SYNC_DOCKER_IMAGES_COMMAND ?= skopeo
+test_go_scripts: export LIST ?= sync-docker-images
+test_go_scripts:
+	cd scripts && find . -name "*_test.go" -execdir go test -v -tags scripts ./... \;
+
+run_go_script: export SCRIPT_NAME ?=
+run_go_script: export DEFAULT_ARGS ?=
+run_go_script: export ARGS ?=
+run_go_script:
+	@cd scripts && go run $(SCRIPT_NAME)/main.go \
+		$(DEFAULT_ARGS) \
+		$(ARGS)
+
+sync_docker_images: export ARGS ?= --concurrency=3
 sync_docker_images:
-	@cd ./scripts/sync-docker-images && \
-		go run . \
-		-version $(REVISION) \
-		-concurrency $(SYNC_DOCKER_IMAGES_CONCURRENCY) \
-		-command "$(SYNC_DOCKER_IMAGES_COMMAND)"
+	@$(MAKE) \
+		SCRIPT_NAME=sync-docker-images \
+		DEFAULT_ARGS="--revision $(REVISION)" \
+		ARGS="$(ARGS)" \
+		run_go_script
+
+check_test_directives:
+	@$(MAKE) \
+		SCRIPT_NAME=check-test-directives \
+		ARGS="$(shell pwd)" \
+		run_go_script
+
+update_feature_flags_docs:
+	@$(MAKE) \
+		SCRIPT_NAME=update-feature-flags-docs \
+		ARGS="$(shell pwd)" \
+		run_go_script
+
+packagecloud_releases: export ARGS ?=
+packagecloud_releases:
+	@$(MAKE) \
+		SCRIPT_NAME=packagecloud-releases \
+		ARGS="$(ARGS)" \
+		run_go_script
 
 release_helper_docker_images:
 	# Releasing GitLab Runner Helper images
@@ -305,9 +331,6 @@ check-tags-in-changelog:
 		[ "$$?" -eq 1 ] || state="OK"; \
 		echo "$$tag:   \t $$state"; \
 	done
-
-update_feature_flags_docs:
-	go run ./scripts/update-feature-flags-docs/main.go
 
 development_setup:
 	test -d tmp/gitlab-test || git clone https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test tmp/gitlab-test

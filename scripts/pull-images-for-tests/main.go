@@ -9,8 +9,9 @@ import (
 	"os/exec"
 	"sync"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 var images = []string{

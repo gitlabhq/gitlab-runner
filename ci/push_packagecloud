@@ -18,7 +18,7 @@ push_packagecloud() {
   package_cloud push --verbose --url "${packageCloudURL}" "${packageCloudRepo}/${dist}" out/${packageType}/*.${packageType}
 }
 
-releases=$(go run ./scripts/packagecloud-releases.go "$packageType" "$branch")
+releases=$(make ARGS="$packageType $branch" packagecloud-releases)
 
 echo "$packageType distros to package: $releases"
 
