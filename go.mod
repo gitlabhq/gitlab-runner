@@ -42,8 +42,8 @@ require (
 	github.com/samber/lo v1.38.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.2.0
 	github.com/saracen/fastzip v0.1.11
-	github.com/sourcegraph/conc v0.3.0
 	github.com/sirupsen/logrus v1.9.3
+	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.8.3
 	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.22.10
