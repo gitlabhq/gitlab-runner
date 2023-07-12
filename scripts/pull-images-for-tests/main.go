@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"io"
 	"os"
 	"os/exec"
@@ -58,7 +59,7 @@ func (rw *rewriter) rewriteInput() <-chan error {
 }
 
 func (rw *rewriter) writeToOutput(line string) {
-	fmt.Printf("\u001B[0;33m[%s]\u001B[0;m %s", rw.prefix, line)
+	fmt.Printf("%s[%s]%s %s", helpers.ANSI_YELLOW, rw.prefix, helpers.ANSI_RESET, line)
 }
 
 func newRewriter(ctx context.Context, prefix string) io.Writer {
