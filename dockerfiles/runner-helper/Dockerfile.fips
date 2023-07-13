@@ -9,13 +9,10 @@ ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 RUN microdnf update -y && \
     microdnf install -y \
     bash \
-    git-lfs \
     wget \
     findutils && \
     wget -O /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_x86_64 && \
     chmod +x /usr/bin/dumb-init
-
-RUN git lfs install --skip-repo
 
 COPY ./helpers/entrypoint /
 RUN chmod +x /entrypoint

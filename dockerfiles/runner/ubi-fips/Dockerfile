@@ -8,7 +8,7 @@ ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
 
 COPY gitlab-runner_*.rpm checksums-* install-deps install-gitlab-runner /tmp/
-RUN /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}" "${GIT_LFS_VERSION}"
+RUN /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}"
 RUN rm -rf /tmp/* /etc/gitlab-runner/.runner_system_id
 
 FROM $BASE_IMAGE
