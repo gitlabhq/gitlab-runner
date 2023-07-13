@@ -61,17 +61,18 @@ func (c *StageCommandStatus) TryUnmarshal(line string) bool {
 }
 
 func (c StageCommandStatus) String() string {
-	// TODO: needs to be better
-	var str string
+	strCmdExitCode := "CommandExitCode: empty-exit-code"
+	strScript := "Script: empty-script"
+
 	if c.CommandExitCode != nil {
-		str = fmt.Sprintf("CommandExitCode: %v", c.CommandExitCode)
+		strCmdExitCode = fmt.Sprintf("CommandExitCode: %v", c.CommandExitCode)
 	}
 
 	if c.Script != nil {
-		str = fmt.Sprintf("%s, Script: %v", str, *c.Script)
+		strScript = fmt.Sprintf("Script: %v", *c.Script)
 	}
 
-	return str
+	return fmt.Sprintf("%s, %s", strCmdExitCode, strScript)
 }
 
 func (c StageCommandStatus) IsExited() bool {
@@ -83,7 +84,7 @@ func (c StageCommandStatus) BuildStage() common.BuildStage {
 		return ""
 	}
 
-	// TODO: windows?
+	// For PowerShell shell, script contains only the name of the script being executed
 	split := strings.Split(*c.Script, "/")
 	stage := split[len(split)-1]
 

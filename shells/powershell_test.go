@@ -91,14 +91,14 @@ func TestPowershell_LineBreaks(t *testing.T) {
 			if tc.shell == SNPwsh {
 				out := tc.shebang + "& {" + eol + eol
 				if tc.useJSONInitializationTermination {
-					out += pwshJSONInitializationScript + eol + eol
+					out += fmt.Sprintf(pwshJSONInitializationScript, getScriptPathCmd(tc.shell)) + eol + eol
 				}
 				out += expectedOutput + "}" + eol + eol
 				expectedOutput = out
 			} else {
 				out := "& {" + eol + eol
 				if tc.useJSONInitializationTermination {
-					out += pwshJSONInitializationScript + eol + eol
+					out += fmt.Sprintf(pwshJSONInitializationScript, getScriptPathCmd(tc.shell)) + eol + eol
 				}
 				out += expectedOutput + "}" + eol + eol
 				expectedOutput = out
@@ -493,7 +493,8 @@ func TestPowershell_GenerateScript(t *testing.T) {
 			expectedFailure: false,
 			expectedScript: shebang + "& {" +
 				pwshShell.EOL + pwshShell.EOL +
-				pwshJSONInitializationScript + pwshShell.EOL + pwshShell.EOL +
+				fmt.Sprintf(pwshJSONInitializationScript, getScriptPathCmd(shellInfo.Shell)) +
+				pwshShell.EOL + pwshShell.EOL +
 				`$ErrorActionPreference = "Stop"` + pwshShell.EOL +
 				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` +
 				pwshShell.EOL + pwshShell.EOL + "}" + pwshShell.EOL + pwshShell.EOL,

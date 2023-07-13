@@ -1400,8 +1400,7 @@ func (s *executor) setupCredentials() error {
 	}
 
 	secret := api.Secret{}
-	secret.GenerateName = s.Build.ProjectUniqueName()
-	secret.Name = generateNameForK8sResources(s.Build.ProjectUniqueName(), int64(s.Build.ProjectRunnerID))
+	secret.Name = generateNameForK8sResources(s.Build.ProjectUniqueName())
 	secret.Namespace = s.configurationOverwrites.namespace
 	secret.Type = api.SecretTypeDockercfg
 	secret.Data = map[string][]byte{}
@@ -1673,11 +1672,10 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 
 	pod := api.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: s.Build.ProjectUniqueName(),
-			Name:         generateNameForK8sResources(s.Build.ProjectUniqueName(), int64(s.Build.ProjectRunnerID)),
-			Namespace:    s.configurationOverwrites.namespace,
-			Labels:       opts.labels,
-			Annotations:  opts.annotations,
+			Name:        generateNameForK8sResources(s.Build.ProjectUniqueName()),
+			Namespace:   s.configurationOverwrites.namespace,
+			Labels:      opts.labels,
+			Annotations: opts.annotations,
 		},
 		Spec: api.PodSpec{
 			Volumes:            s.getVolumes(),
@@ -2008,8 +2006,7 @@ func (s *executor) prepareServiceConfig(
 ) api.Service {
 	return api.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName:    name,
-			Name:            generateNameForK8sResources(name, int64(s.Build.ProjectRunnerID)),
+			Name:            generateNameForK8sResources(name),
 			Namespace:       s.configurationOverwrites.namespace,
 			OwnerReferences: ownerReferences,
 		},
@@ -2424,9 +2421,7 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 	return nil
 }
 
-func generateNameForK8sResources(pattern string, concurrency int64) string {
-	rand.Seed(time.Now().UnixNano() + concurrency)
-
+func generateNameForK8sResources(pattern string) string {
 	suffix := make([]rune, k8sResourcesNameSuffixLength)
 	for i := range suffix {
 		suffix[i] = chars[rand.Intn(len(chars))]
@@ -2500,6 +2495,7 @@ func featuresFn(features *common.FeaturesInfo) {
 }
 
 func init() {
+	rand.Seed(time.Now().UnixNano())
 	common.RegisterExecutorProvider(common.ExecutorKubernetes, executors.DefaultExecutorProvider{
 		Creator: func() common.Executor {
 			return newExecutor()
