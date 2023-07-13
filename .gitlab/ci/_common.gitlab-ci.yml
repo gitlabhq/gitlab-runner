@@ -1,7 +1,9 @@
 variables:
-  # renovate: datasource=docker depName=golang allowedVersions=/1\.18\..+/
-  GO_VERSION: "1.19.6"
-  CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_VERSION-2"
+  # renovate: datasource=docker depName=golang allowedVersions=/1\.20\..+/
+  GO_VERSION: "1.20.5"
+  # Sometimes the FIPS repo lags behind the official releases
+  GO_FIPS_VERSION: "1.20.5"
+  CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_VERSION-1"
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"
@@ -26,7 +28,6 @@ variables:
   DEPENDENCY_SCANNING_DISABLED: "true"
   TRANSFER_METER_FREQUENCY: "5s"
   GO111MODULE: "on"
-  GO_FIPS_VERSION: "1.19"
   GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$GO_FIPS_VERSION
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.15\..+/
   ALPINE_315_VERSION: "3.15.8"

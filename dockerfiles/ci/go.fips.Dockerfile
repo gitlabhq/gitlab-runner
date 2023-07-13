@@ -8,17 +8,17 @@ RUN microdnf update -y && \
     microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel && \
     microdnf clean all -y
 
-ARG GO_VERSION=1.19
-ARG GO_FULL_VERSION=${GO_VERSION}.6
+ARG GO_VERSION=1.20
 
-RUN wget https://go.dev/dl/go${GO_FULL_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && \
-    tar -C /usr/ -xzf go${GO_FULL_VERSION}.linux-${PLATFORM_ARCH}.tar.gz
+RUN wget https://go.dev/dl/go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && \
+    tar -C /usr/ -xzf go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz
 
 ENV PATH="$PATH:/usr/go/bin"
 
+ARG GO_RELEASE_VERSION=${GO_VERSION}-2
 RUN git clone \
     https://github.com/golang-fips/go \
-    --branch go${GO_VERSION}-fips-release \
+    --branch go${GO_RELEASE_VERSION}-openssl-fips \
     --single-branch \
     --depth 1 \
     /tmp/go
