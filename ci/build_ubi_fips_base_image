@@ -1,23 +1,36 @@
 #!/bin/bash
 
-set -eo pipefail
+set -eox pipefail
 
 source "ci/_build_ci_image_common"
 
+# shellcheck source=ci/docker_commands
+source "ci/docker_commands"
+
 build() {
     echo "Building UBI FIPS base image: ${BUILD_IMAGE}"
-    docker build \
-           --cache-from "${BUILD_IMAGE}" \
+
+    trap cleanup_docker_context_trap ERR SIGINT SIGTERM
+    setup_docker_context
+
+    _docker_buildx build \
+           --platform linux/amd64,linux/ppc64le,linux/arm64  \
+           --no-cache \
            --build-arg UBI_VERSION="${UBI_VERSION}" \
            --build-arg GIT_VERSION="${GIT_VERSION}" \
+           --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
+           --push \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
            "${GIT_ROOT}"
+
+    trap - ERR SIGINT SIGTERM
+    cleanup_docker_context
 }
 
-login
+#login
 pull
 build
 push
-logout
+#logout
 scan

@@ -2,8 +2,6 @@ ARG UBI_VERSION
 
 FROM redhat/ubi8-minimal:${UBI_VERSION}
 
-ARG PLATFORM_ARCH=amd64
-
 RUN microdnf update -y && \
     microdnf install -y --setopt=tsflags=nodocs \
             openssl \
@@ -49,7 +47,7 @@ ARG GIT_LFS_VERSION
 # We can probably remove this on the next release of git-lfs.
 # See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/31065
 RUN microdnf install -y --setopt=tsflags=nodocs go
-COPY build_git_lfs /tmp/
+COPY dockerfiles/ci/build_git_lfs /tmp/
 RUN /tmp/build_git_lfs && \
       microdnf remove go
 
