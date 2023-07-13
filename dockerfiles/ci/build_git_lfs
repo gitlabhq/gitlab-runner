@@ -13,11 +13,11 @@ set -eo pipefail
 cd /tmp
 
 downloadURL="https://github.com/git-lfs/git-lfs/archive/refs/tags/v${GIT_LFS_VERSION}.tar.gz"
-wget "${downloadURL}" -O git-lfs-${GIT_LFS_VERSION}.tar.gz
+wget "${downloadURL}" -O "git-lfs-${GIT_LFS_VERSION}.tar.gz"
 
-tar -xzf git-lfs-${GIT_LFS_VERSION}.tar.gz
-make -C git-lfs-${GIT_LFS_VERSION}
-cp git-lfs-${GIT_LFS_VERSION}/bin/git-lfs /usr/bin/
-rm -fr /tmp/*
+tar -xzf "git-lfs-${GIT_LFS_VERSION}.tar.gz"
+make -C "git-lfs-${GIT_LFS_VERSION}"
+cp "git-lfs-${GIT_LFS_VERSION}/bin/git-lfs" /usr/bin/
+rm -rf /tmp/*
 git-lfs install --skip-repo
 git-lfs version

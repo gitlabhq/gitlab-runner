@@ -42,6 +42,17 @@ RUN wget https://github.com/git/git/archive/refs/tags/v${GIT_VERSION}.tar.gz && 
     rm -rf /git-${GIT_VERSION} && \
     microdnf remove autoconf emacs-filesystem
 
+ARG GIT_LFS_VERSION
+# Build git-lfs from source. This is necessary to resolve a number of CVES
+# vulnerabilties reported against this image.
+#
+# We can probably remove this on the next release of git-lfs.
+# See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/31065
+RUN microdnf install -y --setopt=tsflags=nodocs go
+COPY build_git_lfs /tmp/
+RUN /tmp/build_git_lfs && \
+      microdnf remove go
+
 RUN cd /tmp && \
     git clone https://github.com/larsks/fakeprovide.git && \
     cd fakeprovide && \
