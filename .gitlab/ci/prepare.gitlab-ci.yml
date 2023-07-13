@@ -73,8 +73,8 @@ prepare go fips:
   needs:
     - prepare ubi base
   variables:
-    GO_VERSION: $GO_FIPS_VERSION
     BUILD_IMAGE: $GO_FIPS_IMAGE
+    GO_VERSION: $GO_FIPS_VERSION
   script:
     - apk add --no-cache curl make bash
     - make go-fips-docker
