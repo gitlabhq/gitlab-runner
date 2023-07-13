@@ -28,9 +28,9 @@ build() {
     cleanup_docker_context
 }
 
-#login
+login
 pull
 build
 push
-#logout
+logout
 scan
