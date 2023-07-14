@@ -48,8 +48,7 @@ ARG GIT_LFS_VERSION
 # See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/31065
 RUN microdnf install -y --setopt=tsflags=nodocs go
 COPY dockerfiles/ci/build_git_lfs /tmp/
-RUN /tmp/build_git_lfs && \
-      microdnf remove go
+RUN /tmp/build_git_lfs
 
 RUN cd /tmp && \
     git clone https://github.com/larsks/fakeprovide.git && \
