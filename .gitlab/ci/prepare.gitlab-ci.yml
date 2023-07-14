@@ -82,7 +82,7 @@ prepare go fips:
 prepare ubi base:
   extends:
     - .docker
-    - .rules:prepare:go-fips:image:merge-requests
+    - .rules:prepare:ubi-base:image:merge-requests
   stage: prepare
   image: docker:${DOCKER_VERSION}-git
   script:
