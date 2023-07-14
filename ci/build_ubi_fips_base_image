@@ -2,10 +2,11 @@
 
 set -eox pipefail
 
-source "ci/_build_ci_image_common"
-
 # shellcheck source=ci/docker_commands
 source "ci/docker_commands"
+
+# source order is important as some functions overlap in name
+source "ci/_build_ci_image_common"
 
 build() {
     echo "Building UBI FIPS base image: ${BUILD_IMAGE}"
