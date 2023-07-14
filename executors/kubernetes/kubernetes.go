@@ -84,6 +84,8 @@ const (
 	k8sResourcesNameSuffixLength = 8
 	k8sResourcesNameMaxLength    = 63
 
+	k8sEventWarningType = "Warning"
+
 	// errorDialingBackendMessage is an error prefix that is encountered when
 	// connectivity to a Pod fails. This can happen for a number of reasons,
 	// such as the Pod or Node still being configured.
@@ -448,6 +450,10 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 			err = s.runWithAttach(cmd)
 		}
 
+		if err != nil {
+			s.logPodWarningEvents(k8sEventWarningType)
+		}
+
 		var imagePullErr *pull.ImagePullError
 		if errors.As(err, &imagePullErr) {
 			if s.pullManager.UpdatePolicyForImage(attempt, imagePullErr) {
@@ -457,6 +463,41 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 			}
 		}
 		return err
+	}
+}
+
+func (s *executor) logPodWarningEvents(eventType string) {
+	if s.pod == nil {
+		return
+	}
+
+	var eventList *api.EventList
+	r := retry.WithBuildLog(
+		&retryableKubeAPICall{
+			maxTries: defaultTries,
+			fn: func() error {
+				// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
+				el, err := s.kubeClient.CoreV1().Events(s.pod.Namespace).
+					List(context.Background(), metav1.ListOptions{
+						FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.pod.Name, eventType),
+					})
+				if err == nil {
+					eventList = el
+				}
+				return err
+			},
+		},
+		&s.BuildLogger,
+	)
+	retryable := retry.NewWithBackoffDuration(r, defaultRetryMinBackoff, defaultRetryMaxBackoff)
+	err := retryable.Run()
+	if err != nil {
+		s.Errorln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
+		return
+	}
+
+	for _, event := range eventList.Items {
+		s.Warningln(fmt.Sprintf("Event retrieved from the cluster: %s", event.Message))
 	}
 }
 
