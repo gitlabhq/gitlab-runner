@@ -2476,7 +2476,7 @@ func TestSetupCredentials(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test testDef, secret *api.Secret) {
-				dns_test.AssertRFC1123Compatibility(t, secret.GetGenerateName())
+				dns_test.AssertRFC1123Compatibility(t, secret.GetName())
 			},
 		},
 	}
@@ -3233,7 +3233,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"test":    "label",
 					"another": "label",
 					"var":     "sometestvar",
-					"pod":     pod.GenerateName,
+					"pod":     "runner--project-0-concurrent-0",
 				}, pod.ObjectMeta.Labels)
 			},
 			Variables: []common.JobVariable{
@@ -3259,7 +3259,7 @@ func TestSetupBuildPod(t *testing.T) {
 					"another":  "newlabel",
 					"var":      "sometestvar",
 					"another2": "sometestvar",
-					"pod":      pod.GenerateName,
+					"pod":      "runner--project-0-concurrent-0",
 				}, pod.ObjectMeta.Labels)
 			},
 			Variables: []common.JobVariable{
@@ -3532,7 +3532,7 @@ func TestSetupBuildPod(t *testing.T) {
 				expectedServices := []api.Service{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							GenerateName:    "build",
+							Name:            "build",
 							Namespace:       "default",
 							OwnerReferences: ownerReferences,
 						},
@@ -3544,13 +3544,13 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "build-80",
 								},
 							},
-							Selector: map[string]string{"pod": e.pod.GenerateName},
+							Selector: map[string]string{"pod": "runner--project-0-concurrent-0"},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							GenerateName:    "proxy-svc-0",
+							Name:            "proxy-svc-0",
 							Namespace:       "default",
 							OwnerReferences: ownerReferences,
 						},
@@ -3567,13 +3567,13 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "proxy-svc-0-84",
 								},
 							},
-							Selector: map[string]string{"pod": e.pod.GenerateName},
+							Selector: map[string]string{"pod": "runner--project-0-concurrent-0"},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							GenerateName:    "proxy-svc-1",
+							Name:            "proxy-svc-1",
 							Namespace:       "default",
 							OwnerReferences: ownerReferences,
 						},
@@ -3585,13 +3585,22 @@ func TestSetupBuildPod(t *testing.T) {
 									Name:       "proxy-svc-1-85",
 								},
 							},
-							Selector: map[string]string{"pod": e.pod.GenerateName},
+							Selector: map[string]string{"pod": "runner--project-0-concurrent-0"},
 							Type:     api.ServiceTypeClusterIP,
 						},
 					},
 				}
 
-				assert.ElementsMatch(t, expectedServices, e.services)
+				// The name of each service is generated beforehand
+				// We reset it to empty string before the assert
+				// Everything else should be as expected.
+				srvs := make([]api.Service, 0)
+				for _, s := range e.services {
+					s.ObjectMeta.Name = s.ObjectMeta.Name[:len(s.ObjectMeta.Name)-k8sResourcesNameSuffixLength-1]
+					srvs = append(srvs, *s.DeepCopy())
+				}
+
+				assert.ElementsMatch(t, expectedServices, srvs)
 			},
 		},
 		"the default service name for the build container is build": {
@@ -3613,7 +3622,10 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				assert.Equal(t, "build", e.services[0].GenerateName)
+				assert.Equal(
+					t, "build",
+					e.services[0].GetName()[:len(e.services[0].GetName())-k8sResourcesNameSuffixLength-1],
+				)
 			},
 		},
 		"the services have a selector pointing to the 'pod' label in the pod": {
@@ -3646,7 +3658,7 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				for _, service := range e.services {
-					assert.Equal(t, map[string]string{"pod": e.pod.GenerateName}, service.Spec.Selector)
+					assert.Equal(t, map[string]string{"pod": "runner--project-0-concurrent-0"}, service.Spec.Selector)
 				}
 			},
 		},
@@ -3675,7 +3687,10 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				assert.Equal(t, "custom-name", e.services[0].GenerateName)
+				assert.Equal(
+					t, "custom-name",
+					e.services[0].GetName()[:len(e.services[0].GetName())-k8sResourcesNameSuffixLength-1],
+				)
 			},
 		},
 		"proxies are configured if services have been created": {
@@ -3764,10 +3779,16 @@ func TestSetupBuildPod(t *testing.T) {
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				sort.Slice(e.services, func(i, j int) bool {
-					return e.services[i].GenerateName > e.services[j].GenerateName
+					return e.services[i].GetName() > e.services[j].GetName()
 				})
-				assert.Equal(t, "service", e.services[0].GenerateName)
-				assert.Equal(t, "name-non-compatble", e.services[1].GenerateName)
+				assert.Equal(
+					t, "service",
+					e.services[0].GetName()[:len(e.services[0].GetName())-k8sResourcesNameSuffixLength-1],
+				)
+				assert.Equal(
+					t, "name-non-compatble",
+					e.services[1].GetName()[:len(e.services[1].GetName())-k8sResourcesNameSuffixLength-1],
+				)
 
 				assert.NotEmpty(t, e.ProxyPool["service"])
 				assert.NotEmpty(t, e.ProxyPool["name-.non-compat!ble"])
@@ -3848,7 +3869,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				dns_test.AssertRFC1123Compatibility(t, pod.GetGenerateName())
+				dns_test.AssertRFC1123Compatibility(t, pod.GetName())
 			},
 		},
 		"supports pod security context": {
@@ -4998,7 +5019,7 @@ func TestProcessLogs(t *testing.T) {
 			go e.processLogs(context.Background())
 
 			exitStatus := <-e.remoteProcessTerminated
-			assert.Equal(t, tc.expectedExitCode, exitStatus.CommandExitCode)
+			assert.Equal(t, tc.expectedExitCode, *exitStatus.CommandExitCode)
 			if tc.expectedScript != "" {
 				assert.Equal(t, tc.expectedScript, *exitStatus.Script)
 			}
@@ -5148,7 +5169,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 				PollTimeout:  2,
 			}
 			e.kubeClient = client
-			e.remoteProcessTerminated = make(chan shells.TrapCommandExitStatus)
+			e.remoteProcessTerminated = make(chan shells.StageCommandStatus)
 			e.Trace = &common.Trace{Writer: os.Stdout}
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod"

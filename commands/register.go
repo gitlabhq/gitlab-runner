@@ -316,7 +316,7 @@ func (s *RegisterCommand) doLegacyRegisterRunner() {
 	// golangci-lint doesn't recognize logrus.Panicln() call as breaking the execution
 	// flow which causes the following assignment to throw false-positive report for
 	// 'SA5011: possible nil pointer dereference'
-	// nolint:staticcheck
+	//nolint:staticcheck
 	if result == nil {
 		logrus.Panicln("Failed to register the runner.")
 	}

@@ -23,6 +23,20 @@ const (
 	SNPwsh       = "pwsh"
 	SNPowershell = "powershell"
 
+	// When the shell is set to 'powershell', the UTF8 BOM character is prepended to the initialization script, which causes unmarshalling to fail.
+	// To prevent this, we add the 'echo ""' command.
+	// We also introduce the variable '$script_path' to extract the script name from '$PSCommandPath'.
+	// When using '$PSCommandPath', the path contains backslashes followed by characters that are not defined in the JSON specification (https://www.json.org/json-en.html),
+	// leading to unmarshalling failures of the received JSON line.
+	// The '$script_path' variable is also used for the 'pwshJSONTerminationScript' for the same reasons.
+	// When the shell is set to 'pwsh', the '$PSCommandPath' variable can be safely used.
+	// The function 'getScriptPathCmd' is used to determine the appropriate command to use.
+	pwshJSONInitializationScript = `$script_path= %s
+$start_json= '{"script": "' + $script_path + '"}'
+echo ""
+echo "$start_json"
+`
+
 	// Before executing a script, powershell parses it.
 	// A `ParserError` can then be thrown if a parsing error is found.
 	// Those errors are not catched by the powershell_trap_script thus causing the job to hang
@@ -35,7 +49,8 @@ param (
 )
 
 %s -File $Path
-$out_json= '{"command_exit_code": ' + $LASTEXITCODE + ', "script": "' + $MyInvocation.MyCommand.Name + '"}'
+$script_path= %s
+$out_json= '{"command_exit_code": ' + $LASTEXITCODE + ', "script": "' + $script_path + '"}'
 echo ""
 echo "$out_json"
 Exit 0
@@ -65,6 +80,8 @@ type PsWriter struct {
 	EOL           string
 	PassFile      bool
 	resolvePaths  bool
+
+	useJSONInitializationTermination bool
 }
 
 func NewPsWriter(b *PowerShell, info common.ShellScriptInfo) *PsWriter {
@@ -74,6 +91,10 @@ func NewPsWriter(b *PowerShell, info common.ShellScriptInfo) *PsWriter {
 		PassFile:      b.passAsFile(info),
 		TemporaryPath: info.Build.TmpProjectDir(),
 		resolvePaths:  info.Build.IsFeatureFlagOn(featureflags.UsePowershellPathResolver),
+		// useJSONInitializationTermination is only used for kubernetes executor when
+		// the feature flag FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY is set to false
+		useJSONInitializationTermination: info.Build.Runner.Executor == common.ExecutorKubernetes &&
+			!info.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy),
 	}
 }
 
@@ -148,8 +169,16 @@ func fileCmdArgs() []string {
 	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
 }
 
+func getScriptPathCmd(shell string) string {
+	if shell == SNPowershell {
+		return "Split-Path -Path $PSCommandPath -Leaf"
+	}
+
+	return "$PSCommandPath"
+}
+
 func PwshJSONTerminationScript(shell string) string {
-	return fmt.Sprintf(pwshJSONTerminationScript, shell)
+	return fmt.Sprintf(pwshJSONTerminationScript, shell, getScriptPathCmd(shell))
 }
 
 func PowershellDockerCmd(shell string) []string {
@@ -493,6 +522,10 @@ func (p *PsWriter) finishPwsh(buf *strings.Builder, trace bool) {
 	// allows us to bypass file permissions when changing the current user.
 	buf.WriteString("& {" + p.EOL + p.EOL)
 
+	if p.useJSONInitializationTermination {
+		buf.WriteString(fmt.Sprintf(pwshJSONInitializationScript, getScriptPathCmd(p.Shell)) + p.EOL + p.EOL)
+	}
+
 	if trace {
 		buf.WriteString("Set-PSDebug -Trace 2" + p.EOL)
 	}
@@ -509,6 +542,10 @@ func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
 		buf.WriteString("\xef\xbb\xbf")
 	} else {
 		buf.WriteString("& {" + p.EOL + p.EOL)
+	}
+
+	if p.useJSONInitializationTermination {
+		buf.WriteString(fmt.Sprintf(pwshJSONInitializationScript, getScriptPathCmd(p.Shell)) + p.EOL + p.EOL)
 	}
 
 	if trace {

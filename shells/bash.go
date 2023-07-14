@@ -49,6 +49,10 @@ const bashJSONTerminationScript = `runner_script_trap() {
 trap runner_script_trap EXIT
 `
 
+const bashJSONInitializationScript = `start_json="{\"script\": \"$0\"}"
+echo "$start_json"
+`
+
 type BashShell struct {
 	AbstractShell
 	Shell string
@@ -60,11 +64,11 @@ type BashWriter struct {
 	Shell         string
 	indent        int
 
-	checkForErrors     bool
-	useNewEval         bool
-	useNewEscape       bool
-	usePosixEscape     bool
-	useJSONTermination bool
+	checkForErrors                   bool
+	useNewEval                       bool
+	useNewEscape                     bool
+	usePosixEscape                   bool
+	useJSONInitializationTermination bool
 
 	setPermissionsBeforeCleanup bool
 }
@@ -77,9 +81,9 @@ func NewBashWriter(build *common.Build, shell string) *BashWriter {
 		useNewEval:     build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
 		useNewEscape:   build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
 		usePosixEscape: build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
-		// useJSONTermination is only used for kubernetes executor when
+		// useJSONInitializationTermination is only used for kubernetes executor when
 		// the feature flag FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY is set to false
-		useJSONTermination: build.Runner.Executor == common.ExecutorKubernetes &&
+		useJSONInitializationTermination: build.Runner.Executor == common.ExecutorKubernetes &&
 			!build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy),
 		setPermissionsBeforeCleanup: build.IsFeatureFlagOn(featureflags.SetPermissionsBeforeCleanup),
 	}
@@ -291,7 +295,8 @@ func (b *BashWriter) Finish(trace bool) string {
 		buf.WriteString("#!/usr/bin/env " + b.Shell + "\n\n")
 	}
 
-	if b.useJSONTermination {
+	if b.useJSONInitializationTermination {
+		buf.WriteString(bashJSONInitializationScript)
 		buf.WriteString(bashJSONTerminationScript)
 	}
 

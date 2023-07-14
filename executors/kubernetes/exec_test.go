@@ -31,12 +31,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	api "k8s.io/api/core/v1"
-	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
-
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 )
 
 type fakeRemoteExecutor struct {
@@ -169,71 +166,6 @@ func execPodWithPhase(phase api.PodPhase) *api.Pod {
 		Status: api.PodStatus{
 			Phase: phase,
 		},
-	}
-}
-
-func TestExecOptions_ShouldRetry(t *testing.T) {
-	testCommandShouldRetry(t, &ExecOptions{})
-}
-
-func TestAttachOptions_ShouldRetry(t *testing.T) {
-	testCommandShouldRetry(t, &AttachOptions{})
-}
-
-func testCommandShouldRetry(t *testing.T, retryable retry.Retryable) {
-	tests := map[string]struct {
-		err                 error
-		tries               int
-		expectedShouldRetry bool
-	}{
-		"no error, shouldn't retry": {
-			err:                 nil,
-			expectedShouldRetry: false,
-		},
-		"different error, shouldn't retry": {
-			err:                 errors.New("err"),
-			expectedShouldRetry: false,
-		},
-		"empty status error, shouldn't retry": {
-			err:                 &kubeerrors.StatusError{},
-			expectedShouldRetry: false,
-		},
-		"status error different code, shouldn't retry": {
-			err: &kubeerrors.StatusError{
-				ErrStatus: metav1.Status{Message: "error dialing backend: not found", Code: http.StatusNotFound},
-			},
-			expectedShouldRetry: false,
-		},
-		"status error different message, shouldn't retry": {
-			err: &kubeerrors.StatusError{
-				ErrStatus: metav1.Status{Message: "random", Code: http.StatusInternalServerError},
-			},
-			expectedShouldRetry: false,
-		},
-		"status error matching message, should retry": {
-			err: &kubeerrors.StatusError{
-				ErrStatus: metav1.Status{Message: "error dialing backend: EOF", Code: http.StatusInternalServerError},
-			},
-			expectedShouldRetry: true,
-		},
-		"status error matching code and message, over max tries limit": {
-			err: &kubeerrors.StatusError{
-				ErrStatus: metav1.Status{Message: "error dialing backend: EOF", Code: http.StatusInternalServerError},
-			},
-			tries:               commandConnectFailureMaxTries + 1,
-			expectedShouldRetry: false,
-		},
-		"no error, over max tries limit": {
-			err:                 nil,
-			tries:               commandConnectFailureMaxTries + 1,
-			expectedShouldRetry: false,
-		},
-	}
-
-	for tn, tt := range tests {
-		t.Run(tn, func(t *testing.T) {
-			assert.Equal(t, tt.expectedShouldRetry, retryable.ShouldRetry(tt.tries, tt.err))
-		})
 	}
 }
 
