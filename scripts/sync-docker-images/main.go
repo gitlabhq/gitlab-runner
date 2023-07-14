@@ -20,7 +20,7 @@ import (
 type args struct {
 	Revision    string             `arg:"--revision, required" help:"Revision or commit of images to sync e.g. (e.g. v16.0.0 | a54hf6)"`
 	Concurrency int                `arg:"--concurrency" help:"The amount of concurrent image pushes to be done" default:"1"`
-	Command     commaSeparatedList `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
+	Command     spaceSeparatedList `arg:"--command" help:"The Command that will be executed to sync the images. Can be multiple strings separated by a space. Default (skopeo)"`
 	Images      commaSeparatedList `arg:"--images" help:"Comma separated list of which types of images to sync - runner, helper. Default: (runner,helper)"`
 	Filters     commaSeparatedList `arg:"--filters" help:"Comma separated list of tag regexp filters to be applied to the images to be synced. Empty by default"`
 	IsLatest    bool               `arg:"--is-latest" help:"Also sync -latest images"`
@@ -60,6 +60,28 @@ type imageSyncPair struct {
 }
 
 type commaSeparatedList []string
+
+//nolint:unparam
+func (c *commaSeparatedList) UnmarshalText(b []byte) error {
+	values := lo.Map(strings.Split(string(b), ","), func(val string, _ int) string {
+		return strings.TrimSpace(val)
+	})
+	*c = values
+
+	return nil
+}
+
+type spaceSeparatedList []string
+
+//nolint:unparam
+func (c *spaceSeparatedList) UnmarshalText(b []byte) error {
+	values := lo.Map(strings.Split(string(b), " "), func(val string, _ int) string {
+		return strings.TrimSpace(val)
+	})
+	*c = values
+
+	return nil
+}
 
 const (
 	gitlabRunnerImage       image = "gitlab-runner"
@@ -171,18 +193,11 @@ func newImageSyncPair(sourceRegistry, toRegistry string, fromImg, toImg image, t
 	}
 }
 
-//nolint:unparam
-func (c *commaSeparatedList) UnmarshalText(b []byte) error {
-	values := lo.Map(strings.Split(string(b), ","), func(val string, _ int) string {
-		return strings.TrimSpace(val)
-	})
-	*c = values
-
-	return nil
-}
-
 func main() {
 	args := parseArgs()
+
+	fmt.Printf("%+v\n", args.Command)
+	fmt.Printf("%+v\n", len(args.Command))
 
 	if err := syncImages(args); err != nil {
 		log.Fatalln(err)
