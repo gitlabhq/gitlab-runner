@@ -72,6 +72,8 @@
       IMAGE_TAG: ["alpine3.18-" ]
     - IMAGE_FLAVOR: "alpine-latest"
       IMAGE_TAG: ["alpine-latest-"]
+    - IMAGE_FLAVOR: "alpine-edge"
+      IMAGE_TAG: ["alpine-edge-"]
     - IMAGE_FLAVOR: "ubuntu"
       IMAGE_TAG: ["ubuntu-"]
     - IMAGE_FLAVOR: "ubi-fips"

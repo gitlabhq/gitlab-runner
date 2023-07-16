@@ -15,12 +15,12 @@ endif
 
 PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
-BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x' -arch 'ppc64le'
+BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x' -arch 'ppc64le' -arch 'riscv64'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= main
 
-DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le
-RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x ppc64le
+DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le riscv64
+RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x ppc64le riscv64
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
 COMMON_PACKAGE_NAMESPACE = $(PKG)/common
@@ -350,7 +350,7 @@ $(GOCOVER_COBERTURA):
 	go install github.com/boumenot/gocover-cobertura@v1.2.0
 
 $(GOX):
-	go install github.com/mitchellh/gox@v1.0.1
+	go install github.com/mitchellh/gox@9f712387e2d2c810d99040228f89ae5bb5dd21e5
 
 $(SPLITIC):
 	go install gitlab.com/ajwalker/splitic@latest

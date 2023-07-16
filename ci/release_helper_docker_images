@@ -62,6 +62,9 @@ release_docker_helper_images() {
     helper_image_x86_64_fips="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${REVISION}"
     helper_image_x86_64_fips_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-${ref_tag}"
     helper_image_x86_64_fips_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}x86_64-latest"
+    helper_image_riscv64="${REGISTRY}/gitlab-runner-helper:${PREFIX}riscv64-${REVISION}"
+    helper_image_riscv64_version="${REGISTRY}/gitlab-runner-helper:${PREFIX}riscv64-${ref_tag}"
+    helper_image_riscv64_latest="${REGISTRY}/gitlab-runner-helper:${PREFIX}riscv64-latest"
 
     if [[ "$FLAVOR" == "ubi-fips" ]]; then
         # Special case for FIPS since we don't yet support all the architectures we do for other flavors
@@ -79,35 +82,53 @@ release_docker_helper_images() {
     import "out/helper-images/prebuilt-${FLAVOR}-arm64.tar.xz" "${helper_image_arm64}" "linux/arm64/v8"
     import "out/helper-images/prebuilt-${FLAVOR}-s390x.tar.xz" "${helper_image_s390x}" "linux/s390x"
     import "out/helper-images/prebuilt-${FLAVOR}-ppc64le.tar.xz" "${helper_image_ppc64le}" "linux/ppc64le"
+    if [[ "$FLAVOR" == "alpine-edge" ]]; then
+        import "out/helper-images/prebuilt-${FLAVOR}-riscv64.tar.xz" "${helper_image_riscv64}" "linux/riscv64"
+    fi
 
     tag_latest "${helper_image_x86_64}" "${helper_image_x86_64_latest}"
     tag_latest "${helper_image_arm}" "${helper_image_arm_latest}"
     tag_latest "${helper_image_arm64}" "${helper_image_arm64_latest}"
     tag_latest "${helper_image_s390x}" "${helper_image_s390x_latest}"
     tag_latest "${helper_image_ppc64le}" "${helper_image_ppc64le_latest}"
+    if [[ "$FLAVOR" == "alpine-edge" ]]; then
+        tag_latest "${helper_image_riscv64}" "${helper_image_riscv64_latest}"
+    fi
 
     tag "${helper_image_x86_64}" "${helper_image_x86_64_version}"
     tag "${helper_image_arm}" "${helper_image_arm_version}"
     tag "${helper_image_arm64}" "${helper_image_arm64_version}"
     tag "${helper_image_s390x}" "${helper_image_s390x_version}"
     tag "${helper_image_ppc64le}" "${helper_image_ppc64le_version}"
+    if [[ "$FLAVOR" == "alpine-edge" ]]; then
+        tag "${helper_image_riscv64}" "${helper_image_riscv64_version}"
+    fi
 
     push "${helper_image_x86_64}" "${PUSH_ENABLED}"
     push "${helper_image_arm}" "${PUSH_ENABLED}"
     push "${helper_image_arm64}" "${PUSH_ENABLED}"
     push "${helper_image_s390x}" "${PUSH_ENABLED}"
     push "${helper_image_ppc64le}" "${PUSH_ENABLED}"
+    if [[ "$FLAVOR" == "alpine-edge" ]]; then
+        push "${helper_image_riscv64}" "${PUSH_ENABLED}"
+    fi
 
     push_latest "${helper_image_x86_64_latest}" "${PUSH_ENABLED}"
     push_latest "${helper_image_arm_latest}" "${PUSH_ENABLED}"
     push_latest "${helper_image_arm64_latest}" "${PUSH_ENABLED}"
     push_latest "${helper_image_s390x_latest}" "${PUSH_ENABLED}"
     push_latest "${helper_image_ppc64le_latest}" "${PUSH_ENABLED}"
+    if [[ "$FLAVOR" == "alpine-edge" ]]; then
+        push_latest "${helper_image_riscv64_latest}" "${PUSH_ENABLED}"
+    fi
     push "${helper_image_x86_64_version}" "${PUSH_ENABLED}"
     push "${helper_image_arm_version}" "${PUSH_ENABLED}"
     push "${helper_image_arm64_version}" "${PUSH_ENABLED}"
     push "${helper_image_s390x_version}" "${PUSH_ENABLED}"
     push "${helper_image_ppc64le_version}" "${PUSH_ENABLED}"
+    if [[ "$FLAVOR" == "alpine-edge" ]]; then
+        push "${helper_image_riscv64_version}" "${PUSH_ENABLED}"
+    fi
 
     if [[ "$FLAVOR" != "alpine-latest" ]]; then
         # Alpine-latest is a special case, the powershell DockerHub repo (https://hub.docker.com/_/microsoft-powershell) doesn't support an alpine:latest image
