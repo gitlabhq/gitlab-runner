@@ -196,9 +196,6 @@ func newImageSyncPair(sourceRegistry, toRegistry string, fromImg, toImg image, t
 func main() {
 	args := parseArgs()
 
-	fmt.Printf("%+v\n", args.Command)
-	fmt.Printf("%+v\n", len(args.Command))
-
 	if err := syncImages(args); err != nil {
 		log.Fatalln(err)
 	}
