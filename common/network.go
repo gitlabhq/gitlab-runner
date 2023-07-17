@@ -470,9 +470,22 @@ type JobResponse struct {
 type Secrets map[string]Secret
 
 type Secret struct {
-	Vault *VaultSecret `json:"vault,omitempty"`
+	Vault         *VaultSecret         `json:"vault,omitempty"`
+	AzureKeyVault *AzureKeyVaultSecret `json:"azure_key_vault,omitempty"`
+	File          *bool                `json:"file,omitempty"`
+}
 
-	File *bool `json:"file,omitempty"`
+type AzureKeyVaultSecret struct {
+	Name    string              `json:"name"`
+	Version string              `json:"version,omitempty"`
+	Server  AzureKeyVaultServer `json:"server"`
+}
+
+type AzureKeyVaultServer struct {
+	ClientID string `json:"client_id"`
+	TenantID string `json:"tenant_id"`
+	JWT      string `json:"jwt"`
+	URL      string `json:"url"`
 }
 
 type VaultSecret struct {
