@@ -19,5 +19,4 @@ tar -xzf "git-lfs-${GIT_LFS_VERSION}.tar.gz"
 make -C "git-lfs-${GIT_LFS_VERSION}"
 cp "git-lfs-${GIT_LFS_VERSION}/bin/git-lfs" /usr/bin/
 rm -rf /tmp/*
-git-lfs install --skip-repo
 git-lfs version
