@@ -133,6 +133,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
 		"testKubernetesHugeScriptAndAfterScriptFeatureFlag":       testKubernetesHugeScriptAndAfterScriptFeatureFlag,
 		"testKubernetesCustomPodSpec":                             testKubernetesCustomPodSpec,
+		"testKubernetesClusterWarningEvent":                       testKubernetesClusterWarningEvent,
 	}
 
 	featureFlags := []string{
@@ -1561,6 +1562,47 @@ func testKubernetesWaitResources(t *testing.T, featureFlagName string, featureFl
 
 			assert.NoError(t, err)
 			assert.Contains(t, out, "Hello World")
+		})
+	}
+}
+
+func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		image    string
+		verifyFn func(*testing.T, string, error)
+	}{
+		"invalid image": {
+			image: "alpine333",
+			verifyFn: func(t *testing.T, out string, err error) {
+				assert.Error(t, err)
+				assert.Contains(
+					t,
+					out,
+					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine333\": rpc error:",
+				)
+				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ErrImagePull")
+				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ImagePullBackOff")
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				jobResponse, err := common.GetRemoteBuildResponse(
+					"echo Hello World",
+				)
+				require.NoError(t, err)
+
+				return jobResponse, nil
+			})
+			build.Runner.Kubernetes.Image = tc.image
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			tc.verifyFn(t, out, err)
 		})
 	}
 }
