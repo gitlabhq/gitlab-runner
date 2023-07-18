@@ -83,7 +83,7 @@ prepare ubi base:
   extends:
     - .docker
     - .rules:prepare:ubi-base:image:merge-requests
-  timeout: 3h
+  timeout: 4h
   stage: prepare
   image: docker:${DOCKER_VERSION}-git
   script:
