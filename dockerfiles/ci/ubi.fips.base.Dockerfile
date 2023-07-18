@@ -8,7 +8,7 @@ ARG GIT_LFS_VERSION
 #
 # We can probably remove this on the next release of git-lfs.
 # See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/31065
-COPY dockerfiles/build_git_lfs /tmp/
+COPY dockerfiles/ci/build_git_lfs /tmp/
 
 RUN microdnf update -y && \
     microdnf install -y --setopt=tsflags=nodocs \
