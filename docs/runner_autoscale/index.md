@@ -96,9 +96,9 @@ This snippet is in the runners.machine section of the `config.toml` file.
 
 After you configure the runner manager, configure the executors specific to autoscaling:
 
-- Docker Machine Executor
-- Instance Executor
-- Docker Autoscaling Executor
+- [Instance Executor](../executors/instance.md)
+- [Docker Autoscaling Executor](../executors/docker_autoscaler.md)
+- [Docker Machine Executor](../executors/docker_machine.md)
 
 NOTE:
 You should use the Instance and Docker Autoscaling executors, as these comprise the
