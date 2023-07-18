@@ -324,6 +324,7 @@ The following settings define the Docker container parameters.
 | `tls_verify`                   | Enable or disable TLS verification of connections to Docker daemon. Disabled by default. |
 | `user`                         | Run all commands in the container as the specified user. |
 | `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
+| `ulimit`                       | Ulimit values that are passed to the container. Uses the same syntax as the Docker `--ulimit` flag. |
 | `volumes`                      | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
 | `volumes_from`                 | A list of volumes to inherit from another container in the form ``<container name>[:<ro|rw>]``. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
 | `volume_driver`                | The volume driver to use for the container. |
@@ -375,6 +376,8 @@ Example:
   links = ["mysql_container:mysql"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
   allowed_services = ["postgres:9", "redis:*", "mysql:*"]
+  [runners.docker.ulimit]
+    "rtprio" = "99"
   [[runners.docker.services]]
     name = "registry.example.com/svc1"
     alias = "svc1"
