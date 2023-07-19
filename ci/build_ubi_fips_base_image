@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eox pipefail
+set -eo pipefail
 
 # shellcheck source=ci/docker_commands
 source "ci/docker_commands"
