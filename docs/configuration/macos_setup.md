@@ -105,41 +105,26 @@ Now install and configure Xcode.
    sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
    ```
 
-### Register a runner
+### Create and register a project runner
 
-Now register a runner to start picking up your CI/CD jobs.
+Now [create and register](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-an-authentication-token) a project runner.
 
-1. On the left sidebar, at the top, select **Search GitLab** (**{search}**) to find your project or group.
-1. Select **Settings > CI/CD**.
-1. Expand **Runners**.
-1. Note the URL and registration token.
-1. In a terminal, start the interactive setup:
+When you create and register the runner:
 
-   ```shell
-   gitlab-runner register
-   ```
+- In GitLab, add the tag `macos` to ensure macOS jobs run on this macOS machine.
+- In the command-line, select `shell` as the [executor](../executors/index.md).
 
-1. Enter the GitLab URL.
-1. Enter the registration token.
-1. Enter a description for the runner.
-   You will use the description to identify the runner in GitLab, and the name is associated with jobs executed on this instance.
-
-1. Enter tags, which direct specific jobs to specific instances. You will use these tags later to ensure macOS jobs
-   run on this macOS machine. In this example, enter:
-
-   ```shell
-   macos
-   ```
-
-1. Type `shell` to select the shell [executor](../executors/index.md).
-
-A success message is displayed:
+After you register the runner, a success message displays in the command-line:
 
 ```shell
 > Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
 ```
 
-To view the runner, go to **Settings > CI/CD** and expand **Runners**.
+To view the runner:
+
+1. On the left sidebar, at the top, select **Search GitLab** (**{search}**) to find your project.
+1. Select **Settings > CI/CD**.
+1. Expand **Runners**.
 
 ### Configure CI/CD
 
