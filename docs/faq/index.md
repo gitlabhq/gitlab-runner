@@ -289,6 +289,17 @@ sealert -a /var/log/audit/audit.log
 CrowdStrike Falcon Sensor has been reported to kill pods after the `Cleaning up files` stage of a job
 when the "container drift detection" setting was enabled. To ensure that jobs are able to complete, you must disable this setting.
 
+## Job fails with `remote error: tls: bad certificate (exec.go:71:0s)`
+
+This error can occur when the system time changes significantly during a job
+that creates artifacts. Due to the change in system time, SSL certificates are expired, which causes an error when the runner attempts to uploads artifacts. 
+
+To ensure SSL verification can succeed during artifact upload,
+change the system time back to a valid date and time at the end
+of the job.  
+Because the creation time of the artifacts file has also changed, 
+they are automatically archived.
+
 ## Helm Chart: `ERROR .. Unauthorized`
 
 Before uninstalling or upgrading runners deployed with Helm, pause them in GitLab and
