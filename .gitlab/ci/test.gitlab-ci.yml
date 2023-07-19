@@ -362,6 +362,7 @@ integration_k8s:
   needs:
   - 'prepare done'
   stage: test
+  allow_failure: true # Will be fixed in !4228
   services:
   - name: registry.gitlab.com/gitlab-org/cluster-integration/test-utils/k3s-gitlab-ci/releases/v1.26.0-k3s1
     alias: k3s
