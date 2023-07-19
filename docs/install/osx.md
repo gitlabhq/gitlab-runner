@@ -8,15 +8,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 GitLab Runner can be installed and updated on macOS.
 
-## Installing
-
-Two methods for installing GitLab Runner on macOS are available:
-
-- [Manual installation](#manual-installation-official). This method is officially supported and recommended by GitLab.
-- [Homebrew installation](#homebrew-installation-alternative). Install with [Homebrew](https://brew.sh) as an alternative to manual installation.
-
-### Manual installation (official)
-
 1. Download the binary for your system:
 
    - For Intel-based systems:
@@ -65,30 +56,7 @@ Two methods for installing GitLab Runner on macOS are available:
 
 If you followed these instructions, the GitLab Runner configuration file (`config.toml`) is in `/Users/<username>/.gitlab-runner/`. [Learn more about configuring runners](../configuration/advanced-configuration.md).
 
-### Homebrew installation (alternative)
-
-A Homebrew [formula is available](https://formulae.brew.sh/formula/gitlab-runner) to install GitLab.
-
-WARNING:
-GitLab does not maintain the Homebrew formula.
-
-To install GitLab Runner using Homebrew:
-
-1. Install GitLab Runner.
-
-   ```shell
-   brew install gitlab-runner
-   ```
-
-1. Install GitLab Runner as a service and start it.
-
-   ```shell
-   brew services start gitlab-runner
-   ```
-
-GitLab Runner is installed and running.
-
-### Limitations on macOS
+## Limitations on macOS
 
 NOTE:
 The service needs to be installed from a Terminal window logged in
@@ -142,7 +110,7 @@ You can check the status of the `credential.helper` with:
 git config credential.helper
 ```
 
-## Manual update
+## Update GitLab Runner
 
 1. Stop the service:
 
@@ -184,7 +152,7 @@ some of the most common problems with GitLab Runner.
 
 ## Upgrade the service file
 
-In order to upgrade the `LaunchAgent` configuration, you must uninstall and
+To upgrade the `LaunchAgent` configuration, you must uninstall and
 install the service:
 
 ```shell
@@ -197,7 +165,10 @@ gitlab-runner start
 
 If you installed `gitlab-runner` on macOS with Homebrew and your build calls
 `codesign`, you may have to set `<key>SessionCreate</key><true/>` to have
-access to the user keychains. In the following example we run the builds as the `gitlab`
+access to the user keychains. GitLab does not maintain the Homebrew formula and
+you should use the official binary to install GitLab Runner.
+
+In the following example we run the builds as the `gitlab`
 user and want access to the signing certificates installed by that user for codesigning:
 
 ```xml
