@@ -298,7 +298,7 @@ has been changed in GitLab or when the user did not correctly enter the registra
 
 When this error occurs, the first step is to ask a GitLab administrator to verify that the registration token is valid.
 
-Additionally, confirm that runner registration in the project or group is [allowed](https://docs.gitlab.com/ee/user/admin_area/settings/continuous_integration.html#restrict-runner-registration-by-all-members-in-a-group) by the GitLab administrator.
+Additionally, confirm that runner registration in the project or group is [allowed](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#restrict-runner-registration-by-all-members-in-a-group) by the GitLab administrator.
 
 ## `[[runners]]` configuration template file
 
