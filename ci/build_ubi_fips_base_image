@@ -32,6 +32,5 @@ build() {
 login
 pull
 build
-push
 logout
 scan
