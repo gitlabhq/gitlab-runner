@@ -54,9 +54,17 @@ else
 fi
 wget -nv "https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_${DUMB_INIT_ARCH}" \
   -O /usr/bin/dumb-init
-wget -nv "https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-${GIT_LFS_ARCH}-v${GIT_LFS_VERSION}.tar.gz" \
-  -O /tmp/git-lfs.tar.gz
-sha256sum -c -w "${SCRIPTPATH}/checksums-${ARCH}"
+
+if [ -n "$GIT_LFS_VERSION" ]; then
+  wget -nv "https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-${GIT_LFS_ARCH}-v${GIT_LFS_VERSION}.tar.gz" \
+    -O /tmp/git-lfs.tar.gz
+  sha256sum -c -w "${SCRIPTPATH}/checksums-${ARCH}"
+  tar -xf /tmp/git-lfs.tar.gz -C /tmp/
+  mv "/tmp/git-lfs-${GIT_LFS_VERSION}/git-lfs" /usr/bin/git-lfs
+  rm -rf /tmp/git-lfs*
+  git-lfs install --skip-repo
+  git-lfs version
+fi
 
 if [[ -f /usr/bin/docker-machine ]]; then
   chmod +x /usr/bin/docker-machine
@@ -65,9 +73,3 @@ fi
 
 chmod +x /usr/bin/dumb-init
 dumb-init --version
-
-tar -xf /tmp/git-lfs.tar.gz -C /tmp/
-mv /tmp/git-lfs-${GIT_LFS_VERSION}/git-lfs /usr/bin/git-lfs
-rm -rf /tmp/git-lfs*
-git-lfs install --skip-repo
-git-lfs version
