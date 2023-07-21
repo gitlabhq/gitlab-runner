@@ -586,7 +586,7 @@ To use rootless Docker-in-Docker with restricted privileged mode:
    ```yaml
    image: docker:git
    services:
-   - docker:dind-rooless
+   - docker:dind-rootless
 
    build:
      script:
