@@ -12,7 +12,7 @@ COPY dockerfiles/ci/build_git_lfs /tmp/
 
 RUN microdnf update -y && \
     microdnf install -y --setopt=tsflags=nodocs \
-        wget make git tar gzip go && \
+        wget make findutils git tar gzip go && \
     /tmp/build_git_lfs
 
 FROM redhat/ubi8-minimal:${UBI_VERSION}
