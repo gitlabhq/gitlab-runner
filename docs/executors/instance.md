@@ -253,13 +253,13 @@ concurrent = 8
 
 ## GCP instance group configuration examples
 
-### One job per instance using a GCP Instance group
+### One job per instance using a GCP instance group
 
 Prerequisites:
 
 - A custom image with at least `git` and GitLab Runner installed.
-- An Instance group. For the "Autoscaling mode" select "do not autoscale", as Runner handles the scaling.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
+- A GCP instance group where the autoscaling mode is set to `do not autoscale`. The runner handles the scaling.
+- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
 
 This configuration supports:
 
@@ -269,11 +269,11 @@ This configuration supports:
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
-By setting the capacity and use count to both 1, each job is given a secure ephemeral instance that cannot be
-affected by other jobs. As soon the job is complete the instance it was executed on is immediately deleted.
+When the capacity and use count are both set to `1`, each job is given a secure ephemeral instance that cannot be
+affected by other jobs. When the job completes, the instance it was executed on is immediately deleted.
 
-With an idle scale of 5, the runner keeps 5 whole instances
-available for future demand (because the capacity per instance is 1). These instances stay for at least 20 minutes.
+When the idle scale is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
+These instances stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
 
@@ -327,14 +327,14 @@ This configuration supports:
 - An idle time of 20 minutes
 - A maximum instance count of 10
 
-By setting the capacity per instance to 5 and an unlimited use count, each instance concurrently
+When the capacity is set `5` and the use count is unlimited, each instance concurrently
 executes 5 jobs for the lifetime of the instance.
 
 Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
 can affect the performance of another.
 
-With an idle scale of 5, 1 idle instance is created to accommodate an idle capacity of 5
-(due to the capacity per instance) whenever the in use capacity is lower than 5. Idle instances
+When the idle scale is set to `5`, 1 idle instance is created to accommodate an idle capacity of 5
+(due to the capacity per instance) whenever the in-use capacity is lower than 5. Idle instances
 stay for at least 20 minutes.
 
 The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
