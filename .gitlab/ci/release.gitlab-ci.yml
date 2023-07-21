@@ -42,11 +42,12 @@
   variables:
     SKOPEO_VERSION: v1.12.0
     SKOPEO_IMAGE: "quay.io/skopeo/stable:$SKOPEO_VERSION"
-    SYNC_DOCKER_IMAGES_ARGS: "--concurrency=3 --command=docker run -v /tmp:/tmp $SKOPEO_IMAGE"
+    SYNC_DOCKER_IMAGES_ARGS: "--concurrency=3"
+    SYNC_COMMAND: "docker run -v /tmp:/tmp $SKOPEO_IMAGE"
     PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
   script:
-    - make ARGS="$SYNC_DOCKER_IMAGES_ARGS" sync_docker_images
+    - make ARGS="$SYNC_DOCKER_IMAGES_ARGS" SYNC_COMMAND="$SYNC_COMMAND" sync_docker_images
 
 .release_helper_docker_images:
   extends:
