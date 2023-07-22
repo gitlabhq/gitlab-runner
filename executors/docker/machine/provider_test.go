@@ -451,6 +451,9 @@ func TestMachineReuseWithContention(t *testing.T) {
 
 	close(startCh)
 	wg.Wait()
+
+	listLock.Lock()
+	defer listLock.Unlock()
 	assert.NotEmpty(t, list)
 }
 
