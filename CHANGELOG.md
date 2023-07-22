@@ -1,3 +1,67 @@
+## v16.2.0 (2023-07-21)
+
+### New features
+
+- Update Runner package repository with OS availability !4215
+- Add warning events on failure with k8s executor !4211
+- Check forbidden arguments in register command before calling the server !4158
+- Ignore forbidden arguments to register if using --registration-token !4157
+- Retry all k8s API calls in the runner Kubernetes executor !4143
+- Print number of jobs being processed for each new job !4113
+- Added zip+zstd and tar+zstd archivers !4107
+- Add Azure key vault support !3809 (Zehua Zhang @zhzhang93)
+
+### Security fixes
+
+- Do not install python in ubi-fips-base image !4213
+- Build git-lfs from source in runner ubi-fips image !4206
+- Update github.com/docker/distribution dependency !4205
+- Upgrade Go version to 1.20.5 !4179
+- Update `ubi8-minimal` image to version `8.8-860` !4171
+
+### Bug fixes
+
+- Downgrade Git from v2.41.0 to v2.40.1 !4236
+- Fix misleading error when cache isn't configured !4212
+- Fix common build dir implementation in instance executor !4209
+- Add documentation to describe runner issue 30769 and its workarounds !4181
+- Fix panic for instance executor when instance config option is nil !4173
+- Kubernetes executor: prevent background processes from hanging the entire job !4162 (Snaipe @Snaipe)
+- Fix docker-autoscaler proxy tunnel for Windows !4161
+
+### Maintenance
+
+- Fix old metadata in docs !4240
+- Refactor instance executor docs content !4238
+- Fix Git LFS not building !4237
+- Fix typo in Docker executor !4235 (Raphaël Joie @raphaeljoie)
+- Mark integration_k8s as optional temporarily !4233
+- Update documentation links !4232
+- Update runner reg instructions in macOS setup !4230
+- Add links to executor pages !4229
+- Remove homebrew from docs to set up runner on MacOS !4227
+- Build git-lfs in the base UBI fips image as multiarch !4219
+- Add Troubleshooting Case !4208
+- Fix TestStackDumping flaky test and incorrect log output !4207
+- Update vale rules and exceptions !4204
+- Update text in runner registration page !4203
+- Add note for limited config template setting support !4202
+- Add documentation for SETFCAP configuration !4183
+- Fix flaky k8s TestProcessLogs !4177
+- Update to include Runner system requirements !4176
+- Upgrade github.com/minio/minio-go to v7.0.59 !4174
+- Fixed outdated URL and type of variable !4168
+- Add Crowdstrike troubleshooting guidance !4160
+- Emphasize use of runnerToken in Helm chart !4150
+- Mark ConfigExecTimeout as optional !4145 (Nikolay Edigaryev @edigaryev)
+- Propagate build context !4128
+- Add troubleshooting section about "permission denied" errors due to helper image user mismatch in k8s executor !3990
+
+### GitLab Runner distribution
+
+- Fix ECR and DockerHub sync !4180
+- Fix windows servercore pwsh version and checksums !4178
+
 ## v16.1.0 (2023-06-21)
 
 ### New features
