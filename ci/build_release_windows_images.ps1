@@ -39,6 +39,15 @@ $InformationPreference = "Continue"
 # ---------------------------------------------------------------------------
 $imagesBasePath = "dockerfiles/runner-helper/Dockerfile.x86_64"
 
+function Print-Error-And-Exit {
+    param (
+        [string]$ErrorMessage
+    )
+
+    Write-Host "Error: $ErrorMessage"
+    exit 1
+}
+
 function Main
 {
     if (-not (Test-Path Env:IS_LATEST))
@@ -142,7 +151,7 @@ function Build-Image($tag)
 
     & 'docker' build $imageNames --force-rm --no-cache $buildArgs -f $dockerFile $context
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to build docker image")
+        Print-Error-And-Exit "Failed to build docker image"
     }
 }
 
@@ -152,7 +161,7 @@ function Push-Tag($namespace, $tag)
 
     & 'docker' push ${namespace}/gitlab-runner-helper:$tag
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to push docker image ${namespace}/gitlab-runner-helper:$tag" )
+        Print-Error-And-Exit "Failed to push docker image ${namespace}/gitlab-runner-helper:$tag"
     }
 }
 
@@ -186,13 +195,13 @@ function Push-As($namespace, $tag, $alias)
     Write-Information "Tag $tag as $newTag"
     & 'docker' tag $image $newImage
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to tag $tag as $newTag" )
+        Print-Error-And-Exit "Failed to tag $tag as $newTag"
     }
 
     Write-Information "Push image $newImage"
     & 'docker' push $newImage
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to push image $newImage to registry" )
+        Print-Error-And-Exit "Failed to push image $newImage to registry"
     }
 }
 
@@ -202,7 +211,7 @@ function Push-Latest($namespace)
 
     & 'docker' push "${namespace}/gitlab-runner-helper:x86_64-latest-$Env:WINDOWS_VERSION"
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to push image to registry" )
+        Print-Error-And-Exit "Failed to push image to registry"
     }
 }
 
@@ -212,7 +221,7 @@ function Connect-Registry($username, $password, $registry)
 
     & 'docker' login --username $username --password $password $registry
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to login Docker hub" )
+        Print-Error-And-Exit "Failed to login Docker hub"
     }
 }
 
@@ -222,7 +231,7 @@ function Disconnect-Registry($registry)
 
     & 'docker' logout $registry
     if ($LASTEXITCODE -ne 0) {
-        throw ("Failed to logout from Docker hub" )
+        Print-Error-And-Exit "Failed to logout from Docker hub"
     }
 }
 
@@ -230,7 +239,7 @@ Try
 {
     if (-not (Test-Path env:WINDOWS_VERSION))
     {
-        throw '$Env:WINDOWS_VERSION is not set'
+        Print-Error-And-Exit '$Env:WINDOWS_VERSION is not set'
     }
 
     Main
