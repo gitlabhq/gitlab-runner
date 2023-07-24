@@ -7,12 +7,13 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 # Executors **(FREE)**
 
 GitLab Runner implements a number of executors that can be used to run your
-builds in different scenarios. If you are not sure what to select, read the
-[I am not sure](#i-am-not-sure) section.
-Visit the [compatibility chart](#compatibility-chart) to find
-out what features each executor does and does not support.
+builds in different environments.
 
-To jump into the specific documentation for each executor, visit:
+If you are not sure about which executor to select, see [Selecting the executor](#selecting-the-executor).
+
+For more information about features supported by each executor, see the [compatibility chart](#compatibility-chart).
+
+GitLab Runner provides the following executors:
 
 - [SSH](ssh.md)
 - [Shell](shell.md)
@@ -25,10 +26,8 @@ To jump into the specific documentation for each executor, visit:
 - [Instance (experiment)](instance.md)
 - [Custom](custom.md)
 
-The list of executors above is locked. We no longer are developing or
-accepting new ones. Please check
-[CONTRIBUTION.md](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md#contributing-a-new-executors)
-to check the details.
+These executors are locked and we are no longer developing or accepting
+new ones. For more information, see [Contributing new executors](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/CONTRIBUTING.md#contributing-new-executors).
 
 ## Prerequisites for non-Docker executors
 
@@ -57,68 +56,65 @@ you decide which executor to use.
 | Debugging build problems                          | easy | easy    | hard       | hard      | medium | medium     |medium          |
 
 1. It's possible, but in most cases it is problematic if the build uses services
-   installed on the build machine
-1. It requires to install all dependencies by hand
-1. For example using [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox")
+   installed on the build machine.
+1. Requires manual dependency installation.
+1. For example using [Vagrant](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox "Vagrant documentation for VirtualBox").
 1. Dependent on what kind of environment you are provisioning. It can be
    completely isolated or shared between each build.
 1. When a runner's file system access is not protected, jobs can access the entire
-   system including the runner's token, and the cache and code of other jobs.
+   system, which includes the runner's token, and the cache and code of other jobs.
    Executors marked ✓ don't allow the runner to access the file system by default.
    However, security flaws or certain configurations could allow jobs
    to break out of their container and access the file system hosting the runner.
 
-### I am not sure
-
-#### Shell executor
+### Shell executor
 
 **Shell** is the simplest executor to configure. All required dependencies for
 your builds need to be installed manually on the same machine that GitLab Runner is
 installed on.
 
-#### Virtual Machine executor (VirtualBox / Parallels)
+### Virtual Machine executor (VirtualBox / Parallels)
 
-This type of executor allows you to use an already created virtual machine, which
-is cloned and used to run your build. We offer two full system virtualization
-options: **VirtualBox** and **Parallels**. They can prove useful if you want to run
-your builds on different operating systems, since it allows the creation of virtual
-machines on Windows, Linux, macOS or FreeBSD, then GitLab Runner connects to the
-virtual machine and runs the build on it. Its usage can also be useful for reducing
-infrastructure costs.
+You can use this executor to use an already created virtual machine, which
+is cloned and used to run your build. GitLab Runner provides two full system virtualization
+options: **VirtualBox** and **Parallels** that you can use to run your
+builds on Windows, Linux, macOS, or FreeBSD operating systems.
+GitLab Runner connects to the virtual machine and runs the build on it.
+The Virtual Machine executor can also be used to reduce infrastructure costs.
 
-#### Docker executor
+### Docker executor
 
-A great option is to use **Docker** as it allows a clean build environment,
-with easy dependency management (all dependencies for building the project can
-be put in the Docker image). The Docker executor allows you to easily create
-a build environment with dependent [services](https://docs.gitlab.com/ee/ci/services/index.html),
+You can use **Docker** for a clean build environment. All dependencies for building the
+project can be put in the Docker image, which makes dependency management more
+straight-forward. You can use the Docker executor to create a build environment with dependent
+[services](https://docs.gitlab.com/ee/ci/services/index.html),
 like MySQL.
 
-#### Docker Machine executor
+### Docker Machine executor
 
 The **Docker Machine** is a special version of the **Docker** executor
-with support for auto-scaling. It works like the normal **Docker** executor
+with support for auto-scaling. It works like the typical **Docker** executor
 but with build hosts created on demand by _Docker Machine_.
 
-#### Kubernetes executor
+### Kubernetes executor
 
-The **Kubernetes** executor allows you to use an existing Kubernetes cluster
-for your builds. The executor will call the Kubernetes cluster API
-and create a new Pod (with a build container and services containers) for
+You can use the **Kubernetes** executor to use an existing Kubernetes cluster
+for your builds. The executor calls the Kubernetes cluster API
+and creates a new Pod (with a build container and services containers) for
 each GitLab CI job.
 
-#### SSH executor
+### SSH executor
 
 The **SSH** executor is added for completeness, but it's the least supported
-among all executors. It makes GitLab Runner connect to an external server
+executors. When you use the SSH executor, GitLab Runner connects to an external server
 and runs the builds there. We have some success stories from organizations using
 this executor, but usually we recommend using one of the other types.
 
-#### Custom executor
+### Custom executor
 
-The **Custom** executor allows you to specify your own execution
+You can use the **Custom** executor to specify your own execution
 environments. When GitLab Runner does not provide an executor (for
-example, LXC containers), you are able to provide your own
+example, LXC containers), you can provide your own
 executables to GitLab Runner to provision and clean up any environment
 you want to use.
 
