@@ -18,7 +18,7 @@ push_packagecloud() {
   package_cloud push --verbose --url "${packageCloudURL}" "${packageCloudRepo}/${dist}" out/${packageType}/*.${packageType}
 }
 
-releases=$(make ARGS="$packageType $branch" packagecloud-releases)
+releases=$(make ARGS="$packageType $branch" packagecloud_releases)
 
 echo "$packageType distros to package: $releases"
 
