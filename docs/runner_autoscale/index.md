@@ -34,7 +34,7 @@ The following autoscaling options are supported for public cloud compute instanc
 |                   | Next Runner Autoscaler (Experiment)                  | GitLab Runner Docker Machine Autoscaler (GA)                |
 |----------------------------|------------------------|------------------------|
 | Amazon Web Services EC2 instances         | **{check-circle}** Yes | **{check-circle}** Yes |
-| Google Compute Engine | **{check-circle}** Yes | **{dotted-circle}** Yes |
+| Google Compute Engine | **{check-circle}** Yes | **{check-circle}** Yes |
 |Microsoft Azure Virtual Machines|**{check-circle}** Yes|**{check-circle}** Yes|
 
 ### GitLab Runner Autoscaler supported platforms
