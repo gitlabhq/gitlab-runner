@@ -89,11 +89,12 @@ const (
 	// errorDialingBackendMessage is an error prefix that is encountered when
 	// connectivity to a Pod fails. This can happen for a number of reasons,
 	// such as the Pod or Node still being configured.
-	errorDialingBackendMessage      = "error dialing backend"
-	errorTLSHandshakeTimeoutMessage = "TLS handshake timeout"
-	errorUnexpectedEOFMessage       = "unexpected EOF"
-	errorConnectionTimedOutMessage  = "read: connection timed out"
-	errorTimeoutOccuredMessage      = "Timeout occurred"
+	errorDialingBackendMessage            = "error dialing backend"
+	errorTLSHandshakeTimeoutMessage       = "TLS handshake timeout"
+	errorUnexpectedEOFMessage             = "unexpected EOF"
+	errorReadConnectionTimedOutMessage    = "read: connection timed out"
+	errorConnectConnectionTimedOutMessage = "connect: connection timed out"
+	errorTimeoutOccuredMessage            = "Timeout occurred"
 
 	// errorAlreadyExistsMessage is an error message that is encountered when
 	// we fail to create a resource because it already exists.
@@ -126,11 +127,12 @@ var (
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 	errorRegex = fmt.Sprintf(
-		"%s|%s|%s|%s|%s",
+		"%s|%s|%s|%s|%s|%s",
 		errorDialingBackendMessage,
 		errorTLSHandshakeTimeoutMessage,
 		errorUnexpectedEOFMessage,
-		errorConnectionTimedOutMessage,
+		errorReadConnectionTimedOutMessage,
+		errorConnectConnectionTimedOutMessage,
 		errorTimeoutOccuredMessage,
 	)
 )
