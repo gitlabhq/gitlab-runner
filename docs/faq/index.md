@@ -179,7 +179,7 @@ its own configuration, make sure that GitLab requests are proxied to the
 Git protocol via HTTP(S) is resolved by the GitLab Workhorse, so this is the
 **main entrypoint** of GitLab.
 
-If you are using Omnibus GitLab, but don't want to use the bundled NGINX
+If you are using a Linux package installation, but don't want to use the bundled NGINX
 server, please read [using a non-bundled web-server](https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server).
 
 In the GitLab Recipes repository there are
