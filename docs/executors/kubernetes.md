@@ -534,6 +534,7 @@ You can either:
     | services          | get, list, watch, create, patch, delete         |
     | secrets           | get, list, watch, create, update, patch, delete |
     | serviceAccounts   | get (1)                                         |
+    | events            | get, list (1)                                   |
 
   - For `attach strategy`:
 
@@ -543,14 +544,22 @@ You can either:
     | pods/exec         | create, patch, delete                   |
     | pods              | get, watch, create, delete              |
     | services          | get, watch, create, delete              |
-    | configmaps        | get, create, update, delete             |
     | secrets           | get, create, update, delete             |
     | serviceAccounts   | get (1)                                 |
+    | configmaps        | get, create, update, delete (2)         |
+    | events            | get, list (3)                           |
 
 _(1) The `serviceAccount` permission is needed only:_
 
 - _For GitLab 15.0 and 15.1._
 - _For GitLab 15.0.1, 15.1.1, and 15.2 when `resource_availability_check_max_attempts` is set to a value higher than 0._
+
+_(2) The `configmaps` permission is no longer needed from GitLab 15.8._
+
+_(3) The `event` permission is needed only:_
+
+- _For GitLab 16.2.0_
+- _For GitLab 16.2.1 and later when `FF_RETRIEVE_POD_WARNING_EVENTS` is enabled._
 
 ### Overwrite the Kubernetes default service account
 
