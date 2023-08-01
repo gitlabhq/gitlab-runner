@@ -31,6 +31,7 @@ const (
 	UseAdvancedPodSpecConfiguration      string = "FF_USE_ADVANCED_POD_SPEC_CONFIGURATION"
 	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
 	EnableSecretResolvingFailsIfMissing  string = "FF_SECRET_RESOLVING_FAILS_IF_MISSING"
+	RetrievePodWarningEvents             string = "FF_RETRIEVE_POD_WARNING_EVENTS"
 )
 
 type FeatureFlag struct {
@@ -255,6 +256,12 @@ var flags = []FeatureFlag{
 		DefaultValue: true,
 		Deprecated:   false,
 		Description:  "When enabled, secret resolving fails if the value cannot be found.",
+	},
+	{
+		Name:         RetrievePodWarningEvents,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, all warning events associated with the Pod are retrieved when the job fails.",
 	},
 }
 

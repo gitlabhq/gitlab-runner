@@ -450,7 +450,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 			err = s.runWithAttach(cmd)
 		}
 
-		if err != nil {
+		if err != nil && s.Build.IsFeatureFlagOn(featureflags.RetrievePodWarningEvents) {
 			s.logPodWarningEvents(k8sEventWarningType)
 		}
 
