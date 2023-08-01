@@ -86,10 +86,11 @@ NOTE:
 The metrics server exports data about the internal state of the
 GitLab Runner process and should not be publicly available!
 
-The metrics HTTP server can be configured in two ways:
+The metrics HTTP server can be configured in the following ways:
 
 - with a `listen_address` global configuration option in `config.toml` file,
-- with a `--listen-address` command line option for the `run` command.
+- with a `--listen-address` command line option for the `run` command,
+- by configuring the [`metrics`](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/main/values.yaml#L247) and [`service`](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/main/values.yaml#L247) configuration options in `values.yaml` for runners using Helm Chart.
 
 If you add the address to your `config.toml` file, to start the metrics HTTP server,
 you must restart the runner process.
