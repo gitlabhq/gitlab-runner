@@ -161,7 +161,7 @@ existing users need to manually download and install the new keys.
 
 We use one key for all our projects hosted under <https://packages.gitlab.com>. You can find
 the details about the currently used key and technical description of how to update the key when
-needed [in Omnibus GitLab documentation](https://docs.gitlab.com/omnibus/update/package_signatures#package-repository-metadata-signing-keys).
+needed in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures#package-repository-metadata-signing-keys).
 This documentation page lists also
 [all keys used in the past](https://docs.gitlab.com/omnibus/update/package_signatures#previous-keys).
 
@@ -191,7 +191,7 @@ The RPM format contains a full implementation of GPG signing functionality, and 
 integrated with the package management systems based upon that format.
 
 You can find the technical description of how to configure package signature
-verification for RPM-based distributions in [the Omnibus GitLab documentation](https://docs.gitlab.com/omnibus/update/package_signatures#rpm-based-distributions).
+verification for RPM-based distributions in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures#rpm-based-distributions).
 The GitLab Runner differences are:
 
 - The public key package that should be installed is named `gpg-pubkey-35dfa027-60ba0235`.
