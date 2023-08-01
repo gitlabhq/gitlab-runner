@@ -77,10 +77,11 @@ GitLab Runner [supports certain shells](../shells/index.md). To select a shell, 
 
 ## Security
 
-Generally it's unsafe to run tests with shell executors. The jobs are run with
+Generally it's unsafe to run jobs with shell executors. The jobs are run with
 the user's permissions (`gitlab-runner`) and can "steal" code from other
-projects that are run on this server. Use it only for running builds on a
-server you trust and own.
+projects that are run on this server. Depending on your configuration, the job
+could execute arbitrary commands on the server as a highly privileged user.
+Use it only for running builds from users you trust on a server you trust and own.
 
 ## Terminating and killing processes
 
