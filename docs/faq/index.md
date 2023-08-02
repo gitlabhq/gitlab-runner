@@ -17,6 +17,8 @@ View the logs:
 
 - `tail -100 /var/log/syslog` (Debian)
 - `tail -100 /var/log/messages` (RHEL)
+- `docker logs gitlab-runner-container` (Docker)
+- `kubectl logs gitlab-runner-pod` (Kubernetes)
 
 Restart the service:
 
