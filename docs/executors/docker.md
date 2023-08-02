@@ -225,7 +225,7 @@ variables are not shared across the containers. For more information
 about user-defined bridge networks, see the [Docker documentation](https://docs.docker.com/network/drivers/bridge/).
 
 To use this networking mode, enable `FF_NETWORK_PER_BUILD` in either
-the feature flag or the environment variable in the`config.toml`.
+the feature flag or the environment variable in the `config.toml`.
 
 Do not set the `network_mode`.
 
