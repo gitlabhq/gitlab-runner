@@ -664,7 +664,7 @@ runners:
 
 To resolve this error, [switch to the Ubuntu-based GitLab Runner Docker image](#switching-to-the-ubuntu-based-gitlab-runner-docker-image).
 
-### FATAL: Runner configuration other than name and executor configuration is reserved and cannot be specified when registering with a runner token. This configuration is specified on the GitLab server. Please try again without specifying those arguments
+### FATAL: Runner configuration other than name and executor configuration is reserved (specifically --locked, --access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note) and cannot be specified when registering with a runner token. This configuration is specified on the GitLab server. Please try again without specifying any of those arguments
 
 You may get this error in the pod logs after installing GitLab Runner Helm chart.
 It happens if you use an authentication token and [provide a token through a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
