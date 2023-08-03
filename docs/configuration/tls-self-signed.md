@@ -293,3 +293,10 @@ Refer to the general [SSL troubleshooting](https://docs.gitlab.com/omnibus/setti
 documentation.
 
 In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/tlsctl) tool to debug GitLab certificates from the Runner's end.
+
+### `x509: certificate signed by unknown authority` while trying to pull executor images from private registry
+
+This error occurs when the Docker host or Kubernetes node where the runner schedules the
+executors does not trust the certificate used by the private registry. To fix the error,
+add the relevant root certificate authority certificate to the system's trust store based
+on your operating system.
