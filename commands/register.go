@@ -525,10 +525,11 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 	}
 
 	logrus.Fatalln(
-		"Runner configuration other than name and executor configuration is reserved " +
+		"Runner configuration other than name and executor configuration is reserved (specifically --locked, " +
+			"--access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note) " +
 			"and cannot be specified when registering with a runner token. " +
-			"This configuration is specified on the GitLab server. Please try again without specifying " +
-			"those arguments.",
+			"This configuration is specified on the GitLab server. " +
+			"Please try again without specifying any of those arguments.",
 	)
 }
 
