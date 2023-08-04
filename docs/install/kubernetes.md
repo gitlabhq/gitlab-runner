@@ -372,12 +372,13 @@ enable privileged mode in `values.yaml`:
 
 ```yaml
 runners:
-  ## Run all containers with the privileged flag enabled
-  ## This will allow the docker:stable-dind image to run if you need to run Docker
-  ## commands. Please read the docs before turning this on:
-  ## ref: https://docs.gitlab.com/runner/executors/kubernetes.html#using-docker-dind
-  ##
-  privileged: true
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        # Run all containers with the privileged flag enabled.
+        # See https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runnerskubernetes-section for details.
+        privileged = true
+        ...
 ```
 
 ### Best practices for building containers without privileged mode
