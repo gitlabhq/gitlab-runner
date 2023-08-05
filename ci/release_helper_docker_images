@@ -130,8 +130,8 @@ release_docker_helper_images() {
         push "${helper_image_riscv64_version}" "${PUSH_ENABLED}"
     fi
 
-    if [[ "$FLAVOR" != "alpine-latest" ]]; then
-        # Alpine-latest is a special case, the powershell DockerHub repo (https://hub.docker.com/_/microsoft-powershell) doesn't support an alpine:latest image
+    if [[ "$FLAVOR" != "alpine-latest" ]] && [[ "$FLAVOR" != "alpine-edge" ]]; then
+        # Alpine-latest and alpine-edge are special cases, the powershell DockerHub repo (https://hub.docker.com/_/microsoft-powershell) doesn't support alpine:latest and alpine:edge
         import "out/helper-images/prebuilt-${FLAVOR}-x86_64-pwsh.tar.xz" "${helper_image_x86_64_pwsh}" "linux/amd64"
         tag_latest "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_latest}"
         tag "${helper_image_x86_64_pwsh}" "${helper_image_x86_64_pwsh_version}"
