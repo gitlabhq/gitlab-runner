@@ -235,13 +235,6 @@ ${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ 3.18
 
-
-${BASE_TAR_PATH}-alpine-edge-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine-edge-%-pwsh.tar: export PWSH_VERSION ?= 7.3
-${BASE_TAR_PATH}-alpine-edge-%-pwsh.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine-edge $* $@ edge
-
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.3
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
