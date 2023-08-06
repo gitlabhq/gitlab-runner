@@ -1,3 +1,14 @@
+## v16.2.1 (2023-08-06)
+
+### New features
+
+- Put warning event retrieval feature behind a Feature Flag !4246
+
+### Bug fixes
+
+- Fix script typo that caused packages not to be pushed to Packagecloud !4253
+- Prevent abuse of CACHE_FALLBACK_KEY !68
+
 ## v16.2.0 (2023-07-21)
 
 ### New features
