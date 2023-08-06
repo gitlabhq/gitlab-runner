@@ -1,3 +1,14 @@
+## v16.1.1 (2023-08-06)
+
+### Bug fixes
+
+- Downgrade Git from v2.41.0 to v2.40.1 !4236
+- Prevent abuse of CACHE_FALLBACK_KEY !68
+
+### Maintenance
+
+- Mark integration_k8s as optional temporarily !4233
+
 ## v16.1.0 (2023-06-21)
 
 ### New features
