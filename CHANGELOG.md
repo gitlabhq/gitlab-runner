@@ -1,3 +1,13 @@
+## v16.0.3 (2023-08-06)
+
+### Bug fixes
+
+- Prevent abuse of CACHE_FALLBACK_KEY !68
+
+### Maintenance
+
+- Mark integration_k8s as optional temporarily !4233
+
 ## v16.0.2 (2023-06-02)
 
 ### Bug fixes
