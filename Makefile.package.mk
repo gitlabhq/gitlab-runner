@@ -20,6 +20,10 @@ package-deb-arm-64bit: package-deps package-prepare
 	$(MAKE) package-deb-arch ARCH=arm64 PACKAGE_ARCH=aarch64
 	$(MAKE) package-deb-arch ARCH=arm64 PACKAGE_ARCH=arm64
 
+.PHONY: package-deb-riscv-64bit
+package-deb-riscv-64bit: package-deps package-prepare
+	$(MAKE) package-deb-arch ARCH=riscv64 PACKAGE_ARCH=riscv64
+
 .PHONY: package-deb-32bit
 package-deb-32bit: package-deps package-prepare
 	$(MAKE) package-deb-arch ARCH=386 PACKAGE_ARCH=i386
@@ -42,6 +46,10 @@ package-rpm-64bit: package-deps package-prepare
 package-rpm-arm-64bit: package-deps package-prepare
 	$(MAKE) package-rpm-arch ARCH=arm64 PACKAGE_ARCH=aarch64
 	$(MAKE) package-rpm-arch ARCH=arm64 PACKAGE_ARCH=arm64
+
+.PHONY: package-rpm-riscv-64bit
+package-rpm-riscv-64bit: package-deps package-prepare
+	$(MAKE) package-rpm-arch ARCH=riscv64 PACKAGE_ARCH=riscv64
 
 .PHONY: package-rpm-32bit
 package-rpm-32bit: package-deps package-prepare

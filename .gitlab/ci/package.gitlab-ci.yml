@@ -40,6 +40,7 @@ package-deb:
       - package-deb-32bit
       - package-deb-arm-32bit
       - package-deb-ibm
+      - package-deb-riscv-64bit
 
 package-rpm:
   extends:
@@ -52,4 +53,5 @@ package-rpm:
       - package-rpm-32bit
       - package-rpm-arm-32bit
       - package-rpm-ibm
+      - package-rpm-riscv-64bit
       - package-rpm-fips

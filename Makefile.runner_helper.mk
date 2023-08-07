@@ -57,6 +57,13 @@ TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-arm64.tar.xz
 TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-s390x.tar.xz
 TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-ppc64le.tar.xz
 
+TAR_XZ_ALPINE_EDGE += ${BASE_TAR_PATH}-alpine-edge-x86_64.tar.xz
+TAR_XZ_ALPINE_EDGE += ${BASE_TAR_PATH}-alpine-edge-arm.tar.xz
+TAR_XZ_ALPINE_EDGE += ${BASE_TAR_PATH}-alpine-edge-arm64.tar.xz
+TAR_XZ_ALPINE_EDGE += ${BASE_TAR_PATH}-alpine-edge-s390x.tar.xz
+TAR_XZ_ALPINE_EDGE += ${BASE_TAR_PATH}-alpine-edge-ppc64le.tar.xz
+TAR_XZ_ALPINE_EDGE += ${BASE_TAR_PATH}-alpine-edge-riscv64.tar.xz
+
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-x86_64.tar.xz
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-x86_64-pwsh.tar.xz
 TAR_XZ_UBUNTU += ${BASE_TAR_PATH}-ubuntu-arm.tar.xz
@@ -78,6 +85,7 @@ BINARIES += ${BASE_BINARY_PATH}.arm
 BINARIES += ${BASE_BINARY_PATH}.arm64
 BINARIES += ${BASE_BINARY_PATH}.s390x
 BINARIES += ${BASE_BINARY_PATH}.ppc64le
+BINARIES += ${BASE_BINARY_PATH}.riscv64
 
 # Define variables with the architecture for each matching binary. We are using
 # the following pattern match GO_ARCH_{{arch}}-{{os}}, these should match up
@@ -87,6 +95,7 @@ GO_ARCH_arm = linux/arm
 GO_ARCH_arm64 = linux/arm64
 GO_ARCH_s390x = linux/s390x
 GO_ARCH_ppc64le = linux/ppc64le
+GO_ARCH_riscv64 = linux/riscv64
 GO_ARCH_x86_64-windows = windows/amd64
 
 GO_ARCH_NAME_amd64 = x86_64
@@ -167,6 +176,9 @@ helper-dockerarchive-alpine3.17: $(TAR_XZ_ALPINE_317)
 
 .PHONY: helper-dockerarchive-alpine3.18
 helper-dockerarchive-alpine3.18: $(TAR_XZ_ALPINE_318)
+
+.PHONY: helper-dockerarchive-alpine-edge
+helper-dockerarchive-alpine-edge: $(TAR_XZ_ALPINE_EDGE)
 
 .PHONY: helper-dockerarchive-alpine-latest
 helper-dockerarchive-alpine-latest: $(TAR_XZ_ALPINE_LATEST)
@@ -252,6 +264,10 @@ ${BASE_TAR_PATH}-alpine3.17-%.tar: ${BASE_BINARY_PATH}.%
 ${BASE_TAR_PATH}-alpine3.18-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ $(ALPINE_318_VERSION)
+
+${BASE_TAR_PATH}-alpine-edge-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine-edge $* $@ edge
 
 ${BASE_TAR_PATH}-ubuntu-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)

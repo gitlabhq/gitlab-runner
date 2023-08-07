@@ -22,6 +22,7 @@ base_output_part="/usr/lib/gitlab-runner/helper-images/prebuilt-"
 prebuilt_images_list=$(cat <<-END
             ${base_input_part}alpine-arm.tar.xz=${base_output_part}alpine-arm.tar.xz \
             ${base_input_part}alpine-arm64.tar.xz=${base_output_part}alpine-arm64.tar.xz \
+            ${base_input_part}alpine-edge-riscv64.tar.xz=${base_output_part}alpine-edge-riscv64.tar.xz \
             ${base_input_part}alpine-s390x.tar.xz=${base_output_part}alpine-s390x.tar.xz \
             ${base_input_part}alpine-x86_64-pwsh.tar.xz=${base_output_part}alpine-x86_64-pwsh.tar.xz \
             ${base_input_part}alpine-x86_64.tar.xz=${base_output_part}alpine-x86_64.tar.xz \

@@ -100,6 +100,18 @@ func Test_linuxInfo_create(t *testing.T) {
 					Cmd:                     expectedCmd,
 				},
 			},
+			"Docker runs on riscv64, with a default of alpine-edge": {
+				shell:      shell,
+				dockerArch: "riscv64",
+				revision:   "2923a43",
+				expectedInfo: Info{
+					Architecture:            "riscv64",
+					Name:                    GitLabRegistryName,
+					Tag:                     "alpine-edge-riscv64-2923a43" + expectedTagSuffix,
+					IsSupportingLocalImport: true,
+					Cmd:                     expectedCmd,
+				},
+			},
 			"Configured architecture is unknown": {
 				shell:      shell,
 				dockerArch: "some-random-arch",

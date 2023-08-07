@@ -25,7 +25,11 @@ func (l *linuxInfo) Create(revision string, cfg Config) (Info, error) {
 	arch := l.architecture(cfg.Architecture)
 
 	if cfg.Flavor == "" {
-		cfg.Flavor = DefaultFlavor
+		if arch == "riscv64" {
+			cfg.Flavor = DefaultEdgeFlavor
+		} else {
+			cfg.Flavor = DefaultFlavor
+		}
 	}
 
 	// alpine is a special case: we don't add the flavor to the tag name

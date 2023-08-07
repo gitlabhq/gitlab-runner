@@ -20,6 +20,7 @@ binaries:
       - linux/amd64 linux/arm64 #64bit
       - linux/386 linux/arm #32bit
       - linux/s390x linux/ppc64le #ibm
+      - linux/riscv64 #riscv
       - darwin/amd64 darwin/arm64
       - freebsd/386 freebsd/amd64 freebsd/arm
       - windows/386 windows/amd64

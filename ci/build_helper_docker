@@ -59,7 +59,11 @@ else
         exit 1
     fi
 
-    BASE_IMAGE="${TARGET_FLAVOR}:${TARGET_FLAVOR_IMAGE_VERSION}"
+    if [[ $TARGET_FLAVOR == 'alpine-edge' ]]; then
+        BASE_IMAGE="alpine:edge"
+    else
+        BASE_IMAGE="${TARGET_FLAVOR}:${TARGET_FLAVOR_IMAGE_VERSION}"
+    fi
 fi
 
 REVISION=${REVISION:-}
