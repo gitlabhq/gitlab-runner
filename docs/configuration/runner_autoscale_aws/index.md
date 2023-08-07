@@ -56,7 +56,8 @@ You have to make sure that ports `2376` and `22` are accessible by the [Runner M
 You'll need an [AWS Access Key](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html)
 tied to a user with permission to scale (EC2) and update the cache (via S3).
 Create a new user with [policies](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-policies-for-amazon-ec2.html)
-for EC2 (AmazonEC2FullAccess) and S3 (AmazonS3FullAccess). To be more secure,
+for EC2 (AmazonEC2FullAccess) and S3. For more information about the
+minimal permissions required for S3, see [`runners.cache.s3`](../advanced-configuration.md#the-runnerscaches3-section). To be more secure,
 you can disable console login for that user. Keep the tab open or copy paste the
 security credentials in an editor as we'll use them later during the
 [GitLab Runner configuration](#the-runnersmachine-section).
