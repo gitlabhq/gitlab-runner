@@ -52,7 +52,7 @@ func (s *executor) ProxyRequest(
 		return
 	}
 
-	if !s.servicesRunning() {
+	if !s.servicesRunning(s.Context) {
 		logger.Errorf("services are not ready yet")
 		http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return
@@ -66,9 +66,8 @@ func (s *executor) ProxyRequest(
 	proxyHTTPRequest(s, w, r, requestedURI, portSettings, settings, logger)
 }
 
-func (s *executor) servicesRunning() bool {
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(context.TODO(), s.pod.Name, metav1.GetOptions{})
+func (s *executor) servicesRunning(ctx context.Context) bool {
+	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(ctx, s.pod.Name, metav1.GetOptions{})
 	if err != nil || pod.Status.Phase != runningState {
 		return false
 	}
@@ -153,8 +152,7 @@ func proxyHTTPRequest(
 		return
 	}
 
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	body, err := req.Stream(context.TODO())
+	body, err := req.Stream(s.Context)
 	if err != nil {
 		message, code := handleProxyHTTPErr(err, logger)
 		w.WriteHeader(code)

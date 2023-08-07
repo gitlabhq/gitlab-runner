@@ -41,6 +41,7 @@ import (
 //go:generate mockery --name=RemoteExecutor --inpackage
 type RemoteExecutor interface {
 	Execute(
+		ctx context.Context,
 		method string,
 		url *url.URL,
 		config *restclient.Config,
@@ -54,6 +55,7 @@ type RemoteExecutor interface {
 type DefaultRemoteExecutor struct{}
 
 func (*DefaultRemoteExecutor) Execute(
+	ctx context.Context,
 	method string,
 	url *url.URL,
 	config *restclient.Config,
@@ -67,7 +69,7 @@ func (*DefaultRemoteExecutor) Execute(
 	}
 
 	return exec.StreamWithContext(
-		context.TODO(),
+		ctx,
 		remotecommand.StreamOptions{
 			Stdin:  stdin,
 			Stdout: stdout,
@@ -86,12 +88,14 @@ type AttachOptions struct {
 	Executor RemoteExecutor
 	Client   *kubernetes.Clientset
 	Config   *restclient.Config
+
+	Context context.Context
 }
 
 // Run executes a validated remote execution against a pod.
 func (p *AttachOptions) Run() error {
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(context.TODO(), p.PodName, metav1.GetOptions{})
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.Context, p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
@@ -119,7 +123,7 @@ func (p *AttachOptions) Run() error {
 			TTY:       false,
 		}, scheme.ParameterCodec)
 
-	return p.Executor.Execute(http.MethodPost, req.URL(), p.Config, stdin, nil, nil, false)
+	return p.Executor.Execute(p.Context, http.MethodPost, req.URL(), p.Config, stdin, nil, nil, false)
 }
 
 // ExecOptions declare the arguments accepted by the Exec command
@@ -137,12 +141,14 @@ type ExecOptions struct {
 	Executor RemoteExecutor
 	Client   *kubernetes.Clientset
 	Config   *restclient.Config
+
+	Context context.Context
 }
 
 // Run executes a validated remote execution against a pod.
 func (p *ExecOptions) Run() error {
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(context.TODO(), p.PodName, metav1.GetOptions{})
+	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.Context, p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
@@ -183,7 +189,7 @@ func (p *ExecOptions) executeRequest() error {
 		Stderr:    p.Err != nil,
 	}, scheme.ParameterCodec)
 
-	return p.Executor.Execute(http.MethodPost, req.URL(), p.Config, stdin, p.Out, p.Err, false)
+	return p.Executor.Execute(p.Context, http.MethodPost, req.URL(), p.Config, stdin, p.Out, p.Err, false)
 }
 
 func init() {
