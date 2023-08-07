@@ -4,6 +4,7 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -75,6 +76,9 @@ func TestProxyRequestError(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			ex := executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Context: context.Background(),
+				},
 				pod: &api.Pod{ObjectMeta: objectInfo},
 				kubeClient: testKubernetesClient(
 					version,
@@ -143,6 +147,9 @@ func TestProxyRequestHTTP(t *testing.T) {
 	}
 
 	ex := executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Context: context.Background(),
+		},
 		pod: &api.Pod{ObjectMeta: objectInfo},
 	}
 
@@ -249,6 +256,9 @@ func TestProxyRequestHTTPError(t *testing.T) {
 	objectInfo := metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}
 
 	ex := executor{
+		AbstractExecutor: executors.AbstractExecutor{
+			Context: context.Background(),
+		},
 		pod: &api.Pod{ObjectMeta: objectInfo},
 	}
 
@@ -371,6 +381,7 @@ func TestProxyRequestWebsockets(t *testing.T) {
 					},
 				},
 			},
+			Context: context.Background(),
 		},
 		configurationOverwrites: &overwrites{},
 		pod:                     &api.Pod{ObjectMeta: objectInfo},
