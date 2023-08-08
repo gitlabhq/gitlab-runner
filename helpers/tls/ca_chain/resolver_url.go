@@ -123,6 +123,7 @@ func (r *urlResolver) fetchIssuerCertificate(cert *x509.Certificate) (*x509.Cert
 
 	issuerURL := cert.IssuingCertificateURL[0]
 
+	log.WithField("issuerURL", issuerURL).Debug("Fetching issuer certificate")
 	data, err := r.fetcher.Fetch(issuerURL)
 	if err != nil {
 		log.
