@@ -3,17 +3,14 @@ ARG UBI_VERSION
 FROM redhat/ubi8-minimal:${UBI_VERSION} AS git_lfs
 
 ARG GIT_LFS_VERSION
-# Build git-lfs from source. This is necessary to resolve a number of CVES
-# vulnerabilties reported against this image.
-#
-# We can probably remove this on the next release of git-lfs.
-# See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/31065
-COPY dockerfiles/ci/build_git_lfs /tmp/
+COPY dockerfiles/install_git_lfs /tmp/
 
-RUN microdnf update -y && \
-    microdnf install -y --setopt=tsflags=nodocs \
-        wget make findutils git tar gzip go && \
-    /tmp/build_git_lfs
+ARG ARCH=amd64
+ARG GIT_LFS_VERSION
+RUN microdnf update --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs && \
+    microdnf install --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs \
+        wget git tar gzip
+RUN /tmp/install_git_lfs
 
 FROM redhat/ubi8-minimal:${UBI_VERSION} AS git
 
