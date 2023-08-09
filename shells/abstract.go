@@ -17,6 +17,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
+const tagsRefspec = "+refs/tags/*:refs/tags/*"
+
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
 type stringQuoter func(string) string
@@ -442,6 +444,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	fetchArgs := []string{"-c", userAgent, "fetch", "origin"}
 	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
+	fetchArgs = append(fetchArgs, tagsRefspec)
 	if depth > 0 {
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
 	}
