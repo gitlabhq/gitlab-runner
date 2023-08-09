@@ -232,8 +232,8 @@ func (s *RegisterCommand) askSSHLogin() {
 }
 
 func (s *RegisterCommand) verifyRunner() {
-	// If a runner token is specified in place of a registration token, let's accept it and process it as an
-	// authentication token. This allows for an easier transition for users by simply replacing the
+	// If a runner authentication token is specified in place of a registration token, let's accept it and process it as
+	// an authentication token. This allows for an easier transition for users by simply replacing the
 	// registration token with the new authentication token.
 	result := s.network.VerifyRunner(s.RunnerCredentials, s.SystemIDState.GetSystemID())
 	if result == nil || result.ID == 0 {
@@ -278,7 +278,7 @@ func (s *RegisterCommand) askRunner() {
 		logrus.Warningln("A runner with this system ID and token has already been registered.")
 	}
 
-	// when a runner token is specified as a registration token, certain arguments are reserved to the server
+	// when a runner authentication token is specified as a registration token, certain arguments are reserved to the server
 	s.ensureServerConfigArgsEmpty()
 
 	s.verifyRunner()
@@ -527,7 +527,7 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 	logrus.Fatalln(
 		"Runner configuration other than name and executor configuration is reserved (specifically --locked, " +
 			"--access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note) " +
-			"and cannot be specified when registering with a runner token. " +
+			"and cannot be specified when registering with a runner authentication token. " +
 			"This configuration is specified on the GitLab server. " +
 			"Please try again without specifying any of those arguments.",
 	)

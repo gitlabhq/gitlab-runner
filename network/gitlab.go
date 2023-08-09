@@ -533,7 +533,7 @@ func (n *GitLabClient) resetToken(
 
 	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
-	const baseLogText = "Resetting runner token..."
+	const baseLogText = "Resetting runner authentication token..."
 	switch result {
 	case http.StatusCreated:
 		runner.Log().Println(baseLogText, "succeeded")

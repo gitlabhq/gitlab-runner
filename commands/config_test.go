@@ -155,7 +155,7 @@ func TestRunnerByToken(t *testing.T) {
 			runnerToken:   "runner2",
 			expectedIndex: 1,
 		},
-		"does not find non-existent runner token": {
+		"does not find non-existent runner authentication token": {
 			runners: []*common.RunnerConfig{
 				{
 					RunnerCredentials: common.RunnerCredentials{
