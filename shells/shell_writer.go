@@ -4,7 +4,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-//go:generate mockery --name=ShellWriter --inpackage
+//go:generate mockery --name=ShellWriter --inpackage --with-expecter
 type ShellWriter interface {
 	EnvVariableKey(name string) string
 	Variable(variable common.JobVariable)

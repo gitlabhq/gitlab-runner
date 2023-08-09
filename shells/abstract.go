@@ -508,6 +508,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 	return nil
 }
 
+//nolint:funlen
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) error {
 	depth := build.GetSubmoduleDepth()
 
@@ -529,12 +530,12 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", "submodule", "init")
 
 	// Sync .git/config to .gitmodules in case URL changes (e.g. new build token)
-	args := []string{"submodule", "sync"}
+	syncArgs := []string{"submodule", "sync"}
 	if recursive {
-		args = append(args, "--recursive")
+		syncArgs = append(syncArgs, "--recursive")
 	}
-	args = append(args, pathArgs...)
-	w.Command("git", args...)
+	syncArgs = append(syncArgs, pathArgs...)
+	w.Command("git", syncArgs...)
 
 	// Update / initialize submodules
 	updateArgs := append(build.GetURLInsteadOfArgs(), "submodule", "update", "--init")
@@ -558,7 +559,17 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	w.Command("git", append(foreachArgs, cleanCommand...)...)
 	w.Command("git", append(foreachArgs, "git reset --hard")...)
+
+	w.IfCmdWithOutput("git", updateArgs...)
+	w.Noticef("Updated submodules")
+	w.Else()
+	// call sync and update again if the initial update fails
+	w.Warningf("Updating submodules failed. Retrying...")
+	w.Command("git", syncArgs...)
 	w.Command("git", updateArgs...)
+	w.Command("git", append(foreachArgs, "git reset --hard")...)
+	w.EndIf()
+
 	w.Command("git", append(foreachArgs, cleanCommand...)...)
 
 	if !build.IsLFSSmudgeDisabled() {
