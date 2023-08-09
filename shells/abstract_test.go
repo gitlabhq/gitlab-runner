@@ -788,7 +788,7 @@ func TestGitFetchFlags(t *testing.T) {
 
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
-			command := []interface{}{"git", "-c", userAgent, "fetch", "origin"}
+			command := []interface{}{"git", "-c", userAgent, "fetch", "origin", tagsRefspec}
 
 			command = append(command, test.expectedGitFetchFlags...)
 			mockWriter.On("Command", command...)
@@ -2202,7 +2202,7 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	m.On("Else")
 	m.On("Command", "git", "remote", "set-url", "origin", "repo-url")
 	m.On("EndIf")
-	m.On("Command", "git", "-c", mock.Anything, "fetch", "origin", "--prune", "--quiet")
+	m.On("Command", "git", "-c", mock.Anything, "fetch", "origin", tagsRefspec, "--prune", "--quiet")
 	m.On("Noticef", "Skipping Git checkout")
 	m.On("Noticef", "Skipping Git submodules setup")
 
