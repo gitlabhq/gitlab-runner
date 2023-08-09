@@ -776,7 +776,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	err = ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
 
-	err = ex.setupBuildPod(nil)
+	err = ex.setupBuildPod(context.Background(), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error creating the proxy service")
 }
@@ -838,7 +838,7 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 			err := e.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err)
 
-			err = e.setupBuildPod(nil)
+			err = e.setupBuildPod(context.Background(), nil)
 			assert.ErrorIs(t, err, assert.AnError)
 			assert.Error(t, err)
 		})
@@ -1090,6 +1090,9 @@ func TestCleanup(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			ex := executor{
+				AbstractExecutor: executors.AbstractExecutor{
+					Context: context.Background(),
+				},
 				kubeClient: testKubernetesClient(
 					version,
 					fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
@@ -2550,7 +2553,7 @@ func TestSetupCredentials(t *testing.T) {
 			err := ex.prepareOverwrites(make(common.JobVariables, 0))
 			assert.NoError(t, err)
 
-			err = ex.setupCredentials()
+			err = ex.setupCredentials(context.Background())
 			assert.NoError(t, err)
 
 			if test.VerifyFn != nil {
@@ -4813,6 +4816,7 @@ containers:
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
+			ctx := context.Background()
 			helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
 				OSType:       helperimage.OSTypeLinux,
 				Architecture: "amd64",
@@ -4902,11 +4906,11 @@ containers:
 			assert.NoError(t, err, "error preparing overwrites")
 
 			if test.Credentials != nil {
-				err = ex.setupCredentials()
+				err = ex.setupCredentials(ctx)
 				assert.NoError(t, err, "error setting up credentials")
 			}
 
-			err = ex.setupBuildPod(test.InitContainers)
+			err = ex.setupBuildPod(ctx, test.InitContainers)
 			if test.VerifySetupBuildPodErrFn == nil {
 				assert.NoError(t, err, "error setting up build pod")
 				assert.True(t, rt.executed, "RoundTrip for kubernetes client should be executed")
@@ -5227,7 +5231,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 		return true
 	})
 	remoteExecutor.
-		On("Execute", http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).
+		On("Execute", mock.Anything, http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).
 		Return(abortErr)
 
 	p, ok := e.newLogProcessor().(*kubernetesLogProcessor)
@@ -5242,7 +5246,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 	assert.Equal(t, pod.Name, s.pod)
 	assert.Equal(t, pod.Namespace, s.namespace)
 
-	err := s.Stream(int64(offset), output)
+	err := s.Stream(context.Background(), int64(offset), output)
 	assert.ErrorIs(t, err, abortErr)
 }
 

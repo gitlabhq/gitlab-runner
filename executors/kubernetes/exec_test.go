@@ -20,6 +20,7 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -43,6 +44,7 @@ type fakeRemoteExecutor struct {
 }
 
 func (f *fakeRemoteExecutor) Execute(
+	ctx context.Context,
 	method string,
 	url *url.URL,
 	config *restclient.Config,
@@ -124,6 +126,7 @@ func TestExec(t *testing.T) {
 			Stdin:         true,
 			Executor:      ex,
 			Client:        c,
+			Context:       context.TODO(),
 		}
 		err := params.Run()
 		if test.execErr && err != ex.execErr {
@@ -198,8 +201,11 @@ func TestAttach(t *testing.T) {
 		b, _ := io.ReadAll(stdin)
 		return string(b) == "sleep 1\n"
 	})
+
+	ctx := context.TODO()
+
 	mockExecutor.
-		On("Execute", http.MethodPost, urlMatcher, clientConfig, stdinMatcher, nil, nil, false).
+		On("Execute", ctx, http.MethodPost, urlMatcher, clientConfig, stdinMatcher, nil, nil, false).
 		Return(nil).
 		Once()
 
@@ -211,6 +217,7 @@ func TestAttach(t *testing.T) {
 		Executor:      mockExecutor,
 		Client:        client,
 		Config:        clientConfig,
+		Context:       ctx,
 	}
 
 	assert.Nil(t, opts.Run())
@@ -234,6 +241,7 @@ func TestAttachErrorGettingPod(t *testing.T) {
 		ContainerName: "test-resource",
 		Client:        client,
 		Config:        clientConfig,
+		Context:       context.TODO(),
 	}
 
 	assert.ErrorIs(t, opts.Run(), err)
@@ -258,6 +266,7 @@ func TestAttachPodNotRunning(t *testing.T) {
 		ContainerName: "test-resource",
 		Client:        client,
 		Config:        clientConfig,
+		Context:       context.TODO(),
 	}
 
 	err := opts.Run()

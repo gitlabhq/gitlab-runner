@@ -1600,6 +1600,7 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 			})
 			build.Runner.Kubernetes.Image = tc.image
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			buildtest.SetBuildFeatureFlag(build, "FF_RETRIEVE_POD_WARNING_EVENTS", true)
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			tc.verifyFn(t, out, err)

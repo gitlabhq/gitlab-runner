@@ -18,7 +18,7 @@ import (
 
 //go:generate mockery --name=logStreamer --inpackage
 type logStreamer interface {
-	Stream(offset int64, output io.Writer) error
+	Stream(ctx context.Context, offset int64, output io.Writer) error
 	fmt.Stringer
 }
 
@@ -43,7 +43,7 @@ type kubernetesLogStreamer struct {
 	executor     RemoteExecutor
 }
 
-func (s *kubernetesLogStreamer) Stream(offset int64, output io.Writer) error {
+func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output io.Writer) error {
 	exec := ExecOptions{
 		Namespace:     s.namespace,
 		PodName:       s.pod,
@@ -64,6 +64,8 @@ func (s *kubernetesLogStreamer) Stream(offset int64, output io.Writer) error {
 		Executor: s.executor,
 		Client:   s.client,
 		Config:   s.clientConfig,
+
+		Context: ctx,
 	}
 
 	return exec.executeRequest()
@@ -200,7 +202,7 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan s
 	gr.Go(func() error {
 		defer cancel()
 
-		err := l.logStreamer.Stream(logsOffset, writer)
+		err := l.logStreamer.Stream(ctx, logsOffset, writer)
 		// prevent printing an error that the container exited
 		// when the context is already cancelled
 		if errors.Is(ctx.Err(), context.Canceled) {

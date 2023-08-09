@@ -3,9 +3,11 @@
 package kubernetes
 
 import (
+	context "context"
 	io "io"
 
 	mock "github.com/stretchr/testify/mock"
+
 	rest "k8s.io/client-go/rest"
 
 	url "net/url"
@@ -16,13 +18,13 @@ type MockRemoteExecutor struct {
 	mock.Mock
 }
 
-// Execute provides a mock function with given fields: method, _a1, config, stdin, stdout, stderr, tty
-func (_m *MockRemoteExecutor) Execute(method string, _a1 *url.URL, config *rest.Config, stdin io.Reader, stdout io.Writer, stderr io.Writer, tty bool) error {
-	ret := _m.Called(method, _a1, config, stdin, stdout, stderr, tty)
+// Execute provides a mock function with given fields: ctx, method, _a2, config, stdin, stdout, stderr, tty
+func (_m *MockRemoteExecutor) Execute(ctx context.Context, method string, _a2 *url.URL, config *rest.Config, stdin io.Reader, stdout io.Writer, stderr io.Writer, tty bool) error {
+	ret := _m.Called(ctx, method, _a2, config, stdin, stdout, stderr, tty)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, *url.URL, *rest.Config, io.Reader, io.Writer, io.Writer, bool) error); ok {
-		r0 = rf(method, _a1, config, stdin, stdout, stderr, tty)
+	if rf, ok := ret.Get(0).(func(context.Context, string, *url.URL, *rest.Config, io.Reader, io.Writer, io.Writer, bool) error); ok {
+		r0 = rf(ctx, method, _a2, config, stdin, stdout, stderr, tty)
 	} else {
 		r0 = ret.Error(0)
 	}

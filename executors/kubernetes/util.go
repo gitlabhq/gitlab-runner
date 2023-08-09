@@ -142,9 +142,8 @@ type podPhaseResponse struct {
 	err   error
 }
 
-func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseResponse {
-	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := c.CoreV1().Pods(pod.Namespace).Get(context.TODO(), pod.Name, metav1.GetOptions{})
+func getPodPhase(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseResponse {
+	pod, err := c.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
@@ -204,11 +203,11 @@ func getPodPhase(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseR
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
-func triggerPodPhaseCheck(c *kubernetes.Clientset, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
+func triggerPodPhaseCheck(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
 	errc := make(chan podPhaseResponse)
 	go func() {
 		defer close(errc)
-		errc <- getPodPhase(c, pod, out)
+		errc <- getPodPhase(ctx, c, pod, out)
 	}()
 	return errc
 }
@@ -232,7 +231,7 @@ func waitForPodRunning(
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {
 		select {
-		case r := <-triggerPodPhaseCheck(c, pod, out):
+		case r := <-triggerPodPhaseCheck(ctx, c, pod, out):
 			if !r.done {
 				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
