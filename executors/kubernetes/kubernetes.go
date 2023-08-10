@@ -94,7 +94,8 @@ const (
 	errorUnexpectedEOFMessage             = "unexpected EOF"
 	errorReadConnectionTimedOutMessage    = "read: connection timed out"
 	errorConnectConnectionTimedOutMessage = "connect: connection timed out"
-	errorTimeoutOccuredMessage            = "Timeout occurred"
+	errorTimeoutOccurredMessage           = "Timeout occurred"
+	errorHTTP2ConnectionLostMessage       = "http2: client connection lost"
 
 	// errorAlreadyExistsMessage is an error message that is encountered when
 	// we fail to create a resource because it already exists.
@@ -128,13 +129,14 @@ var (
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 	errorRegex = fmt.Sprintf(
-		"%s|%s|%s|%s|%s|%s",
+		"%s|%s|%s|%s|%s|%s|%s",
 		errorDialingBackendMessage,
 		errorTLSHandshakeTimeoutMessage,
 		errorUnexpectedEOFMessage,
 		errorReadConnectionTimedOutMessage,
 		errorConnectConnectionTimedOutMessage,
-		errorTimeoutOccuredMessage,
+		errorTimeoutOccurredMessage,
+		errorHTTP2ConnectionLostMessage,
 	)
 )
 
