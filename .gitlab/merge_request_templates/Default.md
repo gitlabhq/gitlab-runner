@@ -5,6 +5,8 @@ Consider choosing a template from the list above if it will match your case more
 
 ## What does this MR do?
 
+%{first_multiline_commit}
+
 ## Why was this MR needed?
 
 ## What's the best way to test this MR?
