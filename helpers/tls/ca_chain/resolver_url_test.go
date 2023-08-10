@@ -190,6 +190,9 @@ func TestHTTPFetcher(t *testing.T) {
 			assert.Contains(t, e.URL, "http://127.0.0.1:")
 		}
 	}
+	assert404Error := func(t *testing.T, err error) {
+		assert.Equal(t, err.Error(), "HTTP request failed with status code: 404")
+	}
 	assertTimeoutError := func(t *testing.T, err error) {
 		assertURLError(t, err)
 
@@ -222,6 +225,17 @@ func TestHTTPFetcher(t *testing.T) {
 			mockFetcher:  newHTTPFetcher(50 * time.Millisecond),
 			expectedData: nil,
 			assertError:  assertTimeoutError,
+		},
+		"fetch 404": {
+			mockServer: func() *httptest.Server {
+				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNotFound)
+					_, _ = w.Write([]byte("data"))
+				}))
+			},
+			mockFetcher:  newHTTPFetcher(defaultURLResolverFetchTimeout),
+			expectedData: nil,
+			assertError:  assert404Error,
 		},
 		"fetch no remote": {
 			mockServer: func() *httptest.Server {
