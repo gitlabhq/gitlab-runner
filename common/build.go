@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -641,7 +642,10 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				buildPanic <- &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
+				err := &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
+
+				b.Log().WithError(err).Error(string(debug.Stack()))
+				buildPanic <- err
 			}
 		}()
 
@@ -874,6 +878,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = &BuildError{FailureReason: RunnerSystemFailure, Inner: fmt.Errorf("panic: %s", r)}
+
+			b.Log().WithError(err).Error(string(debug.Stack()))
 		}
 	}()
 
