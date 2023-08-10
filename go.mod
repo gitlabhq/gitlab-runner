@@ -15,9 +15,9 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.4.0
 	github.com/creack/pty v1.1.17
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/docker/cli v23.0.1+incompatible
+	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker v23.0.6+incompatible
+	github.com/docker/docker v24.0.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.5.0
 	github.com/docker/machine v0.7.1-0.20170120224952-7b7a141da844
