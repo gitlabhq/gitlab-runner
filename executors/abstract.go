@@ -11,6 +11,7 @@ import (
 
 type ExecutorOptions struct {
 	DefaultCustomBuildsDirEnabled bool
+	DefaultSafeDirectoryCheckout  bool
 	DefaultBuildsDir              string
 	DefaultCacheDir               string
 	SharedBuildsDir               bool
@@ -71,6 +72,7 @@ func (e *AbstractExecutor) startBuild() error {
 		e.CacheDir(),
 		e.CustomBuildEnabled(),
 		e.SharedBuildsDir,
+		e.SafeDirectoryCheckout(),
 	)
 }
 
@@ -96,6 +98,14 @@ func (e *AbstractExecutor) CustomBuildEnabled() bool {
 	}
 
 	return e.DefaultCustomBuildsDirEnabled
+}
+
+func (e *AbstractExecutor) SafeDirectoryCheckout() bool {
+	if e.Config.SafeDirectoryCheckout != nil {
+		return *e.Config.SafeDirectoryCheckout
+	}
+
+	return e.DefaultSafeDirectoryCheckout
 }
 
 func (e *AbstractExecutor) Shell() *common.ShellScriptInfo {

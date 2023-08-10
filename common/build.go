@@ -134,6 +134,8 @@ type Build struct {
 	ExecutorData     ExecutorData
 	ExecutorFeatures FeaturesInfo `json:"-" yaml:"-"`
 
+	SafeDirectoryCheckout bool `json:"-" yaml:"-"`
+
 	// Unique ID for all running builds on this runner
 	RunnerID int `json:"runner_id"`
 
@@ -292,7 +294,10 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 	return path.Clean(dir), nil
 }
 
-func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, sharedDir bool) error {
+func (b *Build) StartBuild(
+	rootDir, cacheDir string,
+	customBuildDirEnabled, sharedDir, safeDirectoryCheckout bool,
+) error {
 	if rootDir == "" {
 		return MakeBuildError("the builds_dir is not configured")
 	}
@@ -300,6 +305,8 @@ func (b *Build) StartBuild(rootDir, cacheDir string, customBuildDirEnabled, shar
 	if cacheDir == "" {
 		return MakeBuildError("the cache_dir is not configured")
 	}
+
+	b.SafeDirectoryCheckout = safeDirectoryCheckout
 
 	// We set RootDir and invalidate variables
 	// to be able to use CI_BUILDS_DIR

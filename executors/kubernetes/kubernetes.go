@@ -108,6 +108,7 @@ var (
 
 	executorOptions = executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
+		DefaultSafeDirectoryCheckout:  true,
 		DefaultBuildsDir:              "/builds",
 		DefaultCacheDir:               "/cache",
 		Shell: common.ShellScriptInfo{

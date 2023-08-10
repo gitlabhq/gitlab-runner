@@ -421,6 +421,14 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	templateDir := w.MkTmpDir("git-template")
 	templateFile := w.Join(templateDir, "config")
 
+	if build.SafeDirectoryCheckout {
+		// Solves problem with newer Git versions when files existing in the working directory
+		// are owned by different system owners. This may happen for example with Docker executor,
+		// a root-less image used in previous job and the working directory being persisted between
+		// jobs. More details can be found at https://gitlab.com/gitlab-org/gitlab/-/issues/368133.
+		w.Command("git", "config", "--global", "--add", "safe.directory", projectDir)
+	}
+
 	w.Command("git", "config", "-f", templateFile, "init.defaultBranch", "none")
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
 	if build.IsSharedEnv() {

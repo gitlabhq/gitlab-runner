@@ -41,7 +41,7 @@ func TestBuildPredefinedVariables(t *testing.T) {
 	for _, rootDir := range []string{"/root/dir1", "/root/dir2"} {
 		t.Run(rootDir, func(t *testing.T) {
 			build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
-				return options.Build.StartBuild(rootDir, "/cache/dir", false, false)
+				return options.Build.StartBuild(rootDir, "/cache/dir", false, false, false)
 			})
 
 			projectDir := build.GetAllVariables().Value("CI_PROJECT_DIR")
@@ -73,7 +73,7 @@ func TestBuildTimeoutExposed(t *testing.T) {
 				if !tt.forceDefault {
 					options.Build.RunnerInfo.Timeout = tt.customTimeout
 				}
-				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
+				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false, false)
 			})
 
 			exposedTimeout, err := strconv.Atoi(build.GetAllVariables().Value("CI_JOB_TIMEOUT"))
@@ -231,7 +231,7 @@ func TestJobImageExposed(t *testing.T) {
 			build := runSuccessfulMockBuild(t, func(options ExecutorPrepareOptions) error {
 				options.Build.Image.Name = tt.image
 				options.Build.Variables = append(options.Build.Variables, tt.vars...)
-				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false)
+				return options.Build.StartBuild("/root/dir", "/cache/dir", false, false, false)
 			})
 
 			actualVarExists := false
@@ -1243,14 +1243,16 @@ func TestStartBuild(t *testing.T) {
 		cacheDir              string
 		customBuildDirEnabled bool
 		sharedDir             bool
+		safeDirectoryCheckout bool
 	}
 
 	tests := map[string]struct {
-		args             startBuildArgs
-		jobVariables     JobVariables
-		expectedBuildDir string
-		expectedCacheDir string
-		expectedError    bool
+		args                          startBuildArgs
+		jobVariables                  JobVariables
+		expectedBuildDir              string
+		expectedCacheDir              string
+		expectedSafeDirectoryCheckout bool
+		expectedError                 bool
 	}{
 		"no job specific build dir with no shared dir": {
 			args: startBuildArgs{
@@ -1258,11 +1260,13 @@ func TestStartBuild(t *testing.T) {
 				cacheDir:              "/cache",
 				customBuildDirEnabled: true,
 				sharedDir:             false,
+				safeDirectoryCheckout: false,
 			},
-			jobVariables:     JobVariables{},
-			expectedBuildDir: "/build/test-namespace/test-repo",
-			expectedCacheDir: "/cache/test-namespace/test-repo",
-			expectedError:    false,
+			jobVariables:                  JobVariables{},
+			expectedBuildDir:              "/build/test-namespace/test-repo",
+			expectedCacheDir:              "/cache/test-namespace/test-repo",
+			expectedSafeDirectoryCheckout: false,
+			expectedError:                 false,
 		},
 		"no job specified build dir with shared dir": {
 			args: startBuildArgs{
@@ -1270,11 +1274,13 @@ func TestStartBuild(t *testing.T) {
 				cacheDir:              "/cache",
 				customBuildDirEnabled: true,
 				sharedDir:             true,
+				safeDirectoryCheckout: false,
 			},
-			jobVariables:     JobVariables{},
-			expectedBuildDir: "/builds/1234/0/test-namespace/test-repo",
-			expectedCacheDir: "/cache/test-namespace/test-repo",
-			expectedError:    false,
+			jobVariables:                  JobVariables{},
+			expectedBuildDir:              "/builds/1234/0/test-namespace/test-repo",
+			expectedCacheDir:              "/cache/test-namespace/test-repo",
+			expectedSafeDirectoryCheckout: false,
+			expectedError:                 false,
 		},
 		"valid GIT_CLONE_PATH was specified": {
 			args: startBuildArgs{
@@ -1282,13 +1288,15 @@ func TestStartBuild(t *testing.T) {
 				cacheDir:              "/cache",
 				customBuildDirEnabled: true,
 				sharedDir:             false,
+				safeDirectoryCheckout: false,
 			},
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
 			},
-			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
-			expectedCacheDir: "/cache/test-namespace/test-repo",
-			expectedError:    false,
+			expectedBuildDir:              "/builds/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir:              "/cache/test-namespace/test-repo",
+			expectedSafeDirectoryCheckout: false,
+			expectedError:                 false,
 		},
 		"valid GIT_CLONE_PATH using CI_BUILDS_DIR was specified": {
 			args: startBuildArgs{
@@ -1296,6 +1304,7 @@ func TestStartBuild(t *testing.T) {
 				cacheDir:              "/cache",
 				customBuildDirEnabled: true,
 				sharedDir:             false,
+				safeDirectoryCheckout: false,
 			},
 			jobVariables: JobVariables{
 				{
@@ -1304,9 +1313,10 @@ func TestStartBuild(t *testing.T) {
 					Public: true,
 				},
 			},
-			expectedBuildDir: "/builds/go/src/gitlab.com/test-namespace/test-repo",
-			expectedCacheDir: "/cache/test-namespace/test-repo",
-			expectedError:    false,
+			expectedBuildDir:              "/builds/go/src/gitlab.com/test-namespace/test-repo",
+			expectedCacheDir:              "/cache/test-namespace/test-repo",
+			expectedSafeDirectoryCheckout: false,
+			expectedError:                 false,
 		},
 		"out-of-bounds GIT_CLONE_PATH was specified": {
 			args: startBuildArgs{
@@ -1314,6 +1324,7 @@ func TestStartBuild(t *testing.T) {
 				cacheDir:              "/cache",
 				customBuildDirEnabled: true,
 				sharedDir:             false,
+				safeDirectoryCheckout: false,
 			},
 			jobVariables: JobVariables{
 				{
@@ -1330,13 +1341,15 @@ func TestStartBuild(t *testing.T) {
 				cacheDir:              "/cache",
 				customBuildDirEnabled: false,
 				sharedDir:             false,
+				safeDirectoryCheckout: false,
 			},
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "/builds/go/src/gitlab.com/test-namespace/test-repo", Public: true},
 			},
-			expectedBuildDir: "/builds/test-namespace/test-repo",
-			expectedCacheDir: "/cache/test-namespace/test-repo",
-			expectedError:    true,
+			expectedBuildDir:              "/builds/test-namespace/test-repo",
+			expectedCacheDir:              "/cache/test-namespace/test-repo",
+			expectedSafeDirectoryCheckout: false,
+			expectedError:                 true,
 		},
 		"invalid GIT_CLONE_PATH was specified": {
 			args: startBuildArgs{
@@ -1344,11 +1357,26 @@ func TestStartBuild(t *testing.T) {
 				cacheDir:              "/cache",
 				customBuildDirEnabled: true,
 				sharedDir:             false,
+				safeDirectoryCheckout: false,
 			},
 			jobVariables: JobVariables{
 				{Key: "GIT_CLONE_PATH", Value: "/go/src/gitlab.com/test-namespace/test-repo", Public: true},
 			},
 			expectedError: true,
+		},
+		"safeDirectoryCheckout enabled": {
+			args: startBuildArgs{
+				rootDir:               "/builds",
+				cacheDir:              "/cache",
+				customBuildDirEnabled: false,
+				sharedDir:             false,
+				safeDirectoryCheckout: true,
+			},
+			jobVariables:                  nil,
+			expectedBuildDir:              "/builds/test-namespace/test-repo",
+			expectedCacheDir:              "/cache/test-namespace/test-repo",
+			expectedSafeDirectoryCheckout: true,
+			expectedError:                 false,
 		},
 	}
 
@@ -1373,6 +1401,7 @@ func TestStartBuild(t *testing.T) {
 				test.args.cacheDir,
 				test.args.customBuildDirEnabled,
 				test.args.sharedDir,
+				test.args.safeDirectoryCheckout,
 			)
 			if test.expectedError {
 				assert.Error(t, err)
@@ -1383,6 +1412,7 @@ func TestStartBuild(t *testing.T) {
 			assert.Equal(t, test.expectedBuildDir, build.BuildDir)
 			assert.Equal(t, test.args.rootDir, build.RootDir)
 			assert.Equal(t, test.expectedCacheDir, build.CacheDir)
+			assert.Equal(t, test.expectedSafeDirectoryCheckout, build.SafeDirectoryCheckout)
 		})
 	}
 }
@@ -1448,6 +1478,7 @@ func TestTmpProjectDir(t *testing.T) {
 				tt.args.cacheDir,
 				tt.args.customBuildDirEnabled,
 				tt.args.sharedDir,
+				false,
 			)
 
 			if tt.expectedError {
@@ -1934,7 +1965,7 @@ func TestDefaultVariables(t *testing.T) {
 				},
 			}
 
-			err := build.StartBuild(test.rootDir, "/cache", true, false)
+			err := build.StartBuild(test.rootDir, "/cache", true, false, false)
 			assert.NoError(t, err)
 
 			variable := build.GetAllVariables().Get(test.key)
