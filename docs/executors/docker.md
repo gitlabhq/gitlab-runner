@@ -578,7 +578,7 @@ To use rootless Docker-in-Docker with restricted privileged mode:
      executor = "docker"
      [runners.docker]
        services_privileged = true
-       allowed_privileged_services = [docker.io/library/docker:*-dind-rootless, docker.io/library/docker:dind-rootless, docker:*-dind-rootless, docker:*-dind-rootless]
+       allowed_privileged_services = ["docker.io/library/docker:*-dind-rootless", "docker.io/library/docker:dind-rootless", "docker:*-dind-rootless", "docker:dind-rootless"]
    ```
 
 1. In `.gitlab-ci.yml`, edit your build script to use Docker-in-Docker rootless container:
