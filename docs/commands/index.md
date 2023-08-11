@@ -604,7 +604,6 @@ The following features are supported. If a feature is not listed in this table, 
 | `GET_SOURCES_ATTEMPTS`       | yes                   |                              |
 | `ARTIFACT_DOWNLOAD_ATTEMPTS` | no                    | Artifacts are not supported. |
 | `RESTORE_CACHE_ATTEMPTS`     | yes                   |                              |
-| `GIT_DEPTH`                  | yes                   |                              |
 
 **Compatibility table - other features**
 
