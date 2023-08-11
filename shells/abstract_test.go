@@ -735,6 +735,7 @@ func TestGitCleanFlags(t *testing.T) {
 func TestGitFetchFlags(t *testing.T) {
 	tests := map[string]struct {
 		value string
+		depth int
 
 		expectedGitFetchFlags []interface{}
 	}{
@@ -745,6 +746,11 @@ func TestGitFetchFlags(t *testing.T) {
 		"use custom flags": {
 			value:                 "--prune",
 			expectedGitFetchFlags: []interface{}{"--prune"},
+		},
+		"depth non zero": {
+			depth:                 1,
+			value:                 "--quiet",
+			expectedGitFetchFlags: []interface{}{"--depth", "1", "--quiet"},
 		},
 		"disabled": {
 			value: "none",
@@ -762,7 +768,7 @@ func TestGitFetchFlags(t *testing.T) {
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
 				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: 0},
+					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth},
 					Variables: common.JobVariables{
 						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
 					},
@@ -770,30 +776,42 @@ func TestGitFetchFlags(t *testing.T) {
 			}
 			build.SafeDirectoryCheckout = true
 
-			mockWriter := new(MockShellWriter)
-			defer mockWriter.AssertExpectations(t)
+			mockWriter := NewMockShellWriter(t)
 
-			mockWriter.On("Noticef", "Fetching changes...").Once()
-			mockWriter.On("MkTmpDir", mock.Anything).Return(mock.Anything).Once()
-			mockWriter.On("Command", "git", "config", "--global", "--add", "safe.directory", mock.Anything).Once()
-			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
-			mockWriter.On("Command", "git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
-			mockWriter.On("Command", "git", "init", dummyProjectDir, "--template", mock.Anything).Once()
-			mockWriter.On("Cd", mock.Anything)
-			mockWriter.On("Join", mock.Anything, mock.Anything).Return(mock.Anything).Once()
-			mockWriter.On("IfCmd", "git", "remote", "add", "origin", mock.Anything)
-			mockWriter.On("RmFile", mock.Anything)
-			mockWriter.On("Noticef", "Created fresh repository.").Once()
-			mockWriter.On("Else")
-			mockWriter.On("Command", "git", "remote", "set-url", "origin", mock.Anything)
-			mockWriter.On("EndIf")
+			if test.depth == 0 {
+				mockWriter.EXPECT().Noticef("Fetching changes...").Once()
+			} else {
+				mockWriter.EXPECT().Noticef("Fetching changes with git depth set to %d...", test.depth).Once()
+			}
+			mockWriter.EXPECT().MkTmpDir(mock.Anything).Return(mock.Anything).Once()
+			mockWriter.EXPECT().Command("git", "config", "--global", "--add", "safe.directory", mock.Anything).Once()
+			mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
+			mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
+			mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything).Once()
+			mockWriter.EXPECT().Cd(mock.Anything).Once()
+			mockWriter.EXPECT().Join(mock.Anything, mock.Anything).Return(mock.Anything).Once()
+			mockWriter.EXPECT().IfCmd("git", "remote", "add", "origin", mock.Anything).Once()
+			mockWriter.EXPECT().RmFile(mock.Anything)
+			mockWriter.EXPECT().Noticef("Created fresh repository.").Once()
+			mockWriter.EXPECT().Else().Once()
+			mockWriter.EXPECT().Command("git", "remote", "set-url", "origin", mock.Anything).Once()
+			mockWriter.EXPECT().EndIf().Once()
 
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
-			command := []interface{}{"git", "-c", userAgent, "fetch", "origin", tagsRefspec}
-
+			command := []interface{}{"-c", userAgent, "fetch", "origin", tagsRefspec}
 			command = append(command, test.expectedGitFetchFlags...)
-			mockWriter.On("Command", command...)
+
+			if test.depth == 0 {
+				unshallowArgs := append(command, "--unshallow")
+				mockWriter.EXPECT().IfFile(".git/shallow").Once()
+				mockWriter.EXPECT().Command("git", unshallowArgs...).Once()
+				mockWriter.EXPECT().Else().Once()
+				mockWriter.EXPECT().Command("git", command...).Once()
+				mockWriter.EXPECT().EndIf().Once()
+			} else {
+				mockWriter.EXPECT().Command("git", command...).Once()
+			}
 
 			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir)
 		})
@@ -2166,45 +2184,50 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 		PostGetSourcesScript: "config post_get_sources",
 	}
 
-	m := &MockShellWriter{}
-	defer m.AssertExpectations(t)
+	m := NewMockShellWriter(t)
 
-	m.On("Variable", mock.Anything)
+	m.EXPECT().Variable(mock.Anything)
 
 	// Pre get sources from configuration file
-	m.On("Noticef", "$ %s", "config pre_get_sources")
-	m.On("Line", "config pre_get_sources")
+	m.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
+	m.EXPECT().Line("config pre_get_sources").Once()
 	// Pre get sources from job payload
-	m.On("Noticef", "$ %s", "job payload")
-	m.On("Line", "job payload")
-	m.On("Noticef", "$ %s", "pre_get_sources")
-	m.On("Line", "pre_get_sources")
+	m.EXPECT().Noticef("$ %s", "job payload").Once()
+	m.EXPECT().Line("job payload").Once()
+	m.EXPECT().Noticef("$ %s", "pre_get_sources").Once()
+	m.EXPECT().Line("pre_get_sources").Once()
 
-	m.On("CheckForErrors")
-	m.On("Noticef", "Fetching changes...")
-	m.On("MkTmpDir", "git-template").Return("git-template-dir").Once()
-	m.On("Join", "git-template-dir", "config").Return("git-template-dir-config").Once()
-	m.On("Command", "git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
-	m.On("RmFile", mock.Anything)
-	m.On("Command", "git", "init", "build-dir", "--template", "git-template-dir")
-	m.On("Cd", "build-dir")
-	m.On("IfCmd", "git", "remote", "add", "origin", "repo-url")
-	m.On("Noticef", "Created fresh repository.")
-	m.On("Else")
-	m.On("Command", "git", "remote", "set-url", "origin", "repo-url")
-	m.On("EndIf")
-	m.On("Command", "git", "-c", mock.Anything, "fetch", "origin", tagsRefspec, "--prune", "--quiet")
-	m.On("Noticef", "Skipping Git checkout")
-	m.On("Noticef", "Skipping Git submodules setup")
+	m.EXPECT().CheckForErrors()
+	m.EXPECT().Noticef("Fetching changes...").Once()
+	m.EXPECT().MkTmpDir("git-template").Return("git-template-dir").Once()
+	m.EXPECT().Join("git-template-dir", "config").Return("git-template-dir-config").Once()
+	m.EXPECT().Command("git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
+	m.EXPECT().RmFile(mock.Anything)
+	m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
+	m.EXPECT().Cd("build-dir").Once()
+	m.EXPECT().IfCmd("git", "remote", "add", "origin", "repo-url").Once()
+	m.EXPECT().Noticef("Created fresh repository.").Once()
+	m.EXPECT().Else().Once()
+	m.EXPECT().Command("git", "remote", "set-url", "origin", "repo-url").Once()
+	m.EXPECT().EndIf().Once()
+
+	m.EXPECT().IfFile(".git/shallow").Once()
+	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", tagsRefspec, "--prune", "--quiet", "--unshallow").Once()
+	m.EXPECT().Else().Once()
+	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", tagsRefspec, "--prune", "--quiet").Once()
+	m.EXPECT().EndIf().Once()
+
+	m.EXPECT().Noticef("Skipping Git checkout").Once()
+	m.EXPECT().Noticef("Skipping Git submodules setup").Once()
 
 	// Post get sources from job payload
-	m.On("Noticef", "$ %s", "job payload")
-	m.On("Line", "job payload")
-	m.On("Noticef", "$ %s", "post_get_sources")
-	m.On("Line", "post_get_sources")
+	m.EXPECT().Noticef("$ %s", "job payload").Once()
+	m.EXPECT().Line("job payload").Once()
+	m.EXPECT().Noticef("$ %s", "post_get_sources").Once()
+	m.EXPECT().Line("post_get_sources").Once()
 	// Post get sources from configuration file
-	m.On("Noticef", "$ %s", "config post_get_sources")
-	m.On("Line", "config post_get_sources")
+	m.EXPECT().Noticef("$ %s", "config post_get_sources").Once()
+	m.EXPECT().Line("config post_get_sources").Once()
 
 	shell := new(AbstractShell)
 

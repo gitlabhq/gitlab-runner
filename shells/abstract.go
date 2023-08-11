@@ -408,6 +408,7 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 	return nil
 }
 
+//nolint:funlen
 func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string) {
 	depth := build.GitInfo.Depth
 
@@ -459,7 +460,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	fetchArgs = append(fetchArgs, build.GetGitFetchFlags()...)
 
-	if depth == 0 {
+	if depth <= 0 {
 		fetchUnshallowArgs := append(fetchArgs, "--unshallow")
 
 		w.IfFile(".git/shallow")
