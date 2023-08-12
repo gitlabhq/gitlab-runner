@@ -63,6 +63,9 @@ security credentials in an editor as we'll use them later during the
 [GitLab Runner configuration](#the-runnersmachine-section).
 
 You can also create an [EC2 instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) with the required `AmazonEC2FullAccess` and `AmazonS3FullAccess` policies. Attach this instance profile to the runner manager EC2 instance to allow the provisioning of new EC2 instances for the jobs' execution. If the runner machine is using an instance profile, include the `iam:PassRole` Action to the instance profile of the runner manager as well.
+
+Example:
+
 ```json
 {
     "Statement": [
