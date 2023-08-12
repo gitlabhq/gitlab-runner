@@ -1093,7 +1093,14 @@ func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error
 	return nil
 }
 
+//nolint:funlen
 func (e *executor) Cleanup() {
+	if e.Config.Docker == nil {
+		// if there's no Docker config, we got here because Prepare() failed
+		// and there's nothing to cleanup.
+		return
+	}
+
 	e.SetCurrentStage(ExecutorStageCleanup)
 
 	var wg sync.WaitGroup
