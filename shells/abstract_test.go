@@ -883,7 +883,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					tc.ExpectedGitForEachFlags...,
 				)
 			}
-
+			expectedGitInsteadOfForEachArgsFn := func() []interface{} {
+				return append(
+					[]interface{}{"-c", insteadOf, "submodule", "foreach"},
+					tc.ExpectedGitForEachFlags...,
+				)
+			}
 			mockWriter.EXPECT().Noticef(tc.ExpectedNoticeArgs[0], tc.ExpectedNoticeArgs[1:]...).Once()
 			mockWriter.EXPECT().Command("git", "submodule", "init").Once()
 			mockWriter.EXPECT().Command("git", append([]any{"submodule", "sync"}, tc.ExpectedGitForEachFlags...)...).Twice()
@@ -893,16 +898,13 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 			mockWriter.EXPECT().Warningf("Updating submodules failed. Retrying...").Once()
 			mockWriter.EXPECT().Command("git", append([]any{"-c", insteadOf, "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...)
 			mockWriter.EXPECT().EndIf().Once()
-
 			cleanCmd := mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git clean "+strings.Join(tc.ExpectedGitCleanFlags, " "))...).Once()
 			mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git reset --hard")...).Run(func(command string, arguments ...string) {
 				cleanCmd.Once()
 			}).Twice()
-
 			mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
-			mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git lfs pull")...).Once()
+			mockWriter.EXPECT().Command("git", append(expectedGitInsteadOfForEachArgsFn(), "git lfs pull")...).Once()
 			mockWriter.EXPECT().EndIf().Once()
-
 			err := shell.writeSubmoduleUpdateCmd(
 				mockWriter,
 				&common.Build{
@@ -1370,7 +1372,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 			}).Twice()
 
 			mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
-			mockWriter.EXPECT().Command("git", "submodule", "foreach", "git lfs pull").Once()
+			mockWriter.EXPECT().Command("git", "-c", insteadOf, "submodule", "foreach", "git lfs pull").Once()
 			mockWriter.EXPECT().EndIf().Once()
 
 			build := &common.Build{
