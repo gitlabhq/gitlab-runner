@@ -362,7 +362,6 @@ func TestBuildWithShallowLock(t *testing.T) {
 
 		build.Variables = append(
 			build.Variables,
-			common.JobVariable{Key: "GIT_DEPTH", Value: "1"},
 			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
 		)
 
