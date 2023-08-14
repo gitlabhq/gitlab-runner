@@ -517,8 +517,8 @@ As with all projects, the items mentioned on this page are subject to change or 
 The development, release, and timing of any products, features, or functionality remain at the
 sole discretion of GitLab Inc.
 
-To register a runner that was created in the GitLab UI, you specify the `runnerToken` in `values.yml`. The `runnerToken` is displayed briefly in 
-the UI when you create the runner. 
+To register a runner that was created in the GitLab UI, you specify the `runnerToken` in `values.yml`. The `runnerToken` is displayed briefly in
+the UI when you create the runner.
 
 It can be a security risk to store tokens in `values.yml`, especially if you commit these to `git`. Instead, you can store the values of these tokens inside of a
 [Kubernetes secret](https://kubernetes.io/docs/concepts/configuration/secret/), and
