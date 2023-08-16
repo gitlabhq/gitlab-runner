@@ -17,7 +17,7 @@
   - 'binaries'
   - 'package-deb'
   - 'binaries-fips'
-  - 'package-rpm: [package-rpm-fips]'
+  - 'package-rpm: [rpmFips]'
   script:
   - make release_docker_images
   parallel:
@@ -116,7 +116,8 @@
   - 'package-deb'
   - 'package-rpm'
   script:
-  - make release_packagecloud
+  - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
+  - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
 
 development S3:
   extends:
@@ -155,6 +156,8 @@ bleeding edge packagecloud:
   environment:
     name: bleeding_edge/packagecloud
     url: https://packages.gitlab.com/runner/unstable
+  variables:
+    PACKAGE_CLOUD_NAMESPACE: runner/unstable
   parallel:
     matrix:
     - DIST_FLAVOR:

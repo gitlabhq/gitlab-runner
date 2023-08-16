@@ -92,6 +92,16 @@ check mocks:
   script:
   - make check_mocks
 
+check magefiles:
+  stage: test
+  extends:
+    - .rules:merge_request_pipelines:no_docs
+    - .no_cache_and_dependencies
+  needs:
+    - 'prepare done'
+  script:
+    - make check_magefiles
+
 check test directives:
   stage: test
   extends:

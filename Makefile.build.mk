@@ -69,13 +69,15 @@ runner-and-helper-docker-host: runner-and-helper-deb-host
 runner-and-helper-deb-host: ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/x86_64/amd64/; s/i386/386/')
 runner-and-helper-deb-host: export BUILD_ARCHS := -arch '$(ARCH)'
 runner-and-helper-deb-host: PACKAGE_ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/x86_64/amd64/; s/i386/i686/')
-runner-and-helper-deb-host: runner-and-helper-bin-host package-deps package-prepare
+runner-and-helper-deb-host: runner-and-helper-bin-host
+	$(MAGE) package:deps package:prepare
 	$(MAKE) package-deb-arch ARCH=$(ARCH) PACKAGE_ARCH=$(PACKAGE_ARCH)
 
 runner-and-helper-rpm-host: ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/x86_64/amd64/; s/i386/386/')
 runner-and-helper-rpm-host: export BUILD_ARCHS := -arch '$(ARCH)'
 runner-and-helper-rpm-host: PACKAGE_ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/x86_64/amd64/; s/i386/i686/')
-runner-and-helper-rpm-host: runner-and-helper-bin-host package-deps package-prepare
+runner-and-helper-rpm-host: runner-and-helper-bin-host
+	$(MAGE) package:deps package:prepare
 	$(MAKE) package-rpm-arch ARCH=$(ARCH) PACKAGE_ARCH=$(PACKAGE_ARCH)
 
 UNIX_ARCHS_CHECK ?= aix/ppc64 android/amd64 dragonfly/amd64 freebsd/amd64 hurd/amd64 illumos/amd64 linux/riscv64 netbsd/amd64 openbsd/amd64 solaris/amd64
