@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Run GitLab Runner in a container **(FREE)**
+# Run GitLab Runner in a container **(FREE ALL)**
 
 This is how you can run GitLab Runner inside a Docker container.
 

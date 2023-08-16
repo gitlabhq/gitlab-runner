@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# VirtualBox **(FREE)**
+# VirtualBox **(FREE ALL)**
 
 NOTE:
 The Parallels executor works the same as the VirtualBox executor. The

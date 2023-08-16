@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Autoscaling GitLab Runner on AWS EC2 **(FREE)**
+# Autoscaling GitLab Runner on AWS EC2 **(FREE ALL)**
 
 One of the biggest advantages of GitLab Runner is its ability to automatically
 spin up and down VMs to make sure your builds get processed immediately. It's a

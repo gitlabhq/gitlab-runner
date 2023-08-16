@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Types of shells supported by GitLab Runner **(FREE)**
+# Types of shells supported by GitLab Runner **(FREE ALL)**
 
 GitLab Runner implements shell script generators that allow executing
 builds on different systems.

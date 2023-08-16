@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Docker executor **(FREE)**
+# Docker executor **(FREE ALL)**
 
 GitLab Runner uses the Docker executor to run jobs on Docker images.
 
