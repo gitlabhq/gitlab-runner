@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Configuring GitLab Runner on OpenShift **(FREE)**
+# Configuring GitLab Runner on OpenShift **(FREE ALL)**
 
 This document explains how to configure GitLab Runner on OpenShift.
 

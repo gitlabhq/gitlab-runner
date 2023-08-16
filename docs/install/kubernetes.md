@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# GitLab Runner Helm Chart **(FREE)**
+# GitLab Runner Helm Chart **(FREE ALL)**
 
 The official way of deploying a GitLab Runner instance into your
 Kubernetes cluster is by using the `gitlab-runner` Helm chart.

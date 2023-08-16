@@ -6,7 +6,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Install GitLab Runner Operator
 
-## Install on Red Hat OpenShift **(FREE)**
+## Install on Red Hat OpenShift **(FREE ALL)**
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26640) in GitLab 13.3.
 > - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27126) in GitLab 13.7.
@@ -40,7 +40,7 @@ On the Installed Operators page, when the GitLab Operator is ready, the status c
 
 ![GitLab Operator Install Status](img/openshift_success_v13_3.png)
 
-## Install on Kubernetes **(FREE)**
+## Install on Kubernetes **(FREE ALL)**
 
 > [Introduced](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/57) in GitLab 14.10.
 

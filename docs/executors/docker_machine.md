@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Install and register GitLab Runner for autoscaling with Docker Machine **(FREE)**
+# Install and register GitLab Runner for autoscaling with Docker Machine **(FREE ALL)**
 
 > The autoscaling feature was introduced in GitLab Runner 1.1.0.
 

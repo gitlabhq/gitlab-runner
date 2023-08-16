@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# The Custom executor **(FREE)**
+# The Custom executor **(FREE ALL)**
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
 

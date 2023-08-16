@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# GitLab Runner bleeding edge releases **(FREE)**
+# GitLab Runner bleeding edge releases **(FREE ALL)**
 
 WARNING:
 These are the latest, probably untested releases of GitLab Runner built straight

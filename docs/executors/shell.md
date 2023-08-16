@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# The Shell executor **(FREE)**
+# The Shell executor **(FREE ALL)**
 
 The Shell executor is a simple executor that you use to execute builds
 locally on the machine where GitLab Runner is installed. It supports all systems on

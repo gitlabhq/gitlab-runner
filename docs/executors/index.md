@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Executors **(FREE)**
+# Executors **(FREE ALL)**
 
 GitLab Runner implements a number of executors that can be used to run your
 builds in different environments.

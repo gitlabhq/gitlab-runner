@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Autoscaling GitLab CI on AWS Fargate **(FREE)**
+# Autoscaling GitLab CI on AWS Fargate **(FREE ALL)**
 
 The GitLab [custom executor](../../executors/custom.md) driver for
 [AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)

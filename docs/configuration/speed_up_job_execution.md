@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Speed up job execution **(FREE)**
+# Speed up job execution **(FREE ALL)**
 
 You can improve performance of your jobs by caching your images and dependencies.
 
