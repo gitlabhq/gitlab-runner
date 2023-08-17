@@ -945,6 +945,8 @@ concurrent = 4
 
 ### Persistent per-concurrency build volumes
 
+> Support for variable injection to `pvc.name` [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4256) in GitLab 16.3.
+
 The build directories in Kubernetes CI jobs are ephemeral by default.
 If you want to persist your Git clone across jobs (to make `GIT_STRATEGY=fetch` work),
 you must mount a persistent volume claim for your build folder.
