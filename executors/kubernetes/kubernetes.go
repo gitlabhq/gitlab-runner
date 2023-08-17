@@ -1159,7 +1159,7 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 
 	for _, mount := range s.Config.Kubernetes.Volumes.PVCs {
 		mounts = append(mounts, api.VolumeMount{
-			Name:      mount.Name,
+			Name:      s.Build.GetAllVariables().ExpandValue(mount.Name),
 			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
 			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
 			ReadOnly:  mount.ReadOnly,
@@ -1298,11 +1298,14 @@ func (s *executor) getVolumesForPVCs() []api.Volume {
 			continue
 		}
 
+		// Resolve the runtime name by injecting variable references.
+		var resolvedName = s.Build.GetAllVariables().ExpandValue(volume.Name)
+
 		apiVolume := api.Volume{
-			Name: volume.Name,
+			Name: resolvedName,
 			VolumeSource: api.VolumeSource{
 				PersistentVolumeClaim: &api.PersistentVolumeClaimVolumeSource{
-					ClaimName: volume.Name,
+					ClaimName: resolvedName,
 				},
 			},
 		}

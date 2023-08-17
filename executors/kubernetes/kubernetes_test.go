@@ -344,6 +344,10 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 									MountPath: "/path/to/whatever/2",
 									SubPath:   "PVC-subpath-2",
 								},
+								{
+									Name:      "PVC-${CI_CONCURRENT_ID}",
+									MountPath: "/path/to/whatever/3",
+								},
 							},
 							ConfigMaps: []common.KubernetesConfigMap{
 								{Name: "ConfigMap", MountPath: "/path/to/whatever"},
@@ -382,6 +386,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 						{Key: "SUB_PATH", Value: "subpath"},
 						{Key: "PATH_TO_WHATEVER", Value: "path/to/whatever"},
 						{Key: "KEYWORD_CSI", Value: "csi"},
+						{Key: "CI_CONCURRENT_ID", Value: "54"},
 					},
 				},
 				Runner: &common.RunnerConfig{},
@@ -396,6 +401,7 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 					{Name: "PVC", MountPath: "/path/to/whatever"},
 					{Name: "PVC-subpath", MountPath: "/path/to/whatever/1", SubPath: "PVC-subpath-1"},
 					{Name: "PVC-subpath", MountPath: "/path/to/whatever/2", SubPath: "PVC-subpath-2"},
+					{Name: "PVC-54", MountPath: "/path/to/whatever/3"},
 					{Name: "ConfigMap", MountPath: "/path/to/whatever"},
 					{Name: "ConfigMap-subpath", MountPath: "/path/to/whatever", SubPath: "ConfigMap-subpath"},
 					{Name: "emptyDir", MountPath: "/path/to/empty/dir"},
