@@ -809,7 +809,7 @@ Use the following options in the `config.toml` file:
 
 | Option       | Type      | Required | Description |
 |--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | The name of the volume and at the same time the name of `PersistentVolumeClaim` that should be used. Supports variables. |
+| `name`       | string    | Yes      | The name of the volume and at the same time the name of `PersistentVolumeClaim` that should be used. Supports variables. For more information, see [Persistent per-concurrency build volumes](#persistent-per-concurrency-build-volumes). |
 | `mount_path` | string    | Yes      | Path in the container where the volume is mounted. |
 | `read_only`  | boolean   | No       | Sets the volume to read-only mode (defaults to false). |
 | `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
@@ -946,9 +946,9 @@ concurrent = 4
 ### Persistent per-concurrency build volumes
 
 The build directories in Kubernetes CI jobs are ephemeral by default.
-If you want to persist your Git clone across jobs (such that `GIT_STRATEGY=fetch` actually works),
-you will need to mount a persistent volume claim for your build folder.
-Because multiple jobs can run concurrently, you will either have to
+If you want to persist your Git clone across jobs (to make `GIT_STRATEGY=fetch` work),
+you must mount a persistent volume claim for your build folder.
+Because multiple jobs can run concurrently, you must either
 use a `ReadWriteMany` volume, or have one volume for each potential
 concurrent job on the same runner. The latter is likely to be more performant.
 Here is an example of such a configuration:
@@ -966,9 +966,9 @@ concurrent = 4
       mount_path = "/mnt/builds"
 ```
 
-You will have to create the persistent volume claims named
+In this example, create the persistent volume claims named
 `build-pvc-0` to `build-pvc-3` yourself.
-You will need to create as many as the runner's `concurrent`-setting dictates.
+Create as many as the runner's `concurrent` setting dictates.
 
 ## Set a security policy for the pod
 
