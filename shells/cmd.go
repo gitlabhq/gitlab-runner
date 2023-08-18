@@ -57,11 +57,15 @@ func batchEscapeMode(input string, mode batchQuoteMode) string {
 		case ' ', '=', ';', ',', '/':
 			sb.WriteByte(c)
 			quote = true
+		case '(', ')':
+			if mode == batchQuoteModeEscape || mode == batchQuoteModeVariable {
+				sb.WriteByte('^')
+			} else {
+				quote = true
+			}
+			sb.WriteByte(c)
 		default:
 			switch {
-			case (mode == batchQuoteModeEscape || mode == batchQuoteModeVariable) && (c == '(' || c == ')'):
-				sb.WriteByte('^')
-				sb.WriteByte(c)
 			case mode == batchQuoteModeCommand && c == '%':
 				sb.WriteString("^%")
 			case mode == batchQuoteModeVariable && c == '%':
