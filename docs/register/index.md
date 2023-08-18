@@ -358,7 +358,7 @@ We register a Kubernetes-executor-based runner to some test project and see what
 $ sudo gitlab-runner register \
      --config /tmp/test-config.toml \
      --non-interactive \
-     --url https://gitlab.com \
+     --url "https://gitlab.com" \
      --registration-token __REDACTED__ \
      --name test-runner \
      --tag-list kubernetes,test \
@@ -455,7 +455,7 @@ $ sudo gitlab-runner register \
      --config /tmp/test-config.toml \
      --template-config /tmp/test-config.template.toml \
      --non-interactive \
-     --url https://gitlab.com \
+     --url "https://gitlab.com" \
      --registration-token __REDACTED__ \
      --name test-runner \
      --tag-list kubernetes,test \
@@ -529,7 +529,7 @@ $ sudo gitlab-runner register \
      --config /tmp/test-config.toml \
      --template-config /tmp/test-config.template.toml \
      --non-interactive \
-     --url https://gitlab.com \
+     --url "https://gitlab.com" \
      --registration-token __REDACTED__ \
      --name test-runner \
      --tag-list shell,test \

@@ -136,7 +136,7 @@ Now install GitLab Runner on the Ubuntu instance.
 1. Run this command with the GitLab URL and registration token you noted in step 1.
 
    ```shell
-   sudo gitlab-runner register --url https://gitlab.com/ --registration-token TOKEN_HERE --name fargate-test-runner --run-untagged --executor custom -n
+   sudo gitlab-runner register --url "https://gitlab.com/" --registration-token TOKEN_HERE --name fargate-test-runner --run-untagged --executor custom -n
    ```
 
 1. Run `sudo vim /etc/gitlab-runner/config.toml` and add the following content:
