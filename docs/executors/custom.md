@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
 
 GitLab Runner provides the Custom executor for environments that it
-doesn't support natively, for example, LXD or Libvirt.
+doesn't support natively. For example, LXD or Libvirt.
 
 This gives you the control to create your own executor by configuring
 GitLab Runner to use some executable to provision, run, and clean up

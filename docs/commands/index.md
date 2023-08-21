@@ -233,7 +233,7 @@ asked multiple questions during a runner's registration.
 This question can be pre-filled by adding arguments when invoking the registration command:
 
 ```shell
-gitlab-runner register --name my-runner --url http://gitlab.example.com --registration-token my-registration-token
+gitlab-runner register --name my-runner --url "http://gitlab.example.com" --registration-token my-registration-token
 ```
 
 Or by configuring the environment variable before the `register` command:
@@ -339,7 +339,7 @@ make sure to have a backup of `config.toml` before executing it.
 #### By URL and token
 
 ```shell
-gitlab-runner unregister --url http://gitlab.example.com/ --token t0k3n
+gitlab-runner unregister --url "http://gitlab.example.com/" --token t0k3n
 ```
 
 #### By name
@@ -384,7 +384,7 @@ gitlab-runner reset-token --name test-runner --pat PaT
 #### With PAT, GitLab URL, and runner ID
 
 ```shell
-gitlab-runner reset-token --url https://gitlab.example.com/ --id 12345 --pat PaT
+gitlab-runner reset-token --url "https://gitlab.example.com/" --id 12345 --pat PaT
 ```
 
 #### All runners
