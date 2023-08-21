@@ -90,8 +90,10 @@
   dependencies:
   - 'helper images'
   - 'helper images binaries'
+  - 'helper images fips'
   - 'binaries'
   - 'binaries-fips'
+  - 'fips helper binaries'
   - 'package-deb'
   - 'package-rpm'
   before_script:
