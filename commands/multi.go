@@ -41,6 +41,7 @@ const (
 const (
 	workerProcessingFailureOther          = "other"
 	workerProcessingFailureNoFreeExecutor = "no_free_executor"
+	workerProcessingFailureJobFailure     = "job_failure"
 )
 
 var (
@@ -192,6 +193,12 @@ func (mr *RunCommand) Start(_ service.Service) error {
 		mr.runnerWorkerProcessingFailure.
 			WithLabelValues(
 				workerProcessingFailureNoFreeExecutor,
+				runner.ShortDescription(), runner.Name, runner.GetSystemID(),
+			).
+			Add(0)
+		mr.runnerWorkerProcessingFailure.
+			WithLabelValues(
+				workerProcessingFailureJobFailure,
 				runner.ShortDescription(), runner.Name, runner.GetSystemID(),
 			).
 			Add(0)
@@ -686,15 +693,7 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 						"executor": runner.Executor,
 					}).WithError(err)
 
-				l := logger.Warn
-				failureType := workerProcessingFailureOther
-
-				var NoFreeExecutorError *common.NoFreeExecutorError
-				if errors.As(err, &NoFreeExecutorError) {
-					l = logger.Debug
-					failureType = workerProcessingFailureNoFreeExecutor
-				}
-
+				l, failureType := loggerAndFailureTypeFromError(logger, err)
 				l("Failed to process runner")
 				mr.runnerWorkerProcessingFailure.
 					WithLabelValues(failureType, runner.ShortDescription(), runner.Name, runner.GetSystemID()).
@@ -712,6 +711,20 @@ func (mr *RunCommand) processRunners(id int, stopWorker chan bool, runners chan 
 		}
 	}
 	<-stopWorker
+}
+
+func loggerAndFailureTypeFromError(logger logrus.FieldLogger, err error) (func(args ...interface{}), string) {
+	var NoFreeExecutorError *common.NoFreeExecutorError
+	if errors.As(err, &NoFreeExecutorError) {
+		return logger.Debug, workerProcessingFailureNoFreeExecutor
+	}
+
+	var BuildError *common.BuildError
+	if errors.As(err, &BuildError) {
+		return logger.Debug, workerProcessingFailureJobFailure
+	}
+
+	return logger.Warn, workerProcessingFailureOther
 }
 
 // processRunner is responsible for handling one job on a specified runner.
