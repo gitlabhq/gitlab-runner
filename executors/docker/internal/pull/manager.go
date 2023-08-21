@@ -16,7 +16,7 @@ import (
 
 //go:generate mockery --name=Manager --inpackage
 type Manager interface {
-	GetDockerImage(imageName string, options common.DockerOptions, imagePullPolicies []common.DockerPullPolicy,
+	GetDockerImage(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy,
 	) (*types.ImageInspect, error)
 }
 
@@ -64,9 +64,13 @@ func NewManager(
 }
 
 func (m *manager) GetDockerImage(
-	imageName string, options common.DockerOptions,
+	imageName string, options common.ImageDockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
+	if err := m.validateDockerOptions(options); err != nil {
+		return nil, fmt.Errorf("failed to verify docker options: %w", err)
+	}
+
 	pullPolicies, err := m.getPullPolicies(imagePullPolicies)
 	if err != nil {
 		return nil, err
@@ -106,6 +110,20 @@ func (m *manager) GetDockerImage(
 		pullPolicies,
 		imageErr,
 	)
+}
+
+func (m *manager) validateDockerOptions(options common.ImageDockerOptions) error {
+	availableOpts := []string{"platform"}
+
+	for _, opt := range availableOpts {
+		for k := range options {
+			if k != opt {
+				return fmt.Errorf("unsupported option: %s. Available options are: %v", k, availableOpts)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (m *manager) verifyPullPolicies(
@@ -156,7 +174,7 @@ func (m *manager) markImageAsUsed(imageName string, image *types.ImageInspect) {
 }
 
 func (m *manager) getImageUsingPullPolicy(
-	imageName string, options common.DockerOptions,
+	imageName string, options common.ImageDockerOptions,
 	pullPolicy common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
 	m.logger.Debugln("Looking for image", imageName, "...")
@@ -220,7 +238,7 @@ func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, 
 	return authConfig, nil
 }
 
-func (m *manager) pullDockerImage(imageName string, options common.DockerOptions, ac *cli.AuthConfig) (*types.ImageInspect, error) {
+func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOptions, ac *cli.AuthConfig) (*types.ImageInspect, error) {
 	if m.onPullImageHookFunc != nil {
 		m.onPullImageHookFunc()
 	}
@@ -233,7 +251,7 @@ func (m *manager) pullDockerImage(imageName string, options common.DockerOptions
 	}
 
 	opts := types.ImagePullOptions{
-		Platform: options.Platform,
+		Platform: options["platform"],
 	}
 
 	var err error

@@ -132,6 +132,8 @@ type FeaturesInfo struct {
 	ReturnExitCode          bool `json:"return_exit_code"`
 	ServiceVariables        bool `json:"service_variables"`
 	ServiceMultipleAliases  bool `json:"service_multiple_aliases"`
+	ImageExecutorOpts       bool `json:"image_executor_opts"`
+	ServiceExecutorOpts     bool `json:"service_executor_opts"`
 }
 
 type ConfigInfo struct {
@@ -284,23 +286,21 @@ type Step struct {
 
 type Steps []Step
 
-type DockerOptions struct {
-	Platform string `json:"platform,omitempty"`
-}
+type ImageDockerOptions map[string]string
 
-type ExecutorOptions struct {
-	DockerOptions DockerOptions `json:"docker,omitempty"`
+type ImageExecutorOptions struct {
+	DockerOptions ImageDockerOptions `json:"docker,omitempty"`
 }
 
 type Image struct {
-	Name            string             `json:"name"`
-	Alias           string             `json:"alias,omitempty"`
-	Command         []string           `json:"command,omitempty"`
-	Entrypoint      []string           `json:"entrypoint,omitempty"`
-	Ports           []Port             `json:"ports,omitempty"`
-	Variables       JobVariables       `json:"variables,omitempty"`
-	PullPolicies    []DockerPullPolicy `json:"pull_policy,omitempty"`
-	ExecutorOptions ExecutorOptions    `json:"executor_opts,omitempty"`
+	Name            string               `json:"name"`
+	Alias           string               `json:"alias,omitempty"`
+	Command         []string             `json:"command,omitempty"`
+	Entrypoint      []string             `json:"entrypoint,omitempty"`
+	Ports           []Port               `json:"ports,omitempty"`
+	Variables       JobVariables         `json:"variables,omitempty"`
+	PullPolicies    []DockerPullPolicy   `json:"pull_policy,omitempty"`
+	ExecutorOptions ImageExecutorOptions `json:"executor_opts,omitempty"`
 }
 
 func (i *Image) Aliases() []string { return strings.Fields(strings.ReplaceAll(i.Alias, ",", " ")) }

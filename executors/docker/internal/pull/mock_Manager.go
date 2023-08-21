@@ -15,15 +15,15 @@ type MockManager struct {
 }
 
 // GetDockerImage provides a mock function with given fields: imageName, options, imagePullPolicies
-func (_m *MockManager) GetDockerImage(imageName string, options common.DockerOptions, imagePullPolicies []common.DockerPullPolicy) (*types.ImageInspect, error) {
+func (_m *MockManager) GetDockerImage(imageName string, options common.ImageDockerOptions, imagePullPolicies []common.DockerPullPolicy) (*types.ImageInspect, error) {
 	ret := _m.Called(imageName, options, imagePullPolicies)
 
 	var r0 *types.ImageInspect
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, common.DockerOptions, []common.DockerPullPolicy) (*types.ImageInspect, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) (*types.ImageInspect, error)); ok {
 		return rf(imageName, options, imagePullPolicies)
 	}
-	if rf, ok := ret.Get(0).(func(string, common.DockerOptions, []common.DockerPullPolicy) *types.ImageInspect); ok {
+	if rf, ok := ret.Get(0).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) *types.ImageInspect); ok {
 		r0 = rf(imageName, options, imagePullPolicies)
 	} else {
 		if ret.Get(0) != nil {
@@ -31,7 +31,7 @@ func (_m *MockManager) GetDockerImage(imageName string, options common.DockerOpt
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, common.DockerOptions, []common.DockerPullPolicy) error); ok {
+	if rf, ok := ret.Get(1).(func(string, common.ImageDockerOptions, []common.DockerPullPolicy) error); ok {
 		r1 = rf(imageName, options, imagePullPolicies)
 	} else {
 		r1 = ret.Error(1)

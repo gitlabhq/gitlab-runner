@@ -76,7 +76,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.BuildShell = &common.ShellConfiguration{}
 
 	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
-	options := common.DockerOptions{}
+	options := common.ImageDockerOptions(nil)
 
 	p.On("GetDockerImage", imageName, options, []common.DockerPullPolicy(nil)).
 		Return(&types.ImageInspect{ID: "helper-image"}, nil).

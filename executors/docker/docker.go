@@ -147,7 +147,7 @@ func (e *executor) getServiceVariables(serviceDefinition common.Image) []string 
 func (e *executor) expandAndGetDockerImage(
 	imageName string,
 	allowedImages []string,
-	dockerOptions common.DockerOptions,
+	dockerOptions common.ImageDockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
 	imageName, err := e.expandImageName(imageName, allowedImages)
