@@ -278,7 +278,7 @@ Though discouraged, in the event that is it absolutely necessary for a CI job to
 user or to write to the root filesystem, you will need to set the `anyuid` SCC on the GitLab Runner
 service account, `gitlab-runner-sa`, which is used by the GitLab Runner container.
 
-In Openshift 4.3.8 and earlier:
+In OpenShift 4.3.8 and earlier:
 
 ```shell
 oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
@@ -287,7 +287,7 @@ oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
 oc get scc anyuid -o yaml
 ```
 
-In Openshift 4.3.8 and later:
+In OpenShift 4.3.8 and later:
 
 ```shell
 oc create -f - <<EOF
