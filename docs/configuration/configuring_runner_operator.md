@@ -278,12 +278,50 @@ Though discouraged, in the event that is it absolutely necessary for a CI job to
 user or to write to the root filesystem, you will need to set the `anyuid` SCC on the GitLab Runner
 service account, `gitlab-runner-sa`, which is used by the GitLab Runner container.
 
+Before 4.3.8:
+
 ```shell
 oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
 
 # Check that the anyiud SCC is set:
 oc get scc anyuid -o yaml
 ```
+After 4.3.8:
+
+```shell
+oc create -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: scc-anyuid
+  namespace: <runner_namespace>
+rules:
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - anyuid
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+EOF
+
+oc create -f - <<EOF
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sa-to-scc-anyuid
+  namespace: <runner_namespace>
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-runner-sa
+roleRef:
+  kind: Role
+  name: scc-anyuid
+  apiGroup: rbac.authorization.k8s.io
+EOF
+```
+
 
 #### Configure SETFCAP
 
