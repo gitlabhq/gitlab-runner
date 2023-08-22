@@ -286,6 +286,7 @@ oc adm policy add-scc-to-user anyuid -z gitlab-runner-sa -n <runner_namespace>
 # Check that the anyiud SCC is set:
 oc get scc anyuid -o yaml
 ```
+
 After 4.3.8:
 
 ```shell
@@ -321,7 +322,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 EOF
 ```
-
 
 #### Configure SETFCAP
 
