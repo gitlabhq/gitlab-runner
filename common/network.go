@@ -222,6 +222,9 @@ type JobInfo struct {
 	Stage       string `json:"stage"`
 	ProjectID   int64  `json:"project_id"`
 	ProjectName string `json:"project_name"`
+
+	TimeInQueueSeconds                       float64 `json:"time_in_queue_seconds"`
+	ProjectJobsRunningOnInstanceRunnersCount string  `json:"project_jobs_running_on_instance_runners_count"`
 }
 
 type GitInfoRefType string
