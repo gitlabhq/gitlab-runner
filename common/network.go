@@ -11,12 +11,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 )
 
-type UpdateState int
-type PatchState int
-type UploadState int
-type DownloadState int
-type JobState string
-type JobFailureReason string
+type (
+	UpdateState      int
+	PatchState       int
+	UploadState      int
+	DownloadState    int
+	JobState         string
+	JobFailureReason string
+)
 
 const (
 	Pending JobState = "pending"
@@ -366,8 +368,10 @@ type Cache struct {
 	FallbackKeys CacheFallbackKeys `json:"fallback_keys"`
 }
 
-type CacheWhen string
-type CacheFallbackKeys []string
+type (
+	CacheWhen         string
+	CacheFallbackKeys []string
+)
 
 const (
 	CacheWhenOnFailure CacheWhen = "on_failure"

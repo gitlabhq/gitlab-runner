@@ -164,7 +164,7 @@ func (e *executor) expandAndGetDockerImage(
 }
 
 func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect, error) {
-	file, err := os.OpenFile(path, os.O_RDONLY, 0600)
+	file, err := os.OpenFile(path, os.O_RDONLY, 0o600)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, err
