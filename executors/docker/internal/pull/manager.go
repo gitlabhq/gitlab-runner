@@ -67,10 +67,6 @@ func (m *manager) GetDockerImage(
 	imageName string, options common.ImageDockerOptions,
 	imagePullPolicies []common.DockerPullPolicy,
 ) (*types.ImageInspect, error) {
-	if err := m.validateDockerOptions(options); err != nil {
-		return nil, fmt.Errorf("failed to verify docker options: %w", err)
-	}
-
 	pullPolicies, err := m.getPullPolicies(imagePullPolicies)
 	if err != nil {
 		return nil, err
@@ -110,20 +106,6 @@ func (m *manager) GetDockerImage(
 		pullPolicies,
 		imageErr,
 	)
-}
-
-func (m *manager) validateDockerOptions(options common.ImageDockerOptions) error {
-	availableOpts := []string{"platform"}
-
-	for _, opt := range availableOpts {
-		for k := range options {
-			if k != opt {
-				return fmt.Errorf("unsupported option: %s. Available options are: %v", k, availableOpts)
-			}
-		}
-	}
-
-	return nil
 }
 
 func (m *manager) verifyPullPolicies(
