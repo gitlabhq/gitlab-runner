@@ -222,7 +222,7 @@ Now install GitLab Runner on the Ubuntu instance.
      1. Copy the **Security group ID**.
 
      In a production setting,
-     follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)
+     follow [AWS guidelines](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html)
      for setting up and using security groups.
 
    - If `EnablePublicIP` is set to true, the public IP of the task container is gathered to perform the SSH connection.
@@ -329,7 +329,7 @@ If you want to perform a cleanup after testing the custom executor with AWS Farg
 ## Configure a private AWS Fargate task
 
 To ensure a high level of security, configure
-[a private AWS Fargate task](https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-tasks-private-subnet).
+[a private AWS Fargate task](https://repost.aws/knowledge-center/ecs-fargate-tasks-private-subnet).
 In this configuration, executors use only internal AWS IP addresses, and allow
 outbound traffic only from AWS so that CI jobs run on a private AWS Fargate
 instance.

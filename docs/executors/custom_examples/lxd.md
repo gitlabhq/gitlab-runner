@@ -17,7 +17,7 @@ want to support multiple images, you would have to modify the executor.
 
 These scripts have the following prerequisites:
 
-- [LXD](https://linuxcontainers.org/lxd/introduction/)
+- [LXD](https://ubuntu.com/lxd)
 - [GitLab Runner](../../install/linux-manually.md)
 
 ## Configuration

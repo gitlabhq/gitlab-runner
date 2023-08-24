@@ -1012,7 +1012,7 @@ When you use GitLab Runner with Google Cloud ADC, you typically use the default 
     BucketName = "runners-cache"
 ```
 
-If you use ADC, be sure that the service account that you use has the `iam.serviceAccounts.signBlob` permission. Typically this is done by granting the [Service Account Token Creator role](https://cloud.google.com/iam/docs/service-accounts#token-creator-role) to the service account.
+If you use ADC, be sure that the service account that you use has the `iam.serviceAccounts.signBlob` permission. Typically this is done by granting the [Service Account Token Creator role](https://cloud.google.com/iam/docs/service-account-permissions#token-creator-role) to the service account.
 
 ### The `[runners.cache.azure]` section
 
