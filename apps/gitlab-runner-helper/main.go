@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -17,6 +18,7 @@ import (
 
 func init() {
 	_, _ = maxprocs.Set()
+	memlimit.SetGoMemLimitWithEnv()
 }
 
 func main() {
