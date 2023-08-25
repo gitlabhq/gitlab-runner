@@ -12,4 +12,4 @@ Include problem, use cases, benefits, and/or goals
 Please paste a link of the related issues or/and merge requests
 -->
 
-/label ~feature
+/label ~feature ~"group::runner"
