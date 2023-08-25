@@ -64,8 +64,9 @@ var machineNoConnect = &common.RunnerConfig{
 	},
 }
 
-func createMachineConfig(t *testing.T, idleCount int, idleTime int) *common.RunnerConfig {
+func createMachineConfigWithLimit(t *testing.T, idleCount int, idleTime int, limit int) *common.RunnerConfig {
 	conf := &common.RunnerConfig{
+		Limit: limit,
 		RunnerSettings: common.RunnerSettings{
 			Machine: &common.DockerMachine{
 				MachineName: "test-machine-%s",
@@ -77,6 +78,10 @@ func createMachineConfig(t *testing.T, idleCount int, idleTime int) *common.Runn
 	err := conf.RunnerSettings.Machine.CompilePeriods()
 	require.NoError(t, err)
 	return conf
+}
+
+func createMachineConfig(t *testing.T, idleCount int, idleTime int) *common.RunnerConfig {
+	return createMachineConfigWithLimit(t, idleCount, idleTime, 0)
 }
 
 type testMachine struct {
@@ -575,6 +580,27 @@ func TestMachineOnDemandMode(t *testing.T) {
 	config := createMachineConfig(t, 0, 1)
 	_, err := p.Acquire(config)
 	assert.NoError(t, err)
+}
+
+func TestMachineOnDemandModeWithLimit(t *testing.T) {
+	p, _ := testMachineProvider()
+
+	limit := 2
+	config := createMachineConfigWithLimit(t, 0, 1, limit)
+
+	for i := 0; i < limit; i++ {
+		data, err := p.Acquire(config)
+		assert.NoError(t, err)
+		assert.Nil(t, data)
+
+		_, nd, err := p.Use(config, data)
+		assert.NoError(t, err)
+		assert.NotNil(t, nd)
+	}
+
+	data, err := p.Acquire(config)
+	assert.Error(t, err, "it should fail with message that currently there's no free machines")
+	assert.Nil(t, data)
 }
 
 func TestMachinePreCreateMode(t *testing.T) {
