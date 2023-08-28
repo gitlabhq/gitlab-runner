@@ -552,6 +552,10 @@ runners:
 This example uses the secret `gitlab-runner-secret` and takes the value of
 `runner-token` to register the runner.
 
+NOTE:
+If your secret management solution doesn't allow you to set empty string for `runner-registration-token`,
+you can set it to any string - it will be ignored when `runner-token` is present.
+
 ### Switching to the Ubuntu-based `gitlab-runner` Docker image
 
 By default the GitLab Runner Helm Chart uses the Alpine version of the `gitlab/gitlab-runner` image,
