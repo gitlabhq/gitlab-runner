@@ -122,7 +122,7 @@ After you register the runner, a success message displays in the command-line:
 
 To view the runner:
 
-1. On the left sidebar, at the top, select **Search GitLab** (**{search}**) to find your project.
+1. On the left sidebar, select **Search or go to** and find your project or group.
 1. Select **Settings > CI/CD**.
 1. Expand **Runners**.
 
