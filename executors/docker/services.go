@@ -183,8 +183,8 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	platform := v1.Platform{
 		Architecture: waitImage.Architecture,
 		OS:           waitImage.Os,
-		OSVersion:    waitImage.Variant,
-		Variant:      waitImage.OsVersion,
+		OSVersion:    waitImage.OsVersion,
+		Variant:      waitImage.Variant,
 	}
 
 	e.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))

@@ -439,8 +439,8 @@ func platformForImage(image types.ImageInspect) *v1.Platform {
 	return &v1.Platform{
 		Architecture: image.Architecture,
 		OS:           image.Os,
-		OSVersion:    image.Variant,
-		Variant:      image.OsVersion,
+		OSVersion:    image.OsVersion,
+		Variant:      image.Variant,
 	}
 }
 

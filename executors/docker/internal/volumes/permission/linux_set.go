@@ -96,8 +96,8 @@ func (d *dockerLinuxSetter) createContainer(
 	platform := v1.Platform{
 		Architecture: d.helperImage.Architecture,
 		OS:           d.helperImage.Os,
-		OSVersion:    d.helperImage.Variant,
-		Variant:      d.helperImage.OsVersion,
+		OSVersion:    d.helperImage.OsVersion,
+		Variant:      d.helperImage.Variant,
 	}
 
 	c, err := d.client.ContainerCreate(ctx, config, hostConfig, nil, &platform, containerName)
