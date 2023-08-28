@@ -997,7 +997,7 @@ func getRequestJobResponse() map[string]interface{} {
 	return res
 }
 
-func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request, jobResponse map[string]any) {
 	if r.URL.Path != "/api/v4/jobs/request" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -1036,7 +1036,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	output, err := json.Marshal(getRequestJobResponse())
+	output, err := json.Marshal(jobResponse)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1050,7 +1050,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 
 func TestRequestJob(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testRequestJobHandler(w, r, t)
+		testRequestJobHandler(t, w, r, getRequestJobResponse())
 	}))
 	defer s.Close()
 
