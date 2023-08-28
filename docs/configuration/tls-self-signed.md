@@ -298,5 +298,5 @@ In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runn
 
 This error occurs when the Docker host or Kubernetes node where the runner schedules the
 executors does not trust the certificate used by the private registry. To fix the error,
-add the relevant root certificate authority certificate to the system's trust store based
-on your operating system.
+add the relevant root certificate authority, or certificate chain, to the system's trust store based
+on your operating system, then restart the containerd service.  Depending on your Runner version and Docker host environment, it may also be necessary to set the Runner feature flag `FF_RESOLVE_FULL_TLS_CHAIN` to `FALSE`.
