@@ -105,6 +105,7 @@ _docker_buildx build \
     --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
     --build-arg "ARCH=${platform_arch}" \
     --build-arg "http_proxy=${http_proxy}" \
+    --build-arg DUMB_INIT_VERSION=${DUMB_INIT_VERSION} \
     --output "type=tar,dest=$TARGET_FILE" \
     --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
     --file "dockerfiles/runner-helper/${DOCKERFILE}" \
