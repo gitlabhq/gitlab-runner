@@ -770,7 +770,7 @@ func TestCreateDependencies(t *testing.T) {
 				mock.Anything,
 				hostConfigMatcher,
 				mock.Anything,
-				mock.Anything,
+				mock.AnythingOfType("*v1.Platform"),
 				containerNameMatcher,
 			).
 				Return(container.CreateResponse{ID: containerID}, nil).
