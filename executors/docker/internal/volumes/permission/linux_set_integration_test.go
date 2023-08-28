@@ -10,10 +10,10 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/permission"
@@ -52,7 +52,12 @@ func TestDockerLinuxSetter(t *testing.T) {
 	uuid, err := helpers.GenerateRandomUUID(8)
 	require.NoError(t, err)
 
-	platform := v1.Platform{}
+	platform := v1.Platform{
+		Architecture: "amd64",
+		OS:           "linux",
+		OSVersion:    "42",
+		Variant:      "amd64",
+	}
 
 	containerName := fmt.Sprintf("%s-set-permission-%s", volumeName, uuid)
 	testContainer, err := client.ContainerCreate(context.Background(), config, hostConfig, nil, &platform, containerName)
