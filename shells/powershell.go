@@ -25,13 +25,8 @@ const (
 
 	// When the shell is set to 'powershell', the UTF8 BOM character is prepended to the initialization script, which causes unmarshalling to fail.
 	// To prevent this, we add the 'echo ""' command.
-	// We also introduce the variable '$script_path' to extract the script name from '$PSCommandPath'.
-	// When using '$PSCommandPath', the path contains backslashes followed by characters that are not defined in the JSON specification (https://www.json.org/json-en.html),
-	// leading to unmarshalling failures of the received JSON line.
-	// The '$script_path' variable is also used for the 'pwshJSONTerminationScript' for the same reasons.
-	// When the shell is set to 'pwsh', the '$PSCommandPath' variable can be safely used.
-	// The function 'getScriptPathCmd' is used to determine the appropriate command to use.
-	pwshJSONInitializationScript = `$script_path= %s
+	// We also introduce the variable '$script_path' to extract the script name without extension from '$PSCommandPath'.
+	pwshJSONInitializationScript = `$script_path= %s -command "(Get-Item $PSCommandPath).BaseName"
 $start_json= '{"script": "' + $script_path + '"}'
 echo ""
 echo "$start_json"
@@ -42,14 +37,15 @@ echo "$start_json"
 	// Those errors are not catched by the powershell_trap_script thus causing the job to hang
 	// To avoid this problem, the PwshValidationScript is used to validate the given script and eventually to cause
 	// the job to fail if a `ParserError` is thrown
+	// As $Path already refers to the script being executed, the script name will be extracted from there in this context
 	pwshJSONTerminationScript = `
 param (
 	[Parameter(Mandatory=$true,Position=1)]
 	[string]$Path
 )
 
-%s -File $Path
-$script_path= %s
+%[1]s -File $Path
+$script_path= %[1]s -command "(Get-Item $Path).BaseName"
 $out_json= '{"command_exit_code": ' + $LASTEXITCODE + ', "script": "' + $script_path + '"}'
 echo ""
 echo "$out_json"
@@ -169,16 +165,8 @@ func fileCmdArgs() []string {
 	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
 }
 
-func getScriptPathCmd(shell string) string {
-	if shell == SNPowershell {
-		return "Split-Path -Path $PSCommandPath -Leaf"
-	}
-
-	return "$PSCommandPath"
-}
-
 func PwshJSONTerminationScript(shell string) string {
-	return fmt.Sprintf(pwshJSONTerminationScript, shell, getScriptPathCmd(shell))
+	return fmt.Sprintf(pwshJSONTerminationScript, shell)
 }
 
 func PowershellDockerCmd(shell string) []string {
@@ -523,7 +511,7 @@ func (p *PsWriter) finishPwsh(buf *strings.Builder, trace bool) {
 	buf.WriteString("& {" + p.EOL + p.EOL)
 
 	if p.useJSONInitializationTermination {
-		buf.WriteString(fmt.Sprintf(pwshJSONInitializationScript, getScriptPathCmd(p.Shell)) + p.EOL + p.EOL)
+		buf.WriteString(fmt.Sprintf(pwshJSONInitializationScript, p.Shell) + p.EOL + p.EOL)
 	}
 
 	if trace {
@@ -545,7 +533,7 @@ func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
 	}
 
 	if p.useJSONInitializationTermination {
-		buf.WriteString(fmt.Sprintf(pwshJSONInitializationScript, getScriptPathCmd(p.Shell)) + p.EOL + p.EOL)
+		buf.WriteString(fmt.Sprintf(pwshJSONInitializationScript, p.Shell) + p.EOL + p.EOL)
 	}
 
 	if trace {
