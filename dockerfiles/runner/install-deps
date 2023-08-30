@@ -7,32 +7,27 @@ SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 TARGETPLATFORM="$1"
 DOCKER_MACHINE_VERSION="$2"
 DUMB_INIT_VERSION="$3"
-GIT_LFS_VERSION="$4"
 
 case "${TARGETPLATFORM}" in
     "linux/arm64")
         ARCH=arm64
         DOCKER_MACHINE_ARCH=aarch64
         DUMB_INIT_ARCH=aarch64
-        GIT_LFS_ARCH=arm64
         ;;
     "linux/amd64" | "")
         ARCH=amd64
         DOCKER_MACHINE_ARCH=x86_64
         DUMB_INIT_ARCH=x86_64
-        GIT_LFS_ARCH=amd64
         ;;
     "linux/s390x")
         ARCH=s390x
         DOCKER_MACHINE_ARCH=s390x
         DUMB_INIT_ARCH=s390x
-        GIT_LFS_ARCH=s390x
         ;;
     "linux/ppc64le")
         ARCH=ppc64le
         DOCKER_MACHINE_ARCH=ppc64le
         DUMB_INIT_ARCH=ppc64le
-        GIT_LFS_ARCH=ppc64le
         ;;
     *)
         echo "Unexpected TARGETPLATFORM value: ${TARGETPLATFORM}"
@@ -55,16 +50,6 @@ fi
 wget -nv "https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_${DUMB_INIT_ARCH}" \
   -O /usr/bin/dumb-init
 
-if [ -n "$GIT_LFS_VERSION" ]; then
-  wget -nv "https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-${GIT_LFS_ARCH}-v${GIT_LFS_VERSION}.tar.gz" \
-    -O /tmp/git-lfs.tar.gz
-  sha256sum -c -w "${SCRIPTPATH}/checksums-${ARCH}"
-  tar -xf /tmp/git-lfs.tar.gz -C /tmp/
-  mv "/tmp/git-lfs-${GIT_LFS_VERSION}/git-lfs" /usr/bin/git-lfs
-  rm -rf /tmp/git-lfs*
-  git-lfs install --skip-repo
-  git-lfs version
-fi
 
 if [[ -f /usr/bin/docker-machine ]]; then
   chmod +x /usr/bin/docker-machine

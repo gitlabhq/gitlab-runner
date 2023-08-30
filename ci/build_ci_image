@@ -16,6 +16,7 @@ build() {
            --build-arg KUBECTL_VERSION="${KUBECTL_VERSION}" \
            --build-arg AWS_CLI_VERSION="${AWS_CLI_VERSION}" \
            --build-arg YQ_VERSION="${YQ_VERSION}" \
+           --build-arg GO_VERSION="${GO_VERSION}" \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
            "${GIT_ROOT}"
