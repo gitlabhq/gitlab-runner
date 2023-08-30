@@ -1051,6 +1051,38 @@ func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 	t.Logf("JobRequest response: %s\n", output)
 }
 
+func TestRequestJobWithUnsupportedOptions(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		jobResp := getRequestJobResponse()
+		jobResp["image"].(map[string]any)["executor_opts"].(map[string]any)["docker"].(map[string]any)["blammo"] = "powpow"
+		jobResp["services"].([]map[string]any)[0]["executor_opts"].(map[string]any)["docker"].(map[string]any)["foobarbaz"] = "flinflanflon"
+		testRequestJobHandler(t, w, r, jobResp)
+	}))
+	defer s.Close()
+
+	require.NoError(t, systemIDState.EnsureSystemID())
+
+	validToken := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   s.URL,
+			Token: validToken,
+		},
+		SystemIDState: systemIDState,
+	}
+
+	c := NewGitLabClient()
+
+	h := newLogHook(logrus.InfoLevel, logrus.ErrorLevel)
+	logrus.AddHook(&h)
+
+	res, ok := c.RequestJob(context.Background(), validToken, nil)
+	assert.True(t, ok)
+	assert.NotNil(t, res)
+	assert.NotNil(t, res.UnsupportedOptions())
+	assert.Contains(t, res.UnsupportedOptions().Error(), "blammo")
+	assert.Contains(t, res.UnsupportedOptions().Error(), "foobarbaz")
+}
+
 func TestRequestJob(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testRequestJobHandler(t, w, r, getRequestJobResponse())
@@ -1096,16 +1128,16 @@ func TestRequestJob(t *testing.T) {
 
 	assert.Equal(t, "ruby:2.7", res.Image.Name)
 	assert.Equal(t, []string{"/bin/sh"}, res.Image.Entrypoint)
-	require.Equal(t, "arm64/v8", res.Image.DockerOptions.Platform)
+	require.Equal(t, "arm64/v8", res.Image.ExecutorOptions.Docker.Platform)
 	require.Len(t, res.Services, 2)
 	assert.Equal(t, "postgresql:9.5", res.Services[0].Name)
 	assert.Equal(t, []string{"/bin/sh"}, res.Services[0].Entrypoint)
 	assert.Equal(t, []string{"sleep", "30"}, res.Services[0].Command)
 	assert.Equal(t, "db-pg", res.Services[0].Alias)
-	assert.Equal(t, "amd64/linux", res.Services[0].DockerOptions.Platform)
+	assert.Equal(t, "amd64/linux", res.Services[0].ExecutorOptions.Docker.Platform)
 	assert.Equal(t, "mysql:5.6", res.Services[1].Name)
 	assert.Equal(t, "db-mysql", res.Services[1].Alias)
-	assert.Equal(t, "arm", res.Services[1].DockerOptions.Platform)
+	assert.Equal(t, "arm", res.Services[1].ExecutorOptions.Docker.Platform)
 
 	require.Len(t, res.Variables, 1)
 	assert.Equal(t, "CI_REF_NAME", res.Variables[0].Key)
