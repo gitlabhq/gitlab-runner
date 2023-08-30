@@ -3,8 +3,8 @@
 set -eEo pipefail
 
 SCRIPTPATH="$(
-  cd "$(dirname "$0")"
-  pwd -P
+        cd "$(dirname "$0")"
+        pwd -P
 )"
 
 # shellcheck source=ci/docker_commands
@@ -17,8 +17,8 @@ TARGET_ARCH=$2
 TARGET_FILE=$3
 
 if [ -z "${TARGET_ARCH}" ] || [ -z "${TARGET_FILE}" ]; then
-    echo -e "${RED}Missing required arguments. Usage: build_helper_docker TARGET_FLAVOR TARGET_ARCH TARGET_FILE [PWSH_TARGET_FLAVOR_IMAGE_VERSION]${RST}"
-    exit 1
+        echo -e "${RED}Missing required arguments. Usage: build_helper_docker TARGET_FLAVOR TARGET_ARCH TARGET_FILE [PWSH_TARGET_FLAVOR_IMAGE_VERSION]${RST}"
+        exit 1
 fi
 
 DOCKERFILE=${TARGET_DOCKERFILE:-"Dockerfile.${TARGET_FLAVOR}"}
@@ -59,19 +59,23 @@ else
         exit 1
     fi
 
-    BASE_IMAGE="${TARGET_FLAVOR}:${TARGET_FLAVOR_IMAGE_VERSION}"
+    if [[ $TARGET_FLAVOR == 'alpine-edge' ]]; then
+        BASE_IMAGE="alpine:edge"
+    else
+        BASE_IMAGE="${TARGET_FLAVOR}:${TARGET_FLAVOR_IMAGE_VERSION}"
+    fi
 fi
 
 REVISION=${REVISION:-}
 if [[ -z "${REVISION}" ]]; then
-    REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
+        REVISION=$(git rev-parse --short=8 HEAD || echo "unknown")
 fi
 
 case "${TARGET_ARCH}" in
-    "x86_64")
+"x86_64")
         platform_arch='amd64'
         ;;
-    *)
+*)
         platform_arch="${TARGET_ARCH}"
         ;;
 esac
@@ -79,11 +83,12 @@ esac
 binary_file="out/binaries/gitlab-runner-helper/gitlab-runner-helper.${TARGET_ARCH}${HELPER_BINARY_POSTFIX}"
 
 if [ ! -f "$binary_file" ]; then
-    echo -e "${RED}Missing binary file ${binary_file}. You probably need to run 'make helper-bin'.${RST}"
-    exit 1
+        echo -e "${RED}Missing binary file ${binary_file}. You probably need to run 'make helper-bin'.${RST}"
+        exit 1
 fi
 
 cp "$binary_file" dockerfiles/runner-helper/binaries/gitlab-runner-helper
+cp dockerfiles/install_git_lfs dockerfiles/runner-helper/
 chmod +x dockerfiles/runner-helper/binaries/gitlab-runner-helper
 
 os=$(_docker version -f '{{.Server.Os}}')
@@ -96,16 +101,17 @@ setup_docker_context
 
 # shellcheck disable=SC2154
 _docker_buildx build \
-    --platform "${platform}" \
-    --no-cache \
-    --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
-    --build-arg "ARCH=${platform_arch}" \
-    --build-arg "http_proxy=${http_proxy}" \
-    --build-arg DUMB_INIT_VERSION=${DUMB_INIT_VERSION} \
-    --output "type=tar,dest=$TARGET_FILE" \
-    --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
-    --file "dockerfiles/runner-helper/${DOCKERFILE}" \
-    dockerfiles/runner-helper
+        --platform "${platform}" \
+        --no-cache \
+        --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+        --build-arg "ARCH=${platform_arch}" \
+        --build-arg "http_proxy=${http_proxy}" \
+        --build-arg DUMB_INIT_VERSION=${DUMB_INIT_VERSION} \
+        --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
+        --output "type=tar,dest=$TARGET_FILE" \
+        --tag "gitlab/gitlab-runner-helper:$TARGET_ARCH-$REVISION" \
+        --file "dockerfiles/runner-helper/${DOCKERFILE}" \
+        dockerfiles/runner-helper
 
 trap - ERR SIGINT SIGTERM
 cleanup_docker_context

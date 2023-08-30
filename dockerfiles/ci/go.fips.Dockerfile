@@ -1,16 +1,16 @@
 ARG GO_FIPS_BASE_IMAGE
 
-FROM ${GO_FIPS_BASE_IMAGE}
+FROM ${GO_FIPS_BASE_IMAGE} AS go
 
 ARG PLATFORM_ARCH=amd64
 
 RUN microdnf update -y && \
-    microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel && \
+    microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel tar gzip gcc make && \
     microdnf clean all -y
 
 ARG GO_VERSION=1.20
 
-RUN wget https://go.dev/dl/go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && \
+RUN curl -LO https://go.dev/dl/go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && \
     tar -C /usr/ -xzf go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz
 
 ENV PATH="$PATH:/usr/go/bin"
@@ -49,7 +49,7 @@ RUN microdnf update -y && \
     microdnf install -y patch gcc openssl openssl-devel make git && \
     microdnf clean all -y
 
-COPY --from=0 /usr/local/go /usr/local/go
+COPY --from=go /usr/local/go /usr/local/go
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH" && go install std
