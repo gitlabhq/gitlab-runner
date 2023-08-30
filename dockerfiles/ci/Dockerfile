@@ -1,5 +1,5 @@
-# renovate: datasource=docker depName=golang allowedVersions=/1\.20\..+\-buster/
-FROM golang:1.20.5-buster
+ARG GO_VERSION
+FROM golang:${GO_VERSION}-buster
 
 # Install required dependencies
 # hadolint ignore=DL3008,DL3015
@@ -44,8 +44,10 @@ RUN mkdir -p ~/.docker/cli-plugins && \
 
 ARG GIT_LFS_VERSION
 ARG GIT_LFS_AMD64_CHECKSUM
+ARG GIT_LFS_CHECKSUM=${GIT_LFS_AMD64_CHECKSUM}
+ARG ARCH=amd64
 
-COPY dockerfiles/ci/install_git_lfs /tmp/
+COPY dockerfiles/install_git_lfs /tmp/
 RUN /tmp/install_git_lfs
 
 # Install kubectl
