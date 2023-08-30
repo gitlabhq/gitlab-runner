@@ -1014,6 +1014,8 @@ type RunnerCredentials struct {
 	TLSCAFile       string    `toml:"tls-ca-file,omitempty" json:"tls-ca-file" long:"tls-ca-file" env:"CI_SERVER_TLS_CA_FILE" description:"File containing the certificates to verify the peer when using HTTPS"`
 	TLSCertFile     string    `toml:"tls-cert-file,omitempty" json:"tls-cert-file" long:"tls-cert-file" env:"CI_SERVER_TLS_CERT_FILE" description:"File containing certificate for TLS client auth when using HTTPS"`
 	TLSKeyFile      string    `toml:"tls-key-file,omitempty" json:"tls-key-file" long:"tls-key-file" env:"CI_SERVER_TLS_KEY_FILE" description:"File containing private key for TLS client auth when using HTTPS"`
+
+	Logger logrus.FieldLogger `toml:"-" json:",omitempty"`
 }
 
 type CacheGCSCredentials struct {
@@ -1792,10 +1794,15 @@ func (c *RunnerCredentials) UniqueID() string {
 }
 
 func (c *RunnerCredentials) Log() *logrus.Entry {
-	if c.ShortDescription() != "" {
-		return logrus.WithField("runner", c.ShortDescription())
+	logger := c.Logger
+	if logger == nil {
+		logger = logrus.StandardLogger()
 	}
-	return logrus.WithFields(logrus.Fields{})
+
+	if c.ShortDescription() != "" {
+		return logger.WithField("runner", c.ShortDescription())
+	}
+	return logger.WithFields(logrus.Fields{})
 }
 
 func (c *RunnerCredentials) SameAs(other *RunnerCredentials) bool {

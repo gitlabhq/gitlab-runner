@@ -2769,3 +2769,135 @@ func TestGetStageTimeoutContexts(t *testing.T) {
 		})
 	}
 }
+
+func Test_logUsedImages(t *testing.T) {
+	const (
+		testImage1 = "test_image:latest"
+		testImage2 = "service_image:v1.0"
+		testImage3 = "registry.gitlab.example.com/my/project/image@sha256:123456"
+
+		testPlatform = "platform"
+	)
+
+	tests := map[string]struct {
+		featureOn    bool
+		image        Image
+		services     Services
+		assertImages func(t *testing.T, images []string, platforms []string)
+	}{
+		"FF disabled": {
+			featureOn: false,
+			image:     Image{Name: testImage1},
+			services: Services{
+				{Name: testImage2},
+				{Name: testImage3},
+			},
+			assertImages: func(t *testing.T, images []string, _ []string) {
+				assert.Empty(t, images)
+			},
+		},
+		"no images defined": {
+			featureOn: true,
+			assertImages: func(t *testing.T, images []string, _ []string) {
+				assert.Empty(t, images)
+			},
+		},
+		"job image defined": {
+			featureOn: true,
+			image: Image{
+				Name: testImage1,
+				ExecutorOptions: ImageExecutorOptions{
+					Docker: ImageDockerOptions{
+						Platform: testPlatform,
+					},
+				},
+			},
+			assertImages: func(t *testing.T, images []string, platforms []string) {
+				assert.Len(t, images, 1)
+				assert.Contains(t, images, testImage1)
+
+				assert.Len(t, platforms, 1)
+				assert.Contains(t, platforms, testPlatform)
+			},
+		},
+		"service images defined": {
+			featureOn: true,
+			services: Services{
+				{Name: testImage1},
+				{
+					Name: testImage2,
+					ExecutorOptions: ImageExecutorOptions{
+						Docker: ImageDockerOptions{
+							Platform: testPlatform,
+						},
+					},
+				},
+			},
+			assertImages: func(t *testing.T, images []string, platforms []string) {
+				assert.Len(t, images, 2)
+				assert.Contains(t, images, testImage1)
+				assert.Contains(t, images, testImage2)
+
+				assert.Len(t, platforms, 1)
+				assert.Contains(t, platforms, testPlatform)
+			},
+		},
+		"all images defined": {
+			featureOn: true,
+			image:     Image{Name: testImage1},
+			services: Services{
+				{Name: testImage2},
+				{Name: testImage3},
+			},
+			assertImages: func(t *testing.T, images []string, _ []string) {
+				assert.Len(t, images, 3)
+				assert.Contains(t, images, testImage1)
+				assert.Contains(t, images, testImage2)
+				assert.Contains(t, images, testImage3)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			logger, hook := test.NewNullLogger()
+
+			b := &Build{
+				Runner: &RunnerConfig{
+					RunnerSettings: RunnerSettings{
+						FeatureFlags: map[string]bool{
+							featureflags.LogImagesConfiguredForJob: tt.featureOn,
+						},
+					},
+					RunnerCredentials: RunnerCredentials{
+						Logger: logger,
+					},
+				},
+				JobResponse: JobResponse{
+					Image:    tt.image,
+					Services: tt.services,
+				},
+			}
+
+			b.logUsedImages()
+
+			var images []string
+			var platforms []string
+			for _, entry := range hook.AllEntries() {
+				image, ok := entry.Data["image_name"]
+				if !ok {
+					continue
+				}
+				images = append(images, image.(string))
+
+				platform, ok := entry.Data["image_platform"]
+				if !ok {
+					continue
+				}
+				platforms = append(platforms, platform.(string))
+			}
+
+			tt.assertImages(t, images, platforms)
+		})
+	}
+}
