@@ -739,7 +739,7 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 	// future folders and files.
 	switch os {
 	case helperimage.OSTypeWindows:
-		chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /t /q | out-null"
+		chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /q | out-null"
 		commands := []string{
 			fmt.Sprintf(chmod, s.logsDir()),
 			fmt.Sprintf(chmod, s.Build.RootDir),
