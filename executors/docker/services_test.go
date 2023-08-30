@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -76,7 +77,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 	e.BuildShell = &common.ShellConfiguration{}
 
 	realServiceContainerName := e.getProjectUniqRandomizedName() + servicePart
-	options := common.ImageDockerOptions(nil)
+	options := common.ImageDockerOptions{}
 
 	p.On("GetDockerImage", imageName, options, []common.DockerPullPolicy(nil)).
 		Return(&types.ImageInspect{ID: "helper-image"}, nil).
