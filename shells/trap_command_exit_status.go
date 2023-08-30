@@ -84,7 +84,8 @@ func (c StageCommandStatus) BuildStage() common.BuildStage {
 		return ""
 	}
 
-	// For PowerShell shell, script contains only the name of the script being executed
+	// When using `powershell/pwsh`, script contains only the script name without its extension being executed.
+	// When using `bash` shell, script contains the script absolute path. We therefore need to extract the script name.
 	split := strings.Split(*c.Script, "/")
 	stage := split[len(split)-1]
 
