@@ -210,7 +210,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 		e.Println("Using helper image: ", imageNameFromConfig, " (overridden, default would be ", e.helperImageInfo, ")")
 
-		return e.pullManager.GetDockerImage(imageNameFromConfig, e.Build.Image.ExecutorOptions.DockerOptions, nil)
+		return e.pullManager.GetDockerImage(imageNameFromConfig, e.Build.Image.ExecutorOptions.Docker, nil)
 	}
 
 	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
@@ -229,7 +229,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 	// Fall back to getting image from registry
 	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
-	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), e.Build.Image.ExecutorOptions.DockerOptions, nil)
+	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), e.Build.Image.ExecutorOptions.Docker, nil)
 }
 
 func (e *executor) getLocalHelperImage() *types.ImageInspect {
@@ -283,7 +283,7 @@ func (e *executor) getBuildImage() (*types.ImageInspect, error) {
 	imagePullPolicies := e.Build.Image.PullPolicies
 
 	// Fetch image
-	image, err := e.pullManager.GetDockerImage(imageName, e.Build.Image.ExecutorOptions.DockerOptions, imagePullPolicies)
+	image, err := e.pullManager.GetDockerImage(imageName, e.Build.Image.ExecutorOptions.Docker, imagePullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +387,7 @@ func (e *executor) createService(
 	}
 
 	e.Println("Starting service", service+":"+version, "...")
-	serviceImage, err := e.pullManager.GetDockerImage(image, definition.ExecutorOptions.DockerOptions, definition.PullPolicies)
+	serviceImage, err := e.pullManager.GetDockerImage(image, definition.ExecutorOptions.Docker, definition.PullPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +547,7 @@ func (e *executor) createContainer(
 	image, err := e.expandAndGetDockerImage(
 		imageDefinition.Name,
 		allowedInternalImages,
-		imageDefinition.ExecutorOptions.DockerOptions,
+		imageDefinition.ExecutorOptions.Docker,
 		imageDefinition.PullPolicies,
 	)
 	if err != nil {

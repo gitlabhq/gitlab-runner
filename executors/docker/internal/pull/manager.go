@@ -233,7 +233,7 @@ func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOp
 	}
 
 	opts := types.ImagePullOptions{
-		Platform: options["platform"],
+		Platform: options.Platform,
 	}
 
 	var err error

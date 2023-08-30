@@ -288,11 +288,14 @@ type Step struct {
 
 type Steps []Step
 
-type ImageDockerOptions map[string]string
-
-type ImageExecutorOptions struct {
-	DockerOptions ImageDockerOptions `json:"docker,omitempty"`
-}
+type (
+	ImageDockerOptions struct {
+		Platform string `json:"platform"`
+	}
+	ImageExecutorOptions struct {
+		Docker ImageDockerOptions `json:"docker,omitempty"`
+	}
+)
 
 type Image struct {
 	Name            string               `json:"name"`
