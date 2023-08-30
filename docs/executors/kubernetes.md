@@ -325,7 +325,7 @@ shutdown_timeout = 0
 
 This `strategic` patch strategy uses the existing `patchStrategy` applied to each field of the `PodSpec` object.
 
-Example of a `pod_spec` configuration with the `json` patch strategy. In this configuration,
+Example of a `pod_spec` configuration with the `strategic` patch strategy. In this configuration,
 a `resource request` is set to on the build container.
 
 ```toml
