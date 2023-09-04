@@ -170,5 +170,6 @@ func (Package) runPackageScript(pkgType, arch, packageArch, binary string) error
 		"PACKAGE_ARCH":  packageArch,
 		"RUNNER_BINARY": binary,
 		"PACKAGE_NAME":  constants.AppName,
+		"VERSION":       constants.Version(),
 	}, "ci/package", pkgType)
 }
