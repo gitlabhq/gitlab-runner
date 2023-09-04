@@ -125,7 +125,10 @@ The final step is to [register a new runner](../register/index.md#docker). The G
 ## Update configuration
 
 If you change the configuration in `config.toml`, you might need to restart the runner to apply the change.
-Make sure to restart the whole container instead of using `gitlab-runner restart`:
+The `config.toml` is the configuration file that you use to [configure runners](../configuration/advanced-configuration.md),
+and is created when you register a runner.
+
+You should restart the whole container instead of using `gitlab-runner restart`:
 
 ```shell
 docker restart gitlab-runner
