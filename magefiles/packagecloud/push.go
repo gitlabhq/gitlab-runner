@@ -2,10 +2,11 @@ package packagecloud
 
 import (
 	"fmt"
-	"github.com/magefile/mage/sh"
-	"github.com/sourcegraph/conc/pool"
 	"path/filepath"
 	"strings"
+
+	"github.com/magefile/mage/sh"
+	"github.com/sourcegraph/conc/pool"
 )
 
 type PushOpts struct {

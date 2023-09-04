@@ -4,14 +4,15 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"text/template"
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/samber/lo"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/constants"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/packages"
-	"os"
-	"strings"
-	"text/template"
 )
 
 // Package namespace for handling deb and rpm packages

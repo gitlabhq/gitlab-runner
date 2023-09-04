@@ -28,10 +28,11 @@ package packagecloud
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/samber/lo"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/samber/lo"
 )
 
 const (
