@@ -68,6 +68,11 @@ ARG YQ_VERSION
 RUN wget https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq &&\
     chmod +x /usr/bin/yq
 
-RUN ls && pwd && cat Makefile && make deps && mage package:deps packagecloud:deps
+COPY Makefile* /build/
+COPY magefiles /build/magefiles
+COPY go.mod /build/
+COPY go.sum /build/
+WORKDIR /build
+RUN make deps && mage package:deps packagecloud:deps
 
 RUN go install github.com/jstemmer/go-junit-report@2a37e36ac67395cc83bca97552a19c8a4ec4ddb1
