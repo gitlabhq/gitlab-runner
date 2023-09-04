@@ -70,6 +70,6 @@ RUN wget https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_lin
 
 COPY Makefile* /tmp/
 WORKDIR /tmp
-RUN make deps packagecloud-deps && mage package:deps
+RUN make deps && mage package:deps packagecloud:deps
 
 RUN go install github.com/jstemmer/go-junit-report@2a37e36ac67395cc83bca97552a19c8a4ec4ddb1

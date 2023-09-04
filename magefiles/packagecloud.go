@@ -30,7 +30,7 @@ func (PackageCloud) Yank(version string) error {
 	})
 }
 
-func (PackageCloud) InstallDeps() error {
+func (PackageCloud) Deps() error {
 	if err := sh.RunV("package_cloud", "version"); err != nil {
 		return sh.RunV("gem", "install", "package_cloud", "--version", "~> 0.3.0", "--no-document")
 	}
@@ -40,7 +40,7 @@ func (PackageCloud) InstallDeps() error {
 
 // Push releases PackageCloud packages
 func (p PackageCloud) Push(dist, branch, flavor string) error {
-	mg.Deps(p.InstallDeps)
+	mg.Deps(p.Deps)
 
 	branch = strings.Split(branch, " ")[0]
 	return packagecloud.Push(packagecloud.PushOpts{
