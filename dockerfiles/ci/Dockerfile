@@ -69,6 +69,7 @@ RUN wget https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_lin
         chmod +x /usr/bin/yq
 
 COPY Makefile* /tmp/
+COPY magefiles /tmp/
 WORKDIR /tmp
 RUN make deps && mage package:deps packagecloud:deps
 
