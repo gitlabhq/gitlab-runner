@@ -3,10 +3,11 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/packagecloud"
-	"strings"
 )
 
 var (

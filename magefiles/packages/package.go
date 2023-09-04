@@ -2,6 +2,7 @@ package packages
 
 import (
 	"fmt"
+
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/constants"
 )
 

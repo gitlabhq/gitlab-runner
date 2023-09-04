@@ -2,6 +2,7 @@ package packagecloud
 
 import (
 	"fmt"
+
 	"github.com/magefile/mage/sh"
 	"github.com/sourcegraph/conc/pool"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/packages"
