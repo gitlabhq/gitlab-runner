@@ -22,6 +22,7 @@ const DefaultRestoreCacheAttempts = 1
 const DefaultExecutorStageAttempts = 1
 const KubernetesPollInterval = 3
 const KubernetesPollTimeout = 180
+const KubernetesCleanupResourcesTimeout = 5 * time.Minute
 const KubernetesResourceAvailabilityCheckMaxAttempts = 5
 const AfterScriptTimeout = 5 * time.Minute
 const DefaultMetricsServerPort = 9252
