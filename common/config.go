@@ -550,6 +550,7 @@ type KubernetesConfig struct {
 	TerminationGracePeriodSeconds                     *int64                             `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds,omitempty" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal.DEPRECATED: use KUBERNETES_POD_TERMINATION_GRACE_PERIOD_SECONDS and KUBERNETES_CLEANUP_GRACE_PERIOD_SECONDS instead."`
 	PodTerminationGracePeriodSeconds                  *int64                             `toml:"pod_termination_grace_period_seconds,omitzero" json:"pod_termination_grace_period_seconds,omitempty" long:"pod_termination_grace_period_seconds" env:"KUBERNETES_POD_TERMINATION_GRACE_PERIOD_SECONDS" description:"Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if KUBERNETES_TERMINATIONGRACEPERIODSECONDS is specified."`
 	CleanupGracePeriodSeconds                         *int64                             `toml:"cleanup_grace_period_seconds,omitzero" json:"cleanup_grace_period_seconds,omitempty" long:"cleanup_grace_period_seconds" env:"KUBERNETES_CLEANUP_GRACE_PERIOD_SECONDS" description:"When cleaning up a pod on completion of a job, the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if KUBERNETES_TERMINATIONGRACEPERIODSECONDS is specified."`
+	CleanupResourcesTimeout                           *time.Duration                     `toml:"cleanup_resources_timeout,omitzero" json:"cleanup_resources_timeout,omitempty" long:"cleanup_resources_timeout" env:"KUBERNETES_CLEANUP_RESOURCES_TIMEOUT" description:"The total amount of time for Kubernetes resources to be cleaned up after the job completes. Supported syntax: '1h30m', '300s', '10m'. Default is 5 minutes ('5m')."`
 	PollInterval                                      int                                `toml:"poll_interval,omitzero" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status"`
 	PollTimeout                                       int                                `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
 	ResourceAvailabilityCheckMaxAttempts              int                                `toml:"resource_availability_check_max_attempts,omitzero" json:"resource_availability_check_max_attempts" long:"resource-availability-check-max-attempts" env:"KUBERNETES_RESOURCE_AVAILABILITY_CHECK_MAX_ATTEMPTS" default:"5" description:"The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt"`
@@ -1345,6 +1346,14 @@ func (c *KubernetesConfig) GetPollAttempts() int {
 	}
 
 	return c.PollTimeout / c.GetPollInterval()
+}
+
+func (c *KubernetesConfig) GetCleanupResourcesTimeout() time.Duration {
+	if c.CleanupResourcesTimeout == nil || c.CleanupResourcesTimeout.Seconds() <= 0 {
+		return KubernetesCleanupResourcesTimeout
+	}
+
+	return *c.CleanupResourcesTimeout
 }
 
 func (c *KubernetesConfig) GetPollInterval() int {

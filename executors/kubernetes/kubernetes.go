@@ -462,7 +462,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		var imagePullErr *pull.ImagePullError
 		if errors.As(err, &imagePullErr) {
 			if s.pullManager.UpdatePolicyForImage(attempt, imagePullErr) {
-				s.cleanupResources(cmd.Context)
+				s.cleanupResources()
 				s.pod = nil
 				continue
 			}
@@ -916,7 +916,7 @@ func (s *executor) Finish(err error) {
 }
 
 func (s *executor) Cleanup() {
-	s.cleanupResources(s.Context)
+	s.cleanupResources()
 	closeKubeClient(s.kubeClient)
 	s.AbstractExecutor.Cleanup()
 }
@@ -926,7 +926,13 @@ func (s *executor) Cleanup() {
 // We therefore explicitly delete the resources if no ownerReference is found on it
 // This does not apply for services as they are created with the owner from the start
 // thus deletion of the pod automatically means deletion of the services if any
-func (s *executor) cleanupResources(ctx context.Context) {
+func (s *executor) cleanupResources() {
+	// Here we don't use the build context as its timeout will prevent a successful cleanup of the resources.
+	// The solution used here is inspired from the one used for the docker executor.
+	// We give a configurable timeout to complete the resources cleanup.
+	ctx, cancel := context.WithTimeout(context.Background(), s.Config.Kubernetes.GetCleanupResourcesTimeout())
+	defer cancel()
+
 	if s.pod != nil {
 		r := retry.WithBuildLog(
 			&retryableKubeAPICall{
