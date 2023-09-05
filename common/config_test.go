@@ -2147,3 +2147,69 @@ func TestConfig_SaveConfig(t *testing.T) {
 
 	assert.NotEqual(t, oldTime, c.ModTime, "Expected ModTime field of Config struct to be updated")
 }
+
+func TestConfig_GetCleanupResourcesTimeout(t *testing.T) {
+	tests := map[string]struct {
+		config      string
+		expected    time.Duration
+		expectError bool
+	}{
+		"negative value": {
+			config: `
+[[runners]]
+	name = "negative value"
+	executor = "kubernetes"
+	[runners.kubernetes]
+		cleanup_resources_timeout = "-5m"`,
+			expected: KubernetesCleanupResourcesTimeout,
+		},
+		"zero value": {
+			config: `
+[[runners]]
+	name = "zero value"
+	executor = "kubernetes"
+	[runners.kubernetes]
+		cleanup_resources_timeout = "0m"`,
+			expected: KubernetesCleanupResourcesTimeout,
+		},
+		"no value": {
+			config: `
+[[runners]]
+	name = "no value"
+	executor = "kubernetes"
+	[runners.kubernetes]`,
+			expected: KubernetesCleanupResourcesTimeout,
+		},
+		"valid value": {
+			config: `
+[[runners]]
+	name = "valid value"
+	executor = "kubernetes"
+	[runners.kubernetes]
+		cleanup_resources_timeout = "3m"`,
+			expected: 3 * time.Minute,
+		},
+		"invalid value": {
+			config: `
+[[runners]]
+	name = "invalid value"
+	executor = "kubernetes"
+	[runners.kubernetes]
+		cleanup_resources_timeout = "nothing"`,
+			expected:    KubernetesCleanupResourcesTimeout,
+			expectError: true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := NewConfig()
+			_, e := toml.Decode(tt.config, cfg)
+			if tt.expectError {
+				assert.Error(t, e)
+				return
+			}
+			assert.Equal(t, tt.expected.Seconds(), cfg.Runners[0].Kubernetes.GetCleanupResourcesTimeout().Seconds())
+		})
+	}
+}
