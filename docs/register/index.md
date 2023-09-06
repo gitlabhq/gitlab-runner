@@ -73,9 +73,9 @@ To register a runner using a Docker container:
 1. If you entered `docker` as your executor, you are asked for the default
    image to be used for projects that do not define one in `.gitlab-ci.yml`.
 
-> Do not use `gitlab-runner restart` inside of a Docker container to apply configuration changes,
-> since that would start a new process instead of actually restarting.
-> Restart the Docker container itself instead.
+NOTE:
+Using `gitlab-runner restart` inside a Docker container starts a new process instead of restarting the existing process.
+To apply configuration changes, restart the Docker container instead.
 
 ## Linux
 
