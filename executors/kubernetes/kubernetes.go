@@ -105,7 +105,7 @@ const (
 )
 
 var (
-	PropagationPolicy = metav1.DeletePropagationForeground
+	PropagationPolicy = metav1.DeletePropagationBackground
 
 	executorOptions = executors.ExecutorOptions{
 		DefaultCustomBuildsDirEnabled: true,
