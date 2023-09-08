@@ -170,6 +170,6 @@ case "${1}" in
         create_rpm_fips
         ;;
     *)
-        echo "Usage: ${0} (deb|rpm)"
+        echo "Usage: ${0} (deb|rpm|rpm-fips)"
         ;;
 esac

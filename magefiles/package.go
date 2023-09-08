@@ -34,7 +34,7 @@ func (p Package) Rpm(arch, packageArch string) error {
 func (p Package) RpmFips() error {
 	arch := "amd64"
 	binary := fmt.Sprintf("out/binaries/%s-linux-%s-fips", constants.AppName, arch)
-	return p.runPackageScript("fips", arch, arch, binary)
+	return p.runPackageScript("rpm-fips", arch, arch, binary)
 }
 
 // We use the go generate statement to call the package:generate target through mage
