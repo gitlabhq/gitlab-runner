@@ -510,7 +510,7 @@ Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts
 
 ### Store registration tokens or runner tokens in secrets
 
-> Introduced in [16.1](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/merge_requests/405) 
+> Introduced in [16.1](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/merge_requests/405).
 
 To register a runner that was created in the GitLab UI, you specify the `runnerToken` in `values.yml`. The `runnerToken` is displayed briefly in
 the UI when you create the runner.
