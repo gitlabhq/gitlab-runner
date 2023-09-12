@@ -1133,7 +1133,7 @@ func TestRequestJob(t *testing.T) {
 		},
 		{
 			Level:   logrus.ErrorLevel,
-			Message: "Checking for jobs... error",
+			Message: "Checking for jobs... client error",
 		},
 	}
 
