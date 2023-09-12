@@ -336,12 +336,40 @@ func (eo *executorOptions) validate(data []byte, supportedOptions []string, exec
 
 type (
 	ImageDockerOptions struct {
+		executorOptions
 		Platform string `json:"platform"`
 	}
 	ImageExecutorOptions struct {
+		executorOptions
 		Docker ImageDockerOptions `json:"docker,omitempty"`
 	}
 )
+
+func (ido *ImageDockerOptions) UnmarshalJSON(data []byte) error {
+	type imageDockerOptions ImageDockerOptions
+	inner := imageDockerOptions{}
+	if err := json.Unmarshal(data, &inner); err != nil {
+		return err
+	}
+	*ido = ImageDockerOptions(inner)
+
+	// call validate after json.Unmarshal so the former handles bad json.
+	ido.unsupportedOptions = ido.validate(data, []string{"platform"}, "docker executor", "image")
+	return nil
+}
+
+func (ieo *ImageExecutorOptions) UnmarshalJSON(data []byte) error {
+	type imageExecutorOptions ImageExecutorOptions
+	inner := imageExecutorOptions{}
+	if err := json.Unmarshal(data, &inner); err != nil {
+		return err
+	}
+	*ieo = ImageExecutorOptions(inner)
+
+	// call validate after json.Unmarshal so the former handles bad json.
+	ieo.unsupportedOptions = ieo.validate(data, []string{"docker"}, "executor_opts", "image")
+	return nil
+}
 
 type Image struct {
 	Name            string               `json:"name"`
