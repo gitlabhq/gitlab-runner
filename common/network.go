@@ -2,10 +2,13 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slices"
 
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
@@ -287,6 +290,49 @@ type Step struct {
 }
 
 type Steps []Step
+
+type (
+	UnsuportedExecutorOptionsError struct {
+		executor, section                    string
+		unsupportedOptions, supportedOptions []string
+	}
+	executorOptions struct {
+		unsupportedOptions error
+	}
+)
+
+func (ueoe *UnsuportedExecutorOptionsError) Error() string {
+	return fmt.Sprintf("Unsupported %q options %v for %q; supported options are %v",
+		ueoe.section,
+		ueoe.unsupportedOptions,
+		ueoe.executor,
+		ueoe.supportedOptions)
+}
+
+func (eo *executorOptions) validate(data []byte, supportedOptions []string, executor, section string) error {
+	options := map[string]any{}
+	if err := json.Unmarshal(data, &options); err != nil {
+		// this can't happen
+		return nil
+	}
+
+	notSupported := []string{}
+	for opt := range options {
+		if !slices.Contains(supportedOptions, opt) {
+			notSupported = append(notSupported, opt)
+		}
+	}
+	if len(notSupported) != 0 {
+		return &UnsuportedExecutorOptionsError{
+			executor:           executor,
+			section:            section,
+			unsupportedOptions: notSupported,
+			supportedOptions:   supportedOptions,
+		}
+	}
+
+	return nil
+}
 
 type (
 	ImageDockerOptions struct {
