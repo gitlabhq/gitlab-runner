@@ -14,17 +14,14 @@ ARG GIT_LFS_AMD64_CHECKSUM
 ARG PWSH_VERSION
 ARG PWSH_AMD64_CHECKSUM
 
-# We have to enable TLS1.2 to download from GitHub.
-RUN New-Item -ItemType directory -Path C:\Downloads; `
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; `
-    Invoke-Webrequest "https://github.com/git-for-windows/git/releases/download/v${Env:GIT_VERSION}.windows.${Env:GIT_VERSION_BUILD}/MinGit-${Env:GIT_VERSION}-64-bit.zip" -OutFile git.zip -UseBasicParsing; `
-    Invoke-Webrequest "https://github.com/git-lfs/git-lfs/releases/download/v${Env:GIT_LFS_VERSION}/git-lfs-windows-amd64-v${Env:GIT_LFS_VERSION}.zip" -OutFile git-lfs.zip -UseBasicParsing; `
-    Invoke-Webrequest "https://github.com/PowerShell/PowerShell/releases/download/v${Env:PWSH_VERSION}/PowerShell-${Env:PWSH_VERSION}-win-x64.msi" -OutFile C:\Downloads\pwsh.msi -UseBasicParsing
+ADD https://github.com/git-for-windows/git/releases/download/v${GIT_VERSION}.windows.${GIT_VERSION_BUILD}/MinGit-${GIT_VERSION}-64-bit.zip C:\git.zip
+ADD https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-windows-amd64-v${GIT_LFS_VERSION}.zip C:\git-lfs.zip
+ADD https://github.com/PowerShell/PowerShell/releases/download/v${PWSH_VERSION}/PowerShell-${PWSH_VERSION}-win-x64.msi C:\pwsh.msi
 
 COPY [".\\helpers\\checksum.ps1", ".\\"]
 RUN powershell -File .\checksum.ps1 -TargetFile git.zip -ExpectedHash ${Env:GIT_AMD64_CHECKSUM}
 RUN powershell -File .\checksum.ps1 -TargetFile git-lfs.zip -ExpectedHash ${Env:GIT_LFS_AMD64_CHECKSUM}
-RUN powershell -File .\checksum.ps1 -TargetFile C:\Downloads\pwsh.msi -ExpectedHash ${Env:PWSH_AMD64_CHECKSUM}
+RUN powershell -File .\checksum.ps1 -TargetFile pwsh.msi -ExpectedHash ${Env:PWSH_AMD64_CHECKSUM}
 
 RUN New-Item -ItemType directory -Path C:\Temp; `
     Expand-Archive -Path git.zip -DestinationPath C:\Temp\git; `
@@ -40,7 +37,7 @@ FROM ${BASE_IMAGE_TAG}
 USER ContainerAdministrator
 
 COPY --from=builder ["C:\\Temp", "C:\\Program Files\\"]
-COPY --from=builder ["C:\\Downloads", "C:\\Downloads\\"]
+COPY --from=builder ["C:\\pwsh.msi", "C:\\Downloads\\"]
 
 RUN msiexec.exe /package "C:\Downloads\pwsh.msi" /quiet REGISTER_MANIFEST=1 && `
     rmdir /s /q "C:\Downloads"
