@@ -1,5 +1,11 @@
 ## v16.3.1 (2023-09-14)
 
+### Security fixes
+
+- Clean up manual installation of git and git-lfs in ubi base image and bump git-lfs version to 3.4.0 !4289
+- Runner-helper fips image cleanups !4308
+- Bump git-lfs version to 3.4.0 !4296
+
 ### Bug fixes
 
 - Do not propagate Build context to k8s executor cleanup method !4328
