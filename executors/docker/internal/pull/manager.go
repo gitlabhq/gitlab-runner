@@ -224,7 +224,13 @@ func (m *manager) pullDockerImage(imageName string, options common.ImageDockerOp
 	if m.onPullImageHookFunc != nil {
 		m.onPullImageHookFunc()
 	}
-	m.logger.Println("Pulling docker image", imageName, "...")
+	msg := "Pulling docker image %s ..."
+	if options.Platform == "" {
+		msg = fmt.Sprintf(msg, imageName)
+	} else {
+		msg = fmt.Sprintf(msg, imageName+" for platform "+options.Platform)
+	}
+	m.logger.Println(msg)
 
 	ref := imageName
 	// Add :latest to limit the download results
