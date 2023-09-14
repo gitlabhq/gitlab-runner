@@ -1,3 +1,14 @@
+## v16.3.1 (2023-09-14)
+
+### Bug fixes
+
+- Do not propagate Build context to k8s executor cleanup method !4328
+- Fix error when unmarshaling string with windows path for powershell and pwsh !4315
+
+### Maintenance
+
+- Use ADD to download Windows dockerfile dependencies !4346
+
 ## v16.3.0 (2023-09-14)
 
 ### New features
