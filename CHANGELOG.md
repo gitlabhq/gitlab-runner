@@ -15,7 +15,7 @@
 
 - Use ADD to download Windows dockerfile dependencies !4346
 
-## v16.3.0 (2023-09-14)
+## v16.3.0 (2023-08-20)
 
 ### New features
 
@@ -27,16 +27,8 @@
 - Add `connect: connection timed out` for k8s API retry !4257
 - Put warning event retrieval feature behind a Feature Flag !4246
 
-### Security fixes
-
-- Clean up manual installation of git and git-lfs in ubi base image and bump git-lfs version to 3.4.0 !4289
-- Runner-helper fips image cleanups !4308
-- Bump git-lfs version to 3.4.0 !4296
-
 ### Bug fixes
 
-- Do not propagate Build context to k8s executor cleanup method !4328
-- Fix error when unmarshaling string with windows path for powershell and pwsh !4315
 - Fix cmd escaping/quoting of parentheses !4301
 - Revert "Prune tags when fetching" !4300
 - Use git --unshallow when GIT_DEPTH is zero !4288
@@ -50,7 +42,6 @@
 
 ### Maintenance
 
-- Use ADD to download Windows dockerfile dependencies !4346
 - Adding All to tier badges !4297
 - Add RBAC as required config !4293
 - Fix whitespace in docs !4291
