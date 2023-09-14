@@ -9,7 +9,7 @@
 
 - Use ADD to download Windows dockerfile dependencies !4346
 
-## v16.3.0 (2023-09-14)
+## v16.3.0 (2023-08-20)
 
 ### New features
 
@@ -23,8 +23,6 @@
 
 ### Bug fixes
 
-- Do not propagate Build context to k8s executor cleanup method !4328
-- Fix error when unmarshaling string with windows path for powershell and pwsh !4315
 - Fix cmd escaping/quoting of parentheses !4301
 - Revert "Prune tags when fetching" !4300
 - Use git --unshallow when GIT_DEPTH is zero !4288
@@ -38,7 +36,6 @@
 
 ### Maintenance
 
-- Use ADD to download Windows dockerfile dependencies !4346
 - Adding All to tier badges !4297
 - Add RBAC as required config !4293
 - Fix whitespace in docs !4291
