@@ -445,6 +445,7 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
+//nolint:funlen,gocognit
 func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 	// track job start and create referees
 	startTime := time.Now()
@@ -469,19 +470,45 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts())
 	}
 
+	//nolint:nestif
 	if err == nil {
+		timeouts := b.getStageTimeoutContexts(ctx,
+			stageTimeout{"RUNNER_SCRIPT_TIMEOUT", 0},
+			stageTimeout{"RUNNER_AFTER_SCRIPT_TIMEOUT", AfterScriptTimeout})
+
+		scriptCtx, cancel := timeouts["RUNNER_SCRIPT_TIMEOUT"]()
+		defer cancel()
+
 		for _, s := range b.Steps {
 			// after_script has a separate BuildStage. See common.BuildStageAfterScript
 			if s.Name == StepNameAfterScript {
 				continue
 			}
-			err = b.executeStage(ctx, StepToBuildStage(s), executor)
+			err = b.executeStage(scriptCtx, StepToBuildStage(s), executor)
 			if err != nil {
 				break
 			}
 		}
 
-		b.executeAfterScript(ctx, err, executor)
+		afterScriptCtx, cancel := timeouts["RUNNER_AFTER_SCRIPT_TIMEOUT"]()
+		defer cancel()
+
+		if afterScriptErr := b.executeAfterScript(afterScriptCtx, err, executor); afterScriptErr != nil {
+			if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				// the parent deadline being exceeded is reported at a later stage, so we
+				// only focus on errors specific to after_script here
+				b.logger.Warningln("after_script failed, but job will continue unaffected:", afterScriptErr)
+			}
+		}
+
+		// If the parent context reached deadline, don't do anything different than usual.
+		// If the script context reached deadline, return the deadline error.
+		if !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(scriptCtx.Err(), context.DeadlineExceeded) {
+			err = &BuildError{
+				Inner:         fmt.Errorf("script timeout context: %w", scriptCtx.Err()),
+				FailureReason: JobExecutionTimeout,
+			}
+		}
 	}
 
 	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
@@ -511,17 +538,14 @@ func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactU
 	return artifactUploadErr
 }
 
-func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) {
+func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) error {
 	state, _ := b.runtimeStateAndError(err)
 	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", JobVariable{
 		Key:   "CI_JOB_STATUS",
 		Value: string(state),
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, AfterScriptTimeout)
-	defer cancel()
-
-	_ = b.executeStage(ctx, BuildStageAfterScript, executor)
+	return b.executeStage(ctx, BuildStageAfterScript, executor)
 }
 
 // StepToBuildStage returns the BuildStage corresponding to a step.
@@ -1267,6 +1291,63 @@ func (b *Build) GetURLInsteadOfArgs() []string {
 		}
 	}
 	return args
+}
+
+type stageTimeout struct {
+	configName     string
+	defaultTimeout time.Duration
+}
+
+func (b *Build) getStageTimeoutContexts(parent context.Context, timeouts ...stageTimeout) map[string]func() (context.Context, func()) {
+	stack := make([]time.Duration, len(timeouts))
+
+	deadline, hasDeadline := parent.Deadline()
+	jobTimeout := time.Until(deadline)
+	for idx, timeout := range timeouts {
+		stack[idx] = timeout.defaultTimeout
+
+		rawTimeout := b.GetAllVariables().Value(timeout.configName)
+		duration, parseErr := time.ParseDuration(rawTimeout)
+
+		switch {
+		case strings.TrimSpace(rawTimeout) == "":
+			// no-op
+
+		case parseErr != nil:
+			b.logger.Warningln(fmt.Sprintf("Ignoring malformed %s timeout: %v", timeout.configName, rawTimeout))
+
+		case duration < 0:
+			// no relative durations for now...
+			b.logger.Warningln(fmt.Sprintf("Ignoring relative %s timeout: %v", timeout.configName, rawTimeout))
+
+		case hasDeadline && duration > jobTimeout:
+			// clamping timeouts to the job timeout happens automatically in `context.WithParent()`, mention it here
+			b.logger.Warningln(fmt.Sprintf("%s timeout: %v is longer than job timeout. Setting to job timeout", timeout.configName, rawTimeout))
+
+		case duration != 0:
+			stack[idx] = duration
+		}
+	}
+
+	results := make(map[string]func() (context.Context, func()))
+	for idx, timeout := range timeouts {
+		switch {
+		case stack[idx] == 0:
+			results[timeout.configName] = func() (context.Context, func()) {
+				// no timeout
+				return context.WithCancel(parent)
+			}
+
+		case stack[idx] > 0:
+			duration := stack[idx]
+			results[timeout.configName] = func() (context.Context, func()) {
+				// absolute timeout
+				return context.WithTimeout(parent, duration)
+			}
+		}
+	}
+
+	return results
 }
 
 func (b *Build) GetGitStrategy() GitStrategy {

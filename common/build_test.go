@@ -2580,3 +2580,192 @@ func Test_expandContainerOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestGetStageTimeoutContexts(t *testing.T) {
+	defaultTimeouts := []stageTimeout{
+		{configName: "RUNNER_SCRIPT_TIMEOUT", defaultTimeout: 0},
+		{configName: "RUNNER_AFTER_SCRIPT_TIMEOUT", defaultTimeout: 5 * time.Minute},
+	}
+
+	tests := map[string]struct {
+		variables  map[string]string
+		expected   map[string]time.Duration
+		contains   []string
+		jobTimeout time.Duration
+	}{
+		"after_script must have a timeout, even if set to zero": {
+			variables: map[string]string{
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": "0s",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       time.Hour,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			jobTimeout: time.Hour,
+		},
+		"no timeout provided": {
+			variables: map[string]string{},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       time.Hour,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			jobTimeout: time.Hour,
+		},
+		"timeout absolute": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT": "5m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       5 * time.Minute,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			jobTimeout: time.Hour,
+		},
+		"timeout last relative": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT":       "5m",
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": "-10m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       5 * time.Minute,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			contains:   []string{"Ignoring relative RUNNER_AFTER_SCRIPT_TIMEOUT timeout: -10m"},
+			jobTimeout: time.Hour,
+		},
+		"timeout first relative": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT":       "-5m",
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": "10m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       time.Hour,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 10 * time.Minute,
+			},
+			contains:   []string{"Ignoring relative RUNNER_SCRIPT_TIMEOUT timeout: -5m"},
+			jobTimeout: time.Hour,
+		},
+		"timeout both relative": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT":       "-15m",
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": "-40m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       1 * time.Hour,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			contains: []string{
+				"Ignoring relative RUNNER_SCRIPT_TIMEOUT timeout: -15",
+				"Ignoring relative RUNNER_AFTER_SCRIPT_TIMEOUT timeout: -40m",
+			},
+			jobTimeout: time.Hour,
+		},
+		"timeout relative and exceeds timeout": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT":       "-40m",
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": "-40m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       time.Hour,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			contains: []string{
+				"Ignoring relative RUNNER_SCRIPT_TIMEOUT timeout: -40m",
+				"Ignoring relative RUNNER_AFTER_SCRIPT_TIMEOUT timeout: -40m",
+			},
+			jobTimeout: time.Hour,
+		},
+		"timeout relative and exceeds timeout and no time left": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT":       "-40m",
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": "-40m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       1 * time.Millisecond,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 1 * time.Millisecond,
+			},
+			contains: []string{
+				"Ignoring relative RUNNER_SCRIPT_TIMEOUT timeout: -40m",
+				"Ignoring relative RUNNER_AFTER_SCRIPT_TIMEOUT timeout: -40m",
+			},
+			jobTimeout: time.Millisecond,
+		},
+		"timeout is invalid": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT": "foobar",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       0,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": time.Millisecond,
+			},
+			contains:   []string{"Ignoring malformed RUNNER_SCRIPT_TIMEOUT timeout: foobar"},
+			jobTimeout: time.Millisecond,
+		},
+		"timeout when no parent timeout": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT": "-10m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       0,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			contains: []string{"Ignoring relative RUNNER_SCRIPT_TIMEOUT timeout: -10m"},
+		},
+		"script timeout longer than job timeout": {
+			variables: map[string]string{
+				"RUNNER_SCRIPT_TIMEOUT": "60m",
+			},
+			expected: map[string]time.Duration{
+				"RUNNER_SCRIPT_TIMEOUT":       40 * time.Minute,
+				"RUNNER_AFTER_SCRIPT_TIMEOUT": 5 * time.Minute,
+			},
+			contains:   []string{"RUNNER_SCRIPT_TIMEOUT timeout: 60m is longer than job timeout."},
+			jobTimeout: 40 * time.Minute,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			logs := bytes.Buffer{}
+			lentry := logrus.New()
+			lentry.Out = &logs
+			logger := NewBuildLogger(nil, logrus.NewEntry(lentry))
+
+			b := &Build{
+				Runner: &RunnerConfig{},
+				logger: logger,
+			}
+			for key, val := range tc.variables {
+				b.Variables = append(b.Variables, JobVariable{
+					Key:   key,
+					Value: val,
+				})
+			}
+
+			ctx := context.Background()
+			if tc.jobTimeout > 0 {
+				var cancel func()
+				ctx, cancel = context.WithTimeout(ctx, tc.jobTimeout)
+				defer cancel()
+			}
+
+			for key, ctxProvider := range b.getStageTimeoutContexts(ctx, defaultTimeouts...) {
+				ctx, cancel := ctxProvider()
+				defer cancel()
+
+				deadline, _ := ctx.Deadline()
+				if !deadline.IsZero() {
+					assert.WithinDuration(t, time.Now().Add(tc.expected[key]), deadline, time.Second, key)
+				}
+			}
+
+			if len(tc.contains) == 0 {
+				assert.Empty(t, logs.String())
+			} else {
+				for i := range tc.contains {
+					assert.Contains(t, logs.String(), tc.contains[i])
+				}
+			}
+		})
+	}
+}
