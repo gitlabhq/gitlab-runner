@@ -185,8 +185,7 @@ bleeding edge sync docker images:
     - bleeding edge docker images
     - bleeding edge helper docker images
   variables:
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
+    PUSH_TO_DOCKER_HUB: "true"
 
 stable S3:
   extends:
@@ -249,8 +248,8 @@ stable sync docker images:
     - stable docker images
     - stable helper docker images
   variables:
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
+    PUSH_TO_DOCKER_HUB: "true"
+    PUSH_TO_ECR_PUBLIC: "true"
 
 stable gitlab release:
   stage: postrelease
