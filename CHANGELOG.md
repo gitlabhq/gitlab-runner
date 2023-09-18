@@ -1,3 +1,73 @@
+## v16.3.1 (2023-09-14)
+
+### Security fixes
+
+- Clean up manual installation of git and git-lfs in ubi base image and bump git-lfs version to 3.4.0 !4289
+- Runner-helper fips image cleanups !4308
+- Bump git-lfs version to 3.4.0 !4296
+
+### Bug fixes
+
+- Do not propagate Build context to k8s executor cleanup method !4328
+- Fix error when unmarshaling string with windows path for powershell and pwsh !4315
+
+### Maintenance
+
+- Use ADD to download Windows dockerfile dependencies !4346
+
+## v16.3.0 (2023-08-20)
+
+### New features
+
+- Enable variable injection to Persistent Volume Claim name !4256 (OK_MF @OK_MF)
+- Add `http2: client connection lost` for k8s API retry !4285
+- Add debug message to diagnose fetching issuer certificate bug !4274
+- Add RISC-V support !4226 (Aaron Dewes @AaronDewes)
+- Add link to documentation when using forbidden arguments in register !4266
+- Add `connect: connection timed out` for k8s API retry !4257
+- Put warning event retrieval feature behind a Feature Flag !4246
+
+### Bug fixes
+
+- Fix cmd escaping/quoting of parentheses !4301
+- Revert "Prune tags when fetching" !4300
+- Use git --unshallow when GIT_DEPTH is zero !4288
+- Fix docker Cleanup() panic when nothing has been configured !4287
+- Mark project working directory as safe for Git !3538
+- Only decode certificates if HTTP GET is successful !4281
+- Panic during build now prints stack trace !4283
+- Retry sync and update submodules on failure !4278
+- Fix Docker ulimit validation warning !4248 (Dennis Voss @DennisVoss)
+- Fix script typo that caused packages not to be pushed to Packagecloud !4253
+
+### Maintenance
+
+- Adding All to tier badges !4297
+- Add RBAC as required config !4293
+- Fix whitespace in docs !4291
+- Fix typos !4284 (Sven Strickroth @mrtux)
+- Include first multiline commit in MR description for default template !4282
+- Update docker dependencies version to fix invalid Host header !4249 (Sword @RryLee)
+- Update fleeting and taskscaler to newer versions !4280
+- Propagate kubernetes executor context !4125
+- Prune tags when fetching !4218 (Guilhem Bonnefille @gbonnefille)
+- Rename runner token to runner authentication token !4264
+- Fix documentation to work with Runner Helm Chart v0.53.0 onwards !4269 (Konstantin Köhring @konstantin.koehring)
+- Provide guidance on minimal permissions needed for EC2 autoscaling !4175
+- Doc | Add troubleshooting steps for private registry ssl errors !4267
+- Update link to EKS !4268
+- Add space before backtick !4265
+- Add Vale to .tool-versions file !4252
+- Add K8s and Docker logging location to troubleshooting !4262
+- Add warnings about shell executor !4261
+- Include steps to enable metrics for Runners using Helm Chart !4260
+- Update installation type references for docs !4258
+- Fix potential race condition in Docker provider test !4244
+- Add missing release binaries/images to Gitlab release page !4254
+- Fix table item !4250
+- Restructure executor page !4245
+- Ensure Windows helper images builds fail upon error !4243
+
 ## v16.2.0 (2023-07-21)
 
 ### New features
