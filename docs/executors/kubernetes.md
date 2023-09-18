@@ -626,6 +626,23 @@ To overwrite Kubernetes pod annotations for each CI/CD job:
      KUBERNETES_POD_ANNOTATIONS_3: "Key3=Val3"
    ```
 
+In the example below, the `pod_annotations` and the `pod_annotations_overwrite_allowed` are set.
+This configuration allows overwrite of any of the `pod_annotations` configured in the `config.toml`.
+
+```toml
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  [runners.kubernetes]
+    image = "alpine"
+    pod_annotations_overwrite_allowed = "*"
+    [runners.kubernetes.pod_annotations]
+      "Key1" = "Val1"
+      "Key2" = "Val2"
+      "Key3" = "Val3"
+      "Key4" = "Val4"
+```
+
 ### Overwrite container resources
 
 You can overwrite Kubernetes CPU and memory allocations for each CI/CD
