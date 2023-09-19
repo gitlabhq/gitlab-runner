@@ -308,7 +308,7 @@ func (s *RegisterCommand) doLegacyRegisterRunner() {
 		logrus.Warningf(
 			"Support for registration tokens and runner parameters in the 'register' command has been deprecated in " +
 				"GitLab Runner 15.6 and will be replaced with support for authentication tokens. " +
-				"For more information, see https://gitlab.com/gitlab-org/gitlab/-/issues/380872",
+				"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow",
 		)
 	}
 
