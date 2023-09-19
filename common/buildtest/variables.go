@@ -1,6 +1,8 @@
 package buildtest
 
 import (
+	"bytes"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
 func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
@@ -49,4 +52,77 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 	} else {
 		assert.Contains(t, out, "MY_EXPANDED_FILE_VARIABLE="+matches[1]+"/MY_FILE_VARIABLE_FOOBAR")
 	}
+}
+
+//nolint:funlen
+func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
+	envVarFn := func(name string) string {
+		switch config.Shell {
+		case shells.SNPwsh, shells.SNPowershell:
+			return "$env:" + name
+		case "cmd":
+			return "%" + name + "%"
+		default:
+			return "$" + name
+		}
+	}
+
+	resp, err := common.GetRemoteBuildResponse("echo 'hello=world' >> " + envVarFn("GITLAB_ENV"))
+	require.NoError(t, err)
+
+	build := &common.Build{
+		JobResponse: resp,
+		Runner:      config,
+	}
+
+	if runtime.GOOS == "linux" && config.Shell == shells.SNPwsh {
+		build.Image.Name = common.TestPwshImage
+	}
+
+	dir := t.TempDir()
+	build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
+	build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   "existing",
+		Value: "existingvalue",
+	})
+
+	build.Steps = append(
+		build.Steps,
+		common.Step{
+			Name: "custom-step",
+			Script: []string{
+				`echo "hellovalue=` + envVarFn("hello") + `"`,
+				"echo 'foo=bar' >> " + envVarFn("GITLAB_ENV"),
+			},
+			When: common.StepWhenOnSuccess,
+		},
+		common.Step{
+			Name: common.StepNameAfterScript,
+			Script: []string{
+				`echo "foovalue=` + envVarFn("foo") + `"`,
+				`echo "existing=` + envVarFn("existing") + `"`,
+			},
+			When: common.StepWhenAlways,
+		},
+	)
+	build.Cache = append(build.Cache, common.Cache{
+		Key:    "cache",
+		Paths:  common.ArtifactPaths{"unknown/path/${foo}"},
+		Policy: common.CachePolicyPullPush,
+	})
+
+	if setup != nil {
+		setup(build)
+	}
+
+	buf := new(bytes.Buffer)
+	trace := &common.Trace{Writer: buf}
+	assert.NoError(t, RunBuildWithTrace(t, build, trace))
+
+	contents := buf.String()
+	assert.Contains(t, contents, "existing=existingvalue")
+	assert.Contains(t, contents, "hellovalue=world")
+	assert.Contains(t, contents, "foovalue=bar")
+	assert.Contains(t, contents, "unknown/path/bar: no matching files")
 }

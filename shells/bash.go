@@ -171,6 +171,14 @@ func (b *BashWriter) Variable(variable common.JobVariable) {
 	}
 }
 
+func (b *BashWriter) SourceEnv(pathname string) {
+	b.Linef("mkdir -p %q", helpers.ToSlash(b.TemporaryPath))
+	b.Linef("touch %q", pathname)
+	b.Linef("set -o allexport")
+	b.Linef("source %q set", pathname)
+	b.Linef("set +o allexport")
+}
+
 func (b *BashWriter) IfDirectory(path string) {
 	b.Linef("if [ -d %q ]; then", path)
 	b.Indent()

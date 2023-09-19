@@ -8,6 +8,7 @@ import (
 type ShellWriter interface {
 	EnvVariableKey(name string) string
 	Variable(variable common.JobVariable)
+	SourceEnv(pathname string)
 	Command(command string, arguments ...string)
 	CommandArgExpand(command string, arguments ...string)
 	Line(text string)

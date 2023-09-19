@@ -245,6 +245,21 @@ func getWindowsImage(t *testing.T) string {
 	return windowsImage
 }
 
+func TestBuildPassingEnvsMultistep(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			t.Skip("cmd not supported")
+		}
+
+		runnerConfig := getRunnerConfigForOS(t)
+		runnerConfig.RunnerSettings.Shell = shell
+
+		buildtest.RunBuildWithPassingEnvsMultistep(t, runnerConfig, nil)
+	})
+}
+
 func TestDockerCommandSuccessRunRawVariable(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 

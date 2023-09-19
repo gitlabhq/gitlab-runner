@@ -1027,6 +1027,39 @@ func (_c *MockShellWriter_SectionStart_Call) RunAndReturn(run func(string, strin
 	return _c
 }
 
+// SourceEnv provides a mock function with given fields: pathname
+func (_m *MockShellWriter) SourceEnv(pathname string) {
+	_m.Called(pathname)
+}
+
+// MockShellWriter_SourceEnv_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SourceEnv'
+type MockShellWriter_SourceEnv_Call struct {
+	*mock.Call
+}
+
+// SourceEnv is a helper method to define mock.On call
+//   - pathname string
+func (_e *MockShellWriter_Expecter) SourceEnv(pathname interface{}) *MockShellWriter_SourceEnv_Call {
+	return &MockShellWriter_SourceEnv_Call{Call: _e.mock.On("SourceEnv", pathname)}
+}
+
+func (_c *MockShellWriter_SourceEnv_Call) Run(run func(pathname string)) *MockShellWriter_SourceEnv_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockShellWriter_SourceEnv_Call) Return() *MockShellWriter_SourceEnv_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockShellWriter_SourceEnv_Call) RunAndReturn(run func(string)) *MockShellWriter_SourceEnv_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // TmpFile provides a mock function with given fields: name
 func (_m *MockShellWriter) TmpFile(name string) string {
 	ret := _m.Called(name)
