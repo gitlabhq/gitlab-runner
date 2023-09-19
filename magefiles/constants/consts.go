@@ -1,8 +1,9 @@
 package constants
 
 import (
-	"github.com/magefile/mage/sh"
 	"sync"
+
+	"github.com/magefile/mage/sh"
 )
 
 const (
