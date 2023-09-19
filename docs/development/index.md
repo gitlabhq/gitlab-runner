@@ -140,7 +140,7 @@ asdf reshim
 Compile GitLab Runner using the Go toolchain:
 
 ```shell
-make runner-and-helper-bin-host
+GIT_LFS_VERSION=3.4.0 make runner-and-helper-bin-host
 ```
 
 `make runner-and-helper-bin-host` is a superset of `make runner-bin-host` which in addition
