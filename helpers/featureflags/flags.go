@@ -228,7 +228,7 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            UsePodActiveDeadlineSeconds,
-		DefaultValue:    false,
+		DefaultValue:    true,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "When enabled, the [pod `activeDeadlineSeconds`]" +
