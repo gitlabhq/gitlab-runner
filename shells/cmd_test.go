@@ -131,7 +131,7 @@ some certificate
 		"--BEGIN 3--\nsome certificate\n-----END CERTIFICATE-----",
 	}
 
-	certs, _ := SplitCertificateChain(certChain)
+	certs := splitCertificateChain(certChain)
 	counter := 0
 	for _, certExpected := range certsExpected {
 		assert.Equal(t, certExpected, certs[counter])
@@ -156,7 +156,7 @@ some certificate
 		"\n\n",
 	}
 
-	certs, _ := SplitCertificateChain(certChain)
+	certs := splitCertificateChain(certChain)
 	counter := 0
 	for _, certExpected := range certsExpected {
 		assert.Equal(t, certExpected, certs[counter])
@@ -165,7 +165,7 @@ some certificate
 }
 
 func TestRemoveEmpty(t *testing.T) {
-	linesRemovedEmpty := RemoveEmpty([]string{
+	linesRemovedEmpty := removeEmpty([]string{
 		"non-empty",
 		"",
 		"another line",
@@ -252,22 +252,22 @@ func Test_CmdWriter_Variable(t *testing.T) {
 			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:   CmdWriter{TemporaryPath: "foo/bar"},
 			// nolint:lll
-			wantLinux:   "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
-			wantWindows: "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+			wantLinux:   "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
 		},
 		"file var, absolute path": {
 			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:   CmdWriter{TemporaryPath: "/foo/bar"},
 			// nolint:lll
-			wantLinux:   "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > \\foo\\bar\\KEY\r\nSET KEY=\\foo\\bar\\KEY\r\n",
-			wantWindows: "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+			wantLinux:   "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
 		},
 		"file var, absolute path with drive": {
 			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:   CmdWriter{TemporaryPath: "C:/foo/bar"},
 			// nolint:lll
-			wantLinux:   "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\C:\\foo\\bar\\KEY\r\nSET KEY=%CD%\\C:\\foo\\bar\\KEY\r\n",
-			wantWindows: "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > C:\\foo\\bar\\KEY\r\nSET KEY=C:\\foo\\bar\\KEY\r\n",
+			wantLinux:   "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\C:\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\C:\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\C:\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"C:\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"C:\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=C:\\foo\\bar\\KEY\r\n",
 		},
 		"tmp file var, relative path": {
 			variable:    common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
