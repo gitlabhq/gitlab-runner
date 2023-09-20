@@ -9,56 +9,41 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 > Introduced in GitLab Runner 15.11.0. This feature is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html)
 
 The Docker Autoscaler executor is an autoscale-enabled Docker executor that creates instances on-demand to
-accommodate the jobs that the runner manager processes.
+accommodate the jobs that the runner manager processes. It wraps the [Docker executor](docker.md) so that all
+Docker executor options and features are supported.
 
-The autoscaler uses [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins. `fleeting` is an abstraction
-for a group of autoscaled instances and uses plugins that support different cloud providers (such as GCP, AWS and
-Azure). This allows instances to be created on-demand to accommodate the jobs that the runner manager processes.
+The Docker Autoscaler uses [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins to autoscale. `fleeting`
+is an abstraction for a group of autoscaled instances. It uses plugins that support different cloud providers,
+like Google Cloud Platform (GCP), AWS, and Azure.
 
-## Prepare the environment
+## Install a fleeting plugin
 
-To prepare your environment for autoscaling, first select a fleeting plugin that will enable scaling for your target
-platform.
+To enable autoscaling for your target platform, install a fleeting plugin. You can install
+either the AWS or GCP fleeting plugin. Both plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
-The AWS and GCP fleeting plugins are an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
 
-You can find our other official plugins [here](https://gitlab.com/gitlab-org/fleeting).
+To install the plugin:
 
-### Installation
+1. Install the binary for your host platform:
+   - [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases)
+   - [GCP fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
+1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
 
-::Tabs
+## Configure Docker Autoscaler
 
-:::TabTitle AWS
+The Docker Autoscaler executor wraps the [Docker executor](docker.md) so that all Docker executor options and
+features are supported.
 
-To install the AWS plugin:
+To configure the Docker Autoscaler, in the `config.toml`:
 
-1. [Download the binary](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases) for your host platform.
-1. Ensure that the plugin binaries are discoverable through the PATH environment variable.
+- In the [`[runners]`](../configuration/advanced-configuration.md#the-runners-section) section, specify
+  the `executor` as `docker-autoscaler`.
+- In the following sections, configure the Docker Autoscaler based on your requirements:
+  - [`[runners.docker]`](../configuration/advanced-configuration.md#the-runnersdocker-section)
+  - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 
-:::TabTitle GCP
-
-To install the GCP plugin:
-
-1. [Download the binary](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases) for your host platform.
-1. Ensure that the plugin binaries are discoverable through the PATH environment variable.
-
-::EndTabs
-
-## Configuration
-
-The Docker Autoscaler executor wraps the [Docker executor](docker.md), which means that all Docker executor options and
-features are supported. To enable the autoscaler, define the executor as `docker-autoscaler`.
-
-- [Docker Executor configuration](../configuration/advanced-configuration.md#the-runnersdocker-section)
-- [Autoscaler configuration](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
-
-## Examples
-
-::Tabs
-
-:::TabTitle AWS
-
-### Example: 1 job per instance using AWS Autoscaling group
+### Example: AWS autoscaling for 1 job per instance
 
 Prerequisites:
 
@@ -123,9 +108,7 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-:::TabTitle GCP
-
-### Example: 1 job per instance using GCP Instance group
+### Example: GCP instance group for 1 job per instance
 
 Prerequisites:
 
@@ -189,5 +172,3 @@ concurrent = 10
       idle_count = 5
       idle_time = "20m0s"
 ```
-
-::EndTabs
