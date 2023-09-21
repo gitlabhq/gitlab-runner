@@ -19,8 +19,8 @@ BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= main
 
-DEB_ARCHS ?= amd64 i386 armel armhf arm64 aarch64 s390x ppc64le riscv64
-RPM_ARCHS ?= x86_64 i686 arm armhf arm64 aarch64 s390x ppc64le riscv64
+DEB_ARCHS := $(shell mage package:archs deb)
+RPM_ARCHS := $(shell mage package:archs rpm)
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
 COMMON_PACKAGE_NAMESPACE = $(PKG)/common
@@ -47,12 +47,13 @@ MOCKERY_VERSION ?= 2.28.2
 MOCKERY = mockery
 
 SPLITIC = splitic
+MAGE = mage
 
 GOLANGLINT_VERSION ?= v1.51.2
 GOLANGLINT ?= .tmp/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= .tmp/goargs.so
 
-DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY)
+DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY) $(MAGE)
 
 RELEASE_INDEX_GEN_VERSION ?= latest
 RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
@@ -64,7 +65,6 @@ all: deps runner-and-helper-bin
 
 include Makefile.runner_helper.mk
 include Makefile.build.mk
-include Makefile.package.mk
 
 .PHONY: help
 help:
@@ -100,9 +100,12 @@ version:
 	@echo Current revision: $(REVISION)
 	@echo Current branch: $(BRANCH)
 	@echo Build platforms: $(BUILD_PLATFORMS)
-	@echo DEB platforms: $(DEB_PLATFORMS)
-	@echo RPM platforms: $(RPM_PLATFORMS)
+	@echo DEB archs: $(DEB_ARCHS)
+	@echo RPM archs: $(RPM_ARCHS)
 	@echo IS_LATEST: $(IS_LATEST)
+
+.tmp:
+	mkdir -p .tmp
 
 .PHONY: deps
 deps: $(DEVELOPMENT_TOOLS)
@@ -165,6 +168,13 @@ check_mocks: mocks
 		!(git ls-files -o | grep 'mock_') && \
 		echo "Mocks up-to-date!"
 
+check_magefiles: $(shell mage generate)
+	# Checking the differences
+	@git --no-pager diff --compact-summary --exit-code -- ./magefiles \
+		$(shell git ls-files | grep '^magefiles/') && \
+		!(git ls-files -o | grep '^magefiles/') && \
+		echo "Magefiles up-to-date!"
+
 test-docker:
 	$(MAKE) test-docker-image IMAGE=centos:7 TYPE=rpm
 	$(MAKE) test-docker-image IMAGE=debian:wheezy TYPE=deb
@@ -191,40 +201,6 @@ build-and-deploy-binary:
 	@[ -z "$(SERVER)" ] && echo "SERVER variable not specified!" && exit 1
 	scp out/binaries/$(PACKAGE_NAME)-linux-$(ARCH) $(SERVER):/usr/bin/gitlab-runner
 
-.PHONY: packagecloud
-packagecloud: packagecloud-deps packagecloud-deb packagecloud-rpm
-
-packagecloud-deps:
-	# Installing packagecloud dependencies...
-	gem install package_cloud --version "~> 0.3.0" --no-document
-
-packagecloud-deb:
-	# Sending Debian compatible packages...
-	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) deb "$(CI_JOB_NAME)"
-
-packagecloud-rpm:
-	# Sending RedHat compatible packages...
-	@-./ci/push_packagecloud $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD) rpm "$(CI_JOB_NAME)"
-
-packagecloud-yank:
-ifneq ($(YANK),)
-	# Removing $(YANK) from packagecloud...
-	-for DIST in $(DEB_PLATFORMS); do \
-		for ARCH in $(DEB_ARCHS); do \
-			package_cloud yank --url $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD)/$$DIST $(PACKAGE_NAME)_$(YANK)_$$ARCH.deb & \
-		done; \
-	done; \
-	for DIST in $(RPM_PLATFORMS); do \
-		for ARCH in $(RPM_ARCHS); do \
-			package_cloud yank --url $(PACKAGE_CLOUD_URL) $(PACKAGE_CLOUD)/$$DIST $(PACKAGE_NAME)-$(YANK)-1.$$ARCH.rpm & \
-		done; \
-	done; \
-	wait
-else
-	# No version specified in YANK
-	@exit 1
-endif
-
 s3-upload:
 	export ARTIFACTS_DEST=artifacts; curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
 	./artifacts upload \
@@ -234,10 +210,6 @@ s3-upload:
 		--max-size $(shell du -bs out/ | cut -f1) \
 		$(shell cd out/; find . -type f)
 	@echo "\n\033[1m==> Download index file: \033[36mhttps://$$ARTIFACTS_S3_BUCKET.s3.amazonaws.com/$$S3_UPLOAD_PATH/index.html\033[0m\n"
-
-release_packagecloud:
-	# Releasing to https://packages.gitlab.com/runner/
-	@./ci/release_packagecloud "$$CI_JOB_NAME"
 
 release_s3: prepare_windows_zip prepare_zoneinfo prepare_index
 	# Releasing to S3
@@ -354,6 +326,13 @@ $(GOX):
 
 $(SPLITIC):
 	go install gitlab.com/ajwalker/splitic@latest
+
+$(MAGE): .tmp
+	cd .tmp && \
+	rm -rf mage && \
+	git clone https://github.com/magefile/mage && \
+	cd mage && \
+	go run bootstrap.go
 
 $(GOLANGLINT): TOOL_BUILD_DIR := .tmp/build/golangci-lint
 $(GOLANGLINT): $(GOLANGLINT_GOARGS)

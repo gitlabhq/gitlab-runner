@@ -22,7 +22,7 @@
     fi
   script:
   - source ci/touch_make_dependencies
-  - make $PKGS
+  - mage package:$PKGS
   artifacts:
     paths:
     - out/deb/
@@ -35,12 +35,12 @@ package-deb:
   parallel:
     matrix:
     - PKGS:
-      - package-deb-64bit
-      - package-deb-arm-64bit
-      - package-deb-32bit
-      - package-deb-arm-32bit
-      - package-deb-ibm
-      - package-deb-riscv-64bit
+      - deb64
+      - debArm64
+      - deb32
+      - debArm32
+      - debIbm
+      - debRiscv64
 
 package-rpm:
   extends:
@@ -48,10 +48,10 @@ package-rpm:
   parallel:
     matrix:
     - PKGS:
-      - package-rpm-64bit
-      - package-rpm-arm-64bit
-      - package-rpm-32bit
-      - package-rpm-arm-32bit
-      - package-rpm-ibm
-      - package-rpm-riscv-64bit
-      - package-rpm-fips
+      - rpm64
+      - rpmArm64
+      - rpm32
+      - rpmArm32
+      - rpmIbm
+      - rpmRiscv64
+      - rpmFips

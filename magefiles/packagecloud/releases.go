@@ -1,4 +1,4 @@
-// packagecloud-releases.go prints the OS distribution/version combinations
+// Package packagecloud prints the OS distribution/version combinations
 // supported by packagecloud for which we want to publish gitlab-runner
 // packages, for the specified package type (deb|rpm) and branch
 // (stable|bleeding). This will be a subset of all the distro versions
@@ -23,21 +23,21 @@
 // - New distros for a package type of branch can be added by adding entries
 // into `supportedDistrosByPackageAndBranch`, `oldestRelease`, and
 // `skipReleases`.
-package main
+package packagecloud
 
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
-	"strings"
+	"net/url"
 	"time"
+
+	"github.com/samber/lo"
 )
 
 const (
-	apiEndpoint = "/api/v1/distributions.json"
-	usage       = "Usage:\n\tpackagecloud-releases <rpm|deb> <stable|bleeding>"
+	distributionsListAPIEndpoint = "/api/v1/distributions.json"
+	usage                        = "Usage:\n\tpackagecloud-releases <rpm|deb> <stable|bleeding>"
 )
 
 type (
@@ -52,14 +52,11 @@ type (
 
 	pkgCloudDistributionsResult map[string][]pkgCloudDistribution
 
-	envArgs struct {
-		token string
-		host  string
-	}
-
-	cmdArgs struct {
+	args struct {
 		branch string
-		pkg    string
+		dist   string
+		token  string
+		host   string
 	}
 )
 
@@ -94,87 +91,31 @@ var (
 	}
 )
 
-func (ca *cmdArgs) String() string {
-	return ca.pkg + "/" + ca.branch
+func (a *args) DistBranchPair() string {
+	return a.dist + "/" + a.branch
 }
 
-func main() {
-	if err := run(); err != nil {
-		log.Fatalln(err)
+func Releases(dist, branch, token, host string) ([]string, error) {
+	args := args{
+		branch: branch,
+		dist:   dist,
+		token:  token,
+		host:   host,
 	}
-}
 
-func run() error {
-	args, err := getCmdArgs(os.Args)
+	if _, ok := supportedDistros[args.DistBranchPair()]; !ok {
+		return nil, fmt.Errorf("no supported distros for package %q and branch %q", args.dist, args.branch)
+	}
+
+	allDistroReleases, err := getPkgCloudDistrosReleases(args.token, args.host)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	env, err := getEnvArgs()
-	if err != nil {
-		return err
-	}
+	distrosToPackage := supportedDistros[args.DistBranchPair()]
 
-	allDistroReleases, err := getPkgCloudDistrosReleases(env.token, env.host)
-	if err != nil {
-		return err
-	}
-
-	distrosToPackage := supportedDistros[args.String()]
-
-	versionsToPackage := getDistroReleasesToPackage(distrosToPackage, allDistroReleases[args.pkg])
-	fmt.Println(strings.Join(versionsToPackage, " "))
-	return nil
-}
-
-// getEnvArgs ensures the required environment variables exist, but does not
-// attempt to validate them.
-func getEnvArgs() (envArgs, error) {
-	env := envArgs{
-		token: os.Getenv("PACKAGECLOUD_TOKEN"),
-		host:  os.Getenv("PACKAGE_CLOUD_URL"),
-	}
-
-	if env.token == "" || env.host == "" {
-		return envArgs{}, fmt.Errorf("missing 'PACKAGE_CLOUD_URL' and/or 'PACKAGECLOUD_TOKEN'")
-	}
-
-	return env, nil
-}
-
-// getCmd ensures the required command line arguments have been specified and
-// are valid.
-func getCmdArgs(osArgs []string) (cmdArgs, error) {
-	if len(osArgs) != 3 {
-		return cmdArgs{}, fmt.Errorf("missing package type and/or branch: %q\n%s", strings.Join(osArgs, " "), usage)
-	}
-
-	args := cmdArgs{
-		pkg:    osArgs[1],
-		branch: osArgs[2],
-	}
-
-	if _, ok := supportedDistros[args.String()]; !ok {
-		return cmdArgs{}, fmt.Errorf("no supported distros for package %q and branch %q", args.pkg, args.branch)
-	}
-
-	return args, nil
-}
-
-func reverse[S ~[]E, E any](s S) S {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
-	}
-	return s
-}
-
-func contains[S ~[]E, E comparable](s S, e E) bool {
-	for _, v := range s {
-		if v == e {
-			return true
-		}
-	}
-	return false
+	versionsToPackage := getDistroReleasesToPackage(distrosToPackage, allDistroReleases[args.dist])
+	return versionsToPackage, nil
 }
 
 // getDistroReleasesToPackage returns the subset of pkgCloudDistributionsResult
@@ -193,12 +134,12 @@ func getDistroReleasesToPackage(supportedDistros []string, pkgCloudDistros []pkg
 	var versionToPackage []string
 
 	for _, distro := range pkgCloudDistros {
-		if !contains(supportedDistros, distro.IndexName) {
+		if !lo.Contains(supportedDistros, distro.IndexName) {
 			continue
 		}
 
-		for _, version := range reverse(distro.Versions) {
-			if !contains(skipReleases[distro.IndexName], version.IndexName) {
+		for _, version := range lo.Reverse(distro.Versions) {
+			if !lo.Contains(skipReleases[distro.IndexName], version.IndexName) {
 				versionToPackage = append(versionToPackage, distro.IndexName+"/"+version.IndexName)
 			}
 			if oldestRelease[distro.IndexName] == version.IndexName {
@@ -210,8 +151,8 @@ func getDistroReleasesToPackage(supportedDistros []string, pkgCloudDistros []pkg
 	return versionToPackage
 }
 
-// getPkgCloudDistrosReleases queries the packagecloud API to get a list of ALL
-// the OS distro/releases it supports. The JSON response surtructure is as follows:
+// getPkgCloudDistrosReleases queries the PackageCloud API to get a list of ALL
+// the OS distro/releases it supports. The JSON response structure is as follows:
 //
 //	{
 //	  "deb": [
@@ -261,16 +202,21 @@ func getDistroReleasesToPackage(supportedDistros []string, pkgCloudDistros []pkg
 //	  ],
 //	}
 func getPkgCloudDistrosReleases(token, host string) (pkgCloudDistributionsResult, error) {
-	req, err := http.NewRequest("GET", host+apiEndpoint, nil)
+	apiURL, err := url.JoinPath(host, distributionsListAPIEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for url %q: %w", host+apiEndpoint, err)
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for url %q: %w", apiURL, err)
 	}
 	req.SetBasicAuth(token, "")
 
 	client := http.Client{Timeout: 20 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get url %q: %w", host+apiEndpoint, err)
+		return nil, fmt.Errorf("failed to get url %q: %w", apiURL, err)
 	}
 	defer resp.Body.Close()
 
