@@ -93,7 +93,8 @@ const (
 	registryDockerHub registry = "DockerHub"
 	registryECR       registry = "ECR"
 
-	envCIRegistryImage = "CI_REGISTRY_IMAGE"
+	envCIRegistry         = "CI_REGISTRY"
+	envCIProjectNamespace = "CI_PROJECT_NAMESPACE"
 
 	envPushToECR         = "PUSH_TO_ECR_PUBLIC"
 	envECRPublicRegistry = "ECR_PUBLIC_REGISTRY"
@@ -107,7 +108,11 @@ const (
 )
 
 var (
-	sourceRegistry        = envOr(envCIRegistryImage, "registry.gitlab.com/gitlab-org")
+	sourceRegistry = fmt.Sprintf(
+		"%s/%s",
+		envOr(envCIRegistry, "registry.gitlab.com"),
+		envOr(envCIProjectNamespace, "gitlab-org"),
+	)
 	ecrPublicRegistryUser = envOr(envECRPublicUser, "AWS")
 
 	targetRegistries = map[registry]registryInfo{
