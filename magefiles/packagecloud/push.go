@@ -33,6 +33,7 @@ func Push(opts PushOpts) error {
 
 	pool := pool.New().WithMaxGoroutines(opts.Concurrency).WithErrors()
 	for _, release := range releases {
+		release := release
 		if opts.Flavor == "" || strings.Contains(release, opts.Flavor) {
 			for _, pkg := range packages {
 				pkg := pkg
@@ -42,7 +43,7 @@ func Push(opts PushOpts) error {
 						"--verbose",
 						"--url",
 						opts.URL,
-						fmt.Sprintf("%s/%s", opts.Namespace, opts.Dist),
+						fmt.Sprintf("%s/%s", opts.Namespace, release),
 						pkg,
 					}
 
