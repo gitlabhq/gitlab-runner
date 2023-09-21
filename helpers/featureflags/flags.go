@@ -204,17 +204,18 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:         ResolveFullTLSChain,
-		DefaultValue: true,
+		DefaultValue: false,
 		Deprecated:   false,
-		Description: "When enabled, the runner resolves a full TLS " +
+		Description: "In GitLab Runner 16.4 and later, the default is `false`. In GitLab Runner 16.3 and earlier, the default is `true`. " +
+			"When enabled, the runner resolves a full TLS " +
 			"chain all the way down to a self-signed root certificate " +
 			"for `CI_SERVER_TLS_CA_FILE`. This was previously " +
 			"[required to make Git HTTPS clones work](tls-self-signed.md#git-cloning) " +
 			"for a Git client built with libcurl prior to v7.68.0 and OpenSSL. " +
-			"However, the process to resolve certificates may fail on " +
+			"However, the process to resolve certificates might fail on " +
 			"some operating systems, such as macOS, that reject root certificates " +
 			"signed with older signature algorithms. " +
-			"If certificate resolution fails, you may need to disable this feature. " +
+			"If certificate resolution fails, you might need to disable this feature. " +
 			"This feature flag can only be disabled in the " +
 			"[`[runners.feature_flags]` configuration](#enable-feature-flag-in-runner-configuration).",
 	},
