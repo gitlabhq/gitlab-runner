@@ -896,8 +896,12 @@ func (mr *RunCommand) requestJob(
 	}
 
 	if jobData.UnsupportedOptions() != nil {
-		_, _ = trace.Write([]byte(jobData.UnsupportedOptions().Error()))
-		_, _ = trace.Write([]byte(". Unsupported options will be ignored and the job will be processed without them.\n"))
+		_, _ = trace.Write([]byte(jobData.UnsupportedOptions().Error() + "\n"))
+		trace.Fail(jobData.UnsupportedOptions(), common.JobFailureData{
+			Reason:   common.RunnerSystemFailure,
+			ExitCode: common.ExitCodeUnsupportedOptions,
+		})
+		return nil, nil, jobData.UnsupportedOptions()
 	}
 
 	trace.SetFailuresCollector(mr.failuresCollector)
