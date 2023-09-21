@@ -56,18 +56,31 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 
 //nolint:funlen
 func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
+	if config.Shell == shells.SNCmd {
+		t.Skip("sourcing environment variables is unsupported on cmd for now")
+	}
+
 	envVarFn := func(name string) string {
 		switch config.Shell {
 		case shells.SNPwsh, shells.SNPowershell:
 			return "$env:" + name
-		case "cmd":
+		case shells.SNCmd:
 			return "%" + name + "%"
 		default:
 			return "$" + name
 		}
 	}
 
-	resp, err := common.GetRemoteBuildResponse("echo 'hello=world' >> " + envVarFn("GITLAB_ENV"))
+	echoPipeFn := func(v string) string {
+		switch config.Shell {
+		case shells.SNCmd:
+			return `(echo ` + v + `) >> `
+		default:
+			return `echo '` + v + `' >> `
+		}
+	}
+
+	resp, err := common.GetRemoteBuildResponse(echoPipeFn("hello=world") + envVarFn("GITLAB_ENV"))
 	require.NoError(t, err)
 
 	build := &common.Build{
@@ -92,16 +105,17 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 		common.Step{
 			Name: "custom-step",
 			Script: []string{
-				`echo "hellovalue=` + envVarFn("hello") + `"`,
-				"echo 'foo=bar' >> " + envVarFn("GITLAB_ENV"),
+				`echo ` + envVarFn("GITLAB_ENV"),
+				`echo hellovalue=` + envVarFn("hello"),
+				echoPipeFn("foo=bar") + envVarFn("GITLAB_ENV"),
 			},
 			When: common.StepWhenOnSuccess,
 		},
 		common.Step{
 			Name: common.StepNameAfterScript,
 			Script: []string{
-				`echo "foovalue=` + envVarFn("foo") + `"`,
-				`echo "existing=` + envVarFn("existing") + `"`,
+				`echo foovalue=` + envVarFn("foo"),
+				`echo existing=` + envVarFn("existing"),
 			},
 			When: common.StepWhenAlways,
 		},

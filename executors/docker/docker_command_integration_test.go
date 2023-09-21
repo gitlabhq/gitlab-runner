@@ -249,8 +249,8 @@ func TestBuildPassingEnvsMultistep(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			t.Skip("cmd not supported")
+		if shell == "cmd" || shell == "pwsh" {
+			t.Skipf("%s not supported", shell)
 		}
 
 		runnerConfig := getRunnerConfigForOS(t)
