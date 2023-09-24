@@ -47,7 +47,7 @@
     PUSH_TO_DOCKER_HUB: "false"
     PUSH_TO_ECR_PUBLIC: "false"
   script:
-    - make ARGS="$SYNC_DOCKER_IMAGES_ARGS" SYNC_COMMAND="$SYNC_COMMAND" sync_docker_images
+    - make REVISION="$REVISION" ARGS="$SYNC_DOCKER_IMAGES_ARGS" SYNC_COMMAND="$SYNC_COMMAND" sync_docker_images
 
 .release_helper_docker_images:
   extends:
@@ -186,6 +186,7 @@ bleeding edge sync docker images:
     - bleeding edge helper docker images
   variables:
     PUSH_TO_DOCKER_HUB: "true"
+    REVISION: bleeding
 
 stable S3:
   extends:
@@ -250,6 +251,7 @@ stable sync docker images:
   variables:
     PUSH_TO_DOCKER_HUB: "true"
     PUSH_TO_ECR_PUBLIC: "true"
+    REVISION: $CI_COMMIT_TAG
 
 stable gitlab release:
   stage: postrelease
