@@ -1,12 +1,22 @@
 package packagecloud
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/magefile/mage/sh"
 	"github.com/sourcegraph/conc/pool"
+)
+
+var (
+	ignoredPackageCloudErrors = []string{
+		"architecture: Unrecognized CPU architecture",
+		"filename: has already been taken",
+	}
 )
 
 type PushOpts struct {
@@ -52,14 +62,39 @@ func Push(opts PushOpts) error {
 						return nil
 					}
 
-					return sh.RunV(
-						"package_cloud",
-						args...,
-					)
+					return runPackageCloudCommand(args)
 				})
 			}
 		}
 	}
 
 	return pool.Wait()
+}
+
+func runPackageCloudCommand(args []string) error {
+	var out bytes.Buffer
+
+	stdout := io.MultiWriter(&out, os.Stdout)
+	stderr := io.MultiWriter(&out, os.Stderr)
+
+	_, err := sh.Exec(
+		nil,
+		stdout,
+		stderr,
+		"package_cloud",
+		args...,
+	)
+
+	outString := out.String()
+	fmt.Println(outString)
+	if err != nil {
+		for _, msg := range ignoredPackageCloudErrors {
+			if strings.Contains(outString, msg) {
+				fmt.Printf("Ignoring PackageCloud error %v: %s\n", err, msg)
+				return nil
+			}
+		}
+	}
+
+	return err
 }
