@@ -34,6 +34,7 @@ type executorTestCase struct {
 	doNotMockCommandFactory bool
 
 	adjustExecutor func(t *testing.T, e *executor)
+	adjustOptions  func(t *testing.T, options common.ExecutorPrepareOptions)
 
 	assertBuild          func(t *testing.T, b *common.Build)
 	assertCommandFactory func(
@@ -541,6 +542,32 @@ func TestExecutor_Prepare(t *testing.T) {
 				assert.NotEmpty(t, options.JobResponseFile)
 			},
 		},
+		"custom executor variable reset before ConfigExec": {
+			config: getRunnerConfig(&common.CustomConfig{
+				RunExec:    "bash",
+				ConfigExec: "echo",
+			}),
+			adjustOptions: func(t *testing.T, options common.ExecutorPrepareOptions) {
+				// Running this will set b.allVariables (common/build.go) before test.
+				_ = options.Build.GetAllVariables()
+
+				options.Build.RunnerID = 1
+				options.Build.ProjectRunnerID = 1
+			},
+			commandErr: nil,
+			assertCommandFactory: func(
+				t *testing.T,
+				tt executorTestCase,
+				ctx context.Context,
+				executable string,
+				args []string,
+				cmdOpts process.CommandOptions,
+				options command.Options,
+			) {
+				assert.Contains(t, cmdOpts.Env, "CUSTOM_ENV_CI_CONCURRENT_PROJECT_ID=1")
+				assert.Contains(t, cmdOpts.Env, "CUSTOM_ENV_CI_CONCURRENT_ID=1")
+			},
+		},
 	}
 
 	for testName, tt := range tests {
@@ -548,6 +575,10 @@ func TestExecutor_Prepare(t *testing.T) {
 			defer mockCommandFactory(t, tt)()
 
 			e, options, out := prepareExecutor(t, tt)
+			if tt.adjustOptions != nil {
+				tt.adjustOptions(t, options)
+			}
+
 			err := e.Prepare(options)
 
 			assertOutput(t, tt, out)

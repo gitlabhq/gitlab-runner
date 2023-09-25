@@ -181,6 +181,10 @@ func (e *executor) dynamicConfig() error {
 		out:        outputs,
 	}
 
+	// Force refresh of all build variables for the upcoming command, ensuring
+	// that the up-to-date environment variables are provided to the ConfigExec script.
+	e.Build.RefreshAllVariables()
+
 	err := e.prepareCommand(ctx, opts).Run()
 	if err != nil {
 		return err

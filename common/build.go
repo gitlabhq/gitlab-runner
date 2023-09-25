@@ -312,7 +312,7 @@ func (b *Build) StartBuild(
 	// to be able to use CI_BUILDS_DIR
 	b.RootDir = rootDir
 	b.CacheDir = path.Join(cacheDir, b.ProjectUniqueDir(false))
-	b.refreshAllVariables()
+	b.RefreshAllVariables()
 
 	var err error
 	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, "GIT_CLONE_PATH", customBuildDirEnabled, sharedDir)
@@ -322,7 +322,7 @@ func (b *Build) StartBuild(
 
 	// We invalidate variables to be able to use
 	// CI_CACHE_DIR and CI_PROJECT_DIR
-	b.refreshAllVariables()
+	b.RefreshAllVariables()
 	return nil
 }
 
@@ -997,7 +997,7 @@ func (b *Build) resolveSecrets() error {
 			}
 
 			b.secretsVariables = variables
-			b.refreshAllVariables()
+			b.RefreshAllVariables()
 
 			return nil
 		},
@@ -1163,7 +1163,9 @@ func (b *Build) IsSharedEnv() bool {
 	return b.ExecutorFeatures.Shared
 }
 
-func (b *Build) refreshAllVariables() {
+// RefreshAllVariables forces the next time all variables are retrieved to discard
+// any cached results and reconstruct/expand all job variables.
+func (b *Build) RefreshAllVariables() {
 	b.allVariables = nil
 }
 
