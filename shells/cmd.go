@@ -36,6 +36,8 @@ const (
 	batchQuoteModeEscape
 	batchQuoteModeCommand
 	batchQuoteModeVariable
+
+	END_CERTIFICATE = "-----END CERTIFICATE-----"
 )
 
 //nolint:funlen,gocognit
@@ -104,6 +106,23 @@ func batchEscapeVariable(text string) string {
 // If not inside a quoted string (e.g., echo text), escape more things
 func batchEscape(text string) string {
 	return batchEscapeMode(text, batchQuoteModeEscape)
+}
+
+// splits certificates chain in a single string into separate strings
+func splitCertificateChain(text string) []string {
+	return strings.SplitAfter(text, END_CERTIFICATE+"\n")
+}
+
+// remove empty lines for array of string
+func removeEmpty(inputStrings []string) []string {
+	result := make([]string, 0)
+	for _, str := range inputStrings {
+		if strings.Trim(str, " \n") != "" {
+			result = append(result, str)
+		}
+	}
+
+	return result
 }
 
 func (b *CmdShell) GetName() string {
@@ -190,7 +209,13 @@ func (b *CmdWriter) Variable(variable common.JobVariable) {
 	if variable.File {
 		variableFile := b.TmpFile(variable.Key)
 		b.Linef("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath)))
-		b.Linef("echo %s > %s", batchEscapeVariable(variable.Value), batchEscape(variableFile))
+		certs := splitCertificateChain(variable.Value)
+		certs = removeEmpty(certs)
+		// create empty file first
+		b.Linef("echo. 2> %q", batchEscape(variableFile))
+		for _, cert := range certs {
+			b.Linef("echo %s >> %q", batchEscapeVariable(cert), batchEscape(variableFile))
+		}
 		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscape(variableFile))
 	} else {
 		if b.isTmpFile(variable.Value) {

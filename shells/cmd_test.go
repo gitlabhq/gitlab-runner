@@ -112,6 +112,81 @@ func TestCMD_DelayedExpanstionFeatureFlag(t *testing.T) {
 	}
 }
 
+func TestSplitCertificateChain(t *testing.T) {
+	certChain := `--BEGIN 1--
+some certificate
+-----END CERTIFICATE-----
+
+
+
+--BEGIN 2--
+some certificate
+-----END CERTIFICATE-----
+--BEGIN 3--
+some certificate
+-----END CERTIFICATE-----`
+	certsExpected := []string{
+		"--BEGIN 1--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"\n\n\n--BEGIN 2--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"--BEGIN 3--\nsome certificate\n-----END CERTIFICATE-----",
+	}
+
+	certs := splitCertificateChain(certChain)
+	counter := 0
+	for _, certExpected := range certsExpected {
+		assert.Equal(t, certExpected, certs[counter])
+		counter++
+	}
+}
+
+func TestSplitCertificateChainWithEmptyLinesAtTheEnd(t *testing.T) {
+	certChain := `--BEGIN 1--
+some certificate
+-----END CERTIFICATE-----
+
+--BEGIN 2--
+some certificate
+-----END CERTIFICATE-----
+
+
+`
+	certsExpected := []string{
+		"--BEGIN 1--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"\n--BEGIN 2--\nsome certificate\n-----END CERTIFICATE-----\n",
+		"\n\n",
+	}
+
+	certs := splitCertificateChain(certChain)
+	counter := 0
+	for _, certExpected := range certsExpected {
+		assert.Equal(t, certExpected, certs[counter])
+		counter++
+	}
+}
+
+func TestRemoveEmpty(t *testing.T) {
+	linesRemovedEmpty := removeEmpty([]string{
+		"non-empty",
+		"",
+		"another line",
+		" ",
+		"\n",
+		"last line",
+		"    ",
+	})
+	linesExpected := []string{
+		"non-empty",
+		"another line",
+		"last line",
+	}
+
+	counter := 0
+	for _, lineExpected := range linesExpected {
+		assert.Equal(t, lineExpected, linesRemovedEmpty[counter])
+		counter++
+	}
+}
+
 func Test_CmdWriter_isTmpFile(t *testing.T) {
 	tmpDir := "/foo/bar"
 	bw := CmdWriter{TemporaryPath: tmpDir}
@@ -177,22 +252,22 @@ func Test_CmdWriter_Variable(t *testing.T) {
 			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:   CmdWriter{TemporaryPath: "foo/bar"},
 			// nolint:lll
-			wantLinux:   "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
-			wantWindows: "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+			wantLinux:   "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
 		},
 		"file var, absolute path": {
 			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:   CmdWriter{TemporaryPath: "/foo/bar"},
 			// nolint:lll
-			wantLinux:   "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > \\foo\\bar\\KEY\r\nSET KEY=\\foo\\bar\\KEY\r\n",
-			wantWindows: "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\foo\\bar\\KEY\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
+			wantLinux:   "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\foo\\bar\\KEY\r\n",
 		},
 		"file var, absolute path with drive": {
 			variable: common.JobVariable{Key: "KEY", Value: "the secret", File: true},
 			writer:   CmdWriter{TemporaryPath: "C:/foo/bar"},
 			// nolint:lll
-			wantLinux:   "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > %CD%\\C:\\foo\\bar\\KEY\r\nSET KEY=%CD%\\C:\\foo\\bar\\KEY\r\n",
-			wantWindows: "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho the secret > C:\\foo\\bar\\KEY\r\nSET KEY=C:\\foo\\bar\\KEY\r\n",
+			wantLinux:   "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"%CD%\\\\C:\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"%CD%\\\\C:\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=%CD%\\C:\\foo\\bar\\KEY\r\n",
+			wantWindows: "md \"C:\\\\foo\\\\bar\" 2>NUL 1>NUL\r\necho. 2> \"C:\\\\foo\\\\bar\\\\KEY\"\r\necho the secret >> \"C:\\\\foo\\\\bar\\\\KEY\"\r\nSET KEY=C:\\foo\\bar\\KEY\r\n",
 		},
 		"tmp file var, relative path": {
 			variable:    common.JobVariable{Key: "KEY", Value: "foo/bar/KEY2"},
