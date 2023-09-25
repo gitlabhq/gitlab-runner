@@ -35,6 +35,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 type fakeRemoteExecutor struct {
@@ -96,7 +98,7 @@ func TestExec(t *testing.T) {
 			case p == test.podPath && m == http.MethodGet:
 				body := objBody(codec, test.pod)
 				return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-					"Content-Type": {"application/json"},
+					common.ContentType: {"application/json"},
 				}}, nil
 			default:
 				// Ensures no GET is performed when deleting by name
@@ -180,7 +182,7 @@ func TestAttach(t *testing.T) {
 		case p == "/api/v1/namespaces/test-resource/pods/test-resource" && m == http.MethodGet:
 			body := objBody(codec, execPod())
 			return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-				"Content-Type": {"application/json"},
+				common.ContentType: {"application/json"},
 			}}, nil
 
 		default:
@@ -253,7 +255,7 @@ func TestAttachPodNotRunning(t *testing.T) {
 	fakeClient := fake.CreateHTTPClient(func(*http.Request) (*http.Response, error) {
 		body := objBody(codec, execPodWithPhase(api.PodUnknown))
 		return &http.Response{StatusCode: http.StatusOK, Body: body, Header: map[string][]string{
-			"Content-Type": {"application/json"},
+			common.ContentType: {"application/json"},
 		}}, nil
 	})
 

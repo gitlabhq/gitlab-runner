@@ -24,6 +24,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/commands/helpers/archive"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	testHelpers "gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -283,7 +284,7 @@ func testCacheBaseUploadHandler(w http.ResponseWriter, r *http.Request) {
 func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
 	testCacheBaseUploadHandler(w, r)
 
-	if r.Header.Get("Content-Type") != "application/octet-stream" {
+	if r.Header.Get(common.ContentType) != "application/octet-stream" {
 		http.Error(w, "500 Wrong Content-Type header", http.StatusInternalServerError)
 		return
 	}
@@ -296,7 +297,7 @@ func testCacheUploadHandler(w http.ResponseWriter, r *http.Request) {
 func testCacheUploadWithCustomHeaders(w http.ResponseWriter, r *http.Request) {
 	testCacheBaseUploadHandler(w, r)
 
-	if r.Header.Get("Content-Type") != "application/zip" {
+	if r.Header.Get(common.ContentType) != "application/zip" {
 		http.Error(w, "500 Wrong Content-Type header", http.StatusInternalServerError)
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	k8sversion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest/fake"
 )
@@ -154,7 +155,7 @@ func TestKubeClientFeatureChecker(t *testing.T) {
 					},
 				}
 				resp.Header = make(http.Header)
-				resp.Header.Add("Content-Type", "application/json")
+				resp.Header.Add(common.ContentType, "application/json")
 
 				return resp, nil
 			}

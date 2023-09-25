@@ -246,7 +246,7 @@ func (n *client) do(
 
 	req.Header.Set("User-Agent", common.AppVersion.UserAgent())
 	if request != nil {
-		req.Header.Set("Content-Type", requestType)
+		req.Header.Set(common.ContentType, requestType)
 	}
 
 	n.ensureTLSConfig()
@@ -356,7 +356,7 @@ func (n *client) doJSONWithPAT(
 
 	headers := make(http.Header)
 	if response != nil {
-		headers.Set("Accept", jsonMimeType)
+		headers.Set(common.Accept, jsonMimeType)
 	}
 	if pat != "" {
 		headers.Set("PRIVATE-TOKEN", pat)
@@ -407,7 +407,7 @@ func getMessageFromJSONResponse(res *http.Response) string {
 }
 
 func getMimeAndContentType(res *http.Response) (mimeType, contentType string, e error) {
-	contentType = res.Header.Get("Content-Type")
+	contentType = res.Header.Get(common.ContentType)
 
 	mimeType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {

@@ -36,8 +36,8 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	logrus.Debugln(
 		r.Method, r.URL.String(),
-		"Content-Type:", r.Header.Get("Content-Type"),
-		"Accept:", r.Header.Get("Accept"),
+		"Content-Type:", r.Header.Get(ContentType),
+		"Accept:", r.Header.Get(Accept),
 		"Body:", string(body),
 	)
 
@@ -46,14 +46,14 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	case "/api/v4/test/auth":
 		w.WriteHeader(http.StatusForbidden)
 	case "/api/v4/test/json":
-		if r.Header.Get("Content-Type") != "application/json" {
-			w.Header().Set("Content-Type", "application/json")
+		if r.Header.Get(ContentType) != "application/json" {
+			w.Header().Set(ContentType, "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprint(w, `{"message":{"some-key":["some error"]}}`)
 			return
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			w.Header().Set("Content-Type", "application/json")
+		if r.Header.Get(Accept) != "application/json" {
+			w.Header().Set(ContentType, "application/json")
 			w.WriteHeader(http.StatusNotAcceptable)
 			fmt.Fprint(w, `{"message":"406 Not Acceptable"}`)
 			return
@@ -61,14 +61,14 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 
 		switch r.Header.Get("PRIVATE-TOKEN") {
 		case "":
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(ContentType, "application/json")
 			fmt.Fprint(w, `{"key":"value"}`)
 		case "my-pat":
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(ContentType, "application/json")
 			w.WriteHeader(http.StatusCreated)
 			fmt.Fprint(w, `{"key":"value","pat":"my-pat"}`)
 		default:
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(ContentType, "application/json")
 			w.WriteHeader(http.StatusForbidden)
 			fmt.Fprint(w, `{"message":"403 Forbidden"}`)
 		}
@@ -514,19 +514,19 @@ func TestUrlFixing(t *testing.T) {
 func charsetTestClientHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/api/v4/with-charset":
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set(ContentType, "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
 	case "/api/v4/without-charset":
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(ContentType, "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
 	case "/api/v4/without-json":
-		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set(ContentType, "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
 	case "/api/v4/invalid-header":
-		w.Header().Set("Content-Type", "application/octet-stream, test, a=b")
+		w.Header().Set(ContentType, "application/octet-stream, test, a=b")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "{\"key\":\"value\"}")
 	}

@@ -722,7 +722,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 			},
 		}
 		resp.Header = make(http.Header)
-		resp.Header.Add("Content-Type", "application/json")
+		resp.Header.Add(common.ContentType, "application/json")
 
 		return resp, nil
 	}
@@ -2518,7 +2518,7 @@ func TestSetupCredentials(t *testing.T) {
 				Reader: bytes.NewBuffer(podBytes),
 			}}
 			resp.Header = make(http.Header)
-			resp.Header.Add("Content-Type", "application/json")
+			resp.Header.Add(common.ContentType, "application/json")
 
 			return
 		}
@@ -2593,7 +2593,7 @@ func TestServiceAccountExists(t *testing.T) {
 					}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
@@ -2610,7 +2610,7 @@ func TestServiceAccountExists(t *testing.T) {
 			clientFunc: func(req *http.Request) (*http.Response, error) {
 				sa := &api.ServiceAccount{}
 				return &http.Response{
-					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					Header:     map[string][]string{common.ContentType: {"application/json"}},
 					StatusCode: http.StatusOK,
 					Status:     http.StatusText(http.StatusOK),
 					Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
@@ -2668,7 +2668,7 @@ func TestSecretExists(t *testing.T) {
 					}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
@@ -2685,7 +2685,7 @@ func TestSecretExists(t *testing.T) {
 			clientFunc: func(req *http.Request) (*http.Response, error) {
 				sa := &api.ServiceAccount{}
 				return &http.Response{
-					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					Header:     map[string][]string{common.ContentType: {"application/json"}},
 					StatusCode: http.StatusOK,
 					Status:     http.StatusText(http.StatusOK),
 					Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
@@ -2762,7 +2762,7 @@ func TestWaitForResources(t *testing.T) {
 					}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
@@ -2787,7 +2787,7 @@ func TestWaitForResources(t *testing.T) {
 					}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
@@ -2809,7 +2809,7 @@ func TestWaitForResources(t *testing.T) {
 					sa := &api.ServiceAccount{}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
@@ -2834,7 +2834,7 @@ func TestWaitForResources(t *testing.T) {
 					s := &api.Secret{}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
@@ -2871,7 +2871,7 @@ func TestWaitForResources(t *testing.T) {
 					}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, s)))),
@@ -2901,7 +2901,7 @@ func TestWaitForResources(t *testing.T) {
 					}
 
 					return &http.Response{
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 						StatusCode: http.StatusOK,
 						Status:     http.StatusText(http.StatusOK),
 						Body:       io.NopCloser(bytes.NewReader([]byte(kuberuntime.EncodeOrDie(codec, sa)))),
@@ -3009,7 +3009,7 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 		},
 	}
 	resp.Header = make(http.Header)
-	resp.Header.Add("Content-Type", "application/json")
+	resp.Header.Add(common.ContentType, "application/json")
 
 	if strings.Contains(req.URL.Path, "pods") {
 		p := new(api.Pod)
@@ -3043,7 +3043,7 @@ func (rt *setupBuildPodFakeRoundTripper) RoundTrip(req *http.Request) (*http.Res
 			},
 		}
 		resp.Header = make(http.Header)
-		resp.Header.Add("Content-Type", "application/json")
+		resp.Header.Add(common.ContentType, "application/json")
 		return resp, nil
 	}
 
@@ -3068,7 +3068,7 @@ func buildSecretAPIResponse(t *testing.T, secretName string) (*http.Response, er
 		},
 	}
 	resp.Header = make(http.Header)
-	resp.Header.Add("Content-Type", "application/json")
+	resp.Header.Add(common.ContentType, "application/json")
 	return resp, nil
 }
 
@@ -3086,7 +3086,7 @@ func buildServiceAccountAPIResponse(t *testing.T, saName string) (*http.Response
 		},
 	}
 	resp.Header = make(http.Header)
-	resp.Header.Add("Content-Type", "application/json")
+	resp.Header.Add(common.ContentType, "application/json")
 	return resp, nil
 }
 
@@ -5158,7 +5158,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 					}
 
 					res.response.Header = map[string][]string{
-						"Content-Type": {"application/json"},
+						common.ContentType: {"application/json"},
 					}
 					if res.response.Body == nil {
 						res.response.Body = objBody(codec, execPod())
@@ -5195,7 +5195,7 @@ func fakeKubeDeleteResponse(status int) *http.Response {
 
 	body := objBody(codec, &metav1.Status{Code: int32(status)})
 	return &http.Response{StatusCode: status, Body: body, Header: map[string][]string{
-		"Content-Type": {"application/json"},
+		common.ContentType: {"application/json"},
 	}}
 }
 

@@ -272,8 +272,8 @@ func (c *CacheArchiverCommand) setHeaders(req *http.Request, fi os.FileInfo) {
 	}
 
 	// Set default headers. But don't override custom Content-Type.
-	if req.Header.Get("Content-Type") == "" {
-		req.Header.Set("Content-Type", "application/octet-stream")
+	if req.Header.Get(common.ContentType) == "" {
+		req.Header.Set(common.ContentType, "application/octet-stream")
 	}
 	req.Header.Set("Last-Modified", fi.ModTime().Format(http.TimeFormat))
 }
