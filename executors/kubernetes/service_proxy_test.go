@@ -344,7 +344,7 @@ func mockPodRunningStatus(
 			},
 		}
 		return &http.Response{StatusCode: http.StatusOK, Body: objBody(codec, pod), Header: map[string][]string{
-			"Content-Type": {"application/json"},
+			common.ContentType: {"application/json"},
 		}}, nil
 	default:
 		return nil, errors.New("unexpected request")

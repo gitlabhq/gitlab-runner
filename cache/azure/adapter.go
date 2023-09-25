@@ -37,7 +37,7 @@ func (a *azureAdapter) GetUploadURL(_ context.Context) *url.URL {
 
 func (a *azureAdapter) GetUploadHeaders() http.Header {
 	httpHeaders := http.Header{}
-	httpHeaders.Set("Content-Type", "application/octet-stream")
+	httpHeaders.Set(common.ContentType, "application/octet-stream")
 	httpHeaders.Set("x-ms-blob-type", "BlockBlob")
 
 	return httpHeaders

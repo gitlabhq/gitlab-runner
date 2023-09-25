@@ -363,7 +363,7 @@ func TestAdapterOperation(t *testing.T) {
 			headers := adapter.GetUploadHeaders()
 			require.NotNil(t, headers)
 			assert.Len(t, headers, 2)
-			assert.Equal(t, "application/octet-stream", headers.Get("Content-Type"))
+			assert.Equal(t, "application/octet-stream", headers.Get(common.ContentType))
 			assert.Equal(t, "BlockBlob", headers.Get("x-ms-blob-type"))
 
 			u := adapter.GetGoCloudURL(context.Background())

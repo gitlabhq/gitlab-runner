@@ -118,7 +118,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(ContentType, "application/json")
 
 		mapResponseToBody := map[registerRunnerResponse]string{
 			registerRunnerResponseRunnerNamespacesLimitHit: `{"message":{"runner_namespaces.base":["Maximum number of ci registered group runners (3) exceeded"]}}`,
@@ -135,7 +135,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 		res["token"] = req["token"].(string)
 		res["token_expires_at"] = nil
 	case expiringToken:
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(ContentType, "application/json")
 		w.WriteHeader(http.StatusCreated)
 		res["id"] = 54321
 		res["token"] = req["token"].(string)
@@ -148,7 +148,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 		return
 	}
 
-	if r.Header.Get("Accept") != "application/json" {
+	if r.Header.Get(Accept) != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -159,7 +159,7 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, _ = w.Write(output)
 }
@@ -683,7 +683,7 @@ func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	if r.Header.Get("Accept") != "application/json" {
+	if r.Header.Get(Accept) != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -718,7 +718,7 @@ func testResetTokenHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, _ = w.Write(output)
 }
@@ -793,7 +793,7 @@ func testResetTokenWithPATHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Accept") != "application/json" {
+	if r.Header.Get(Accept) != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -826,7 +826,7 @@ func testResetTokenWithPATHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, _ = w.Write(output)
 }
@@ -1031,7 +1031,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 
 	assert.Equal(t, systemIDState.GetSystemID(), req["system_id"])
 
-	if r.Header.Get("Accept") != "application/json" {
+	if r.Header.Get(Accept) != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -1042,7 +1042,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(ContentType, "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_, _ = w.Write(output)
 	t.Logf("JobRequest response: %s\n", output)
@@ -2232,7 +2232,7 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(ContentType, "application/json")
 
 	if len(testCase.formValueKey) > 0 {
 		if r.FormValue(testCase.formValueKey) != body {
@@ -2438,7 +2438,7 @@ func checkTestArtifactsDownloadHandlerContent(w http.ResponseWriter, token strin
 		return
 	}
 
-	w.Header().Set("Content-Type", testCase.contentType)
+	w.Header().Set(ContentType, testCase.contentType)
 	w.WriteHeader(testCase.statusCode)
 	_, _ = w.Write([]byte(testCase.body))
 }

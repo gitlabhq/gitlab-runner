@@ -3,6 +3,8 @@ package common
 import (
 	"fmt"
 	"time"
+
+	"github.com/go-http-utils/headers"
 )
 
 const DefaultTimeout = 7200
@@ -104,3 +106,85 @@ type MaskOptions struct {
 	Phrases       []string
 	TokenPrefixes []string
 }
+
+// HTTP related constants
+const (
+	Accept                        = headers.Accept
+	AcceptCharset                 = headers.AcceptCharset
+	AcceptEncoding                = headers.AcceptEncoding
+	AcceptLanguage                = headers.AcceptLanguage
+	Authorization                 = headers.Authorization
+	CacheControl                  = headers.CacheControl
+	ContentLength                 = headers.ContentLength
+	ContentMD5                    = headers.ContentMD5
+	ContentType                   = headers.ContentType
+	DoNotTrack                    = headers.DoNotTrack
+	IfMatch                       = headers.IfMatch
+	IfModifiedSince               = headers.IfModifiedSince
+	IfNoneMatch                   = headers.IfNoneMatch
+	IfRange                       = headers.IfRange
+	IfUnmodifiedSince             = headers.IfUnmodifiedSince
+	MaxForwards                   = headers.MaxForwards
+	ProxyAuthorization            = headers.ProxyAuthorization
+	Pragma                        = headers.Pragma
+	Range                         = headers.Range
+	Referer                       = headers.Referer
+	UserAgent                     = headers.UserAgent
+	TE                            = headers.TE
+	Via                           = headers.Via
+	Warning                       = headers.Warning
+	Cookie                        = headers.Cookie
+	Origin                        = headers.Origin
+	AcceptDatetime                = headers.AcceptDatetime
+	XRequestedWith                = headers.XRequestedWith
+	AccessControlAllowOrigin      = headers.AccessControlAllowOrigin
+	AccessControlAllowMethods     = headers.AccessControlAllowMethods
+	AccessControlAllowHeaders     = headers.AccessControlAllowHeaders
+	AccessControlAllowCredentials = headers.AccessControlAllowCredentials
+	AccessControlExposeHeaders    = headers.AccessControlExposeHeaders
+	AccessControlMaxAge           = headers.AccessControlMaxAge
+	AccessControlRequestMethod    = headers.AccessControlRequestMethod
+	AccessControlRequestHeaders   = headers.AccessControlRequestHeaders
+	AcceptPatch                   = headers.AcceptPatch
+	AcceptRanges                  = headers.AcceptRanges
+	Allow                         = headers.Allow
+	ContentEncoding               = headers.ContentEncoding
+	ContentLanguage               = headers.ContentLanguage
+	ContentLocation               = headers.ContentLocation
+	ContentDisposition            = headers.ContentDisposition
+	ContentRange                  = headers.ContentRange
+	ETag                          = headers.ETag
+	Expires                       = headers.Expires
+	LastModified                  = headers.LastModified
+	Link                          = headers.Link
+	Location                      = headers.Location
+	P3P                           = headers.P3P
+	ProxyAuthenticate             = headers.ProxyAuthenticate
+	Refresh                       = headers.Refresh
+	RetryAfter                    = headers.RetryAfter
+	Server                        = headers.Server
+	SetCookie                     = headers.SetCookie
+	StrictTransportSecurity       = headers.StrictTransportSecurity
+	TransferEncoding              = headers.TransferEncoding
+	Upgrade                       = headers.Upgrade
+	Vary                          = headers.Vary
+	WWWAuthenticate               = headers.WWWAuthenticate
+
+	// Non-Standard
+	XFrameOptions          = headers.XFrameOptions
+	XXSSProtection         = headers.XXSSProtection
+	ContentSecurityPolicy  = headers.ContentSecurityPolicy
+	XContentSecurityPolicy = headers.XContentSecurityPolicy
+	XWebKitCSP             = headers.XWebKitCSP
+	XContentTypeOptions    = headers.XContentTypeOptions
+	XPoweredBy             = headers.XPoweredBy
+	XUACompatible          = headers.XUACompatible
+	XForwardedProto        = headers.XForwardedProto
+	XHTTPMethodOverride    = headers.XHTTPMethodOverride
+	XForwardedFor          = headers.XForwardedFor
+	XRealIP                = headers.XRealIP
+	XCSRFToken             = headers.XCSRFToken
+	XRatelimitLimit        = headers.XRatelimitLimit
+	XRatelimitRemaining    = headers.XRatelimitRemaining
+	XRatelimitReset        = headers.XRatelimitReset
+)

@@ -225,7 +225,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       objBody(codec, pod),
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 					}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
@@ -260,7 +260,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       objBody(codec, pod),
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 					}, nil
 				default:
 					// Ensures no GET is performed when deleting by name
@@ -315,7 +315,7 @@ func TestWaitForPodRunning(t *testing.T) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       objBody(codec, pod),
-						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						Header:     map[string][]string{common.ContentType: {"application/json"}},
 					}, nil
 				default:
 					// Ensures no GET is performed when deleting by name

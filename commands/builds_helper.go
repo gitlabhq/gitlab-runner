@@ -318,7 +318,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("X-List-Version", "2")
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add(common.ContentType, "text/plain")
 	w.WriteHeader(http.StatusOK)
 
 	b.lock.Lock()

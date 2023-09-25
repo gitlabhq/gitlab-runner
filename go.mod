@@ -25,6 +25,7 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/getsentry/sentry-go v0.13.0
+	github.com/go-http-utils/headers v0.0.0-20181008091004-fed159eddc2a
 	github.com/golang/mock v1.6.0
 	github.com/googleapis/gax-go/v2 v2.7.0
 	github.com/gorhill/cronexpr v0.0.0-20160318121724-f0984319b442
