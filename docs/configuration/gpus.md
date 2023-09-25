@@ -50,7 +50,7 @@ train:
     - nvidia-smi
 ```
 
-If GPUs are enabled, the output of `nvdia-smi` displays the available devices. In
+If GPUs are enabled, the output of `nvidia-smi` displays the available devices. In
 the following example, a single NVIDIA Tesla P4 is enabled:
 
 ```shell
