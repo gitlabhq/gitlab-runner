@@ -1,4 +1,4 @@
-## v16.4.0 (2023-09-22)
+## v16.4.0 (2023-09-25)
 
 ### New features
 
@@ -17,6 +17,7 @@
 
 ### Bug fixes
 
+- Fix powershell SourceEnv permission failure !4369
 - Fixed: init-permissions takes too long for windows volumes !4324 (OK_MF @OK_MF)
 - Switch deletion propagation to background for Pod's dependents !4339
 - Do not propagate Build context to k8s executor cleanup method !4328
@@ -46,7 +47,7 @@
 - Remove configmap section !4329
 - Fix FF_USE_POWERSHELL_PATH_RESOLVER env var value !4327
 - Remove disclaimer from putting runner tokens in secrets !4319
-- Docs: Update nav steps !4310
+- Update nav steps !4310
 - Add note about empty runner-registration-token !4276
 - Simplify issue templates and add labels !4275
 - Fix links that are redirecting in docs !4311
