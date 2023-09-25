@@ -1,3 +1,60 @@
+## v16.4.0 (2023-09-25)
+
+### New features
+
+- Add script/after script timeout configuration via variables !4335
+- Distinguish job failure in worker processing failures metric !4304
+- Expose queueing duration histogram metric !3499
+
+### Security fixes
+
+- Clean up manual installation of git and git-lfs in ubi base image and bump git-lfs version to 3.4.0 !4289
+- Runner-helper fips image cleanups !4308
+- Bump git-lfs version to 3.4.0 !4296
+- Clean up manual installation of git and git-lfs in ubi base image and bump git-lfs version to 3.4.0 !4289
+- Runner-helper fips image cleanups !4308
+- Bump git-lfs version to 3.4.0 !4296
+
+### Bug fixes
+
+- Fix powershell SourceEnv permission failure !4369
+- Fixed: init-permissions takes too long for windows volumes !4324 (OK_MF @OK_MF)
+- Switch deletion propagation to background for Pod's dependents !4339
+- Do not propagate Build context to k8s executor cleanup method !4328
+- Fix error when unmarshaling string with windows path for powershell and pwsh !4315
+- Automatically set GOMEMLIMIT based on memory cgroup quotas !4312
+- Do not propagate Build context to k8s executor cleanup method !4328
+- Fix error when unmarshaling string with windows path for powershell and pwsh !4315
+- Update fleeting and taskscaler to newest versions !4303
+- Forward url rewrite in lfs pull !4234 (François Leurent @131)
+
+### Maintenance
+
+- Set FF_RESOLVE_FULL_TLS_CHAIN to false by default !4292
+- Generate packagecloud packages with Mage !4323
+- Fix pass env cmd test !4365
+- Refactor content for Docker autoscaler executor page !4354
+- Update runner registration token deprecation link !4357
+- Enable pushing to ECR and DockerHub !4353
+- Improve documentation about pod_annotations !4336
+- Use ADD to download Windows dockerfile dependencies !4346
+- Use ADD to download Windows dockerfile dependencies !4346
+- Fix link in documentation to avoid redirects !4347
+- Remove trailing whitespace from documentation !4343
+- Discourage `gitlab-runner restart` within containers !4331 (Benedikt Franke @spawnia)
+- Add info about config.toml file !4333
+- Update binary version !4330
+- Remove configmap section !4329
+- Fix FF_USE_POWERSHELL_PATH_RESOLVER env var value !4327
+- Remove disclaimer from putting runner tokens in secrets !4319
+- Update nav steps !4310
+- Add note about empty runner-registration-token !4276
+- Simplify issue templates and add labels !4275
+- Fix links that are redirecting in docs !4311
+- Add Openshift4.3.8 and later anyuid SCC !4306
+- Add FIPS-compliant helper images and binaries to S3 sync job !4302
+- Refresh Vale rules and link checking Docker image !4299
+
 ## v16.3.1 (2023-09-14)
 
 ### Security fixes
