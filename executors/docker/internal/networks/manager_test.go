@@ -5,12 +5,14 @@ package networks
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
@@ -200,6 +202,78 @@ func TestCreateNetwork(t *testing.T) {
 
 			assert.Equal(t, testCase.expectedNetworkMode, networkMode)
 			assert.Equal(t, testCase.expectedErr, err)
+		})
+	}
+}
+
+func TestCreateNetworkWithCustomMTU(t *testing.T) {
+	testCases := map[string]struct {
+		networkPerBuild bool
+		mtu             int
+		expectedMTU     int
+	}{
+		"feature-flag is enabled, with mtu": {
+			networkPerBuild: true,
+			mtu:             1402,
+			expectedMTU:     1402,
+		},
+		"feature-flag is enabled, no mtu": {
+			networkPerBuild: true,
+		},
+		"feature-flag disabled": {
+			mtu: 1234,
+		},
+	}
+
+	for testName, testCase := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			m := newDefaultManager()
+			m.build.ID = 0
+
+			client := addClient(m)
+			defer client.AssertExpectations(t)
+
+			m.build.Runner.Docker = &common.DockerConfig{NetworkMTU: testCase.mtu}
+
+			var receivedMTU int
+
+			if testCase.networkPerBuild {
+				m.build.Variables = append(m.build.Variables, common.JobVariable{
+					Key:   featureflags.NetworkPerBuild,
+					Value: "true",
+				})
+
+				client.On("NetworkCreate", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("types.NetworkCreate")).
+					Run(func(args mock.Arguments) {
+						arg, ok := args.Get(2).(types.NetworkCreate)
+						require.True(t, ok)
+
+						if testCase.mtu != 0 {
+							mtu, ok := arg.Options["com.docker.network.driver.mtu"]
+							require.True(t, ok)
+							var err error
+							receivedMTU, err = strconv.Atoi(mtu)
+							assert.NoError(t, err)
+						} else {
+							_, ok := arg.Options["com.docker.network.driver.mtu"]
+							require.False(t, ok)
+						}
+					}).
+					Return(types.NetworkCreateResponse{ID: "test-network"}, nil).
+					Once()
+
+				client.On("NetworkInspect", mock.Anything, mock.AnythingOfType("string")).
+					Return(types.NetworkResource{
+						ID:   "test-network",
+						Name: "test-network",
+					}, nil).
+					Once()
+			}
+
+			_, err := m.Create(context.Background(), "", false)
+
+			assert.Equal(t, testCase.expectedMTU, receivedMTU)
+			assert.NoError(t, err)
 		})
 	}
 }

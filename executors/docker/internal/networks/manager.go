@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -69,6 +70,7 @@ func (m *manager) Create(ctx context.Context, networkMode string, enableIPv6 boo
 		types.NetworkCreate{
 			Labels:     m.labeler.Labels(map[string]string{}),
 			EnableIPv6: enableIPv6,
+			Options:    networkOptionsFromConfig(m.build.Runner.Docker),
 		},
 	)
 	if err != nil {
@@ -85,6 +87,15 @@ func (m *manager) Create(ctx context.Context, networkMode string, enableIPv6 boo
 	m.perBuild = true
 
 	return m.networkMode, nil
+}
+
+func networkOptionsFromConfig(config *common.DockerConfig) map[string]string {
+	networkOptions := make(map[string]string)
+	if config != nil && config.NetworkMTU != 0 {
+		networkOptions["com.docker.network.driver.mtu"] = strconv.Itoa(config.NetworkMTU)
+	}
+
+	return networkOptions
 }
 
 func (m *manager) Inspect(ctx context.Context) (types.NetworkResource, error) {
