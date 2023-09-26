@@ -302,6 +302,15 @@ name. To resolve the container name, you must create a network for each job.
 
 Linked containers share their environment variables.
 
+#### Overriding the MTU of the created network
+
+For some environments, like VMs in OpenStack, a custom MTU is necessary. The Docker daemon does not respect the MTU in `docker.json` (see [moby/moby#34981](https://github.com/moby/moby/issues/34981)), so you can set the `network_mtu` in your `config.toml` to any valid value. This instructs the Docker daemon to use the correct MTU for the newly-created network.
+
+```toml
+[runners.docker]
+  network_mtu = 1402
+```
+
 ## Restrict Docker images and services
 
 To restrict Docker images and services, specify a wildcard pattern in the `allowed_images` and `allowed_services` parameters.

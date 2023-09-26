@@ -224,6 +224,7 @@ type DockerConfig struct {
 	ContainerLabels            map[string]string  `toml:"container_labels,omitempty" json:"container_labels,omitempty" long:"container-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create containers with the given container labels. Environment variables will be substituted for values here."`
 	EnableIPv6                 bool               `toml:"enable_ipv6,omitempty" json:"enable_ipv6" long:"enable-ipv6" description:"Enable IPv6 for automatically created networks. This is only takes affect when the feature flag FF_NETWORK_PER_BUILD is enabled."`
 	Ulimit                     map[string]string  `toml:"ulimit,omitempty" json:"ulimit,omitempty" long:"ulimit" env:"DOCKER_ULIMIT" description:"Ulimit options for container"`
+	NetworkMTU                 int                `toml:"network_mtu,omitempty" json:"network_mtu" long:"network-mtu" description:"MTU of the Docker network created for the job IFF the FF_NETWORK_PER_BUILD feature-flag was specified."`
 }
 
 type InstanceConfig struct {
