@@ -112,11 +112,11 @@ This approach is secure, but makes the Runner a single point of trust.
 There are two contexts that need to be taken into account when we consider registering a certificate on a container:
 
 - The [**user image**](https://docs.gitlab.com/ee/ci/yaml/#image), which is used to run the user script.
-  In this scenario, the user must take ownership regarding how to install a certificate, since this is
+  For scenarios that involve trusting the certificate for user scripts, the user must take ownership regarding how to install a certificate, since this is
   highly dependent on the image itself, and the Runner has no way of knowing how to install a certificate in each
   possible scenario.
 - The [**Runner helper image**](advanced-configuration.md#helper-image), which is used to handle Git, artifacts, and cache operations.
-  In this scenario, the user only needs to make a certificate file
+  For scenarios that involve trusting the certificate for other CI/CD stages, the user only needs to make a certificate file
   available at a specific location (for example, `/etc/gitlab-runner/certs/ca.crt`), and the Docker container will
   automatically install it for the user.
 
