@@ -37,6 +37,8 @@ FROM $BASE_IMAGE
 COPY --from=0 / /
 COPY --chmod=777 entrypoint /
 
+RUN apk update && apk upgrade --no-cache
+
 STOPSIGNAL SIGQUIT
 VOLUME ["/etc/gitlab-runner", "/home/gitlab-runner"]
 ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]
