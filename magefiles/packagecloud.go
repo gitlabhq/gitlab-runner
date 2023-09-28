@@ -5,15 +5,17 @@ package main
 import (
 	"strings"
 
+	"gitlab.com/gitlab-org/gitlab-runner/magefiles/mageutils"
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/packagecloud"
 )
 
 var (
-	packageCloudURL       = envFallbackOrDefault("PACKAGE_CLOUD_URL", "", "https://packages.gitlab.com/")
-	packageCloudNamespace = envFallbackOrDefault("PACKAGE_CLOUD_NAMESPACE", "PACKAGE_CLOUD", "runner/gitlab-runner")
-	packageCloudToken     = envFallbackOrDefault("PACKAGE_CLOUD_TOKEN", "PACKAGECLOUD_TOKEN", "")
+	packageCloudURL       = mageutils.EnvFallbackOrDefault("PACKAGE_CLOUD_URL", "", "https://packages.gitlab.com/")
+	packageCloudNamespace = mageutils.EnvFallbackOrDefault("PACKAGE_CLOUD_NAMESPACE", "PACKAGE_CLOUD", "runner/gitlab-runner")
+	packageCloudToken     = mageutils.EnvFallbackOrDefault("PACKAGE_CLOUD_TOKEN", "PACKAGECLOUD_TOKEN", "")
 )
 
 type PackageCloud mg.Namespace
@@ -31,6 +33,7 @@ func (PackageCloud) Yank(version string) error {
 	})
 }
 
+// Deps installs package_cloud CLI
 func (PackageCloud) Deps() error {
 	if err := sh.RunV("package_cloud", "version"); err != nil {
 		return sh.RunV("gem", "install", "package_cloud", "--version", "~> 0.3.0", "--no-document")

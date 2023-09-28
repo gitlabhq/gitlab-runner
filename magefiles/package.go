@@ -8,11 +8,11 @@ import (
 	"strings"
 	"text/template"
 
+	"gitlab.com/gitlab-org/gitlab-runner/magefiles/build"
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/samber/lo"
-
-	"gitlab.com/gitlab-org/gitlab-runner/magefiles/constants"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/packages"
 )
 
@@ -21,20 +21,20 @@ type Package mg.Namespace
 
 // Deb builds deb package
 func (p Package) Deb(arch, packageArch string) error {
-	binary := fmt.Sprintf("out/binaries/%s-linux-%s", constants.AppName, arch)
+	binary := fmt.Sprintf("out/binaries/%s-linux-%s", build.AppName, arch)
 	return p.runPackageScript("deb", arch, packageArch, binary)
 }
 
 // Rpm builds rpm package
 func (p Package) Rpm(arch, packageArch string) error {
-	binary := fmt.Sprintf("out/binaries/%s-linux-%s", constants.AppName, arch)
+	binary := fmt.Sprintf("out/binaries/%s-linux-%s", build.AppName, arch)
 	return p.runPackageScript("rpm", arch, packageArch, binary)
 }
 
 // RpmFips builds rpm package for fips
 func (p Package) RpmFips() error {
 	arch := "amd64"
-	binary := fmt.Sprintf("out/binaries/%s-linux-%s-fips", constants.AppName, arch)
+	binary := fmt.Sprintf("out/binaries/%s-linux-%s-fips", build.AppName, arch)
 	return p.runPackageScript("rpm-fips", arch, arch, binary)
 }
 
@@ -170,7 +170,7 @@ func (Package) runPackageScript(pkgType, arch, packageArch, binary string) error
 		"ARCH":          arch,
 		"PACKAGE_ARCH":  packageArch,
 		"RUNNER_BINARY": binary,
-		"PACKAGE_NAME":  constants.AppName,
-		"VERSION":       constants.Version(),
+		"PACKAGE_NAME":  build.AppName,
+		"VERSION":       build.Version(),
 	}, "ci/package", pkgType)
 }

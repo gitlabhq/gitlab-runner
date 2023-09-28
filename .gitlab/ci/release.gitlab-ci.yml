@@ -3,7 +3,6 @@
   extends:
   - .docker
   - .docker_qemu
-  - .linux-dependency-checksums
   variables:
     PUBLISH_IMAGES: "true"
   before_script:
@@ -19,7 +18,7 @@
   - 'binaries-fips'
   - 'package-rpm: [rpmFips]'
   script:
-  - make release_docker_images
+  - mage images:releaseRunner "$IMAGE_FLAVOR" "$TARGET_ARCHS"
   parallel:
     matrix:
     - IMAGE_FLAVOR: ubi-fips
@@ -57,7 +56,7 @@
   - 'helper images'
   - 'helper images fips'
   script:
-  - make release_helper_docker_images
+  - mage images:releaseHelper "$IMAGE_FLAVOR" "$IMAGE_TAG"
   parallel:
     matrix:
     - IMAGE_FLAVOR: "alpine"
@@ -119,6 +118,11 @@
   - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
   - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
 
+.release_artifacts:
+  artifacts:
+    paths:
+      - out/release_artifacts/*
+
 development S3:
   extends:
   - .release_s3
@@ -131,15 +135,17 @@ development docker images:
   extends:
   - .release_docker_images
   - .rules:release:development:merge-requests
+  - .release_artifacts
   variables:
-    PUBLISH_IMAGES: "false"
+    RUNNER_IMAGE_NAME: "gitlab-runner-dev"
 
 development helper docker images:
   extends:
   - .release_helper_docker_images
   - .rules:release:development:merge-requests
+  - .release_artifacts
   variables:
-    PUBLISH_IMAGES: "false"
+    HELPER_IMAGE_NAME: "gitlab-runner-helper-dev"
 
 bleeding edge S3:
   extends:
@@ -178,11 +184,13 @@ bleeding edge docker images:
   extends:
   - .bleeding_edge_docker_images_base
   - .release_docker_images
+  - .release_artifacts
 
 bleeding edge helper docker images:
   extends:
   - .bleeding_edge_docker_images_base
   - .release_helper_docker_images
+  - .release_artifacts
 
 bleeding edge sync docker images:
   extends:

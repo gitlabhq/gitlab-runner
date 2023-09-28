@@ -18,7 +18,7 @@ type mageConfig struct {
 var config mageConfig
 
 func init() {
-	envconfig.MustProcess("MAGE", &config)
+	envconfig.MustProcess("RUNNER_MAGE", &config)
 
 	if config.Concurrency < 1 {
 		config.Concurrency = 1
