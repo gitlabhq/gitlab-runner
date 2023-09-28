@@ -49,7 +49,7 @@ Prerequisites:
 To configure the instance executor for autoscaling, update the following sections in the `config.toml`:
 
 - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
-- [`[runners.instance]`](../configuration/advanced-configuration.md#the-runnersinstance-section-alpha)
+- [`[runners.instance]`](../configuration/advanced-configuration.md#the-runnersinstance-section)
 
 ## AWS autoscaling group configuration examples
 
