@@ -6,9 +6,15 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Advanced configuration **(FREE ALL)**
 
-You can change the behavior of GitLab Runner and of individual registered runners.
+To change the behavior of GitLab Runner and individual registered runners, modify the `config.toml` file.
 
-To do this, you modify a file called `config.toml`, which uses the [TOML](https://github.com/toml-lang/toml) format.
+You can find the `config.toml` file in:
+
+- `/etc/gitlab-runner/` on \*nix systems when GitLab Runner is
+   executed as root. This directory is also the path for service configuration.
+- `~/.gitlab-runner/` on \*nix systems when GitLab Runner is
+   executed as non-root.
+- `./` on other systems.
 
 GitLab Runner does not require a restart when you change most options. This includes parameters
 in the `[[runners]]` section and most parameters in the global section, except for `listen_address`.
@@ -17,14 +23,6 @@ If a runner was already registered, you don't need to register it again.
 GitLab Runner checks for configuration modifications every 3 seconds and reloads if necessary.
 GitLab Runner also reloads the configuration in response to the `SIGHUP` signal.
 
-You can find the `config.toml` file in:
-
-- `/etc/gitlab-runner/` on \*nix systems when GitLab Runner is
-   executed as root (**this is also the path for service configuration**)
-- `~/.gitlab-runner/` on \*nix systems when GitLab Runner is
-   executed as non-root
-- `./` on other systems
-
 ## Configuration validation
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
@@ -32,12 +30,8 @@ You can find the `config.toml` file in:
 Configuration validation is a process that checks the structure of the `config.toml` file. The output from the configuration
 validator provides only `info` level messages.
 
-The configuration validation is a _best effort_ and is currently only for informational purposes. It assists users
-to identify potential issues with their runner configuration. It may not catch all possible problems and the absence of
-any messages does not guarantee that the `config.toml` file is flawless.
-
-Over time, the validation process will be refined to provide more accurate, comprehensive, and useful feedback. You should keep your
-GitLab Runner updated to benefit from the latest improvements and enhancements.
+The configuration validation process is for informational purposes only. You can use the output to
+to identify potential issues with your runner configuration. The configuration validation might not catch all possible problems, and the absence of messages does not guarantee that the `config.toml` file is flawless.
 
 ## The global section
 
@@ -106,18 +100,11 @@ INFO[0000] [session_server].listen_address not defined, session endpoints disabl
 
 ### How `check_interval` works
 
-If more than one `[[runners]]` section exists in `config.toml`,
-the interval between requests to GitLab are more frequent than you might expect. GitLab Runner
-contains a loop that constantly schedules a request to the GitLab instance it's configured for.
+If `config.toml` has more than one `[[runners]]` section, GitLab Runner contains a loop that
+constantly schedules job requests to the GitLab instance where GitLab Runner is configured.
 
-GitLab Runner tries to ensure that subsequent requests for each runner are done in the specified interval.
-To do this, it divides the value of `check_interval` by the number of `[[runners]]` sections. The loop
-iterates over all sections, schedules a request for each, and sleeps for the calculated amount
-of time. Things get interesting when the runners are tied to a different GitLab instance.
-Consider the following example.
-
-If you set `check_interval = 10`, and there are two runners (`runner-1` and `runner-2`),
-a request is made each 10 seconds. Here is an example of the loop in this case:
+The following example has `check_interval` of 10 seconds and two `[[runners]]` sections
+(`runner-1` and `runner-2`). GitLab Runner sends a request every 10 seconds and sleeps for five seconds:
 
 1. Get `check_interval` value (`10s`).
 1. Get list of runners (`runner-1`, `runner-2`).
@@ -129,13 +116,13 @@ a request is made each 10 seconds. Here is an example of the loop in this case:
     1. Sleep for `5s`.
     1. Repeat.
 
-In this example, a request from the runner's process is made every 5 seconds.
+In this example, a job request from the runner's process is made every five seconds.
 If `runner-1` and `runner-2` are connected to the same
 GitLab instance, this GitLab instance also receives a new request from this runner
-every 5 seconds.
+every five seconds.
 
-Between the first request for `runner-1` and second request for `runner-1`
-there are two sleep periods. Each one takes 5 seconds, so it's approximately 10 seconds between subsequent requests for `runner-1`.
+Two sleep periods occur between the first and second requests for `runner-1`.
+Each period takes five seconds, so it's approximately 10 seconds between subsequent requests for `runner-1`.
 The same applies for `runner-2`.
 
 If you define more runners, the sleep interval is smaller. However, a request for a runner is
@@ -333,8 +320,8 @@ The following settings define the Docker container parameters.
 
 ### The `[[runners.docker.services]]` section
 
-Specify additional services that should be run with the job. Visit the
-[Docker Registry](https://hub.docker.com) for the list of available images.
+Specify additional services to run with the job. For a list of available images, see the
+[Docker Registry](https://hub.docker.com).
 Each service runs in a separate container and is linked to the job.
 
 | Parameter | Description |
@@ -396,7 +383,7 @@ Example:
 
 ### Volumes in the `[runners.docker]` section
 
-[View the complete guide of Docker volume usage](https://docs.docker.com/storage/volumes/).
+For more information about volumes, see the [Docker documentation](https://docs.docker.com/storage/volumes/).
 
 The following examples show how to specify volumes in the `[runners.docker]` section.
 
@@ -444,17 +431,20 @@ well.
 
 ### Use a private container registry
 
-To use private registries as a source of images for your jobs,
-you can set the authorization configuration in a [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/)
-named `DOCKER_AUTH_CONFIG`. You can set the variable in the project's CI/CD settings as [type `File`](https://docs.gitlab.com/ee/ci/variables/#use-file-type-cicd-variables)
-or in the `config.toml` file.
+To use private registries as a source of images for your jobs, configure authorization
+with the [CI/CD variable](https://docs.gitlab.com/ee/ci/variables/) `DOCKER_AUTH_CONFIG`. You can set the variable in one of the following:
+
+- The CI/CD settings of the project as the [`file` type](https://docs.gitlab.com/ee/ci/variables/#use-file-type-cicd-variables)
+- The `config.toml` file
 
 Using private registries with the `if-not-present` pull policy may introduce
 [security implications](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
-To fully understand how pull policies work,
-read the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images).
+For more information about how pull policies work, see [Configure how runners pull images](../executors/docker.md#configure-how-runners-pull-images).
 
-For a detailed example, visit the [Using Docker images documentation](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry).
+For more information about using private container registries, see:
+
+- [Access an image from a private container registry](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#access-an-image-from-a-private-container-registry)
+- [`.gitlab-ci.yml` keyword reference](https://docs.gitlab.com/ee/ci/yaml/index.html#image)
 
 The steps performed by the runner can be summed up as:
 
@@ -463,10 +453,6 @@ The steps performed by the runner can be summed up as:
    configuration for this registry.
 1. Finally, if an authentication corresponding to the specified registry is
    found, subsequent pulls makes use of it.
-
-Now that the runner is set up to authenticate against your private registry,
-learn [how to configure the `.gitlab-ci.yml` file](https://docs.gitlab.com/ee/ci/yaml/index.html#image) to use that
-registry.
 
 #### Support for GitLab integrated registry
 
@@ -601,10 +587,7 @@ Example:
 
 ## The `[runners.machine]` section
 
-> Added in GitLab Runner v1.1.0.
-
-The following parameters define the Docker Machine-based autoscaling feature. More details can be
-found in the separate [runner autoscale documentation](autoscale.md).
+The following parameters define the Docker Machine-based autoscaling feature. For more information, see [Docker Machine Executor autoscale configuration](autoscale.md).
 
 | Parameter           | Description |
 |---------------------|-------------|
@@ -679,9 +662,10 @@ following fields:
 Like in the standard cron configuration file, the fields can contain single
 values, ranges, lists, and asterisks. View [a detailed description of the syntax](https://github.com/gorhill/cronexpr#implementation).
 
-## The `[runners.instance]` section (Alpha)
+## The `[runners.instance]` section **(EXPERIMENT)**
 
 The following parameters define the configuration for the [instance executor](../executors/instance.md).
+The instance executor is an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment)
 
 | Parameter        | Type         | Description |
 |------------------|--------------|-------------|
@@ -689,10 +673,11 @@ The following parameters define the configuration for the [instance executor](..
 
 ## The `[runners.autoscaler]` section
 
-> Added in GitLab Runner v15.10.0.
+> Introduced in GitLab Runner v15.10.0.
 
-The following parameters configure the new and experimental autoscaler feature and can only be used with the
-[Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors.
+The following parameters configure the autoscaler feature. You can only use these parameters with the
+[Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors. These
+executors are [Experiments](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
 
 | Parameter                               | Description |
 |-----------------------------------------|-------------|
@@ -792,8 +777,6 @@ The following parameters define configuration for the [custom executor](../execu
 
 ## The `[runners.cache]` section
 
-> Introduced in GitLab Runner 1.1.0.
-
 The following parameters define the distributed cache feature. View details
 in the [runner autoscale documentation](autoscale.md#distributed-runners-caching).
 
@@ -803,11 +786,6 @@ in the [runner autoscale documentation](autoscale.md#distributed-runners-caching
 | `Path`                   | string  | Name of the path to prepend to the cache URL. |
 | `Shared`                 | boolean | Enables cache sharing between runners. Default is `false`. |
 | `MaxUploadedArchiveSize` | int64   | Limit, in bytes, of the cache archive being uploaded to cloud storage. A malicious actor can work around this limit so the GCS adapter enforces it through the X-Goog-Content-Length-Range header in the signed URL. You should also set the limit on your cloud storage provider. |
-
-WARNING:
-In GitLab Runner 11.3, the configuration parameters related to S3 were moved to a dedicated `[runners.cache.s3]` section.
-The configuration with S3 configured directly in `[runners.cache]` was deprecated.
-**In GitLab Runner 12.0, the configuration syntax was removed and is no longer supported**.
 
 The cache mechanism uses pre-signed URLs to upload and download cache. URLs are signed by GitLab Runner on its own instance.
 It does not matter if the job's script (including the cache upload/download script) are executed on local or external
@@ -849,8 +827,6 @@ This table lists `config.toml`, CLI options, and ENV variables for `register`.
 ### The `[runners.cache.s3]` section
 
 The following parameters define S3 storage for cache.
-
-In GitLab Runner 11.2 and earlier, these settings were in the global `[runners.cache]` section.
 
 | Parameter           | Type             | Description |
 |---------------------|------------------|-------------|
@@ -910,7 +886,7 @@ If you use `ServerSideEncryption` of type `KMS`, this role must also have permis
 - "kms:GenerateDataKey*"
 - "kms:DescribeKey"
 
-`ServerSideEncryption` of type `SSE-C` is currently not supported.
+`ServerSideEncryption` of type `SSE-C` is not supported.
 `SSE-C` requires that the headers, which contain the user-supplied key, are provided for the download request, in addition to the presigned URL.
 This would mean passing the key material to the job, where the key can't be kept safe. This does have the potential to leak the decryption key.
 A discussion about this issue is in [this merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295).
@@ -959,11 +935,9 @@ To use IAM roles for service accounts, an IAM OIDC provider [must exist for your
 
 ### The `[runners.cache.gcs]` section
 
-> Introduced in GitLab Runner 11.3.0.
-
-The following parameters define native support for Google Cloud Storage. To view
-where these values come from, view the
-[Google Cloud Storage (GCS) Authentication documentation](https://cloud.google.com/storage/docs/authentication#service_accounts).
+The following parameters define native support for Google Cloud Storage. For more information
+about these values, see the
+[Google Cloud Storage (GCS) authentication documentation](https://cloud.google.com/storage/docs/authentication#service_accounts).
 
 | Parameter         | Type             | Description |
 |-------------------|------------------|-------------|
