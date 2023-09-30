@@ -4,7 +4,7 @@
   stage: prepare
   image: docker:${DOCKER_VERSION}-git
   script:
-  - apk add --no-cache curl
+  - apk add --no-cache --upgrade curl
   - source ./ci/build_ci_image
 
 prepare ci image:
@@ -76,7 +76,7 @@ prepare go fips:
     BUILD_IMAGE: $GO_FIPS_IMAGE
     GO_VERSION: $GO_FIPS_VERSION
   script:
-    - apk add --no-cache curl make bash
+    - apk add --no-cache --upgrade curl make bash
     - make go-fips-docker
 
 prepare ubi base:
@@ -87,7 +87,7 @@ prepare ubi base:
   stage: prepare
   image: docker:${DOCKER_VERSION}-git
   script:
-    - apk add --no-cache curl make bash
+    - apk add --no-cache --upgrade curl make bash
     - make ubi-fips-base-docker
 
 prepare runner-incept variables:
