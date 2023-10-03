@@ -72,7 +72,7 @@ curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-ru
    rpm -i gitlab-runner_<arch>.rpm
    ```
 
-1. [Register a runner](../register/index.md#linux)
+1. [Register a runner](../register/index.md)
 
 ### Update
 
