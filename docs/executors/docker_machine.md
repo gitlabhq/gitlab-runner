@@ -67,7 +67,7 @@ installed in the same machine:
    concurrent processes are disturbing each other. This can end with a non-working
    environment. That's why it's important to create a test machine manually the
    very first time you set up GitLab Runner with Docker Machine.
-1. [Register a runner](../register/index.md#linux) and select the
+1. [Register a runner](../register/index.md) and select the
    `docker+machine` executor when asked.
 1. Edit [`config.toml`](../commands/index.md#configuration-file) and configure
    the runner to use Docker machine. Visit the dedicated page covering detailed

@@ -120,7 +120,7 @@ For a [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) imag
 
 ### Register the runner
 
-The final step is to [register a new runner](../register/index.md#docker). The GitLab Runner container doesn't pick up any jobs until it's registered.
+The final step is to [register a new runner](../register/index.md). The GitLab Runner container doesn't pick up any jobs until it's registered.
 
 ## Update configuration
 
