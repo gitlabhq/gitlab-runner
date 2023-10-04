@@ -38,9 +38,12 @@ RUN cd /tmp && \
 
 FROM redhat/ubi8-minimal:${UBI_VERSION}
 
+# these packages are required by downstream images, but we don't know anymore specifically which images require which
+# packages, so we'll install them all here...
 RUN microdnf update --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs && \
     microdnf install --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs \
-        expat # git runtime dep
+    hostname procps wget tar gzip ca-certificates tzdata openssl shadow-utils \
+    expat # git runtime dep
 
 COPY --from=git /usr/local/ /usr/local/
 COPY --from=git /tmp/fakeprovide-git-*.rpm /tmp
