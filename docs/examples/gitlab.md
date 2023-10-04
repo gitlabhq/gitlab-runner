@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 We will register the runner using a confined Docker executor.
 
-The registration token can be found at `https://gitlab.com/project_namespace/project_name/runners`.
+To generate a runner authentication token, create a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token).
 You can export it as a variable and run the commands below as-is. Start by
 creating a template configuration file in order to pass complex configuration:
 
@@ -29,7 +29,7 @@ Finally, register the runner, passing the newly created template configuration f
 gitlab-runner register \
   --non-interactive \
   --url "https://gitlab.com" \
-  --registration-token "$REGISTRATION_TOKEN" \
+  --token "$RUNNER_AUTHENTICATION_TOKEN" \
   --template-config /tmp/test-config.template.toml \
   --description "gitlab-ce-ruby-2.7" \
   --executor "docker" \
