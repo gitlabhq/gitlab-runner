@@ -16,7 +16,10 @@ Runner registration is the process that links the runner with one or more GitLab
 You can register multiple runners on the same host machine,
 each with a different configuration, by repeating the `register` command.
 
-## Prerequisites
+You can also register the same configuration on multiple host machines, by repeating the `register` command
+with the same runner authentication token.
+
+## Requirements
 
 Before you register a runner:
 

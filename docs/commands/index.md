@@ -320,8 +320,15 @@ It expects either:
 With the `--all-runners` option, it unregisters all the attached runners.
 
 NOTE:
-Runners can be unregistered directly by using the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-registered-runner) but
+Runners can be unregistered with the GitLab [Runners API](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner) but the
 configuration is not modified for the user.
+
+- If the runner was created with a runner registration token, `gitlab-runner unregister`
+  with the runner authentication token deletes the runner.
+- If the runner was created in the GitLab UI or with the Runners API, `gitlab-runner unregister`
+  with the runner authentication token deletes the runner manager, but not the runner.
+  To completely remove the runner, [delete the runner in the runners administration page](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#delete-shared-runners)
+  or use the [`DELETE /runners`](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner) REST API endpoint.
 
 To unregister a single runner, first get the runner's details by executing
 `gitlab-runner list`:
