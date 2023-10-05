@@ -1,3 +1,17 @@
+## v16.3.2 (2023-10-05)
+
+### Security fixes
+
+- Run `apk upgrade` in runner alpine images !4378
+
+### Bug fixes
+
+- Add missing runtime packages to ubi base image !4359
+
+### Maintenance
+
+- Run apk upgrade in image used to build images !4381
+
 ## v16.3.1 (2023-09-14)
 
 ### Security fixes
