@@ -1,3 +1,18 @@
+## v16.4.1 (2023-10-05)
+
+### Security fixes
+
+- Run `apk upgrade` in runner alpine images !4378
+
+### Bug fixes
+
+- Add missing runtime packages to ubi base image !4359
+- Fix powershell SourceEnv permission failure !4369
+
+### Maintenance
+
+- Run apk upgrade in image used to build images !4381
+
 ## v16.4.0 (2023-09-25)
 
 ### New features
