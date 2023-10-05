@@ -13,7 +13,7 @@ ifeq ($(shell git describe --exact-match --match $(LATEST_STABLE_TAG) >/dev/null
 export IS_LATEST := true
 endif
 
-PACKAGE_CLOUD ?= ayufan/gitlab-ci-multi-runner
+PACKAGE_CLOUD ?= runner/gitlab-runner
 PACKAGE_CLOUD_URL ?= https://packagecloud.io/
 BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x' -arch 'ppc64le' -arch 'riscv64'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
