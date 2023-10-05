@@ -1,3 +1,20 @@
+## v16.2.2 (2023-10-05)
+
+### Security fixes
+
+- Clean up manual installation of git and git-lfs in ubi base image and bump git-lfs version to 3.4.0 !4289
+- Runner-helper fips image cleanups !4308
+- Bump git-lfs version to 3.4.0 !4296
+
+### Bug fixes
+
+- Add missing runtime packages to ubi base image !4359
+- Fix error when unmarshaling string with windows path for powershell and pwsh !4315
+
+### Maintenance
+
+- Run apk upgrade in image used to build images !4381
+
 ## v16.2.1 (2023-08-06)
 
 ### New features
