@@ -81,24 +81,11 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 
    :::TabTitle Docker
 
-   To launch a short-lived `gitlab-runner` container to register the container
-   you created during installation:
+   Use the executable inside the container you created during installation:
 
-   - For local system volume mounts:
-
-     ```shell
-     docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
-     ```
-
-     NOTE:
-     If you used a configuration volume other than `/srv/gitlab-runner/config`
-     during installation, update the command with the correct volume.
-
-   - For Docker volume mounts:
-
-     ```shell
-     docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
-     ```
+   ```shell
+   docker exec -it gitlab-runner gitlab-runner register
+   ```
 
    ::EndTabs
 
