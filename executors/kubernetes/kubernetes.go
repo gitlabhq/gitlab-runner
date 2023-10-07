@@ -1173,16 +1173,27 @@ func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...st
 		return []string{}, command
 	}
 
-	if len(command) == 0 && len(imageDefinition.Entrypoint) > 0 {
-		command = imageDefinition.Entrypoint
+	var args []string
+	cmd := command
+
+	if len(command) == 0 {
+		// services
+		if len(imageDefinition.Entrypoint) > 0 {
+			cmd = imageDefinition.Entrypoint
+		}
+	} else {
+		// build/helper
+		if len(imageDefinition.Entrypoint) > 0 {
+			cmd = imageDefinition.Entrypoint
+			args = command
+		}
 	}
 
-	var args []string
-	if len(imageDefinition.Command) > 0 {
+	if len(args) == 0 && len(imageDefinition.Command) > 0 {
 		args = imageDefinition.Command
 	}
 
-	return command, args
+	return cmd, args
 }
 
 func (s *executor) logFile() string {
