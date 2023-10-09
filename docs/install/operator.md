@@ -60,16 +60,13 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
 
 #### Install GitLab Runner
 
-1. Obtain a token that you'll use to register the runner:
-   - For a [shared runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#shared-runners),
-     have an administrator go to the GitLab Admin Area and click **Overview > Runners**.
-   - For a [group runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners),
-     go to **Settings > CI/CD** and expand the **Runners** section.
-   - For a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#project-runners),
-     go to **Settings > CI/CD** and expand the **Runners** section.
-1. Under **Use the following registration token during setup:**, copy the token.
-1. Go to the namespace where you want to create GitLab Runner.
-1. Create the secret file with your GitLab project's runner token:
+1. Obtain a runner authentication token. You can either:
+    - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
+      [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
+      [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
+    - Locate the runner authentication token in the `config.toml` file.
+      Runner authentication tokens have the prefix, `glrt-`.
+1. Create the secret file with your GitLab Runner token:
 
    ```shell
    cat > gitlab-runner-secret.yml << EOF
@@ -78,8 +75,11 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
    metadata:
      name: gitlab-runner-secret
    type: Opaque
+   # Only one of the following fields can be set. The Operator fails to register the runner if both are provided.
+   # NOTE: runner-registration-token is deprecated and will be removed in GitLab 18.0. You should use runner-token instead.
    stringData:
-     runner-registration-token: REPLACE_ME # your project runner secret
+     runner-token: REPLACE_ME # your project runner token
+     # runner-registration-token: "" # your project runner secret
    EOF
    ```
 
