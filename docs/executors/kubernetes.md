@@ -1795,6 +1795,14 @@ Error cleaning up pod: etcdserver: request timed out
 Error cleaning up pod: context deadline exceeded
 ```
 
+### Dial tcp xxx.xx.x.x:xxx: i/o timeout
+
+This is a Kubernetes error that generally indicates the Kubernetes API server is unreachable by the runner manager. 
+To resolve this issue:
+
+- If you use network security policies, grant access to the Kubernetes API, typically on port 443 or port 6443, or both. 
+- Ensure that the Kubernetes API is running. 
+
 ### Connection refused when attempting to communicate with the Kubernetes API
 
 When GitLab Runner makes a request to the Kubernetes API and it fails,
