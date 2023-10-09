@@ -37,8 +37,10 @@ require (
 	github.com/invopop/jsonschema v0.7.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/service v1.2.2
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.16.5
 	github.com/klauspost/pgzip v1.2.5
+	github.com/magefile/mage v1.15.0
 	github.com/minio/minio-go/v7 v7.0.59
 	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/client_model v0.2.0
@@ -138,10 +140,8 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/magefile/mage v1.15.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786 // indirect
 	github.com/masterzen/winrm v0.0.0-20220917170901-b07f6cb0598d // indirect
