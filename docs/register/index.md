@@ -11,13 +11,7 @@ info: >-
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) in GitLab Runner 15.0, a change to the registration request format prevents the GitLab Runner from communicating with GitLab 14.7 and earlier. You must use a GitLab Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
 
-Runner registration is the process that links the runner with one or more GitLab instances.
-
-You can register multiple runners on the same host machine,
-each with a different configuration, by repeating the `register` command.
-
-You can also register the same configuration on multiple host machines, by repeating the `register` command
-with the same runner authentication token.
+Runner registration is the process that links the runner with one or more GitLab instances. You must register the runner so that it can pick up jobs from the GitLab instance.
 
 ## Requirements
 
@@ -29,6 +23,8 @@ Before you register a runner:
 
 ## Register with a runner authentication token
 
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) in GitLab 15.10.
+
 Prerequisite:
 
 - Obtain a runner authentication token. You can either:
@@ -37,7 +33,7 @@ Prerequisite:
     [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
   - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
 
-To register the runner:
+To register the runner with a [runner authentication token](https://docs.gitlab.com/ee/security/token_overview.html#runner-authentication-tokens):
 
 1. Run the register command:
 
@@ -108,6 +104,77 @@ To register the runner:
 1. Enter a name for the runner.
 1. Enter the type of [executor](../executors/index.md).
 
+- To register multiple runners on the same host machine, each with a different configuration,
+repeat the `register` command.
+- To register the same configuration on multiple host machines, use the same runner authentication token
+for each runner registration. For more information, see [Reusing a runner configuration](../fleet_scaling/index.md#reusing-a-runner-configuration).
+
+You can also use the [non-interactive mode](../commands/index.md#non-interactive-registration) to use additional arguments to register the runner:
+
+::Tabs
+
+:::TabTitle Linux
+
+```shell
+sudo gitlab-runner register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --token "$RUNNER_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "docker-runner"
+```
+
+:::TabTitle macOS
+
+```shell
+gitlab-runner register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --token "$RUNNER_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "docker-runner"
+```
+
+:::TabTitle Windows
+
+```shell
+.\gitlab-runner.exe register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --token "$RUNNER_TOKEN" \
+  --executor "docker-windows" \
+  --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --description "docker-runner"
+```
+
+:::TabTitle FreeBSD
+
+```shell
+sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --token "$RUNNER_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "docker-runner"
+```
+
+:::TabTitle Docker
+
+```shell
+docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --token "$RUNNER_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "docker-runner"
+```
+
+::EndTabs
+
 ## Register with a runner registration token (deprecated)
 
 WARNING:
@@ -123,7 +190,9 @@ Prerequisite:
   [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
   [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated) runner.
 
-To register the runner:
+After you register the runner, the configuration is saved to the `config.toml`.
+
+To register the runner with a [runner registration token](https://docs.gitlab.com/ee/security/token_overview.html#runner-registration-tokens-deprecated):
 
 1. Run the register command:
 
@@ -196,74 +265,14 @@ To register the runner:
 1. Enter an optional maintenance note for the runner.
 1. Enter the type of [executor](../executors/index.md).
 
-### Legacy-compatible registration process
+To register multiple runners on the same host machine, each with a different configuration,
+repeat the `register` command.
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4157) in GitLab 16.2.
+You can also use the [non-interactive mode](../commands/index.md#non-interactive-registration) to use additional arguments to register the runner:
 
-Runner registration tokens and several runner configuration arguments were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)
-in GitLab 15.6 and will be removed in GitLab 18.0. To ensure minimal disruption to your automation workflow, the `legacy-compatible registration process` triggers
-if a runner authentication token is specified in the legacy parameter `--registration-token`.
+::Tabs
 
-This process causes the following command-line parameters to be ignored.
-These parameters can only be configured when a runner is created in the UI or with the API.
-
-- `--locked`
-- `--access-level`
-- `--run-untagged`
-- `--maximum-timeout`
-- `--paused`
-- `--tag-list`
-- `--maintenance-note`
-
-## Register with a one-line command
-
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29670) in GitLab Runner 15.10.
-
-If you want to use the non-interactive mode to register a runner, you can
-use either the `register` subcommands or their equivalent environment
-variables.
-
-To display a list of all the `register` subcommands, run the following command:
-
-```shell
-gitlab-runner register -h
-```
-
-### With a runner authentication token
-
-To register a runner using the most common options:
-
-```shell
-sudo gitlab-runner register \
-  --non-interactive \
-  --url "https://gitlab.com/" \
-  --token "$RUNNER_TOKEN" \
-  --executor "docker" \
-  --docker-image alpine:latest \
-  --description "docker-runner"
-```
-
-If you're running the runner in a Docker container, run the `register` command
-with a structure similar to the following example:
-
-```shell
-docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
-  --non-interactive \
-  --executor "docker" \
-  --docker-image alpine:latest \
-  --url "https://gitlab.com/" \
-  --token "$RUNNER_TOKEN" \
-  --description "docker-runner"
-```
-
-### With a runner registration token (deprecated)
-
-WARNING:
-This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743) in GitLab 15.6 and is planned for removal in 17.0. This change is a breaking change.
-In GitLab 16.2 and later, legacy-compatible registration processing automatically ignores several deprecated parameters if they are passed during registration. For more information, see [Legacy-compatible registration process](#legacy-compatible-registration-process).
-
-To register a runner using the most common options, run the `register` command
-with a structure similar to the following example:
+:::TabTitle Linux
 
 ```shell
 sudo gitlab-runner register \
@@ -280,16 +289,15 @@ sudo gitlab-runner register \
   --access-level="not_protected"
 ```
 
-If you're running the runner in a Docker container, the `register` command
-is structured similar to the following:
+:::TabTitle macOS
 
 ```shell
-docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
+gitlab-runner register \
   --non-interactive \
+  --url "https://gitlab.com/" \
+  --registration-token "$PROJECT_REGISTRATION_TOKEN" \
   --executor "docker" \
   --docker-image alpine:latest \
-  --url "https://gitlab.com/" \
-  --registration-token "PROJECT_REGISTRATION_TOKEN" \
   --description "docker-runner" \
   --maintenance-note "Free-form maintainer notes about this runner" \
   --tag-list "docker,aws" \
@@ -298,14 +306,82 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
   --access-level="not_protected"
 ```
 
-The `--access-level` parameter was added in GitLab Runner 12.0. It uses a registration API parameter introduced in GitLab 11.11.
-Use this parameter during registration to create a [protected runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#prevent-runners-from-revealing-sensitive-information).
-For a protected runner, use the `--access-level="ref_protected"` parameter.
-For an unprotected runner, use `--access-level="not_protected"` instead or leave the value undefined.
-This value can later be toggled on or off in the project's **Settings > CI/CD** menu.
+:::TabTitle Windows
 
-The `--maintenance-note` parameter was [added](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3268) in GitLab Runner 14.8.
-You can use it to add information related to runner maintenance. The maximum allowed length is 255 characters.
+```shell
+.\gitlab-runner.exe register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --registration-token "$PROJECT_REGISTRATION_TOKEN" \
+  --executor "docker-windows" \
+  --docker-image mcr.microsoft.com/windows/servercore:1809_amd64 \
+  --description "docker-runner" \
+  --maintenance-note "Free-form maintainer notes about this runner" \
+  --tag-list "docker,aws" \
+  --run-untagged="true" \
+  --locked="false" \
+  --access-level="not_protected"
+```
+
+:::TabTitle FreeBSD
+
+```shell
+sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --registration-token "$PROJECT_REGISTRATION_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "docker-runner" \
+  --maintenance-note "Free-form maintainer notes about this runner" \
+  --tag-list "docker,aws" \
+  --run-untagged="true" \
+  --locked="false" \
+  --access-level="not_protected"
+```
+
+:::TabTitle Docker
+
+```shell
+docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
+  --non-interactive \
+  --url "https://gitlab.com/" \
+  --registration-token "$PROJECT_REGISTRATION_TOKEN" \
+  --executor "docker" \
+  --docker-image alpine:latest \
+  --description "docker-runner" \
+  --maintenance-note "Free-form maintainer notes about this runner" \
+  --tag-list "docker,aws" \
+  --run-untagged="true" \
+  --locked="false" \
+  --access-level="not_protected"
+```
+
+::EndTabs
+
+- `--access-level` creates a [protected runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#prevent-runners-from-revealing-sensitive-information).
+  - For a protected runner, use the `--access-level="ref_protected"` parameter.
+  - For an unprotected runner, use `--access-level="not_protected"` or leave the value undefined.
+- `--maintenance-note` adds information related to runner maintenance. The maximum length is 255 characters.
+
+### Legacy-compatible registration process
+
+> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4157) in GitLab 16.2.
+
+Runner registration tokens and several runner configuration arguments were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)
+in GitLab 15.6 and will be removed in GitLab 18.0. To ensure minimal disruption to your automation workflow, the `legacy-compatible registration process` triggers
+if a runner authentication token is specified in the legacy parameter `--registration-token`.
+
+The legacy-compatible registration process ignores the following command-line parameters.
+These parameters can only be configured when a runner is created in the UI or with the API.
+
+- `--locked`
+- `--access-level`
+- `--run-untagged`
+- `--maximum-timeout`
+- `--paused`
+- `--tag-list`
+- `--maintenance-note`
 
 ## Registering runners with Docker
 
@@ -587,10 +663,13 @@ chosen to be placed in the final configuration.
 
 ### `Check registration token` error
 
-The `check registration token` error message is displayed when the GitLab instance does not recognize
-the entered registration token. This issue can occur when the instance group or project registration token
-has been changed in GitLab or when the user did not correctly enter the registration token.
+The `check registration token` error message displays when the GitLab instance does not recognize
+the runner registration token entered during registration. This issue can occur when either:
 
-When this error occurs, the first step is to ask a GitLab administrator to verify that the registration token is valid.
+- The instance, group, or project runner registration token was changed in GitLab.
+- An incorrect runner registration token was entered.
 
-Additionally, confirm that runner registration in the project or group is [allowed](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#restrict-runner-registration-by-all-members-in-a-group) by the GitLab administrator.
+When this error occurs, you can ask a GitLab administrator to:
+
+- Verify that the runner registration token is valid.
+- Confirm that runner registration in the project or group is [permitted](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#restrict-runner-registration-by-all-members-in-a-group).
