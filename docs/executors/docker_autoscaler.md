@@ -19,7 +19,7 @@ like Google Cloud Platform (GCP), AWS, and Azure.
 ## Install a fleeting plugin
 
 To enable autoscaling for your target platform, install a fleeting plugin. You can install
-either the AWS or GCP fleeting plugin. Both plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+the AWS, GCP, or Azure fleeting plugin. These plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
 For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
 
@@ -28,6 +28,7 @@ To install the plugin:
 1. Install the binary for your host platform:
    - [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases)
    - [GCP fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
+   - [Azure fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-azure/-/releases)
 1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
 
 ## Configure Docker Autoscaler
