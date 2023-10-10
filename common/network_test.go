@@ -213,6 +213,109 @@ func TestSecrets_expandVariables(t *testing.T) {
 	}
 }
 
+func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
+	testName := "key-name"
+	testVersion := "key-version"
+	testAuthJWT := "auth-jwt"
+
+	variables := JobVariables{
+		{Key: "CI_AZURE_KEY_VAULT_KEY_NAME", Value: testName},
+		{Key: "CI_AZURE_KEY_VAULT_KEY_VERSION", Value: testVersion},
+		{Key: "CI_AZURE_KEY_VAULT_AUTH_JWT", Value: testAuthJWT},
+	}
+
+	assertValue := func(t *testing.T, prefix string, variableValue string, testedValue interface{}) {
+		assert.Equal(
+			t,
+			fmt.Sprintf("%s %s", prefix, variableValue),
+			testedValue,
+		)
+	}
+
+	tests := map[string]struct {
+		secrets       Secrets
+		assertSecrets func(t *testing.T, secrets Secrets)
+	}{
+		"no secrets defined": {
+			secrets: nil,
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				assert.Nil(t, secrets)
+			},
+		},
+		"nil vault secret": {
+			secrets: Secrets{
+				"VAULT": Secret{
+					AzureKeyVault: nil,
+				},
+			},
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				assert.Nil(t, secrets["VAULT"].Vault)
+			},
+		},
+		"vault missing data": {
+			secrets: Secrets{
+				"VAULT": Secret{
+					AzureKeyVault: &AzureKeyVaultSecret{},
+				},
+			},
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				assert.NotNil(t, secrets["VAULT"].AzureKeyVault)
+			},
+		},
+		"vault missing jwt data": {
+			secrets: Secrets{
+				"VAULT": Secret{
+					AzureKeyVault: &AzureKeyVaultSecret{
+						Name:    testName,
+						Version: testVersion,
+						Server: AzureKeyVaultServer{
+							ClientID: "test_client_id",
+							TenantID: "test_tenant_id",
+							URL:      "test_url",
+						},
+					},
+				},
+			},
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				require.NotNil(t, secrets["VAULT"].AzureKeyVault)
+				assert.Equal(t, testName, secrets["VAULT"].AzureKeyVault.Name)
+				assert.Equal(t, testVersion, secrets["VAULT"].AzureKeyVault.Version)
+			},
+		},
+		"vault secret defined": {
+			secrets: Secrets{
+				"VAULT": Secret{
+					AzureKeyVault: &AzureKeyVaultSecret{
+						Name:    "name ${CI_AZURE_KEY_VAULT_KEY_NAME}",
+						Version: "version ${CI_AZURE_KEY_VAULT_KEY_VERSION}",
+						Server: AzureKeyVaultServer{
+							ClientID: "client_id",
+							TenantID: "tenant_id",
+							JWT:      "jwt ${CI_AZURE_KEY_VAULT_AUTH_JWT}",
+							URL:      "url",
+						},
+					},
+				},
+			},
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				require.NotNil(t, secrets["VAULT"].AzureKeyVault)
+				assertValue(t, "name", testName, secrets["VAULT"].AzureKeyVault.Name)
+				assertValue(t, "version", testVersion, secrets["VAULT"].AzureKeyVault.Version)
+				assertValue(t, "jwt", testAuthJWT, secrets["VAULT"].AzureKeyVault.Server.JWT)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				tt.secrets.expandVariables(variables)
+				tt.assertSecrets(t, tt.secrets)
+			})
+		})
+	}
+}
+
 func TestJobResponse_JobURL(t *testing.T) {
 	jobID := int64(1)
 

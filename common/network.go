@@ -527,6 +527,9 @@ func (s Secret) expandVariables(vars JobVariables) {
 	if s.Vault != nil {
 		s.Vault.expandVariables(vars)
 	}
+	if s.AzureKeyVault != nil {
+		s.AzureKeyVault.expandVariables(vars)
+	}
 }
 
 // IsFile defines whether the variable should be of type FILE or no.
@@ -539,6 +542,17 @@ func (s Secret) IsFile() bool {
 	}
 
 	return *s.File
+}
+
+func (s *AzureKeyVaultSecret) expandVariables(vars JobVariables) {
+	s.Server.expandVariables(vars)
+
+	s.Name = vars.ExpandValue(s.Name)
+	s.Version = vars.ExpandValue(s.Version)
+}
+
+func (s *AzureKeyVaultServer) expandVariables(vars JobVariables) {
+	s.JWT = vars.ExpandValue(s.JWT)
 }
 
 func (s *VaultSecret) expandVariables(vars JobVariables) {
