@@ -22,6 +22,7 @@ import (
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -1463,6 +1464,7 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 			VolumeSource: api.VolumeSource{
 				EmptyDir: &api.EmptyDirVolumeSource{
 					Medium: api.StorageMedium(volume.Medium),
+					SizeLimit: resource.ParseQuantity(volume.SizeLimit)
 				},
 			},
 		})
