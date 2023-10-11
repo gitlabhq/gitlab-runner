@@ -784,7 +784,7 @@ func TestExecute_MergeConfigTemplate(t *testing.T) {
         name = "empty_dir"
 	    mount_path = "/path/to/empty_dir"
 	    medium = "Memory"
-		size_limit = "1G"`
+	    size_limit = "1G"`
 
 		baseOutputConfigFmt = `concurrent = 1
 check_interval = 0
