@@ -430,6 +430,9 @@ continually remove a Docker Machine. GitLab has provided patches for both cases
 in the upstream project. For more information, see issues
 [#2771](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2771) and
 [#2772](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2772).
+Additional issues might have to be addressed by the use of of other forks downstream GitLab's.
+Some success has been had using the 
+[Continuous Kernel Integration Project's fork](https://gitlab.com/cki-project/mirror/docker-machine).
 
 ## Conclusion
 
