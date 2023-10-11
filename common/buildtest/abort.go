@@ -104,7 +104,7 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 			}
 
 			if setup != nil {
-				setup(build)
+				setup(t, build)
 			}
 			if tc.setupFn != nil {
 				tc.setupFn(build)

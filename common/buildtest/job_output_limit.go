@@ -96,7 +96,7 @@ func runBuildWithJobOutputLimitExceeded(
 			}
 
 			if setup != nil {
-				setup(build)
+				setup(t, build)
 			}
 
 			runBuildWithJobOutputLimitExceededCase(t, tt, build)

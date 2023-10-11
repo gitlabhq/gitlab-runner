@@ -43,7 +43,7 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 	)
 
 	if setup != nil {
-		setup(build)
+		setup(t, build)
 	}
 
 	buf, err := trace.New()

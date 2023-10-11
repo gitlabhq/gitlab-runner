@@ -233,7 +233,7 @@ func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, common.JobResponse{}, shell)
 
-		updateSleepForCMD := func(build *common.Build) {
+		updateSleepForCMD := func(_ *testing.T, build *common.Build) {
 			if shell != "cmd" {
 				return
 			}
