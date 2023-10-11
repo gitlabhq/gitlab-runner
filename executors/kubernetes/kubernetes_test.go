@@ -531,11 +531,12 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 								},
 							},
 							EmptyDirs: []common.KubernetesEmptyDir{
-								{Name: "emptyDir", MountPath: "/path/to/empty/dir", Medium: "Memory"},
+								{Name: "emptyDir", MountPath: "/path/to/empty/dir", Medium: "Memory", SizeLimit: "1G"},
 								{
 									Name:      "emptyDir-subpath",
 									MountPath: "/subpath",
 									Medium:    "Memory",
+									SizeLimit: "1G",
 									SubPath:   "subpath",
 								},
 							},
