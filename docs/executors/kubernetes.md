@@ -596,6 +596,78 @@ variables:
   KUBERNETES_BEARER_TOKEN: thebearertokenfromanothernamespace
 ```
 
+### Overwrite the node selector
+
+To overwrite the node selector:
+
+1. In the `config.toml` or Helm `values.yaml` file, enable overwriting of the node selector:
+
+   ```toml
+   runners:
+    ...
+    config: |
+      [[runners]]
+        [runners.kubernetes]
+          node_selector_overwrite_allowed = ".*"
+   ```
+
+1. In the `.gitlab-ci.yml` file, define the variable to overwrite the node selector:
+
+   ```yaml
+   variables:
+     KUBERNETES_NODE_SELECTOR_* = ''
+   ```
+
+In the following example, to overwrite the Kubernetes node architecture,
+the settings are configured in the `config.toml` and `.gitlab-ci.yml`:
+
+::Tabs
+
+:::TabTitle `config.toml`
+
+```toml
+concurrent = 1
+check_interval = 1
+log_level = "debug"
+shutdown_timeout = 0
+
+listen_address = ':9252'
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = ""
+  url = "https://gitlab.com/"
+  id = 0
+  token = "__REDACTED__"
+  token_obtained_at = "0001-01-01T00:00:00Z"
+  token_expires_at = "0001-01-01T00:00:00Z"
+  executor = "kubernetes"
+  shell = "bash"
+  [runners.kubernetes]
+    host = ""
+    bearer_token_overwrite_allowed = false
+    image = "alpine"
+    namespace = ""
+    namespace_overwrite_allowed = ""
+    pod_labels_overwrite_allowed = ""
+    service_account_overwrite_allowed = ""
+    pod_annotations_overwrite_allowed = ""
+    node_selector_overwrite_allowed = "kubernetes.io/arch=.*" # <--- allows overwrite of the architecture
+```
+
+:::TabTitle `.gitlab-ci.yml`
+
+```yaml
+  job:
+    image: IMAGE_NAME
+    variables:
+      KUBERNETES_NODE_SELECTOR_ARCH: 'kubernetes.io/arch=amd64' # <--- select the right architecture
+```
+
+::EndTabs
+
 ### Overwrite pod labels
 
 To overwrite Kubernetes pod labels for each CI/CD job:
