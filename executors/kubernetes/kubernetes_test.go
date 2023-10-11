@@ -2033,6 +2033,7 @@ func TestPrepare(t *testing.T) {
 									Name:      "repo",
 									MountPath: "/builds",
 									Medium:    "Memory",
+									SizeLimit: "1G",
 								},
 							},
 						},
