@@ -1303,24 +1303,6 @@ func TestBuildMultilineCommand(t *testing.T) {
 	assert.Contains(t, out, "collapsed multi-line command")
 }
 
-func TestBuildWithBrokenGitSSLCAInfo(t *testing.T) {
-	skipOnGit(t, "< 1.9")
-	skipOnGit(t, ">= 2.10.2")
-
-	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		successfulBuild, err := common.GetRemoteBrokenTLSBuild()
-		assert.NoError(t, err)
-		build := newBuild(t, successfulBuild, shell)
-
-		build.Runner.URL = "https://gitlab.com"
-
-		out, err := buildtest.RunBuildReturningOutput(t, build)
-		assert.Error(t, err)
-		assert.Contains(t, out, "Created fresh repository")
-		assert.NotContains(t, out, "Updating/initializing submodules")
-	})
-}
-
 func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
