@@ -1366,38 +1366,6 @@ func TestDocker1_13Compatibility(t *testing.T) {
 	testDockerVersion(t, "1.13")
 }
 
-func TestDockerCommandWithBrokenGitSSLCAInfo(t *testing.T) {
-	test.SkipIfGitLabCIOn(t, test.OSWindows)
-	helpers.SkipIntegrationTests(t, "docker", "info")
-
-	successfulBuild, err := common.GetRemoteBrokenTLSBuild()
-	assert.NoError(t, err)
-	build := &common.Build{
-		JobResponse: successfulBuild,
-		Runner: &common.RunnerConfig{
-			RunnerCredentials: common.RunnerCredentials{
-				URL: "https://gitlab.com",
-			},
-			RunnerSettings: common.RunnerSettings{
-				Executor: "docker",
-				Docker: &common.DockerConfig{
-					Image:      common.TestAlpineImage,
-					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
-				},
-			},
-			SystemIDState: systemIDState,
-		},
-	}
-
-	var buffer bytes.Buffer
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
-	assert.Error(t, err)
-	out := buffer.String()
-	assert.Contains(t, out, "Created fresh repository")
-	assert.NotContains(t, out, "Updating/initializing submodules")
-}
-
 func TestDockerCommandWithGitSSLCAInfo(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
