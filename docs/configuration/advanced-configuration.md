@@ -288,6 +288,7 @@ The following settings define the Docker container parameters.
 | `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
 | `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
 | `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.15`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.18`. |
+| `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image ARCH and OS. |
 | `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
 | `hostname`                     | Custom hostname for the Docker container. |
 | `image`                        | The image to run jobs with. |
