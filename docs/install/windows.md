@@ -409,3 +409,13 @@ When this error occurs, ensure the user the Docker engine is running as has full
 The Docker engine must be able to write to this directory for certain actions, and without the correct permissions it will fail.
 
 [Read more about configuring Docker Engine on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/manage-docker/configure-docker-daemon).
+
+### Blank lines for Windows Subsystem for Linux (WSL) STDOUT output in job logs
+
+By default the STDOUT output for the Windows Subsystem for Linux (WSL) is not UTF8 encoded and displays as blank lines in the job logs. To display the STDOUT output, you can force UTF8 encoding for WSL by setting the `WSL_UTF8` environment variable.
+
+```yaml
+job:
+  variables:
+    WSL_UTF8: "1"
+```
