@@ -2568,7 +2568,6 @@ func featuresFn(features *common.FeaturesInfo) {
 }
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
 	common.RegisterExecutorProvider(common.ExecutorKubernetes, executors.DefaultExecutorProvider{
 		Creator: func() common.Executor {
 			return newExecutor()

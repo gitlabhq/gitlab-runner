@@ -4,9 +4,9 @@ package trace
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io"
 	"math"
-	"math/rand"
 	"strings"
 	"testing"
 	"unicode/utf8"
