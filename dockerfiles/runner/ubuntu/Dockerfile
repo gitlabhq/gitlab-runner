@@ -13,7 +13,7 @@ RUN apt-get update -y && \
         apt-transport-https \
         ca-certificates \
         curl \
-        git \
+        git git-lfs \
         wget \
         tzdata \
         openssh-client \
@@ -21,11 +21,9 @@ RUN apt-get update -y && \
 
 ARG DOCKER_MACHINE_VERSION
 ARG DUMB_INIT_VERSION
-ARG GIT_LFS_VERSION
 
-COPY gitlab-runner_*.deb checksums-* install-deps install-gitlab-runner install_git_lfs /tmp/
+COPY gitlab-runner_*.deb checksums-* install-deps install-gitlab-runner /tmp/
 RUN /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}"
-RUN /tmp/install_git_lfs
 RUN rm -rf /tmp/* /etc/gitlab-runner/.runner_system_id
 
 FROM $BASE_IMAGE
