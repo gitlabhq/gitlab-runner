@@ -44,9 +44,9 @@ param (
 	[string]$Path
 )
 
-%[1]s -File $Path
+%[1]s -File $Path; $command_exit_code = $LASTEXITCODE
 $script_path= %[1]s -command "(Get-Item $Path).BaseName"
-$out_json= '{"command_exit_code": ' + $LASTEXITCODE + ', "script": "' + $script_path + '"}'
+$out_json= '{"command_exit_code": ' + $command_exit_code + ', "script": "' + $script_path + '"}'
 echo ""
 echo "$out_json"
 Exit 0

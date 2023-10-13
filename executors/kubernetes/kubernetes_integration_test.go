@@ -134,6 +134,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesHugeScriptAndAfterScriptFeatureFlag":       testKubernetesHugeScriptAndAfterScriptFeatureFlag,
 		"testKubernetesCustomPodSpec":                             testKubernetesCustomPodSpec,
 		"testKubernetesClusterWarningEvent":                       testKubernetesClusterWarningEvent,
+		"testKubernetesFailingBuildForBashAndPwshFeatureFlag":     testKubernetesFailingBuildForBashAndPwshFeatureFlag,
 	}
 
 	featureFlags := []string{
@@ -596,7 +597,6 @@ My nested nested here-string
 
 			outBuffer := new(bytes.Buffer)
 			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
-			fmt.Println(outBuffer.String())
 			require.NoError(t, err)
 
 			if !featureFlagValue {
@@ -745,6 +745,39 @@ containers:
 			)
 
 			finalize(t, client, tc.namespace)
+		})
+	}
+}
+
+func testKubernetesFailingBuildForBashAndPwshFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		image string
+		shell string
+	}{
+		"bash failing script": {
+			image: common.TestAlpineImage,
+			shell: "bash",
+		},
+		"pwsh failing script": {
+			image: common.TestPwshImage,
+			shell: "pwsh",
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse("invalid_command")
+			})
+
+			build.Runner.RunnerSettings.Shell = tc.shell
+			build.JobResponse.Image.Name = tc.image
+
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			require.Error(t, err)
 		})
 	}
 }
