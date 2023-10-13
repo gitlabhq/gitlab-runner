@@ -88,7 +88,6 @@ if [ ! -f "$binary_file" ]; then
 fi
 
 cp "$binary_file" dockerfiles/runner-helper/binaries/gitlab-runner-helper
-cp dockerfiles/install_git_lfs dockerfiles/runner-helper/
 chmod +x dockerfiles/runner-helper/binaries/gitlab-runner-helper
 
 os=$(_docker version -f '{{.Server.Os}}')

@@ -18,8 +18,6 @@ build() {
            --platform linux/amd64,linux/ppc64le,linux/arm64  \
            --no-cache \
            --build-arg UBI_VERSION="${UBI_VERSION}" \
-           --build-arg GIT_VERSION="${GIT_VERSION}" \
-           --build-arg GIT_LFS_VERSION="${GIT_LFS_VERSION}" \
            --push \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
