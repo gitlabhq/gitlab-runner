@@ -7,7 +7,7 @@ RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
                         ruby ruby-dev python-pip \
                         dpkg-sig createrepo rpm \
-                        zip libffi-dev jq zip && \
+                        zip libffi-dev jq git-lfs && \
     rm -rf /var/lib/apt/lists/*
 
 # Set default locale for the environment
@@ -41,14 +41,6 @@ ARG BUILDX_VERSION
 RUN mkdir -p ~/.docker/cli-plugins && \
     wget -q https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64 -O ~/.docker/cli-plugins/docker-buildx && \
     chmod a+x ~/.docker/cli-plugins/docker-buildx
-
-ARG GIT_LFS_VERSION
-ARG GIT_LFS_AMD64_CHECKSUM
-ARG GIT_LFS_CHECKSUM=${GIT_LFS_AMD64_CHECKSUM}
-ARG ARCH=amd64
-
-COPY dockerfiles/install_git_lfs /tmp/
-RUN /tmp/install_git_lfs
 
 # Install kubectl
 ARG KUBECTL_VERSION

@@ -10,13 +10,8 @@ ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 # hadolint ignore=DL3018
 RUN apk update && \
     apk upgrade --no-cache && \
-    apk add --no-cache -u ca-certificates curl git busybox zlib pcre2 bash dumb-init miniperl \
+    apk add --no-cache -u ca-certificates curl git git-lfs busybox zlib pcre2 bash dumb-init miniperl \
     && ln -s miniperl /usr/bin/perl
-
-ARG GIT_LFS_VERSION
-
-COPY ./install_git_lfs /tmp/
-RUN /tmp/install_git_lfs
 
 COPY ./helpers/entrypoint /
 RUN chmod +x /entrypoint
