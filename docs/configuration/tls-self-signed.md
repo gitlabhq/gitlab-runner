@@ -42,8 +42,7 @@ the [next section](#trusting-tls-certificates-for-docker-and-kubernetes-executor
 GitLab Runner supports the following options:
 
 - **Default - Read the system certificate**: GitLab Runner reads the system certificate store and verifies the
-  GitLab server against the certificate authorities (CA) stored in the system. Note that reading from
-  the system certificate store is [not supported in Windows](https://github.com/golang/go/issues/16736).
+  GitLab server against the certificate authorities (CA) stored in the system.
 
 - **Specify a custom certificate file**: GitLab Runner exposes the `tls-ca-file` option during [registration](../commands/index.md#gitlab-runner-register)
   (`gitlab-runner register --tls-ca-file=/path`), and in [`config.toml`](advanced-configuration.md)
