@@ -11,6 +11,7 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/samber/lo"
+
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/constants"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/packages"
 )
@@ -143,7 +144,7 @@ func (p Package) {{ .Name }}() error {
 // Deps makes sure the packages needed to build rpm and deb packages are available on the system
 func (p Package) Deps() error {
 	if err := sh.Run("fpm", "--help"); err != nil {
-		return sh.RunV("gem", "install", "rake", "fpm:1.10.2", "--no-document")
+		return sh.RunV("gem", "install", "rake", "fpm:1.15.1", "--no-document")
 	}
 
 	return nil
