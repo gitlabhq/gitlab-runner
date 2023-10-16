@@ -277,7 +277,7 @@ Boolean parameters must be passed in the command line with `--key={true|false}`.
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
 Additional options can be easily configured during runner registration using the
-[configuration template file](../register/index.md#runners-configuration-template-file) feature.
+[configuration template file](../register/index.md#register-with-a-configuration-template) feature.
 
 ### `gitlab-runner list`
 

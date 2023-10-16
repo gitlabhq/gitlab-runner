@@ -53,7 +53,7 @@ Some properties are only available with more recent versions of the Operator.
 | `azure`          | all      | Options used to setup Azure cache. Refer to [Cache properties](#cache-properties). |
 | `ca`             | all      | Name of TLS secret containing the custom certificate authority (CA) certificates. |
 | `serviceaccount` | all      | Use to override service account used to run the Runner pod. |
-| `config`         | all      | Use to provide a custom config map with a [configuration template](../register/index.md#runners-configuration-template-file). |
+| `config`         | all      | Use to provide a custom config map with a [configuration template](../register/index.md#register-with-a-configuration-template). |
 
 ## Cache properties
 
@@ -147,7 +147,7 @@ NOTE:
 The use of a configuration template to customize `config.toml` is currently limited to specifying `[runners.kubernetes.volumes]` settings.
 Support to extend this to other settings is proposed in [issue 49](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/49).
 
-You can customize the runner's `config.toml` file by using the [configuration template](../register/index.md#runners-configuration-template-file).
+You can customize the runner's `config.toml` file by using the [configuration template](../register/index.md#register-with-a-configuration-template).
 
 1. Create a custom config template file. For example, let's instruct our runner to mount an `EmptyDir` volume. Create the `custom-config.toml` file:
 
@@ -336,7 +336,7 @@ Some jobs (for example, buildah) need the `SETFCAP` capability granted to run co
 1. Add the SETFCAP capability to the SCC that GitLab Runner is using (replace the `gitlab-scc` with the SCC assigned to your GitLab Runner pod):
 
     ```shell
-    oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'  
+    oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'
     ```
 
 1. Update your `config.toml` and add the `SETFCAP` capability under the `kubernetes` section:
@@ -353,7 +353,7 @@ Some jobs (for example, buildah) need the `SETFCAP` capability granted to run co
 1. Create a configmap using this `config.toml` in the namespace where GitLab Runner is deployed:
 
     ```shell
-    oc create configmap custom-config-toml --from-file config.toml=config.toml 
+    oc create configmap custom-config-toml --from-file config.toml=config.toml
     ```
 
 1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner pod name)

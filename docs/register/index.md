@@ -33,6 +33,8 @@ Prerequisite:
     [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
   - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
 
+After you register the runner, the configuration is saved to the `config.toml`.
+
 To register the runner with a [runner authentication token](https://docs.gitlab.com/ee/security/token_overview.html#runner-authentication-tokens):
 
 1. Run the register command:
@@ -383,6 +385,115 @@ These parameters can only be configured when a runner is created in the UI or wi
 - `--tag-list`
 - `--maintenance-note`
 
+## Register with a configuration template
+
+You can use a configuration template to register a runner with settings that are not supported by the `register` command.
+
+Prerequisites:
+
+- The volume for the location of the template file must be mounted on the GitLab Runner container.
+- A runner authentication or registration token:
+  - Obtain a runner authentication token (recommended). You can either:
+    - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
+    [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
+    [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
+    - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
+  - Obtain a runner registration token (deprecated) for a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-registration-token-deprecated),
+  [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
+  [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated) runner.
+
+The configuration template can be used for automated environments that do not support some arguments
+in the `register` command due to:
+
+- Size limits on environment variables based on the environment.
+- Command-line options that are not available for executor volumes for Kubernetes.
+
+WARNING:
+The configuration template supports only a single [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section)
+section and does not support global options.
+
+To register a runner:
+
+1. Create a configuration template file with the `.toml` format and add your specifications. For example:
+
+   ```toml
+   [[runners]]
+     [runners.kubernetes]
+     [runners.kubernetes.volumes]
+       [[runners.kubernetes.volumes.empty_dir]]
+         name = "empty_dir"
+         mount_path = "/path/to/empty_dir"
+         medium = "Memory"
+   ```
+
+1. Add the path to the file. You can use either:
+   - The [non-interactive mode](../commands/index.md#non-interactive-registration) in the command line:
+
+     ```shell
+     $ sudo gitlab-runner register \
+     --template-config /tmp/test-config.template.toml \
+     --non-interactive \
+     --url "https://gitlab.com" \
+     --token <TOKEN> \ "# --registration-token if using the deprecated runner registration token"
+     --name test-runner \
+     --executor kubernetes
+     --host = "http://localhost:9876/"
+     ```
+
+   - The environment variable in the `.gitlab.yaml` file:
+
+     ```yaml
+     variables:
+       TEMPLATE_CONFIG_FILE = <file_path>
+     ```
+
+    If you update the environment variable, you do not need to
+    add the file path in the `register` command each time you register.
+
+After you register the runner, the settings in the configuration template
+are merged with the `[[runners]]` entry created in the `config.toml`:
+
+```toml
+concurrent = 1
+check_interval = 0
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = "test-runner"
+  url = "https://gitlab.com"
+  token = glrt-<TOKEN>
+  executor = "kubernetes"
+  [runners.kubernetes]
+    host = "http://localhost:9876/"
+    bearer_token_overwrite_allowed = false
+    image = ""
+    namespace = ""
+    namespace_overwrite_allowed = ""
+    privileged = false
+    service_account_overwrite_allowed = ""
+    pod_labels_overwrite_allowed = ""
+    pod_annotations_overwrite_allowed = ""
+    [runners.kubernetes.volumes]
+
+       [[runners.kubernetes.volumes.empty_dir]]
+         name = "empty_dir"
+         mount_path = "/path/to/empty_dir"
+         medium = "Memory"
+```
+
+Template settings are merged only for options that are:
+
+- Empty strings
+- Null or non-existent entries
+- Zeroes
+
+Command-line arguments or environment variables take precedence over
+settings in the configuration template. For example, if the template
+specifies a `docker` executor, but the command line specifies `shell`,
+the configured executor is `shell`.
+
 ## Registering runners with Docker
 
 After you register the runner with a Docker container:
@@ -393,271 +504,6 @@ After you register the runner with a Docker container:
 NOTE:
 If `gitlab-runner restart` runs in a Docker container, GitLab Runner starts a new process instead of restarting the existing process.
 To apply configuration changes, restart the Docker container instead.
-
-## `[[runners]]` configuration template file
-
-Some runner configuration settings can't be set with environment variables or command line options.
-
-For example:
-
-- Environment variables do not support slices.
-- Command line option support is intentionally unavailable for the settings for the
-  whole Kubernetes executor volumes tree.
-
-This is a problem for environments that are handled by any kind of automation, such as the
-[GitLab Runner official Helm chart](../install/kubernetes.md). In cases like these, the only solution was
-to manually update the `config.toml` file after the runner was registered. This is less
-than ideal, error-prone, and not reliable. Especially when more than one registration
-for the same GitLab Runner installation is done.
-
-This problem can be resolved with the usage of a _configuration template file_.
-
-To use a configuration template file, pass a path to the file to `register` with either
-the:
-
-- `--template-config` command line option.
-- `TEMPLATE_CONFIG_FILE` environment variable.
-
-The configuration template file supports:
-
-- Only a single
-  [`[[runners]]`](../configuration/advanced-configuration.md#the-runners-section)
-  section.
-- No global options.
-
-When `--template-config` or `TEMPLATE_CONFIG_FILE` is used, the configuration of `[[runners]]` entry
-is merged into the configuration of newly created `[[runners]]` entry in the regular `config.toml`
-file.
-
-The merging is done only for options that were _empty_. That is:
-
-- Empty strings.
-- Nulls or/non existent entries.
-- Zeroes.
-
-With this:
-
-- All configuration provided with command line options and/or environment variables during the
-  `register` command call take precedence.
-- The template fills the gaps and adds additional settings.
-
-### Example
-
-We register a Kubernetes-executor-based runner to some test project and see what the
-`config.toml` file looks like:
-
-```shell
-$ sudo gitlab-runner register \
-     --config /tmp/test-config.toml \
-     --non-interactive \
-     --url "https://gitlab.com" \
-     --registration-token __REDACTED__ \
-     --name test-runner \
-     --tag-list kubernetes,test \
-     --locked \
-     --paused \
-     --executor kubernetes \
-     --kubernetes-host http://localhost:9876/
-
-Runtime platform                                    arch=amd64 os=linux pid=1684 revision=436955cb version=15.11.0
-
-Registering runner... succeeded                     runner=__REDACTED__
-Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
-```
-
-The command above creates the following `config.toml` file:
-
-```toml
-concurrent = 1
-check_interval = 0
-
-[session_server]
-  session_timeout = 1800
-
-[[runners]]
-  name = "test-runner"
-  url = "https://gitlab.com"
-  token = "__REDACTED__"
-  executor = "kubernetes"
-  [runners.cache]
-    [runners.cache.s3]
-    [runners.cache.gcs]
-  [runners.kubernetes]
-    host = "http://localhost:9876/"
-    bearer_token_overwrite_allowed = false
-    image = ""
-    namespace = ""
-    namespace_overwrite_allowed = ""
-    privileged = false
-    service_account_overwrite_allowed = ""
-    pod_labels_overwrite_allowed = ""
-    pod_annotations_overwrite_allowed = ""
-    [runners.kubernetes.volumes]
-```
-
-We can see the basic configuration created from the provided command line options:
-
-- Runner credentials (URL and token).
-- The executor specified.
-- The default, empty section `runners.kubernetes` with only the one option
-  provided during the registration filled out.
-
-Normally one would have to set few more options to make the Kubernetes executor
-usable, but the above is enough for the purpose of our example.
-
-Let's now assume that we have to configure an `emptyDir` volume for our Kubernetes executor. There is
-no way to add this while registering with neither environment variables nor command line options.
-We would have to **manually append** something like this to the end of the file:
-
-```toml
-[[runners.kubernetes.volumes.empty_dir]]
-  name = "empty_dir"
-  mount_path = "/path/to/empty_dir"
-  medium = "Memory"
-```
-
-Because [TOML](https://github.com/toml-lang/toml) doesn't require proper indentation (it
-relies on entries ordering), we could just append the required changes to the end of the
-file.
-​
-However, this becomes tricky when more `[[runners]]` sections are being registered
-within one `config.toml` file. The assumption that the new one is always at the
-end is risky.
-
-With GitLab Runner 12.2, this becomes much easier using the `--template-config` flag.
-
-```shell
-$ cat > /tmp/test-config.template.toml << EOF
-[[runners]]
-  [runners.kubernetes]
-    [runners.kubernetes.volumes]
-      [[runners.kubernetes.volumes.empty_dir]]
-        name = "empty_dir"
-        mount_path = "/path/to/empty_dir"
-        medium = "Memory"
-EOF
-```
-
-Having the file, we can now try to register the runner again, but this time adding the
-`--template-config /tmp/test-config.template.toml` option. Apart from this change, the
-rest of registration command is exactly the same:
-
-```shell
-$ sudo gitlab-runner register \
-     --config /tmp/test-config.toml \
-     --template-config /tmp/test-config.template.toml \
-     --non-interactive \
-     --url "https://gitlab.com" \
-     --registration-token __REDACTED__ \
-     --name test-runner \
-     --tag-list kubernetes,test \
-     --locked \
-     --paused \
-     --executor kubernetes \
-     --kubernetes-host http://localhost:9876/
-
-Runtime platform                                    arch=amd64 os=linux pid=8798 revision=436955cb version=15.11.0
-
-Registering runner... succeeded                     runner=__REDACTED__
-Merging configuration from template file
-Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
-```
-
-As we can see, there is a little change in the output of the registration command.
-We can see a `Merging configuration from template file` line.
-
-Now let's see what the configuration file looks like after using the template:
-
-```toml
-concurrent = 1
-check_interval = 0
-
-[session_server]
-  session_timeout = 1800
-
-[[runners]]
-  name = "test-runner"
-  url = "https://gitlab.com"
-  token = "__REDACTED__"
-  executor = "kubernetes"
-  [runners.cache]
-    [runners.cache.s3]
-    [runners.cache.gcs]
-  [runners.kubernetes]
-    host = "http://localhost:9876/"
-    bearer_token_overwrite_allowed = false
-    image = ""
-    namespace = ""
-    namespace_overwrite_allowed = ""
-    privileged = false
-    service_account_overwrite_allowed = ""
-    pod_labels_overwrite_allowed = ""
-    pod_annotations_overwrite_allowed = ""
-    [runners.kubernetes.volumes]
-
-      [[runners.kubernetes.volumes.empty_dir]]
-        name = "empty_dir"
-        mount_path = "/path/to/empty_dir"
-        medium = "Memory"
-```
-
-We can see, that the configuration is almost the same as it was previously. The only
-change is that it now has the `[[runners.kubernetes.volumes.empty_dir]]` entry with
-its options at the end of the file. It's added to the `[[runners]]` entry that was
-created by the registration. And because the whole file is saved with the same mechanism,
-we also have proper indentation.
-
-If the configuration template includes a settings, and the same setting is passed to the
-`register` command, the one passed to the `register` command takes precedence over the one
-specified inside of the configuration template.
-
-```shell
-$ cat > /tmp/test-config.template.toml << EOF
-[[runners]]
-  executor = "docker"
-EOF
-
-$ sudo gitlab-runner register \
-     --config /tmp/test-config.toml \
-     --template-config /tmp/test-config.template.toml \
-     --non-interactive \
-     --url "https://gitlab.com" \
-     --registration-token __REDACTED__ \
-     --name test-runner \
-     --tag-list shell,test \
-     --locked \
-     --paused \
-     --executor shell
-
-Runtime platform                                    arch=amd64 os=linux pid=12359 revision=436955cb version=15.11.0
-
-Registering runner... succeeded                     runner=__REDACTED__
-Merging configuration from template file
-Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
-```
-
-As we can see, the registration command is specifying the `shell` executor, while the template
-contains the `docker` one. Let's see what is the final configuration content:
-
-```toml
-concurrent = 1
-check_interval = 0
-
-[session_server]
-  session_timeout = 1800
-
-[[runners]]
-  name = "test-runner"
-  url = "https://gitlab.com"
-  token = "__REDACTED__"
-  executor = "shell"
-  [runners.cache]
-    [runners.cache.s3]
-    [runners.cache.gcs]
-```
-
-The configuration set with the `register` command options took priority and was
-chosen to be placed in the final configuration.
 
 ## Troubleshooting
 
