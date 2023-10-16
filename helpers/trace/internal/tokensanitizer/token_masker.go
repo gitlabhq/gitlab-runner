@@ -105,7 +105,7 @@ type tokenSanitizer struct {
 //nolint:funlen,gocognit
 func (m *tokenSanitizer) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {
-		return
+		return 0, nil
 	}
 
 	// fast path: if the write is "[MASKED]" from an upper-level, don't bother
