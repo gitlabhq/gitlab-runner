@@ -150,9 +150,9 @@ ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)
 
 ### Additional configuration
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#runners-configuration-template-file) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
+> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#register-with-a-configuration-template) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
-You can use a [configuration template file](../register/index.md#runners-configuration-template-file)
+You can use a [configuration template file](../register/index.md#register-with-a-configuration-template)
 to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#configuration-settings).
 You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
