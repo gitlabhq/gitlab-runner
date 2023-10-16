@@ -6,7 +6,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/wait"
@@ -93,14 +92,7 @@ func (d *dockerLinuxSetter) createContainer(
 	}
 
 	containerName := fmt.Sprintf("%s-set-permission-%s", volumeName, uuid)
-	platform := v1.Platform{
-		Architecture: d.helperImage.Architecture,
-		OS:           d.helperImage.Os,
-		OSVersion:    d.helperImage.OsVersion,
-		Variant:      d.helperImage.Variant,
-	}
-
-	c, err := d.client.ContainerCreate(ctx, config, hostConfig, nil, &platform, containerName)
+	c, err := d.client.ContainerCreate(ctx, config, hostConfig, nil, nil, containerName)
 	if err != nil {
 		return "", err
 	}

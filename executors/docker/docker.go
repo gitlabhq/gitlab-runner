@@ -210,7 +210,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 		e.Println("Using helper image: ", imageNameFromConfig, " (overridden, default would be ", e.helperImageInfo, ")")
 
-		return e.pullManager.GetDockerImage(imageNameFromConfig, e.Build.Image.ExecutorOptions.Docker, nil)
+		return e.pullManager.GetDockerImage(imageNameFromConfig, common.ImageDockerOptions{}, nil)
 	}
 
 	e.Debugln(fmt.Sprintf("Looking for prebuilt image %s...", e.helperImageInfo))
@@ -229,7 +229,7 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 
 	// Fall back to getting image from registry
 	e.Debugln(fmt.Sprintf("Loading image form registry: %s", e.helperImageInfo))
-	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), e.Build.Image.ExecutorOptions.Docker, nil)
+	return e.pullManager.GetDockerImage(e.helperImageInfo.String(), common.ImageDockerOptions{}, nil)
 }
 
 func (e *executor) getLocalHelperImage() *types.ImageInspect {

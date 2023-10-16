@@ -218,10 +218,8 @@ func TestHelperImageWithVariable(t *testing.T) {
 	defer p.AssertExpectations(t)
 
 	runnerImageTag := "gitlab/gitlab-runner:" + common.REVISION
-	dockerImageOptions := common.ImageDockerOptions{}
-	dockerImageOptions.Platform = "foo/bar"
 
-	p.On("GetDockerImage", runnerImageTag, dockerImageOptions, []common.DockerPullPolicy(nil)).
+	p.On("GetDockerImage", runnerImageTag, common.ImageDockerOptions{}, []common.DockerPullPolicy(nil)).
 		Return(&types.ImageInspect{ID: "helper-image"}, nil).
 		Once()
 
@@ -232,8 +230,6 @@ func TestHelperImageWithVariable(t *testing.T) {
 	e.Config.Docker = &common.DockerConfig{
 		HelperImage: "gitlab/gitlab-runner:${CI_RUNNER_REVISION}",
 	}
-
-	e.Build.Image.ExecutorOptions = common.ImageExecutorOptions{Docker: dockerImageOptions}
 
 	img, err := e.getPrebuiltImage()
 	assert.NoError(t, err)
