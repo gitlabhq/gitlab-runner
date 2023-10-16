@@ -298,7 +298,11 @@ fuzz variable mask:
   - 'clone test repo'
   - 'prepare done'
   script:
+  # pre-pull windows images before starting tests
   - docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest-${WINDOWS_VERSION}
+  - docker pull registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0
+  - docker network create -d "nat" test-network
+  - docker network rm test-network
   - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 -tags integration ./... -- -timeout 30m
 
 # Only test the oldest supported version in merge requests,
