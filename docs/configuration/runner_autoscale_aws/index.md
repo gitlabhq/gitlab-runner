@@ -431,7 +431,7 @@ in the upstream project. For more information, see issues
 [#2771](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2771) and
 [#2772](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2772).
 
-Gitlab's fork does not support AWS EC2 Fleets and their use with spot instances. 
+The GitLab fork does not support AWS EC2 fleets and their use with spot instances. 
 As an alternative, you can use the 
 [Continuous Kernel Integration Project's downstream fork](https://gitlab.com/cki-project/mirror/docker-machine).
 
