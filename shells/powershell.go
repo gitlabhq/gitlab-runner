@@ -191,7 +191,7 @@ func psReplaceSpecialChars(text string) string {
 }
 
 func psSingleQuote(text string) string {
-	return singleQuote(psReplaceSpecialChars(text))
+	return singleQuote(text)
 }
 
 // github.com/PowerShell/PowerShell/blob/v7.3.1/src/System.Management.Automation/engine/parser/CharTraits.cs#L276-L282
