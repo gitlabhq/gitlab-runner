@@ -405,12 +405,7 @@ func (s *executor) setupDefaultExecutorOptions(os string) {
 }
 
 func (s *executor) prepareHelperImage() (helperimage.Info, error) {
-	config := helperimage.Config{
-		OSType:       helperimage.OSTypeLinux,
-		Architecture: "amd64",
-		Shell:        s.Config.Shell,
-		Flavor:       s.ExpandValue(s.Config.Kubernetes.HelperImageFlavor),
-	}
+	config := s.retrieveHelperImageConfig()
 
 	// use node selector labels to better select the correct image
 	if s.Config.Kubernetes.NodeSelector != nil {
@@ -441,6 +436,26 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 	}
 
 	return helperimage.Get(common.REVISION, config)
+}
+
+func (s *executor) retrieveHelperImageConfig() helperimage.Config {
+	cfg := helperimage.Config{
+		OSType:       helperimage.OSTypeLinux,
+		Architecture: "amd64",
+		Shell:        s.Config.Shell,
+		Flavor:       s.ExpandValue(s.Config.Kubernetes.HelperImageFlavor),
+	}
+
+	if !s.Config.Kubernetes.HelperImageAutosetArchAndOS {
+		return cfg
+	}
+
+	cfg.Architecture = common.AppVersion.Architecture
+	if helperimage.OSTypeWindows == common.AppVersion.OS {
+		cfg.OSType = helperimage.OSTypeWindows
+	}
+
+	return cfg
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {

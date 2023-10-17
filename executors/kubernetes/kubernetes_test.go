@@ -1195,6 +1195,38 @@ func TestPrepare(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	getExecutorForHelperAutoset := func() *executor {
+		hi := helperimage.Info{
+			Architecture:            "x86_64",
+			OSType:                  helperimage.OSTypeLinux,
+			Name:                    helperimage.GitLabRegistryName,
+			Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
+			IsSupportingLocalImport: true,
+			Cmd:                     []string{"gitlab-runner-build"},
+		}
+		if !strings.Contains(runtime.GOARCH, "amd") {
+			hi.Architecture = runtime.GOARCH
+			hi.Tag = fmt.Sprintf("%s-%s", hi.Architecture, helperImageTag)
+		}
+		if runtime.GOOS == helperimage.OSTypeWindows {
+			hi.OSType = helperimage.OSTypeWindows
+			hi.Name = ""
+			hi.Architecture = ""
+			hi.Tag = ""
+			hi.IsSupportingLocalImport = false
+			hi.Cmd = nil
+		}
+		return &executor{
+			options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+				},
+			},
+			configurationOverwrites: defaultOverwrites,
+			helperImageInfo:         hi,
+		}
+	}
+
 	tests := []struct {
 		Name  string
 		Error string
@@ -2353,6 +2385,31 @@ func TestPrepare(t *testing.T) {
 				helperImageInfo:         defaultHelperImage,
 			},
 			Error: "conversion to Kubernetes policy: unsupported pull policy: \"invalid\"",
+		},
+		{
+			Name:         "autoset helper arch and os",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:                       "test-image",
+						Host:                        "test-server",
+						HelperImageAutosetArchAndOS: true,
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: getExecutorForHelperAutoset(),
 		},
 	}
 
