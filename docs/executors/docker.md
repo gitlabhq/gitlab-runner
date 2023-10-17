@@ -235,7 +235,7 @@ Example:
 [[runners]]
   (...)
   executor = "docker"
-  environment = ["FF_NETWORK_PER_BUILD = 1"]
+  environment = ["FF_NETWORK_PER_BUILD=1"]
 ```
 
 Or:
