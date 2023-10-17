@@ -249,7 +249,9 @@ func (p *PsWriter) CommandArgExpand(command string, arguments ...string) {
 	p.checkErrorLevel()
 }
 
-func (p *PsWriter) SectionStart(id, command string) {}
+func (p *PsWriter) SectionStart(id, command string) {
+	p.Noticef("$ %s", command)
+}
 
 func (p *PsWriter) SectionEnd(id string) {}
 

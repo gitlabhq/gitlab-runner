@@ -647,6 +647,8 @@ func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo
 	for i, command := range commands {
 		command = strings.TrimSpace(command)
 
+		// When FF_SCRIPT_SECTIONS is enabled, the multiline commands are entirely displayed
+		// PowerShell is not supported at the moment
 		if info.Build.IsFeatureFlagOn(featureflags.ScriptSections) &&
 			info.Build.JobResponse.Features.TraceSections {
 			b.writeCommandWithSection(w, fmt.Sprintf("%s_%d", prefix, i), command)
@@ -656,7 +658,6 @@ func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo
 		if command != "" {
 			lines := strings.SplitN(command, "\n", 2)
 			if len(lines) > 1 {
-				// TODO: this should be collapsable once we introduce that in GitLab
 				w.Noticef("$ %s # collapsed multi-line command", lines[0])
 			} else {
 				w.Noticef("$ %s", lines[0])
@@ -674,13 +675,7 @@ func (b *AbstractShell) writeCommandWithSection(w ShellWriter, sectionName, comm
 		w.EmptyLine()
 	}
 
-	lines := strings.SplitN(command, "\n", 2)
-	if len(lines) > 1 {
-		w.SectionStart(sectionName, fmt.Sprintf("$ %s # collapsed multi-line command", lines[0]))
-	} else {
-		w.SectionStart(sectionName, fmt.Sprintf("$ %s", lines[0]))
-	}
-
+	w.SectionStart(sectionName, fmt.Sprintf("$ %s", command))
 	w.Line(command)
 	w.CheckForErrors()
 	w.SectionEnd(sectionName)

@@ -157,8 +157,10 @@ var flags = []FeatureFlag{
 		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When enabled, each script line from the `.gitlab-ci.yml` file will be in a collapsible " +
-			"section in the job output and show the duration of each line.",
+		Description: "When enabled, each script line from the `.gitlab-ci.yml` file is in a collapsible " +
+			"section in the job output, and shows the duration of each line. " +
+			"When the command spans multiple lines, the complete command is " +
+			"displayed within the job log output terminal.",
 	},
 	{
 		Name:            UseNewShellEscape,
