@@ -548,6 +548,7 @@ You can either:
     |-------------------|-----------------------------------------|
     | pods/attach       | create, patch, delete                   |
     | pods/exec         | create, patch, delete                   |
+    | pods/log          | get                                     |
     | pods              | get, watch, create, delete              |
     | services          | get, watch, create, delete              |
     | secrets           | get, create, update, delete             |
