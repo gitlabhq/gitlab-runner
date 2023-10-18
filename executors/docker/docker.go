@@ -372,6 +372,7 @@ func (e *executor) isInPrivilegedServiceList(serviceDefinition common.Image) boo
 	return isInAllowedPrivilegedImages(serviceDefinition.Name, e.Config.Docker.AllowedPrivilegedServices)
 }
 
+//nolint:funlen
 func (e *executor) createService(
 	serviceIndex int,
 	service, version, image string,
@@ -417,7 +418,10 @@ func (e *executor) createService(
 	hostConfig := e.createHostConfigForService()
 	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(definition)
 	networkConfig := e.networkConfig(linkNames)
-	platform := platformForImage(*serviceImage)
+	var platform *v1.Platform
+	if definition.ExecutorOptions.Docker.Platform != "" {
+		platform = platformForImage(*serviceImage)
+	}
 
 	e.Debugln("Creating service container", containerName, "...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
@@ -535,6 +539,7 @@ func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
 	return isInAllowedPrivilegedImages(imageDefinition.Name, e.Config.Docker.AllowedPrivilegedImages)
 }
 
+//nolint:funlen
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
@@ -579,7 +584,11 @@ func (e *executor) createContainer(
 
 	aliases := []string{"build", containerName}
 	networkConfig := e.networkConfig(aliases)
-	platform := platformForImage(*image)
+
+	var platform *v1.Platform
+	if imageDefinition.ExecutorOptions.Docker.Platform != "" {
+		platform = platformForImage(*image)
+	}
 
 	// this will fail potentially some builds if there's name collision
 	_ = e.removeContainer(e.Context, containerName)
