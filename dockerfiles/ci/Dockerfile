@@ -1,12 +1,12 @@
 ARG GO_VERSION
-FROM golang:${GO_VERSION}-bookworm
+FROM golang:${GO_VERSION}-bullseye
 
 # Install required dependencies
 # hadolint ignore=DL3008,DL3015
 RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
     ruby ruby-dev python3-pip \
-    createrepo-c rpm \
+    dpkg-sig createrepo-c rpm \
     zip libffi-dev jq git-lfs && \
     rm -rf /var/lib/apt/lists/*
 
