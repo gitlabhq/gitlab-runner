@@ -439,6 +439,11 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Command("git", "config", "-f", templateFile, "init.defaultBranch", "none")
 	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
+
+	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
+		w.Command("git", "config", "-f", templateFile, "transfer.bundleURI", "true")
+	}
+
 	if build.IsSharedEnv() {
 		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
 	}

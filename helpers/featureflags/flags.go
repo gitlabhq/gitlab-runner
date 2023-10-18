@@ -33,6 +33,7 @@ const (
 	EnableSecretResolvingFailsIfMissing  string = "FF_SECRET_RESOLVING_FAILS_IF_MISSING"
 	RetrievePodWarningEvents             string = "FF_RETRIEVE_POD_WARNING_EVENTS"
 	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
+	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
 )
 
 type FeatureFlag struct {
@@ -272,6 +273,13 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, all events associated with the build pod will be printed until it's started.",
+	},
+	{
+		Name:         UseGitBundleURIs,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, the Git `transfer.bundleURI` configuration option is set to `true`. This FF is enabled by default. " +
+			"Set to `false` to disable Git bundle support.",
 	},
 }
 
