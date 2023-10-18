@@ -891,3 +891,13 @@ func TestDockerGetImagePlatformSuccess(t *testing.T) {
 	assert.NotNil(t, image)
 	assert.Equal(t, "arm64/v8", image.Architecture)
 }
+
+func TestGetDockerImageWithPlatform(t *testing.T) {
+	remoteImage := "registry.domain.tld:5005/image/name:version"
+
+	dockerConfig := &common.DockerConfig{}
+	dockerOptions := common.ImageDockerOptions{Platform: "foo/bar"}
+	m := newDefaultTestManager(nil, dockerConfig)
+
+	testGetDockerImage(t, m, remoteImage, dockerOptions, addPullsRemoteImageExpectations)
+}
