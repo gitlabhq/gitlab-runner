@@ -67,10 +67,6 @@ func (e *BuildLogger) sendLog(logger func(args ...interface{}), logPrefix string
 	logger(args...)
 }
 
-func (e *BuildLogger) Write(p []byte) (n int, err error) {
-	return e.log.Write(p)
-}
-
 func (e *BuildLogger) WriterLevel(level logrus.Level) *io.PipeWriter {
 	return e.entry.WriterLevel(level)
 }

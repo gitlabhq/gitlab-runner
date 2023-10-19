@@ -539,7 +539,7 @@ func (s *executor) watchPodEvents() error {
 }
 
 func (s *executor) printPodEvents() {
-	w := tabwriter.NewWriter(&s.BuildLogger, 3, 1, 3, ' ', 0)
+	w := tabwriter.NewWriter(s.Trace, 3, 1, 3, ' ', 0)
 	_, _ = fmt.Fprintln(w, "Type\tReason\tMessage")
 
 	// The s.eventsStream.Stop method will be called by the caller
@@ -703,7 +703,12 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		}
 	}
 
-	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
+	var out io.Writer = s.Trace
+	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+		out = io.Discard
+	}
+
+	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes)
 	if err != nil {
 		return fmt.Errorf("waiting for pod running: %w", err)
 	}
@@ -2275,7 +2280,12 @@ func (s *executor) runInContainerWithExec(
 	go func() {
 		defer close(errCh)
 
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
+		var out io.Writer = s.Trace
+		if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+			out = io.Discard
+		}
+
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes)
 		if err != nil {
 			errCh <- err
 			return
