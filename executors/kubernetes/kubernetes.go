@@ -501,13 +501,22 @@ func (s *executor) buildRetry(r retry.Retryable) *retry.Retry {
 	)
 }
 
-func (s *executor) watchPodEvents() error {
+func (s *executor) handlePodEvents() error {
 	// This will run the watcher only for the first call
 	// which is when the pod is being initialized
 	if s.eventsStream != nil {
 		return nil
 	}
 
+	if err := s.watchPodEvents(); err != nil {
+		return err
+	}
+
+	go s.printPodEvents()
+	return nil
+}
+
+func (s *executor) watchPodEvents() error {
 	s.BuildLogger.Println("Subscribing to Kubernetes Pod events...")
 	// Continue polling for the status of the pod as that feels more straightforward than
 	// checking for each individual container's status in the events.
@@ -585,12 +594,9 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 		}
 
 		if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
-			if err := s.watchPodEvents(); err != nil {
+			if err := s.handlePodEvents(); err != nil {
 				return err
 			}
-			defer s.eventsStream.Stop()
-
-			go s.printPodEvents()
 		}
 	}
 
@@ -650,15 +656,6 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
-		if err := s.watchPodEvents(); err != nil {
-			return err
-		}
-		defer s.eventsStream.Stop()
-
-		go s.printPodEvents()
-	}
-
 	podStatusCh := s.watchPodStatus(ctx)
 
 	select {
@@ -698,6 +695,12 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	err = s.setupBuildPod(ctx, []api.Container{permissionsInitContainer})
 	if err != nil {
 		return fmt.Errorf("setting up build pod: %w", err)
+	}
+
+	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+		if err := s.handlePodEvents(); err != nil {
+			return err
+		}
 	}
 
 	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, s.Trace, s.Config.Kubernetes)
@@ -998,6 +1001,10 @@ func (s *executor) Finish(err error) {
 }
 
 func (s *executor) Cleanup() {
+	if s.eventsStream != nil {
+		s.eventsStream.Stop()
+	}
+
 	s.cleanupResources()
 	closeKubeClient(s.kubeClient)
 	s.AbstractExecutor.Cleanup()

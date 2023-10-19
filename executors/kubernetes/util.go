@@ -178,28 +178,6 @@ func getPodPhase(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out
 		}
 	}
 
-	_, _ = fmt.Fprintf(
-		out,
-		"Waiting for pod %s/%s to be running, status is %s\n",
-		pod.Namespace,
-		pod.Name,
-		pod.Status.Phase,
-	)
-
-	for _, condition := range pod.Status.Conditions {
-		// skip conditions with no reason, these are typically expected pod conditions
-		if condition.Reason == "" {
-			continue
-		}
-
-		_, _ = fmt.Fprintf(
-			out,
-			"\t%s: %q\n",
-			condition.Reason,
-			condition.Message,
-		)
-	}
-
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
