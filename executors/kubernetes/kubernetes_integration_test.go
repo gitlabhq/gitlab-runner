@@ -136,6 +136,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesCustomPodSpec":                             testKubernetesCustomPodSpec,
 		"testKubernetesClusterWarningEvent":                       testKubernetesClusterWarningEvent,
 		"testKubernetesFailingBuildForBashAndPwshFeatureFlag":     testKubernetesFailingBuildForBashAndPwshFeatureFlag,
+		"testKubernetesPodEvents":                                 testKubernetesPodEvents,
 	}
 
 	featureFlags := []string{
@@ -172,6 +173,50 @@ func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, f
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func testKubernetesPodEvents(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	build.Image.Name = common.TestAlpineImage
+	build.Variables = append(
+		build.Variables,
+		common.JobVariable{Key: featureflags.PrintPodEvents, Value: "true"},
+	)
+
+	out, err := buildtest.RunBuildReturningOutput(t, build)
+	require.NoError(t, err)
+
+	expectedLines := []string{
+		"Type     Reason      Message",
+		"Normal   Scheduled   Successfully assigned",
+		"Normal   Pulled   Container image",
+	}
+
+	if build.Variables.Get(featureflags.UseLegacyKubernetesExecutionStrategy) == "true" {
+		expectedLines = append(
+			expectedLines,
+			"Normal   Created   Created container init-permissions",
+			"Normal   Started   Started container init-permissions",
+		)
+	}
+
+	expectedLines = append(
+		expectedLines,
+		"Normal   Pulling   Pulling image",
+		"Normal   Pulled   Successfully pulled image",
+		"Normal   Created   Created container build",
+		"Normal   Started   Started container build",
+		"Normal   Pulled   Container image",
+		"Normal   Created   Created container helper",
+		"Normal   Started   Started container helper",
+	)
+
+	for _, l := range expectedLines {
+		assert.Contains(t, out, l)
+	}
 }
 
 func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName string, featureFlagValue bool) {

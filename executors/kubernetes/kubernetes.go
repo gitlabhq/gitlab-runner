@@ -583,6 +583,15 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 		if err != nil {
 			return err
 		}
+
+		if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+			if err := s.watchPodEvents(); err != nil {
+				return err
+			}
+			defer s.eventsStream.Stop()
+
+			go s.printPodEvents()
+		}
 	}
 
 	containerName := buildContainerName
@@ -641,12 +650,14 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	if err := s.watchPodEvents(); err != nil {
-		return err
-	}
-	defer s.eventsStream.Stop()
+	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+		if err := s.watchPodEvents(); err != nil {
+			return err
+		}
+		defer s.eventsStream.Stop()
 
-	go s.printPodEvents()
+		go s.printPodEvents()
+	}
 
 	podStatusCh := s.watchPodStatus(ctx)
 

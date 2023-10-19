@@ -32,6 +32,7 @@ const (
 	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
 	EnableSecretResolvingFailsIfMissing  string = "FF_SECRET_RESOLVING_FAILS_IF_MISSING"
 	RetrievePodWarningEvents             string = "FF_RETRIEVE_POD_WARNING_EVENTS"
+	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 )
 
 type FeatureFlag struct {
