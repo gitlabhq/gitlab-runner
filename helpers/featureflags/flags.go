@@ -265,6 +265,12 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description:  "When enabled, all warning events associated with the Pod are retrieved when the job fails.",
 	},
+	{
+		Name:         PrintPodEvents,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, all events associated with the build pod will be printed until it's started.",
+	},
 }
 
 func GetAll() []FeatureFlag {
