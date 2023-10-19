@@ -582,22 +582,8 @@ func (s *executor) logPodWarningEvents(eventType string) {
 func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	ctx := cmd.Context
 
-	if s.pod == nil {
-		err := s.setupCredentials(ctx)
-		if err != nil {
-			return err
-		}
-
-		err = s.setupBuildPod(ctx, nil)
-		if err != nil {
-			return err
-		}
-
-		if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
-			if err := s.handlePodEvents(); err != nil {
-				return err
-			}
-		}
+	if err := s.setupPodLegacy(ctx); err != nil {
+		return err
 	}
 
 	containerName := buildContainerName
@@ -629,6 +615,30 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	case <-ctx.Done():
 		return fmt.Errorf("build aborted")
 	}
+}
+
+func (s *executor) setupPodLegacy(ctx context.Context) error {
+	if s.pod != nil {
+		return nil
+	}
+
+	err := s.setupCredentials(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = s.setupBuildPod(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+		if err := s.handlePodEvents(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
