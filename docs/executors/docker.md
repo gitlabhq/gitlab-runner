@@ -200,7 +200,7 @@ To define an image from a private registry, provide the registry name and the im
 Example:
 
 ```yaml
-image: my.registry.tld:5000/namepace/image:tag
+image: my.registry.tld:5000/namespace/image:tag
 ```
 
 In this example, GitLab Runner searches the registry `my.registry.tld:5000` for the
