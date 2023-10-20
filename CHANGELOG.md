@@ -1,3 +1,18 @@
+## v16.4.2 (2023-10-20)
+
+### Security fixes
+
+- Install git and git-lfs via package manager in ubi.fips.base image !4405
+
+### Bug fixes
+
+- Add missing findutils package to ubi-base image !4414
+- Retrieve script exit command after execution !4397
+
+### Maintenance
+
+- Remove WithBrokenGitSSLCAInfo tests as they no longer function as expected !4408
+
 ## v16.4.1 (2023-10-05)
 
 ### Security fixes
