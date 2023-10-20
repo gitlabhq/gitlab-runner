@@ -1,3 +1,65 @@
+## v16.5.0 (2023-10-20)
+
+### New features
+
+- Print Kubernetes Pod events !4420
+- Support of multi-line command output in job terminal output view for bash shell when FF_SCRIPT_SECTIONS is enabled !3486
+
+### Security fixes
+
+- Install git and git-lfs via package manager in ubi.fips.base image !4405
+- Run `apk upgrade` in runner alpine images !4378
+
+### Bug fixes
+
+- docker-machine: Ensure runner stays under limit when IdleCount is 0 !4314
+- When single-quoting, don't also quote with backtick with PowerShell/pwsh !4387 (Matthew Bradburn @mbradburn)
+- Add config to autoset Helper Image ARCH and OS !4386
+- Add missing findutils package to ubi-base image !4414
+- Set `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` default value to `true` !4361
+- Retrieve script exit command after execution !4397
+- Add missing runtime packages to ubi base image !4359
+- Fix the repository cloning error on Windows with `cmd` shell executor !4341
+- Fix powershell SourceEnv permission failure !4369
+- Fix powershell SourceEnv permission failure !4369
+
+### Maintenance
+
+- Display the stage command exit code when debug log is enabled !4421
+- Fix docs typo !4419 (Alex @AJIOB)
+- Downgrade CI image to use Debian bullseye instead of bookworm !4417
+- Enhance debug secrets warning in documentation !4415 (Matthew Bradburn @mbradburn-ext)
+- Add missing rbac when debugging services !4412 (Ismael Posada Trobo @iposadat)
+- Docs: point users to docker-machine fork that successfully handles EC2 fleet spot instance requests !4403
+- Remove note on no-support for Windows system certificate store !4409 (Taisuke 'Jeff' Inoue @jeffi7)
+- Remove spaces from FF_NETWORK_PER_BUILD environment variable example !4416
+- Use latest linter image in relevant pipelines !4411
+- Part 3: CTRT edits for registering runners !4392
+- Upgrade Go to version 1.20.10 !4348
+- Remove WithBrokenGitSSLCAInfo tests as they no longer function as expected !4408
+- Update file kubernetes.md !4393 (Thomas Spear @tspearconquest)
+- Detail how to output stdout for WSL on windows !4370
+- Add docs about Kubernetes overrides by CI variables !4222
+- Lock `gitlab-dangerfiles` to 4.1.0 !4401
+- Add link to Azure plugin releases to the instance executor documentation !4363
+- Add link to Azure plugin releases to the docker autoscaler executor !4364
+- CTRT register runners prt2 v2 !4395
+- Adding dial tcp timeout !4389
+- Update documentation to reflect use of runner-token !4390
+- Update PACKAGE_CLOUD variable default value !4342
+- Improve documentation regarding runner unregistration !4338
+- CTRT Part 1: Registering runners page !4371
+- Add documentation issue template to project !4382
+- Run apk upgrade in image used to build images !4381
+- Style and language improvements for Advanced configuration docs !4377
+- Improve error messages that are emitted by tasks !4344 (Taliesin Millhouse @strongishllama)
+- Add links to Trusting TLS certificates paragraphs !4376
+- Enable configuration of MTU in Docker executor !3576 (Jasmin @nachtjasmin)
+- fix: Sets some http headers to use constants !4355
+- Update default GIT_LFS_VERSION !4372 (Matthew Bradburn @mbradburn)
+- GIT_LFS_VERSION must be specified when running make at the command line. !4360 (Matthew Bradburn @mbradburn)
+- Fixed nvidia-smi typo !4367 (Alexander Hallard @zanda8893)
+
 ## v16.4.0 (2023-09-25)
 
 ### New features
