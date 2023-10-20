@@ -65,7 +65,7 @@ func (c StageCommandStatus) String() string {
 	strScript := "Script: empty-script"
 
 	if c.CommandExitCode != nil {
-		strCmdExitCode = fmt.Sprintf("CommandExitCode: %v", c.CommandExitCode)
+		strCmdExitCode = fmt.Sprintf("CommandExitCode: %v", *c.CommandExitCode)
 	}
 
 	if c.Script != nil {
