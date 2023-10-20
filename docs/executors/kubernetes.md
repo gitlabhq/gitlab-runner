@@ -460,7 +460,7 @@ can be affected by:
 - Enabling the [`FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag](../configuration/feature-flags.md).
   When enabled and the job times out, the pod running the CI/CD job is marked as
   failed and all associated containers are killed. To have the job time out on GitLab first,
-  set `activeDeadlineSeconds` to `configured timeout + 1 second`.
+  `activeDeadlineSeconds` is set to `configured timeout + 1 second`.
 
 NOTE:
 If both the `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag is enabled and the
