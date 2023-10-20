@@ -16,12 +16,20 @@ const (
 )
 
 func canCreateIdle(config *common.RunnerConfig, data *machinesData) bool {
+	return canCreate(config, data, false)
+}
+
+func canCreateOnDemand(config *common.RunnerConfig, data *machinesData) bool {
+	return canCreate(config, data, true)
+}
+
+func canCreate(config *common.RunnerConfig, data *machinesData, onDemand bool) bool {
 	ils := &idleLimitStrategy{
 		config: config,
 		data:   data,
 	}
 
-	return ils.canCreate()
+	return ils.canCreate(onDemand)
 }
 
 func shouldRemoveIdle(config *common.RunnerConfig, data *machinesData, details machineInfo) removeIdleReason {
@@ -42,12 +50,20 @@ type idleLimitStrategy struct {
 
 // canCreate checks if any of the defined filters detected
 // exceeding one of the tracked limits.
-func (ils *idleLimitStrategy) canCreate() bool {
-	exceeded := ils.machinesGrowthExceeded() ||
-		ils.totalMachinesExceeded() ||
-		ils.composedIdleMachinesExceeded()
+//
+// onDemand indicates that the caller wants to create machines as
+// they are needed by jobs, as opposed to the pre-scaling phase where idle
+// machines are allocated first.
+func (ils *idleLimitStrategy) canCreate(onDemand bool) bool {
+	if ils.machinesGrowthExceeded() || ils.totalMachinesExceeded() {
+		return false
+	}
 
-	return !exceeded
+	if onDemand && ils.config.Machine.GetIdleCount() <= 0 {
+		return true
+	}
+
+	return !ils.composedIdleMachinesExceeded()
 }
 
 // shouldRemove checks if the machine is in Idle state
