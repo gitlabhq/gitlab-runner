@@ -157,7 +157,7 @@ func (c *ArtifactsUploaderCommand) handleRedirect(location string) error {
 	return retryableErr{err: fmt.Errorf("request redirected")}
 }
 
-func (c *ArtifactsUploaderCommand) ShouldRetry(tries int, err error) bool {
+func (c *ArtifactsUploaderCommand) shouldRetry(tries int, err error) bool {
 	var errAs retryableErr
 	if !errors.As(err, &errAs) {
 		return false
@@ -202,9 +202,12 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 
 	// If the upload fails, exit with a non-zero exit code to indicate an issue?
 	logger := logrus.WithField("context", "artifacts-uploader")
-	retryable := retry.New(retry.WithLogrus(c, logger))
-	err = retryable.Run()
-	if err != nil {
+	retryable := retry.
+		New(c.Run).
+		WithCheck(c.shouldRetry).
+		WithLogrus(logger)
+
+	if err := retryable.Run(); err != nil {
 		logrus.Fatalln(err)
 	}
 }
