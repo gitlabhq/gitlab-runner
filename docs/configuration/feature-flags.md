@@ -70,6 +70,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_SET_PERMISSIONS_BEFORE_CLEANUP` | `true` | **{dotted-circle}** No |  | When enabled, permissions on directories and files in the project directory are set first, to ensure that deletions during cleanup are successful. |
 | `FF_SECRET_RESOLVING_FAILS_IF_MISSING` | `true` | **{dotted-circle}** No |  | When enabled, secret resolving fails if the value cannot be found. |
 | `FF_RETRIEVE_POD_WARNING_EVENTS` | `false` | **{dotted-circle}** No |  | When enabled, all warning events associated with the Pod are retrieved when the job fails. |
+| `FF_PRINT_POD_EVENTS` | `false` | **{dotted-circle}** No |  | When enabled, all events associated with the build pod will be printed until it's started. |
 
 <!-- feature_flags_list_end -->
 

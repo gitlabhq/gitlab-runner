@@ -32,6 +32,7 @@ const (
 	SetPermissionsBeforeCleanup          string = "FF_SET_PERMISSIONS_BEFORE_CLEANUP"
 	EnableSecretResolvingFailsIfMissing  string = "FF_SECRET_RESOLVING_FAILS_IF_MISSING"
 	RetrievePodWarningEvents             string = "FF_RETRIEVE_POD_WARNING_EVENTS"
+	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 )
 
 type FeatureFlag struct {
@@ -265,6 +266,12 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, all warning events associated with the Pod are retrieved when the job fails.",
+	},
+	{
+		Name:         PrintPodEvents,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, all events associated with the build pod will be printed until it's started.",
 	},
 }
 
