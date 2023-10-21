@@ -1145,7 +1145,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		return api.Container{}, err
 	}
 
-	command, args := s.getCommandAndArgs(opts.imageDefinition, opts.command...)
+	command, args := s.getCommandAndArgs(opts.name, opts.imageDefinition, opts.command...)
 
 	container := api.Container{
 		Name:            opts.name,
@@ -1168,7 +1168,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	return container, nil
 }
 
-func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
+func (s *executor) getCommandAndArgs(containerName string, imageDefinition common.Image, command ...string) ([]string, []string) {
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
 		return []string{}, command
 	}
@@ -1176,14 +1176,13 @@ func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...st
 	var args []string
 	cmd := command
 
-	if len(command) == 0 {
-		// services
-		if len(imageDefinition.Entrypoint) > 0 {
+	switch {
+	case strings.HasPrefix(containerName, serviceContainerPrefix):
+		if len(cmd) == 0 && len(imageDefinition.Entrypoint) > 0 {
 			cmd = imageDefinition.Entrypoint
 		}
-	} else {
-		// build/helper
-		if len(imageDefinition.Entrypoint) > 0 {
+	default:
+		if len(cmd) > 0 && len(imageDefinition.Entrypoint) > 0 {
 			cmd = imageDefinition.Entrypoint
 			args = command
 		}
