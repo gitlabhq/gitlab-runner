@@ -1178,11 +1178,11 @@ func (s *executor) getCommandAndArgs(containerName string, imageDefinition commo
 
 	switch {
 	case strings.HasPrefix(containerName, serviceContainerPrefix):
-		if len(cmd) == 0 && len(imageDefinition.Entrypoint) > 0 {
+		if len(imageDefinition.Entrypoint) > 0 {
 			cmd = imageDefinition.Entrypoint
 		}
 	default:
-		if len(cmd) > 0 && len(imageDefinition.Entrypoint) > 0 {
+		if len(imageDefinition.Entrypoint) > 0 {
 			cmd = imageDefinition.Entrypoint
 			args = command
 		}
