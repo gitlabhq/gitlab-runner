@@ -3512,11 +3512,11 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
 				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[0].Command)
-				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
+				assert.Equal(t, pod.Spec.Containers[0].Args, []string{common.TestShellDockerCommand})
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
+				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -3904,12 +3904,12 @@ func TestSetupBuildPod(t *testing.T) {
 
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Empty(t, pod.Spec.Containers[0].Command, "Build container command should be empty")
+				assert.Equal(t, pod.Spec.Containers[0].Command, []string{common.TestShellDockerCommand})
 				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
+				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -3948,11 +3948,11 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[0].Command)
-				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
+				assert.Equal(t, pod.Spec.Containers[0].Args, []string{common.TestShellDockerCommand})
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
+				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 			},
 		},
@@ -4952,8 +4952,10 @@ containers:
 				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
 				options:    options,
 				AbstractExecutor: executors.AbstractExecutor{
-					Config:     test.RunnerConfig,
-					BuildShell: &common.ShellConfiguration{},
+					Config: test.RunnerConfig,
+					BuildShell: &common.ShellConfiguration{
+						DockerCommand: []string{common.TestShellDockerCommand},
+					},
 					Build: &common.Build{
 						JobResponse: common.JobResponse{
 							Variables:   vars,

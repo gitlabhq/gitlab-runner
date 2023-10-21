@@ -67,6 +67,7 @@ const (
 	TestAlpineOverriddenEntrypoint  = "/entrypoint-override"
 	TestHelperEntrypointImage       = "registry.gitlab.com/gitlab-org/gitlab-runner/helper-entrypoint:latest"
 	TestAlpineIDOverflowImage       = "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-id-overflow:latest"
+	TestShellDockerCommand          = "/bin/sh"
 	TestDockerDindImage             = "docker:23-dind"
 	TestDockerGitImage              = "docker:23-git"
 	TestLivenessImage               = "registry.gitlab.com/gitlab-org/ci-cd/tests/liveness:0.1.0"
