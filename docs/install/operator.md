@@ -132,8 +132,8 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
 If you do not want to use the version of GitLab Runner Operator that's available in the Red Hat OperatorHub, you can install a different version.
 
 To find out the official currently-available Operator versions, view the [tags in the `gitlab-runner-operator` repository](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/tags).
-To find out which version of GitLab Runner the Operator is running, view the
-`APP_VERSION` variable in the `Makefile` of the commit/tag you are interested in, for example, [https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/v1.0.0/Makefile](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/v1.0.0/Makefile).
+To find out which version of GitLab Runner the Operator is running, view the contents of the
+`APP_VERSION` file of the commit/tag you are interested in, for example, [https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/1-17-stable/APP_VERSION](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/blob/1-17-stable/APP_VERSION).
 
 To install a specific version, create this `catalogsource.yaml` file and replace `<VERSION>` with a tag or a specific commit:
 
