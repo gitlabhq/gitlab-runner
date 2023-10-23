@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -177,6 +178,8 @@ func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, f
 
 func testKubernetesPodEvents(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	// this test is known to fail spectacularly when run against minikube.
+	skipIfRunningAgainstMiniKube(t)
 
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
@@ -1108,6 +1111,8 @@ func testOverwriteServiceAccountNotMatchFeatureFlag(t *testing.T, featureFlagNam
 
 func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	// this test is known to fail spectacularly when run against minikube.
+	skipIfRunningAgainstMiniKube(t)
 
 	if os.Getenv("GITLAB_CI") == "true" {
 		t.Skip("Skipping inside of GitLab CI check https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26421")
@@ -1265,6 +1270,8 @@ func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName s
 // testKubernetesGarbageCollection tests the deletion of resources via garbage collector once the owning pod is deleted
 func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	// this test is known to fail spectacularly when run against minikube.
+	skipIfRunningAgainstMiniKube(t)
 
 	ctxTimeout := time.Minute
 	client := getTestKubeClusterClient(t)
@@ -1936,6 +1943,8 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 
 func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+	// this test is known to fail spectacularly when run against minikube.
+	skipIfRunningAgainstMiniKube(t)
 
 	build := getTestBuild(t, func() (common.JobResponse, error) {
 		return common.GetRemoteBuildResponse("id")
@@ -2834,4 +2843,21 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 	// the helper image name does not appeart in the logs, but the build will fail if the option was not expanded.
 	assert.Contains(t, out, "Using Kubernetes executor with image alpine:latest")
 	assert.Regexp(t, `\[service:postgres-db\]`, out)
+}
+
+func skipIfRunningAgainstMiniKube(t *testing.T, args ...string) {
+	executable, err := exec.LookPath("minikube")
+	if err != nil {
+		return
+	}
+
+	cmd := exec.Command(executable, "status")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return
+	}
+
+	if strings.Contains(string(out), "kubelet: Running") {
+		t.Skip("Temporarily skipped: issue https://gitlab.com/gitlab-org/gitlab-runner/-/issues/36827")
+	}
 }
