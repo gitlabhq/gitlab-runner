@@ -1207,6 +1207,7 @@ func testBuildsDirVolumeMountEmptyDirFeatureFlag(t *testing.T, featureFlagName s
 				Name:      "repo",
 				MountPath: "/path/to/builds/dir",
 				Medium:    "Memory",
+				SizeLimit: "1G",
 			},
 		},
 	}

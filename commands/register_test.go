@@ -121,7 +121,8 @@ var (
       [[runners.kubernetes.volumes.empty_dir]]
         name = "empty_dir"
 	    mount_path = "/path/to/empty_dir"
-	    medium = "Memory"`
+	    medium = "Memory"
+	    size_limit = "1G"`
 
 	configTemplateMergeToBaseConfiguration = &common.RunnerConfig{
 		RunnerCredentials: common.RunnerCredentials{
@@ -187,6 +188,7 @@ func TestConfigTemplate_MergeTo(t *testing.T) {
 				assert.Equal(t, "empty_dir", emptyDir.Name)
 				assert.Equal(t, "/path/to/empty_dir", emptyDir.MountPath)
 				assert.Equal(t, "Memory", emptyDir.Medium)
+				assert.Equal(t, "1G", emptyDir.SizeLimit)
 			},
 			expectedError: nil,
 		},

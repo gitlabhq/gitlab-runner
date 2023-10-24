@@ -21,6 +21,7 @@ import (
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/watch"
@@ -1462,12 +1463,22 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 			Name: volume.Name,
 			VolumeSource: api.VolumeSource{
 				EmptyDir: &api.EmptyDirVolumeSource{
-					Medium: api.StorageMedium(volume.Medium),
+					Medium:    api.StorageMedium(volume.Medium),
+					SizeLimit: s.parseVolumeSizeLimit(volume),
 				},
 			},
 		})
 	}
 	return volumes
+}
+
+func (s *executor) parseVolumeSizeLimit(volume common.KubernetesEmptyDir) *resource.Quantity {
+	quantity, err := resource.ParseQuantity(volume.SizeLimit)
+	if err != nil {
+		s.Warningln(fmt.Sprintf("invalid limit quantity %q for empty volume %q: %v", volume.SizeLimit, volume.Name, err))
+		return nil
+	}
+	return &quantity
 }
 
 func (s *executor) getVolumesForCSIs() []api.Volume {

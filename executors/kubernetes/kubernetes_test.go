@@ -457,6 +457,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 	}
 	csiVolFSType := "ext4"
 	csiVolReadOnly := false
+	oneGig, _ := resource.ParseQuantity("1G")
 	tests := map[string]struct {
 		GlobalConfig *common.Config
 		RunnerConfig common.RunnerConfig
@@ -531,11 +532,12 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 								},
 							},
 							EmptyDirs: []common.KubernetesEmptyDir{
-								{Name: "emptyDir", MountPath: "/path/to/empty/dir", Medium: "Memory"},
+								{Name: "emptyDir", MountPath: "/path/to/empty/dir", Medium: "Memory", SizeLimit: "1G"},
 								{
 									Name:      "emptyDir-subpath",
 									MountPath: "/subpath",
 									Medium:    "Memory",
+									SizeLimit: "1G",
 									SubPath:   "subpath",
 								},
 							},
@@ -599,8 +601,8 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 							},
 						},
 					},
-					{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
-					{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
+					{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory", SizeLimit: &oneGig}}},
+					{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory", SizeLimit: &oneGig}}},
 					{
 						Name: "csi",
 						VolumeSource: api.VolumeSource{
@@ -2032,6 +2034,7 @@ func TestPrepare(t *testing.T) {
 									Name:      "repo",
 									MountPath: "/builds",
 									Medium:    "Memory",
+									SizeLimit: "1G",
 								},
 							},
 						},

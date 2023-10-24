@@ -679,6 +679,7 @@ type KubernetesEmptyDir struct {
 	MountPath string `toml:"mount_path" description:"Path where volume should be mounted inside of container"`
 	SubPath   string `toml:"sub_path,omitempty" description:"The sub-path of the volume to mount (defaults to volume root)"`
 	Medium    string `toml:"medium,omitempty" description:"Set to 'Memory' to have a tmpfs"`
+	SizeLimit string `toml:"size_limit,omitempty" description:"Total amount of local storage required."`
 }
 
 type KubernetesCSI struct {

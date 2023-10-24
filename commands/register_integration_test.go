@@ -783,7 +783,8 @@ func TestExecute_MergeConfigTemplate(t *testing.T) {
       [[runners.kubernetes.volumes.empty_dir]]
         name = "empty_dir"
 	    mount_path = "/path/to/empty_dir"
-	    medium = "Memory"`
+	    medium = "Memory"
+	    size_limit = "1G"`
 
 		baseOutputConfigFmt = `concurrent = 1
 check_interval = 0
