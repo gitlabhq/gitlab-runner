@@ -977,6 +977,7 @@ Use the following options in the `config.toml` file:
 | `mount_path` | string  | Yes      | Path inside of container where the volume should be mounted. |
 | `sub_path`   | string  | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
 | `medium`     | string  | No       | "Memory" provides a `tmpfs`, otherwise it defaults to the node disk storage (defaults to ""). |
+| `size_limit` | string  | No       | "SizeLimit" is the total amount of local storage required for the emptyDir volume. See [http://kubernetes.io/docs/user-guide/volumes#emptydir](http://kubernetes.io/docs/user-guide/volumes#emptydir). |
 
 ### `csi` volume
 
