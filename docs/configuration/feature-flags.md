@@ -71,6 +71,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_SECRET_RESOLVING_FAILS_IF_MISSING` | `true` | **{dotted-circle}** No |  | When enabled, secret resolving fails if the value cannot be found. |
 | `FF_RETRIEVE_POD_WARNING_EVENTS` | `false` | **{dotted-circle}** No |  | When enabled, all warning events associated with the Pod are retrieved when the job fails. |
 | `FF_PRINT_POD_EVENTS` | `false` | **{dotted-circle}** No |  | When enabled, all events associated with the build pod will be printed until it's started. |
+| `FF_USE_GIT_BUNDLE_URIS` | `true` | **{dotted-circle}** No |  | When enabled, the Git `transfer.bundleURI` configuration option is set to `true`. This FF is enabled by default. Set to `false` to disable Git bundle support. |
 
 <!-- feature_flags_list_end -->
 
