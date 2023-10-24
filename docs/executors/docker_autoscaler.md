@@ -12,8 +12,8 @@ The Docker Autoscaler executor is an autoscale-enabled Docker executor that crea
 accommodate the jobs that the runner manager processes. It wraps the [Docker executor](docker.md) so that all
 Docker executor options and features are supported.
 
-The Docker Autoscaler uses [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins to autoscale. `fleeting`
-is an abstraction for a group of autoscaled instances. It uses plugins that support different cloud providers,
+The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
+_Fleeting_ is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
 like Google Cloud Platform (GCP), AWS, and Azure.
 
 ## Install a fleeting plugin
@@ -21,7 +21,7 @@ like Google Cloud Platform (GCP), AWS, and Azure.
 To enable autoscaling for your target platform, install a fleeting plugin. You can install
 the AWS, GCP, or Azure fleeting plugin. These plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
-For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
+For other official plugins developed by GitLab, see the [fleeting project](https://gitlab.com/gitlab-org/fleeting).
 
 To install the plugin:
 
@@ -114,7 +114,8 @@ concurrent = 10
 Prerequisites:
 
 - A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [COS](https://cloud.google.com/container-optimized-os/docs).
-- An Instance group. For the "Autoscaling mode" select "do not autoscale", as Runner handles the scaling.
+- A GCP instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
+the GCP instance group.
 - An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
 
 This configuration supports:
