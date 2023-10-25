@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Instance executor (Experiment)
+# Instance executor (BETA
 
 > Introduced in GitLab Runner 15.10.0. This feature is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 

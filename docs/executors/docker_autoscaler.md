@@ -4,7 +4,7 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Docker Autoscaler executor (Experiment)
+# Docker Autoscaler executor (BETA)
 
 > Introduced in GitLab Runner 15.11.0. This feature is an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html)
 
@@ -19,7 +19,7 @@ like Google Cloud Platform (GCP), AWS, and Azure.
 ## Install a fleeting plugin
 
 To enable autoscaling for your target platform, install a fleeting plugin. You can install
-the AWS, GCP, or Azure fleeting plugin. These plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+the AWS, GCP, or Azure fleeting plugin. The AWS plugin is now in BETA. The GCP and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
 For other official plugins developed by GitLab, see the [fleeting project](https://gitlab.com/gitlab-org/fleeting).
 
