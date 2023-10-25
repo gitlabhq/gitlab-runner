@@ -83,12 +83,12 @@ func (ref *acquisitionRef) Prepare(
 		UseExternalAddr: useExternalAddr,
 	}
 
-	logger.Println(fmt.Sprintf("Dialing instance %s...", info.ID))
+	logger.Debugln(fmt.Sprintf("Dialing instance %s...", info.ID))
 	fleetingDialer, err := ref.dialAcquisitionInstance(ctx, info, fleetingDialOpts)
 	if err != nil {
 		return nil, err
 	}
-	logger.Println(fmt.Sprintf("Instance %s connected", info.ID))
+	logger.Debugln(fmt.Sprintf("Instance %s connected", info.ID))
 
 	// if nesting is disabled, return a client for the host instance, for example VM Isolation and VM tunnel not needed
 	if !options.Config.Autoscaler.VMIsolation.Enabled {
