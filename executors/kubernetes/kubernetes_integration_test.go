@@ -1165,7 +1165,9 @@ func testInteractiveTerminalFeatureFlag(t *testing.T, featureFlagName string, fe
 	}
 	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
 	defer func() {
-		resp.Body.Close()
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		if conn != nil {
 			_ = conn.Close()
 		}
