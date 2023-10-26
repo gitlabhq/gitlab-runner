@@ -237,13 +237,14 @@ type kubernetesOptions struct {
 }
 
 type containerBuildOpts struct {
-	name            string
-	image           string
-	imageDefinition common.Image
-	requests        api.ResourceList
-	limits          api.ResourceList
-	securityContext *api.SecurityContext
-	command         []string
+	name               string
+	image              string
+	imageDefinition    common.Image
+	isServiceContainer bool
+	requests           api.ResourceList
+	limits             api.ResourceList
+	securityContext    *api.SecurityContext
+	command            []string
 }
 
 type podConfigPrepareOpts struct {
@@ -1096,7 +1097,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		allowedImages []string
 		envVars       []common.JobVariable
 	)
-	if strings.HasPrefix(opts.name, serviceContainerPrefix) {
+	if opts.isServiceContainer {
 		optionName = "services"
 		allowedImages = s.Config.Kubernetes.AllowedServices
 		envVars = s.getServiceVariables(opts.imageDefinition)
@@ -1145,7 +1146,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		return api.Container{}, err
 	}
 
-	command, args := s.getCommandAndArgs(opts.name, opts.imageDefinition, opts.command...)
+	command, args := s.getCommandAndArgs(opts, opts.imageDefinition, opts.command...)
 
 	container := api.Container{
 		Name:            opts.name,
@@ -1168,7 +1169,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	return container, nil
 }
 
-func (s *executor) getCommandAndArgs(containerName string, imageDefinition common.Image, command ...string) ([]string, []string) {
+func (s *executor) getCommandAndArgs(opts containerBuildOpts, imageDefinition common.Image, command ...string) ([]string, []string) {
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
 		return []string{}, command
 	}
@@ -1176,13 +1177,11 @@ func (s *executor) getCommandAndArgs(containerName string, imageDefinition commo
 	var args []string
 	cmd := command
 
-	switch {
-	case strings.HasPrefix(containerName, serviceContainerPrefix):
-		if len(imageDefinition.Entrypoint) > 0 {
+	if len(imageDefinition.Entrypoint) > 0 {
+		switch {
+		case opts.isServiceContainer:
 			cmd = imageDefinition.Entrypoint
-		}
-	default:
-		if len(imageDefinition.Entrypoint) > 0 {
+		default:
 			cmd = imageDefinition.Entrypoint
 			args = command
 		}
@@ -1800,11 +1799,12 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 
 	for i, service := range s.options.Services {
 		podServices[i], err = s.buildContainer(containerBuildOpts{
-			name:            fmt.Sprintf("%s%d", serviceContainerPrefix, i),
-			image:           service.Name,
-			imageDefinition: service,
-			requests:        s.configurationOverwrites.serviceRequests,
-			limits:          s.configurationOverwrites.serviceLimits,
+			name:               fmt.Sprintf("%s%d", serviceContainerPrefix, i),
+			image:              service.Name,
+			imageDefinition:    service,
+			isServiceContainer: true,
+			requests:           s.configurationOverwrites.serviceRequests,
+			limits:             s.configurationOverwrites.serviceLimits,
 			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
 				s.Config.Kubernetes.ServiceContainerSecurityContext,
 				s.defaultCapDrop()...,
