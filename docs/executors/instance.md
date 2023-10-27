@@ -25,7 +25,7 @@ Nesting is only supported on Apple Silicon instances.
 ## Prepare the environment for autoscaling
 
 To enable scaling for your target platform, install the AWS, GCP, or Azure fleeting plugins.
-These plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+The AWS plugin is in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html). The GCP and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
 For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
 
