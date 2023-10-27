@@ -1062,13 +1062,13 @@ Docker executor:
 ### Supported Windows versions
 
 GitLab Runner only supports the following versions of Windows which
-follows our [support lifecycle for Windows](../install/windows.md#windows-version-support-policy):
+follows our [support lifecycle for Windows](../install/support-policy.md#windows-version-support):
 
 - Windows Server 2022 LTSC (21H2)
 - Windows Server 2019 LTSC (1809)
 
 For future Windows Server versions, we have a
-[future version support policy](../install/windows.md#windows-version-support-policy).
+[future version support policy](../install/support-policy.md#windows-version-support).
 
 You can only run containers based on the same OS version that the Docker
 daemon is running on. For example, the following [`Windows Server Core`](https://hub.docker.com/_/microsoft-windows-servercore) images can
