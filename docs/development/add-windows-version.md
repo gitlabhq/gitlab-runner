@@ -6,7 +6,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Add Docker executor support for a Windows version
 
-GitLab supports [specific versions of Windows](../install/windows.md#windows-version-support-policy).
+GitLab supports [specific versions of Windows](../install/support-policy.md#windows-version-support).
 
 To add support for a new Windows version for the
 [Docker executor](../executors/docker.md), you must release a

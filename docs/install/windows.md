@@ -90,59 +90,6 @@ cd ..
 rmdir /s GitLab-Runner
 ```
 
-## Windows version support policy
-
-GitLab officially supports LTS versions of Microsoft Windows operating systems and so we follow the Microsoft
-[Servicing Channels](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#servicing-channels) lifecycle policy.
-
-This means that we support:
-
-- [Long-Term Servicing Channel](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel),
-  versions for 5 years after their release date. Note that we don't
-  support versions that are on extended support.
-- [Semi-Annual Channel](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#semi-annual-channel)
-  versions for 18 months after their release date. We don't support
-  these versions after mainstream support ends.
-
-This is the case for both the [Windows binaries](#installation) that we
-distribute, and also for the [Docker executor](../executors/docker.md#supported-windows-versions).
-
-NOTE:
-The Docker executor for Windows containers has strict version
-requirements, because containers have to match the version of the host
-OS. See the [list of supported Windows containers](../executors/docker.md#supported-windows-versions)
-for more information.
-
-GitLab provides Windows operating system runner images until the EOL (End-Of-Life) date for the operating system. After the EOL date of the Windows OS, GitLab stops releasing runner images with the EOL Windows OS version.
-
-The EOL date for a Windows OS version will not necessarily align with a GitLab major release; therefore, we will typically stop releasing an EOL image in a GitLab minor release. A removal notice will be included in the release post of the GitLab version in which we stopped publishing the image with the EOL Windows version.
-
-As a single source of truth we use
-<https://learn.microsoft.com/en-us/lifecycle/products/> which specifies
-both the release and mainstream support dates.
-
-Below is a list of versions that are commonly used and their end of life
-date:
-
-| OS                                  | Mainstream support end of life date |
-|-------------------------------------|-------------------------------------|
-| Windows 10 1809/2019                | January 2024                        |
-| Windows Server Datacenter 1809/2019 | January 2024                        |
-
-### Future releases
-
-Microsoft releases new Windows Server products in the
-[Semi-Annual Channel](https://learn.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#semi-annual-channel)
-twice a year, and every 2 - 3 years a new major version of Windows Sever
-is released in the
-[Long-Term Servicing Channel (LTSC)](https://learn.microsoft.com/en-us/windows-server/get-started/servicing-channels-comparison#long-term-servicing-channel-ltsc).
-
-GitLab aims to test and release new GitLab Runner helper images that
-include the latest Windows Server version (Semi-Annual Channel) within 1
-month of the official Microsoft release date on the Google Cloud Platform. Refer to the
-[Windows Server current versions by servicing option list](https://learn.microsoft.com/en-us/windows-server/get-started/windows-server-release-info#windows-server-current-versions-by-servicing-option)
-for availability dates.
-
 ## Windows troubleshooting
 
 Make sure that you read the [FAQ](../faq/index.md) section which describes
@@ -365,9 +312,9 @@ Kubernetes executor on Windows might fail with the following error:
 
 ```plaintext
 Using Kubernetes namespace: gitlab-runner
-ERROR: Preparation failed: prepare helper image: detecting base image: unsupported Windows Version: 
+ERROR: Preparation failed: prepare helper image: detecting base image: unsupported Windows Version:
 Will be retried in 3s ...
-ERROR: Job failed (system failure): prepare helper image: detecting base image: unsupported Windows Version: 
+ERROR: Job failed (system failure): prepare helper image: detecting base image: unsupported Windows Version:
 ```
 
 To fix it, add `node.kubernetes.io/windows-build` nodeSelector in the section `[runners.kubernetes.node_selector]`
