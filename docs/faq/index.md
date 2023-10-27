@@ -165,7 +165,7 @@ Upgrade your NGINX to newer version. For more information see this issue: <https
 
 ## `No URL provided, cache will not be uploaded`
 
-This occurs when caching is configured for the job, but the GitLab Runner Helper does not have
+This occurs when caching is configured for the job, but the GitLab Runner helper does not have
 a pre-signed URL to access a remote cache. This might be caused by a problem with credentials
 configuration in `config.toml`. If there is a problem with the credentials configuration, a
 diagnostic error message is added to the GitLab Runner process log.
