@@ -346,6 +346,9 @@ func getBuildResponse(repoURL string, commands []string) JobResponse {
 				AllowFailure: false,
 			},
 		},
+		RunnerInfo: RunnerInfo{
+			Timeout: DefaultTimeout,
+		},
 	}
 }
 
