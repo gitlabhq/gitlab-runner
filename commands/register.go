@@ -520,7 +520,7 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 				"--access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note. " +
 				"These parameters and the legacy-compatible registration process will be removed " +
 				"in GitLab Runner 18.0. " +
-				"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow",
+				"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#changes-to-the-gitlab-runner-register-command-syntax",
 		)
 		return
 	}
@@ -531,7 +531,7 @@ func (s *RegisterCommand) ensureServerConfigArgsEmpty() {
 			"and cannot be specified when registering with a runner authentication token. " +
 			"This configuration is specified on the GitLab server. " +
 			"Please try again without specifying any of those arguments. " +
-			"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow",
+			"For more information, see https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#changes-to-the-gitlab-runner-register-command-syntax",
 	)
 }
 
