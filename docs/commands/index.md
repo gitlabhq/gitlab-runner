@@ -705,3 +705,15 @@ Here are two ways to prevent this:
   $ gitlab-runner run
   Runtime platform                                    arch=amd64 os=linux pid=87858 revision=436955cb version=15.11.0
   ```
+
+### Saving system ID state file: access denied
+
+GitLab Runner 15.7 and 15.8 might not start if it lacks write permissions
+for the directory that contains the `config.toml` file.
+
+When GitLab Runner starts, it searches for the `.runner_system_id` file in the directory that contains
+the `config.toml`. If it cannot find the `.runner_system_id` file, it creates a new one. If GitLab Runner
+doesn't have write permissions, it fails to start.
+
+To resolve this issue, temporarily allow file write permissions, then run `gitlab-runner run`.
+After the `.runner_system_id` file is created, you can reset the permissions to read-only.
