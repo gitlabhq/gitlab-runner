@@ -271,7 +271,7 @@ func TestAskRunnerUsingRunnerTokenOnRegistrationTokenOverridingForbiddenDefaults
 			assert.Contains(
 				t,
 				commands.GetLogrusOutput(t, hook),
-				"this has triggered the 'legacy-compatible registration process'",
+				"This has triggered the 'legacy-compatible registration process'",
 			)
 		})
 	}

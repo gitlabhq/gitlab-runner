@@ -22,7 +22,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
-// createdRunnerTokenPrefix is the token prefix used for GitLab UI-created runner tokens
+// createdRunnerTokenPrefix is the token prefix used for GitLab UI-created runner authentication tokens
 const createdRunnerTokenPrefix = "glrt-"
 const clientError = -100
 

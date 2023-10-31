@@ -15,8 +15,8 @@ type ResetTokenCommand struct {
 	Name       string `short:"n" long:"name" description:"Name of the runner whose token you wish to reset (as defined in the configuration file)"`
 	URL        string `short:"u" long:"url" description:"URL of the runner whose token you wish to reset (as defined in the configuration file)"`
 	ID         int64  `short:"i" long:"id" description:"ID of the runner whose token you wish to reset (as defined in the configuration file)"`
-	AllRunners bool   `long:"all-runners" description:"Reset all runner tokens"`
-	PAT        string `long:"pat" description:"Personal access token to use in lieu of runner's old token"`
+	AllRunners bool   `long:"all-runners" description:"Reset all runner authentication tokens"`
+	PAT        string `long:"pat" description:"Personal access token to use in lieu of runner's old authentication token"`
 }
 
 func (c *ResetTokenCommand) resetAllRunnerTokens() {

@@ -276,7 +276,7 @@ func nextRunnerToReset(config *common.Config) (*common.RunnerConfig, time.Time) 
 
 func (mr *RunCommand) resetRunnerTokens() {
 	for mr.resetOneRunnerToken() {
-		// Handling runner tokens resetting - one by one - until mr.runFinished
+		// Handling runner authentication token resetting - one by one - until mr.runFinished
 		// reports that mr.run() have been finished
 	}
 }
