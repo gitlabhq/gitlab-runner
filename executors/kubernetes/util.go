@@ -295,11 +295,16 @@ func createResourceList(cpu, memory, ephemeralStorage string) (api.ResourceList,
 	return l, nil
 }
 
-// buildVariables converts a common.BuildVariables into a list of
+// buildVariables converts a common.JobVariables into a list of
 // kubernetes EnvVar objects
 func buildVariables(bv common.JobVariables) []api.EnvVar {
 	e := make([]api.EnvVar, len(bv))
 	for i, b := range bv {
+		// For file-type secrets, substitute the path to the secret
+		// for the secret value.
+		if b.File {
+			b.Value = bv.Get(b.Key)
+		}
 		e[i] = api.EnvVar{
 			Name:  b.Key,
 			Value: b.Value,

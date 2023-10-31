@@ -46,7 +46,15 @@ func (b JobVariables) PublicOrInternal() (variables JobVariables) {
 
 func (b JobVariables) StringList() (variables []string) {
 	for _, variable := range b {
-		variables = append(variables, variable.String())
+		// For file-type secrets, substitute the path to the secret for the secret
+		// value.
+		if variable.File {
+			v := variable
+			v.Value = b.value(v.Key, true)
+			variables = append(variables, v.String())
+		} else {
+			variables = append(variables, variable.String())
+		}
 	}
 	return variables
 }
