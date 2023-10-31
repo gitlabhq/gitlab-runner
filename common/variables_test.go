@@ -182,8 +182,18 @@ func TestMaskedVariables(t *testing.T) {
 }
 
 func TestListVariables(t *testing.T) {
-	v := JobVariables{{Key: "key", Value: "value"}}
-	assert.Equal(t, []string{"key=value"}, v.StringList())
+	v := JobVariables{
+		{Key: "key", Value: "value"},
+		{Key: "fileKey", Value: "fileValue", File: true},
+		{Key: "RUNNER_TEMP_PROJECT_DIR", Value: "/foo/bar", Public: true, Internal: true},
+	}
+
+	stringList := v.StringList()
+
+	assert.Len(t, stringList, 3)
+	assert.Equal(t, "key=value", stringList[0])
+	assert.Equal(t, "fileKey=/foo/bar/fileKey", stringList[1])
+	assert.Equal(t, "RUNNER_TEMP_PROJECT_DIR=/foo/bar", stringList[2])
 }
 
 func TestGetVariable(t *testing.T) {

@@ -542,3 +542,21 @@ func TestSanitizeLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildVariables(t *testing.T) {
+	bv := []common.JobVariable{
+		{Key: "k", Value: "v"},
+		{Key: "filetype", Value: "secret-stuff", File: true},
+		{Key: "RUNNER_TEMP_PROJECT_DIR", Value: "/foo/bar", Public: true, Internal: true},
+	}
+
+	validate := func(t *testing.T, envVars []api.EnvVar) {
+		assert.Len(t, envVars, 3)
+		assert.Equal(t, envVars[0], api.EnvVar{Name: "k", Value: "v"})
+		assert.Equal(t, envVars[1], api.EnvVar{Name: "filetype", Value: "/foo/bar/filetype"})
+		assert.Equal(t, envVars[2], api.EnvVar{Name: "RUNNER_TEMP_PROJECT_DIR", Value: "/foo/bar"})
+	}
+
+	envVars := buildVariables(bv)
+	validate(t, envVars)
+}
