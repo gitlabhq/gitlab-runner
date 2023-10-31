@@ -494,6 +494,99 @@ settings in the configuration template. For example, if the template
 specifies a `docker` executor, but the command line specifies `shell`,
 the configured executor is `shell`.
 
+## Register a runner for GitLab Community Edition integration tests
+
+To test GitLab Community Edition integrations, use a configuration template to register a runner
+with a confined Docker executor.
+
+1. Create a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token).
+1. Create a template with the `[[runners.docker.services]]` section:
+
+   ```shell
+   $ cat > /tmp/test-config.template.toml << EOF
+   [[runners]]
+   [runners.docker]
+   [[runners.docker.services]]
+   name = "mysql:latest"
+   [[runners.docker.services]]
+   name = "redis:latest"
+
+   EOF
+   ```
+
+1. Register the runner:
+
+   ::Tabs
+
+   :::TabTitle Linux
+
+   ```shell
+   sudo gitlab-runner register \
+     --non-interactive \
+     --url "https://gitlab.com" \
+     --token "$RUNNER_AUTHENTICATION_TOKEN" \
+     --template-config /tmp/test-config.template.toml \
+     --description "gitlab-ce-ruby-2.7" \
+     --executor "docker" \
+     --docker-image ruby:2.7
+   ```
+
+   :::TabTitle macOS
+
+   ```shell
+   gitlab-runner register \
+     --non-interactive \
+     --url "https://gitlab.com" \
+     --token "$RUNNER_AUTHENTICATION_TOKEN" \
+     --template-config /tmp/test-config.template.toml \
+     --description "gitlab-ce-ruby-2.7" \
+     --executor "docker" \
+     --docker-image ruby:2.7
+   ```
+
+   :::TabTitle Windows
+
+   ```shell
+   .\gitlab-runner.exe register \
+     --non-interactive \
+     --url "https://gitlab.com" \
+     --token "$RUNNER_AUTHENTICATION_TOKEN" \
+     --template-config /tmp/test-config.template.toml \
+     --description "gitlab-ce-ruby-2.7" \
+     --executor "docker" \
+     --docker-image ruby:2.7
+   ```
+
+   :::TabTitle FreeBSD
+
+   ```shell
+   sudo -u gitlab-runner -H /usr/local/bin/gitlab-runner register
+     --non-interactive \
+     --url "https://gitlab.com" \
+     --token "$RUNNER_AUTHENTICATION_TOKEN" \
+     --template-config /tmp/test-config.template.toml \
+     --description "gitlab-ce-ruby-2.7" \
+     --executor "docker" \
+     --docker-image ruby:2.7
+   ```
+
+   :::TabTitle Docker
+
+   ```shell
+   docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register \
+     --non-interactive \
+     --url "https://gitlab.com" \
+     --token "$RUNNER_AUTHENTICATION_TOKEN" \
+     --template-config /tmp/test-config.template.toml \
+     --description "gitlab-ce-ruby-2.7" \
+     --executor "docker" \
+     --docker-image ruby:2.7
+   ```
+
+   ::EndTabs
+
+For more configuration options, see [Advanced configuration](../configuration/advanced-configuration.md).
+
 ## Registering runners with Docker
 
 After you register the runner with a Docker container:

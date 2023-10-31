@@ -1,43 +1,11 @@
 ---
-stage: Verify
-group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://about.gitlab.com/handbook/product/ux/technical-writing/#assignments
+redirect_to: '../register/index.md#register-a-runner-for-gitlab-community-edition-integration-tests'
+remove_date: '2024-01-16'
 ---
 
-# How to configure GitLab Runner for GitLab CE integration tests
+This document was moved to [another location](../register/index.md#register-a-runner-for-gitlab-community-edition-integration-tests).
 
-We will register the runner using a confined Docker executor.
-
-To generate a runner authentication token, create a [project runner](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token).
-You can export it as a variable and run the commands below as-is. Start by
-creating a template configuration file in order to pass complex configuration:
-
-```shell
-$ cat > /tmp/test-config.template.toml << EOF
-[[runners]]
-[runners.docker]
-[[runners.docker.services]]
-name = "mysql:latest"
-[[runners.docker.services]]
-name = "redis:latest"
-EOF
-```
-
-Finally, register the runner, passing the newly created template configuration file:
-
-```shell
-gitlab-runner register \
-  --non-interactive \
-  --url "https://gitlab.com" \
-  --token "$RUNNER_AUTHENTICATION_TOKEN" \
-  --template-config /tmp/test-config.template.toml \
-  --description "gitlab-ce-ruby-2.7" \
-  --executor "docker" \
-  --docker-image ruby:2.7
-```
-
-You now have a GitLab CE integration testing instance with bundle caching.
-Push some commits to test it.
-
-For [advanced configuration](../configuration/advanced-configuration.md), look into
-`/etc/gitlab-runner/config.toml` and tune it.
+<!-- This redirect file can be deleted after <2024-01-16>. -->
+<!-- Redirects that point to other docs in the same project expire in three months. -->
+<!-- Redirects that point to docs in a different project or site (for example, link is not relative and starts with `https:`) expire in one year. -->
+<!-- Before deletion, see: https://docs.gitlab.com/ee/development/documentation/redirects.html -->
