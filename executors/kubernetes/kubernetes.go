@@ -78,11 +78,6 @@ const (
 	defaultRetryMinBackoff = 500 * time.Millisecond
 	defaultRetryMaxBackoff = 2 * time.Second
 
-	// commandConnectFailureMaxTries is the number of attempts we retry when
-	// the connection to a Pod fails. There's an exponential backoff, which
-	// maxes out at 5 seconds.
-	commandConnectFailureMaxTries = 30
-
 	// The suffix is built using alphanumeric character
 	// that means there is 34^8 possibilities for a resource name using the same pattern
 	// Considering that the k8s resources are deleted after they run,
