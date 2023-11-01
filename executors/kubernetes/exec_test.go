@@ -127,7 +127,7 @@ func TestExec(t *testing.T) {
 			Err:           bufErr,
 			Stdin:         true,
 			Executor:      ex,
-			Client:        c,
+			KubeClient:    c,
 			Context:       context.TODO(),
 		}
 		err := params.Run()
@@ -217,7 +217,7 @@ func TestAttach(t *testing.T) {
 		ContainerName: "test-resource",
 		Command:       []string{"sleep", "1"},
 		Executor:      mockExecutor,
-		Client:        client,
+		KubeClient:    client,
 		Config:        clientConfig,
 		Context:       ctx,
 	}
@@ -241,7 +241,7 @@ func TestAttachErrorGettingPod(t *testing.T) {
 		Namespace:     "test-resource",
 		PodName:       "test-resource",
 		ContainerName: "test-resource",
-		Client:        client,
+		KubeClient:    client,
 		Config:        clientConfig,
 		Context:       context.TODO(),
 	}
@@ -266,7 +266,7 @@ func TestAttachPodNotRunning(t *testing.T) {
 		Namespace:     "test-resource",
 		PodName:       "test-resource",
 		ContainerName: "test-resource",
-		Client:        client,
+		KubeClient:    client,
 		Config:        clientConfig,
 		Context:       context.TODO(),
 	}

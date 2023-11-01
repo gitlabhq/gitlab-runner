@@ -59,3 +59,22 @@ check development docs Go version:
     - grep $GO_VERSION docs/development/index.md || EXIT_CODE=$?
     - if [ $EXIT_CODE -ne 0 ]; then echo "Make sure to update all Go versions in docs/development/index.md to $GO_VERSION"; exit 1; fi
 
+check Kubernetes API docs:
+  extends:
+    - .rules:merge_request_pipelines
+  stage: docs
+  needs:
+    - job: 'prepare ci image'
+      optional: true
+  script:
+    - cp docs/executors/kubernetes.md docs/executors/kubernetes.md.orig
+    - mage k8s:generatePermissionsDocs
+    - |
+        diff docs/executors/kubernetes.md.orig docs/executors/kubernetes.md || (
+          echo
+          echo "Kubernetes API list in documentation is not up-to-date"
+          echo "Run 'mage k8s:generatePermissionsDocs' to update it"
+          echo
+          exit 1
+        )
+

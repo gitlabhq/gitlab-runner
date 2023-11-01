@@ -85,9 +85,9 @@ type AttachOptions struct {
 	ContainerName string
 	Command       []string
 
-	Executor RemoteExecutor
-	Client   *kubernetes.Clientset
-	Config   *restclient.Config
+	Executor   RemoteExecutor
+	KubeClient *kubernetes.Clientset
+	Config     *restclient.Config
 
 	Context context.Context
 }
@@ -95,7 +95,8 @@ type AttachOptions struct {
 // Run executes a validated remote execution against a pod.
 func (p *AttachOptions) Run() error {
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.Context, p.PodName, metav1.GetOptions{})
+	// kubeAPI: pods, get
+	pod, err := p.KubeClient.CoreV1().Pods(p.Namespace).Get(p.Context, p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
@@ -110,7 +111,9 @@ func (p *AttachOptions) Run() error {
 	// Ending with a newline is important to actually run the script
 	stdin := strings.NewReader(strings.Join(p.Command, " ") + "\n")
 
-	req := p.Client.CoreV1().RESTClient().Post().
+	//nolint:gocritic
+	// kubeAPI: pods, attach, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+	req := p.KubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
 		Namespace(pod.Namespace).
@@ -138,9 +141,9 @@ type ExecOptions struct {
 	Out io.Writer
 	Err io.Writer
 
-	Executor RemoteExecutor
-	Client   *kubernetes.Clientset
-	Config   *restclient.Config
+	Executor   RemoteExecutor
+	KubeClient *kubernetes.Clientset
+	Config     *restclient.Config
 
 	Context context.Context
 }
@@ -148,7 +151,8 @@ type ExecOptions struct {
 // Run executes a validated remote execution against a pod.
 func (p *ExecOptions) Run() error {
 	// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-	pod, err := p.Client.CoreV1().Pods(p.Namespace).Get(p.Context, p.PodName, metav1.GetOptions{})
+	// kubeAPI: pods, get
+	pod, err := p.KubeClient.CoreV1().Pods(p.Namespace).Get(p.Context, p.PodName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("couldn't get pod details: %w", err)
 	}
@@ -169,7 +173,8 @@ func (p *ExecOptions) Run() error {
 }
 
 func (p *ExecOptions) executeRequest() error {
-	req := p.Client.CoreV1().RESTClient().Post().
+	// kubeAPI: pods, exec
+	req := p.KubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.PodName).
 		Namespace(p.Namespace).
