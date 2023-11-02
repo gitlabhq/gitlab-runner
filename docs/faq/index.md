@@ -343,7 +343,7 @@ for how to set this value correctly depending on the platform.
 
 ## `Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s`
 
-This error can occur when the Docker machine is not able to succesfully create the executor virtual machines. While the reason for the failure can vary, you can get more information about the error 
-by manually creating the virtual machine using the same `MachineOptions` that you have defined in your `config.toml`. 
+This error can occur when the Docker machine is not able to successfully create the executor virtual machines. To get more information
+about the error, manually create the virtual machine with the same `MachineOptions` that you have defined in your `config.toml`.  
 
 For example: `docker-machine create --driver=google --google-project=GOOGLE-PROJECT-ID --google-zone=GOOGLE-ZONE ...`.
