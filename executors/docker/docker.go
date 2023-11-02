@@ -83,7 +83,8 @@ type executor struct {
 	info                      types.Info
 	waiter                    wait.KillWaiter
 
-	temporary []string // IDs of containers that should be removed
+	temporary        []string // IDs of containers that should be removed
+	buildContainerID string
 
 	services []*types.Container
 
@@ -597,6 +598,9 @@ func (e *executor) createContainer(
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
 	if resp.ID != "" {
 		e.temporary = append(e.temporary, resp.ID)
+		if containerType == buildContainerType {
+			e.buildContainerID = resp.ID
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -1142,6 +1146,10 @@ func (e *executor) Cleanup() {
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
+			// send SIGTERM to all processes in the build container.
+			if id == e.buildContainerID {
+				_ = e.sendSIGTERMToContainerProcs(ctx, id)
+			}
 			_ = e.removeContainer(ctx, id)
 			wg.Done()
 		}()
