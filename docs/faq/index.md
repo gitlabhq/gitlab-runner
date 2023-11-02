@@ -340,3 +340,10 @@ Elasticsearch has a `vm.max_map_count` requirement that has to be set on the ins
 
 See the [Elasticsearch Docs](https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites)
 for how to set this value correctly depending on the platform.
+
+## Preparing the "docker+machine" executor ERROR: Preparation failed: exit status 1 Will be retried in 3s
+
+This error can occur when the Docker machine is not able to succesfully create the executor virtual machines. While the reason for the failure can vary, you can get more information about the error 
+by manually creating the virtual machine using the same `MachineOptions` that you have defined in your `config.toml`. 
+
+Sample command: `docker-machine create --driver=google --google-project=GOOGLE-PROJECT-ID --google-zone=GOOGLE-ZONE ...`.
