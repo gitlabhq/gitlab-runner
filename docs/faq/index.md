@@ -346,4 +346,4 @@ for how to set this value correctly depending on the platform.
 This error can occur when the Docker machine is not able to succesfully create the executor virtual machines. While the reason for the failure can vary, you can get more information about the error 
 by manually creating the virtual machine using the same `MachineOptions` that you have defined in your `config.toml`. 
 
-Sample command: `docker-machine create --driver=google --google-project=GOOGLE-PROJECT-ID --google-zone=GOOGLE-ZONE ...`.
+For example: `docker-machine create --driver=google --google-project=GOOGLE-PROJECT-ID --google-zone=GOOGLE-ZONE ...`.
