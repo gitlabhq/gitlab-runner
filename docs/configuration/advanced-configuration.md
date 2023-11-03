@@ -45,7 +45,7 @@ These settings are global. They apply to all runners.
 | `check_interval`   | Defines the interval length, in seconds, between the runner checking for new jobs. The default value is `3`. If set to `0` or lower, the default value is used. |
 | `sentry_dsn`       | Enables tracking of all system level errors to Sentry. |
 | `listen_address`   | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
-| `shutdown_timeout` | Number of seconds until the [forceful shutdown operation](https://docs.gitlab.com/runner/commands/#signals) times out and exits the process. |
+| `shutdown_timeout` | Number of seconds until the [forceful shutdown operation](../../commands/index.md#signals) times out and exits the process. |
 
 Configuration example:
 
