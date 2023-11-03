@@ -832,19 +832,14 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 			fmt.Sprintf(chmod, s.logsDir()),
 			fmt.Sprintf(chmod, s.Build.RootDir),
 		}
-		container.Command = []string{
-			s.Shell().Shell,
-			"-c",
-			strings.Join(commands, ";\n"),
-		}
+		container.Command = []string{s.Shell().Shell, "-c", strings.Join(commands, ";\n")}
 
 	default:
-		chmod := "touch %[1]s && (chmod 777 %[1]s || exit 0)"
-		container.Command = []string{
-			"sh",
-			"-c",
-			fmt.Sprintf(chmod, s.logFile()),
+		initCommand := "touch %[1]s && (chmod 777 %[1]s || exit 0)"
+		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+			initCommand += " && cp /usr/bin/dumb-init %[2]s"
 		}
+		container.Command = []string{"sh", "-c", fmt.Sprintf(initCommand, s.logFile(), s.scriptsDir())}
 	}
 
 	return container, nil
@@ -1875,7 +1870,7 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 			s.Config.Kubernetes.BuildContainerSecurityContext,
 			s.defaultCapDrop()...,
 		),
-		command: s.BuildShell.DockerCommand,
+		command: s.getBuildAndHelperContainersCommand(),
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building build container: %w", err)
@@ -1890,13 +1885,26 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 			s.Config.Kubernetes.HelperContainerSecurityContext,
 			s.defaultCapDrop()...,
 		),
-		command: s.BuildShell.DockerCommand,
+		command: s.getBuildAndHelperContainersCommand(),
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building helper container: %w", err)
 	}
 
 	return buildContainer, helperContainer, nil
+}
+
+func (s *executor) getBuildAndHelperContainersCommand() []string {
+	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		return s.BuildShell.DockerCommand
+	}
+
+	switch s.Shell().Shell {
+	case shells.SNPowershell:
+		return s.BuildShell.DockerCommand
+	default:
+		return append([]string{fmt.Sprintf("%s/dumb-init", s.scriptsDir()), "--"}, s.BuildShell.DockerCommand...)
+	}
 }
 
 // Inspired by
