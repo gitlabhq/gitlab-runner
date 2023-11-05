@@ -75,28 +75,24 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 
 	switch g.SLSAProvenanceVersion {
 	case slsaProvenanceVersion02:
-		{
-			header, headerErr := g.generateStatementHeader(opts.files, slsa_v02.PredicateSLSAProvenance)
-			if headerErr != nil {
-				return "", headerErr
-			}
-			var err error
-			statement, err = g.generateSLSAV02Statement(header, jobID, &start, &end, opts)
-			if err != nil {
-				return "", err
-			}
+		header, headerErr := g.generateStatementHeader(opts.files, slsa_v02.PredicateSLSAProvenance)
+		if headerErr != nil {
+			return "", headerErr
+		}
+		var err error
+		statement, err = g.generateSLSAv02Statement(header, jobID, &start, &end)
+		if err != nil {
+			return "", err
 		}
 	case slsaProvenanceVersion1:
-		{
-			header, headerErr := g.generateStatementHeader(opts.files, slsa_v02.PredicateSLSAProvenance)
-			if headerErr != nil {
-				return "", err
-			}
-			var err error
-			statement, err = g.generateSLSAV1StatementJson(header, jobID, &start, &end, opts)
-			if err != nil {
-				return "", err
-			}
+		header, headerErr := g.generateStatementHeader(opts.files, slsa_v02.PredicateSLSAProvenance)
+		if headerErr != nil {
+			return "", err
+		}
+		var err error
+		statement, err = g.generateSLSAv1Statement(header, jobID, &start, &end)
+		if err != nil {
+			return "", err
 		}
 	default:
 		return "", fmt.Errorf("unknown slsa provenance version: %s", g.SLSAProvenanceVersion)
@@ -113,7 +109,7 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 	return file, err
 }
 
-func (g *artifactStatementGenerator) generateSLSAV1StatementJson(header in_toto.StatementHeader, jobID string, start *time.Time, end *time.Time, opts generateStatementOptions) (*in_toto.ProvenanceStatementSLSA1, error) {
+func (g *artifactStatementGenerator) generateSLSAv1Statement(header in_toto.StatementHeader, jobID string, start *time.Time, end *time.Time) (*in_toto.ProvenanceStatementSLSA1, error) {
 	predicate := g.generateSLSAv1Predicate(jobID, start, end)
 	return &in_toto.ProvenanceStatementSLSA1{
 		StatementHeader: header,
@@ -169,7 +165,7 @@ func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId string, start
 	}
 }
 
-func (g *artifactStatementGenerator) generateSLSAV02Statement(header in_toto.StatementHeader, jobID string, start *time.Time, end *time.Time, opts generateStatementOptions) (*in_toto.ProvenanceStatementSLSA02, error) {
+func (g *artifactStatementGenerator) generateSLSAv02Statement(header in_toto.StatementHeader, jobID string, start *time.Time, end *time.Time) (*in_toto.ProvenanceStatementSLSA02, error) {
 	predicate := g.generateSLSAv02Predicate(jobID, start, end)
 	return &in_toto.ProvenanceStatementSLSA02{
 		StatementHeader: header,
