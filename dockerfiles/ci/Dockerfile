@@ -1,4 +1,5 @@
 ARG GO_VERSION
+# Update the CI_IMAGE variable to include Debian flavor
 FROM golang:${GO_VERSION}-bullseye
 
 # Install required dependencies
