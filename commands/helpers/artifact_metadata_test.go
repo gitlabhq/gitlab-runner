@@ -11,15 +11,16 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func TestGeneratePredicate(t *testing.T) {
+func TestGeneratePredicateV02(t *testing.T) {
 	gen := &artifactStatementGenerator{
-		RunnerID:     1001,
-		RepoURL:      "testurl",
-		RepoDigest:   "testdigest",
-		JobName:      "testjobname",
-		ExecutorName: "testexecutorname",
-		RunnerName:   "testrunnername",
-		Parameters:   []string{"testparam"},
+		RunnerID:              1001,
+		RepoURL:               "testurl",
+		RepoDigest:            "testdigest",
+		JobName:               "testjobname",
+		ExecutorName:          "testexecutorname",
+		RunnerName:            "testrunnername",
+		Parameters:            []string{"testparam"},
+		SLSAProvenanceVersion: slsaProvenanceVersion02,
 	}
 
 	jobId := "10001"
@@ -35,9 +36,39 @@ func TestGeneratePredicate(t *testing.T) {
 		common.AppVersion.Version = originalVersion
 	}()
 
-	actualPredicate := gen.generatePredicate(jobId, startTime, endTime)
+	actualPredicate := gen.generateSLSAv02Predicate(jobId, &startTime, &endTime)
+
+	expectedBuildType := fmt.Sprintf(attestationTypeFormat, testVersion)
+	assert.Equal(t, expectedBuildType, actualPredicate.BuildType)
+}
+
+func TestGeneratePredicateV1(t *testing.T) {
+	gen := &artifactStatementGenerator{
+		RunnerID:              1001,
+		RepoURL:               "testurl",
+		RepoDigest:            "testdigest",
+		JobName:               "testjobname",
+		ExecutorName:          "testexecutorname",
+		RunnerName:            "testrunnername",
+		Parameters:            []string{"testparam"},
+		SLSAProvenanceVersion: slsaProvenanceVersion1,
+	}
+
+	jobId := "10001"
+
+	startTime := time.Now()
+	endTime := startTime.Add(time.Minute)
+
+	originalVersion := common.AppVersion.Version
+	testVersion := "vTest"
+	common.AppVersion.Version = testVersion
+
+	defer func() {
+		common.AppVersion.Version = originalVersion
+	}()
+
+	actualPredicate := gen.generateSLSAv1Predicate(jobId, &startTime, &endTime)
 
 	expectedBuildType := fmt.Sprintf(attestationTypeFormat, testVersion)
 	assert.Equal(t, expectedBuildType, actualPredicate.BuildDefinition.BuildType)
-
 }

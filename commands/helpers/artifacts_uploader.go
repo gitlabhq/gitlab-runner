@@ -188,6 +188,7 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 
 	if c.GenerateArtifactsMetadata {
 		logrus.Infof("Generating artifacts statement")
+
 		metadataFile, err := c.generateStatementToFile(generateStatementOptions{
 			artifactName: c.Name,
 			files:        c.files,
