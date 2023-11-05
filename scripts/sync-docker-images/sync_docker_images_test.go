@@ -18,7 +18,7 @@ func newDefaultArgs() args {
 	return args{
 		Revision:    "",
 		Concurrency: 1,
-		Command:     commaSeparatedList{"skopeo"},
+		Command:     spaceSeparatedList{"skopeo"},
 		Images:      commaSeparatedList{string(gitlabRunnerImage), string(gitlabRunnerHelperImage)},
 		Filters:     nil,
 		DryRun:      false,
@@ -57,7 +57,7 @@ func TestParseArgs(t *testing.T) {
 		"command": {
 			cmdArg: &cmdArg{
 				A: "command",
-				B: "test, command",
+				B: "test command",
 			},
 			expectedArgs: func(a *args) {
 				a.Command = []string{"test", "command"}
