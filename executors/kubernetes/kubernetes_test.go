@@ -3515,11 +3515,15 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
 				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[0].Command)
-				assert.Equal(t, pod.Spec.Containers[0].Args, []string{common.TestShellDockerCommand})
+				assert.Equal(
+					t,
+					pod.Spec.Containers[0].Args,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
+				assert.Equal(t, pod.Spec.Containers[1].Command, []string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand})
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -3907,12 +3911,20 @@ func TestSetupBuildPod(t *testing.T) {
 
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Equal(t, pod.Spec.Containers[0].Command, []string{common.TestShellDockerCommand})
+				assert.Equal(
+					t,
+					pod.Spec.Containers[0].Command,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
 				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
+				assert.Equal(
+					t,
+					pod.Spec.Containers[1].Command,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -3951,11 +3963,18 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[0].Command)
-				assert.Equal(t, pod.Spec.Containers[0].Args, []string{common.TestShellDockerCommand})
+				assert.Equal(
+					t,
+					pod.Spec.Containers[0].Args,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
+				assert.Equal(t,
+					pod.Spec.Containers[1].Command,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 			},
 		},
