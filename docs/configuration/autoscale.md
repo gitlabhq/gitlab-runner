@@ -68,7 +68,7 @@ For more configurations details read the
 | Parameter  | Value            | Description |
 |------------|------------------|-------------|
 | `executor` | string           | To use the autoscale feature, `executor` must be set to `docker+machine`. |
-| `limit`    | integer          | Limits how many jobs can be handled concurrently by this specific token. 0 simply means don't limit. For autoscale it's the upper limit of machines created by this provider (in conjunction with `concurrent` and `IdleCount`). |
+| `limit`    | integer          | Limits how many jobs can be handled concurrently by this specific token. `0` means don't limit. For autoscale, it's the upper limit of machines created by this provider (in conjunction with `concurrent` and `IdleCount`). |
 
 ### `[runners.machine]` options
 
