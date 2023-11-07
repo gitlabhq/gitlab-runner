@@ -415,7 +415,7 @@ func TestArtifactUploaderCommandShouldRetry(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			r := ArtifactsUploaderCommand{}
-			assert.Equal(t, tt.expectedShouldRetry, r.ShouldRetry(tt.tries, tt.err))
+			assert.Equal(t, tt.expectedShouldRetry, r.shouldRetry(tt.tries, tt.err))
 		})
 	}
 }

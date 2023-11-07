@@ -46,15 +46,15 @@ func TestRetry_Run(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			mockRetryable := &MockRetryable{}
-			defer mockRetryable.AssertExpectations(t)
+			m := &mockRetryable{}
+			defer m.AssertExpectations(t)
 
 			for _, e := range tt.calls {
-				mockRetryable.On("Run").Return(e).Once()
+				m.On("Run").Return(e).Once()
 			}
-			mockRetryable.On("ShouldRetry", mock.Anything, mock.Anything).Return(tt.shouldRetry).Maybe()
+			m.On("ShouldRetry", mock.Anything, mock.Anything).Return(tt.shouldRetry).Maybe()
 
-			retry := New(mockRetryable)
+			retry := New(m.Run).WithCheck(m.ShouldRetry)
 			err := retry.Run()
 			assert.Equal(t, tt.expectedErr, err)
 		})
@@ -65,67 +65,81 @@ func TestRunBackoff(t *testing.T) {
 	sleepTime := 2 * time.Second
 	runErr := errors.New("err")
 
-	mockRetryable := &MockRetryable{}
-	defer mockRetryable.AssertExpectations(t)
+	m := &mockRetryable{}
+	defer m.AssertExpectations(t)
 
-	mockRetryable.On("Run").Return(runErr).Times(2)
-	mockRetryable.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
-	mockRetryable.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
-
-	retry := NewWithBackoffDuration(mockRetryable, sleepTime, sleepTime)
+	m.On("Run").Return(runErr).Times(2)
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
 	start := time.Now()
-	err := retry.Run()
+
+	err := New(m.Run).
+		WithCheck(m.ShouldRetry).
+		WithMaxTries(3).
+		WithBackoff(sleepTime, sleepTime).
+		Run()
+
 	assert.True(t, time.Since(start) >= sleepTime)
 	assert.Equal(t, runErr, err)
 }
 
-func TestRetryable(t *testing.T) {
+func TestRunOnceNoRetry(t *testing.T) {
 	err := errors.New("err")
-	var runCalled, shouldRetryCalled bool
-	r := newRetryableDecorator(func() error {
-		runCalled = true
-		return err
-	}, func(tries int, err error) bool {
-		shouldRetryCalled = true
-		return true
-	})
 
-	assert.Equal(t, err, r.Run())
-	assert.True(t, r.ShouldRetry(0, nil))
-	assert.True(t, runCalled)
-	assert.True(t, shouldRetryCalled)
+	m := &mockRetryable{}
+	defer m.AssertExpectations(t)
+
+	m.On("Run").Return(err).Once()
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
+
+	assert.Equal(t, err, New(m.Run).WithCheck(m.ShouldRetry).Run())
 }
 
 func TestRetryableLogrusDecorator(t *testing.T) {
 	err := errors.New("err")
 
-	mr := &MockRetryable{}
-	defer mr.AssertExpectations(t)
-	mr.On("Run").Return(err).Once()
-	mr.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
+	m := &mockRetryable{}
+	defer m.AssertExpectations(t)
+
+	m.On("Run").Return(err).Twice()
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
 	logger, hook := test.NewNullLogger()
-	r := WithLogrus(mr, logger.WithContext(context.Background()))
+	r := New(m.Run).WithCheck(m.ShouldRetry).WithLogrus(logger.WithContext(context.Background()))
 
 	assert.Equal(t, err, r.Run())
-	assert.Equal(t, true, r.ShouldRetry(0, nil))
 	assert.Len(t, hook.Entries, 1)
 }
 
 func TestRetryableBuildLoggerDecorator(t *testing.T) {
 	err := errors.New("err")
 
-	mr := &MockRetryable{}
-	defer mr.AssertExpectations(t)
-	mr.On("Run").Return(err).Once()
-	mr.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
+	m := &mockRetryable{}
+	defer m.AssertExpectations(t)
+
+	m.On("Run").Return(err).Twice()
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Once()
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
 	logger, hook := test.NewNullLogger()
 	buildLogger := common.NewBuildLogger(nil, logger.WithContext(context.Background()))
-	r := WithBuildLog(mr, &buildLogger)
+	r := New(m.Run).WithCheck(m.ShouldRetry).WithBuildLog(&buildLogger)
 
 	assert.Equal(t, err, r.Run())
-	assert.Equal(t, true, r.ShouldRetry(0, nil))
 	assert.Len(t, hook.Entries, 1)
+}
+
+func TestMaxTries(t *testing.T) {
+	err := errors.New("err")
+
+	m := &mockRetryable{}
+	defer m.AssertExpectations(t)
+
+	m.On("Run").Return(err).Times(6)
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Times(5)
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
+
+	assert.Equal(t, err, New(m.Run).WithBackoff(0, 0).WithCheck(m.ShouldRetry).WithMaxTries(6).Run())
 }
