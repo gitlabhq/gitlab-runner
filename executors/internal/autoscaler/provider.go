@@ -86,13 +86,18 @@ func New(ep common.ExecutorProvider, cfg Config) common.ExecutorProvider {
 func (p *provider) Init() {}
 
 func (p *provider) Shutdown(ctx context.Context) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	wg := new(sync.WaitGroup)
-	for _, s := range p.scalers {
+	for key, s := range p.scalers {
 		wg.Add(1)
 		go func(sc scaler) {
 			defer wg.Done()
 			sc.shutdown(ctx)
 		}(s)
+
+		delete(p.scalers, key)
 	}
 
 	wg.Wait()

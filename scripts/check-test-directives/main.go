@@ -34,6 +34,9 @@ var (
 		"executors/docker/internal/volumes/parser/windows_path_test.go": tagOverridesMap{
 			"windows": false,
 		},
+		"executors/docker/autoscaler/autoscaler_integration_unix_test.go": tagOverridesMap{
+			"windows": false,
+		},
 	}
 )
 

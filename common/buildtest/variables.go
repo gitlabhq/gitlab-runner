@@ -35,7 +35,7 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 	)
 
 	if setup != nil {
-		setup(build)
+		setup(t, build)
 	}
 
 	out, err := RunBuildReturningOutput(t, build)
@@ -127,7 +127,7 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 	})
 
 	if setup != nil {
-		setup(build)
+		setup(t, build)
 	}
 
 	buf := new(bytes.Buffer)

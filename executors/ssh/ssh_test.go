@@ -59,15 +59,16 @@ func TestPrepare(t *testing.T) {
 
 	sshConfig := runnerConfig.RunnerSettings.SSH
 	server, err := sshHelpers.NewStubServer(sshConfig.User, sshConfig.Password)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, server.Stop())
+	}()
 
 	require.NoError(t, os.WriteFile(
 		knownHostsFilePath,
 		[]byte(fmt.Sprintf("[%s]:%s %s\n", host, server.Port(), sshHelpers.TestSSHKeyPair.PublicKey)),
 		0o644,
 	))
-
-	defer server.Stop()
 
 	sshConfig.Port = server.Port()
 

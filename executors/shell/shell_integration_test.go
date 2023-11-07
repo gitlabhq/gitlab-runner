@@ -131,7 +131,7 @@ func TestBuildSuccess(t *testing.T) {
 			assert.NoError(t, err)
 			build := newBuild(t, successfulBuild, shell)
 
-			setup(build)
+			setup(t, build)
 
 			err = buildtest.RunBuild(t, build)
 			assert.NoError(t, err)
@@ -314,7 +314,7 @@ func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		build := newBuild(t, common.JobResponse{}, shell)
 
-		updateSleepForCMD := func(build *common.Build) {
+		updateSleepForCMD := func(_ *testing.T, build *common.Build) {
 			if shell != "cmd" {
 				return
 			}
@@ -1628,7 +1628,7 @@ func TestBuildFileVariablesRemoval(t *testing.T) {
 						common.JobVariable{Key: testVariableName, Value: "test", File: true},
 					)
 
-					setup(build)
+					setup(t, build)
 
 					_ = buildtest.RunBuild(t, build)
 
@@ -1660,7 +1660,7 @@ func TestBuildInvokeBinaryHelper(t *testing.T) {
 
 			build := newBuild(t, successfulBuild, shell)
 
-			setup(build)
+			setup(t, build)
 
 			dir := t.TempDir()
 

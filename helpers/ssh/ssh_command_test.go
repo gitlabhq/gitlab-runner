@@ -19,8 +19,11 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	boolTrueValue := true
 	boolFalseValue := false
 
-	s, _ := ssh.NewStubServer(user, pass)
-	defer s.Stop()
+	s, err := ssh.NewStubServer(user, pass)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, s.Stop())
+	})
 
 	tempDir := t.TempDir()
 

@@ -802,16 +802,19 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 		// To do this, we create a new dial context for Docker's client, whilst
 		// also overridding the daemon hostname it would typically use (if it were to use
 		// its own dialer).
-		//
-		// We do this because tunneling "npipe" and "unix" connections is possible, but if
-		// we don't give docker a "fake" host, it'll complain when we tunnel to an npipe
-		// connection from Linux, or a unix connection from Windows.
 		host := creds.Host
-		creds.Host = internalFakeTunnelHostname
-
-		dialer, err := e.environmentDialContext(c, host)
+		scheme, dialer, err := e.environmentDialContext(c, host)
 		if err != nil {
 			return fmt.Errorf("creating env dialer: %w", err)
+		}
+
+		// If the scheme (docker uses it to define the protocol used) is "npipe" or "unix", we
+		// need to use a "fake" host, otherwise when dialing from Linux to Windows or vice-versa
+		// docker will complain because it doesn't think Linux can support "npipe" and doesn't
+		// think Windows can support "unix".
+		switch scheme {
+		case "unix", "npipe":
+			creds.Host = internalFakeTunnelHostname
 		}
 
 		opts = append(opts, client.WithDialContext(dialer))
@@ -850,7 +853,7 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 func (e *executor) environmentDialContext(
 	executorClient executors.Client,
 	host string,
-) (func(ctx context.Context, network, addr string) (net.Conn, error), error) {
+) (string, func(ctx context.Context, network, addr string) (net.Conn, error), error) {
 	if host == "" {
 		host = os.Getenv("DOCKER_HOST")
 	}
@@ -859,10 +862,10 @@ func (e *executor) environmentDialContext(
 	}
 	u, err := client.ParseHostURL(host)
 	if err != nil {
-		return nil, fmt.Errorf("parsing docker host: %w", err)
+		return "", nil, fmt.Errorf("parsing docker host: %w", err)
 	}
 
-	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return u.Scheme, func(ctx context.Context, network, addr string) (net.Conn, error) {
 		conn, err := executorClient.Dial(u.Scheme, u.Host)
 		if err != nil {
 			return nil, fmt.Errorf("dialing environment connection: %w", err)
