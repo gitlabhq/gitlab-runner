@@ -231,7 +231,7 @@ func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName strin
 		buildtest.RunBuildWithPassingEnvsMultistep(
 			t,
 			build.Runner,
-			func(build *common.Build) {
+			func(_ *testing.T, build *common.Build) {
 				buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 			},
 		)
@@ -699,8 +699,10 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	ctxTimeout := time.Minute
 	client := getTestKubeClusterClient(t)
 
-	init := func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
-		err := retry.New(newNamespaceManager(client, createNamespace, namespace)).Run()
+	init := func(t *testing.T, _ *common.Build, client *k8s.Clientset, namespace string) {
+		err := retry.NewWithValue(func() (namespaceManager, error) {
+			return newNamespaceManager(client, createNamespace, namespace), nil
+		}).Run()
 		require.NoError(t, err)
 
 		credentials, err := getSecrets(client, namespace, "")
@@ -713,7 +715,9 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	}
 
 	finalize := func(t *testing.T, client *k8s.Clientset, namespace string) {
-		err := retry.New(newNamespaceManager(client, deleteNamespace, namespace)).Run()
+		err := retry.NewWithValue(func() (namespaceManager, error) {
+			return newNamespaceManager(client, deleteNamespace, namespace), nil
+		}).Run()
 		require.NoError(t, err)
 	}
 
@@ -887,7 +891,7 @@ func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, 
 	buildtest.RunBuildWithCancel(
 		t,
 		build.Runner,
-		func(build *common.Build) {
+		func(_ *testing.T, build *common.Build) {
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 		},
 	)
@@ -902,7 +906,7 @@ func testKubernetesBuildLogLimitExceededFeatureFlag(t *testing.T, featureFlagNam
 	buildtest.RunRemoteBuildWithJobOutputLimitExceeded(
 		t,
 		build.Runner,
-		func(build *common.Build) {
+		func(_ *testing.T, build *common.Build) {
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 		},
 	)
@@ -917,7 +921,7 @@ func testKubernetesBuildMaskingFeatureFlag(t *testing.T, featureFlagName string,
 	buildtest.RunBuildWithMasking(
 		t,
 		build.Runner,
-		func(build *common.Build) {
+		func(_ *testing.T, build *common.Build) {
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 		},
 	)
@@ -1305,7 +1309,9 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 		"pod deletion during prepare stage in custom namespace": {
 			namespace: generateRandomNamespace("gc"),
 			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
-				err := retry.New(newNamespaceManager(client, createNamespace, namespace)).Run()
+				err := retry.NewWithValue(func() (namespaceManager, error) {
+					return newNamespaceManager(client, createNamespace, namespace), nil
+				}).Run()
 				require.NoError(t, err)
 
 				credentials, err := getSecrets(client, namespace, "")
@@ -1317,7 +1323,9 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 				assert.Empty(t, configMaps)
 			},
 			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
-				err := retry.New(newNamespaceManager(client, deleteNamespace, namespace)).Run()
+				err := retry.NewWithValue(func() (namespaceManager, error) {
+					return newNamespaceManager(client, deleteNamespace, namespace), nil
+				}).Run()
 				require.NoError(t, err)
 			},
 		},
