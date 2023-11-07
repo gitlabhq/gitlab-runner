@@ -33,6 +33,8 @@ import (
 	jsonpatch "github.com/evanphx/json-patch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 
+	"github.com/samber/lo"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
@@ -1142,7 +1144,11 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	return container, nil
 }
 
-func (s *executor) getCommandAndArgs(opts containerBuildOpts, imageDefinition common.Image, command ...string) ([]string, []string) {
+func (s *executor) getCommandAndArgs(
+	opts containerBuildOpts,
+	imageDefinition common.Image,
+	command ...string,
+) ([]string, []string) {
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
 		return []string{}, command
 	}
@@ -1150,7 +1156,7 @@ func (s *executor) getCommandAndArgs(opts containerBuildOpts, imageDefinition co
 	var args []string
 	cmd := command
 
-	if len(imageDefinition.Entrypoint) > 0 {
+	if len(lo.WithoutEmpty[string](imageDefinition.Entrypoint)) > 0 {
 		switch {
 		case opts.isServiceContainer:
 			cmd = imageDefinition.Entrypoint
