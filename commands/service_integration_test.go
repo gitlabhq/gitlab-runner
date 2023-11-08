@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kardianos/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
+	"golang.org/x/exp/slices"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
@@ -49,7 +51,6 @@ func TestGetServiceArguments(t *testing.T) {
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
-				"--syslog",
 			},
 		},
 		{
@@ -60,7 +61,6 @@ func TestGetServiceArguments(t *testing.T) {
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
 				"--config", "/tmp/config.toml",
 				"--service", "gitlab-runner",
-				"--syslog",
 			},
 		},
 		{
@@ -71,7 +71,6 @@ func TestGetServiceArguments(t *testing.T) {
 				"--working-directory", "/tmp",
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
-				"--syslog",
 			},
 		},
 		{
@@ -82,7 +81,6 @@ func TestGetServiceArguments(t *testing.T) {
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner-service-name",
-				"--syslog",
 			},
 		},
 		{
@@ -93,7 +91,6 @@ func TestGetServiceArguments(t *testing.T) {
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
-				"--syslog",
 			},
 		},
 		{
@@ -110,6 +107,9 @@ func TestGetServiceArguments(t *testing.T) {
 
 	for id, testCase := range tests {
 		t.Run(fmt.Sprintf("case-%d", id), func(t *testing.T) {
+			if service.Platform() != "linux-systemd" && !slices.Contains(testCase.cliFlags, "--syslog=false") {
+				testCase.expectedArgs = append(testCase.expectedArgs, "--syslog")
+			}
 			testServiceCommandRun(newTestGetServiceArgumentsCommand(t, testCase.expectedArgs), testCase.cliFlags...)
 		})
 	}
