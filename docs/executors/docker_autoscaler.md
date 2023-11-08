@@ -175,3 +175,69 @@ concurrent = 10
       idle_count = 5
       idle_time = "20m0s"
 ```
+
+### Example: Azure scale set for 1 job per instance
+
+Prerequisites:
+
+- An Azure VM Image with [Docker Engine](https://docs.docker.com/engine/) installed.
+- An Azure scale set where the autoscaling policy is set to `manual`. The runner handles the scaling.
+
+This configuration supports:
+
+- A capacity per instance of 1
+- A use count of 1
+- An idle scale of 5
+- An idle time of 20 minutes
+- A maximum instance count of 10
+
+When the capacity and use count are both set to `1`, each job is given a secure ephemeral instance that cannot be
+affected by other jobs. When the job completes, the instance it was executed on is immediately deleted.
+
+When the idle scale is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
+These instances stay for at least 20 minutes.
+
+The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
+
+```toml
+concurrent = 10
+
+[[runners]]
+  name = "docker autoscaler example"
+  url = "https://gitlab.com"
+  token = "<token>"
+  shell = "sh"                                        # use powershell or pwsh for Windows AMIs
+
+  # uncomment for Windows AMIs when the Runner manager is hosted on Linux
+  # environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=1"]
+
+  executor = "docker-autoscaler"
+
+  # Docker Executor config
+  [runners.docker]
+    image = "busybox:latest"
+
+  # Autoscaler config
+  [runners.autoscaler]
+    plugin = "fleeting-plugin-azure"
+
+    capacity_per_instance = 1
+    max_use_count = 1
+    max_instances = 10
+
+    [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
+      name = "my-docker-scale-set"
+      subscription_id = "9b3c4602-cde2-4089-bed8-889e5a3e7102"
+      resource_group_name = "my-resource-group"
+
+    [runners.autoscaler.connector_config]
+      username = "azureuser"
+      password = "my-scale-set-static-password"
+      use_static_credentials = true
+      timeout = "10m"
+      use_external_addr = true
+
+    [[runners.autoscaler.policy]]
+      idle_count = 5
+      idle_time = "20m0s"
+```

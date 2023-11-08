@@ -37,7 +37,7 @@ To prepare the environment for autoscaling:
    - [GCP fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
    - [Azure fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-azure/-/releases)
 1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
-1. Create an Amazon Machine Image (AMI) or GCP custom image. The image must include:
+1. Create a VM image for the platform you're using. The image must include:
    - Git
    - GitLab Runner
    - Dependencies required by the jobs you plan to run
@@ -370,6 +370,130 @@ concurrent = 50
       username          = "Administrator"
       timeout           = "5m0s"
       use_external_addr = true
+
+    [[runners.autoscaler.policy]]
+      idle_count = 5
+      idle_time = "20m0s"
+```
+
+## Azure scale set configuration examples
+
+### One job per instance using a Azure scale set
+
+Prerequisites:
+
+- A custom image with at least `git` and GitLab Runner installed.
+- An Azure scale set where the autoscaling mode is set to `manual`. The runner handles the scaling.
+
+This configuration supports:
+
+- A capacity per instance of 1
+- A use count of 1
+- An idle scale of 5
+- An idle time of 20 minutes
+- A maximum instance count of 10
+
+When the capacity and use count are both set to `1`, each job is given a secure ephemeral instance that cannot be
+affected by other jobs. When the job completes, the instance it was executed on is immediately deleted.
+
+When the idle scale is set to `5`, the runner keeps 5 instances available for future demand (because the capacity per instance is 1).
+These instances stay for at least 20 minutes.
+
+The runner `concurrent` field is set to 10 (maximum number instances * capacity per instance).
+
+```toml
+concurrent = 10
+
+[[runners]]
+  name = "instance autoscaler example"
+  url = "https://gitlab.com"
+  token = "<token>"
+  shell = "sh"
+
+  executor = "instance"
+
+  # Autoscaler config
+  [runners.autoscaler]
+    plugin = "fleeting-plugin-azure"
+
+    capacity_per_instance = 1
+    max_use_count = 1
+    max_instances = 10
+
+    [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
+      name                = "my-linux-scale-set" # Azure scale set name
+      subscription_id     = "9b3c4602-cde2-4089-bed8-889e5a3e7102"
+      resource_group_name = "my-resource-group" 
+
+    [runners.autoscaler.connector_config]
+      username               = "runner"
+      password               = "my-scale-set-static-password"
+      use_static_credentials = true
+      timeout                = "10m"
+      use_external_addr      = true
+
+    [[runners.autoscaler.policy]]
+      idle_count = 5
+      idle_time  = "20m0s"
+```
+
+### Five jobs per instance, unlimited uses, using GCP Instance group
+
+Prerequisites:
+
+- A custom image with at least `git` and GitLab Runner installed.
+- An Azure scale set where the autoscaling mode is set to `manual`. The runner handles the scaling.
+
+This configuration supports:
+
+- A capacity per instance of 5
+- An unlimited use count
+- An idle scale of 5
+- An idle time of 20 minutes
+- A maximum instance count of 10
+
+When the capacity is set `5` and the use count is unlimited, each instance concurrently
+executes 5 jobs for the lifetime of the instance.
+
+Jobs executed in these environments should be **trusted** as there is little isolation between them and each job
+can affect the performance of another.
+
+When the idle scale is set to `5`, 1 idle instance is created to accommodate an idle capacity of 5
+(due to the capacity per instance) whenever the in-use capacity is lower than 5. Idle instances
+stay for at least 20 minutes.
+
+The runner `concurrent` field is set to 50 (maximum number instances * capacity per instance).
+
+```toml
+concurrent = 50
+
+[[runners]]
+  name = "instance autoscaler example"
+  url = "https://gitlab.com"
+  token = "<token>"
+  shell = "sh"
+
+  executor = "instance"
+
+  # Autoscaler config
+  [runners.autoscaler]
+    plugin = "fleeting-plugin-azure"
+
+    capacity_per_instance = 5
+    max_use_count = 0
+    max_instances = 10
+
+    [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
+      name                = "my-windows-scale-set" # Azure scale set name
+      subscription_id     = "9b3c4602-cde2-4089-bed8-889e5a3e7102"
+      resource_group_name = "my-resource-group" 
+
+    [runners.autoscaler.connector_config]
+      username               = "Administrator"
+      password               = "my-scale-set-static-password"
+      use_static_credentials = true
+      timeout                = "10m"
+      use_external_addr      = true
 
     [[runners.autoscaler.policy]]
       idle_count = 5
