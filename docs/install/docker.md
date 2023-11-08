@@ -47,7 +47,7 @@ USAGE:
    gitlab-runner [global options] command [command options] [arguments...]
 
 VERSION:
-   15.11.0 (436955cb)
+   16.5.0 (853330f9)
 
 (...)
 ```

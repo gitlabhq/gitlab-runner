@@ -148,7 +148,7 @@ USAGE:
    gitlab-runner [global options] command [command options] [arguments...]
 
 VERSION:
-   15.11.0 (436955cb)
+   16.5.0 (853330f9)
 
 AUTHOR:
    GitLab Inc. <support@gitlab.com>
@@ -703,7 +703,7 @@ Here are two ways to prevent this:
 
   ```shell
   $ gitlab-runner run
-  Runtime platform                                    arch=amd64 os=linux pid=87858 revision=436955cb version=15.11.0
+  Runtime platform                                    arch=arm64 os=linux pid=8 revision=853330f9 version=16.5.0
   ```
 
 ### Saving system ID state file: access denied

@@ -62,16 +62,16 @@ rpm -i gitlab-runner_386.rpm
 
 ## Download any other tagged release
 
-Simply replace `main` with either `tag` (for example, `v15.11.0`) or `latest` (the latest
+Simply replace `main` with either `tag` (for example, `v16.5.0`) or `latest` (the latest
 stable). For a list of tags see <https://gitlab.com/gitlab-org/gitlab-runner/-/tags>.
 For example:
 
 - <https://s3.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-386>
 - <https://s3.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-386>
-- <https://s3.amazonaws.com/gitlab-runner-downloads/v15.11.0/binaries/gitlab-runner-linux-386>
+- <https://s3.amazonaws.com/gitlab-runner-downloads/v16.5.0/binaries/gitlab-runner-linux-386>
 
 If you have problem downloading through `https`, fallback to plain `http`:
 
 - <http://s3.amazonaws.com/gitlab-runner-downloads/main/binaries/gitlab-runner-linux-386>
 - <http://s3.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-386>
-- <http://s3.amazonaws.com/gitlab-runner-downloads/v15.11.0/binaries/gitlab-runner-linux-386>
+- <http://s3.amazonaws.com/gitlab-runner-downloads/v16.5.0/binaries/gitlab-runner-linux-386>

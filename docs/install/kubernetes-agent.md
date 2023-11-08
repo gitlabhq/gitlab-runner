@@ -102,7 +102,7 @@ metadata:
   name: gitlab-runner-gitlab-runner
   labels:
     app: gitlab-runner-gitlab-runner
-    chart: gitlab-runner-0.51.0
+    chart: gitlab-runner-0.58.2
     release: "gitlab-runner"
     heritage: "Helm"
 ---
@@ -113,7 +113,7 @@ metadata:
   name: "gitlab-runner-gitlab-runner"
   labels:
     app: gitlab-runner-gitlab-runner
-    chart: gitlab-runner-0.51.0
+    chart: gitlab-runner-0.58.2
     release: "gitlab-runner"
     heritage: "Helm"
 type: Opaque
@@ -128,7 +128,7 @@ metadata:
   name: gitlab-runner-gitlab-runner
   labels:
     app: gitlab-runner-gitlab-runner
-    chart: gitlab-runner-0.51.0
+    chart: gitlab-runner-0.58.2
     release: "gitlab-runner"
     heritage: "Helm"
 data:
@@ -226,7 +226,7 @@ metadata:
   name: gitlab-runner-gitlab-runner
   labels:
     app: gitlab-runner-gitlab-runner
-    chart: gitlab-runner-0.51.0
+    chart: gitlab-runner-0.58.2
     release: "gitlab-runner"
     heritage: "Helm"
 rules:
@@ -241,7 +241,7 @@ metadata:
   name: gitlab-runner-gitlab-runner
   labels:
     app: gitlab-runner-gitlab-runner
-    chart: gitlab-runner-0.51.0
+    chart: gitlab-runner-0.58.2
     release: "gitlab-runner"
     heritage: "Helm"
 roleRef:
@@ -260,7 +260,7 @@ metadata:
   name: gitlab-runner-gitlab-runner
   labels:
     app: gitlab-runner-gitlab-runner
-    chart: gitlab-runner-0.51.0
+    chart: gitlab-runner-0.58.2
     release: "gitlab-runner"
     heritage: "Helm"
 spec:
@@ -272,7 +272,7 @@ spec:
     metadata:
       labels:
         app: gitlab-runner-gitlab-runner
-        chart: gitlab-runner-0.51.0
+        chart: gitlab-runner-0.58.2
         release: "gitlab-runner"
         heritage: "Helm"
       annotations:
