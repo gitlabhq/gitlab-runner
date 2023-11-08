@@ -104,7 +104,7 @@ GitLab service and GitLab Runner exist in two different networks that are bridge
 ```shell
 Created fresh repository.
 ++ echo 'Created fresh repository.'
-++ git -c 'http.userAgent=gitlab-runner 15.11.0 linux/amd64' fetch origin +da39a3ee5e6b4b0d3255bfef95601890afd80709:refs/pipelines/435345 +refs/heads/master:refs/remotes/origin/master --depth 50 --prune --quiet
+++ git -c 'http.userAgent=gitlab-runner 16.5.0 linux/amd64' fetch origin +da39a3ee5e6b4b0d3255bfef95601890afd80709:refs/pipelines/435345 +refs/heads/master:refs/remotes/origin/master --depth 50 --prune --quiet
 fatal: Authentication failed for 'https://gitlab.example.com/group/example-project.git/'
 ```
 
