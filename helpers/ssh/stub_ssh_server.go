@@ -167,7 +167,7 @@ func (s *StubSSHServer) Stop() error {
 	case <-s.stopped:
 		return err
 
-	case <-time.After(30 * time.Second):
+	case <-time.After(45 * time.Second):
 		return fmt.Errorf("timed out waiting for active ssh session to close")
 	}
 }
