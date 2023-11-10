@@ -156,7 +156,7 @@ func testDefaultInspectUIDandGID(
 	tests := map[string]uidAndGidTestCase{
 		"Exec error": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
 					}).
@@ -170,7 +170,7 @@ func testDefaultInspectUIDandGID(
 		},
 		"ID parsing error": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
 						mockOutput(t, args, "\n\ntest\n\n", "")
@@ -186,7 +186,7 @@ func testDefaultInspectUIDandGID(
 		},
 		"err output mixed with expected stdout output": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
 						mockOutput(t, args, "\n\n123\n\n", "Some mixed error output")
@@ -199,7 +199,7 @@ func testDefaultInspectUIDandGID(
 		},
 		"empty output of the id command": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
 						mockOutput(t, args, "\n\n\n\n", "")
@@ -214,7 +214,7 @@ func testDefaultInspectUIDandGID(
 		},
 		"proper ID received from output": {
 			assertExecMock: func(t *testing.T, clientMock *exec.MockDocker, expectedCtx context.Context) {
-				clientMock.On("Exec", expectedCtx, containerID, mock.Anything).
+				clientMock.On("Exec", expectedCtx, containerID, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).
 					Run(func(args mock.Arguments) {
 						assertCommand(t, args)
 						mockOutput(t, args, "\n\n123\n\n", "")

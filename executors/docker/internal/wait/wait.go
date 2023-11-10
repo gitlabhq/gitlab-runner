@@ -11,6 +11,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
+type GracefulExitFunc func(ctx context.Context, containerID string) error
+
 //go:generate mockery --name=Waiter --inpackage
 type Waiter interface {
 	Wait(ctx context.Context, containerID string) error
@@ -20,7 +22,7 @@ type Waiter interface {
 type KillWaiter interface {
 	Waiter
 
-	StopKillWait(ctx context.Context, containerID string, timeout *int) error
+	StopKillWait(ctx context.Context, containerID string, timeout *int, gracefulExitFunc GracefulExitFunc) error
 }
 
 type dockerWaiter struct {
@@ -46,7 +48,13 @@ func (d *dockerWaiter) Wait(ctx context.Context, containerID string) error {
 //
 // A nil timeout uses the daemon's or containers default timeout, -1 will wait
 // indefinitely. Use 0 to not wait at all.
-func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int) error {
+func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int,
+	graceGracefulExitFunc GracefulExitFunc,
+) error {
+	// if the job timed out or was cancelled, the ctx will already have expired, so just use context.Background()
+	if graceGracefulExitFunc != nil {
+		_ = graceGracefulExitFunc(context.Background(), containerID)
+	}
 	return d.retryWait(ctx, containerID, func() {
 		_ = d.client.ContainerStop(ctx, containerID, container.StopOptions{Timeout: timeout})
 	})

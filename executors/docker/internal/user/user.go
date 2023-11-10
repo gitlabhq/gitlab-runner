@@ -69,7 +69,7 @@ func (i *defaultInspect) executeCommand(ctx context.Context, containerID string,
 		Stderr: limitwriter.New(stderr, 1024),
 	}
 
-	err := i.exec.Exec(ctx, containerID, streams)
+	err := i.exec.Exec(ctx, containerID, streams, nil)
 	if err != nil {
 		return 0, fmt.Errorf("executing %q on container %q: %w", command, containerID, err)
 	}

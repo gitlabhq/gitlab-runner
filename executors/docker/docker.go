@@ -711,7 +711,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 		Stdout: e.Trace,
 	}
 
-	return dockerExec.Exec(ctx, id, streams)
+	return dockerExec.Exec(ctx, id, streams, nil)
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {

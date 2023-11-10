@@ -313,7 +313,7 @@ func (s *commandExecutor) executeChownOnDir(
 		Stdout: lw,
 	}
 
-	err := dockerExec.Exec(s.Context, c.ID, streams)
+	err := dockerExec.Exec(s.Context, c.ID, streams, nil)
 
 	log := s.Build.Log().WithField("updatedDir", dir)
 	log.WithField("output", output.String()).Debug("Changing ownership of files")

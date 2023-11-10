@@ -13,13 +13,13 @@ type MockKillWaiter struct {
 	mock.Mock
 }
 
-// StopKillWait provides a mock function with given fields: ctx, containerID, timeout
-func (_m *MockKillWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int) error {
-	ret := _m.Called(ctx, containerID, timeout)
+// StopKillWait provides a mock function with given fields: ctx, containerID, timeout, gracefulExitFunc
+func (_m *MockKillWaiter) StopKillWait(ctx context.Context, containerID string, timeout *int, gracefulExitFunc GracefulExitFunc) error {
+	ret := _m.Called(ctx, containerID, timeout, gracefulExitFunc)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, *int) error); ok {
-		r0 = rf(ctx, containerID, timeout)
+	if rf, ok := ret.Get(0).(func(context.Context, string, *int, GracefulExitFunc) error); ok {
+		r0 = rf(ctx, containerID, timeout, gracefulExitFunc)
 	} else {
 		r0 = ret.Error(0)
 	}

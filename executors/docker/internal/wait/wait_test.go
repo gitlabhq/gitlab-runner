@@ -104,7 +104,7 @@ func TestDockerWaiter_StopKillWait(t *testing.T) {
 		}
 	}()
 
-	err := waiter.StopKillWait(context.Background(), "id", nil)
+	err := waiter.StopKillWait(context.Background(), "id", nil, nil)
 	assert.NoError(t, err)
 }
 
