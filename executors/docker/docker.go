@@ -711,7 +711,12 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 		Stdout: e.Trace,
 	}
 
-	return dockerExec.Exec(ctx, id, streams, nil)
+	var gracefulExitFunc wait.GracefulExitFunc
+	if id == e.buildContainerID {
+		// send SIGTERM to all processes in the build container.
+		gracefulExitFunc = e.sendSIGTERMToContainerProcs
+	}
+	return dockerExec.Exec(ctx, id, streams, gracefulExitFunc)
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {
@@ -1146,10 +1151,6 @@ func (e *executor) Cleanup() {
 	remove := func(id string) {
 		wg.Add(1)
 		go func() {
-			// send SIGTERM to all processes in the build container.
-			if id == e.buildContainerID {
-				_ = e.sendSIGTERMToContainerProcs(ctx, id)
-			}
 			_ = e.removeContainer(ctx, id)
 			wg.Done()
 		}()
