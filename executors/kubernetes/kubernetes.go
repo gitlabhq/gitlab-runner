@@ -835,11 +835,12 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 		container.Command = []string{s.Shell().Shell, "-c", strings.Join(commands, ";\n")}
 
 	default:
-		initCommand := "touch %[1]s && (chmod 777 %[1]s || exit 0)"
-		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
-			initCommand += " && cp /usr/bin/dumb-init %[2]s"
+		initCommand := fmt.Sprintf("touch %[1]s && (chmod 777 %[1]s || exit 0)", s.logFile())
+		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) &&
+			s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+			initCommand = fmt.Sprintf("%s && cp /usr/bin/dumb-init %s", initCommand, s.scriptsDir())
 		}
-		container.Command = []string{"sh", "-c", fmt.Sprintf(initCommand, s.logFile(), s.scriptsDir())}
+		container.Command = []string{"sh", "-c", initCommand}
 	}
 
 	return container, nil
@@ -1895,7 +1896,8 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 }
 
 func (s *executor) getBuildAndHelperContainersCommand() []string {
-	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) ||
+		!s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
 		return s.BuildShell.DockerCommand
 	}
 
