@@ -138,6 +138,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesClusterWarningEvent":                       testKubernetesClusterWarningEvent,
 		"testKubernetesFailingBuildForBashAndPwshFeatureFlag":     testKubernetesFailingBuildForBashAndPwshFeatureFlag,
 		"testKubernetesPodEvents":                                 testKubernetesPodEvents,
+		"testKubernetesDumbInitSuccessRun":                        testKubernetesDumbInitSuccessRun,
 	}
 
 	featureFlags := []string{
@@ -239,6 +240,18 @@ func testKubernetesBuildPassingEnvsMultistep(t *testing.T, featureFlagName strin
 			},
 		)
 	})
+}
+
+func testKubernetesDumbInitSuccessRun(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+	build.Image.Name = common.TestDockerGitImage
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+	buildtest.SetBuildFeatureFlag(build, featureflags.UseDumbInitWithKubernetesExecutor, true)
+
+	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
 }
 
 func TestBuildScriptSections(t *testing.T) {
