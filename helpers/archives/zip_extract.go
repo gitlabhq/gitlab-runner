@@ -96,8 +96,7 @@ func ExtractZipArchive(archive *zip.Reader) error {
 	}
 
 	for _, file := range archive.File {
-		// Update file permissions
-		if err := os.Chmod(file.Name, file.Mode().Perm()); tracker.actionable(err) {
+		if err := lchmod(file.Name, file.Mode()); tracker.actionable(err) {
 			logrus.Warningf("%s: %s (suppressing repeats)", file.Name, err)
 		}
 
