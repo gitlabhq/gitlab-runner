@@ -95,3 +95,43 @@ func TestExtractZipFileNotFound(t *testing.T) {
 	err := ExtractZipFile("non_existing_zip_file.zip")
 	assert.Error(t, err)
 }
+
+// When extracting a regular file and a symlink that refers to that file, the file's mode bits
+// should be unchanged by the process of zipping and extracting the files.
+func TestExtractZipFileSymlinkMode(t *testing.T) {
+	testInWorkDir(t, func(t *testing.T, fileName string) {
+		regularFile := createTestFile(t, singleByte)
+		err := os.Chmod(regularFile, 0o600)
+		require.NoError(t, err)
+
+		fileInfo, err := os.Lstat(regularFile)
+		require.NoError(t, err)
+		originalFilePerm := fileInfo.Mode().Perm()
+
+		symlinkFile := "symlinkFile"
+		err = os.Symlink(regularFile, symlinkFile)
+		require.NoError(t, err)
+
+		f, err := os.Create(fileName)
+		require.NoError(t, err)
+		defer f.Close()
+
+		err = CreateZipArchive(f, []string{
+			regularFile,
+			symlinkFile,
+		})
+		require.NoError(t, err)
+
+		err = os.Remove(symlinkFile)
+		require.NoError(t, err)
+		err = os.Remove(regularFile)
+		require.NoError(t, err)
+
+		err = ExtractZipFile(fileName)
+		require.NoError(t, err)
+
+		fileInfo, err = os.Lstat(regularFile)
+		require.NoError(t, err)
+		assert.EqualValues(t, fileInfo.Mode().Perm(), originalFilePerm)
+	})
+}
