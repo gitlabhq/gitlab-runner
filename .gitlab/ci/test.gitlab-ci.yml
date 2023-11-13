@@ -28,7 +28,7 @@ check version definition:
 
 # Perform documentation linting on Markdown files
 docs lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.18-vale-2.27.0-markdownlint-0.35.0-markdownlint2-0.8.1
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.18-vale-2.29.6-markdownlint-0.37.0-markdownlint2-0.10.0
   stage: test
   extends:
   - .rules:merge_request_pipelines
@@ -40,7 +40,7 @@ docs lint markdown:
 
 # Perform link checks on published HTML files
 docs check links:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.18-ruby-3.2.2-6a53d93b
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.18-ruby-3.2.2-08fa6df8
   stage: test
   extends:
   - .rules:merge_request_pipelines
