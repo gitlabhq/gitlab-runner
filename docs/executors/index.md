@@ -20,10 +20,10 @@ GitLab Runner provides the following executors:
 - [Parallels](parallels.md)
 - [VirtualBox](virtualbox.md)
 - [Docker](docker.md)
-- [Docker Autoscaler (experiment)](docker_autoscaler.md)
+- [Docker Autoscaler (Beta)](docker_autoscaler.md)
 - [Docker Machine (auto-scaling)](docker_machine.md)
 - [Kubernetes](kubernetes.md)
-- [Instance (experiment)](instance.md)
+- [Instance (Beta)](instance.md)
 - [Custom](custom.md)
 
 These executors are locked and we are no longer developing or accepting
