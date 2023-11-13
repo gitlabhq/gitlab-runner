@@ -647,6 +647,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		Runtime:       e.Config.Docker.Runtime,
 		Privileged:    e.Config.Docker.Privileged,
+		GroupAdd:      e.Config.Docker.GroupAdd,
 		UsernsMode:    container.UsernsMode(e.Config.Docker.UsernsMode),
 		CapAdd:        e.Config.Docker.CapAdd,
 		CapDrop:       e.Config.Docker.CapDrop,

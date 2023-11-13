@@ -185,6 +185,7 @@ type DockerConfig struct {
 	ServicesPrivileged         *bool              `toml:"services_privileged,omitempty" json:"services_privileged,omitempty" long:"services_privileged" env:"DOCKER_SERVICES_PRIVILEGED" description:"When set this will give or remove extended privileges to container services"`
 	DisableEntrypointOverwrite bool               `toml:"disable_entrypoint_overwrite,omitzero" json:"disable_entrypoint_overwrite" long:"disable-entrypoint-overwrite" env:"DOCKER_DISABLE_ENTRYPOINT_OVERWRITE" description:"Disable the possibility for a container to overwrite the default image entrypoint"`
 	User                       string             `toml:"user,omitempty" json:"user" long:"user" env:"DOCKER_USER" description:"Run all commands in the container as the specified user."`
+	GroupAdd                   []string           `toml:"group_add" json:"group_add,omitempty" long:"group-add" env:"DOCKER_GROUP_ADD" description:"Add additional groups to join"`
 	UsernsMode                 string             `toml:"userns_mode,omitempty" json:"userns_mode" long:"userns" env:"DOCKER_USERNS_MODE" description:"User namespace to use"`
 	CapAdd                     []string           `toml:"cap_add" json:"cap_add,omitempty" long:"cap-add" env:"DOCKER_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                    []string           `toml:"cap_drop" json:"cap_drop,omitempty" long:"cap-drop" env:"DOCKER_CAP_DROP" description:"Drop Linux capabilities"`

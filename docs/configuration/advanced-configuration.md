@@ -286,6 +286,7 @@ The following settings define the Docker container parameters.
 | `dns_search`                   | A list of DNS search domains. |
 | `extra_hosts`                  | Hosts that should be defined in container environment. |
 | `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
+| `group_add`                    | Add additional groups the container process will run as. |
 | `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
 | `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.15`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.18`. |
 | `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image ARCH and OS. |
@@ -350,6 +351,7 @@ Example:
   dns = ["8.8.8.8"]
   dns_search = [""]
   privileged = false
+  group_add = ["docker"]
   userns_mode = "host"
   cap_add = ["NET_ADMIN"]
   cap_drop = ["DAC_OVERRIDE"]
