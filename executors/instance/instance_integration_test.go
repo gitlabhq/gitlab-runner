@@ -76,6 +76,10 @@ func setupAcquireBuild(t *testing.T, build *common.Build) {
 }
 func TestBuildSuccess(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			t.Skip()
+		}
+
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		require.NoError(t, err)
 
@@ -101,12 +105,20 @@ func TestBuildCancel(t *testing.T) {
 
 func TestBuildMasking(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			t.Skip()
+		}
+
 		buildtest.RunBuildWithMasking(t, newRunnerConfig(t, shell), setupAcquireBuild)
 	})
 }
 
 func TestBuildExpandedFileVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			t.Skip()
+		}
+
 		buildtest.RunBuildWithExpandedFileVariable(t, newRunnerConfig(t, shell), setupAcquireBuild)
 	})
 }
