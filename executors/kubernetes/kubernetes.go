@@ -78,11 +78,6 @@ const (
 	defaultRetryMinBackoff = 500 * time.Millisecond
 	defaultRetryMaxBackoff = 2 * time.Second
 
-	// commandConnectFailureMaxTries is the number of attempts we retry when
-	// the connection to a Pod fails. There's an exponential backoff, which
-	// maxes out at 5 seconds.
-	commandConnectFailureMaxTries = 30
-
 	// The suffix is built using alphanumeric character
 	// that means there is 34^8 possibilities for a resource name using the same pattern
 	// Considering that the k8s resources are deleted after they run,
@@ -837,19 +832,15 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 			fmt.Sprintf(chmod, s.logsDir()),
 			fmt.Sprintf(chmod, s.Build.RootDir),
 		}
-		container.Command = []string{
-			s.Shell().Shell,
-			"-c",
-			strings.Join(commands, ";\n"),
-		}
+		container.Command = []string{s.Shell().Shell, "-c", strings.Join(commands, ";\n")}
 
 	default:
-		chmod := "touch %[1]s && (chmod 777 %[1]s || exit 0)"
-		container.Command = []string{
-			"sh",
-			"-c",
-			fmt.Sprintf(chmod, s.logFile()),
+		initCommand := fmt.Sprintf("touch %[1]s && (chmod 777 %[1]s || exit 0)", s.logFile())
+		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) &&
+			s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+			initCommand = fmt.Sprintf("%s && cp /usr/bin/dumb-init %s", initCommand, s.scriptsDir())
 		}
+		container.Command = []string{"sh", "-c", initCommand}
 	}
 
 	return container, nil
@@ -1880,7 +1871,7 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 			s.Config.Kubernetes.BuildContainerSecurityContext,
 			s.defaultCapDrop()...,
 		),
-		command: s.BuildShell.DockerCommand,
+		command: s.getBuildAndHelperContainersCommand(),
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building build container: %w", err)
@@ -1895,13 +1886,27 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 			s.Config.Kubernetes.HelperContainerSecurityContext,
 			s.defaultCapDrop()...,
 		),
-		command: s.BuildShell.DockerCommand,
+		command: s.getBuildAndHelperContainersCommand(),
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building helper container: %w", err)
 	}
 
 	return buildContainer, helperContainer, nil
+}
+
+func (s *executor) getBuildAndHelperContainersCommand() []string {
+	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) ||
+		!s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+		return s.BuildShell.DockerCommand
+	}
+
+	switch s.Shell().Shell {
+	case shells.SNPowershell:
+		return s.BuildShell.DockerCommand
+	default:
+		return append([]string{fmt.Sprintf("%s/dumb-init", s.scriptsDir()), "--"}, s.BuildShell.DockerCommand...)
+	}
 }
 
 // Inspired by

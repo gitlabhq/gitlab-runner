@@ -34,6 +34,7 @@ const (
 	RetrievePodWarningEvents             string = "FF_RETRIEVE_POD_WARNING_EVENTS"
 	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
+	UseDumbInitWithKubernetesExecutor    string = "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR"
 )
 
 type FeatureFlag struct {
@@ -280,6 +281,13 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, the Git `transfer.bundleURI` configuration option is set to `true`. This FF is enabled by default. " +
 			"Set to `false` to disable Git bundle support.",
+	},
+	{
+		Name:         UseDumbInitWithKubernetesExecutor,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, `dumb-init` is used to execute all the scripts. " +
+			"This allows `dumb-init` to run as the first process in the helper and build container. It is only supported in the attach mode.",
 	},
 }
 

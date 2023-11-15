@@ -3467,7 +3467,99 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.ElementsMatch(t, expectedTolerations, pod.Spec.Tolerations)
 			},
 		},
-		"supports extended docker configuration for image and services": {
+		"supports extended docker configuration for image and services, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is true": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name:       "test-image",
+					Entrypoint: []string{"/init", "run"},
+				},
+				Services: common.Services{
+					{
+						Name:       "test-service",
+						Entrypoint: []string{"/init", "run"},
+						Command:    []string{"application", "--debug"},
+					},
+					{
+						Name:    "test-service-2",
+						Command: []string{"application", "--debug"},
+					},
+					{
+						Name:    "test-service-3",
+						Command: []string{"application", "--debug"},
+						Variables: []common.JobVariable{
+							{
+								Key:   "SERVICE_VAR",
+								Value: "SERVICE_VAR_VALUE",
+							},
+							{
+								Key:   "SERVICE_VAR_REF_BUILD_VAR",
+								Value: "$BUILD_VAR",
+							},
+						},
+					},
+				},
+			},
+			Variables: []common.JobVariable{
+				{Key: "BUILD_VAR", Value: "BUILD_VAR_VALUE", Public: true},
+				{Key: "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR", Value: "true", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.Containers, 5)
+
+				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
+				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
+				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[0].Command)
+				assert.Equal(
+					t,
+					pod.Spec.Containers[0].Args,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
+
+				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
+				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
+				assert.Equal(t, pod.Spec.Containers[1].Command, []string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand})
+				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
+
+				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
+				assert.Equal(t, "test-service", pod.Spec.Containers[2].Image)
+				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[2].Command)
+				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Args)
+				assert.NotContains(
+					t, pod.Spec.Containers[2].Env,
+					api.EnvVar{Name: "SERVICE_VAR", Value: "SERVICE_VAR_VALUE"},
+					"Service env should NOT contain SERVICE_VAR with value VARIABLE_VALUE",
+				)
+
+				assert.Equal(t, "svc-1", pod.Spec.Containers[3].Name)
+				assert.Equal(t, "test-service-2", pod.Spec.Containers[3].Image)
+				assert.Empty(t, pod.Spec.Containers[3].Command, "Service container command should be empty")
+				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[3].Args)
+				assert.NotContains(
+					t, pod.Spec.Containers[3].Env,
+					api.EnvVar{Name: "SERVICE_VAR", Value: "SERVICE_VAR_VALUE"},
+					"Service env should NOT contain VARIABLE_NAME with value VARIABLE_VALUE",
+				)
+
+				assert.Equal(t, "svc-2", pod.Spec.Containers[4].Name)
+				assert.Equal(t, "test-service-3", pod.Spec.Containers[4].Image)
+				assert.Contains(
+					t, pod.Spec.Containers[4].Env,
+					api.EnvVar{Name: "SERVICE_VAR", Value: "SERVICE_VAR_VALUE"},
+				)
+				assert.Contains(
+					t, pod.Spec.Containers[4].Env,
+					api.EnvVar{Name: "SERVICE_VAR_REF_BUILD_VAR", Value: "BUILD_VAR_VALUE"},
+				)
+			},
+		},
+		"supports extended docker configuration for image and services, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is false": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -3874,7 +3966,75 @@ func TestSetupBuildPod(t *testing.T) {
 				)
 			},
 		},
-		"sets command (entrypoint) and args for services": {
+		"sets command (entrypoint) and args for services, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is true": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-image",
+				},
+				Services: common.Services{
+					{
+						Name:    "test-service-0",
+						Command: []string{"application", "--debug"},
+					},
+					{
+						Name:       "test-service-1",
+						Entrypoint: []string{"application", "--debug"},
+					},
+					{
+						Name:       "test-service-2",
+						Entrypoint: []string{"application", "--debug"},
+						Command:    []string{"argument1", "argument2"},
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.Containers, 5)
+
+				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
+				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
+				assert.Equal(
+					t,
+					pod.Spec.Containers[0].Command,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
+				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
+
+				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
+				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
+				assert.Equal(
+					t,
+					pod.Spec.Containers[1].Command,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
+				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
+
+				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
+				assert.Equal(t, "test-service-0", pod.Spec.Containers[2].Image)
+				assert.Empty(t, pod.Spec.Containers[2].Command, "Service container command should be empty")
+				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[2].Args)
+
+				assert.Equal(t, "svc-1", pod.Spec.Containers[3].Name)
+				assert.Equal(t, "test-service-1", pod.Spec.Containers[3].Image)
+				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[3].Command)
+				assert.Empty(t, pod.Spec.Containers[3].Args, "Service container args should be empty")
+
+				assert.Equal(t, "svc-2", pod.Spec.Containers[4].Name)
+				assert.Equal(t, "test-service-2", pod.Spec.Containers[4].Image)
+				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[4].Command)
+				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
+			},
+			Variables: []common.JobVariable{
+				{Key: "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR", Value: "true", Public: true},
+			},
+		},
+		"sets command (entrypoint) and args for services, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is false": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -3931,7 +4091,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
 			},
 		},
-		"sets command (entrypoint) for build": {
+		"sets command (entrypoint) for build, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is true": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -3951,7 +4111,49 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[0].Command)
-				assert.Equal(t, pod.Spec.Containers[0].Args, []string{common.TestShellDockerCommand})
+				assert.Equal(
+					t,
+					pod.Spec.Containers[0].Args,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
+
+				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
+				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
+				assert.Equal(t,
+					pod.Spec.Containers[1].Command,
+					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
+				)
+				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
+			},
+			Variables: []common.JobVariable{
+				{Key: "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR", Value: "true", Public: true},
+			},
+		},
+		"sets command (entrypoint) for build, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is false": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						HelperImage: "custom/helper-image",
+					},
+				},
+			},
+			Options: &kubernetesOptions{
+				Image: common.Image{
+					Name:       "test-image",
+					Entrypoint: []string{"application", "--debug"},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				require.Len(t, pod.Spec.Containers, 2)
+
+				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
+				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
+				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[0].Command)
+				assert.Equal(
+					t,
+					pod.Spec.Containers[0].Args,
+					[]string{common.TestShellDockerCommand},
+				)
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
