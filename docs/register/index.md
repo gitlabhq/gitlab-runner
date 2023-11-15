@@ -25,7 +25,7 @@ Before you register a runner:
 
 > [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) in GitLab 15.10.
 
-Prerequisite:
+Prerequisites:
 
 - Obtain a runner authentication token. You can either:
   - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
@@ -185,7 +185,7 @@ The ability to pass a runner registration token, and support for certain configu
 in GitLab 18.0. Runner authentication tokens should be used instead. For more information, see
 [Migrating to the new runner registration workflow](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html).
 
-Prerequisite:
+Prerequisites:
 
 - Obtain a runner registration token
   for a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-registration-token-deprecated),
