@@ -38,7 +38,7 @@ type IOStreams struct {
 
 //go:generate mockery --name=Docker --inpackage
 type Docker interface {
-	Exec(ctx context.Context, containerID string, streams IOStreams) error
+	Exec(ctx context.Context, containerID string, streams IOStreams, gracefulExitFunc wait.GracefulExitFunc) error
 }
 
 // NewDocker returns a client for starting a new container and running a
@@ -65,7 +65,7 @@ type defaultDocker struct {
 }
 
 //nolint:funlen
-func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IOStreams) error {
+func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IOStreams, gracefulExitFunc wait.GracefulExitFunc) error {
 	d.logger.Debugln("Attaching to container", containerID, "...")
 
 	hijacked, err := d.c.ContainerAttach(ctx, containerID, attachOptions())
@@ -129,7 +129,7 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 	// It's very likely that at this point, the context passed to Exec has
 	// been cancelled, so is unable to be used. Instead, we use the context
 	// passed to NewDocker.
-	return d.waiter.StopKillWait(d.ctx, containerID, nil)
+	return d.waiter.StopKillWait(d.ctx, containerID, nil, gracefulExitFunc)
 }
 
 func attachOptions() types.ContainerAttachOptions {

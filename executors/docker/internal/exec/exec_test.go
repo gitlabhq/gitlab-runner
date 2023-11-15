@@ -111,7 +111,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {
 				assert.Contains(t, logOutput, "finished with aborted")
@@ -129,7 +129,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {
 				assert.Contains(t, logOutput, "finished with input error")
@@ -147,7 +147,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {
 				assert.Contains(t, logOutput, "finished with output error")
@@ -166,7 +166,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, reader, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(assert.AnError).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(assert.AnError).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {},
 			expectedError:   assert.AnError,
@@ -197,7 +197,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				mockWorkingClient(clientMock, pr, expectedCtx)
 			},
 			setupKillWaiter: func(t *testing.T, waiterMock *wait.MockKillWaiter, expectedCtx context.Context) {
-				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything).Return(nil).Once()
+				waiterMock.On("StopKillWait", expectedCtx, id, mock.Anything, mock.AnythingOfType("wait.GracefulExitFunc")).Return(nil).Once()
 			},
 			assertLogOutput: func(t *testing.T, logOutput string) {},
 			expectedError:   nil,
@@ -240,7 +240,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 			}
 
 			dockerExec := NewDocker(executorCtx, clientMock, waiterMock, logger)
-			err := dockerExec.Exec(ctx, id, streams)
+			err := dockerExec.Exec(ctx, id, streams, nil)
 
 			logOutput := ""
 			for _, entry := range hook.AllEntries() {

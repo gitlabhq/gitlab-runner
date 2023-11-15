@@ -35,6 +35,24 @@ fi
 
 `
 
+// This script is indented to be run in docker or kubernetes containers only to ensure graceful shutdown of build,
+// service and potentially other containers. It sends SIGTERM to all PIDs excluding itself and 1, in decreasing numeric
+// order, positing that the higher PIDs are likely the processes blocking and thus preventing the container from
+// shutting down cleanly. The inner while loop waits for up to 5 seconds for the last killed PID to exit before moving
+// onto the next PID. Note that processes that are shells will ignore SIGTERM anyway, so this script is not as heavy
+// handed as it might appear.
+const ContainerSigTermScript = `PROCS=$(cd /proc && ls -rvd [0-9]*) &&
+for P in $PROCS; do
+	if [ $$ -ne $P ] && [ $P -ne 1 ]; then
+		kill -TERM $P 2>/dev/null &&
+		ATTEMPTS=6 &&
+		while [ -e /proc/$P ] && [ $ATTEMPTS -gt 0 ]; do
+			sleep 1 && ATTEMPTS=$((ATTEMPTS-1));
+		done;
+	fi;
+done
+`
+
 // bashJSONTerminationScript prints a json log-line to provide exit code context to
 // executors that cannot directly retrieve the exit status of the script.
 const bashJSONTerminationScript = `runner_script_trap() {

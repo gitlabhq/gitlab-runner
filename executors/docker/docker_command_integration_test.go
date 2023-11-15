@@ -2126,7 +2126,69 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, out.String(), "FOO = value from [[runners.docker.services]]")
 	assert.Contains(t, out.String(), "EXPANDED = my_global_var_value")
+}
 
+func TestDockerBuildContainerGracefulShutdown(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]func(*common.Build, *common.Trace){
+		"timeout exceeded": func(b *common.Build, _ *common.Trace) {
+			b.RunnerInfo.Timeout = 5
+		},
+		"RUNNER_SCRIPT_TIMEOUT exceeded": func(b *common.Build, _ *common.Trace) {
+			b.Variables = append(b.Variables, common.JobVariable{
+				Key:   "RUNNER_SCRIPT_TIMEOUT",
+				Value: "5s",
+			})
+		},
+		"job cancelled": func(_ *common.Build, tr *common.Trace) {
+			go func() {
+				time.Sleep(5 * time.Second)
+				assert.True(t, tr.Cancel())
+			}()
+		},
+		"job aborted": func(_ *common.Build, tr *common.Trace) {
+			go func() {
+				time.Sleep(5 * time.Second)
+				assert.True(t, tr.Abort())
+			}()
+		},
+	}
+
+	for name, testSetup := range tests {
+		t.Run(name, func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteBuildResponse("./long-script-with-cleanup.sh")
+			assert.NoError(t, err)
+
+			successfulBuild.GitInfo.Sha = "6353879af977aed75f7f75b7f8084a5cb6f1177a"
+
+			build := &common.Build{
+				JobResponse: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Image:      "alpine:latest",
+							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+						},
+					},
+				},
+			}
+
+			out := bytes.NewBuffer(nil)
+			trace := common.Trace{Writer: out}
+
+			testSetup(build, &trace)
+
+			err = build.Run(&common.Config{}, &trace)
+
+			assert.Error(t, err)
+			assert.Regexp(t, "Starting [0-9]{1,2}", out.String())
+			assert.Regexp(t, "Caught SIGTERM", out.String())
+			assert.Regexp(t, "Exiting [0-9]{1,2}", out.String())
+		})
+	}
 }
 
 func TestDockerCommandWithPlatform(t *testing.T) {
