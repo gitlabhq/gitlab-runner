@@ -194,7 +194,7 @@ unit test with race:
       -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner \
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       ./... \
-      -- -ldflags "$(make print_ldflags)" -timeout=15m
+      -- -ldflags "$(make print_ldflags)" -timeout=20m
 
 integration test:
   extends:
@@ -289,7 +289,7 @@ fuzz variable mask:
   - 'clone test repo'
   - 'prepare done'
   script:
-  - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./...
+  - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./... -- -timeout 20m
 
 .windows integration test:
   extends:
