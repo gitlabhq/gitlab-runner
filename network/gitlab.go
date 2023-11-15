@@ -22,11 +22,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
-// createdRunnerTokenPrefix is the token prefix used for GitLab UI-created runner authentication tokens
-const createdRunnerTokenPrefix = "glrt-"
-const clientError = -100
-
-const retryAfterHeader = "Retry-After"
+const (
+	// createdRunnerTokenPrefix is the token prefix used for GitLab UI-created runner authentication tokens
+	createdRunnerTokenPrefix = "glrt-"
+	clientError              = -100
+	retryAfterHeader         = "Retry-After"
+)
 
 func TokenIsCreatedRunnerToken(token string) bool {
 	return strings.HasPrefix(token, createdRunnerTokenPrefix)

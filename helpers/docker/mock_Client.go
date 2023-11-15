@@ -15,6 +15,8 @@ import (
 
 	types "github.com/docker/docker/api/types"
 
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+
 	volume "github.com/docker/docker/api/types/volume"
 )
 
@@ -75,23 +77,23 @@ func (_m *MockClient) ContainerAttach(ctx context.Context, _a1 string, options t
 	return r0, r1
 }
 
-// ContainerCreate provides a mock function with given fields: ctx, config, hostConfig, networkingConfig, containerName
-func (_m *MockClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, containerName string) (container.CreateResponse, error) {
-	ret := _m.Called(ctx, config, hostConfig, networkingConfig, containerName)
+// ContainerCreate provides a mock function with given fields: ctx, config, hostConfig, networkingConfig, platform, containerName
+func (_m *MockClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *v1.Platform, containerName string) (container.CreateResponse, error) {
+	ret := _m.Called(ctx, config, hostConfig, networkingConfig, platform, containerName)
 
 	var r0 container.CreateResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, string) (container.CreateResponse, error)); ok {
-		return rf(ctx, config, hostConfig, networkingConfig, containerName)
+	if rf, ok := ret.Get(0).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, *v1.Platform, string) (container.CreateResponse, error)); ok {
+		return rf(ctx, config, hostConfig, networkingConfig, platform, containerName)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, string) container.CreateResponse); ok {
-		r0 = rf(ctx, config, hostConfig, networkingConfig, containerName)
+	if rf, ok := ret.Get(0).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, *v1.Platform, string) container.CreateResponse); ok {
+		r0 = rf(ctx, config, hostConfig, networkingConfig, platform, containerName)
 	} else {
 		r0 = ret.Get(0).(container.CreateResponse)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, string) error); ok {
-		r1 = rf(ctx, config, hostConfig, networkingConfig, containerName)
+	if rf, ok := ret.Get(1).(func(context.Context, *container.Config, *container.HostConfig, *network.NetworkingConfig, *v1.Platform, string) error); ok {
+		r1 = rf(ctx, config, hostConfig, networkingConfig, platform, containerName)
 	} else {
 		r1 = ret.Error(1)
 	}

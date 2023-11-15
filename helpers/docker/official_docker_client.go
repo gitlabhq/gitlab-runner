@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -108,10 +109,11 @@ func (c *officialDockerClient) ContainerCreate(
 	config *container.Config,
 	hostConfig *container.HostConfig,
 	networkingConfig *network.NetworkingConfig,
+	platform *v1.Platform,
 	containerName string,
 ) (container.CreateResponse, error) {
 	started := time.Now()
-	container, err := c.client.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, containerName)
+	container, err := c.client.ContainerCreate(ctx, config, hostConfig, networkingConfig, platform, containerName)
 	return container, wrapError("ContainerCreate", err, started)
 }
 

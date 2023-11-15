@@ -42,6 +42,7 @@ require (
 	github.com/klauspost/pgzip v1.2.5
 	github.com/magefile/mage v1.15.0
 	github.com/minio/minio-go/v7 v7.0.59
+	github.com/opencontainers/image-spec v1.0.2
 	github.com/prometheus/client_golang v1.13.1
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.37.0
@@ -163,7 +164,6 @@ require (
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/oklog/ulid/v2 v2.0.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect

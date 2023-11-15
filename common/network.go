@@ -2,21 +2,27 @@ package common
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 )
 
-type UpdateState int
-type PatchState int
-type UploadState int
-type DownloadState int
-type JobState string
-type JobFailureReason string
+type (
+	UpdateState      int
+	PatchState       int
+	UploadState      int
+	DownloadState    int
+	JobState         string
+	JobFailureReason string
+)
 
 const (
 	Pending JobState = "pending"
@@ -132,6 +138,8 @@ type FeaturesInfo struct {
 	ReturnExitCode          bool `json:"return_exit_code"`
 	ServiceVariables        bool `json:"service_variables"`
 	ServiceMultipleAliases  bool `json:"service_multiple_aliases"`
+	ImageExecutorOpts       bool `json:"image_executor_opts"`
+	ServiceExecutorOpts     bool `json:"service_executor_opts"`
 }
 
 type ConfigInfo struct {
@@ -284,17 +292,110 @@ type Step struct {
 
 type Steps []Step
 
+type (
+	UnsuportedExecutorOptionsError struct {
+		executor, section                    string
+		unsupportedOptions, supportedOptions []string
+	}
+	executorOptions struct {
+		unsupportedOptions error
+	}
+)
+
+func (ueoe *UnsuportedExecutorOptionsError) Error() string {
+	return fmt.Sprintf("Unsupported %q options %v for %q; supported options are %v",
+		ueoe.section,
+		ueoe.unsupportedOptions,
+		ueoe.executor,
+		ueoe.supportedOptions)
+}
+
+func (eo *executorOptions) validate(data []byte, supportedOptions []string, executor, section string) error {
+	options := map[string]any{}
+	if err := json.Unmarshal(data, &options); err != nil {
+		// this can't happen
+		return nil
+	}
+
+	notSupported := []string{}
+	for opt := range options {
+		if !slices.Contains(supportedOptions, opt) {
+			notSupported = append(notSupported, opt)
+		}
+	}
+	if len(notSupported) != 0 {
+		return &UnsuportedExecutorOptionsError{
+			executor:           executor,
+			section:            section,
+			unsupportedOptions: notSupported,
+			supportedOptions:   supportedOptions,
+		}
+	}
+
+	return nil
+}
+
+func (eo *executorOptions) UnsupportedOptions() error {
+	return eo.unsupportedOptions
+}
+
+type (
+	ImageDockerOptions struct {
+		executorOptions
+		Platform string `json:"platform"`
+	}
+	ImageExecutorOptions struct {
+		executorOptions
+		Docker ImageDockerOptions `json:"docker,omitempty"`
+	}
+)
+
+func (ido *ImageDockerOptions) UnmarshalJSON(data []byte) error {
+	type imageDockerOptions ImageDockerOptions
+	inner := imageDockerOptions{}
+	if err := json.Unmarshal(data, &inner); err != nil {
+		return err
+	}
+	*ido = ImageDockerOptions(inner)
+
+	// call validate after json.Unmarshal so the former handles bad json.
+	ido.unsupportedOptions = ido.validate(data, []string{"platform"}, "docker executor", "image")
+	return nil
+}
+
+func (ieo *ImageExecutorOptions) UnmarshalJSON(data []byte) error {
+	type imageExecutorOptions ImageExecutorOptions
+	inner := imageExecutorOptions{}
+	if err := json.Unmarshal(data, &inner); err != nil {
+		return err
+	}
+	*ieo = ImageExecutorOptions(inner)
+
+	// call validate after json.Unmarshal so the former handles bad json.
+	ieo.unsupportedOptions = ieo.validate(data, []string{"docker"}, "executor_opts", "image")
+	return nil
+}
+
+func (ieo *ImageExecutorOptions) UnsupportedOptions() error {
+	return errors.Join(ieo.executorOptions.UnsupportedOptions(), ieo.Docker.UnsupportedOptions())
+}
+
 type Image struct {
-	Name         string             `json:"name"`
-	Alias        string             `json:"alias,omitempty"`
-	Command      []string           `json:"command,omitempty"`
-	Entrypoint   []string           `json:"entrypoint,omitempty"`
-	Ports        []Port             `json:"ports,omitempty"`
-	Variables    JobVariables       `json:"variables,omitempty"`
-	PullPolicies []DockerPullPolicy `json:"pull_policy,omitempty"`
+	Name            string               `json:"name"`
+	Alias           string               `json:"alias,omitempty"`
+	Command         []string             `json:"command,omitempty"`
+	Entrypoint      []string             `json:"entrypoint,omitempty"`
+	Ports           []Port               `json:"ports,omitempty"`
+	Variables       JobVariables         `json:"variables,omitempty"`
+	PullPolicies    []DockerPullPolicy   `json:"pull_policy,omitempty"`
+	ExecutorOptions ImageExecutorOptions `json:"executor_opts,omitempty"`
 }
 
 func (i *Image) Aliases() []string { return strings.Fields(strings.ReplaceAll(i.Alias, ",", " ")) }
+
+func (i *Image) UnsupportedOptions() error {
+	return i.ExecutorOptions.UnsupportedOptions()
+}
 
 type Port struct {
 	Number   int    `json:"number,omitempty"`
@@ -303,6 +404,14 @@ type Port struct {
 }
 
 type Services []Image
+
+func (s Services) UnsupportedOptions() error {
+	errs := make([]error, 0, len(s))
+	for _, i := range s {
+		errs = append(errs, i.UnsupportedOptions())
+	}
+	return errors.Join(errs...)
+}
 
 type ArtifactPaths []string
 
@@ -357,8 +466,10 @@ type Cache struct {
 	FallbackKeys CacheFallbackKeys `json:"fallback_keys"`
 }
 
-type CacheWhen string
-type CacheFallbackKeys []string
+type (
+	CacheWhen         string
+	CacheFallbackKeys []string
+)
 
 const (
 	CacheWhenOnFailure CacheWhen = "on_failure"
@@ -620,6 +731,13 @@ func (j *JobResponse) JobURL() string {
 	url := strings.TrimSuffix(j.RepoCleanURL(), ".git")
 
 	return fmt.Sprintf("%s/-/jobs/%d", url, j.ID)
+}
+
+func (j *JobResponse) UnsupportedOptions() error {
+	return errors.Join(
+		j.Image.UnsupportedOptions(),
+		j.Services.UnsupportedOptions(),
+	)
 }
 
 type UpdateJobRequest struct {

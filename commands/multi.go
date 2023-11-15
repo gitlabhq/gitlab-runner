@@ -14,10 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/collectors"
-
 	"github.com/kardianos/service"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -900,6 +899,15 @@ func (mr *RunCommand) requestJob(
 		// send failure once
 		mr.network.UpdateJob(*runner, jobCredentials, jobInfo)
 		return nil, nil, err
+	}
+
+	if jobData.UnsupportedOptions() != nil {
+		_, _ = trace.Write([]byte(jobData.UnsupportedOptions().Error() + "\n"))
+		trace.Fail(jobData.UnsupportedOptions(), common.JobFailureData{
+			Reason:   common.RunnerSystemFailure,
+			ExitCode: common.ExitCodeUnsupportedOptions,
+		})
+		return nil, nil, jobData.UnsupportedOptions()
 	}
 
 	trace.SetFailuresCollector(mr.failuresCollector)

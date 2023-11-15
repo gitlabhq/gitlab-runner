@@ -52,7 +52,7 @@ func TestDockerLinuxSetter(t *testing.T) {
 	require.NoError(t, err)
 
 	containerName := fmt.Sprintf("%s-set-permission-%s", volumeName, uuid)
-	testContainer, err := client.ContainerCreate(context.Background(), config, hostConfig, nil, containerName)
+	testContainer, err := client.ContainerCreate(context.Background(), config, hostConfig, nil, nil, containerName)
 	require.NoError(t, err)
 
 	defer func() {

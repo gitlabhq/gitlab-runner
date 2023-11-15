@@ -92,7 +92,7 @@ func (d *dockerLinuxSetter) createContainer(
 	}
 
 	containerName := fmt.Sprintf("%s-set-permission-%s", volumeName, uuid)
-	c, err := d.client.ContainerCreate(ctx, config, hostConfig, nil, containerName)
+	c, err := d.client.ContainerCreate(ctx, config, hostConfig, nil, nil, containerName)
 	if err != nil {
 		return "", err
 	}

@@ -946,6 +946,7 @@ func getRequestJobResponse() map[string]interface{} {
 	image["name"] = "ruby:2.7"
 	image["entrypoint"] = []string{"/bin/sh"}
 	res["image"] = image
+	image["executor_opts"] = map[string]any{"docker": map[string]any{"platform": "arm64/v8"}}
 
 	services := make([]map[string]interface{}, 2)
 	services[0] = make(map[string]interface{})
@@ -953,9 +954,11 @@ func getRequestJobResponse() map[string]interface{} {
 	services[0]["entrypoint"] = []string{"/bin/sh"}
 	services[0]["command"] = []string{"sleep", "30"}
 	services[0]["alias"] = "db-pg"
+	services[0]["executor_opts"] = map[string]any{"docker": map[string]any{"platform": "amd64/linux"}}
 	services[1] = make(map[string]interface{})
 	services[1]["name"] = "mysql:5.6"
 	services[1]["alias"] = "db-mysql"
+	services[1]["executor_opts"] = map[string]any{"docker": map[string]any{"platform": "arm"}}
 	res["services"] = services
 
 	artifacts := make([]map[string]interface{}, 1)
@@ -997,7 +1000,7 @@ func getRequestJobResponse() map[string]interface{} {
 	return res
 }
 
-func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) {
+func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request, jobResponse map[string]any) {
 	if r.URL.Path != "/api/v4/jobs/request" {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -1036,7 +1039,7 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 		return
 	}
 
-	output, err := json.Marshal(getRequestJobResponse())
+	output, err := json.Marshal(jobResponse)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1048,9 +1051,41 @@ func testRequestJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T)
 	t.Logf("JobRequest response: %s\n", output)
 }
 
+func TestRequestJobWithUnsupportedOptions(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		jobResp := getRequestJobResponse()
+		jobResp["image"].(map[string]any)["executor_opts"].(map[string]any)["docker"].(map[string]any)["blammo"] = "powpow"
+		jobResp["services"].([]map[string]any)[0]["executor_opts"].(map[string]any)["docker"].(map[string]any)["foobarbaz"] = "flinflanflon"
+		testRequestJobHandler(t, w, r, jobResp)
+	}))
+	defer s.Close()
+
+	require.NoError(t, systemIDState.EnsureSystemID())
+
+	validToken := RunnerConfig{
+		RunnerCredentials: RunnerCredentials{
+			URL:   s.URL,
+			Token: validToken,
+		},
+		SystemIDState: systemIDState,
+	}
+
+	c := NewGitLabClient()
+
+	h := newLogHook(logrus.InfoLevel, logrus.ErrorLevel)
+	logrus.AddHook(&h)
+
+	res, ok := c.RequestJob(context.Background(), validToken, nil)
+	assert.True(t, ok)
+	assert.NotNil(t, res)
+	assert.NotNil(t, res.UnsupportedOptions())
+	assert.Contains(t, res.UnsupportedOptions().Error(), "blammo")
+	assert.Contains(t, res.UnsupportedOptions().Error(), "foobarbaz")
+}
+
 func TestRequestJob(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testRequestJobHandler(w, r, t)
+		testRequestJobHandler(t, w, r, getRequestJobResponse())
 	}))
 	defer s.Close()
 
@@ -1086,20 +1121,23 @@ func TestRequestJob(t *testing.T) {
 	logrus.AddHook(&h)
 
 	res, ok := c.RequestJob(context.Background(), validToken, nil)
+	assert.True(t, ok)
 	if assert.NotNil(t, res) {
 		assert.NotEmpty(t, res.ID)
 	}
-	assert.True(t, ok)
 
 	assert.Equal(t, "ruby:2.7", res.Image.Name)
 	assert.Equal(t, []string{"/bin/sh"}, res.Image.Entrypoint)
+	require.Equal(t, "arm64/v8", res.Image.ExecutorOptions.Docker.Platform)
 	require.Len(t, res.Services, 2)
 	assert.Equal(t, "postgresql:9.5", res.Services[0].Name)
 	assert.Equal(t, []string{"/bin/sh"}, res.Services[0].Entrypoint)
 	assert.Equal(t, []string{"sleep", "30"}, res.Services[0].Command)
 	assert.Equal(t, "db-pg", res.Services[0].Alias)
+	assert.Equal(t, "amd64/linux", res.Services[0].ExecutorOptions.Docker.Platform)
 	assert.Equal(t, "mysql:5.6", res.Services[1].Name)
 	assert.Equal(t, "db-mysql", res.Services[1].Alias)
+	assert.Equal(t, "arm", res.Services[1].ExecutorOptions.Docker.Platform)
 
 	require.Len(t, res.Variables, 1)
 	assert.Equal(t, "CI_REF_NAME", res.Variables[0].Key)

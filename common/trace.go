@@ -18,6 +18,8 @@ type masker interface {
 	SetMasked(MaskOptions)
 }
 
+const ExitCodeUnsupportedOptions = 3
+
 type JobFailureData struct {
 	Reason   JobFailureReason
 	ExitCode int

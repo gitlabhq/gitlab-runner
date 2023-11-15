@@ -38,6 +38,9 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
+// Specifying container image platform requires API version >= 1.41
+const minDockerDaemonVersion = "1.41"
+
 var getWindowsImageOnce sync.Once
 var windowsImage string
 var systemIDState = common.NewSystemIDState()
@@ -2124,4 +2127,55 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 	assert.Contains(t, out.String(), "FOO = value from [[runners.docker.services]]")
 	assert.Contains(t, out.String(), "EXPANDED = my_global_var_value")
 
+}
+
+func TestDockerCommandWithPlatform(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+	test.SkipIfDockerDaemonAPIVersionNotAtLeast(t, minDockerDaemonVersion)
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	assert.NoError(t, err)
+
+	successfulBuild.Image.ExecutorOptions.Docker.Platform = "amd64"
+	successfulBuild.Image.Name = common.TestAlpineImage
+
+	successfulBuild.Services = common.Services{
+		{
+			Name: "redis:7.0",
+			ExecutorOptions: common.ImageExecutorOptions{
+				Docker: common.ImageDockerOptions{Platform: "amd64"},
+			},
+		},
+		{
+			Name: "postgres:14.4",
+		},
+	}
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					HelperImage: "gitlab/gitlab-runner-helper:x86_64-5a147c92",
+				},
+			},
+			SystemIDState: systemIDState,
+		},
+	}
+
+	var buffer bytes.Buffer
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	require.NoError(t, err)
+	str := buffer.String()
+
+	require.NoError(t, err)
+	assert.Contains(t, str, "Pulling docker image redis:7.0 for platform amd64")
+	assert.Contains(t, str, "Pulling docker image postgres:14.4")
+	assert.NotContains(t, str, "Pulling docker image postgres:14.4 for platform")
+	assert.Contains(t, str, "Pulling docker image alpine:3.14.2 for platform amd64")
+	assert.Contains(t, str, "Pulling docker image gitlab/gitlab-runner-helper:x86_64-5a147c92")
+	assert.NotContains(t, str, "Pulling docker image gitlab/gitlab-runner-helper:x86_64-5a147c92 for platform")
 }
