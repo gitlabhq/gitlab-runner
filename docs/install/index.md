@@ -6,12 +6,18 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Install GitLab Runner **(FREE ALL)**
 
-You can install GitLab Runner on your infrastructure.
+GitLab Runner runs the CI/CD jobs that are defined in GitLab.
+
+You can install GitLab Runner on your infrastructure,
+inside a Docker container, or deployed to a Kubernetes cluster.
 
 GitLab Runner is open-source and written in [Go](https://go.dev). It can run
 as a single binary and has no language-specific requirements.
 
-GitLab Runner can also run inside a Docker container or be deployed to a Kubernetes cluster.
+After you install GitLab Runner, you must [create and register runners](../register/index.md)
+with your GitLab instance. This instance can be self-managed, or you can use GitLab.com.
+You can also follow the tutorial,
+[Create, register, and run your own project runner](https://docs.gitlab.com/ee/tutorials/create_register_first_runner/).
 
 GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD, and Windows.
 You can install it:
@@ -35,20 +41,12 @@ Go binary.
 - Linux, Windows, macOS, FreeBSD
 
 NOTE:
-For security and performance reasons, you should install GitLab Runner on a machine that is separate to the machine that hosts your GitLab instance.
-
-You can find information on the different installation methods below.
-You can also view installation instructions in GitLab by going to your project's
-**Settings > CI / CD**, expanding the **Runners** section, and clicking
-**Show runner installation instructions**.
-
-After you install GitLab Runner, you must [register individual runners](../register/index.md) with your GitLab instance. This instance can be self-managed, or you can use GitLab.com.
-
-GitLab Runner runs the CI/CD jobs that are defined in GitLab.
+For security and performance reasons, you should install GitLab Runner on a machine that
+is separate to the machine that hosts your GitLab instance.
 
 ## System Requirements
 
-GitLab Runner system requirements vary widely and depend on a number of variables unique to each use-case. GitLab Runner instances can be sized individually given these variables and scaled higher or lower as necessary. These variables include:
+GitLab Runner system requirements vary widely and depend on variables unique to each use-case. GitLab Runner instances can be sized individually given these variables and scaled higher or lower as necessary. These variables include:
 
 - The anticipated:
   - CPU load of CI jobs.
@@ -62,9 +60,9 @@ For more information, see what [machine types are available for Linux (x86-64)](
 
 ## FIPS compliant GitLab Runner
 
-As of GitLab Runner 14.7, we provide a FIPS 140-12 compliant GitLab Runner binary. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
+In GitLab Runner 14.7 and later, a GitLab Runner binary that is FIPS 140-12 compliant is provided. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
 
-As of GitLab Runner 15.10, we use [UBI-8 minimal](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) as the base for creating the GitLab Runner FIPS image.
+In GitLab Runner 15.1 and later, a [UBI-8 minimal](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) is used as the base for creating the GitLab Runner FIPS image.
 
 NOTE:
 Only Red Hat Enterprise Linux (RHEL) distributions are supported.
