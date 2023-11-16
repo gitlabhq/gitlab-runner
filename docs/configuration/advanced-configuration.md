@@ -712,7 +712,7 @@ the empty values that the plugin cannot determine.
 | `protocol`               | The protocol to use: `ssh` or `winrm`. |
 | `username`               | The username used to connect with. |
 | `password`               | The password used to connect with. |
-| `key_pathname`           | The TLS key used to connect with or dynamically provision credentials with. |
+| `key_path`               | The TLS key used to connect with or dynamically provision credentials with. |
 | `use_static_credentials` | Disabled automatic credential provisioning. Default: `false`. |
 | `keepalive`              | The connection keepalive duration. |
 | `timeout`                | The connection timeout duration. |
