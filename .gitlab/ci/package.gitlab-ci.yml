@@ -28,9 +28,9 @@
     - out/deb/
     - out/rpm/
     expire_in: 7d
+  timeout: 15 minutes
 
 package-deb:
-  timeout: 30 minutes
   extends:
   - .packages
   parallel:
@@ -44,7 +44,6 @@ package-deb:
       - debRiscv64
 
 package-rpm:
-  timeout: 30 minutes
   extends:
   - .packages
   parallel:
