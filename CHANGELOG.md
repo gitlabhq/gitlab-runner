@@ -1,3 +1,68 @@
+## v16.6.0 (2023-11-16)
+
+### New features
+
+- feat: allow specifying image platform to pull images !3916 (Muhammed Ali @ar-mali)
+- docker executor: Add configuration to include docker's `--group-add` !4459 (Ben Brown @benjamb)
+- Add custom entrypoint for the build container for Kubernetes executor !4394 (Baptiste Lalanne @BaptisteLalanne)
+- Prevent logging every connection to the instance when using an autoscaler !4332 (Mattias Michaux @mollux)
+- Add SizeLimit option to emptyDir volumes for Kubernetes executor !4410
+- Enable git transfer.bundleURI by default !4418
+
+### Security fixes
+
+- Update various images to use latest docker-machine version !4454
+- Update some dependencies to resolve vulnerabilities !4453
+
+### Bug fixes
+
+- Implement graceful build container shutdown for docker executor !4446
+- Add a better handling of signal on both Helper and Build container for k8s executor in attach mode !4443
+- Add a mutex to sync access to sentryLogHook !4450 (Matthew Bradburn @mbradburn-ext)
+- Use lchmod for zip extract !4437 (Matthew Bradburn @mbradburn-ext)
+- Don't use docker links for user-defined networks !4092
+- Fix compilation of kubernetes integration tests !4455
+- Sanitize image entrypoint to remove empty string !4452
+- Manually refresh JobVariables prior to ConfigExec !4379 (Paul Bryant @paulbry)
+- Fix file secrets in debug terminal !4423 (Matthew Bradburn @mbradburn-ext)
+- Fix labeling of the gitlab_runner_failed_jobs_total metric !4433
+- Fix azure key vault JWT convert bug !4396 (Zehua Zhang @zhzhang93)
+
+### Maintenance
+
+- Doc | Fix typo: rename key_pathname to key_path !4476
+- Add a link to runner tutorial !4467
+- docs: Use "prerequisites," plural (Runner) !4473
+- Clarify powershell defaults !4470 (Matthew Bradburn @mbradburn-ext)
+- Change docker and instance executor from experiment to beta !4463
+- Skip instance executor tests for cmd !4462
+- Removed deprecated link !4461
+- Use latest Technical Writing images !4449
+- Misc test fixes !4460
+- Add link to forceful shutdown definition !4445
+- Add basic Azure instance/docker autoscaler examples !4451
+- Update versions in documentation !4457
+- Update runner_autoscale_aws documentation with required iam:PassRole !4286 (Sjoerd Smink @sjoerdsmink)
+- Add Docker Autoscaler and Instance executor integration tests !4402
+- Refactor the retry interface to be generic !4422
+- Update CI_IMAGE to include Debian image flavor !4447
+- Fix sync_docker_images test not building !4448
+- Change instance, docker autoscaler and AWS plugin to BETA !4432
+- Update gocloud.dev to v0.34.0 !4430
+- Doc | Add sample command for creating docker machines for troubleshooting !4444
+- Update imagePullSecrets documentation !4440
+- Add upgrade troubleshooting info to Runner docs !3968
+- Update information regarding new runner creation workflow !4436
+- Merge "Example" page into register runners page !4413
+- Add tip about No URL provided !4435 (Matthew Bradburn @mbradburn-ext)
+- Set test build timeout to the DefaultTimeout value !4439
+- Add a support policy page for GitLab Runner support policies !4434
+- Reduce timeout for package-deb/rpm jobs to 30 minutes !4431
+- Fix usage of 'build' !4429
+- Fix formatting in Docker Autoscaler executor page !4428
+- Clarify how FF_USE_POD_ACTIVE_DEADLINE_SECONDS works !4424 (Ben Bodenmiller @bbodenmiller)
+- Update runner version reference !4426
+
 ## v16.5.0 (2023-10-20)
 
 ### New features
