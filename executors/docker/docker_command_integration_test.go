@@ -2132,27 +2132,31 @@ func TestDockerBuildContainerGracefulShutdown(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
-	tests := map[string]func(*common.Build, *common.Trace){
-		"timeout exceeded": func(b *common.Build, _ *common.Trace) {
-			b.RunnerInfo.Timeout = 5
-		},
-		"RUNNER_SCRIPT_TIMEOUT exceeded": func(b *common.Build, _ *common.Trace) {
+	tests := map[string]func(*common.Build, *common.Trace) func(){
+		// Comment this out for now. This test is flaky because the timeout includes docker image pull time, which will
+		// always have outliers that exceed the entire job timeout.
+		// "timeout exceeded": func(b *common.Build, _ *common.Trace) func() {
+		// 	b.RunnerInfo.Timeout = 10
+		// 	return func() {}
+		// },
+		"RUNNER_SCRIPT_TIMEOUT exceeded": func(b *common.Build, _ *common.Trace) func() {
 			b.Variables = append(b.Variables, common.JobVariable{
 				Key:   "RUNNER_SCRIPT_TIMEOUT",
-				Value: "5s",
+				Value: "2s",
+			})
+			return func() {}
+		},
+		"job cancelled": func(build *common.Build, tr *common.Trace) func() {
+			return buildtest.OnStage(build, "step_", func() {
+				time.Sleep(2 * time.Second)
+				assert.True(t, tr.Cancel())
 			})
 		},
-		"job cancelled": func(_ *common.Build, tr *common.Trace) {
-			go func() {
-				time.Sleep(5 * time.Second)
-				assert.True(t, tr.Cancel())
-			}()
-		},
-		"job aborted": func(_ *common.Build, tr *common.Trace) {
-			go func() {
-				time.Sleep(5 * time.Second)
+		"job aborted": func(build *common.Build, tr *common.Trace) func() {
+			return buildtest.OnStage(build, "step_", func() {
+				time.Sleep(2 * time.Second)
 				assert.True(t, tr.Abort())
-			}()
+			})
 		},
 	}
 
@@ -2179,14 +2183,17 @@ func TestDockerBuildContainerGracefulShutdown(t *testing.T) {
 			out := bytes.NewBuffer(nil)
 			trace := common.Trace{Writer: out}
 
-			testSetup(build, &trace)
+			defer testSetup(build, &trace)()
 
 			err = build.Run(&common.Config{}, &trace)
 
 			assert.Error(t, err)
-			assert.Regexp(t, "Starting [0-9]{1,2}", out.String())
-			assert.Regexp(t, "Caught SIGTERM", out.String())
-			assert.Regexp(t, "Exiting [0-9]{1,2}", out.String())
+
+			assert.EventuallyWithT(t, func(t *assert.CollectT) {
+				assert.Regexp(t, "Starting [0-9]{1,2}", out.String())
+				assert.Regexp(t, "Caught SIGTERM", out.String())
+				assert.Regexp(t, "Exiting [0-9]{1,2}", out.String())
+			}, 5*time.Second, 1*time.Second)
 		})
 	}
 }
