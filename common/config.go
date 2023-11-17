@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -1162,6 +1163,8 @@ type RunnerSettings struct {
 
 	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags,omitempty" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags.html"`
 
+	Monitoring *runner.Monitoring `toml:"monitoring" long:"runner-monitoring" description:"(Experimental) Monitoring configuration specific to this runner"`
+
 	Instance   *InstanceConfig   `toml:"instance,omitempty" json:"instance,omitempty"`
 	SSH        *ssh.Config       `toml:"ssh,omitempty" json:"ssh,omitempty" group:"ssh executor" namespace:"ssh"`
 	Docker     *DockerConfig     `toml:"docker,omitempty" json:"docker,omitempty" group:"docker executor" namespace:"docker"`
@@ -1998,6 +2001,13 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 
 	r.SystemIDState = c.SystemIDState
 
+	if r.Monitoring != nil {
+		err = r.Monitoring.Compile()
+		if err != nil {
+			return nil, fmt.Errorf("compiling monitoring sections: %w", err)
+		}
+	}
+
 	return &r, err
 }
 
@@ -2036,21 +2046,26 @@ func (c *Config) LoadConfig(configFile string) error {
 	}
 
 	if _, err = toml.DecodeFile(configFile, c); err != nil {
-		return err
+		return fmt.Errorf("decoding configuration file: %v", err)
 	}
 
 	for _, runner := range c.Runners {
 		runner.rewriteGetSourcesHooks()
 
-		if runner.Machine == nil {
-			continue
+		if runner.Machine != nil {
+			err := runner.Machine.CompilePeriods()
+			if err != nil {
+				return fmt.Errorf("compiling docker machine autoscaling periods: %w", err)
+			}
+			runner.Machine.logDeprecationWarning()
 		}
 
-		err := runner.Machine.CompilePeriods()
-		if err != nil {
-			return err
+		if runner.Monitoring != nil {
+			err = runner.Monitoring.Compile()
+			if err != nil {
+				return fmt.Errorf("compiling monitoring sections: %w", err)
+			}
 		}
-		runner.Machine.logDeprecationWarning()
 	}
 
 	c.ModTime = info.ModTime()

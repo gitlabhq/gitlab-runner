@@ -69,6 +69,8 @@ type buildsHelper struct {
 	jobsTotal                 *prometheus.CounterVec
 	jobDurationHistogram      *prometheus.HistogramVec
 	jobQueueDurationHistogram *prometheus.HistogramVec
+
+	acceptableJobQueuingDurationExceeded *prometheus.CounterVec
 }
 
 func (b *buildsHelper) getRunnerCounter(runner *common.RunnerConfig) *runnerCounter {
@@ -198,6 +200,56 @@ func (b *buildsHelper) addBuild(build *common.Build) {
 			build.JobInfo.ProjectJobsRunningOnInstanceRunnersCount,
 		).
 		Observe(build.JobInfo.TimeInQueueSeconds)
+
+	b.evaluateJobQueuingDuration(build.Runner, build.JobInfo)
+}
+
+func (b *buildsHelper) evaluateJobQueuingDuration(runner *common.RunnerConfig, jobInfo common.JobInfo) {
+	counterForRunner := b.acceptableJobQueuingDurationExceeded.
+		WithLabelValues(
+			runner.ShortDescription(),
+			runner.SystemIDState.GetSystemID(),
+		)
+
+	// This .Add(0) will not change the value of the metric when threshold was
+	// not exceeded, but will make sure that the metric for each runner is always
+	// available
+	counterForRunner.Add(0)
+
+	// If configuration is not present we don't care about the metric
+	if runner.Monitoring == nil || len(runner.Monitoring.JobQueuingDurations) < 1 {
+		return
+	}
+
+	jobQueueDurationCfg := runner.Monitoring.JobQueuingDurations.GetActiveConfiguration()
+
+	// If no configuration matches current time we don't care about the metric
+	if jobQueueDurationCfg == nil {
+		return
+	}
+
+	threshold := jobQueueDurationCfg.Threshold.Seconds()
+
+	// Threshold not configured, zeroed or invalid (negative) means we're not interested in this feature
+	if threshold <= 0 {
+		return
+	}
+
+	// If threshold is not exceeded, then all is good and there is no need for other checks
+	if jobInfo.TimeInQueueSeconds <= threshold {
+		return
+	}
+
+	// If JobProjectsRunningOnInstanceRunnersCount doesn't match the definition it means that exceeded
+	// threshold is acceptable in such case.
+	// If the definition was not configured (or the regular expression in the config.toml file was invalid
+	// and couldn't be compiled) we treat that as "matched" and count the case in
+	if !jobQueueDurationCfg.JobsRunningForProjectMatched(jobInfo.ProjectJobsRunningOnInstanceRunnersCount) {
+		return
+	}
+
+	// Timing expectation not met for this case. Let's increase the counter
+	counterForRunner.Inc()
 }
 
 func (b *buildsHelper) removeBuild(deleteBuild *common.Build) bool {
@@ -274,6 +326,7 @@ func (b *buildsHelper) Describe(ch chan<- *prometheus.Desc) {
 	b.jobsTotal.Describe(ch)
 	b.jobDurationHistogram.Describe(ch)
 	b.jobQueueDurationHistogram.Describe(ch)
+	b.acceptableJobQueuingDurationExceeded.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
@@ -314,6 +367,7 @@ func (b *buildsHelper) Collect(ch chan<- prometheus.Metric) {
 	b.jobsTotal.Collect(ch)
 	b.jobDurationHistogram.Collect(ch)
 	b.jobQueueDurationHistogram.Collect(ch)
+	b.acceptableJobQueuingDurationExceeded.Collect(ch)
 }
 
 func (b *buildsHelper) ListJobsHandler(w http.ResponseWriter, r *http.Request) {
@@ -361,6 +415,13 @@ func newBuildsHelper() buildsHelper {
 				Buckets: []float64{1, 3, 10, 30, 60, 120, 300, 900, 1800, 3600},
 			},
 			[]string{"runner", "system_id", "project_jobs_running"},
+		),
+		acceptableJobQueuingDurationExceeded: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "gitlab_runner_acceptable_job_queuing_duration_exceeded_total",
+				Help: "Increased each time when the queuing duration was longer than the configured threshold",
+			},
+			[]string{"runner", "system_id"},
 		),
 	}
 }
