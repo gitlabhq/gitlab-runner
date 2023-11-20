@@ -618,7 +618,15 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 		return err
 	}
 
-	err = s.setupBuildPod(ctx, nil)
+	var initContainers []api.Container
+	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+		permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
+		if err != nil {
+			return fmt.Errorf("building permissions init container: %w", err)
+		}
+		initContainers = append(initContainers, permissionsInitContainer)
+	}
+	err = s.setupBuildPod(ctx, initContainers)
 	if err != nil {
 		return err
 	}
@@ -830,20 +838,25 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 	// future folders and files.
 	switch os {
 	case helperimage.OSTypeWindows:
-		chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /q | out-null"
-		commands := []string{
-			fmt.Sprintf(chmod, s.logsDir()),
-			fmt.Sprintf(chmod, s.Build.RootDir),
+		var command []string
+		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+			chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /q | out-null"
+			initCommand := []string{
+				fmt.Sprintf(chmod, s.logsDir()),
+				fmt.Sprintf(chmod, s.Build.RootDir),
+			}
+			command = []string{s.Shell().Shell, "-c", strings.Join(initCommand, ";\n")}
 		}
-		container.Command = []string{s.Shell().Shell, "-c", strings.Join(commands, ";\n")}
-
+		container.Command = command
 	default:
-		initCommand := fmt.Sprintf("touch %[1]s && (chmod 777 %[1]s || exit 0)", s.logFile())
-		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) &&
-			s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
-			initCommand = fmt.Sprintf("%s && cp /usr/bin/dumb-init %s", initCommand, s.scriptsDir())
+		var initCommand []string
+		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+			initCommand = append(initCommand, fmt.Sprintf("touch %[1]s && (chmod 777 %[1]s || exit 0)", s.logFile()))
 		}
-		container.Command = []string{"sh", "-c", initCommand}
+		if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+			initCommand = append(initCommand, fmt.Sprintf("cp /usr/bin/dumb-init %s", s.scriptsDir()))
+		}
+		container.Command = []string{"sh", "-c", strings.Join(initCommand, ";\n")}
 	}
 
 	return container, nil
