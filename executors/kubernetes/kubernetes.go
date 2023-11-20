@@ -1305,18 +1305,25 @@ func (s *executor) getVolumes() []api.Volume {
 		})
 	}
 
+	// scripts volumes are needed when using the Kubernetes executor in attach mode
+	// FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY = false
+	// or when the dumb init is used as it is copied from the helper to this volume
+	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) ||
+		!s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		volumes = append(volumes, api.Volume{
+			Name: "scripts",
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{},
+			},
+		})
+	}
+
 	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		return volumes
 	}
 
 	volumes = append(
 		volumes,
-		api.Volume{
-			Name: "scripts",
-			VolumeSource: api.VolumeSource{
-				EmptyDir: &api.EmptyDirVolumeSource{},
-			},
-		},
 		api.Volume{
 			Name: "logs",
 			VolumeSource: api.VolumeSource{
