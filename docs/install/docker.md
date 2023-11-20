@@ -91,7 +91,7 @@ docker run -d --name gitlab-runner --restart always \
 ```
 
 NOTE:
-On macOS, use `/Users/Shared` instead of `/srv`.
+On macOS, `/srv` does not exist by default. You can create `/private/srv` or use another private directory.
 
 ### Option 2: Use Docker volumes to start the Runner container
 
