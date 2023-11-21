@@ -897,6 +897,8 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 }
 
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
+	b.logUsedImages()
+
 	b.logger = NewBuildLogger(trace, b.Log())
 	b.printRunningWithHeader()
 
@@ -950,6 +952,21 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	executor.Finish(err)
 
 	return err
+}
+
+func (b *Build) logUsedImages() {
+	if !b.IsFeatureFlagOn(featureflags.LogImagesConfiguredForJob) {
+		return
+	}
+
+	imageFields := b.JobResponse.Image.LogFields()
+	if imageFields != nil {
+		b.Log().WithFields(imageFields).Info("Image configured for job")
+	}
+
+	for _, service := range b.JobResponse.Services {
+		b.Log().WithFields(service.LogFields()).Info("Service image configured for job")
+	}
 }
 
 func (b *Build) configureTrace(trace JobTrace, cancel context.CancelFunc) {

@@ -35,6 +35,7 @@ const (
 	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
 	UseDumbInitWithKubernetesExecutor    string = "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR"
+	LogImagesConfiguredForJob            string = "FF_LOG_IMAGES_CONFIGURED_FOR_JOB"
 )
 
 type FeatureFlag struct {
@@ -288,6 +289,12 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, `dumb-init` is used to execute all the scripts. " +
 			"This allows `dumb-init` to run as the first process in the helper and build container. It is only supported in the attach mode.",
+	},
+	{
+		Name:         LogImagesConfiguredForJob,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, the runner logs names of the image and service images defined for each received job.",
 	},
 }
 
