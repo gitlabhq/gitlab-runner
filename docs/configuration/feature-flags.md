@@ -73,6 +73,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_PRINT_POD_EVENTS` | `false` | **{dotted-circle}** No |  | When enabled, all events associated with the build pod will be printed until it's started. |
 | `FF_USE_GIT_BUNDLE_URIS` | `true` | **{dotted-circle}** No |  | When enabled, the Git `transfer.bundleURI` configuration option is set to `true`. This FF is enabled by default. Set to `false` to disable Git bundle support. |
 | `FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR` | `false` | **{dotted-circle}** No |  | When enabled, `dumb-init` is used to execute all the scripts. This allows `dumb-init` to run as the first process in the helper and build container. It is only supported in the attach mode. |
+| `FF_USE_INIT_WITH_DOCKER_EXECUTOR` | `false` | **{dotted-circle}** No |  | When enabled, the Docker executor starts the service and build containers with the `--init` option, which runs `tini-init` as PID 1. |
 | `FF_LOG_IMAGES_CONFIGURED_FOR_JOB` | `false` | **{dotted-circle}** No |  | When enabled, the runner logs names of the image and service images defined for each received job. |
 
 <!-- feature_flags_list_end -->

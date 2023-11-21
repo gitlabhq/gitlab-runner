@@ -35,6 +35,7 @@ const (
 	PrintPodEvents                       string = "FF_PRINT_POD_EVENTS"
 	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
 	UseDumbInitWithKubernetesExecutor    string = "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR"
+	UseInitWithDockerExecutor            string = "FF_USE_INIT_WITH_DOCKER_EXECUTOR"
 	LogImagesConfiguredForJob            string = "FF_LOG_IMAGES_CONFIGURED_FOR_JOB"
 )
 
@@ -289,6 +290,12 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, `dumb-init` is used to execute all the scripts. " +
 			"This allows `dumb-init` to run as the first process in the helper and build container. It is only supported in the attach mode.",
+	},
+	{
+		Name:         UseInitWithDockerExecutor,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, the Docker executor starts the service and build containers with the `--init` option, which runs `tini-init` as PID 1.",
 	},
 	{
 		Name:         LogImagesConfiguredForJob,

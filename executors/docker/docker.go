@@ -38,6 +38,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -54,6 +55,8 @@ const (
 )
 
 const ServiceLogOutputLimit = 64 * 1024
+
+var useInit = true
 
 var PrebuiltImagesPaths []string
 
@@ -418,6 +421,11 @@ func (e *executor) createService(
 	config.Entrypoint = e.overwriteEntrypoint(&definition)
 	hostConfig := e.createHostConfigForService()
 	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(definition)
+
+	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
+		hostConfig.Init = &useInit
+	}
+
 	networkConfig := e.networkConfig(linkNames)
 	var platform *v1.Platform
 	if definition.ExecutorOptions.Docker.Platform != "" {
@@ -582,6 +590,10 @@ func (e *executor) createContainer(
 		return nil, err
 	}
 	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedImageList(imageDefinition)
+
+	if containerType == buildContainerType && e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
+		hostConfig.Init = &useInit
+	}
 
 	aliases := []string{"build", containerName}
 	networkConfig := e.networkConfig(aliases)
