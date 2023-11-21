@@ -2025,6 +2025,28 @@ you can:
   [chmod](https://linux.die.net/man/1/chmod) commands.
   to your [(`before_`/`after_`)`script:` directives](https://docs.gitlab.com/ee/ci/yaml/index.html#default).
 
+### Apparently redundant shell process in build container with init system
+
+The process tree might include a shell process when either: 
+
+- `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` is `false` and `FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR` is `true`.
+- The `ENTRYPOINT` of the build image is an init system (like `tini-init` or `dumb-init`).
+
+```shell
+UID    PID   PPID  C STIME TTY          TIME CMD
+root     1      0  0 21:58 ?        00:00:00 /scripts-37474587-5556589047/dumb-init -- sh -c if [ -x /usr/local/bin/bash ]; then .exec /usr/local/bin/bash  elif [ -x /usr/bin/bash ]; then .exec /usr/bin/bash  elif [ -x /bin/bash ]; then .exec /bin/bash  elif [ -x /usr/local/bin/sh ]; then .exec /usr/local/bin/sh  elif [ -x /usr/bin/sh ]; then .exec /usr/bin/sh  elif [ -x /bin/sh ]; then .exec /bin/sh  elif [ -x /busybox/sh ]; then .exec /busybox/sh  else .echo shell not found .exit 1 fi  
+root     7      1  0 21:58 ?        00:00:00 /usr/bin/bash <---------------- WHAT IS THIS???
+root    26      1  0 21:58 ?        00:00:00 sh -c (/scripts-37474587-5556589047/detect_shell_script /scripts-37474587-5556589047/step_script 2>&1 | tee -a /logs-37474587-5556589047/output.log) &
+root    27     26  0 21:58 ?        00:00:00  \_ /usr/bin/bash /scripts-37474587-5556589047/step_script
+root    32     27  0 21:58 ?        00:00:00  |   \_ /usr/bin/bash /scripts-37474587-5556589047/step_script
+root    37     32  0 21:58 ?        00:00:00  |       \_ ps -ef --forest
+root    28     26  0 21:58 ?        00:00:00  \_ tee -a /logs-37474587-5556589047/output.log
+```
+
+This shell process, which might be `sh`, `bash` or `busybox`, with a `PPID` of 1 and a `PID` of 6 or 7, is the shell
+started by the shell detection script run by the init system (`PID` 1 above). The process is not redundant, and is the typical
+operation when the build container runs with an init system.
+
 ## Restrict access to job variables
 
 When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
