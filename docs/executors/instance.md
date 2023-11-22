@@ -499,3 +499,11 @@ concurrent = 50
       idle_count = 5
       idle_time = "20m0s"
 ```
+
+## Troubleshooting
+
+When working with the Instance executor, you might encounter the following issues:
+
+### sh: 1: eval: Running on ip-x.x.x.x via runner-host...n: not found
+
+This error typically occurs when the `eval` command in the preparation step fails. To resolve this error, switch to `bash` shell and enable the [feature flag](../configuration/feature-flags.md) `FF_USE_NEW_BASH_EVAL_STRATEGY`.
