@@ -876,18 +876,18 @@ assign to the service account. The specific annotation needed is:
 
 The IAM policy for this role must have permissions to do the following actions for the specified bucket:
 
-- "s3:PutObject"
-- "s3:GetObjectVersion"
-- "s3:GetObject"
-- "s3:DeleteObject"
+- `s3:PutObject`
+- `s3:GetObjectVersion`
+- `s3:GetObject`
+- `s3:DeleteObject`
 
 If you use `ServerSideEncryption` of type `KMS`, this role must also have permission to do the following actions for the specified AWS KMS Key:
 
-- "kms:Encrypt"
-- "kms:Decrypt"
-- "kms:ReEncrypt*"
-- "kms:GenerateDataKey*"
-- "kms:DescribeKey"
+- `kms:Encrypt`
+- `kms:Decrypt`
+- `kms:ReEncrypt*`
+- `kms:GenerateDataKey*`
+- `kms:DescribeKey`
 
 `ServerSideEncryption` of type `SSE-C` is not supported.
 `SSE-C` requires that the headers, which contain the user-supplied key, are provided for the download request, in addition to the presigned URL.
