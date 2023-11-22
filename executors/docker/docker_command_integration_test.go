@@ -2128,7 +2128,15 @@ func TestDockerCommandWithRunnerServiceEnvironmentVariables(t *testing.T) {
 	assert.Contains(t, out.String(), "EXPANDED = my_global_var_value")
 }
 
-func TestDockerBuildContainerGracefulShutdown(t *testing.T) {
+func TestDockerBuildContainerGracefulShutdownNoInit(t *testing.T) {
+	testDockerBuildContainerGracefulShutdown(t, false)
+}
+
+func TestDockerBuildContainerGracefulShutdownWithInit(t *testing.T) {
+	testDockerBuildContainerGracefulShutdown(t, true)
+}
+
+func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
@@ -2176,6 +2184,13 @@ func TestDockerBuildContainerGracefulShutdown(t *testing.T) {
 				},
 			}
 
+			if useInit {
+				build.Variables = append(build.Variables, common.JobVariable{
+					Key:   "FF_USE_INIT_WITH_DOCKER_EXECUTOR",
+					Value: "true",
+				})
+			}
+
 			out := bytes.NewBuffer(nil)
 			trace := common.Trace{Writer: out}
 
@@ -2187,6 +2202,52 @@ func TestDockerBuildContainerGracefulShutdown(t *testing.T) {
 			assert.Regexp(t, "Starting [0-9]{1,2}", out.String())
 			assert.Regexp(t, "Caught SIGTERM", out.String())
 			assert.Regexp(t, "Exiting [0-9]{1,2}", out.String())
+		})
+	}
+}
+
+func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]bool{
+		"use init":        true,
+		"do not use init": false,
+	}
+
+	for name, useInit := range tests {
+		t.Run(name, func(t *testing.T) {
+			successfulBuild, err := common.GetRemoteBuildResponse("ps -A")
+			assert.NoError(t, err)
+
+			build := &common.Build{
+				JobResponse: successfulBuild,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: "docker",
+						Docker: &common.DockerConfig{
+							Image:      "alpine:latest",
+							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+						},
+					},
+				},
+			}
+
+			if useInit {
+				build.Variables = append(build.Variables, common.JobVariable{
+					Key:   "FF_USE_INIT_WITH_DOCKER_EXECUTOR",
+					Value: "true",
+				})
+			}
+
+			out := bytes.NewBuffer(nil)
+			assert.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: out}))
+
+			if useInit {
+				assert.Regexp(t, "1 root      0:00 /sbin/docker-init -- sh", out.String())
+			} else {
+				assert.NotRegexp(t, "1 root      0:00 /sbin/docker-init -- sh", out.String())
+			}
 		})
 	}
 }
