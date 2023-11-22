@@ -472,8 +472,17 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 
 	//nolint:nestif
 	if err == nil {
+		defaultRunnerScriptTimeout := time.Duration(0)
+		deadline, ok := ctx.Deadline()
+		if ok {
+			defaultRunnerScriptTimeout = time.Until(deadline) - AfterScriptTimeout
+			if defaultRunnerScriptTimeout < 0 {
+				defaultRunnerScriptTimeout = 0
+			}
+		}
+
 		timeouts := b.getStageTimeoutContexts(ctx,
-			stageTimeout{"RUNNER_SCRIPT_TIMEOUT", 0},
+			stageTimeout{"RUNNER_SCRIPT_TIMEOUT", defaultRunnerScriptTimeout},
 			stageTimeout{"RUNNER_AFTER_SCRIPT_TIMEOUT", AfterScriptTimeout})
 
 		scriptCtx, cancel := timeouts["RUNNER_SCRIPT_TIMEOUT"]()
