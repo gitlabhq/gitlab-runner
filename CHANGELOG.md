@@ -1,3 +1,9 @@
+## v16.6.1 (2023-11-23)
+
+### Bug fixes
+
+- Hide docker executor init behind a feature flag !4488
+
 ## v16.6.0 (2023-11-16)
 
 ### New features
