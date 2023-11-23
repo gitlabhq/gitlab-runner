@@ -571,14 +571,12 @@ Running containers in privileged mode can lead to container breakout. For more i
 see the Docker documentation about
 [runtime privilege and Linux capabilities](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
 
-NOTE:
-Please note that you may need to configure Docker in Docker with TLS, or
-disable TLS to avoid seeing an error, like one below:
-```
+You may need to [configure Docker in Docker with TLS, or
+disable TLS](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-docker-executor-with-docker-in-docker) to avoid seeing an error, like one below:
+
+```plaintext
 Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon running?
 ```
-See details on how to do that on documentation page about
-[using Docker builds](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-the-docker-executor-with-docker-in-docker).
 
 ### Use rootless Docker-in-Docker with restricted privileged mode
 
