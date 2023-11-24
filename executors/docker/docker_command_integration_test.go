@@ -2168,6 +2168,7 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 		t.Run(name, func(t *testing.T) {
 			successfulBuild, err := common.GetRemoteBuildResponse("./long-script-with-cleanup.sh")
 			assert.NoError(t, err)
+			successfulBuild.Image.Name = common.TestAlpineImage
 
 			successfulBuild.GitInfo.Sha = "6353879af977aed75f7f75b7f8084a5cb6f1177a"
 
@@ -2176,10 +2177,7 @@ func testDockerBuildContainerGracefulShutdown(t *testing.T, useInit bool) {
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
-						Docker: &common.DockerConfig{
-							Image:      "alpine:latest",
-							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
-						},
+						Docker:   &common.DockerConfig{},
 					},
 				},
 			}
@@ -2219,16 +2217,14 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			successfulBuild, err := common.GetRemoteBuildResponse("ps -A")
 			assert.NoError(t, err)
+			successfulBuild.Image.Name = common.TestAlpineImage
 
 			build := &common.Build{
 				JobResponse: successfulBuild,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
 						Executor: "docker",
-						Docker: &common.DockerConfig{
-							Image:      "alpine:latest",
-							PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
-						},
+						Docker:   &common.DockerConfig{},
 					},
 				},
 			}
