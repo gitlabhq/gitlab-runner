@@ -36,6 +36,7 @@ const (
 	UseGitBundleURIs                     string = "FF_USE_GIT_BUNDLE_URIS"
 	UseDumbInitWithKubernetesExecutor    string = "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR"
 	UseInitWithDockerExecutor            string = "FF_USE_INIT_WITH_DOCKER_EXECUTOR"
+	LogImagesConfiguredForJob            string = "FF_LOG_IMAGES_CONFIGURED_FOR_JOB"
 )
 
 type FeatureFlag struct {
@@ -295,6 +296,12 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, the Docker executor starts the service and build containers with the `--init` option, which runs `tini-init` as PID 1.",
+	},
+	{
+		Name:         LogImagesConfiguredForJob,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, the runner logs names of the image and service images defined for each received job.",
 	},
 }
 
