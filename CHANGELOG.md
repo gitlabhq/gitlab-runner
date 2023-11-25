@@ -1,3 +1,13 @@
+## v16.6.1 (2023-11-24)
+
+### Bug fixes
+
+- Hide docker executor init behind a feature flag !4488
+
+### Maintenance
+
+- Make autoscaler integration tests pass !4497
+
 ## v16.6.0 (2023-11-16)
 
 ### New features
