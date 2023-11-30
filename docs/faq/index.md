@@ -163,11 +163,15 @@ This happens due to fact that GitLab Runner uses `Transfer-Encoding: chunked` wh
 
 Upgrade your NGINX to newer version. For more information see this issue: <https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1031>
 
-## `No URL provided, cache will not be uploaded`
+## `No URL provided, cache will not be download`/`uploaded`
 
 This occurs when caching is configured for the job, but the GitLab Runner helper does not have
-a pre-signed URL to access a remote cache. This might be caused by a problem with credentials
-configuration in `config.toml`. If there is a problem with the credentials configuration, a
+any pre-signed URL to access a remote cache, or an invalid URL.
+Review each [cache-related `config.toml` entry](../configuration/advanced-configuration.md#the-runnerscache-section)
+as well as the provider-specific keys and values.
+An invalid URL might be getting constructed from any item not following the URL syntax requirements.
+
+If there is a problem with the credentials configuration, a
 diagnostic error message is added to the GitLab Runner process log.
 
 ## Error: `warning: You appear to have cloned an empty repository.`
