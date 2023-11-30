@@ -32,6 +32,21 @@ Feature flags are toggled using environment variables. To:
 - Activate a feature flag, set the corresponding environment variable to `"true"` or `1`.
 - Deactivate a feature flag, set the corresponding environment variable to `"false"` or `0`.
 
+## Risks when enabling features still in development
+
+Before enabling a disabled feature flag in a production environment, it is crucial to understand the potential risks involved.
+
+WARNING:
+Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default.
+
+Features that are disabled by default may change or be removed without notice in a future version of GitLab Runner.
+
+Features behind default-disabled feature flags are not recommended for use in a production environment
+and problems caused by using a default disabled features aren't covered by GitLab Support.
+
+Security issues found in features that are disabled by default are patched in regular releases
+and do not follow our regular maintenance policy with regards to backporting the fix.
+
 ## Available feature flags
 
 <!--
