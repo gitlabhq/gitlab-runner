@@ -2047,6 +2047,21 @@ This shell process, which might be `sh`, `bash` or `busybox`, with a `PPID` of 1
 started by the shell detection script run by the init system (`PID` 1 above). The process is not redundant, and is the typical
 operation when the build container runs with an init system.
 
+### The Runner pod successfully registers with Gitlab but attempting to run a job results in an empty window and eventually times out
+
+In this scenario, the errors reported are:
+
+```
+There has been a timeout failure or the job got stuck. Check your timeout limits or try again.
+
+This job does not have a trace.
+
+```
+
+In this case you may find that the runner recieves HTTP 204 No content response code when connecting to the `jobs/request`` API. 
+
+To troubleshoot, manally send a POST request to the API. This will help you to validate if the TCP connection is hanging. In a previously reported case, the TCP connection in the customers virtual private network would silently hang after ~2 KB data transfer. So the TCP connection allowed the Runner to register with GitLab, but subsequently failed when the runner tried to request CI job payloads.
+
 ## Restrict access to job variables
 
 When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
