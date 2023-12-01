@@ -168,16 +168,6 @@ runners:
 
 The executor-specific configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
-<!--- start_remove The following content will be removed on remove_date: '2023-08-22' -->
-
-### Use the configuration template to set additional options (removed) **(ULTIMATE SELF)**
-
-This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379064) in GitLab 13.6
-and [removed](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/merge_requests/393) in 16.0
-Use [the configuration template to set additional options](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) instead.
-
-<!--- end_remove -->
-
 ### Using cache with configuration template
 
 To use the cache with your configuration template, set the following variables in `values.yaml`:

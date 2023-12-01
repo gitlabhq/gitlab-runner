@@ -1007,15 +1007,6 @@ This setting is similar to [the `retry` directive](https://docs.gitlab.com/ee/ci
 in the `.gitlab-ci.yml` files of individual projects,
 but only takes effect if specifically the Docker pull fails initially.
 
-<!--- start_remove The following content will be removed on remove_date: '2023-08-22' -->
-
-## Docker vs Docker-SSH (and Docker+Machine vs Docker-SSH+Machine) (removed) **(ULTIMATE SELF)**
-
-This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/681) in GitLab Runner 10.0
-and [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4060) in 16.0.
-
-<!--- end_remove -->
-
 ## Use Windows containers
 
 > [Introduced](https://gitlab.com/groups/gitlab-org/-/epics/535) in GitLab Runner 11.11.
