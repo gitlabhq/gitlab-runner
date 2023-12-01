@@ -3,6 +3,7 @@ package buildtest
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"testing"
 
@@ -94,7 +95,7 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 				SystemInterrupt: make(chan os.Signal, 1),
 			}
 			buf := new(bytes.Buffer)
-			trace := &common.Trace{Writer: buf}
+			trace := &common.Trace{Writer: io.MultiWriter(buf, os.Stdout)}
 
 			if tc.onUserStep != nil {
 				done := OnUserStage(build, func() {

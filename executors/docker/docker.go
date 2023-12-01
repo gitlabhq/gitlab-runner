@@ -71,7 +71,7 @@ const (
 // when we provide a tunnelled dialer implementation. Because we're overriding
 // the dialer, this domain should never be used by the client, but we use the
 // reserved TLD ".invalid" for safety.
-const internalFakeTunnelHostname = "http://internel.tunnel.invalid"
+const internalFakeTunnelHostname = "http://internal.tunnel.invalid"
 
 var neverRestartPolicy = container.RestartPolicy{Name: "no"}
 
@@ -871,7 +871,7 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 		// docker will complain because it doesn't think Linux can support "npipe" and doesn't
 		// think Windows can support "unix".
 		switch scheme {
-		case "unix", "npipe":
+		case "unix", "npipe", "dial-stdio":
 			creds.Host = internalFakeTunnelHostname
 		}
 
@@ -912,24 +912,42 @@ func (e *executor) environmentDialContext(
 	executorClient executors.Client,
 	host string,
 ) (string, func(ctx context.Context, network, addr string) (net.Conn, error), error) {
+	systemHost := host == ""
 	if host == "" {
 		host = os.Getenv("DOCKER_HOST")
 	}
 	if host == "" {
 		host = client.DefaultDockerHost
 	}
+
 	u, err := client.ParseHostURL(host)
 	if err != nil {
 		return "", nil, fmt.Errorf("parsing docker host: %w", err)
 	}
 
-	return u.Scheme, func(ctx context.Context, network, addr string) (net.Conn, error) {
-		conn, err := executorClient.Dial(u.Scheme, u.Host)
-		if err != nil {
-			return nil, fmt.Errorf("dialing environment connection: %w", err)
+	if !e.Build.IsFeatureFlagOn(featureflags.UseDockerAutoscalerDialStdio) {
+		return u.Scheme, func(ctx context.Context, network, addr string) (net.Conn, error) {
+			conn, err := executorClient.Dial(u.Scheme, u.Host)
+			if err != nil {
+				return nil, fmt.Errorf("dialing environment connection: %w", err)
+			}
+
+			return conn, nil
+		}, nil
+	}
+
+	return "dial-stdio", func(_ context.Context, network, addr string) (net.Conn, error) {
+		// DialRun doesn't wnat just a context for dialing, but one for a long-lived connection,
+		// so here we're ensuring that we use the executor's context, so that it is only cancelled
+		// when the job is cancelled.
+
+		// rather than use this system's host, we use the remote system's default
+		if systemHost {
+			return executorClient.DialRun(e.Context, "docker system dial-stdio")
 		}
 
-		return conn, nil
+		// if the host was explicit, we try to use this even with dial-stdio
+		return executorClient.DialRun(e.Context, fmt.Sprintf("docker -H %s system dial-stdio", host))
 	}, nil
 }
 

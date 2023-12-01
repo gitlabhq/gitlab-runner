@@ -37,6 +37,7 @@ const (
 	UseDumbInitWithKubernetesExecutor    string = "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR"
 	UseInitWithDockerExecutor            string = "FF_USE_INIT_WITH_DOCKER_EXECUTOR"
 	LogImagesConfiguredForJob            string = "FF_LOG_IMAGES_CONFIGURED_FOR_JOB"
+	UseDockerAutoscalerDialStdio         string = "FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO"
 )
 
 type FeatureFlag struct {
@@ -303,6 +304,13 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, the runner logs names of the image and service images defined for each received job.",
+	},
+	{
+		Name:         UseDockerAutoscalerDialStdio,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled (the default), `docker system stdio` is used to tunnel to the remote Docker daemon. When disabled, for SSH connections " +
+			"a native SSH tunnel is used, and for WinRM connections a 'fleeting-proxy' helper binary is first deployed.",
 	},
 }
 

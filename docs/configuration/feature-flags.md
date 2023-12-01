@@ -78,6 +78,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR` | `false` | **{dotted-circle}** No |  | When enabled, `dumb-init` is used to execute all the scripts. This allows `dumb-init` to run as the first process in the helper and build container. It is only supported in the attach mode. |
 | `FF_USE_INIT_WITH_DOCKER_EXECUTOR` | `false` | **{dotted-circle}** No |  | When enabled, the Docker executor starts the service and build containers with the `--init` option, which runs `tini-init` as PID 1. |
 | `FF_LOG_IMAGES_CONFIGURED_FOR_JOB` | `false` | **{dotted-circle}** No |  | When enabled, the runner logs names of the image and service images defined for each received job. |
+| `FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO` | `true` | **{dotted-circle}** No |  | When enabled (the default), `docker system stdio` is used to tunnel to the remote Docker daemon. When disabled, for SSH connections a native SSH tunnel is used, and for WinRM connections a 'fleeting-proxy' helper binary is first deployed. |
 
 <!-- feature_flags_list_end -->
 

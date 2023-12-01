@@ -4,13 +4,16 @@ package autoscaler_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
+	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
@@ -104,6 +107,51 @@ func TestBuildSuccess(t *testing.T) {
 			JobResponse: successfulBuild,
 			Runner:      newRunnerConfig(t, shell),
 		}
+		setupAcquireBuild(t, build)
+
+		require.NoError(t, buildtest.RunBuild(t, build))
+	})
+}
+
+func TestBuildSuccessUsingDockerHost(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		require.NoError(t, err)
+
+		build := &common.Build{
+			JobResponse: successfulBuild,
+			Runner:      newRunnerConfig(t, shell),
+		}
+
+		// explicitly set the docker host, which will override the use of connecting
+		// via "dial-stdio" to ensure this method of connecting is still possible.
+		if host := os.Getenv("DOCKER_HOST"); host != "" {
+			build.Runner.Docker.Host = host
+		} else {
+			build.Runner.Docker.Host = client.DefaultDockerHost
+		}
+
+		setupAcquireBuild(t, build)
+
+		require.NoError(t, buildtest.RunBuild(t, build))
+	})
+}
+
+func TestBuildSuccessUsingDockerHostLegacyTunnel(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		require.NoError(t, err)
+
+		successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+			Key:   featureflags.UseDockerAutoscalerDialStdio,
+			Value: "false",
+		})
+
+		build := &common.Build{
+			JobResponse: successfulBuild,
+			Runner:      newRunnerConfig(t, shell),
+		}
+
 		setupAcquireBuild(t, build)
 
 		require.NoError(t, buildtest.RunBuild(t, build))

@@ -617,8 +617,8 @@ github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20231130083954-bc069a05f851 h1:JGwJ7W1D5EIda+Fs/lsMcoVk/H+LPCrusCgoXWU42jk=
-gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20231130083954-bc069a05f851/go.mod h1:54eINEc5nqEUAS8UYVk1gpCjVgZvTWOUNv1DdWQ/jsY=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20231212184414-f315b5ad3f7b h1:XBFqONv6dtiqkdJz9pm16bCeto5fcgrPvo5C4pgQ3ME=
+gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20231212184414-f315b5ad3f7b/go.mod h1:54eINEc5nqEUAS8UYVk1gpCjVgZvTWOUNv1DdWQ/jsY=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20230818161800-377d2aa4b1b5 h1:+Mv2rp1qLmhOMORh0Ts+zUKSrrzBqCyglBQLGbMKrhY=
 gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20230818161800-377d2aa4b1b5/go.mod h1:dNcxkdms9+5vWfke3Infes/+R1VC226bJ43OxtPetmY=
 gitlab.com/gitlab-org/fleeting/nesting v0.1.1-0.20230410214021-ab545632193b h1:LOc3bwBDPqWiWcaeMuixxgtxz/16VtCNtlnNVsaQp8Q=
