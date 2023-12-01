@@ -617,9 +617,10 @@ type JobResponse struct {
 type Secrets map[string]Secret
 
 type Secret struct {
-	Vault         *VaultSecret         `json:"vault,omitempty"`
-	AzureKeyVault *AzureKeyVaultSecret `json:"azure_key_vault,omitempty"`
-	File          *bool                `json:"file,omitempty"`
+	Vault            *VaultSecret            `json:"vault,omitempty"`
+	GCPSecretManager *GCPSecretManagerSecret `json:"gcp_secret_manager,omitempty"`
+	AzureKeyVault    *AzureKeyVaultSecret    `json:"azure_key_vault,omitempty"`
+	File             *bool                   `json:"file,omitempty"`
 }
 
 func (s Secrets) expandVariables(vars JobVariables) {
@@ -631,6 +632,9 @@ func (s Secrets) expandVariables(vars JobVariables) {
 func (s Secret) expandVariables(vars JobVariables) {
 	if s.Vault != nil {
 		s.Vault.expandVariables(vars)
+	}
+	if s.GCPSecretManager != nil {
+		s.GCPSecretManager.expandVariables(vars)
 	}
 	if s.AzureKeyVault != nil {
 		s.AzureKeyVault.expandVariables(vars)
@@ -647,6 +651,33 @@ func (s Secret) IsFile() bool {
 	}
 
 	return *s.File
+}
+
+type GCPSecretManagerSecret struct {
+	Name    string                 `json:"name"`
+	Version string                 `json:"version"`
+	Server  GCPSecretManagerServer `json:"server"`
+}
+
+type GCPSecretManagerServer struct {
+	ProjectNumber                        string `json:"project_number"`
+	WorkloadIdentityFederationPoolId     string `json:"workload_identity_federation_pool_id"`
+	WorkloadIdentityFederationProviderID string `json:"workload_identity_federation_provider_id"`
+	JWT                                  string `json:"jwt"`
+}
+
+func (s *GCPSecretManagerSecret) expandVariables(vars JobVariables) {
+	s.Name = vars.ExpandValue(s.Name)
+	s.Version = vars.ExpandValue(s.Version)
+
+	s.Server.expandVariables(vars)
+}
+
+func (s *GCPSecretManagerServer) expandVariables(vars JobVariables) {
+	s.ProjectNumber = vars.ExpandValue(s.ProjectNumber)
+	s.WorkloadIdentityFederationPoolId = vars.ExpandValue(s.WorkloadIdentityFederationPoolId)
+	s.WorkloadIdentityFederationProviderID = vars.ExpandValue(s.WorkloadIdentityFederationProviderID)
+	s.JWT = vars.ExpandValue(s.JWT)
 }
 
 type AzureKeyVaultSecret struct {
