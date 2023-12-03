@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
@@ -388,7 +389,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 
 	logger, _ := logrustest.NewNullLogger()
 	e.AbstractExecutor = executors.AbstractExecutor{
-		BuildLogger: common.NewBuildLogger(&common.Trace{Writer: io.Discard}, logger.WithField("test", t.Name())),
+		BuildLogger: buildlogger.New(&common.Trace{Writer: io.Discard}, logger.WithField("test", t.Name())),
 		Build: &common.Build{
 			ProjectRunnerID: 0,
 			Runner:          &c,
@@ -1981,7 +1982,7 @@ func (c *envClient) Close() error {
 
 func (e *env) Prepare(
 	ctx context.Context,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 	options common.ExecutorPrepareOptions,
 ) (executors.Client, error) {
 	e.client = &envClient{}

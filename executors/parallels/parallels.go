@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/vm"
 	prl "gitlab.com/gitlab-org/gitlab-runner/helpers/parallels"
@@ -28,17 +29,17 @@ func (s *executor) waitForIPAddress(vmName string, seconds int) (string, error) 
 		return s.ipAddress, nil
 	}
 
-	s.Debugln("Looking for MAC address...")
+	s.BuildLogger.Debugln("Looking for MAC address...")
 	macAddr, err := prl.Mac(vmName)
 	if err != nil {
 		return "", err
 	}
 
-	s.Debugln("Requesting IP address...")
+	s.BuildLogger.Debugln("Requesting IP address...")
 	for i := 0; i < seconds; i++ {
 		ipAddr, err := prl.IPAddress(macAddr)
 		if err == nil {
-			s.Debugln("IP address found", ipAddr, "...")
+			s.BuildLogger.Debugln("IP address found", ipAddr, "...")
 			s.ipAddress = ipAddr
 			return ipAddr, nil
 		}
@@ -61,13 +62,13 @@ func (s *executor) verifyMachine(vmName string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		Config:         *s.Config.SSH,
-		Stdout:         s.Trace,
-		Stderr:         s.Trace,
+		Stdout:         s.BuildLogger.Stdout(),
+		Stderr:         s.BuildLogger.Stderr(),
 		ConnectRetries: 30,
 	}
 	sshCommand.Host = ipAddr
 
-	s.Debugln("Connecting to SSH...")
+	s.BuildLogger.Debugln("Connecting to SSH...")
 	err = sshCommand.Connect()
 	if err != nil {
 		return err
@@ -82,13 +83,13 @@ func (s *executor) verifyMachine(vmName string) error {
 }
 
 func (s *executor) restoreFromSnapshot() error {
-	s.Debugln("Requesting default snapshot for VM...")
+	s.BuildLogger.Debugln("Requesting default snapshot for VM...")
 	snapshot, err := prl.GetDefaultSnapshot(s.vmName)
 	if err != nil {
 		return err
 	}
 
-	s.Debugln("Reverting VM to snapshot", snapshot, "...")
+	s.BuildLogger.Debugln("Reverting VM to snapshot", snapshot, "...")
 	err = prl.RevertToSnapshot(s.vmName, snapshot)
 	if err != nil {
 		return err
@@ -110,20 +111,20 @@ func (s *executor) createVM(baseImage string) error {
 	}
 
 	if !prl.Exist(templateName) {
-		s.Debugln("Creating template from VM", baseImage, "...")
+		s.BuildLogger.Debugln("Creating template from VM", baseImage, "...")
 		err := prl.CreateTemplate(baseImage, templateName)
 		if err != nil {
 			return fmt.Errorf("%w (image: %q)", err, baseImage)
 		}
 	}
 
-	s.Debugln("Creating runner from VM template...")
+	s.BuildLogger.Debugln("Creating runner from VM template...")
 	err := prl.CreateOsVM(s.vmName, templateName)
 	if err != nil {
 		return err
 	}
 
-	s.Debugln("Bootstrapping VM...")
+	s.BuildLogger.Debugln("Bootstrapping VM...")
 	err = prl.Start(s.vmName)
 	if err != nil {
 		return err
@@ -132,13 +133,13 @@ func (s *executor) createVM(baseImage string) error {
 	// TODO: integration tests do fail on this due
 	// Unable to open new session in this virtual machine.
 	// Make sure the latest version of Parallels Tools is installed in this virtual machine and it has finished booting
-	s.Debugln("Waiting for VM to start...")
+	s.BuildLogger.Debugln("Waiting for VM to start...")
 	err = prl.TryExec(s.vmName, 120, "exit", "0")
 	if err != nil {
 		return err
 	}
 
-	s.Debugln("Waiting for VM to become responsive...")
+	s.BuildLogger.Debugln("Waiting for VM to become responsive...")
 	err = s.verifyMachine(s.vmName)
 	if err != nil {
 		return err
@@ -147,7 +148,7 @@ func (s *executor) createVM(baseImage string) error {
 }
 
 func (s *executor) updateGuestTime() error {
-	s.Debugln("Updating VM date...")
+	s.BuildLogger.Debugln("Updating VM date...")
 	timeServer := s.Config.Parallels.TimeServer
 	if timeServer == "" {
 		timeServer = "time.apple.com"
@@ -169,7 +170,8 @@ func (s *executor) updateGuestTime() error {
 	// Neither sntp nor ntpdate is available, very likely guest OS is not macOS.
 	// Report a warning to a user and gracefully return.
 
-	s.Warningln("Neither sntp nor ntpdate are available in a guest VM. Proceeding without time synchronization ...")
+	//nolint:lll
+	s.BuildLogger.Warningln("Neither sntp nor ntpdate are available in a guest VM. Proceeding without time synchronization ...")
 
 	return nil
 }
@@ -201,21 +203,21 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.vmName = s.getVMName(baseName)
 
 	if s.Config.Parallels.DisableSnapshots && prl.Exist(s.vmName) {
-		s.Debugln("Deleting old VM...")
+		s.BuildLogger.Debugln("Deleting old VM...")
 		killAndUnregisterVM(s.vmName)
 	}
 
 	s.tryRestoreFromSnapshot()
 
 	if !prl.Exist(s.vmName) {
-		s.Println("Creating new VM...")
+		s.BuildLogger.Println("Creating new VM...")
 		err = s.createVM(baseName)
 		if err != nil {
 			return err
 		}
 
 		if !s.Config.Parallels.DisableSnapshots {
-			s.Println("Creating default snapshot...")
+			s.BuildLogger.Println("Creating default snapshot...")
 			err = prl.CreateSnapshot(s.vmName, "Started")
 			if err != nil {
 				return err
@@ -237,7 +239,7 @@ func (s *executor) printVersion() error {
 		return err
 	}
 
-	s.Println("Using Parallels", version, "executor...")
+	s.BuildLogger.Println("Using Parallels", version, "executor...")
 	return nil
 }
 
@@ -266,10 +268,10 @@ func (s *executor) tryRestoreFromSnapshot() {
 		return
 	}
 
-	s.Println("Restoring VM from snapshot...")
+	s.BuildLogger.Println("Restoring VM from snapshot...")
 	err := s.restoreFromSnapshot()
 	if err != nil {
-		s.Println("Previous VM failed. Deleting, because", err)
+		s.BuildLogger.Println("Previous VM failed. Deleting, because", err)
 		killAndUnregisterVM(s.vmName)
 	}
 }
@@ -302,7 +304,7 @@ func killAndUnregisterVM(vmName string) {
 }
 
 func (s *executor) ensureVMStarted() error {
-	s.Debugln("Checking VM status...")
+	s.BuildLogger.Debugln("Checking VM status...")
 	status, err := prl.Status(s.vmName)
 	if err != nil {
 		return err
@@ -310,7 +312,7 @@ func (s *executor) ensureVMStarted() error {
 
 	// Start VM if stopped
 	if status == prl.Stopped || status == prl.Suspended {
-		s.Println("Starting VM...")
+		s.BuildLogger.Println("Starting VM...")
 		err = prl.Start(s.vmName)
 		if err != nil {
 			return err
@@ -318,14 +320,14 @@ func (s *executor) ensureVMStarted() error {
 	}
 
 	if status != prl.Running {
-		s.Debugln("Waiting for VM to run...")
+		s.BuildLogger.Debugln("Waiting for VM to run...")
 		err = prl.WaitForStatus(s.vmName, prl.Running, 60)
 		if err != nil {
 			return err
 		}
 	}
 
-	s.Println("Waiting for VM to become responsive...")
+	s.BuildLogger.Println("Waiting for VM to become responsive...")
 	err = s.verifyMachine(s.vmName)
 	if err != nil {
 		return err
@@ -338,7 +340,7 @@ func (s *executor) ensureVMStarted() error {
 	// Make sure the latest version of Parallels Tools is installed in this virtual machine and it has finished booting
 	err = s.updateGuestTime()
 	if err != nil {
-		s.Println("Could not sync with timeserver!")
+		s.BuildLogger.Println("Could not sync with timeserver!")
 		return err
 	}
 
@@ -351,15 +353,17 @@ func (s *executor) sshConnect() error {
 		return err
 	}
 
-	s.Debugln("Starting SSH command...")
+	s.BuildLogger.Debugln("Starting SSH command...")
+
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.Trace,
-		Stderr: s.Trace,
+		Stdout: logger.Stdout(),
+		Stderr: logger.Stderr(),
 	}
 	s.sshCommand.Host = ipAddr
 
-	s.Debugln("Connecting to SSH server...")
+	s.BuildLogger.Debugln("Connecting to SSH server...")
 	return s.sshCommand.Connect()
 }
 

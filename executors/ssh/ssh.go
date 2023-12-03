@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
@@ -20,7 +21,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return fmt.Errorf("prearing AbstractExecutor: %w", err)
 	}
 
-	s.Println("Using SSH executor...")
+	s.BuildLogger.Println("Using SSH executor...")
 	if s.BuildShell.PassFile {
 		return errors.New("SSH doesn't support shells that require script file")
 	}
@@ -29,16 +30,18 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("missing SSH configuration")
 	}
 
-	s.Debugln("Starting SSH command...")
+	s.BuildLogger.Debugln("Starting SSH command...")
+
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 
 	// Create SSH command
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.Trace,
-		Stderr: s.Trace,
+		Stdout: logger.Stdout(),
+		Stderr: logger.Stderr(),
 	}
 
-	s.Debugln("Connecting to SSH server...")
+	s.BuildLogger.Debugln("Connecting to SSH server...")
 	err = s.sshCommand.Connect()
 	if err != nil {
 		return fmt.Errorf("ssh command Connect() error: %w", err)

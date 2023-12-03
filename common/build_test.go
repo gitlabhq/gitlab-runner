@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
@@ -746,7 +747,7 @@ func TestDebugTrace(t *testing.T) {
 			logger, hooks := test.NewNullLogger()
 
 			build := &Build{
-				logger: NewBuildLogger(nil, logrus.NewEntry(logger)),
+				logger: buildlogger.New(nil, logrus.NewEntry(logger)),
 				JobResponse: JobResponse{
 					Variables: JobVariables{},
 				},
@@ -1599,7 +1600,7 @@ func TestWaitForTerminal(t *testing.T) {
 			}
 
 			trace := Trace{Writer: os.Stdout}
-			build.logger = NewBuildLogger(&trace, build.Log())
+			build.logger = buildlogger.New(&trace, build.Log())
 			sess, err := session.NewSession(nil)
 			require.NoError(t, err)
 			build.Session = sess
@@ -1984,7 +1985,7 @@ func TestBuildFinishTimeout(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			logger, hooks := test.NewNullLogger()
 			build := Build{
-				logger: NewBuildLogger(nil, logrus.NewEntry(logger)),
+				logger: buildlogger.New(nil, logrus.NewEntry(logger)),
 			}
 			buildFinish := make(chan error, 1)
 			timeout := 10 * time.Millisecond
@@ -2451,7 +2452,7 @@ func TestSetTraceStatus(t *testing.T) {
 			b := &Build{
 				Runner: &RunnerConfig{},
 			}
-			b.logger = NewBuildLogger(nil, b.Log())
+			b.logger = buildlogger.New(nil, b.Log())
 
 			trace := new(MockJobTrace)
 			defer trace.AssertExpectations(t)
@@ -2492,7 +2493,7 @@ func Test_GetDebugServicePolicy(t *testing.T) {
 	logs := bytes.Buffer{}
 	lentry := logrus.New()
 	lentry.Out = &logs
-	logger := NewBuildLogger(nil, logrus.NewEntry(lentry))
+	logger := buildlogger.New(nil, logrus.NewEntry(lentry))
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -2550,7 +2551,7 @@ func Test_expandContainerOptions(t *testing.T) {
 	logs := bytes.Buffer{}
 	lentry := logrus.New()
 	lentry.Out = &logs
-	logger := NewBuildLogger(nil, logrus.NewEntry(lentry))
+	logger := buildlogger.New(nil, logrus.NewEntry(lentry))
 
 	for name, tt := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -2729,7 +2730,7 @@ func TestGetStageTimeoutContexts(t *testing.T) {
 			logs := bytes.Buffer{}
 			lentry := logrus.New()
 			lentry.Out = &logs
-			logger := NewBuildLogger(nil, logrus.NewEntry(lentry))
+			logger := buildlogger.New(nil, logrus.NewEntry(lentry))
 
 			b := &Build{
 				Runner: &RunnerConfig{},

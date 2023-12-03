@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/vm"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
@@ -32,14 +33,14 @@ func (s *executor) verifyMachine(sshPort string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		Config:         *s.Config.SSH,
-		Stdout:         s.Trace,
-		Stderr:         s.Trace,
+		Stdout:         s.BuildLogger.Stdout(),
+		Stderr:         s.BuildLogger.Stderr(),
 		ConnectRetries: 30,
 	}
 	sshCommand.Port = sshPort
 	sshCommand.Host = "localhost"
 
-	s.Debugln("Connecting to SSH...")
+	s.BuildLogger.Debugln("Connecting to SSH...")
 	err := sshCommand.Connect()
 	if err != nil {
 		return err
@@ -54,7 +55,7 @@ func (s *executor) verifyMachine(sshPort string) error {
 }
 
 func (s *executor) restoreFromSnapshot() error {
-	s.Debugln("Reverting VM to current snapshot...")
+	s.BuildLogger.Debugln("Reverting VM to current snapshot...")
 	err := vbox.RevertToSnapshot(s.Context, s.vmName)
 	if err != nil {
 		return err
@@ -70,7 +71,7 @@ func (s *executor) determineBaseSnapshot(baseImage string) string {
 		baseSnapshot, err = vbox.GetCurrentSnapshot(s.Context, baseImage)
 		if err != nil {
 			if s.Config.VirtualBox.DisableSnapshots {
-				s.Debugln("No snapshots found for base VM", baseImage)
+				s.BuildLogger.Debugln("No snapshots found for base VM", baseImage)
 				return ""
 			}
 
@@ -80,14 +81,14 @@ func (s *executor) determineBaseSnapshot(baseImage string) string {
 
 	if baseSnapshot != "" && !vbox.HasSnapshot(s.Context, baseImage, baseSnapshot) {
 		if s.Config.VirtualBox.DisableSnapshots {
-			s.Warningln("Snapshot", baseSnapshot, "not found in base VM", baseImage)
+			s.BuildLogger.Warningln("Snapshot", baseSnapshot, "not found in base VM", baseImage)
 			return ""
 		}
 
-		s.Debugln("Creating snapshot", baseSnapshot, "from current base VM", baseImage, "state...")
+		s.BuildLogger.Debugln("Creating snapshot", baseSnapshot, "from current base VM", baseImage, "state...")
 		err = vbox.CreateSnapshot(s.Context, baseImage, baseSnapshot)
 		if err != nil {
-			s.Warningln("Failed to create snapshot", baseSnapshot, "from base VM", baseImage)
+			s.BuildLogger.Warningln("Failed to create snapshot", baseSnapshot, "from base VM", baseImage)
 			return ""
 		}
 	}
@@ -105,9 +106,9 @@ func (s *executor) createVM(baseImage string) (err error) {
 	if !vbox.Exist(s.Context, s.vmName) {
 		baseSnapshot := s.determineBaseSnapshot(baseImage)
 		if baseSnapshot == "" {
-			s.Debugln("Creating testing VM from VM", baseImage, "...")
+			s.BuildLogger.Debugln("Creating testing VM from VM", baseImage, "...")
 		} else {
-			s.Debugln("Creating testing VM from VM", baseImage, "snapshot", baseSnapshot, "...")
+			s.BuildLogger.Debugln("Creating testing VM from VM", baseImage, "snapshot", baseSnapshot, "...")
 		}
 
 		err = vbox.CreateOsVM(s.Context, baseImage, s.vmName, baseSnapshot, s.Config.VirtualBox.BaseFolder)
@@ -116,10 +117,10 @@ func (s *executor) createVM(baseImage string) (err error) {
 		}
 	}
 
-	s.Debugln("Identify SSH Port...")
+	s.BuildLogger.Debugln("Identify SSH Port...")
 	s.sshPort, err = vbox.FindSSHPort(s.Context, s.vmName)
 	if err != nil {
-		s.Debugln("Creating localhost ssh forwarding...")
+		s.BuildLogger.Debugln("Creating localhost ssh forwarding...")
 		vmSSHPort := s.Config.SSH.Port
 		if vmSSHPort == "" {
 			vmSSHPort = "22"
@@ -129,15 +130,15 @@ func (s *executor) createVM(baseImage string) (err error) {
 			return err
 		}
 	}
-	s.Debugln("Using local", s.sshPort, "SSH port to connect to VM...")
+	s.BuildLogger.Debugln("Using local", s.sshPort, "SSH port to connect to VM...")
 
-	s.Debugln("Bootstraping VM...")
+	s.BuildLogger.Debugln("Bootstraping VM...")
 	err = s.startVM()
 	if err != nil {
 		return err
 	}
 
-	s.Debugln("Waiting for VM to become responsive...")
+	s.BuildLogger.Debugln("Waiting for VM to become responsive...")
 	time.Sleep(10 * time.Second)
 	err = s.verifyMachine(s.sshPort)
 	if err != nil {
@@ -172,21 +173,21 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	s.vmName = s.getVMName(baseName)
 
 	if s.Config.VirtualBox.DisableSnapshots && vbox.Exist(s.Context, s.vmName) {
-		s.Debugln("Deleting old VM...")
+		s.BuildLogger.Debugln("Deleting old VM...")
 		killAndUnregisterVM(s.Context, s.vmName)
 	}
 
 	s.tryRestoreFromSnapshot()
 
 	if !vbox.Exist(s.Context, s.vmName) {
-		s.Println("Creating new VM...")
+		s.BuildLogger.Println("Creating new VM...")
 		err = s.createVM(baseName)
 		if err != nil {
 			return err
 		}
 
 		if !s.Config.VirtualBox.DisableSnapshots {
-			s.Println("Creating default snapshot...")
+			s.BuildLogger.Println("Creating default snapshot...")
 			err = vbox.CreateSnapshot(s.Context, s.vmName, "Started")
 			if err != nil {
 				return err
@@ -208,7 +209,7 @@ func (s *executor) printVersion() error {
 		return err
 	}
 
-	s.Println("Using VirtualBox version", version, "executor...")
+	s.BuildLogger.Println("Using VirtualBox version", version, "executor...")
 	return nil
 }
 
@@ -246,7 +247,7 @@ func (s *executor) getVMName(baseName string) string {
 }
 
 func (s *executor) startVM() error {
-	s.Debugln("Starting VM...")
+	s.BuildLogger.Debugln("Starting VM...")
 	startType := s.Config.VirtualBox.StartType
 	if startType == "" {
 		startType = "headless"
@@ -263,10 +264,10 @@ func (s *executor) tryRestoreFromSnapshot() {
 		return
 	}
 
-	s.Println("Restoring VM from snapshot...")
+	s.BuildLogger.Println("Restoring VM from snapshot...")
 	err := s.restoreFromSnapshot()
 	if err != nil {
-		s.Println("Previous VM failed. Deleting, because", err)
+		s.BuildLogger.Println("Previous VM failed. Deleting, because", err)
 		killAndUnregisterVM(s.Context, s.vmName)
 	}
 }
@@ -278,7 +279,7 @@ func killAndUnregisterVM(ctx context.Context, vmName string) {
 }
 
 func (s *executor) ensureVMStarted() error {
-	s.Debugln("Checking VM status...")
+	s.BuildLogger.Debugln("Checking VM status...")
 	status, err := vbox.Status(s.Context, s.vmName)
 	if err != nil {
 		return err
@@ -292,21 +293,21 @@ func (s *executor) ensureVMStarted() error {
 	}
 
 	if status != vbox.Running {
-		s.Debugln("Waiting for VM to run...")
+		s.BuildLogger.Debugln("Waiting for VM to run...")
 		err = vbox.WaitForStatus(s.Context, s.vmName, vbox.Running, 60)
 		if err != nil {
 			return err
 		}
 	}
 
-	s.Debugln("Identify SSH Port...")
+	s.BuildLogger.Debugln("Identify SSH Port...")
 	sshPort, err := vbox.FindSSHPort(s.Context, s.vmName)
 	s.sshPort = sshPort
 	if err != nil {
 		return err
 	}
 
-	s.Println("Waiting for VM to become responsive...")
+	s.BuildLogger.Println("Waiting for VM to become responsive...")
 	err = s.verifyMachine(s.sshPort)
 	if err != nil {
 		return err
@@ -317,16 +318,19 @@ func (s *executor) ensureVMStarted() error {
 }
 
 func (s *executor) sshConnect() error {
-	s.Println("Starting SSH command...")
+	s.BuildLogger.Println("Starting SSH command...")
+
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
+
 	s.sshCommand = ssh.Client{
 		Config: *s.Config.SSH,
-		Stdout: s.Trace,
-		Stderr: s.Trace,
+		Stdout: logger.Stdout(),
+		Stderr: logger.Stderr(),
 	}
 	s.sshCommand.Port = s.sshPort
 	s.sshCommand.Host = "localhost"
 
-	s.Debugln("Connecting to SSH server...")
+	s.BuildLogger.Debugln("Connecting to SSH server...")
 	return s.sshCommand.Connect()
 }
 

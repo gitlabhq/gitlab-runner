@@ -36,6 +36,7 @@ import (
 	"github.com/samber/lo"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
@@ -321,12 +322,12 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	imageName := s.options.Image.Name
 
-	s.Println("Using Kubernetes executor with image", imageName, "...")
+	s.BuildLogger.Println("Using Kubernetes executor with image", imageName, "...")
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
-		s.Println("Using attach strategy to execute scripts...")
+		s.BuildLogger.Println("Using attach strategy to execute scripts...")
 	}
 
-	s.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
+	s.BuildLogger.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
 
 	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
 		return fmt.Errorf("prepare build and shell: %w", err)
@@ -469,10 +470,10 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		var err error
 
 		if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
-			s.Debugln("Starting Kubernetes command...")
+			s.BuildLogger.Debugln("Starting Kubernetes command...")
 			err = s.runWithExecLegacy(cmd)
 		} else {
-			s.Debugln("Starting Kubernetes command with attach...")
+			s.BuildLogger.Debugln("Starting Kubernetes command with attach...")
 			err = s.runWithAttach(cmd)
 		}
 
@@ -527,7 +528,7 @@ func (s *executor) watchPodEvents() error {
 }
 
 func (s *executor) printPodEvents() {
-	w := tabwriter.NewWriter(s.Trace, 3, 1, 3, ' ', 0)
+	w := tabwriter.NewWriter(s.BuildLogger.Stderr(), 3, 1, 3, ' ', 0)
 	_, _ = fmt.Fprintln(w, "Type\tReason\tMessage")
 
 	// The s.eventsStream.Stop method will be called by the caller
@@ -558,12 +559,12 @@ func (s *executor) logPodWarningEvents(eventType string) {
 
 	events, err := kubeRequest.RunValue()
 	if err != nil {
-		s.Errorln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
+		s.BuildLogger.Errorln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
 		return
 	}
 
 	for _, event := range events.Items {
-		s.Warningln(fmt.Sprintf("Event retrieved from the cluster: %s", event.Message))
+		s.BuildLogger.Warningln(fmt.Sprintf("Event retrieved from the cluster: %s", event.Message))
 	}
 }
 
@@ -584,7 +585,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	s.Debugln(fmt.Sprintf(
+	s.BuildLogger.Debugln(fmt.Sprintf(
 		"Starting in container %q the command %q with script: %s",
 		containerName,
 		containerCommand,
@@ -593,7 +594,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 
 	select {
 	case err := <-s.runInContainerWithExec(ctx, containerName, containerCommand, cmd.Script):
-		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
+		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
 			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
@@ -647,7 +648,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		return err
 	}
 
-	s.Debugln(fmt.Sprintf(
+	s.BuildLogger.Debugln(fmt.Sprintf(
 		"Starting in container %q the command %q with script: %s",
 		containerName,
 		containerCommand,
@@ -658,7 +659,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
-		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
+		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var terminatedError *commandTerminatedError
 		if err != nil && errors.As(err, &terminatedError) {
 			return &common.BuildError{Inner: err, ExitCode: terminatedError.exitCode}
@@ -701,7 +702,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		}
 	}
 
-	var out io.Writer = s.Trace
+	var out io.Writer = s.BuildLogger.Stderr()
 	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
 		out = io.Discard
 	}
@@ -875,7 +876,7 @@ func (s *executor) processLogs(ctx context.Context) {
 			}
 
 			if err != nil {
-				s.Warningln(fmt.Sprintf("Error processing the log file: %v", err))
+				s.BuildLogger.Warningln(fmt.Sprintf("Error processing the log file: %v", err))
 			}
 
 			exitCode := getExitCode(err)
@@ -889,13 +890,13 @@ func (s *executor) forwardLogLine(line string) {
 	var status shells.StageCommandStatus
 	if !status.TryUnmarshal(line) {
 		if _, err := s.writeRunnerLog(line); err != nil {
-			s.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
+			s.BuildLogger.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 		}
 
 		return
 	}
 
-	s.Debugln(fmt.Sprintf("Setting remote stage status: %s", status))
+	s.BuildLogger.Debugln(fmt.Sprintf("Setting remote stage status: %s", status))
 	s.remoteStageStatusMutex.Lock()
 	s.remoteStageStatus = status
 	s.remoteStageStatusMutex.Unlock()
@@ -912,7 +913,9 @@ func (s *executor) writeRunnerLog(log string) (int, error) {
 		log = log[:size-1]
 	}
 
-	return s.Trace.Write([]byte(log))
+	// todo:
+	// build logger: update kubernetes log processor to support separate stdout/stderr streams
+	return s.BuildLogger.Stdout().Write([]byte(log))
 }
 
 // getExitCode tries to extract the exit code from an inner exec.CodeExitError
@@ -929,7 +932,7 @@ func getExitCode(err error) int {
 }
 
 func (s *executor) setupTrappingScripts(ctx context.Context) error {
-	s.Debugln("Setting up trapping scripts on emptyDir ...")
+	s.BuildLogger.Debugln("Setting up trapping scripts on emptyDir ...")
 
 	scriptName, script := "", ""
 	shellName := s.Shell().Shell
@@ -954,7 +957,7 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptName, contain
 	if err != nil {
 		return err
 	}
-	s.Debugln(fmt.Sprintf("Saving stage script %s on Container %q", saveScript, containerName))
+	s.BuildLogger.Debugln(fmt.Sprintf("Saving stage script %s on Container %q", saveScript, containerName))
 
 	select {
 	case err := <-s.runInContainerWithExec(
@@ -963,7 +966,7 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptName, contain
 		s.BuildShell.DockerCommand,
 		saveScript,
 	):
-		s.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
+		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
 			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
@@ -1032,7 +1035,7 @@ func (s *executor) cleanupResources() {
 		})
 
 		if err := kubeRequest.Run(); err != nil {
-			s.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
+			s.BuildLogger.Errorln(fmt.Sprintf("Error cleaning up pod: %s", err.Error()))
 		}
 	}
 
@@ -1045,7 +1048,7 @@ func (s *executor) cleanupResources() {
 				})
 		})
 		if err := kubeRequest.Run(); err != nil {
-			s.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
+			s.BuildLogger.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
 	}
 }
@@ -1453,7 +1456,7 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 func (s *executor) parseVolumeSizeLimit(volume common.KubernetesEmptyDir) *resource.Quantity {
 	quantity, err := resource.ParseQuantity(volume.SizeLimit)
 	if err != nil {
-		s.Warningln(fmt.Sprintf("invalid limit quantity %q for empty volume %q: %v", volume.SizeLimit, volume.Name, err))
+		s.BuildLogger.Warningln(fmt.Sprintf("invalid limit quantity %q for empty volume %q: %v", volume.SizeLimit, volume.Name, err))
 		return nil
 	}
 	return &quantity
@@ -1530,7 +1533,7 @@ func (s *executor) isSharedBuildsDirRequired() bool {
 }
 
 func (s *executor) setupCredentials(ctx context.Context) error {
-	s.Debugln("Setting up secrets")
+	s.BuildLogger.Debugln("Setting up secrets")
 
 	authConfigs, err := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
 	if err != nil {
@@ -1573,7 +1576,7 @@ func (s *executor) requestSecretCreation(
 	creds, err := s.kubeClient.CoreV1().
 		Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
 	if isConflict(err) {
-		s.Debugln(
+		s.BuildLogger.Debugln(
 			fmt.Sprintf(
 				"Conflict while trying to create the secret  %s ... Retrieving the existing resource",
 				secret.Name,
@@ -1591,7 +1594,7 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 	supportsHostAliases, err := s.featureChecker.IsHostAliasSupported()
 	switch {
 	case errors.Is(err, &badVersionError{}):
-		s.Warningln("Checking for host alias support. Host aliases will be disabled.", err)
+		s.BuildLogger.Warningln("Checking for host alias support. Host aliases will be disabled.", err)
 		return nil, nil
 	case err != nil:
 		return nil, err
@@ -1603,7 +1606,7 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 }
 
 func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Container) error {
-	s.Debugln("Setting up build pod")
+	s.BuildLogger.Debugln("Setting up build pod")
 
 	prepareOpts, err := s.createPodConfigPrepareOpts(initContainers)
 	if err != nil {
@@ -1615,14 +1618,14 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 		return err
 	}
 
-	s.Debugln("Checking for ImagePullSecrets or ServiceAccount existence")
+	s.BuildLogger.Debugln("Checking for ImagePullSecrets or ServiceAccount existence")
 	err = s.checkDependantResources(ctx)
 	if err != nil {
 		return err
 	}
 
 	if s.Build.IsFeatureFlagOn(featureflags.UseAdvancedPodSpecConfiguration) {
-		s.Warningln("Advanced Pod Spec configuration enabled, merging the provided PodSpec to the generated one. " +
+		s.BuildLogger.Warningln("Advanced Pod Spec configuration enabled, merging the provided PodSpec to the generated one. " +
 			"This is an alpha feature and is subject to change. Feedback is collected in this issue: " +
 			"https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29659 ...")
 		podConfig.Spec, err = s.applyPodSpecMerge(&podConfig.Spec)
@@ -1631,7 +1634,7 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 		}
 	}
 
-	s.Debugln("Creating build pod")
+	s.BuildLogger.Debugln("Creating build pod")
 
 	kubeRequest := newRetryableKubeAPICallWithValue(func() (*api.Pod, error) {
 		return s.requestPodCreation(ctx, &podConfig, s.configurationOverwrites.namespace)
@@ -1655,7 +1658,7 @@ func (s *executor) requestPodCreation(ctx context.Context, pod *api.Pod, namespa
 	p, err := s.kubeClient.CoreV1().
 		Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if isConflict(err) {
-		s.Debugln(
+		s.BuildLogger.Debugln(
 			fmt.Sprintf(
 				"Conflict while trying to create the pod  %s ... Retrieving the existing resource",
 				pod.Name,
@@ -1671,7 +1674,7 @@ func (s *executor) requestPodCreation(ctx context.Context, pod *api.Pod, namespa
 
 func (s *executor) checkDependantResources(ctx context.Context) error {
 	if s.Config.Kubernetes.GetResourceAvailabilityCheckMaxAttempts() == 0 {
-		s.Debugln("Resources check has been disabled")
+		s.BuildLogger.Debugln("Resources check has been disabled")
 		return nil
 	}
 
@@ -1847,7 +1850,7 @@ func (s *executor) getPodActiveDeadlineSeconds() *int64 {
 		return nil
 	}
 
-	s.Println(fmt.Sprintf(
+	s.BuildLogger.Println(fmt.Sprintf(
 		"Using FF_USE_POD_ACTIVE_DEADLINE_SECONDS, the Pod activeDeadlineSeconds will be set to the job timeout: %v...",
 		time.Duration(s.Build.RunnerInfo.Timeout)*time.Second,
 	))
@@ -2006,7 +2009,7 @@ func (s *executor) waitForResource(
 ) error {
 	attempt := -1
 
-	s.Debugln(fmt.Sprintf("Checking for %s existence", resourceType))
+	s.BuildLogger.Debugln(fmt.Sprintf("Checking for %s existence", resourceType))
 
 	for attempt < s.Config.Kubernetes.GetResourceAvailabilityCheckMaxAttempts() {
 		if checkExists(ctx, resourceName) {
@@ -2015,7 +2018,7 @@ func (s *executor) waitForResource(
 
 		attempt++
 		if attempt > 0 {
-			s.Debugln(fmt.Sprintf(
+			s.BuildLogger.Debugln(fmt.Sprintf(
 				"Pausing check of the %s availability for %d (attempt %d)",
 				resourceType,
 				resourceAvailabilityCheckMaxPollInterval,
@@ -2067,7 +2070,7 @@ func (s *executor) secretExists() func(context.Context, string) bool {
 func (s *executor) getDNSPolicy() api.DNSPolicy {
 	dnsPolicy, err := s.Config.Kubernetes.DNSPolicy.Get()
 	if err != nil {
-		s.Warningln(fmt.Sprintf("falling back to cluster's default policy: %v", err))
+		s.BuildLogger.Warningln(fmt.Sprintf("falling back to cluster's default policy: %v", err))
 	}
 	return dnsPolicy
 }
@@ -2084,7 +2087,7 @@ func (s *executor) makePodProxyServices(
 	ctx context.Context,
 	ownerReferences []metav1.OwnerReference,
 ) ([]api.Service, error) {
-	s.Debugln("Creating pod proxy services")
+	s.BuildLogger.Debugln("Creating pod proxy services")
 
 	ch := make(chan serviceCreateResponse)
 	var wg sync.WaitGroup
@@ -2116,7 +2119,7 @@ func (s *executor) makePodProxyServices(
 	for res := range ch {
 		if res.err != nil {
 			err := fmt.Errorf("error creating the proxy service %q: %w", res.service.Name, res.err)
-			s.Errorln(err)
+			s.BuildLogger.Errorln(err)
 
 			return []api.Service{}, err
 		}
@@ -2176,7 +2179,7 @@ func (s *executor) requestServiceCreation(
 	srv, err := s.kubeClient.CoreV1().
 		Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	if isConflict(err) {
-		s.Debugln(
+		s.BuildLogger.Debugln(
 			fmt.Sprintf(
 				"Conflict while trying to create the service  %s ... Retrieving the existing resource",
 				service.Name,
@@ -2231,7 +2234,7 @@ func (s *executor) checkPodStatus(ctx context.Context) error {
 
 	if err != nil {
 		// General request failure
-		s.Warningln("Getting job pod status", err)
+		s.BuildLogger.Warningln("Getting job pod status", err)
 		return nil
 	}
 
@@ -2270,7 +2273,7 @@ func (s *executor) runInContainer(
 
 		kubeRequest := newRetryableKubeAPICall(func() error {
 			err := attach.Run()
-			s.Debugln(fmt.Sprintf("Trying to execute stage %v, got error %v", stage, err))
+			s.BuildLogger.Debugln(fmt.Sprintf("Trying to execute stage %v, got error %v", stage, err))
 			return s.checkScriptExecution(stage, err)
 		})
 
@@ -2279,7 +2282,7 @@ func (s *executor) runInContainer(
 		}
 
 		exitStatus := <-s.remoteProcessTerminated
-		s.Debugln("Remote process exited with the status:", exitStatus)
+		s.BuildLogger.Debugln("Remote process exited with the status:", exitStatus)
 
 		// CommandExitCode is guaranteed to be non nil when sent over the remoteProcessTerminated channel
 		if *exitStatus.CommandExitCode == 0 {
@@ -2303,7 +2306,7 @@ func (s *executor) runInContainerWithExec(
 	go func() {
 		defer close(errCh)
 
-		var out io.Writer = s.Trace
+		var out io.Writer = s.BuildLogger.Stderr()
 		if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
 			out = io.Discard
 		}
@@ -2325,8 +2328,8 @@ func (s *executor) runInContainerWithExec(
 			ContainerName: name,
 			Command:       command,
 			In:            strings.NewReader(script),
-			Out:           s.Trace,
-			Err:           s.Trace,
+			Out:           s.BuildLogger.Stdout(),
+			Err:           s.BuildLogger.Stderr(),
 			Stdin:         true,
 			Config:        s.kubeConfig,
 			Client:        s.kubeClient,
@@ -2363,10 +2366,10 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 
 	s.remoteStageStatusMutex.Lock()
 	defer s.remoteStageStatusMutex.Unlock()
-	s.Debugln(fmt.Sprintf("Checking remote stage status after trying attach with err %v. Remote stage status: %v", err, s.remoteStageStatus))
+	s.BuildLogger.Debugln(fmt.Sprintf("Checking remote stage status after trying attach with err %v. Remote stage status: %v", err, s.remoteStageStatus))
 
 	// If the remote stage is the one we are trying to retry it means that it was already executed.
-	s.Debugln(fmt.Sprintf("Remote stage: %v, trying to execute stage %v", s.remoteStageStatus.BuildStage(), stage))
+	s.BuildLogger.Debugln(fmt.Sprintf("Remote stage: %v, trying to execute stage %v", s.remoteStageStatus.BuildStage(), stage))
 	if s.remoteStageStatus.BuildStage() == stage {
 		return nil
 	}
@@ -2448,13 +2451,13 @@ func (s *executor) checkDefaults() error {
 	}
 
 	if s.configurationOverwrites.namespace == "" {
-		s.Warningln(
+		s.BuildLogger.Warningln(
 			fmt.Sprintf("Namespace is empty, therefore assuming '%s'.", DefaultResourceIdentifier),
 		)
 		s.configurationOverwrites.namespace = DefaultResourceIdentifier
 	}
 
-	s.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
+	s.BuildLogger.Println("Using Kubernetes namespace:", s.configurationOverwrites.namespace)
 
 	return nil
 }
@@ -2474,10 +2477,13 @@ func (s *executor) captureContainersLogs(ctx context.Context, containers []api.C
 			if service.Name != container.Image {
 				continue
 			}
+
+			logger := s.BuildLogger.StreamID(buildlogger.StreamStartingServiceLevel)
+
 			aliases := append([]string{strings.Split(container.Image, ":")[0]}, service.Aliases()...)
-			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), s.Trace)
+			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger.Stdout())
 			if err := s.captureContainerLogs(ctx, container.Name, sink); err != nil {
-				s.Warningln(err.Error())
+				s.BuildLogger.Warningln(err.Error())
 			}
 		}
 	}
@@ -2507,17 +2513,21 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
 	}
 
-	s.Debugln("streaming logs for container " + containerName)
+	s.BuildLogger.Debugln("streaming logs for container " + containerName)
 	go func() {
 		defer podLogs.Close()
 		defer sink.Close()
 
 		if _, err = io.Copy(sink, podLogs); err != nil {
 			if err != io.EOF && !errors.Is(err, context.Canceled) {
-				s.Warningln(fmt.Sprintf("error streaming logs for container %s: %s", containerName, err.Error()))
+				s.BuildLogger.Warningln(fmt.Sprintf(
+					"error streaming logs for container %s: %s",
+					containerName,
+					err.Error(),
+				))
 			}
 		}
-		s.Debugln("stopped streaming logs for container " + containerName)
+		s.BuildLogger.Debugln("stopped streaming logs for container " + containerName)
 	}()
 	return nil
 }

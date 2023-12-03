@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
@@ -21,10 +22,9 @@ type ExecutorOptions struct {
 
 type AbstractExecutor struct {
 	ExecutorOptions
-	common.BuildLogger
+	BuildLogger  buildlogger.Logger
 	Config       common.RunnerConfig
 	Build        *common.Build
-	Trace        common.JobTrace
 	BuildShell   *common.ShellConfiguration
 	currentStage common.ExecutorStage
 	Context      context.Context
@@ -57,7 +57,7 @@ func (e *AbstractExecutor) generateShellConfiguration() error {
 		return err
 	}
 	e.BuildShell = shellConfiguration
-	e.Debugln("Shell configuration:", shellConfiguration)
+	e.BuildLogger.Debugln("Shell configuration:", shellConfiguration)
 	return nil
 }
 
@@ -123,8 +123,7 @@ func (e *AbstractExecutor) PrepareConfiguration(options common.ExecutorPrepareOp
 	e.Context = options.Context
 	e.Config = *options.Config
 	e.Build = options.Build
-	e.Trace = options.Trace
-	e.BuildLogger = common.NewBuildLogger(options.Trace, options.Build.Log())
+	e.BuildLogger = options.BuildLogger
 	e.ProxyPool = proxy.NewPool()
 }
 

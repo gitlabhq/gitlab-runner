@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 const (
@@ -127,7 +128,7 @@ type overwrites struct {
 func createOverwrites(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (*overwrites, error) {
 	var err error
 	o := &overwrites{}
@@ -227,7 +228,7 @@ func createOverwrites(
 func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (err error) {
 	o.buildRequests, err = o.evaluateMaxResourceListOverwrite(
 		"CPURequest",
@@ -273,7 +274,7 @@ func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (err error) {
 	o.serviceRequests, err = o.evaluateMaxResourceListOverwrite(
 		"ServiceCPURequest",
@@ -319,7 +320,7 @@ func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 func (o *overwrites) evaluateMaxHelperResourcesOverwrite(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (err error) {
 	o.helperRequests, err = o.evaluateMaxResourceListOverwrite(
 		"HelperCPURequest",
@@ -366,7 +367,7 @@ func (o *overwrites) evaluateBoolControlledOverwrite(
 	fieldName, value string,
 	canOverride bool,
 	overwriteValue string,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (string, error) {
 	if canOverride {
 		return o.evaluateOverwrite(fieldName, value, ".+", overwriteValue, logger)
@@ -376,7 +377,7 @@ func (o *overwrites) evaluateBoolControlledOverwrite(
 
 func (o *overwrites) evaluateOverwrite(
 	fieldName, value, regex, overwriteValue string,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (string, error) {
 	if regex == "" {
 		logger.Debugln("Regex allowing overrides for", fieldName, "is empty, disabling override.")
@@ -429,7 +430,7 @@ func (o *overwrites) evaluateMapOverwrite(
 	regex string,
 	variables common.JobVariables,
 	variablesSelector string,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (map[string]string, error) {
 	if regex == "" {
 		logger.Debugln("Regex allowing overrides for", fieldName, "is empty, disabling override.")
@@ -474,7 +475,7 @@ func (o *overwrites) evaluateMaxResourceListOverwrite(
 	overwriteCPU,
 	overwriteMemory string,
 	overwriteEphemeralStorage string,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (api.ResourceList, error) {
 	cpu, err := o.evaluateMaxResourceOverwrite(cpuFieldName, currentCPU, maxCPU, overwriteCPU, logger)
 	if err != nil {
@@ -505,7 +506,7 @@ func (o *overwrites) evaluateMaxResourceOverwrite(
 	value,
 	maxResource,
 	overwriteValue string,
-	logger common.BuildLogger,
+	logger buildlogger.Logger,
 ) (string, error) {
 	if maxResource == "" {
 		logger.Debugln("setting allowing overrides for", fieldName, "is empty, disabling override.")

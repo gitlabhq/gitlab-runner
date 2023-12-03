@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/services"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
@@ -22,7 +23,7 @@ import (
 
 func (e *executor) createServices() error {
 	e.SetCurrentStage(ExecutorStageCreatingServices)
-	e.Debugln("Creating services...")
+	e.BuildLogger.Debugln("Creating services...")
 
 	servicesDefinitions, err := e.getServicesDefinitions()
 	if err != nil {
@@ -46,7 +47,7 @@ func (e *executor) createServices() error {
 	}
 
 	if e.networkMode.IsBridge() || e.networkMode.NetworkName() == "" {
-		e.Debugln("Building service links...")
+		e.BuildLogger.Debugln("Building service links...")
 		e.links = e.buildServiceLinks(linksMap)
 	}
 
@@ -75,19 +76,19 @@ func (e *executor) getServicesDefinitions() (common.Services, error) {
 }
 
 func (e *executor) waitForServices() {
-	waitForServicesTimeout := e.Config.Docker.WaitForServicesTimeout
-	if waitForServicesTimeout == 0 {
-		waitForServicesTimeout = common.DefaultWaitForServicesTimeout
+	timeout := e.Config.Docker.WaitForServicesTimeout
+	if timeout == 0 {
+		timeout = common.DefaultWaitForServicesTimeout
 	}
 
 	// wait for all services to came up
-	if waitForServicesTimeout > 0 && len(e.services) > 0 {
-		e.Println("Waiting for services to be up and running (timeout", waitForServicesTimeout, "seconds)...")
+	if timeout > 0 && len(e.services) > 0 {
+		e.BuildLogger.Println("Waiting for services to be up and running (timeout", timeout, "seconds)...")
 		wg := sync.WaitGroup{}
 		for _, service := range e.services {
 			wg.Add(1)
 			go func(service *types.Container) {
-				_ = e.waitForServiceContainer(service, time.Duration(waitForServicesTimeout)*time.Second)
+				_ = e.waitForServiceContainer(service, time.Duration(timeout)*time.Second)
 				wg.Done()
 			}(service)
 		}
@@ -122,7 +123,7 @@ func (e *executor) createFromServiceDefinition(
 
 	for _, linkName := range serviceMeta.Aliases {
 		if linksMap[linkName] != nil {
-			e.Warningln("Service", serviceDefinition.Name, "is already created. Ignoring.")
+			e.BuildLogger.Warningln("Service", serviceDefinition.Name, "is already created. Ignoring.")
 			continue
 		}
 
@@ -141,7 +142,7 @@ func (e *executor) createFromServiceDefinition(
 				return err
 			}
 
-			e.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
+			e.BuildLogger.Debugln("Created service", serviceDefinition.Name, "as", container.ID)
 			e.services = append(e.services, container)
 			e.temporary = append(e.temporary, container.ID)
 		}
@@ -187,14 +188,14 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 		Variant:      waitImage.Variant,
 	}
 
-	e.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
+	e.BuildLogger.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, &platform, containerName)
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
 	defer func() { _ = e.removeContainer(e.Context, resp.ID) }()
 
-	e.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
+	e.BuildLogger.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
 	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return fmt.Errorf("start service container: %w", err)
@@ -265,7 +266,9 @@ func (e *executor) waitForServiceContainer(service *types.Container, timeout tim
 	buffer.WriteString("\n")
 	buffer.WriteString(helpers.ANSI_YELLOW + "*********" + helpers.ANSI_RESET + "\n")
 	buffer.WriteString("\n")
-	_, _ = io.Copy(e.Trace, &buffer)
+
+	_, _ = e.BuildLogger.Stderr().Write(buffer.Bytes())
+
 	return err
 }
 
@@ -288,9 +291,11 @@ func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[strin
 			}
 		}
 
-		sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), e.Trace)
+		logger := e.BuildLogger.StreamID(buildlogger.StreamStartingServiceLevel)
+
+		sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger.Stdout())
 		if err := e.captureContainerLogs(ctx, service.ID, service.Names[0], sink); err != nil {
-			e.Warningln(err.Error())
+			e.BuildLogger.Warningln(err.Error())
 		}
 	}
 }
@@ -312,7 +317,7 @@ func (e *executor) captureContainerLogs(ctx context.Context, cid, containerName 
 		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
 	}
 
-	e.Debugln("streaming logs for container " + containerName)
+	e.BuildLogger.Debugln("streaming logs for container " + containerName)
 	go func() {
 		defer source.Close()
 		defer sink.Close()
@@ -321,10 +326,14 @@ func (e *executor) captureContainerLogs(ctx context.Context, cid, containerName 
 		// containers are started with TTY=true, io.Copy should be used instead.
 		if _, err := stdcopy.StdCopy(sink, sink, source); err != nil {
 			if err != io.EOF && !errors.Is(err, context.Canceled) {
-				e.Warningln(fmt.Sprintf("error streaming logs for container %s: %s", containerName, err.Error()))
+				e.BuildLogger.Warningln(fmt.Sprintf(
+					"error streaming logs for container %s: %s",
+					containerName,
+					err.Error(),
+				))
 			}
 		}
-		e.Debugln("stopped streaming logs for container " + containerName)
+		e.BuildLogger.Debugln("stopped streaming logs for container " + containerName)
 	}()
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
@@ -54,16 +55,18 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
-	s.Println("Using Shell (" + s.Shell().Shell + ") executor...")
+	s.BuildLogger.Println("Using Shell (" + s.Shell().Shell + ") executor...")
 	return nil
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
 	s.BuildLogger.Debugln("Using new shell command execution")
+
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 	cmdOpts := process.CommandOptions{
 		Env:                             os.Environ(),
-		Stdout:                          s.Trace,
-		Stderr:                          s.Trace,
+		Stdout:                          logger.Stdout(),
+		Stderr:                          logger.Stderr(),
 		UseWindowsLegacyProcessStrategy: s.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
 	}
 

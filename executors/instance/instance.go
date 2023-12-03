@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/autoscaler"
 )
@@ -23,7 +24,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		if options.Config.Autoscaler.VMIsolation.Enabled || options.Config.Autoscaler.MaxUseCount == 1 {
 			e.SharedBuildsDir = false
 		} else {
-			e.Warningln("use_common_build_dir has no effect: requires vm isolation or max_use_count = 1")
+			e.BuildLogger.Warningln("use_common_build_dir has no effect: requires vm isolation or max_use_count = 1")
 		}
 	}
 
@@ -62,7 +63,7 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 		return errors.New("expected environment executor data")
 	}
 
-	e.Println("Preparing instance...")
+	e.BuildLogger.Println("Preparing instance...")
 	e.client, err = environment.Prepare(options.Context, e.BuildLogger, options)
 	if err != nil {
 		return fmt.Errorf("creating instance environment: %w", err)
@@ -72,11 +73,13 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (e *executor) Run(cmd common.ExecutorCommand) error {
+	logger := e.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
+
 	return e.client.Run(cmd.Context, executors.RunOptions{
 		Command: e.BuildShell.CmdLine,
 		Stdin:   strings.NewReader(cmd.Script),
-		Stdout:  e.Trace,
-		Stderr:  e.Trace,
+		Stdout:  logger.Stdout(),
+		Stderr:  logger.Stderr(),
 	})
 }
 

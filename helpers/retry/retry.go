@@ -5,7 +5,7 @@ import (
 
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 const (
@@ -98,7 +98,7 @@ func (r *Retry[T]) WithLogrus(log *logrus.Entry) *Retry[T] {
 	})
 }
 
-func (r *Retry[T]) WithBuildLog(log *common.BuildLogger) *Retry[T] {
+func (r *Retry[T]) WithBuildLog(log *buildlogger.Logger) *Retry[T] {
 	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
 		if shouldRetry {
 			logger := log.WithFields(logrus.Fields{logrus.ErrorKey: err})

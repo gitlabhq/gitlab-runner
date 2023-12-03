@@ -25,7 +25,7 @@ func (e *Executor) GetBaseName(defaultBaseName string) (string, error) {
 	if len(e.allowedImages) == 0 {
 		// Ignore YAML's image if no allowed_images parameter is provided for the sake of backward compatibility.
 		// And warn user about this.
-		e.Warningln(fmt.Sprintf(
+		e.BuildLogger.Warningln(fmt.Sprintf(
 			"No allowed_images configuration found for \"%s\", using image \"%s\"",
 			e.Build.Image.Name,
 			defaultBaseName,
@@ -39,13 +39,13 @@ func (e *Executor) GetBaseName(defaultBaseName string) (string, error) {
 		}
 	}
 
-	e.Println()
-	e.Errorln(fmt.Sprintf("The %q image is not present on list of allowed images", imageName))
+	e.BuildLogger.Println()
+	e.BuildLogger.Errorln(fmt.Sprintf("The %q image is not present on list of allowed images", imageName))
 	for _, allowedImage := range e.allowedImages {
-		e.Println("-", allowedImage)
+		e.BuildLogger.Println("-", allowedImage)
 	}
-	e.Println()
-	e.Println("Please check runner's configuration")
+	e.BuildLogger.Println()
+	e.BuildLogger.Println("Please check runner's configuration")
 
 	return "", errors.New("invalid image")
 }

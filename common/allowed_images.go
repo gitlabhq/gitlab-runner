@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/bmatcuk/doublestar/v4"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 type VerifyAllowedImageOptions struct {
@@ -16,7 +17,7 @@ type VerifyAllowedImageOptions struct {
 
 var ErrDisallowedImage = errors.New("disallowed image")
 
-func VerifyAllowedImage(options VerifyAllowedImageOptions, logger BuildLogger) error {
+func VerifyAllowedImage(options VerifyAllowedImageOptions, logger buildlogger.Logger) error {
 	for _, allowedImage := range options.AllowedImages {
 		ok, _ := doublestar.Match(allowedImage, options.Image)
 		if ok {

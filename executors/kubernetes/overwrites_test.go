@@ -13,6 +13,7 @@ import (
 	api "k8s.io/api/core/v1"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 type variableOverwrites map[string]string
@@ -38,8 +39,8 @@ func buildOverwriteVariables(overwrites variableOverwrites, globOverwrites ...ma
 	return variables
 }
 
-func stdoutLogger() common.BuildLogger {
-	return common.NewBuildLogger(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}))
+func stdoutLogger() buildlogger.Logger {
+	return buildlogger.New(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}))
 }
 
 func TestOverwrites(t *testing.T) {

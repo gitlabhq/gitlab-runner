@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
 
 // ExecutorData is an empty interface representing free-form data
@@ -40,11 +41,11 @@ const (
 // ExecutorPrepareOptions stores any data necessary for the executor to prepare
 // the environment for running a build. This includes runner configuration, build data, etc.
 type ExecutorPrepareOptions struct {
-	Config  *RunnerConfig
-	Build   *Build
-	Trace   JobTrace
-	User    string
-	Context context.Context
+	Config      *RunnerConfig
+	Build       *Build
+	BuildLogger buildlogger.Logger
+	User        string
+	Context     context.Context
 }
 
 type NoFreeExecutorError struct {

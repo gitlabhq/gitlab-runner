@@ -17,6 +17,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -154,7 +155,7 @@ type Build struct {
 
 	Session *session.Session
 
-	logger BuildLogger
+	logger buildlogger.Logger
 
 	allVariables     JobVariables
 	secretsVariables JobVariables
@@ -745,7 +746,7 @@ func (b *Build) waitForBuildFinish(buildFinish <-chan error, timeout time.Durati
 func (b *Build) retryCreateExecutor(
 	options ExecutorPrepareOptions,
 	provider ExecutorProvider,
-	logger BuildLogger,
+	logger buildlogger.Logger,
 ) (Executor, error) {
 	var err error
 
@@ -899,7 +900,7 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.logUsedImages()
 
-	b.logger = NewBuildLogger(trace, b.Log())
+	b.logger = buildlogger.New(trace, b.Log())
 	b.printRunningWithHeader()
 
 	b.setCurrentState(BuildRunStatePending)
@@ -928,7 +929,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.configureTrace(trace, cancel)
 
-	options := b.createExecutorPrepareOptions(ctx, globalConfig, trace)
+	options := b.createExecutorPrepareOptions(ctx, globalConfig)
 	provider := GetExecutorProvider(b.Runner.Executor)
 	if provider == nil {
 		return errors.New("executor not found")
@@ -978,17 +979,13 @@ func (b *Build) configureTrace(trace JobTrace, cancel context.CancelFunc) {
 	})
 }
 
-func (b *Build) createExecutorPrepareOptions(
-	ctx context.Context,
-	globalConfig *Config,
-	trace JobTrace,
-) ExecutorPrepareOptions {
+func (b *Build) createExecutorPrepareOptions(ctx context.Context, globalConfig *Config) ExecutorPrepareOptions {
 	return ExecutorPrepareOptions{
-		Config:  b.Runner,
-		Build:   b,
-		Trace:   trace,
-		User:    globalConfig.User,
-		Context: ctx,
+		Config:      b.Runner,
+		Build:       b,
+		BuildLogger: b.logger,
+		User:        globalConfig.User,
+		Context:     ctx,
 	}
 }
 
