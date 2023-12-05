@@ -8,6 +8,9 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 > Introduced in GitLab 11.4.
 
+WARNING:
+Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/ee/administration/feature_flags.html#risks-when-enabling-features-still-in-development).
+
 Feature flags are toggles that allow you to enable or disable specific features. These flags are typically used:
 
 - For beta features that are made available for volunteers to test, but that are not ready to be enabled for all users.
@@ -31,21 +34,6 @@ Feature flags are toggled using environment variables. To:
 
 - Activate a feature flag, set the corresponding environment variable to `"true"` or `1`.
 - Deactivate a feature flag, set the corresponding environment variable to `"false"` or `0`.
-
-## Risks when enabling features still in development
-
-Before enabling a disabled feature flag in a production environment, it is crucial to understand the potential risks involved.
-
-WARNING:
-Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default.
-
-Features that are disabled by default may change or be removed without notice in a future version of GitLab Runner.
-
-Features behind default-disabled feature flags are not recommended for use in a production environment
-and problems caused by using a default disabled features aren't covered by GitLab Support.
-
-Security issues found in features that are disabled by default are patched in regular releases
-and do not follow our regular maintenance policy with regards to backporting the fix.
 
 ## Available feature flags
 
