@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -37,7 +36,7 @@ type artifactStatementGenerator struct {
 	Parameters                []string `long:"metadata-parameter"`
 	StartedAtRFC3339          string   `long:"started-at"`
 	EndedAtRFC3339            string   `long:"ended-at"`
-	SLSAProvenanceVersion     string   `env:"SLSA_PROVENANCE_SCHEMA_VERSION"`
+	SLSAProvenanceVersion     string   `long:"schema-version"`
 }
 
 type generateStatementOptions struct {
@@ -47,54 +46,42 @@ type generateStatementOptions struct {
 	jobID        int64
 }
 
-var provenanceSchemas = map[string]struct{}{
-	slsaProvenanceVersion02: {},
-	slsaProvenanceVersion1:  {},
-}
-
 const (
-	slsaProvenanceVersion1  string = "v1"
-	slsaProvenanceVersion02 string = "v0.2"
+	slsaProvenanceVersion1  = "v1"
+	slsaProvenanceVersion02 = "v0.2"
 )
 
-func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatementOptions) (string, error) {
-	var statement interface{}
+var provenanceSchemaPredicateType = map[string]string{
+	slsaProvenanceVersion02: slsa_v02.PredicateSLSAProvenance,
+	slsaProvenanceVersion1:  slsa_v1.PredicateSLSAProvenance,
+}
 
+func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatementOptions) (string, error) {
 	start, end, err := g.parseTimings()
 	if err != nil {
 		return "", err
 	}
 
-	jobID := strconv.Itoa(int(opts.jobID))
-
-	// check if provided slsa provenance version is one that is supported
-	_, ok := provenanceSchemas[g.SLSAProvenanceVersion]
-	if !ok {
-		g.SLSAProvenanceVersion = slsaProvenanceVersion02
+	header, err := g.generateStatementHeader(opts.files, provenanceSchemaPredicateType[g.SLSAProvenanceVersion])
+	if err != nil {
+		return "", err
 	}
 
+	var statement any
 	switch g.SLSAProvenanceVersion {
 	case slsaProvenanceVersion02:
-		header, headerErr := g.generateStatementHeader(opts.files, slsa_v02.PredicateSLSAProvenance)
-		if headerErr != nil {
-			return "", headerErr
-		}
-		var err error
-		statement, err = g.generateSLSAv02Statement(header, jobID, &start, &end)
-		if err != nil {
-			return "", err
+		statement = &in_toto.ProvenanceStatementSLSA02{
+			StatementHeader: header,
+			Predicate:       g.generateSLSAv02Predicate(opts.jobID, start, end),
 		}
 	case slsaProvenanceVersion1:
-		header, headerErr := g.generateStatementHeader(opts.files, slsa_v02.PredicateSLSAProvenance)
-		if headerErr != nil {
-			return "", err
-		}
-		var err error
-		statement, err = g.generateSLSAv1Statement(header, jobID, &start, &end)
-		if err != nil {
-			return "", err
+		statement = &in_toto.ProvenanceStatementSLSA1{
+			StatementHeader: header,
+			Predicate:       g.generateSLSAv1Predicate(opts.jobID, start, end),
 		}
 	default:
+		// Runner will check for supported versions before calling the generator. This is purely defensive code for the
+		// rare instances where the generator is called directly.
 		return "", fmt.Errorf("unknown slsa provenance version: %s", g.SLSAProvenanceVersion)
 	}
 
@@ -109,15 +96,7 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 	return file, err
 }
 
-func (g *artifactStatementGenerator) generateSLSAv1Statement(header in_toto.StatementHeader, jobID string, start *time.Time, end *time.Time) (*in_toto.ProvenanceStatementSLSA1, error) {
-	predicate := g.generateSLSAv1Predicate(jobID, start, end)
-	return &in_toto.ProvenanceStatementSLSA1{
-		StatementHeader: header,
-		Predicate:       predicate,
-	}, nil
-}
-
-func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId string, start *time.Time, end *time.Time) slsa_v1.ProvenancePredicate {
+func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start time.Time, end time.Time) slsa_v1.ProvenancePredicate {
 	externalParams := make(map[string]string, len(g.Parameters))
 	for _, param := range g.Parameters {
 		externalParams[param] = ""
@@ -130,7 +109,7 @@ func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId string, start
 		"name":         g.RunnerName,
 		"executor":     g.ExecutorName,
 		"architecture": common.AppVersion.Architecture,
-		"job":          jobId,
+		"job":          fmt.Sprint(jobId),
 	}
 
 	resolvedDeps := []slsa_v1.ResourceDescriptor{{
@@ -156,31 +135,23 @@ func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId string, start
 				BuilderDependencies: nil,
 			},
 			BuildMetadata: slsa_v1.BuildMetadata{
-				InvocationID: jobId,
-				StartedOn:    start,
-				FinishedOn:   end,
+				InvocationID: fmt.Sprint(jobId),
+				StartedOn:    &start,
+				FinishedOn:   &end,
 			},
 			Byproducts: nil,
 		},
 	}
 }
 
-func (g *artifactStatementGenerator) generateSLSAv02Statement(header in_toto.StatementHeader, jobID string, start *time.Time, end *time.Time) (*in_toto.ProvenanceStatementSLSA02, error) {
-	predicate := g.generateSLSAv02Predicate(jobID, start, end)
-	return &in_toto.ProvenanceStatementSLSA02{
-		StatementHeader: header,
-		Predicate:       predicate,
-	}, nil
-}
-
-func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID string, start *time.Time, end *time.Time) slsa_v02.ProvenancePredicate {
+func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID int64, start time.Time, end time.Time) slsa_v02.ProvenancePredicate {
 	params := make(map[string]string, len(g.Parameters))
 	for _, param := range g.Parameters {
 		params[param] = ""
 	}
 
 	type EnvironmentJob struct {
-		ID string `json:"id"`
+		ID int64 `json:"id"`
 	}
 
 	type Environment struct {
@@ -209,8 +180,8 @@ func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID string, star
 			},
 		},
 		Metadata: &slsa_v02.ProvenanceMetadata{
-			BuildStartedOn:  start,
-			BuildFinishedOn: end,
+			BuildStartedOn:  &start,
+			BuildFinishedOn: &end,
 			Reproducible:    false,
 			Completeness: slsa_v02.ProvenanceComplete{
 				Parameters:  true,
@@ -226,6 +197,7 @@ func (g *artifactStatementGenerator) generateStatementHeader(artifacts map[strin
 	if err != nil {
 		return in_toto.StatementHeader{}, err
 	}
+
 	return in_toto.StatementHeader{
 		Type:          in_toto.StatementInTotoV01,
 		PredicateType: predicateType,
