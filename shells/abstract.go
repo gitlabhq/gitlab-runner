@@ -967,6 +967,8 @@ func (b *AbstractShell) generateArtifactsMetadataArgs(info common.ShellScriptInf
 		info.Build.StartedAt().Format(time.RFC3339),
 		"--ended-at",
 		time.Now().Format(time.RFC3339),
+		"--schema-version",
+		info.Build.Variables.Get("SLSA_PROVENANCE_SCHEMA_VERSION"),
 	}
 
 	for _, variable := range info.Build.Variables {

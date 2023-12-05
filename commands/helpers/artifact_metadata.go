@@ -16,6 +16,7 @@ import (
 	slsa_common "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa_v02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	slsa_v1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -47,13 +48,14 @@ type generateStatementOptions struct {
 }
 
 const (
-	slsaProvenanceVersion1  = "v1"
-	slsaProvenanceVersion02 = "v0.2"
+	slsaProvenanceVersion1       = "v1"
+	slsaProvenanceVersion02      = "v0.2"
+	defaultSLSAProvenanceVersion = slsaProvenanceVersion02
 )
 
 var provenanceSchemaPredicateType = map[string]string{
-	slsaProvenanceVersion02: slsa_v02.PredicateSLSAProvenance,
 	slsaProvenanceVersion1:  slsa_v1.PredicateSLSAProvenance,
+	slsaProvenanceVersion02: slsa_v02.PredicateSLSAProvenance,
 }
 
 func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatementOptions) (string, error) {
@@ -67,22 +69,24 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 		return "", err
 	}
 
+	provenanceVersion := g.SLSAProvenanceVersion
+	if provenanceVersion != slsaProvenanceVersion1 && provenanceVersion != slsaProvenanceVersion02 {
+		logrus.Warnln(fmt.Sprintf("Unknown SLSA provenance version %s, defaulting to %s", provenanceVersion, defaultSLSAProvenanceVersion))
+		provenanceVersion = defaultSLSAProvenanceVersion
+	}
+
 	var statement any
-	switch g.SLSAProvenanceVersion {
-	case slsaProvenanceVersion02:
-		statement = &in_toto.ProvenanceStatementSLSA02{
-			StatementHeader: header,
-			Predicate:       g.generateSLSAv02Predicate(opts.jobID, start, end),
-		}
+	switch provenanceVersion {
 	case slsaProvenanceVersion1:
 		statement = &in_toto.ProvenanceStatementSLSA1{
 			StatementHeader: header,
 			Predicate:       g.generateSLSAv1Predicate(opts.jobID, start, end),
 		}
-	default:
-		// Runner will check for supported versions before calling the generator. This is purely defensive code for the
-		// rare instances where the generator is called directly.
-		return "", fmt.Errorf("unknown slsa provenance version: %s", g.SLSAProvenanceVersion)
+	case slsaProvenanceVersion02:
+		statement = &in_toto.ProvenanceStatementSLSA02{
+			StatementHeader: header,
+			Predicate:       g.generateSLSAv02Predicate(opts.jobID, start, end),
+		}
 	}
 
 	b, err := json.MarshalIndent(statement, "", " ")
@@ -97,11 +101,7 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 }
 
 func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start time.Time, end time.Time) slsa_v1.ProvenancePredicate {
-	externalParams := make(map[string]string, len(g.Parameters))
-	for _, param := range g.Parameters {
-		externalParams[param] = ""
-	}
-
+	externalParams := g.params()
 	externalParams["entryPoint"] = g.JobName
 	externalParams["source"] = g.RepoURL
 
@@ -145,11 +145,6 @@ func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start 
 }
 
 func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID int64, start time.Time, end time.Time) slsa_v02.ProvenancePredicate {
-	params := make(map[string]string, len(g.Parameters))
-	for _, param := range g.Parameters {
-		params[param] = ""
-	}
-
 	type EnvironmentJob struct {
 		ID int64 `json:"id"`
 	}
@@ -171,7 +166,7 @@ func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID int64, start
 					"sha256": g.RepoDigest,
 				},
 			},
-			Parameters: params,
+			Parameters: g.params(),
 			Environment: Environment{
 				Name:         g.RunnerName,
 				Executor:     g.ExecutorName,
@@ -203,6 +198,15 @@ func (g *artifactStatementGenerator) generateStatementHeader(artifacts map[strin
 		PredicateType: predicateType,
 		Subject:       subjects,
 	}, nil
+}
+
+func (g *artifactStatementGenerator) params() map[string]string {
+	params := make(map[string]string, len(g.Parameters))
+	for _, param := range g.Parameters {
+		params[param] = ""
+	}
+
+	return params
 }
 
 func (g *artifactStatementGenerator) version() string {
