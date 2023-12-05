@@ -67,6 +67,7 @@ func (s *executor) ProxyRequest(
 }
 
 func (s *executor) servicesRunning(ctx context.Context) bool {
+	// kubeAPI: pods, get
 	pod, err := s.kubeClient.CoreV1().Pods(s.pod.Namespace).Get(ctx, s.pod.Name, metav1.GetOptions{})
 	if err != nil || pod.Status.Phase != runningState {
 		return false
@@ -90,6 +91,7 @@ func (s *executor) serviceEndpointRequest(
 		return nil, err
 	}
 
+	// kubeAPI: ignore
 	result := s.kubeClient.CoreV1().RESTClient().Verb(verb).
 		Namespace(s.pod.Namespace).
 		Resource("services").

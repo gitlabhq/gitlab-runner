@@ -531,42 +531,29 @@ You can either:
 - Specify a service account `rbac.serviceAccountName: <service_account_name>` with the following
   permissions in the `values.yml` file.
 
-  - For `exec strategy`:
+ <!-- k8s_api_permissions_list_start -->
 
-    | Resource          | Permissions                                     |
-    |-------------------|-------------------------------------------------|
-    | pods/exec         | create, patch, delete                           |
-    | pods              | get, list, watch, create, patch, delete         |
-    | services          | get, list, watch, create, patch, delete         |
-    | secrets           | get, list, watch, create, update, patch, delete |
-    | serviceAccounts   | get (1)                                         |
-    | events            | get, list (1)                                   |
+| Resource | Verb (Optional Feature Flags) |
+|----------|-------------------------------|
+| events | list (`FF_RETRIEVE_POD_WARNING_EVENTS=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
+| pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get |
+| pods/logs | get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| secrets | create, delete, get, update |
+| serviceAccounts | get |
+| services | create, get |
 
-  - For `attach strategy`:
+<!-- k8s_api_permissions_list_end -->
 
-    | Resource          | Permissions                             |
-    |-------------------|-----------------------------------------|
-    | pods/attach       | create, patch, delete                   |
-    | pods/exec         | create, patch, delete                   |
-    | pods/log          | get                                     |
-    | pods              | get, watch, create, delete              |
-    | services          | get, watch, create, delete              |
-    | secrets           | get, create, update, delete             |
-    | serviceAccounts   | get (1)                                 |
-    | configmaps        | get, create, update, delete (2)         |
-    | events            | get, list (3)                           |
+- _The `serviceAccount` permission is needed only:_
 
-_(1) The `serviceAccount` permission is needed only:_
+  - _For GitLab 15.0 and 15.1._
+  - _For GitLab 15.0.1, 15.1.1, and 15.2 when `resource_availability_check_max_attempts` is set to a value higher than 0._
 
-- _For GitLab 15.0 and 15.1._
-- _For GitLab 15.0.1, 15.1.1, and 15.2 when `resource_availability_check_max_attempts` is set to a value higher than 0._
+- _As of GitLab Runner 15.8 the `configmaps` permission is no longer needed._ 
 
-_(2) The `configmaps` permission is no longer needed from GitLab 15.8._
+- _The `event` permission is needed only:_
 
-_(3) The `event` permission is needed only:_
-
-- _For GitLab 16.2.0_
-- _For GitLab 16.2.1 and later when `FF_RETRIEVE_POD_WARNING_EVENTS` is enabled._
+  - _For GitLab 16.2.1 and later._
 
 ### Overwrite the Kubernetes default service account
 

@@ -1810,15 +1810,15 @@ func TestLogDeletionAttach(t *testing.T) {
 				require.NoError(t, err)
 				logsPath := fmt.Sprintf("/logs-%d-%d", build.JobInfo.ProjectID, build.JobResponse.ID)
 				opts := kubernetes.ExecOptions{
-					Namespace: pod.Namespace,
-					PodName:   pod.Name,
-					Client:    client,
-					Stdin:     true,
-					In:        strings.NewReader(fmt.Sprintf("rm -rf %s/*", logsPath)),
-					Out:       io.Discard,
-					Command:   []string{"/bin/sh"},
-					Config:    config,
-					Executor:  &kubernetes.DefaultRemoteExecutor{},
+					Namespace:  pod.Namespace,
+					PodName:    pod.Name,
+					KubeClient: client,
+					Stdin:      true,
+					In:         strings.NewReader(fmt.Sprintf("rm -rf %s/*", logsPath)),
+					Out:        io.Discard,
+					Command:    []string{"/bin/sh"},
+					Config:     config,
+					Executor:   &kubernetes.DefaultRemoteExecutor{},
 				}
 				err = opts.Run()
 				require.NoError(t, err)

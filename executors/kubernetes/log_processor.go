@@ -59,11 +59,11 @@ func (s *kubernetesLogStreamer) Stream(ctx context.Context, offset int64, output
 			"--wait-file-timeout",
 			s.waitLogFileTimeout.String(),
 		},
-		Out:      output,
-		Err:      output,
-		Executor: s.executor,
-		Client:   s.client,
-		Config:   s.clientConfig,
+		Out:        output,
+		Err:        output,
+		Executor:   s.executor,
+		KubeClient: s.client,
+		Config:     s.clientConfig,
 
 		Context: ctx,
 	}
