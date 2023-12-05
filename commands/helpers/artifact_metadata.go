@@ -105,57 +105,49 @@ func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start 
 	externalParams["entryPoint"] = g.JobName
 	externalParams["source"] = g.RepoURL
 
-	internalParams := map[string]string{
-		"name":         g.RunnerName,
-		"executor":     g.ExecutorName,
-		"architecture": common.AppVersion.Architecture,
-		"job":          fmt.Sprint(jobId),
-	}
-
-	resolvedDeps := []slsa_v1.ResourceDescriptor{{
-		URI:    g.RepoURL,
-		Digest: map[string]string{"sha256": g.RepoDigest},
-	}}
-
-	builderVersion := map[string]string{
-		"gitlab-runner": g.version(),
-	}
-
 	return slsa_v1.ProvenancePredicate{
 		BuildDefinition: slsa_v1.ProvenanceBuildDefinition{
-			BuildType:            fmt.Sprintf(attestationTypeFormat, g.version()),
-			ExternalParameters:   externalParams,
-			InternalParameters:   internalParams,
-			ResolvedDependencies: resolvedDeps,
+			BuildType:          fmt.Sprintf(attestationTypeFormat, g.version()),
+			ExternalParameters: externalParams,
+			InternalParameters: map[string]string{
+				"name":         g.RunnerName,
+				"executor":     g.ExecutorName,
+				"architecture": common.AppVersion.Architecture,
+				"job":          fmt.Sprint(jobId),
+			},
+			ResolvedDependencies: []slsa_v1.ResourceDescriptor{{
+				URI:    g.RepoURL,
+				Digest: map[string]string{"sha256": g.RepoDigest},
+			}},
 		},
 		RunDetails: slsa_v1.ProvenanceRunDetails{
 			Builder: slsa_v1.Builder{
-				ID:                  fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
-				Version:             builderVersion,
-				BuilderDependencies: nil,
+				ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
+				Version: map[string]string{
+					"gitlab-runner": g.version(),
+				},
 			},
 			BuildMetadata: slsa_v1.BuildMetadata{
 				InvocationID: fmt.Sprint(jobId),
 				StartedOn:    &start,
 				FinishedOn:   &end,
 			},
-			Byproducts: nil,
 		},
 	}
 }
 
+type slsaV02Environment struct {
+	Name         string                `json:"name"`
+	Executor     string                `json:"executor"`
+	Architecture string                `json:"architecture"`
+	Job          slsaV02EnvironmentJob `json:"job"`
+}
+
+type slsaV02EnvironmentJob struct {
+	ID int64 `json:"id"`
+}
+
 func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID int64, start time.Time, end time.Time) slsa_v02.ProvenancePredicate {
-	type EnvironmentJob struct {
-		ID int64 `json:"id"`
-	}
-
-	type Environment struct {
-		Name         string         `json:"name"`
-		Executor     string         `json:"executor"`
-		Architecture string         `json:"architecture"`
-		Job          EnvironmentJob `json:"job"`
-	}
-
 	return slsa_v02.ProvenancePredicate{
 		Builder:   slsa_common.ProvenanceBuilder{ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID)},
 		BuildType: fmt.Sprintf(attestationTypeFormat, g.version()),
@@ -167,11 +159,11 @@ func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID int64, start
 				},
 			},
 			Parameters: g.params(),
-			Environment: Environment{
+			Environment: slsaV02Environment{
 				Name:         g.RunnerName,
 				Executor:     g.ExecutorName,
 				Architecture: common.AppVersion.Architecture,
-				Job:          EnvironmentJob{ID: jobID},
+				Job:          slsaV02EnvironmentJob{ID: jobID},
 			},
 		},
 		Metadata: &slsa_v02.ProvenanceMetadata{
