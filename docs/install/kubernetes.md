@@ -425,7 +425,7 @@ You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/config
 to the GitLab Runner Helm Chart, which will be used to populate the container's
 `/home/gitlab-runner/.gitlab-runner/certs` directory.
 
-Each key name in the Secret will be used as a filename in the directory, with the
+Each key name in the Secret will be used as a file name in the directory, with the
 file content being the value associated with the key:
 
 - The key/file name used should be in the format `<gitlab.hostname>.crt`, for example
@@ -458,11 +458,11 @@ Where:
 
 - `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
 - `<SECRET_NAME>` is the Kubernetes Secret resource name. (For example: `gitlab-domain-cert`.)
-- `<CERTIFICATE_FILENAME>` is the filename for the certificate in your current directory that will be imported into the secret.
+- `<CERTIFICATE_FILENAME>` is the file name for the certificate in your current directory that will be imported into the secret.
 
 If the source file `<CERTIFICATE_FILENAME>` is not in the current directory or
 does not follow the format `<gitlab.hostname.crt>` then it will be necessary to
-specify the filename to use on the target:
+specify the file name to use on the target:
 
 ```shell
 kubectl create secret generic <SECRET_NAME> \
@@ -474,7 +474,7 @@ Where:
 
 - `<TARGET_FILENAME>` is the name of the certificate file as presented to the Runner
   containers. (For example: `gitlab.hostname.crt`.)
-- `<CERTIFICATE_FILENAME>` is the filename for the certificate relative to your
+- `<CERTIFICATE_FILENAME>` is the file name for the certificate relative to your
   current directory that will be imported into the secret. (For example:
   `cert-directory/my-gitlab-certificate.crt`)
 
