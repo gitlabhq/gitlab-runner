@@ -10,7 +10,6 @@
 prepare ci image:
   extends:
   - .image_builder
-  - .linux-dependency-checksums
   - .rules:prepare:ci:image:merge-requests
   variables:
     BUILD_IMAGE: $CI_IMAGE

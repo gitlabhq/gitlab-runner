@@ -1,6 +1,7 @@
 package retry
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jpillora/backoff"
@@ -92,6 +93,16 @@ func (r *Retry[T]) WithLogrus(log *logrus.Entry) *Retry[T] {
 	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
 		if shouldRetry {
 			log.WithError(err).Warningln("Retrying...")
+		}
+
+		return shouldRetry
+	})
+}
+
+func (r *Retry[T]) WithStdout() *Retry[T] {
+	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
+		if shouldRetry {
+			fmt.Println("Retrying...")
 		}
 
 		return shouldRetry

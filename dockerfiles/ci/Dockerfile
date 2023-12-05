@@ -61,10 +61,7 @@ ARG YQ_VERSION
 RUN wget https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 -O /usr/bin/yq &&\
     chmod +x /usr/bin/yq
 
-COPY Makefile* /build/
-COPY magefiles /build/magefiles
-COPY go.mod /build/
-COPY go.sum /build/
+COPY . /build/
 WORKDIR /build
 RUN make deps && mage package:deps packagecloud:deps
 

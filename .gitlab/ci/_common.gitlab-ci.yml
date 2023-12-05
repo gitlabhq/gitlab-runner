@@ -3,7 +3,7 @@ variables:
   GO_VERSION: "1.20.10"
   # Sometimes the FIPS repo lags behind the official releases
   GO_FIPS_VERSION: "1.20.10"
-  CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_VERSION-bullseye"
+  CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_VERSION-bullseye-1"
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"
@@ -15,7 +15,6 @@ variables:
   BUILDX_VERSION: 0.10.4
   KUBECTL_VERSION: 1.23.0
   AWS_CLI_VERSION: 2.4.19
-  DUMB_INIT_VERSION: "1.2.5"
   GIT_VERSION: "2.40.1"
   GIT_VERSION_BUILD: "1"
   GIT_LFS_VERSION: "3.4.0"
@@ -29,6 +28,8 @@ variables:
   TRANSFER_METER_FREQUENCY: "5s"
   GO111MODULE: "on"
   GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$GO_FIPS_VERSION
+  # Leaving the Alpine and UBI versions defined here until the renovate pattern is changed
+  # to recognize the definitions as a Go variable
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.15\..+/
   ALPINE_315_VERSION: "3.15.8"
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.16\..+/
@@ -41,7 +42,7 @@ variables:
   UBUNTU_VERSION: "20.04"
   # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.8-.+/
   UBI_FIPS_VERSION: "8.8-860"
-  UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base:$UBI_FIPS_VERSION
+  UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base
 
 default:
   image: $CI_IMAGE
@@ -108,19 +109,6 @@ default:
     paths:
     - $CI_PROJECT_DIR\.gocache-false\
     key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
-
-.linux-dependency-checksums:
-  variables:
-    DOCKER_MACHINE_LINUX_AMD64_CHECKSUM: "99043581ef46b7a78417a8137d6b62f535620bf970b10ae36d510d152675da98"
-    DOCKER_MACHINE_LINUX_ARM64_CHECKSUM: "378b735a90cb4abe4be34ebfffa76ddadcee4664fd7fdf1e38cb526745376ef5"
-    DUMB_INIT_LINUX_AMD64_CHECKSUM: "e874b55f3279ca41415d290c512a7ba9d08f98041b28ae7c2acb19a545f1c4df"
-    DUMB_INIT_LINUX_ARM64_CHECKSUM: "b7d648f97154a99c539b63c55979cd29f005f88430fb383007fe3458340b795e"
-    DUMB_INIT_LINUX_S390X_CHECKSUM: "47e4601b152fc6dcb1891e66c30ecc62a2939fd7ffd1515a7c30f281cfec53b7"
-    DUMB_INIT_LINUX_PPC64LE_CHECKSUM: "3d15e80e29f0f4fa1fc686b00613a2220bc37e83a35283d4b4cca1fbd0a5609f"
-    GIT_LFS_LINUX_AMD64_CHECKSUM: "60b7e9b9b4bca04405af58a2cd5dff3e68a5607c5bc39ee88a5256dd7a07f58c"
-    GIT_LFS_LINUX_ARM64_CHECKSUM: "aee90114f8f2eb5a11c1a6e9f1703a2bfcb4dc1fc4ba12a3a574c3a86952a5d0"
-    GIT_LFS_LINUX_S390X_CHECKSUM: "494191655c638f0a75d4d026ef58dc124fc4845361a144a0d1ade3986f2bb6e0"
-    GIT_LFS_LINUX_PPC64LE_CHECKSUM: "1ed0277cf0ae309a4800971581ff169bbff5c865718250b11090f6a9386f7533"
 
 .windows-dependency-checksums:
   variables:

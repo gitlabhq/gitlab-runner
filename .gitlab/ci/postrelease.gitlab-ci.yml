@@ -37,3 +37,41 @@ static QA:
       jq -C . gl-code-quality-report.json
       exit 1
     fi
+
+.verify-resources:
+  extends:
+    - .rules:merge_request_pipelines:no_docs
+    - .docker
+  stage: postrelease
+  script:
+    - mage resources:verifyAll
+
+verify development resources:
+  extends:
+  - .verify-resources
+  - .rules:release:development:merge-requests
+  needs:
+  - job: "development docker images"
+    artifacts: true
+  - job: "development helper docker images"
+    artifacts: true
+
+verify bleeding edge resources:
+  extends:
+  - .verify-resources
+  - .rules:release:bleeding-edge
+  needs:
+  - job: "bleeding edge docker images"
+    artifacts: true
+  - job: "bleeding edge helper docker images"
+    artifacts: true
+
+verify stable resources:
+  extends:
+  - .verify-resources
+  - .rules:release:stable:branch
+  needs:
+  - job: "stable docker images"
+    artifacts: true
+  - job: "stable helper docker images"
+    artifacts: true
