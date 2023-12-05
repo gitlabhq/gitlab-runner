@@ -569,7 +569,7 @@ By default, the GitLab Runner images will not work with non-root users. The [Git
 images are designed for that scenario. To use them change the GitLab Runner and GitLab Runner Helper images:
 
 NOTE:
-While `run_as_user` points to the user ID of `nonroot` user (59417), the images are designed so that they can work with any user ID. 
+Although `run_as_user` points to the user ID of `nonroot` user (59417), the images work with any user ID.
 It's important that this user ID is part of the root group. Being part of the root group doesn't give it any specific privileges.
 
 ```yaml
