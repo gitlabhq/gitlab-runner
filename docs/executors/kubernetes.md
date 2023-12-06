@@ -2049,7 +2049,7 @@ operation when the build container runs with an init system.
 
 ### Runner Pod fails to run/retrieve(???) Job Results and eventually timesout despite successful registration
 
-In this scenario, the errors reported are:
+After the runner pod registers with GitLab, it might attempt to run job results in an empty window and eventually time out. The following errors are reported:
 
 ```
 There has been a timeout failure or the job got stuck. Check your timeout limits or try again.
