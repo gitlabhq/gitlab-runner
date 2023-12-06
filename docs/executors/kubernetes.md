@@ -2047,7 +2047,7 @@ This shell process, which might be `sh`, `bash` or `busybox`, with a `PPID` of 1
 started by the shell detection script run by the init system (`PID` 1 above). The process is not redundant, and is the typical
 operation when the build container runs with an init system.
 
-### The Runner pod successfully registers with Gitlab but attempting to run a job results in an empty window and eventually times out
+### Runner Pod fails to run/retrieve(???) Job Results and eventually timesout despite successful registration
 
 In this scenario, the errors reported are:
 
