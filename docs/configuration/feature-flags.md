@@ -8,6 +8,9 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 > Introduced in GitLab 11.4.
 
+WARNING:
+Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/ee/administration/feature_flags.html#risks-when-enabling-features-still-in-development).
+
 Feature flags are toggles that allow you to enable or disable specific features. These flags are typically used:
 
 - For beta features that are made available for volunteers to test, but that are not ready to be enabled for all users.
