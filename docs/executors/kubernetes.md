@@ -2055,7 +2055,6 @@ After the runner pod registers with GitLab, it attempts to run a job but does no
 There has been a timeout failure or the job got stuck. Check your timeout limits or try again.
 
 This job does not have a trace.
-
 ```
 
 In this case, the runner might receive the error,
