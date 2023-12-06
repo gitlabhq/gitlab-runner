@@ -2058,7 +2058,9 @@ This job does not have a trace.
 
 ```
 
-In this case, the runner might receive the error, `HTTP 204 No content response code when connecting to the `jobs/request`` API.`
+In this case, the runner might receive the error,
+
+> HTTP 204 No content response code when connecting to the `jobs/request` API.
 
 To troubleshoot this issue, manually send a POST request to the API to
 validate if the TCP connection is hanging. If the TCP connection is hanging,
