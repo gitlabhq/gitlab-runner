@@ -619,7 +619,8 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 	}
 
 	var initContainers []api.Container
-	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) &&
+		s.helperImageInfo.OSType != helperimage.OSTypeWindows {
 		permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
 		if err != nil {
 			return fmt.Errorf("building permissions init container: %w", err)
@@ -838,16 +839,13 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 	// future folders and files.
 	switch os {
 	case helperimage.OSTypeWindows:
-		var command []string
-		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
-			chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /q | out-null"
-			initCommand := []string{
-				fmt.Sprintf(chmod, s.logsDir()),
-				fmt.Sprintf(chmod, s.Build.RootDir),
-			}
-			command = []string{s.Shell().Shell, "-c", strings.Join(initCommand, ";\n")}
+		chmod := "icacls $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath(%q) /grant 'Everyone:(OI)(CI)F' /q | out-null"
+		commands := []string{
+			fmt.Sprintf(chmod, s.logsDir()),
+			fmt.Sprintf(chmod, s.Build.RootDir),
 		}
-		container.Command = command
+		container.Command = []string{s.Shell().Shell, "-c", strings.Join(commands, ";\n")}
+
 	default:
 		var initCommand []string
 		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
