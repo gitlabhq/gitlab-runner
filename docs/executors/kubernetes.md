@@ -2051,7 +2051,7 @@ operation when the build container runs with an init system.
 
 After the runner pod registers with GitLab, it attempts to run a job but does not and the job eventually times out. The following errors are reported:
 
-```
+```sh
 There has been a timeout failure or the job got stuck. Check your timeout limits or try again.
 
 This job does not have a trace.
