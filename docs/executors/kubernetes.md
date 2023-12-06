@@ -2060,7 +2060,9 @@ This job does not have a trace.
 
 In this case, the runner might receive the error, `HTTP 204 No content response code when connecting to the `jobs/request`` API.`
 
-To troubleshoot, manally send a POST request to the API. This will help you to validate if the TCP connection is hanging. In a previously reported case, the TCP connection in the customers virtual private network would silently hang after ~2 KB data transfer. So the TCP connection allowed the Runner to register with GitLab, but subsequently failed when the runner tried to request CI job payloads.
+To troubleshoot this issue, manually send a POST request to the API to
+validate if the TCP connection is hanging. If the TCP connection is hanging,
+the runner might not be able to request CI job payloads.
 
 ## Restrict access to job variables
 
