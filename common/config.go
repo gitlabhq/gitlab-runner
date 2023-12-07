@@ -1790,7 +1790,13 @@ func (c *RunnerCredentials) ShortDescription() string {
 }
 
 func (c *RunnerCredentials) UniqueID() string {
-	return c.URL + c.Token
+	// Truncate the token in order to ensure that it won't be exposed in logged messages.
+	token := c.Token
+	if len(token) > 14 {
+		token = token[:14]
+	}
+
+	return c.URL + token
 }
 
 func (c *RunnerCredentials) Log() *logrus.Entry {
