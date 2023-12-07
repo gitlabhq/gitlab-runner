@@ -6,7 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 
@@ -39,7 +38,7 @@ func TestPrepare(t *testing.T) {
 			executorData: &acquisitionRef{key: acqRefKey},
 			retry:        false,
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
-				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(taskscaler.NewAcquisition(), nil).Once()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), nil).Once()
 				me.On("Prepare", mock.Anything).Return(nil).Once()
 			},
 			checkErrFn: func(t *testing.T, err error) {
@@ -50,7 +49,7 @@ func TestPrepare(t *testing.T) {
 			executorData: &acquisitionRef{key: acqRefKey},
 			retry:        true,
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
-				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(taskscaler.NewAcquisition(), nil).Once()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), nil).Once()
 				me.On("Prepare", mock.Anything).Return(nil).Twice()
 			},
 			checkErrFn: func(t *testing.T, err error) {
@@ -61,7 +60,7 @@ func TestPrepare(t *testing.T) {
 			executorData: &acquisitionRef{key: acqRefKey},
 			retry:        false,
 			assertFn: func(t *testing.T, ts *mocks.Taskscaler, me *common.MockExecutor) {
-				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(taskscaler.NewAcquisition(), assert.AnError).Once()
+				ts.EXPECT().Acquire(mock.Anything, acqRefKey).Return(mocks.NewAcquisition(t), assert.AnError).Once()
 			},
 			checkErrFn: func(t *testing.T, err error) {
 				require.ErrorIs(t, err, assert.AnError)
