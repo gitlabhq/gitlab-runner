@@ -2263,7 +2263,7 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 	successfulBuild, err := common.GetRemoteSuccessfulBuild()
 	assert.NoError(t, err)
 
-	successfulBuild.Image.ExecutorOptions.Docker.Platform = "amd64"
+	// leave platform empty
 	successfulBuild.Image.Name = common.TestAlpineImage
 
 	successfulBuild.Services = common.Services{
@@ -2275,6 +2275,9 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 		},
 		{
 			Name: "postgres:14.4",
+			ExecutorOptions: common.ImageExecutorOptions{
+				Docker: common.ImageDockerOptions{Platform: "arm64"}, // this image will download but fail to run, which is OK.
+			},
 		},
 	}
 
@@ -2283,25 +2286,28 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 		Runner: &common.RunnerConfig{
 			RunnerSettings: common.RunnerSettings{
 				Executor: "docker",
-				Docker: &common.DockerConfig{
-					HelperImage: "gitlab/gitlab-runner-helper:x86_64-5a147c92",
-				},
+				Docker:   &common.DockerConfig{},
 			},
 			SystemIDState: systemIDState,
 		},
 	}
 
-	var buffer bytes.Buffer
-
-	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+	err = build.Run(&common.Config{}, &common.Trace{Writer: &bytes.Buffer{}})
 	require.NoError(t, err)
-	str := buffer.String()
 
+	images := map[string]string{
+		"redis:7.0":     "amd64",
+		"postgres:14.4": "arm64",
+		// unspecified platform defaults to host arch
+		common.TestAlpineImage: runtime.GOARCH,
+	}
+
+	client, err := docker.New(docker.Credentials{})
 	require.NoError(t, err)
-	assert.Contains(t, str, "Pulling docker image redis:7.0 for platform amd64")
-	assert.Contains(t, str, "Pulling docker image postgres:14.4")
-	assert.NotContains(t, str, "Pulling docker image postgres:14.4 for platform")
-	assert.Contains(t, str, "Pulling docker image alpine:3.14.2 for platform amd64")
-	assert.Contains(t, str, "Pulling docker image gitlab/gitlab-runner-helper:x86_64-5a147c92")
-	assert.NotContains(t, str, "Pulling docker image gitlab/gitlab-runner-helper:x86_64-5a147c92 for platform")
+	defer client.Close()
+	for img, arch := range images {
+		info, _, err := client.ImageInspectWithRaw(context.Background(), img)
+		require.NoError(t, err)
+		assert.Equal(t, arch, info.Architecture)
+	}
 }
