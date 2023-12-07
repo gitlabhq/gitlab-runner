@@ -850,17 +850,17 @@ type KubernetesAffinity struct {
 
 type KubernetesNodeAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution,omitempty"`
-	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
+	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution,omitempty"`
 }
 
 type KubernetesPodAffinity struct {
-	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
-	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution,omitempty"`
+	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution,omitempty"`
 }
 
 type KubernetesPodAntiAffinity struct {
-	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution"`
-	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution"`
+	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `toml:"required_during_scheduling_ignored_during_execution,omitempty" json:"required_during_scheduling_ignored_during_execution,omitempty"`
+	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `toml:"preferred_during_scheduling_ignored_during_execution,omitempty" json:"preferred_during_scheduling_ignored_during_execution,omitempty"`
 }
 
 type KubernetesHostAliases struct {
