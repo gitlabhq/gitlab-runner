@@ -618,7 +618,16 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 		return err
 	}
 
-	err = s.setupBuildPod(ctx, nil)
+	var initContainers []api.Container
+	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) &&
+		s.helperImageInfo.OSType != helperimage.OSTypeWindows {
+		permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
+		if err != nil {
+			return fmt.Errorf("building permissions init container: %w", err)
+		}
+		initContainers = append(initContainers, permissionsInitContainer)
+	}
+	err = s.setupBuildPod(ctx, initContainers)
 	if err != nil {
 		return err
 	}
@@ -838,12 +847,14 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 		container.Command = []string{s.Shell().Shell, "-c", strings.Join(commands, ";\n")}
 
 	default:
-		initCommand := fmt.Sprintf("touch %[1]s && (chmod 777 %[1]s || exit 0)", s.logFile())
-		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) &&
-			s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
-			initCommand = fmt.Sprintf("%s && cp /usr/bin/dumb-init %s", initCommand, s.scriptsDir())
+		var initCommand []string
+		if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+			initCommand = append(initCommand, fmt.Sprintf("touch %[1]s && (chmod 777 %[1]s || exit 0)", s.logFile()))
 		}
-		container.Command = []string{"sh", "-c", initCommand}
+		if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+			initCommand = append(initCommand, fmt.Sprintf("cp /usr/bin/dumb-init %s", s.scriptsDir()))
+		}
+		container.Command = []string{"sh", "-c", strings.Join(initCommand, ";\n")}
 	}
 
 	return container, nil
@@ -1200,6 +1211,19 @@ func (s *executor) scriptName(name string) string {
 func (s *executor) getVolumeMounts() []api.VolumeMount {
 	var mounts []api.VolumeMount
 
+	// scripts volumes are needed when using the Kubernetes executor in attach mode
+	// FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY = false
+	// or when the dumb init is used as it is copied from the helper to this volume
+	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) ||
+		!s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		mounts = append(
+			mounts,
+			api.VolumeMount{
+				Name:      "scripts",
+				MountPath: s.scriptsDir(),
+			})
+	}
+
 	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		// These volume mounts **MUST NOT** be mounted inside another volume mount.
 		// E.g. mounting them inside the "repo" volume mount will cause the whole volume
@@ -1212,10 +1236,6 @@ func (s *executor) getVolumeMounts() []api.VolumeMount {
 		// resulting in an inability to modify anything inside the parent volume.
 		mounts = append(
 			mounts,
-			api.VolumeMount{
-				Name:      "scripts",
-				MountPath: s.scriptsDir(),
-			},
 			api.VolumeMount{
 				Name:      "logs",
 				MountPath: s.logsDir(),
@@ -1305,18 +1325,25 @@ func (s *executor) getVolumes() []api.Volume {
 		})
 	}
 
+	// scripts volumes are needed when using the Kubernetes executor in attach mode
+	// FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY = false
+	// or when the dumb init is used as it is copied from the helper to this volume
+	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) ||
+		!s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		volumes = append(volumes, api.Volume{
+			Name: "scripts",
+			VolumeSource: api.VolumeSource{
+				EmptyDir: &api.EmptyDirVolumeSource{},
+			},
+		})
+	}
+
 	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
 		return volumes
 	}
 
 	volumes = append(
 		volumes,
-		api.Volume{
-			Name: "scripts",
-			VolumeSource: api.VolumeSource{
-				EmptyDir: &api.EmptyDirVolumeSource{},
-			},
-		},
 		api.Volume{
 			Name: "logs",
 			VolumeSource: api.VolumeSource{
@@ -1907,8 +1934,7 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 }
 
 func (s *executor) getBuildAndHelperContainersCommand() []string {
-	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) ||
-		!s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
+	if !s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
 		return s.BuildShell.DockerCommand
 	}
 
