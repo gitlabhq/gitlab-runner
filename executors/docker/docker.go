@@ -727,7 +727,7 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 	}
 
 	var gracefulExitFunc wait.GracefulExitFunc
-	if id == e.buildContainerID {
+	if id == e.buildContainerID && e.helperImageInfo.OSType != helperimage.OSTypeWindows {
 		// send SIGTERM to all processes in the build container.
 		gracefulExitFunc = e.sendSIGTERMToContainerProcs
 	}
