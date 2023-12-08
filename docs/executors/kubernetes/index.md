@@ -214,6 +214,7 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `image_pull_secrets` | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
 | `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
+| `namespace_per_job` | Isolate jobs in separate namespaces. If enabled, `namespace` and `namespace_overwrite_allowed` are ignored. |
 | `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
 | `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#specify-the-node-to-execute-builds). |
 | `node_tolerations` | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
