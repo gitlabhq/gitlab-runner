@@ -110,6 +110,7 @@ You can either:
 | Resource | Verb (Optional Feature Flags) |
 |----------|-------------------------------|
 | events | list (`FF_RETRIEVE_POD_WARNING_EVENTS=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
+| namespaces | create, delete |
 | pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get |
 | pods/logs | get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | secrets | create, delete, get, update |
@@ -128,6 +129,10 @@ You can either:
 - _The `event` permission is needed only:_
 
   - _For GitLab 16.2.1 and later._
+
+- _The `namespace` permission is needed only:_
+
+  - _When enabling namespace isolation via `namespace_per_job`._
 
 ## Configuration settings
 

@@ -1669,6 +1669,7 @@ func (s *executor) setupBuildNamespace() error {
 			},
 		}
 
+		// kubeAPI: namespaces, create
 		_, err := s.kubeClient.CoreV1().Namespaces().Create(context.TODO(), &nsconfig, metav1.CreateOptions{})
 
 		if err != nil {
@@ -1683,6 +1684,7 @@ func (s *executor) teardownBuildNamespace() error {
 	if s.Config.Kubernetes.NamespacePerJob {
 		s.BuildLogger.Debugln("Tearing down build namespace")
 
+		// kubeAPI: namespaces, delete
 		err := s.kubeClient.CoreV1().Namespaces().Delete(context.TODO(), s.configurationOverwrites.namespace, metav1.DeleteOptions{})
 
 		if err != nil {
