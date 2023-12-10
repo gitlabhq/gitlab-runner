@@ -1033,6 +1033,7 @@ type CacheS3Config struct {
 	ServerAddress             string     `toml:"ServerAddress,omitempty" long:"server-address" env:"CACHE_S3_SERVER_ADDRESS" description:"A host:port to the used S3-compatible server"`
 	AccessKey                 string     `toml:"AccessKey,omitempty" long:"access-key" env:"CACHE_S3_ACCESS_KEY" description:"S3 Access Key"`
 	SecretKey                 string     `toml:"SecretKey,omitempty" long:"secret-key" env:"CACHE_S3_SECRET_KEY" description:"S3 Secret Key"`
+	SessionToken              string     `toml:"SessionToken,omitempty" long:"session-token" env:"CACHE_S3_SESSION_TOKEN" description:"S3 Session Token"`
 	BucketName                string     `toml:"BucketName,omitempty" long:"bucket-name" env:"CACHE_S3_BUCKET_NAME" description:"Name of the bucket where cache will be stored"`
 	BucketLocation            string     `toml:"BucketLocation,omitempty" long:"bucket-location" env:"CACHE_S3_BUCKET_LOCATION" description:"Name of S3 region"`
 	Insecure                  bool       `toml:"Insecure,omitempty" long:"insecure" env:"CACHE_S3_INSECURE" description:"Use insecure mode (without https)"`

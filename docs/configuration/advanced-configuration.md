@@ -825,6 +825,7 @@ This table lists `config.toml`, CLI options, and ENV variables for `register`.
 | `S3.ServerAddress`      | `[runners.cache.s3] -> ServerAddress` <br><br> Before 12.0, `[runners.cache] -> ServerAddress`    | `--cache-s3-server-address`                                    | `$CACHE_S3_SERVER_ADDRESS` <br> <br>Before 12.0, `$S3_SERVER_ADDRESS`    |
 | `S3.AccessKey`          | `[runners.cache.s3] -> AccessKey` <br> <br> Before 12.0, `[runners.cache] -> AccessKey`           | `--cache-s3-access-key`                                        | `$CACHE_S3_ACCESS_KEY` <br> <br>Before 12.0, `$S3_ACCESS_KEY`            |
 | `S3.SecretKey`          | `[runners.cache.s3] -> SecretKey` <br> <br> Before 12.0, `[runners.cache] -> SecretKey`           | `--cache-s3-secret-key`                                        | `$CACHE_S3_SECRET_KEY` <br> <br> Before 12.0, `$S3_SECRET_KEY`           |
+| `S3.SessionToken`       | `[runners.cache.s3] -> SessionToken`                                                              | `--cache-s3-session-token`                                     | `$CACHE_S3_SESSION_TOKEN`                                                |
 | `S3.BucketName`         | `[runners.cache.s3] -> BucketName` <br> <br> Before 12.0, `[runners.cache] -> BucketName`         | `--cache-s3-bucket-name`                                       | `$CACHE_S3_BUCKET_NAME` <br> <br>Before 12.0, `$S3_BUCKET_NAME`          |
 | `S3.BucketLocation`     | `[runners.cache.s3] -> BucketLocation` <br> <br> Before 12.0, `[runners.cache] -> BucketLocation` | `--cache-s3-bucket-location`                                   | `$CACHE_S3_BUCKET_LOCATION` <br> <br> Before 12.0, `$S3_BUCKET_LOCATION` |
 | `S3.Insecure`           | `[runners.cache.s3] -> Insecure` <br> <br> Before 12.0, `[runners.cache] -> Insecure`             | `--cache-s3-insecure`                                          | `$CACHE_S3_INSECURE` <br> <br> Before 12.0, `$S3_INSECURE`               |
@@ -849,6 +850,7 @@ The following parameters define S3 storage for cache.
 | `ServerAddress`     | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
 | `AccessKey`         | string           | The access key specified for your S3 instance. |
 | `SecretKey`         | string           | The secret key specified for your S3 instance. |
+| `SessionToken`      | string           | The session token specified for your S3 instance (when using temporary credentials). |
 | `BucketName`        | string           | Name of the storage bucket where cache is stored. |
 | `BucketLocation`    | string           | Name of S3 region. |
 | `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
