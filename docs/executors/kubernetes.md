@@ -983,6 +983,8 @@ Use the following options in the `config.toml`:
 | `sub_path`          | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
 | `read_only`         | boolean             | No       | Sets the volume in read-only mode (defaults to false). |
 
+The `gcs-fuse-csi-driver` `csi` driver currently [does not support mounting volumes for the init container](https://github.com/GoogleCloudPlatform/gcs-fuse-csi-driver/issues/38). This can cause failures starting the init container when using this driver. Features [introduced in Kubernetes 1.28](https://kubernetes.io/blog/2023/08/25/native-sidecar-containers/) will need to be supported in the driver's project to resolve this bug.
+
 ### Mount volumes on service containers
 
 Volumes defined for the build container are also automatically mounted for all services containers. You can use this functionality as an alternative to [`services_tmpfs`](docker.md#mount-a-directory-in-ram) (available only to Docker executor), to mount database storage in RAM to speed up tests.
