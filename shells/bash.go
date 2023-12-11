@@ -41,7 +41,7 @@ fi
 // shutting down cleanly. The inner while loop waits for up to 5 seconds for the last killed PID to exit before moving
 // onto the next PID. Note that processes that are shells will ignore SIGTERM anyway, so this script is not as heavy
 // handed as it might appear.
-const ContainerSigTermScript = `PROCS=$(cd /proc && ls -rvd [0-9]*) &&
+const ContainerSigTermScriptForLinux = `PROCS=$(cd /proc && ls -rvd [0-9]*) &&
 for P in $PROCS; do
 	if [ $$ -ne $P ] && [ $P -ne 1 ]; then
 		kill -TERM $P 2>/dev/null &&

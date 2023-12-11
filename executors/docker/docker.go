@@ -1220,7 +1220,7 @@ func (e *executor) Cleanup() {
 // Effectively gives the processes in a the container a chance to exit gracefully (if they listen for SIGTERM).
 func (e *executor) sendSIGTERMToContainerProcs(ctx context.Context, containerID string) error {
 	e.BuildLogger.Debugln("Emitting SIGTERM to processes in container", containerID)
-	return e.execScriptOnContainer(ctx, containerID, shells.ContainerSigTermScript)
+	return e.execScriptOnContainer(ctx, containerID, shells.ContainerSigTermScriptForLinux)
 }
 
 func (e *executor) execScriptOnContainer(ctx context.Context, containerID string, script ...string) (err error) {
