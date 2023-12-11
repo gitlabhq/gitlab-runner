@@ -850,7 +850,7 @@ The following parameters define S3 storage for cache.
 | `ServerAddress`     | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
 | `AccessKey`         | string           | The access key specified for your S3 instance. |
 | `SecretKey`         | string           | The secret key specified for your S3 instance. |
-| `SessionToken`      | string           | The session token specified for your S3 instance (when using temporary credentials). |
+| `SessionToken`      | string           | The session token specified for your S3 instance when temporary credentials are used. |
 | `BucketName`        | string           | Name of the storage bucket where cache is stored. |
 | `BucketLocation`    | string           | Name of S3 region. |
 | `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
