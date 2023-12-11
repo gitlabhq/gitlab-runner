@@ -211,12 +211,12 @@ func (b *CmdWriter) Variable(variable common.JobVariable) {
 		b.Linef("md %q 2>NUL 1>NUL", batchEscape(helpers.ToBackslash(b.TemporaryPath)))
 		certs := splitCertificateChain(variable.Value)
 		certs = removeEmpty(certs)
-		// create empty file first
-		b.Linef("echo. 2> %q", batchEscape(variableFile))
-		for _, cert := range certs {
-			b.Linef("echo %s >> %q", batchEscapeVariable(cert), batchEscape(variableFile))
-		}
 		b.Linef("SET %s=%s", batchEscapeVariable(variable.Key), batchEscape(variableFile))
+		// create empty file first
+		b.Linef("echo. >NUL 2> %%%s%%", batchEscapeVariable(variable.Key))
+		for _, cert := range certs {
+			b.Linef("echo %s >> %%%s%%", batchEscapeVariable(cert), batchEscapeVariable(variable.Key))
+		}
 	} else {
 		if b.isTmpFile(variable.Value) {
 			variable.Value = b.cleanPath(variable.Value)
