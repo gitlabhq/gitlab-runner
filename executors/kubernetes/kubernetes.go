@@ -850,9 +850,10 @@ func (s *executor) buildRedirectionCmd(shell string) string {
 	switch shell {
 	// powershell outputs utf16, so we re-encode the output to utf8
 	// this is important because our json decoder that detects the exit status
-	// of a job requires utf8.
+	// of a job requires utf8.Converting command output to strings with %{"$_"}
+	// prevents a powershell complaint about native command output on stderr.
 	case shells.SNPowershell:
-		return fmt.Sprintf("2>&1 | Out-File -Append -Encoding UTF8 %s", s.logFile())
+		return fmt.Sprintf("2>&1 | %%{ \"$_\" } | Out-File -Append -Encoding UTF8 %s", s.logFile())
 	}
 
 	return fmt.Sprintf("2>&1 | tee -a %s", s.logFile())
