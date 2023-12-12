@@ -949,6 +949,14 @@ func (b *AbstractShell) shouldGenerateArtifactsMetadata(info common.ShellScriptI
 }
 
 func (b *AbstractShell) generateArtifactsMetadataArgs(info common.ShellScriptInfo) []string {
+	schemaVersion := info.Build.Variables.Get("SLSA_PROVENANCE_SCHEMA_VERSION")
+	if schemaVersion == "" {
+		// specify a value so the CLI can parse the arguments correctly
+		// avoid specifying a proper default here to avoid duplication
+		// the artifact metadata command will handle that separately
+		schemaVersion = "unknown"
+	}
+
 	args := []string{
 		"--generate-artifacts-metadata",
 		"--runner-id",
@@ -968,7 +976,7 @@ func (b *AbstractShell) generateArtifactsMetadataArgs(info common.ShellScriptInf
 		"--ended-at",
 		time.Now().Format(time.RFC3339),
 		"--schema-version",
-		info.Build.Variables.Get("SLSA_PROVENANCE_SCHEMA_VERSION"),
+		schemaVersion,
 	}
 
 	for _, variable := range info.Build.Variables {
