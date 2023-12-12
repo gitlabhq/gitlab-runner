@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	artifactsStatementFormat  = "%v-statement.json"
+	artifactsStatementFormat  = "%v-metadata.json"
 	attestationTypeFormat     = "https://gitlab.com/gitlab-org/gitlab-runner/-/blob/%v/PROVENANCE.md"
 	attestationRunnerIDFormat = "%v/-/runners/%v"
 )
