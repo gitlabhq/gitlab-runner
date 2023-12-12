@@ -231,7 +231,8 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description: "When enabled, PowerShell scripts for shell and custom executors are passed by " +
-			"file, rather than passed and executed via stdin.",
+			"file, rather than passed and executed via stdin. This is required for jobs' " +
+			"`allow_failure:exit_codes` keywords to work correctly.",
 	},
 	{
 		Name:            UsePodActiveDeadlineSeconds,
