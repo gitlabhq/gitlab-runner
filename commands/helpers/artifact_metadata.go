@@ -64,15 +64,15 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 		return "", err
 	}
 
-	header, err := g.generateStatementHeader(opts.files, provenanceSchemaPredicateType[g.SLSAProvenanceVersion])
-	if err != nil {
-		return "", err
-	}
-
 	provenanceVersion := g.SLSAProvenanceVersion
 	if provenanceVersion != slsaProvenanceVersion1 && provenanceVersion != slsaProvenanceVersion02 {
 		logrus.Warnln(fmt.Sprintf("Unknown SLSA provenance version %s, defaulting to %s", provenanceVersion, defaultSLSAProvenanceVersion))
 		provenanceVersion = defaultSLSAProvenanceVersion
+	}
+
+	header, err := g.generateStatementHeader(opts.files, provenanceSchemaPredicateType[provenanceVersion])
+	if err != nil {
+		return "", err
 	}
 
 	var statement any
