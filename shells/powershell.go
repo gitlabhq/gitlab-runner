@@ -162,7 +162,7 @@ func powershellStdinCmdArgs(shell string) []string {
 }
 
 func fileCmdArgs() []string {
-	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"}
+	return []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"}
 }
 
 func PwshJSONTerminationScript(shell string) string {
@@ -608,11 +608,6 @@ func (b *PowerShell) scriptArgs(script *common.ShellConfiguration) []string {
 }
 
 func (b *PowerShell) passAsFile(info common.ShellScriptInfo) bool {
-	// pwsh is always passed via stdin
-	if b.Shell == SNPwsh {
-		return false
-	}
-
 	// if DisablePowershellStdin is false, powershell is passed via stdin
 	if !info.Build.IsFeatureFlagOn(featureflags.DisablePowershellStdin) {
 		return false

@@ -267,7 +267,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			getExpectedArguments: func(_ string) []string {
 				return fileCmdArgs()
 			},
-			expectedCmdLine: "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command",
+			expectedCmdLine: "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File",
 		},
 		"powershell on shell - FF_DISABLE_POWERSHELL_STDIN false": {
 			shell:    SNPowershell,
