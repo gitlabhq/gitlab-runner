@@ -2052,6 +2052,10 @@ To troubleshoot this issue, manually send a POST request to the API to
 validate if the TCP connection is hanging. If the TCP connection is hanging,
 the runner might not be able to request CI job payloads.
 
+### `failed to reserve container name` for init-permissions container when `gcs-fuse-csi-driver` is used
+
+The `gcs-fuse-csi-driver` `csi` driver currently [does not support mounting volumes for the init container](https://github.com/GoogleCloudPlatform/gcs-fuse-csi-driver/issues/38). This can cause failures starting the init container when using this driver. Features [introduced in Kubernetes 1.28](https://kubernetes.io/blog/2023/08/25/native-sidecar-containers/) will need to be supported in the driver's project to resolve this bug.
+
 ## Restrict access to job variables
 
 When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
