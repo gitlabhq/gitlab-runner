@@ -140,6 +140,12 @@ rm -r /root/.docker/machine/certs/*
 service gitlab-runner restart
 ```
 
+## `dialing environment connection: ssh: rejected: connect failed (open failed)`
+
+This error can be produced when the Docker autoscaler is unable to connect to the Docker daemon on the
+target system, when the connection is tunneled through SSH. Ensure that you can SSH to the target system
+and successfully run Docker commands, for example `docker info`.
+
 ## Adding an AWS Instance Profile to your autoscaled runners
 
 After you create an AWS IAM Role, in your IAM console, the role has a **Role ARN** and a **Instance Profile ARNs**. You must use the **Instance Profile** name, **not** the **Role Name**.
