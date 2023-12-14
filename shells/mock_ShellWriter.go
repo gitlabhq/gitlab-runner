@@ -993,9 +993,9 @@ func (_c *MockShellWriter_SectionEnd_Call) RunAndReturn(run func(string)) *MockS
 	return _c
 }
 
-// SectionStart provides a mock function with given fields: id, command
-func (_m *MockShellWriter) SectionStart(id string, command string) {
-	_m.Called(id, command)
+// SectionStart provides a mock function with given fields: id, command, options
+func (_m *MockShellWriter) SectionStart(id string, command string, options []string) {
+	_m.Called(id, command, options)
 }
 
 // MockShellWriter_SectionStart_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SectionStart'
@@ -1006,13 +1006,14 @@ type MockShellWriter_SectionStart_Call struct {
 // SectionStart is a helper method to define mock.On call
 //   - id string
 //   - command string
-func (_e *MockShellWriter_Expecter) SectionStart(id interface{}, command interface{}) *MockShellWriter_SectionStart_Call {
-	return &MockShellWriter_SectionStart_Call{Call: _e.mock.On("SectionStart", id, command)}
+//   - options []string
+func (_e *MockShellWriter_Expecter) SectionStart(id interface{}, command interface{}, options interface{}) *MockShellWriter_SectionStart_Call {
+	return &MockShellWriter_SectionStart_Call{Call: _e.mock.On("SectionStart", id, command, options)}
 }
 
-func (_c *MockShellWriter_SectionStart_Call) Run(run func(id string, command string)) *MockShellWriter_SectionStart_Call {
+func (_c *MockShellWriter_SectionStart_Call) Run(run func(id string, command string, options []string)) *MockShellWriter_SectionStart_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string))
+		run(args[0].(string), args[1].(string), args[2].([]string))
 	})
 	return _c
 }
@@ -1022,7 +1023,7 @@ func (_c *MockShellWriter_SectionStart_Call) Return() *MockShellWriter_SectionSt
 	return _c
 }
 
-func (_c *MockShellWriter_SectionStart_Call) RunAndReturn(run func(string, string)) *MockShellWriter_SectionStart_Call {
+func (_c *MockShellWriter_SectionStart_Call) RunAndReturn(run func(string, string, []string)) *MockShellWriter_SectionStart_Call {
 	_c.Call.Return(run)
 	return _c
 }

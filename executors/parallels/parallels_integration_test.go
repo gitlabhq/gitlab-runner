@@ -59,7 +59,8 @@ func TestBuildScriptSections(t *testing.T) {
 			t.Skip("CMD, pwsh, powershell not supported")
 		}
 
-		successfulBuild, err := common.GetRemoteBuildResponse("echo Hello World")
+		successfulBuild, err := common.GetRemoteBuildResponse(`echo "Hello
+World"`)
 
 		build := &common.Build{
 			JobResponse: successfulBuild,

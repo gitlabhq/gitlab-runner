@@ -313,7 +313,8 @@ func TestBuildScriptSections(t *testing.T) {
 		}
 
 		build := getBuildForOS(t, func() (common.JobResponse, error) {
-			return common.GetRemoteSuccessfulBuild()
+			return common.GetRemoteBuildResponse(`echo "Hello
+World"`)
 		})
 
 		build.Runner.RunnerSettings.Shell = shell

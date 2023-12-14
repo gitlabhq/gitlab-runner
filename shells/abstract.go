@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -649,40 +650,42 @@ func (b *AbstractShell) writeDownloadArtifactsScript(
 
 // Write the given string of commands using the provided ShellWriter object.
 func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo, prefix string, commands ...string) {
-	for i, command := range commands {
+	lo.ForEach(commands, func(command string, i int) {
 		command = strings.TrimSpace(command)
+		defer func() {
+			w.Line(command)
+			w.CheckForErrors()
+		}()
 
-		// When FF_SCRIPT_SECTIONS is enabled, the multiline commands are entirely displayed
-		// PowerShell is not supported at the moment
+		if command == "" {
+			w.EmptyLine()
+			return
+		}
+
+		nlIndex := strings.Index(command, "\n")
+		if nlIndex == -1 {
+			w.Noticef("$ %s", command)
+			return
+		}
+
 		if info.Build.IsFeatureFlagOn(featureflags.ScriptSections) &&
 			info.Build.JobResponse.Features.TraceSections {
-			b.writeCommandWithSection(w, fmt.Sprintf("%s_%d", prefix, i), command)
-			continue
-		}
-
-		if command != "" {
-			lines := strings.SplitN(command, "\n", 2)
-			if len(lines) > 1 {
-				w.Noticef("$ %s # collapsed multi-line command", lines[0])
-			} else {
-				w.Noticef("$ %s", lines[0])
-			}
+			b.writeMultilineCommand(w, fmt.Sprintf("%s_%d", prefix, i), command)
 		} else {
-			w.EmptyLine()
+			w.Noticef("$ %s # collapsed multi-line command", command[:nlIndex])
 		}
-		w.Line(command)
-		w.CheckForErrors()
-	}
+	})
 }
 
-func (b *AbstractShell) writeCommandWithSection(w ShellWriter, sectionName, command string) {
-	if command == "" {
-		w.EmptyLine()
+func stringifySectionOptions(opts []string) string {
+	if len(opts) == 0 {
+		return ""
 	}
+	return fmt.Sprintf("[%s]", strings.Join(opts, ","))
+}
 
-	w.SectionStart(sectionName, fmt.Sprintf("$ %s", command))
-	w.Line(command)
-	w.CheckForErrors()
+func (b *AbstractShell) writeMultilineCommand(w ShellWriter, sectionName, command string) {
+	w.SectionStart(sectionName, fmt.Sprintf("$ %s", command), []string{"hide_duration=true", "collapsed=true"})
 	w.SectionEnd(sectionName)
 }
 

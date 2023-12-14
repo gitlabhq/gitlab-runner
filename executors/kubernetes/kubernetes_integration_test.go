@@ -263,7 +263,11 @@ func TestBuildScriptSections(t *testing.T) {
 			t.Skip("CMD, pwsh, powershell not supported")
 		}
 
-		build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+		getRemoteSuccessfulMultiLineBuild := func() (common.JobResponse, error) {
+			return common.GetRemoteBuildResponse(`echo "Hello
+World"`)
+		}
+		build := getTestBuild(t, getRemoteSuccessfulMultiLineBuild)
 		build.Runner.RunnerSettings.Shell = shell
 
 		buildtest.RunBuildWithSections(t, build)

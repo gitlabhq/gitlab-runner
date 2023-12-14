@@ -38,7 +38,7 @@ type ShellWriter interface {
 	Errorf(fmt string, arguments ...interface{})
 	EmptyLine()
 
-	SectionStart(id, command string)
+	SectionStart(id, command string, options []string)
 	SectionEnd(id string)
 
 	Finish(trace bool) string

@@ -117,7 +117,7 @@ func TestBuildScriptSections(t *testing.T) {
 			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
 			t.Skip("CMD, pwsh, powershell not supported")
 		}
-		successfulBuild, err := common.GetSuccessfulBuild()
+		successfulBuild, err := common.GetSuccessfulMultilineCommandBuild()
 		require.NoError(t, err)
 
 		build := newBuild(t, successfulBuild, shell)
