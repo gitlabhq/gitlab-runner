@@ -345,66 +345,66 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 		expected       func(*testing.T, Image)
 		expectedErrMsg []string
 	}{
-		"empty image": {
-			json: "{}",
-			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-			},
-		},
-		"executor_opts, no docker": {
+		"no executor_opts": {
 			json: `{"executor_opts":{}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
 			},
 		},
-		"docker, no platform": {
+		"docker, empty": {
 			json: `{"executor_opts":{"docker": {}}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
 			},
 		},
-		"docker, with platform": {
+		"docker, only user": {
+			json: `{"executor_opts":{"docker": {"user": "ubuntu"}}}`,
+			expected: func(t *testing.T, i Image) {
+				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "ubuntu", i.ExecutorOptions.Docker.User)
+			},
+		},
+		"docker, only platform": {
 			json: `{"executor_opts":{"docker": {"platform": "amd64"}}}`,
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
 			},
 		},
-		"executor_opts, docker, invalid executor": {
-			json:           `{"executor_opts":{"k8s": {}, "docker": {"platform": "amd64"}}}`,
-			expectedErrMsg: []string{`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker]`},
+		"docker, all options": {
+			json: `{"executor_opts":{"docker": {"platform": "arm64", "user": "ubuntu"}}}`,
 			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "arm64", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "ubuntu", i.ExecutorOptions.Docker.User)
 			},
 		},
-		"executor_opts, no docker, invalid executor": {
+		"docker, invalid options": {
+			json:           `{"executor_opts":{"docker": {"foobar": 1234}}}`,
+			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform user]`},
+			expected: func(t *testing.T, i Image) {
+				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
+			},
+		},
+		"invalid executor": {
 			json:           `{"executor_opts":{"k8s": {}}}`,
 			expectedErrMsg: []string{`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker]`},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
 			},
 		},
-		"executor_opts, docker, no platform, invalid property": {
-			json:           `{"executor_opts":{"docker": {"foobar": 1234}}}`,
-			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform]`},
-			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, "", i.ExecutorOptions.Docker.Platform)
-			},
-		},
-		"executor_opts, docker, platform, invalid property": {
-			json:           `{"executor_opts":{"docker": {"platform": "amd64", "foobar": 1234}}}`,
-			expectedErrMsg: []string{`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform]`},
-			expected: func(t *testing.T, i Image) {
-				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
-			},
-		},
-		"executor_opts, invalid executor, docker, platform, invalid property": {
+		"invalid executor, valid executor, invalid option": {
 			json: `{"executor_opts":{"k8s": {}, "docker": {"platform": "amd64", "foobar": 1234}}}`,
 			expectedErrMsg: []string{
 				`Unsupported "image" options [k8s] for "executor_opts"; supported options are [docker]`,
-				`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform]`,
+				`Unsupported "image" options [foobar] for "docker executor"; supported options are [platform user]`,
 			},
 			expected: func(t *testing.T, i Image) {
 				assert.Equal(t, "amd64", i.ExecutorOptions.Docker.Platform)
+				assert.Equal(t, "", i.ExecutorOptions.Docker.User)
 			},
 		},
 	}

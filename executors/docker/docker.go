@@ -421,6 +421,7 @@ func (e *executor) createService(
 		config.Cmd = definition.Command
 	}
 	config.Entrypoint = e.overwriteEntrypoint(&definition)
+	config.User = definition.ExecutorOptions.Docker.User
 	hostConfig := e.createHostConfigForService()
 	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(definition)
 
@@ -649,6 +650,10 @@ func (e *executor) createContainerConfig(
 	// user config should only be set in build containers
 	if containerType == buildContainerType {
 		config.User = e.Config.Docker.User
+		// Takes precedence over Global Docker User
+		if imageDefinition.ExecutorOptions.Docker.User != "" {
+			config.User = imageDefinition.ExecutorOptions.Docker.User
+		}
 	}
 
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
