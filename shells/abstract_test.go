@@ -1514,6 +1514,54 @@ func TestScriptSections(t *testing.T) {
 			traceSections: true,
 			inputSteps: common.Steps{
 				common.Step{
+					Name: common.StepNameScript,
+					Script: common.StepScript{`Multi line
+					script 1`, `Multi line
+					script 2`, `Multi line
+					script 3`},
+				},
+			},
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("Variable", mock.Anything)
+				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
+				m.On("SourceEnv", "path/to/env/file").Once()
+				m.On("Cd", mock.AnythingOfType("string"))
+				m.On("Noticef", "$ %s", "echo prebuild").Once()
+				m.On(
+					"SectionStart",
+					mock.AnythingOfType("string"),
+					"$ Multi line\n\t\t\t\t\tscript 1",
+					mock.AnythingOfType("[]string"),
+				).Once()
+				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
+				m.On(
+					"SectionStart",
+					mock.AnythingOfType("string"),
+					"$ Multi line\n\t\t\t\t\tscript 2",
+					mock.AnythingOfType("[]string"),
+				).Once()
+				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
+				m.On(
+					"SectionStart",
+					mock.AnythingOfType("string"),
+					"$ Multi line\n\t\t\t\t\tscript 3",
+					mock.AnythingOfType("[]string"),
+				).Once()
+				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
+				m.On("Noticef", "$ %s", "echo postbuild").Once()
+				m.On("Line", "echo prebuild").Once()
+				m.On("Line", "Multi line\n\t\t\t\t\tscript 1").Once()
+				m.On("Line", "Multi line\n\t\t\t\t\tscript 2").Once()
+				m.On("Line", "Multi line\n\t\t\t\t\tscript 3").Once()
+				m.On("Line", "echo postbuild").Once()
+				m.On("CheckForErrors").Times(5)
+			},
+		},
+		{
+			featureFlagOn: true,
+			traceSections: true,
+			inputSteps: common.Steps{
+				common.Step{
 					Name:   common.StepNameScript,
 					Script: common.StepScript{"script 1", "script 2", "script 3"},
 				},
@@ -1523,16 +1571,11 @@ func TestScriptSections(t *testing.T) {
 				m.On("TmpFile", "gitlab_runner_env").Return("path/to/env/file").Once()
 				m.On("SourceEnv", "path/to/env/file").Once()
 				m.On("Cd", mock.AnythingOfType("string"))
-				m.On("SectionStart", mock.AnythingOfType("string"), "$ echo prebuild").Once()
-				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
-				m.On("SectionStart", mock.AnythingOfType("string"), "$ script 1").Once()
-				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
-				m.On("SectionStart", mock.AnythingOfType("string"), "$ script 2").Once()
-				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
-				m.On("SectionStart", mock.AnythingOfType("string"), "$ script 3").Once()
-				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
-				m.On("SectionStart", mock.AnythingOfType("string"), "$ echo postbuild").Once()
-				m.On("SectionEnd", mock.AnythingOfType("string")).Once()
+				m.On("Noticef", "$ %s", "echo prebuild").Once()
+				m.On("Noticef", "$ %s", "script 1").Once()
+				m.On("Noticef", "$ %s", "script 2").Once()
+				m.On("Noticef", "$ %s", "script 3").Once()
+				m.On("Noticef", "$ %s", "echo postbuild").Once()
 				m.On("Line", "echo prebuild").Once()
 				m.On("Line", "script 1").Once()
 				m.On("Line", "script 2").Once()

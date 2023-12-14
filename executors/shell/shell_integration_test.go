@@ -1722,7 +1722,7 @@ func TestBuildScriptSections(t *testing.T) {
 		}
 		build := newBuild(t, common.JobResponse{}, shell)
 
-		successfulBuild, err := common.GetSuccessfulBuild()
+		successfulBuild, err := common.GetSuccessfulMultilineCommandBuild()
 		require.NoError(t, err)
 		build.JobResponse = successfulBuild
 		build.Runner.RunnerSettings.Shell = shell

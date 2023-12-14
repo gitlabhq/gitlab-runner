@@ -300,9 +300,9 @@ func (b *BashWriter) EmptyLine() {
 	b.Line("echo")
 }
 
-func (b *BashWriter) SectionStart(id, command string) {
+func (b *BashWriter) SectionStart(id, command string, options []string) {
 	b.Line("printf '%b\\n' " +
-		"section_start:$(date +%s):section_" + id +
+		"section_start:$(date +%s):section_" + id + stringifySectionOptions(options) +
 		"\r" + helpers.ANSI_CLEAR + b.escape(helpers.ANSI_BOLD_GREEN+command+helpers.ANSI_RESET))
 }
 

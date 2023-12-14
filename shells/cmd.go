@@ -335,7 +335,7 @@ func (b *CmdWriter) Join(elem ...string) string {
 	return helpers.ToBackslash(newPath)
 }
 
-func (b *CmdWriter) SectionStart(id, command string) {}
+func (b *CmdWriter) SectionStart(id, command string, options []string) {}
 
 func (b *CmdWriter) SectionEnd(id string) {}
 

@@ -86,6 +86,11 @@ func GetSuccessfulBuild() (JobResponse, error) {
 	return GetLocalBuildResponse("echo Hello World")
 }
 
+func GetSuccessfulMultilineCommandBuild() (JobResponse, error) {
+	return GetLocalBuildResponse(`echo "Hello
+World"`)
+}
+
 func GetRemoteSuccessfulBuild() (JobResponse, error) {
 	return GetRemoteBuildResponse("echo Hello World")
 }
