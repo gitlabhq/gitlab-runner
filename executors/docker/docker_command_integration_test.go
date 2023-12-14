@@ -1122,6 +1122,7 @@ func TestDockerServiceHealthcheck(t *testing.T) {
 			}
 
 			if runtime.GOOS == "windows" {
+				build.Runner.Docker.WaitForServicesTimeout = 60
 				build.Runner.RunnerSettings.Shell = shells.SNPwsh
 				build.Image.Entrypoint = []string{""}
 			}
@@ -2310,4 +2311,35 @@ func TestDockerCommandWithPlatform(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, arch, info.Architecture)
 	}
+}
+
+func TestDockerCommandWithUser(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+	test.SkipIfDockerDaemonAPIVersionNotAtLeast(t, minDockerDaemonVersion)
+
+	successfulBuild, err := common.GetRemoteBuildResponse("whoami")
+	require.NoError(t, err)
+
+	successfulBuild.Steps[0].Name = "wait"
+
+	successfulBuild.Image.Name = common.TestAlpineImage
+	successfulBuild.Image.ExecutorOptions.Docker.User = "squid"
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker:   &common.DockerConfig{},
+			},
+			SystemIDState: systemIDState,
+		},
+	}
+
+
+	var buffer bytes.Buffer
+	require.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: &buffer}))
+
+	assert.Regexp(t, "whoami.*\nsquid", buffer.String())
 }

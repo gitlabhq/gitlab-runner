@@ -1937,6 +1937,38 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 	)
 }
 
+func TestDockerImageWithUser(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		User: "test",
+	}
+	imageConfig := common.Image{
+		Name: "alpine",
+		ExecutorOptions: common.ImageExecutorOptions{
+			Docker: common.ImageDockerOptions{
+				User: "test",
+			},
+		},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "test", config.User)
+	}
+
+	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+
+	c.On("ContainerInspect", mock.Anything, "abc").
+		Return(types.ContainerJSON{}, nil).Once()
+
+	err := e.createVolumesManager()
+	require.NoError(t, err)
+
+	err = e.createPullManager()
+	require.NoError(t, err)
+
+	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+	require.NoError(t, err)
+}
+
 func TestCreateHostConfigForServiceHealthCheck(t *testing.T) {
 	tests := []string{"default", "user-defined"}
 

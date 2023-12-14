@@ -340,16 +340,29 @@ func (eo *executorOptions) UnsupportedOptions() error {
 	return eo.unsupportedOptions
 }
 
+var SupportedExecutorOptions = map[string][]string{
+	"docker": {"platform", "user"},
+}
+
 type (
 	ImageDockerOptions struct {
 		executorOptions
 		Platform string `json:"platform"`
+		User     string `json:"user"`
 	}
 	ImageExecutorOptions struct {
 		executorOptions
 		Docker ImageDockerOptions `json:"docker,omitempty"`
 	}
 )
+
+func mapKeys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
 
 func (ido *ImageDockerOptions) UnmarshalJSON(data []byte) error {
 	type imageDockerOptions ImageDockerOptions
@@ -360,7 +373,7 @@ func (ido *ImageDockerOptions) UnmarshalJSON(data []byte) error {
 	*ido = ImageDockerOptions(inner)
 
 	// call validate after json.Unmarshal so the former handles bad json.
-	ido.unsupportedOptions = ido.validate(data, []string{"platform"}, "docker executor", "image")
+	ido.unsupportedOptions = ido.validate(data, SupportedExecutorOptions["docker"], "docker executor", "image")
 	return nil
 }
 
@@ -373,7 +386,7 @@ func (ieo *ImageExecutorOptions) UnmarshalJSON(data []byte) error {
 	*ieo = ImageExecutorOptions(inner)
 
 	// call validate after json.Unmarshal so the former handles bad json.
-	ieo.unsupportedOptions = ieo.validate(data, []string{"docker"}, "executor_opts", "image")
+	ieo.unsupportedOptions = ieo.validate(data, mapKeys(SupportedExecutorOptions), "executor_opts", "image")
 	return nil
 }
 
