@@ -14,7 +14,7 @@ const (
 	V21H2 = "21H2"
 )
 
-var ErrUnsupportedWindowsVersion = errors.New("unsupported windows version")
+var ErrUnsupportedWindowsVersion = errors.New("unsupported Windows version")
 
 var supportedWindowsBuilds = map[string]string{
 	// Windows server versions: https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions#Server_versions
@@ -29,10 +29,12 @@ var supportedWindowsBuilds = map[string]string{
 	"10.0.19045": V1809,
 	"10.0.22000": V21H2,
 	"10.0.22621": V21H2,
+	"10.0.22631": V21H2,
 }
 
 // Version checks the specified kernel version to see if it's one of the
-// supported Windows version. If true, it returns the os version.
+// supported Windows versions. If so, it returns the Windows servercore
+// version is supported by that kernel version.
 // UnsupportedWindowsVersionError is returned when no supported Windows version
 // is found in the string.
 func Version(version string) (string, error) {

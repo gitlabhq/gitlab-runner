@@ -35,6 +35,11 @@ func TestVersion(t *testing.T) {
 			expectedErr:     nil,
 		},
 		{
+			kernelVersion:   "10.0.22631",
+			expectedVersion: V21H2,
+			expectedErr:     nil,
+		},
+		{
 			kernelVersion: "10.0 17134 (17134.1.amd64fre.rs4_release.180410-1804)",
 			expectedErr:   ErrUnsupportedWindowsVersion,
 		},
