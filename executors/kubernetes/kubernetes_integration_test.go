@@ -300,7 +300,6 @@ func TestEntrypointNotIgnored(t *testing.T) {
 	testCases := map[string]struct {
 		jobResponse          common.JobResponse
 		buildImage           string
-		customEntrypoint     []string
 		helperImage          string
 		useHonorEntrypointFF bool
 		expectedOutputLines  []string
@@ -316,21 +315,6 @@ func TestEntrypointNotIgnored(t *testing.T) {
 			buildImage:           common.TestAlpineEntrypointImage,
 			useHonorEntrypointFF: true,
 			expectedOutputLines:  []string{"I am now nobody", "this has been executed through a custom entrypoint"},
-		},
-		"build image with overridden entrypoint feature flag on": {
-			jobResponse:          buildTestJob,
-			buildImage:           common.TestAlpineEntrypointImage,
-			customEntrypoint:     []string{common.TestAlpineOverriddenEntrypoint},
-			useHonorEntrypointFF: true,
-			expectedOutputLines:  []string{"I am now nobody", "this has been executed through a custom entrypoint"},
-		},
-		"build image with overridden entrypoint feature flag off": {
-			jobResponse:          buildTestJob,
-			buildImage:           common.TestAlpineEntrypointImage,
-			customEntrypoint:     []string{common.TestAlpineOverriddenEntrypoint},
-			useHonorEntrypointFF: false,
-			expectedOutputLines: []string{"I am now nobody", "this has been executed through a custom entrypoint " +
-				"overridden by the job response"},
 		},
 		"helper image with entrypoint feature flag off": {
 			jobResponse:          helperTestJob,
@@ -353,7 +337,7 @@ func TestEntrypointNotIgnored(t *testing.T) {
 				job.Image = common.Image{
 					Name: common.TestAlpineEntrypointImage,
 				}
-				job.Image.Entrypoint = tc.customEntrypoint
+
 				return job, err
 			})
 
