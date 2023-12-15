@@ -250,8 +250,8 @@ var flags = []FeatureFlag{
 		Deprecated:      false,
 		ToBeRemovedWith: "",
 		Description: "When enabled, the user can set an entire whole pod specification in the `config.toml` file. " +
-			"For more information, see [Overwrite generated pod specifications (Alpha)]" +
-			"(../executors/kubernetes.md#overwrite-generated-pod-specifications-alpha)..",
+			"For more information, see [Overwrite generated pod specifications (Experiment)]" +
+			"(../executors/kubernetes.md#overwrite-generated-pod-specifications).",
 	},
 	{
 		Name:         SetPermissionsBeforeCleanup,
