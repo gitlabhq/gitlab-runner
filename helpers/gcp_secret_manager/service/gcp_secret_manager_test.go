@@ -10,7 +10,6 @@ import (
 
 	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/sts/v1"
@@ -51,47 +50,97 @@ func TestClient_GetSecret(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		secret           *common.GCPSecretManagerSecret
-		setupAuthMock    func(a *mockAuthenticator, ctx context.Context, secret *common.GCPSecretManagerSecret)
-		setupServiceMock func(s *mockService, ctx context.Context, secret *common.GCPSecretManagerSecret)
-		assertError      assert.ErrorAssertionFunc
-		expectedResult   string
+		secret             *common.GCPSecretManagerSecret
+		verifyGetToken     func(c *Client) func(t *testing.T)
+		verifyAccessSecret func(c *Client) func(t *testing.T)
+		assertError        assert.ErrorAssertionFunc
+		expectedResult     string
 	}{
 		"successful token exchange and accessing secret": {
 			secret: secret,
-			setupAuthMock: func(a *mockAuthenticator, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				a.On("getToken", ctx, secret).Return(stubTokenResponse, nil).Once()
+			verifyGetToken: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+					callCount += 1
+					return stubTokenResponse, nil
+				}
+
+				return func(t *testing.T) {
+					assert.Equal(t, 1, callCount)
+				}
 			},
-			setupServiceMock: func(s *mockService, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				expectedTokenSource := oauth2.StaticTokenSource(&oauth2.Token{
-					AccessToken: stubTokenResponse.AccessToken,
-					TokenType:   stubTokenResponse.TokenType,
-				})
-				s.On("access", ctx, secret, expectedTokenSource).Return(stubAccessSecretResponse, nil).Once()
+			verifyAccessSecret: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				var accessToken string
+
+				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+					callCount += 1
+					token, _ := source.Token()
+					accessToken = token.AccessToken
+
+					return stubAccessSecretResponse, nil
+				}
+
+				return func(t *testing.T) {
+					assert.Equal(t, stubTokenResponse.AccessToken, accessToken)
+					assert.Equal(t, 1, callCount)
+				}
 			},
 			assertError:    assert.NoError,
 			expectedResult: string(stubData),
 		},
 		"failed authentication": {
 			secret: secret,
-			setupAuthMock: func(a *mockAuthenticator, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				a.On("getToken", ctx, secret).Return(nil, errors.New("failed auth")).Once()
+			verifyGetToken: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+					callCount += 1
+					return nil, errors.New("failed getToken")
+				}
+
+				return func(t *testing.T) {
+					assert.Equal(t, 1, callCount)
+				}
 			},
-			setupServiceMock: func(s *mockService, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				s.AssertNotCalled(t, "access")
+			verifyAccessSecret: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+					callCount += 1
+					return stubAccessSecretResponse, nil
+				}
+
+				return func(t *testing.T) {
+					assert.Equal(t, 0, callCount)
+				}
 			},
 			assertError: func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
-				assert.ErrorContains(t, err, "failed auth")
+				assert.ErrorContains(t, err, "failed getToken")
 				return false
 			},
 		},
 		"failed secret access": {
 			secret: secret,
-			setupAuthMock: func(a *mockAuthenticator, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				a.On("getToken", ctx, secret).Return(stubTokenResponse, nil).Once()
+			verifyGetToken: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+					callCount += 1
+					return stubTokenResponse, nil
+				}
+
+				return func(t *testing.T) {
+					assert.Equal(t, 1, callCount)
+				}
 			},
-			setupServiceMock: func(s *mockService, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				s.On("access", ctx, secret, mock.Anything).Return(nil, errors.New("failed to get secret")).Once()
+			verifyAccessSecret: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+					callCount += 1
+					return nil, errors.New("failed to get secret")
+				}
+
+				return func(t *testing.T) {
+					assert.Equal(t, 1, callCount)
+				}
 			},
 			assertError: func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
 				assert.ErrorContains(t, err, "failed to get secret")
@@ -100,20 +149,37 @@ func TestClient_GetSecret(t *testing.T) {
 		},
 		"corrupted data": {
 			secret: secret,
-			setupAuthMock: func(a *mockAuthenticator, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				a.On("getToken", ctx, secret).Return(stubTokenResponse, nil).Once()
-			},
-			setupServiceMock: func(s *mockService, ctx context.Context, secret *common.GCPSecretManagerSecret) {
-				incorrectChecksum := int64(1234)
-
-				stubAccessSecretResponse := &smpb.AccessSecretVersionResponse{
-					Name: secretName,
-					Payload: &smpb.SecretPayload{
-						Data:       stubData,
-						DataCrc32C: &incorrectChecksum,
-					},
+			verifyGetToken: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				c.getToken = func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
+					callCount += 1
+					return stubTokenResponse, nil
 				}
-				s.On("access", ctx, secret, mock.Anything).Return(stubAccessSecretResponse, nil).Once()
+
+				return func(t *testing.T) {
+					assert.Equal(t, 1, callCount)
+				}
+			},
+			verifyAccessSecret: func(c *Client) func(t *testing.T) {
+				callCount := 0
+				c.accessSecret = func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
+					callCount += 1
+					incorrectChecksum := int64(1234)
+
+					stubAccessSecretResponse := &smpb.AccessSecretVersionResponse{
+						Name: secretName,
+						Payload: &smpb.SecretPayload{
+							Data:       stubData,
+							DataCrc32C: &incorrectChecksum,
+						},
+					}
+
+					return stubAccessSecretResponse, nil
+				}
+
+				return func(t *testing.T) {
+					assert.Equal(t, 1, callCount)
+				}
 			},
 			assertError: func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
 				assert.ErrorContains(t, err, "data corruption detected")
@@ -126,18 +192,9 @@ func TestClient_GetSecret(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			ctx := context.Background()
 
-			authMock := new(mockAuthenticator)
-			tt.setupAuthMock(authMock, ctx, tt.secret)
-			defer authMock.AssertExpectations(t)
-
-			serviceMock := new(mockService)
-			tt.setupServiceMock(serviceMock, ctx, tt.secret)
-			defer serviceMock.AssertExpectations(t)
-
-			c := Client{
-				auth: authMock,
-				svc:  serviceMock,
-			}
+			c := &Client{}
+			defer tt.verifyGetToken(c)(t)
+			defer tt.verifyAccessSecret(c)(t)
 
 			result, err := c.GetSecret(ctx, tt.secret)
 			tt.assertError(t, err)

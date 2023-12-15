@@ -21,26 +21,26 @@ const (
 )
 
 type Client struct {
-	auth authenticator
-	svc  service
+	getToken     getTokenFunc
+	accessSecret accessSecretFunc
 }
 
 func NewClient() Client {
 	return Client{
-		auth: authFunc(getToken),
-		svc:  accessFunc(access),
+		getToken:     getToken,
+		accessSecret: access,
 	}
 }
 
 func (c Client) GetSecret(ctx context.Context, secret *common.GCPSecretManagerSecret) (string, error) {
-	tokenResponse, err := c.auth.getToken(ctx, secret)
+	tokenResponse, err := c.getToken(ctx, secret)
 	if err != nil {
 		return "", fmt.Errorf("failed to exchange sts token: %w", err)
 	}
 
 	tokenSource := toTokenSource(tokenResponse)
 
-	accessSecretVersionResponse, err := c.svc.access(ctx, secret, tokenSource)
+	accessSecretVersionResponse, err := c.accessSecret(ctx, secret, tokenSource)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to get secret: %w", err)
@@ -57,16 +57,7 @@ func (c Client) GetSecret(ctx context.Context, secret *common.GCPSecretManagerSe
 	return string(accessSecretVersionResponse.Payload.Data), nil
 }
 
-//go:generate mockery --name=authenticator --inpackage
-type authenticator interface {
-	getToken(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error)
-}
-
-type authFunc func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error)
-
-func (f authFunc) getToken(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
-	return f(ctx, secret)
-}
+type getTokenFunc func(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error)
 
 func getToken(ctx context.Context, secret *common.GCPSecretManagerSecret) (*sts.GoogleIdentityStsV1ExchangeTokenResponse, error) {
 	// option.WithoutAuthentication() is required for STS service.
@@ -98,16 +89,7 @@ func stsAudience(secret *common.GCPSecretManagerSecret) string {
 		secret.Server.WorkloadIdentityFederationProviderID)
 }
 
-//go:generate mockery --name=service --inpackage
-type service interface {
-	access(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error)
-}
-
-type accessFunc func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error)
-
-func (f accessFunc) access(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
-	return f(ctx, secret, source)
-}
+type accessSecretFunc func(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error)
 
 func access(ctx context.Context, secret *common.GCPSecretManagerSecret, source oauth2.TokenSource) (*smpb.AccessSecretVersionResponse, error) {
 	smClient, err := sm.NewClient(ctx, option.WithTokenSource(source))
