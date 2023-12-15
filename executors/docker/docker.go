@@ -937,17 +937,18 @@ func (e *executor) environmentDialContext(
 	}
 
 	return "dial-stdio", func(_ context.Context, network, addr string) (net.Conn, error) {
-		// DialRun doesn't wnat just a context for dialing, but one for a long-lived connection,
+		// DialRun doesn't want just a context for dialing, but one for a long-lived connection,
 		// so here we're ensuring that we use the executor's context, so that it is only cancelled
 		// when the job is cancelled.
 
+		// if the host was explicit, we try to use this even with dial-stdio
+		cmd := fmt.Sprintf("docker -H %s system dial-stdio", host)
+
 		// rather than use this system's host, we use the remote system's default
 		if systemHost {
-			return executorClient.DialRun(e.Context, "docker system dial-stdio")
+			cmd = "docker system dial-stdio"
 		}
-
-		// if the host was explicit, we try to use this even with dial-stdio
-		return executorClient.DialRun(e.Context, fmt.Sprintf("docker -H %s system dial-stdio", host))
+		return executorClient.DialRun(e.Context, cmd)
 	}, nil
 }
 
