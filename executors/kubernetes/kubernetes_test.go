@@ -3515,16 +3515,12 @@ func TestSetupBuildPod(t *testing.T) {
 
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[0].Command)
-				assert.Equal(
-					t,
-					pod.Spec.Containers[0].Args,
-					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
-				)
+				assert.Equal(t, pod.Spec.Containers[0].Command, []string{"/scripts-0-0/dumb-init", "--"})
+				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t, pod.Spec.Containers[1].Command, []string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand})
+				assert.Equal(t, pod.Spec.Containers[1].Command, []string{"/scripts-0-0/dumb-init", "--"})
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -3607,11 +3603,11 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
 				assert.Equal(t, []string{"/init", "run"}, pod.Spec.Containers[0].Command)
-				assert.Equal(t, pod.Spec.Containers[0].Args, []string{common.TestShellDockerCommand})
+				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
+				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -3966,7 +3962,7 @@ func TestSetupBuildPod(t *testing.T) {
 				)
 			},
 		},
-		"sets command (entrypoint) and args for services, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is true": {
+		"sets command (entrypoint) and args, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is true": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -3999,20 +3995,12 @@ func TestSetupBuildPod(t *testing.T) {
 
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Equal(
-					t,
-					pod.Spec.Containers[0].Command,
-					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
-				)
+				assert.Equal(t, pod.Spec.Containers[0].Command, []string{"/scripts-0-0/dumb-init", "--"})
 				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(
-					t,
-					pod.Spec.Containers[1].Command,
-					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
-				)
+				assert.Equal(t, pod.Spec.Containers[1].Command, []string{"/scripts-0-0/dumb-init", "--"})
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -4034,7 +4022,7 @@ func TestSetupBuildPod(t *testing.T) {
 				{Key: "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR", Value: "true", Public: true},
 			},
 		},
-		"sets command (entrypoint) and args for services, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is false": {
+		"sets command (entrypoint) and args, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is false": {
 			RunnerConfig: common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -4067,12 +4055,12 @@ func TestSetupBuildPod(t *testing.T) {
 
 				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
 				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Equal(t, pod.Spec.Containers[0].Command, []string{common.TestShellDockerCommand})
+				assert.Empty(t, pod.Spec.Containers[0].Command, "Build container args should be empty")
 				assert.Empty(t, pod.Spec.Containers[0].Args, "Build container args should be empty")
 
 				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
 				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
+				assert.Empty(t, pod.Spec.Containers[1].Command, "Helper container command should be empty")
 				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 
 				assert.Equal(t, "svc-0", pod.Spec.Containers[2].Name)
@@ -4089,76 +4077,6 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, "test-service-2", pod.Spec.Containers[4].Image)
 				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[4].Command)
 				assert.Equal(t, []string{"argument1", "argument2"}, pod.Spec.Containers[4].Args)
-			},
-		},
-		"sets command (entrypoint) for build, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is true": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						HelperImage: "custom/helper-image",
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Image: common.Image{
-					Name:       "test-image",
-					Entrypoint: []string{"application", "--debug"},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				require.Len(t, pod.Spec.Containers, 2)
-
-				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
-				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[0].Command)
-				assert.Equal(
-					t,
-					pod.Spec.Containers[0].Args,
-					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
-				)
-
-				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
-				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t,
-					pod.Spec.Containers[1].Command,
-					[]string{"/scripts-0-0/dumb-init", "--", common.TestShellDockerCommand},
-				)
-				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
-			},
-			Variables: []common.JobVariable{
-				{Key: "FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR", Value: "true", Public: true},
-			},
-		},
-		"sets command (entrypoint) for build, FF_USE_DUMB_INIT_WITH_KUBERNETES_EXECUTOR is false": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						HelperImage: "custom/helper-image",
-					},
-				},
-			},
-			Options: &kubernetesOptions{
-				Image: common.Image{
-					Name:       "test-image",
-					Entrypoint: []string{"application", "--debug"},
-				},
-			},
-			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
-				require.Len(t, pod.Spec.Containers, 2)
-
-				assert.Equal(t, "build", pod.Spec.Containers[0].Name)
-				assert.Equal(t, "test-image", pod.Spec.Containers[0].Image)
-				assert.Equal(t, []string{"application", "--debug"}, pod.Spec.Containers[0].Command)
-				assert.Equal(
-					t,
-					pod.Spec.Containers[0].Args,
-					[]string{common.TestShellDockerCommand},
-				)
-
-				assert.Equal(t, "helper", pod.Spec.Containers[1].Name)
-				assert.Equal(t, "custom/helper-image", pod.Spec.Containers[1].Image)
-				assert.Equal(t, pod.Spec.Containers[1].Command, []string{common.TestShellDockerCommand})
-				assert.Empty(t, pod.Spec.Containers[1].Args, "Helper container args should be empty")
 			},
 		},
 		"non-DNS-1123-compatible-token": {
@@ -5157,10 +5075,8 @@ containers:
 				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
 				options:    options,
 				AbstractExecutor: executors.AbstractExecutor{
-					Config: test.RunnerConfig,
-					BuildShell: &common.ShellConfiguration{
-						DockerCommand: []string{common.TestShellDockerCommand},
-					},
+					Config:     test.RunnerConfig,
+					BuildShell: &common.ShellConfiguration{},
 					Build: &common.Build{
 						JobResponse: common.JobResponse{
 							Variables:   vars,
