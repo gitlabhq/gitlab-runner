@@ -133,6 +133,9 @@ func (s *StubSSHServer) start() error {
 }
 
 func (s *StubSSHServer) setError(err error) {
+	if errors.Is(err, io.EOF) {
+		return
+	}
 	if err != nil {
 		s.once.Do(func() {
 			s.err = err

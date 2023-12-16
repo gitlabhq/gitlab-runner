@@ -2008,6 +2008,11 @@ func (c *envClient) Run(ctx context.Context, options executors.RunOptions) error
 	return nil
 }
 
+func (c *envClient) DialRun(ctx context.Context, command string) (net.Conn, error) {
+	c.dialed = true
+	return nil, assert.AnError
+}
+
 func (c *envClient) Close() error {
 	return nil
 }

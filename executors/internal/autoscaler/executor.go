@@ -33,8 +33,11 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	}
 
 	// todo: allow configuration of how long we're willing to wait for.
-	// Or is this already handled by the option's context?
-	ctx, cancel := context.WithTimeout(options.Context, 5*time.Minute)
+	// This is currently set to 15minutes knowing that cloud providers
+	// can sometimes exceed 6 minutes provisioning a Windows instance.
+	// This is far more relevant when we're provisioning instances on demand,
+	// rather than waiting for idle instances.
+	ctx, cancel := context.WithTimeout(options.Context, 15*time.Minute)
 	defer cancel()
 
 	acq, err := e.provider.getRunnerTaskscaler(options.Config).Acquire(ctx, acqRef.key)

@@ -239,6 +239,10 @@ func (c *client) Dial(n string, addr string) (net.Conn, error) {
 	return c.client.Dial(n, addr)
 }
 
+func (c *client) DialRun(ctx context.Context, command string) (net.Conn, error) {
+	return c.client.DialRun(ctx, command)
+}
+
 func (c *client) Run(ctx context.Context, opts executors.RunOptions) error {
 	err := c.client.Run(ctx, connector.RunOptions(opts))
 

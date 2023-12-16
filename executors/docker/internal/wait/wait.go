@@ -53,7 +53,10 @@ func (d *dockerWaiter) StopKillWait(ctx context.Context, containerID string, tim
 ) error {
 	// if the job timed out or was cancelled, the ctx will already have expired, so just use context.Background()
 	if graceGracefulExitFunc != nil {
-		_ = graceGracefulExitFunc(context.Background(), containerID)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		_ = graceGracefulExitFunc(ctx, containerID)
 	}
 	return d.retryWait(ctx, containerID, func() {
 		_ = d.client.ContainerStop(ctx, containerID, container.StopOptions{Timeout: timeout})
