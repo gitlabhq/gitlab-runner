@@ -400,24 +400,32 @@ kubectl create secret docker-registry <SECRET_NAME> \
   --docker-password="<REGISTRY_PASSWORD>"
 ```
 
+In GitLab Runner Helm Chart v0.53.x and later, the deprecated properties are not supported anymore in the `values.yaml`
+and `runners.imagePullSecrets` is one of them. To configure an `image_pull_secret`, users have to set it in
+the `config.toml` template provided in `runners.config`
+
+```yaml
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        ## Specify one or more imagePullSecrets
+        ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+        ##
+        image_pull_secrets = [your-image-pull-secret]
+```
+
 In GitLab Runner Helm Chart v0.52.x and earlier, if you configure `runners.imagePullSecrets`, the container adds
 `--kubernetes-image-pull-secrets "<SECRET_NAME>"` to the image entrypoint script. This eliminates the need to configure
 the `image_pull_secrets` parameter in the Kubernetes executor `config.toml` settings.
 
 ```yaml
 runners:
-  ## Specify one or more imagePullSecrets
-  ##
-  ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-  ##
   imagePullSecrets: [your-image-pull-secret]
 ```
 
 Take note of the format. The value is not prefixed by a `name` tag as is the convention in Kubernetes resources. An array of one or more secret names is required, regardless of whether or not you're using multiple registry credentials.
 
-In GitLab Runner Helm Chart v0.53.x and later, the deprecated properties are not supported anymore in the `values.yaml`
-and `runners.imagePullSecrets` is one of them. To configure an `image_pull_secret`, users have to set it in
-the `config.toml` template provided in `runners.config`
 
 ### Providing a custom certificate for accessing GitLab
 
