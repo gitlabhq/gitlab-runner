@@ -134,7 +134,7 @@ For GitLab Runner to function, your configuration file **must** specify the foll
 - `gitlabUrl`: The GitLab server full URL to register the runner against. For example, `https://gitlab.example.com`.
 - `rbac: { create: true }`: Create RBAC rules for the GitLab Runner to create pods to run jobs in. If you have an existing `serviceAccount` you prefer to use, you should also set `rbac: { serviceAccountName: "SERVICE_ACCOUNT_NAME" }`. For more information about the minimal permissions required for the `serviceAccount`, see [Configure runner API permissions](../executors/kubernetes.md#configure-runner-api-permissions).
 - `runnerToken`:
-  - The authentication token you obtain when you [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/register_runner.html#generate-an-authentication-token).
+  - The authentication token you obtain when you [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/register_runner.html#create-a-shared-runner-with-a-runner-authentication-token).
   - Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
 
   \- or -
