@@ -171,6 +171,8 @@ Review each [cache-related `config.toml` entry](../configuration/advanced-config
 as well as the provider-specific keys and values.
 An invalid URL might be getting constructed from any item not following the URL syntax requirements.
 
+Moreover, ensure that your helper `image` and `helper_image_flavor` match and are up-to-date.
+
 If there is a problem with the credentials configuration, a
 diagnostic error message is added to the GitLab Runner process log.
 
