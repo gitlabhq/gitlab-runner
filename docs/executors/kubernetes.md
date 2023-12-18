@@ -783,6 +783,38 @@ concurrent = 4
       "onlyKey" = ""
 ```
 
+## Restrict access to job variables
+
+When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
+
+- Pod's environment section
+
+To restrict access to job variable data, you should use role-based access control (RBAC) so that only GitLab administrators have access to the namespace used by the GitLab Runner.
+
+If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the type of access users have in the GitLab Runner namespace:
+
+- For `pods` and `configmaps`:
+  - `get`
+  - `watch`
+  - `list`
+- For `pods/exec` and `pods/attach`, use `create`.
+
+Example RBAC definition for authorized users:
+
+```yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: gitlab-runner-authorized-users
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "pods"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["pods/exec", "pods/attach"]
+  verbs: ["create"]
+```
+
 ## Resources check during prepare step
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
@@ -1697,7 +1729,7 @@ Kaniko works without the Docker daemon and builds images without privileged acce
 
 For more information, see [Building images with kaniko and GitLab CI/CD](https://docs.gitlab.com/ee/ci/docker/using_kaniko.html).
 
-There is a know issue when using kaniko to build _multi-stage_ `Dockerfiles`. If a pipeline job includes an
+There is a known issue when using kaniko to build _multi-stage_ `Dockerfiles`. If a pipeline job includes an
 `after_script` section, when the `after_script` section is executed it fails with the following error message. The job still completes successfully.
 
 ```shell
@@ -2054,36 +2086,4 @@ the runner might not be able to request CI job payloads.
 
 ### `failed to reserve container name` for init-permissions container when `gcs-fuse-csi-driver` is used
 
-The `gcs-fuse-csi-driver` `csi` driver currently [does not support mounting volumes for the init container](https://github.com/GoogleCloudPlatform/gcs-fuse-csi-driver/issues/38). This can cause failures starting the init container when using this driver. Features [introduced in Kubernetes 1.28](https://kubernetes.io/blog/2023/08/25/native-sidecar-containers/) will need to be supported in the driver's project to resolve this bug.
-
-## Restrict access to job variables
-
-When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
-
-- Pod's environment section
-
-To restrict access to job variable data, you should use role-based access control (RBAC) so that only GitLab administrators have access to the namespace used by the GitLab Runner.
-
-If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the type of access users have in the GitLab Runner namespace:
-
-- For `pods` and `configmaps`:
-  - `get`
-  - `watch`
-  - `list`
-- For `pods/exec` and `pods/attach`, use `create`.
-
-Example RBAC definition for authorized users:
-
-```yaml
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: gitlab-runner-authorized-users
-rules:
-- apiGroups: [""]
-  resources: ["configmaps", "pods"]
-  verbs: ["get", "watch", "list"]
-- apiGroups: [""]
-  resources: ["pods/exec", "pods/attach"]
-  verbs: ["create"]
-```
+The `gcs-fuse-csi-driver` `csi` driver [does not support mounting volumes for the init container](https://github.com/GoogleCloudPlatform/gcs-fuse-csi-driver/issues/38). This can cause failures starting the init container when using this driver. Features [introduced in Kubernetes 1.28](https://kubernetes.io/blog/2023/08/25/native-sidecar-containers/) must be supported in the driver's project to resolve this bug.
