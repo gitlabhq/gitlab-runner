@@ -168,10 +168,10 @@ Upgrade your NGINX to newer version. For more information see this issue: <https
 This occurs when caching is configured for the job, but the GitLab Runner helper does not have
 any pre-signed URL to access a remote cache, or an invalid URL.
 Review each [cache-related `config.toml` entry](../configuration/advanced-configuration.md#the-runnerscache-section)
-as well as the provider-specific keys and values.
-An invalid URL might be getting constructed from any item not following the URL syntax requirements.
+and provider-specific keys and values.
+An invalid URL might be constructed from any item that does not follow the URL syntax requirements.
 
-Moreover, ensure that your helper `image` and `helper_image_flavor` match and are up-to-date.
+Additionally, ensure that your helper `image` and `helper_image_flavor` match and are up-to-date.
 
 If there is a problem with the credentials configuration, a
 diagnostic error message is added to the GitLab Runner process log.
