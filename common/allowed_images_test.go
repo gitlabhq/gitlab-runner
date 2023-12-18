@@ -59,18 +59,20 @@ func TestVerifyAllowedImage(t *testing.T) {
 	logger := buildlogger.Logger{}
 
 	for _, test := range allowedImageTestCases {
-		options := VerifyAllowedImageOptions{
-			Image:          test.image,
-			OptionName:     "",
-			AllowedImages:  test.allowedImages,
-			InternalImages: test.internalImages,
-		}
-		err := VerifyAllowedImage(options, logger)
+		t.Run(test.image, func(t *testing.T) {
+			options := VerifyAllowedImageOptions{
+				Image:          test.image,
+				OptionName:     "",
+				AllowedImages:  test.allowedImages,
+				InternalImages: test.internalImages,
+			}
+			err := VerifyAllowedImage(options, logger)
 
-		if test.expectedAllowed {
-			assert.NoError(t, err, "%q must be allowed by %q", test.image, test.allowedImages)
-		} else {
-			assert.Error(t, err, "%q must not be allowed by %q", test.image, test.allowedImages)
-		}
+			if test.expectedAllowed {
+				assert.NoError(t, err, "%q must be allowed by %q", test.image, test.allowedImages)
+			} else {
+				assert.Error(t, err, "%q must not be allowed by %q", test.image, test.allowedImages)
+			}
+		})
 	}
 }
