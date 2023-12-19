@@ -286,7 +286,7 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScr
 	return nil
 }
 
-func (b *AbstractShell) writePrepareScript(ctx context.Context, w ShellWriter, info common.ShellScriptInfo) error {
+func (b *AbstractShell) writePrepareScript(_ context.Context, w ShellWriter, _ common.ShellScriptInfo) error {
 	w.RmFile(w.TmpFile(gitlabEnvFileName))
 	return nil
 }

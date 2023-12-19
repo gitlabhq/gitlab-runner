@@ -57,7 +57,12 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	formatter := shellFormatter(config.Shell)
 
-	resp, err := common.GetRemoteBuildResponse(formatter.PipeVar("hello=world") + formatter.EnvName("GITLAB_ENV"))
+	steps := []string{formatter.PipeVar("hello=world") + formatter.EnvName("GITLAB_ENV")}
+	if config.Shell == "bash" {
+		steps = append(steps, `echo 'executed=$(echo "yes")' >> $GITLAB_ENV`)
+	}
+
+	resp, err := common.GetRemoteBuildResponse(steps...)
 	require.NoError(t, err)
 
 	build := &common.Build{
@@ -84,6 +89,7 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 			Script: []string{
 				`echo ` + formatter.EnvName("GITLAB_ENV"),
 				`echo hellovalue=` + formatter.EnvName("hello"),
+				`echo executed=` + formatter.EnvName("executed"),
 				formatter.PipeVar("foo=bar") + formatter.EnvName("GITLAB_ENV"),
 			},
 			When: common.StepWhenOnSuccess,
@@ -116,6 +122,7 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 	assert.Contains(t, contents, "hellovalue=world")
 	assert.Contains(t, contents, "foovalue=bar")
 	assert.Contains(t, contents, "unknown/path/bar: no matching files")
+	assert.NotContains(t, contents, "executed=yes")
 }
 
 func RunBuildWithPassingEnvsJobIsolation(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
