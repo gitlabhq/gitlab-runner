@@ -477,8 +477,17 @@ func TestPowershell_GenerateScript(t *testing.T) {
 
 	pwshShell := common.GetShell("pwsh").(*PowerShell)
 	shebang := ""
+	rmGitLabEnvScript := `$CurrentDirectory = (Resolve-Path ./).Path` + pwshShell.EOL +
+		`if( (Get-Command -Name Remove-Item2 -Module NTFSSecurity -ErrorAction SilentlyContinue) -and (Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env" -PathType Leaf) ) {` + pwshShell.EOL +
+		`  Remove-Item2 -Force "$CurrentDirectory/.tmp/gitlab_runner_env"` + pwshShell.EOL +
+		`} elseif(Test-Path "$CurrentDirectory/.tmp/gitlab_runner_env") {` + pwshShell.EOL +
+		`  Remove-Item -Force "$CurrentDirectory/.tmp/gitlab_runner_env"` + pwshShell.EOL +
+		`}` + pwshShell.EOL + pwshShell.EOL + pwshShell.EOL + "}" + pwshShell.EOL + pwshShell.EOL
+
 	if pwshShell.EOL == "\n" {
 		shebang = "#!/usr/bin/env pwsh\n"
+	} else {
+		rmGitLabEnvScript = strings.ReplaceAll(rmGitLabEnvScript, `/`, `\`)
 	}
 
 	testCases := map[string]struct {
@@ -496,14 +505,17 @@ func TestPowershell_GenerateScript(t *testing.T) {
 				fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
 				pwshShell.EOL + pwshShell.EOL +
 				`$ErrorActionPreference = "Stop"` + pwshShell.EOL +
-				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` +
-				pwshShell.EOL + pwshShell.EOL + "}" + pwshShell.EOL + pwshShell.EOL,
+				`echo "Running on $([Environment]::MachineName) via "Test Hostname"..."` + pwshShell.EOL + rmGitLabEnvScript,
 		},
 		"cleanup variables": {
 			stage:           common.BuildStageCleanup,
 			info:            shellInfo,
 			expectedFailure: false,
-			expectedScript:  ``,
+			expectedScript: shebang + "& {" +
+				pwshShell.EOL + pwshShell.EOL +
+				fmt.Sprintf(pwshJSONInitializationScript, shellInfo.Shell) +
+				pwshShell.EOL + pwshShell.EOL +
+				`$ErrorActionPreference = "Stop"` + pwshShell.EOL + rmGitLabEnvScript,
 		},
 		"no script": {
 			stage:           "no_script",

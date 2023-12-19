@@ -30,6 +30,8 @@ const credHelperConfFile = "cred-helper.conf"
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
+const gitlabEnvFileName = "gitlab_runner_env"
+
 type stringQuoter func(string) string
 
 func singleQuote(s string) string {
@@ -285,6 +287,7 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScr
 }
 
 func (b *AbstractShell) writePrepareScript(ctx context.Context, w ShellWriter, info common.ShellScriptInfo) error {
+	w.RmFile(w.TmpFile(gitlabEnvFileName))
 	return nil
 }
 
@@ -388,7 +391,7 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 		w.Variable(variable)
 	}
 
-	gitlabEnvFile := w.TmpFile("gitlab_runner_env")
+	gitlabEnvFile := w.TmpFile(gitlabEnvFileName)
 
 	w.Variable(common.JobVariable{
 		Key:   "GITLAB_ENV",
@@ -1258,29 +1261,21 @@ func (b *AbstractShell) writeArchiveCacheOnFailureScript(
 }
 
 func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
-	skipCleanupStage := true
+	w.RmFile(w.TmpFile(gitlabEnvFileName))
 
 	for _, variable := range info.Build.GetAllVariables() {
 		if !variable.File {
 			continue
 		}
-
-		skipCleanupStage = false
 		w.RmFile(w.TmpFile(variable.Key))
 	}
 
 	if info.Build.IsFeatureFlagOn(featureflags.EnableJobCleanup) {
-		skipCleanupStage = false
-
 		if err := b.writeCleanupBuildDirectoryScript(w, info); err != nil {
 			return err
 		}
 
 		w.RmFile(filepath.Join(info.Build.FullProjectDir(), ".git", "config"))
-	}
-
-	if skipCleanupStage {
-		return common.ErrSkipBuildStage
 	}
 
 	return nil

@@ -55,20 +55,9 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 }
 
 func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	envVarFn := func(name string) string {
-		switch config.Shell {
-		case shells.SNPwsh, shells.SNPowershell:
-			return "$env:" + name
-		default:
-			return "$" + name
-		}
-	}
+	formatter := shellFormatter(config.Shell)
 
-	echoPipeFn := func(v string) string {
-		return `echo '` + v + `' >> `
-	}
-
-	resp, err := common.GetRemoteBuildResponse(echoPipeFn("hello=world") + envVarFn("GITLAB_ENV"))
+	resp, err := common.GetRemoteBuildResponse(formatter.PipeVar("hello=world") + formatter.EnvName("GITLAB_ENV"))
 	require.NoError(t, err)
 
 	build := &common.Build{
@@ -93,17 +82,17 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 		common.Step{
 			Name: "custom-step",
 			Script: []string{
-				`echo ` + envVarFn("GITLAB_ENV"),
-				`echo hellovalue=` + envVarFn("hello"),
-				echoPipeFn("foo=bar") + envVarFn("GITLAB_ENV"),
+				`echo ` + formatter.EnvName("GITLAB_ENV"),
+				`echo hellovalue=` + formatter.EnvName("hello"),
+				formatter.PipeVar("foo=bar") + formatter.EnvName("GITLAB_ENV"),
 			},
 			When: common.StepWhenOnSuccess,
 		},
 		common.Step{
 			Name: common.StepNameAfterScript,
 			Script: []string{
-				`echo foovalue=` + envVarFn("foo"),
-				`echo existing=` + envVarFn("existing"),
+				`echo foovalue=` + formatter.EnvName("foo"),
+				`echo existing=` + formatter.EnvName("existing"),
 			},
 			When: common.StepWhenAlways,
 		},
@@ -127,4 +116,60 @@ func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig,
 	assert.Contains(t, contents, "hellovalue=world")
 	assert.Contains(t, contents, "foovalue=bar")
 	assert.Contains(t, contents, "unknown/path/bar: no matching files")
+}
+
+func RunBuildWithPassingEnvsJobIsolation(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
+	dir := t.TempDir()
+	run := func(response common.JobResponse) string {
+		build := &common.Build{
+			JobResponse: response,
+			Runner:      config,
+		}
+
+		if runtime.GOOS == "linux" && config.Shell == shells.SNPwsh {
+			build.Image.Name = common.TestPwshImage
+		}
+
+		dir := dir
+		build.Runner.RunnerSettings.BuildsDir = filepath.Join(dir, "build")
+		build.Runner.RunnerSettings.CacheDir = filepath.Join(dir, "cache")
+		if setup != nil {
+			setup(t, build)
+		}
+
+		buf := new(bytes.Buffer)
+		trace := &common.Trace{Writer: buf}
+		assert.NoError(t, RunBuildWithTrace(t, build, trace))
+		return buf.String()
+	}
+
+	formatter := shellFormatter(config.Shell)
+
+	job1, err := common.GetRemoteBuildResponse(formatter.PipeVar("job_isolation_test=not_isolated") + formatter.EnvName("GITLAB_ENV"))
+	require.NoError(t, err)
+
+	job2, err := common.GetRemoteBuildResponse(`echo job1_isolation=` + formatter.EnvName("job_isolation_test"))
+	require.NoError(t, err)
+
+	job1Output := run(job1)
+	job2Output := run(job2)
+
+	assert.Contains(t, job1Output, formatter.PipeVar("job_isolation_test=not_isolated")+formatter.EnvName("GITLAB_ENV"))
+	assert.Contains(t, job2Output, "job1_isolation")
+	assert.NotContains(t, job2Output, "job1_isolation=not_isolated")
+}
+
+type shellFormatter string
+
+func (s shellFormatter) EnvName(name string) string {
+	switch s {
+	case shells.SNPwsh, shells.SNPowershell:
+		return "$env:" + name
+	default:
+		return "$" + name
+	}
+}
+
+func (s shellFormatter) PipeVar(variable string) string {
+	return `echo '` + variable + `' >> `
 }
