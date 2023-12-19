@@ -251,7 +251,10 @@ func TestHTTPFetcher(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			resp, err := tc.mockFetcher.Fetch("http://" + tc.mockServer().Listener.Addr().String())
+			server := tc.mockServer()
+			defer server.Close()
+
+			resp, err := tc.mockFetcher.Fetch("http://" + server.Listener.Addr().String())
 			if tc.assertError != nil {
 				tc.assertError(t, err)
 				return
