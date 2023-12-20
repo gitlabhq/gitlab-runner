@@ -1824,7 +1824,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 			Volumes:                      s.getVolumes(),
 			SchedulerName:                s.Config.Kubernetes.SchedulerName,
 			ServiceAccountName:           s.configurationOverwrites.serviceAccount,
-			AutomountServiceAccountToken: s.Config.Kubernetes.GetAutomountServiceAccountTokenConfig(),
+			AutomountServiceAccountToken: s.Config.Kubernetes.AutomountServiceAccountToken,
 			RestartPolicy:                api.RestartPolicyNever,
 			NodeSelector:                 s.configurationOverwrites.nodeSelector,
 			Tolerations:                  s.getPodTolerations(),

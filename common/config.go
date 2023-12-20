@@ -1538,15 +1538,6 @@ func (c *KubernetesConfig) GetDNSConfig() *api.PodDNSConfig {
 	return &config
 }
 
-func (c *KubernetesConfig) GetAutomountServiceAccountTokenConfig() *bool {
-	if c.AutomountServiceAccountToken != nil {
-		return c.AutomountServiceAccountToken
-	}
-
-	defaultAutomountServiceAccountToken := true
-	return &defaultAutomountServiceAccountToken
-}
-
 func (c *KubernetesConfig) GetNodeAffinity() *api.NodeAffinity {
 	var nodeAffinity api.NodeAffinity
 
