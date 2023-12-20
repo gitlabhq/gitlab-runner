@@ -43,7 +43,7 @@ type artifactStatementGenerator struct {
 type generateStatementOptions struct {
 	artifactName string
 	files        map[string]os.FileInfo
-	wd           string
+	artifactsWd  string
 	jobID        int64
 }
 
@@ -94,7 +94,7 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 		return "", err
 	}
 
-	file := filepath.Join(opts.wd, fmt.Sprintf(artifactsStatementFormat, opts.artifactName))
+	file := filepath.Join(opts.artifactsWd, fmt.Sprintf(artifactsStatementFormat, opts.artifactName))
 
 	err = os.WriteFile(file, b, 0o644)
 	return file, err

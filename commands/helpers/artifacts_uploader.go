@@ -192,7 +192,7 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 		metadataFile, err := c.generateStatementToFile(generateStatementOptions{
 			artifactName: c.Name,
 			files:        c.files,
-			wd:           c.wd,
+			artifactsWd:  c.wd,
 			jobID:        c.ID,
 		})
 		if err != nil {

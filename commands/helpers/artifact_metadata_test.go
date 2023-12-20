@@ -227,7 +227,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
-				wd:           tmpDir,
+				artifactsWd:  tmpDir,
 				jobID:        1000,
 			},
 			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
@@ -240,7 +240,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
-				wd:           tmpDir,
+				artifactsWd:  tmpDir,
 				jobID:        1000,
 			},
 			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
@@ -255,8 +255,8 @@ func TestGenerateMetadataToFile(t *testing.T) {
 					tmpFile.Name(): fileInfo{name: tmpFile.Name()},
 					"nonexisting":  fileInfo{name: "nonexisting"},
 				},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactsWd: tmpDir,
+				jobID:       1000,
 			},
 			expectedError: os.ErrNotExist,
 		},
@@ -267,8 +267,8 @@ func TestGenerateMetadataToFile(t *testing.T) {
 				files: map[string]os.FileInfo{
 					tmpFile.Name(): fileInfo{name: tmpFile.Name()},
 					"dir":          fileInfo{name: "im-a-dir", mode: fs.ModeDir}},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactsWd: tmpDir,
+				jobID:       1000,
 			},
 			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
 				return testStatement(common.AppVersion.Revision, g, opts), func() {}
@@ -284,7 +284,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
-				wd:           tmpDir,
+				artifactsWd:  tmpDir,
 				jobID:        1000,
 			},
 			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
