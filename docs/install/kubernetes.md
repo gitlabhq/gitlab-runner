@@ -426,7 +426,6 @@ runners:
 
 Take note of the format. The value is not prefixed by a `name` tag as is the convention in Kubernetes resources. An array of one or more secret names is required, regardless of whether or not you're using multiple registry credentials.
 
-
 ### Providing a custom certificate for accessing GitLab
 
 You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
