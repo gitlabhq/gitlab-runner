@@ -277,9 +277,9 @@ under `MachineOptions`. Below you can see the most common ones.
 | `amazonec2-access-key=XXXX` | The AWS access key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
 | `amazonec2-secret-key=XXXX` | The AWS secret key of the user that has permissions to create EC2 instances, see [AWS credentials](#aws-credentials). |
 | `amazonec2-region=eu-central-1` | The region to use when launching the instance. You can omit this entirely and the default `us-east-1` will be used. |
-| `amazonec2-vpc-id=vpc-xxxxx` | Your [VPC ID](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/drivers/aws.md#vpc-id) to launch the instance in. |
+| `amazonec2-vpc-id=vpc-xxxxx` | Your [VPC ID](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-id) to launch the instance in. |
 | `amazonec2-subnet-id=subnet-xxxx` | The AWS VPC subnet ID. |
-| `amazonec2-zone=x` | If not specified, the [availability zone is `a`](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/drivers/aws.md#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
+| `amazonec2-zone=x` | If not specified, the [availability zone is `a`](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#environment-variables-and-default-values), it needs to be set to the same availability zone as the specified subnet, for example when the zone is `eu-west-1b` it has to be `amazonec2-zone=b` |
 | `amazonec2-use-private-address=true` | Use the private IP address of Docker Machines, but still create a public IP address. Useful to keep the traffic internal and avoid extra costs.|
 | `amazonec2-tags=runner-manager-name,gitlab-aws-autoscaler,gitlab,true,gitlab-runner-autoscale,true` | AWS extra tag key-value pairs, useful to identify the instances on the AWS console. The "Name" [tag](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) is set to the machine name by default. We set the "runner-manager-name" to match the runner name set in `[[runners]]`, so that we can filter all the EC2 instances created by a specific manager setup. |
 | `amazonec2-security-group=xxxx` | AWS VPC security group name, not the security group ID. See [AWS security groups](#aws-security-groups). |
@@ -296,17 +296,17 @@ under `MachineOptions`. Below you can see the most common ones.
 Notes:
 
 - Under `MachineOptions` you can add anything that the
-  AWS Docker Machine driver [supports](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/drivers/aws.md#options). You are highly
+  [AWS Docker Machine driver supports](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#options). You are highly
   encouraged to read Docker's docs as your infrastructure setup may warrant
   different options to be applied.
 - The child instances will use by default Ubuntu 16.04 unless you choose a
   different AMI ID by setting `amazonec2-ami`. Set only
-  [supported base operating systems for Docker Machine](https://github.com/docker/docs/blob/173d3c65f8e7df2a8c0323594419c18086fc3a30/machine/drivers/os-base.md).
+  [supported base operating systems for Docker Machine](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/os-base).
 - If you specify `amazonec2-private-address-only=true` as one of the machine
   options, your EC2 instance won't get assigned a public IP. This is ok if your
   VPC is configured correctly with an Internet Gateway (IGW) and routing is fine,
   but it’s something to consider if you've got a more complex configuration. Read
-  more about [VPC connectivity](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-connectivity).
+  more in [Docker docs about VPC connectivity](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md#vpc-connectivity).
 
 [Other options](../advanced-configuration.md#the-runnersmachine-section)
 under `[runners.machine]` are also available.
