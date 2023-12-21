@@ -1,3 +1,10 @@
+## v16.6.2 (2023-12-21)
+
+### Bug fixes
+
+- Hide docker executor init behind a feature flag !4488
+- Revert "Add custom entrypoint for the build container for Kubernetes executor" changes !4535
+
 ## v16.6.1 (2023-11-24)
 
 ### Bug fixes
