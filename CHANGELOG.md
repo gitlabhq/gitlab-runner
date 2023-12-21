@@ -1,9 +1,63 @@
-## v16.6.2 (2023-12-21)
+## v16.7.0 (2023-12-21)
+
+### New features
+
+- feat(slsa): use in_toto library and update to slsa provenance schema v1 !4514
+- Add 'docker system dial-stdio' support to docker-autoscaler executor !4509
+- Feat: Support passing User to Docker Executor !4483 (Muhammed Ali @ar-mali)
+- Log images used by job !4325
 
 ### Bug fixes
 
-- Hide docker executor init behind a feature flag !4488
 - Revert "Add custom entrypoint for the build container for Kubernetes executor" changes !4535
+- Improve the collapsible element logic !4487
+- Avoid SIGTERM propagation to processes on Windows OS !4524
+- Fix powershell native command error output with Kubernetes executor !4474 (Matthew Bradburn @mbradburn-ext)
+- Use -File to improve pwsh exit status !4468 (Matthew Bradburn @mbradburn-ext)
+- Add a better handling of signal on both Helper and Build container for k8s executor in exec mode !4485
+- Fix broken main !4499
+- Hide docker executor init behind a feature flag !4488
+- Hide docker executor init behind a feature flag !4488
+- Make TestDockerBuildContainerGracefulShutdown less flaky !4479
+
+### Maintenance
+
+- Update alpine Docker tag !4167
+- Fix orphaned links for Autoscaling GitLab Runner on AWS EC2 docs page !3575
+- Fix flaky resolver_url_test.go due to lack of cleanup !4542
+- Fix broken link !4539
+- Troubleshoot more "No URL provided" cases !4502
+- Move section in Kubernetes executor page !4538
+- Update alpha to experiment in k8s executor page !4532
+- Add support for Windows 11 23H2 !4504 (Matthew Bradburn @mbradburn-ext)
+- Add troubleshooting for docker connect failed !4516 (Matthew Bradburn @mbradburn-ext)
+- Document limitation in gcs-fuse-csi-driver for mounting volumes in init container !4527
+- Exclude empty slices during the validation of the config.toml !4520
+- Improve docker executor platform option integration test !4489
+- Add 204 error troubleshooting steps to the k8s executor docs !4508
+- Upgrade fleeting and taskscaler !4510
+- Add clarification about feature flags usage !4503
+- Clarify ability to set other non-root user ids for k8s runner !4513
+- Update "filename" to "file name" !4515
+- Rewrite Image building to Mage to export them for verification !4295
+- Update links to TW team handbook page !4511
+- Generate k8s api permissions docs !4442
+- Separate trace/job log streams !3983
+- Delete docs marked for removal !4507
+- Change RBAC option from "enable" to "create" !4506 (Chen Wu @wuchen)
+- Clarify user membership for docker !4498
+- Change "Experiment` to Beta in supported public cloud instances table !4492
+- Revert "Merge branch 'less-verbose-logging' into 'main'" !4496
+- Make autoscaler integration tests pass !4497
+- Make autoscaler integration tests pass !4497
+- Cross-link Docker in Docker TLS configuration docs !4495
+- Bump some test timeouts !4490
+- Doc | Add new error to the troubleshooting section of instance executor !4475
+- Improve formatting !4484 (Ben Bodenmiller @bbodenmiller)
+- Clarify process tree in kuberenetes build container !4482
+- Recommend a mountpoint other than /Users/Shared !4478 (Matthew Bradburn @mbradburn-ext)
+- Retry package-deb and package-rpm when job times out !4481
+- Bump some test timeouts !4471
 
 ## v16.6.1 (2023-11-24)
 
