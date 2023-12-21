@@ -1982,6 +1982,7 @@ func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{})
 				Variables: common.JobVariables{
 					{Key: "CI_RUNNER_ID", Value: "1000"},
 					{Key: "TEST_VARIABLE", Value: ""},
+					{Key: "SLSA_PROVENANCE_SCHEMA_VERSION", Value: "v1"},
 				},
 				GitInfo: common.GitInfo{
 					RepoURL: "https://gitlab.com/my/repo.git",
@@ -2023,10 +2024,14 @@ func testGenerateArtifactsMetadataData() (common.ShellScriptInfo, []interface{})
 		mock.MatchedBy(parseRFC3339Mock),
 		"--ended-at",
 		mock.MatchedBy(parseRFC3339Mock),
+		"--schema-version",
+		"v1",
 		"--metadata-parameter",
 		"CI_RUNNER_ID",
 		"--metadata-parameter",
 		"TEST_VARIABLE",
+		"--metadata-parameter",
+		"SLSA_PROVENANCE_SCHEMA_VERSION",
 		"--metadata-parameter",
 		"RUNNER_GENERATE_ARTIFACTS_METADATA",
 	}

@@ -1,1 +1,8 @@
-# [GitLab CI provenance](https://github.com/in-toto/attestation/blob/v0.1.0/spec/predicates/provenance.md)
+# GitLab CI provenance
+When enabled with variable **RUNNER_GENERATE_ARTIFACTS_METADATA**, runner produces [SLSA provenance v0.2](https://slsa.dev/spec/v0.2/provenance) statements.
+
+You can configure the runner by setting the variable **SLSA_PROVENANCE_SCHEMA_VERSION**.
+
+The supported schemas versions are:
+* [v0.2](https://slsa.dev/spec/v0.2/provenance)
+* [v1](https://slsa.dev/spec/v1/provenance)

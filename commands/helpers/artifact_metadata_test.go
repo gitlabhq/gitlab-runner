@@ -14,6 +14,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/in-toto/in-toto-golang/in_toto"
+	slsa_common "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
+	slsa_v02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+	slsa_v1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -70,62 +74,122 @@ func TestGenerateMetadataToFile(t *testing.T) {
 	endedAt, err := time.Parse(time.RFC3339, endedAtRFC3339)
 	require.NoError(t, err)
 
-	var testMetadata = func(
+	var testStatementV02 = func(
 		version string,
-		g *artifactMetadataGenerator,
-		opts generateMetadataOptions,
-	) AttestationMetadata {
-		return AttestationMetadata{
-			Type: attestationType,
-			Subject: []AttestationSubject{
-				{
-					Name: tmpFile.Name(),
-					Digest: AttestationDigest{
-						Sha256: hex.EncodeToString(checksum),
+		g *artifactStatementGenerator,
+		opts generateStatementOptions,
+	) *in_toto.ProvenanceStatementSLSA02 {
+		return &in_toto.ProvenanceStatementSLSA02{
+			StatementHeader: in_toto.StatementHeader{
+				Type:          in_toto.StatementInTotoV01,
+				PredicateType: slsa_v02.PredicateSLSAProvenance,
+				Subject: []in_toto.Subject{
+					{
+						Name:   tmpFile.Name(),
+						Digest: slsa_common.DigestSet{"sha256": hex.EncodeToString(checksum)},
 					},
 				},
 			},
-			PredicateType: attestationPredicateType,
-			Predicate: AttestationPredicate{
-				BuildType: fmt.Sprintf(attestationTypeFormat, version),
-				Builder: AttestationPredicateBuilder{
+			Predicate: slsa_v02.ProvenancePredicate{
+				Builder: slsa_common.ProvenanceBuilder{
 					ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
 				},
-				Invocation: AttestationPredicateInvocation{
-					ConfigSource: AttestationPredicateInvocationConfigSource{
+				BuildType: fmt.Sprintf(attestationTypeFormat, version),
+				Invocation: slsa_v02.ProvenanceInvocation{
+					ConfigSource: slsa_v02.ConfigSource{
 						URI: g.RepoURL,
-						Digest: AttestationDigest{
-							Sha256: g.RepoDigest,
+						Digest: slsa_common.DigestSet{
+							"sha256": g.RepoDigest,
 						},
-						EntryPoint: g.JobName,
 					},
-					Environment: AttestationPredicateInvocationEnvironment{
+					Parameters: map[string]interface{}{
+						"testparam": "",
+					},
+					Environment: slsaV02Environment{
 						Name:         g.RunnerName,
 						Executor:     g.ExecutorName,
 						Architecture: common.AppVersion.Architecture,
-						Job:          AttestationPredicateInvocationEnvironmentJob{ID: opts.jobID},
-					},
-					Parameters: AttestationPredicateInvocationParameters{
-						"testparam": "",
+						Job:          slsaV02EnvironmentJob{ID: opts.jobID},
 					},
 				},
-			},
-			Materials: make([]interface{}, 0),
-			Metadata: AttestationMetadataInfo{
-				BuildStartedOn: TimeRFC3339{
-					Time: startedAt,
-				},
-				BuildFinishedOn: TimeRFC3339{
-					Time: endedAt,
-				},
-				Reproducible: false,
-				Completeness: AttestationMetadataInfoCompleteness{
-					Parameters:  true,
-					Environment: true,
-					Materials:   false,
+				Metadata: &slsa_v02.ProvenanceMetadata{
+					BuildStartedOn:  &startedAt,
+					BuildFinishedOn: &endedAt,
+					Reproducible:    false,
+					Completeness: slsa_v02.ProvenanceComplete{
+						Parameters:  true,
+						Environment: true,
+						Materials:   false,
+					},
 				},
 			},
 		}
+	}
+
+	var testsStatementV1 = func(
+		version string,
+		g *artifactStatementGenerator,
+		opts generateStatementOptions,
+	) *in_toto.ProvenanceStatementSLSA1 {
+		return &in_toto.ProvenanceStatementSLSA1{
+			StatementHeader: in_toto.StatementHeader{
+				Type:          in_toto.StatementInTotoV01,
+				PredicateType: slsa_v1.PredicateSLSAProvenance,
+				Subject: []in_toto.Subject{
+					{
+						Name:   tmpFile.Name(),
+						Digest: slsa_common.DigestSet{"sha256": hex.EncodeToString(checksum)},
+					},
+				},
+			},
+			Predicate: slsa_v1.ProvenancePredicate{
+				BuildDefinition: slsa_v1.ProvenanceBuildDefinition{
+					BuildType: fmt.Sprintf(attestationTypeFormat, g.version()),
+					ExternalParameters: map[string]string{
+						"testparam":  "",
+						"entryPoint": g.JobName,
+						"source":     g.RepoURL,
+					},
+					InternalParameters: map[string]string{
+						"name":         g.RunnerName,
+						"executor":     g.ExecutorName,
+						"architecture": common.AppVersion.Architecture,
+						"job":          fmt.Sprint(opts.jobID),
+					},
+					ResolvedDependencies: []slsa_v1.ResourceDescriptor{{
+						URI:    g.RepoURL,
+						Digest: map[string]string{"sha256": g.RepoDigest},
+					}},
+				},
+				RunDetails: slsa_v1.ProvenanceRunDetails{
+					Builder: slsa_v1.Builder{
+						ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
+						Version: map[string]string{
+							"gitlab-runner": version,
+						},
+					},
+					BuildMetadata: slsa_v1.BuildMetadata{
+						InvocationID: fmt.Sprint(opts.jobID),
+						StartedOn:    &startedAt,
+						FinishedOn:   &endedAt,
+					},
+				},
+			},
+		}
+	}
+
+	var testStatement = func(
+		version string,
+		g *artifactStatementGenerator,
+		opts generateStatementOptions) any {
+		switch g.SLSAProvenanceVersion {
+		case slsaProvenanceVersion1:
+			return testsStatementV1(version, g, opts)
+		case slsaProvenanceVersion02:
+			return testStatementV02(version, g, opts)
+		}
+
+		panic("unreachable, invalid statement version")
 	}
 
 	var setVersion = func(version string) (string, func()) {
@@ -137,97 +201,103 @@ func TestGenerateMetadataToFile(t *testing.T) {
 		}
 	}
 
-	var newGenerator = func() *artifactMetadataGenerator {
-		return &artifactMetadataGenerator{
-			RunnerID:         1001,
-			RepoURL:          "testurl",
-			RepoDigest:       "testdigest",
-			JobName:          "testjobname",
-			ExecutorName:     "testexecutorname",
-			RunnerName:       "testrunnername",
-			Parameters:       []string{"testparam"},
-			StartedAtRFC3339: startedAtRFC3339,
-			EndedAtRFC3339:   endedAtRFC3339,
+	var newGenerator = func(slsaVersion string) *artifactStatementGenerator {
+		return &artifactStatementGenerator{
+			RunnerID:              1001,
+			RepoURL:               "testurl",
+			RepoDigest:            "testdigest",
+			JobName:               "testjobname",
+			ExecutorName:          "testexecutorname",
+			RunnerName:            "testrunnername",
+			Parameters:            []string{"testparam"},
+			StartedAtRFC3339:      startedAtRFC3339,
+			EndedAtRFC3339:        endedAtRFC3339,
+			SLSAProvenanceVersion: slsaVersion,
 		}
 	}
 
 	tests := map[string]struct {
-		opts          generateMetadataOptions
-		newGenerator  func() *artifactMetadataGenerator
-		expected      func(*artifactMetadataGenerator, generateMetadataOptions) (AttestationMetadata, func())
+		opts          generateStatementOptions
+		newGenerator  func(slsaVersion string) *artifactStatementGenerator
+		expected      func(*artifactStatementGenerator, generateStatementOptions) (any, func())
 		expectedError error
 	}{
 		"basic": {
 			newGenerator: newGenerator,
-			opts: generateMetadataOptions{
+			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
-				wd:           tmpDir,
+				artifactsWd:  tmpDir,
 				jobID:        1000,
 			},
-			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
+			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
 				version, cleanup := setVersion("v1.0.0")
-				m := testMetadata(version, g, opts)
-				return m, cleanup
+				return testStatement(version, g, opts), cleanup
 			},
 		},
 		"basic version isn't prefixed so use REVISION": {
 			newGenerator: newGenerator,
-			opts: generateMetadataOptions{
+			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
-				wd:           tmpDir,
+				artifactsWd:  tmpDir,
 				jobID:        1000,
 			},
-			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
-				m := testMetadata(common.AppVersion.Revision, g, opts)
-				return m, func() {}
+			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
+				return testStatement(common.AppVersion.Revision, g, opts), func() {}
 			},
 		},
 		"files subject doesn't exist": {
 			newGenerator: newGenerator,
-			opts: generateMetadataOptions{
+			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files: map[string]os.FileInfo{
 					tmpFile.Name(): fileInfo{name: tmpFile.Name()},
 					"nonexisting":  fileInfo{name: "nonexisting"},
 				},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactsWd: tmpDir,
+				jobID:       1000,
 			},
 			expectedError: os.ErrNotExist,
 		},
 		"non-regular file": {
 			newGenerator: newGenerator,
-			opts: generateMetadataOptions{
+			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files: map[string]os.FileInfo{
 					tmpFile.Name(): fileInfo{name: tmpFile.Name()},
 					"dir":          fileInfo{name: "im-a-dir", mode: fs.ModeDir}},
-				wd:    tmpDir,
-				jobID: 1000,
+				artifactsWd: tmpDir,
+				jobID:       1000,
 			},
-			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
-				m := testMetadata(common.AppVersion.Revision, g, opts)
-				return m, func() {}
+			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
+				return testStatement(common.AppVersion.Revision, g, opts), func() {}
 			},
 		},
 		"no parameters": {
-			newGenerator: func() *artifactMetadataGenerator {
-				g := newGenerator()
+			newGenerator: func(v string) *artifactStatementGenerator {
+				g := newGenerator(v)
 				g.Parameters = nil
 
 				return g
 			},
-			opts: generateMetadataOptions{
+			opts: generateStatementOptions{
 				artifactName: "artifact-name",
 				files:        map[string]os.FileInfo{tmpFile.Name(): fileInfo{name: tmpFile.Name()}},
-				wd:           tmpDir,
+				artifactsWd:  tmpDir,
 				jobID:        1000,
 			},
-			expected: func(g *artifactMetadataGenerator, opts generateMetadataOptions) (AttestationMetadata, func()) {
-				m := testMetadata(common.AppVersion.Revision, g, opts)
-				m.Predicate.Invocation.Parameters = map[string]string{}
+			expected: func(g *artifactStatementGenerator, opts generateStatementOptions) (any, func()) {
+				m := testStatement(common.AppVersion.Revision, g, opts)
+				switch m := m.(type) {
+				case *in_toto.ProvenanceStatementSLSA1:
+					m.Predicate.BuildDefinition.ExternalParameters = map[string]string{
+						"entryPoint": g.JobName,
+						"source":     g.RepoURL,
+					}
+				case *in_toto.ProvenanceStatementSLSA02:
+					m.Predicate.Invocation.Parameters = map[string]interface{}{}
+				}
 				return m, func() {}
 			},
 		},
@@ -235,47 +305,102 @@ func TestGenerateMetadataToFile(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			g := tt.newGenerator()
+			for _, v := range []string{slsaProvenanceVersion1, slsaProvenanceVersion02} {
+				t.Run(v, func(t *testing.T) {
+					g := tt.newGenerator(v)
 
-			var expected AttestationMetadata
-			if tt.expected != nil {
-				var cleanup func()
-				expected, cleanup = tt.expected(g, tt.opts)
-				defer cleanup()
+					var expected any
+					if tt.expected != nil {
+						var cleanup func()
+						expected, cleanup = tt.expected(g, tt.opts)
+						defer cleanup()
+					}
+
+					f, err := g.generateStatementToFile(tt.opts)
+					if tt.expectedError == nil {
+						require.NoError(t, err)
+					} else {
+						assert.Empty(t, f)
+						assert.ErrorIs(t, err, tt.expectedError)
+						return
+					}
+
+					filename := filepath.Base(f)
+					assert.Equal(t, fmt.Sprintf(artifactsStatementFormat, tt.opts.artifactName), filename)
+
+					file, err := os.Open(f)
+					require.NoError(t, err)
+					defer file.Close()
+
+					b, err := io.ReadAll(file)
+					require.NoError(t, err)
+
+					indented, err := json.MarshalIndent(expected, "", " ")
+					require.NoError(t, err)
+
+					assert.Equal(t, string(indented), string(b))
+					assert.Contains(t, string(indented), startedAtRFC3339)
+					assert.Contains(t, string(indented), endedAtRFC3339)
+				})
 			}
-
-			f, err := g.generateMetadataToFile(tt.opts)
-			if tt.expectedError == nil {
-				require.NoError(t, err)
-			} else {
-				assert.Empty(t, f)
-				assert.ErrorIs(t, err, tt.expectedError)
-				return
-			}
-
-			filename := filepath.Base(f)
-			assert.Equal(t, fmt.Sprintf(artifactsMetadataFormat, tt.opts.artifactName), filename)
-
-			file, err := os.Open(f)
-			require.NoError(t, err)
-			defer file.Close()
-
-			b, err := io.ReadAll(file)
-			require.NoError(t, err)
-
-			var actual AttestationMetadata
-			err = json.Unmarshal(b, &actual)
-			require.NoError(t, err)
-
-			require.Equal(t, expected, actual)
-
-			// apart from being correct, make sure that the data is also properly formatted
-			indented, err := json.MarshalIndent(expected, "", " ")
-			require.NoError(t, err)
-
-			assert.Equal(t, indented, b)
-			assert.Contains(t, string(indented), startedAtRFC3339)
-			assert.Contains(t, string(indented), endedAtRFC3339)
 		})
 	}
+}
+
+func TestGeneratePredicateV02(t *testing.T) {
+	gen := &artifactStatementGenerator{
+		RunnerID:              1001,
+		RepoURL:               "testurl",
+		RepoDigest:            "testdigest",
+		JobName:               "testjobname",
+		ExecutorName:          "testexecutorname",
+		RunnerName:            "testrunnername",
+		Parameters:            []string{"testparam"},
+		SLSAProvenanceVersion: slsaProvenanceVersion02,
+	}
+
+	startTime := time.Now()
+	endTime := startTime.Add(time.Minute)
+
+	originalVersion := common.AppVersion.Version
+	testVersion := "vTest"
+	common.AppVersion.Version = testVersion
+
+	defer func() {
+		common.AppVersion.Version = originalVersion
+	}()
+
+	actualPredicate := gen.generateSLSAv02Predicate(10001, startTime, endTime)
+
+	expectedBuildType := fmt.Sprintf(attestationTypeFormat, testVersion)
+	assert.Equal(t, expectedBuildType, actualPredicate.BuildType)
+}
+
+func TestGeneratePredicateV1(t *testing.T) {
+	gen := &artifactStatementGenerator{
+		RunnerID:              1001,
+		RepoURL:               "testurl",
+		RepoDigest:            "testdigest",
+		JobName:               "testjobname",
+		ExecutorName:          "testexecutorname",
+		RunnerName:            "testrunnername",
+		Parameters:            []string{"testparam"},
+		SLSAProvenanceVersion: slsaProvenanceVersion1,
+	}
+
+	startTime := time.Now()
+	endTime := startTime.Add(time.Minute)
+
+	originalVersion := common.AppVersion.Version
+	testVersion := "vTest"
+	common.AppVersion.Version = testVersion
+
+	defer func() {
+		common.AppVersion.Version = originalVersion
+	}()
+
+	actualPredicate := gen.generateSLSAv1Predicate(10001, startTime, endTime)
+
+	expectedBuildType := fmt.Sprintf(attestationTypeFormat, testVersion)
+	assert.Equal(t, expectedBuildType, actualPredicate.BuildDefinition.BuildType)
 }

@@ -9,22 +9,24 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/in-toto/in-toto-golang/in_toto"
+	slsa_common "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
+	slsa_v02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+	slsa_v1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
+	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 const (
-	artifactsMetadataFormat   = "%v-metadata.json"
-	attestationType           = "https://in-toto.io/Statement/v0.1"
-	attestationPredicateType  = "https://slsa.dev/provenance/v0.2"
+	artifactsStatementFormat  = "%v-metadata.json"
 	attestationTypeFormat     = "https://gitlab.com/gitlab-org/gitlab-runner/-/blob/%v/PROVENANCE.md"
 	attestationRunnerIDFormat = "%v/-/runners/%v"
 )
 
-type artifactMetadataGenerator struct {
+type artifactStatementGenerator struct {
 	GenerateArtifactsMetadata bool     `long:"generate-artifacts-metadata"`
 	RunnerID                  int64    `long:"runner-id"`
 	RepoURL                   string   `long:"repo-url"`
@@ -35,175 +37,171 @@ type artifactMetadataGenerator struct {
 	Parameters                []string `long:"metadata-parameter"`
 	StartedAtRFC3339          string   `long:"started-at"`
 	EndedAtRFC3339            string   `long:"ended-at"`
+	SLSAProvenanceVersion     string   `long:"schema-version"`
 }
 
-type AttestationMetadata struct {
-	Type          string                  `json:"_type"`
-	Subject       []AttestationSubject    `json:"subject"`
-	PredicateType string                  `json:"predicateType"`
-	Predicate     AttestationPredicate    `json:"predicate"`
-	Metadata      AttestationMetadataInfo `json:"metadata"`
-	// Materials are currently intentionally empty
-	// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28940#note_976823431
-	Materials []interface{} `json:"materials"`
-}
-
-type AttestationSubject struct {
-	Name   string            `json:"name"`
-	Digest AttestationDigest `json:"digest"`
-}
-
-type AttestationDigest struct {
-	Sha256 string `json:"sha256"`
-}
-
-type AttestationPredicate struct {
-	BuildType  string                         `json:"buildType"`
-	Builder    AttestationPredicateBuilder    `json:"builder"`
-	Invocation AttestationPredicateInvocation `json:"invocation"`
-}
-
-type AttestationPredicateBuilder struct {
-	ID string `json:"id"`
-}
-
-type AttestationPredicateInvocation struct {
-	ConfigSource AttestationPredicateInvocationConfigSource `json:"configSource"`
-	Environment  AttestationPredicateInvocationEnvironment  `json:"environment"`
-	Parameters   AttestationPredicateInvocationParameters   `json:"parameters"`
-}
-
-type AttestationPredicateInvocationConfigSource struct {
-	URI        string            `json:"uri"`
-	Digest     AttestationDigest `json:"digest"`
-	EntryPoint string            `json:"entryPoint"`
-}
-
-type AttestationPredicateInvocationEnvironment struct {
-	Name         string                                       `json:"name"`
-	Executor     string                                       `json:"executor"`
-	Architecture string                                       `json:"architecture"`
-	Job          AttestationPredicateInvocationEnvironmentJob `json:"job"`
-}
-
-type AttestationPredicateInvocationEnvironmentJob struct {
-	ID int64 `json:"id"`
-}
-
-type AttestationPredicateInvocationParameters map[string]string
-
-type AttestationMetadataInfo struct {
-	BuildStartedOn  TimeRFC3339                         `json:"buildStartedOn"`
-	BuildFinishedOn TimeRFC3339                         `json:"buildFinishedOn"`
-	Reproducible    bool                                `json:"reproducible"`
-	Completeness    AttestationMetadataInfoCompleteness `json:"completeness"`
-}
-
-type AttestationMetadataInfoCompleteness struct {
-	Parameters  bool `json:"parameters"`
-	Environment bool `json:"environment"`
-	Materials   bool `json:"materials"`
-}
-
-// TimeRFC3339 is used specifically to marshal and unmarshal time to/from RFC3339 strings
-// That's because the metadata is user-facing and using Go's built-in time parsing will not be portable
-type TimeRFC3339 struct {
-	time.Time
-}
-
-func (t *TimeRFC3339) UnmarshalJSON(b []byte) error {
-	var err error
-	t.Time, err = time.Parse(time.RFC3339, strings.Trim(string(b), `"`))
-	return err
-}
-
-func (t TimeRFC3339) MarshalJSON() ([]byte, error) {
-	if t.IsZero() {
-		return nil, nil
-	}
-
-	return []byte(strconv.Quote(t.Time.Format(time.RFC3339))), nil
-}
-
-type generateMetadataOptions struct {
+type generateStatementOptions struct {
 	artifactName string
 	files        map[string]os.FileInfo
-	wd           string
+	artifactsWd  string
 	jobID        int64
 }
 
-func (g *artifactMetadataGenerator) generateMetadataToFile(opts generateMetadataOptions) (string, error) {
-	metadata, err := g.metadata(opts)
+const (
+	slsaProvenanceVersion1       = "v1"
+	slsaProvenanceVersion02      = "v0.2"
+	defaultSLSAProvenanceVersion = slsaProvenanceVersion02
+)
+
+var provenanceSchemaPredicateType = map[string]string{
+	slsaProvenanceVersion1:  slsa_v1.PredicateSLSAProvenance,
+	slsaProvenanceVersion02: slsa_v02.PredicateSLSAProvenance,
+}
+
+func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatementOptions) (string, error) {
+	start, end, err := g.parseTimings()
 	if err != nil {
 		return "", err
 	}
 
-	file := filepath.Join(opts.wd, fmt.Sprintf(artifactsMetadataFormat, opts.artifactName))
+	provenanceVersion := g.SLSAProvenanceVersion
+	if provenanceVersion != slsaProvenanceVersion1 && provenanceVersion != slsaProvenanceVersion02 {
+		logrus.Warnln(fmt.Sprintf("Unknown SLSA provenance version %s, defaulting to %s", provenanceVersion, defaultSLSAProvenanceVersion))
+		provenanceVersion = defaultSLSAProvenanceVersion
+	}
 
-	b, err := json.MarshalIndent(metadata, "", " ")
+	header, err := g.generateStatementHeader(opts.files, provenanceSchemaPredicateType[provenanceVersion])
 	if err != nil {
 		return "", err
 	}
+
+	var statement any
+	switch provenanceVersion {
+	case slsaProvenanceVersion1:
+		statement = &in_toto.ProvenanceStatementSLSA1{
+			StatementHeader: header,
+			Predicate:       g.generateSLSAv1Predicate(opts.jobID, start, end),
+		}
+	case slsaProvenanceVersion02:
+		statement = &in_toto.ProvenanceStatementSLSA02{
+			StatementHeader: header,
+			Predicate:       g.generateSLSAv02Predicate(opts.jobID, start, end),
+		}
+	}
+
+	b, err := json.MarshalIndent(statement, "", " ")
+	if err != nil {
+		return "", err
+	}
+
+	file := filepath.Join(opts.artifactsWd, fmt.Sprintf(artifactsStatementFormat, opts.artifactName))
 
 	err = os.WriteFile(file, b, 0o644)
 	return file, err
 }
 
-func (g *artifactMetadataGenerator) metadata(opts generateMetadataOptions) (AttestationMetadata, error) {
-	subjects, err := g.generateSubjects(opts.files)
-	if err != nil {
-		return AttestationMetadata{}, err
-	}
+func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start time.Time, end time.Time) slsa_v1.ProvenancePredicate {
+	externalParams := g.params()
+	externalParams["entryPoint"] = g.JobName
+	externalParams["source"] = g.RepoURL
 
-	parameters := AttestationPredicateInvocationParameters{}
-	for _, param := range g.Parameters {
-		parameters[param] = ""
-	}
-
-	startedAt, endedAt, err := g.parseTimings()
-	if err != nil {
-		return AttestationMetadata{}, err
-	}
-
-	return AttestationMetadata{
-		Type:          attestationType,
-		Subject:       subjects,
-		PredicateType: attestationPredicateType,
-		Predicate: AttestationPredicate{
-			BuildType: fmt.Sprintf(attestationTypeFormat, g.version()),
-			Builder:   AttestationPredicateBuilder{ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID)},
-			Invocation: AttestationPredicateInvocation{
-				ConfigSource: AttestationPredicateInvocationConfigSource{
-					URI:        g.RepoURL,
-					Digest:     AttestationDigest{Sha256: g.RepoDigest},
-					EntryPoint: g.JobName,
+	return slsa_v1.ProvenancePredicate{
+		BuildDefinition: slsa_v1.ProvenanceBuildDefinition{
+			BuildType:          fmt.Sprintf(attestationTypeFormat, g.version()),
+			ExternalParameters: externalParams,
+			InternalParameters: map[string]string{
+				"name":         g.RunnerName,
+				"executor":     g.ExecutorName,
+				"architecture": common.AppVersion.Architecture,
+				"job":          fmt.Sprint(jobId),
+			},
+			ResolvedDependencies: []slsa_v1.ResourceDescriptor{{
+				URI:    g.RepoURL,
+				Digest: map[string]string{"sha256": g.RepoDigest},
+			}},
+		},
+		RunDetails: slsa_v1.ProvenanceRunDetails{
+			Builder: slsa_v1.Builder{
+				ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
+				Version: map[string]string{
+					"gitlab-runner": g.version(),
 				},
-				Environment: AttestationPredicateInvocationEnvironment{
-					Name:         g.RunnerName,
-					Executor:     g.ExecutorName,
-					Architecture: common.AppVersion.Architecture,
-					Job: AttestationPredicateInvocationEnvironmentJob{
-						ID: opts.jobID,
-					},
-				},
-				Parameters: parameters,
+			},
+			BuildMetadata: slsa_v1.BuildMetadata{
+				InvocationID: fmt.Sprint(jobId),
+				StartedOn:    &start,
+				FinishedOn:   &end,
 			},
 		},
-		Metadata: AttestationMetadataInfo{
-			BuildStartedOn:  TimeRFC3339{Time: startedAt},
-			BuildFinishedOn: TimeRFC3339{Time: endedAt},
+	}
+}
+
+type slsaV02Environment struct {
+	Name         string                `json:"name"`
+	Executor     string                `json:"executor"`
+	Architecture string                `json:"architecture"`
+	Job          slsaV02EnvironmentJob `json:"job"`
+}
+
+type slsaV02EnvironmentJob struct {
+	ID int64 `json:"id"`
+}
+
+func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID int64, start time.Time, end time.Time) slsa_v02.ProvenancePredicate {
+	return slsa_v02.ProvenancePredicate{
+		Builder:   slsa_common.ProvenanceBuilder{ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID)},
+		BuildType: fmt.Sprintf(attestationTypeFormat, g.version()),
+		Invocation: slsa_v02.ProvenanceInvocation{
+			ConfigSource: slsa_v02.ConfigSource{
+				URI: g.RepoURL,
+				Digest: slsa_common.DigestSet{
+					"sha256": g.RepoDigest,
+				},
+			},
+			Parameters: g.params(),
+			Environment: slsaV02Environment{
+				Name:         g.RunnerName,
+				Executor:     g.ExecutorName,
+				Architecture: common.AppVersion.Architecture,
+				Job:          slsaV02EnvironmentJob{ID: jobID},
+			},
+		},
+		Metadata: &slsa_v02.ProvenanceMetadata{
+			BuildStartedOn:  &start,
+			BuildFinishedOn: &end,
 			Reproducible:    false,
-			Completeness: AttestationMetadataInfoCompleteness{
+			Completeness: slsa_v02.ProvenanceComplete{
 				Parameters:  true,
 				Environment: true,
 				Materials:   false,
 			},
 		},
-		Materials: make([]interface{}, 0),
+	}
+}
+
+func (g *artifactStatementGenerator) generateStatementHeader(artifacts map[string]os.FileInfo, predicateType string) (in_toto.StatementHeader, error) {
+	subjects, err := g.generateSubjects(artifacts)
+	if err != nil {
+		return in_toto.StatementHeader{}, err
+	}
+
+	return in_toto.StatementHeader{
+		Type:          in_toto.StatementInTotoV01,
+		PredicateType: predicateType,
+		Subject:       subjects,
 	}, nil
 }
 
-func (g *artifactMetadataGenerator) version() string {
+func (g *artifactStatementGenerator) params() map[string]string {
+	params := make(map[string]string, len(g.Parameters))
+	for _, param := range g.Parameters {
+		params[param] = ""
+	}
+
+	return params
+}
+
+func (g *artifactStatementGenerator) version() string {
 	if strings.HasPrefix(common.AppVersion.Version, "v") {
 		return common.AppVersion.Version
 	}
@@ -211,7 +209,7 @@ func (g *artifactMetadataGenerator) version() string {
 	return common.AppVersion.Revision
 }
 
-func (g *artifactMetadataGenerator) parseTimings() (time.Time, time.Time, error) {
+func (g *artifactStatementGenerator) parseTimings() (time.Time, time.Time, error) {
 	startedAt, err := time.Parse(time.RFC3339, g.StartedAtRFC3339)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
@@ -225,34 +223,39 @@ func (g *artifactMetadataGenerator) parseTimings() (time.Time, time.Time, error)
 	return startedAt, endedAt, nil
 }
 
-func (g *artifactMetadataGenerator) generateSubjects(files map[string]os.FileInfo) ([]AttestationSubject, error) {
-	subjects := make([]AttestationSubject, 0, len(files))
+func (g *artifactStatementGenerator) generateSubjects(files map[string]os.FileInfo) ([]in_toto.Subject, error) {
+	subjects := make([]in_toto.Subject, 0, len(files))
 
 	h := sha256.New()
 	br := bufio.NewReader(nil)
+	subjectGeneratorFunc := func(file string) (in_toto.Subject, error) {
+		f, err := os.Open(file)
+		if err != nil {
+			return in_toto.Subject{}, err
+		}
+		defer f.Close()
+
+		br.Reset(f)
+		h.Reset()
+		if _, err := io.Copy(h, br); err != nil {
+			return in_toto.Subject{}, err
+		}
+
+		digestSet := make(slsa_common.DigestSet, 1)
+		digestSet["sha256"] = hex.EncodeToString(h.Sum(nil))
+
+		return in_toto.Subject{
+			Name:   file,
+			Digest: digestSet,
+		}, nil
+	}
+
 	for file, fi := range files {
 		if !fi.Mode().IsRegular() {
 			continue
 		}
 
-		subject, err := func(file string) (AttestationSubject, error) {
-			f, err := os.Open(file)
-			if err != nil {
-				return AttestationSubject{}, err
-			}
-			defer f.Close()
-
-			br.Reset(f)
-			h.Reset()
-			if _, err := io.Copy(h, br); err != nil {
-				return AttestationSubject{}, err
-			}
-
-			return AttestationSubject{
-				Name:   file,
-				Digest: AttestationDigest{Sha256: hex.EncodeToString(h.Sum(nil))},
-			}, nil
-		}(file)
+		subject, err := subjectGeneratorFunc(file)
 		if err != nil {
 			return nil, err
 		}

@@ -36,7 +36,7 @@ type ArtifactsUploaderCommand struct {
 	common.JobCredentials
 	fileArchiver
 	meter.TransferMeterCommand
-	artifactMetadataGenerator
+	artifactStatementGenerator
 
 	network common.Network
 
@@ -187,11 +187,12 @@ func (c *ArtifactsUploaderCommand) Execute(*cli.Context) {
 	}
 
 	if c.GenerateArtifactsMetadata {
-		logrus.Infof("Generating artifacts metadata")
-		metadataFile, err := c.generateMetadataToFile(generateMetadataOptions{
+		logrus.Infof("Generating artifacts statement")
+
+		metadataFile, err := c.generateStatementToFile(generateStatementOptions{
 			artifactName: c.Name,
 			files:        c.files,
-			wd:           c.wd,
+			artifactsWd:  c.wd,
 			jobID:        c.ID,
 		})
 		if err != nil {
