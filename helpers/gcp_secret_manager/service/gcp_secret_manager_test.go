@@ -5,7 +5,6 @@ package service
 import (
 	"context"
 	"errors"
-	"hash/crc32"
 	"testing"
 
 	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -45,7 +44,7 @@ func TestClient_GetSecret(t *testing.T) {
 		Name: secretName,
 		Payload: &smpb.SecretPayload{
 			Data:       stubData,
-			DataCrc32C: calculateCrc32(stubData),
+			DataCrc32C: calculateCrc32C(stubData),
 		},
 	}
 
@@ -202,13 +201,4 @@ func TestClient_GetSecret(t *testing.T) {
 			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
-}
-
-func calculateCrc32(data []byte) *int64 {
-	var checksum int64
-
-	crc32c := crc32.MakeTable(crc32.Castagnoli)
-	checksum = int64(crc32.Checksum(data, crc32c))
-
-	return &checksum
 }

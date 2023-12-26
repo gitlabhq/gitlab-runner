@@ -116,8 +116,12 @@ func secretVersionResourceName(secret *common.GCPSecretManagerSecret) string {
 }
 
 func validChecksum(payload *smpb.SecretPayload) bool {
-	crc32c := crc32.MakeTable(crc32.Castagnoli)
-	checksum := int64(crc32.Checksum(payload.Data, crc32c))
+	return *calculateCrc32C(payload.Data) == *payload.DataCrc32C
+}
 
-	return checksum == *payload.DataCrc32C
+func calculateCrc32C(data []byte) *int64 {
+	crc32c := crc32.MakeTable(crc32.Castagnoli)
+	checksum := int64(crc32.Checksum(data, crc32c))
+
+	return &checksum
 }
