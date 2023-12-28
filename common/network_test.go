@@ -214,6 +214,103 @@ func TestSecrets_expandVariables(t *testing.T) {
 	}
 }
 
+func TestGCPSecretManagerSecrets_expandVariables(t *testing.T) {
+	secretName := "my-secret-1234"
+	secretVersion := "version-999"
+	projectNumber := "8888"
+	poolId := "my-pool-123"
+	providerId := "my-provider-123"
+	jwt := "my-jwt"
+
+	variables := JobVariables{
+		{Key: "NAME", Value: secretName},
+		{Key: "VERSION", Value: secretVersion},
+		{Key: "PROJECT_NUMBER", Value: projectNumber},
+		{Key: "POOL_ID", Value: poolId},
+		{Key: "PROVIDER_ID", Value: providerId},
+		{Key: "JWT", Value: jwt},
+	}
+
+	tests := map[string]struct {
+		secrets       Secrets
+		assertSecrets func(t *testing.T, secrets Secrets)
+	}{
+		"no secrets defined": {
+			secrets: nil,
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				assert.Nil(t, secrets)
+			},
+		},
+		"empty data": {
+			secrets: Secrets{
+				"VAULT": Secret{
+					GCPSecretManager: &GCPSecretManagerSecret{},
+				},
+			},
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				assert.Equal(t, &GCPSecretManagerSecret{}, secrets["VAULT"].GCPSecretManager)
+			},
+		},
+		"without expansion": {
+			secrets: Secrets{
+				"VAULT": Secret{
+					GCPSecretManager: &GCPSecretManagerSecret{
+						Name:    "my-secret",
+						Version: "latest",
+						Server: GCPSecretManagerServer{
+							ProjectNumber:                        "1234",
+							WorkloadIdentityFederationPoolId:     "pool-id",
+							WorkloadIdentityFederationProviderID: "provider-id",
+							JWT:                                  "jwt",
+						},
+					},
+				},
+			},
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				assert.Equal(t, "my-secret", secrets["VAULT"].GCPSecretManager.Name)
+				assert.Equal(t, "latest", secrets["VAULT"].GCPSecretManager.Version)
+				assert.Equal(t, "1234", secrets["VAULT"].GCPSecretManager.Server.ProjectNumber)
+				assert.Equal(t, "pool-id", secrets["VAULT"].GCPSecretManager.Server.WorkloadIdentityFederationPoolId)
+				assert.Equal(t, "provider-id", secrets["VAULT"].GCPSecretManager.Server.WorkloadIdentityFederationProviderID)
+				assert.Equal(t, "jwt", secrets["VAULT"].GCPSecretManager.Server.JWT)
+			},
+		},
+		"with expansion": {
+			secrets: Secrets{
+				"VAULT": Secret{
+					GCPSecretManager: &GCPSecretManagerSecret{
+						Name:    "$NAME",
+						Version: "$VERSION",
+						Server: GCPSecretManagerServer{
+							ProjectNumber:                        "$PROJECT_NUMBER",
+							WorkloadIdentityFederationPoolId:     "$POOL_ID",
+							WorkloadIdentityFederationProviderID: "$PROVIDER_ID",
+							JWT:                                  "$JWT",
+						},
+					},
+				},
+			},
+			assertSecrets: func(t *testing.T, secrets Secrets) {
+				assert.Equal(t, secretName, secrets["VAULT"].GCPSecretManager.Name)
+				assert.Equal(t, secretVersion, secrets["VAULT"].GCPSecretManager.Version)
+				assert.Equal(t, projectNumber, secrets["VAULT"].GCPSecretManager.Server.ProjectNumber)
+				assert.Equal(t, poolId, secrets["VAULT"].GCPSecretManager.Server.WorkloadIdentityFederationPoolId)
+				assert.Equal(t, providerId, secrets["VAULT"].GCPSecretManager.Server.WorkloadIdentityFederationProviderID)
+				assert.Equal(t, jwt, secrets["VAULT"].GCPSecretManager.Server.JWT)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				tt.secrets.expandVariables(variables)
+				tt.assertSecrets(t, tt.secrets)
+			})
+		})
+	}
+}
+
 func TestAzureKeyVaultSecrets_expandVariables(t *testing.T) {
 	testName := "key-name"
 	testVersion := "key-version"
