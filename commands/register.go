@@ -360,6 +360,10 @@ func (s *RegisterCommand) askExecutorOptions() {
 			s.Docker = docker
 			s.askDocker()
 		},
+		"docker-autoscaler": func() {
+			s.Docker = docker
+			s.askDocker()
+		},
 		"docker-windows": func() {
 			if s.RunnerConfig.Shell == "" {
 				s.Shell = shells.SNPwsh
