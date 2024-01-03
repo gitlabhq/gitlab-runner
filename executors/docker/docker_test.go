@@ -1938,35 +1938,64 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 }
 
 func TestDockerImageWithUser(t *testing.T) {
-	dockerConfig := &common.DockerConfig{
-		User: "test",
+	tests := map[string]struct {
+		runnerUser, jobUser, want string
+		allowedUsers              []string
+		wantErr                   bool
+	}{
+		"no allowed users, neither specified":     {},
+		"no allowed users, runner user specified": {runnerUser: "baba", want: "baba"},
+		"no allowed users, job user specified":    {jobUser: "baba", want: "baba"},
+		"no allowed users, both specified":        {runnerUser: "baba", jobUser: "yaga", want: "baba"},
+
+		"ok allowed users, neither specified":     {allowedUsers: []string{"baba"}},
+		"ok allowed users, runner user specified": {allowedUsers: []string{"baba"}, runnerUser: "baba", want: "baba"},
+		"ok allowed users, job user specified":    {allowedUsers: []string{"baba"}, jobUser: "baba", want: "baba"},
+		"ok allowed users, both specified":        {allowedUsers: []string{"baba"}, runnerUser: "baba", jobUser: "yaga", want: "baba"},
+
+		"bad allowed users, runner user specified": {allowedUsers: []string{"yaga"}, runnerUser: "baba", want: "", wantErr: true},
+		"bad allowed users, job user specified":    {allowedUsers: []string{"yaga"}, jobUser: "baba", want: "", wantErr: true},
+		"bad allowed users, both specified":        {allowedUsers: []string{"blammo"}, runnerUser: "baba", jobUser: "yaga", want: "", wantErr: true},
 	}
-	imageConfig := common.Image{
-		Name: "alpine",
-		ExecutorOptions: common.ImageExecutorOptions{
-			Docker: common.ImageDockerOptions{
-				User: "test",
-			},
-		},
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			dockerConfig := &common.DockerConfig{
+				User:         tt.runnerUser,
+				AllowedUsers: tt.allowedUsers,
+			}
+			imageConfig := common.Image{
+				Name: "alpine",
+				ExecutorOptions: common.ImageExecutorOptions{
+					Docker: common.ImageDockerOptions{
+						User: tt.jobUser,
+					},
+				},
+			}
+
+			cce := func(t *testing.T, config *container.Config, _ *container.HostConfig) {
+				assert.Equal(t, tt.want, config.User)
+			}
+
+			c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
+
+			c.On("ContainerInspect", mock.Anything, "abc").
+				Return(types.ContainerJSON{}, nil).Once()
+
+			err := e.createVolumesManager()
+			require.NoError(t, err)
+
+			err = e.createPullManager()
+			require.NoError(t, err)
+
+			_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
+			if !tt.wantErr {
+				require.NoError(t, err)
+			} else {
+				require.Contains(t, err.Error(), "is not an allowed user")
+			}
+		})
 	}
-
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
-		assert.Equal(t, "test", config.User)
-	}
-
-	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
-
-	c.On("ContainerInspect", mock.Anything, "abc").
-		Return(types.ContainerJSON{}, nil).Once()
-
-	err := e.createVolumesManager()
-	require.NoError(t, err)
-
-	err = e.createPullManager()
-	require.NoError(t, err)
-
-	_, err = e.createContainer(buildContainerType, imageConfig, []string{"/bin/sh"}, []string{})
-	require.NoError(t, err)
 }
 
 func TestCreateHostConfigForServiceHealthCheck(t *testing.T) {
