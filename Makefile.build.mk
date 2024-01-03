@@ -15,7 +15,7 @@ runner-bin-fips:
 		   -o="out/binaries/$(NAME)-$(GOOS)-$(GOARCH)-fips" \
 		   $(PKG)
 
-go-fips-docker: export GO_VERSION ?= 1.20
+go-fips-docker: export GO_VERSION ?= 1.21
 go-fips-docker: export UBI_VERSION ?= $(UBI_FIPS_VERSION)
 go-fips-docker: export BUILD_IMAGE ?= registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$(GO_VERSION)
 go-fips-docker: export GO_FIPS_BASE_IMAGE ?= $(UBI_FIPS_BASE_IMAGE):$(UBI_FIPS_VERSION)
@@ -31,7 +31,7 @@ ubi-fips-base-docker:
 	# Building UBI FIPS base Docker image
 	@./ci/build_ubi_fips_base_image
 
-runner-bin-fips-docker: export GO_VERSION ?= 1.20
+runner-bin-fips-docker: export GO_VERSION ?= 1.21
 runner-bin-fips-docker: export GOOS ?= linux
 runner-bin-fips-docker: export GOARCH ?= amd64
 runner-bin-fips-docker: export BUILD_IMAGE ?= go-fips

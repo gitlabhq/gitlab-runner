@@ -394,7 +394,7 @@ func TestClientInvalidTLSAuth(t *testing.T) {
 		nil,
 	)
 	assert.Equal(t, -1, statusCode, statusText)
-	assert.Contains(t, statusText, "tls: bad certificate")
+	assert.Contains(t, statusText, "tls: certificate required")
 }
 
 func TestClientTLSAuth(t *testing.T) {
