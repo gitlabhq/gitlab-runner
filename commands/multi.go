@@ -943,7 +943,8 @@ func (mr *RunCommand) requestJob(
 		return nil, nil, err
 	}
 
-	if err := errors.Join(jobData.UnsupportedOptions(), jobData.StepsShim()); err != nil {
+	if err := errors.Join(jobData.UnsupportedOptions(),
+		jobData.ValidateStepsJobRequest(mr.executorSupportsNativeSteps(runner))); err != nil {
 		_, _ = trace.Write([]byte(err.Error() + "\n"))
 
 		err = trace.Fail(err, common.JobFailureData{
