@@ -283,7 +283,8 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 		return "", MakeBuildError("setting %s is not allowed, enable `custom_build_dir` feature", overrideKey)
 	}
 
-	relDir, err := filepath.Rel(rootDir, dir)
+	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25913
+	relDir, err := filepath.Rel(helpers.ToSlash(rootDir), helpers.ToSlash(dir))
 	if err != nil {
 		return "", &BuildError{Inner: err}
 	}
