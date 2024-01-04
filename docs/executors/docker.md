@@ -626,7 +626,7 @@ By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker im
 
 To ensure a job can run, its Docker image must:
 
-- Provide `sh` or `bash`
+- Provide `sh` or `bash` and `grep`
 - Define an `ENTRYPOINT` that starts a shell when passed `sh`/`bash` as argument
 
 The Docker Executor runs the job's container with an equivalent of the following command:
