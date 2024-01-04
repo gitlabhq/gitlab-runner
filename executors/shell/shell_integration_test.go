@@ -1830,3 +1830,48 @@ func TestBuildCacheHelper(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildWithCustomClonePath(t *testing.T) {
+	tests := map[string]string{
+		"using configured build dir": "",
+		// For test isolation we always specify a unique builds dir, appending
+		// `/builds` will test the case when builds_dir is not configured and we
+		// automatically append `/builds` to PWD.
+		"appending default /builds when no build dir configured": "/builds",
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				var cmd string
+				switch shell {
+				case "powershell", "pwsh":
+					cmd = "Get-Item -Path $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+				case "cmd":
+					cmd = `dir "%CI_BUILDS_DIR%/go/src/gitlab.com/gitlab-org/repo"`
+				default:
+					cmd = "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
+				}
+
+				jobResponse, err := common.GetRemoteBuildResponse(cmd)
+				require.NoError(t, err)
+
+				build := newBuild(t, jobResponse, shell)
+
+				build.Runner.CustomBuildDir = &common.CustomBuildDir{Enabled: true}
+				build.Runner.BuildsDir = build.Runner.BuildsDir + tt
+
+				build.Variables = append(
+					build.Variables,
+					common.JobVariable{
+						Key: "GIT_CLONE_PATH",
+						Value: "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
+					},
+				)
+
+				err = buildtest.RunBuild(t, build)
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
