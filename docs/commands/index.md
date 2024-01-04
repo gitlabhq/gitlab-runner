@@ -688,14 +688,16 @@ Here are two ways to prevent this:
 
 - Register the runner as a local service (like `systemd`) with `SIGQUIT` as the kill
   signal, and use `gitlab-runner stop` or `systemctl stop gitlab-runner.service`.
-  Here is an example from the configuration of the shared runners on GitLab.com:
+  Here is an example configuration to enable this behavior:
 
   ```ini
   ; /etc/systemd/system/gitlab-runner.service.d/kill.conf
   [Service]
   KillSignal=SIGQUIT
-  TimeoutStopSec=__REDACTED__
+  TimeoutStopSec=infinity
   ```
+
+  - To apply the configuration change, after you create this file, reload `systemd` with `systemctl daemon-reload`.
 
 - Manually kill the process with `kill -SIGQUIT <pid>`. You have to find the `pid`
   of the main `gitlab-runner` process. You can find this by looking at logs, as
