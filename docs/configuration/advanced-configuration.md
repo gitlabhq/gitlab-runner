@@ -223,6 +223,19 @@ If the runner can reach the node on `192.168.1.23`, set the `clone_url` to `http
 If the `clone_url` is set, the runner constructs a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
+### How `unhealthy_requests_limit` and `unhealthy_interval` works
+
+When a GitLab instance is unavailable for an extended period of time (for example, during a 
+version upgrade), the runners configured for that instance become idle and 
+do not resume job processing for 30-60 minutes after 
+the GitLab instance is available again.
+
+To increase or decrease the duration that runners are idle, change the `unhealthy_interval` setting. 
+
+To change the number of times the runner attempts to connect to the GitLab server and
+receive an unhealthy sleep before becoming idle, change the `unhealthy_requests_limit` setting. 
+For more information, see [How `check_interval` works](advanced-configuration.md#how-check_interval-works).
+
 ## The executors
 
 The following executors are available.
