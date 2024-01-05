@@ -230,7 +230,7 @@ version upgrade), the runners configured for that instance become idle and
 do not resume job processing for 30-60 minutes after 
 the GitLab instance is available again.
 
-To increase or decrease the duration  that runners are idle, change the `unhealthy_interval` setting. 
+To increase or decrease the duration that runners are idle, change the `unhealthy_interval` setting. 
 
 To change the number of times the runner attempts to connect to the GitLab server and
 receive an unhealthy sleep before becoming idle, change the `unhealthy_requests_limit` setting. 
