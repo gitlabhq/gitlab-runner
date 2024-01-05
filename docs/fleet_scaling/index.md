@@ -1,9 +1,11 @@
 ---
 stage: Verify
 group: Runner
-info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: >-
+  To determine the technical writer assigned to the Stage/Group associated with
+  this page, see
+  https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
-
 # Plan and operate a fleet of shared runners
 
 This guide contains best practices for scaling a fleet of runners in a shared service model.
@@ -137,13 +139,44 @@ manager-only configuration, the runner agent is itself not executing any CI/CD j
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.
 - The pods used for job execution typically require more compute and memory resources than the pod that hosts the runner manager.
 
-### Reusing a runner configuration
+#### Reusing a runner configuration
 
-Runners registered with the same authentication token and different `system_id` values become grouped under a single runner. Grouped runners can be reused to run different jobs by multiple runner managers.
+Each runner manager associated with the same runner authentication token is assigned a `system_id` identifier.
+The `system_id` identifies the machine where the runner is being used. Runners registered with the same
+authentication token and different `system_id` values are grouped under a single runner.
+Grouped runners can be reused to run different jobs by multiple runner managers.
 
-The `system_id` is generated each time the GitLab Runner application starts and when the
-configuration is saved, and identifies the machine where the runner is being used.
-The `system_id` is saved to the `.runner_system_id` file, in the same folder as the `config.toml`.
+GitLab Runner generates the `system_id` at startup or when the configuration is saved. The `system_id` is saved to the
+`.runner_system_id` file in the same directory as the
+[`config.toml`](../configuration/advanced-configuration.md), and displays in job logs and the runner
+administration page.
+
+##### Generation of `system_id` identifiers
+
+To generate the `system_id`, GitLab Runner attempts to derive a unique system identifier from hardware identifiers
+(for instance, `/etc/machine-id` in some Linux distributions).
+If not successful, GitLab Runner uses a random identifier to generate the `system_id`.
+
+The `system_id` has one the following prefixes:
+
+- `r_`: GitLab Runner assigned a random identifier.
+- `s_`: GitLab Runner assigned a unique system identifier from hardware identifiers.
+
+It is important to take this into account when creating container images for example, so that the `system_id` is not
+hard-coded into the image. If the `system_id` is hard-coded, you cannot distinguish between hosts
+executing a given job.
+
+##### Delete runners and runner managers
+
+To delete runners and runner managers registered with a runner registration token (deprecated), use the `gitlab-runner unregister`
+command.
+
+To delete runners and runner managers created with a runner authentication token, use the
+[UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#delete-shared-runners) or
+[API](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner).
+Runners created with a runner authentication token are reusable configurations that can be reused in multiple machines.
+If you use the [`gitlab-runner unregister`](../commands/index.md#gitlab-runner-unregister) command, only the
+runner manager is deleted, not the runner.
 
 ## Configure instance-level shared runners
 
