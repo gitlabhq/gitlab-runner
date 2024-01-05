@@ -225,17 +225,16 @@ of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
 ### How `unhealthy_requests_limit` and `unhealthy_interval` works
 
-When a GitLab instance is unavailable for an extended period of time (e.g. during a 
-version upgrade), the GitLab runners configured for that instance will "sleep" and 
-will not resume job processing for (from customer observation) 30-60 minutes after 
+When a GitLab instance is unavailable for an extended period of time (for example, during a 
+version upgrade), the runners configured for that instance become idle and 
+do not resume job processing for 30-60 minutes after 
 the GitLab instance is available again.
 
-By adjusting the `unhealthy_interval` you can shorten or lengthen the duration for which the 
-runner will sleep for. 
+To increase or decrease the duration  that runners are idle, change the `unhealthy_interval` setting. 
 
-By adjusting the `unhealthy_requests_limit` you can change the number of times that
-the runner will attempt to connect to the GitLab server and recieve an unhealthy state before
-going into sleep. To understand how long that is please see the [How `check_interval` works](advanced-configuration.md#how-check_interval-works)
+To change the number of times the runner attempts to connect to the GitLab server and
+receive an unhealthy sleep before becoming idle, change the `unhealthy_requests_limit` setting. 
+For more information, see [How `check_interval` works](advanced-configuration.md#how-check_interval-works).
 
 ## The executors
 
