@@ -662,6 +662,21 @@ func (e *executor) createContainerConfig(
 	return config
 }
 
+func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, error) {
+	// runner config takes precedence
+	user := e.Config.Docker.User
+	if user == "" {
+		user = imageDefinition.ExecutorOptions.Docker.User
+	}
+
+	if !e.Config.Docker.UserIsAllowed(user) {
+		return "", fmt.Errorf("user %q is not an allowed user: %v",
+			user, e.Config.Docker.AllowedUsers)
+	}
+
+	return user, nil
+}
+
 func (e *executor) createHostConfig() (*container.HostConfig, error) {
 	nanoCPUs, err := e.Config.Docker.GetNanoCPUs()
 	if err != nil {
