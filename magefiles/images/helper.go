@@ -163,7 +163,7 @@ func AssembleReleaseHelper(flavor, prefix string) build.TargetBlueprint[build.Co
 		builds.data = append(builds.data, helperBuild{
 			archive:  fmt.Sprintf("out/helper-images/prebuilt-%s-x86_64-pwsh.tar.xz", flavor),
 			platform: platformMap["x86_64"],
-			tags:     newHelperTagsList(prefix, "-pwsh", "arch", imageName, registryImage, build.IsLatest()),
+			tags:     newHelperTagsList(prefix, "-pwsh", "x86_64", imageName, registryImage, build.IsLatest()),
 		})
 	}
 
