@@ -29,7 +29,6 @@ const (
 	// DefaultEdgeFlavor is the default flavor for architectures where there is no stable base distro available, like riscv64.
 	DefaultEdgeFlavor = "alpine-edge"
 
-	headRevision       = "HEAD"
 	latestImageVersion = "latest"
 )
 

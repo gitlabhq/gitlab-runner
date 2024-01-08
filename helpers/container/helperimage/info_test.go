@@ -30,7 +30,7 @@ func TestGetInfo(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.osType, func(t *testing.T) {
-			_, err := Get(headRevision, Config{OSType: test.osType, KernelVersion: test.version})
+			_, err := Get("HEAD", Config{OSType: test.osType, KernelVersion: test.version})
 
 			assert.ErrorIs(t, err, test.expectedError)
 		})
@@ -52,7 +52,7 @@ func Test_imageRevision(t *testing.T) {
 		expectedTag string
 	}{
 		{
-			revision:    headRevision,
+			revision:    "HEAD",
 			expectedTag: latestImageVersion,
 		},
 		{
