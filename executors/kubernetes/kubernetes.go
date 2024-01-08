@@ -439,7 +439,7 @@ func (s *executor) prepareHelperImage() (helperimage.Info, error) {
 		}
 	}
 
-	return helperimage.Get(common.REVISION, config)
+	return helperimage.Get(common.VERSION, config)
 }
 
 func (s *executor) retrieveHelperImageConfig() helperimage.Config {

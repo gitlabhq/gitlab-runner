@@ -53,7 +53,7 @@ func Test_imageRevision(t *testing.T) {
 	}{
 		{
 			revision:    headRevision,
-			expectedTag: latestImageRevision,
+			expectedTag: latestImageVersion,
 		},
 		{
 			revision:    "1234",
@@ -63,7 +63,26 @@ func Test_imageRevision(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.revision, func(t *testing.T) {
-			assert.Equal(t, test.expectedTag, imageRevision(test.revision))
+			assert.Equal(t, test.expectedTag, imageVersion(test.revision))
+		})
+	}
+}
+
+func TestImageVersion(t *testing.T) {
+	tests := []struct {
+		version     string
+		expectedTag string
+	}{
+		{version: "1.2.3", expectedTag: "v1.2.3"},
+		{version: "16.6.0~beta.105.gd2263193", expectedTag: "v16.6.0"},
+		{version: "development", expectedTag: "latest"},
+		{version: "", expectedTag: "latest"},
+		{version: "head", expectedTag: "latest"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.version, func(t *testing.T) {
+			assert.Equal(t, test.expectedTag, imageVersion(test.version))
 		})
 	}
 }
