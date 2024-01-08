@@ -72,6 +72,7 @@ create_package() {
     fpm \
         --package "out/${packageType}/${PACKAGE_NAME}_${PACKAGE_ARCH}${package_postfix}.${packageType}" \
         --force \
+        --debug \
         --input-type dir \
         --output-type "${packageType}" \
         \
