@@ -38,7 +38,7 @@ variables:
   ALPINE_317_VERSION: "3.17.6"
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.18\..+/
   ALPINE_318_VERSION: "3.18.5"
-  # renovate: datasource=docker depName=alpine allowedVersions=/3\.18\..+/
+  # renovate: datasource=docker depName=alpine allowedVersions=/3\.19\..+/
   ALPINE_319_VERSION: "3.19.0"
   # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
   UBUNTU_VERSION: "20.04"
