@@ -96,6 +96,8 @@ type RunCommand struct {
 	sentryLogHookMutex sync.Mutex
 	sentryLogHook      sentry.LogHook
 
+	networkMutex sync.Mutex
+
 	prometheusLogHook prometheus_helper.LogHook
 
 	failuresCollector    *prometheus_helper.FailuresCollector
@@ -355,6 +357,12 @@ func (mr *RunCommand) reloadConfig() error {
 	mr.sentryLogHookMutex.Lock()
 	mr.sentryLogHook = slh
 	mr.sentryLogHookMutex.Unlock()
+
+	if config.ConnectionMaxAge != nil && mr.network != nil {
+		mr.networkMutex.Lock()
+		mr.network.SetConnectionMaxAge(*config.ConnectionMaxAge)
+		mr.networkMutex.Unlock()
+	}
 
 	mr.configReloaded <- 1
 

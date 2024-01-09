@@ -4,6 +4,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -2239,6 +2240,49 @@ func Test_Docker_UserIsAllowed(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.want, cfg.IsUserAllowed(tt.user))
+		})
+	}
+}
+
+func TestLoadConfig(t *testing.T) {
+	tests := map[string]struct {
+		config         string
+		validateConfig func(t *testing.T, config *Config)
+		expectedErr    string
+	}{
+		"parse defaults": {
+			config: ``,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Equal(t, 0, len(config.Runners))
+				require.Equal(t, 15*time.Minute, *config.ConnectionMaxAge)
+			},
+		},
+		"connection max age set": {
+			config: `connection_max_age = "1s"`,
+			validateConfig: func(t *testing.T, config *Config) {
+				require.Equal(t, 0, len(config.Runners))
+				require.Equal(t, 1*time.Second, *config.ConnectionMaxAge)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			tempFile, err := os.CreateTemp("", "test_config")
+			require.NoError(t, err)
+			defer os.Remove(tempFile.Name())
+			defer tempFile.Close()
+
+			_, err = tempFile.WriteString(tt.config)
+			require.NoError(t, err)
+
+			cfg := NewConfig()
+			err = cfg.LoadConfig(tempFile.Name())
+			require.NoError(t, err)
+
+			if tt.validateConfig != nil {
+				tt.validateConfig(t, cfg)
+			}
 		})
 	}
 }

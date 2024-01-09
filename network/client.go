@@ -56,15 +56,17 @@ const (
 
 type client struct {
 	http.Client
-	url             *url.URL
-	caFile          string
-	certFile        string
-	keyFile         string
-	caData          []byte
-	updateTime      time.Time
-	lastUpdate      string
-	requestBackOffs map[string]*backoff.Backoff
-	lock            sync.Mutex
+	url              *url.URL
+	caFile           string
+	certFile         string
+	keyFile          string
+	caData           []byte
+	updateTime       time.Time
+	lastIdleRefresh  time.Time
+	lastUpdate       string
+	requestBackOffs  map[string]*backoff.Backoff
+	connectionMaxAge time.Duration
+	lock             sync.Mutex
 
 	requester requester
 }
@@ -104,8 +106,36 @@ func (n *client) ensureTLSConfig() {
 	// create or update transport
 	if n.Transport == nil {
 		n.updateTime = time.Now()
+		n.lastIdleRefresh = time.Now()
 		n.createTransport()
 	}
+}
+
+// To ensure long-lived TLS connections pick up rotated certificates
+// and to ensure load balancers distribute connections evenly, limit
+// the age of a connection to 15 minutes. Go has an upstream proposal
+// to do this in https://github.com/golang/go/issues/54429, but this
+// feature is not yet available.
+func (n *client) ensureTransportMaxAge() {
+	if n.connectionMaxAge == 0 {
+		return
+	}
+
+	if n.Transport == nil {
+		return
+	}
+
+	elapsed := time.Since(n.lastIdleRefresh)
+	if elapsed <= n.connectionMaxAge {
+		return
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"elapsed_s": elapsed.Seconds(),
+		"max_age_s": n.connectionMaxAge.Seconds(),
+	}).Debug("Closing idle connections")
+	n.CloseIdleConnections()
+	n.lastIdleRefresh = time.Now()
 }
 
 func (n *client) addTLSCA(tlsConfig *tls.Config) {
@@ -250,6 +280,7 @@ func (n *client) do(
 	}
 
 	n.ensureTLSConfig()
+	n.ensureTransportMaxAge()
 
 	res, err := n.requester.Do(req)
 	if err != nil {
@@ -530,6 +561,10 @@ func (n *client) findCertificate(certificate *string, base string, name string) 
 }
 
 func newClient(requestCredentials requestCredentials) (*client, error) {
+	return newClientWithMaxAge(requestCredentials, 0)
+}
+
+func newClientWithMaxAge(requestCredentials requestCredentials, connectionMaxAge time.Duration) (*client, error) {
 	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
 		return nil, err
@@ -540,11 +575,12 @@ func newClient(requestCredentials requestCredentials) (*client, error) {
 	}
 
 	c := &client{
-		url:             url,
-		caFile:          requestCredentials.GetTLSCAFile(),
-		certFile:        requestCredentials.GetTLSCertFile(),
-		keyFile:         requestCredentials.GetTLSKeyFile(),
-		requestBackOffs: make(map[string]*backoff.Backoff),
+		url:              url,
+		caFile:           requestCredentials.GetTLSCAFile(),
+		certFile:         requestCredentials.GetTLSCertFile(),
+		keyFile:          requestCredentials.GetTLSKeyFile(),
+		requestBackOffs:  make(map[string]*backoff.Backoff),
+		connectionMaxAge: connectionMaxAge,
 	}
 	c.requester = newRateLimitRequester(&c.Client)
 

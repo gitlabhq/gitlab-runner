@@ -910,6 +910,7 @@ func NewPatchTraceResult(sentOffset int, state PatchState, newUpdateInterval int
 
 //go:generate mockery --name=Network --inpackage
 type Network interface {
+	SetConnectionMaxAge(time.Duration)
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials, systemID string) *VerifyRunnerResponse
 	UnregisterRunner(config RunnerCredentials) bool
