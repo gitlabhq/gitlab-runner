@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/exp/slices"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -35,8 +36,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
 )
 
-type DockerPullPolicy string
-type DockerSysCtls map[string]string
+type (
+	DockerPullPolicy string
+	DockerSysCtls    map[string]string
+)
 
 type KubernetesHookHandlerType string
 
@@ -128,6 +131,26 @@ func (c DockerConfig) GetAllowedPullPolicies() ([]DockerPullPolicy, error) {
 	return policies, nil
 }
 
+func (c DockerConfig) IsUserAllowed(user string) bool {
+	// default image user is allowed.
+	if user == "" {
+		return true
+	}
+
+	// if neither a user nor allowed-users have been specified in the runner config, any user is allowed.
+	if len(c.AllowedUsers) == 0 && c.User == "" {
+		return true
+	}
+
+	// if allowed-users was not configured, it defaults to the single user configured in the runner.
+	allowedUsers := c.AllowedUsers
+	if len(allowedUsers) == 0 {
+		allowedUsers = []string{c.User}
+	}
+
+	return slices.Contains(allowedUsers, user)
+}
+
 func (c KubernetesConfig) GetAllowedPullPolicies() ([]api.PullPolicy, error) {
 	if len(c.AllowedPullPolicies) == 0 {
 		return c.GetPullPolicies()
@@ -185,6 +208,7 @@ type DockerConfig struct {
 	ServicesPrivileged         *bool              `toml:"services_privileged,omitempty" json:"services_privileged,omitempty" long:"services_privileged" env:"DOCKER_SERVICES_PRIVILEGED" description:"When set this will give or remove extended privileges to container services"`
 	DisableEntrypointOverwrite bool               `toml:"disable_entrypoint_overwrite,omitzero" json:"disable_entrypoint_overwrite" long:"disable-entrypoint-overwrite" env:"DOCKER_DISABLE_ENTRYPOINT_OVERWRITE" description:"Disable the possibility for a container to overwrite the default image entrypoint"`
 	User                       string             `toml:"user,omitempty" json:"user" long:"user" env:"DOCKER_USER" description:"Run all commands in the container as the specified user."`
+	AllowedUsers               []string           `toml:"allowed_users,omitempty" json:"allowed_users" long:"allowed_users" env:"DOCKER_ALLOWED_USERS" description:"List of allowed users under which to run commands in the build container."`
 	GroupAdd                   []string           `toml:"group_add" json:"group_add,omitempty" long:"group-add" env:"DOCKER_GROUP_ADD" description:"Add additional groups to join"`
 	UsernsMode                 string             `toml:"userns_mode,omitempty" json:"userns_mode" long:"userns" env:"DOCKER_USERNS_MODE" description:"User namespace to use"`
 	CapAdd                     []string           `toml:"cap_add" json:"cap_add,omitempty" long:"cap-add" env:"DOCKER_CAP_ADD" description:"Add Linux capabilities"`
@@ -1544,7 +1568,7 @@ func (c *LabelSelector) GetLabelSelectorMatchExpressions() []metav1.LabelSelecto
 	var labelSelectorRequirement []metav1.LabelSelectorRequirement
 
 	for _, label := range c.MatchExpressions {
-		var expression = metav1.LabelSelectorRequirement{
+		expression := metav1.LabelSelectorRequirement{
 			Key:      label.Key,
 			Operator: metav1.LabelSelectorOperator(label.Operator),
 			Values:   label.Values,
@@ -1612,7 +1636,7 @@ func (c *WeightedPodAffinityTerm) GetWeightedPodAffinityTerm() api.WeightedPodAf
 }
 
 func (c *NodeSelectorTerm) GetNodeSelectorTerm() api.NodeSelectorTerm {
-	var nodeSelectorTerm = api.NodeSelectorTerm{}
+	nodeSelectorTerm := api.NodeSelectorTerm{}
 	for _, expression := range c.MatchExpressions {
 		nodeSelectorTerm.MatchExpressions = append(
 			nodeSelectorTerm.MatchExpressions,

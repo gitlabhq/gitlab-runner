@@ -2213,3 +2213,32 @@ func TestConfig_GetCleanupResourcesTimeout(t *testing.T) {
 		})
 	}
 }
+
+func Test_Docker_UserIsAllowed(t *testing.T) {
+	tests := map[string]struct {
+		user, runnerUser string
+		allowedUsers     []string
+		want             bool
+	}{
+		"no allowed users, neither specified":     {want: true},
+		"no allowed users, runner user specified": {runnerUser: "baba", want: true},
+		"no allowed users, job user specified":    {user: "baba", want: true},
+		"no allowed users, both specified":        {runnerUser: "baba", user: "yaga", want: false},
+
+		"allowed users, neither specified":     {allowedUsers: []string{"baba"}, want: true},
+		"allowed users, runner user specified": {allowedUsers: []string{"baba"}, runnerUser: "yaga", want: true},
+		"allowed users, job user specified":    {allowedUsers: []string{"baba"}, runnerUser: "yaga", user: "baba", want: true},
+		"allowed users, both specified":        {allowedUsers: []string{"baba"}, runnerUser: "yaga", user: "yaga", want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			cfg := DockerConfig{
+				User:         tt.runnerUser,
+				AllowedUsers: tt.allowedUsers,
+			}
+
+			assert.Equal(t, tt.want, cfg.IsUserAllowed(tt.user))
+		})
+	}
+}

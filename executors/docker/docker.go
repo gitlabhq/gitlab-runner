@@ -586,7 +586,10 @@ func (e *executor) createContainer(
 	// A container of the same type is created _once_ per execution and re-used.
 	containerName := e.getProjectUniqRandomizedName() + "-" + containerType
 
-	config := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
+	config, err := e.createContainerConfig(containerType, imageDefinition, image.ID, hostname, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create container configuration: %w", err)
+	}
 
 	hostConfig, err := e.createHostConfig()
 	if err != nil {
@@ -631,7 +634,7 @@ func (e *executor) createContainerConfig(
 	imageID string,
 	hostname string,
 	cmd []string,
-) *container.Config {
+) (*container.Config, error) {
 	labels := e.prepareContainerLabels(map[string]string{"type": containerType})
 	config := &container.Config{
 		Image:        imageID,
@@ -649,17 +652,32 @@ func (e *executor) createContainerConfig(
 
 	// user config should only be set in build containers
 	if containerType == buildContainerType {
-		config.User = e.Config.Docker.User
-		// Takes precedence over Global Docker User
-		if imageDefinition.ExecutorOptions.Docker.User != "" {
-			config.User = imageDefinition.ExecutorOptions.Docker.User
+		if user, err := e.getBuildContainerUser(imageDefinition); err != nil {
+			return nil, err
+		} else {
+			config.User = user
 		}
 	}
 
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
 	config.MacAddress = e.Config.Docker.MacAddress
 
-	return config
+	return config, nil
+}
+
+func (e *executor) getBuildContainerUser(imageDefinition common.Image) (string, error) {
+	// runner config takes precedence
+	user := e.Config.Docker.User
+	if user == "" {
+		user = imageDefinition.ExecutorOptions.Docker.User
+	}
+
+	if !e.Config.Docker.IsUserAllowed(user) {
+		return "", fmt.Errorf("user %q is not an allowed user: %v",
+			user, e.Config.Docker.AllowedUsers)
+	}
+
+	return user, nil
 }
 
 func (e *executor) createHostConfig() (*container.HostConfig, error) {
