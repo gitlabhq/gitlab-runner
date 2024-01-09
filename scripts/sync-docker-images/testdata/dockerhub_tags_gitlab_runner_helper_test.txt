@@ -28,6 +28,11 @@ alpine3.18-s390x-v16.1.0
 alpine3.18-arm64-v16.1.0
 alpine3.18-arm-v16.1.0
 alpine3.18-x86_64-v16.1.0
+alpine3.19-ppc64le-v16.1.0
+alpine3.19-s390x-v16.1.0
+alpine3.19-arm64-v16.1.0
+alpine3.19-arm-v16.1.0
+alpine3.19-x86_64-v16.1.0
 alpine-latest-ppc64le-v16.1.0
 alpine-latest-s390x-v16.1.0
 alpine-latest-arm64-v16.1.0

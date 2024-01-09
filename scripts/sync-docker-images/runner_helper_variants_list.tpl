@@ -28,6 +28,11 @@ alpine3.18-s390x-{{ .Revision }}
 alpine3.18-arm64-{{ .Revision }}
 alpine3.18-arm-{{ .Revision }}
 alpine3.18-x86_64-{{ .Revision }}
+alpine3.19-ppc64le-{{ .Revision }}
+alpine3.19-s390x-{{ .Revision }}
+alpine3.19-arm64-{{ .Revision }}
+alpine3.19-arm-{{ .Revision }}
+alpine3.19-x86_64-{{ .Revision }}
 alpine-latest-ppc64le-{{ .Revision }}
 alpine-latest-s390x-{{ .Revision }}
 alpine-latest-arm64-{{ .Revision }}
@@ -75,6 +80,11 @@ alpine3.18-s390x-latest
 alpine3.18-arm64-latest
 alpine3.18-arm-latest
 alpine3.18-x86_64-latest
+alpine3.19-ppc64le-latest
+alpine3.19-s390x-latest
+alpine3.19-arm64-latest
+alpine3.19-arm-latest
+alpine3.19-x86_64-latest
 alpine-latest-ppc64le-latest
 alpine-latest-s390x-latest
 alpine-latest-arm64-latest

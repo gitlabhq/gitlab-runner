@@ -1,5 +1,3 @@
-//go:build scripts
-
 package main
 
 import (
