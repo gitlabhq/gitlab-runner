@@ -1123,7 +1123,7 @@ Images are built with multiple versions of Alpine Linux, so you can use a newer 
 
 For the helper image, change the `helper_image_flavor` or read the [Helper image](#helper-image) section.
 
-For the GitLab Runner image, follow the same logic, where alpine, alpine3.15, alpine3.16, alpine3.17, alpine3.18 or alpine-latest is used as a prefix in the image, before the version:
+For the GitLab Runner image, follow the same logic, where alpine, alpine3.15, alpine3.16, alpine3.17, alpine3.18, alpine3.19 or alpine-latest is used as a prefix in the image, before the version:
 
 ```shell
 docker pull gitlab/gitlab-runner:alpine3.18-v16.1.0

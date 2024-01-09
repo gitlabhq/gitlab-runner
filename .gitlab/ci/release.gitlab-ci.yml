@@ -33,6 +33,8 @@
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.18
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
+    - IMAGE_FLAVOR: alpine3.19
+      TARGET_ARCHS: amd64 arm64 ppc64le s390x
 
 .sync_docker_images:
   stage: release
@@ -69,6 +71,8 @@
       IMAGE_TAG: ["alpine3.17-"]
     - IMAGE_FLAVOR: "alpine3.18"
       IMAGE_TAG: ["alpine3.18-" ]
+    - IMAGE_FLAVOR: "alpine3.19"
+      IMAGE_TAG: [ "alpine3.19-" ]
     - IMAGE_FLAVOR: "alpine-latest"
       IMAGE_TAG: ["alpine-latest-"]
     - IMAGE_FLAVOR: "alpine-edge"
