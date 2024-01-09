@@ -51,7 +51,7 @@ var newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
 		return newMinioWithIAM(serverAddress, s3.BucketLocation)
 	case common.S3AuthTypeAccessKey:
 		return newMinio(serverAddress, &minio.Options{
-			Creds:  credentials.NewStaticV4(s3.AccessKey, s3.SecretKey, ""),
+			Creds:  credentials.NewStaticV4(s3.AccessKey, s3.SecretKey, s3.SessionToken),
 			Secure: !s3.Insecure,
 			Transport: &bucketLocationTripper{
 				bucketLocation: s3.BucketLocation,
