@@ -1790,12 +1790,8 @@ func (c *RunnerCredentials) ShortDescription() string {
 }
 
 func (c *RunnerCredentials) UniqueID() string {
-	// Truncate the token in order to ensure that it won't be exposed in logged messages.
-	token := c.Token
-	if len(token) > 14 {
-		token = token[:14]
-	}
-
+	// Shorten the token to ensure that it won't be exposed in logged messages.
+	token := helpers.ShortenToken(c.Token)
 	return c.URL + token
 }
 
