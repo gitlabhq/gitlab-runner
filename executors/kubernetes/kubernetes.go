@@ -1471,6 +1471,10 @@ func (s *executor) getVolumesForEmptyDirs() []api.Volume {
 }
 
 func (s *executor) parseVolumeSizeLimit(volume common.KubernetesEmptyDir) *resource.Quantity {
+	if strings.Trim(volume.SizeLimit, " ") == "" {
+		return nil
+	}
+
 	quantity, err := resource.ParseQuantity(volume.SizeLimit)
 	if err != nil {
 		s.BuildLogger.Warningln(fmt.Sprintf("invalid limit quantity %q for empty volume %q: %v", volume.SizeLimit, volume.Name, err))
