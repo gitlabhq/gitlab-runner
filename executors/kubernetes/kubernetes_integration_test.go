@@ -1225,25 +1225,67 @@ func testBuildsDirDefaultVolumeFeatureFlag(t *testing.T, featureFlagName string,
 func testBuildsDirVolumeMountEmptyDirFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
-	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
-	build.Image.Name = common.TestDockerGitImage
-	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-	build.Runner.BuildsDir = "/path/to/builds/dir"
-	build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
-		EmptyDirs: []common.KubernetesEmptyDir{
-			{
+	tests := map[string]struct {
+		emptyDir   common.KubernetesEmptyDir
+		hasWarning bool
+	}{
+		"emptyDir with empty size": {
+			emptyDir: common.KubernetesEmptyDir{
+				Name:      "repo",
+				MountPath: "/path/to/builds/dir",
+				Medium:    "Memory",
+			},
+		},
+		"emptyDir with untrimed empty size": {
+			emptyDir: common.KubernetesEmptyDir{
+				Name:      "repo",
+				MountPath: "/path/to/builds/dir",
+				Medium:    "Memory",
+				SizeLimit: "  ",
+			},
+		},
+		"emptyDir with valid size": {
+			emptyDir: common.KubernetesEmptyDir{
 				Name:      "repo",
 				MountPath: "/path/to/builds/dir",
 				Medium:    "Memory",
 				SizeLimit: "1G",
 			},
 		},
+		"emptyDir with invalid emptyDir": {
+			emptyDir: common.KubernetesEmptyDir{
+				Name:      "repo",
+				MountPath: "/path/to/builds/dir",
+				Medium:    "Memory",
+				SizeLimit: "invalid",
+			},
+			hasWarning: true,
+		},
 	}
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.NoError(t, err)
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
+			build.Image.Name = common.TestDockerGitImage
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			build.Runner.BuildsDir = "/path/to/builds/dir"
+			build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+				EmptyDirs: []common.KubernetesEmptyDir{
+					tc.emptyDir,
+				},
+			}
 
-	assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", build.BuildDir)
+			outBuffer := bytes.NewBuffer(nil)
+			err := build.Run(&common.Config{}, &common.Trace{Writer: outBuffer})
+			assert.NoError(t, err)
+
+			if tc.hasWarning {
+				assert.Contains(t, outBuffer.String(), "invalid limit quantity")
+			}
+
+			assert.Equal(t, "/path/to/builds/dir/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test", build.BuildDir)
+		})
+	}
 }
 
 func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {

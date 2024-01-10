@@ -533,6 +533,8 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 								},
 							},
 							EmptyDirs: []common.KubernetesEmptyDir{
+								{Name: "emptyDirWithoutSize", MountPath: "/path/to/empty/dir", Medium: "Memory"},
+								{Name: "emptyDirWithSpaceSize", MountPath: "/path/to/empty/dir", Medium: "Memory", SizeLimit: "  "},
 								{Name: "emptyDir", MountPath: "/path/to/empty/dir", Medium: "Memory", SizeLimit: "1G"},
 								{
 									Name:      "emptyDir-subpath",
@@ -602,6 +604,8 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 							},
 						},
 					},
+					{Name: "emptyDirWithoutSize", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
+					{Name: "emptyDirWithSpaceSize", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory"}}},
 					{Name: "emptyDir", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory", SizeLimit: &oneGig}}},
 					{Name: "emptyDir-subpath", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{Medium: "Memory", SizeLimit: &oneGig}}},
 					{
