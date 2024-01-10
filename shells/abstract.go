@@ -196,8 +196,9 @@ func (b *AbstractShell) addExtractCacheCommand(
 	w.Warningf("Failed to extract cache")
 
 	// When extraction fails, remove the cache directories to avoid problems in cases
-	// where files may have been partially extracted, leaving the cache in an inconsistent
-	// state. If we attempt to extract from fallback caches below, we'll
+	// where archives may have been partially extracted, leaving the cache in an inconsistent
+	// state. If we attempt to extract from fallback caches below, we'll remove the same set
+	// of directories if that fails.
 	if info.Build.IsFeatureFlagOn(featureflags.CleanUpFailedCacheExtract) {
 		for _, cachePath := range cachePaths {
 			w.Printf("Removing %s", cachePath)
