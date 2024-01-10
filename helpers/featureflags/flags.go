@@ -317,8 +317,8 @@ var flags = []FeatureFlag{
 		Name:         CleanUpFailedCacheExtract,
 		DefaultValue: false,
 		Deprecated:   false,
-		Description: "When enabled, commands are inserted into build job scripts to detect failed cache extraction " +
-			"and clean up any cache contents left behind.",
+		Description: "When enabled, commands are inserted into build scripts to detect a failed cache extraction " +
+			"and clean up partial cache contents left behind.",
 	},
 }
 
