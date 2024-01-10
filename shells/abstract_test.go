@@ -1203,6 +1203,169 @@ func TestAbstractShell_extractCacheWithMultipleFallbackKeys(t *testing.T) {
 	}
 }
 
+// As above, but enabling FF_CLEAN_UP_FAILED_CACHE_EXTRACT.
+func TestAbstractShell_extractCacheWithMultipleFallbackKeysWithCleanup(t *testing.T) {
+	testCacheKey := "test-cache-key"
+	tests := map[string]struct {
+		cacheFallbackKeyVarValue string
+		cacheFallbackKeysValues  []string
+		allowedCacheKeys         []string
+		variables                common.JobVariables
+	}{
+		"multiple fallback keys": {
+			cacheFallbackKeyVarValue: "test-var-fallback-cache-key",
+			cacheFallbackKeysValues: []string{
+				"test-fallback-cache-key-1",
+				"test-fallback-cache-key-2",
+			},
+			allowedCacheKeys: []string{
+				"test-cache-key",
+				"test-fallback-cache-key-1",
+				"test-fallback-cache-key-2",
+				"test-var-fallback-cache-key",
+			},
+			variables: common.JobVariables{},
+		},
+		"fallback keys with variables": {
+			cacheFallbackKeyVarValue: "test-var-fallback-cache-key",
+			cacheFallbackKeysValues: []string{
+				"test-fallback-cache-$CACHE_FALLBACK_1",
+				"test-fallback-cache-$CACHE_FALLBACK_2",
+			},
+			allowedCacheKeys: []string{
+				"test-cache-key",
+				"test-fallback-cache-key-1",
+				"test-fallback-cache-key-2",
+				"test-var-fallback-cache-key",
+			},
+			variables: common.JobVariables{
+				{
+					Key:   "CACHE_FALLBACK_1",
+					Value: "key-1",
+				},
+				{
+					Key:   "CACHE_FALLBACK_2",
+					Value: "key-2",
+				},
+			},
+		},
+		"protected fallback keys": {
+			cacheFallbackKeyVarValue: "test-var-fallback-cache-key",
+			cacheFallbackKeysValues: []string{
+				"test-fallback-protected-1",
+				"test-fallback-protected-2",
+			},
+			allowedCacheKeys: []string{
+				"test-cache-key",
+				"test-fallback-protected-1",
+				"test-fallback-protected-2",
+				"test-var-fallback-cache-key",
+			},
+			variables: common.JobVariables{},
+		},
+		"invalid global protected fallback key": {
+			cacheFallbackKeyVarValue: "test-var-fallback-key-protected",
+			cacheFallbackKeysValues: []string{
+				"test-fallback-cache-key-1",
+				"test-fallback-cache-key-2",
+			},
+			allowedCacheKeys: []string{
+				"test-cache-key",
+				"test-fallback-cache-key-1",
+				"test-fallback-cache-key-2",
+			},
+			variables: common.JobVariables{},
+		},
+	}
+
+	runnerConfig := &common.RunnerConfig{
+		RunnerSettings: common.RunnerSettings{
+			Cache: &common.CacheConfig{
+				Type:   "test",
+				Shared: true,
+			},
+		},
+	}
+	shell := AbstractShell{}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			variables := common.JobVariables{
+				{
+					Key:   "CACHE_FALLBACK_KEY",
+					Value: tc.cacheFallbackKeyVarValue,
+				},
+				{
+					Key:   "FF_CLEAN_UP_FAILED_CACHE_EXTRACT",
+					Value: "true",
+				},
+			}
+			build := &common.Build{
+				BuildDir: "/builds",
+				CacheDir: "/cache",
+				Runner:   runnerConfig,
+				JobResponse: common.JobResponse{
+					ID: 1000,
+					JobInfo: common.JobInfo{
+						ProjectID: 1000,
+					},
+					Cache: common.Caches{
+						{
+							Key:          testCacheKey,
+							Policy:       common.CachePolicyPullPush,
+							Paths:        []string{"path1", "path2"},
+							FallbackKeys: tc.cacheFallbackKeysValues,
+						},
+					},
+					Variables: append(variables, tc.variables...),
+				},
+			}
+			info := common.ShellScriptInfo{
+				RunnerCommand: "runner-command",
+				Build:         build,
+			}
+
+			mockWriter := new(MockShellWriter)
+			defer mockWriter.AssertExpectations(t)
+
+			mockWriter.On("IfCmd", "runner-command", "--version").Once()
+
+			for _, cacheKey := range tc.allowedCacheKeys {
+				mockWriter.On("Noticef", "Checking cache for %s...", cacheKey).Once()
+				mockWriter.On(
+					"IfCmdWithOutput",
+					"runner-command",
+					"cache-extractor",
+					"--file",
+					filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
+					"--timeout",
+					"10",
+					"--url",
+					fmt.Sprintf("test://download/project/1000/%s", cacheKey),
+				).Once()
+				mockWriter.On("Noticef", "Successfully extracted cache").Once()
+				mockWriter.On("Else").Once()
+				mockWriter.On("Warningf", "Failed to extract cache").Once()
+				mockWriter.On("Printf", "Removing %s", "path1").Once()
+				mockWriter.On("RmDir", "path1").Once()
+				mockWriter.On("Printf", "Removing %s", "path2").Once()
+				mockWriter.On("RmDir", "path2").Once()
+			}
+
+			for range tc.allowedCacheKeys {
+				mockWriter.On("EndIf").Once()
+			}
+
+			mockWriter.On("Else").Once()
+			mockWriter.On("Warningf", "Missing %s. %s is disabled.", "runner-command", "Extracting cache").Once()
+			mockWriter.On("EndIf").Once()
+
+			err := shell.cacheExtractor(context.Background(), mockWriter, info)
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestAbstractShell_cachePolicy(t *testing.T) {
 	testCacheKey := "test-cache-key"
 
