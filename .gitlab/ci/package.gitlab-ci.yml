@@ -22,7 +22,7 @@
     fi
   script:
   - source ci/touch_make_dependencies
-  - { while true; do df -h ; sleep 2 ; done } &
+  - while true; do df -h ; sleep 2 & done
   - mage package:$PKGS
   artifacts:
     paths:
