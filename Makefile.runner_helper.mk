@@ -52,7 +52,6 @@ TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-s390x.tar.xz
 TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-ppc64le.tar.xz
 
 TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-x86_64.tar.xz
-TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-x86_64-pwsh.tar.xz
 TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-arm.tar.xz
 TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-arm64.tar.xz
 TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-s390x.tar.xz
