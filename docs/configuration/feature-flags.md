@@ -79,7 +79,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_INIT_WITH_DOCKER_EXECUTOR` | `false` | **{dotted-circle}** No |  | When enabled, the Docker executor starts the service and build containers with the `--init` option, which runs `tini-init` as PID 1. |
 | `FF_LOG_IMAGES_CONFIGURED_FOR_JOB` | `false` | **{dotted-circle}** No |  | When enabled, the runner logs names of the image and service images defined for each received job. |
 | `FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO` | `true` | **{dotted-circle}** No |  | When enabled (the default), `docker system stdio` is used to tunnel to the remote Docker daemon. When disabled, for SSH connections a native SSH tunnel is used, and for WinRM connections a 'fleeting-proxy' helper binary is first deployed. |
-| `FF_CLEAN_UP_FAILED_CACHE_EXTRACT` | `false` | **{dotted-circle}** No |  | When enabled, commands are inserted into build job scripts to detect failed cache extraction and clean up any cache contents left behind. |
+| `FF_CLEAN_UP_FAILED_CACHE_EXTRACT` | `false` | **{dotted-circle}** No |  | When enabled, commands are inserted into build scripts to detect a failed cache extraction and clean up partial cache contents left behind. |
 
 <!-- feature_flags_list_end -->
 
