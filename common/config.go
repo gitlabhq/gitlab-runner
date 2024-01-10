@@ -1815,7 +1815,9 @@ func (c *RunnerCredentials) ShortDescription() string {
 }
 
 func (c *RunnerCredentials) UniqueID() string {
-	return c.URL + c.Token
+	// Shorten the token to ensure that it won't be exposed in logged messages.
+	token := helpers.ShortenToken(c.Token)
+	return c.URL + token
 }
 
 func (c *RunnerCredentials) Log() *logrus.Entry {
