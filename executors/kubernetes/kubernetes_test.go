@@ -1153,9 +1153,9 @@ func TestCleanup(t *testing.T) {
 
 func TestPrepare(t *testing.T) {
 	helperImageTag := "latest"
-	// common.REVISION is overridden at build time.
-	if common.REVISION != "HEAD" {
-		helperImageTag = common.REVISION
+	// common.VERSION is overridden at build time.
+	if common.VERSION != "development version" {
+		helperImageTag = common.VERSION
 	}
 
 	defaultOverwrites := &overwrites{
