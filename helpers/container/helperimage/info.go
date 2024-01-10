@@ -76,7 +76,7 @@ func Get(version string, cfg Config) (Info, error) {
 	return info, err
 }
 
-var versionRegex = regexp.MustCompile(`^[0-9]*.[0-9]*.[0-9]`)
+var versionRegex = regexp.MustCompile(`^[0-9]*\.[0-9]*\.[0-9]*`)
 
 func imageVersion(version string) string {
 	versionMatches := versionRegex.FindAllString(version, 1)
