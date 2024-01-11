@@ -166,7 +166,7 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 
 	// Execute cache-extractor command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
-		b.addExtractCacheCommand(ctx, w, info, cacheFile, allowedCacheKeys)
+		b.addExtractCacheCommand(ctx, w, info, cacheFile, allowedCacheKeys, cacheOptions.Paths)
 	})
 }
 
@@ -176,6 +176,7 @@ func (b *AbstractShell) addExtractCacheCommand(
 	info common.ShellScriptInfo,
 	cacheFile string,
 	cacheKeys []string,
+	cachePaths []string,
 ) {
 	cacheKey := cacheKeys[0]
 	args := []string{
@@ -193,9 +194,21 @@ func (b *AbstractShell) addExtractCacheCommand(
 	w.Noticef("Successfully extracted cache")
 	w.Else()
 	w.Warningf("Failed to extract cache")
+
+	// When extraction fails, remove the cache directories to avoid problems in cases
+	// where archives may have been partially extracted, leaving the cache in an inconsistent
+	// state. If we attempt to extract from fallback caches below, we'll remove the same set
+	// of directories if that fails.
+	if info.Build.IsFeatureFlagOn(featureflags.CleanUpFailedCacheExtract) {
+		for _, cachePath := range cachePaths {
+			w.Printf("Removing %s", cachePath)
+			w.RmDir(cachePath)
+		}
+	}
+
 	// We check that there is another key than the one we just used
 	if len(cacheKeys) > 1 {
-		b.addExtractCacheCommand(ctx, w, info, cacheFile, cacheKeys[1:])
+		b.addExtractCacheCommand(ctx, w, info, cacheFile, cacheKeys[1:], cachePaths)
 	}
 	w.EndIf()
 }
