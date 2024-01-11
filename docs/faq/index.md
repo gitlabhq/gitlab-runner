@@ -130,15 +130,25 @@ Check your SELinux policy on your system for possible denials.
 
 ## Docker-machine error: `Unable to query docker version: Cannot connect to the docker engine endpoint.`
 
-If you get the error `Unable to query docker version: Cannot connect to the docker engine endpoint`, it could be related to a TLS failure. When `docker-machine` is installed, it ends up with some certs that don't work.
+This error relates to machine provisioning and might be due to the following reasons:
 
-To fix this issue, clear out the certs and restart the runner. Upon restart, the runner notices the certs are empty and it recreates them.
+- There is a TLS failure. When `docker-machine` is installed, some certificates might be invalid. 
+To resolve this issue, remove the certificates and restart the runner:
 
-```shell
-sudo su -
-rm -r /root/.docker/machine/certs/*
-service gitlab-runner restart
-```
+  ```shell
+  sudo su -
+  rm -r /root/.docker/machine/certs/*
+  service gitlab-runner restart
+  ```
+
+  After the runner restarts, it registers that the certificates are empty and recreates them.
+
+- The hostname is longer than the supported length in the provisioned machine. For example, Ubuntu machines have
+  a 64 character limit for `HOST_NAME_MAX`. The hostname is reported by `docker-machine ls`. Check the `MachineName` in the runner configuration
+  and reduce the hostname length if required.
+
+NOTE:
+This error might have occurred before Docker was installed in the machine.
 
 ## `dialing environment connection: ssh: rejected: connect failed (open failed)`
 
