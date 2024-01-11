@@ -75,6 +75,7 @@ func TestImageVersion(t *testing.T) {
 	}{
 		{version: "1.2.3", expectedTag: "v1.2.3"},
 		{version: "16.6.0~beta.105.gd2263193", expectedTag: "v16.6.0"},
+		{version: "v16.6.0~beta.105.gd2263193", expectedTag: "latest"},
 		{version: "development", expectedTag: "latest"},
 		{version: "", expectedTag: "latest"},
 		{version: "head", expectedTag: "latest"},
