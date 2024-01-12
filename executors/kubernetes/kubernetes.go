@@ -1649,7 +1649,7 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 
 	if s.Build.IsFeatureFlagOn(featureflags.UseAdvancedPodSpecConfiguration) {
 		s.BuildLogger.Warningln("Advanced Pod Spec configuration enabled, merging the provided PodSpec to the generated one. " +
-			"This is an alpha feature and is subject to change. Feedback is collected in this issue: " +
+			"This is a beta feature and is subject to change. Feedback is collected in this issue: " +
 			"https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29659 ...")
 		podConfig.Spec, err = s.applyPodSpecMerge(&podConfig.Spec)
 		if err != nil {
