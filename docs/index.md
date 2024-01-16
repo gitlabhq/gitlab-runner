@@ -194,7 +194,7 @@ This glossary provides [research-backed](https://gitlab.com/gitlab-org/ux-resear
 - **runner** -- the machine on which the runner manager does the actual job work.
   It's either the same machine (shelling out to another runner process) or a remote machine created by an autoscaling executor.
 - **machine** -- a VM or pod in which runner operates.
-  Runner automatically generates a unique, persistent machine id so that when multiple machines are given the same runner config, jobs can be routed separately but the runner configs are grouped in the UI.
+  Runner automatically generates a unique, persistent machine ID so that when multiple machines are given the same runner config, jobs can be routed separately but the runner configs are grouped in the UI.
 
 See also the official [GitLab Word List](https://docs.gitlab.com/ee/development/documentation/styleguide/word_list.html#gitlab-runner) and the GitLab Architecture entry for [GitLab Runner](https://docs.gitlab.com/ee/development/architecture.html#gitlab-runner).
 
