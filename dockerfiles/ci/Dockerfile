@@ -1,14 +1,15 @@
 ARG GO_VERSION
 # Update the CI_IMAGE variable to include Debian flavor
-FROM golang:${GO_VERSION}-bullseye
+FROM golang:${GO_VERSION}-bookworm
 
 # Install required dependencies
 # hadolint ignore=DL3008,DL3015
 RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
     ruby ruby-dev python3-pip \
-    dpkg-sig createrepo-c rpm \
+    devscripts createrepo-c rpm \
     zip libffi-dev jq git-lfs && \
+#    cmake lua5.3 liblua5.3-dev libpopt-dev libbz2-dev \
     rm -rf /var/lib/apt/lists/*
 
 # Set default locale for the environment
@@ -18,6 +19,17 @@ RUN echo "en_US UTF-8" > /etc/locale.gen; \
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
+
+#RUN wget https://ftp.osuosl.org/pub/rpm/releases/rpm-4.19.x/rpm-4.19.1.tar.bz2 -O /tmp/rpm.tar.bz2 && \
+#    tar -xjf /tmp/rpm.tar.bz2 -C /tmp/ && \
+#    cd /tmp/rpm-4.19.1 && \
+#    mkdir _build && \
+#    cd _build && \
+#    cmake .. && \
+#    make && \
+#    make instal && \
+#    rpmbuild --version && \
+#    rm -rf /tmp/*
 
 # Install docker client
 ARG DOCKER_VERSION

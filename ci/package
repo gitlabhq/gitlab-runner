@@ -116,6 +116,7 @@ create_deb() {
     create_package deb "${prebuilt_images_list}" "" "${options[@]}"
 
     if [ -n "${GPG_KEYID}" ]; then
+        # TODO dpkg-sig
         dpkg-sig \
             -g "--no-tty --digest-algo 'sha512' --passphrase '${GPG_PASSPHRASE}' --pinentry-mode=loopback" \
             -k "${GPG_KEYID}" \
