@@ -8,6 +8,8 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 GitLab Runner can be installed and updated on macOS.
 
+For information about troubleshooting, see [Troubleshooting GitLab Runner](../faq/index.md).
+
 1. Download the binary for your system:
 
    - For Intel-based systems:
@@ -110,7 +112,7 @@ You can check the status of the `credential.helper` with:
 git config credential.helper
 ```
 
-## Update GitLab Runner
+## Upgrade GitLab Runner
 
 1. Stop the service:
 
@@ -146,9 +148,6 @@ git config credential.helper
    ```shell
    gitlab-runner start
    ```
-
-Make sure that you read the [FAQ](../faq/index.md) section which describes
-some of the most common problems with GitLab Runner.
 
 ## Upgrade the service file
 
