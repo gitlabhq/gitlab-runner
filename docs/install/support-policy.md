@@ -22,7 +22,7 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 | Alpine                         | 3.12                   | 2022-05-01      | 2023-05-22      |
 | Alpine                         | 3.13                   | 2022-11-01      | 2023-05-22      |
 | Alpine                         | 3.14                   | 2023-05-01      | 2023-05-22      |
-| Alpine                         | 3.15                   | 2023-11-01      | 2023-11-22      |
+| Alpine                         | 3.15                   | 2023-11-01      | 2024-01-18      |
 | Alpine                         | 3.16                   | 2024-05-23      | 2024-06-22      |
 | Alpine                         | 3.17                   | 2024‑11‑22      | 2024-12-22      |
 | Alpine                         | 3.18                   | 2025‑05‑09      | 2025-05-22      |

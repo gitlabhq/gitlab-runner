@@ -25,7 +25,6 @@ var platformMap = map[string]string{
 
 var flavorsSupportingPWSH = []string{
 	"alpine",
-	"alpine3.15",
 	"alpine3.16",
 	"alpine3.17",
 	"alpine3.18",
