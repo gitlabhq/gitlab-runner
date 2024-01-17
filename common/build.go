@@ -421,7 +421,7 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 }
 
 //nolint:funlen,gocognit
-func (b *Build) executeScript(ctx context.Context, executor Executor) error {
+func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Executor) error {
 	// track job start and create referees
 	startTime := time.Now()
 	b.createReferees(executor)
@@ -454,6 +454,10 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		scriptCtx, cancel := timeouts["RUNNER_SCRIPT_TIMEOUT"]()
 		defer cancel()
 
+		// update trace's cancel function so that the main script can be cancelled,
+		// with after_script and later stages to still complete.
+		trace.SetCancelFunc(cancel)
+
 		for _, s := range b.Steps {
 			// after_script has a separate BuildStage. See common.BuildStageAfterScript
 			if s.Name == StepNameAfterScript {
@@ -463,6 +467,17 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 			if err != nil {
 				break
 			}
+		}
+
+		// if parent context is fine but script context was cancelled we ensure the build error
+		// failure reason is "canceled".
+		if ctx.Err() == nil && errors.Is(scriptCtx.Err(), context.Canceled) {
+			err = &BuildError{
+				Inner:         errors.New("canceled"),
+				FailureReason: JobCanceled,
+			}
+
+			b.logger.Warningln("script canceled externally (UI, API)")
 		}
 
 		afterScriptCtx, cancel := timeouts["RUNNER_AFTER_SCRIPT_TIMEOUT"]()
@@ -629,20 +644,20 @@ func (b *Build) handleError(err error) error {
 }
 
 func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
-	switch err {
-	case context.Canceled:
+	switch {
+	case errors.Is(err, context.Canceled):
 		return BuildRunRuntimeCanceled, &BuildError{
 			Inner:         errors.New("canceled"),
 			FailureReason: JobCanceled,
 		}
 
-	case context.DeadlineExceeded:
+	case errors.Is(err, context.DeadlineExceeded):
 		return BuildRunRuntimeTimedout, &BuildError{
 			Inner:         fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()),
 			FailureReason: JobExecutionTimeout,
 		}
 
-	case nil:
+	case err == nil:
 		return BuildRunRuntimeSuccess, nil
 
 	default:
@@ -651,7 +666,7 @@ func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 }
 
 //nolint:funlen
-func (b *Build) run(ctx context.Context, executor Executor) (err error) {
+func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err error) {
 	b.setCurrentState(BuildRunRuntimeRunning)
 
 	buildFinish := make(chan error, 1)
@@ -679,7 +694,7 @@ func (b *Build) run(ctx context.Context, executor Executor) (err error) {
 			}
 		}()
 
-		buildFinish <- b.executeScript(runContext, executor)
+		buildFinish <- b.executeScript(runContext, trace, executor)
 	}()
 
 	// Wait for signals: cancel, timeout, abort or finish
@@ -945,7 +960,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}
 	defer executor.Cleanup()
 
-	err = b.run(ctx, executor)
+	err = b.run(ctx, trace, executor)
 	if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
 		b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
 	}

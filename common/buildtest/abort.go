@@ -15,11 +15,11 @@ import (
 
 //nolint:funlen,gocognit
 func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	cancelIncludeStages := []common.BuildStage{
+	abortIncludeStages := []common.BuildStage{
 		common.BuildStagePrepare,
 		common.BuildStageGetSources,
 	}
-	cancelExcludeStages := []common.BuildStage{
+	abortExcludeStages := []common.BuildStage{
 		common.BuildStageRestoreCache,
 		common.BuildStageDownloadArtifacts,
 		common.BuildStageAfterScript,
@@ -27,6 +27,21 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 		common.BuildStageArchiveOnFailureCache,
 		common.BuildStageUploadOnFailureArtifacts,
 		common.BuildStageUploadOnSuccessArtifacts,
+	}
+
+	cancelIncludeStages := []common.BuildStage{
+		common.BuildStagePrepare,
+		common.BuildStageGetSources,
+		common.BuildStageAfterScript,
+	}
+	cancelExcludeStages := []common.BuildStage{
+		common.BuildStageArchiveOnSuccessCache,
+		common.BuildStageUploadOnSuccessArtifacts,
+
+		common.BuildStageRestoreCache,
+		common.BuildStageDownloadArtifacts,
+		common.BuildStageArchiveOnFailureCache,
+		common.BuildStageUploadOnFailureArtifacts,
 	}
 
 	tests := map[string]struct {
@@ -62,16 +77,16 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 			onUserStep: func(build *common.Build, _ common.JobTrace) {
 				build.SystemInterrupt <- os.Interrupt
 			},
-			includesStage: cancelIncludeStages,
-			excludesStage: cancelExcludeStages,
+			includesStage: abortIncludeStages,
+			excludesStage: abortExcludeStages,
 			expectedErr:   &common.BuildError{FailureReason: common.RunnerSystemFailure},
 		},
 		"job is aborted": {
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {
 				trace.Abort()
 			},
-			includesStage: cancelIncludeStages,
-			excludesStage: cancelExcludeStages,
+			includesStage: abortIncludeStages,
+			excludesStage: abortExcludeStages,
 			expectedErr:   &common.BuildError{FailureReason: common.JobCanceled},
 		},
 		"job is canceling": {
