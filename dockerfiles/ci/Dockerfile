@@ -7,7 +7,7 @@ FROM golang:${GO_CI_IMAGE}
 RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
     ruby ruby-dev python3-pip \
-    devscripts createrepo-c rpm \
+    createrepo-c rpm \
     zip libffi-dev jq git-lfs && \
     rm -rf /var/lib/apt/lists/*
 
@@ -18,6 +18,12 @@ RUN echo "en_US UTF-8" > /etc/locale.gen; \
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
+
+# Install dpkg-sig from deb file since it's no longer in the repos since bookworm
+RUN wget "http://ftp.de.debian.org/debian/pool/main/d/dpkg-sig/dpkg-sig_0.13.1+nmu4_all.deb" && \
+    dpkg -i dpkg-sig_0.13.1+nmu4_all.deb && \
+    rm dpkg-sig_0.13.1+nmu4_all.deb && \
+    which dpkg-sig
 
 # Install docker client
 ARG DOCKER_VERSION
