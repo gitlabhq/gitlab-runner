@@ -186,15 +186,15 @@ sequenceDiagram
 
 ## Glossary
 
-This glossary provides [research-backed](https://gitlab.com/gitlab-org/ux-research/-/issues/2444#note_1473076549) definitions for terms related to GitLab Runner.
+This glossary provides definitions for terms related to GitLab Runner.
 
 - **GitLab Runner**: The application that you install that executes GitLab CI jobs on a target computing platform.
-- **runner config** -- A single `[[runner]]` entry in the `config.toml` which shows up as a "runner" in the UI.
-- **runner manager** -- The process which reads the `config.toml` and runs all the runner configs concurrently.
-- **runner** -- the process that executes the actual job work on a selected machine.
-  Depending on the executor, this machine could be local to the runner manager (`shell` or `docker` executor) or a remote machine created by an autoscaler (`docker-autoscaler`, `kubernetes`).
-- **machine** -- a VM or pod in which runner operates.
-  Runner automatically generates a unique, persistent machine ID so that when multiple machines are given the same runner config, jobs can be routed separately but the runner configs are grouped in the UI.
+- **runner configuration**: A single `[[runner]]` entry in the `config.toml` that displays as a **runner** in the UI.
+- **runner manager**: The process that reads the `config.toml` and runs all the runner configurations concurrently.
+- **runner**: The process that executes the job on a selected machine.
+  Depending on the type of executor, this machine could be local to the runner manager (`shell` or `docker` executor) or a remote machine created by an autoscaler (`docker-autoscaler` or `kubernetes`).
+- **machine**: A virtual machine (VM) or pod that the runner operates in.
+  GitLab Runner automatically generates a unique, persistent machine ID so that when multiple machines are given the same runner configuration, jobs can be routed separately but the runner configurations are grouped in the UI.
 
 See also the official [GitLab Word List](https://docs.gitlab.com/ee/development/documentation/styleguide/word_list.html#gitlab-runner) and the GitLab Architecture entry for [GitLab Runner](https://docs.gitlab.com/ee/development/architecture.html#gitlab-runner).
 
