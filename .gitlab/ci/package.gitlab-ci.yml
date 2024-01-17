@@ -22,7 +22,6 @@
     fi
   script:
   - source ci/touch_make_dependencies
-  - mage diagnose:diskUsage 30s &
   - mage package:$PKGS
   artifacts:
     paths:
