@@ -191,8 +191,8 @@ This glossary provides [research-backed](https://gitlab.com/gitlab-org/ux-resear
 - **GitLab Runner**: The application that you install that executes GitLab CI jobs on a target computing platform.
 - **runner config** -- A single `[[runner]]` entry in the `config.toml` which shows up as a "runner" in the UI.
 - **runner manager** -- The process which reads the `config.toml` and runs all the runner configs concurrently.
-- **runner** -- the machine on which the runner manager does the actual job work.
-  It's either the same machine (shelling out to another runner process) or a remote machine created by an autoscaling executor.
+- **runner** -- the process that executes the actual job work on a selected machine.
+  Depending on the executor, this machine could be local to the runner manager (`shell` or `docker` executor) or a remote machine created by an autoscaler (`docker-autoscaler`, `kubernetes`).
 - **machine** -- a VM or pod in which runner operates.
   Runner automatically generates a unique, persistent machine ID so that when multiple machines are given the same runner config, jobs can be routed separately but the runner configs are grouped in the UI.
 
