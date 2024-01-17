@@ -1,4 +1,4 @@
-ARG GO_VERSION
+ARG GO_CI_IMAGE
 # Update the CI_IMAGE variable to include Debian flavor
 FROM golang:${GO_CI_IMAGE}
 
