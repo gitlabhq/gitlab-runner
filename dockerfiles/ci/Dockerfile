@@ -20,7 +20,7 @@ ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
 # Install dpkg-sig from deb file since it's no longer in the repos since bookworm
-RUN wget "http://ftp.de.debian.org/debian/pool/main/d/dpkg-sig/dpkg-sig_0.13.1+nmu4_all.deb" && \
+RUN wget http://ftp.de.debian.org/debian/pool/main/d/dpkg-sig/dpkg-sig_0.13.1+nmu4_all.deb && \
     dpkg -i dpkg-sig_0.13.1+nmu4_all.deb && \
     rm dpkg-sig_0.13.1+nmu4_all.deb && \
     which dpkg-sig
