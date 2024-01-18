@@ -232,7 +232,8 @@
   rules:
   - <<: *if-runner-merge-request-pipeline
     changes:
-    - dockerfiles/ci/*
+    - dockerfiles/ci/Dockerfile
+    - dockerfiles/ci/Dockerfile.rebuild
     - .gitlab/ci/_common.gitlab-ci.yml
     - .gitlab/ci/prepare.gitlab-ci.yml
 
