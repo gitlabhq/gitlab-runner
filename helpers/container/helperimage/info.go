@@ -70,7 +70,7 @@ func Get(version string, cfg Config) (Info, error) {
 		return Info{}, errors.NewErrOSNotSupported(cfg.OSType)
 	}
 
-	info, err := factory.Create(imageVersion(version), cfg)
+	info, err := factory.Create(Version(version), cfg)
 	info.OSType = cfg.OSType
 
 	return info, err
@@ -78,7 +78,7 @@ func Get(version string, cfg Config) (Info, error) {
 
 var versionRegex = regexp.MustCompile(`^[0-9]*\.[0-9]*\.[0-9]*`)
 
-func imageVersion(version string) string {
+func Version(version string) string {
 	versionMatches := versionRegex.FindAllString(version, 1)
 	if len(versionMatches) == 1 {
 		return fmt.Sprintf("v%s", versionMatches[0])

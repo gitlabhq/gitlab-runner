@@ -1155,11 +1155,7 @@ func TestPrepare(t *testing.T) {
 	helperImageTag := "latest"
 	// common.VERSION is overridden at build time.
 	if common.VERSION != "development version" {
-		img, err := helperimage.Get(common.VERSION, helperimage.Config{
-			OSType: helperimage.OSTypeLinux,
-		})
-		require.NoError(t, err)
-		helperImageTag = img.Tag
+		helperImageTag = helperimage.Version(common.VERSION)
 	}
 
 	defaultOverwrites := &overwrites{
@@ -1193,7 +1189,7 @@ func TestPrepare(t *testing.T) {
 			nodeSelectorWindowsBuildLabel: os,
 		}
 	}
-	pwshHelperImage, err := helperimage.Get(helperImageTag, helperimage.Config{
+	pwshHelperImage, err := helperimage.Get(common.VERSION, helperimage.Config{
 		Architecture:  "x86_64",
 		OSType:        osType,
 		Shell:         shells.SNPwsh,

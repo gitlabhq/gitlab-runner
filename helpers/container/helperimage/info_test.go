@@ -63,7 +63,7 @@ func Test_imageRevision(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.revision, func(t *testing.T) {
-			assert.Equal(t, test.expectedTag, imageVersion(test.revision))
+			assert.Equal(t, test.expectedTag, Version(test.revision))
 		})
 	}
 }
@@ -83,7 +83,7 @@ func TestImageVersion(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.version, func(t *testing.T) {
-			assert.Equal(t, test.expectedTag, imageVersion(test.version))
+			assert.Equal(t, test.expectedTag, Version(test.version))
 		})
 	}
 }
