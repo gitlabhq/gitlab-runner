@@ -30,6 +30,7 @@ type ManagerConfig struct {
 	TemporaryName    string
 	DisableCache     bool
 	PermissionSetter permission.Setter
+	Driver           string
 	DriverOpts       map[string]string
 }
 
@@ -146,7 +147,7 @@ func (m *manager) addCacheVolume(ctx context.Context, volume *parser.Volume) err
 		return m.createHostBasedCacheVolume(volume.Destination)
 	}
 
-	_, err := m.createCacheVolume(ctx, volume.Destination, true, m.config.DriverOpts)
+	_, err := m.createCacheVolume(ctx, volume.Destination, true, &m.config)
 
 	return err
 }
@@ -176,7 +177,7 @@ func (m *manager) createCacheVolume(
 	ctx context.Context,
 	destination string,
 	reusable bool,
-	driverOps map[string]string,
+	config *ManagerConfig,
 ) (string, error) {
 	destination, err := m.absolutePath(destination)
 	if err != nil {
@@ -196,7 +197,8 @@ func (m *manager) createCacheVolume(
 	volumeName := fmt.Sprintf("%s-cache-%s", name, hashPath(destination))
 	vBody := volume.CreateOptions{
 		Name:       volumeName,
-		DriverOpts: driverOps,
+		Driver:     config.Driver,
+		DriverOpts: config.DriverOpts,
 		Labels:     m.labeler.Labels(map[string]string{"type": "cache"}),
 	}
 
@@ -226,7 +228,7 @@ func (m *manager) createCacheVolume(
 // It's up to the caller to clean up the temporary volumes by calling
 // `RemoveTemporary`.
 func (m *manager) CreateTemporary(ctx context.Context, destination string) error {
-	volumeName, err := m.createCacheVolume(ctx, destination, false, m.config.DriverOpts)
+	volumeName, err := m.createCacheVolume(ctx, destination, false, &m.config)
 	if err != nil {
 		return fmt.Errorf("creating cache volume: %w", err)
 	}
