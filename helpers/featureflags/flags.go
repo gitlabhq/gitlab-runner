@@ -291,7 +291,7 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description: "When enabled, `dumb-init` is used to execute all the scripts. " +
-			"This allows `dumb-init` to run as the first process in the helper and build container. It is only supported in the attach mode.",
+			"This allows `dumb-init` to run as the first process in the helper and build container.",
 	},
 	{
 		Name:         UseInitWithDockerExecutor,
