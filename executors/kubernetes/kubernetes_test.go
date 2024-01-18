@@ -687,7 +687,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 
 func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	version, _ := testVersionAndCodec()
-	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+	helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	})
@@ -5035,7 +5035,7 @@ containers:
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
 			ctx := context.Background()
-			helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+			helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
 				OSType:       helperimage.OSTypeLinux,
 				Architecture: "amd64",
 			})
@@ -5533,7 +5533,7 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 }
 
 func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
-	gitlabRegistry, err := helperimage.Get(common.REVISION, helperimage.Config{
+	gitlabRegistry, err := helperimage.Get(common.VERSION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	})
