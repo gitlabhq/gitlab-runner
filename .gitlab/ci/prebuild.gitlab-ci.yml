@@ -21,7 +21,6 @@ helper images:
   parallel:
     matrix:
     - IMAGE_BASE: "alpine"
-    - IMAGE_BASE: "alpine3.15"
     - IMAGE_BASE: "alpine3.16"
     - IMAGE_BASE: "alpine3.17"
     - IMAGE_BASE: "alpine3.18"

@@ -4,15 +4,9 @@ ubuntu-s390x-v16.1.0
 ubuntu-arm64-v16.1.0
 ubuntu-arm-v16.1.0
 ubuntu-x86_64-v16.1.0
-alpine3.15-x86_64-v16.1.0-pwsh
 alpine3.16-x86_64-v16.1.0-pwsh
 alpine3.17-x86_64-v16.1.0-pwsh
 alpine3.18-x86_64-v16.1.0-pwsh
-alpine3.15-ppc64le-v16.1.0
-alpine3.15-s390x-v16.1.0
-alpine3.15-arm64-v16.1.0
-alpine3.15-arm-v16.1.0
-alpine3.15-x86_64-v16.1.0
 alpine3.16-ppc64le-v16.1.0
 alpine3.16-s390x-v16.1.0
 alpine3.16-arm64-v16.1.0

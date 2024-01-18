@@ -31,8 +31,6 @@ variables:
   GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$GO_FIPS_VERSION
   # Leaving the Alpine and UBI versions defined here until the renovate pattern is changed
   # to recognize the definitions as a Go variable
-  # renovate: datasource=docker depName=alpine allowedVersions=/3\.15\..+/
-  ALPINE_315_VERSION: "3.15.11"
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.16\..+/
   ALPINE_316_VERSION: "3.16.8"
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.17\..+/
