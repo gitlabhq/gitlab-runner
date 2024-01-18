@@ -26,6 +26,7 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 | Alpine                         | 3.16                   | 2024-05-23      | 2024-06-22      |
 | Alpine                         | 3.17                   | 2024‑11‑22      | 2024-12-22      |
 | Alpine                         | 3.18                   | 2025‑05‑09      | 2025-05-22      |
+| Alpine                         | 3.19                   | 2025‑11‑01      | 2025-11-22      |
 | Red Hat Universal Base Image 8 | 8.7-1054               | 2024-05-31      | 2024-06-22      |
 
 ## Windows version support
