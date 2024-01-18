@@ -13,7 +13,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -181,15 +180,9 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 
 	config := e.createConfigForServiceHealthCheckContainer(service, cmd, waitImage, environment)
 	hostConfig := e.createHostConfigForServiceHealthCheck(service)
-	platform := v1.Platform{
-		Architecture: waitImage.Architecture,
-		OS:           waitImage.Os,
-		OSVersion:    waitImage.OsVersion,
-		Variant:      waitImage.Variant,
-	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
-	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, &platform, containerName)
+	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, nil, containerName)
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)
 	}
