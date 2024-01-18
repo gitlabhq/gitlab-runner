@@ -1,3 +1,14 @@
+## v16.7.1 (2024-01-18)
+
+### Bug fixes
+
+- Helper image container should always use native platform !4581
+
+### Maintenance
+
+- Update `k8s dumb-init` FF doc to convey its support in both Kubernetes modes !4582
+- Fix the architecture of pwsh x86-64 helper images !4559
+
 ## v16.7.0 (2023-12-21)
 
 ### New features
