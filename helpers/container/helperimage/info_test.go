@@ -46,28 +46,6 @@ func TestContainerImage_String(t *testing.T) {
 	assert.Equal(t, "abc:1234", image.String())
 }
 
-func Test_imageRevision(t *testing.T) {
-	tests := []struct {
-		revision    string
-		expectedTag string
-	}{
-		{
-			revision:    "HEAD",
-			expectedTag: latestImageVersion,
-		},
-		{
-			revision:    "1234",
-			expectedTag: "1234",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.revision, func(t *testing.T) {
-			assert.Equal(t, test.expectedTag, Version(test.revision))
-		})
-	}
-}
-
 func TestImageVersion(t *testing.T) {
 	tests := []struct {
 		version     string
