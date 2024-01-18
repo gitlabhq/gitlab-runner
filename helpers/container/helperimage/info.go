@@ -2,6 +2,7 @@ package helperimage
 
 import (
 	"fmt"
+	"regexp"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/errors"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
@@ -28,8 +29,7 @@ const (
 	// DefaultEdgeFlavor is the default flavor for architectures where there is no stable base distro available, like riscv64.
 	DefaultEdgeFlavor = "alpine-edge"
 
-	headRevision        = "HEAD"
-	latestImageRevision = "latest"
+	latestImageVersion = "latest"
 )
 
 type Info struct {
@@ -64,24 +64,27 @@ var supportedOsTypesFactories = map[string]creator{
 	OSTypeLinux:   new(linuxInfo),
 }
 
-func Get(revision string, cfg Config) (Info, error) {
+func Get(version string, cfg Config) (Info, error) {
 	factory, ok := supportedOsTypesFactories[cfg.OSType]
 	if !ok {
 		return Info{}, errors.NewErrOSNotSupported(cfg.OSType)
 	}
 
-	info, err := factory.Create(imageRevision(revision), cfg)
+	info, err := factory.Create(Version(version), cfg)
 	info.OSType = cfg.OSType
 
 	return info, err
 }
 
-func imageRevision(revision string) string {
-	if revision != headRevision {
-		return revision
+var versionRegex = regexp.MustCompile(`^[0-9]*\.[0-9]*\.[0-9]*`)
+
+func Version(version string) string {
+	versionMatches := versionRegex.FindAllString(version, 1)
+	if len(versionMatches) == 1 {
+		return fmt.Sprintf("v%s", versionMatches[0])
 	}
 
-	return latestImageRevision
+	return latestImageVersion
 }
 
 func getPowerShellCmd(shell string) []string {

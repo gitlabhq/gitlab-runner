@@ -832,7 +832,7 @@ func createExecutorForTestDockerConfiguration(
 	e.Build.Token = "abcd123456"
 	e.BuildShell = &common.ShellConfiguration{}
 	var err error
-	e.helperImageInfo, err = helperimage.Get(common.REVISION, helperimage.Config{
+	e.helperImageInfo, err = helperimage.Get(common.VERSION, helperimage.Config{
 		OSType:        e.info.OSType,
 		Architecture:  e.info.Architecture,
 		KernelVersion: e.info.KernelVersion,

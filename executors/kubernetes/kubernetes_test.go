@@ -691,7 +691,7 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 
 func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	version, _ := testVersionAndCodec()
-	helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+	helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	})
@@ -1157,9 +1157,9 @@ func TestCleanup(t *testing.T) {
 
 func TestPrepare(t *testing.T) {
 	helperImageTag := "latest"
-	// common.REVISION is overridden at build time.
-	if common.REVISION != "HEAD" {
-		helperImageTag = common.REVISION
+	// common.VERSION is overridden at build time.
+	if common.VERSION != "development version" {
+		helperImageTag = helperimage.Version(common.VERSION)
 	}
 
 	defaultOverwrites := &overwrites{
@@ -1193,7 +1193,7 @@ func TestPrepare(t *testing.T) {
 			nodeSelectorWindowsBuildLabel: os,
 		}
 	}
-	pwshHelperImage, err := helperimage.Get(helperImageTag, helperimage.Config{
+	pwshHelperImage, err := helperimage.Get(common.VERSION, helperimage.Config{
 		Architecture:  "x86_64",
 		OSType:        osType,
 		Shell:         shells.SNPwsh,
@@ -5035,7 +5035,7 @@ containers:
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
 			ctx := context.Background()
-			helperImageInfo, err := helperimage.Get(common.REVISION, helperimage.Config{
+			helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
 				OSType:       helperimage.OSTypeLinux,
 				Architecture: "amd64",
 			})
@@ -5533,7 +5533,7 @@ func TestCommandTerminatedError_Is(t *testing.T) {
 }
 
 func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
-	gitlabRegistry, err := helperimage.Get(common.REVISION, helperimage.Config{
+	gitlabRegistry, err := helperimage.Get(common.VERSION, helperimage.Config{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	})

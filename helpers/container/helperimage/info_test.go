@@ -30,7 +30,7 @@ func TestGetInfo(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.osType, func(t *testing.T) {
-			_, err := Get(headRevision, Config{OSType: test.osType, KernelVersion: test.version})
+			_, err := Get("HEAD", Config{OSType: test.osType, KernelVersion: test.version})
 
 			assert.ErrorIs(t, err, test.expectedError)
 		})
@@ -46,24 +46,22 @@ func TestContainerImage_String(t *testing.T) {
 	assert.Equal(t, "abc:1234", image.String())
 }
 
-func Test_imageRevision(t *testing.T) {
+func TestImageVersion(t *testing.T) {
 	tests := []struct {
-		revision    string
+		version     string
 		expectedTag string
 	}{
-		{
-			revision:    headRevision,
-			expectedTag: latestImageRevision,
-		},
-		{
-			revision:    "1234",
-			expectedTag: "1234",
-		},
+		{version: "1.2.3", expectedTag: "v1.2.3"},
+		{version: "16.6.0~beta.105.gd2263193", expectedTag: "v16.6.0"},
+		{version: "v16.6.0~beta.105.gd2263193", expectedTag: "latest"},
+		{version: "development", expectedTag: "latest"},
+		{version: "", expectedTag: "latest"},
+		{version: "head", expectedTag: "latest"},
 	}
 
 	for _, test := range tests {
-		t.Run(test.revision, func(t *testing.T) {
-			assert.Equal(t, test.expectedTag, imageRevision(test.revision))
+		t.Run(test.version, func(t *testing.T) {
+			assert.Equal(t, test.expectedTag, Version(test.version))
 		})
 	}
 }
