@@ -21,7 +21,7 @@ func Version() string {
 }
 
 func RefTag() string {
-	return mageutils.EnvFallbackOrDefault("CI_COMMIT_TAG", "CI_COMMIT_REF_SLUG", "bleeding")
+	return mageutils.EnvOrDefault("CI_COMMIT_TAG", "bleeding")
 }
 
 var latestStableTagOnce mageutils.Once[string]
