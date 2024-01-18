@@ -189,10 +189,14 @@ sequenceDiagram
 This glossary provides definitions for terms related to GitLab Runner.
 
 - **GitLab Runner**: The application that you install that executes GitLab CI jobs on a target computing platform.
-- **runner**: The agent that runs the code on the host platform and displays in the UI. If a runner is registered with the same token,
-  the runner could represent a collection of runners and runner managers.
-- **runner manager**: A type of runner that can create multiple runners for autoscaling. Specific to the type of executor used.
-- **runner worker**: The process created by the runner on the host computing platform to run jobs.
+- **runner configuration**: A single `[[runner]]` entry in the `config.toml` that displays as a **runner** in the UI.
+- **runner manager**: The process that reads the `config.toml` and runs all the runner configurations concurrently.
+- **runner**: The process that executes the job on a selected machine.
+  Depending on the type of executor, this machine could be local to the runner manager (`shell` or `docker` executor) or a remote machine created by an autoscaler (`docker-autoscaler` or `kubernetes`).
+- **machine**: A virtual machine (VM) or pod that the runner operates in.
+  GitLab Runner automatically generates a unique, persistent machine ID so that when multiple machines are given the same runner configuration, jobs can be routed separately but the runner configurations are grouped in the UI.
+
+See also the official [GitLab Word List](https://docs.gitlab.com/ee/development/documentation/styleguide/word_list.html#gitlab-runner) and the GitLab Architecture entry for [GitLab Runner](https://docs.gitlab.com/ee/development/architecture.html#gitlab-runner).
 
 ## Troubleshooting
 
