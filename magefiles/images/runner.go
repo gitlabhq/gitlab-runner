@@ -46,6 +46,7 @@ var (
 	alpine316Version = env.NewDefault("ALPINE_316_VERSION", "3.16.5")
 	alpine317Version = env.NewDefault("ALPINE_317_VERSION", "3.17.3")
 	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.2")
+	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
 	ubiFIPSBaseImage = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
 	ubiFIPSVersion   = env.NewDefault("UBI_FIPS_VERSION", "8.8-860")
 
@@ -115,6 +116,7 @@ func AssembleBuildRunner(flavor, targetArchs string) build.TargetBlueprint[runne
 		alpine316Version,
 		alpine317Version,
 		alpine318Version,
+		alpine319Version,
 		ubiFIPSBaseImage,
 		ubiFIPSVersion,
 		dockerMachineAmd64Checksum,
@@ -167,6 +169,7 @@ func BuildRunner(blueprint build.TargetBlueprint[runnerImageFileDependency, buil
 		"alpine3.16":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine316Version)),
 		"alpine3.17":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine317Version)),
 		"alpine3.18":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine318Version)),
+		"alpine3.19":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine319Version)),
 		"alpine-latest": "alpine:latest",
 		"ubi-fips": fmt.Sprintf(
 			"%s:%s",

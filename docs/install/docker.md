@@ -221,7 +221,7 @@ source for possible build instructions for both Ubuntu and Alpine images.
 
 ### Creating a GitLab Runner Docker image
 
-As of GitLab Runner 16.1, the GitLab Runner Docker image based on Alpine uses Alpine 3.18.2. However, you can upgrade the image's OS before it is available in the GitLab repositories.
+As of GitLab Runner 16.1, the GitLab Runner Docker image based on Alpine uses Alpine 3.18. However, you can upgrade the image's OS before it is available in the GitLab repositories.
 
 To build a `gitlab-runner` Docker image for the latest Alpine version:
 
