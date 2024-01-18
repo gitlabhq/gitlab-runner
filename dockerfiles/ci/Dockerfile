@@ -1,13 +1,13 @@
-ARG GO_VERSION
+ARG GO_CI_IMAGE
 # Update the CI_IMAGE variable to include Debian flavor
-FROM golang:${GO_VERSION}-bullseye
+FROM golang:${GO_CI_IMAGE}
 
 # Install required dependencies
 # hadolint ignore=DL3008,DL3015
 RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
     ruby ruby-dev python3-pip \
-    dpkg-sig createrepo-c rpm \
+    libconfig-file-perl createrepo-c rpm \
     zip libffi-dev jq git-lfs && \
     rm -rf /var/lib/apt/lists/*
 
@@ -18,6 +18,12 @@ RUN echo "en_US UTF-8" > /etc/locale.gen; \
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
+
+# Install dpkg-sig from deb file since it's no longer in the repos since bookworm
+RUN wget http://ftp.de.debian.org/debian/pool/main/d/dpkg-sig/dpkg-sig_0.13.1+nmu4_all.deb && \
+    dpkg -i dpkg-sig_0.13.1+nmu4_all.deb && \
+    rm dpkg-sig_0.13.1+nmu4_all.deb && \
+    which dpkg-sig
 
 # Install docker client
 ARG DOCKER_VERSION
