@@ -427,10 +427,7 @@ func (e *executor) createService(
 	}
 
 	networkConfig := e.networkConfig(linkNames)
-	var platform *v1.Platform
-	if definition.ExecutorOptions.Docker.Platform != "" {
-		platform = platformForImage(*serviceImage)
-	}
+	platform := platformForImage(serviceImage, definition.ExecutorOptions)
 
 	e.Debugln("Creating service container", containerName, "...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
@@ -448,7 +445,11 @@ func (e *executor) createService(
 	return fakeContainer(resp.ID, containerName), nil
 }
 
-func platformForImage(image types.ImageInspect) *v1.Platform {
+func platformForImage(image *types.ImageInspect, opts common.ImageExecutorOptions) *v1.Platform {
+	if image == nil || opts.Docker.Platform == "" {
+		return nil
+	}
+
 	return &v1.Platform{
 		Architecture: image.Architecture,
 		OS:           image.Os,
@@ -599,8 +600,9 @@ func (e *executor) createContainer(
 	networkConfig := e.networkConfig(aliases)
 
 	var platform *v1.Platform
-	if imageDefinition.ExecutorOptions.Docker.Platform != "" {
-		platform = platformForImage(*image)
+	// predefined/helper container always uses native platform
+	if containerType == buildContainerType {
+		platform = platformForImage(image, imageDefinition.ExecutorOptions)
 	}
 
 	// this will fail potentially some builds if there's name collision
