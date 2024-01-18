@@ -7,7 +7,7 @@ FROM golang:${GO_CI_IMAGE}
 RUN apt-get update -yq && \
     apt-get install -yq locales make xz-utils \
     ruby ruby-dev python3-pip \
-    createrepo-c rpm \
+    libconfig-file-perl createrepo-c rpm \
     zip libffi-dev jq git-lfs && \
     rm -rf /var/lib/apt/lists/*
 
