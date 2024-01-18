@@ -1155,7 +1155,9 @@ func TestPrepare(t *testing.T) {
 	helperImageTag := "latest"
 	// common.VERSION is overridden at build time.
 	if common.VERSION != "development version" {
-		img, err := helperimage.Get(common.VERSION, helperimage.Config{})
+		img, err := helperimage.Get(common.VERSION, helperimage.Config{
+			OSType: helperimage.OSTypeLinux,
+		})
 		require.NoError(t, err)
 		helperImageTag = img.Tag
 	}
