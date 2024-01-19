@@ -1,13 +1,49 @@
-## v16.7.1 (2024-01-18)
+## v16.8.0 (2024-01-18)
+
+### New features
+
+- Set default runner script timeout to allow after_script !4491
+- Move PodSpec feature to beta !4568
+- Allow IAM Session Tokens for S3 cache client credentials !4526 (Mike Heyns @mike.heyns)
+- Add allowed_users config for docker executor !4550
+- Add GCP Secret Manager secrets integration !4512
 
 ### Bug fixes
 
 - Helper image container should always use native platform !4581
+- Delete cache dirs after failed extraction !4565 (Matthew Bradburn @mbradburn-ext)
+- Truncate runner token so it won't get logged !4521 (Matthew Bradburn @mbradburn-ext)
+- Allow empty string on emptyDir volume size !4564
+- Support default paths on Windows for custom clone path !2122 (Ben Boeckel @ben.boeckel)
+- Hide docker executor init behind a feature flag !4488
+- Revert "Add custom entrypoint for the build container for Kubernetes executor" changes !4535
 
 ### Maintenance
 
+- Build images with `bleeding` postfix rather than `main` !4583
+- Use version instead of sha commit to reference helper images !4558
+- Update glossary !4574
+- Remove alpine 315 !4575
+- Add alpine 3.19 !4561
+- Fix FPM building RPM packages !4560
 - Update `k8s dumb-init` FF doc to convey its support in both Kubernetes modes !4582
+- Rebuild CI image !4576
+- Change update to upgrade for 'Update GitLab Runner' !4572
+- Add omitempty to allowed_users runner config spec !4571
+- Helm documentation for ImagePullSecrets less confusing !4536 (Baptiste Lalanne @BaptisteLalanne)
+- Document hostname length issue when using docker-machine !4518 (Andrés Delfino @andredelfino)
+- Removing docs Vale rule !4567
 - Fix the architecture of pwsh x86-64 helper images !4559
+- Create subtests for each allowed image !4540 (Zubeen @syedzubeen)
+- Changing title to active verb !4563
+- Updating title to be verb !4562
+- Adding metadata descriptions !4556
+- Document runner managers and system_id !4549
+- Add section for unhealthy configuration !4552
+- Add `grep` as a dependency when overriding an image's ENTRYPOINT !4553
+- Clarify / revise gitlab-runner SIGQUIT config !4548
+- Update to go 1.21.5 !4541 (Matthew Bradburn @mbradburn-ext)
+- Add missing Docker configuration for docker-autoscaler !4534 (Nabil ZOUABI @nabil_zouabi)
 
 ## v16.7.0 (2023-12-21)
 
