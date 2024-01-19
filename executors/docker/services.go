@@ -181,7 +181,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	config := e.createConfigForServiceHealthCheckContainer(service, cmd, waitImage, environment)
 	hostConfig := e.createHostConfigForServiceHealthCheck(service)
 
-	e.BuildLogger.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
+	e.Debugln(fmt.Sprintf("Creating service healthcheck container %s...", containerName))
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, nil, nil, containerName)
 	if err != nil {
 		return fmt.Errorf("create service container: %w", err)

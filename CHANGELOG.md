@@ -1,11 +1,14 @@
-## v16.7.0 (2023-12-21)
+## v16.6.3 (2024-01-18)
 
-### New features
+### Bug fixes
 
-- feat(slsa): use in_toto library and update to slsa provenance schema v1 !4514
-- Add 'docker system dial-stdio' support to docker-autoscaler executor !4509
-- Feat: Support passing User to Docker Executor !4483 (Muhammed Ali @ar-mali)
-- Log images used by job !4325
+- Helper image container should always use native platform !4581
+
+### Maintenance
+
+- Update `k8s dumb-init` FF doc to convey its support in both Kubernetes modes !4582
+
+## v16.6.2 (2023-12-21)
 
 ### Bug fixes
 
