@@ -108,6 +108,7 @@ func createServiceConfig(c *cli.Context) *service.Config {
 	config := &service.Config{
 		Name:        c.String("service"),
 		DisplayName: c.String("service"),
+		UserName:    c.String("user"),
 		Description: defaultDescription,
 		Arguments:   append([]string{"run"}, GetServiceArguments(c)...),
 	}
