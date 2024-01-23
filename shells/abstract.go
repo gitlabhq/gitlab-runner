@@ -606,6 +606,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	w.IfCmdWithOutput("git", updateArgs...)
 	w.Noticef("Updated submodules")
+	w.Command("git", syncArgs...)
 	w.Else()
 	// call sync and update again if the initial update fails
 	w.Warningf("Updating submodules failed. Retrying...")
