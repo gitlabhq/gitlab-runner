@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/magefile/mage/sh"
 	"github.com/sourcegraph/conc/pool"
 )
@@ -17,7 +19,43 @@ var (
 		"architecture: Unrecognized CPU architecture",
 		"filename: has already been taken",
 	}
+
+	retryPackageCloudErrors = []string{
+		"502 Bad Gateway",
+	}
 )
+
+type packageCloudError struct {
+	err string
+}
+
+func newPackageCloudError(err string) *packageCloudError {
+	return &packageCloudError{err: err}
+}
+
+func (p *packageCloudError) isIgnored() bool {
+	for _, msg := range ignoredPackageCloudErrors {
+		if strings.Contains(p.err, msg) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (p *packageCloudError) isRetryable() bool {
+	for _, msg := range retryPackageCloudErrors {
+		if strings.Contains(p.err, msg) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (p *packageCloudError) Error() string {
+	return p.err
+}
 
 type PushOpts struct {
 	URL         string
@@ -62,7 +100,7 @@ func Push(opts PushOpts) error {
 						return nil
 					}
 
-					return runPackageCloudCommand(args)
+					return newPackageCloudCommand(args).run()
 				})
 			}
 		}
@@ -71,30 +109,50 @@ func Push(opts PushOpts) error {
 	return pool.Wait()
 }
 
-func runPackageCloudCommand(args []string) error {
-	var out bytes.Buffer
+type packageCloudCommand struct {
+	cmd     string
+	args    []string
+	backoff backoff.Backoff
+}
 
-	stdout := io.MultiWriter(&out, os.Stdout)
-	stderr := io.MultiWriter(&out, os.Stderr)
+func newPackageCloudCommand(args []string) *packageCloudCommand {
+	return &packageCloudCommand{
+		cmd:  "package_cloud",
+		args: args,
+		backoff: backoff.Backoff{
+			Min: time.Second,
+			Max: 5 * time.Second,
+		},
+	}
+}
 
-	_, err := sh.Exec(
-		nil,
-		stdout,
-		stderr,
-		"package_cloud",
-		args...,
-	)
+func (p *packageCloudCommand) run() error {
+	for i := 0; i < 5; i++ {
+		time.Sleep(p.backoff.Duration())
+		fmt.Printf("Running PackageCloud upload command try #%d\n", i+1)
 
-	outString := out.String()
-	fmt.Println(outString)
-	if err != nil {
-		for _, msg := range ignoredPackageCloudErrors {
-			if strings.Contains(outString, msg) {
-				fmt.Printf("Ignoring PackageCloud error %v: %s\n", err, msg)
-				return nil
-			}
+		var out bytes.Buffer
+
+		stdout := io.MultiWriter(&out, os.Stdout)
+		stderr := io.MultiWriter(&out, os.Stderr)
+
+		_, err := sh.Exec(
+			nil,
+			stdout,
+			stderr,
+			"package_cloud",
+			p.args...,
+		)
+
+		pkgCloudErr := newPackageCloudError(out.String())
+		if err == nil || pkgCloudErr.isIgnored() {
+			return nil
+		} else if pkgCloudErr.isRetryable() {
+			continue
 		}
+
+		return err
 	}
 
-	return err
+	return fmt.Errorf("failed to run PackageCloud command after 5 tries")
 }
