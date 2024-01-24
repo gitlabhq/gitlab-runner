@@ -33,8 +33,6 @@ func (s *executor) verifyMachine(sshPort string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		SshConfig:      *s.Config.SSH,
-		Stdout:         s.BuildLogger.Stdout(),
-		Stderr:         s.BuildLogger.Stderr(),
 		ConnectRetries: 30,
 	}
 	sshCommand.Port = sshPort
@@ -320,12 +318,8 @@ func (s *executor) ensureVMStarted() error {
 func (s *executor) sshConnect() error {
 	s.BuildLogger.Println("Starting SSH command...")
 
-	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
-
 	s.sshCommand = ssh.Client{
 		SshConfig: *s.Config.SSH,
-		Stdout:    logger.Stdout(),
-		Stderr:    logger.Stderr(),
 	}
 	s.sshCommand.Port = s.sshPort
 	s.sshCommand.Host = "localhost"
@@ -335,9 +329,13 @@ func (s *executor) sshConnect() error {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
+	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
+
 	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Command: s.BuildShell.CmdLine,
 		Stdin:   cmd.Script,
+		Stdout:  logger.Stdout(),
+		Stderr:  logger.Stderr(),
 	})
 	if exitError, ok := err.(*ssh.ExitError); ok {
 		exitCode := exitError.ExitCode()
