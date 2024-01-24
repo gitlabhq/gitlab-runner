@@ -4,9 +4,13 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# The Custom executor **(FREE ALL)**
+# The Custom executor
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2885) in GitLab Runner 12.1
 
 GitLab Runner provides the Custom executor for environments that it
 doesn't support natively. For example, LXD or Libvirt.
@@ -114,7 +118,7 @@ The stages run in the following sequence:
 
 ### Services
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) in GitLab Runner 13.6
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4358) in GitLab Runner 13.6
 
 [Services](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#what-is-a-service) are exposed as a JSON array
 as `CUSTOM_ENV_CI_JOB_SERVICES`.

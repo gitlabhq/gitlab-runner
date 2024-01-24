@@ -7,9 +7,13 @@ info: >-
   https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Registering runners **(FREE ALL)**
+# Registering runners
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) in GitLab Runner 15.0, a change to the registration request format prevents the GitLab Runner from communicating with GitLab 14.7 and earlier. You must use a GitLab Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3414) in GitLab Runner 15.0, a change to the registration request format prevents the GitLab Runner from communicating with GitLab 14.7 and earlier. You must use a GitLab Runner version that is appropriate for the GitLab version, or upgrade the GitLab application.
 
 Runner registration is the process that links the runner with one or more GitLab instances. You must register the runner so that it can pick up jobs from the GitLab instance.
 
@@ -23,7 +27,7 @@ Before you register a runner:
 
 ## Register with a runner authentication token
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) in GitLab 15.10.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29613) in GitLab 15.10.
 
 Prerequisites:
 
@@ -368,7 +372,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 
 ### Legacy-compatible registration process
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4157) in GitLab 16.2.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4157) in GitLab 16.2.
 
 Runner registration tokens and several runner configuration arguments were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)
 in GitLab 15.6 and will be removed in GitLab 18.0. To ensure minimal disruption to your automation workflow, the `legacy-compatible registration process` triggers

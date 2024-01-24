@@ -4,7 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# GitLab Runner **(FREE ALL)**
+# GitLab Runner
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
@@ -17,7 +21,11 @@ By default these runners are enabled for all projects.
 You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners) if you have
 the Owner role for the project.
 
-## Use self-managed runners **(FREE SELF)**
+## Use self-managed runners
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** Self-managed
 
 Alternatively, you can install GitLab Runner and register your own runners on GitLab.com or
 on your own instance. To use self-managed runners, you [install](install/index.md) GitLab Runner on infrastructure

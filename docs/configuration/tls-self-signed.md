@@ -4,9 +4,13 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Self-signed certificates or custom Certification Authorities **(FREE ALL)**
+# Self-signed certificates or custom Certification Authorities
 
-> Introduced in GitLab Runner 0.7.0
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
+
+> - Introduced in GitLab Runner 0.7.0
 
 GitLab Runner provides two options to configure certificates to be used to verify TLS peers:
 
@@ -202,7 +206,7 @@ curl --cacert "${CI_SERVER_TLS_CA_FILE}"  ${URL} -o ${FILE}
 
 ### Trusting the certificate for the other CI/CD stages
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3371) in GitLab 13.3.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3371) in GitLab 13.3.
 
 You can map a certificate file to `/etc/gitlab-runner/certs/ca.crt` on Linux,
 or `C:\GitLab-Runner\certs\ca.crt` on Windows.

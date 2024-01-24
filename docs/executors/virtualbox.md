@@ -4,7 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# VirtualBox **(FREE ALL)**
+# VirtualBox
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 NOTE:
 The Parallels executor works the same as the VirtualBox executor. The
@@ -97,7 +101,7 @@ To use VirtualBox with Windows, you can install Cygwin or PowerShell.
 
 ### Use native OpenSSH and PowerShell
 
-> [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3176) GitLab Runner 14.6.
+> - [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3176) GitLab Runner 14.6.
 
 - Install [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.2)
 - Install and configure [OpenSSH](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=powershell#install-openssh-for-windows)

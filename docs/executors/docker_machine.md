@@ -4,9 +4,13 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Install and register GitLab Runner for autoscaling with Docker Machine **(FREE ALL)**
+# Install and register GitLab Runner for autoscaling with Docker Machine
 
-> The autoscaling feature was introduced in GitLab Runner 1.1.0.
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
+
+> - The autoscaling feature was introduced in GitLab Runner 1.1.0.
 
 For an overview of the autoscale architecture, take a look at the
 [comprehensive documentation on autoscaling](../configuration/autoscale.md).
@@ -129,7 +133,7 @@ executable. For example, to download and install `v0.16.2-gitlab.23`:
 
 ### Using GPUs on Google Compute Engine
 
-> [Introduced](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/issues/34) in GitLab Docker Machine `0.16.2-gitlab.10` and GitLab Runner 13.9.
+> - [Introduced](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/issues/34) in GitLab Docker Machine `0.16.2-gitlab.10` and GitLab Runner 13.9.
 
 NOTE:
 GPUs are [supported on every executor](../configuration/gpus.md). It is
