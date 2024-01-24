@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
@@ -29,8 +28,6 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 		JobResponse: resp,
 		Runner:      config,
 	}
-
-	build.Runner.FeatureFlags = map[string]bool{featureflags.UseImprovedURLMasking: true}
 
 	build.Variables = append(
 		build.Variables,

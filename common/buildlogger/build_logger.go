@@ -7,7 +7,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 type Trace interface {
@@ -29,10 +28,6 @@ const (
 	// StreamStartingServiceLevel is the starting stream number for a service log line
 	StreamStartingServiceLevel = 15
 )
-
-type jobTraceIsMaskingURLParams interface {
-	IsMaskingURLParams() bool
-}
 
 func New(log Trace, entry *logrus.Entry) Logger {
 	return Logger{
@@ -77,10 +72,6 @@ func (e *Logger) sendLog(logger func(args ...interface{}), logPrefix string, arg
 		// (fmt.Sprintln consistently adds a space between arguments).
 		logLine := fmt.Sprintln(args...)
 		logLine = logLine[:len(logLine)-1]
-
-		if trace, ok := e.log.(jobTraceIsMaskingURLParams); !ok || !trace.IsMaskingURLParams() {
-			logLine = url_helpers.ScrubSecrets(logLine)
-		}
 		logLine += helpers.ANSI_RESET + "\n"
 
 		e.SendRawLog(logPrefix + logLine)

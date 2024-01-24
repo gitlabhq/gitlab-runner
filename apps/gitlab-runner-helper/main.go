@@ -10,7 +10,6 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
 
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
@@ -48,9 +47,6 @@ func main() {
 		logrus.Fatalln("Command", command, "not found")
 	}
 
-	if !featureflags.IsOn(logrus.StandardLogger(), os.Getenv(featureflags.UseImprovedURLMasking)) {
-		log.AddSecretsCleanupLogHook(logrus.StandardLogger())
-	}
 	log.ConfigureLogging(app)
 
 	if err := app.Run(os.Args); err != nil {
