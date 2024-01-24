@@ -526,9 +526,11 @@ If you have an existing registered runner and want to use that, set the
 `runner-token` with the token used to identify that runner. If you want
 to have a new runner registered you can set the
 `runner-registration-token` with a
-[registration token](https://docs.gitlab.com/ee/ci/runners/) ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/102681).
+[registration token](https://docs.gitlab.com/ee/ci/runners/) ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/102681)).
 
 For example:
+
+1. Create a secret with registration token
 
 ```yaml
 apiVersion: v1
@@ -540,6 +542,12 @@ data:
   runner-registration-token: "" # need to leave as an empty string for compatibility reasons
   runner-token: "REDACTED"
 ```
+
+```shell
+kubectl apply --namespace <NAMESPACE> -f gitlab-runner-secret.yaml
+```
+
+1. Configure the following in `values.yaml`:
 
 ```yaml
 runners:
