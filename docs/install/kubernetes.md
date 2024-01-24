@@ -4,7 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# GitLab Runner Helm Chart **(FREE ALL)**
+# GitLab Runner Helm Chart
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 The official way of deploying a GitLab Runner instance into your
 Kubernetes cluster is by using the `gitlab-runner` Helm chart.
@@ -149,7 +153,7 @@ ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)
 
 ### Additional configuration
 
-> [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#register-with-a-configuration-template) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
+> - [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#register-with-a-configuration-template) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 You can use a [configuration template file](../register/index.md#register-with-a-configuration-template)
 to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#configuration-settings).
@@ -512,7 +516,7 @@ Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts
 
 ### Store registration tokens or runner tokens in secrets
 
-> Introduced in [16.1](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/merge_requests/405).
+> - Introduced in [16.1](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/merge_requests/405).
 
 To register a runner that was created in the GitLab UI, you specify the `runnerToken` in `values.yml`. The `runnerToken` is displayed briefly in
 the UI when you create the runner.

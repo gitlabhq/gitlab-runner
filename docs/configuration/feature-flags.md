@@ -6,7 +6,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # GitLab Runner feature flags
 
-> Introduced in GitLab 11.4.
+> - Introduced in GitLab 11.4.
 
 WARNING:
 Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/ee/administration/feature_flags.html#risks-when-enabling-features-still-in-development).
@@ -127,7 +127,7 @@ in the [Runner configuration](advanced-configuration.md):
 
 ## Enable feature flag in runner configuration
 
-> [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2811) GitLab Runner 13.11.
+> - [Introduced in](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2811) GitLab Runner 13.11.
 
 You can enable feature flags by specifying them under `[runners.feature_flags]`. This
 setting prevents any job from overriding the feature flag values.

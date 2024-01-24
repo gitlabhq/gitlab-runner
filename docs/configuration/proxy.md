@@ -4,7 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Running GitLab Runner behind a proxy **(FREE ALL)**
+# Running GitLab Runner behind a proxy
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 This guide aims specifically to making GitLab Runner with Docker executor work behind a proxy.
 

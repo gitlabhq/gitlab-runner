@@ -4,9 +4,13 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Docker Machine Executor autoscale configuration **(FREE ALL)**
+# Docker Machine Executor autoscale configuration
 
-> The autoscale feature was introduced in GitLab Runner 1.1.0.
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
+
+> - The autoscale feature was introduced in GitLab Runner 1.1.0.
 
 Autoscale provides the ability to use resources in a more elastic and
 dynamic way.
@@ -340,7 +344,7 @@ In the worst case scenario, you can't have 10 idle machines, but only 5, because
 
 ## The `IdleScaleFactor` strategy
 
-> Introduced as experimental feature in [GitLab Runner 14.6](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3179).
+> - Introduced as experimental feature in [GitLab Runner 14.6](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3179).
 
 The `IdleCount` parameter defines a static number of _Idle_ machines that runner should sustain.
 The value you assign depends on your use case.
@@ -407,7 +411,7 @@ until 10 remain. After that point, scaling down stops and Runner keeps 10 machin
 
 ## Autoscaling periods configuration
 
-> Introduced in [GitLab Runner 13.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/5069).
+> - Introduced in [GitLab Runner 13.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/5069).
 
 Autoscaling can be configured to have different values depending on the time period.
 Organizations might have regular times when spikes of jobs are being executed,
@@ -462,7 +466,7 @@ in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](ad
 
 ## Off Peak time mode configuration (Deprecated)
 
-> This setting is deprecated and was removed in GitLab Runner 14.0.
+> - This setting is deprecated and was removed in GitLab Runner 14.0.
 
 Autoscale **can no longer be configured** with _Off Peak_ time mode periods. Convert it into autoscaling periods instead.
 

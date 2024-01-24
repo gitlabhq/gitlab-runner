@@ -4,7 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Advanced configuration **(FREE ALL)**
+# Advanced configuration
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 To change the behavior of GitLab Runner and individual registered runners, modify the `config.toml` file.
 
@@ -25,7 +29,7 @@ GitLab Runner also reloads the configuration in response to the `SIGHUP` signal.
 
 ## Configuration validation
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3924) in GitLab Runner 15.10
 
 Configuration validation is a process that checks the structure of the `config.toml` file. The output from the configuration
 validator provides only `info` level messages.
@@ -549,7 +553,7 @@ The `start_type` parameter determines the graphical front end used when starting
 
 ## Overriding the base VM image
 
-> Introduced in GitLab Runner 14.2.
+> - Introduced in GitLab Runner 14.2.
 
 For both the Parallels and VirtualBox executors, you can override the base VM name specified by `base_name`.
 To do this, use the [image](https://docs.gitlab.com/ee/ci/yaml/#image) parameter in the `.gitlab-ci.yml` file.
@@ -678,7 +682,10 @@ following fields:
 Like in the standard cron configuration file, the fields can contain single
 values, ranges, lists, and asterisks. View [a detailed description of the syntax](https://github.com/gorhill/cronexpr#implementation).
 
-## The `[runners.instance]` section **(EXPERIMENT)**
+## The `[runners.instance]` section
+
+DETAILS:
+**Status:** Experiment
 
 The following parameters define the configuration for the [instance executor](../executors/instance.md).
 The instance executor is an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment)
@@ -689,7 +696,7 @@ The instance executor is an [Experiment](https://docs.gitlab.com/ee/policy/exper
 
 ## The `[runners.autoscaler]` section
 
-> Introduced in GitLab Runner v15.10.0.
+> - Introduced in GitLab Runner v15.10.0.
 
 The following parameters configure the autoscaler feature. You can only use these parameters with the
 [Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors. These
@@ -1008,7 +1015,7 @@ If you use ADC, be sure that the service account that you use has the `iam.servi
 
 ### The `[runners.cache.azure]` section
 
-> Introduced in GitLab Runner 13.4.0.
+> - Introduced in GitLab Runner 13.4.0.
 
 The following parameters define native support for Azure Blob Storage. To learn more, view the
 [Azure Blob Storage documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
@@ -1038,7 +1045,7 @@ Example:
 
 ## The `[runners.kubernetes]` section
 
-> Introduced in GitLab Runner v1.6.0.
+> - Introduced in GitLab Runner v1.6.0.
 
 The following parameters define Kubernetes behavior.
 For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes.md).
@@ -1119,7 +1126,7 @@ To use the `arm64` helper image on `arm64` Kubernetes clusters, set the followin
 
 ### Runner images that use an old version of Alpine Linux
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3122) in GitLab Runner 14.5.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3122) in GitLab Runner 14.5.
 
 Images are built with multiple versions of Alpine Linux, so you can use a newer version of Alpine, but at the same time use older versions as well.
 
@@ -1219,14 +1226,14 @@ valid and point to the same image.
 
 #### When using PowerShell Core
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27252) in GitLab 13.9.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27252) in GitLab 13.9.
 
 An additional version of the helper image for Linux,
 which contains PowerShell Core, is published with the `gitlab/gitlab-runner-helper:XYZ-pwsh` tag.
 
 ## The `[runners.custom_build_dir]` section
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1267) in GitLab Runner 11.10.
 
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#custom-build-directories) parameters.
 

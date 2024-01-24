@@ -5,7 +5,11 @@ description: Software for CI/CD jobs.
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Install GitLab Runner **(FREE ALL)**
+# Install GitLab Runner
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 GitLab Runner runs the CI/CD jobs that are defined in GitLab.
 

@@ -4,7 +4,11 @@ group: Environments
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Use the agent to install GitLab Runner **(FREE ALL)**
+# Use the agent to install GitLab Runner
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 After you install and configure the [GitLab agent for Kubernetes](https://docs.gitlab.com/ee/user/clusters/agent/)
 you can use the agent to install GitLab Runner in your cluster.

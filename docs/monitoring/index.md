@@ -5,13 +5,17 @@ description: Prometheus metrics.
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Monitor GitLab Runner usage **(FREE ALL)**
+# Monitor GitLab Runner usage
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 GitLab Runner can be monitored using [Prometheus](https://prometheus.io).
 
 ## Embedded Prometheus metrics
 
-> The embedded HTTP Statistics Server with Prometheus metrics was introduced in GitLab Runner 1.8.0.
+> - The embedded HTTP Statistics Server with Prometheus metrics was introduced in GitLab Runner 1.8.0.
 
 GitLab Runner is instrumented with native Prometheus
 metrics, which can be exposed via an embedded HTTP server on the `/metrics`
@@ -69,7 +73,7 @@ For a complete list of available metrics see [Monitoring runners](../fleet_scali
 
 ## `pprof` HTTP endpoints
 
-> `pprof` integration was introduced in GitLab Runner 1.9.0.
+> - `pprof` integration was introduced in GitLab Runner 1.9.0.
 
 While having metrics about the internal state of the GitLab Runner process is useful,
 we've found that in some cases it would be good to check what is happening

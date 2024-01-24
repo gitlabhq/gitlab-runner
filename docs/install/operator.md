@@ -6,7 +6,11 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Install GitLab Runner Operator
 
-## Install on Red Hat OpenShift **(FREE ALL)**
+## Install on Red Hat OpenShift
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26640) in GitLab 13.3.
 > - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27126) in GitLab 13.7.
@@ -40,9 +44,13 @@ On the Installed Operators page, when the GitLab Operator is ready, the status c
 
 ![GitLab Operator Install Status](img/openshift_success_v13_3.png)
 
-## Install on Kubernetes **(FREE ALL)**
+## Install on Kubernetes
 
-> [Introduced](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/57) in GitLab 14.10.
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
+
+> - [Introduced](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/57) in GitLab 14.10.
 
 You can install the GitLab Runner on Kubernetes v1.21 and later using the [GitLab Runner Operator](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator) available from the stable channel of [OperatorHub.io](https://operatorhub.io/operator/gitlab-runner-operator). Once installed, you can run your GitLab CI/CD jobs using the newly deployed GitLab Runner instance. Each CI/CD job will run in a separate pod.
 

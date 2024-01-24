@@ -4,7 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# GitLab Runner commands **(FREE ALL)**
+# GitLab Runner commands
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 GitLab Runner contains a set of commands you use to register, manage, and
 run your builds.
@@ -274,7 +278,7 @@ Boolean parameters must be passed in the command line with `--key={true|false}`.
 
 #### `[[runners]]` configuration template file
 
-> [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4228) in GitLab Runner 12.2.
 
 Additional options can be easily configured during runner registration using the
 [configuration template file](../register/index.md#register-with-a-configuration-template) feature.

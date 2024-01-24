@@ -4,7 +4,11 @@ group: Runner
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Security for self-managed runners **(FREE ALL)**
+# Security for self-managed runners
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 A GitLab CI/CD pipeline is a workflow automation engine used for simple or complex DevOps automation tasks. Because these pipelines enable a remote code execution service, you should implement the following process to reduce security risks:
 

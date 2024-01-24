@@ -5,7 +5,11 @@ description: Config.toml, certificates, autoscaling, proxy setup.
 info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
-# Configure GitLab Runner **(FREE ALL)**
+# Configure GitLab Runner
+
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** SaaS, self-managed
 
 Learn how to configure GitLab Runner.
 
