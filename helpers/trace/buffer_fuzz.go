@@ -10,9 +10,9 @@ import (
 	"math/rand"
 	"strings"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/masker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/tokensanitizer"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/urlsanitizer"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/masker"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/tokensanitizer"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/urlsanitizer"
 )
 
 type nopWriter struct {

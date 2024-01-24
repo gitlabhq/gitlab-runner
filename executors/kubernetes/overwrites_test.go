@@ -40,7 +40,7 @@ func buildOverwriteVariables(overwrites variableOverwrites, globOverwrites ...ma
 }
 
 func stdoutLogger() buildlogger.Logger {
-	return buildlogger.New(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}))
+	return buildlogger.New(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 }
 
 func TestOverwrites(t *testing.T) {

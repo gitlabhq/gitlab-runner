@@ -387,13 +387,17 @@ func (s *executor) sshConnect() error {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
-	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
+	stdout := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+	defer stdout.Close()
+
+	stderr := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr)
+	defer stderr.Close()
 
 	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Command: s.BuildShell.CmdLine,
 		Stdin:   cmd.Script,
-		Stdout:  logger.Stdout(),
-		Stderr:  logger.Stderr(),
+		Stdout:  stdout,
+		Stderr:  stderr,
 	})
 	if exitError, ok := err.(*ssh.ExitError); ok {
 		exitCode := exitError.ExitCode()

@@ -872,7 +872,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 			defer buf.Close()
 
 			trace := &common.Trace{Writer: buf}
-			e.BuildLogger = buildlogger.New(trace, logrus.WithFields(logrus.Fields{}))
+			e.BuildLogger = buildlogger.New(trace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 			isw := service_helpers.NewInlineServiceLogWriter(cName, trace)
 
@@ -938,7 +938,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 
 	e := &executor{services: containers}
 	e.client = c
-	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry))
+	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
 	e.Build = &common.Build{}
 
 	ctx := context.Background()

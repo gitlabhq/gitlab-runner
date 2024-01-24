@@ -3,10 +3,14 @@ package buildlogger
 import (
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/masker"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/tokensanitizer"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/urlsanitizer"
 )
 
 type Trace interface {
@@ -14,10 +18,34 @@ type Trace interface {
 	IsStdout() bool
 }
 
+type Options struct {
+	MaskPhrases       []string
+	MaskTokenPrefixes []string
+	Timestamping      bool
+}
+
+const (
+	Stdout StreamType = 'O'
+	Stderr StreamType = 'E'
+)
+
+type StreamType byte
+
 type Logger struct {
-	log      Trace
-	entry    *logrus.Entry
-	streamID int
+	internal.Tee
+
+	base   io.WriteCloser
+	opts   Options
+	closed bool
+
+	// mu protects w, as Tee's Println, Debugln etc. funcs can be called
+	// throughout the runner from different go routines.
+	mu *sync.Mutex
+	w  io.WriteCloser
+}
+
+func NewNopCloser(w io.Writer) io.WriteCloser {
+	return internal.NewNopCloser(w)
 }
 
 const (
@@ -29,107 +57,71 @@ const (
 	StreamStartingServiceLevel = 15
 )
 
-func New(log Trace, entry *logrus.Entry) Logger {
+func New(log Trace, entry *logrus.Entry, opts Options) Logger {
+	l := Logger{mu: new(sync.Mutex)}
+	l.opts = opts
+
+	if log != nil {
+		l.base = internal.NewNopCloser(log)
+		l.w = wrap(l.base, StreamExecutorLevel, Stdout, opts)
+	}
+
+	l.Tee = internal.NewTee(l.SendRawLog, entry, log != nil && log.IsStdout())
+
+	return l
+}
+
+func (l *Logger) Stream(streamID int, streamType StreamType) io.WriteCloser {
+	// l.base being nil happens when the buildlogger hasn't been created with New() or
+	// a nil was passed for the Trace parameter. This only happens in tests, and to not
+	// panic we simply return a discard writer.
+	if l.base == nil {
+		return internal.NewNopCloser(io.Discard)
+	}
+
+	return wrap(l.base, streamID, streamType, l.opts)
+}
+
+func wrap(w io.WriteCloser, streamID int, streamType StreamType, opts Options) io.WriteCloser {
+	w = tokensanitizer.New(w, opts.MaskTokenPrefixes)
+	w = urlsanitizer.New(w)
+	w = masker.New(w, opts.MaskPhrases)
+
+	return w
+}
+
+func (l *Logger) WithFields(fields logrus.Fields) Logger {
 	return Logger{
-		log:   log,
-		entry: entry,
+		Tee:  l.Tee.WithFields(fields),
+		base: l.base,
+		opts: l.opts,
+		w:    l.w,
+		mu:   l.mu,
 	}
 }
 
-func (e *Logger) Stdout() io.Writer {
-	return e.log
-}
-
-func (e *Logger) Stderr() io.Writer {
-	return e.log
-}
-
-func (e *Logger) StreamID(streamID int) Logger {
-	return Logger{
-		log:      e.log,
-		entry:    e.entry,
-		streamID: streamID,
-	}
-}
-
-func (e *Logger) WithFields(fields logrus.Fields) Logger {
-	return New(e.log, e.entry.WithFields(fields))
-}
-
-func (e *Logger) SendRawLog(args ...interface{}) {
-	if e.log != nil {
-		_, _ = fmt.Fprint(e.log, args...)
-	}
-}
-
-func (e *Logger) sendLog(logger func(args ...interface{}), logPrefix string, args ...interface{}) {
-	if e.log != nil {
-		// log lines have spaces between each argument, followed by an ANSI Reset and *then* a new-line.
-		//
-		// To achieve this, we use fmt.Sprintln and remove the newline, add the ANSI Reset and then
-		// append the newline again. The reason we don't use fmt.Sprint is that there's a greater
-		// difference between that and fmt.Sprintln than just the newline character being added
-		// (fmt.Sprintln consistently adds a space between arguments).
-		logLine := fmt.Sprintln(args...)
-		logLine = logLine[:len(logLine)-1]
-		logLine += helpers.ANSI_RESET + "\n"
-
-		e.SendRawLog(logPrefix + logLine)
-
-		if e.log.IsStdout() {
-			return
-		}
-	}
-
-	if len(args) == 0 {
+func (l *Logger) SendRawLog(args ...any) {
+	if l.w == nil {
 		return
 	}
 
-	logger(args...)
+	l.mu.Lock()
+	_, _ = fmt.Fprint(l.w, args...)
+	l.mu.Unlock()
 }
 
-func (e *Logger) WriterLevel(level logrus.Level) *io.PipeWriter {
-	return e.entry.WriterLevel(level)
-}
+func (l *Logger) Close() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-func (e *Logger) Debugln(args ...interface{}) {
-	if e.entry == nil {
-		return
+	if l.closed {
+		return fmt.Errorf("already closed")
 	}
-	e.entry.Debugln(args...)
-}
+	l.closed = true
 
-func (e *Logger) Println(args ...interface{}) {
-	if e.entry == nil {
-		return
+	if l.w != nil {
+		return l.w.Close()
 	}
-	e.sendLog(e.entry.Debugln, helpers.ANSI_CLEAR, args...)
-}
 
-func (e *Logger) Infoln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Println, helpers.ANSI_BOLD_GREEN, args...)
-}
-
-func (e *Logger) Warningln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Warningln, helpers.ANSI_YELLOW+"WARNING: ", args...)
-}
-
-func (e *Logger) SoftErrorln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Warningln, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
-}
-
-func (e *Logger) Errorln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Errorln, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
+	return nil
 }

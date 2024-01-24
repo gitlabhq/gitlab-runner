@@ -104,11 +104,6 @@ func IncompatiblePullPolicyError(pullPolicy, allowedPullPolicies interface{}, pu
 	}
 }
 
-type MaskOptions struct {
-	Phrases       []string
-	TokenPrefixes []string
-}
-
 // HTTP related constants
 const (
 	Accept                        = headers.Accept

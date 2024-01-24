@@ -111,7 +111,7 @@ func prepareExecutor(t *testing.T, tt executorTestCase) (*executor, common.Execu
 		},
 		Config:      &tt.config,
 		Context:     context.Background(),
-		BuildLogger: buildlogger.New(trace, logrus.WithFields(logrus.Fields{})),
+		BuildLogger: buildlogger.New(trace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 	}
 
 	e := new(executor)
@@ -149,6 +149,12 @@ func mockCommandFactory(t *testing.T, tt executorTestCase) func() {
 	cmd := new(command.MockCommand)
 	cmd.On("Run").
 		Run(func(_ mock.Arguments) {
+			if outputs.stdout != nil {
+				defer outputs.stdout.Close()
+			}
+			if outputs.stderr != nil {
+				defer outputs.stderr.Close()
+			}
 			if tt.commandStdoutContent != "" && outputs.stdout != nil {
 				_, err := fmt.Fprintln(outputs.stdout, tt.commandStdoutContent)
 				require.NoError(t, err, "Unexpected error on mocking command output to stdout")
@@ -174,8 +180,8 @@ func mockCommandFactory(t *testing.T, tt executorTestCase) func() {
 				tt.assertCommandFactory(t, tt, ctx, executable, args, cmdOpts, options)
 			}
 
-			outputs.stdout = cmdOpts.Stdout
-			outputs.stderr = cmdOpts.Stderr
+			outputs.stdout = buildlogger.NewNopCloser(cmdOpts.Stdout)
+			outputs.stderr = buildlogger.NewNopCloser(cmdOpts.Stderr)
 
 			return cmd
 		}

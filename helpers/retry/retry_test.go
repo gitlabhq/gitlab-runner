@@ -126,7 +126,7 @@ func TestRetryableBuildLoggerDecorator(t *testing.T) {
 	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
 
 	logger, hook := test.NewNullLogger()
-	buildLogger := buildlogger.New(nil, logger.WithContext(context.Background()))
+	buildLogger := buildlogger.New(nil, logger.WithContext(context.Background()), buildlogger.Options{})
 	r := NewNoValue(
 		New().WithCheck(m.ShouldRetry).WithBuildLog(&buildLogger),
 		m.Run,

@@ -230,7 +230,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			}
 
 			logger, _ := test.NewNullLogger()
-			bl := buildlogger.New(nil, logrus.NewEntry(logger))
+			bl := buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{})
 
 			options := executorPrepareOptions(tc.jobImage, tc.nestingCfgImage, testNestingHost, testVariableValue)
 			options.Config.Autoscaler.VMIsolation.Enabled = tc.vmIsolationEnabled

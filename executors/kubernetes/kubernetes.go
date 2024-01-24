@@ -545,7 +545,10 @@ func (s *executor) watchPodEvents() error {
 }
 
 func (s *executor) printPodEvents() {
-	w := tabwriter.NewWriter(s.BuildLogger.Stderr(), 3, 1, 3, ' ', 0)
+	wc := s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr)
+	defer wc.Close()
+
+	w := tabwriter.NewWriter(wc, 3, 1, 3, ' ', 0)
 	_, _ = fmt.Fprintln(w, "Type\tReason\tMessage")
 
 	// The s.eventsStream.Stop method will be called by the caller
@@ -737,15 +740,17 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		}
 	}
 
-	var out io.Writer = s.BuildLogger.Stderr()
-	if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
-		out = io.Discard
+	var out io.WriteCloser = buildlogger.NewNopCloser(io.Discard)
+	if !s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+		out = s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr)
 	}
+	defer out.Close()
 
 	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes)
 	if err != nil {
 		return fmt.Errorf("waiting for pod running: %w", err)
 	}
+	out.Close()
 
 	if status != api.PodRunning {
 		return fmt.Errorf("pod failed to enter running state: %s", status)
@@ -901,13 +906,17 @@ func (s *executor) processLogs(ctx context.Context) {
 	processor := s.newLogProcessor()
 	logsCh, errCh := processor.Process(ctx)
 
+	// todo: update kubernetes log processor to support separate stdout/stderr streams
+	logger := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+	defer logger.Close()
+
 	for {
 		select {
 		case line, ok := <-logsCh:
 			if !ok {
 				return
 			}
-			s.forwardLogLine(line)
+			s.forwardLogLine(logger, line)
 		case err, ok := <-errCh:
 			if !ok {
 				continue
@@ -924,10 +933,10 @@ func (s *executor) processLogs(ctx context.Context) {
 	}
 }
 
-func (s *executor) forwardLogLine(line string) {
+func (s *executor) forwardLogLine(w io.Writer, line string) {
 	var status shells.StageCommandStatus
 	if !status.TryUnmarshal(line) {
-		if _, err := s.writeRunnerLog(line); err != nil {
+		if _, err := s.writeRunnerLog(w, line); err != nil {
 			s.BuildLogger.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 		}
 
@@ -944,16 +953,14 @@ func (s *executor) forwardLogLine(line string) {
 	}
 }
 
-func (s *executor) writeRunnerLog(log string) (int, error) {
+func (s *executor) writeRunnerLog(w io.Writer, log string) (int, error) {
 	size := len(log)
 
 	if size > common.DefaultReaderBufferSize && string(log[size-1]) == "\n" {
 		log = log[:size-1]
 	}
 
-	// todo:
-	// build logger: update kubernetes log processor to support separate stdout/stderr streams
-	return s.BuildLogger.Stdout().Write([]byte(log))
+	return w.Write([]byte(log))
 }
 
 // getExitCode tries to extract the exit code from an inner exec.CodeExitError
@@ -2444,21 +2451,29 @@ func (s *executor) runInContainerWithExec(
 	go func() {
 		defer close(errCh)
 
-		var out io.Writer = s.BuildLogger.Stderr()
-		if s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
-			out = io.Discard
+		var out io.WriteCloser = buildlogger.NewNopCloser(io.Discard)
+		if !s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+			out = s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr)
 		}
+		defer out.Close()
 
 		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes)
 		if err != nil {
 			errCh <- err
 			return
 		}
+		out.Close()
 
 		if status != api.PodRunning {
 			errCh <- fmt.Errorf("pod failed to enter running state: %s", status)
 			return
 		}
+
+		stdout := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+		defer stdout.Close()
+
+		stderr := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr)
+		defer stderr.Close()
 
 		exec := ExecOptions{
 			PodName:       s.pod.Name,
@@ -2466,8 +2481,8 @@ func (s *executor) runInContainerWithExec(
 			ContainerName: name,
 			Command:       command,
 			In:            strings.NewReader(script),
-			Out:           s.BuildLogger.Stdout(),
-			Err:           s.BuildLogger.Stderr(),
+			Out:           stdout,
+			Err:           stderr,
 			Stdin:         true,
 			Config:        s.kubeConfig,
 			KubeClient:    s.kubeClient,
@@ -2631,13 +2646,15 @@ func (s *executor) captureContainersLogs(ctx context.Context, containers []api.C
 				continue
 			}
 
-			logger := s.BuildLogger.StreamID(buildlogger.StreamStartingServiceLevel)
+			logger := s.BuildLogger.Stream(buildlogger.StreamStartingServiceLevel, buildlogger.Stdout)
+			defer logger.Close()
 
 			aliases := append([]string{strings.Split(container.Image, ":")[0]}, service.Aliases()...)
-			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger.Stdout())
+			sink := service_helpers.NewInlineServiceLogWriter(strings.Join(aliases, "-"), logger)
 			if err := s.captureContainerLogs(ctx, container.Name, sink); err != nil {
 				s.BuildLogger.Warningln(err.Error())
 			}
+			logger.Close()
 		}
 	}
 }

@@ -4,20 +4,13 @@ package tokensanitizer
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
 )
-
-type nopCloser struct {
-	io.Writer
-}
-
-func (nopCloser) Close() error {
-	return nil
-}
 
 func TestTokenMasking(t *testing.T) {
 	tests := map[string]struct {
@@ -91,7 +84,7 @@ func TestTokenMasking(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 
-			m := New(nopCloser{buf}, tc.prefixes)
+			m := New(internal.NewNopCloser(buf), tc.prefixes)
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {

@@ -1599,7 +1599,7 @@ func TestWaitForTerminal(t *testing.T) {
 			}
 
 			trace := Trace{Writer: os.Stdout}
-			build.logger = buildlogger.New(&trace, build.Log())
+			build.logger = buildlogger.New(&trace, build.Log(), buildlogger.Options{})
 			sess, err := session.NewSession(nil)
 			require.NoError(t, err)
 			build.Session = sess
@@ -2020,7 +2020,7 @@ func TestBuildFinishTimeout(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			logger, hooks := test.NewNullLogger()
 			build := Build{
-				logger: buildlogger.New(nil, logrus.NewEntry(logger)),
+				logger: buildlogger.New(nil, logrus.NewEntry(logger), buildlogger.Options{}),
 			}
 			buildFinish := make(chan error, 1)
 			timeout := 10 * time.Millisecond
@@ -2437,10 +2437,12 @@ func TestSetTraceStatus(t *testing.T) {
 			b := &Build{
 				Runner: &RunnerConfig{},
 			}
-			b.logger = buildlogger.New(nil, b.Log())
 
 			trace := new(MockJobTrace)
 			defer trace.AssertExpectations(t)
+
+			trace.On("IsStdout").Return(true)
+			trace.On("Write", mock.Anything).Return(0, nil)
 
 			var be *BuildError
 			if errors.As(tc.err, &be) {
@@ -2525,18 +2527,10 @@ func Test_expandContainerOptions(t *testing.T) {
 		},
 	}
 
-	logs := bytes.Buffer{}
-	lentry := logrus.New()
-	lentry.Out = &logs
-	logger := buildlogger.New(nil, logrus.NewEntry(lentry))
-
 	for name, tt := range testCases {
 		t.Run(name, func(t *testing.T) {
-			logs.Reset()
-
 			b := &Build{
 				Runner: &RunnerConfig{},
-				logger: logger,
 				JobResponse: JobResponse{
 					Variables: tt.jobVars,
 					Image:     tt.image,
@@ -2707,7 +2701,7 @@ func TestGetStageTimeoutContexts(t *testing.T) {
 			logs := bytes.Buffer{}
 			lentry := logrus.New()
 			lentry.Out = &logs
-			logger := buildlogger.New(nil, logrus.NewEntry(lentry))
+			logger := buildlogger.New(nil, logrus.NewEntry(lentry), buildlogger.Options{})
 
 			b := &Build{
 				Runner: &RunnerConfig{},

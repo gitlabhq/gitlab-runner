@@ -19,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-units"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sirupsen/logrus"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -180,6 +181,7 @@ var testAllowedImages = []testAllowedImageDescription{
 
 func TestVerifyAllowedImage(t *testing.T) {
 	e := new(executor)
+	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 	for _, test := range testAllowedImages {
 		err := e.verifyAllowedImage(test.image, "", test.allowedImages, []string{})
@@ -389,7 +391,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 
 	logger, _ := logrustest.NewNullLogger()
 	e.AbstractExecutor = executors.AbstractExecutor{
-		BuildLogger: buildlogger.New(&common.Trace{Writer: io.Discard}, logger.WithField("test", t.Name())),
+		BuildLogger: buildlogger.New(&common.Trace{Writer: io.Discard}, logger.WithField("test", t.Name()), buildlogger.Options{}),
 		Build: &common.Build{
 			ProjectRunnerID: 0,
 			Runner:          &c,
@@ -825,6 +827,7 @@ func createExecutorForTestDockerConfiguration(
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	}
+	e.BuildLogger = buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 	e.Config.Docker = dockerConfig
 	e.Build = &common.Build{
 		Runner: &common.RunnerConfig{},
@@ -1523,6 +1526,7 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) (*executor
 	}
 	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
+			BuildLogger: buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{}),
 			Build: &common.Build{
 				ProjectRunnerID: 0,
 				Runner:          &c,
