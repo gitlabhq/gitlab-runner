@@ -14,10 +14,6 @@ type Trace struct {
 	mutex      sync.Mutex
 }
 
-type masker interface {
-	SetMasked(MaskOptions)
-}
-
 const ExitCodeUnsupportedOptions = 3
 
 type JobFailureData struct {
@@ -33,13 +29,6 @@ func (s *Trace) Write(p []byte) (n int, err error) {
 		return 0, os.ErrInvalid
 	}
 	return s.Writer.Write(p)
-}
-
-func (s *Trace) SetMasked(opts MaskOptions) {
-	masker, ok := s.Writer.(masker)
-	if ok {
-		masker.SetMasked(opts)
-	}
 }
 
 func (s *Trace) SetDebugModeEnabled(_ bool) {

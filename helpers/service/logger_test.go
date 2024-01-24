@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
@@ -228,7 +227,6 @@ func BenchmarkServiceLog(b *testing.B) {
 		"discard": func() io.Writer { return io.Discard },
 		"trace buffer": func() io.Writer {
 			buf, err := trace.New()
-			buf.SetMasked(common.MaskOptions{Phrases: []string{"bench", "mark"}})
 			require.NoError(b, err)
 			return buf
 		},

@@ -89,11 +89,6 @@ func (_m *MockJobTrace) SetFailuresCollector(fc FailuresCollector) {
 	_m.Called(fc)
 }
 
-// SetMasked provides a mock function with given fields: maskOptions
-func (_m *MockJobTrace) SetMasked(maskOptions MaskOptions) {
-	_m.Called(maskOptions)
-}
-
 // SetSupportedFailureReasonMapper provides a mock function with given fields: f
 func (_m *MockJobTrace) SetSupportedFailureReasonMapper(f SupportedFailureReasonMapper) {
 	_m.Called(f)

@@ -1012,10 +1012,6 @@ func (b *Build) logUsedImages() {
 func (b *Build) configureTrace(trace JobTrace, cancel context.CancelFunc) {
 	trace.SetCancelFunc(cancel)
 	trace.SetAbortFunc(cancel)
-	trace.SetMasked(MaskOptions{
-		Phrases:       b.GetAllVariables().Masked(),
-		TokenPrefixes: b.JobResponse.Features.TokenMaskPrefixes,
-	})
 }
 
 func (b *Build) createExecutorPrepareOptions(ctx context.Context, globalConfig *Config) ExecutorPrepareOptions {

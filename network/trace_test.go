@@ -64,10 +64,6 @@ func newTestJobTrace(network *common.MockNetwork, config common.RunnerConfig) (*
 		return nil, err
 	}
 
-	// use long mask token to ensure that tests that check for incremental updates
-	// use \n to flush to the network.
-	trace.SetMasked(common.MaskOptions{Phrases: []string{"really_long_mask_token_for_tests"}})
-
 	return trace, err
 }
 
@@ -234,33 +230,6 @@ func TestJobOutputLimit(t *testing.T) {
 
 	assert.Contains(t, receivedTrace.String(), traceMessage)
 	assert.Contains(t, receivedTrace.String(), expectedLogLimitExceededMsg)
-}
-
-func TestJobMasking(t *testing.T) {
-	maskedValues := common.MaskOptions{Phrases: []string{"masked"}}
-	traceMessage := "This string should be masked"
-	traceMaskedMessage := "This string should be [MASKED]"
-
-	mockNetwork := new(common.MockNetwork)
-	defer mockNetwork.AssertExpectations(t)
-
-	ignoreOptionalTouchJob(mockNetwork)
-
-	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage), 0, false).
-		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.PatchSucceeded, 0))
-
-	mockNetwork.On("UpdateJob", mock.Anything, mock.Anything, mock.Anything).
-		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
-
-	jobTrace, err := newTestJobTrace(mockNetwork, jobConfig)
-	require.NoError(t, err)
-
-	jobTrace.SetMasked(maskedValues)
-	jobTrace.start()
-
-	_, err = jobTrace.Write([]byte(traceMessage))
-	require.NoError(t, err)
-	assert.NoError(t, jobTrace.Success())
 }
 
 func TestJobFinishTraceUpdateRetry(t *testing.T) {
@@ -797,32 +766,24 @@ func TestUpdateIntervalChanges(t *testing.T) {
 	}
 }
 
-// TestJobChecksum validates a completness of crc32 checksum as sent in
-// `UpdateJob`. It ensures that checksum engine generates a checksum of a
-// masked content that is send in a chunks to Rails
 func TestJobChecksum(t *testing.T) {
-	maskedValues := common.MaskOptions{Phrases: []string{"masked"}}
-	traceMessage := "This string should be masked $$$$"
-	traceMaskedMessage := "This string should be [MASKED] $$$$"
+	const traceMessage = "This is a basic log line"
+	const maxTraceSize = 22
 
 	expectedJobInfo := common.UpdateJobInfo{
 		ID:    -1,
 		State: "success",
 		Output: common.JobTraceOutput{
-			Checksum: "crc32:0fc72945", // this is a checksum of `traceMaskedMessage`
-			Bytesize: 35,
+			Checksum: "crc32:367dfeeb", // this is a checksum of `traceMaskedMessage`
+			Bytesize: len(traceMessage),
 		},
 	}
 
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
 
-	// 22 is an offset of a space before `[MASKED]`
-	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage[0:22]), 0, false).
-		Return(common.NewPatchTraceResult(22, common.PatchSucceeded, 0)).Once()
-
-	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage[22:]), 22, false).
-		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.PatchSucceeded, 0)).Once()
+	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMessage[:maxTraceSize]), 0, false).
+		Return(common.NewPatchTraceResult(24, common.PatchSucceeded, 0)).Once()
 
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, expectedJobInfo).
 		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
@@ -830,8 +791,7 @@ func TestJobChecksum(t *testing.T) {
 	jobTrace, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
-	jobTrace.maxTracePatchSize = 22
-	jobTrace.SetMasked(maskedValues)
+	jobTrace.maxTracePatchSize = maxTraceSize
 	jobTrace.start()
 
 	_, err = jobTrace.Write([]byte(traceMessage))
@@ -840,24 +800,22 @@ func TestJobChecksum(t *testing.T) {
 }
 
 func TestJobBytesize(t *testing.T) {
-	maskedValues := common.MaskOptions{Phrases: []string{"secret"}}
 	traceMessage := "Build trace with secret and multi-byte ü character"
-	traceMaskedMessage := "Build trace with [MASKED] and multi-byte ü character"
 
 	expectedJobInfo := common.UpdateJobInfo{
 		ID:    -1,
 		State: "success",
 		Output: common.JobTraceOutput{
-			Checksum: "crc32:984a6af7",
-			Bytesize: 53,
+			Checksum: "crc32:0d7cf601",
+			Bytesize: 51,
 		},
 	}
 
 	mockNetwork := new(common.MockNetwork)
 	defer mockNetwork.AssertExpectations(t)
 
-	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMaskedMessage), 0, false).
-		Return(common.NewPatchTraceResult(len(traceMaskedMessage), common.PatchSucceeded, 0)).Once()
+	mockNetwork.On("PatchTrace", mock.Anything, mock.Anything, []byte(traceMessage), 0, false).
+		Return(common.NewPatchTraceResult(len(traceMessage), common.PatchSucceeded, 0)).Once()
 
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, expectedJobInfo).
 		Return(common.UpdateJobResult{State: common.UpdateSucceeded})
@@ -866,7 +824,6 @@ func TestJobBytesize(t *testing.T) {
 	require.NoError(t, err)
 
 	jobTrace.maxTracePatchSize = 100
-	jobTrace.SetMasked(maskedValues)
 	jobTrace.start()
 
 	_, err = jobTrace.Write([]byte(traceMessage))

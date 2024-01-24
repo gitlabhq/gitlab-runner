@@ -6243,7 +6243,6 @@ func (f FakeBuildTrace) SetAbortFunc(cancelFunc context.CancelFunc)             
 func (f FakeBuildTrace) Abort() bool                                                                { return false }
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)                           {}
 func (f FakeBuildTrace) SetSupportedFailureReasonMapper(filter common.SupportedFailureReasonMapper) {}
-func (f FakeBuildTrace) SetMasked(opts common.MaskOptions)                                          {}
 func (f FakeBuildTrace) SetDebugModeEnabled(isEnabled bool)                                         {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
