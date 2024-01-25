@@ -39,6 +39,7 @@ const (
 	UseDockerAutoscalerDialStdio         string = "FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO"
 	CleanUpFailedCacheExtract            string = "FF_CLEAN_UP_FAILED_CACHE_EXTRACT"
 	UseWindowsJobObject                  string = "FF_USE_WINDOWS_JOB_OBJECT"
+	UseTimestamps                        string = "FF_TIMESTAMPS"
 )
 
 type FeatureFlag struct {
@@ -324,6 +325,12 @@ var flags = []FeatureFlag{
 		Description: "When enabled, a job object is created for each process that the runner creates on Windows " +
 			"with the shell and custom executors. To force-kill the processes, the runner closes " +
 			"the job object. This should improve the termination of difficult-to-kill processes.",
+	},
+	{
+		Name:         UseTimestamps,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled timestamps are added to the beginning of each log trace line.",
 	},
 }
 

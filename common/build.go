@@ -869,7 +869,7 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	logger := buildlogger.New(trace, b.Log().WithFields(logrus.Fields{
 		"duration_s": b.Duration().Seconds(),
-	}), buildlogger.Options{})
+	}), buildlogger.Options{Timestamping: b.IsFeatureFlagOn(featureflags.UseTimestamps)})
 
 	if err == nil {
 		logger.Infoln("Job succeeded")
@@ -960,6 +960,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.logger = buildlogger.New(trace, b.Log(), buildlogger.Options{
 		MaskPhrases:       b.GetAllVariables().Masked(),
 		MaskTokenPrefixes: b.JobResponse.Features.TokenMaskPrefixes,
+		Timestamping:      b.IsFeatureFlagOn(featureflags.UseTimestamps),
 	})
 	defer b.logger.Close()
 
@@ -1043,7 +1044,9 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 		Name:        string(BuildStageResolveSecrets),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			logger := buildlogger.New(trace, b.Log(), buildlogger.Options{})
+			logger := buildlogger.New(trace, b.Log(), buildlogger.Options{
+				Timestamping: b.IsFeatureFlagOn(featureflags.UseTimestamps),
+			})
 			defer logger.Close()
 
 			resolver, err := b.secretsResolver(&logger, GetSecretResolverRegistry(), b.IsFeatureFlagOn)
@@ -1543,7 +1546,9 @@ func (b *Build) getFeatureFlagInfo() string {
 }
 
 func (b *Build) printRunningWithHeader(trace JobTrace) {
-	logger := buildlogger.New(trace, b.Log(), buildlogger.Options{})
+	logger := buildlogger.New(trace, b.Log(), buildlogger.Options{
+		Timestamping: b.IsFeatureFlagOn(featureflags.UseTimestamps),
+	})
 	defer logger.Close()
 
 	logger.Println("Running with", AppVersion.Line())

@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/masker"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/timestamper"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/tokensanitizer"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/urlsanitizer"
 )
@@ -83,6 +84,9 @@ func (l *Logger) Stream(streamID int, streamType StreamType) io.WriteCloser {
 }
 
 func wrap(w io.WriteCloser, streamID int, streamType StreamType, opts Options) io.WriteCloser {
+	if opts.Timestamping {
+		w = timestamper.New(w, timestamper.StreamType(streamType), uint8(streamID), true)
+	}
 	w = tokensanitizer.New(w, opts.MaskTokenPrefixes)
 	w = urlsanitizer.New(w)
 	w = masker.New(w, opts.MaskPhrases)
