@@ -16,7 +16,7 @@ func TestSetProcessGroup(t *testing.T) {
 		t.Run(fmt.Sprintf("process_%t", pg), func(t *testing.T) {
 			cmd := exec.Command("sleep", "1")
 			require.Nil(t, cmd.SysProcAttr)
-			setProcessGroup(cmd, pg)
+			setProcessGroup(cmd)
 			assert.True(t, cmd.SysProcAttr.Setpgid)
 		})
 	}

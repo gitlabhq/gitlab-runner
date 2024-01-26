@@ -246,6 +246,7 @@ func (e *executor) prepareCommand(ctx context.Context, opts prepareCommandOpts) 
 		GracefulKillTimeout:             e.config.GetGracefulKillTimeout(),
 		ForceKillTimeout:                e.config.GetForceKillTimeout(),
 		UseWindowsLegacyProcessStrategy: e.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
+		UseWindowsJobObject:             e.Build.IsFeatureFlagOn(featureflags.UseWindowsJobObject),
 	}
 
 	// Append job_env defined variable first to avoid overwriting any CI/CD or predefined variables.

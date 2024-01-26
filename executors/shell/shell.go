@@ -68,6 +68,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		Stdout:                          logger.Stdout(),
 		Stderr:                          logger.Stderr(),
 		UseWindowsLegacyProcessStrategy: s.Build.IsFeatureFlagOn(featureflags.UseWindowsLegacyProcessStrategy),
+		UseWindowsJobObject:             s.Build.IsFeatureFlagOn(featureflags.UseWindowsJobObject),
 	}
 
 	args := s.BuildShell.Arguments

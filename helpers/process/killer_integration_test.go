@@ -24,6 +24,7 @@ func newKillerWithLoggerAndCommand(
 	duration string,
 	skipTerminate bool,
 	useWindowsLegacyProcessStrategy bool,
+	useWindowsJobObject bool,
 ) (process.Killer, *process.MockLogger, process.Commander, func()) {
 	t.Helper()
 
@@ -36,7 +37,10 @@ func newKillerWithLoggerAndCommand(
 	}
 
 	command := process.NewOSCmd(sleepBinary, args,
-		process.CommandOptions{UseWindowsLegacyProcessStrategy: useWindowsLegacyProcessStrategy})
+		process.CommandOptions{
+			UseWindowsLegacyProcessStrategy: useWindowsLegacyProcessStrategy,
+			UseWindowsJobObject:             useWindowsJobObject,
+		})
 	err := command.Start()
 	require.NoError(t, err)
 
@@ -81,6 +85,7 @@ type testKillerTestCase struct {
 	skipTerminate                   bool
 	expectedError                   string
 	useWindowsLegacyProcessStrategy bool
+	useWindowsJobObject             bool
 }
 
 func TestKiller(t *testing.T) {
@@ -88,7 +93,7 @@ func TestKiller(t *testing.T) {
 
 	for testName, testCase := range testKillerTestCases() {
 		t.Run(testName, func(t *testing.T) {
-			k, loggerMock, cmd, cleanup := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate, testCase.useWindowsLegacyProcessStrategy)
+			k, loggerMock, cmd, cleanup := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate, testCase.useWindowsLegacyProcessStrategy, testCase.useWindowsJobObject)
 			defer cleanup()
 
 			waitCh := make(chan error)

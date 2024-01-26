@@ -80,6 +80,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_LOG_IMAGES_CONFIGURED_FOR_JOB` | `false` | **{dotted-circle}** No |  | When enabled, the runner logs names of the image and service images defined for each received job. |
 | `FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO` | `true` | **{dotted-circle}** No |  | When enabled (the default), `docker system stdio` is used to tunnel to the remote Docker daemon. When disabled, for SSH connections a native SSH tunnel is used, and for WinRM connections a 'fleeting-proxy' helper binary is first deployed. |
 | `FF_CLEAN_UP_FAILED_CACHE_EXTRACT` | `false` | **{dotted-circle}** No |  | When enabled, commands are inserted into build scripts to detect a failed cache extraction and clean up partial cache contents left behind. |
+| `FF_USE_WINDOWS_JOB_OBJECT` | `false` | **{dotted-circle}** No |  | When enabled, a job object is created for each process that the runner creates on Windows with the shell and custom executors. To force-kill the processes, the runner closes the job object. This should improve the termination of difficult-to-kill processes. |
 
 <!-- feature_flags_list_end -->
 

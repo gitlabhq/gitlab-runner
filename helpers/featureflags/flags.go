@@ -39,6 +39,7 @@ const (
 	LogImagesConfiguredForJob            string = "FF_LOG_IMAGES_CONFIGURED_FOR_JOB"
 	UseDockerAutoscalerDialStdio         string = "FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO"
 	CleanUpFailedCacheExtract            string = "FF_CLEAN_UP_FAILED_CACHE_EXTRACT"
+	UseWindowsJobObject                  string = "FF_USE_WINDOWS_JOB_OBJECT"
 )
 
 type FeatureFlag struct {
@@ -319,6 +320,14 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, commands are inserted into build scripts to detect a failed cache extraction " +
 			"and clean up partial cache contents left behind.",
+	},
+	{
+		Name:         UseWindowsJobObject,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, a job object is created for each process that the runner creates on Windows " +
+			"with the shell and custom executors. To force-kill the processes, the runner closes " +
+			"the job object. This should improve the termination of difficult-to-kill processes.",
 	},
 }
 
