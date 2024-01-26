@@ -439,4 +439,4 @@ you can use `cd $Env:RUNNER_SRC`.
 
 1. [Reviewing GitLab Runner merge requests](reviewing-gitlab-runner.md)
 1. [Add support for new Windows Version](add-windows-version.md)
-1. [Runner Group - Team Resources](https://about.gitlab.com/handbook/engineering/development/ops/verify/runner/team-resources/#overview)
+1. [Runner Group - Team Resources](https://handbook.gitlab.com/handbook/engineering/development/ops/verify/runner/team-resources/#overview)
