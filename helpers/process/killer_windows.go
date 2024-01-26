@@ -13,13 +13,18 @@ import (
 
 type windowsKiller struct {
 	logger Logger
-	cmd    Commander
+	cmd    osCmd
 }
 
 func newKiller(logger Logger, cmd Commander) killer {
+	osCmd, ok := cmd.(*osCmd)
+	if !ok {
+		panic("Failed to convert Commander to osCmd")
+	}
+
 	return &windowsKiller{
 		logger: logger,
-		cmd:    cmd,
+		cmd:    *osCmd,
 	}
 }
 
@@ -45,6 +50,8 @@ func (pk *windowsKiller) ForceKill() {
 	if err != nil {
 		pk.logger.Warn("Failed to force-kill:", err)
 	}
+
+	pk.cmd.closeJobObject()
 }
 
 // Send a CTRL_C_EVENT signal (like SIGTERM in unix) to a console process via
