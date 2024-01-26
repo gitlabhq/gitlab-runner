@@ -149,7 +149,7 @@ Having all of that in mind, please follow these few rules when merging the merge
   changelog.
 
 - Please also take a moment to read through
-  [Engineering metrics data classification](https://about.gitlab.com/handbook/engineering/metrics/#data-classification)
+  [Engineering metrics data classification](https://handbook.gitlab.com/handbook/engineering/metrics/#work-type-classification)
   page, which gives some guidance about when certain labels should be used.
 
 ## Summary
