@@ -954,7 +954,7 @@ Use the following options in the `config.toml`:
 Each key from the `configMap` is changed into a file and stored in the mount path. By default:
 
 - All keys are included.
-- The `configMap` key is used as the file name.
+- The `configMap` key is used as the filename.
 - The value is stored in the file contents.
 
 To change the default key and value storage, use the `items` option . If you use the `items` option, **only specified keys**
@@ -981,7 +981,7 @@ Use the following options in the `config.toml` file:
 Each key from selected `secret` is changed into a file stored in the selected mount path. By default:
 
 - All keys are included.
-- The `configMap` key is used as the file name.
+- The `configMap` key is used as the filename.
 - The value is stored in the file contents.
 
 To change default key and value storage, use the `items` option. If you use the `items` option, **only specified keys**
