@@ -28,14 +28,6 @@
     - out/deb/
     - out/rpm/
     expire_in: 7d
-  timeout: 15 minutes
-  # TODO: The package-* randomly fails
-  # This retry has been added as a workaround and should be removed once the root cause of those failures
-  # is identified and fixed.
-  retry:
-    max: 2
-    when:
-      - job_execution_timeout
 
 package-deb:
   extends:
