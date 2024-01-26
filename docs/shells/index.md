@@ -91,7 +91,7 @@ PowerShell Desktop Edition is the default shell when a new runner is registered 
 PowerShell doesn't support executing the build in context of another user.
 
 The generated PowerShell script is executed by saving its content to a file and
-passing the file name to the following command:
+passing the filename to the following command:
 
 - For PowerShell Desktop Edition:
 
@@ -302,7 +302,7 @@ specified.
 It doesn't support executing the build in context of another user.
 
 The generated Batch script is executed by saving its content to file and
-passing the file name to the following command:
+passing the filename to the following command:
 
 ```batch
 cmd /Q /C generated-windows-batch.cmd

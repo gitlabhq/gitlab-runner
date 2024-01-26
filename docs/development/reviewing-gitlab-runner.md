@@ -27,7 +27,7 @@ Getting back to the technical details...
 The GitLab Runner CI/CD pipeline helps us here and provides the coverage reports in HTML format, for tests
 executed in regular (`count`) and race (`atomic`) modes.
 
-We have two types of the reports: containing `.race` and `.regular` as part of the file name.
+We have two types of the reports: containing `.race` and `.regular` as part of the filename.
 The files are tracking output of `go test` command executed with coverage options. The `.race.` files
 contain sources and reports for tests started with `-race` flag, while the `.regular.` files are sources
 and reports for tests started without this option.
@@ -78,7 +78,7 @@ request description, discussion or diff that provide more context.
 As an example, look at <https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1812> and compare:
 
 - `yml to yaml` - which is the original title and was added to changelog with our script,
-- `Fix values.yaml file name in documentation` - which is what I've updated it to in the changelog.
+- `Fix values.yaml filename in documentation` - which is what I've updated it to in the changelog.
 
 What will `yml to yaml` tell a GitLab Runner administrator if they review the changelog before updating
 to a newer version? Does it show the risks behind the update, the implemented behavior changes, a new
