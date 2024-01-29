@@ -30,7 +30,11 @@ func (Images) ReleaseRunner(flavor, targetArchs string) error {
 }
 
 func runRunnerBuild(flavor, targetArchs string, publish bool) error {
-	blueprint := build.PrintBlueprint(images.AssembleBuildRunner(flavor, targetArchs))
+	blueprint, err := build.PrintBlueprint(images.AssembleBuildRunner(flavor, targetArchs))
+	if err != nil {
+		return err
+	}
+
 	artifactsFile := fmt.Sprintf("runner_images_%s_%s", flavor, strings.Join(strings.Split(targetArchs, ","), "_"))
 	if err := build.Export(blueprint.Artifacts(), build.ReleaseArtifactsPath(artifactsFile)); err != nil {
 		return err
@@ -58,7 +62,11 @@ func (Images) ReleaseHelper(flavor, prefix string) error {
 }
 
 func runHelperBuild(flavor, prefix string, publish bool) error {
-	blueprint := build.PrintBlueprint(images.AssembleReleaseHelper(flavor, prefix))
+	blueprint, err := build.PrintBlueprint(images.AssembleReleaseHelper(flavor, prefix))
+	if err != nil {
+		return err
+	}
+
 	artifactsFile := fmt.Sprintf("helper_images_%s_%s", flavor, prefix)
 	if err := build.Export(blueprint.Artifacts(), build.ReleaseArtifactsPath(artifactsFile)); err != nil {
 		return err

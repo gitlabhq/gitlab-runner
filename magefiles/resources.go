@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/magefile/mage/mg"
@@ -42,10 +43,16 @@ func verify(f string) ([]table.Row, error) {
 	}
 
 	c := lo.Map(m, func(m map[string]string, _ int) build.Component {
-		return build.NewComponent(m["Value"], m["Type"])
+		required, _ := strconv.ParseBool(m["Required"])
+		return build.NewComponent(
+			m["Value"],
+			m["Type"],
+			m["Description"],
+			required,
+		)
 	})
 
-	checked := build.CheckComponents(c)
+	checked, _ := build.CheckComponents(c)
 	rows := build.RowsFromCheckedComponents(checked)
 	errs := lo.FilterMap(lo.Values(checked), func(t lo.Tuple2[string, error], _ int) (error, bool) {
 		return t.B, t.B != nil
