@@ -8,11 +8,10 @@ import (
 	"strings"
 	"text/template"
 
-	"gitlab.com/gitlab-org/gitlab-runner/magefiles/build"
-
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/samber/lo"
+	"gitlab.com/gitlab-org/gitlab-runner/magefiles/build"
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/packages"
 )
 
@@ -21,21 +20,31 @@ type Package mg.Namespace
 
 // Deb builds deb package
 func (p Package) Deb(arch, packageArch string) error {
-	binary := fmt.Sprintf("out/binaries/%s-linux-%s", build.AppName, arch)
-	return p.runPackageScript("deb", arch, packageArch, binary)
+	return p.createPackage(packages.Deb, arch, packageArch)
 }
 
 // Rpm builds rpm package
 func (p Package) Rpm(arch, packageArch string) error {
-	binary := fmt.Sprintf("out/binaries/%s-linux-%s", build.AppName, arch)
-	return p.runPackageScript("rpm", arch, packageArch, binary)
+	return p.createPackage(packages.Rpm, arch, packageArch)
 }
 
 // RpmFips builds rpm package for fips
 func (p Package) RpmFips() error {
-	arch := "amd64"
-	binary := fmt.Sprintf("out/binaries/%s-linux-%s-fips", build.AppName, arch)
-	return p.runPackageScript("rpm-fips", arch, arch, binary)
+	return p.createPackage(packages.RpmFips, "amd64", "amd64")
+}
+
+func (p Package) createPackage(pkgType packages.Type, arch, packageArch string) error {
+	blueprint, err := build.PrintBlueprint(packages.Assemble(pkgType, arch, packageArch))
+	if err != nil {
+		return err
+	}
+
+	artifactsPath := fmt.Sprintf("%s_%s.%s", arch, packageArch, pkgType)
+	if err := build.Export(blueprint.Artifacts(), build.ReleaseArtifactsPath(artifactsPath)); err != nil {
+		return err
+	}
+
+	return packages.Create(blueprint)
 }
 
 // We use the go generate statement to call the package:generate target through mage
@@ -163,14 +172,4 @@ func (p Package) Prepare() error {
 	}
 
 	return nil
-}
-
-func (Package) runPackageScript(pkgType, arch, packageArch, binary string) error {
-	return sh.RunWithV(map[string]string{
-		"ARCH":          arch,
-		"PACKAGE_ARCH":  packageArch,
-		"RUNNER_BINARY": binary,
-		"PACKAGE_NAME":  build.AppName,
-		"VERSION":       build.Version(),
-	}, "ci/package", pkgType)
 }

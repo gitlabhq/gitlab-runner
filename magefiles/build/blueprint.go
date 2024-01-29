@@ -21,6 +21,8 @@ const (
 	messageNo  = "No"
 )
 
+type CheckedComponents map[string]lo.Tuple2[string, error]
+
 type TargetBlueprint[T Component, E Component, F any] interface {
 	Dependencies() []T
 	Artifacts() []E
@@ -80,31 +82,42 @@ func (b BlueprintBase) Env() BlueprintEnv {
 	return b.env
 }
 
-func PrintBlueprint[T Component, E Component, F any](blueprint TargetBlueprint[T, E, F]) TargetBlueprint[T, E, F] {
+func PrintBlueprint[T Component, E Component, F any](blueprint TargetBlueprint[T, E, F]) (TargetBlueprint[T, E, F], error) {
 	t := table.NewWriter()
+	defer func() {
+		fmt.Println(t.Render())
+	}()
+
 	t.AppendHeader(table.Row{"Target info"})
 
 	t.AppendRow(table.Row{"Dependency", "Type", "Exists"})
 	t.AppendSeparator()
-	t.AppendRows(rowsFromComponents(blueprint.Dependencies()))
+
+	checkedDeps, err := CheckComponents(blueprint.Dependencies())
+
+	t.AppendRows(RowsFromCheckedComponents(checkedDeps))
 
 	t.AppendSeparator()
 
 	t.AppendRow(table.Row{"Artifact", "Type", "Exists"})
 	t.AppendSeparator()
-	t.AppendRows(rowsFromComponents(blueprint.Artifacts()))
+
+	// Artifacts are not required to exist
+	checkedArtifacts, _ := CheckComponents(blueprint.Artifacts())
+
+	t.AppendRows(RowsFromCheckedComponents(checkedArtifacts))
 	t.AppendSeparator()
 
 	t.AppendRow(table.Row{"Environment variable", "Is set", "Is default"})
 	t.AppendSeparator()
 	t.AppendRows(rowsFromEnv(blueprint.Env()))
 
-	fmt.Println(t.Render())
-
-	return blueprint
+	return blueprint, err
 }
 
-func CheckComponents[T Component](components []T) map[string]lo.Tuple2[string, error] {
+func CheckComponents[T Component](components []T) (CheckedComponents, error) {
+	var requiredComponentsMissing bool
+
 	deps := make(map[string]lo.Tuple2[string, error])
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -115,7 +128,17 @@ func CheckComponents[T Component](components []T) map[string]lo.Tuple2[string, e
 			// with a bit of good old school Go code
 			exists := NewResourceChecker(c).Exists()
 			mu.Lock()
-			deps[c.Value()] = lo.Tuple2[string, error]{
+
+			if c.Required() && exists != nil {
+				requiredComponentsMissing = true
+			}
+
+			valueWithDescription := c.Value()
+			if c.Description() != "" {
+				valueWithDescription += fmt.Sprintf(" (%s)", c.Description())
+			}
+
+			deps[valueWithDescription] = lo.Tuple2[string, error]{
 				A: c.Type(),
 				B: exists,
 			}
@@ -126,10 +149,15 @@ func CheckComponents[T Component](components []T) map[string]lo.Tuple2[string, e
 
 	wg.Wait()
 
-	return deps
+	var err error
+	if requiredComponentsMissing {
+		err = fmt.Errorf("required components are missing")
+	}
+
+	return deps, err
 }
 
-func RowsFromCheckedComponents(deps map[string]lo.Tuple2[string, error]) []table.Row {
+func RowsFromCheckedComponents(deps CheckedComponents) []table.Row {
 	values := lo.Keys(deps)
 	sort.Strings(values)
 
@@ -143,10 +171,6 @@ func RowsFromCheckedComponents(deps map[string]lo.Tuple2[string, error]) []table
 
 		return table.Row{value, dep.A, existsMessage}
 	})
-}
-
-func rowsFromComponents[T Component](components []T) []table.Row {
-	return RowsFromCheckedComponents(CheckComponents(components))
 }
 
 func rowsFromEnv(blueprintEnv BlueprintEnv) []table.Row {

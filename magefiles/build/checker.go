@@ -2,6 +2,7 @@ package build
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
@@ -20,15 +21,19 @@ type ResourceChecker interface {
 
 func NewResourceChecker(c Component) ResourceChecker {
 	switch c.Type() {
-	case typeDockerImage:
+	case TypeDockerImage:
 		return newDockerImageChecker(c.Value())
-	case typeFile:
+	case TypeFile:
 		return newFileChecker(c.Value())
-	case typeDockerImageArchive:
+	case TypeDockerImageArchive:
 		return newFileChecker(c.Value())
+	case TypeOSBinary:
+		return newBinaryPathChecker(c.Value())
+	case TypeMacOSPackage:
+		return newBinaryPathChecker(c.Value())
+	default:
+		return unknownResourceChecker{}
 	}
-
-	return unknownResourceChecker{}
 }
 
 type unknownResourceChecker struct {
@@ -48,6 +53,13 @@ func newFileChecker(f string) fileChecker {
 
 func (f fileChecker) Exists() error {
 	_, err := os.Stat(f.file)
+	if err != nil {
+		substr := fmt.Sprintf("stat %s: ", f.file)
+		if strings.HasPrefix(err.Error(), substr) {
+			return errors.New(strings.Replace(err.Error(), substr, "", 1))
+		}
+	}
+
 	return err
 }
 
@@ -91,4 +103,17 @@ func (d *dockerImageChecker) Exists() error {
 
 	errMessage := matches[skopeoErrorMessageRegex.SubexpIndex("message")]
 	return errors.New(errMessage)
+}
+
+type binaryPathChecker struct {
+	bin string
+}
+
+func newBinaryPathChecker(bin string) *binaryPathChecker {
+	return &binaryPathChecker{bin: bin}
+}
+
+func (b *binaryPathChecker) Exists() error {
+	_, err := exec.LookPath(b.bin)
+	return err
 }
