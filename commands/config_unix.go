@@ -3,7 +3,9 @@
 package commands
 
 import (
+	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -11,13 +13,27 @@ import (
 
 var ROOTCONFIGDIR = "/etc/gitlab-runner"
 
-func getDefaultConfigDirectory() string {
-	if os.Getuid() == 0 {
-		return ROOTCONFIGDIR
-	} else if homeDir := helpers.GetHomeDir(); homeDir != "" {
-		return filepath.Join(homeDir, ".gitlab-runner")
-	} else if currentDir := helpers.GetCurrentWorkingDirectory(); currentDir != "" {
-		return currentDir
+func getDefaultConfigDirectory(user string) string {
+	switch {
+	case os.Getuid() == 0:
+		if user == "" {
+			return ROOTCONFIGDIR
+		}
+		return filepath.Join(getUserHomeDir(user), ".gitlab-runner")
+
+	case helpers.GetHomeDir() != "":
+		return filepath.Join(helpers.GetHomeDir(), ".gitlab-runner")
+	case helpers.GetCurrentWorkingDirectory() != "":
+		return helpers.GetCurrentWorkingDirectory()
+	default:
+		panic("Cannot get default config file location")
 	}
-	panic("Cannot get default config file location")
+}
+
+func getUserHomeDir(username string) string {
+	u, err := user.Lookup(username)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get home for user %q: %s", username, err.Error()))
+	}
+	return u.HomeDir
 }
