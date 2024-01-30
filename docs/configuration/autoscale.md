@@ -409,9 +409,7 @@ If the number of _Idle_ machines goes down to 0, the desired number of _Idle_ ma
 however, is less than the defined `IdleCountMin` setting, so Runner will slowly start removing the _Idle_ VMs
 until 10 remain. After that point, scaling down stops and Runner keeps 10 machines in _Idle_ state.
 
-## Autoscaling periods configuration
-
-> - Introduced in [GitLab Runner 13.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/5069).
+## Configure autoscaling periods
 
 Autoscaling can be configured to have different values depending on the time period.
 Organizations might have regular times when spikes of jobs are being executed,
@@ -464,49 +462,14 @@ default can be stated as `Timezone = "Local"` explicitly.
 More information about the syntax of `[[runner.machine.autoscaling]]` sections can be found
 in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section).
 
-## Off Peak time mode configuration (Deprecated)
+<!--- start_remove The following content will be removed on remove_date: '2024-04-25' -->
 
-> - This setting is deprecated and was removed in GitLab Runner 14.0.
+## Off peak time mode configuration (removed)
 
-Autoscale **can no longer be configured** with _Off Peak_ time mode periods. Convert it into autoscaling periods instead.
+This feature was [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555) in GitLab 14.0
+Use [autoscaling periods](#configure-autoscaling-periods) instead.
 
-**Converting an Off Peak configuration into an autoscaling one**
-
-To convert an Off Peak Configuration into an autoscaling one, create a `[[runners.machine.autoscaling]]` section and populate it as follows:
-
-- `Periods` field takes the value from `OffpeakPeriods`
-- `IdleCount` field takes the value from `OffpeakIdleCount`
-- `IdleTime` field takes the value from `OffpeakIdleTime`
-- `Timezone` field takes the value from `OffpeakTimezone`
-
-As an example, consider the conversion of the following **Offpeak configuration**:
-
-```toml
-[runners.machine]
-  MachineName = "auto-scale-%s"
-  MachineDriver = "google"
-  IdleCount = 10
-  IdleTime = 1800
-  OffPeakPeriods = ["* * 9-17 * * mon-fri *"]
-  OffPeakIdleCount = 50
-  OffPeakIdleTime = 3600
-  OffPeakTimezone = "UTC"
-```
-
-The conversion results in:
-
-```toml
-[runners.machine]
-  MachineName = "auto-scale-%s"
-  MachineDriver = "google"
-  IdleCount = 10
-  IdleTime = 1800
-  [[runners.machine.autoscaling]]
-    Periods = ["* * 9-17 * * mon-fri *"]
-    IdleCount = 50
-    IdleTime = 3600
-    Timezone = "UTC"
-```
+<!--- end_remove -->
 
 ## Distributed runners caching
 
