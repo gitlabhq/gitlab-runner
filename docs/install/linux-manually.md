@@ -30,8 +30,8 @@ It is possible to download and install via a `deb` or `rpm` package, if necessar
 
 To download the appropriate package for your system:
 
-1. Find the latest filename and options at
-   <https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html>.
+1. Find the latest file name and options at
+   <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html>.
 1. Choose a version and download a binary, as described in the
    documentation for [downloading any other tagged releases](bleeding-edge.md#download-any-other-tagged-release) for
    bleeding edge GitLab Runner releases.
@@ -40,24 +40,24 @@ For example, for Debian or Ubuntu:
 
 ```shell
 # Replace ${arch} with any of the supported architectures, e.g. amd64, arm, arm64
-# A full list of architectures can be found here https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
-curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/deb/gitlab-runner_${arch}.deb"
+# A full list of architectures can be found here https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html
+curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/deb/gitlab-runner_${arch}.deb"
 ```
 
 For example, for CentOS or Red Hat Enterprise Linux:
 
 ```shell
 # Replace ${arch} with any of the supported architectures, e.g. amd64, arm, arm64
-# A full list of architectures can be found here https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
-curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_${arch}.rpm"
+# A full list of architectures can be found here https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html
+curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_${arch}.rpm"
 ```
 
 For example, for [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) on RHEL:
 
 ```shell
 # Currently only amd64 is a supported arch
-# A full list of architectures can be found here https://gitlab-runner-downloads.s3.amazonaws.com/latest/index.html
-curl -LJO "https://gitlab-runner-downloads.s3.amazonaws.com/latest/rpm/gitlab-runner_amd64-fips.rpm"
+# A full list of architectures can be found here https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html
+curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/rpm/gitlab-runner_amd64-fips.rpm"
 ```
 
 ### Install
@@ -107,25 +107,25 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
 
    ```shell
    # Linux x86-64
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-amd64"
 
    # Linux x86
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-386"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-386"
 
    # Linux arm
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-arm"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-arm"
 
    # Linux arm64
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-arm64"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-arm64"
 
    # Linux s390x
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-s390x"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-s390x"
 
    # Linux ppc64le
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-ppc64le"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-ppc64le"
 
    # Linux x86-64 FIPS Compliant
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64-fips"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-amd64-fips"
    ```
 
    You can download a binary for every available version as described in
@@ -173,7 +173,7 @@ therefore the user under which jobs are run, needs to have access to the executa
 1. Download the binary to replace the GitLab Runner executable. For example:
 
    ```shell
-   sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
+   sudo curl -L --output /usr/local/bin/gitlab-runner "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/binaries/gitlab-runner-linux-amd64"
    ```
 
    You can download a binary for every available version as described in
