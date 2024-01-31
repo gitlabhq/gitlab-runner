@@ -5,8 +5,12 @@ import (
 	"sync"
 )
 
+// GetEnv allows us to mock os.Getenv in tests
+// please don't override this outside of tests
+var GetEnv = os.Getenv
+
 func Env(env string) string {
-	return os.Getenv(env)
+	return GetEnv(env)
 }
 
 func EnvOrDefault(env, def string) string {

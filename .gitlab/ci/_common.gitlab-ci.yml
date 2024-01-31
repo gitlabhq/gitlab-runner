@@ -44,6 +44,7 @@ variables:
   # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.8-.+/
   UBI_FIPS_VERSION: "8.8-860"
   UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base
+  PACKAGES_ITERATION: "1"
 
 default:
   image: $CI_IMAGE

@@ -64,6 +64,7 @@ func createPackage(blueprint Blueprint, opts []string) error {
 	args := append(opts, []string{
 		"--package", p.pkgFile,
 		"--force",
+		"--iteration", blueprint.Env().Value(iteration),
 		"--input-type", "dir",
 		"--output-type", string(p.pkgType),
 		"--name", pkgName + p.postfix,
@@ -99,13 +100,13 @@ func createPackage(blueprint Blueprint, opts []string) error {
 }
 
 func signPackage(blueprint Blueprint) error {
-	gpgKey := blueprint.Env().Value(GPGKeyID)
+	gpgKey := blueprint.Env().Value(gPGKeyID)
 	if gpgKey == "" {
 		fmt.Println("gpg key is empty, skipping signing")
 		return nil
 	}
 
-	gpgPass := blueprint.Env().Value(GPGPassphrase)
+	gpgPass := blueprint.Env().Value(gPGPassphrase)
 	if gpgPass == "" {
 		return fmt.Errorf("gpg passphrase is empty")
 	}
