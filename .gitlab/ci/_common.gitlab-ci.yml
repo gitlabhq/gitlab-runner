@@ -32,13 +32,13 @@ variables:
   # Leaving the Alpine and UBI versions defined here until the renovate pattern is changed
   # to recognize the definitions as a Go variable
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.16\..+/
-  ALPINE_316_VERSION: "3.16.8"
+  ALPINE_316_VERSION: "3.16.9"
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.17\..+/
-  ALPINE_317_VERSION: "3.17.6"
+  ALPINE_317_VERSION: "3.17.7"
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.18\..+/
-  ALPINE_318_VERSION: "3.18.5"
+  ALPINE_318_VERSION: "3.18.6"
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.19\..+/
-  ALPINE_319_VERSION: "3.19.0"
+  ALPINE_319_VERSION: "3.19.1"
   # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
   UBUNTU_VERSION: "20.04"
   # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.8-.+/
