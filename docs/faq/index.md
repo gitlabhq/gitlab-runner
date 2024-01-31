@@ -117,7 +117,7 @@ In this case, the authentication failure is caused by a service in between the I
 You can tell Docker which DNS server to use by using the `dns` configuration in the `[runners.docker]` section of [the Runner's `config.toml` file](../configuration/advanced-configuration.md#the-runnersdocker-section).
 
 ```toml
-dns           = ["192.168.xxx.xxx","192.168.xxx.xxx"]
+dns = ["192.168.xxx.xxx","192.168.xxx.xxx"]
 ```
 
 ## I'm seeing `x509: certificate signed by unknown authority`
@@ -298,9 +298,7 @@ working by following the steps below:
 You can, but not sharing the same `config.toml` file.
 
 Running multiple instances of GitLab Runner using the same configuration file can cause
-unexpected and hard-to-debug behavior. In
-[GitLab Runner 12.2](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4407),
-only a single instance of GitLab Runner can use a specific `config.toml` file at
+unexpected and hard-to-debug behavior. Only a single instance of GitLab Runner can use a specific `config.toml` file at
 one time.
 
 ## `Job failed (system failure): preparing environment:`
