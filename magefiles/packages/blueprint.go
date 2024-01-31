@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	GPGKeyID      = env.New("GPG_KEYID")
-	GPGPassphrase = env.New("GPG_PASSPHRASE")
+	gPGKeyID      = env.New("GPG_KEYID")
+	gPGPassphrase = env.New("GPG_PASSPHRASE")
+	iteration     = env.New(iterationVar)
 )
 
 type Blueprint = build.TargetBlueprint[build.Component, build.Component, blueprintParams]
@@ -71,7 +72,7 @@ func (b blueprintImpl) Data() blueprintParams {
 }
 
 func Assemble(pkgType Type, arch, packageArch string) Blueprint {
-	base := build.NewBlueprintBase(GPGKeyID, GPGPassphrase)
+	base := build.NewBlueprintBase(gPGKeyID, gPGPassphrase, iteration)
 
 	var postfix string
 	if pkgType == RpmFips {
@@ -115,7 +116,7 @@ func assembleDependencies(p blueprintParams, env build.BlueprintEnv) ([]string, 
 
 	binaryDependencies := []string{"fpm"}
 
-	if env.Value(GPGKeyID) != "" {
+	if env.Value(gPGKeyID) != "" {
 		switch p.pkgType {
 		case Deb:
 			binaryDependencies = append(binaryDependencies, "dpkg-sig", "gpg")

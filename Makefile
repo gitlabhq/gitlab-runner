@@ -129,6 +129,9 @@ simple-test:
 	# use env -i to clear parent environment variables for go test
 	go test $(TEST_PKG) $(TESTFLAGS) -ldflags "$(GO_LDFLAGS)"
 
+mage-test:
+	go test -ldflags "$(GO_LDFLAGS)" -v ./magefiles/...
+
 git1.8-test: $(SPLITIC)
 	splitic test -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
 		gitlab.com/gitlab-org/gitlab-runner/executors/shell gitlab.com/gitlab-org/gitlab-runner/shells \

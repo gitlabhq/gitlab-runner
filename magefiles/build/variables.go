@@ -70,3 +70,8 @@ func Revision() string {
 func ReleaseArtifactsPath(f string) string {
 	return fmt.Sprintf("out/release_artifacts/%s.json", f)
 }
+
+func IsMainBranch() bool {
+	return mageutils.Env("CI_COMMIT_BRANCH") == mageutils.Env("CI_DEFAULT_BRANCH") &&
+		mageutils.Env("CI_COMMIT_BRANCH") != ""
+}

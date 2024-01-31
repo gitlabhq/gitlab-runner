@@ -401,3 +401,12 @@ integration_k8s:
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
       -- -timeout=30m
+
+mage tests:
+    extends:
+    - .rules:merge_request_pipelines:no_docs
+    stage: test
+    needs:
+    - 'prepare done'
+    script:
+    - make mage-test

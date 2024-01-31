@@ -173,3 +173,12 @@ func (p Package) Prepare() error {
 
 	return nil
 }
+
+// VerifyIterationVariable verifies that the PACKAGES_ITERATION variable is set correctly.
+// When on the `main` branch it's allowed to be only ever set to `1`. Only in stable branches
+// and tags it is allowed to be changed.
+// This restriction exists to prevent stable branches to be created from `main` when the iteration
+// is not set to `1`. Preventing us from releasing a package with an iteration with no preceeding packages.
+func (Package) VerifyIterationVariable() error {
+	return packages.VerifyIterationVariable()
+}
