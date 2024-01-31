@@ -704,7 +704,7 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	client := getTestKubeClusterClient(t)
 
 	init := func(t *testing.T, _ *common.Build, client *k8s.Clientset, namespace string) {
-		err := retry.NewWithValue(func() (namespaceManager, error) {
+		_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
 			return newNamespaceManager(client, createNamespace, namespace), nil
 		}).Run()
 		require.NoError(t, err)
@@ -719,7 +719,7 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	}
 
 	finalize := func(t *testing.T, client *k8s.Clientset, namespace string) {
-		err := retry.NewWithValue(func() (namespaceManager, error) {
+		_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
 			return newNamespaceManager(client, deleteNamespace, namespace), nil
 		}).Run()
 		require.NoError(t, err)
@@ -1361,7 +1361,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 		"pod deletion during prepare stage in custom namespace": {
 			namespace: generateRandomNamespace("gc"),
 			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
-				err := retry.NewWithValue(func() (namespaceManager, error) {
+				_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
 					return newNamespaceManager(client, createNamespace, namespace), nil
 				}).Run()
 				require.NoError(t, err)
@@ -1375,7 +1375,7 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 				assert.Empty(t, configMaps)
 			},
 			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
-				err := retry.NewWithValue(func() (namespaceManager, error) {
+				_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
 					return newNamespaceManager(client, deleteNamespace, namespace), nil
 				}).Run()
 				require.NoError(t, err)

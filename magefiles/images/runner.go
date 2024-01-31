@@ -335,9 +335,12 @@ func buildx(
 	}
 
 	fmt.Printf("Buildx builder will retry failed builds %d times\n", env.Int(buildxRetry))
-	return retry.New(func() error {
-		return builder.Buildx(append([]string{"build"}, args...)...)
-	}).WithMaxTries(env.Int(buildxRetry)).WithStdout().Run()
+	return retry.NewNoValue(
+		retry.New().WithMaxTries(env.Int(buildxRetry)).WithStdout(),
+		func() error {
+			return builder.Buildx(append([]string{"build"}, args...)...)
+		},
+	).Run()
 }
 
 func buildxArgs(

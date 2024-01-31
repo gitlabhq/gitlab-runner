@@ -24,32 +24,69 @@ type checkFuncWithPrevious func(tries int, err error, shouldRetry bool) bool
 //go:generate mockery --name=retryable --inpackage
 type retryable interface {
 	Run() error
-	RunValue() (any, error)
 	ShouldRetry(tries int, err error) bool
 }
 
-func (r RunFunc) ToValueFunc() RunValueFunc[any] {
+// used only in tests to mock the run and check functions
+//
+//go:generate mockery --name=valueRetryable --inpackage
+type valueRetryable[T any] interface {
+	Run() (T, error)
+	ShouldRetry(tries int, err error) bool
+}
+
+type Provider interface {
+	NewRetry() *Retry
+}
+
+func (r RunFunc) toValueFunc() RunValueFunc[any] {
 	return func() (any, error) {
 		return nil, r()
 	}
 }
 
-type Retry[T any] struct {
-	value   T
-	run     RunValueFunc[T]
+type Retry struct {
+	run     RunFunc
 	check   CheckFunc
 	backoff *backoff.Backoff
 }
 
-func New(run RunFunc) *Retry[any] {
-	return NewWithValue(func() (any, error) {
-		return nil, run()
-	})
+type NoValueRetry struct {
+	retry *Retry
+	value any
+	run   RunFunc
 }
 
-func NewWithValue[T any](run RunValueFunc[T]) *Retry[T] {
-	return &Retry[T]{
-		run: run,
+type ValueRetry[T any] struct {
+	retry *Retry
+	value T
+	run   RunValueFunc[T]
+}
+
+func NewNoValue(retry *Retry, run RunFunc) *NoValueRetry {
+	return &NoValueRetry{
+		retry: retry,
+		run:   run,
+	}
+}
+
+func NewValue[T any](retry *Retry, run RunValueFunc[T]) *ValueRetry[T] {
+	return &ValueRetry[T]{
+		retry: retry,
+		run:   run,
+	}
+}
+
+func WithValueFn[T any](p Provider, run RunValueFunc[T]) *ValueRetry[T] {
+	return NewValue[T](p.NewRetry(), run)
+}
+
+func WithFn(p Provider, run RunFunc) *NoValueRetry {
+	return NewNoValue(p.NewRetry(), run)
+}
+
+func New() *Retry {
+	return &Retry{
 		check: func(_ int, _ error) bool {
 			return true
 		},
@@ -57,7 +94,7 @@ func NewWithValue[T any](run RunValueFunc[T]) *Retry[T] {
 	}
 }
 
-func (r *Retry[T]) wrapCheck(newCheck checkFuncWithPrevious) *Retry[T] {
+func (r *Retry) wrapCheck(newCheck checkFuncWithPrevious) *Retry {
 	originalCheck := r.check
 	return r.WithCheck(func(tries int, err error) bool {
 		shouldRetry := false
@@ -69,12 +106,12 @@ func (r *Retry[T]) wrapCheck(newCheck checkFuncWithPrevious) *Retry[T] {
 	})
 }
 
-func (r *Retry[T]) WithCheck(check CheckFunc) *Retry[T] {
+func (r *Retry) WithCheck(check CheckFunc) *Retry {
 	r.check = check
 	return r
 }
 
-func (r *Retry[T]) WithMaxTries(max int) *Retry[T] {
+func (r *Retry) WithMaxTries(max int) *Retry {
 	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
 		if tries >= max {
 			return false
@@ -84,12 +121,12 @@ func (r *Retry[T]) WithMaxTries(max int) *Retry[T] {
 	})
 }
 
-func (r *Retry[T]) WithBackoff(min, max time.Duration) *Retry[T] {
+func (r *Retry) WithBackoff(min, max time.Duration) *Retry {
 	r.backoff = &backoff.Backoff{Min: min, Max: max}
 	return r
 }
 
-func (r *Retry[T]) WithLogrus(log *logrus.Entry) *Retry[T] {
+func (r *Retry) WithLogrus(log *logrus.Entry) *Retry {
 	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
 		if shouldRetry {
 			log.WithError(err).Warningln("Retrying...")
@@ -99,7 +136,7 @@ func (r *Retry[T]) WithLogrus(log *logrus.Entry) *Retry[T] {
 	})
 }
 
-func (r *Retry[T]) WithStdout() *Retry[T] {
+func (r *Retry) WithStdout() *Retry {
 	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
 		if shouldRetry {
 			fmt.Println("Retrying...")
@@ -109,7 +146,7 @@ func (r *Retry[T]) WithStdout() *Retry[T] {
 	})
 }
 
-func (r *Retry[T]) WithBuildLog(log *buildlogger.Logger) *Retry[T] {
+func (r *Retry) WithBuildLog(log *buildlogger.Logger) *Retry {
 	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
 		if shouldRetry {
 			logger := log.WithFields(logrus.Fields{logrus.ErrorKey: err})
@@ -120,24 +157,28 @@ func (r *Retry[T]) WithBuildLog(log *buildlogger.Logger) *Retry[T] {
 	})
 }
 
-func (r *Retry[T]) Run() error {
-	_, err := r.RunValue()
-	return err
-}
-
-func (r *Retry[T]) RunValue() (T, error) {
+func retryRun[T any](retry *Retry, fn RunValueFunc[T]) (T, error) {
 	var err error
 	var tries int
 	var value T
 	for {
 		tries++
-		value, err = r.run()
-		if err == nil || !r.check(tries, err) {
+		value, err = fn()
+		if err == nil || !retry.check(tries, err) {
 			break
 		}
 
-		time.Sleep(r.backoff.Duration())
+		time.Sleep(retry.backoff.Duration())
 	}
 
 	return value, err
+}
+
+func (r *NoValueRetry) Run() error {
+	_, err := retryRun(r.retry, r.run.toValueFunc())
+	return err
+}
+
+func (r *ValueRetry[T]) Run() (T, error) {
+	return retryRun(r.retry, r.run)
 }
