@@ -3438,6 +3438,7 @@ func TestSetupBuildPod(t *testing.T) {
 							"custom.toleration=value":        "NoSchedule",
 							"empty.value=":                   "PreferNoSchedule",
 							"onlyKey":                        "",
+							"":                               "",
 						},
 					},
 				},
@@ -3466,6 +3467,56 @@ func TestSetupBuildPod(t *testing.T) {
 						Key:      "onlyKey",
 						Operator: api.TolerationOpExists,
 						Effect:   "",
+					},
+					{
+						Operator: api.TolerationOpExists,
+					},
+				}
+				assert.ElementsMatch(t, expectedTolerations, pod.Spec.Tolerations)
+			},
+		},
+		"support setting kubernetes pod taint tolerations via job variables": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						NodeTolerationsOverwriteAllowed: ".*",
+					},
+				},
+			},
+			Variables: []common.JobVariable{
+				{Key: "KUBERNETES_NODE_TOLERATIONS_1", Value: "node-role.kubernetes.io/master:NoSchedule", Public: true},
+				{Key: "KUBERNETES_NODE_TOLERATIONS_2", Value: "custom.toleration=value:NoSchedule", Public: true},
+				{Key: "KUBERNETES_NODE_TOLERATIONS_3", Value: "empty.value=:PreferNoSchedule", Public: true},
+				{Key: "KUBERNETES_NODE_TOLERATIONS_4", Value: "onlyKey:", Public: true},
+				{Key: "KUBERNETES_NODE_TOLERATIONS_5", Value: "", Public: true},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				expectedTolerations := []api.Toleration{
+					{
+						Key:      "node-role.kubernetes.io/master",
+						Operator: api.TolerationOpExists,
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+						Key:      "custom.toleration",
+						Operator: api.TolerationOpEqual,
+						Value:    "value",
+						Effect:   api.TaintEffectNoSchedule,
+					},
+					{
+
+						Key:      "empty.value",
+						Operator: api.TolerationOpEqual,
+						Value:    "",
+						Effect:   api.TaintEffectPreferNoSchedule,
+					},
+					{
+						Key:      "onlyKey",
+						Operator: api.TolerationOpExists,
+						Effect:   "",
+					},
+					{
+						Operator: api.TolerationOpExists,
 					},
 				}
 				assert.ElementsMatch(t, expectedTolerations, pod.Spec.Tolerations)

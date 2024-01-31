@@ -661,6 +661,33 @@ listen_address = ':9252'
 
 ::EndTabs
 
+### Overwrite pod tolerations
+
+To overwrite Kubernetes pod tolerations:
+
+1. In the `config.toml` or Helm `values.yaml` file, to enable the overwrite of CI job pod tolerations, define a regular expression for `node_tolerations_overwrite_allowed`. 
+   This regular expression validates the values of CI variable names that start with `KUBERNETES_NODE_TOLERATIONS_`.
+
+   ```toml
+   runners:
+    ...
+    config: |
+      [[runners]]
+        [runners.kubernetes]
+          node_tolerations_overwrite_allowed = ".*"
+   ```
+
+1. In the `.gitlab-ci.yml` file, define one or more CI variables to overwrite CI job pod tolerations.
+
+   ```yaml
+   variables:
+     KUBERNETES_NODE_TOLERATIONS_1: 'node-role.kubernetes.io/master:NoSchedule'
+     KUBERNETES_NODE_TOLERATIONS_2: 'custom.toleration=value:NoSchedule'
+     KUBERNETES_NODE_TOLERATIONS_3: 'empty.value=:PreferNoSchedule'
+     KUBERNETES_NODE_TOLERATIONS_4: 'onlyKey'
+     KUBERNETES_NODE_TOLERATIONS_5: '' # tolerate all taints
+   ```
+
 ### Overwrite pod labels
 
 To overwrite Kubernetes pod labels for each CI/CD job:

@@ -28,6 +28,9 @@ const (
 	// NodeSelectorOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
 	// user overwritten NodeSelectors
 	NodeSelectorOverwriteVariablePrefix = "KUBERNETES_NODE_SELECTOR_"
+	// NodeTolerationsOverwriteVariablePrefix is the prefix for all the JobVariable keys containing
+	// user overwritten NodeTolerations
+	NodeTolerationsOverwriteVariablePrefix = "KUBERNETES_NODE_TOLERATIONS_"
 	// CPULimitOverwriteVariableValue is the key for the JobVariable containing user overwritten cpu limit
 	CPULimitOverwriteVariableValue = "KUBERNETES_CPU_LIMIT"
 	// CPURequestOverwriteVariableValue is the key for the JobVariable containing user overwritten cpu limit
@@ -109,12 +112,13 @@ func (m *malformedOverwriteError) Is(err error) bool {
 }
 
 type overwrites struct {
-	namespace      string
-	serviceAccount string
-	bearerToken    string
-	podLabels      map[string]string
-	podAnnotations map[string]string
-	nodeSelector   map[string]string
+	namespace       string
+	serviceAccount  string
+	bearerToken     string
+	podLabels       map[string]string
+	podAnnotations  map[string]string
+	nodeSelector    map[string]string
+	nodeTolerations map[string]string
 
 	buildLimits     api.ResourceList
 	serviceLimits   api.ResourceList
@@ -178,6 +182,7 @@ func createOverwrites(
 		variables,
 		PodLabelsOverwriteVariablePrefix,
 		logger,
+		splitMapOverwrite,
 	)
 	if err != nil {
 		return nil, err
@@ -190,6 +195,7 @@ func createOverwrites(
 		variables,
 		PodAnnotationsOverwriteVariablePrefix,
 		logger,
+		splitMapOverwrite,
 	)
 	if err != nil {
 		return nil, err
@@ -202,6 +208,20 @@ func createOverwrites(
 		variables,
 		NodeSelectorOverwriteVariablePrefix,
 		logger,
+		splitMapOverwrite,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	o.nodeTolerations, err = o.evaluateMapOverwrite(
+		"NodeTolerations",
+		config.NodeTolerations,
+		config.NodeTolerationsOverwriteAllowed,
+		variables,
+		NodeTolerationsOverwriteVariablePrefix,
+		logger,
+		splitToleration,
 	)
 	if err != nil {
 		return nil, err
@@ -424,6 +444,23 @@ func splitMapOverwrite(str string) (string, string, error) {
 	return "", "", &malformedOverwriteError{value: str, pattern: "k=v"}
 }
 
+// splitToleration splits 'key[=value]:effect' on ':' if present, and returns
+// keyvalue, effect, and a nil error, meeting the split function signature in
+// the evaluateMapOverwrite method.
+// Should toleration be empty, the resulting api.Toleration added to the
+// api.PodSpec will have api.Toleration.Operator set to Exists, allowing
+// the CI job pod to tolerate all node taints
+func splitToleration(toleration string) (string, string, error) {
+	effect := ""
+	colonParts := strings.SplitN(toleration, ":", 2)
+	if len(colonParts) > 1 {
+		effect = colonParts[1]
+	}
+	keyvalue := colonParts[0]
+
+	return keyvalue, effect, nil
+}
+
 func (o *overwrites) evaluateMapOverwrite(
 	fieldName string,
 	values map[string]string,
@@ -431,6 +468,7 @@ func (o *overwrites) evaluateMapOverwrite(
 	variables common.JobVariables,
 	variablesSelector string,
 	logger buildlogger.Logger,
+	split func(string) (string, string, error),
 ) (map[string]string, error) {
 	if regex == "" {
 		logger.Debugln("Regex allowing overrides for", fieldName, "is empty, disabling override.")
@@ -451,7 +489,7 @@ func (o *overwrites) evaluateMapOverwrite(
 			return nil, err
 		}
 
-		key, value, err := splitMapOverwrite(variable.Value)
+		key, value, err := split(variable.Value)
 		if err != nil {
 			return nil, err
 		}

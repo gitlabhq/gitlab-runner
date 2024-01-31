@@ -53,6 +53,7 @@ func TestOverwrites(t *testing.T) {
 		ServiceAccountOverwriteVariableValue string
 		BearerTokenOverwriteVariableValue    string
 		NodeSelectorOverwriteValues          map[string]string
+		NodeTolerationsOverwriteValues       map[string]string
 		PodLabelsOverwriteValues             map[string]string
 		PodAnnotationsOverwriteValues        map[string]string
 		Expected                             *overwrites
@@ -104,8 +105,9 @@ func TestOverwrites(t *testing.T) {
 					"kubernetes.io/arch":             "amd64",
 					"eks.amazonaws.com/capacityType": "SPOT",
 				},
-				PodLabelsOverwriteAllowed:      ".*",
-				PodAnnotationsOverwriteAllowed: ".*",
+				NodeTolerationsOverwriteAllowed: ".*",
+				PodLabelsOverwriteAllowed:       ".*",
+				PodAnnotationsOverwriteAllowed:  ".*",
 				PodLabels: map[string]string{
 					"app":               "gitlab-runner",
 					"chart":             "gitlab-runner-0.27.0",
@@ -165,6 +167,12 @@ func TestOverwrites(t *testing.T) {
 				"KUBERNETES_NODE_SELECTOR_SPOT": "eks.amazonaws.com/capacityType=ON_DEMAND",
 				"KUBERNETES_NODE_SELECTOR_ARCH": "kubernetes.io/arch=arm64",
 			},
+			NodeTolerationsOverwriteValues: map[string]string{
+				"KUBERNETES_NODE_TOLERATIONS_1": "tkey1=tvalue1:teffect1", // tolerate taints with key tkey1, value tvalue1, and effect teffect1
+				"KUBERNETES_NODE_TOLERATIONS_2": "tkey2:teffect2",         // tolerate taints with key tkey2, and effect teffect2, with any value
+				"KUBERNETES_NODE_TOLERATIONS_3": "tkey3",                  // tolerate taints with key tkey3, with any value, any effect
+				"KUBERNETES_NODE_TOLERATIONS_4": "",                       // tolerate taints with any key, any value, and any effect
+			},
 			PodLabelsOverwriteValues: map[string]string{
 				"KUBERNETES_POD_LABELS_1":     "test5=test6=1",
 				"KUBERNETES_POD_LABELS_2":     "test7=test8",
@@ -204,6 +212,12 @@ func TestOverwrites(t *testing.T) {
 					"eks.amazonaws.com/capacityType": "ON_DEMAND",
 					"kubernetes.io/arch":             "arm64",
 				},
+				nodeTolerations: map[string]string{
+					"tkey1=tvalue1": "teffect1",
+					"tkey2":         "teffect2",
+					"tkey3":         "",
+					"":              "",
+				},
 				podLabels: map[string]string{
 					"app":               "gitlab-runner",
 					"chart":             "gitlab-runner-0.27.0-override",
@@ -240,6 +254,11 @@ func TestOverwrites(t *testing.T) {
 					"test1": "test1",
 					"test2": "test2",
 				},
+				NodeTolerations: map[string]string{
+					"tkey1=tvalue1": "not_overwritten",
+					"tkey2":         "",
+					"":              "",
+				},
 				PodLabels: map[string]string{
 					"test5": "test5",
 					"test6": "test6",
@@ -274,6 +293,11 @@ func TestOverwrites(t *testing.T) {
 				"KUBERNETES_NODE_SELECTOR_1": "test3=test3",
 				"KUBERNETES_NODE_SELECTOR_2": "test4=test4",
 			},
+			NodeTolerationsOverwriteValues: map[string]string{
+				"KUBERNETES_NODE_TOLERATIONS_1": "tkey1=tvalue1:teffect1", // tolerate taints with key tkey1, value tvalue1, and effect teffect1
+				"KUBERNETES_NODE_TOLERATIONS_2": "tkey2:teffect2",         // tolerate taints with key tkey2, with any value, and effect teffect2
+				"KUBERNETES_NODE_TOLERATIONS_3": ":teffect3",              // tolerate taints with any key, with any value, and effect teffect3
+			},
 			PodLabelsOverwriteValues: map[string]string{
 				"KUBERNETES_POD_LABELS_1": "test7=test7",
 				"KUBERNETES_POD_LABELS_2": "test8=test8",
@@ -307,6 +331,11 @@ func TestOverwrites(t *testing.T) {
 				nodeSelector: map[string]string{
 					"test1": "test1",
 					"test2": "test2",
+				},
+				nodeTolerations: map[string]string{
+					"tkey1=tvalue1": "not_overwritten",
+					"tkey2":         "",
+					"":              "",
 				},
 				podLabels: map[string]string{
 					"test5": "test5",
@@ -567,6 +596,7 @@ func TestOverwrites(t *testing.T) {
 					HelperEphemeralStorageRequestOverwriteVariableValue:  test.HelperEphemeralStorageRequestOverwriteVariableValue,
 				},
 				test.NodeSelectorOverwriteValues,
+				test.NodeTolerationsOverwriteValues,
 				test.PodLabelsOverwriteValues,
 				test.PodAnnotationsOverwriteValues,
 			)
