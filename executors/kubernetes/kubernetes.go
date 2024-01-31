@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/docker/cli/cli/config/types"
 	"github.com/jpillora/backoff"
+	"github.com/samber/lo"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -84,17 +84,6 @@ const (
 
 	k8sEventWarningType = "Warning"
 
-	// errorDialingBackendMessage is an error prefix that is encountered when
-	// connectivity to a Pod fails. This can happen for a number of reasons,
-	// such as the Pod or Node still being configured.
-	errorDialingBackendMessage            = "error dialing backend"
-	errorTLSHandshakeTimeoutMessage       = "TLS handshake timeout"
-	errorUnexpectedEOFMessage             = "unexpected EOF"
-	errorReadConnectionTimedOutMessage    = "read: connection timed out"
-	errorConnectConnectionTimedOutMessage = "connect: connection timed out"
-	errorTimeoutOccurredMessage           = "Timeout occurred"
-	errorHTTP2ConnectionLostMessage       = "http2: client connection lost"
-
 	// errorAlreadyExistsMessage is an error message that is encountered when
 	// we fail to create a resource because it already exists.
 	// Because of a connectivity issue, an attempt to create a resource can fail while the request itself
@@ -126,16 +115,17 @@ var (
 
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
-	errorRegex = fmt.Sprintf(
-		"%s|%s|%s|%s|%s|%s|%s",
-		errorDialingBackendMessage,
-		errorTLSHandshakeTimeoutMessage,
-		errorUnexpectedEOFMessage,
-		errorReadConnectionTimedOutMessage,
-		errorConnectConnectionTimedOutMessage,
-		errorTimeoutOccurredMessage,
-		errorHTTP2ConnectionLostMessage,
-	)
+	// network errors to retry on
+	retryErrorsMessages = []string{
+		"error dialing backend",
+		"TLS handshake timeout",
+		"unexpected EOF",
+		"read: connection timed out",
+		"connect: connection timed out",
+		"Timeout occurred",
+		"http2: client connection lost",
+		"connection refused",
+	}
 )
 
 type commandTerminatedError struct {
@@ -165,13 +155,14 @@ func isNetworkError(err error) bool {
 		return false
 	}
 
-	matchError, _ := regexp.MatchString(errorRegex, err.Error())
 	return errors.Is(err, syscall.ECONNRESET) ||
 		errors.Is(err, syscall.ECONNREFUSED) ||
 		errors.Is(err, syscall.ECONNABORTED) ||
 		errors.Is(err, syscall.EPIPE) ||
 		errors.Is(err, io.ErrUnexpectedEOF) ||
-		matchError
+		lo.ContainsBy(retryErrorsMessages, func(msg string) bool {
+			return strings.Contains(msg, err.Error())
+		})
 }
 
 type podPhaseError struct {
