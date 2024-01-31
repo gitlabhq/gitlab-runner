@@ -1843,7 +1843,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 			ServiceAccountName: s.configurationOverwrites.serviceAccount,
 			RestartPolicy:      api.RestartPolicyNever,
 			NodeSelector:       s.configurationOverwrites.nodeSelector,
-			Tolerations:        s.Config.Kubernetes.GetNodeTolerations(),
+			Tolerations:        s.getPodTolerations(),
 			InitContainers:     opts.initContainers,
 			Containers: append([]api.Container{
 				buildContainer,
@@ -1863,6 +1863,34 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 	}
 
 	return pod, nil
+}
+
+// getPodTolerations returns a list of pod tolerations converted from map
+// entries in the kubernetes configuration, and possibly from map entries
+// generated from job variables, if overwrite is allowed.
+func (s *executor) getPodTolerations() []api.Toleration {
+	var tolerations []api.Toleration
+
+	for keyvalue, effect := range s.configurationOverwrites.nodeTolerations {
+		newToleration := api.Toleration{
+			Key:      keyvalue,
+			Operator: api.TolerationOpExists,
+			Effect:   api.TaintEffect(effect),
+		}
+
+		if strings.Contains(keyvalue, "=") {
+			parts := strings.SplitN(keyvalue, "=", 2)
+			newToleration.Key = parts[0]
+			if len(parts) > 1 {
+				newToleration.Value = parts[1]
+			}
+			newToleration.Operator = api.TolerationOpEqual
+		}
+
+		tolerations = append(tolerations, newToleration)
+	}
+
+	return tolerations
 }
 
 // getPodActiveDeadlineSeconds returns the effective build/job timeout
