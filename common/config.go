@@ -581,6 +581,7 @@ type KubernetesConfig struct {
 	PollInterval                                      int                                `toml:"poll_interval,omitzero" json:"poll_interval" long:"poll-interval" env:"KUBERNETES_POLL_INTERVAL" description:"How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status"`
 	PollTimeout                                       int                                `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
 	ResourceAvailabilityCheckMaxAttempts              int                                `toml:"resource_availability_check_max_attempts,omitzero" json:"resource_availability_check_max_attempts" long:"resource-availability-check-max-attempts" env:"KUBERNETES_RESOURCE_AVAILABILITY_CHECK_MAX_ATTEMPTS" default:"5" description:"The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt"`
+	RequestRetryLimit                                 int                                `toml:"try_limit,omitzero" json:"try_limit" long:"try-limit" env:"KUBERNETES_REQUEST_TRY_LIMIT" default:"5" description:"The maximum number of attempts to communicate with Kubernetes API. The retry interval between each attempt is based on a backoff algorithm starting at 500 ms"`
 	PodLabels                                         map[string]string                  `toml:"pod_labels,omitempty" json:"pod_labels,omitempty" long:"pod-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create pods with the given pod labels. Environment variables will be substituted for values here."`
 	PodLabelsOverwriteAllowed                         string                             `toml:"pod_labels_overwrite_allowed" json:"pod_labels_overwrite_allowed" long:"pod_labels_overwrite_allowed" env:"KUBERNETES_POD_LABELS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_LABELS_*' values"`
 	SchedulerName                                     string                             `toml:"scheduler_name,omitempty" json:"scheduler_name" long:"scheduler-name" env:"KUBERNETES_SCHEDULER_NAME" description:"Pods will be scheduled using this scheduler, if it exists"`
@@ -1401,6 +1402,14 @@ func (c *KubernetesConfig) GetResourceAvailabilityCheckMaxAttempts() int {
 	}
 
 	return c.ResourceAvailabilityCheckMaxAttempts
+}
+
+func (c *KubernetesConfig) GetTryLimit() int {
+	if c == nil || c.RequestRetryLimit <= 0 {
+		return DefaultRequestRetryLimit
+	}
+
+	return c.RequestRetryLimit
 }
 
 func (c *KubernetesConfig) GetNodeTolerations() []api.Toleration {

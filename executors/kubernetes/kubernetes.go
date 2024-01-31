@@ -73,7 +73,6 @@ const (
 
 	k8sAnnotationPrefix = "runner.gitlab.com/"
 
-	defaultTries           = 5
 	defaultRetryMinBackoff = 500 * time.Millisecond
 	defaultRetryMaxBackoff = 2 * time.Second
 
@@ -152,24 +151,13 @@ func (c *commandTerminatedError) Is(err error) bool {
 	return ok
 }
 
-type retryableKubeAPICall[T any] struct {
-	*retry.Retry[T]
-}
-
-func newRetryableKubeAPICallWithValue[T any](fn retry.RunValueFunc[T]) *retryableKubeAPICall[T] {
-	return &retryableKubeAPICall[T]{
-		Retry: retry.
-			NewWithValue(fn).
-			WithCheck(func(_ int, err error) bool {
-				return isNetworkError(err)
-			}).
-			WithMaxTries(defaultTries).
-			WithBackoff(defaultRetryMinBackoff, defaultRetryMaxBackoff),
-	}
-}
-
-func newRetryableKubeAPICall(fn retry.RunFunc) *retryableKubeAPICall[any] {
-	return newRetryableKubeAPICallWithValue(fn.ToValueFunc())
+func (s *executor) NewRetry() *retry.Retry {
+	return retry.New().
+		WithCheck(func(_ int, err error) bool {
+			return isNetworkError(err)
+		}).
+		WithMaxTries(s.Config.Kubernetes.GetTryLimit()).
+		WithBackoff(defaultRetryMinBackoff, defaultRetryMaxBackoff)
 }
 
 func isNetworkError(err error) bool {
@@ -512,16 +500,15 @@ func (s *executor) watchPodEvents() error {
 	// It also makes it less likely to break something existing since we get the status of the Pod
 	// when it's already failed.
 	// This strategy can be revised in the future if needed.
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (watch.Interface, error) {
+	var err error
+	s.eventsStream, err = retry.WithValueFn(s, func() (watch.Interface, error) {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		// kubeAPI: events, watch, FF_PRINT_POD_EVENTS=true
 		return s.kubeClient.CoreV1().Events(s.pod.Namespace).Watch(context.Background(), metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("involvedObject.name=%s", s.pod.Name),
 		})
-	})
+	}).Run()
 
-	var err error
-	s.eventsStream, err = kubeRequest.RunValue()
 	return err
 }
 
@@ -547,16 +534,14 @@ func (s *executor) logPodWarningEvents(eventType string) {
 		return
 	}
 
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (*api.EventList, error) {
+	events, err := retry.WithValueFn(s, func() (*api.EventList, error) {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		// kubeAPI: events, list, FF_RETRIEVE_POD_WARNING_EVENTS=true
 		return s.kubeClient.CoreV1().Events(s.pod.Namespace).
 			List(context.Background(), metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.pod.Name, eventType),
 			})
-	})
-
-	events, err := kubeRequest.RunValue()
+	}).Run()
 	if err != nil {
 		s.BuildLogger.Errorln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
 		return
@@ -1036,7 +1021,7 @@ func (s *executor) cleanupResources() {
 	defer cancel()
 
 	if s.pod != nil {
-		kubeRequest := newRetryableKubeAPICall(func() error {
+		kubeRequest := retry.WithFn(s, func() error {
 			// kubeAPI: pods, delete
 			return s.kubeClient.CoreV1().
 				Pods(s.pod.Namespace).
@@ -1052,7 +1037,7 @@ func (s *executor) cleanupResources() {
 	}
 
 	if s.credentials != nil && len(s.credentials.OwnerReferences) == 0 {
-		kubeRequest := newRetryableKubeAPICall(func() error {
+		kubeRequest := retry.WithFn(s, func() error {
 			// kubeAPI: secrets, delete
 			return s.kubeClient.CoreV1().
 				Secrets(s.configurationOverwrites.namespace).
@@ -1582,10 +1567,9 @@ func (s *executor) setupCredentials(ctx context.Context) error {
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (*api.Secret, error) {
+	s.credentials, err = retry.WithValueFn(s, func() (*api.Secret, error) {
 		return s.requestSecretCreation(ctx, &secret, s.configurationOverwrites.namespace)
-	})
-	s.credentials, err = kubeRequest.RunValue()
+	}).Run()
 	return err
 }
 
@@ -1659,10 +1643,9 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 
 	s.BuildLogger.Debugln("Creating build pod")
 
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (*api.Pod, error) {
+	s.pod, err = retry.WithValueFn(s, func() (*api.Pod, error) {
 		return s.requestPodCreation(ctx, &podConfig, s.configurationOverwrites.namespace)
-	})
-	s.pod, err = kubeRequest.RunValue()
+	}).Run()
 	if err != nil {
 		return err
 	}
@@ -2000,7 +1983,8 @@ func (s *executor) setOwnerReferencesForResources(ctx context.Context, ownerRefe
 		return nil
 	}
 
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (*api.Secret, error) {
+	var err error
+	s.credentials, err = retry.WithValueFn(s, func() (*api.Secret, error) {
 		credentials := s.credentials.DeepCopy()
 		credentials.SetOwnerReferences(ownerReferences)
 
@@ -2008,9 +1992,8 @@ func (s *executor) setOwnerReferencesForResources(ctx context.Context, ownerRefe
 		return s.kubeClient.CoreV1().
 			Secrets(s.configurationOverwrites.namespace).
 			Update(ctx, credentials, metav1.UpdateOptions{})
-	})
-	var err error
-	s.credentials, err = kubeRequest.RunValue()
+	}).Run()
+
 	return err
 }
 
@@ -2069,27 +2052,23 @@ func (s *executor) serviceAccountExists() func(context.Context, string) bool {
 			return true
 		}
 
-		kubeRequest := newRetryableKubeAPICall(func() error {
+		return retry.WithFn(s, func() error {
 			// kubeAPI: serviceAccounts, get
 			_, err := s.kubeClient.CoreV1().
 				ServiceAccounts(s.configurationOverwrites.namespace).Get(ctx, saName, metav1.GetOptions{})
 			return err
-		})
-
-		return kubeRequest.Run() == nil
+		}).Run() == nil
 	}
 }
 
 func (s *executor) secretExists() func(context.Context, string) bool {
 	return func(ctx context.Context, secretName string) bool {
-		kubeRequest := newRetryableKubeAPICall(func() error {
+		return retry.WithFn(s, func() error {
 			// kubeAPI: secrets, get
 			_, err := s.kubeClient.CoreV1().
 				Secrets(s.configurationOverwrites.namespace).Get(ctx, secretName, metav1.GetOptions{})
 			return err
-		})
-
-		return kubeRequest.Run() == nil
+		}).Run() == nil
 	}
 }
 
@@ -2184,11 +2163,11 @@ func (s *executor) createKubernetesService(
 ) {
 	defer wg.Done()
 
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (*api.Service, error) {
-		return s.requestServiceCreation(ctx, service, s.pod.Namespace)
-	})
 	var err error
-	service, err = kubeRequest.RunValue()
+	service, err = retry.WithValueFn(s, func() (*api.Service, error) {
+		return s.requestServiceCreation(ctx, service, s.pod.Namespace)
+	}).Run()
+
 	if err == nil {
 		// Updating the internal service name reference and activating the proxy
 		proxySettings.ServiceName = service.Name
@@ -2250,13 +2229,11 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 }
 
 func (s *executor) checkPodStatus(ctx context.Context) error {
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (*api.Pod, error) {
+	pod, err := retry.WithValueFn(s, func() (*api.Pod, error) {
 		// kubeAPI: pods, get
 		return s.kubeClient.CoreV1().
 			Pods(s.pod.Namespace).Get(ctx, s.pod.Name, metav1.GetOptions{})
-	})
-
-	pod, err := kubeRequest.RunValue()
+	}).Run()
 	if IsKubernetesPodNotFoundError(err) {
 		return err
 	}
@@ -2300,7 +2277,7 @@ func (s *executor) runInContainer(
 			Context: ctx,
 		}
 
-		kubeRequest := newRetryableKubeAPICall(func() error {
+		kubeRequest := retry.WithFn(s, func() error {
 			err := attach.Run()
 			s.BuildLogger.Debugln(fmt.Sprintf("Trying to execute stage %v, got error %v", stage, err))
 			return s.checkScriptExecution(stage, err)
@@ -2367,10 +2344,7 @@ func (s *executor) runInContainerWithExec(
 			Context: ctx,
 		}
 
-		kubeRequest := newRetryableKubeAPICallWithValue(func() (any, error) {
-			return nil, exec.Run()
-		})
-		errCh <- kubeRequest.Run()
+		errCh <- retry.WithFn(s, exec.Run).Run()
 	}()
 
 	return errCh
@@ -2532,14 +2506,12 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		Timestamps: true,
 	}
 
-	kubeRequest := newRetryableKubeAPICallWithValue(func() (io.ReadCloser, error) {
+	podLogs, err := retry.WithValueFn(s, func() (io.ReadCloser, error) {
 		//nolint:gocritic
 		// kubeAPI: pods/logs, get, list, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 		return s.kubeClient.CoreV1().
 			Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
-	})
-
-	podLogs, err := kubeRequest.RunValue()
+	}).Run()
 	if err != nil {
 		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
 	}
