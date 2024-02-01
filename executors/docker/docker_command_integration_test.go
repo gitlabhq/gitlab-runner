@@ -1628,8 +1628,10 @@ func TestDockerCommandRunAttempts_InvalidAttempts(t *testing.T) {
 		Public: true,
 	})
 
-	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
-	assert.Error(t, err)
+	buf := new(bytes.Buffer)
+	err := build.Run(&common.Config{}, &common.Trace{Writer: buf})
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), "WARNING: EXECUTOR_JOB_SECTION_ATTEMPTS: number of attempts out of the range [1, 10], using default 1")
 }
 
 func TestDockerCommand_WriteToVolumeNonRootImage(t *testing.T) {
@@ -1997,7 +1999,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			},
 			assert: func(out string, err error) {
 				assert.NoError(t, err)
-				assert.NotContains(t, out, "WARNING: failed to parse value 'trace' for CI_DEBUG_SERVICES variable")
+				assert.NotContains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
 				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\] .* The files belonging to this database system will be owned by user "postgres"`, out)
 				assert.Regexp(t, `\[service:(postgres-db|db-postgres)\] .* database system is ready to accept connections`, out)
 				assert.Regexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
@@ -2020,7 +2022,7 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			}},
 			assert: func(out string, err error) {
 				assert.NoError(t, err)
-				assert.Contains(t, out, "WARNING: failed to parse value 'blammo' for CI_DEBUG_SERVICES variable")
+				assert.Contains(t, out, "WARNING: CI_DEBUG_SERVICES: expected bool got \"blammo\", using default value: false")
 				assert.NotRegexp(t, `\[service:(postgres-db|db-postgres)\] .* Error: Database is uninitialized and superuser password is not specified`, out)
 				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
 				assert.NotRegexp(t, `\[service:(redis-cache|cache-redis)\] .* Ready to accept connections`, out)
@@ -2028,12 +2030,12 @@ func Test_CaptureServiceLogs(t *testing.T) {
 		},
 	}
 
-	build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
-	build.Services = append(build.Services, common.Image{Name: "postgres:14.4", Alias: "db"})
-	build.Services = append(build.Services, common.Image{Name: "redis:7.0", Alias: "cache"})
-
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
+			build := getBuildForOS(t, common.GetRemoteSuccessfulBuild)
+			build.Services = append(build.Services, common.Image{Name: "postgres:14.4", Alias: "db"})
+			build.Services = append(build.Services, common.Image{Name: "redis:7.0", Alias: "cache"})
+
 			build.Variables = tt.buildVars
 			out, err := buildtest.RunBuildReturningOutput(t, &build)
 			tt.assert(out, err)
@@ -2341,7 +2343,6 @@ func TestDockerCommandWithUser(t *testing.T) {
 			SystemIDState: systemIDState,
 		},
 	}
-
 
 	var buffer bytes.Buffer
 	require.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: &buffer}))

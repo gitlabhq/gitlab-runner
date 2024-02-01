@@ -28,33 +28,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/session/terminal"
 )
 
-type GitStrategy int
-
-const (
-	GitClone GitStrategy = iota
-	GitFetch
-	GitNone
-)
-
-const (
-	gitCleanFlagsDefault = "-ffdx"
-	gitCleanFlagsNone    = "none"
-)
-
-const (
-	gitFetchFlagsDefault = "--prune --quiet"
-	gitFetchFlagsNone    = "none"
-)
-
-type SubmoduleStrategy int
-
-const (
-	SubmoduleInvalid SubmoduleStrategy = iota
-	SubmoduleNone
-	SubmoduleNormal
-	SubmoduleRecursive
-)
-
 type BuildRuntimeState string
 
 const (
@@ -110,19 +83,6 @@ const (
 // build stage.
 var ErrSkipBuildStage = errors.New("skip build stage")
 
-type invalidAttemptError struct {
-	key string
-}
-
-func (i *invalidAttemptError) Error() string {
-	return fmt.Sprintf("number of attempts out of the range [1, 10] for variable: %s", i.key)
-}
-
-func (i *invalidAttemptError) Is(err error) bool {
-	_, ok := err.(*invalidAttemptError)
-	return ok
-}
-
 type Build struct {
 	JobResponse `yaml:",inline"`
 
@@ -159,6 +119,7 @@ type Build struct {
 
 	allVariables     JobVariables
 	secretsVariables JobVariables
+	buildSettings    *BuildSettings
 
 	createdAt time.Time
 
@@ -274,14 +235,13 @@ func (b *Build) BuildStages() []BuildStage {
 	return stages
 }
 
-func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEnabled, sharedDir bool) (string, error) {
-	dir := b.GetAllVariables().Get(overrideKey)
+func (b *Build) getCustomBuildDir(rootDir, dir string, customBuildDirEnabled, sharedDir bool) (string, error) {
 	if dir == "" {
 		return path.Join(rootDir, b.ProjectUniqueDir(sharedDir)), nil
 	}
 
 	if !customBuildDirEnabled {
-		return "", MakeBuildError("setting %s is not allowed, enable `custom_build_dir` feature", overrideKey)
+		return "", MakeBuildError("setting GIT_CLONE_PATH is not allowed, enable `custom_build_dir` feature")
 	}
 
 	// See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25913
@@ -290,7 +250,7 @@ func (b *Build) getCustomBuildDir(rootDir, overrideKey string, customBuildDirEna
 		return "", &BuildError{Inner: err}
 	}
 	if strings.HasPrefix(relDir, "..") {
-		return "", MakeBuildError("the %s=%q has to be within %q", overrideKey, dir, rootDir)
+		return "", MakeBuildError("the GIT_CLONE_PATH=%q has to be within %q", dir, rootDir)
 	}
 
 	return path.Clean(dir), nil
@@ -317,7 +277,7 @@ func (b *Build) StartBuild(
 	b.RefreshAllVariables()
 
 	var err error
-	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, "GIT_CLONE_PATH", customBuildDirEnabled, sharedDir)
+	b.BuildDir, err = b.getCustomBuildDir(b.RootDir, b.Settings().GitClonePath, customBuildDirEnabled, sharedDir)
 	if err != nil {
 		return err
 	}
@@ -912,7 +872,6 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.logger = buildlogger.New(trace, b.Log())
 	b.printRunningWithHeader()
-
 	b.setCurrentState(BuildRunStatePending)
 
 	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
@@ -938,6 +897,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	defer cancel()
 
 	b.configureTrace(trace, cancel)
+
+	b.printSettingErrors()
 
 	options := b.createExecutorPrepareOptions(ctx, globalConfig)
 	provider := GetExecutorProvider(b.Runner.Executor)
@@ -1144,12 +1105,12 @@ func (b *Build) GetSharedEnvVariable() JobVariable {
 	return env
 }
 
-func (b *Build) GetTLSVariables(caFile, certFile, keyFile string) JobVariables {
+func (b *Build) GetCITLSVariables() JobVariables {
 	variables := JobVariables{}
 
 	if b.TLSCAChain != "" {
 		variables = append(variables, JobVariable{
-			Key:      caFile,
+			Key:      tls.VariableCAFile,
 			Value:    b.TLSCAChain,
 			Public:   true,
 			Internal: true,
@@ -1161,14 +1122,14 @@ func (b *Build) GetTLSVariables(caFile, certFile, keyFile string) JobVariables {
 		variables = append(
 			variables,
 			JobVariable{
-				Key:      certFile,
+				Key:      tls.VariableCertFile,
 				Value:    b.TLSAuthCert,
 				Public:   true,
 				Internal: true,
 				File:     true,
 			},
 			JobVariable{
-				Key:      keyFile,
+				Key:      tls.VariableKeyFile,
 				Value:    b.TLSAuthKey,
 				Internal: true,
 				File:     true,
@@ -1179,10 +1140,6 @@ func (b *Build) GetTLSVariables(caFile, certFile, keyFile string) JobVariables {
 	return variables
 }
 
-func (b *Build) GetCITLSVariables() JobVariables {
-	return b.GetTLSVariables(tls.VariableCAFile, tls.VariableCertFile, tls.VariableKeyFile)
-}
-
 func (b *Build) IsSharedEnv() bool {
 	return b.ExecutorFeatures.Shared
 }
@@ -1191,6 +1148,7 @@ func (b *Build) IsSharedEnv() bool {
 // any cached results and reconstruct/expand all job variables.
 func (b *Build) RefreshAllVariables() {
 	b.allVariables = nil
+	b.buildSettings = nil
 }
 
 func (b *Build) GetAllVariables() JobVariables {
@@ -1295,7 +1253,7 @@ func (b *Build) GetURLInsteadOfArgs() []string {
 	// https://example.com/ 		-> https://gitlab-ci-token:abc123@example.com/
 	args := b.getURLInsteadOf(baseURLWithAuth, baseURL)
 
-	if b.IsForceHTTPSEnabled() {
+	if b.Settings().GitSubmoduleForceHTTPS {
 		ciServerPort := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_PORT")
 		ciServerHost := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_HOST")
 		if ciServerHost == "" {
@@ -1377,23 +1335,7 @@ func (b *Build) getStageTimeoutContexts(parent context.Context, timeouts ...stag
 }
 
 func (b *Build) GetGitStrategy() GitStrategy {
-	switch b.GetAllVariables().Value("GIT_STRATEGY") {
-	case "clone":
-		return GitClone
-
-	case "fetch":
-		return GitFetch
-
-	case "none":
-		return GitNone
-
-	default:
-		if b.AllowGitFetch {
-			return GitFetch
-		}
-
-		return GitClone
-	}
+	return b.Settings().GitStrategy
 }
 
 func (b *Build) GetGitCheckout() bool {
@@ -1401,158 +1343,70 @@ func (b *Build) GetGitCheckout() bool {
 		return false
 	}
 
-	strCheckout := b.GetAllVariables().Value("GIT_CHECKOUT")
-	if strCheckout == "" {
-		return true
-	}
-
-	checkout, err := strconv.ParseBool(strCheckout)
-	if err != nil {
-		return true
-	}
-	return checkout
+	return b.Settings().GitCheckout
 }
 
 func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
 	if b.GetGitStrategy() == GitNone {
 		return SubmoduleNone
 	}
-	switch b.GetAllVariables().Value("GIT_SUBMODULE_STRATEGY") {
-	case "normal":
-		return SubmoduleNormal
 
-	case "recursive":
-		return SubmoduleRecursive
-
-	case "none", "":
-		// Default (legacy) behavior is to not update/init submodules
-		return SubmoduleNone
-
-	default:
-		// Will cause an error in AbstractShell) writeSubmoduleUpdateCmds
-		return SubmoduleInvalid
-	}
+	return b.Settings().GitSubmoduleStrategy
 }
 
 // GetSubmodulePaths https://git-scm.com/docs/git-submodule#Documentation/git-submodule.txt-ltpathgt82308203
 func (b *Build) GetSubmodulePaths() ([]string, error) {
-	paths := b.GetAllVariables().Value("GIT_SUBMODULE_PATHS")
-	toks := strings.Fields(paths)
+	toks := b.Settings().GitSubmodulePaths
 	for _, tok := range toks {
 		if tok == ":(exclude)" {
-			return nil, fmt.Errorf("invalid submodule pathspec '%s'", paths)
+			return nil, fmt.Errorf("GIT_SUBMODULE_PATHS: invalid submodule pathspec %q", toks)
 		}
 	}
 	return toks, nil
 }
 
 func (b *Build) GetSubmoduleDepth() int {
-	depth, err := strconv.Atoi(b.GetAllVariables().Value("GIT_SUBMODULE_DEPTH"))
-	if err != nil {
-		return b.GitInfo.Depth
-	}
-	return depth
+	return b.Settings().GitSubmoduleDepth
 }
 
 func (b *Build) GetGitCleanFlags() []string {
-	flags := b.GetAllVariables().Value("GIT_CLEAN_FLAGS")
-	if flags == "" {
-		flags = gitCleanFlagsDefault
-	}
-
-	if flags == gitCleanFlagsNone {
-		return []string{}
-	}
-
-	return strings.Fields(flags)
+	return b.Settings().GitCleanFlags
 }
 
 func (b *Build) GetGitFetchFlags() []string {
-	flags := b.GetAllVariables().Value("GIT_FETCH_EXTRA_FLAGS")
-	if flags == "" {
-		flags = gitFetchFlagsDefault
-	}
-
-	if flags == gitFetchFlagsNone {
-		return []string{}
-	}
-
-	return strings.Fields(flags)
+	return b.Settings().GitFetchExtraFlags
 }
 
 func (b *Build) GetGitSubmoduleUpdateFlags() []string {
-	flags := b.GetAllVariables().Value("GIT_SUBMODULE_UPDATE_FLAGS")
-	return strings.Fields(flags)
+	return b.Settings().GitSubmoduleUpdateFlags
 }
 
 func (b *Build) IsDebugTraceEnabled() bool {
-	trace, err := strconv.ParseBool(b.GetAllVariables().Value("CI_DEBUG_TRACE"))
-	if err != nil {
-		trace = false
-	}
-
-	if b.Runner.DebugTraceDisabled {
-		if trace {
-			b.logger.Warningln("CI_DEBUG_TRACE usage is disabled on this Runner")
-		}
-
-		return false
-	}
-
-	return trace
+	return b.Settings().CIDebugTrace
 }
 
 func (b *Build) GetDockerAuthConfig() string {
-	return b.GetAllVariables().Value("DOCKER_AUTH_CONFIG")
+	return b.Settings().DockerAuthConfig
 }
 
 func (b *Build) GetGetSourcesAttempts() int {
-	retries, err := strconv.Atoi(b.GetAllVariables().Value("GET_SOURCES_ATTEMPTS"))
-	if err != nil {
-		return DefaultGetSourcesAttempts
-	}
-	return retries
+	return b.Settings().GetSourcesAttempts
 }
 
 func (b *Build) GetDownloadArtifactsAttempts() int {
-	retries, err := strconv.Atoi(b.GetAllVariables().Value("ARTIFACT_DOWNLOAD_ATTEMPTS"))
-	if err != nil {
-		return DefaultArtifactDownloadAttempts
-	}
-	return retries
+	return b.Settings().ArtifactDownloadAttempts
 }
 
 func (b *Build) GetRestoreCacheAttempts() int {
-	retries, err := strconv.Atoi(b.GetAllVariables().Value("RESTORE_CACHE_ATTEMPTS"))
-	if err != nil {
-		return DefaultRestoreCacheAttempts
-	}
-	return retries
+	return b.Settings().RestoreCacheAttempts
 }
 
 func (b *Build) GetCacheRequestTimeout() int {
-	timeout, err := strconv.Atoi(b.GetAllVariables().Value("CACHE_REQUEST_TIMEOUT"))
-	if err != nil {
-		return DefaultCacheRequestTimeout
-	}
-	return timeout
+	return b.Settings().CacheRequestTimeout
 }
 
-func (b *Build) GetExecutorJobSectionAttempts() (int, error) {
-	attempts, err := strconv.Atoi(b.GetAllVariables().Value(ExecutorJobSectionAttempts))
-	if err != nil {
-		return DefaultExecutorStageAttempts, nil
-	}
-
-	if validAttempts(attempts) {
-		return 0, &invalidAttemptError{key: ExecutorJobSectionAttempts}
-	}
-
-	return attempts, nil
-}
-
-func validAttempts(attempts int) bool {
-	return attempts < 1 || attempts > 10
+func (b *Build) GetExecutorJobSectionAttempts() int {
+	return b.Settings().ExecutorJobSectionAttempts
 }
 
 func (b *Build) StartedAt() time.Time {
@@ -1626,42 +1480,20 @@ func (b *Build) printRunningWithHeader() {
 	}
 }
 
-func (b *Build) IsLFSSmudgeDisabled() bool {
-	disabled, err := strconv.ParseBool(b.GetAllVariables().Value("GIT_LFS_SKIP_SMUDGE"))
-	if err != nil {
-		return false
+func (b *Build) printSettingErrors() {
+	if len(b.Settings().Errors) > 0 {
+		b.logger.Warningln(errors.Join(b.Settings().Errors...))
 	}
+}
 
-	return disabled
+func (b *Build) IsLFSSmudgeDisabled() bool {
+	return b.Settings().GitLFSSkipSmudge
 }
 
 func (b *Build) IsCIDebugServiceEnabled() bool {
-	debugServices := b.GetAllVariables().Value("CI_DEBUG_SERVICES")
-
-	if debugServices == "" {
-		return false
-	}
-
-	enabled, err := strconv.ParseBool(debugServices)
-	if err != nil {
-		b.logger.Warningln(fmt.Sprintf(
-			"failed to parse value '%s' for CI_DEBUG_SERVICES variable: %s",
-			debugServices,
-			err.Error(),
-		))
-	}
-	return enabled
+	return b.Settings().CIDebugServices
 }
 
 func (b *Build) IsDebugModeEnabled() bool {
 	return b.IsDebugTraceEnabled() || b.IsCIDebugServiceEnabled()
-}
-
-func (b *Build) IsForceHTTPSEnabled() bool {
-	enabled, err := strconv.ParseBool(b.GetAllVariables().Value("GIT_SUBMODULE_FORCE_HTTPS"))
-	if err != nil {
-		return false
-	}
-
-	return enabled
 }

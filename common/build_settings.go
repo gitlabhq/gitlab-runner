@@ -1,0 +1,204 @@
+package common
+
+import (
+	"fmt"
+	"slices"
+	"strconv"
+	"strings"
+)
+
+type GitStrategy string
+
+const (
+	GitClone GitStrategy = "clone"
+	GitFetch GitStrategy = "fetch"
+	GitNone  GitStrategy = "none"
+)
+
+type cmdFlags []string
+
+var (
+	gitCleanFlagsDefault = cmdFlags{"-ffdx"}
+	gitFetchFlagsDefault = cmdFlags{"--prune", "--quiet"}
+)
+
+type SubmoduleStrategy string
+
+const (
+	SubmoduleInvalid   SubmoduleStrategy = "invalid"
+	SubmoduleNone      SubmoduleStrategy = "none"
+	SubmoduleNormal    SubmoduleStrategy = "normal"
+	SubmoduleRecursive SubmoduleStrategy = "recursive"
+)
+
+type BuildSettings struct {
+	CIDebugServices bool
+	CIDebugTrace    bool
+
+	GitClonePath            string
+	GitCheckout             bool
+	GitSubmoduleStrategy    SubmoduleStrategy
+	GitStrategy             GitStrategy
+	GitSubmodulePaths       []string
+	GitSubmoduleDepth       int
+	GitCleanFlags           cmdFlags
+	GitFetchExtraFlags      cmdFlags
+	GitSubmoduleUpdateFlags cmdFlags
+	GitLFSSkipSmudge        bool
+	GitSubmoduleForceHTTPS  bool
+
+	GetSourcesAttempts         int
+	ArtifactDownloadAttempts   int
+	RestoreCacheAttempts       int
+	ExecutorJobSectionAttempts int
+
+	CacheRequestTimeout int
+
+	DockerAuthConfig string
+
+	Errors []error
+}
+
+// Settings returns user provided build settings.
+func (b *Build) Settings() BuildSettings {
+	b.initSettings()
+
+	return *b.buildSettings
+}
+
+func (b *Build) initSettings() {
+	if b.buildSettings != nil {
+		return
+	}
+
+	b.buildSettings = &BuildSettings{}
+
+	variables := b.GetAllVariables()
+
+	defaultGitStategy := GitClone
+	if b.AllowGitFetch {
+		defaultGitStategy = GitFetch
+	}
+
+	errs := []error{
+		validate(variables, "CI_DEBUG_SERVICES", &b.buildSettings.CIDebugServices, false),
+		validate(variables, "CI_DEBUG_TRACE", &b.buildSettings.CIDebugTrace, false),
+
+		validate(variables, "GIT_CLONE_PATH", &b.buildSettings.GitClonePath, ""),
+		validate(variables, "GIT_STRATEGY", &b.buildSettings.GitStrategy, defaultGitStategy),
+		validate(variables, "GIT_CHECKOUT", &b.buildSettings.GitCheckout, true),
+		validate(variables, "GIT_SUBMODULE_STRATEGY", &b.buildSettings.GitSubmoduleStrategy, SubmoduleInvalid),
+		validate(variables, "GIT_SUBMODULE_PATHS", &b.buildSettings.GitSubmodulePaths, nil),
+		validate(variables, "GIT_SUBMODULE_DEPTH", &b.buildSettings.GitSubmoduleDepth, b.GitInfo.Depth),
+		validate(variables, "GIT_CLEAN_FLAGS", &b.buildSettings.GitCleanFlags, gitCleanFlagsDefault),
+		validate(variables, "GIT_FETCH_EXTRA_FLAGS", &b.buildSettings.GitFetchExtraFlags, gitFetchFlagsDefault),
+		validate(variables, "GIT_SUBMODULE_UPDATE_FLAGS", &b.buildSettings.GitSubmoduleUpdateFlags, nil),
+		validate(variables, "GIT_LFS_SKIP_SMUDGE", &b.buildSettings.GitLFSSkipSmudge, false),
+		validate(variables, "GIT_SUBMODULE_FORCE_HTTPS", &b.buildSettings.GitSubmoduleForceHTTPS, false),
+
+		validate(variables, "GET_SOURCES_ATTEMPTS", &b.buildSettings.GetSourcesAttempts, DefaultGetSourcesAttempts),
+		validate(variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", &b.buildSettings.ArtifactDownloadAttempts, DefaultArtifactDownloadAttempts),
+		validate(variables, "RESTORE_CACHE_ATTEMPTS", &b.buildSettings.RestoreCacheAttempts, DefaultRestoreCacheAttempts),
+		validate(variables, "EXECUTOR_JOB_SECTION_ATTEMPTS", &b.buildSettings.ExecutorJobSectionAttempts, DefaultExecutorStageAttempts),
+
+		validate(variables, "CACHE_REQUEST_TIMEOUT", &b.buildSettings.CacheRequestTimeout, DefaultCacheRequestTimeout),
+
+		validate(variables, "DOCKER_AUTH_CONFIG", &b.buildSettings.DockerAuthConfig, ""),
+	}
+
+	if b.Runner != nil && b.Runner.DebugTraceDisabled {
+		if b.buildSettings.CIDebugTrace {
+			errs = append(errs, fmt.Errorf("CI_DEBUG_TRACE: usage is disabled on this Runner"))
+		}
+		if b.buildSettings.CIDebugServices {
+			errs = append(errs, fmt.Errorf("CI_DEBUG_SERVICES: usage is disabled on this Runner"))
+		}
+		b.buildSettings.CIDebugTrace = false
+		b.buildSettings.CIDebugServices = false
+	}
+
+	if b.buildSettings.ExecutorJobSectionAttempts < 1 || b.buildSettings.ExecutorJobSectionAttempts > 10 {
+		errs = append(errs, fmt.Errorf("EXECUTOR_JOB_SECTION_ATTEMPTS: number of attempts out of the range [1, 10], using default %v", DefaultExecutorStageAttempts))
+		b.buildSettings.ExecutorJobSectionAttempts = DefaultExecutorStageAttempts
+	}
+
+	b.buildSettings.Errors = slices.DeleteFunc(errs, func(err error) bool {
+		return err == nil
+	})
+}
+
+func validate[T any](variables JobVariables, name string, value *T, def T) error {
+	raw := variables.Get(name)
+	var err error
+
+	switch v := any(value).(type) {
+	case *SubmoduleStrategy:
+		switch raw {
+		case "normal":
+			*v = SubmoduleNormal
+		case "recursive":
+			*v = SubmoduleRecursive
+		case "none", "":
+			*v = SubmoduleNone
+		default:
+			*value = def
+			return fmt.Errorf("%s: expected either 'normal', 'recursive' or 'none' got %q", name, raw)
+		}
+		return nil
+
+	case *GitStrategy:
+		switch raw {
+		case "clone":
+			*v = GitClone
+		case "fetch":
+			*v = GitFetch
+		case "none":
+			*v = GitNone
+		case "":
+			*value = def
+		default:
+			*value = def
+			return fmt.Errorf("%s: expected either 'clone', 'fetch' or 'none' got %q, using default value '%v'", name, raw, def)
+		}
+		return nil
+	}
+
+	// all cases below use a default when the value is empty
+	if raw == "" {
+		*value = def
+		return nil
+	}
+
+	switch v := any(value).(type) {
+	case *bool:
+		*v, err = strconv.ParseBool(raw)
+		if err != nil {
+			*value = def
+			return fmt.Errorf("%s: expected bool got %q, using default value: %v", name, raw, def)
+		}
+
+	case *int:
+		i, err := strconv.ParseInt(raw, 10, 64)
+		*v = int(i)
+		if err != nil {
+			*value = def
+			return fmt.Errorf("%s: expected int got %q, using default value: %v", name, raw, def)
+		}
+
+	case *string:
+		*v = raw
+
+	case *cmdFlags:
+		switch raw {
+		case "none":
+			*v = cmdFlags{}
+		default:
+			*v = cmdFlags(strings.Fields(raw))
+		}
+
+	case *[]string:
+		*v = strings.Fields(raw)
+	}
+
+	return nil
+}
