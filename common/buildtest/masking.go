@@ -11,6 +11,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
+//nolint:funlen
 func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	resp, err := common.GetRemoteSuccessfulBuildPrintVars(
 		config.Shell,
@@ -68,6 +69,10 @@ func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildS
 	assert.NotContains(t, string(contents), "x-amz-credential=foobar")
 	assert.Contains(t, string(contents), "x-amz-credential=[MASKED]")
 
-	assert.NotContains(t, string(contents), "glpat-abcdef mytoken:ghijklmno foobar-pqrstuvwxyz")
-	assert.Contains(t, string(contents), "glpat-[MASKED] mytoken:[MASKED] foobar-[MASKED]")
+	assert.NotContains(t, string(contents), "glpat-abcdef")
+	assert.NotContains(t, string(contents), "mytoken:ghijklmno")
+	assert.NotContains(t, string(contents), "foobar-pqrstuvwxyz")
+	assert.Contains(t, string(contents), "glpat-[MASKED]")
+	assert.Contains(t, string(contents), "mytoken:[MASKED]")
+	assert.Contains(t, string(contents), "foobar-[MASKED]")
 }

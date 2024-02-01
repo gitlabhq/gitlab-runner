@@ -15,7 +15,6 @@ package masker
 import (
 	"bytes"
 	"io"
-	"sort"
 )
 
 var mask = []byte("[MASKED]")
@@ -25,26 +24,13 @@ type Masker struct {
 }
 
 // New returns a new Masker.
-func New(w io.WriteCloser, phrases []string) *Masker {
+func New(w io.WriteCloser, phrases [][]byte) *Masker {
 	m := &Masker{}
-
-	sort.Slice(phrases, func(i, j int) bool {
-		return len(phrases[i]) < len(phrases[j])
-	})
-
 	m.next = w
 
 	// Create a masker for each unique phrase
-	unique := map[string]struct{}{}
 	for i := 0; i < len(phrases); i++ {
-		if phrases[i] == "" {
-			continue
-		}
-		if _, ok := unique[phrases[i]]; ok {
-			continue
-		}
-		unique[phrases[i]] = struct{}{}
-		m.next = &masker{next: m.next, phrase: []byte(phrases[i])}
+		m.next = &masker{next: m.next, phrase: phrases[i]}
 	}
 
 	return m

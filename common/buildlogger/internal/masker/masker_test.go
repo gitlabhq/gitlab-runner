@@ -114,7 +114,7 @@ func TestMasking(t *testing.T) {
 		t.Run(tc.input, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 
-			m := New(internal.NewNopCloser(buf), tc.values)
+			m := New(internal.NewNopCloser(buf), internal.Unique(tc.values))
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {

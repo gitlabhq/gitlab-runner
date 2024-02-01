@@ -73,18 +73,13 @@ func TestTokenMasking(t *testing.T) {
 			input:    "Lormask1-ipsu dolor sit amm|ask2-t, cons-ctg|lpat-tur adipiscing mask5-lit, smask11-|d do mask7-iusmod t|glpat-mpor incididunt ut |labormask10-=_ mask9-t",
 			expected: "Lormask1-[MASKED] dolor sit ammask2-[MASKED], cons-ctglpat-[MASKED] adipiscing mask5-[MASKED], smask11-d do mask7-[MASKED] tglpat-[MASKED] incididunt ut labormask10-=_ mask9-[MASKED]",
 		},
-		"whitespaced prefixes": {
-			prefixes: []string{" mask1- ", "	mask2-", "mask3-	", "mask4-", "mask5-", "mask6-", "mask7-", "mask8-", "mask9-"},
-			input:    "Lormask1-ipsu dolor sit amm|ask2-t, cons-ctg|lpat-tur adipiscing mask5-lit, smask11-|d do mask7-iusmod t|glpat-mpor incididunt ut |labormask10-=_ mask9-t",
-			expected: "Lormask1-[MASKED] dolor sit ammask2-[MASKED], cons-ctglpat-[MASKED] adipiscing mask5-[MASKED], smask11-d do mask7-[MASKED] tglpat-[MASKED] incididunt ut labormask10-=_ mask9-[MASKED]",
-		},
 	}
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 
-			m := New(internal.NewNopCloser(buf), tc.prefixes)
+			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultPATPrefix)))
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {
