@@ -125,6 +125,7 @@ var (
 		"Timeout occurred",
 		"http2: client connection lost",
 		"connection refused",
+		"tls: internal error",
 	}
 )
 
