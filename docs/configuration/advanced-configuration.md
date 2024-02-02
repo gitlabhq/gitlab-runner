@@ -332,7 +332,7 @@ The following settings define the Docker container parameters.
 | `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
 | `ulimit`                       | Ulimit values that are passed to the container. Uses the same syntax as the Docker `--ulimit` flag. |
 | `volumes`                      | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
-| `volumes_from`                 | A list of volumes to inherit from another container in the form ``<container name>[:<ro|rw>]``. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
+| `volumes_from`                 | A list of volumes to inherit from another container in the form `<container name>[:<access_level>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
 | `volume_driver`                | The volume driver to use for the container. |
 | `wait_for_services_timeout`    | How long to wait for Docker services. Set to `-1` to disable. Default is `30`. |
 | `container_labels`             | A set of labels to add to each container created by the runner. The label value can include environment variables for expansion. |
@@ -630,7 +630,7 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 
 | Parameter           | Description |
 |---------------------|-------------|
-| `Periods`           | Time periods during which this schedule is active. An array of cron-style patterns (described [below](#periods-syntax)).
+| `Periods`           | Time periods during which this schedule is active. An array of cron-style patterns (described [below](#periods-syntax)). |
 | `IdleCount`         | Number of machines that need to be created and waiting in _Idle_ state. |
 | `IdleScaleFactor`   | (Experimental) The number of _Idle_ machines as a factor of the number of machines currently in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
 | `IdleCountMin`      | Minimal number of machines that need to be created and waiting in _Idle_ state when the `IdleScaleFactor` is in use. Default is 1. |
@@ -837,8 +837,8 @@ This table lists `config.toml`, CLI options, and ENV variables for `register`.
 | `S3.BucketLocation`     | `[runners.cache.s3] -> BucketLocation` <br> <br> Before 12.0, `[runners.cache] -> BucketLocation` | `--cache-s3-bucket-location`                                   | `$CACHE_S3_BUCKET_LOCATION` <br> <br> Before 12.0, `$S3_BUCKET_LOCATION` |
 | `S3.Insecure`           | `[runners.cache.s3] -> Insecure` <br> <br> Before 12.0, `[runners.cache] -> Insecure`             | `--cache-s3-insecure`                                          | `$CACHE_S3_INSECURE` <br> <br> Before 12.0, `$S3_INSECURE`               |
 | `S3.AuthenticationType` | `[runners.cache.s3] -> AuthenticationType`                                                        | `--cache-s3-authentication_type`                               | `$CACHE_S3_AUTHENTICATION_TYPE`                                          |
-| `S3.ServerSideEncryption` | `[runners.cache.s3] -> ServerSideEncryption` | `--cache-s3-server-side-encryption` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION`   |                                     |                          |                       |
-| `S3.ServerSideEncryptionKeyID`         | `[runners.cache.s3] -> ServerSideEncryptionKeyID` | `--cache-s3-server-side-encryption-key-id` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID`   |                                     |                          |                       |
+| `S3.ServerSideEncryption` | `[runners.cache.s3] -> ServerSideEncryption` | `--cache-s3-server-side-encryption` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION` |
+| `S3.ServerSideEncryptionKeyID`         | `[runners.cache.s3] -> ServerSideEncryptionKeyID` | `--cache-s3-server-side-encryption-key-id` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID` |
 | `GCS.AccessID`          | `[runners.cache.gcs] -> AccessID`                                                                 | `--cache-gcs-access-id`                                        | `$CACHE_GCS_ACCESS_ID`                                                   |
 | `GCS.PrivateKey`        | `[runners.cache.gcs] -> PrivateKey`                                                               | `--cache-gcs-private-key`                                      | `$CACHE_GCS_PRIVATE_KEY`                                                 |
 | `GCS.CredentialsFile`   | `[runners.cache.gcs] -> CredentialsFile`                                                          | `--cache-gcs-credentials-file`                                 | `$GOOGLE_APPLICATION_CREDENTIALS`                                        |

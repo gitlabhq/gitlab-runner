@@ -1584,7 +1584,7 @@ of the pods.
 |--------------|-----------------------------|----------|-------------|
 | `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
 | `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
-| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod.
+| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
 
 Example configuration in the `config.toml` file:
 
