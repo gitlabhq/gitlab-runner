@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
 type GitStrategy string
@@ -55,6 +57,8 @@ type BuildSettings struct {
 	CacheRequestTimeout int
 
 	DockerAuthConfig string
+
+	FeatureFlags map[string]bool
 
 	Errors []error
 }
@@ -122,23 +126,24 @@ func (b *Build) initSettings() {
 		b.buildSettings.ExecutorJobSectionAttempts = DefaultExecutorStageAttempts
 	}
 
+	errs = append(errs, populateFeatureFlags(b, variables)...)
+
 	b.buildSettings.Errors = slices.DeleteFunc(errs, func(err error) bool {
 		return err == nil
 	})
 }
 
+//nolint:funlen
 func validate[T any](variables JobVariables, name string, value *T, def T) error {
 	raw := variables.Get(name)
 	var err error
 
 	switch v := any(value).(type) {
 	case *SubmoduleStrategy:
-		switch raw {
-		case "normal":
-			*v = SubmoduleNormal
-		case "recursive":
-			*v = SubmoduleRecursive
-		case "none", "":
+		switch strategy := SubmoduleStrategy(raw); strategy {
+		case SubmoduleNormal, SubmoduleRecursive, SubmoduleNone:
+			*v = strategy
+		case "":
 			*v = SubmoduleNone
 		default:
 			*value = def
@@ -147,13 +152,9 @@ func validate[T any](variables JobVariables, name string, value *T, def T) error
 		return nil
 
 	case *GitStrategy:
-		switch raw {
-		case "clone":
-			*v = GitClone
-		case "fetch":
-			*v = GitFetch
-		case "none":
-			*v = GitNone
+		switch strategy := GitStrategy(raw); strategy {
+		case GitClone, GitFetch, GitNone:
+			*v = strategy
 		case "":
 			*value = def
 		default:
@@ -201,4 +202,33 @@ func validate[T any](variables JobVariables, name string, value *T, def T) error
 	}
 
 	return nil
+}
+
+func populateFeatureFlags(b *Build, variables JobVariables) []error {
+	var errs []error
+
+	b.buildSettings.FeatureFlags = make(map[string]bool)
+	for _, ff := range featureflags.GetAll() {
+		b.buildSettings.FeatureFlags[ff.Name] = ff.DefaultValue
+
+		// runner setting takes precedence if defined
+		if b.Runner != nil && b.Runner.FeatureFlags != nil {
+			val, ok := b.Runner.FeatureFlags[ff.Name]
+			if ok {
+				b.buildSettings.FeatureFlags[ff.Name] = val
+				continue
+			}
+		}
+
+		// if job variable is valid it can override default
+		raw := variables.Get(ff.Name)
+		val, err := strconv.ParseBool(raw)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%v: could not parse feature flag, expected bool, got %v", ff.Name, raw))
+		} else {
+			b.buildSettings.FeatureFlags[ff.Name] = val
+		}
+	}
+
+	return errs
 }

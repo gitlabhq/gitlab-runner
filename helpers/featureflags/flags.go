@@ -57,6 +57,12 @@ type FeatureFlag struct {
 // basing on the values below
 var flags = []FeatureFlag{
 	{
+		Name:         "FF_TEST_FEATURE",
+		DefaultValue: false,
+		Deprecated:   true,
+		Description:  "FF_TEST_FEATURE is a feature flag that is used to test the feature flag functionality in tests.",
+	},
+	{
 		Name:            CmdDisableDelayedErrorLevelExpansion,
 		DefaultValue:    false,
 		Deprecated:      false,
