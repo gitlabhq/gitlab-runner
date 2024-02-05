@@ -159,7 +159,8 @@ func TestServerCertificateChange(t *testing.T) {
 	// serve TLS
 	tlsListener := tls.NewListener(ln, srv.TLSConfig)
 	go func() {
-		srv.Serve(tlsListener)
+		errServe := srv.Serve(tlsListener)
+		require.EqualError(t, errServe, "http: Server closed")
 	}()
 	defer srv.Close()
 
