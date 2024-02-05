@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -22,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
@@ -30,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	. "gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
 )
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
@@ -132,6 +135,72 @@ func TestInvalidUrl(t *testing.T) {
 		URL: "address.com/ci///",
 	})
 	assert.Error(t, err)
+}
+
+func TestServerCertificateChange(t *testing.T) {
+	gen := certificate.X509Generator{}
+
+	// we use net.Listen and tls.Listener to build our own "httptest"-esque TLS server here,
+	// because the httptest package doesn't give you enough control over the TLS certificate
+	// setup.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	// create a very impractical TLS server that changes the TLS certificate on every connection.
+	srv := &http.Server{Addr: ln.Addr().String(), Handler: http.HandlerFunc(clientHandler)}
+	srv.TLSConfig = &tls.Config{
+		GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			cert, _, err := gen.Generate("127.0.0.1")
+			return &cert, err
+		},
+	}
+
+	// serve TLS
+	tlsListener := tls.NewListener(ln, srv.TLSConfig)
+	go func() {
+		srv.Serve(tlsListener)
+	}()
+	defer srv.Close()
+
+	// create runner client
+	c, err := newClient(&RunnerCredentials{
+		URL: "https://" + ln.Addr().String(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, c)
+
+	// we cheat here and skip verification so that we don't need a bunch of
+	// valid certificates from the client's perspective.
+	c.createTransport()
+	c.Client.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
+
+	//
+	var cachedCA []byte
+	for i := 0; i < 10; i++ {
+		statusCode, statusText, resp := c.doJSONWithPAT(
+			context.Background(),
+			"test/ok",
+			http.MethodGet,
+			http.StatusOK,
+			"",
+			nil,
+			nil,
+		)
+		assert.Equal(t, http.StatusOK, statusCode, statusText)
+
+		// force a client transport refresh, without this, the
+		// PeerCertificates will not change.
+		c.connectionMaxAge = 1
+		c.lastIdleRefresh = time.Now().Add(-10 * time.Second)
+		c.ensureTransportMaxAge()
+
+		sum := sha256.Sum256(resp.TLS.PeerCertificates[0].Raw)
+		if cachedCA != nil {
+			require.NotEqual(t, sum[:], cachedCA, "ca was cached and should not have been")
+		}
+		cachedCA = sum[:]
+	}
 }
 
 func TestClientDo(t *testing.T) {

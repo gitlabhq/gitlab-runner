@@ -2268,9 +2268,8 @@ func TestLoadConfig(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			tempFile, err := os.CreateTemp("", "test_config")
+			tempFile, err := os.CreateTemp(t.TempDir(), "test_config")
 			require.NoError(t, err)
-			defer os.Remove(tempFile.Name())
 			defer tempFile.Close()
 
 			_, err = tempFile.WriteString(tt.config)
