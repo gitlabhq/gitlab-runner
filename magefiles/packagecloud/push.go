@@ -2,6 +2,7 @@ package packagecloud
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -23,6 +24,8 @@ var (
 	retryPackageCloudErrors = []string{
 		"502 Bad Gateway",
 	}
+
+	failedToRunPackageCloudCommandError = errors.New("failed to run PackageCloud command after 5 tries")
 )
 
 type packageCloudError struct {
@@ -109,34 +112,47 @@ func Push(opts PushOpts) error {
 	return pool.Wait()
 }
 
+type execFunc func(env map[string]string, stdout, stderr io.Writer, cmd string, args ...string) (ran bool, err error)
+
 type packageCloudCommand struct {
-	cmd     string
 	args    []string
 	backoff backoff.Backoff
+
+	stdout io.Writer
+	stderr io.Writer
+
+	exec execFunc
 }
 
 func newPackageCloudCommand(args []string) *packageCloudCommand {
 	return &packageCloudCommand{
-		cmd:  "package_cloud",
 		args: args,
 		backoff: backoff.Backoff{
 			Min: time.Second,
 			Max: 5 * time.Second,
 		},
+
+		stdout: os.Stdout,
+		stderr: os.Stderr,
+		exec:   sh.Exec,
 	}
 }
 
 func (p *packageCloudCommand) run() error {
 	for i := 0; i < 5; i++ {
 		time.Sleep(p.backoff.Duration())
-		fmt.Printf("Running PackageCloud upload command try #%d\n", i+1)
+
+		_, err := fmt.Fprintf(p.stdout, "Running PackageCloud upload command \"package_cloud %+v\" try #%d\n", p.args, i+1)
+		if err != nil {
+			return err
+		}
 
 		var out bytes.Buffer
 
-		stdout := io.MultiWriter(&out, os.Stdout)
-		stderr := io.MultiWriter(&out, os.Stderr)
+		stdout := io.MultiWriter(&out, p.stdout)
+		stderr := io.MultiWriter(&out, p.stderr)
 
-		_, err := sh.Exec(
+		_, err = p.exec(
 			nil,
 			stdout,
 			stderr,
@@ -154,5 +170,5 @@ func (p *packageCloudCommand) run() error {
 		return err
 	}
 
-	return fmt.Errorf("failed to run PackageCloud command after 5 tries")
+	return failedToRunPackageCloudCommandError
 }
