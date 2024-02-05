@@ -88,4 +88,4 @@ Using Docker executor with image golang:1.8 ...
 (If you can, link to the line of code that might be responsible for the problem)
 --->
 
-/label ~bug ~"group::runner"
+/label ~bug ~"group::runner" ~"Category:Runner Core" 
