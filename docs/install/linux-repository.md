@@ -17,7 +17,7 @@ on other Linux distributions.
 | Distribution | Support Information |
 |--------------|---------------------|
 | Debian       | <https://wiki.debian.org/LTS> |
-| Ubuntu       | <https://wiki.ubuntu.com/Releases>
+| Ubuntu       | <https://wiki.ubuntu.com/Releases> |
 | LinuxMint    | <https://linuxmint.com/download_all.php> |
 | Raspbian     | |
 | RHEL         | <https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux> |
