@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/samber/lo"
 )
 
 var (
@@ -38,6 +40,8 @@ var (
 			"windows": false,
 		},
 	}
+
+	ignoreDirectories = []string{".git", "scripts", ".tmp"}
 )
 
 type tagOverridesFilesMap map[string]tagOverridesMap
@@ -102,10 +106,8 @@ func walkTestFiles(testType string, rootPath string, walkFunc filepath.WalkFunc)
 
 	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
 		name := info.Name()
-		if info.IsDir() {
-			if name == ".git" || name == "scripts" {
-				return filepath.SkipDir
-			}
+		if info.IsDir() && lo.Contains(ignoreDirectories, name) {
+			return filepath.SkipDir
 		}
 
 		if !testFileRx.MatchString(name) {
