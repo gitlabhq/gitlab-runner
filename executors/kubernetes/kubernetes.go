@@ -193,6 +193,15 @@ func (r *resourceCheckError) Is(err error) bool {
 	return ok
 }
 
+type podServiceError struct {
+	serviceName string
+	exitCode    int
+}
+
+func (p *podServiceError) Error() string {
+	return fmt.Sprintf("Error in service %s: exit code %d", p.serviceName, p.exitCode)
+}
+
 type kubernetesOptions struct {
 	Image    common.Image
 	Services common.Services
@@ -314,6 +323,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
 	}
 
+	err = s.waitForServices(options.Context)
 	return err
 }
 
@@ -640,7 +650,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx)
+	podStatusCh := s.watchPodStatus(ctx, checkExtendedPodStatusNoOp)
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -2220,7 +2230,7 @@ func (s *executor) requestServiceCreation(
 	return srv, err
 }
 
-func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
+func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkExtendedPodStatusFunc) <-chan error {
 	// Buffer of 1 in case the context is cancelled while the timer tick case is being executed
 	// and the consumer is no longer reading from the channel while we try to write to it
 	ch := make(chan error, 1)
@@ -2236,7 +2246,7 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 			case <-ctx.Done():
 				return
 			case <-t.C:
-				err := s.checkPodStatus(ctx)
+				err := s.checkPodStatus(ctx, extendedStatusFunc)
 				if err != nil {
 					ch <- err
 					return
@@ -2248,7 +2258,24 @@ func (s *executor) watchPodStatus(ctx context.Context) <-chan error {
 	return ch
 }
 
-func (s *executor) checkPodStatus(ctx context.Context) error {
+type checkExtendedPodStatusFunc func(context.Context, *api.Pod) error
+
+func checkExtendedPodStatusNoOp(_ context.Context, _ *api.Pod) error { return nil }
+
+func checkServiceStatus(ctx context.Context, pod *api.Pod) error {
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil &&
+			containerStatus.State.Terminated.Reason == "Error" {
+			return &podServiceError{
+				serviceName: containerStatus.Name,
+				exitCode:    int(containerStatus.State.Terminated.ExitCode),
+			}
+		}
+	}
+	return nil
+}
+
+func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck checkExtendedPodStatusFunc) error {
 	pod, err := retry.WithValueFn(s, func() (*api.Pod, error) {
 		// kubeAPI: pods, get
 		return s.kubeClient.CoreV1().
@@ -2271,7 +2298,7 @@ func (s *executor) checkPodStatus(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return extendedStatusCheck(ctx, pod)
 }
 
 func (s *executor) runInContainer(
@@ -2585,6 +2612,51 @@ func IsKubernetesPodNotFoundError(err error) bool {
 		statusErr.ErrStatus.Code == http.StatusNotFound &&
 		statusErr.ErrStatus.Details != nil &&
 		statusErr.ErrStatus.Details.Kind == "pods"
+}
+
+// Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
+func (s *executor) waitForServices(ctx context.Context) error {
+	portArgs := ""
+	for _, service := range s.options.Services {
+		port := service.Variables.Get("HEALTHCHECK_TCP_PORT")
+		if port == "" {
+			continue
+		}
+		portArgs += fmt.Sprintf("--port '%s' ", port)
+	}
+	if portArgs == "" {
+		return nil
+	}
+	command := "gitlab-runner-helper health-check " + portArgs
+
+	var err error
+	if s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) {
+		err = s.setupPodLegacy(ctx)
+	} else {
+		err = s.ensurePodsConfigured(ctx)
+	}
+	if err != nil {
+		return err
+	}
+
+	podStatusCh := s.watchPodStatus(ctx, checkServiceStatus)
+
+	select {
+	case err := <-s.runInContainerWithExec(ctx, helperContainerName, s.BuildShell.DockerCommand, command):
+		s.BuildLogger.Debugln(fmt.Sprintf("Container helper exited with error: %v", err))
+		var exitError exec.CodeExitError
+		if err != nil && errors.As(err, &exitError) {
+			return &common.BuildError{Inner: err, ExitCode: exitError.ExitStatus()}
+		}
+	case err := <-podStatusCh:
+		s.BuildLogger.Println("Health check aborted due to error: ", err.Error())
+		return err
+
+	case <-ctx.Done():
+		return fmt.Errorf("health check aborted")
+	}
+
+	return nil
 }
 
 func newExecutor() *executor {

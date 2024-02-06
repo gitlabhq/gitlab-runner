@@ -17,26 +17,43 @@ import (
 
 type HealthCheckCommand struct {
 	ctx context.Context
+
+	Ports []string `short:"p" long:"port" description:"Service port"`
 }
 
 func (c *HealthCheckCommand) Execute(_ *cli.Context) {
 	var ports []string
 	var addr string
+	var waitAll bool
 
 	if c.ctx == nil {
 		c.ctx = context.Background()
 	}
 
-	for _, e := range os.Environ() {
-		parts := strings.Split(e, "=")
+	// If command-line ports were given, use those. Otherwise search the environment. The command-line
+	// 'port' flag is used by the kubernetes executor, and in kubernetes the networking environment is
+	// shared among all containers in the pod. So we use localhost instead of another tcp address.
+	if len(c.Ports) > 0 {
+		addr = "localhost"
 
-		switch {
-		case len(parts) != 2:
-			continue
-		case strings.HasSuffix(parts[0], "_TCP_ADDR"):
-			addr = parts[1]
-		case strings.HasSuffix(parts[0], "_TCP_PORT"):
-			ports = append(ports, parts[1])
+		// The urfave/cli package gives us an unwanted trailing entry, which apparently contains the
+		// concatenation of all the --port arguments. Elide it.
+		ports = c.Ports[:len(c.Ports)-1]
+
+		// For kubernetes port checks, wait for all services to respond.
+		waitAll = true
+	} else {
+		for _, e := range os.Environ() {
+			parts := strings.Split(e, "=")
+
+			switch {
+			case len(parts) != 2:
+				continue
+			case strings.HasSuffix(parts[0], "_TCP_ADDR"):
+				addr = parts[1]
+			case strings.HasSuffix(parts[0], "_TCP_PORT"):
+				ports = append(ports, parts[1])
+			}
 		}
 	}
 
@@ -51,7 +68,7 @@ func (c *HealthCheckCommand) Execute(_ *cli.Context) {
 	defer cancel()
 
 	for _, port := range ports {
-		go checkPort(ctx, addr, port, cancel, wg.Done)
+		go checkPort(ctx, addr, port, cancel, wg.Done, waitAll)
 	}
 
 	wg.Wait()
@@ -62,9 +79,14 @@ func (c *HealthCheckCommand) Execute(_ *cli.Context) {
 //  1. A call to net.Dial is successful (i.e. does not return an error). A successful dial will also result in the
 //     the passed context being cancelled.
 //  2. The passed context is cancelled.
-func checkPort(parentCtx context.Context, addr, port string, cancel func(), done func()) {
+func checkPort(parentCtx context.Context, addr, port string, cancel func(), done func(), waitAll bool) {
 	defer done()
-	defer cancel()
+
+	// If we're not awaiting all services, arrange to cancel the parent context as soon as
+	// a dial succeeds.
+	if !waitAll {
+		defer cancel()
+	}
 
 	for {
 		ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)

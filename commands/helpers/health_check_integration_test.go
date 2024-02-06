@@ -130,3 +130,88 @@ func TestHealthCheckCommand_Execute(t *testing.T) {
 		})
 	}
 }
+
+func TestHealthCheckCommand_WaitAll(t *testing.T) {
+	// We might simulate as many as two services.
+	const MAX_PORTS = 2
+
+	cases := []struct {
+		name            string
+		successCount    int
+		expectedTimeout bool
+	}{
+		{
+			name:            "Two services down",
+			successCount:    0,
+			expectedTimeout: true,
+		},
+		{
+			name:            "One up one down",
+			successCount:    1,
+			expectedTimeout: true,
+		},
+		{
+			name:            "Two services up",
+			successCount:    2,
+			expectedTimeout: false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+
+			ports := make([]string, 0)
+
+			for i := 0; i < c.successCount; i++ {
+				listener, err := net.Listen("tcp", "127.0.0.1:")
+				require.NoError(t, err)
+				defer listener.Close()
+
+				port := listener.Addr().(*net.TCPAddr).Port
+				ports = append(ports, strconv.Itoa(port))
+			}
+
+			// To simulate services that are down, find an unused port and increment port
+			// numbers from there.
+			unusedPort := 0
+			if c.successCount < MAX_PORTS {
+				listener, err := net.Listen("tcp", "127.0.0.1:")
+				require.NoError(t, err)
+
+				unusedPort = listener.Addr().(*net.TCPAddr).Port
+				listener.Close()
+			}
+
+			for i := c.successCount; i < MAX_PORTS; i++ {
+				ports = append(ports, strconv.Itoa(unusedPort))
+				unusedPort++
+			}
+
+			// The cli package provides an extra value at end of the args array
+			ports = append(ports, "[unused value]")
+
+			ctx, cancelFn := context.WithTimeout(context.Background(), 4*time.Second)
+			defer cancelFn()
+			done := make(chan struct{})
+			go func() {
+				cmd := HealthCheckCommand{
+					ctx:   ctx,
+					Ports: ports,
+				}
+				cmd.Execute(nil)
+				done <- struct{}{}
+			}()
+
+			select {
+			case <-ctx.Done():
+				if !c.expectedTimeout {
+					require.Fail(t, "Unexpected timeout")
+				}
+			case <-done:
+				if c.expectedTimeout {
+					require.Fail(t, "Unexpected failure to time out")
+				}
+			}
+		})
+	}
+}

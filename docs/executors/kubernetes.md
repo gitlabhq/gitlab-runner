@@ -1238,6 +1238,7 @@ check_interval = 30
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4470) in GitLab Runner 12.5.
 > - [Introduced support for `alias`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4829) in GitLab Runner 12.9
 > - [Introduced support for `command` and `entrypoint`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173) in GitLab Runner 13.6.
+> - [Introduced support for `HEALTCHECK_TCP_SERVICES`](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27215) in GitLab Runner 16.9.
 
 Define a list of [services](https://docs.gitlab.com/ee/ci/services/) in the `config.toml`.
 
@@ -1258,7 +1259,12 @@ check_interval = 30
         alias = "svc1"
         entrypoint = ["entrypoint.sh"]
         command = ["executable","param1","param2"]
+        environment = ["ENV=value1", "ENV2=value2"]
 ```
+
+If the service environment includes `HEALTHCHECK_TCP_PORT`, GitLab Runner waits until the service
+responds on that port before starting user CI scripts. You can also configure the `HEALTHCHECK_TCP_PORT`
+environment variable in a `services` section of `.gitlab-ci.yml`.
 
 ## Set a pull policy
 
