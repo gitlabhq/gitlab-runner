@@ -788,6 +788,7 @@ func TestExecute_MergeConfigTemplate(t *testing.T) {
 
 		baseOutputConfigFmt = `concurrent = 1
 check_interval = 0
+connection_max_age = "15m0s"
 shutdown_timeout = 0
 
 [session_server]
@@ -849,6 +850,7 @@ shutdown_timeout = 0
 			errExpected: false,
 			expectedFileContentFmt: `concurrent = 1
 check_interval = 0
+connection_max_age = "15m0s"
 shutdown_timeout = 0
 
 [session_server]

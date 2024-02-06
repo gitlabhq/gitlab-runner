@@ -38,6 +38,7 @@ type GitLabClient struct {
 	lock    sync.Mutex
 
 	apiRequestsCollector *APIRequestsCollector
+	connectionMaxAge     time.Duration
 }
 
 func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err error) {
@@ -56,7 +57,7 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err
 	)
 	c = n.clients[key]
 	if c == nil {
-		c, err = newClient(credentials)
+		c, err = newClientWithMaxAge(credentials, n.connectionMaxAge)
 		if err != nil {
 			return
 		}
@@ -325,6 +326,10 @@ func (n *GitLabClient) getResponseTLSData(
 	}
 
 	return c.getResponseTLSData(response.TLS, resolveFullChain)
+}
+
+func (n *GitLabClient) SetConnectionMaxAge(age time.Duration) {
+	n.connectionMaxAge = age
 }
 
 func (n *GitLabClient) RegisterRunner(

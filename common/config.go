@@ -56,6 +56,8 @@ const (
 	GenerateArtifactsMetadataVariable = "RUNNER_GENERATE_ARTIFACTS_METADATA"
 
 	UnknownSystemID = "unknown"
+
+	DefaultConnectionMaxAge = 15 * time.Minute
 )
 
 var (
@@ -1167,15 +1169,16 @@ type Config struct {
 	ListenAddress string        `toml:"listen_address,omitempty" json:"listen_address"`
 	SessionServer SessionServer `toml:"session_server,omitempty" json:"session_server"`
 
-	Concurrent    int             `toml:"concurrent" json:"concurrent"`
-	CheckInterval int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
-	LogLevel      *string         `toml:"log_level" json:"log_level,omitempty" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
-	LogFormat     *string         `toml:"log_format" json:"log_format,omitempty" description:"Define log format (one of: runner, text, json)"`
-	User          string          `toml:"user,omitempty" json:"user"`
-	Runners       []*RunnerConfig `toml:"runners" json:"runners,omitempty"`
-	SentryDSN     *string         `toml:"sentry_dsn" json:",omitempty"`
-	ModTime       time.Time       `toml:"-"`
-	Loaded        bool            `toml:"-"`
+	Concurrent       int             `toml:"concurrent" json:"concurrent"`
+	CheckInterval    int             `toml:"check_interval" json:"check_interval" description:"Define active checking interval of jobs"`
+	LogLevel         *string         `toml:"log_level" json:"log_level,omitempty" description:"Define log level (one of: panic, fatal, error, warning, info, debug)"`
+	LogFormat        *string         `toml:"log_format" json:"log_format,omitempty" description:"Define log format (one of: runner, text, json)"`
+	User             string          `toml:"user,omitempty" json:"user"`
+	Runners          []*RunnerConfig `toml:"runners" json:"runners,omitempty"`
+	SentryDSN        *string         `toml:"sentry_dsn" json:",omitempty"`
+	ConnectionMaxAge *time.Duration  `toml:"connection_max_age,omitempty" json:"connection_max_age,omitempty"`
+	ModTime          time.Time       `toml:"-"`
+	Loaded           bool            `toml:"-"`
 
 	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds until the forceful shutdown operation times out and exits the process"`
 
@@ -2001,6 +2004,12 @@ func (c *Config) LoadConfig(configFile string) error {
 	}
 
 	c.ModTime = info.ModTime()
+
+	if c.ConnectionMaxAge == nil {
+		defaultValue := DefaultConnectionMaxAge
+		c.ConnectionMaxAge = &defaultValue
+	}
+
 	c.Loaded = true
 
 	return nil
