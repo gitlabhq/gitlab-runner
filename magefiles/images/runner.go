@@ -26,9 +26,9 @@ const (
 var (
 	runnerImageName = env.NewDefault("RUNNER_IMAGE_NAME", "")
 
-	dockerMachineVersion       = env.NewDefault("DOCKER_MACHINE_VERSION", "v0.16.2-gitlab.23")
-	dockerMachineAmd64Checksum = env.NewDefault("DOCKER_MACHINE_AMD64_CHECKSUM", "99043581ef46b7a78417a8137d6b62f535620bf970b10ae36d510d152675da98")
-	dockerMachineArm64Checksum = env.NewDefault("DOCKER_MACHINE_ARM64_CHECKSUM", "378b735a90cb4abe4be34ebfffa76ddadcee4664fd7fdf1e38cb526745376ef5")
+	dockerMachineVersion       = env.NewDefault("DOCKER_MACHINE_VERSION", "v0.16.2-gitlab.24")
+	dockerMachineAmd64Checksum = env.NewDefault("DOCKER_MACHINE_AMD64_CHECKSUM", "a9695e9fabde0ba328a6326a4cb2b7f9f939d148f15ecaffe2e40e746bf33a6f")
+	dockerMachineArm64Checksum = env.NewDefault("DOCKER_MACHINE_ARM64_CHECKSUM", "be4b8261d8e4a6efb4871d0888d6dcdd1b8f47785bc9ce885996f53edf7b8849")
 	// s390x and ppc64le are not being released
 	dockerMachineS390xChecksum   = env.New("DOCKER_MACHINE_S390X_CHECKSUM")
 	dockerMachinePpc64leChecksum = env.New("DOCKER_MACHINE_PPC64LE_CHECKSUM")

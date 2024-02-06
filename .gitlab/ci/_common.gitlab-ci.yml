@@ -12,7 +12,7 @@ variables:
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 24.0.5
-  DOCKER_MACHINE_VERSION: "v0.16.2-gitlab.23"
+  DOCKER_MACHINE_VERSION: "v0.16.2-gitlab.24"
   BUILDX_VERSION: 0.10.4
   KUBECTL_VERSION: 1.23.0
   AWS_CLI_VERSION: 2.4.19
@@ -49,11 +49,11 @@ variables:
 default:
   image: $CI_IMAGE
   tags:
-  - gitlab-org
+    - gitlab-org
   retry:
     max: 2
     when:
-    - runner_system_failure
+      - runner_system_failure
 
 .no_cache:
   cache: {}
@@ -63,12 +63,12 @@ default:
 
 .no_cache_and_dependencies:
   extends:
-  - .no_cache
-  - .no_dependencies
+    - .no_cache
+    - .no_dependencies
 
 .docker:
   services:
-  - docker:${DOCKER_VERSION}-dind
+    - docker:${DOCKER_VERSION}-dind
   variables:
     DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2376
@@ -76,40 +76,40 @@ default:
     DOCKER_TLS_CERTDIR: "/certs"
     DOCKER_CERT_PATH: "/certs/client"
   tags:
-  - gitlab-org-docker
+    - gitlab-org-docker
 
 .docker_qemu-before_script: &docker_qemu-before_script
-- docker run --privileged --rm tonistiigi/binfmt --install all
+  - docker run --privileged --rm tonistiigi/binfmt --install all
 
 .docker_qemu:
   before_script:
-  - *docker_qemu-before_script
+    - *docker_qemu-before_script
 
 .go-cache:
   variables:
     GOCACHE: $CI_PROJECT_DIR/.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
-  - mkdir -p "$GOCACHE"
+    - mkdir -p "$GOCACHE"
   cache:
     paths:
-    - $CI_PROJECT_DIR/.gocache-false/
+      - $CI_PROJECT_DIR/.gocache-false/
     key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
 
 .go-cache-docker-qemu:
   extends:
-  - .go-cache
+    - .go-cache
   before_script:
-  - *docker_qemu-before_script
-  - mkdir -p "$GOCACHE"
+    - *docker_qemu-before_script
+    - mkdir -p "$GOCACHE"
 
 .go-cache-windows:
   variables:
     GOCACHE: $CI_PROJECT_DIR\.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
-  - New-Item -Path "$Env:GOCACHE" -Type Directory -Force
+    - New-Item -Path "$Env:GOCACHE" -Type Directory -Force
   cache:
     paths:
-    - $CI_PROJECT_DIR\.gocache-false\
+      - $CI_PROJECT_DIR\.gocache-false\
     key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
 
 .windows-dependency-checksums:
@@ -124,15 +124,15 @@ default:
 
 .windows1809:
   extends:
-  - .windows1809_variables
+    - .windows1809_variables
   tags:
-  - shared-windows
-  - windows
-  - windows-1809
+    - shared-windows
+    - windows
+    - windows-1809
 
 .windows1809_nano:
   extends:
-  - .windows1809
+    - .windows1809
   variables:
     WINDOWS_VERSION: nanoserver1809
 
@@ -142,14 +142,14 @@ default:
 
 .windows21H2:
   extends:
-  - .windows21H2_variables
+    - .windows21H2_variables
   tags:
-  - windows
-  - windows-21h1 # todo: use windows-2022 when ready (https://gitlab.com/gitlab-org/ci-cd/shared-runners/infrastructure/-/issues/61)
+    - windows
+    - windows-21h1 # todo: use windows-2022 when ready (https://gitlab.com/gitlab-org/ci-cd/shared-runners/infrastructure/-/issues/61)
 
 .windows21H2_nano:
   extends:
-  - .windows21H2
+    - .windows21H2
   variables:
     WINDOWS_VERSION: nanoserver21H2
 
@@ -157,10 +157,10 @@ default:
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:
   extends:
-  - .no_cache_and_dependencies
-  - .rules:merge_request_pipelines
+    - .no_cache_and_dependencies
+    - .rules:merge_request_pipelines
   image: alpine:latest
   variables:
     GIT_STRATEGY: none
   script:
-  - exit 0
+    - exit 0
