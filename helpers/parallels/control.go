@@ -2,6 +2,7 @@ package parallels
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +15,13 @@ import (
 
 	"github.com/sirupsen/logrus"
 )
+
+type VmSimpleConfig struct {
+	UUID         string `json:"uuid"`
+	Status       string `json:"status"`
+	ConfiguredIp string `json:"ip_configured"`
+	Name         string `json:"name"`
+}
 
 type StatusType string
 
@@ -85,8 +93,12 @@ func Exist(name string) bool {
 	return err == nil
 }
 
-func CreateTemplate(vmName, templateName string) error {
+func CreateLinkedCloneTemplate(vmName, templateName string) error {
 	return Prlctl("clone", vmName, "--name", templateName, "--template", "--linked")
+}
+
+func CreateCloneTemplate(vmName, templateName string) error {
+	return Prlctl("clone", vmName, "--name", templateName, "--template")
 }
 
 func CreateOsVM(vmName, templateName string) error {
@@ -193,14 +205,14 @@ func Mac(vmName string) (string, error) {
 	return mac, nil
 }
 
-// IPAddress finds the IP address of a VM connected that uses DHCP by its MAC address
+// IPAddressFromMac finds the IP address of a VM connected that uses DHCP by its MAC address
 //
 // Parses the file /Library/Preferences/Parallels/parallels_dhcp_leases
 // file contain a list of DHCP leases given by Parallels Desktop
 // Example line:
 // 10.211.55.181="1418921112,1800,001c42f593fb,ff42f593fb000100011c25b9ff001c42f593fb"
 // IP Address   ="Lease expiry, Lease time, MAC, MAC or DUID"
-func IPAddress(mac string) (string, error) {
+func IPAddressFromMac(mac string) (string, error) {
 	if len(mac) != 12 {
 		return "", fmt.Errorf("not a valid MAC address: %s. It should be exactly 12 digits", mac)
 	}
@@ -230,4 +242,28 @@ func IPAddress(mac string) (string, error) {
 
 	logrus.Debugf("Found IP lease: %s for MAC address %s\n", mostRecentIP, mac)
 	return mostRecentIP, nil
+}
+
+func IPAddress(vmName string) (string, error) {
+	output, err := PrlctlOutput("list", vmName, "-a", "-f", "--json")
+	if err != nil {
+		return "", err
+	}
+
+	var result []VmSimpleConfig
+	err = json.Unmarshal([]byte(output), &result)
+	if err != nil {
+		logrus.Errorf("Error: %s", err)
+		return "", err
+	}
+	if len(result) == 0 {
+		return "", fmt.Errorf("VM %s not found", vmName)
+	}
+
+	if result[0].ConfiguredIp == "" || result[0].ConfiguredIp == "-" {
+		return "", fmt.Errorf("VM %s doesn't have an IP address", vmName)
+	}
+
+	logrus.Debugf("IP address: %s", result[0].ConfiguredIp)
+	return result[0].ConfiguredIp, nil
 }
