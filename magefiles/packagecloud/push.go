@@ -2,12 +2,15 @@ package packagecloud
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/magefile/mage/sh"
 	"github.com/sourcegraph/conc/pool"
 )
@@ -17,7 +20,45 @@ var (
 		"architecture: Unrecognized CPU architecture",
 		"filename: has already been taken",
 	}
+
+	retryPackageCloudErrors = []string{
+		"502 Bad Gateway",
+	}
+
+	failedToRunPackageCloudCommandError = errors.New("failed to run PackageCloud command after 5 tries")
 )
+
+type packageCloudError struct {
+	err string
+}
+
+func newPackageCloudError(err string) *packageCloudError {
+	return &packageCloudError{err: err}
+}
+
+func (p *packageCloudError) isIgnored() bool {
+	for _, msg := range ignoredPackageCloudErrors {
+		if strings.Contains(p.err, msg) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (p *packageCloudError) isRetryable() bool {
+	for _, msg := range retryPackageCloudErrors {
+		if strings.Contains(p.err, msg) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (p *packageCloudError) Error() string {
+	return p.err
+}
 
 type PushOpts struct {
 	URL         string
@@ -62,7 +103,7 @@ func Push(opts PushOpts) error {
 						return nil
 					}
 
-					return runPackageCloudCommand(args)
+					return newPackageCloudCommand(args).run()
 				})
 			}
 		}
@@ -71,30 +112,63 @@ func Push(opts PushOpts) error {
 	return pool.Wait()
 }
 
-func runPackageCloudCommand(args []string) error {
-	var out bytes.Buffer
+type execFunc func(env map[string]string, stdout, stderr io.Writer, cmd string, args ...string) (ran bool, err error)
 
-	stdout := io.MultiWriter(&out, os.Stdout)
-	stderr := io.MultiWriter(&out, os.Stderr)
+type packageCloudCommand struct {
+	args    []string
+	backoff backoff.Backoff
 
-	_, err := sh.Exec(
-		nil,
-		stdout,
-		stderr,
-		"package_cloud",
-		args...,
-	)
+	stdout io.Writer
+	stderr io.Writer
 
-	outString := out.String()
-	fmt.Println(outString)
-	if err != nil {
-		for _, msg := range ignoredPackageCloudErrors {
-			if strings.Contains(outString, msg) {
-				fmt.Printf("Ignoring PackageCloud error %v: %s\n", err, msg)
-				return nil
-			}
+	exec execFunc
+}
+
+func newPackageCloudCommand(args []string) *packageCloudCommand {
+	return &packageCloudCommand{
+		args: args,
+		backoff: backoff.Backoff{
+			Min: time.Second,
+			Max: 5 * time.Second,
+		},
+
+		stdout: os.Stdout,
+		stderr: os.Stderr,
+		exec:   sh.Exec,
+	}
+}
+
+func (p *packageCloudCommand) run() error {
+	for i := 0; i < 5; i++ {
+		time.Sleep(p.backoff.Duration())
+
+		_, err := fmt.Fprintf(p.stdout, "Running PackageCloud upload command \"package_cloud %+v\" try #%d\n", p.args, i+1)
+		if err != nil {
+			return err
 		}
+
+		var out bytes.Buffer
+
+		stdout := io.MultiWriter(&out, p.stdout)
+		stderr := io.MultiWriter(&out, p.stderr)
+
+		_, err = p.exec(
+			nil,
+			stdout,
+			stderr,
+			"package_cloud",
+			p.args...,
+		)
+
+		pkgCloudErr := newPackageCloudError(out.String())
+		if err == nil || pkgCloudErr.isIgnored() {
+			return nil
+		} else if pkgCloudErr.isRetryable() {
+			continue
+		}
+
+		return err
 	}
 
-	return err
+	return failedToRunPackageCloudCommandError
 }
