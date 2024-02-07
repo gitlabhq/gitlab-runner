@@ -84,10 +84,7 @@ func (s *commandExecutor) isUmaskDisabled() bool {
 }
 
 func (s *commandExecutor) Run(cmd common.ExecutorCommand) error {
-	maxAttempts, err := s.Build.GetExecutorJobSectionAttempts()
-	if err != nil {
-		return fmt.Errorf("getting job section attempts: %w", err)
-	}
+	maxAttempts := s.Build.GetExecutorJobSectionAttempts()
 
 	var runErr error
 	for attempts := 1; attempts <= maxAttempts; attempts++ {
