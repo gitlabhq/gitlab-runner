@@ -1026,6 +1026,98 @@ func TestDockerCPUSetCPUsSetting(t *testing.T) {
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
+func TestDockerServiceSettings(t *testing.T) {
+	tests := map[string]struct {
+		dockerConfig common.DockerConfig
+		verifyFn     func(t *testing.T, config *container.Config, hostConfig *container.HostConfig)
+	}{
+		"memory": {
+			dockerConfig: common.DockerConfig{
+				ServiceMemory: "42m",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				value, err := units.RAMInBytes("42m")
+				require.NoError(t, err)
+				assert.Equal(t, value, hostConfig.Memory)
+			},
+		},
+		"memory reservation": {
+			dockerConfig: common.DockerConfig{
+				ServiceMemoryReservation: "64m",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				value, err := units.RAMInBytes("64m")
+				require.NoError(t, err)
+				assert.Equal(t, value, hostConfig.MemoryReservation)
+			},
+		},
+		"swap": {
+			dockerConfig: common.DockerConfig{
+				ServiceMemorySwap: "2g",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				value, err := units.RAMInBytes("2g")
+				require.NoError(t, err)
+				assert.Equal(t, value, hostConfig.MemorySwap)
+			},
+		},
+		"CPUSetCPUs": {
+			dockerConfig: common.DockerConfig{
+				ServiceCPUSetCPUs: "1-3,5",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, "1-3,5", hostConfig.CpusetCpus)
+			},
+		},
+		"cpus_0.5": {
+			dockerConfig: common.DockerConfig{
+				ServiceCPUS: "0.5",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, int64(500000000), hostConfig.NanoCPUs)
+			},
+		},
+		"cpus_0.25": {
+			dockerConfig: common.DockerConfig{
+				ServiceCPUS: "0.25",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, int64(250000000), hostConfig.NanoCPUs)
+			},
+		},
+		"cpus_1/3": {
+			dockerConfig: common.DockerConfig{
+				ServiceCPUS: "1/3",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, int64(333333333), hostConfig.NanoCPUs)
+			},
+		},
+		"cpus_1/8": {
+			dockerConfig: common.DockerConfig{
+				ServiceCPUS: "1/8",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, int64(125000000), hostConfig.NanoCPUs)
+			},
+		},
+		"cpus_0.0001": {
+			dockerConfig: common.DockerConfig{
+				ServiceCPUS: "0.0001",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, int64(100000), hostConfig.NanoCPUs)
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			testDockerConfigurationWithServiceContainer(t, &tt.dockerConfig, tt.verifyFn)
+		})
+	}
+}
+
 func TestDockerContainerLabelsSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		ContainerLabels: map[string]string{"my.custom.label": "my.custom.value"},
@@ -2099,6 +2191,40 @@ func TestConnectEnvironment(t *testing.T) {
 	require.ErrorIs(t, err, assert.AnError)
 	require.NotNil(t, env.client)
 	require.True(t, env.client.dialed)
+}
+
+func TestTooManyServicesRequestedError(t *testing.T) {
+	t.Parallel()
+	t.Run(".Is()", func(t *testing.T) {
+		tests := map[string]struct {
+			err1 tooManyServicesRequestedError
+			err2 tooManyServicesRequestedError
+			want bool
+		}{
+			"matching errors": {
+				err1: tooManyServicesRequestedError{allowed: 1, requested: 2},
+				err2: tooManyServicesRequestedError{allowed: 1, requested: 2},
+				want: true,
+			},
+			"mismatching allowed field": {
+				err1: tooManyServicesRequestedError{allowed: 1, requested: 2},
+				err2: tooManyServicesRequestedError{allowed: 10, requested: 2},
+				want: false,
+			},
+			"mismatching requested field": {
+				err1: tooManyServicesRequestedError{allowed: 1, requested: 2},
+				err2: tooManyServicesRequestedError{allowed: 1, requested: 20},
+				want: false,
+			},
+		}
+
+		for testName, test := range tests {
+			t.Run(testName, func(t *testing.T) {
+				have := test.err1.Is(&test.err2)
+				assert.Equal(t, test.want, have)
+			})
+		}
+	})
 }
 
 func init() {

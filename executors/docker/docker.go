@@ -405,32 +405,20 @@ func (e *executor) createService(
 	// this will fail potentially some builds if there's name collision
 	_ = e.removeContainer(e.Context, containerName)
 
-	labels := map[string]string{
-		"type":            labelServiceType,
-		"service":         service,
-		"service.version": version,
+	config := e.createServiceContainerConfig(service, version, serviceImage.ID, definition)
+
+	hostConfig, err := e.createHostConfigForService()
+	if err != nil {
+		return nil, err
 	}
 
-	config := &container.Config{
-		Image:  serviceImage.ID,
-		Labels: e.labeler.Labels(labels),
-		Env:    e.getServiceVariables(definition),
-	}
-
-	if len(definition.Command) > 0 {
-		config.Cmd = definition.Command
-	}
-	config.Entrypoint = e.overwriteEntrypoint(&definition)
-	config.User = definition.ExecutorOptions.Docker.User
-	hostConfig := e.createHostConfigForService()
 	hostConfig.Privileged = hostConfig.Privileged && e.isInPrivilegedServiceList(definition)
-
 	if e.Build.IsFeatureFlagOn(featureflags.UseInitWithDockerExecutor) {
 		hostConfig.Init = &useInit
 	}
 
-	networkConfig := e.networkConfig(linkNames)
 	platform := platformForImage(serviceImage, definition.ExecutorOptions)
+	networkConfig := e.networkConfig(linkNames)
 
 	e.BuildLogger.Debugln("Creating service container", containerName, "...")
 	resp, err := e.client.ContainerCreate(e.Context, config, hostConfig, networkConfig, platform, containerName)
@@ -461,13 +449,26 @@ func platformForImage(image *types.ImageInspect, opts common.ImageExecutorOption
 	}
 }
 
-func (e *executor) createHostConfigForService() *container.HostConfig {
+func (e *executor) createHostConfigForService() (*container.HostConfig, error) {
 	privileged := e.Config.Docker.Privileged
 	if e.Config.Docker.ServicesPrivileged != nil {
 		privileged = *e.Config.Docker.ServicesPrivileged
 	}
 
+	nanoCPUs, err := e.Config.Docker.GetServiceNanoCPUs()
+	if err != nil {
+		return nil, fmt.Errorf("service nano cpus: %w", err)
+	}
+
 	return &container.HostConfig{
+		Resources: container.Resources{
+			Memory:            e.Config.Docker.GetServiceMemory(),
+			MemorySwap:        e.Config.Docker.GetServiceMemorySwap(),
+			MemoryReservation: e.Config.Docker.GetServiceMemoryReservation(),
+			CpusetCpus:        e.Config.Docker.ServiceCPUSetCPUs,
+			CPUShares:         e.Config.Docker.ServiceCPUShares,
+			NanoCPUs:          nanoCPUs,
+		},
 		DNS:           e.Config.Docker.DNS,
 		DNSSearch:     e.Config.Docker.DNSSearch,
 		RestartPolicy: neverRestartPolicy,
@@ -483,7 +484,32 @@ func (e *executor) createHostConfigForService() *container.HostConfig {
 		LogConfig: container.LogConfig{
 			Type: "json-file",
 		},
+	}, nil
+}
+
+func (e *executor) createServiceContainerConfig(
+	service, version, serviceImageID string,
+	definition common.Image,
+) *container.Config {
+	labels := map[string]string{
+		"type":            labelServiceType,
+		"service":         service,
+		"service.version": version,
 	}
+
+	config := &container.Config{
+		Image:  serviceImageID,
+		Labels: e.labeler.Labels(labels),
+		Env:    e.getServiceVariables(definition),
+	}
+
+	if len(definition.Command) > 0 {
+		config.Cmd = definition.Command
+	}
+	config.Entrypoint = e.overwriteEntrypoint(&definition)
+	config.User = definition.ExecutorOptions.Docker.User
+
+	return config
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {

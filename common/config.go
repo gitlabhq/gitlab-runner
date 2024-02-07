@@ -234,6 +234,13 @@ type DockerConfig struct {
 	MacAddress                 string             `toml:"mac_address,omitempty" json:"mac_address" long:"mac-address" env:"DOCKER_MAC_ADDRESS" description:"Container MAC address (e.g., 92:d0:c6:0a:29:33)"`
 	Links                      []string           `toml:"links,omitempty" json:"links,omitempty" long:"links" env:"DOCKER_LINKS" description:"Add link to another container"`
 	Services                   []Service          `toml:"services,omitempty" json:"services,omitempty" description:"Add service that is started with container"`
+	ServicesLimit              *int               `toml:"services_limit,omitempty" json:"services_limit" long:"services-limit" env:"DOCKER_SERVICES_LIMIT" description:"The maximum amount of services allowed"`
+	ServiceMemory              string             `toml:"service_memory,omitempty" json:"service_memory" long:"service-memory" env:"DOCKER_SERVICE_MEMORY" description:"Service memory limit (format: <number>[<unit>]). Unit can be one of b (if omitted), k, m, or g. Minimum is 4M."`
+	ServiceMemorySwap          string             `toml:"service_memory_swap,omitempty" json:"service_memory_swap" long:"service-memory-swap" env:"DOCKER_SERVICE_MEMORY_SWAP" description:"Service total memory limit (memory + swap, format: <number>[<unit>]). Unit can be one of b (if omitted), k, m, or g."`
+	ServiceMemoryReservation   string             `toml:"service_memory_reservation,omitempty" json:"service_memory_reservation" long:"service-memory-reservation" env:"DOCKER_SERVICE_MEMORY_RESERVATION" description:"Service memory soft limit (format: <number>[<unit>]). Unit can be one of b (if omitted), k, m, or g."`
+	ServiceCPUSetCPUs          string             `toml:"service_cpuset_cpus,omitempty" json:"service_cpuset_cpus" long:"service-cpuset-cpus" env:"DOCKER_SERVICE_CPUSET_CPUS" description:"String value containing the cgroups CpusetCpus to use for service"`
+	ServiceCPUS                string             `toml:"service_cpus,omitempty" json:"service_cpus" long:"service-cpus" env:"DOCKER_SERVICE_CPUS" description:"Number of CPUs for service"`
+	ServiceCPUShares           int64              `toml:"service_cpu_shares,omitzero" json:"service_cpu_shares" long:"service-cpu-shares" env:"DOCKER_SERVICE_CPU_SHARES" description:"Number of CPU shares for service"`
 	WaitForServicesTimeout     int                `toml:"wait_for_services_timeout,omitzero" json:"wait_for_services_timeout" long:"wait-for-services-timeout" env:"DOCKER_WAIT_FOR_SERVICES_TIMEOUT" description:"How long to wait for service startup"`
 	AllowedImages              []string           `toml:"allowed_images,omitempty" json:"allowed_images,omitempty" long:"allowed-images" env:"DOCKER_ALLOWED_IMAGES" description:"Image allowlist"`
 	AllowedPrivilegedImages    []string           `toml:"allowed_privileged_images,omitempty" json:"allowed_privileged_images,omitempty" long:"allowed-privileged-images" env:"DOCKER_ALLOWED_PRIVILEGED_IMAGES" description:"Privileged image allowlist"`
@@ -1315,19 +1322,27 @@ func (c *SessionServer) GetSessionTimeout() time.Duration {
 	return DefaultSessionTimeout
 }
 
-func (c *DockerConfig) GetNanoCPUs() (int64, error) {
-	if c.CPUS == "" {
+func (c *DockerConfig) computeNanoCPUs(value string) (int64, error) {
+	if value == "" {
 		return 0, nil
 	}
 
-	cpu, ok := new(big.Rat).SetString(c.CPUS)
+	cpu, ok := new(big.Rat).SetString(value)
 	if !ok {
-		return 0, fmt.Errorf("failed to parse %v as a rational number", c.CPUS)
+		return 0, fmt.Errorf("failed to parse %s as a rational number", value)
 	}
 
 	nano, _ := cpu.Mul(cpu, big.NewRat(1e9, 1)).Float64()
 
 	return int64(nano), nil
+}
+
+func (c *DockerConfig) GetNanoCPUs() (int64, error) {
+	return c.computeNanoCPUs(c.CPUS)
+}
+
+func (c *DockerConfig) GetServiceNanoCPUs() (int64, error) {
+	return c.computeNanoCPUs(c.ServiceCPUS)
 }
 
 func (c *DockerConfig) getMemoryBytes(size string, fieldName string) int64 {
@@ -1355,6 +1370,18 @@ func (c *DockerConfig) GetMemoryReservation() int64 {
 	return c.getMemoryBytes(c.MemoryReservation, "memory_reservation")
 }
 
+func (c *DockerConfig) GetServiceMemory() int64 {
+	return c.getMemoryBytes(c.ServiceMemory, "service_memory")
+}
+
+func (c *DockerConfig) GetServiceMemorySwap() int64 {
+	return c.getMemoryBytes(c.ServiceMemorySwap, "service_memory_swap")
+}
+
+func (c *DockerConfig) GetServiceMemoryReservation() int64 {
+	return c.getMemoryBytes(c.ServiceMemoryReservation, "service_memory_reservation")
+}
+
 func (c *DockerConfig) GetOomKillDisable() *bool {
 	return &c.OomKillDisable
 }
@@ -1374,6 +1401,14 @@ func getExpandedServices(services []Service, vars JobVariables) []Service {
 // See: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29499
 func (c *DockerConfig) GetExpandedServices(vars JobVariables) []Service {
 	return getExpandedServices(c.Services, vars)
+}
+
+func (c *DockerConfig) GetServicesLimit() int {
+	if c.ServicesLimit == nil {
+		return -1
+	}
+
+	return *c.ServicesLimit
 }
 
 func (c *KubernetesConfig) GetPollAttempts() int {
