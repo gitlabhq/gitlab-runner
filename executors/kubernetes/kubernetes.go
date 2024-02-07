@@ -17,7 +17,6 @@ import (
 
 	"github.com/docker/cli/cli/config/types"
 	"github.com/jpillora/backoff"
-	"github.com/samber/lo"
 	"golang.org/x/net/context"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -116,16 +115,20 @@ var (
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 	// network errors to retry on
-	retryErrorsMessages = []string{
-		"error dialing backend",
-		"TLS handshake timeout",
-		"unexpected EOF",
-		"read: connection timed out",
-		"connect: connection timed out",
-		"Timeout occurred",
-		"http2: client connection lost",
-		"connection refused",
-		"tls: internal error",
+	retryNetworkErrorsGroup = []error{
+		errors.New("error dialing backend"),
+		errors.New("TLS handshake timeout"),
+		errors.New("read: connection timed out"),
+		errors.New("connect: connection timed out"),
+		errors.New("Timeout occurred"),
+		errors.New("http2: client connection lost"),
+		errors.New("connection refused"),
+		errors.New("tls: internal error"),
+		io.ErrUnexpectedEOF,
+
+		syscall.ECONNRESET,
+		syscall.ECONNREFUSED,
+		syscall.ECONNABORTED,
 	}
 )
 
@@ -143,27 +146,62 @@ func (c *commandTerminatedError) Is(err error) bool {
 }
 
 func (s *executor) NewRetry() *retry.Retry {
+	retryLimits := s.Config.Kubernetes.RequestRetryLimits
+
 	return retry.New().
 		WithCheck(func(_ int, err error) bool {
-			return isNetworkError(err)
+			if isGroupError(err, retryNetworkErrorsGroup) {
+				return true
+			}
+
+			for _, pair := range retryLimits {
+				for errStr := range pair {
+					if strings.Contains(err.Error(), errStr) {
+						return true
+					}
+				}
+			}
+
+			return false
 		}).
-		WithMaxTries(s.Config.Kubernetes.GetTryLimit()).
+		WithMaxTriesFunc(func(err error) int {
+			for _, pair := range retryLimits {
+				for errStr, limit := range pair {
+					if isGroupError(errors.New(errStr), retryNetworkErrorsGroup) {
+						return limit
+					}
+
+					if strings.Contains(err.Error(), errStr) {
+						return limit
+					}
+				}
+			}
+
+			return s.Config.Kubernetes.RequestRetryLimit
+		}).
 		WithBackoff(defaultRetryMinBackoff, defaultRetryMaxBackoff)
 }
 
-func isNetworkError(err error) bool {
+func isGroupError(err error, grp []error) bool {
 	if err == nil {
 		return false
 	}
 
-	return errors.Is(err, syscall.ECONNRESET) ||
-		errors.Is(err, syscall.ECONNREFUSED) ||
-		errors.Is(err, syscall.ECONNABORTED) ||
-		errors.Is(err, syscall.EPIPE) ||
-		errors.Is(err, io.ErrUnexpectedEOF) ||
-		lo.ContainsBy(retryErrorsMessages, func(msg string) bool {
-			return strings.Contains(msg, err.Error())
-		})
+	for _, errg := range grp {
+		if isError(err, errg) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isError(err, err2 error) bool {
+	if errors.Is(err, err2) || strings.Contains(err.Error(), err2.Error()) {
+		return true
+	}
+
+	return false
 }
 
 type podPhaseError struct {
@@ -2415,7 +2453,7 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 	// the log file and the log processor moves things forward.
 
 	// Non-network errors don't concern this function
-	if !isNetworkError(err) {
+	if !isGroupError(err, retryNetworkErrorsGroup) {
 		return err
 	}
 
