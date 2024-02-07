@@ -125,7 +125,7 @@ func pwshStdinCmdArgs(shell string) []string {
 	var sb strings.Builder
 
 	sb.WriteString("$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r\n")
-	sb.WriteString(shell + " -Command -\r\n")
+	sb.WriteString(shell + " -NoProfile -Command -\r\n")
 	encoded, _ := encoder.String(sb.String())
 
 	return []string{
