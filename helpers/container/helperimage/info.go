@@ -11,6 +11,7 @@ import (
 const (
 	OSTypeLinux   = "linux"
 	OSTypeWindows = "windows"
+	OSTypeFreeBSD = "freebsd"
 
 	// DockerHubWarningMessage is the message that is printed to the user when
 	// it's using the helper image hosted in Docker Hub. It is up to the caller
@@ -62,6 +63,7 @@ type creator interface {
 var supportedOsTypesFactories = map[string]creator{
 	OSTypeWindows: new(windowsInfo),
 	OSTypeLinux:   new(linuxInfo),
+	OSTypeFreeBSD: new(linuxInfo),
 }
 
 func Get(version string, cfg Config) (Info, error) {

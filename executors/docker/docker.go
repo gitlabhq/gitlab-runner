@@ -976,7 +976,7 @@ func (e *executor) environmentDialContext(
 // info response.
 func (e *executor) validateOSType() error {
 	switch e.info.OSType {
-	case osTypeLinux, osTypeWindows:
+	case osTypeLinux, osTypeWindows, osTypeFreeBSD:
 		return nil
 	}
 

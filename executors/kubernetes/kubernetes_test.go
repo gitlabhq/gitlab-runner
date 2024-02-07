@@ -1920,7 +1920,7 @@ func TestPrepare(t *testing.T) {
 						Host: "test-server",
 						NodeSelector: map[string]string{
 							api.LabelArchStable: "riscv64",
-							api.LabelOSStable:   "freebsd",
+							api.LabelOSStable:   "unknown",
 						},
 					},
 				},
@@ -1942,7 +1942,7 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         helperimage.Info{},
 			},
-			Error: `prepare helper image: unsupported OSType "freebsd"`,
+			Error: `prepare helper image: unsupported OSType "unknown"`,
 		},
 		{
 			Name:         "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
