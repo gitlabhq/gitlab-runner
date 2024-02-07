@@ -4,4 +4,5 @@ const (
 	osTypeLinux   = "linux"
 	osTypeDarwin  = "darwin"
 	osTypeWindows = "windows"
+	osTypeFreeBSD = "freebsd"
 )

@@ -1460,6 +1460,9 @@ func TestCheckOSType(t *testing.T) {
 		"windows type": {
 			dockerInfoOSType: osTypeWindows,
 		},
+		"freebsd type": {
+			dockerInfoOSType: osTypeFreeBSD,
+		},
 		"unknown": {
 			dockerInfoOSType: "foobar",
 			expectedErr:      "unsupported os type: foobar",
