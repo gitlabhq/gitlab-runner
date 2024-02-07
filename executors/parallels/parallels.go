@@ -3,6 +3,7 @@ package parallels
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -22,6 +23,15 @@ type executor struct {
 	machineVerified bool
 }
 
+func (s *executor) isAppleSilicon() bool {
+	result := runtime.GOARCH == "arm64"
+	if result {
+		s.BuildLogger.Debugln("Apple Silicon detected")
+	}
+
+	return result
+}
+
 func (s *executor) waitForIPAddress(vmName string, seconds int) (string, error) {
 	var lastError error
 
@@ -29,15 +39,15 @@ func (s *executor) waitForIPAddress(vmName string, seconds int) (string, error) 
 		return s.ipAddress, nil
 	}
 
-	s.BuildLogger.Debugln("Looking for MAC address...")
-	macAddr, err := prl.Mac(vmName)
-	if err != nil {
-		return "", err
-	}
-
 	s.BuildLogger.Debugln("Requesting IP address...")
 	for i := 0; i < seconds; i++ {
-		ipAddr, err := prl.IPAddress(macAddr)
+		var ipAddr string
+		var err error
+		if s.isAppleSilicon() {
+			ipAddr, err = prl.IPAddress(vmName)
+		} else {
+			ipAddr, err = prl.IPAddressFromMac(vmName)
+		}
 		if err == nil {
 			s.BuildLogger.Debugln("IP address found", ipAddr, "...")
 			s.ipAddress = ipAddr
@@ -112,9 +122,9 @@ func (s *executor) createVM(baseImage string) error {
 
 	if !prl.Exist(templateName) {
 		s.BuildLogger.Debugln("Creating template from VM", baseImage, "...")
-		err := prl.CreateTemplate(baseImage, templateName)
+		err := s.createClone(baseImage, templateName)
 		if err != nil {
-			return fmt.Errorf("%w (image: %q)", err, baseImage)
+			return err
 		}
 	}
 
@@ -201,11 +211,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	unregisterInvalidVM(s.vmName)
 
 	s.vmName = s.getVMName(baseName)
-
-	if s.Config.Parallels.DisableSnapshots && prl.Exist(s.vmName) {
-		s.BuildLogger.Debugln("Deleting old VM...")
-		killAndUnregisterVM(s.vmName)
-	}
+	s.tryDeleteVM()
 
 	s.tryRestoreFromSnapshot()
 
@@ -216,7 +222,8 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 			return err
 		}
 
-		if !s.Config.Parallels.DisableSnapshots {
+		canCreateSnapshot := !s.Config.Parallels.DisableSnapshots && !s.isAppleSilicon()
+		if canCreateSnapshot {
 			s.BuildLogger.Println("Creating default snapshot...")
 			err = prl.CreateSnapshot(s.vmName, "Started")
 			if err != nil {
@@ -231,6 +238,14 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	}
 
 	return s.sshConnect()
+}
+
+func (s *executor) tryDeleteVM() {
+	shouldDelete := s.Config.Parallels.DisableSnapshots || s.isAppleSilicon()
+	if shouldDelete && prl.Exist(s.vmName) {
+		s.BuildLogger.Debugln("Deleting old VM...")
+		killAndUnregisterVM(s.vmName)
+	}
 }
 
 func (s *executor) printVersion() error {
@@ -264,6 +279,11 @@ func (s *executor) validateConfig() error {
 }
 
 func (s *executor) tryRestoreFromSnapshot() {
+	// Apple Silicon does not support snapshots
+	if s.isAppleSilicon() {
+		return
+	}
+
 	if !prl.Exist(s.vmName) {
 		return
 	}
@@ -348,7 +368,7 @@ func (s *executor) ensureVMStarted() error {
 }
 
 func (s *executor) sshConnect() error {
-	ipAddr, err := s.waitForIPAddress(s.vmName, 60)
+	ipAddr, err := s.waitForIPAddress(s.vmName, 120)
 	if err != nil {
 		return err
 	}
@@ -391,6 +411,22 @@ func (s *executor) Cleanup() {
 	}
 
 	s.AbstractExecutor.Cleanup()
+}
+
+func (s *executor) createClone(baseImage string, templateName string) error {
+	if s.isAppleSilicon() {
+		err := prl.CreateCloneTemplate(baseImage, templateName)
+		if err != nil {
+			return fmt.Errorf("%w (image: %q)", err, baseImage)
+		}
+	} else {
+		err := prl.CreateLinkedCloneTemplate(baseImage, templateName)
+		if err != nil {
+			return fmt.Errorf("%w (image: %q)", err, baseImage)
+		}
+	}
+
+	return nil
 }
 
 func init() {
