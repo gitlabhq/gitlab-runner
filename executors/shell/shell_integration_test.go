@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/gitlab-org/gitlab-runner/shells"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
@@ -29,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
+	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
@@ -1164,6 +1164,54 @@ func TestBuildGitFetchStrategySubmoduleRecursiveCleanup(t *testing.T) {
 
 		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "tests", "example", untrackedFileInSubSubmodule))
 		assert.Error(t, err, "cleanup should have removed untracked file in submodule's submodule")
+	})
+}
+
+func TestBuildGitFetchStrategyFallback(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetLocalBuildResponse()
+		assert.NoError(t, err)
+
+		build := newBuild(t, successfulBuild, shell)
+
+		// Perform a successful build that doesn't fetch submodules.
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"},
+		)
+		_, err = buildtest.RunBuildReturningOutput(t, build)
+		require.NoError(t, err)
+
+		// Add a file in a submodule. This situation can arise naturally and in
+		// this case there is no combination of `git clean` or `git for-each-submodule`
+		// that can remove the file. Deleting all tracked files via `git rm -rf .`
+		// will work though.
+		testTxt := filepath.Join(build.BuildDir, "gitlab-grack", "test.txt")
+		err = os.WriteFile(testTxt, []byte("content"), 0600)
+		require.NoError(t, err)
+
+		// Now do another build but this time try to fetch the submodules.
+		// Updating the submodules will fail because `test.txt` exists, and
+		// `git clean` won't remove it because it is in a submodule.
+		//
+		// But since we set `GET_SOURCES_ATTEMPTS` to 2, before trying for
+		// the second time it will delete all the tracked and untracked files
+		// so the second attempt will succeed.
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GET_SOURCES_ATTEMPTS", Value: "2"},
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+		)
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		err = buildtest.RunBuild(t, build)
+		require.NoError(t, err)
+		require.Contains(t, out, "Deleting tracked and untracked files...")
+
+		// Double check that the submodule was successfully checked out and `test.txt` is gone.
+		_, err = os.Stat(filepath.Join(build.BuildDir, "gitlab-grack", "README.md"))
+		require.NoError(t, err, "submodule was not checked out correctly")
+		_, err = os.Stat(testTxt)
+		require.Error(t, err, "fetch error did not result in a clean clone")
 	})
 }
 

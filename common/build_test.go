@@ -518,7 +518,12 @@ func TestGetSourcesRunFailure(t *testing.T) {
 	// Fail a build script
 	executor.On("Shell").Return(&ShellScriptInfo{Shell: "script-shell"})
 	executor.On("Run", matchBuildStage(BuildStagePrepare)).Return(nil).Once()
-	executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail")).Times(3)
+	for attempt := 0; attempt < 10; attempt++ {
+		if attempt == 0 {
+			executor.On("Run", matchBuildStage(BuildStageClearWorktree)).Return(nil)
+		}
+		executor.On("Run", matchBuildStage(BuildStageGetSources)).Return(errors.New("build fail"))
+	}
 	executor.On("Run", matchBuildStage(BuildStageArchiveOnFailureCache)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageUploadOnFailureArtifacts)).Return(nil).Once()
 	executor.On("Run", matchBuildStage(BuildStageCleanup)).Return(nil).Once()

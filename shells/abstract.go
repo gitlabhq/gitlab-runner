@@ -306,6 +306,24 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 	return nil
 }
 
+func (b *AbstractShell) writeClearWorktreeScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
+	// Sometimes repos can get into a state where `git clean` isn't enough. A simple
+	// example is if you have an untracked file in an uninitialised submodule.
+	// In this case `git rm -rf .` will delete the entire submodule, allowing
+	// a subsequent fetch to succeed.
+	w.Noticef("Deleting tracked and untracked files...")
+
+	projectDir := info.Build.FullProjectDir()
+
+	w.IfDirectory(projectDir)
+	w.Cd(projectDir)
+	w.Command("git", "rm", "-rf", "--ignore-unmatch", ".")
+	w.Command("git", "clean", "-ffdx")
+	w.EndIf()
+
+	return nil
+}
+
 func (b *AbstractShell) guardGetSourcesScriptHooks(
 	w ShellWriter,
 	info common.ShellScriptInfo,
@@ -1166,6 +1184,7 @@ func (b *AbstractShell) writeScript(
 	methods := map[common.BuildStage]func(context.Context, ShellWriter, common.ShellScriptInfo) error{
 		common.BuildStagePrepare:                  b.writePrepareScript,
 		common.BuildStageGetSources:               b.writeGetSourcesScript,
+		common.BuildStageClearWorktree:            b.writeClearWorktreeScript,
 		common.BuildStageRestoreCache:             b.writeRestoreCacheScript,
 		common.BuildStageDownloadArtifacts:        b.writeDownloadArtifactsScript,
 		common.BuildStageAfterScript:              b.writeAfterScript,
