@@ -5097,6 +5097,39 @@ containers:
 				assert.Contains(t, names, "new-container")
 			},
 		},
+		"uses default AutomountServiceAccountToken for pod": {
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.Nil(
+					t,
+					pod.Spec.AutomountServiceAccountToken,
+					"Pod AutomountServiceAccountToken should be empty",
+				)
+			},
+		},
+		"configures to enable AutomountServiceAccountToken for pod": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						AutomountServiceAccountToken: func(b bool) *bool { return &b }(true),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.True(t, *pod.Spec.AutomountServiceAccountToken)
+			},
+		},
+		"configures to disable AutomountServiceAccountToken for pod": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						AutomountServiceAccountToken: func(b bool) *bool { return &b }(false),
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				assert.False(t, *pod.Spec.AutomountServiceAccountToken)
+			},
+		},
 	}
 
 	for testName, test := range tests {
