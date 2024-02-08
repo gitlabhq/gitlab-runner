@@ -1773,6 +1773,10 @@ func (s *executor) defaultCapDrop() []string {
 }
 
 func (s *executor) prepareImagePullSecrets() []api.LocalObjectReference {
+	if s.Config.Kubernetes.UseServiceAccountImagePullSecrets {
+		return nil
+	}
+
 	var imagePullSecrets []api.LocalObjectReference
 	for _, imagePullSecret := range s.Config.Kubernetes.ImagePullSecrets {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})

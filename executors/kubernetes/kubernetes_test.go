@@ -3210,6 +3210,22 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
 			},
 		},
+		"uses image pull secrets from service account": {
+			RunnerConfig: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						ImagePullSecrets: []string{
+							"docker-registry-credentials",
+						},
+						UseServiceAccountImagePullSecrets: true,
+					},
+				},
+			},
+			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
+				var secrets []api.LocalObjectReference
+				assert.Equal(t, secrets, pod.Spec.ImagePullSecrets)
+			},
+		},
 		"uses default security context flags for containers": {
 			VerifyFn: func(t *testing.T, test setupBuildPodTestDef, pod *api.Pod) {
 				for _, c := range pod.Spec.Containers {
