@@ -73,6 +73,7 @@ const (
 	BuildStagePrepareExecutor          BuildStage = "prepare_executor"
 	BuildStagePrepare                  BuildStage = "prepare_script"
 	BuildStageGetSources               BuildStage = "get_sources"
+	BuildStageClearWorktree            BuildStage = "clear_worktree"
 	BuildStageRestoreCache             BuildStage = "restore_cache"
 	BuildStageDownloadArtifacts        BuildStage = "download_artifacts"
 	BuildStageAfterScript              BuildStage = "after_script"
@@ -389,6 +390,7 @@ func getPredefinedEnv(buildStage BuildStage) bool {
 	env := map[BuildStage]bool{
 		BuildStagePrepare:                  true,
 		BuildStageGetSources:               true,
+		BuildStageClearWorktree:            true,
 		BuildStageRestoreCache:             true,
 		BuildStageDownloadArtifacts:        true,
 		BuildStageAfterScript:              false,
@@ -411,6 +413,7 @@ func GetStageDescription(stage BuildStage) string {
 	descriptions := map[BuildStage]string{
 		BuildStagePrepare:                  "Preparing environment",
 		BuildStageGetSources:               "Getting source from Git repository",
+		BuildStageClearWorktree:            "Deleting all tracked and untracked files due to source fetch failure",
 		BuildStageRestoreCache:             "Restoring cache",
 		BuildStageDownloadArtifacts:        "Downloading artifacts",
 		BuildStageAfterScript:              "Running after_script",
@@ -460,7 +463,7 @@ func (b *Build) executeScript(ctx context.Context, executor Executor) error {
 		)
 	}
 
-	err = b.attemptExecuteStage(ctx, BuildStageGetSources, executor, b.GetGetSourcesAttempts())
+	err = b.attemptGetSourcesStage(ctx, executor, b.GetGetSourcesAttempts())
 
 	if err == nil {
 		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts())
@@ -571,6 +574,30 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 			Format:   ArtifactFormat(referee.ArtifactFormat()),
 		})
 	}
+}
+
+func (b *Build) attemptGetSourcesStage(
+	ctx context.Context,
+	executor Executor,
+	attempts int,
+) (err error) {
+	if attempts < 1 || attempts > 10 {
+		return fmt.Errorf("number of attempts out of the range [1, 10] for stage: %s", BuildStageGetSources)
+	}
+	for attempt := 0; attempt < attempts; attempt++ {
+		if attempt == 1 {
+			// If GetSources fails we delete all tracked and untracked files. This is
+			// because Git's submodule support has various bugs that cause fetches to
+			// fail if submodules have changed.
+			if err = b.executeStage(ctx, BuildStageClearWorktree, executor); err != nil {
+				continue
+			}
+		}
+		if err = b.executeStage(ctx, BuildStageGetSources, executor); err == nil {
+			return
+		}
+	}
+	return
 }
 
 func (b *Build) attemptExecuteStage(
