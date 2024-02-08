@@ -109,6 +109,7 @@ bugfixed
 bugfixes
 bugfixing
 Bugzilla
+Buildah
 Buildkite
 buildpack
 buildpacks
@@ -176,6 +177,7 @@ Codecov
 codenames
 Codepen
 CodeSandbox
+Codey
 Cognito
 Coinbase
 colocate
@@ -282,6 +284,7 @@ devfiles
 DevOps
 Dhall
 dialogs
+Diffblue
 disambiguates
 discoverability
 dismissable
@@ -350,6 +353,7 @@ Fastly
 Fastzip
 favicon
 favorited
+Fediverse
 ffaker
 Figma
 Filebeat
@@ -370,6 +374,7 @@ Flycheck
 focusable
 Forgerock
 formatters
+Fortanix
 Fortinet
 FQDNs
 FreshBooks
@@ -525,6 +530,7 @@ LaunchDarkly
 ldapsearch
 Lefthook
 Leiningen
+Lemmy
 libFuzzer
 Libgcrypt
 Libravatar
@@ -644,6 +650,7 @@ OmniAuth
 onboarding
 OpenID
 OpenShift
+OpenTelemetry
 Opsgenie
 Opstrace
 ORMs
@@ -879,7 +886,6 @@ sharded
 sharding
 SHAs
 shfmt
-Shimo
 Shippo
 Shopify
 Sidekiq
@@ -958,6 +964,7 @@ subqueried
 subqueries
 subquery
 subquerying
+Subreddit
 substring
 substrings
 subtask
