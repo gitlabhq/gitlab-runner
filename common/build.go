@@ -289,6 +289,7 @@ func (b *Build) StartBuild(
 	return nil
 }
 
+//nolint:funlen
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -296,6 +297,15 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 
 	b.setCurrentStage(buildStage)
 	b.Log().WithField("build_stage", buildStage).Debug("Executing build stage")
+
+	defer func() {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			b.logger.Warningln(
+				string(buildStage) + " could not run to completion because the timeout was exceeded. " +
+					"For more control over job and script timeouts see: " +
+					"https://docs.gitlab.com/ee/ci/runners/configure_runners.html#set-script-and-after_script-timeouts")
+		}
+	}()
 
 	shell := executor.Shell()
 	if shell == nil {
