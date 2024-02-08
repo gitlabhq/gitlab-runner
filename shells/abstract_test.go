@@ -816,7 +816,7 @@ func TestGitFetchFlags(t *testing.T) {
 
 			v := common.AppVersion
 			userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
-			command := []interface{}{"-c", userAgent, "fetch", "origin"}
+			command := []interface{}{"-c", userAgent, "fetch", "origin", "--no-recurse-submodules"}
 			command = append(command, test.expectedGitFetchFlags...)
 
 			if test.depth == 0 {
@@ -2456,9 +2456,9 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	m.EXPECT().EndIf().Once()
 
 	m.EXPECT().IfFile(".git/shallow").Once()
-	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--prune", "--quiet", "--unshallow").Once()
+	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
 	m.EXPECT().Else().Once()
-	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--prune", "--quiet").Once()
+	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
 	m.EXPECT().EndIf().Once()
 
 	m.EXPECT().Noticef("Skipping Git checkout").Once()

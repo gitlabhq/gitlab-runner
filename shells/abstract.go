@@ -495,7 +495,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	v := common.AppVersion
 	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
 
-	fetchArgs := []string{"-c", userAgent, "fetch", "origin"}
+	fetchArgs := []string{"-c", userAgent, "fetch", "origin", "--no-recurse-submodules"}
 	fetchArgs = append(fetchArgs, build.GitInfo.Refspecs...)
 	if depth > 0 {
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
