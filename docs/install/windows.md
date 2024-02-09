@@ -277,7 +277,7 @@ functions. While `exit 1` will mark a job as failed, `return 1` will **not**.
 
 ### Job marked as success and terminated midway using Kubernetes executor
 
-Please see [Job execution](../executors/kubernetes.md#job-execution).
+Please see [Job execution](../executors/kubernetes/index.md#job-execution).
 
 ### Docker executor: `unsupported Windows Version`
 

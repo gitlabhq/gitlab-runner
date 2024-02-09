@@ -45,7 +45,7 @@ workflow in your public projects, see
    # Run all containers with the privileged flag enabled
    # This flag allows the docker:dind image to run if you need to run Docker commands
    # Read the docs before turning this on:
-   # https://docs.gitlab.com/runner/executors/kubernetes.html#using-dockerdind
+   # https://docs.gitlab.com/runner/executors/kubernetes/index.html#using-dockerdind
    runners:
        privileged: true
    ```
