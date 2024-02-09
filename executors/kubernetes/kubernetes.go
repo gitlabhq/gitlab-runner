@@ -271,6 +271,10 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare overwrites: %w", err)
 	}
 
+	if err = s.prepareExplicitServiceOverwrites(options.Build.Services); err != nil {
+		return fmt.Errorf("couldn't prepare explicit service overwrites: %w", err)
+	}
+
 	s.pullManager, err = s.preparePullManager(options)
 	if err != nil {
 		return err
@@ -1798,8 +1802,8 @@ func (s *executor) preparePodServices() ([]api.Container, error) {
 			name:            fmt.Sprintf("%s%d", serviceContainerPrefix, i),
 			image:           service.Name,
 			imageDefinition: service,
-			requests:        s.configurationOverwrites.serviceRequests,
-			limits:          s.configurationOverwrites.serviceLimits,
+			requests:        s.configurationOverwrites.getExplicitServiceResourceRequestsOrGlobals(i),
+			limits:          s.configurationOverwrites.getExplicitServiceResourceLimitsOrGlobals(i),
 			securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
 				s.Config.Kubernetes.ServiceContainerSecurityContext,
 				s.defaultCapDrop()...,
@@ -2440,6 +2444,20 @@ func (s *executor) prepareOverwrites(variables common.JobVariables) error {
 	}
 
 	s.configurationOverwrites = values
+	return nil
+}
+
+func (s *executor) prepareExplicitServiceOverwrites(services common.Services) error {
+	for index, service := range services {
+		if err := s.configurationOverwrites.evaluateExplicitServiceResourceOverwrite(
+			s.Config.Kubernetes,
+			index,
+			service.Variables,
+			s.BuildLogger,
+		); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
