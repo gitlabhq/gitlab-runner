@@ -5,15 +5,20 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
+
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
 const DefaultAWSS3Server = "s3.amazonaws.com"
+
+var s3AcceleratePattern = regexp.MustCompile(`s3-accelerate.*\.amazonaws\.com$`)
 
 //go:generate mockery --name=minioClient --inpackage
 type minioClient interface {
@@ -46,11 +51,20 @@ var newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
 		serverAddress = DefaultAWSS3Server
 	}
 
+	var isS3AccelerateEndpoint = s3AcceleratePattern.MatchString(serverAddress)
+	var s3AccelerateEndpoint string
+	if isS3AccelerateEndpoint {
+		s3AccelerateEndpoint = serverAddress
+		serverAddress = strings.Replace(serverAddress, "s3-accelerate", "s3", 1)
+	}
+
+	var client *minio.Client
+	var err error
 	switch s3.AuthType() {
 	case common.S3AuthTypeIAM:
-		return newMinioWithIAM(serverAddress, s3.BucketLocation)
+		client, err = newMinioWithIAM(serverAddress, s3.BucketLocation)
 	case common.S3AuthTypeAccessKey:
-		return newMinio(serverAddress, &minio.Options{
+		client, err = newMinio(serverAddress, &minio.Options{
 			Creds:  credentials.NewStaticV4(s3.AccessKey, s3.SecretKey, s3.SessionToken),
 			Secure: !s3.Insecure,
 			Transport: &bucketLocationTripper{
@@ -60,4 +74,10 @@ var newMinioClient = func(s3 *common.CacheS3Config) (minioClient, error) {
 	default:
 		return nil, errors.New("invalid s3 authentication type")
 	}
+
+	if err == nil && isS3AccelerateEndpoint {
+		client.SetS3TransferAccelerate(s3AccelerateEndpoint)
+	}
+
+	return client, err
 }
