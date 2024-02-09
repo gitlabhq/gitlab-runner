@@ -251,7 +251,7 @@ var flags = []FeatureFlag{
 		Description: "When enabled, the [pod `activeDeadlineSeconds`]" +
 			"(https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle)" +
 			" is set to the CI/CD job timeout. This flag affects the " +
-			"[pod's lifecycle](../executors/kubernetes.md#pod-lifecycle).",
+			"[pod's lifecycle](../executors/kubernetes/index.md#pod-lifecycle).",
 	},
 	{
 		Name:            UseAdvancedPodSpecConfiguration,
@@ -260,7 +260,7 @@ var flags = []FeatureFlag{
 		ToBeRemovedWith: "",
 		Description: "When enabled, the user can set an entire whole pod specification in the `config.toml` file. " +
 			"For more information, see [Overwrite generated pod specifications (Experiment)]" +
-			"(../executors/kubernetes.md#overwrite-generated-pod-specifications).",
+			"(../executors/kubernetes/index.md#overwrite-generated-pod-specifications).",
 	},
 	{
 		Name:         SetPermissionsBeforeCleanup,

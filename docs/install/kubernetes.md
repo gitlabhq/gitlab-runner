@@ -136,7 +136,7 @@ in the chart repository.
 For GitLab Runner to function, your configuration file **must** specify the following:
 
 - `gitlabUrl`: The GitLab server full URL to register the runner against. For example, `https://gitlab.example.com`.
-- `rbac: { create: true }`: Create RBAC rules for the GitLab Runner to create pods to run jobs in. If you have an existing `serviceAccount` you prefer to use, you should also set `rbac: { serviceAccountName: "SERVICE_ACCOUNT_NAME" }`. For more information about the minimal permissions required for the `serviceAccount`, see [Configure runner API permissions](../executors/kubernetes.md#configure-runner-api-permissions).
+- `rbac: { create: true }`: Create RBAC rules for the GitLab Runner to create pods to run jobs in. If you have an existing `serviceAccount` you prefer to use, you should also set `rbac: { serviceAccountName: "SERVICE_ACCOUNT_NAME" }`. For more information about the minimal permissions required for the `serviceAccount`, see [Configure runner API permissions](../executors/kubernetes/index.md#configure-runner-api-permissions).
 - `runnerToken`:
   - The authentication token you obtain when you [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/register_runner.html#create-a-shared-runner-with-a-runner-authentication-token).
   - Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
@@ -156,7 +156,7 @@ ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)
 > - [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#register-with-a-configuration-template) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
 You can use a [configuration template file](../register/index.md#register-with-a-configuration-template)
-to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes.md#configuration-settings).
+to [configure the behavior of GitLab Runner build pod within Kubernetes](../executors/kubernetes/index.md#configuration-settings).
 You can use the configuration template to configure any field on the runner,
 without having the Helm chart be aware of specific runner configuration options.
 
@@ -350,7 +350,7 @@ concurrent: 10
 ### Running Docker-in-Docker containers with GitLab Runner
 
 See [running privileged containers for the runners](#running-privileged-containers-for-the-runners) for how to enable it,
-and the [GitLab Runner documentation](../executors/kubernetes.md#using-docker-in-builds) on running dind.
+and the [GitLab Runner documentation](../executors/kubernetes/index.md#using-docker-in-builds) on running dind.
 
 ### Running privileged containers for the runners
 
@@ -358,7 +358,7 @@ You can tell the GitLab Runner to run using privileged containers. You may need
 this enabled if you need to use the Docker executable within your GitLab CI/CD jobs.
 
 This comes with several risks that you can read about in the
-[GitLab CI/CD Runner documentation](../executors/kubernetes.md#using-docker-in-builds).
+[GitLab CI/CD Runner documentation](../executors/kubernetes/index.md#using-docker-in-builds).
 
 If you are okay with the risks, and your GitLab Runner instance is registered
 against a specific project in GitLab that you trust the CI jobs of, you can
