@@ -3,8 +3,12 @@
 package s3
 
 import (
+	"context"
 	"errors"
+	"net/http"
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
@@ -90,6 +94,70 @@ func TestMinioClientInitialization(t *testing.T) {
 	}
 }
 
+type minioClientInitializationTestS3Accelerate struct {
+	serverAddress string
+	endpointURL   string
+	targetURL     string
+	accelerated   bool
+	err           error
+}
+
+func TestMinioClientInitializationWithAccelerate(t *testing.T) {
+	tests := map[string]minioClientInitializationTestS3Accelerate{
+		"standard-accelerate-endpoint": {
+			serverAddress: "s3-accelerate.amazonaws.com",
+			endpointURL:   "s3.amazonaws.com",
+			targetURL:     "foo.s3-accelerate.amazonaws.com",
+			accelerated:   true,
+		},
+		"dualstack-region-endpoint": {
+			serverAddress: "s3-accelerate.dualstack.us-east-1.amazonaws.com",
+			endpointURL:   "s3.dualstack.us-east-1.amazonaws.com",
+			targetURL:     "foo.s3-accelerate.dualstack.us-east-1.amazonaws.com",
+			accelerated:   true,
+		},
+		"non-aws-endpoint": {
+			serverAddress: "s3-accelerate.min.io",
+			endpointURL:   "s3-accelerate.min.io",
+			targetURL:     "s3-accelerate.min.io",
+		},
+		"client-with-error": {
+			serverAddress: "s3-accelerate.amazonaws.com",
+			endpointURL:   "s3.amazonaws.com",
+			targetURL:     "foo.s3-accelerate.amazonaws.com",
+			accelerated:   true,
+			err:           assert.AnError,
+		},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			cleanupMinioMock := runOnFakeMinioWithAccelerateEndpoint(t, test.accelerated, test.err)
+			defer cleanupMinioMock()
+
+			cacheConfig := serverAddressAccelerateFactory(test.serverAddress)
+			cacheConfig.S3.AccessKey = "TOKEN"
+			cacheConfig.S3.SecretKey = "TOKEN"
+
+			client, err := newMinioClient(cacheConfig.S3)
+			if test.err != nil {
+				require.ErrorIs(t, err, test.err)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, client)
+
+			url, err := client.PresignHeader(context.Background(), "GET", "foo", "bar", time.Hour, url.Values{}, http.Header{})
+			require.NoError(t, err)
+			assert.Equal(t, test.targetURL, url.Host)
+
+			mc, ok := client.(*minio.Client)
+			require.True(t, ok)
+			assert.Equal(t, test.endpointURL, mc.EndpointURL().Host)
+		})
+	}
+}
+
 func insecureCacheFactory() *common.CacheConfig {
 	cacheConfig := defaultCacheFactory()
 	cacheConfig.S3.Insecure = true
@@ -137,6 +205,13 @@ func onlyServerAddressFactory() *common.CacheConfig {
 	return cacheConfig
 }
 
+func serverAddressAccelerateFactory(serverAddress string) *common.CacheConfig {
+	cacheConfig := emptyCredentialsCacheFactory()
+	cacheConfig.S3.ServerAddress = serverAddress
+
+	return cacheConfig
+}
+
 func onlyAccessKeyFactory() *common.CacheConfig {
 	cacheConfig := emptyCredentialsCacheFactory()
 	cacheConfig.S3.AccessKey = "TOKEN"
@@ -172,6 +247,25 @@ func runOnFakeMinio(t *testing.T, test minioClientInitializationTest) func() {
 		require.NoError(t, err)
 
 		return client, nil
+	}
+
+	return func() {
+		newMinio = oldNewMinio
+	}
+}
+
+func runOnFakeMinioWithAccelerateEndpoint(t *testing.T, accelerated bool, err error) func() {
+	oldNewMinio := newMinio
+	newMinio = func(endpoint string, opts *minio.Options) (*minio.Client, error) {
+		if accelerated {
+			assert.NotContains(t, endpoint, "s3-accelerate")
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		return minio.New(endpoint, opts)
 	}
 
 	return func() {
