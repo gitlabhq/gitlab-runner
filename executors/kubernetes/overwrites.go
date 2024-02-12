@@ -127,8 +127,8 @@ type overwrites struct {
 	serviceRequests api.ResourceList
 	helperRequests  api.ResourceList
 
-	explicitServiceLimits   map[int]api.ResourceList
-	explicitServiceRequests map[int]api.ResourceList
+	explicitServiceLimits   map[string]api.ResourceList
+	explicitServiceRequests map[string]api.ResourceList
 }
 
 //nolint:funlen
@@ -296,24 +296,24 @@ func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 
 func (o *overwrites) evaluateExplicitServiceResourceOverwrite(
 	config *common.KubernetesConfig,
-	serviceIndex int,
+	serviceName string,
 	serviceVariables common.JobVariables,
 	logger buildlogger.Logger,
 ) (err error) {
-	explicitCPURequest := serviceVariables.Value(ServiceCPURequestOverwriteVariableValue)
-	explicitMemoryRequest := serviceVariables.Value(ServiceMemoryRequestOverwriteVariableValue)
-	explicitEphemeralStorageRequest := serviceVariables.Value(ServiceEphemeralStorageRequestOverwriteVariableValue)
+	cpuRequest := serviceVariables.Value(ServiceCPURequestOverwriteVariableValue)
+	memoryRequest := serviceVariables.Value(ServiceMemoryRequestOverwriteVariableValue)
+	ephemeralStorageRequest := serviceVariables.Value(ServiceEphemeralStorageRequestOverwriteVariableValue)
 
-	explicitCPULimit := serviceVariables.Value(ServiceCPULimitOverwriteVariableValue)
-	explicitMemoryLimit := serviceVariables.Value(ServiceMemoryLimitOverwriteVariableValue)
-	explicitEphemeralStorageLimit := serviceVariables.Value(ServiceEphemeralStorageLimitOverwriteVariableValue)
+	cpuLimit := serviceVariables.Value(ServiceCPULimitOverwriteVariableValue)
+	memoryLimit := serviceVariables.Value(ServiceMemoryLimitOverwriteVariableValue)
+	ephemeralStorageLimit := serviceVariables.Value(ServiceEphemeralStorageLimitOverwriteVariableValue)
 
 	limitsOverwrites, err := o.evaluateServiceResourceOverwrites(
 		"Limits",
 		config,
-		explicitCPULimit,
-		explicitMemoryLimit,
-		explicitEphemeralStorageLimit,
+		cpuLimit,
+		memoryLimit,
+		ephemeralStorageLimit,
 		logger,
 	)
 
@@ -323,17 +323,17 @@ func (o *overwrites) evaluateExplicitServiceResourceOverwrite(
 
 	if limitsOverwrites != nil {
 		if len(o.explicitServiceLimits) == 0 {
-			o.explicitServiceLimits = make(map[int]api.ResourceList)
+			o.explicitServiceLimits = make(map[string]api.ResourceList)
 		}
-		o.explicitServiceLimits[serviceIndex] = limitsOverwrites
+		o.explicitServiceLimits[serviceName] = limitsOverwrites
 	}
 
 	requestsOverwrites, err := o.evaluateServiceResourceOverwrites(
 		"Requests",
 		config,
-		explicitCPURequest,
-		explicitMemoryRequest,
-		explicitEphemeralStorageRequest,
+		cpuRequest,
+		memoryRequest,
+		ephemeralStorageRequest,
 		logger,
 	)
 
@@ -343,9 +343,9 @@ func (o *overwrites) evaluateExplicitServiceResourceOverwrite(
 
 	if requestsOverwrites != nil {
 		if len(o.explicitServiceRequests) == 0 {
-			o.explicitServiceRequests = make(map[int]api.ResourceList)
+			o.explicitServiceRequests = make(map[string]api.ResourceList)
 		}
-		o.explicitServiceRequests[serviceIndex] = requestsOverwrites
+		o.explicitServiceRequests[serviceName] = requestsOverwrites
 	}
 	return nil
 }
@@ -353,9 +353,9 @@ func (o *overwrites) evaluateExplicitServiceResourceOverwrite(
 func (o *overwrites) evaluateServiceResourceOverwrites(
 	resourceType string,
 	config *common.KubernetesConfig,
-	explicitCPU string,
-	explicitMemory string,
-	explicitEphemeralStorage string,
+	cpu string,
+	memory string,
+	ephemeralStorage string,
 	logger buildlogger.Logger,
 ) (api.ResourceList, error) {
 	switch resourceType {
@@ -370,9 +370,9 @@ func (o *overwrites) evaluateServiceResourceOverwrites(
 			config.ServiceCPULimitOverwriteMaxAllowed,
 			config.ServiceMemoryLimitOverwriteMaxAllowed,
 			config.ServiceEphemeralStorageLimitOverwriteMaxAllowed,
-			explicitCPU,
-			explicitMemory,
-			explicitEphemeralStorage,
+			cpu,
+			memory,
+			ephemeralStorage,
 			logger,
 		)
 
@@ -387,9 +387,9 @@ func (o *overwrites) evaluateServiceResourceOverwrites(
 			config.ServiceCPURequestOverwriteMaxAllowed,
 			config.ServiceMemoryRequestOverwriteMaxAllowed,
 			config.ServiceEphemeralStorageRequestOverwriteMaxAllowed,
-			explicitCPU,
-			explicitMemory,
-			explicitEphemeralStorage,
+			cpu,
+			memory,
+			ephemeralStorage,
 			logger,
 		)
 	default:
@@ -443,8 +443,8 @@ func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 	return nil
 }
 
-func (o *overwrites) getExplicitServiceResourceLimitsOrGlobals(serviceIndex int) api.ResourceList {
-	switch limits, ok := o.explicitServiceLimits[serviceIndex]; ok {
+func (o *overwrites) getServiceResourceLimits(serviceName string) api.ResourceList {
+	switch limits, ok := o.explicitServiceLimits[serviceName]; ok {
 	case true:
 		return limits
 	default:
@@ -452,8 +452,8 @@ func (o *overwrites) getExplicitServiceResourceLimitsOrGlobals(serviceIndex int)
 	}
 }
 
-func (o *overwrites) getExplicitServiceResourceRequestsOrGlobals(serviceIndex int) api.ResourceList {
-	switch requests, ok := o.explicitServiceRequests[serviceIndex]; ok {
+func (o *overwrites) getServiceResourceRequests(serviceName string) api.ResourceList {
+	switch requests, ok := o.explicitServiceRequests[serviceName]; ok {
 	case true:
 		return requests
 	default:

@@ -960,19 +960,19 @@ func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
 			for i, s := range tt.services {
 				err := o.evaluateExplicitServiceResourceOverwrite(
 					c,
-					i,
+					fmt.Sprintf("%s%d", serviceContainerPrefix, i),
 					s.Variables,
 					defaultLogger,
 				)
 				assert.NoError(t, err)
-				assert.Equal(t, tt.want[i].limits, o.explicitServiceLimits[i])
-				assert.Equal(t, tt.want[i].requests, o.explicitServiceRequests[i])
+				assert.Equal(t, tt.want[i].limits, o.explicitServiceLimits[fmt.Sprintf("%s%d", serviceContainerPrefix, i)])
+				assert.Equal(t, tt.want[i].requests, o.explicitServiceRequests[fmt.Sprintf("%s%d", serviceContainerPrefix, i)])
 			}
 		})
 	}
 }
 
-func Test_overwrites_getExplicitServiceResourceLimitsOrGlobals(t *testing.T) {
+func Test_overwrites_getServiceResourceLimits(t *testing.T) {
 	defaultLogger := stdoutLogger()
 	defaultKubernetesConfig := &common.KubernetesConfig{
 		ServiceCPURequest:                                 "100m",
@@ -999,23 +999,23 @@ func Test_overwrites_getExplicitServiceResourceLimitsOrGlobals(t *testing.T) {
 	tests := []struct {
 		name                  string
 		serviceIndex          int
-		explicitServiceLimits map[int]api.ResourceList
+		explicitServiceLimits map[string]api.ResourceList
 		want                  api.ResourceList
 	}{
 		{
 			name:         "only explicit overwrites",
 			serviceIndex: 58,
-			explicitServiceLimits: map[int]api.ResourceList{
-				0:  mustCreateResourceList(t, "400m", "400M", "100Mi"),
-				58: mustCreateResourceList(t, "200m", "200M", "123Mi"),
+			explicitServiceLimits: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0):  mustCreateResourceList(t, "400m", "400M", "100Mi"),
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 58): mustCreateResourceList(t, "200m", "200M", "123Mi"),
 			},
 			want: mustCreateResourceList(t, "200m", "200M", "123Mi"),
 		},
 		{
 			name:         "only explicit overwrites (partial)",
 			serviceIndex: 0,
-			explicitServiceLimits: map[int]api.ResourceList{
-				0: mustCreateResourceList(
+			explicitServiceLimits: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(
 					t, "400m",
 					defaultKubernetesConfig.ServiceMemoryLimit,
 					defaultKubernetesConfig.ServiceEphemeralStorageLimit,
@@ -1042,12 +1042,12 @@ func Test_overwrites_getExplicitServiceResourceLimitsOrGlobals(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := defaultOverwrites
 			o.explicitServiceLimits = tt.explicitServiceLimits
-			assert.Equal(t, tt.want, o.getExplicitServiceResourceLimitsOrGlobals(tt.serviceIndex))
+			assert.Equal(t, tt.want, o.getServiceResourceLimits(fmt.Sprintf("%s%d", serviceContainerPrefix, tt.serviceIndex)))
 		})
 	}
 }
 
-func Test_overwrites_getExplicitServiceResourceRequestsOrGlobals(t *testing.T) {
+func Test_overwrites_getServiceResourceRequests(t *testing.T) {
 	defaultLogger := stdoutLogger()
 	defaultKubernetesConfig := &common.KubernetesConfig{
 		ServiceCPURequest:                                 "100m",
@@ -1080,23 +1080,23 @@ func Test_overwrites_getExplicitServiceResourceRequestsOrGlobals(t *testing.T) {
 	tests := []struct {
 		name                    string
 		serviceIndex            int
-		explicitServiceRequests map[int]api.ResourceList
+		explicitServiceRequests map[string]api.ResourceList
 		want                    api.ResourceList
 	}{
 		{
 			name:         "only explicit overwrites",
 			serviceIndex: 58,
-			explicitServiceRequests: map[int]api.ResourceList{
-				0:  mustCreateResourceList(t, "400m", "400M", "456Mi"),
-				58: mustCreateResourceList(t, "200m", "200M", "654Mi"),
+			explicitServiceRequests: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0):  mustCreateResourceList(t, "400m", "400M", "456Mi"),
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 58): mustCreateResourceList(t, "200m", "200M", "654Mi"),
 			},
 			want: mustCreateResourceList(t, "200m", "200M", "654Mi"),
 		},
 		{
 			name:         "only explicit overwrites (partial)",
 			serviceIndex: 0,
-			explicitServiceRequests: map[int]api.ResourceList{
-				0: mustCreateResourceList(
+			explicitServiceRequests: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(
 					t, "400m",
 					defaultKubernetesConfig.ServiceMemoryRequest,
 					defaultKubernetesConfig.ServiceEphemeralStorageRequest,
@@ -1123,7 +1123,7 @@ func Test_overwrites_getExplicitServiceResourceRequestsOrGlobals(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := defaultOverwrites
 			o.explicitServiceRequests = tt.explicitServiceRequests
-			assert.Equal(t, tt.want, o.getExplicitServiceResourceRequestsOrGlobals(tt.serviceIndex))
+			assert.Equal(t, tt.want, o.getServiceResourceRequests(fmt.Sprintf("%s%d", serviceContainerPrefix, tt.serviceIndex)))
 		})
 	}
 }

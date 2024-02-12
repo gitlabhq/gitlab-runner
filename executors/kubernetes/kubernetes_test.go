@@ -1174,11 +1174,11 @@ func TestPrepare(t *testing.T) {
 
 	getDefaultOverwritesWithNServices := func(n int) *overwrites {
 		overwrites := *defaultOverwrites
-		overwrites.explicitServiceLimits = make(map[int]api.ResourceList, n)
-		overwrites.explicitServiceRequests = make(map[int]api.ResourceList, n)
+		overwrites.explicitServiceLimits = make(map[string]api.ResourceList, n)
+		overwrites.explicitServiceRequests = make(map[string]api.ResourceList, n)
 		for i := 0; i < n; i++ {
-			overwrites.explicitServiceLimits[i] = mustCreateResourceList(t, "0", "0", "0")
-			overwrites.explicitServiceRequests[i] = mustCreateResourceList(t, "0", "0", "0")
+			overwrites.explicitServiceLimits[fmt.Sprintf("%s%d", serviceContainerPrefix, i)] = mustCreateResourceList(t, "0", "0", "0")
+			overwrites.explicitServiceRequests[fmt.Sprintf("%s%d", serviceContainerPrefix, i)] = mustCreateResourceList(t, "0", "0", "0")
 		}
 		return &overwrites
 	}
@@ -1869,13 +1869,13 @@ func TestPrepare(t *testing.T) {
 					serviceRequests: mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
 					buildRequests:   api.ResourceList{},
 					helperRequests:  api.ResourceList{},
-					explicitServiceLimits: map[int]api.ResourceList{
-						0: mustCreateResourceList(t, "200m", "300Mi", "2Gi"),
-						1: mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+					explicitServiceLimits: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "200m", "300Mi", "2Gi"),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
 					},
-					explicitServiceRequests: map[int]api.ResourceList{
-						0: mustCreateResourceList(t, "100m", "150Mi", "1Gi"),
-						1: mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+					explicitServiceRequests: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "100m", "150Mi", "1Gi"),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
 					},
 				},
 				helperImageInfo: defaultHelperImage,
