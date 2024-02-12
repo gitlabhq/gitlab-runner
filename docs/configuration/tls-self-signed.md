@@ -304,3 +304,17 @@ executors does not trust the certificate used by the private registry. To fix th
 add the relevant root certificate authority, or certificate chain, to the system's trust store based
 on your operating system, then restart the container service. Depending on your GitLab Runner version
 and Docker host environment, you might need to also set the runner feature flag `FF_RESOLVE_FULL_TLS_CHAIN` to `FALSE`.
+
+### `apt-get: not found` errors in jobs
+
+The [`pre_build_script`](advanced-configuration.md#the-runners-section) commands are executed
+before every job a runner executes. If you add commands that are specific to certain distributions,
+like `apk` or `apt-get` when you install a certificate for user scripts, your CI jobs might fail 
+if they use [images](https://docs.gitlab.com/ee/ci/yaml/#image) based on different distributions. 
+
+For example, if some of your CI jobs run Ubuntu-based images and some run Alpine-based images and you add
+Ubuntu commands, the `apt-get: not found` error occurs in jobs with Alpine-based
+images. To resolve this, either:
+
+- Write your `pre_build_script` so that it is distribution-agnostic.
+- Use [tags](https://docs.gitlab.com/ee/ci/yaml/#tags) to ensure runners only pick up jobs with compatible images.
