@@ -16,5 +16,5 @@ func TestCreateVolumesLabels(t *testing.T) {
 
 func TestCreateVolumesDriverOpts(t *testing.T) {
 	t.Skip("Windows local driver does not accept volume driver options.")
-	//testCreateVolumesDriverOpts(t, parser.NewLinuxParser())
+	//testCreateVolumesDriverOpts(t, parser.NewWindowsParser())
 }
