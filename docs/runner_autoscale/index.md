@@ -31,7 +31,7 @@ GitLab Runner Autoscaler is the successor to the autoscaling technology based on
 
 The following autoscaling options are supported for public cloud compute instances.
 
-|                   | Next Runner Autoscaler (Beta)                  | GitLab Runner Docker Machine Autoscaler (GA)                |
+|                   | Next Runner Autoscaler (**Status:** Beta)                  | GitLab Runner Docker Machine Autoscaler (GA)                |
 |----------------------------|------------------------|------------------------|
 | Amazon Web Services EC2 instances         | **{check-circle}** Yes | **{check-circle}** Yes |
 | Google Compute Engine | **{check-circle}** Yes | **{check-circle}** Yes |
