@@ -3,6 +3,7 @@ package packages
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/magefile/mage/sh"
@@ -124,10 +125,10 @@ func signPackage(blueprint Blueprint) error {
 	case Rpm, RpmFips:
 		command := []string{
 			"echo yes | setsid rpm",
-			"--define", fmt.Sprintf("_gpg_name %s", gpgKey),
-			"--define", "_signature gpg",
-			"--define", "__gpg_check_password_cmd /bin/true",
-			"--define", fmt.Sprintf("__gpg_sign_cmd $(command -v gpg) --batch --no-armor --digest-algo 'sha512' --passphrase '%s' --pinentry-mode=loopback --no-secmem-warning -u '%s' --sign --detach-sign --output %%{__signature_filename} %%{__plaintext_filename}", gpgPass, gpgKey),
+			"--define", strconv.Quote(fmt.Sprintf("_gpg_name %s", gpgKey)),
+			"--define", strconv.Quote("_signature gpg"),
+			"--define", strconv.Quote("__gpg_check_password_cmd /bin/true"),
+			"--define", strconv.Quote(fmt.Sprintf("__gpg_sign_cmd $(command -v gpg) --batch --no-armor --digest-algo 'sha512' --passphrase '%s' --pinentry-mode=loopback --no-secmem-warning -u '%s' --sign --detach-sign --output %%{__signature_filename} %%{__plaintext_filename}", gpgPass, gpgKey)),
 			"--addsign", blueprint.Data().pkgFile,
 		}
 
