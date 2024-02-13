@@ -881,7 +881,7 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	require.Error(t, err, "error")
 	var buildError *common.BuildError
-	assert.ErrorAs(t, err, &buildError)
+	require.ErrorAs(t, err, &buildError)
 	assert.Contains(t, err.Error(), "command terminated with exit code 1")
 	assert.Equal(t, 1, buildError.ExitCode)
 }

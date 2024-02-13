@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -6269,6 +6271,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 				pod: &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
 			}
 			e.options = &kubernetesOptions{}
+			e.Config.Kubernetes = &common.KubernetesConfig{}
 
 			buf, err := trace.New()
 			require.NoError(t, err)
@@ -6542,6 +6545,66 @@ containers:
 			assert.NoError(t, err)
 
 			tc.verifyFn(t, &patchedPodSpec)
+		})
+	}
+}
+
+func TestRetryLimits(t *testing.T) {
+	tests := map[string]struct {
+		config             common.KubernetesConfig
+		err                error
+		expectedRetryCount int
+	}{
+		"no retry limits": {
+			config:             common.KubernetesConfig{},
+			err:                syscall.ECONNRESET,
+			expectedRetryCount: 5,
+		},
+		"retry limits": {
+			config: common.KubernetesConfig{
+				RequestRetryLimit: 6,
+				RequestRetryLimits: map[string]int{
+					syscall.ECONNRESET.Error(): 3,
+				},
+			},
+			err:                syscall.ECONNRESET,
+			expectedRetryCount: 3,
+		},
+		"retry limits fallback to default": {
+			config: common.KubernetesConfig{
+				RequestRetryLimit: 6,
+				RequestRetryLimits: map[string]int{
+					syscall.ECONNRESET.Error(): 3,
+				},
+			},
+			err:                syscall.ECONNABORTED,
+			expectedRetryCount: 6,
+		},
+		"retry limits with manually constructed error": {
+			config: common.KubernetesConfig{
+				RequestRetryLimit: 6,
+				RequestRetryLimits: map[string]int{
+					"error dialing backend": 2,
+				},
+			},
+			err:                errors.New("error dialing backend"),
+			expectedRetryCount: 2,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			e := &executor{}
+			e.Config.Kubernetes = &tt.config
+
+			var counter int
+			err := retry.WithFn(e, func() error {
+				counter++
+				return tt.err
+			}).Run()
+
+			require.Equal(t, err, tt.err)
+			require.Equal(t, tt.expectedRetryCount, counter)
 		})
 	}
 }

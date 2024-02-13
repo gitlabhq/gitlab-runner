@@ -153,6 +153,25 @@ func TestMaxTries(t *testing.T) {
 	assert.Equal(t, err, r.Run())
 }
 
+func TestMaxTriesFunc(t *testing.T) {
+	err := errors.New("err")
+
+	m := &mockRetryable{}
+	defer m.AssertExpectations(t)
+
+	m.On("Run").Return(err).Times(6)
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(true).Times(5)
+	m.On("ShouldRetry", mock.Anything, mock.Anything).Return(false).Once()
+
+	r := NewNoValue(
+		New().WithBackoff(0, 0).WithCheck(m.ShouldRetry).WithMaxTriesFunc(func(err error) int {
+			return 6
+		}),
+		m.Run,
+	)
+	assert.Equal(t, err, r.Run())
+}
+
 func TestRunValue(t *testing.T) {
 	m := &mockValueRetryable[int]{}
 	defer m.AssertExpectations(t)
