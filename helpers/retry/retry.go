@@ -112,12 +112,8 @@ func (r *Retry) WithCheck(check CheckFunc) *Retry {
 }
 
 func (r *Retry) WithMaxTries(max int) *Retry {
-	return r.wrapCheck(func(tries int, err error, shouldRetry bool) bool {
-		if tries >= max {
-			return false
-		}
-
-		return shouldRetry
+	return r.WithMaxTriesFunc(func(_ error) int {
+		return max
 	})
 }
 

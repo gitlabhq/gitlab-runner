@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,22 +17,9 @@ import (
 	"time"
 
 	"github.com/docker/cli/cli/config/types"
-	"github.com/jpillora/backoff"
-	"golang.org/x/net/context"
-	api "k8s.io/api/core/v1"
-	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/util/exec"
-
 	jsonpatch "github.com/evanphx/json-patch"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
-
+	"github.com/jpillora/backoff"
+	"github.com/samber/lo"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -44,6 +32,17 @@ import (
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
+	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/utils/exec"
 )
 
 const (
@@ -116,21 +115,41 @@ var (
 
 	// network errors to retry on
 	retryNetworkErrorsGroup = []error{
-		errors.New("error dialing backend"),
-		errors.New("TLS handshake timeout"),
-		errors.New("read: connection timed out"),
-		errors.New("connect: connection timed out"),
-		errors.New("Timeout occurred"),
-		errors.New("http2: client connection lost"),
-		errors.New("connection refused"),
-		errors.New("tls: internal error"),
-		io.ErrUnexpectedEOF,
+		&retryError{errors.New("error dialing backend")},
+		&retryError{errors.New("TLS handshake timeout")},
+		&retryError{errors.New("read: connection timed out")},
+		&retryError{errors.New("connect: connection timed out")},
+		&retryError{errors.New("Timeout occurred")},
+		&retryError{errors.New("http2: client connection lost")},
+		&retryError{errors.New("connection refused")},
+		&retryError{errors.New("tls: internal error")},
+		&retryError{io.ErrUnexpectedEOF},
 
-		syscall.ECONNRESET,
-		syscall.ECONNREFUSED,
-		syscall.ECONNABORTED,
+		&retryError{syscall.ECONNRESET},
+		&retryError{syscall.ECONNREFUSED},
+		&retryError{syscall.ECONNABORTED},
 	}
 )
+
+type retryError struct {
+	error
+}
+
+func (n *retryError) Error() string {
+	return n.error.Error()
+}
+
+func (n *retryError) Is(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if errors.Is(err, n.error) {
+		return true
+	}
+
+	return strings.Contains(err.Error(), n.error.Error())
+}
 
 type commandTerminatedError struct {
 	exitCode int
@@ -150,58 +169,24 @@ func (s *executor) NewRetry() *retry.Retry {
 
 	return retry.New().
 		WithCheck(func(_ int, err error) bool {
-			if isGroupError(err, retryNetworkErrorsGroup) {
-				return true
-			}
-
-			for _, pair := range retryLimits {
-				for errStr := range pair {
-					if strings.Contains(err.Error(), errStr) {
-						return true
-					}
-				}
-			}
-
-			return false
+			_, found := isGroupError(err, retryNetworkErrorsGroup, retryLimits.AsErrors())
+			return found
 		}).
 		WithMaxTriesFunc(func(err error) int {
-			for _, pair := range retryLimits {
-				for errStr, limit := range pair {
-					if isGroupError(errors.New(errStr), retryNetworkErrorsGroup) {
-						return limit
-					}
-
-					if strings.Contains(err.Error(), errStr) {
-						return limit
-					}
-				}
+			matchingErr, found := isGroupError(err, retryNetworkErrorsGroup, retryLimits.AsErrors())
+			if found && retryLimits[matchingErr.Error()] > 0 {
+				return retryLimits[matchingErr.Error()]
 			}
 
-			return s.Config.Kubernetes.RequestRetryLimit
+			return s.Config.Kubernetes.RequestRetryLimit.Get()
 		}).
 		WithBackoff(defaultRetryMinBackoff, defaultRetryMaxBackoff)
 }
 
-func isGroupError(err error, grp []error) bool {
-	if err == nil {
-		return false
-	}
-
-	for _, errg := range grp {
-		if isError(err, errg) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func isError(err, err2 error) bool {
-	if errors.Is(err, err2) || strings.Contains(err.Error(), err2.Error()) {
-		return true
-	}
-
-	return false
+func isGroupError(err error, groups ...[]error) (error, bool) {
+	return lo.Find(lo.Flatten(groups), func(err2 error) bool {
+		return errors.Is(err2, err)
+	})
 }
 
 type podPhaseError struct {
@@ -2453,7 +2438,7 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 	// the log file and the log processor moves things forward.
 
 	// Non-network errors don't concern this function
-	if !isGroupError(err, retryNetworkErrorsGroup) {
+	if _, ok := isGroupError(err, retryNetworkErrorsGroup); ok {
 		return err
 	}
 
