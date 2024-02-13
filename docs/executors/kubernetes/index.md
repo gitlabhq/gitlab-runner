@@ -1894,7 +1894,7 @@ For example, if in your environment TLS related errors occur a bit too much, you
   [runners.kubernetes]
     retry_limit = 5
   
-    [[runners.kubernetes.retry_limits]]
+    [runners.kubernetes.retry_limits]
         "TLS handshake timeout" = 10
         "tls: internal error" = 10
 ```
@@ -1909,7 +1909,7 @@ If you want to retry an entirely different error, such as `exceeded quota` 20 ti
   [runners.kubernetes]
     retry_limit = 5
   
-    [[runners.kubernetes.retry_limits]]
+    [runners.kubernetes.retry_limits]
         "exceeded quota" = 20
 ```
 
