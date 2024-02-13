@@ -1878,6 +1878,7 @@ The following failures are automatically retried:
 - [`syscall.ECONNRESET`](https://pkg.go.dev/syscall#pkg-constants)
 - [`syscall.ECONNREFUSED`](https://pkg.go.dev/syscall#pkg-constants)
 - [`syscall.ECONNABORTED`](https://pkg.go.dev/syscall#pkg-constants)
+- [`syscall.EPIPE`](https://pkg.go.dev/syscall#pkg-constants)
 
 To control the amount of retries for each error, use the `retry_limits` option. 
 The `rety_limits` specifies the amount of retries for each error separately,

@@ -114,6 +114,7 @@ var (
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 	// network errors to retry on
+	// make sure to update the documentation in kubernetes/index.md to keep it in sync
 	retryNetworkErrorsGroup = []error{
 		&retryError{errors.New("error dialing backend")},
 		&retryError{errors.New("TLS handshake timeout")},
@@ -123,11 +124,13 @@ var (
 		&retryError{errors.New("http2: client connection lost")},
 		&retryError{errors.New("connection refused")},
 		&retryError{errors.New("tls: internal error")},
+
 		&retryError{io.ErrUnexpectedEOF},
 
 		&retryError{syscall.ECONNRESET},
 		&retryError{syscall.ECONNREFUSED},
 		&retryError{syscall.ECONNABORTED},
+		&retryError{syscall.EPIPE},
 	}
 )
 
