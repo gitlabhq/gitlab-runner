@@ -1873,10 +1873,10 @@ The following failures will be automatically retried:
 * `http2: client connection lost`
 * `connection refused`
 * `tls: internal error`
-* [io.unexpected EOF](https://pkg.go.dev/io#ErrUnexpectedEOF)
-* [syscall.ECONNRESET](https://pkg.go.dev/syscall#pkg-constants)
-* [syscall.ECONNREFUSED](https://pkg.go.dev/syscall#pkg-constants)
-* [syscall.ECONNABORTED](https://pkg.go.dev/syscall#pkg-constants)
+* [`io.unexpected EOF`](https://pkg.go.dev/io#ErrUnexpectedEOF)
+* [`syscall.ECONNRESET`](https://pkg.go.dev/syscall#pkg-constants)
+* [`syscall.ECONNREFUSED`](https://pkg.go.dev/syscall#pkg-constants)
+* [`syscall.ECONNABORTED`](https://pkg.go.dev/syscall#pkg-constants)
 
 In order to more finely control the amount of retries per each error the `retry_limits` config option can be used. 
 This option allows to specify the amount of retries for each error separately. 
