@@ -250,11 +250,13 @@ stable docker images:
   extends:
   - .stable_docker_images_base
   - .release_docker_images
+  - .release_artifacts
 
 stable helper docker images:
   extends:
   - .stable_docker_images_base
   - .release_helper_docker_images
+  - .release_artifacts
 
 stable sync docker images:
   extends:
