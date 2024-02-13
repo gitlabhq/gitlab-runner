@@ -1860,31 +1860,33 @@ to `true` and [submit an issue](https://gitlab.com/gitlab-org/gitlab-runner/-/is
 
 Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976) for progress on legacy execution strategy removal.
 
-### Retry limits
+### Configure the number of request attempts to the Kubernetes API
 
-By default, the Kubernetes executor will retry specific requests to the Kubernetes API upon failure 5 times with a delay controlled by a backoff algorithm with `500ms` floor and `2s` ceiling. The amount of retires can be configured by the `retry_limit` option in the `config.toml` file.
-The following failures will be automatically retried:
+By default, the Kubernetes executor retries specific requests to the Kubernetes API after five failed attempts. The delay is controlled by 
+a backoff algorithm with a 500 millisecond floor and a two second ceiling. To configure the number of retries, use the `retry_limit` option in the `config.toml` file.
+The following failures are automatically retried:
 
-* `error dialing backend`
-* `TLS handshake timeout`
-* `read: connection timed out`
-* `connect: connection timed out`
-* `Timeout occurred`
-* `http2: client connection lost`
-* `connection refused`
-* `tls: internal error`
-* [`io.unexpected EOF`](https://pkg.go.dev/io#ErrUnexpectedEOF)
-* [`syscall.ECONNRESET`](https://pkg.go.dev/syscall#pkg-constants)
-* [`syscall.ECONNREFUSED`](https://pkg.go.dev/syscall#pkg-constants)
-* [`syscall.ECONNABORTED`](https://pkg.go.dev/syscall#pkg-constants)
+- `error dialing backend`
+- `TLS handshake timeout`
+- `read: connection timed out`
+- `connect: connection timed out`
+- `Timeout occurred`
+- `http2: client connection lost`
+- `connection refused`
+- `tls: internal error`
+- [`io.unexpected EOF`](https://pkg.go.dev/io#ErrUnexpectedEOF)
+- [`syscall.ECONNRESET`](https://pkg.go.dev/syscall#pkg-constants)
+- [`syscall.ECONNREFUSED`](https://pkg.go.dev/syscall#pkg-constants)
+- [`syscall.ECONNABORTED`](https://pkg.go.dev/syscall#pkg-constants)
 
-In order to more finely control the amount of retries per each error the `retry_limits` config option can be used. 
-This option allows to specify the amount of retries for each error separately. 
-The `retry_limits` option is a map of error messages to the amount of retries. 
+To control the amount of retries for each error, use the `retry_limits` option. 
+The `rety_limits` specifies the amount of retries for each error separately,
+and is a map of error messages to the amount of retries.  
 The error message can be a substring of the error message returned by the Kubernetes API. 
 The `retry_limits` option has precedence over the `retry_limit` option.
 
-For example, if in your environment TLS related errors occur a bit too much, you can configure the `retry_limits` option to retry those errors 10 times instead of the default 5 times:
+For example, if you need to control the number of TLS related errors in your environment, you can configure the `retry_limits` option
+to retry those errors 10 times instead of the default of five times:
 
 ```toml
 [[runners]]
@@ -1899,7 +1901,7 @@ For example, if in your environment TLS related errors occur a bit too much, you
         "tls: internal error" = 10
 ```
 
-If you want to retry an entirely different error, such as `exceeded quota` 20 times, you can do it as follows:
+To retry an entirely different error, such as `exceeded quota` 20 times:
 
 ```toml
 [[runners]]
