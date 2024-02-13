@@ -364,9 +364,9 @@ func (o *overwrites) evaluateServiceResourceOverwrites(
 			"ServiceCPULimit",
 			"ServiceMemoryLimit",
 			"ServiceEphemeralStorageLimit",
-			o.serviceLimits[api.ResourceCPU].ToUnstructured().(string),
-			o.serviceLimits[api.ResourceMemory].ToUnstructured().(string),
-			o.serviceLimits[api.ResourceEphemeralStorage].ToUnstructured().(string),
+			getServiceResourceValue(o.serviceLimits, api.ResourceCPU),
+			getServiceResourceValue(o.serviceLimits, api.ResourceMemory),
+			getServiceResourceValue(o.serviceLimits, api.ResourceEphemeralStorage),
 			config.ServiceCPULimitOverwriteMaxAllowed,
 			config.ServiceMemoryLimitOverwriteMaxAllowed,
 			config.ServiceEphemeralStorageLimitOverwriteMaxAllowed,
@@ -381,9 +381,9 @@ func (o *overwrites) evaluateServiceResourceOverwrites(
 			"ServiceCPURequest",
 			"ServiceMemoryRequest",
 			"ServiceEphemeralStorageRequest",
-			o.serviceRequests[api.ResourceCPU].ToUnstructured().(string),
-			o.serviceRequests[api.ResourceMemory].ToUnstructured().(string),
-			o.serviceRequests[api.ResourceEphemeralStorage].ToUnstructured().(string),
+			getServiceResourceValue(o.serviceRequests, api.ResourceCPU),
+			getServiceResourceValue(o.serviceRequests, api.ResourceMemory),
+			getServiceResourceValue(o.serviceRequests, api.ResourceEphemeralStorage),
 			config.ServiceCPURequestOverwriteMaxAllowed,
 			config.ServiceMemoryRequestOverwriteMaxAllowed,
 			config.ServiceEphemeralStorageRequestOverwriteMaxAllowed,
@@ -395,6 +395,14 @@ func (o *overwrites) evaluateServiceResourceOverwrites(
 	default:
 		return nil, fmt.Errorf("invalid resource type %s, only Requests and Limits are valid values", resourceType)
 	}
+}
+
+func getServiceResourceValue(resourceList api.ResourceList, resource api.ResourceName) string {
+	if value, ok := resourceList[resource]; ok {
+		return value.String()
+	}
+
+	return ""
 }
 
 func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
