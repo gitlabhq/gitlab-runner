@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
 	restclient "k8s.io/client-go/rest"
-	"k8s.io/utils/exec"
+	"k8s.io/client-go/util/exec"
 )
 
 const (
