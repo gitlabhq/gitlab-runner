@@ -23,6 +23,7 @@ var (
 
 	retryPackageCloudErrors = []string{
 		"502 Bad Gateway",
+		"HTTP status code 520",
 	}
 
 	failedToRunPackageCloudCommandError = errors.New("failed to run PackageCloud command after 5 tries")
