@@ -1749,13 +1749,13 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 		verifyFn func(*testing.T, string, error)
 	}{
 		"invalid image": {
-			image: "alpine333",
+			image: "alpine:invalid-tag",
 			verifyFn: func(t *testing.T, out string, err error) {
 				assert.Error(t, err)
 				assert.Contains(
 					t,
 					out,
-					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine333\": rpc error:",
+					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine:invalid-tag\": rpc error:",
 				)
 				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ErrImagePull")
 				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ImagePullBackOff")
