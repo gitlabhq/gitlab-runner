@@ -126,6 +126,9 @@ type overwrites struct {
 	buildRequests   api.ResourceList
 	serviceRequests api.ResourceList
 	helperRequests  api.ResourceList
+
+	explicitServiceLimits   map[string]api.ResourceList
+	explicitServiceRequests map[string]api.ResourceList
 }
 
 //nolint:funlen
@@ -291,6 +294,117 @@ func (o *overwrites) evaluateMaxBuildResourcesOverwrite(
 	return nil
 }
 
+func (o *overwrites) evaluateExplicitServiceResourceOverwrite(
+	config *common.KubernetesConfig,
+	serviceName string,
+	serviceVariables common.JobVariables,
+	logger buildlogger.Logger,
+) (err error) {
+	cpuRequest := serviceVariables.Value(ServiceCPURequestOverwriteVariableValue)
+	memoryRequest := serviceVariables.Value(ServiceMemoryRequestOverwriteVariableValue)
+	ephemeralStorageRequest := serviceVariables.Value(ServiceEphemeralStorageRequestOverwriteVariableValue)
+
+	cpuLimit := serviceVariables.Value(ServiceCPULimitOverwriteVariableValue)
+	memoryLimit := serviceVariables.Value(ServiceMemoryLimitOverwriteVariableValue)
+	ephemeralStorageLimit := serviceVariables.Value(ServiceEphemeralStorageLimitOverwriteVariableValue)
+
+	limitsOverwrites, err := o.evaluateServiceResourceOverwrites(
+		"Limits",
+		config,
+		cpuLimit,
+		memoryLimit,
+		ephemeralStorageLimit,
+		logger,
+	)
+
+	if err != nil {
+		return fmt.Errorf("invalid service limits specified: %w", err)
+	}
+
+	if limitsOverwrites != nil {
+		if len(o.explicitServiceLimits) == 0 {
+			o.explicitServiceLimits = make(map[string]api.ResourceList)
+		}
+		o.explicitServiceLimits[serviceName] = limitsOverwrites
+	}
+
+	requestsOverwrites, err := o.evaluateServiceResourceOverwrites(
+		"Requests",
+		config,
+		cpuRequest,
+		memoryRequest,
+		ephemeralStorageRequest,
+		logger,
+	)
+
+	if err != nil {
+		return fmt.Errorf("invalid service requests specified: %w", err)
+	}
+
+	if requestsOverwrites != nil {
+		if len(o.explicitServiceRequests) == 0 {
+			o.explicitServiceRequests = make(map[string]api.ResourceList)
+		}
+		o.explicitServiceRequests[serviceName] = requestsOverwrites
+	}
+	return nil
+}
+
+func (o *overwrites) evaluateServiceResourceOverwrites(
+	resourceType string,
+	config *common.KubernetesConfig,
+	cpu string,
+	memory string,
+	ephemeralStorage string,
+	logger buildlogger.Logger,
+) (api.ResourceList, error) {
+	switch resourceType {
+	case "Limits":
+		return o.evaluateMaxResourceListOverwrite(
+			"ServiceCPULimit",
+			"ServiceMemoryLimit",
+			"ServiceEphemeralStorageLimit",
+			getServiceResourceValue(o.serviceLimits, api.ResourceCPU),
+			getServiceResourceValue(o.serviceLimits, api.ResourceMemory),
+			getServiceResourceValue(o.serviceLimits, api.ResourceEphemeralStorage),
+			config.ServiceCPULimitOverwriteMaxAllowed,
+			config.ServiceMemoryLimitOverwriteMaxAllowed,
+			config.ServiceEphemeralStorageLimitOverwriteMaxAllowed,
+			cpu,
+			memory,
+			ephemeralStorage,
+			logger,
+		)
+
+	case "Requests":
+		return o.evaluateMaxResourceListOverwrite(
+			"ServiceCPURequest",
+			"ServiceMemoryRequest",
+			"ServiceEphemeralStorageRequest",
+			getServiceResourceValue(o.serviceRequests, api.ResourceCPU),
+			getServiceResourceValue(o.serviceRequests, api.ResourceMemory),
+			getServiceResourceValue(o.serviceRequests, api.ResourceEphemeralStorage),
+			config.ServiceCPURequestOverwriteMaxAllowed,
+			config.ServiceMemoryRequestOverwriteMaxAllowed,
+			config.ServiceEphemeralStorageRequestOverwriteMaxAllowed,
+			cpu,
+			memory,
+			ephemeralStorage,
+			logger,
+		)
+	default:
+		return nil, fmt.Errorf("invalid resource type %s, only Requests and Limits are valid values", resourceType)
+	}
+}
+
+func getServiceResourceValue(resourceList api.ResourceList, resource api.ResourceName) string {
+	if value, ok := resourceList[resource]; ok {
+		return value.String()
+	}
+
+	return ""
+}
+
 func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,
@@ -335,6 +449,24 @@ func (o *overwrites) evaluateMaxServiceResourcesOverwrite(
 	}
 
 	return nil
+}
+
+func (o *overwrites) getServiceResourceLimits(serviceName string) api.ResourceList {
+	switch limits, ok := o.explicitServiceLimits[serviceName]; ok {
+	case true:
+		return limits
+	default:
+		return o.serviceLimits
+	}
+}
+
+func (o *overwrites) getServiceResourceRequests(serviceName string) api.ResourceList {
+	switch requests, ok := o.explicitServiceRequests[serviceName]; ok {
+	case true:
+		return requests
+	default:
+		return o.serviceRequests
+	}
 }
 
 func (o *overwrites) evaluateMaxHelperResourcesOverwrite(

@@ -1174,6 +1174,17 @@ func TestPrepare(t *testing.T) {
 		helperRequests:  api.ResourceList{},
 	}
 
+	getDefaultOverwritesWithNServices := func(n int) *overwrites {
+		overwrites := *defaultOverwrites
+		overwrites.explicitServiceLimits = make(map[string]api.ResourceList, n)
+		overwrites.explicitServiceRequests = make(map[string]api.ResourceList, n)
+		for i := 0; i < n; i++ {
+			overwrites.explicitServiceLimits[fmt.Sprintf("%s%d", serviceContainerPrefix, i)] = api.ResourceList{}
+			overwrites.explicitServiceRequests[fmt.Sprintf("%s%d", serviceContainerPrefix, i)] = api.ResourceList{}
+		}
+		return &overwrites
+	}
+
 	defaultHelperImage := helperimage.Info{
 		Architecture:            "x86_64",
 		OSType:                  helperimage.OSTypeLinux,
@@ -1635,7 +1646,7 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: defaultOverwrites,
+				configurationOverwrites: getDefaultOverwritesWithNServices(1),
 				helperImageInfo:         defaultHelperImage,
 			},
 		},
@@ -1727,8 +1738,417 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				configurationOverwrites: defaultOverwrites,
+				configurationOverwrites: getDefaultOverwritesWithNServices(2),
 				helperImageInfo:         defaultHelperImage,
+			},
+		},
+		{
+			Name:         "all with limits and request and explicit services limits and requests",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:                                              "test-server",
+						ServiceCPULimitOverwriteMaxAllowed:                "500m",
+						ServiceCPULimit:                                   "100m",
+						ServiceCPURequestOverwriteMaxAllowed:              "500m",
+						ServiceCPURequest:                                 "50m",
+						ServiceMemoryLimitOverwriteMaxAllowed:             "1Gi",
+						ServiceMemoryLimit:                                "200Mi",
+						ServiceMemoryRequestOverwriteMaxAllowed:           "10Gi",
+						ServiceMemoryRequest:                              "100Mi",
+						ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "10Gi",
+						ServiceEphemeralStorageLimit:                      "1Gi",
+						ServiceEphemeralStorageRequestOverwriteMaxAllowed: "10Gi",
+						ServiceEphemeralStorageRequest:                    "500Mi",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service-explicit-overrides",
+							Alias:      "test-alias-0",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+							Variables: []common.JobVariable{
+								{
+									Key:   ServiceCPULimitOverwriteVariableValue,
+									Value: "200m",
+								},
+								{
+									Key:   ServiceCPURequestOverwriteVariableValue,
+									Value: "100m",
+								},
+								{
+									Key:   ServiceMemoryLimitOverwriteVariableValue,
+									Value: "300Mi",
+								},
+								{
+									Key:   ServiceMemoryRequestOverwriteVariableValue,
+									Value: "150Mi",
+								},
+								{
+									Key:   ServiceEphemeralStorageLimitOverwriteVariableValue,
+									Value: "2Gi",
+								},
+								{
+									Key:   ServiceEphemeralStorageRequestOverwriteVariableValue,
+									Value: "1Gi",
+								},
+							},
+						},
+						{
+							Name:       "test-service-without-explicit-overrides",
+							Alias:      "test-alias-1",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service-explicit-overrides",
+							Alias:      "test-alias-0",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+							Variables: []common.JobVariable{
+								{
+									Key:   ServiceCPULimitOverwriteVariableValue,
+									Value: "200m",
+								},
+								{
+									Key:   ServiceCPURequestOverwriteVariableValue,
+									Value: "100m",
+								},
+								{
+									Key:   ServiceMemoryLimitOverwriteVariableValue,
+									Value: "300Mi",
+								},
+								{
+									Key:   ServiceMemoryRequestOverwriteVariableValue,
+									Value: "150Mi",
+								},
+								{
+									Key:   ServiceEphemeralStorageLimitOverwriteVariableValue,
+									Value: "2Gi",
+								},
+								{
+									Key:   ServiceEphemeralStorageRequestOverwriteVariableValue,
+									Value: "1Gi",
+								},
+							},
+						},
+						{
+							Name:       "test-service-without-explicit-overrides",
+							Alias:      "test-alias-1",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+					explicitServiceLimits: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "200m", "300Mi", "2Gi"),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+					},
+					explicitServiceRequests: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "100m", "150Mi", "1Gi"),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+					},
+				},
+				helperImageInfo: defaultHelperImage,
+			},
+		},
+		{
+			Name:         "all with limits and request and explicit services limits and requests without max override",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host:                           "test-server",
+						ServiceCPULimit:                "100m",
+						ServiceCPURequest:              "50m",
+						ServiceMemoryLimit:             "200Mi",
+						ServiceMemoryRequest:           "100Mi",
+						ServiceEphemeralStorageLimit:   "1Gi",
+						ServiceEphemeralStorageRequest: "500Mi",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service-explicit-overrides",
+							Alias:      "test-alias-0",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+							Variables: []common.JobVariable{
+								{
+									Key:   ServiceCPULimitOverwriteVariableValue,
+									Value: "200m",
+								},
+								{
+									Key:   ServiceCPURequestOverwriteVariableValue,
+									Value: "100m",
+								},
+								{
+									Key:   ServiceMemoryLimitOverwriteVariableValue,
+									Value: "300Mi",
+								},
+								{
+									Key:   ServiceMemoryRequestOverwriteVariableValue,
+									Value: "150Mi",
+								},
+								{
+									Key:   ServiceEphemeralStorageLimitOverwriteVariableValue,
+									Value: "2Gi",
+								},
+								{
+									Key:   ServiceEphemeralStorageRequestOverwriteVariableValue,
+									Value: "1Gi",
+								},
+							},
+						},
+						{
+							Name:       "test-service-without-explicit-overrides",
+							Alias:      "test-alias-1",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service-explicit-overrides",
+							Alias:      "test-alias-0",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+							Variables: []common.JobVariable{
+								{
+									Key:   ServiceCPULimitOverwriteVariableValue,
+									Value: "200m",
+								},
+								{
+									Key:   ServiceCPURequestOverwriteVariableValue,
+									Value: "100m",
+								},
+								{
+									Key:   ServiceMemoryLimitOverwriteVariableValue,
+									Value: "300Mi",
+								},
+								{
+									Key:   ServiceMemoryRequestOverwriteVariableValue,
+									Value: "150Mi",
+								},
+								{
+									Key:   ServiceEphemeralStorageLimitOverwriteVariableValue,
+									Value: "2Gi",
+								},
+								{
+									Key:   ServiceEphemeralStorageRequestOverwriteVariableValue,
+									Value: "1Gi",
+								},
+							},
+						},
+						{
+							Name:       "test-service-without-explicit-overrides",
+							Alias:      "test-alias-1",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+					// Explicit service limits and requests are not set because the max override is not set.
+					// Default is used.
+					explicitServiceLimits: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "100m", "200Mi", "1Gi"),
+					},
+					explicitServiceRequests: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "50m", "100Mi", "500Mi"),
+					},
+				},
+				helperImageInfo: defaultHelperImage,
+			},
+		},
+		{
+			Name:         "all with limits and request and explicit services limits and requests without max override and without default values",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Host: "test-server",
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service-explicit-overrides",
+							Alias:      "test-alias-0",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+							Variables: []common.JobVariable{
+								{
+									Key:   ServiceCPULimitOverwriteVariableValue,
+									Value: "200m",
+								},
+								{
+									Key:   ServiceCPURequestOverwriteVariableValue,
+									Value: "100m",
+								},
+								{
+									Key:   ServiceMemoryLimitOverwriteVariableValue,
+									Value: "300Mi",
+								},
+								{
+									Key:   ServiceMemoryRequestOverwriteVariableValue,
+									Value: "150Mi",
+								},
+								{
+									Key:   ServiceEphemeralStorageLimitOverwriteVariableValue,
+									Value: "2Gi",
+								},
+								{
+									Key:   ServiceEphemeralStorageRequestOverwriteVariableValue,
+									Value: "1Gi",
+								},
+							},
+						},
+						{
+							Name:       "test-service-without-explicit-overrides",
+							Alias:      "test-alias-1",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name:       "test-image",
+						Entrypoint: []string{"/init", "run"},
+					},
+					Services: common.Services{
+						{
+							Name:       "test-service-explicit-overrides",
+							Alias:      "test-alias-0",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+							Variables: []common.JobVariable{
+								{
+									Key:   ServiceCPULimitOverwriteVariableValue,
+									Value: "200m",
+								},
+								{
+									Key:   ServiceCPURequestOverwriteVariableValue,
+									Value: "100m",
+								},
+								{
+									Key:   ServiceMemoryLimitOverwriteVariableValue,
+									Value: "300Mi",
+								},
+								{
+									Key:   ServiceMemoryRequestOverwriteVariableValue,
+									Value: "150Mi",
+								},
+								{
+									Key:   ServiceEphemeralStorageLimitOverwriteVariableValue,
+									Value: "2Gi",
+								},
+								{
+									Key:   ServiceEphemeralStorageRequestOverwriteVariableValue,
+									Value: "1Gi",
+								},
+							},
+						},
+						{
+							Name:       "test-service-without-explicit-overrides",
+							Alias:      "test-alias-1",
+							Entrypoint: []string{"/init", "run"},
+							Command:    []string{"application", "--debug"},
+						},
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "default",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+					// Explicit service limits and requests are not set because the max override is not set
+					// nil is used since default is not defined
+					explicitServiceLimits: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "", "", ""),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "", "", ""),
+					},
+					explicitServiceRequests: map[string]api.ResourceList{
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(t, "", "", ""),
+						fmt.Sprintf("%s%d", serviceContainerPrefix, 1): mustCreateResourceList(t, "", "", ""),
+					},
+				},
+				helperImageInfo: defaultHelperImage,
 			},
 		},
 		{

@@ -780,6 +780,39 @@ setting for that resource. If the maximum overwrite has not been set for a resou
    KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT: "1Gi"
 ```
 
+### Overwrite service containers resources
+
+If a job has multiple service containers, you can set explicit 
+resource requests and limits to each service container.
+Use the variables attribute in each service
+to overwrite container resources specified in `.gitlab-ci.yml`.
+
+```yaml
+  services:
+    - name: redis:5
+      alias: redis5
+      variables:
+        KUBERNETES_SERVICE_CPU_REQUEST: "3"
+        KUBERNETES_SERVICE_CPU_LIMIT: "6"
+        KUBERNETES_SERVICE_MEMORY_REQUEST: "3Gi"
+        KUBERNETES_SERVICE_MEMORY_LIMIT: "6Gi"
+        KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "2Gi"
+        KUBERNETES_EPHEMERAL_STORAGE_LIMIT: "3Gi"
+    - name: postgres:12
+      alias: MY_relational-database.12
+      variables:
+        KUBERNETES_CPU_REQUEST: "2"
+        KUBERNETES_CPU_LIMIT: "4"
+        KUBERNETES_MEMORY_REQUEST: "1Gi"
+        KUBERNETES_MEMORY_LIMIT: "2Gi"
+        KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "1Gi"
+        KUBERNETES_EPHEMERAL_STORAGE_LIMIT: "2Gi"
+```
+
+These specific settings take precedence over the general settings for the job.
+The values are still restricted to the [maximum overwrite setting](#configuration-settings)
+for that resource.
+
 ### Configuration example
 
 The following sample shows an example configuration of the `config.toml` file

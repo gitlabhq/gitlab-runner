@@ -635,6 +635,499 @@ func Test_overwriteTooHighError_Is(t *testing.T) {
 	}
 }
 
+func Test_overwrites_evaluateExplicitServiceResourceOverwrite(t *testing.T) {
+	defaultLogger := stdoutLogger()
+	defaultKubernetesConfig := &common.KubernetesConfig{
+		ServiceCPURequest:                                 "100m",
+		ServiceCPULimit:                                   "2",
+		ServiceCPURequestOverwriteMaxAllowed:              "2",
+		ServiceCPULimitOverwriteMaxAllowed:                "3",
+		ServiceMemoryRequest:                              "128Mi",
+		ServiceMemoryLimit:                                "256Mi",
+		ServiceMemoryRequestOverwriteMaxAllowed:           "512Mi",
+		ServiceMemoryLimitOverwriteMaxAllowed:             "1Gi",
+		ServiceEphemeralStorageRequest:                    "128Mi",
+		ServiceEphemeralStorageLimit:                      "256Mi",
+		ServiceEphemeralStorageRequestOverwriteMaxAllowed: "2Gi",
+		ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "4Gi",
+	}
+	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, common.JobVariables{}, defaultLogger)
+	assert.NoError(t, err)
+	defaultServiceLimits := mustCreateResourceList(
+		t,
+		defaultKubernetesConfig.ServiceCPULimit,
+		defaultKubernetesConfig.ServiceMemoryLimit,
+		defaultKubernetesConfig.ServiceEphemeralStorageLimit,
+	)
+	defaultServiceRequests := mustCreateResourceList(
+		t,
+		defaultKubernetesConfig.ServiceCPURequest,
+		defaultKubernetesConfig.ServiceMemoryRequest,
+		defaultKubernetesConfig.ServiceEphemeralStorageRequest,
+	)
+
+	type testResult struct {
+		limits   api.ResourceList
+		requests api.ResourceList
+	}
+
+	type testResults []testResult
+	tests := []struct {
+		name      string
+		config    *common.KubernetesConfig
+		services  common.Services
+		variables common.JobVariables
+		want      testResults
+	}{
+		{
+			name: "empty, only globals service overwrites",
+			services: common.Services{
+				{
+					Name: "someimage:tag", Alias: "multiple-hyphens-and.multiple.dots",
+				},
+			},
+			want: testResults{
+				{
+					limits:   defaultServiceLimits,
+					requests: defaultServiceRequests,
+				},
+			},
+		},
+		{
+			name: "only specific cpu request",
+			services: common.Services{
+				{
+					Name:  "someimage:tag",
+					Alias: "multiple-hyphens-and.multiple.dots",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_CPU_REQUEST",
+							Value: "500m",
+						},
+					},
+				},
+			},
+			want: testResults{
+				{
+					limits: defaultServiceLimits,
+					requests: mustCreateResourceList(
+						t,
+						"500m",
+						defaultKubernetesConfig.ServiceMemoryRequest,
+						defaultKubernetesConfig.ServiceEphemeralStorageRequest,
+					),
+				},
+			},
+		},
+		{
+			name: "only specific cpu limit",
+			services: common.Services{
+				{
+					Name:  "registry.test.io/image:1234",
+					Alias: "service1",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_CPU_LIMIT",
+							Value: "2",
+						},
+					},
+				},
+			},
+			want: testResults{
+				{
+					limits: mustCreateResourceList(
+						t, "2",
+						defaultKubernetesConfig.ServiceMemoryLimit,
+						defaultKubernetesConfig.ServiceEphemeralStorageLimit,
+					),
+					requests: defaultServiceRequests,
+				},
+			},
+		},
+		{
+			name: "only specific memory request",
+			services: common.Services{
+				{
+					Name:  "foo",
+					Alias: "my--service",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_MEMORY_REQUEST",
+							Value: "500M",
+						},
+					},
+				},
+			},
+
+			want: testResults{
+				{
+					limits: defaultServiceLimits,
+					requests: mustCreateResourceList(
+						t,
+						defaultKubernetesConfig.ServiceCPURequest,
+						"500M",
+						defaultKubernetesConfig.ServiceEphemeralStorageRequest,
+					),
+				},
+			},
+		},
+		{
+			name: "only specific memory limit",
+			services: common.Services{
+				{
+					Name: "random.io:tag1234", Alias: "1234567890",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_MEMORY_LIMIT",
+							Value: "64Mi",
+						},
+					},
+				},
+			},
+			want: testResults{
+				{
+					limits: mustCreateResourceList(
+						t,
+						defaultKubernetesConfig.ServiceCPULimit,
+						"64Mi",
+						defaultKubernetesConfig.ServiceEphemeralStorageLimit,
+					),
+					requests: defaultServiceRequests,
+				},
+			},
+		},
+		{
+			name: "only specific ephemeral storage request",
+			services: common.Services{
+				{
+					Name:  "foo",
+					Alias: "my--service",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST",
+							Value: "1Gi",
+						},
+					},
+				},
+			},
+
+			want: testResults{
+				{
+					limits: defaultServiceLimits,
+					requests: mustCreateResourceList(
+						t,
+						defaultKubernetesConfig.ServiceCPURequest,
+						defaultKubernetesConfig.ServiceMemoryRequest,
+						"1Gi",
+					),
+				},
+			},
+		},
+		{
+			name: "only specific ephemeral storage limit",
+			services: common.Services{
+				{
+					Name: "random.io:tag1234", Alias: "1234567890",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT",
+							Value: "1Gi",
+						},
+					},
+				},
+			},
+			want: testResults{
+				{
+					limits: mustCreateResourceList(
+						t,
+						defaultKubernetesConfig.ServiceCPULimit,
+						defaultKubernetesConfig.ServiceMemoryLimit,
+						"1Gi",
+					),
+					requests: defaultServiceRequests,
+				},
+			},
+		},
+		{
+			name: "complete requests overwrite",
+			services: common.Services{
+				{
+					Name: "someimage:tag",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_CPU_REQUEST",
+							Value: "500m",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_MEMORY_REQUEST",
+							Value: "500M",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST",
+							Value: "1Gi",
+						},
+					},
+				},
+			},
+			want: testResults{
+				{
+					limits:   defaultServiceLimits,
+					requests: mustCreateResourceList(t, "500m", "500M", "1Gi"),
+				},
+			},
+		},
+
+		{
+			name: "complete limits overwrite",
+			services: common.Services{
+				{
+					Name: "someimage:tag",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_CPU_LIMIT",
+							Value: "500m",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_MEMORY_LIMIT",
+							Value: "500M",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT",
+							Value: "1Gi",
+						},
+					},
+				},
+			},
+			want: testResults{
+				{
+					requests: defaultServiceRequests,
+					limits:   mustCreateResourceList(t, "500m", "500M", "1Gi"),
+				},
+			},
+		},
+		{
+			name: "complete requests & limits overwrite",
+			services: common.Services{
+				{
+					Name: "someimage:tag",
+					Variables: common.JobVariables{
+						{
+							Key:   "KUBERNETES_SERVICE_CPU_LIMIT",
+							Value: "500m",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_MEMORY_LIMIT",
+							Value: "500M",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_LIMIT",
+							Value: "1Gi",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_CPU_REQUEST",
+							Value: "300m",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_MEMORY_REQUEST",
+							Value: "100M",
+						},
+						{
+							Key:   "KUBERNETES_SERVICE_EPHEMERAL_STORAGE_REQUEST",
+							Value: "512Mi",
+						},
+					},
+				},
+			},
+			want: testResults{
+				{
+					requests: mustCreateResourceList(t, "300m", "100M", "512Mi"),
+					limits:   mustCreateResourceList(t, "500m", "500M", "1Gi"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := defaultOverwrites
+			var c *common.KubernetesConfig
+			switch tt.config {
+			case nil:
+				c = defaultKubernetesConfig
+			default:
+				c = tt.config
+			}
+
+			for i, s := range tt.services {
+				err := o.evaluateExplicitServiceResourceOverwrite(
+					c,
+					fmt.Sprintf("%s%d", serviceContainerPrefix, i),
+					s.Variables,
+					defaultLogger,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want[i].limits, o.explicitServiceLimits[fmt.Sprintf("%s%d", serviceContainerPrefix, i)])
+				assert.Equal(t, tt.want[i].requests, o.explicitServiceRequests[fmt.Sprintf("%s%d", serviceContainerPrefix, i)])
+			}
+		})
+	}
+}
+
+func Test_overwrites_getServiceResourceLimits(t *testing.T) {
+	defaultLogger := stdoutLogger()
+	defaultKubernetesConfig := &common.KubernetesConfig{
+		ServiceCPURequest:                                 "100m",
+		ServiceCPULimit:                                   "2",
+		ServiceCPURequestOverwriteMaxAllowed:              "2",
+		ServiceCPULimitOverwriteMaxAllowed:                "3",
+		ServiceMemoryRequest:                              "128Mi",
+		ServiceMemoryLimit:                                "256Mi",
+		ServiceMemoryRequestOverwriteMaxAllowed:           "512Mi",
+		ServiceMemoryLimitOverwriteMaxAllowed:             "1Gi",
+		ServiceEphemeralStorageRequest:                    "128Mi",
+		ServiceEphemeralStorageLimit:                      "256Mi",
+		ServiceEphemeralStorageRequestOverwriteMaxAllowed: "2Gi",
+		ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "4Gi",
+	}
+	defaultOverwrites, err := createOverwrites(defaultKubernetesConfig, common.JobVariables{}, defaultLogger)
+	assert.NoError(t, err)
+	err = defaultOverwrites.evaluateMaxServiceResourcesOverwrite(
+		defaultKubernetesConfig,
+		common.JobVariables{},
+		defaultLogger,
+	)
+	assert.NoError(t, err)
+	tests := []struct {
+		name                  string
+		serviceIndex          int
+		explicitServiceLimits map[string]api.ResourceList
+		want                  api.ResourceList
+	}{
+		{
+			name:         "only explicit overwrites",
+			serviceIndex: 58,
+			explicitServiceLimits: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0):  mustCreateResourceList(t, "400m", "400M", "100Mi"),
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 58): mustCreateResourceList(t, "200m", "200M", "123Mi"),
+			},
+			want: mustCreateResourceList(t, "200m", "200M", "123Mi"),
+		},
+		{
+			name:         "only explicit overwrites (partial)",
+			serviceIndex: 0,
+			explicitServiceLimits: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(
+					t, "400m",
+					defaultKubernetesConfig.ServiceMemoryLimit,
+					defaultKubernetesConfig.ServiceEphemeralStorageLimit,
+				),
+			},
+			want: mustCreateResourceList(
+				t, "400m",
+				defaultKubernetesConfig.ServiceMemoryLimit,
+				defaultKubernetesConfig.ServiceEphemeralStorageLimit,
+			),
+		},
+		{
+			name:         "only global overwrites",
+			serviceIndex: 4,
+			want: mustCreateResourceList(
+				t,
+				defaultKubernetesConfig.ServiceCPULimit,
+				defaultKubernetesConfig.ServiceMemoryLimit,
+				defaultKubernetesConfig.ServiceEphemeralStorageLimit,
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := defaultOverwrites
+			o.explicitServiceLimits = tt.explicitServiceLimits
+			assert.Equal(t, tt.want, o.getServiceResourceLimits(fmt.Sprintf("%s%d", serviceContainerPrefix, tt.serviceIndex)))
+		})
+	}
+}
+
+func Test_overwrites_getServiceResourceRequests(t *testing.T) {
+	defaultLogger := stdoutLogger()
+	defaultKubernetesConfig := &common.KubernetesConfig{
+		ServiceCPURequest:                                 "100m",
+		ServiceCPULimit:                                   "2",
+		ServiceCPURequestOverwriteMaxAllowed:              "2",
+		ServiceCPULimitOverwriteMaxAllowed:                "3",
+		ServiceMemoryRequest:                              "128Mi",
+		ServiceMemoryLimit:                                "256Mi",
+		ServiceMemoryRequestOverwriteMaxAllowed:           "512Mi",
+		ServiceMemoryLimitOverwriteMaxAllowed:             "1Gi",
+		ServiceEphemeralStorageRequest:                    "128Mi",
+		ServiceEphemeralStorageLimit:                      "256Mi",
+		ServiceEphemeralStorageRequestOverwriteMaxAllowed: "2Gi",
+		ServiceEphemeralStorageLimitOverwriteMaxAllowed:   "4Gi",
+	}
+	defaultOverwrites, err := createOverwrites(
+		defaultKubernetesConfig,
+		common.JobVariables{},
+		defaultLogger,
+	)
+	assert.NoError(t, err)
+
+	err = defaultOverwrites.evaluateMaxServiceResourcesOverwrite(
+		defaultKubernetesConfig,
+		common.JobVariables{},
+		defaultLogger,
+	)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name                    string
+		serviceIndex            int
+		explicitServiceRequests map[string]api.ResourceList
+		want                    api.ResourceList
+	}{
+		{
+			name:         "only explicit overwrites",
+			serviceIndex: 58,
+			explicitServiceRequests: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0):  mustCreateResourceList(t, "400m", "400M", "456Mi"),
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 58): mustCreateResourceList(t, "200m", "200M", "654Mi"),
+			},
+			want: mustCreateResourceList(t, "200m", "200M", "654Mi"),
+		},
+		{
+			name:         "only explicit overwrites (partial)",
+			serviceIndex: 0,
+			explicitServiceRequests: map[string]api.ResourceList{
+				fmt.Sprintf("%s%d", serviceContainerPrefix, 0): mustCreateResourceList(
+					t, "400m",
+					defaultKubernetesConfig.ServiceMemoryRequest,
+					defaultKubernetesConfig.ServiceEphemeralStorageRequest,
+				),
+			},
+			want: mustCreateResourceList(
+				t, "400m",
+				defaultKubernetesConfig.ServiceMemoryRequest,
+				defaultKubernetesConfig.ServiceEphemeralStorageRequest,
+			),
+		},
+		{
+			name:         "only global overwrites",
+			serviceIndex: 4,
+			want: mustCreateResourceList(
+				t,
+				defaultKubernetesConfig.ServiceCPURequest,
+				defaultKubernetesConfig.ServiceMemoryRequest,
+				defaultKubernetesConfig.ServiceEphemeralStorageRequest,
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := defaultOverwrites
+			o.explicitServiceRequests = tt.explicitServiceRequests
+			assert.Equal(t, tt.want, o.getServiceResourceRequests(fmt.Sprintf("%s%d", serviceContainerPrefix, tt.serviceIndex)))
+		})
+	}
+}
+
 type emptyTestError struct{}
 
 func (e *emptyTestError) Error() string {
