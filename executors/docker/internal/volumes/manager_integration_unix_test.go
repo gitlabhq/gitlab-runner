@@ -9,7 +9,12 @@ import (
 )
 
 var testCreateVolumesLabelsDestinationPath = "/test"
+var testCreateVolumesDriverOptsDestinationPath = "/test"
 
 func TestCreateVolumesLabels(t *testing.T) {
 	testCreateVolumesLabels(t, parser.NewLinuxParser())
+}
+
+func TestCreateVolumesDriverOpts(t *testing.T) {
+	testCreateVolumesDriverOpts(t, parser.NewLinuxParser())
 }

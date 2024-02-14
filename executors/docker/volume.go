@@ -11,6 +11,7 @@ var createVolumesManager = func(e *executor) (volumes.Manager, error) {
 		UniqueName:    e.Build.ProjectUniqueName(),
 		TemporaryName: e.getProjectUniqRandomizedName(),
 		DisableCache:  e.Config.Docker.DisableCache,
+		Driver:        e.Config.Docker.VolumeDriver,
 		DriverOpts:    e.Config.Docker.VolumeDriverOps,
 	}
 

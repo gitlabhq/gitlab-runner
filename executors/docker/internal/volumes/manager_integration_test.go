@@ -82,3 +82,59 @@ func testCreateVolumesLabels(t *testing.T, p parser.Parser) {
 		"com.gitlab.gitlab-runner.type":            "cache",
 	}, volume.Labels)
 }
+
+func testCreateVolumesDriverOpts(t *testing.T, p parser.Parser) {
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	successfulJobResponse, err := common.GetRemoteSuccessfulBuild()
+	require.NoError(t, err)
+
+	client, err := docker.New(docker.Credentials{})
+	require.NoError(t, err, "should be able to connect to docker")
+	defer client.Close()
+
+	successfulJobResponse.GitInfo.RepoURL = "https://user:pass@gitlab.example.com/namespace/project.git"
+
+	build := &common.Build{
+		ProjectRunnerID: 0,
+		Runner: &common.RunnerConfig{
+			RunnerCredentials: common.RunnerCredentials{Token: "test-token"},
+		},
+		JobResponse: successfulJobResponse,
+	}
+	build.Variables = common.JobVariables{
+		{Key: "CI_PIPELINE_ID", Value: "1"},
+	}
+
+	logger, _ := logrustest.NewNullLogger()
+
+	cfg := volumes.ManagerConfig{
+		CacheDir:     "",
+		BasePath:     "",
+		UniqueName:   t.Name(),
+		DisableCache: false,
+		DriverOpts: map[string]string{
+			"type":   "tmpfs",
+			"device": "tmpfs",
+			"o":      "size=100m,uid=1000",
+		},
+	}
+
+	manager := volumes.NewManager(logger, p, client, cfg, labels.NewLabeler(build))
+
+	ctx := context.Background()
+
+	err = manager.Create(ctx, testCreateVolumesDriverOptsDestinationPath)
+	assert.NoError(t, err)
+
+	name := fmt.Sprintf("%s-cache-%x", t.Name(), md5.Sum([]byte(testCreateVolumesDriverOptsDestinationPath)))
+	defer func() {
+		err = client.VolumeRemove(ctx, name, true)
+		assert.NoError(t, err)
+	}()
+
+	volume, err := client.VolumeInspect(ctx, name)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]string{"device": "tmpfs", "o": "size=100m,uid=1000", "type": "tmpfs"}, volume.Options)
+}
