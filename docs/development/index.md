@@ -118,7 +118,7 @@ export PATH="$(go env GOBIN):$PATH"
 
 ## 3. Install Rancher Desktop
 
-The Docker Engine is required to create pre-built image that is embedded into GitLab Runner and loaded when using Docker executor. A local Kubernetes cluster is helpful for developing Kubernetes executor. Rancher Desktop provides both.
+The Docker Engine is required to create a pre-built image that is embedded into GitLab Runner and loaded when using Docker executor. A local Kubernetes cluster is helpful for developing Kubernetes executor. Rancher Desktop provides both.
 
 To install Rancher Desktop, follow the
 [installation instructions](https://docs.rancherdesktop.io/getting-started/installation/) for your OS.
@@ -140,7 +140,7 @@ asdf reshim
 Compile GitLab Runner using the Go toolchain:
 
 ```shell
-GIT_LFS_VERSION=3.4.0 make runner-and-helper-bin-host
+make runner-and-helper-bin-host
 ```
 
 `make runner-and-helper-bin-host` is a superset of `make runner-bin-host` which in addition
