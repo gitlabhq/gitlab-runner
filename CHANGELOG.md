@@ -1,8 +1,78 @@
-## v16.8.1 (2024-02-15)
+## v16.9.0 (2024-02-15)
+
+### New features
+
+- Add Kubernetes configurable retry limits !4618
+- Support cancelation of job script with resumed execution of later stages !4578
+- Add support for s3 accelerate in runner cache !4313 (ArtyMaury @ArtyMaury)
+- kubernetes: add automount_service_account_token option !4543 (Thorsten Banhart @banhartt)
+- docs: register runner using docker exec !4334 (Zhiliang @ZhiliangWu)
+- Clear worktree on git fetch failures !4216 (Tim @timmmm)
+- kubernetes: add option to skip explicit imagePullSecrets configuration !3517 (Miao Wang @shankerwangmiao)
+- Limit number, memory and cpu of services container for docker runners !3804 (Kevin Goslar @kev.go)
+- Provide early build setting validation !4611
+- Allow FreeBSD to be used with Docker executor (unofficially supported) !4551 (Ben Cooksley @bcooksley)
+- Add support for service health checks for the Kubernetes executor !4545
+- Limit the max age of a TLS keepalive connection !4537
+- Retry on tls: internal error message for k8s executor !4608
+- Retry on connection refused k8s error message !4605
+- Increment package build number !4595
+- Make kubernetes API retries configurable !4523 (Michał Skibicki @m.skibicki)
+- Add support for Node Tolerations overwrite !4566 (Marc Ostrow @marc.ostrow)
+- Rewrite ci package script to mage !4593
+
+### Security fixes
+
+- Address CVE-2023-48795 - upgrade golang.org/x/crypto !4573
 
 ### Bug fixes
 
+- Correctly use volume driver for all volumes !4579 (Mitar @mitar)
 - Revert default runner script timeout !4621
+- Avoid recursing into submodules on checkout and fetch !3463 (Ciprian Daniel Petrisor @dciprian.petrisor)
+- Fix edge case where git submodule sync is not being called !4619
+- Fix file variable quoting issue with cmd shell !4528 (Robin Lambertz @roblabla)
+- Allow zero value for cleanup_grace_period_seconds !4617
+- Use Windows job to improve process termination !4525
+- Helper image container should always use native platform !4581
+- Helper image container should always use native platform !4581
+
+### Maintenance
+
+- Fix warning event integration test !4633
+- Retry package cloud push on HTTP error 520 !4635
+- Allow explicit cpu/memory service resources overwrites for the Kubernetes executor !4626 (Tarun Khandelwal @tkhandelwal1)
+- Fix rpmsign invocation by quoting all arguments !4632
+- Fix verify stable resources job !4630
+- Fix rpmsign invocation again !4631
+- Fixing badge format !4629
+- Explain side-effect of using pre_build_script commands !4627
+- Create separate Kubernetes troubleshooting page !4622
+- Vale and Markdown rule refresh for project !4620
+- Update Go version to v1.21.7 !4458
+- Check directives script ignores .tmp dir !4615
+- Fix rpmsign command invocation !4614
+- Retry bad gateway errors for package cloud jobs !4606
+- Restore argument "NoProfile" for powershell in encoded command !4427 (Alexandr Timoshenko @saw.friendship)
+- Add Apple Silicon support to Parallels Executor !4580 (Carlos Lapao @cjlapao)
+- Update alpine Docker tag !4603
+- Fully implement markdownlint-cli2 in project !4610
+- Update docker+machine version to v0.16.2-gitlab.24 !4609
+- Add ~"Category:Runner Core"  to bug issue template !4612
+- housekeeping docs update !4604
+- Resolve merge conflicts for Updated documentation S3 endpoints to support IPv6 !4602
+- Remove removed feature from docs !4594
+- Replace old handbook URLs !4554
+- Change file name usage in docs per word list !4596
+- Remove timeout and retry of package-deb and package-rpm jobs !4597
+- Update version notes to new style - Runner !4590
+- Update Harbor self-signed certificate x509: unknown Certificate Authority gotcha !4321
+- Add specific steps on secret creation !4589
+- Clean up docs redirects, runner - 2024-01-22 !4588
+- Update persona links to handbook subdomain !4587
+- Update `k8s dumb-init` FF doc to convey its support in both Kubernetes modes !4582
+- Update `k8s dumb-init` FF doc to convey its support in both Kubernetes modes !4582
+- Fix the architecture of pwsh x86-64 helper images !4559
 
 ## v16.8.0 (2024-01-18)
 
