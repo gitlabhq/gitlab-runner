@@ -208,7 +208,12 @@ func (b *AbstractShell) addExtractCacheCommand(
 
 	// We check that there is another key than the one we just used
 	if len(cacheKeys) > 1 {
-		b.addExtractCacheCommand(ctx, w, info, cacheFile, cacheKeys[1:], cachePaths)
+		_, cacheFile, err := b.cacheFile(info.Build, cacheKeys[1])
+		if err != nil {
+			w.Noticef("Skipping cache extraction due to %v", err)
+		} else {
+			b.addExtractCacheCommand(ctx, w, info, cacheFile, cacheKeys[1:], cachePaths)
+		}
 	}
 	w.EndIf()
 }
