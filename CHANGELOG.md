@@ -1,3 +1,9 @@
+## v16.8.1 (2024-02-15)
+
+### Bug fixes
+
+- Revert default runner script timeout !4621
+
 ## v16.8.0 (2024-01-18)
 
 ### New features
