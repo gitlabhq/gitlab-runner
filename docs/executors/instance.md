@@ -28,8 +28,8 @@ Nesting is only supported on Apple Silicon instances.
 
 ## Prepare the environment for autoscaling
 
-To enable scaling for your target platform, install the AWS, GCP, or Azure fleeting plugins.
-The AWS plugin is in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html). The GCP and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+To enable scaling for your target platform, install the AWS, Google Cloud, or Azure fleeting plugins.
+The AWS plugin is in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html). The Google Cloud and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
 For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
 
@@ -37,7 +37,7 @@ To prepare the environment for autoscaling:
 
 1. Install the binary for your host platform:
    - [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases)
-   - [GCP fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
+   - [Google Cloud fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
    - [Azure fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-azure/-/releases)
 1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
 1. Create a VM image for the platform you're using. The image must include:
@@ -256,14 +256,14 @@ concurrent = 8
       timeout  = "20m"
 ```
 
-## GCP instance group configuration examples
+## Google Cloud instance group configuration examples
 
-### One job per instance using a GCP instance group
+### One job per instance using a Google Cloud instance group
 
 Prerequisites:
 
 - A custom image with at least `git` and GitLab Runner installed.
-- A GCP instance group where the autoscaling mode is set to `do not autoscale`. The runner handles the scaling.
+- A Google Cloud instance group where the autoscaling mode is set to `do not autoscale`. The runner handles the scaling.
 - An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
 
 This configuration supports:
@@ -302,7 +302,7 @@ concurrent = 10
     max_instances = 10
 
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
-      name             = "my-linux-instance-group" # GCP Instance Group name
+      name             = "my-linux-instance-group" # Google Cloud Instance Group name
       project          = "my-gcp-project"
       zone             = "europe-west1-c"
       credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
@@ -316,7 +316,7 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### Five jobs per instance, unlimited uses, using GCP Instance group
+### Five jobs per instance, unlimited uses, using Google Cloud Instance group
 
 Prerequisites:
 
@@ -364,7 +364,7 @@ concurrent = 50
     max_instances = 10
 
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
-      name             = "my-windows-instance-group" # GCP Instance Group name
+      name             = "my-windows-instance-group" # Google Cloud Instance Group name
       project          = "my-gcp-project"
       zone             = "europe-west1-c"
       credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
@@ -426,7 +426,7 @@ concurrent = 10
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
       name                = "my-linux-scale-set" # Azure scale set name
       subscription_id     = "9b3c4602-cde2-4089-bed8-889e5a3e7102"
-      resource_group_name = "my-resource-group" 
+      resource_group_name = "my-resource-group"
 
     [runners.autoscaler.connector_config]
       username               = "runner"
@@ -440,7 +440,7 @@ concurrent = 10
       idle_time  = "20m0s"
 ```
 
-### Five jobs per instance, unlimited uses, using GCP Instance group
+### Five jobs per instance, unlimited uses, using Google Cloud Instance group
 
 Prerequisites:
 
@@ -489,7 +489,7 @@ concurrent = 50
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
       name                = "my-windows-scale-set" # Azure scale set name
       subscription_id     = "9b3c4602-cde2-4089-bed8-889e5a3e7102"
-      resource_group_name = "my-resource-group" 
+      resource_group_name = "my-resource-group"
 
     [runners.autoscaler.connector_config]
       username               = "Administrator"
