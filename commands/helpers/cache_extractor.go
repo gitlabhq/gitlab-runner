@@ -162,7 +162,7 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 
 	f, size, format, err := openArchive(c.File)
 	if os.IsNotExist(err) {
-		return
+		warningln("Cache file does not exist")
 	}
 	if err != nil {
 		logrus.Fatalln(err)

@@ -93,7 +93,7 @@ func TestCacheExtractorForNotExistingFile(t *testing.T) {
 	cmd := CacheExtractorCommand{
 		File: "/../../../test.zip",
 	}
-	assert.NotPanics(t, func() {
+	assert.Panics(t, func() {
 		cmd.Execute(nil)
 	})
 }
