@@ -18,12 +18,12 @@ Docker executor options and features are supported.
 
 The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
 _Fleeting_ is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
-like Google Cloud Platform (GCP), AWS, and Azure.
+like Google Cloud, AWS, and Azure.
 
 ## Install a fleeting plugin
 
 To enable autoscaling for your target platform, install a fleeting plugin. You can install
-the AWS, GCP, or Azure fleeting plugin. The AWS plugin is in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html). The GCP and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+the AWS, Google Cloud, or Azure fleeting plugin. The AWS plugin is in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html). The Google Cloud and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
 
 For other official plugins developed by GitLab, see the [fleeting project](https://gitlab.com/gitlab-org/fleeting).
 
@@ -31,7 +31,7 @@ To install the plugin:
 
 1. Install the binary for your host platform:
    - [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases)
-   - [GCP fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
+   - [Google Cloud fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
    - [Azure fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-azure/-/releases)
 1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
 
@@ -113,13 +113,13 @@ concurrent = 10
       idle_time = "20m0s"
 ```
 
-### Example: GCP instance group for 1 job per instance
+### Example: Google Cloud instance group for 1 job per instance
 
 Prerequisites:
 
 - A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [COS](https://cloud.google.com/container-optimized-os/docs).
-- A GCP instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
-the GCP instance group.
+- A Google Cloud instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
+the Google Cloud instance group.
 - An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
 
 This configuration supports:
@@ -165,7 +165,7 @@ concurrent = 10
     max_instances = 10
 
     [runners.autoscaler.plugin_config] # plugin specific configuration (see plugin documentation)
-      name             = "my-docker-instance-group" # GCP Instance Group name
+      name             = "my-docker-instance-group" # Google Cloud Instance Group name
       project          = "my-gcp-project"
       zone             = "europe-west1"
       credentials_file = "/home/user/.config/gcloud/application_default_credentials.json" # optional, default is '~/.config/gcloud/application_default_credentials.json'
