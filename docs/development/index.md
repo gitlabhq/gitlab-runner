@@ -67,6 +67,7 @@ The simplest way to get your development environment setup is to use `asdf`.
 ```shell
 cd gitlab-runner
 asdf plugin add golang
+asdf plugin add vale
 asdf install
 ```
 
