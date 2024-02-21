@@ -465,6 +465,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	// initializing
 	templateDir := w.MkTmpDir("git-template")
 	templateFile := w.Join(templateDir, "config")
+	objectFormat := build.GetRepositoryObjectFormat()
 
 	if build.SafeDirectoryCheckout {
 		// Solves problem with newer Git versions when files existing in the working directory
@@ -487,7 +488,12 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	b.writeGitCleanup(w, build.GetSubmoduleStrategy(), projectDir)
 
-	w.Command("git", "init", projectDir, "--template", templateDir)
+	if objectFormat != common.DefaultObjectFormat {
+		w.Command("git", "init", projectDir, "--template", templateDir, "--object-format", objectFormat)
+	} else {
+		w.Command("git", "init", projectDir, "--template", templateDir)
+	}
+
 	w.Cd(projectDir)
 
 	// Add `git remote` or update existing

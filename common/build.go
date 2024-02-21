@@ -1381,6 +1381,14 @@ func (b *Build) GetGitStrategy() GitStrategy {
 	return b.Settings().GitStrategy
 }
 
+func (b *Build) GetRepositoryObjectFormat() string {
+	if b.GitInfo.RepoObjectFormat == "" {
+		return DefaultObjectFormat
+	}
+
+	return b.GitInfo.RepoObjectFormat
+}
+
 func (b *Build) GetGitCheckout() bool {
 	if b.GetGitStrategy() == GitNone {
 		return false

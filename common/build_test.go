@@ -1886,6 +1886,42 @@ func TestGitFetchFlags(t *testing.T) {
 	}
 }
 
+func TestGetRepositoryObjectFormat(t *testing.T) {
+	tests := map[string]struct {
+		value          string
+		expectedResult string
+	}{
+		"empty value": {
+			value:          "",
+			expectedResult: "sha1",
+		},
+		"sha1": {
+			value:          "sha1",
+			expectedResult: "sha1",
+		},
+		"sha256": {
+			value:          "sha256",
+			expectedResult: "sha256",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			build := &Build{
+				Runner: &RunnerConfig{},
+				JobResponse: JobResponse{
+					GitInfo: GitInfo{
+						RepoObjectFormat: test.value,
+					},
+				},
+			}
+
+			result := build.GetRepositoryObjectFormat()
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
 func TestGitSubmoduleUpdateFlags(t *testing.T) {
 	tests := map[string]struct {
 		value          string
