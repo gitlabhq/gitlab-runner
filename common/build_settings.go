@@ -135,7 +135,7 @@ func (b *Build) initSettings() {
 
 //nolint:funlen
 func validate[T any](variables JobVariables, name string, value *T, def T) error {
-	raw := variables.Get(name)
+	raw := variables.Value(name)
 	var err error
 
 	switch v := any(value).(type) {
