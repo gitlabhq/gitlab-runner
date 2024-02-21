@@ -46,7 +46,11 @@ func (s *executor) waitForIPAddress(vmName string, seconds int) (string, error) 
 		if s.isAppleSilicon() {
 			ipAddr, err = prl.IPAddress(vmName)
 		} else {
-			ipAddr, err = prl.IPAddressFromMac(vmName)
+			mac, macError := prl.Mac(vmName)
+			if macError != nil {
+				return "", err
+			}
+			ipAddr, err = prl.IPAddressFromMac(mac)
 		}
 		if err == nil {
 			s.BuildLogger.Debugln("IP address found", ipAddr, "...")
