@@ -167,6 +167,15 @@ code_quality:
     reports:
       junit: .splitic/junit_*.xml
 
+compile tests:
+  extends:
+    - .linux test
+  needs:
+    - "clone test repo"
+    - "prepare done"
+  script:
+    - make test-compile
+
 unit test:
   extends:
   - .linux test
@@ -310,6 +319,26 @@ fuzz variable mask:
   - docker network rm test-network
   - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
   - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 -tags integration ./... -- -timeout 45m
+
+windows 1809 compile tests:
+  extends:
+  - .windows unit test
+  - .windows1809
+  - .rules:merge_request_pipelines:no_docs
+  parallel: null
+  script:
+    - go test -count=1 --tags=integration,kubernetes -run=nope ./...
+    - go test -count=1 -run=nope ./...
+
+windows 21H2 compile tests:
+  extends:
+  - .windows unit test
+  - .windows21H2
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
+  parallel: null
+  script:
+    - go test -count=1 --tags=integration,kubernetes -run=nope ./...
+    - go test -count=1 -run=nope ./...
 
 # Only test the oldest supported version in merge requests,
 # but test all versions in the default branch.

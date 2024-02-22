@@ -124,6 +124,11 @@ lint-docs:
 .PHONY: test
 test: helper-dockerarchive-host development_setup simple-test
 
+.PHONY: test-compile
+test-compile:
+	go test -count=1 --tags=integration,kubernetes -run=nope ./...
+	go test -count=1 -run=nope ./...
+
 simple-test: TEST_PKG ?= $(shell go list ./...)
 simple-test:
 	# use env -i to clear parent environment variables for go test
