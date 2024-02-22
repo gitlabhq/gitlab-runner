@@ -279,6 +279,10 @@ concurrent = 4
       "onlyKey" = ""
 ```
 
+## Configure the executor service account
+
+To configure the executor service account, you can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use the `--kubernetes-service-account` flag.
+
 ## Pods and containers
 
 You can configure pods and containers to control how jobs are executed.
@@ -402,7 +406,7 @@ DETAILS:
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3114) in GitLab Runner 15.10.
 
-This feature is a [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). We strongly recommend that you use
+This feature is in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). We strongly recommend that you use
 this feature on a test Kubernetes cluster before you use it on a production cluster. To use this feature, you must
 enable the `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` [feature flag](../../configuration/feature-flags.md).
 
@@ -707,72 +711,6 @@ To handle this situation, you can use the GitLab Runner Pod Cleanup application 
 - The GitLab Runner Pod Cleanup project [README](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/readme.md).
 - GitLab Runner Pod Cleanup [documentation](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pod-cleanup/-/blob/main/docs/README.md).
 
-### Define nodes where pods are scheduled
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 14.3.
-
-Use pod affinity and anti-affinity to constrain the nodes
-[your pod is eligible](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity)
-to be scheduled on, based on labels on other pods.
-
-Example configuration in the `config.toml`:
-
-```toml
-concurrent = 1
-[[runners]]
-  name = "myRunner"
-  url = "gitlab.example.com"
-  executor = "kubernetes"
-  [runners.kubernetes]
-    [runners.kubernetes.affinity]
-      [runners.kubernetes.affinity.pod_affinity]
-        [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
-          topology_key = "failure-domain.beta.kubernetes.io/zone"
-          namespaces = ["namespace_1", "namespace_2"]
-          [runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
-            [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
-              key = "security"
-              operator = "In"
-              values = ["S1"]
-        [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution]]
-        weight = 100
-        [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
-          topology_key = "failure-domain.beta.kubernetes.io/zone"
-          [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
-            [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
-              key = "security_2"
-              operator = "In"
-              values = ["S2"]
-      [runners.kubernetes.affinity.pod_anti_affinity]
-        [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution]]
-          topology_key = "failure-domain.beta.kubernetes.io/zone"
-          namespaces = ["namespace_1", "namespace_2"]
-          [runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector]
-            [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
-              key = "security"
-              operator = "In"
-              values = ["S1"]
-          [runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespace_selector]
-            [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespace_selector.match_expressions]]
-              key = "security"
-              operator = "In"
-              values = ["S1"]
-        [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
-        weight = 100
-        [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
-          topology_key = "failure-domain.beta.kubernetes.io/zone"
-          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
-            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
-              key = "security_2"
-              operator = "In"
-              values = ["S2"]
-          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector]
-            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector.match_expressions]]
-              key = "security_2"
-              operator = "In"
-              values = ["S2"]
-```
-
 ### Set a security policy for the container
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3116) in GitLab Runner 14.5.
@@ -1008,60 +946,7 @@ These specific settings take precedence over the general settings for the job.
 The values are still restricted to the [maximum overwrite setting](#configuration-settings)
 for that resource.
 
-### Set the RuntimeClass
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26646) in GitLab Runner 14.9.
-
-Use `runtime_class_name` to set the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
-
-If you specify a RuntimeClass name and it's not configured in the cluster or the feature is not supported, the executor fails to create jobs.
-
-```toml
-concurrent = 1
-check_interval = 30
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-    [runners.kubernetes]
-      runtime_class_name = "myclass"
-```
-
-## Configure the executor service account
-
-To configure the executor service account, you can set the `KUBERNETES_SERVICE_ACCOUNT` environment variable or use the `--kubernetes-service-account` flag.
-
-## Overwrite the Kubernetes namespace
-
-Prerequisites:
-
-- In the `values.yml` file for GitLab Runner Helm charts, `rbac.clusterWideAccess` is set to `true`.
-- The runner has [permissions](#configure-runner-api-permissions) configured in the core API group.
-
-You can overwrite Kubernetes namespaces to designate a namespace for CI purposes, and deploy a custom
-set of pods to it. The pods spawned by the runner are in the overwritten namespace to
-enable access between containers during the CI stages.
-
-To overwrite the Kubernetes namespace for each CI/CD job, set the `KUBERNETES_NAMESPACE_OVERWRITE`
-variable in the `.gitlab-ci.yml` file.
-
-``` yaml
-variables:
-  KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_SLUG}
-```
-
-NOTE:
-This variable does not create a namespace on your cluster. Ensure that the namespace exists before you run the job.
-
-To use only designated namespaces during CI runs, in the `config.toml` file, define a regular expression for `namespace_overwrite_allowed`:
-
-```toml
-[runners.kubernetes]
-    ...
-    namespace_overwrite_allowed = "ci-.*"
-```
-
-## Overwrite the Kubernetes default service account
+### Overwrite the Kubernetes default service account
 
 To overwrite the Kubernetes service account for each CI/CD job in the `.gitlab-ci.yml` file,
 set the variable `KUBERNETES_SERVICE_ACCOUNT_OVERWRITE`.
@@ -1082,7 +967,142 @@ for either:
 
 If you don't set either, the overwrite is disabled.
 
-## Overwrite the node selector
+### Set the RuntimeClass
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/26646) in GitLab Runner 14.9.
+
+Use `runtime_class_name` to set the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
+
+If you specify a RuntimeClass name and it's not configured in the cluster or the feature is not supported, the executor fails to create jobs.
+
+```toml
+concurrent = 1
+check_interval = 30
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      runtime_class_name = "myclass"
+```
+
+## Nodes
+
+### Define a list of node affinities
+
+Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to add to a pod specification at build time.
+
+Example configuration in the `config.toml`:
+
+```toml
+concurrent = 1
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [runners.kubernetes.affinity]
+      [runners.kubernetes.affinity.node_affinity]
+        [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+          weight = 100
+          [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+              key = "cpu_speed"
+              operator = "In"
+              values = ["fast"]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+              key = "mem_speed"
+              operator = "In"
+              values = ["fast"]
+        [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
+          weight = 50
+          [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
+              key = "core_count"
+              operator = "In"
+              values = ["high", "32"]
+            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields]]
+              key = "cpu_type"
+              operator = "In"
+              values = ["arm64"]
+      [runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
+        [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
+          [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
+            key = "kubernetes.io/e2e-az-name"
+            operator = "In"
+            values = [
+              "e2e-az1",
+              "e2e-az2"
+            ]
+```
+
+### Define nodes where pods are scheduled
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2324) in GitLab Runner 14.3.
+
+Use pod affinity and anti-affinity to constrain the nodes
+[your pod is eligible](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity)
+to be scheduled on, based on labels on other pods.
+
+Example configuration in the `config.toml`:
+
+```toml
+concurrent = 1
+[[runners]]
+  name = "myRunner"
+  url = "gitlab.example.com"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [runners.kubernetes.affinity]
+      [runners.kubernetes.affinity.pod_affinity]
+        [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution]]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          namespaces = ["namespace_1", "namespace_2"]
+          [runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+            [[runners.kubernetes.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
+              key = "security"
+              operator = "In"
+              values = ["S1"]
+        [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution]]
+        weight = 100
+        [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          [runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+            [[runners.kubernetes.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+              key = "security_2"
+              operator = "In"
+              values = ["S2"]
+      [runners.kubernetes.affinity.pod_anti_affinity]
+        [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution]]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          namespaces = ["namespace_1", "namespace_2"]
+          [runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
+              key = "security"
+              operator = "In"
+              values = ["S1"]
+          [runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespace_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespace_selector.match_expressions]]
+              key = "security"
+              operator = "In"
+              values = ["S1"]
+        [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution]]
+        weight = 100
+        [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term]
+          topology_key = "failure-domain.beta.kubernetes.io/zone"
+          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions]]
+              key = "security_2"
+              operator = "In"
+              values = ["S2"]
+          [runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector]
+            [[runners.kubernetes.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.namespace_selector.match_expressions]]
+              key = "security_2"
+              operator = "In"
+              values = ["S2"]
+```
+
+### Overwrite the node selector
 
 To overwrite the node selector:
 
@@ -1154,56 +1174,221 @@ listen_address = ':9252'
 
 ::EndTabs
 
-## Restrict access to job variables
+### Specify the node to execute builds
 
-When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
+Use the `node_selector` option to specify which node in a Kubernetes cluster to execute builds on.
+It is a table of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables).
 
-- Pod's environment section
+The runner uses the information provided to determine the OS and architecture for the build. This ensures that
+the correct [helper image](../../configuration/advanced-configuration.md#helper-image) is used. By default, the OS and
+architecture is assumed to be `linux/amd64`.
 
-To restrict access to job variable data, you should use role-based access control (RBAC) so that only GitLab administrators have access to the namespace used by the GitLab Runner.
+You can use specific labels to schedule nodes with different operating systems and architectures.
 
-If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the type of access users have in the GitLab Runner namespace:
+#### Example for `linux/arm64`
 
-- For `pods` and `configmaps`:
-  - `get`
-  - `watch`
-  - `list`
-- For `pods/exec` and `pods/attach`, use `create`.
+```toml
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
 
-Example RBAC definition for authorized users:
-
-```yaml
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: gitlab-runner-authorized-users
-rules:
-- apiGroups: [""]
-  resources: ["configmaps", "pods"]
-  verbs: ["get", "watch", "list"]
-- apiGroups: [""]
-  resources: ["pods/exec", "pods/attach"]
-  verbs: ["create"]
+    [runners.kubernetes.node_selector]
+      "kubernetes.io/arch" = "arm64"
+      "kubernetes.io/os" = "linux"
 ```
 
-## Resources check during prepare step
+#### Example for `windows/amd64`
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
-> - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29101) in GitLab 15.2.
+Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support),
+so if process isolation is used, you must also provide the specific windows build version with the
+[`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
 
-Prerequisites:
+```toml
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
 
-- `image_pull_secrets` or `service_account` is set.
-- `resource_availability_check_max_attempts` is set to a number greater than zero.
-- Kubernetes `serviceAccount` used with the `get` and `list` permissions.
+    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell
+    # to resolve paths for Windows correctly when Runner is operating in a Linux environment
+    # but targeting Windows nodes.
+    environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=true"]
 
-GitLab Runner checks if the new service accounts or secrets are available with a 5-second interval between each try.
+    [runners.kubernetes.node_selector]
+      "kubernetes.io/arch" = "amd64"
+      "kubernetes.io/os" = "windows"
+      "node.kubernetes.io/windows-build" = "10.0.20348"
+```
 
-- In GitLab 15.0 and 15.1, you cannot disable this feature and it defaults to `5` when a negative value is set.
-- In GitLab 15.0.1, 15.1.1, 15.2 and later, this feature is disabled by default. To enable this feature, set `resource_availability_check_max_attempts` to any value other than `0`.
-The value you set defines the amount of times the runner checks for service accounts or secrets.
+## Networking
 
-## Using the cache with the Kubernetes executor
+### Configure a container lifecycle hook
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
+
+Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run
+code configured for a handler when the corresponding lifecycle hook is executed.
+
+You can configure two types of hooks: `PreStop` and `PostStart`. Each of them allows only one type of handler to be set.
+
+Example configuration in the `config.toml` file:
+
+```toml
+[[runners]]
+  name = "kubernetes"
+  url = "https://gitlab.example.com/"
+  executor = "kubernetes"
+  token = "yrnZW46BrtBFqM7xDzE7dddd"
+  [runners.kubernetes]
+    image = "alpine:3.11"
+    privileged = true
+    namespace = "default"
+    [runners.kubernetes.container_lifecycle.post_start.exec]
+      command = ["touch", "/builds/postStart.txt"]
+    [runners.kubernetes.container_lifecycle.pre_stop.http_get]
+      port = 8080
+      host = "localhost"
+      path = "/test"
+      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+        name = "header_name_1"
+        value = "header_value_1"
+      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
+        name = "header_name_2"
+        value = "header_value_2"
+```
+
+Use the following settings to configure each lifecycle hook:
+
+| Option       | Type                           | Required | Description |
+|--------------|--------------------------------|----------|-------------|
+| `exec`       | `KubernetesLifecycleExecAction`| No       | `Exec` specifies the action to take. |
+| `http_get`   | `KubernetesLifecycleHTTPGet`   | No       | `HTTPGet` specifies the http request to perform. |
+| `tcp_socket` | `KubernetesLifecycleTcpSocket` | No       | `TCPsocket` specifies an action involving a TCP port. |
+
+#### KubernetesLifecycleExecAction
+
+| Option       | Type          | Required | Description |
+|--------------|---------------|----------|-------------|
+| `command`    | `string` list | Yes      | The command line to execute inside the container. |
+
+#### KubernetesLifecycleHTTPGet
+
+| Option         | Type                                     | Required | Description |
+|----------------|------------------------------------------|----------|-------------|
+| `port`         | `int`                                    | Yes      | The number of the port to access on the container. |
+| `host`         | string                                   | No       | The host name to connect to, defaults to the pod IP (optional). |
+| `path`         | string                                   | No       | The path to access on the HTTP server (optional). |
+| `scheme`       | string                                   | No       | The scheme used for connecting to the host. Defaults to HTTP (optional). |
+| `http_headers` | `KubernetesLifecycleHTTPGetHeader` list  | No       | Custom headers to set in the request (optional). |
+
+#### KubernetesLifecycleHTTPGetHeader
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | HTTP header name.  |
+| `value`      | string    | Yes      | HTTP header value. |
+
+#### KubernetesLifecycleTcpSocket
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `port`       | `int`     | Yes      | The number of the port to access on the container. |
+| `host`       | string    | No       | The host name to connect to, defaults to the pod IP (optional). |
+
+### Configure pod DNS settings
+
+Use the following options to configure the [DNS settings](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config)
+of the pods.
+
+| Option       | Type                        | Required | Description |
+|--------------|-----------------------------|----------|-------------|
+| `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
+| `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
+| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
+
+Example configuration in the `config.toml` file:
+
+```toml
+concurrent = 1
+check_interval = 30
+[[runners]]
+  name = "myRunner"
+  url = "https://gitlab.example.com"
+  token = "__REDACTED__"
+  executor = "kubernetes"
+  [runners.kubernetes]
+    image = "alpine:latest"
+    [runners.kubernetes.dns_config]
+      nameservers = [
+        "1.2.3.4",
+      ]
+      searches = [
+        "ns1.svc.cluster-domain.example",
+        "my.dns.search.suffix",
+      ]
+
+      [[runners.kubernetes.dns_config.options]]
+        name = "ndots"
+        value = "2"
+
+      [[runners.kubernetes.dns_config.options]]
+        name = "edns0"
+```
+
+#### KubernetesDNSConfigOption
+
+| Option       | Type      | Required | Description |
+|--------------|-----------|----------|-------------|
+| `name`       | string    | Yes      | Configuration option name.  |
+| `value`      | `*string` | No       | Configuration option value. |
+
+#### Default list of dropped capabilities
+
+GitLab Runner drops the following capabilities by default.
+
+User-defined `cap_add` has priority over the default list of dropped capabilities.
+If you want to add the capability that is dropped by default, add it to `cap_add`.
+
+<!-- kubernetes_default_cap_drop_list_start -->
+- `NET_RAW`
+
+<!-- kubernetes_default_cap_drop_list_end -->
+
+### Add extra host aliases
+
+This feature is available in Kubernetes 1.7 and higher.
+
+Configure a [host aliases](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/) to
+instruct Kubernetes to add entries to `/etc/hosts` file in the container.
+
+Use the following options:
+
+| Option       | Type          | Required | Description |
+|--------------|---------------|----------|-------------|
+| `IP`         | string        | Yes      | The IP address you want to attach hosts to. |
+| `Hostnames`  | `string` list | Yes      | A list of host name aliases that will be attached to the IP. |
+
+Example configuration in the `config.toml` file:
+
+```toml
+concurrent = 4
+
+[[runners]]
+  # usual configuration
+  executor = "kubernetes"
+  [runners.kubernetes]
+    [[runners.kubernetes.host_aliases]]
+      ip = "127.0.0.1"
+      hostnames = ["web1", "web2"]
+    [[runners.kubernetes.host_aliases]]
+      ip = "192.168.1.1"
+      hostnames = ["web14", "web15"]
+```
+
+## Volumes
+
+### Using the cache with the Kubernetes executor
 
 When the cache is used with the Kubernetes executor, a volume called `/cache` is mounted on the pod. During job
 execution, if cached data is needed, the runner checks if cached data is available. Cached data is available if
@@ -1215,7 +1400,7 @@ To set the cache volume, use the [`cache_dir`](../../configuration/advanced-conf
 - If not available, the cached data is downloaded from the configured storage and saved into the `cache dir` as a compressed file.
   The compressed file is then extracted into the `build` folder.
 
-## Configure volume types
+### Configure volume types
 
 You can mount the following volume types:
 
@@ -1271,7 +1456,7 @@ concurrent = 4
         size = "2Gi"
 ```
 
-### `hostPath` volume
+#### `hostPath` volume
 
 Configure the [`hostPath` volume](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath) to instruct Kubernetes to mount
 a specified host path in the container.
@@ -1286,7 +1471,7 @@ Use the following options in the `config.toml` file:
 | `host_path`  | string    | No     | Host path to mount as the volume. If not specified, then this is set to the same path as `mount_path`. |
 | `read_only`  | boolean   | No     | Sets the volume in read-only mode (defaults to false). |
 
-### `persistentVolumeClaim` volume
+#### `persistentVolumeClaim` volume
 
 Configure the [`persistentVolumeClaim` volume](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim) to
 instruct Kubernetes to use a `persistentVolumeClaim` defined in a Kubernetes cluster and mount it in the container.
@@ -1300,7 +1485,7 @@ Use the following options in the `config.toml` file:
 | `read_only`  | boolean   | No       | Sets the volume to read-only mode (defaults to false). |
 | `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
 
-### `configMap` volume
+#### `configMap` volume
 
 Configure the `configMap` volume to instruct Kubernetes to use a [`configMap`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/)
 defined in a Kubernetes cluster and mount it in the container.
@@ -1327,7 +1512,7 @@ are added to the volumes and all other keys are skipped.
 NOTE:
 If you use a key that doesn't exist, the job fails on the pod creation stage.
 
-### `secret` volume
+#### `secret` volume
 
 Configure a [`secret` volume](https://kubernetes.io/docs/concepts/storage/volumes/#secret) to instruct Kubernetes to use
 a `secret` defined in a Kubernetes cluster and mount it in the container.
@@ -1354,7 +1539,7 @@ are added to the volumes and all other keys are skipped.
 NOTE:
 If you use a key that doesn't exist, the job fails on the pod creation stage.
 
-### `emptyDir` volume
+#### `emptyDir` volume
 
 Configure an [`emptyDir` volume](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)
 to instruct Kubernetes to mount an empty directory in the container.
@@ -1369,7 +1554,7 @@ Use the following options in the `config.toml` file:
 | `medium`     | string  | No       | "Memory" provides a `tmpfs`, otherwise it defaults to the node disk storage (defaults to ""). |
 | `size_limit` | string  | No       | The total amount of local storage required for the `emptyDir` volume. For more information, see [http://kubernetes.io/docs/user-guide/volumes#emptydir](http://kubernetes.io/docs/user-guide/volumes#emptydir). |
 
-### `csi` volume
+#### `csi` volume
 
 Configure a [Container Storage Interface (`csi`) volume](https://kubernetes.io/docs/concepts/storage/volumes/#csi) to instruct
 Kubernetes to use a custom `csi` driver to mount an arbitrary storage system in the container.
@@ -1478,264 +1663,6 @@ RUN groupadd -g 59417 nonroot && \
 WORKDIR /home/nonroot
 USER 59417:59417
 ```
-
-## Specify the node to execute builds
-
-Use the `node_selector` option to specify which node in a Kubernetes cluster to execute builds on.
-It is a table of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables).
-
-The runner uses the information provided to determine the OS and architecture for the build. This ensures that
-the correct [helper image](../../configuration/advanced-configuration.md#helper-image) is used. By default, the OS and
-architecture is assumed to be `linux/amd64`.
-
-You can use specific labels to schedule nodes with different operating systems and architectures.
-
-### Example for `linux/arm64`
-
-```toml
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-
-    [runners.kubernetes.node_selector]
-      "kubernetes.io/arch" = "arm64"
-      "kubernetes.io/os" = "linux"
-```
-
-### Example for `windows/amd64`
-
-Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support),
-so if process isolation is used, you must also provide the specific windows build version with the
-[`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
-
-```toml
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-
-    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell
-    # to resolve paths for Windows correctly when Runner is operating in a Linux environment
-    # but targeting Windows nodes.
-    environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=true"]
-
-    [runners.kubernetes.node_selector]
-      "kubernetes.io/arch" = "amd64"
-      "kubernetes.io/os" = "windows"
-      "node.kubernetes.io/windows-build" = "10.0.20348"
-```
-
-## Define a list of node affinities
-
-Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to add to a pod specification at build time.
-
-Example configuration in the `config.toml`:
-
-```toml
-concurrent = 1
-[[runners]]
-  name = "myRunner"
-  url = "gitlab.example.com"
-  executor = "kubernetes"
-  [runners.kubernetes]
-    [runners.kubernetes.affinity]
-      [runners.kubernetes.affinity.node_affinity]
-        [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
-          weight = 100
-          [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
-            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
-              key = "cpu_speed"
-              operator = "In"
-              values = ["fast"]
-            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
-              key = "mem_speed"
-              operator = "In"
-              values = ["fast"]
-        [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution]]
-          weight = 50
-          [runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference]
-            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions]]
-              key = "core_count"
-              operator = "In"
-              values = ["high", "32"]
-            [[runners.kubernetes.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields]]
-              key = "cpu_type"
-              operator = "In"
-              values = ["arm64"]
-      [runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution]
-        [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms]]
-          [[runners.kubernetes.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_terms.match_expressions]]
-            key = "kubernetes.io/e2e-az-name"
-            operator = "In"
-            values = [
-              "e2e-az1",
-              "e2e-az2"
-            ]
-```
-
-## Add extra host aliases
-
-This feature is available in Kubernetes 1.7 and higher.
-
-Configure a [host aliases](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/) to
-instruct Kubernetes to add entries to `/etc/hosts` file in the container.
-
-Use the following options:
-
-| Option       | Type          | Required | Description |
-|--------------|---------------|----------|-------------|
-| `IP`         | string        | Yes      | The IP address you want to attach hosts to. |
-| `Hostnames`  | `string` list | Yes      | A list of host name aliases that will be attached to the IP. |
-
-Example configuration in the `config.toml` file:
-
-```toml
-concurrent = 4
-
-[[runners]]
-  # usual configuration
-  executor = "kubernetes"
-  [runners.kubernetes]
-    [[runners.kubernetes.host_aliases]]
-      ip = "127.0.0.1"
-      hostnames = ["web1", "web2"]
-    [[runners.kubernetes.host_aliases]]
-      ip = "192.168.1.1"
-      hostnames = ["web14", "web15"]
-```
-
-## Configure a container lifecycle hook
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3630) in GitLab Runner 14.2.
-
-Use [container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to run
-code configured for a handler when the corresponding lifecycle hook is executed.
-
-You can configure two types of hooks: `PreStop` and `PostStart`. Each of them allows only one type of handler to be set.
-
-Example configuration in the `config.toml` file:
-
-```toml
-[[runners]]
-  name = "kubernetes"
-  url = "https://gitlab.example.com/"
-  executor = "kubernetes"
-  token = "yrnZW46BrtBFqM7xDzE7dddd"
-  [runners.kubernetes]
-    image = "alpine:3.11"
-    privileged = true
-    namespace = "default"
-    [runners.kubernetes.container_lifecycle.post_start.exec]
-      command = ["touch", "/builds/postStart.txt"]
-    [runners.kubernetes.container_lifecycle.pre_stop.http_get]
-      port = 8080
-      host = "localhost"
-      path = "/test"
-      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
-        name = "header_name_1"
-        value = "header_value_1"
-      [[runners.kubernetes.container_lifecycle.pre_stop.http_get.http_headers]]
-        name = "header_name_2"
-        value = "header_value_2"
-```
-
-Use the following settings to configure each lifecycle hook:
-
-| Option       | Type                           | Required | Description |
-|--------------|--------------------------------|----------|-------------|
-| `exec`       | `KubernetesLifecycleExecAction`| No       | `Exec` specifies the action to take. |
-| `http_get`   | `KubernetesLifecycleHTTPGet`   | No       | `HTTPGet` specifies the http request to perform. |
-| `tcp_socket` | `KubernetesLifecycleTcpSocket` | No       | `TCPsocket` specifies an action involving a TCP port. |
-
-### KubernetesLifecycleExecAction
-
-| Option       | Type          | Required | Description |
-|--------------|---------------|----------|-------------|
-| `command`    | `string` list | Yes      | The command line to execute inside the container. |
-
-### KubernetesLifecycleHTTPGet
-
-| Option         | Type                                     | Required | Description |
-|----------------|------------------------------------------|----------|-------------|
-| `port`         | `int`                                    | Yes      | The number of the port to access on the container. |
-| `host`         | string                                   | No       | The host name to connect to, defaults to the pod IP (optional). |
-| `path`         | string                                   | No       | The path to access on the HTTP server (optional). |
-| `scheme`       | string                                   | No       | The scheme used for connecting to the host. Defaults to HTTP (optional). |
-| `http_headers` | `KubernetesLifecycleHTTPGetHeader` list  | No       | Custom headers to set in the request (optional). |
-
-### KubernetesLifecycleHTTPGetHeader
-
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | HTTP header name.  |
-| `value`      | string    | Yes      | HTTP header value. |
-
-### KubernetesLifecycleTcpSocket
-
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `port`       | `int`     | Yes      | The number of the port to access on the container. |
-| `host`       | string    | No       | The host name to connect to, defaults to the pod IP (optional). |
-
-## Configure pod DNS settings
-
-Use the following options to configure the [DNS settings](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config)
-of the pods.
-
-| Option       | Type                        | Required | Description |
-|--------------|-----------------------------|----------|-------------|
-| `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
-| `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
-| `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
-
-Example configuration in the `config.toml` file:
-
-```toml
-concurrent = 1
-check_interval = 30
-[[runners]]
-  name = "myRunner"
-  url = "https://gitlab.example.com"
-  token = "__REDACTED__"
-  executor = "kubernetes"
-  [runners.kubernetes]
-    image = "alpine:latest"
-    [runners.kubernetes.dns_config]
-      nameservers = [
-        "1.2.3.4",
-      ]
-      searches = [
-        "ns1.svc.cluster-domain.example",
-        "my.dns.search.suffix",
-      ]
-
-      [[runners.kubernetes.dns_config.options]]
-        name = "ndots"
-        value = "2"
-
-      [[runners.kubernetes.dns_config.options]]
-        name = "edns0"
-```
-
-### KubernetesDNSConfigOption
-
-| Option       | Type      | Required | Description |
-|--------------|-----------|----------|-------------|
-| `name`       | string    | Yes      | Configuration option name.  |
-| `value`      | `*string` | No       | Configuration option value. |
-
-### Default list of dropped capabilities
-
-GitLab Runner drops the following capabilities by default.
-
-User-defined `cap_add` has priority over the default list of dropped capabilities.
-If you want to add the capability that is dropped by default, add it to `cap_add`.
-
-<!-- kubernetes_default_cap_drop_list_start -->
-- `NET_RAW`
-
-<!-- kubernetes_default_cap_drop_list_end -->
 
 ## Using Docker in builds
 
@@ -1968,3 +1895,82 @@ The container entry point has the following known issues:
   any setup changes before running script commands:
   - [CI/CD variables defined in the settings](https://docs.gitlab.com/ee/ci/variables/#define-a-cicd-variable-in-the-ui).
   - [Masked CI/CD variables](https://docs.gitlab.com/ee/ci/variables/#mask-a-cicd-variable).
+
+### Restrict access to job variables
+
+When using Kubernetes executor, users with access to the Kubernetes cluster can read variables used in the job. By default, job variables are stored in:
+
+- Pod's environment section
+
+To restrict access to job variable data, you should use role-based access control (RBAC) so that only GitLab administrators have access to the namespace used by the GitLab Runner.
+
+If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the type of access users have in the GitLab Runner namespace:
+
+- For `pods` and `configmaps`:
+  - `get`
+  - `watch`
+  - `list`
+- For `pods/exec` and `pods/attach`, use `create`.
+
+Example RBAC definition for authorized users:
+
+```yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: gitlab-runner-authorized-users
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "pods"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["pods/exec", "pods/attach"]
+  verbs: ["create"]
+```
+
+## Resources check during prepare step
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27664) in GitLab 15.0.
+> - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29101) in GitLab 15.2.
+
+Prerequisites:
+
+- `image_pull_secrets` or `service_account` is set.
+- `resource_availability_check_max_attempts` is set to a number greater than zero.
+- Kubernetes `serviceAccount` used with the `get` and `list` permissions.
+
+GitLab Runner checks if the new service accounts or secrets are available with a 5-second interval between each try.
+
+- In GitLab 15.0 and 15.1, you cannot disable this feature and it defaults to `5` when a negative value is set.
+- In GitLab 15.0.1, 15.1.1, 15.2 and later, this feature is disabled by default. To enable this feature, set `resource_availability_check_max_attempts` to any value other than `0`.
+The value you set defines the amount of times the runner checks for service accounts or secrets.
+
+### Overwrite the Kubernetes namespace
+
+Prerequisites:
+
+- In the `values.yml` file for GitLab Runner Helm charts, `rbac.clusterWideAccess` is set to `true`.
+- The runner has [permissions](#configure-runner-api-permissions) configured in the core API group.
+
+You can overwrite Kubernetes namespaces to designate a namespace for CI purposes, and deploy a custom
+set of pods to it. The pods spawned by the runner are in the overwritten namespace to
+enable access between containers during the CI stages.
+
+To overwrite the Kubernetes namespace for each CI/CD job, set the `KUBERNETES_NAMESPACE_OVERWRITE`
+variable in the `.gitlab-ci.yml` file.
+
+``` yaml
+variables:
+  KUBERNETES_NAMESPACE_OVERWRITE: ci-${CI_COMMIT_REF_SLUG}
+```
+
+NOTE:
+This variable does not create a namespace on your cluster. Ensure that the namespace exists before you run the job.
+
+To use only designated namespaces during CI runs, in the `config.toml` file, define a regular expression for `namespace_overwrite_allowed`:
+
+```toml
+[runners.kubernetes]
+    ...
+    namespace_overwrite_allowed = "ci-.*"
+```
