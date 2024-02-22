@@ -54,6 +54,8 @@ const (
 	backOffDelayJitter = true
 )
 
+type Option = func(c *client) error
+
 type client struct {
 	http.Client
 	url              *url.URL
@@ -560,11 +562,14 @@ func (n *client) findCertificate(certificate *string, base string, name string) 
 	}
 }
 
-func newClient(requestCredentials requestCredentials) (*client, error) {
-	return newClientWithMaxAge(requestCredentials, 0)
+func WithMaxAge(connectionMaxAge time.Duration) Option {
+	return func(c *client) error {
+		c.connectionMaxAge = connectionMaxAge
+		return nil
+	}
 }
 
-func newClientWithMaxAge(requestCredentials requestCredentials, connectionMaxAge time.Duration) (*client, error) {
+func newClient(requestCredentials requestCredentials, options ...Option) (*client, error) {
 	url, err := url.Parse(fixCIURL(requestCredentials.GetURL()) + "/api/v4/")
 	if err != nil {
 		return nil, err
@@ -575,12 +580,11 @@ func newClientWithMaxAge(requestCredentials requestCredentials, connectionMaxAge
 	}
 
 	c := &client{
-		url:              url,
-		caFile:           requestCredentials.GetTLSCAFile(),
-		certFile:         requestCredentials.GetTLSCertFile(),
-		keyFile:          requestCredentials.GetTLSKeyFile(),
-		requestBackOffs:  make(map[string]*backoff.Backoff),
-		connectionMaxAge: connectionMaxAge,
+		url:             url,
+		caFile:          requestCredentials.GetTLSCAFile(),
+		certFile:        requestCredentials.GetTLSCertFile(),
+		keyFile:         requestCredentials.GetTLSKeyFile(),
+		requestBackOffs: make(map[string]*backoff.Backoff),
 	}
 	c.requester = newRateLimitRequester(&c.Client)
 
@@ -589,6 +593,13 @@ func newClientWithMaxAge(requestCredentials requestCredentials, connectionMaxAge
 		c.findCertificate(&c.caFile, CertificateDirectory, host+".crt")
 		c.findCertificate(&c.certFile, CertificateDirectory, host+".auth.crt")
 		c.findCertificate(&c.keyFile, CertificateDirectory, host+".auth.key")
+	}
+
+	for _, o := range options {
+		err := o(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return c, nil
