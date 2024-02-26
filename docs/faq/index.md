@@ -136,7 +136,7 @@ Check your SELinux policy on your system for possible denials.
 
 This error relates to machine provisioning and might be due to the following reasons:
 
-- There is a TLS failure. When `docker-machine` is installed, some certificates might be invalid. 
+- There is a TLS failure. When `docker-machine` is installed, some certificates might be invalid.
 To resolve this issue, remove the certificates and restart the runner:
 
   ```shell
