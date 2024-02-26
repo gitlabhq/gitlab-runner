@@ -1169,6 +1169,15 @@ func TestBuildGitFetchStrategySubmoduleRecursiveCleanup(t *testing.T) {
 
 func TestBuildGitFetchStrategyFallback(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		if shell == "cmd" {
+			// This test doesn't work on cmd because the worktree is never cleaned
+			// up. It appears that the exit code of the fetch sources script isn't
+			// returned properly to `os.Exec.Wait()` unless "& exit" is appended to
+			// "cmd /c script.cmd".  Since cmd is deprecated, skip this test.
+			// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37393
+			t.Skip("Skipping test for cmd shell because it's deprecated")
+		}
+
 		successfulBuild, err := common.GetLocalBuildResponse()
 		assert.NoError(t, err)
 
@@ -1912,7 +1921,7 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 				build.Variables = append(
 					build.Variables,
 					common.JobVariable{
-						Key: "GIT_CLONE_PATH",
+						Key:   "GIT_CLONE_PATH",
 						Value: "$CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo",
 					},
 				)
