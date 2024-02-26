@@ -309,8 +309,8 @@ and Docker host environment, you might need to also set the runner feature flag 
 
 The [`pre_build_script`](advanced-configuration.md#the-runners-section) commands are executed
 before every job a runner executes. If you add commands that are specific to certain distributions,
-like `apk` or `apt-get` when you install a certificate for user scripts, your CI jobs might fail 
-if they use [images](https://docs.gitlab.com/ee/ci/yaml/#image) based on different distributions. 
+like `apk` or `apt-get` when you install a certificate for user scripts, your CI jobs might fail
+if they use [images](https://docs.gitlab.com/ee/ci/yaml/#image) based on different distributions.
 
 For example, if some of your CI jobs run Ubuntu-based images and some run Alpine-based images and you add
 Ubuntu commands, the `apt-get: not found` error occurs in jobs with Alpine-based

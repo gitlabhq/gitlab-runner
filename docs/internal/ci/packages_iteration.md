@@ -25,4 +25,3 @@ The workflow is as follows:
 
 We could make the iteration check automatic by checking the package cloud packages, but technically we need to check all of them to make sure we know
 the highest iteration, so we can increment off of that. This sounds time-consuming in terms of CI time. For now we'll stick to the manual approach.
- 
