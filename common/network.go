@@ -141,6 +141,7 @@ type FeaturesInfo struct {
 	ServiceMultipleAliases  bool `json:"service_multiple_aliases"`
 	ImageExecutorOpts       bool `json:"image_executor_opts"`
 	ServiceExecutorOpts     bool `json:"service_executor_opts"`
+	CancelGracefully        bool `json:"cancel_gracefully"`
 }
 
 type ConfigInfo struct {

@@ -81,6 +81,7 @@ func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 	features.TraceChecksum = true
 	features.TraceSize = true
 	features.Cancelable = true
+	features.CancelGracefully = true
 }
 
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
