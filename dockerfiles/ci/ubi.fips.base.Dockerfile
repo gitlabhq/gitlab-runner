@@ -6,6 +6,6 @@ FROM redhat/ubi8-minimal:${UBI_VERSION}
 # packages, so we'll install them all here...
 RUN microdnf update --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs && \
     microdnf install --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs \
-    hostname procps wget tar gzip ca-certificates tzdata openssl shadow-utils git git-lfs findutils
+    hostname procps tar gzip ca-certificates tzdata openssl shadow-utils git git-lfs findutils
 
 RUN git-lfs install --skip-repo
