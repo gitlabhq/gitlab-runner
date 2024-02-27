@@ -4,7 +4,7 @@
 
 - Revert default runner script timeout !4621
 
-## v16.8.0 (2024-01-18)
+## v16.8.0 (2024-02-27)
 
 ### New features
 
@@ -16,8 +16,9 @@
 
 ### Bug fixes
 
+- Revert default runner script timeout !4621
 - Helper image container should always use native platform !4581
-- Delete cache dirs after failed extraction !4565 (Matthew Bradburn @mbradburn-ext)
+- Delete cache dirs after failed extraction !4565
 - Truncate runner token so it won't get logged !4521 (Matthew Bradburn @mbradburn-ext)
 - Allow empty string on emptyDir volume size !4564
 - Support default paths on Windows for custom clone path !2122 (Ben Boeckel @ben.boeckel)
@@ -48,7 +49,7 @@
 - Add section for unhealthy configuration !4552
 - Add `grep` as a dependency when overriding an image's ENTRYPOINT !4553
 - Clarify / revise gitlab-runner SIGQUIT config !4548
-- Update to go 1.21.5 !4541 (Matthew Bradburn @mbradburn-ext)
+- Update to go 1.21.5 !4541
 - Add missing Docker configuration for docker-autoscaler !4534 (Nabil ZOUABI @nabil_zouabi)
 
 ## v16.7.0 (2023-12-21)
