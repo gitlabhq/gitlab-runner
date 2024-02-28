@@ -1,3 +1,13 @@
+## v16.9.1 (2024-02-28)
+
+### Bug fixes
+
+- Call Value() instead of Get() when validating variables !4647
+
+### Maintenance
+
+- Skip TestBuildGitFetchStrategyFallback on Windows cmd !4653
+
 ## v16.9.0 (2024-02-15)
 
 ### New features
