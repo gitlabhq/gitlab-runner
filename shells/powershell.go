@@ -337,7 +337,7 @@ func (p *PsWriter) Variable(variable common.JobVariable) {
 func (p *PsWriter) SourceEnv(pathname string) {
 	p.MkDir(p.TemporaryPath)
 	pathname = p.resolvePath(pathname)
-	p.Linef("if(!(Test-Path %s)) { New-Item -Force %s | out-null }", pathname, pathname)
+	p.Linef("if(!(Test-Path %s)) { New-Item -ItemType file -Force %s | out-null }", pathname, pathname)
 	p.Linef("Try { Get-Content %s | ForEach { $k, $v = $_.split('='); Set-Content env:\\$k $v} } Catch {", pathname)
 	p.Indent()
 	p.Warningf("Unable to read env file: %s", pathname)
