@@ -14,11 +14,6 @@ func setupOSServiceConfig(c *cli.Context, config *service.Config) {
 		logrus.Fatal("The --user is not supported for non-root users")
 	}
 
-	user := c.String("user")
-	if user != "" {
-		config.Arguments = append(config.Arguments, "--user", user)
-	}
-
 	switch service.Platform() {
 	case "linux-systemd":
 		config.Dependencies = []string{
