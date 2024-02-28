@@ -170,13 +170,17 @@ func (c *commandTerminatedError) Is(err error) bool {
 func (s *executor) NewRetry() *retry.Retry {
 	retryLimits := s.Config.Kubernetes.RequestRetryLimits
 
+	retryLimitsAsRetryErrors := lo.Map(retryLimits.AsErrors(), func(err error, _ int) error {
+		return &retryError{err}
+	})
+
 	return retry.New().
 		WithCheck(func(_ int, err error) bool {
-			_, found := isGroupError(err, retryNetworkErrorsGroup, retryLimits.AsErrors())
+			_, found := isGroupError(err, retryNetworkErrorsGroup, retryLimitsAsRetryErrors)
 			return found
 		}).
 		WithMaxTriesFunc(func(err error) int {
-			matchingErr, found := isGroupError(err, retryNetworkErrorsGroup, retryLimits.AsErrors())
+			matchingErr, found := isGroupError(err, retryNetworkErrorsGroup, retryLimitsAsRetryErrors)
 			if found && retryLimits[matchingErr.Error()] > 0 {
 				return retryLimits[matchingErr.Error()]
 			}
