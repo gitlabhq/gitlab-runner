@@ -1660,36 +1660,35 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 }
 
 func (s *executor) setupBuildNamespace(ctx context.Context) error {
-	if s.Config.Kubernetes.NamespacePerJob {
-		s.BuildLogger.Debugln("Setting up build namespace")
+	if !s.Config.Kubernetes.NamespacePerJob {
+		return nil
+	}
+	s.BuildLogger.Debugln("Setting up build namespace")
 
-		nsconfig := api.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: s.configurationOverwrites.namespace,
-			},
-		}
-
-		// kubeAPI: namespaces, create
-		_, err := s.kubeClient.CoreV1().Namespaces().Create(ctx, &nsconfig, metav1.CreateOptions{})
-
-		if err != nil {
-			return err
-		}
+	nsconfig := api.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: s.configurationOverwrites.namespace,
+		},
 	}
 
-	return nil
+	// kubeAPI: namespaces, create
+	_, err := s.kubeClient.CoreV1().Namespaces().Create(ctx, &nsconfig, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create namespace: %w", err)
+	}
+	return err
 }
-
 func (s *executor) teardownBuildNamespace(ctx context.Context) error {
-	if s.Config.Kubernetes.NamespacePerJob {
-		s.BuildLogger.Debugln("Tearing down build namespace")
+	if !s.Config.Kubernetes.NamespacePerJob {
+		return nil
+	}
 
-		// kubeAPI: namespaces, delete
-		err := s.kubeClient.CoreV1().Namespaces().Delete(ctx, s.configurationOverwrites.namespace, metav1.DeleteOptions{})
+	s.BuildLogger.Debugln("Tearing down build namespace")
 
-		if err != nil {
-			return err
-		}
+	// kubeAPI: namespaces, delete
+	err := s.kubeClient.CoreV1().Namespaces().Delete(ctx, s.configurationOverwrites.namespace, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete namespace: %w", err)
 	}
 	return nil
 }
