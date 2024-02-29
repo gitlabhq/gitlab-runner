@@ -130,6 +130,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesBashFeatureFlag":                           testKubernetesBashFeatureFlag,
 		"testKubernetesContainerHookFeatureFlag":                  testKubernetesContainerHookFeatureFlag,
 		"testKubernetesGarbageCollection":                         testKubernetesGarbageCollection,
+		"testKubernetesNamespaceIsolation":                        testKubernetesNamespaceIsolation,
 		"testKubernetesPublicInternalVariables":                   testKubernetesPublicInternalVariables,
 		"testKubernetesWaitResources":                             testKubernetesWaitResources,
 		"testKubernetesLongLogsFeatureFlag":                       testKubernetesLongLogsFeatureFlag,
@@ -1461,6 +1462,136 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 
 			if tc.finalize != nil {
 				tc.finalize(t, client, tc.namespace)
+			}
+		})
+	}
+}
+
+func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	jobId := rand.Int()
+	expectedNamespace := fmt.Sprintf("ci-job-%d", jobId)
+
+	ctxTimeout := time.Minute
+	client := getTestKubeClusterClient(t)
+
+	validateNamespaceDeleted := func(t *testing.T, client *k8s.Clientset, namespace string) {
+		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+		defer cancel()
+
+		ns, err := client.CoreV1().Namespaces().Get(
+			ctx,
+			namespace,
+			metav1.GetOptions{},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, v1.NamespaceTerminating, ns.Status.Phase)
+	}
+
+	tests := map[string]struct {
+		init     func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string)
+		finalize func(t *testing.T, client *k8s.Clientset, namespace string)
+	}{
+		"test with default values": {
+			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
+				credentials, err := getSecrets(client, namespace, "")
+				require.NoError(t, err)
+				configMaps, err := getConfigMaps(client, namespace, "")
+				require.NoError(t, err)
+
+				assert.Empty(t, credentials)
+				assert.Empty(t, configMaps)
+			},
+			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
+				_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
+					return newNamespaceManager(client, deleteNamespace, namespace), nil
+				}).Run()
+				require.NoError(t, err)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				jobResponse, err := common.GetRemoteBuildResponse(
+					"sleep 5000",
+				)
+				require.NoError(t, err)
+
+				jobResponse.Credentials = []common.Credentials{
+					{
+						Type:     "registry",
+						URL:      "http://example.com",
+						Username: "user",
+						Password: "password",
+					},
+				}
+
+				return jobResponse, nil
+			})
+			build.ID = int64(jobId)
+			build.Runner.Kubernetes.Namespace = "default"
+			build.Runner.Kubernetes.NamespacePerJob = true
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+			if tc.init != nil {
+				tc.init(t, build, client, expectedNamespace)
+			}
+
+			deletedPodNameCh := make(chan string)
+			defer buildtest.OnUserStage(build, func() {
+				ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+				defer cancel()
+				pods, err := client.CoreV1().Pods(expectedNamespace).List(
+					ctx,
+					metav1.ListOptions{
+						LabelSelector: labels.Set(build.Runner.Kubernetes.PodLabels).String(),
+					},
+				)
+				require.NoError(t, err)
+				require.NotEmpty(t, pods.Items)
+				pod := pods.Items[0]
+
+				assert.Equal(t, pod.GetNamespace(), expectedNamespace)
+
+				err = client.
+					CoreV1().
+					Pods(expectedNamespace).
+					Delete(ctx, pod.Name, metav1.DeleteOptions{
+						PropagationPolicy: &kubernetes.PropagationPolicy,
+					})
+				require.NoError(t, err)
+
+				deletedPodNameCh <- pod.Name
+			})()
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+
+			podName := <-deletedPodNameCh
+
+			if !featureFlagValue {
+				assert.Contains(
+					t,
+					out,
+					"ERROR: Job failed (system failure):",
+				)
+			} else {
+				assert.Errorf(t, err, "command terminated with exit code 137")
+			}
+
+			assert.Contains(
+				t,
+				out,
+				fmt.Sprintf("pods %q not found", podName),
+			)
+
+			validateNamespaceDeleted(t, client, expectedNamespace)
+
+			if tc.finalize != nil {
+				tc.finalize(t, client, expectedNamespace)
 			}
 		})
 	}
