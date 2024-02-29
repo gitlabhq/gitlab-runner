@@ -627,7 +627,7 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 		return nil
 	}
 
-	err := s.setupBuildNamespace()
+	err := s.setupBuildNamespace(ctx)
 	if err != nil {
 		return err
 	}
@@ -712,7 +712,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return nil
 	}
 
-	err := s.setupBuildNamespace()
+	err := s.setupBuildNamespace(ctx)
 	if err != nil {
 		return fmt.Errorf("setting up build namespace: %w", err)
 	}
@@ -1092,7 +1092,7 @@ func (s *executor) cleanupResources() {
 		}
 	}
 
-	err := s.teardownBuildNamespace()
+	err := s.teardownBuildNamespace(ctx)
 	if err != nil {
 		s.BuildLogger.Errorln(fmt.Sprintf("Error tearing down namespace: %s", err.Error()))
 	}
@@ -1659,7 +1659,7 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 	return createHostAliases(s.options.Services, s.Config.Kubernetes.GetHostAliases())
 }
 
-func (s *executor) setupBuildNamespace() error {
+func (s *executor) setupBuildNamespace(ctx context.Context) error {
 	if s.Config.Kubernetes.NamespacePerJob {
 		s.BuildLogger.Debugln("Setting up build namespace")
 
@@ -1670,7 +1670,7 @@ func (s *executor) setupBuildNamespace() error {
 		}
 
 		// kubeAPI: namespaces, create
-		_, err := s.kubeClient.CoreV1().Namespaces().Create(context.TODO(), &nsconfig, metav1.CreateOptions{})
+		_, err := s.kubeClient.CoreV1().Namespaces().Create(ctx, &nsconfig, metav1.CreateOptions{})
 
 		if err != nil {
 			return err
@@ -1680,12 +1680,12 @@ func (s *executor) setupBuildNamespace() error {
 	return nil
 }
 
-func (s *executor) teardownBuildNamespace() error {
+func (s *executor) teardownBuildNamespace(ctx context.Context) error {
 	if s.Config.Kubernetes.NamespacePerJob {
 		s.BuildLogger.Debugln("Tearing down build namespace")
 
 		// kubeAPI: namespaces, delete
-		err := s.kubeClient.CoreV1().Namespaces().Delete(context.TODO(), s.configurationOverwrites.namespace, metav1.DeleteOptions{})
+		err := s.kubeClient.CoreV1().Namespaces().Delete(ctx, s.configurationOverwrites.namespace, metav1.DeleteOptions{})
 
 		if err != nil {
 			return err
