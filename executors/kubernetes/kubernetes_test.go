@@ -1564,6 +1564,48 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
+			Name:         "minimal configuration with namespace isolation",
+			GlobalConfig: &common.Config{},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:           "test-image",
+						Host:            "test-server",
+						NamespacePerJob: true,
+					},
+				},
+			},
+			Build: &common.Build{
+				JobResponse: common.JobResponse{
+					GitInfo: common.GitInfo{
+						Sha: "1234567890",
+					},
+					Variables: []common.JobVariable{
+						// Try to bypass namespace isolation
+						{Key: NamespaceOverwriteVariableName, Value: "ci-job-42"},
+					},
+				},
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: &overwrites{
+					namespace:       "ci-job-0",
+					serviceLimits:   api.ResourceList{},
+					buildLimits:     api.ResourceList{},
+					helperLimits:    api.ResourceList{},
+					serviceRequests: api.ResourceList{},
+					buildRequests:   api.ResourceList{},
+					helperRequests:  api.ResourceList{},
+				},
+				helperImageInfo: defaultHelperImage,
+			},
+		},
+		{
 			Name:         "minimal configuration with pwsh shell",
 			GlobalConfig: &common.Config{},
 			RunnerConfig: &common.RunnerConfig{
@@ -3046,6 +3088,191 @@ func TestSetupCredentials(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = ex.setupCredentials(context.Background())
+			assert.NoError(t, err)
+
+			if test.VerifyFn != nil {
+				assert.True(t, executed)
+			} else {
+				assert.False(t, executed)
+			}
+		})
+	}
+}
+
+func TestSetupBuildNamespace(t *testing.T) {
+	version, _ := testVersionAndCodec()
+
+	type testDef struct {
+		NamespaceIsolation bool
+		VerifyFn           func(*testing.T, testDef, *api.Namespace, string)
+	}
+	tests := map[string]testDef{
+		"namespace isolation disabled": {
+			// don't execute VerifyFn
+			NamespaceIsolation: false,
+			VerifyFn:           nil,
+		},
+		"namespace isolation enabled": {
+			NamespaceIsolation: true,
+			VerifyFn: func(t *testing.T, test testDef, namespace *api.Namespace, method string) {
+				assert.Equal(t, "ci-job-0", namespace.Name)
+				assert.Equal(t, http.MethodPost, method)
+			},
+		},
+	}
+
+	executed := false
+	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
+		return func(req *http.Request) (resp *http.Response, err error) {
+			namespaceBytes, err := io.ReadAll(req.Body)
+			executed = true
+
+			if err != nil {
+				t.Errorf("failed to read request body: %s", err.Error())
+				return
+			}
+
+			n := new(api.Namespace)
+
+			err = json.Unmarshal(namespaceBytes, n)
+
+			if err != nil {
+				t.Errorf("error decoding namespace: %s", err.Error())
+				return
+			}
+
+			if test.VerifyFn != nil {
+				test.VerifyFn(t, test, n, req.Method)
+			}
+
+			resp = &http.Response{StatusCode: http.StatusOK, Body: FakeReadCloser{
+				Reader: bytes.NewBuffer(namespaceBytes),
+			}}
+			resp.Header = make(http.Header)
+			resp.Header.Add(common.ContentType, "application/json")
+
+			return
+		}
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
+				options:    &kubernetesOptions{},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{
+								Namespace:       "default",
+								Image:           "default-image",
+								NamespacePerJob: test.NamespaceIsolation,
+							},
+						},
+					},
+					BuildShell: &common.ShellConfiguration{},
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables: []common.JobVariable{},
+						},
+						Runner: &common.RunnerConfig{},
+					},
+				},
+			}
+
+			executed = false
+
+			err := ex.prepareOverwrites(common.JobVariables{})
+			assert.NoError(t, err)
+			err = ex.checkDefaults()
+			assert.NoError(t, err)
+
+			err = ex.setupBuildNamespace(context.Background())
+			assert.NoError(t, err)
+
+			if test.VerifyFn != nil {
+				assert.True(t, executed)
+			} else {
+				assert.False(t, executed)
+			}
+		})
+	}
+}
+
+func TestTeardownBuildNamespace(t *testing.T) {
+	version, _ := testVersionAndCodec()
+
+	type testDef struct {
+		NamespaceIsolation bool
+		VerifyFn           func(*testing.T, testDef, string, string)
+	}
+	tests := map[string]testDef{
+		"namespace isolation disabled": {
+			// don't execute VerifyFn
+			NamespaceIsolation: false,
+			VerifyFn:           nil,
+		},
+		"namespace isolation enabled": {
+			NamespaceIsolation: true,
+			VerifyFn: func(t *testing.T, test testDef, namespace string, method string) {
+				assert.Equal(t, "ci-job-0", namespace)
+				assert.Equal(t, http.MethodDelete, method)
+			},
+		},
+	}
+
+	executed := false
+	fakeClientRoundTripper := func(test testDef) func(req *http.Request) (*http.Response, error) {
+		return func(req *http.Request) (resp *http.Response, err error) {
+			executed = true
+
+			pathSplit := strings.Split(req.URL.Path, "/")
+
+			if test.VerifyFn != nil {
+				test.VerifyFn(t, test, pathSplit[len(pathSplit)-1], req.Method)
+			}
+
+			resp = &http.Response{StatusCode: http.StatusOK}
+			resp.Header = make(http.Header)
+			resp.Header.Add(common.ContentType, "application/json")
+
+			return
+		}
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			ex := executor{
+				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
+				options:    &kubernetesOptions{},
+				AbstractExecutor: executors.AbstractExecutor{
+					Config: common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Kubernetes: &common.KubernetesConfig{
+								Namespace:       "default",
+								Image:           "default-image",
+								NamespacePerJob: test.NamespaceIsolation,
+							},
+						},
+					},
+					BuildShell: &common.ShellConfiguration{},
+					Build: &common.Build{
+						JobResponse: common.JobResponse{
+							Variables: []common.JobVariable{},
+						},
+						Runner: &common.RunnerConfig{},
+					},
+				},
+			}
+
+			executed = false
+
+			err := ex.prepareOverwrites(common.JobVariables{})
+			assert.NoError(t, err)
+			err = ex.checkDefaults()
+			assert.NoError(t, err)
+
+			err = ex.teardownBuildNamespace(context.Background())
 			assert.NoError(t, err)
 
 			if test.VerifyFn != nil {
