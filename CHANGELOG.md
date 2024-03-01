@@ -8,17 +8,17 @@
 
 - Skip TestBuildGitFetchStrategyFallback on Windows cmd !4653
 
-## v16.9.0 (2024-02-15)
+## v16.9.0 (2024-03-01)
 
 ### New features
 
 - Add Kubernetes configurable retry limits !4618
 - Support cancelation of job script with resumed execution of later stages !4578
 - Add support for s3 accelerate in runner cache !4313 (ArtyMaury @ArtyMaury)
-- kubernetes: add automount_service_account_token option !4543 (Thorsten Banhart @banhartt)
-- docs: register runner using docker exec !4334 (Zhiliang @ZhiliangWu)
+- Kubernetes: add automount_service_account_token option !4543 (Thorsten Banhart @banhartt)
+- Register runner using docker exec !4334 (Zhiliang @ZhiliangWu)
 - Clear worktree on git fetch failures !4216 (Tim @timmmm)
-- kubernetes: add option to skip explicit imagePullSecrets configuration !3517 (Miao Wang @shankerwangmiao)
+- Kubernetes: add option to skip explicit imagePullSecrets configuration !3517 (Miao Wang @shankerwangmiao)
 - Limit number, memory and cpu of services container for docker runners !3804 (Kevin Goslar @kev.go)
 - Provide early build setting validation !4611
 - Allow FreeBSD to be used with Docker executor (unofficially supported) !4551 (Ben Cooksley @bcooksley)
@@ -37,6 +37,7 @@
 
 ### Bug fixes
 
+- Call Value() instead of Get() when validating variables !4647
 - Correctly use volume driver for all volumes !4579 (Mitar @mitar)
 - Revert default runner script timeout !4621
 - Avoid recursing into submodules on checkout and fetch !3463 (Ciprian Daniel Petrisor @dciprian.petrisor)
@@ -49,6 +50,7 @@
 
 ### Maintenance
 
+- Skip TestBuildGitFetchStrategyFallback on Windows cmd !4653
 - Fix warning event integration test !4633
 - Retry package cloud push on HTTP error 520 !4635
 - Allow explicit cpu/memory service resources overwrites for the Kubernetes executor !4626 (Tarun Khandelwal @tkhandelwal1)
@@ -69,7 +71,7 @@
 - Fully implement markdownlint-cli2 in project !4610
 - Update docker+machine version to v0.16.2-gitlab.24 !4609
 - Add ~"Category:Runner Core"  to bug issue template !4612
-- housekeeping docs update !4604
+- Housekeeping docs update !4604
 - Resolve merge conflicts for Updated documentation S3 endpoints to support IPv6 !4602
 - Remove removed feature from docs !4594
 - Replace old handbook URLs !4554
