@@ -627,7 +627,12 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 		return nil
 	}
 
-	err := s.setupCredentials(ctx)
+	err := s.setupBuildNamespace(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = s.setupCredentials(ctx)
 	if err != nil {
 		return err
 	}
@@ -707,7 +712,12 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return nil
 	}
 
-	err := s.setupCredentials(ctx)
+	err := s.setupBuildNamespace(ctx)
+	if err != nil {
+		return fmt.Errorf("setting up build namespace: %w", err)
+	}
+
+	err = s.setupCredentials(ctx)
 	if err != nil {
 		return fmt.Errorf("setting up credentials: %w", err)
 	}
@@ -1080,6 +1090,11 @@ func (s *executor) cleanupResources() {
 		if err := kubeRequest.Run(); err != nil {
 			s.BuildLogger.Errorln(fmt.Sprintf("Error cleaning up secrets: %s", err.Error()))
 		}
+	}
+
+	err := s.teardownBuildNamespace(ctx)
+	if err != nil {
+		s.BuildLogger.Errorln(fmt.Sprintf("Error tearing down namespace: %s", err.Error()))
 	}
 }
 
@@ -1642,6 +1657,40 @@ func (s *executor) getHostAliases() ([]api.HostAlias, error) {
 	}
 
 	return createHostAliases(s.options.Services, s.Config.Kubernetes.GetHostAliases())
+}
+
+func (s *executor) setupBuildNamespace(ctx context.Context) error {
+	if !s.Config.Kubernetes.NamespacePerJob {
+		return nil
+	}
+	s.BuildLogger.Debugln("Setting up build namespace")
+
+	nsconfig := api.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: s.configurationOverwrites.namespace,
+		},
+	}
+
+	// kubeAPI: namespaces, create
+	_, err := s.kubeClient.CoreV1().Namespaces().Create(ctx, &nsconfig, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create namespace: %w", err)
+	}
+	return err
+}
+func (s *executor) teardownBuildNamespace(ctx context.Context) error {
+	if !s.Config.Kubernetes.NamespacePerJob {
+		return nil
+	}
+
+	s.BuildLogger.Debugln("Tearing down build namespace")
+
+	// kubeAPI: namespaces, delete
+	err := s.kubeClient.CoreV1().Namespaces().Delete(ctx, s.configurationOverwrites.namespace, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete namespace: %w", err)
+	}
+	return nil
 }
 
 func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Container) error {
@@ -2548,6 +2597,10 @@ func (s *executor) checkDefaults() error {
 		s.options.Image = common.Image{
 			Name: k8sConfigImageName,
 		}
+	}
+
+	if s.Config.Kubernetes.NamespacePerJob {
+		s.configurationOverwrites.namespace = fmt.Sprintf("ci-job-%d", s.Build.ID)
 	}
 
 	if s.configurationOverwrites.namespace == "" {
