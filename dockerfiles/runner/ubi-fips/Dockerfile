@@ -11,7 +11,7 @@ ARG GIT_LFS_VERSION
 
 COPY gitlab-runner_*.rpm checksums-* install-deps install-gitlab-runner /tmp/
 RUN microdnf install --best --refresh --assumeyes --nodocs --noplugins --setopt=install_weak_deps=0 --setopt=tsflags=nodocs \
-        wget tar openssl
+        tar openssl
 RUN /tmp/install-deps "${TARGETPLATFORM}" "${DOCKER_MACHINE_VERSION}" "${DUMB_INIT_VERSION}"
 RUN rm -rf /tmp/* /etc/gitlab-runner/.runner_system_id
 

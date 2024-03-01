@@ -42,13 +42,13 @@ mkdir -p /etc/gitlab-runner/certs
 chmod -R 700 /etc/gitlab-runner
 
 if grep 'docker-machine' "${SCRIPTPATH}/checksums-${ARCH}"; then
-  wget -nv "https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases/${DOCKER_MACHINE_VERSION}/downloads/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" \
-    -O /usr/bin/docker-machine
+  curl -L "https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases/${DOCKER_MACHINE_VERSION}/downloads/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" \
+    -o /usr/bin/docker-machine
 else
   echo "No checksum specified for docker-machine, skipping."
 fi
-wget -nv "https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_${DUMB_INIT_ARCH}" \
-  -O /usr/bin/dumb-init
+curl -L "https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_${DUMB_INIT_ARCH}" \
+  -o /usr/bin/dumb-init
 
 
 if [[ -f /usr/bin/docker-machine ]]; then
