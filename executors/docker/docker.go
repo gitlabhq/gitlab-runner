@@ -1293,6 +1293,23 @@ func (e *executor) sendSIGTERMToContainerProcs(ctx context.Context, containerID 
 	return e.execScriptOnContainer(ctx, containerID, shells.ContainerSigTermScriptForLinux)
 }
 
+// Because docker error types are in fact interfaces with a unique identifying method, it's not possible to use
+// errors.Is or errors.As on them. And because we wrap those errors as they are returned up the chain, we can't use
+// errdefs directly. Do this instead.
+func shouldIgnoreDockerError(err error, isFuncs ...func(error) bool) bool {
+	if err == nil {
+		return true
+	}
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		for _, is := range isFuncs {
+			if is(e) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (e *executor) execScriptOnContainer(ctx context.Context, containerID string, script ...string) (err error) {
 	action := ""
 	execConfig := types.ExecConfig{
@@ -1303,9 +1320,8 @@ func (e *executor) execScriptOnContainer(ctx context.Context, containerID string
 	}
 
 	defer func() {
-		if err != nil && !errdefs.IsConflict(err) && !docker.IsErrNotFound(err) {
-			l := e.Config.Log().WithFields(logrus.Fields{"error": err})
-			l.Warningln(action, err)
+		if !shouldIgnoreDockerError(err, errdefs.IsConflict, errdefs.IsNotFound) {
+			e.Config.Log().WithFields(logrus.Fields{"error": err}).Warningln(action, err)
 		}
 	}()
 
