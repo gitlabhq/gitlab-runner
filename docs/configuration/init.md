@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** SaaS, self-managed
+**Offering:** GitLab.com, Self-managed
 
 GitLab Runner uses the [Go `service` library](https://github.com/kardianos/service)
 to detect the underlying OS and eventually install the service file based on
