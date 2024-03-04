@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** SaaS, self-managed
+**Offering:** GitLab.com, Self-managed
 
 The Shell executor is a simple executor that you use to execute builds
 locally on the machine where GitLab Runner is installed. It supports all systems on

@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** SaaS, self-managed
+**Offering:** GitLab.com, Self-managed
 
 Use the Kubernetes executor to use Kubernetes clusters for your builds. The executor calls the Kubernetes
 cluster API and creates a pod for each GitLab CI job.

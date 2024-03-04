@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 DETAILS:
 **Tier:** Free, Premium, Ultimate
-**Offering:** SaaS, self-managed
+**Offering:** GitLab.com, Self-managed
 
 A GitLab CI/CD pipeline is a workflow automation engine used for simple or complex DevOps automation tasks. Because these pipelines enable a remote code execution service, you should implement the following process to reduce security risks:
 
