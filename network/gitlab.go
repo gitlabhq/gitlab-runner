@@ -344,12 +344,13 @@ func (n *GitLabClient) RegisterRunner(
 	}
 
 	var response common.RegisterRunnerResponse
-	result, statusText, resp := n.doJSON(
+	result, statusText, resp := n.doJSONWithPAT(
 		context.Background(),
 		&runner,
 		http.MethodPost,
 		"runners",
 		http.StatusCreated,
+		runner.Token,
 		&request,
 		&response,
 	)
@@ -378,23 +379,25 @@ func (n *GitLabClient) VerifyRunner(runner common.RunnerCredentials, systemID st
 	}
 
 	var response common.VerifyRunnerResponse
-	result, statusText, resp := n.doJSON(
+	result, statusText, resp := n.doJSONWithPAT(
 		context.Background(),
 		&runner,
 		http.MethodPost,
 		"runners/verify",
 		http.StatusOK,
+		runner.Token,
 		&request,
 		&response,
 	)
 	if result == -1 {
 		// if server is not able to return JSON, let's try plain text (the legacy response format)
-		result, statusText, resp = n.doJSON(
+		result, statusText, resp = n.doJSONWithPAT(
 			context.Background(),
 			&runner,
 			http.MethodPost,
 			"runners/verify",
 			http.StatusOK,
+			runner.Token,
 			&request,
 			nil,
 		)
@@ -431,12 +434,13 @@ func (n *GitLabClient) UnregisterRunner(runner common.RunnerCredentials) bool {
 		Token: runner.Token,
 	}
 
-	result, statusText, resp := n.doJSON(
+	result, statusText, resp := n.doJSONWithPAT(
 		context.Background(),
 		&runner,
 		http.MethodDelete,
 		"runners",
 		http.StatusNoContent,
+		runner.Token,
 		&request,
 		nil,
 	)
@@ -465,12 +469,13 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 		SystemID: systemID,
 	}
 
-	result, statusText, resp := n.doJSON(
+	result, statusText, resp := n.doJSONWithPAT(
 		context.Background(),
 		&runner,
 		http.MethodDelete,
 		"runners/managers",
 		http.StatusNoContent,
+		runner.Token,
 		&request,
 		nil,
 	)
@@ -574,6 +579,7 @@ func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 	}
 }
 
+//nolint:funlen
 func (n *GitLabClient) RequestJob(
 	ctx context.Context,
 	config common.RunnerConfig,
@@ -590,17 +596,18 @@ func (n *GitLabClient) RequestJob(
 	var response common.JobResponse
 
 	//nolint:bodyclose
-	result, statusText, httpResponse := n.doMeasuredJSON(
+	result, statusText, httpResponse := n.doMeasuredJSONWithPAT(
 		ctx,
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
 		config.SystemIDState.GetSystemID(),
 		apiEndpointRequestJob,
-		doJSONParams{
+		doJSONWithPATParams{
 			credentials: &config.RunnerCredentials,
 			method:      http.MethodPost,
 			uri:         "jobs/request",
 			statusCode:  http.StatusCreated,
+			pat:         config.Token,
 			request:     &request, response: &response,
 		},
 	)
@@ -660,17 +667,18 @@ func (n *GitLabClient) UpdateJob(
 	log.Info("Updating job...")
 
 	//nolint:bodyclose
-	statusCode, statusText, response := n.doMeasuredJSON(
+	statusCode, statusText, response := n.doMeasuredJSONWithPAT(
 		context.Background(),
 		config.Log(),
 		config.RunnerCredentials.ShortDescription(),
 		config.SystemIDState.GetSystemID(),
 		apiEndpointUpdateJob,
-		doJSONParams{
+		doJSONWithPATParams{
 			credentials: &config.RunnerCredentials,
 			method:      http.MethodPut,
 			uri:         fmt.Sprintf("jobs/%d", jobInfo.ID),
 			statusCode:  http.StatusOK,
+			pat:         jobCredentials.Token,
 			request:     &request,
 			response:    nil,
 		},

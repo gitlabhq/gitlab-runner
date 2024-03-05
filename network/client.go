@@ -390,7 +390,7 @@ func (n *client) doJSONWithPAT(
 		headers.Set(common.Accept, jsonMimeType)
 	}
 	if pat != "" {
-		headers.Set("PRIVATE-TOKEN", pat)
+		headers.Set(common.PrivateToken, pat)
 	}
 
 	res, err := n.do(ctx, uri, method, body, jsonMimeType, headers)

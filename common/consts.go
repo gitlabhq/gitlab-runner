@@ -188,4 +188,6 @@ const (
 	XRatelimitLimit        = headers.XRatelimitLimit
 	XRatelimitRemaining    = headers.XRatelimitRemaining
 	XRatelimitReset        = headers.XRatelimitReset
+
+	PrivateToken = "PRIVATE-TOKEN"
 )

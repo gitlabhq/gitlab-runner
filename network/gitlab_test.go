@@ -111,7 +111,11 @@ func testRegisterRunnerHandler(w http.ResponseWriter, r *http.Request, response 
 
 	res := make(map[string]interface{})
 
-	switch req["token"].(string) {
+	token := req["token"].(string)
+	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
+	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+
+	switch token {
 	case validToken:
 		if req["description"].(string) != "test" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -362,7 +366,11 @@ func testUnregisterRunnerHandler(w http.ResponseWriter, r *http.Request, t *test
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
 
-	switch req["token"].(string) {
+	token := req["token"].(string)
+	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
+	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+
+	switch token {
 	case validGlrtToken, validToken:
 		w.WriteHeader(http.StatusNoContent)
 	case invalidToken:
@@ -390,7 +398,11 @@ func testUnregisterRunnerManagerHandler(w http.ResponseWriter, r *http.Request, 
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
 
-	switch req["token"].(string) {
+	token := req["token"].(string)
+	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
+	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+
+	switch token {
 	case validGlrtToken:
 		if systemID, ok := req["system_id"].(string); ok && systemID == "s_some_system_id" {
 			w.WriteHeader(http.StatusNoContent)
@@ -513,7 +525,11 @@ func testVerifyRunnerHandler(w http.ResponseWriter, r *http.Request, legacyServe
 
 	res := make(map[string]interface{})
 
-	switch req["token"].(string) {
+	token := req["token"].(string)
+	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
+	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+
+	switch token {
 	case validToken:
 		if legacyServer {
 			w.Header().Set("Content-Type", "plain/text")
@@ -782,7 +798,7 @@ func testResetTokenWithPATHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := matches[1]
 
-	pat := r.Header.Get("PRIVATE-TOKEN")
+	pat := r.Header.Get(PrivateToken)
 	if pat == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -1018,7 +1034,11 @@ func testRequestJobHandler(t *testing.T, w http.ResponseWriter, r *http.Request,
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
 
-	switch req["token"].(string) {
+	token := req["token"].(string)
+	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
+	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+
+	switch token {
 	case validToken:
 	case "no-jobs":
 		w.Header().Add("X-GitLab-Last-Update", "a nice timestamp")
@@ -1288,7 +1308,11 @@ func testUpdateJobHandler(w http.ResponseWriter, r *http.Request, t *testing.T) 
 	err = json.Unmarshal(body, &req)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "token", req["token"])
+	token := req["token"].(string)
+	require.NotEmpty(t, r.Header.Get(PrivateToken), "private-token header is required")
+	require.Equal(t, token, r.Header.Get("private-token"), "token in header and body must match")
+
+	assert.Equal(t, "token", token)
 
 	setStateForUpdateJobHandlerResponse(w, req)
 }

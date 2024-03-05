@@ -62,7 +62,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		switch r.Header.Get("PRIVATE-TOKEN") {
+		switch r.Header.Get(PrivateToken) {
 		case "":
 			w.Header().Set(ContentType, "application/json")
 			fmt.Fprint(w, `{"key":"value"}`)
