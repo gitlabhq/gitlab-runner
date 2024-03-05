@@ -21,7 +21,7 @@ on other Linux distributions.
 | LinuxMint    | <https://linuxmint.com/download_all.php> |
 | Raspbian     | |
 | RHEL         | <https://access.redhat.com/product-life-cycles?product=Red%20Hat%20Enterprise%20Linux> |
-| Oracle Linux | <https://endoflife.date/oraclelinux> |
+| Oracle Linux | <https://endoflife.date/oracle-linux> |
 | Fedora       | <https://docs.fedoraproject.org/en-US/releases/eol/> |
 | Amazon Linux | <https://aws.amazon.com/linux/> |
 

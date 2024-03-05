@@ -253,7 +253,7 @@ Or:
 ```
 
 To set the default Docker address pool, use `default-address-pool` in
-[`dockerd`](https://docs.docker.com/engine/reference/commandline/dockerd/). If CIDR ranges
+[`dockerd`](https://docs.docker.com/reference/cli/dockerd/). If CIDR ranges
 are already used in the network, Docker networks may conflict with other networks on the host,
 including other Docker networks.
 
@@ -392,7 +392,7 @@ required to test if there is a lot of I/O related work, such as with databases.
 
 If you use the `tmpfs` and `services_tmpfs` options in the runner configuration,
 you can specify multiple paths, each with its own options. For more information, see the
-[Docker documentation](https://docs.docker.com/engine/reference/commandline/run/#mount-tmpfs-tmpfs).
+[Docker documentation](https://docs.docker.com/reference/cli/docker/container/run/#tmpfs).
 
 For example, to mount the data directory for the official MySQL container in RAM,
 configure the `config.toml`:
@@ -507,7 +507,7 @@ To clear Docker build images:
     Build Cache     0         0         0B        0B
     ```
 
-1. To remove all unused containers, networks, images (dangling and unreferenced), and untagged volumes, run [`docker system prune`](https://docs.docker.com/engine/reference/commandline/system_prune/).
+1. To remove all unused containers, networks, images (dangling and unreferenced), and untagged volumes, run [`docker system prune`](https://docs.docker.com/reference/cli/docker/system/prune/).
 
 ## Persistent storage
 
@@ -649,7 +649,7 @@ image:
   entrypoint: [""]
 ```
 
-For more information, see [Override the Entrypoint of an image](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image) and [How CMD and ENTRYPOINT interact in Docker](https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact).
+For more information, see [Override the Entrypoint of an image](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image) and [How CMD and ENTRYPOINT interact in Docker](https://docs.docker.com/reference/dockerfile/#understand-how-cmd-and-entrypoint-interact).
 
 ### Job script as ENTRYPOINT
 

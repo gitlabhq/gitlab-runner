@@ -9,8 +9,8 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 DETAILS:
 **Status:** Beta
 
-> - Introduced in GitLab Runner 15.11.0 as an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
-> - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html) in GitLab Runner 16.6.
+> - Introduced in GitLab Runner 15.11.0 as an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
+> - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
 
 The instance executor is an autoscale-enabled executor that creates instances on-demand to accommodate
 the expected volume of jobs that the runner manager processes.
@@ -29,7 +29,7 @@ Nesting is only supported on Apple Silicon instances.
 ## Prepare the environment for autoscaling
 
 To enable scaling for your target platform, install the AWS, Google Cloud, or Azure fleeting plugins.
-The AWS plugin is in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html). The Google Cloud and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+The AWS plugin is in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). The Google Cloud and Azure plugins are [Experiments](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
 
 For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
 

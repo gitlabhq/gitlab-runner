@@ -195,7 +195,7 @@ where `gitlab-runner` is the name of the container, set with `--name gitlab-runn
 the first command.
 
 You may find more information about handling container logs at the
-[Docker documentation page](https://docs.docker.com/engine/reference/commandline/logs/).
+[Docker documentation page](https://docs.docker.com/reference/cli/docker/container/logs/).
 
 ## Installing trusted SSL server certificates
 

@@ -253,7 +253,7 @@ skipped.
 
 These are the binaries that you can install:
 
-1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://developer.hashicorp.com/vagrant/downloads); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
+1. [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](https://developer.hashicorp.com/vagrant/install); the [Vagrant Parallels plugin](https://github.com/Parallels/vagrant-parallels) is also required
 1. [kubectl](https://kubernetes.io/docs/tasks/tools/) with
    [minikube](https://github.com/kubernetes/minikube)
 1. [Parallels Pro or Business edition](https://www.parallels.com/products/desktop/)

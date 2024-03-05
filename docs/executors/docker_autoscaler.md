@@ -9,7 +9,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 DETAILS:
 **Status:** Beta
 
-> - Introduced in GitLab Runner 15.11.0 as an [Experiment](https://docs.gitlab.com/ee/policy/alpha-beta-support.html).
+> - Introduced in GitLab Runner 15.11.0 as an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html) in GitLab Runner 16.6.
 
 The Docker Autoscaler executor is an autoscale-enabled Docker executor that creates instances on-demand to
