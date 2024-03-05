@@ -698,10 +698,10 @@ values, ranges, lists, and asterisks. View [a detailed description of the syntax
 ## The `[runners.instance]` section
 
 DETAILS:
-**Status:** Experiment
+**Status:** Beta
 
 The following parameters define the configuration for the [instance executor](../executors/instance.md).
-The instance executor is an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment)
+The instance executor is in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta)
 
 | Parameter        | Type         | Description |
 |------------------|--------------|-------------|
@@ -713,7 +713,7 @@ The instance executor is an [Experiment](https://docs.gitlab.com/ee/policy/exper
 
 The following parameters configure the autoscaler feature. You can only use these parameters with the
 [Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors. These
-executors are [Experiments](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
+executors are in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta).
 
 | Parameter                               | Description |
 |-----------------------------------------|-------------|
