@@ -57,7 +57,9 @@ func (n *GitLabClient) getClient(credentials requestCredentials) (c *client, err
 	)
 	c = n.clients[key]
 	if c == nil {
-		c, err = newClientWithMaxAge(credentials, n.connectionMaxAge)
+		c, err = newClient(
+			credentials,
+			WithMaxAge(n.connectionMaxAge))
 		if err != nil {
 			return
 		}
