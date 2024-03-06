@@ -1014,6 +1014,18 @@ func TestDockerMacAddress(t *testing.T) {
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
+func TestDockerCgroupParentSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		CgroupParent: "test-docker-cgroup",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "test-docker-cgroup", hostConfig.CgroupParent)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
 func TestDockerCPUSetCPUsSetting(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		CPUSetCPUs: "1-3,5",
@@ -1059,6 +1071,14 @@ func TestDockerServiceSettings(t *testing.T) {
 				value, err := units.RAMInBytes("2g")
 				require.NoError(t, err)
 				assert.Equal(t, value, hostConfig.MemorySwap)
+			},
+		},
+		"CgroupParent": {
+			dockerConfig: common.DockerConfig{
+				ServiceCgroupParent: "test-docker-cgroup",
+			},
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+				assert.Equal(t, "test-docker-cgroup", hostConfig.CgroupParent)
 			},
 		},
 		"CPUSetCPUs": {
