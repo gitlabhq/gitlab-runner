@@ -17,7 +17,7 @@ func setupOSServiceConfig(c *cli.Context, config *service.Config) {
 	switch service.Platform() {
 	case "linux-systemd":
 		config.Dependencies = []string{
-			"After=syslog.target network.target",
+			"After=network.target",
 		}
 		config.Option = service.KeyValue{
 			"Restart": "always",
