@@ -354,8 +354,8 @@ Each service runs in a separate container and is linked to the job.
 | --------- | ----------- |
 | `name`  | The name of the image to be run as a service. |
 | `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service .|
-| `entrypoint` | Command or script that should be executed as the container’s entrypoint. The syntax is similar to [Dockerfile’s ENTRYPOINT](https://docs.docker.com/engine/reference/builder/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
-| `command` | Command or script that should be used as the container’s command. The syntax is similar to [Dockerfile’s CMD](https://docs.docker.com/engine/reference/builder/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
+| `entrypoint` | Command or script that should be executed as the container’s entrypoint. The syntax is similar to [Dockerfile’s ENTRYPOINT](https://docs.docker.com/reference/dockerfile/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
+| `command` | Command or script that should be used as the container’s command. The syntax is similar to [Dockerfile’s CMD](https://docs.docker.com/reference/dockerfile/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
 | `environment` | Append or overwrite environment variables for the service container. |
 
 Example:
