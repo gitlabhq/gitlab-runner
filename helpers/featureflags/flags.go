@@ -133,12 +133,12 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:            UseWindowsLegacyProcessStrategy,
-		DefaultValue:    true,
+		DefaultValue:    false,
 		Deprecated:      false,
 		ToBeRemovedWith: "",
-		Description: "When disabled, processes that Runner creates on Windows (shell and custom executor) will be " +
-			"created with additional setup that should improve process termination. This is currently experimental " +
-			"and how we setup these processes may change as we continue to improve this. When set to `true`, legacy " +
+		Description: "In GitLab Runner 16.10 and later, the default is `false`. In GitLab Runner 16.9 and earlier, the default is `true`. " +
+			"When disabled, processes that Runner creates on Windows (shell and custom executor) will be " +
+			"created with additional setup that should improve process termination. When set to `true`, legacy " +
 			"process setup is used. To successfully and gracefully drain a Windows Runner, this feature flag should " +
 			"be set to `false`.",
 	},
