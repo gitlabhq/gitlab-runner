@@ -175,7 +175,7 @@ this is done depends on how the runner is launched. For example:
 
 1. Verify that `docker-machine` can create a virtual machine with your
    desired options. For example, to create an `n1-standard-1` machine
-   with a single NVIDIA Telsa P4 accelerator, substitute
+   with a single NVIDIA Tesla P4 accelerator, substitute
    `test-gpu` with a name and run:
 
    ```shell
