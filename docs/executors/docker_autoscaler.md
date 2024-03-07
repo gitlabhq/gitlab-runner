@@ -23,7 +23,7 @@ like Google Cloud, AWS, and Azure.
 ## Install a fleeting plugin
 
 To enable autoscaling for your target platform, install a fleeting plugin. You can install
-the AWS, Google Cloud, or Azure fleeting plugin. The AWS, Google Cloud and Azure plugins are currently in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html#beta). See [epic 2502](https://gitlab.com/groups/gitlab-org/-/epics/2502) for a timeline.
+the AWS, Google Cloud, or Azure fleeting plugin. The AWS, Google Cloud and Azure plugins are currently in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). See [epic 2502](https://gitlab.com/groups/gitlab-org/-/epics/2502) for a timeline.
 
 For other official plugins developed by GitLab, see the [fleeting project](https://gitlab.com/gitlab-org/fleeting).
 
