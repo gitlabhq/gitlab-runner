@@ -240,3 +240,31 @@ Then add the Docker Machine options to your [`MachineOptions` settings in the Gi
        "google-metadata=install-nvidia-driver=True"
      ]
    ```
+
+## Troubleshooting
+
+When working with the Docker Machine executor, you might encounter the following issues.
+
+### ERROR: Error creating machine
+
+When installing Docker Machine, you might encounter an error that states
+`ERROR: Error creating machine: Error running provisioning: error installing docker`.
+
+Docker Machine attempts to install Docker on a newly provisioned
+virtual machine using this script:
+
+```shell
+if ! type docker; then curl -sSL "https://get.docker.com" | sh -; fi
+```
+
+If the `docker` command succeeds, Docker Machine assumes Docker
+is installed and continues.
+
+If it does not succeed, Docker Machine attempts to download
+and run the script at `https://get.docker.com`. If the installation
+fails, it's possible the operating system is no longer supported by
+Docker.
+
+To troubleshoot this issue, you can enable debugging on Docker
+Machine by setting `MACHINE_DEBUG=true` in the environment
+where GitLab Runner is installed.
