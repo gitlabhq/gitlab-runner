@@ -10,7 +10,7 @@ DETAILS:
 **Status:** Beta
 
 > - Introduced in GitLab Runner 15.11.0 as an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
-> - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html) in GitLab Runner 16.6.
+> - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
 
 The Docker Autoscaler executor is an autoscale-enabled Docker executor that creates instances on-demand to
 accommodate the jobs that the runner manager processes. It wraps the [Docker executor](docker.md) so that all
@@ -23,7 +23,7 @@ like Google Cloud, AWS, and Azure.
 ## Install a fleeting plugin
 
 To enable autoscaling for your target platform, install a fleeting plugin. You can install
-the AWS, Google Cloud, or Azure fleeting plugin. The AWS, Google Cloud and Azure plugins are currently in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html). See [epic 2502](https://gitlab.com/groups/gitlab-org/-/epics/2502) for a timeline.
+the AWS, Google Cloud, or Azure fleeting plugin. The AWS, Google Cloud and Azure plugins are currently in [Beta](https://docs.gitlab.com/ee/policy/alpha-beta-support.html#beta). See [epic 2502](https://gitlab.com/groups/gitlab-org/-/epics/2502) for a timeline.
 
 For other official plugins developed by GitLab, see the [fleeting project](https://gitlab.com/gitlab-org/fleeting).
 
