@@ -48,6 +48,7 @@ These settings are global. They apply to all runners.
 | `log_format`       | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`, which contains ANSI escape codes for coloring. |
 | `check_interval`   | Defines the interval length, in seconds, between the runner checking for new jobs. The default value is `3`. If set to `0` or lower, the default value is used. |
 | `sentry_dsn`       | Enables tracking of all system level errors to Sentry. |
+| `connection_max_age` | The maximum duration a TLS keepalive connection to the GitLab server should remain open before reconnecting. The default value is `15m` for 15 minutes. If set to `0` or lower, the connection will persist as long as possible. |
 | `listen_address`   | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
 | `shutdown_timeout` | Number of seconds until the [forceful shutdown operation](../commands/index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
 
