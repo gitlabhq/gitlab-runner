@@ -7,11 +7,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner"
+	"gitlab.com/gitlab-org/gitlab-runner/common/config/runner/monitoring"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 )
 
@@ -228,6 +233,151 @@ func TestRestrictHTTPMethods(t *testing.T) {
 			resp, err := server.Client().Do(req)
 			require.NoError(t, err)
 			require.Equal(t, expectedStatusCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestBuildsHelper_evaluateJobQueuingDuration(t *testing.T) {
+	const (
+		testToken = "testoken" // No typo here! 8 characters to make it equal to the computed ShortDescription()
+	)
+
+	type jobInfo struct {
+		timeInQueueSeconds                       float64
+		projectJobsRunningOnInstanceRunnersCount string
+	}
+
+	basicJob := jobInfo{
+		timeInQueueSeconds:                       (15 * time.Second).Seconds(),
+		projectJobsRunningOnInstanceRunnersCount: "0",
+	}
+
+	tc := map[string]struct {
+		monitoringSectionMissing bool
+		jobQueuingSectionMissing bool
+		threshold                time.Duration
+		jobsRunningForProject    string
+		jobInfo                  jobInfo
+		expectedValue            float64
+	}{
+		"no monitoring section in configuration": {
+			monitoringSectionMissing: true,
+			jobInfo:                  basicJob,
+			expectedValue:            0,
+		},
+		"no jobQueuingDuration section in configuration": {
+			jobQueuingSectionMissing: true,
+			jobInfo:                  basicJob,
+			expectedValue:            0,
+		},
+		"zeroed configuration": {
+			jobInfo:       basicJob,
+			expectedValue: 0,
+		},
+		"jobsRunningForProject not configured and threshold not exceeded": {
+			threshold:     60 * time.Second,
+			jobInfo:       basicJob,
+			expectedValue: 0,
+		},
+		"jobsRunningForProject not configured and threshold exceeded": {
+			threshold:     10 * time.Second,
+			jobInfo:       basicJob,
+			expectedValue: 1,
+		},
+		"jobsRunningForProject configured and matched and threshold not exceeded": {
+			threshold:             60 * time.Second,
+			jobsRunningForProject: ".*",
+			jobInfo:               basicJob,
+			expectedValue:         0,
+		},
+		"jobsRunningForProject configured and matched and threshold exceeded": {
+			threshold:             10 * time.Second,
+			jobsRunningForProject: ".*",
+			jobInfo:               basicJob,
+			expectedValue:         1,
+		},
+		"jobsRunningForProject configured and not matched and threshold not exceeded": {
+			threshold:             60 * time.Second,
+			jobsRunningForProject: "Inf+",
+			jobInfo:               basicJob,
+			expectedValue:         0,
+		},
+		"jobsRunningForProject configured and not matched and threshold exceeded": {
+			threshold:             10 * time.Second,
+			jobsRunningForProject: "Inf+",
+			jobInfo:               basicJob,
+			expectedValue:         0,
+		},
+	}
+
+	for tn, tt := range tc {
+		t.Run(tn, func(t *testing.T) {
+			build := &common.Build{
+				Runner: &common.RunnerConfig{
+					RunnerCredentials: common.RunnerCredentials{
+						Token: testToken,
+					},
+					SystemIDState: &common.SystemIDState{},
+				},
+				JobResponse: common.JobResponse{
+					ID: 1,
+					JobInfo: common.JobInfo{
+						ProjectID:                                1,
+						TimeInQueueSeconds:                       tt.jobInfo.timeInQueueSeconds,
+						ProjectJobsRunningOnInstanceRunnersCount: tt.jobInfo.projectJobsRunningOnInstanceRunnersCount,
+					},
+				},
+			}
+
+			require.NoError(t, build.Runner.SystemIDState.EnsureSystemID())
+
+			if !tt.monitoringSectionMissing {
+				build.Runner.Monitoring = &runner.Monitoring{}
+
+				if !tt.jobQueuingSectionMissing {
+					build.Runner.Monitoring.JobQueuingDurations = monitoring.JobQueuingDurations{
+						&monitoring.JobQueuingDuration{
+							Periods:               []string{"* * * * * * *"},
+							Threshold:             tt.threshold,
+							JobsRunningForProject: tt.jobsRunningForProject,
+						},
+					}
+				}
+				require.NoError(t, build.Runner.Monitoring.Compile())
+			}
+
+			b := newBuildsHelper()
+			b.addBuild(build)
+
+			ch := make(chan prometheus.Metric, 1)
+			b.acceptableJobQueuingDurationExceeded.Collect(ch)
+
+			m := <-ch
+
+			var mm dto.Metric
+			err := m.Write(&mm)
+			require.NoError(t, err)
+
+			labels := make(map[string]string)
+			for _, l := range mm.GetLabel() {
+				if !assert.NotNil(t, l.Name) {
+					continue
+				}
+
+				if !assert.NotNil(t, l.Value) {
+					continue
+				}
+
+				labels[*l.Name] = *l.Value
+			}
+
+			assert.Len(t, labels, 2)
+			require.Contains(t, labels, "runner")
+			assert.Equal(t, testToken, labels["runner"])
+			require.Contains(t, labels, "system_id")
+			assert.Equal(t, build.Runner.SystemIDState.GetSystemID(), labels["system_id"])
+
+			assert.Equal(t, tt.expectedValue, mm.GetCounter().GetValue())
 		})
 	}
 }
