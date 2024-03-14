@@ -36,15 +36,18 @@ GitLab officially supports LTS versions of Microsoft Windows operating systems a
 
 This means that we support:
 
-- [Long-Term Servicing Channel](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel),
-  versions for 5 years after their release date. Note that we don't
-  support versions that are on extended support.
+- [Long-Term Servicing Channel](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#long-term-servicing-channel)
+  versions for five years after their release date.
+
+  After five years, Microsoft offers extended support for an additional five years.
+  During this extended period, we offer support for as long as is practical.
+  We can end this support, with announcement, on a GitLab major release.
 - [Semi-Annual Channel](https://learn.microsoft.com/en-us/windows/deployment/update/waas-overview#semi-annual-channel)
   versions for 18 months after their release date. We don't support
   these versions after mainstream support ends.
 
-This is the case for both the [Windows binaries](windows.md#installation) that we
-distribute, and also for the [Docker executor](../executors/docker.md#supported-windows-versions).
+This support policy applies to the [Windows binaries](windows.md#installation) that we
+distribute and the [Docker executor](../executors/docker.md#supported-windows-versions).
 
 NOTE:
 The Docker executor for Windows containers has strict version
@@ -52,21 +55,16 @@ requirements, because containers have to match the version of the host
 OS. See the [list of supported Windows containers](../executors/docker.md#supported-windows-versions)
 for more information.
 
-GitLab provides Windows operating system runner images until the EOL (End-Of-Life) date for the operating system. After the EOL date of the Windows OS, GitLab stops releasing runner images with the EOL Windows OS version.
-
-The EOL date for a Windows OS version will not necessarily align with a GitLab major release; therefore, we will typically stop releasing an EOL image in a GitLab minor release. A removal notice will be included in the release post of the GitLab version in which we stopped publishing the image with the EOL Windows version.
-
-As a single source of truth we use
-<https://learn.microsoft.com/en-us/lifecycle/products/> which specifies
-both the release and mainstream support dates.
+As a single source of truth, we use <https://learn.microsoft.com/en-us/lifecycle/products/>,
+which specifies the release, mainstream, and extended support dates.
 
 Below is a list of versions that are commonly used and their end of life
 date:
 
-| OS                                  | Mainstream support end of life date |
-|-------------------------------------|-------------------------------------|
-| Windows 10 1809/2019                | January 2024                        |
-| Windows Server Datacenter 1809/2019 | January 2024                        |
+| Operating system            | Mainstream end date | Extended end date |
+|-----------------------------|---------------------| ------------------|
+| Windows Server 2019 (1809)  | January 2024        | January 2029      |
+| Windows Server 2022 (21H2)  | October 2026        | October 2031      |
 
 ### Future releases
 
