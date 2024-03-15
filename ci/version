@@ -25,4 +25,4 @@ last_tag=$(git describe --abbrev=0 --exclude='*-rc*')
 commits=$(git rev-list --count "${last_tag}..HEAD")
 revision=$(git rev-parse --short=8 HEAD || echo unknown)
 
-echo "${version}~beta.${commits}.g${revision}"
+echo "${version}~pre.${commits}.g${revision}"
