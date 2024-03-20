@@ -2,6 +2,7 @@ package buildtest
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -12,6 +13,16 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
+
+type withContext struct {
+}
+
+func (c *withContext) WithContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancelCause(ctx)
+	cancel(assert.AnError)
+
+	return context.WithCancel(ctx)
+}
 
 //nolint:funlen,gocognit
 func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
@@ -139,4 +150,24 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 			}
 		})
 	}
+}
+
+func RunBuildWithExecutorCancel(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
+	resp, err := common.GetRemoteLongRunningBuildWithAfterScript()
+	require.NoError(t, err)
+
+	build := &common.Build{
+		JobResponse:     resp,
+		Runner:          config,
+		SystemInterrupt: make(chan os.Signal, 1),
+	}
+	build.ExecutorData = &withContext{}
+
+	buf := new(bytes.Buffer)
+	trace := &common.Trace{Writer: io.MultiWriter(buf, os.Stdout)}
+
+	err = RunBuildWithTrace(t, build, trace)
+	t.Log(buf.String())
+
+	assert.ErrorIs(t, err, assert.AnError)
 }

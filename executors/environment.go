@@ -11,6 +11,7 @@ import (
 
 type Environment interface {
 	Prepare(context.Context, buildlogger.Logger, common.ExecutorPrepareOptions) (Client, error)
+	WithContext(context.Context) (context.Context, context.CancelFunc)
 }
 
 type Client interface {

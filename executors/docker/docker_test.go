@@ -2133,6 +2133,8 @@ func TestCreateHostConfigForServiceHealthCheck(t *testing.T) {
 	}
 }
 
+var _ executors.Environment = (*env)(nil)
+
 type env struct {
 	client *envClient
 }
@@ -2159,6 +2161,10 @@ func (c *envClient) DialRun(ctx context.Context, command string) (net.Conn, erro
 
 func (c *envClient) Close() error {
 	return nil
+}
+
+func (e *env) WithContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithCancel(ctx)
 }
 
 func (e *env) Prepare(
