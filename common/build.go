@@ -42,6 +42,14 @@ const (
 
 type BuildStage string
 
+// WithContext is an interface that some Executor's ExecutorData will implement as a
+// mechanism for extending the build context and canceling if the executor cannot
+// complete the job. For example, the Autoscaler Executor will cancel the returned
+// context if the instance backing the job disappears.
+type WithContext interface {
+	WithContext(context.Context) (context.Context, context.CancelFunc)
+}
+
 const (
 	BuildStageResolveSecrets           BuildStage = "resolve_secrets"
 	BuildStagePrepareExecutor          BuildStage = "prepare_executor"
@@ -701,7 +709,7 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 	b.Log().Debugln("Waiting for signals...")
 	select {
 	case <-ctx.Done():
-		err = b.handleError(ctx.Err())
+		err = b.handleError(context.Cause(ctx))
 
 	case signal := <-b.SystemInterrupt:
 		err = &BuildError{
@@ -718,7 +726,7 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 		// return early because we're no longer waiting for the build
 		// to finish.
 		if ctx.Err() != nil {
-			return b.handleError(ctx.Err())
+			return b.handleError(context.Cause(ctx))
 		}
 
 		if err != nil {
@@ -780,7 +788,7 @@ func (b *Build) retryCreateExecutor(
 		if errors.As(err, &buildErr) {
 			return nil, err
 		} else if options.Context.Err() != nil {
-			return nil, b.handleError(options.Context.Err())
+			return nil, b.handleError(context.Cause(options.Context))
 		}
 
 		logger.SoftErrorln("Preparation failed:", err)
@@ -910,6 +918,7 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 	return b.executorStageResolver()
 }
 
+//nolint:funlen
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.logUsedImages()
 
@@ -959,6 +968,12 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		return err
 	}
 	defer executor.Cleanup()
+
+	// override context that can be canceled by the executor if supported
+	if withContext, ok := b.ExecutorData.(WithContext); ok {
+		ctx, cancel = withContext.WithContext(ctx)
+		defer cancel()
+	}
 
 	err = b.run(ctx, trace, executor)
 	if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {

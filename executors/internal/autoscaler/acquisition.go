@@ -117,6 +117,14 @@ func (ref *acquisitionRef) Prepare(
 	return client, nil
 }
 
+func (ref *acquisitionRef) WithContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	if ref.acq == nil {
+		return context.WithCancel(ctx)
+	}
+
+	return ref.acq.WithContext(ctx)
+}
+
 func (ref *acquisitionRef) connectNesting(
 	host string,
 	logger buildlogger.Logger,
