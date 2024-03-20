@@ -4,6 +4,8 @@ go 1.21
 
 toolchain go1.21.7
 
+replace github.com/moby/spdystream => github.com/gravitational/spdystream v0.0.0-20230511100431-ddc12af7b31d
+
 require (
 	cloud.google.com/go/compute/metadata v0.2.3
 	cloud.google.com/go/iam v1.1.5
