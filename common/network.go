@@ -245,13 +245,14 @@ const (
 )
 
 type GitInfo struct {
-	RepoURL   string         `json:"repo_url"`
-	Ref       string         `json:"ref"`
-	Sha       string         `json:"sha"`
-	BeforeSha string         `json:"before_sha"`
-	RefType   GitInfoRefType `json:"ref_type"`
-	Refspecs  []string       `json:"refspecs"`
-	Depth     int            `json:"depth"`
+	RepoURL          string         `json:"repo_url"`
+	RepoObjectFormat string         `json:"repo_object_format"`
+	Ref              string         `json:"ref"`
+	Sha              string         `json:"sha"`
+	BeforeSha        string         `json:"before_sha"`
+	RefType          GitInfoRefType `json:"ref_type"`
+	Refspecs         []string       `json:"refspecs"`
+	Depth            int            `json:"depth"`
 }
 
 type RunnerInfo struct {

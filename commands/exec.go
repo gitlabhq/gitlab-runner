@@ -61,6 +61,15 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (*
 		return nil, err
 	}
 
+	repoObjectFormat, err := c.runCommand("git", "config", "extensions.objectFormat")
+	if err != nil {
+		return nil, err
+	}
+
+	if repoObjectFormat == "" {
+		repoObjectFormat = common.DefaultObjectFormat
+	}
+
 	jobResponse := common.JobResponse{
 		ID:            1,
 		Token:         "",
@@ -72,10 +81,11 @@ func (c *ExecCommand) createBuild(repoURL string, abortSignal chan os.Signal) (*
 			ProjectName: "",
 		},
 		GitInfo: common.GitInfo{
-			RepoURL:   repoURL,
-			Ref:       strings.TrimSpace(refName),
-			Sha:       strings.TrimSpace(sha),
-			BeforeSha: strings.TrimSpace(beforeSha),
+			RepoURL:          repoURL,
+			Ref:              strings.TrimSpace(refName),
+			Sha:              strings.TrimSpace(sha),
+			BeforeSha:        strings.TrimSpace(beforeSha),
+			RepoObjectFormat: repoObjectFormat,
 		},
 		RunnerInfo: common.RunnerInfo{
 			Timeout: c.Timeout,

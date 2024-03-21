@@ -31,6 +31,8 @@ const (
 	SubmoduleNone      SubmoduleStrategy = "none"
 	SubmoduleNormal    SubmoduleStrategy = "normal"
 	SubmoduleRecursive SubmoduleStrategy = "recursive"
+
+	DefaultObjectFormat = "sha1"
 )
 
 type BuildSettings struct {

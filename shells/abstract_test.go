@@ -750,8 +750,9 @@ func TestGitCleanFlags(t *testing.T) {
 
 func TestGitFetchFlags(t *testing.T) {
 	tests := map[string]struct {
-		value string
-		depth int
+		value        string
+		depth        int
+		objectFormat string
 
 		expectedGitFetchFlags []interface{}
 	}{
@@ -767,6 +768,11 @@ func TestGitFetchFlags(t *testing.T) {
 			depth:                 1,
 			value:                 "--quiet",
 			expectedGitFetchFlags: []interface{}{"--depth", "1", "--quiet"},
+		},
+		"object format SHA256": {
+			value:                 "",
+			objectFormat:          "sha256",
+			expectedGitFetchFlags: []interface{}{"--prune", "--quiet"},
 		},
 		"disabled": {
 			value: "none",
@@ -784,7 +790,7 @@ func TestGitFetchFlags(t *testing.T) {
 			build := &common.Build{
 				Runner: &common.RunnerConfig{},
 				JobResponse: common.JobResponse{
-					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth},
+					GitInfo: common.GitInfo{Sha: dummySha, Ref: dummyRef, Depth: test.depth, RepoObjectFormat: test.objectFormat},
 					Variables: common.JobVariables{
 						{Key: "GIT_FETCH_EXTRA_FLAGS", Value: test.value},
 					},
@@ -799,12 +805,24 @@ func TestGitFetchFlags(t *testing.T) {
 			} else {
 				mockWriter.EXPECT().Noticef("Fetching changes with git depth set to %d...", test.depth).Once()
 			}
+
+			var expectedObjectFormat = "sha1"
+			if test.objectFormat != "" {
+				expectedObjectFormat = test.objectFormat
+			}
+
 			mockWriter.EXPECT().MkTmpDir(mock.Anything).Return(mock.Anything).Once()
 			mockWriter.EXPECT().Command("git", "config", "--global", "--add", "safe.directory", mock.Anything).Once()
 			mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
 			mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
 			mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "transfer.bundleURI", "true").Once()
-			mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything).Once()
+
+			if expectedObjectFormat != "sha1" {
+				mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything, "--object-format", expectedObjectFormat).Once()
+			} else {
+				mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything).Once()
+			}
+
 			mockWriter.EXPECT().Cd(mock.Anything).Once()
 			mockWriter.EXPECT().Join(mock.Anything, mock.Anything).Return(mock.Anything).Once()
 			mockWriter.EXPECT().IfCmd("git", "remote", "add", "origin", mock.Anything).Once()
