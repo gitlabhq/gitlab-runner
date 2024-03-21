@@ -85,8 +85,6 @@ func GetServiceArguments(c *cli.Context) (arguments []string) {
 
 	if config := c.String("config"); config != "" {
 		arguments = append(arguments, "--config", config)
-	} else {
-		arguments = append(arguments, "--config", GetDefaultConfigFile(c.String("user")))
 	}
 
 	if sn := c.String("service"); sn != "" {
@@ -110,7 +108,6 @@ func createServiceConfig(c *cli.Context) *service.Config {
 	config := &service.Config{
 		Name:        c.String("service"),
 		DisplayName: c.String("service"),
-		UserName:    c.String("user"),
 		Description: defaultDescription,
 		Arguments:   append([]string{"run"}, GetServiceArguments(c)...),
 	}
@@ -164,7 +161,8 @@ func GetInstallFlags() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  "config, c",
-			Usage: "Specify custom config file (default: .gitlab-runner/config.toml under the effective user's home directory)",
+			Value: GetDefaultConfigFile(),
+			Usage: "Specify custom config file",
 		},
 		cli.BoolFlag{
 			Name:  "syslog",

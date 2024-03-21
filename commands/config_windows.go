@@ -4,7 +4,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
-func getDefaultConfigDirectory(_ string) string {
+func getDefaultConfigDirectory() string {
 	if currentDir := helpers.GetCurrentWorkingDirectory(); currentDir != "" {
 		return currentDir
 	}

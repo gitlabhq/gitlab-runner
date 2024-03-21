@@ -49,7 +49,7 @@ func TestGetServiceArguments(t *testing.T) {
 		{
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", commands.GetDefaultConfigFile(""),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
 		},
@@ -69,7 +69,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", "/tmp",
-				"--config", commands.GetDefaultConfigFile(""),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
 		},
@@ -79,7 +79,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", commands.GetDefaultConfigFile(""),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner-service-name",
 			},
 		},
@@ -89,7 +89,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", commands.GetDefaultConfigFile(""),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
 		},
@@ -99,7 +99,7 @@ func TestGetServiceArguments(t *testing.T) {
 			},
 			expectedArgs: []string{
 				"--working-directory", helpers.GetCurrentWorkingDirectory(),
-				"--config", commands.GetDefaultConfigFile(""),
+				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
 		},
