@@ -1,3 +1,59 @@
+## v16.10.0 (2024-03-21)
+
+### New features
+
+- [Experimental] Define monitoring threshold for job queue duration !4480
+- Enable feature cancel_gracefully !4655
+- Add support for cgroup_parent setting on Docker executor !4652 (Stefano Tenuta @stenuta)
+- Add runner token to header !4643
+- Add support for isolating jobs to individual namespaces !4519 (Markus Kostrzewski @MKostrzewski)
+
+### Security fixes
+
+- FedRAMP/CVE: Don't install wget in ubi images !4660
+
+### Bug fixes
+
+- Build is now canceled if autoscaled instance disappears !4669
+- Add jobs to compile all tests !4651
+- Set UseWindowsLegacyProcessStrategy to false by default !4659
+- Really silence error when `exec`ing on container that does not exists !4665
+- Gracefully stop long running processes when using the shell executor !4601
+- Call Value() instead of Get() when validating variables !4647
+- Call Value() instead of Get() when validating variables !4647
+- Fix get ip on parallels executor on macOS intel !4642 (Carlos Lapao @cjlapao)
+- Fix fallback_key for local cache !4349 (Andreas Bachlechner @andrbach)
+- Revert default runner script timeout !4621
+
+### Maintenance
+
+- Update windows support section !4641
+- Upgrade fleeting library !4679
+- Document connection_max_age parameter !4678
+- Remove broken link to Kubernetes docs' emptyDir !4656 (Victor M. @victoremepunto)
+- Bump docker+machine version to v0.16.2-gitlab.25 !4676
+- Document how to troubleshoot Docker Machine issues !4677
+- Update plugin status, link timeline/epic !4674
+- Runner: updates last two redirecting links !4675
+- Fix typo (Telsa -> Tesla) !4673 (Per Lundberg @perlun)
+- Enabling Vale for badges !4671
+- service_linux.go: Remove non-existent syslog.target from service file !4667 (Martin @C0rn3j)
+- Refactor network.newClient to use Go functional option pattern !4648
+- Finishes link fixes in Runner docs !4670
+- Fix Experimental -> Beta references !4668 (Per Lundberg @perlun)
+- Updating SaaS to be .com !4666
+- Update runner sizes !4664
+- Fix reference to project issue !4663
+- Skip TestBuildGitFetchStrategyFallback on Windows cmd !4653
+- Update no-trailing-spaces configuration for consistency !4658
+- Remove unneeded trailing spaces !4644
+- Skip TestBuildGitFetchStrategyFallback on Windows cmd !4653
+- Restructure Kubernetes executor page part 2 !4650
+- Restructure Kubernetes executor page !4649
+- Add-vale-plugin-to-runner-dev-env-setup !4639
+- Update usage of GCP to Google Cloud !4623
+- GIT_LFS_VERSION is no longer required to be set !4636 (Matthew Bradburn @mbradburn-ext)
+
 ## v16.9.1 (2024-02-28)
 
 ### Bug fixes
