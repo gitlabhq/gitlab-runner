@@ -31,7 +31,7 @@ func (n *NullService) Stop(s service.Service) error {
 }
 
 func runServiceInstall(s service.Service, c *cli.Context) error {
-	if user := c.String("user"); user == "" && os.Getuid() == 0 {
+	if c.String("user") == "" && c.String("init-user") == "" && os.Getuid() == 0 {
 		logrus.Fatal("Please specify user that will run gitlab-runner service")
 	}
 
@@ -114,6 +114,10 @@ func createServiceConfig(c *cli.Context) *service.Config {
 }
 
 func RunServiceControl(c *cli.Context) {
+	if c.String("user") != "" && c.String("init-user") != "" {
+		logrus.Fatal("Only one of 'user' or 'init-user' can be specified.")
+	}
+
 	svcConfig := createServiceConfig(c)
 
 	s, err := service_helpers.New(&NullService{}, svcConfig)
@@ -179,11 +183,17 @@ func GetInstallFlags() []cli.Flag {
 				Usage: "Specify user password to install service (required)",
 			})
 	} else if os.Getuid() == 0 {
-		installFlags = append(installFlags, cli.StringFlag{
-			Name:  "user, u",
-			Value: "",
-			Usage: "Specify user-name to secure the runner",
-		})
+		installFlags = append(installFlags,
+			cli.StringFlag{
+				Name:  "user, u",
+				Value: "",
+				Usage: "Specify user-name to secure the runner",
+			},
+			cli.StringFlag{
+				Name:  "init-user, i",
+				Value: "",
+				Usage: "Specify user-name to secure the runner in the init script or systemd unit file",
+			})
 	}
 
 	return installFlags
