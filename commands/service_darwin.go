@@ -15,4 +15,5 @@ func setupOSServiceConfig(c *cli.Context, config *service.Config) {
 	}
 
 	applyStrArg(c, "user", true, func(val string) { config.Arguments = append(config.Arguments, "--user", val) })
+	applyStrArg(c, "init-user", true, func(val string) { config.UserName = val })
 }
