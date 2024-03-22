@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
 	"runtime"
 
 	"github.com/kardianos/service"
@@ -88,9 +89,12 @@ func getUserHomeDir(username string) string {
 }
 
 func GetServiceArguments(c *cli.Context) (arguments []string) {
-	if config := c.String("config"); config != "" {
-		arguments = append(arguments, "--config", config)
+	// Update the default config-file path if it was not actually set and --init-user was specified...
+	config := c.String("config")
+	if !c.IsSet("config") && c.String("init-user") != "" {
+		config = filepath.Join(getUserHomeDir(c.String("init-user")), "config.toml")
 	}
+	arguments = append(arguments, "--config", config)
 
 	applyStrArg(c, "working-directory", false, func(val string) { arguments = append(arguments, "--working-directory", val) })
 	applyStrArg(c, "service", false, func(val string) { arguments = append(arguments, "--service", val) })
