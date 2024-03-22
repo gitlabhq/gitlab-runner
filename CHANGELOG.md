@@ -14,6 +14,7 @@
 
 ### Bug fixes
 
+- Revert "Merge branch 'avonbertoldi/27443/graceful-shutdown-shell' into 'main'" !4686
 - Build is now canceled if autoscaled instance disappears !4669
 - Add jobs to compile all tests !4651
 - Set UseWindowsLegacyProcessStrategy to false by default !4659
@@ -37,7 +38,7 @@
 - Runner: updates last two redirecting links !4675
 - Fix typo (Telsa -> Tesla) !4673 (Per Lundberg @perlun)
 - Enabling Vale for badges !4671
-- service_linux.go: Remove non-existent syslog.target from service file !4667 (Martin @C0rn3j)
+- Service_linux.go: Remove non-existent syslog.target from service file !4667 (Martin @C0rn3j)
 - Refactor network.newClient to use Go functional option pattern !4648
 - Finishes link fixes in Runner docs !4670
 - Fix Experimental -> Beta references !4668 (Per Lundberg @perlun)
