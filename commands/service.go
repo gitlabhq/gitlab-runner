@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"runtime"
 
 	"github.com/kardianos/service"
@@ -76,6 +77,14 @@ func runServiceStatus(displayName string, s service.Service) {
 	}
 
 	fmt.Printf("%s: %s\n", displayName, description)
+}
+
+func getUserHomeDir(username string) string {
+	u, err := user.Lookup(username)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get home for user %q: %s", username, err.Error()))
+	}
+	return u.HomeDir
 }
 
 func GetServiceArguments(c *cli.Context) (arguments []string) {
