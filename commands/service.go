@@ -79,17 +79,12 @@ func runServiceStatus(displayName string, s service.Service) {
 }
 
 func GetServiceArguments(c *cli.Context) (arguments []string) {
-	if wd := c.String("working-directory"); wd != "" {
-		arguments = append(arguments, "--working-directory", wd)
-	}
-
 	if config := c.String("config"); config != "" {
 		arguments = append(arguments, "--config", config)
 	}
 
-	if sn := c.String("service"); sn != "" {
-		arguments = append(arguments, "--service", sn)
-	}
+	applyStrArg(c, "working-directory", false, func(val string) { arguments = append(arguments, "--working-directory", val) })
+	applyStrArg(c, "service", false, func(val string) { arguments = append(arguments, "--service", val) })
 
 	// syslogging doesn't make sense for systemd systems as those log straight to journald
 	syslog := !c.IsSet("syslog") || c.Bool("syslog")
@@ -234,4 +229,19 @@ func init() {
 		Action: RunServiceControl,
 		Flags:  flags,
 	})
+}
+
+// applyStrArg applies the named string-typed runtime argument to the service configuration in whatever way the `apply`
+// function dictates.
+func applyStrArg(c *cli.Context, argname string, rootonly bool, apply func(val string)) {
+	argval := c.String(argname)
+	if argval == "" {
+		return
+	}
+
+	if rootonly && os.Getuid() != 0 {
+		logrus.Fatalf("The --%s is not supported for non-root users", argname)
+	}
+
+	apply(argval)
 }
