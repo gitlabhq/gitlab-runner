@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/fleeting/fleeting"
+	"gitlab.com/gitlab-org/fleeting/fleeting-artifact/pkg/installer"
 	"gitlab.com/gitlab-org/fleeting/fleeting/connector"
 	flprometheus "gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
@@ -75,7 +76,12 @@ func New(ep common.ExecutorProvider, cfg Config) common.ExecutorProvider {
 		scalers:          make(map[string]scaler),
 		taskscalerNew:    taskscaler.New,
 		fleetingRunPlugin: func(name string, config []byte) (fleetingPlugin, error) {
-			return fleeting.RunPlugin(name, config)
+			pluginPath, err := installer.LookPath(name, "")
+			if err != nil {
+				return nil, fmt.Errorf("loading fleeting plugin: %w", err)
+			}
+
+			return fleeting.RunPlugin(pluginPath, config)
 		},
 		generateUniqueID: func() (string, error) {
 			return helpers.GenerateRandomUUID(8)
