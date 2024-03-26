@@ -12,10 +12,9 @@ DETAILS:
 
 GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pipeline.
 
-## Use GitLab.com SaaS runners
+## Use GitLab-hosted runners
 
-If you use GitLab.com, you can run your CI/CD jobs on [SaaS runners](https://docs.gitlab.com/ee/ci/runners/index.html)
-hosted by GitLab.
+If you use GitLab.com, you can run your CI/CD jobs on [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/index.html).
 These runners are managed by GitLab and fully integrated with GitLab.com.
 By default these runners are enabled for all projects.
 You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners) if you have
