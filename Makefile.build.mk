@@ -42,8 +42,10 @@ runner-bin-fips-docker:
 	@docker cp gitlab-runner-fips:/gitlab-runner-linux-amd64-fips out/binaries/
 	@docker rm -f gitlab-runner-fips
 
+ARCH_REPLACE="s/aarch64/arm64/ ; s/armv7l/arm/ ; s/x86_64/amd64/ ; s/i386/386/"
+
 runner-bin-host: OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-runner-bin-host: ARCH := $(shell uname -m | sed 's/aarch64/arm64/ ; s/armv7l/arm/ ; s/x86_64/amd64/ ; s/i386/386/')
+runner-bin-host: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-bin-host:
 	# Building $(NAME) in version $(VERSION) for host platform
 	$(MAKE) runner-bin BUILD_PLATFORMS="-osarch=$(OS)/$(ARCH)"
@@ -64,16 +66,16 @@ runner-and-helper-docker-host: runner-and-helper-deb-host
 	$(MAKE) release_docker_images
 	$(MAKE) release_helper_docker_images
 
-runner-and-helper-deb-host: ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/armv7l/arm/; s/x86_64/amd64/; s/i386/386/')
+runner-and-helper-deb-host: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-and-helper-deb-host: export BUILD_ARCHS := -arch '$(ARCH)'
-runner-and-helper-deb-host: PACKAGE_ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/armv7l/arm/; s/x86_64/amd64/; s/i386/i686/')
+runner-and-helper-deb-host: PACKAGE_ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-and-helper-deb-host: runner-and-helper-bin-host
 	$(MAGE) package:deps package:prepare
 	$(MAKE) package-deb-arch ARCH=$(ARCH) PACKAGE_ARCH=$(PACKAGE_ARCH)
 
-runner-and-helper-rpm-host: ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/armv7l/arm/; s/x86_64/amd64/; s/i386/386/')
+runner-and-helper-rpm-host: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-and-helper-rpm-host: export BUILD_ARCHS := -arch '$(ARCH)'
-runner-and-helper-rpm-host: PACKAGE_ARCH := $(shell uname -m | sed 's/aarch64/arm64/; s/armv7l/arm/; s/x86_64/amd64/; s/i386/i686/')
+runner-and-helper-rpm-host: PACKAGE_ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-and-helper-rpm-host: runner-and-helper-bin-host
 	$(MAGE) package:deps package:prepare
 	$(MAKE) package-rpm-arch ARCH=$(ARCH) PACKAGE_ARCH=$(PACKAGE_ARCH)
