@@ -27,7 +27,6 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker/machine"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
 
@@ -635,14 +634,14 @@ func assertExecutorDefaultValues(t *testing.T, executor string, s *commands.Regi
 	}
 }
 
-func assertDefaultSSHLogin(t *testing.T, sshCfg *ssh.Config) {
+func assertDefaultSSHLogin(t *testing.T, sshCfg *common.SshConfig) {
 	require.NotNil(t, sshCfg)
 	assert.Equal(t, "user", sshCfg.User)
 	assert.Equal(t, "password", sshCfg.Password)
 	assert.Equal(t, "/home/user/.ssh/id_rsa", sshCfg.IdentityFile)
 }
 
-func assertDefaultSSHServer(t *testing.T, sshCfg *ssh.Config) {
+func assertDefaultSSHServer(t *testing.T, sshCfg *common.SshConfig) {
 	require.NotNil(t, sshCfg)
 	assert.Equal(t, "gitlab.example.com", sshCfg.Host)
 	assert.Equal(t, "22", sshCfg.Port)
@@ -689,14 +688,14 @@ func assertExecutorOverridenValues(t *testing.T, executor string, s *commands.Re
 	}
 }
 
-func assertOverridenSSHLogin(t *testing.T, sshCfg *ssh.Config) {
+func assertOverridenSSHLogin(t *testing.T, sshCfg *common.SshConfig) {
 	require.NotNil(t, sshCfg)
 	assert.Equal(t, "root", sshCfg.User)
 	assert.Equal(t, "admin", sshCfg.Password)
 	assert.Equal(t, "/root/.ssh/id_rsa", sshCfg.IdentityFile)
 }
 
-func assertOverridenSSHServer(t *testing.T, sshCfg *ssh.Config) {
+func assertOverridenSSHServer(t *testing.T, sshCfg *common.SshConfig) {
 	require.NotNil(t, sshCfg)
 	assert.Equal(t, "ssh.gitlab.example.com", sshCfg.Host)
 	assert.Equal(t, "8822", sshCfg.Port)
