@@ -18,6 +18,7 @@ import (
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/gcs"
 	_ "gitlab.com/gitlab-org/gitlab-runner/cache/s3"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands"
+	_ "gitlab.com/gitlab-org/gitlab-runner/commands/fleeting"
 	_ "gitlab.com/gitlab-org/gitlab-runner/commands/helpers"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
