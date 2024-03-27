@@ -15,7 +15,6 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -553,7 +552,7 @@ func newRegisterCommand() *RegisterCommand {
 				Cache:      &common.CacheConfig{},
 				Machine:    &common.DockerMachine{},
 				Docker:     &common.DockerConfig{},
-				SSH:        &ssh.Config{},
+				SSH:        &common.SshConfig{},
 				Parallels:  &common.ParallelsConfig{},
 				VirtualBox: &common.VirtualBoxConfig{},
 			},

@@ -33,7 +33,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/timeperiod"
 	"gitlab.com/gitlab-org/gitlab-runner/referees"
 )
@@ -1168,7 +1167,7 @@ type RunnerSettings struct {
 	Monitoring *runner.Monitoring `toml:"monitoring" long:"runner-monitoring" description:"(Experimental) Monitoring configuration specific to this runner"`
 
 	Instance   *InstanceConfig   `toml:"instance,omitempty" json:"instance,omitempty"`
-	SSH        *ssh.Config       `toml:"ssh,omitempty" json:"ssh,omitempty" group:"ssh executor" namespace:"ssh"`
+	SSH        *SshConfig        `toml:"ssh,omitempty" json:"ssh,omitempty" group:"ssh executor" namespace:"ssh"`
 	Docker     *DockerConfig     `toml:"docker,omitempty" json:"docker,omitempty" group:"docker executor" namespace:"docker"`
 	Parallels  *ParallelsConfig  `toml:"parallels,omitempty" json:"parallels,omitempty" group:"parallels executor" namespace:"parallels"`
 	VirtualBox *VirtualBoxConfig `toml:"virtualbox,omitempty" json:"virtualbox,omitempty" group:"virtualbox executor" namespace:"virtualbox"`
@@ -1348,6 +1347,20 @@ func (c *SessionServer) GetSessionTimeout() time.Duration {
 	}
 
 	return DefaultSessionTimeout
+}
+
+type SshConfig struct {
+	User                         string `toml:"user,omitempty" json:"user,omitempty" long:"user" env:"SSH_USER" description:"User name"`
+	Password                     string `toml:"password,omitempty" json:"password,omitempty" long:"password" env:"SSH_PASSWORD" description:"User password"`
+	Host                         string `toml:"host,omitempty" json:"host,omitempty" long:"host" env:"SSH_HOST" description:"Remote host"`
+	Port                         string `toml:"port,omitempty" json:"port,omitempty" long:"port" env:"SSH_PORT" description:"Remote host port"`
+	IdentityFile                 string `toml:"identity_file,omitempty" json:"identity_file,omitempty" long:"identity-file" env:"SSH_IDENTITY_FILE" description:"Identity file to be used"`
+	DisableStrictHostKeyChecking *bool  `toml:"disable_strict_host_key_checking,omitempty" json:"disable_strict_host_key_checking,omitempty" long:"disable-strict-host-key-checking" env:"DISABLE_STRICT_HOST_KEY_CHECKING" description:"Disable SSH strict host key checking"`
+	KnownHostsFile               string `toml:"known_hosts_file,omitempty" json:"known_hosts_file,omitempty" long:"known-hosts-file" env:"KNOWN_HOSTS_FILE" description:"Location of known_hosts file. Defaults to ~/.ssh/known_hosts"`
+}
+
+func (c *SshConfig) ShouldDisableStrictHostKeyChecking() bool {
+	return c.DisableStrictHostKeyChecking != nil && *c.DisableStrictHostKeyChecking
 }
 
 func (c *DockerConfig) computeNanoCPUs(value string) (int64, error) {

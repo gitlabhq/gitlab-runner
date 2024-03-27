@@ -10,12 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 type Client struct {
-	Config
+	common.SshConfig
 
 	Stdout         io.Writer
 	Stderr         io.Writer
@@ -72,7 +73,7 @@ func (s *Client) getSSHAuthMethods() ([]ssh.AuthMethod, error) {
 	return methods, nil
 }
 
-func getHostKeyCallback(config Config) (ssh.HostKeyCallback, error) {
+func getHostKeyCallback(config common.SshConfig) (ssh.HostKeyCallback, error) {
 	if config.ShouldDisableStrictHostKeyChecking() {
 		return ssh.InsecureIgnoreHostKey(), nil
 	}
@@ -110,7 +111,7 @@ func (s *Client) Connect() error {
 		Auth: methods,
 	}
 
-	hostKeyCallback, err := getHostKeyCallback(s.Config)
+	hostKeyCallback, err := getHostKeyCallback(s.SshConfig)
 	if err != nil {
 		return fmt.Errorf("getting host key callback: %w", err)
 	}

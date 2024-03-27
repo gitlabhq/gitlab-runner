@@ -36,9 +36,9 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	// Create SSH command
 	s.sshCommand = ssh.Client{
-		Config: *s.Config.SSH,
-		Stdout: logger.Stdout(),
-		Stderr: logger.Stderr(),
+		SshConfig: *s.Config.SSH,
+		Stdout:    logger.Stdout(),
+		Stderr:    logger.Stderr(),
 	}
 
 	s.BuildLogger.Debugln("Connecting to SSH server...")

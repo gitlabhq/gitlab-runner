@@ -73,8 +73,8 @@ func TestStrictHostCheckingWithKnownHostsFile(t *testing.T) {
 	for tn, tc := range testCases {
 		t.Run(tn, func(t *testing.T) {
 			c := s.Client()
-			c.Config.DisableStrictHostKeyChecking = tc.disableHostChecking
-			c.Config.KnownHostsFile = tc.knownHostsFileLocation
+			c.SshConfig.DisableStrictHostKeyChecking = tc.disableHostChecking
+			c.SshConfig.KnownHostsFile = tc.knownHostsFileLocation
 
 			err := c.Connect()
 			defer c.Cleanup()
