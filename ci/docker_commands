@@ -79,12 +79,22 @@ setup_docker_context() {
     if [ -n "${DOCKER_CERT_PATH}" ]; then
         docker="host=${DOCKER_HOST},ca=${DOCKER_CERT_PATH}/ca.pem,cert=${DOCKER_CERT_PATH}/cert.pem,key=${DOCKER_CERT_PATH}/key.pem"
     fi
+
+    # --default-stack-orchestrator was removed as an argument in docker 23
+    local default_stack_arg="--default-stack-orchestrator=swarm"
+    if [ $(docker_version_major) -ge 23 ]; then
+        default_stack_arg=""
+    fi
     _docker context create "${docker_buildx_ctx_name}" \
-        --default-stack-orchestrator=swarm \
+        ${default_stack_arg} \
         --description "Temporary buildx Docker context" \
         --docker "${docker}"
 
     _docker_buildx create --use --name "${docker_builder_name}" "${docker_buildx_ctx_name}"
+}
+
+docker_version_major() {
+    echo $(_docker version --format '{{ .Client.Version }}' | cut -d. -f1)
 }
 
 cleanup_docker_context_trap() {
