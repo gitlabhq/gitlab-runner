@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -393,7 +394,7 @@ func (s *StubSSHServer) handleSession(ctx context.Context, channel ssh.NewChanne
 
 func (s *StubSSHServer) Client() Client {
 	return Client{
-		Config: Config{
+		SshConfig: common.SshConfig{
 			User:         s.User,
 			Password:     s.Password,
 			Host:         "127.0.0.1",

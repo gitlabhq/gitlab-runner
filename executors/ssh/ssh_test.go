@@ -39,7 +39,7 @@ func TestPrepare(t *testing.T) {
 	runnerConfig := &common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
 			Executor: "ssh",
-			SSH: &sshHelpers.Config{
+			SSH: &common.SshConfig{
 				User:           "user",
 				Password:       "pass",
 				Host:           host,

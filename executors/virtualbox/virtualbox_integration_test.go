@@ -14,7 +14,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/ssh"
 )
 
 const (
@@ -22,7 +21,7 @@ const (
 	vboxManage = "vboxmanage"
 )
 
-var vboxSSHConfig = &ssh.Config{
+var vboxSSHConfig = &common.SshConfig{
 	User:     "vagrant",
 	Password: "vagrant",
 }

@@ -32,7 +32,7 @@ func (s *executor) verifyMachine(sshPort string) error {
 
 	// Create SSH command
 	sshCommand := ssh.Client{
-		Config:         *s.Config.SSH,
+		SshConfig:      *s.Config.SSH,
 		Stdout:         s.BuildLogger.Stdout(),
 		Stderr:         s.BuildLogger.Stderr(),
 		ConnectRetries: 30,
@@ -323,9 +323,9 @@ func (s *executor) sshConnect() error {
 	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 
 	s.sshCommand = ssh.Client{
-		Config: *s.Config.SSH,
-		Stdout: logger.Stdout(),
-		Stderr: logger.Stderr(),
+		SshConfig: *s.Config.SSH,
+		Stdout:    logger.Stdout(),
+		Stderr:    logger.Stderr(),
 	}
 	s.sshCommand.Port = s.sshPort
 	s.sshCommand.Host = "localhost"
