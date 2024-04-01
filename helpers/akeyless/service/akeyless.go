@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+
 	"github.com/akeylesslabs/akeyless-go-cloud-id/cloudprovider/aws"
 	"github.com/akeylesslabs/akeyless-go-cloud-id/cloudprovider/azure"
 	"github.com/akeylesslabs/akeyless-go-cloud-id/cloudprovider/gcp"

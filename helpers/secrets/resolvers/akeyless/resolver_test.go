@@ -4,11 +4,12 @@ package akeyless
 
 import (
 	"context"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/akeyless/service"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
-	"testing"
 )
 
 func TestResolver_Name(t *testing.T) {
