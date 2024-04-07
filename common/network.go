@@ -764,7 +764,6 @@ type AkeylessServer struct {
 	AccessId               string `json:"access_id"`
 	AccessKey              string `json:"access_key"`
 	AkeylessApiUrl         string `json:"akeyless_api_url"`
-	GatewayUrl             string `json:"gateway_url"`
 	AkeylessAccessType     string `json:"akeyless_access_type"`
 	AkeylessToken          string `json:"akeyless_token"`
 	JWT                    string `json:"jwt"`
@@ -788,7 +787,6 @@ func (s *AkeylessSecret) expandVariables(vars JobVariables) {
 func (s *AkeylessServer) expandVariables(vars JobVariables) {
 	s.JWT = vars.ExpandValue(s.JWT)
 	s.AkeylessApiUrl = vars.ExpandValue(s.AkeylessApiUrl)
-	s.GatewayUrl = vars.ExpandValue(s.GatewayUrl)
 	s.AkeylessAccessType = vars.ExpandValue(s.AkeylessAccessType)
 	s.AkeylessToken = vars.ExpandValue(s.AkeylessToken)
 	s.UidToken = vars.ExpandValue(s.UidToken)

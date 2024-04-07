@@ -48,6 +48,8 @@ type Config struct {
 	K8SAuthConfigName      string
 	JWT                    string
 }
+
+//go:generate mockery --name=Akeyless --inpackage
 type Akeyless interface {
 	GetAkeylessSecret(ctx context.Context, secret *common.AkeylessSecret) (any, error)
 }
@@ -243,7 +245,7 @@ func setupAuthParams(server common.AkeylessServer) (*akeyless_api.Auth, error) {
 		authParams.SetUidToken(server.UidToken)
 
 	case K8S:
-		authParams.SetGatewayUrl(server.GatewayUrl)
+		authParams.SetGatewayUrl(server.AkeylessApiUrl)
 		authParams.SetK8sServiceAccountToken(server.K8SServiceAccountToken)
 		authParams.SetK8sAuthConfigName(server.K8SAuthConfigName)
 
