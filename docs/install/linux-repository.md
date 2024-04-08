@@ -11,7 +11,7 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed
 
 We provide packages for the following supported versions of Linux distributions with [packagecloud](https://packages.gitlab.com/runner/gitlab-runner/). New runner `deb` or `rpm` packages for new OS distribution releases are added automatically when supported by packagecloud.
-Depending on your setup, other `deb` or `rpm` based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative, so the runner Debian package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file).
+Depending on your setup, other `deb` or `rpm` based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative, so the runner Debian package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
 on other Linux distributions.
 
 | Distribution | Support Information |
