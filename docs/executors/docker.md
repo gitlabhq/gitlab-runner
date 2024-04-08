@@ -751,7 +751,7 @@ Prerequisites:
    sudo loginctl enable-linger gitlab-runner
    ```
 
-1. Edit the GitLab Runner `config.toml` file and add the socket value to the host entry in the `[[runners.docker]]` section.
+1. Edit the GitLab Runner `config.toml` file and add the socket value to the host entry in the `[runners.docker]` section.
    For example:
 
    ```toml
