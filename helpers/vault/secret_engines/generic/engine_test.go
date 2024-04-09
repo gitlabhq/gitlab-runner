@@ -1,6 +1,6 @@
 //go:build !integration
 
-package kv_v1
+package generic
 
 import (
 	"testing"
@@ -10,8 +10,10 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault"
 )
 
+const engineName = "generic"
+
 func TestEngine_EngineName(t *testing.T) {
-	e := new(engine)
+	e := engine{name: engineName}
 	assert.Equal(t, engineName, e.EngineName())
 }
 
@@ -84,7 +86,7 @@ func TestEngine_Get(t *testing.T) {
 			assertions := tt.setupClientMock(t, clientMock)
 			defer assertions()
 
-			e := NewEngine(clientMock, enginePath)
+			e := engineForName(engineName)(clientMock, enginePath)
 			result, err := e.Get(path)
 			if tt.expectedError != nil {
 				assert.ErrorAs(t, err, &tt.expectedError)
@@ -139,7 +141,7 @@ func TestEngine_Put(t *testing.T) {
 			assertions := tt.setupClientMock(t, clientMock)
 			defer assertions()
 
-			e := NewEngine(clientMock, enginePath)
+			e := engineForName(engineName)(clientMock, enginePath)
 			err := e.Put(path, data)
 			if tt.expectedError != nil {
 				assert.ErrorAs(t, err, &tt.expectedError)
@@ -190,7 +192,7 @@ func TestEngine_Delete(t *testing.T) {
 			assertions := tt.setupClientMock(t, clientMock)
 			defer assertions()
 
-			e := NewEngine(clientMock, enginePath)
+			e := engineForName(engineName)(clientMock, enginePath)
 			err := e.Delete(path)
 			if tt.expectedError != nil {
 				assert.ErrorAs(t, err, &tt.expectedError)

@@ -1,4 +1,4 @@
-package kv_v1
+package generic
 
 import (
 	"fmt"
@@ -8,22 +8,24 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines"
 )
 
-const engineName = "kv-v1"
-
 type engine struct {
 	client vault.Client
 	path   string
+	name   string
 }
 
-func NewEngine(client vault.Client, path string) vault.SecretEngine {
-	return &engine{
-		client: client,
-		path:   path,
+func engineForName(engineName string) func(vault.Client, string) vault.SecretEngine {
+	return func(client vault.Client, path string) vault.SecretEngine {
+		return &engine{
+			client: client,
+			path:   path,
+			name:   engineName,
+		}
 	}
 }
 
 func (e *engine) EngineName() string {
-	return engineName
+	return e.name
 }
 
 func (e *engine) Get(path string) (map[string]interface{}, error) {
@@ -58,5 +60,6 @@ func (e *engine) Delete(path string) error {
 }
 
 func init() {
-	secret_engines.MustRegisterFactory(engineName, NewEngine)
+	secret_engines.MustRegisterFactory("generic", engineForName("generic"))
+	secret_engines.MustRegisterFactory("kv-v1", engineForName("kv-v1"))
 }

@@ -7,8 +7,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods/jwt" // register auth method
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines"
-	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines/kv_v1" // register secret engine
-	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines/kv_v2" // register secret engine
+	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines/generic" // register secret engine
+	_ "gitlab.com/gitlab-org/gitlab-runner/helpers/vault/secret_engines/kv_v2"   // register secret engine
 )
 
 //go:generate mockery --name=Auth --inpackage
