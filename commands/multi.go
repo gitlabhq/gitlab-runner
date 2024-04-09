@@ -836,9 +836,22 @@ func (mr *RunCommand) processBuildOnRunner(
 func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
 	if err != nil {
 		fmt.Fprintln(trace, err.Error())
-		trace.Fail(err, common.JobFailureData{Reason: common.RunnerSystemFailure})
-	} else {
-		trace.Success()
+
+		logTerminationError(
+			mr.log(),
+			"Fail",
+			trace.Fail(err, common.JobFailureData{Reason: common.RunnerSystemFailure}),
+		)
+
+		return
+	}
+
+	logTerminationError(mr.log(), "Success", trace.Success())
+}
+
+func logTerminationError(logger logrus.FieldLogger, name string, err error) {
+	if err != nil {
+		logger.WithError(err).Errorf("Job trace termination %q failed", name)
 	}
 }
 
@@ -912,10 +925,12 @@ func (mr *RunCommand) requestJob(
 
 	if jobData.UnsupportedOptions() != nil {
 		_, _ = trace.Write([]byte(jobData.UnsupportedOptions().Error() + "\n"))
-		trace.Fail(jobData.UnsupportedOptions(), common.JobFailureData{
+		err = trace.Fail(jobData.UnsupportedOptions(), common.JobFailureData{
 			Reason:   common.RunnerSystemFailure,
 			ExitCode: common.ExitCodeUnsupportedOptions,
 		})
+		logTerminationError(mr.log(), "Fail", err)
+
 		return nil, nil, jobData.UnsupportedOptions()
 	}
 

@@ -42,8 +42,17 @@ func (_m *MockJobTrace) Cancel() bool {
 }
 
 // Fail provides a mock function with given fields: err, failureData
-func (_m *MockJobTrace) Fail(err error, failureData JobFailureData) {
-	_m.Called(err, failureData)
+func (_m *MockJobTrace) Fail(err error, failureData JobFailureData) error {
+	ret := _m.Called(err, failureData)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(error, JobFailureData) error); ok {
+		r0 = rf(err, failureData)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // IsStdout provides a mock function with given fields:
@@ -91,8 +100,17 @@ func (_m *MockJobTrace) SetSupportedFailureReasonMapper(f SupportedFailureReason
 }
 
 // Success provides a mock function with given fields:
-func (_m *MockJobTrace) Success() {
-	_m.Called()
+func (_m *MockJobTrace) Success() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // Write provides a mock function with given fields: p
