@@ -327,12 +327,32 @@ func (p *provider) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-//nolint:gocognit
+//nolint:gocognit,funlen
 func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscaler.UpFunc {
 	return func(id string, info fleetingprovider.ConnectInfo, cause fleeting.Cause) (keys []string, used int, err error) {
 		useExternalAddr := true
 		if config.Autoscaler != nil {
 			useExternalAddr = config.Autoscaler.ConnectorConfig.UseExternalAddr
+		}
+
+		// run instance ready command on instances that didn't pre-exist
+		//
+		// we may later relax the pre-exist rule, but right now (see below) we simply remove
+		// instances that pre-existed if VMIsolation is enabled, and it's very unlikely that
+		// VMIsolation will need the InstanceReadyCommand for now.
+		if config.Autoscaler.InstanceReadyCommand != "" && cause != fleeting.CausePreexisted {
+			err := connector.Run(ctx, info, connector.ConnectorOptions{
+				RunOptions: connector.RunOptions{
+					Command: config.Autoscaler.InstanceReadyCommand,
+				},
+				DialOptions: connector.DialOptions{
+					UseExternalAddr: useExternalAddr,
+				},
+			})
+
+			if err != nil {
+				return nil, 0, fmt.Errorf("ready command: %w", err)
+			}
 		}
 
 		// If VMIsolation is disabled, we cannot trust an existing instance that we have no data of,

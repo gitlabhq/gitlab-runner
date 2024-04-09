@@ -278,6 +278,8 @@ type AutoscalerConfig struct {
 	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty" json:",omitempty"`
 
+	InstanceReadyCommand string `toml:"instance_ready_command,omitempty"`
+
 	DeleteInstancesOnShutdown bool `toml:"delete_instances_on_shutdown,omitempty" json:",omitempty"`
 
 	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`

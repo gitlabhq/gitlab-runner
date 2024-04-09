@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -26,6 +25,7 @@ type StubSSHServer struct {
 	Config   *ssh.ServerConfig
 
 	ExecuteLocal bool
+	Shell        []string
 
 	host               string
 	port               string
@@ -348,13 +348,14 @@ func (s *StubSSHServer) handleSession(ctx context.Context, channel ssh.NewChanne
 				return fmt.Errorf("session unmarshal: %w", err)
 			}
 
-			// this is in place of a proper shlex implementation, but should probably work
-			// for all of our use-cases.
-			args := strings.Split(string(command.Value), " ")
-
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
+
+			if len(s.Shell) == 0 {
+				s.Shell = []string{"sh", "-c"}
+			}
+			args := append(s.Shell, string(command.Value))
 
 			cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 			cmd.Dir = s.tempDir
@@ -369,7 +370,7 @@ func (s *StubSSHServer) handleSession(ctx context.Context, channel ssh.NewChanne
 
 			var exitError *exec.ExitError
 			code := 0
-			if errors.As(err, &exitError) {
+			if errors.As(runErr, &exitError) {
 				code = exitError.ExitCode()
 			}
 
