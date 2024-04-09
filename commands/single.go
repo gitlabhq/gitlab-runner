@@ -112,7 +112,10 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 
 	trace.SetDebugModeEnabled(newBuild.IsDebugModeEnabled())
 
-	defer trace.Success()
+	defer func() {
+		err := trace.Success()
+		logTerminationError(logrus.StandardLogger(), "Success", err)
+	}()
 
 	err = newBuild.Run(config, trace)
 

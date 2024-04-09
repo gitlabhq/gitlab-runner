@@ -15,6 +15,7 @@ const NotHealthyCheckInterval = 300
 const ReloadConfigInterval = 3 * time.Second
 const DefaultUnhealthyRequestsLimit = 3
 const DefaultUnhealthyInterval = 60 * time.Minute
+const DefaultTraceFinalizeTimeout = 60 * time.Minute
 const DefaultWaitForServicesTimeout = 30
 const DefaultShutdownTimeout = 30 * time.Second
 const PreparationRetries = 3

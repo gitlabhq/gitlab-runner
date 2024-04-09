@@ -424,7 +424,7 @@ func TestJobFailure(t *testing.T) {
 	trace.On("SetAbortFunc", mock.Anything).Once()
 	trace.On("SetMasked", mock.Anything).Once()
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
-	trace.On("Fail", thrownErr, JobFailureData{Reason: "", ExitCode: 1}).Once()
+	trace.On("Fail", thrownErr, JobFailureData{Reason: "", ExitCode: 1}).Return(nil).Once()
 
 	err = build.Run(&Config{}, trace)
 
@@ -462,7 +462,7 @@ func TestJobFailureOnExecutionTimeout(t *testing.T) {
 	trace.On("SetSupportedFailureReasonMapper", mock.Anything).Once()
 	trace.On("Fail", mock.Anything, JobFailureData{Reason: JobExecutionTimeout}).Run(func(arguments mock.Arguments) {
 		assert.Error(t, arguments.Get(0).(error))
-	}).Once()
+	}).Return(nil).Once()
 
 	err := build.Run(&Config{}, trace)
 
@@ -2445,7 +2445,7 @@ func TestResolvedSecretsSetMasked(t *testing.T) {
 	trace.On("IsStdout").Return(true)
 	trace.On("SetCancelFunc", mock.Anything).Twice()
 	trace.On("SetAbortFunc", mock.Anything).Once()
-	trace.On("Success").Once()
+	trace.On("Success").Return(nil).Once()
 
 	// ensure that variables returned from the secrets
 	// resolver get passed to SetMasked
@@ -2463,25 +2463,25 @@ func TestSetTraceStatus(t *testing.T) {
 		"nil error is successful": {
 			err: nil,
 			assert: func(t *testing.T, mt *MockJobTrace, err error) {
-				mt.On("Success").Once()
+				mt.On("Success").Return(nil).Once()
 			},
 		},
 		"build error, script failure": {
 			err: &BuildError{FailureReason: ScriptFailure},
 			assert: func(t *testing.T, mt *MockJobTrace, err error) {
-				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Once()
+				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Return(nil).Once()
 			},
 		},
 		"build error, wrapped script failure": {
 			err: fmt.Errorf("wrapped: %w", &BuildError{FailureReason: ScriptFailure}),
 			assert: func(t *testing.T, mt *MockJobTrace, err error) {
-				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Once()
+				mt.On("Fail", err, JobFailureData{Reason: ScriptFailure}).Return(nil).Once()
 			},
 		},
 		"non-build error": {
 			err: fmt.Errorf("some error"),
 			assert: func(t *testing.T, mt *MockJobTrace, err error) {
-				mt.On("Fail", err, JobFailureData{Reason: RunnerSystemFailure}).Once()
+				mt.On("Fail", err, JobFailureData{Reason: RunnerSystemFailure}).Return(nil).Once()
 			},
 		},
 	}

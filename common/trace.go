@@ -45,10 +45,12 @@ func (s *Trace) SetMasked(opts MaskOptions) {
 func (s *Trace) SetDebugModeEnabled(_ bool) {
 }
 
-func (s *Trace) Success() {
+func (s *Trace) Success() error {
+	return nil
 }
 
-func (s *Trace) Fail(err error, failureData JobFailureData) {
+func (s *Trace) Fail(err error, failureData JobFailureData) error {
+	return nil
 }
 
 func (s *Trace) SetCancelFunc(cancelFunc context.CancelFunc) {
