@@ -4,21 +4,14 @@ package urlsanitizer
 
 import (
 	"bytes"
-	"io"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
 )
-
-type nopCloser struct {
-	io.Writer
-}
-
-func (nopCloser) Close() error {
-	return nil
-}
 
 func TestMasking(t *testing.T) {
 	tests := []struct {
@@ -140,7 +133,7 @@ func TestMasking(t *testing.T) {
 		t.Run(tc.input, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 
-			m := New(nopCloser{buf})
+			m := New(internal.NewNopCloser(buf))
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {

@@ -3,11 +3,15 @@ package buildlogger
 import (
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/masker"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/timestamper"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/tokensanitizer"
+	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/urlsanitizer"
 )
 
 type Trace interface {
@@ -15,10 +19,37 @@ type Trace interface {
 	IsStdout() bool
 }
 
+type Options struct {
+	MaskPhrases       []string
+	MaskTokenPrefixes []string
+	Timestamping      bool
+}
+
+const (
+	Stdout StreamType = 'O'
+	Stderr StreamType = 'E'
+)
+
+type StreamType byte
+
 type Logger struct {
-	log      Trace
-	entry    *logrus.Entry
-	streamID int
+	internal.Tee
+
+	base   io.WriteCloser
+	closed bool
+
+	// mu protects w, as Tee's Println, Debugln etc. funcs can be called
+	// throughout the runner from different go routines.
+	mu *sync.Mutex
+	w  io.WriteCloser
+
+	maskPhrases       [][]byte
+	maskTokenPrefixes [][]byte
+	timestamping      bool
+}
+
+func NewNopCloser(w io.Writer) io.WriteCloser {
+	return internal.NewNopCloser(w)
 }
 
 const (
@@ -30,115 +61,89 @@ const (
 	StreamStartingServiceLevel = 15
 )
 
-type jobTraceIsMaskingURLParams interface {
-	IsMaskingURLParams() bool
+func New(log Trace, entry *logrus.Entry, opts Options) Logger {
+	l := Logger{mu: new(sync.Mutex)}
+
+	l.maskPhrases = internal.Unique(opts.MaskPhrases)
+	l.maskTokenPrefixes = internal.Unique(append(opts.MaskTokenPrefixes, tokensanitizer.DefaultPATPrefix))
+	l.timestamping = opts.Timestamping
+
+	if log != nil {
+		l.base = internal.NewNopCloser(log)
+		l.w = l.wrap(l.base, StreamExecutorLevel, Stdout)
+	}
+
+	l.Tee = internal.NewTee(l.SendRawLog, entry, log != nil && log.IsStdout())
+
+	return l
 }
 
-func New(log Trace, entry *logrus.Entry) Logger {
+func (l *Logger) Stream(streamID int, streamType StreamType) io.WriteCloser {
+	// l.base being nil happens when the buildlogger hasn't been created with New() or
+	// a nil was passed for the Trace parameter. This only happens in tests, and to not
+	// panic we simply return a discard writer.
+	if l.base == nil {
+		return internal.NewNopCloser(io.Discard)
+	}
+
+	return l.wrap(l.base, streamID, streamType)
+}
+
+// wrap wraps the underlying writer with "filters". Order here somewhat
+// matters, and the order they're instantiated in is the reverse order in which
+// writes are processed, e.g. last added filter is the first to process data.
+//
+// order:
+// - mask phrases (masker.New)
+// - mask sensitive URL parameters (urlsanitizer.New)
+// - mask secrets with a prefixed token (tokentanitizer.New)
+// - split log lines and add timestamps (timestamper.New)
+func (l *Logger) wrap(w io.WriteCloser, streamID int, streamType StreamType) io.WriteCloser {
+	if l.timestamping {
+		w = timestamper.New(w, timestamper.StreamType(streamType), uint8(streamID), true)
+	}
+
+	w = tokensanitizer.New(w, l.maskTokenPrefixes)
+	w = urlsanitizer.New(w)
+	w = masker.New(w, l.maskPhrases)
+
+	return w
+}
+
+func (l *Logger) WithFields(fields logrus.Fields) Logger {
 	return Logger{
-		log:   log,
-		entry: entry,
+		Tee:               l.Tee.WithFields(fields),
+		base:              l.base,
+		mu:                l.mu,
+		w:                 l.w,
+		maskPhrases:       l.maskPhrases,
+		maskTokenPrefixes: l.maskTokenPrefixes,
+		timestamping:      l.timestamping,
 	}
 }
 
-func (e *Logger) Stdout() io.Writer {
-	return e.log
-}
-
-func (e *Logger) Stderr() io.Writer {
-	return e.log
-}
-
-func (e *Logger) StreamID(streamID int) Logger {
-	return Logger{
-		log:      e.log,
-		entry:    e.entry,
-		streamID: streamID,
-	}
-}
-
-func (e *Logger) WithFields(fields logrus.Fields) Logger {
-	return New(e.log, e.entry.WithFields(fields))
-}
-
-func (e *Logger) SendRawLog(args ...interface{}) {
-	if e.log != nil {
-		_, _ = fmt.Fprint(e.log, args...)
-	}
-}
-
-func (e *Logger) sendLog(logger func(args ...interface{}), logPrefix string, args ...interface{}) {
-	if e.log != nil {
-		// log lines have spaces between each argument, followed by an ANSI Reset and *then* a new-line.
-		//
-		// To achieve this, we use fmt.Sprintln and remove the newline, add the ANSI Reset and then
-		// append the newline again. The reason we don't use fmt.Sprint is that there's a greater
-		// difference between that and fmt.Sprintln than just the newline character being added
-		// (fmt.Sprintln consistently adds a space between arguments).
-		logLine := fmt.Sprintln(args...)
-		logLine = logLine[:len(logLine)-1]
-
-		if trace, ok := e.log.(jobTraceIsMaskingURLParams); !ok || !trace.IsMaskingURLParams() {
-			logLine = url_helpers.ScrubSecrets(logLine)
-		}
-		logLine += helpers.ANSI_RESET + "\n"
-
-		e.SendRawLog(logPrefix + logLine)
-
-		if e.log.IsStdout() {
-			return
-		}
-	}
-
-	if len(args) == 0 {
+func (l *Logger) SendRawLog(args ...any) {
+	if l.w == nil {
 		return
 	}
 
-	logger(args...)
+	l.mu.Lock()
+	_, _ = fmt.Fprint(l.w, args...)
+	l.mu.Unlock()
 }
 
-func (e *Logger) WriterLevel(level logrus.Level) *io.PipeWriter {
-	return e.entry.WriterLevel(level)
-}
+func (l *Logger) Close() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-func (e *Logger) Debugln(args ...interface{}) {
-	if e.entry == nil {
-		return
+	if l.closed {
+		return fmt.Errorf("already closed")
 	}
-	e.entry.Debugln(args...)
-}
+	l.closed = true
 
-func (e *Logger) Println(args ...interface{}) {
-	if e.entry == nil {
-		return
+	if l.w != nil {
+		return l.w.Close()
 	}
-	e.sendLog(e.entry.Debugln, helpers.ANSI_CLEAR, args...)
-}
 
-func (e *Logger) Infoln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Println, helpers.ANSI_BOLD_GREEN, args...)
-}
-
-func (e *Logger) Warningln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Warningln, helpers.ANSI_YELLOW+"WARNING: ", args...)
-}
-
-func (e *Logger) SoftErrorln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Warningln, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
-}
-
-func (e *Logger) Errorln(args ...interface{}) {
-	if e.entry == nil {
-		return
-	}
-	e.sendLog(e.entry.Errorln, helpers.ANSI_BOLD_RED+"ERROR: ", args...)
+	return nil
 }

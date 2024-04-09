@@ -32,13 +32,9 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 
 	s.BuildLogger.Debugln("Starting SSH command...")
 
-	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
-
 	// Create SSH command
 	s.sshCommand = ssh.Client{
 		SshConfig: *s.Config.SSH,
-		Stdout:    logger.Stdout(),
-		Stderr:    logger.Stderr(),
 	}
 
 	s.BuildLogger.Debugln("Connecting to SSH server...")
@@ -51,9 +47,17 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
+	stdout := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+	defer stdout.Close()
+
+	stderr := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr)
+	defer stderr.Close()
+
 	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Command: s.BuildShell.CmdLine,
 		Stdin:   cmd.Script,
+		Stdout:  stdout,
+		Stderr:  stderr,
 	})
 	if exitError, ok := err.(*ssh.ExitError); ok {
 		exitCode := exitError.ExitCode()

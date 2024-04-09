@@ -867,14 +867,14 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 // If an error cannot be unwrapped to `BuildError`, `SystemFailure`
 // is used as the failure reason.
 func (b *Build) setTraceStatus(trace JobTrace, err error) {
-	logger := b.logger.WithFields(logrus.Fields{
+	logger := buildlogger.New(trace, b.Log().WithFields(logrus.Fields{
 		"duration_s": b.Duration().Seconds(),
-	})
+	}), buildlogger.Options{Timestamping: b.IsFeatureFlagOn(featureflags.UseTimestamps)})
 
 	if err == nil {
 		logger.Infoln("Job succeeded")
-		err = trace.Success()
-		logTerminationError(logger, "Success", err)
+		logTerminationError(logger, "Success", trace.Success())
+		logger.Close()
 
 		return
 	}
@@ -887,6 +887,7 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		}
 
 		logger.SoftErrorln(msg)
+		logger.Close()
 
 		trace.SetSupportedFailureReasonMapper(newFailureReasonMapper(b.Features.FailureReasons))
 		err = trace.Fail(err, JobFailureData{
@@ -899,15 +900,17 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	}
 
 	logger.Errorln("Job failed (system failure):", err)
-	err = trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure})
-	logTerminationError(logger, "Fail", err)
+	logTerminationError(logger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure}))
+	logger.Close()
 }
 
 func logTerminationError(logger buildlogger.Logger, name string, err error) {
-	if err != nil {
-		logger = logger.WithFields(logrus.Fields{"error": err})
-		logger.Errorln(fmt.Sprintf("Job trace termination %q failed", name))
+	if err == nil {
+		return
 	}
+
+	logger = logger.WithFields(logrus.Fields{"error": err})
+	logger.Errorln(fmt.Sprintf("Job trace termination %q failed", name))
 }
 
 func (b *Build) setExecutorStageResolver(resolver func() ExecutorStage) {
@@ -930,10 +933,6 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 
 //nolint:funlen
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
-	b.logUsedImages()
-
-	b.logger = buildlogger.New(trace, b.Log())
-	b.printRunningWithHeader()
 	b.setCurrentState(BuildRunStatePending)
 
 	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
@@ -948,12 +947,22 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		}
 	}()
 
-	err = b.resolveSecrets()
+	b.logUsedImages()
+	b.printRunningWithHeader(trace)
+
+	err = b.resolveSecrets(trace)
 	if err != nil {
 		return err
 	}
 
 	b.expandContainerOptions()
+
+	b.logger = buildlogger.New(trace, b.Log(), buildlogger.Options{
+		MaskPhrases:       b.GetAllVariables().Masked(),
+		MaskTokenPrefixes: b.JobResponse.Features.TokenMaskPrefixes,
+		Timestamping:      b.IsFeatureFlagOn(featureflags.UseTimestamps),
+	})
+	defer b.logger.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
 	defer cancel()
@@ -1012,10 +1021,6 @@ func (b *Build) logUsedImages() {
 func (b *Build) configureTrace(trace JobTrace, cancel context.CancelFunc) {
 	trace.SetCancelFunc(cancel)
 	trace.SetAbortFunc(cancel)
-	trace.SetMasked(MaskOptions{
-		Phrases:       b.GetAllVariables().Masked(),
-		TokenPrefixes: b.JobResponse.Features.TokenMaskPrefixes,
-	})
 }
 
 func (b *Build) createExecutorPrepareOptions(ctx context.Context, globalConfig *Config) ExecutorPrepareOptions {
@@ -1028,7 +1033,7 @@ func (b *Build) createExecutorPrepareOptions(ctx context.Context, globalConfig *
 	}
 }
 
-func (b *Build) resolveSecrets() error {
+func (b *Build) resolveSecrets(trace JobTrace) error {
 	if b.Secrets == nil {
 		return nil
 	}
@@ -1039,7 +1044,12 @@ func (b *Build) resolveSecrets() error {
 		Name:        string(BuildStageResolveSecrets),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			resolver, err := b.secretsResolver(&b.logger, GetSecretResolverRegistry(), b.IsFeatureFlagOn)
+			logger := buildlogger.New(trace, b.Log(), buildlogger.Options{
+				Timestamping: b.IsFeatureFlagOn(featureflags.UseTimestamps),
+			})
+			defer logger.Close()
+
+			resolver, err := b.secretsResolver(&logger, GetSecretResolverRegistry(), b.IsFeatureFlagOn)
 			if err != nil {
 				return fmt.Errorf("creating secrets resolver: %w", err)
 			}
@@ -1535,10 +1545,15 @@ func (b *Build) getFeatureFlagInfo() string {
 	return strings.Join(statuses, ", ")
 }
 
-func (b *Build) printRunningWithHeader() {
-	b.logger.Println("Running with", AppVersion.Line())
+func (b *Build) printRunningWithHeader(trace JobTrace) {
+	logger := buildlogger.New(trace, b.Log(), buildlogger.Options{
+		Timestamping: b.IsFeatureFlagOn(featureflags.UseTimestamps),
+	})
+	defer logger.Close()
+
+	logger.Println("Running with", AppVersion.Line())
 	if b.Runner != nil && b.Runner.ShortDescription() != "" {
-		b.logger.Println(fmt.Sprintf(
+		logger.Println(fmt.Sprintf(
 			"  on %s %s, system ID: %s",
 			b.Runner.Name,
 			b.Runner.ShortDescription(),
@@ -1546,7 +1561,7 @@ func (b *Build) printRunningWithHeader() {
 		))
 	}
 	if featureInfo := b.getFeatureFlagInfo(); featureInfo != "" {
-		b.logger.Println("  feature flags:", featureInfo)
+		logger.Println("  feature flags:", featureInfo)
 	}
 }
 

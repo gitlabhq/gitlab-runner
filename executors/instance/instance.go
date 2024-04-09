@@ -73,13 +73,17 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 }
 
 func (e *executor) Run(cmd common.ExecutorCommand) error {
-	logger := e.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
+	stdout := e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+	defer stdout.Close()
+
+	stderr := e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr)
+	defer stderr.Close()
 
 	return e.client.Run(cmd.Context, executors.RunOptions{
 		Command: e.BuildShell.CmdLine,
 		Stdin:   strings.NewReader(cmd.Script),
-		Stdout:  logger.Stdout(),
-		Stderr:  logger.Stderr(),
+		Stdout:  stdout,
+		Stderr:  stderr,
 	})
 }
 

@@ -434,7 +434,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 
 	logger, _ := logrustest.NewNullLogger()
 	output := bytes.NewBufferString("")
-	buildLogger := buildlogger.New(&common.Trace{Writer: output}, logger.WithField("test", t.Name()))
+	buildLogger := buildlogger.New(&common.Trace{Writer: output}, logger.WithField("test", t.Name()), buildlogger.Options{})
 
 	dockerConfig := &common.DockerConfig{PullPolicy: []string{common.PullPolicyAlways, common.PullPolicyIfNotPresent}}
 	dockerOptions := common.ImageDockerOptions{}

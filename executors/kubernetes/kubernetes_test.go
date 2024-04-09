@@ -1135,7 +1135,7 @@ func TestCleanup(t *testing.T) {
 					},
 				},
 			}
-			ex.AbstractExecutor.BuildLogger = buildlogger.New(buildTrace, logrus.WithFields(logrus.Fields{}))
+			ex.AbstractExecutor.BuildLogger = buildlogger.New(buildTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 			if test.Config == nil {
 				test.Config = &common.KubernetesConfig{}
@@ -5984,7 +5984,7 @@ func TestProcessLogs(t *testing.T) {
 			tc.run(tc.lineCh, tc.errCh)
 
 			e := newExecutor()
-			e.BuildLogger = buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}))
+			e.BuildLogger = buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod_name"
 			e.pod.Namespace = "namespace"
@@ -6146,7 +6146,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			}
 			e.kubeClient = client
 			e.remoteProcessTerminated = make(chan shells.StageCommandStatus)
-			e.BuildLogger = buildlogger.New(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}))
+			e.BuildLogger = buildlogger.New(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod"
 			e.pod.Namespace = "namespace"
@@ -6243,7 +6243,6 @@ func (f FakeBuildTrace) SetAbortFunc(cancelFunc context.CancelFunc)             
 func (f FakeBuildTrace) Abort() bool                                                                { return false }
 func (f FakeBuildTrace) SetFailuresCollector(fc common.FailuresCollector)                           {}
 func (f FakeBuildTrace) SetSupportedFailureReasonMapper(filter common.SupportedFailureReasonMapper) {}
-func (f FakeBuildTrace) SetMasked(opts common.MaskOptions)                                          {}
 func (f FakeBuildTrace) SetDebugModeEnabled(isEnabled bool)                                         {}
 func (f FakeBuildTrace) IsStdout() bool {
 	return false
@@ -6925,7 +6924,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 			defer buf.Close()
 
 			trace := &common.Trace{Writer: buf}
-			e.BuildLogger = buildlogger.New(trace, logrus.WithFields(logrus.Fields{}))
+			e.BuildLogger = buildlogger.New(trace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 			isw := service_helpers.NewInlineServiceLogWriter(cName, trace)
 
@@ -7004,7 +7003,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 		pod:        &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
 		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
 	}
-	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry))
+	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
 	e.Config.Kubernetes = &common.KubernetesConfig{}
 
 	ctx := context.Background()

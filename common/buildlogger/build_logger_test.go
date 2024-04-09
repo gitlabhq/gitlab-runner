@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeJobTrace struct {
@@ -35,7 +36,7 @@ func newFakeJobTrace() *fakeJobTrace {
 }
 
 func newBuildLogger(testName string, jt Trace) Logger {
-	return New(jt, logrus.WithField("test", testName))
+	return New(jt, logrus.WithField("test", testName), Options{})
 }
 
 func runOnHijackedLogrusOutput(t *testing.T, handler func(t *testing.T, output *bytes.Buffer)) {
@@ -55,6 +56,8 @@ func TestLogLineWithoutSecret(t *testing.T) {
 		l := newBuildLogger("log-line-without-secret", jt)
 
 		l.Errorln("Fatal: Get http://localhost/?id=123")
+		assert.NoError(t, l.Close())
+
 		assert.Contains(t, jt.Read(), `Get http://localhost/?id=123`)
 		assert.Contains(t, output.String(), `Get http://localhost/?id=123`)
 	})
@@ -67,10 +70,12 @@ func TestLogLineWithSecret(t *testing.T) {
 		l := newBuildLogger("log-line-with-secret", jt)
 
 		l.Errorln("Get http://localhost/?id=123&X-Amz-Signature=abcd1234&private_token=abcd1234")
+		assert.NoError(t, l.Close())
+
 		assert.Contains(
 			t,
 			jt.Read(),
-			`Get http://localhost/?id=123&X-Amz-Signature=[FILTERED]&private_token=[FILTERED]`,
+			`Get http://localhost/?id=123&X-Amz-Signature=[MASKED]&private_token=[MASKED]`,
 		)
 		assert.Contains(
 			t,
@@ -107,13 +112,14 @@ func TestLogPrinters(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			trace := newFakeJobTrace()
 
-			logger := New(trace, tc.entry)
+			logger := New(trace, tc.entry, Options{})
 
 			logger.Println("print")
 			logger.Infoln("info")
 			logger.Warningln("warning")
 			logger.SoftErrorln("softerror")
 			logger.Errorln("error")
+			require.NoError(t, logger.Close())
 
 			tc.assertion(t, trace.Read())
 		})

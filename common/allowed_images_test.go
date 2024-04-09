@@ -5,6 +5,7 @@ package common
 import (
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 )
@@ -56,7 +57,7 @@ var allowedImageTestCases = []allowedImageTestCase{
 }
 
 func TestVerifyAllowedImage(t *testing.T) {
-	logger := buildlogger.Logger{}
+	logger := buildlogger.New(nil, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 
 	for _, test := range allowedImageTestCases {
 		t.Run(test.image, func(t *testing.T) {

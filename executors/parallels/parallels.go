@@ -76,8 +76,6 @@ func (s *executor) verifyMachine(vmName string) error {
 	// Create SSH command
 	sshCommand := ssh.Client{
 		SshConfig:      *s.Config.SSH,
-		Stdout:         s.BuildLogger.Stdout(),
-		Stderr:         s.BuildLogger.Stderr(),
 		ConnectRetries: 30,
 	}
 	sshCommand.Host = ipAddr
@@ -379,11 +377,8 @@ func (s *executor) sshConnect() error {
 
 	s.BuildLogger.Debugln("Starting SSH command...")
 
-	logger := s.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
 	s.sshCommand = ssh.Client{
 		SshConfig: *s.Config.SSH,
-		Stdout:    logger.Stdout(),
-		Stderr:    logger.Stderr(),
 	}
 	s.sshCommand.Host = ipAddr
 
@@ -392,9 +387,17 @@ func (s *executor) sshConnect() error {
 }
 
 func (s *executor) Run(cmd common.ExecutorCommand) error {
+	stdout := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
+	defer stdout.Close()
+
+	stderr := s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr)
+	defer stderr.Close()
+
 	err := s.sshCommand.Run(cmd.Context, ssh.Command{
 		Command: s.BuildShell.CmdLine,
 		Stdin:   cmd.Script,
+		Stdout:  stdout,
+		Stderr:  stderr,
 	})
 	if exitError, ok := err.(*ssh.ExitError); ok {
 		exitCode := exitError.ExitCode()

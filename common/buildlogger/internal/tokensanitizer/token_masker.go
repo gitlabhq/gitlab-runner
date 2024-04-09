@@ -21,13 +21,9 @@ package tokensanitizer
 import (
 	"bytes"
 	"io"
-	"sort"
-	"strings"
 )
 
-const (
-	defaultPATPrefix = "glpat-"
-)
+const DefaultPATPrefix = "glpat-"
 
 var (
 	// alphabet is the character set we expect a token to comform to, not all
@@ -62,25 +58,17 @@ type TokenSanitizer struct {
 
 // New returns a new TokenSanitizer.
 // We only allow 10 token prefixes at the moment. Everything else is being silently ignored
-func New(w io.WriteCloser, prefixes []string) *TokenSanitizer {
+func New(w io.WriteCloser, prefixes [][]byte) *TokenSanitizer {
 	m := &TokenSanitizer{}
-
-	prefixes = append(prefixes, defaultPATPrefix)
-	sort.Slice(prefixes, func(i, j int) bool {
-		return len(prefixes[i]) < len(prefixes[j])
-	})
-
 	m.next = w
 
-	// create token sanitizer for each unique prefix
-	unique := map[string]struct{}{}
-	for i := 0; i < len(prefixes) && len(unique) < 10; i++ {
-		trimmed := strings.TrimSpace(prefixes[i])
-		if _, ok := unique[trimmed]; ok || trimmed == "" {
-			continue
-		}
-		unique[trimmed] = struct{}{}
-		m.next = &tokenSanitizer{next: m.next, prefix: []byte(trimmed)}
+	max := len(prefixes)
+	if max > 10 {
+		max = 10
+	}
+
+	for i := 0; i < max; i++ {
+		m.next = &tokenSanitizer{next: m.next, prefix: prefixes[i]}
 	}
 
 	return m

@@ -11,11 +11,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/masker"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/tokensanitizer"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace/internal/urlsanitizer"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
 )
@@ -43,41 +39,9 @@ type Buffer struct {
 }
 
 type options struct {
-	urlParamMasking bool
 }
 
 type Option func(*options) error
-
-func WithURLParamMasking(enabled bool) Option {
-	return func(o *options) error {
-		o.urlParamMasking = enabled
-		return nil
-	}
-}
-
-func (b *Buffer) SetMasked(opts common.MaskOptions) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	// close existing writer to flush data
-	if b.w != nil {
-		b.w.Close()
-	}
-
-	// convert bytes to utf-8
-	b.w = transform.NewWriter(b.lw, encoding.Replacement.NewEncoder())
-
-	// mask values
-	b.w = masker.New(b.w, opts.Phrases)
-
-	// prefixes values
-	b.w = tokensanitizer.New(b.w, opts.TokenPrefixes)
-
-	// mask urls if enabled
-	if b.opts.urlParamMasking {
-		b.w = urlsanitizer.New(b.w)
-	}
-}
 
 func (b *Buffer) SetLimit(size int) {
 	b.lock.Lock()
@@ -224,9 +188,7 @@ func New(opts ...Option) (*Buffer, error) {
 		return nil, err
 	}
 
-	options := options{
-		urlParamMasking: true,
-	}
+	options := options{}
 
 	for _, o := range opts {
 		err := o(&options)
@@ -248,7 +210,7 @@ func New(opts ...Option) (*Buffer, error) {
 		limit:   defaultBytesLimit,
 	}
 
-	buffer.SetMasked(common.MaskOptions{})
+	buffer.w = transform.NewWriter(buffer.lw, encoding.Replacement.NewEncoder())
 
 	return buffer, nil
 }

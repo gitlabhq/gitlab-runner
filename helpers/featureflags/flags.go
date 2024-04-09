@@ -24,7 +24,6 @@ const (
 	EnableJobCleanup                     string = "FF_ENABLE_JOB_CLEANUP"
 	KubernetesHonorEntrypoint            string = "FF_KUBERNETES_HONOR_ENTRYPOINT"
 	PosixlyCorrectEscapes                string = "FF_POSIXLY_CORRECT_ESCAPES"
-	UseImprovedURLMasking                string = "FF_USE_IMPROVED_URL_MASKING"
 	ResolveFullTLSChain                  string = "FF_RESOLVE_FULL_TLS_CHAIN"
 	DisablePowershellStdin               string = "FF_DISABLE_POWERSHELL_STDIN"
 	UsePodActiveDeadlineSeconds          string = "FF_USE_POD_ACTIVE_DEADLINE_SECONDS"
@@ -40,6 +39,7 @@ const (
 	UseDockerAutoscalerDialStdio         string = "FF_USE_DOCKER_AUTOSCALER_DIAL_STDIO"
 	CleanUpFailedCacheExtract            string = "FF_CLEAN_UP_FAILED_CACHE_EXTRACT"
 	UseWindowsJobObject                  string = "FF_USE_WINDOWS_JOB_OBJECT"
+	UseTimestamps                        string = "FF_TIMESTAMPS"
 )
 
 type FeatureFlag struct {
@@ -210,15 +210,6 @@ var flags = []FeatureFlag{
 			"This should be enabled if the job environment uses a POSIX-compliant shell.",
 	},
 	{
-		Name:         UseImprovedURLMasking,
-		DefaultValue: false,
-		Deprecated:   false,
-		Description: "When enabled, any sensitive URL parameters are masked no matter where they appear in the trace " +
-			"log output. When this is disabled, sensitive URL parameters are only masked in select places and can " +
-			"[occasionally be revealed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4625). This feature " +
-			"flag can only be configured via Runner's config and not from a job.",
-	},
-	{
 		Name:         ResolveFullTLSChain,
 		DefaultValue: false,
 		Deprecated:   false,
@@ -334,6 +325,12 @@ var flags = []FeatureFlag{
 		Description: "When enabled, a job object is created for each process that the runner creates on Windows " +
 			"with the shell and custom executors. To force-kill the processes, the runner closes " +
 			"the job object. This should improve the termination of difficult-to-kill processes.",
+	},
+	{
+		Name:         UseTimestamps,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled timestamps are added to the beginning of each log trace line.",
 	},
 }
 

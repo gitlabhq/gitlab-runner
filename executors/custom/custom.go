@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -21,8 +22,12 @@ import (
 )
 
 type commandOutputs struct {
-	stdout io.Writer
-	stderr io.Writer
+	stdout io.WriteCloser
+	stderr io.WriteCloser
+}
+
+func (c *commandOutputs) Close() error {
+	return errors.Join(c.stdout.Close(), c.stderr.Close())
 }
 
 type prepareCommandOpts struct {
@@ -123,8 +128,12 @@ func (e *executor) Prepare(options common.ExecutorPrepareOptions) error {
 	opts := prepareCommandOpts{
 		executable: e.config.PrepareExec,
 		args:       e.config.PrepareArgs,
-		out:        e.defaultCommandOutputs(),
+		out: commandOutputs{
+			stdout: e.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stdout),
+			stderr: e.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr),
+		},
 	}
+	defer opts.out.Close()
 
 	return e.prepareCommand(ctx, opts).Run()
 }
@@ -171,16 +180,16 @@ func (e *executor) dynamicConfig() error {
 	defer cancelFunc()
 
 	buf := bytes.NewBuffer(nil)
-	outputs := commandOutputs{
-		stdout: buf,
-		stderr: e.BuildLogger.Stderr(),
-	}
 
 	opts := prepareCommandOpts{
 		executable: e.config.ConfigExec,
 		args:       e.config.ConfigArgs,
-		out:        outputs,
+		out: commandOutputs{
+			stdout: buildlogger.NewNopCloser(buf),
+			stderr: e.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr),
+		},
 	}
+	defer opts.out.Close()
 
 	// Force refresh of all build variables for the upcoming command, ensuring
 	// that the up-to-date environment variables are provided to the ConfigExec script.
@@ -223,13 +232,6 @@ func (e *executor) logStartupMessage() {
 	}
 
 	e.BuildLogger.Println(fmt.Sprintf("%s with driver %s %s...", usageLine, *info.Name, *info.Version))
-}
-
-func (e *executor) defaultCommandOutputs() commandOutputs {
-	return commandOutputs{
-		stdout: e.BuildLogger.Stdout(),
-		stderr: e.BuildLogger.Stderr(),
-	}
 }
 
 var commandFactory = command.New
@@ -314,16 +316,15 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 
 	args := append(e.config.RunArgs, scriptFile, string(stage))
 
-	logger := e.BuildLogger.StreamID(buildlogger.StreamWorkLevel)
-
 	opts := prepareCommandOpts{
 		executable: e.config.RunExec,
 		args:       args,
 		out: commandOutputs{
-			stdout: logger.Stdout(),
-			stderr: logger.Stderr(),
+			stdout: e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout),
+			stderr: e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr),
 		},
 	}
+	defer opts.out.Close()
 
 	return e.prepareCommand(cmd.Context, opts).Run()
 }
@@ -352,16 +353,15 @@ func (e *executor) Cleanup() {
 	stdoutLogger := e.BuildLogger.WithFields(logrus.Fields{"cleanup_std": "out"})
 	stderrLogger := e.BuildLogger.WithFields(logrus.Fields{"cleanup_std": "err"})
 
-	outputs := commandOutputs{
-		stdout: stdoutLogger.WriterLevel(logrus.DebugLevel),
-		stderr: stderrLogger.WriterLevel(logrus.WarnLevel),
-	}
-
 	opts := prepareCommandOpts{
 		executable: e.config.CleanupExec,
 		args:       e.config.CleanupArgs,
-		out:        outputs,
+		out: commandOutputs{
+			stdout: stdoutLogger.WriterLevel(logrus.DebugLevel),
+			stderr: stderrLogger.WriterLevel(logrus.WarnLevel),
+		},
 	}
+	defer opts.out.Close()
 
 	err = e.prepareCommand(ctx, opts).Run()
 	if err != nil {
