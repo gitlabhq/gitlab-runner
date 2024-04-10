@@ -70,10 +70,17 @@ func (v *defaultAkeyless) GetAkeylessSecret(ctx context.Context, secret *common.
 		Servers:       []akeyless_api.ServerConfiguration{{URL: secret.Server.AkeylessApiUrl}},
 		DefaultHeader: map[string]string{"akeylessclienttype": "gitlab"},
 	}).V2Api
+	token := secret.Server.AkeylessToken
+	var err error
+	if token == "" {
+		token, err = v.authFunc(ctx, secret.Server, apiService)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	token, err := v.authFunc(ctx, secret.Server, apiService)
-	if err != nil {
-		return nil, err
+	if secret.Name == "" {
+		return token, nil
 	}
 
 	return v.getSecretFunc(ctx, secret, token, apiService)
