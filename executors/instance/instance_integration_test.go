@@ -30,6 +30,13 @@ func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
 
 	srv.ExecuteLocal = true
 
+	switch shell {
+	case "bash", "sh":
+		srv.Shell = []string{shell, "-c"}
+	case "pwsh", "powershell":
+		srv.Shell = []string{shell, "-Command"}
+	}
+
 	return &common.RunnerConfig{
 		SystemIDState: common.NewSystemIDState(),
 		RunnerCredentials: common.RunnerCredentials{
@@ -74,6 +81,51 @@ func setupAcquireBuild(t *testing.T, build *common.Build) {
 		}
 	})
 }
+
+func TestInstanceReadyCommand(t *testing.T) {
+	tests := map[string]struct {
+		command string
+		success bool
+	}{
+		"no command": {command: "", success: true},
+		"exit 0":     {command: "exit 0", success: true},
+
+		// we skip non-success codes for now, as this causes instance churn
+		// that is currently difficult to detect.
+		// "exit 1": {command: "exit 1", success: false},
+		// "exit 128":   {command: "exit 128", success: false},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				if shell == "cmd" {
+					t.Skip()
+				}
+
+				successfulBuild, err := common.GetRemoteSuccessfulBuild()
+				require.NoError(t, err)
+
+				cfg := newRunnerConfig(t, shell)
+				cfg.Autoscaler.InstanceReadyCommand = tc.command
+
+				build := &common.Build{
+					JobResponse: successfulBuild,
+					Runner:      cfg,
+				}
+				setupAcquireBuild(t, build)
+
+				err = buildtest.RunBuild(t, build)
+				if tc.success {
+					require.NoError(t, err)
+				} else {
+					require.Error(t, err)
+				}
+			})
+		})
+	}
+}
+
 func TestBuildSuccess(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		if shell == "cmd" {
