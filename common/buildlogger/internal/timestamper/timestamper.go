@@ -81,7 +81,7 @@ func New(w io.Writer, streamType StreamType, streamNumber uint8, timestamp bool)
 	}
 
 	if timestamp {
-		l.timeLen = len(time.Now().Format(time.RFC3339)) + fracs + additionalBytes
+		l.timeLen = len(time.Now().UTC().Format(time.RFC3339)) + fracs + additionalBytes
 	}
 	l.bufStream = make([]byte, l.timeLen+4)
 	if timestamp {
