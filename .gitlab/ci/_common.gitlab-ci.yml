@@ -24,7 +24,6 @@ variables:
   DOCS_GITLAB_REPO_SUFFIX: "runner"
   # We're overriding rules for the jobs that we want to run.
   # This will disable all other rules.
-  SAST_DISABLED: "true"
   DEPENDENCY_SCANNING_DISABLED: "true"
   TRANSFER_METER_FREQUENCY: "5s"
   GO111MODULE: "on"
