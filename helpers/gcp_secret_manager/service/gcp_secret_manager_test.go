@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -199,6 +200,47 @@ func TestClient_GetSecret(t *testing.T) {
 			tt.assertError(t, err)
 
 			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}
+
+func TestSecretVersionResourceName(t *testing.T) {
+	wifPoolProjectNumber := "1234"
+	otherProjectNumber := "9876"
+	baseSecretName := "my-secret"
+	secretVersion := "345"
+
+	tests := map[string]struct {
+		secretName           string
+		expectedResourceName string
+	}{
+		"bare secret name using implicit project number": {
+			secretName:           baseSecretName,
+			expectedResourceName: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", wifPoolProjectNumber, baseSecretName, secretVersion),
+		},
+		"full secret resource name using implicit project number": {
+			secretName:           fmt.Sprintf("projects/%s/secrets/%s", wifPoolProjectNumber, baseSecretName),
+			expectedResourceName: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", wifPoolProjectNumber, baseSecretName, secretVersion),
+		},
+		"full secret resource name from another project": {
+			secretName:           fmt.Sprintf("projects/%s/secrets/%s", otherProjectNumber, baseSecretName),
+			expectedResourceName: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", otherProjectNumber, baseSecretName, secretVersion),
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			secret := &common.GCPSecretManagerSecret{
+				Name:    tt.secretName,
+				Version: secretVersion,
+				Server: common.GCPSecretManagerServer{
+					ProjectNumber:                        wifPoolProjectNumber,
+					WorkloadIdentityFederationPoolId:     "pool-id",
+					WorkloadIdentityFederationProviderID: "provider-id",
+					JWT:                                  "jwt token",
+				},
+			}
+			assert.Equal(t, tt.expectedResourceName, secretVersionResourceName(secret))
 		})
 	}
 }
