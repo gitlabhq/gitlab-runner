@@ -84,6 +84,11 @@ var staticBuildStages = []BuildStage{
 	BuildStageCleanup,
 }
 
+var (
+	ErrJobCanceled      = errors.New("canceled")
+	ErrJobScriptTimeout = errors.New("script timeout")
+)
+
 const (
 	ExecutorJobSectionAttempts = "EXECUTOR_JOB_SECTION_ATTEMPTS"
 )
@@ -477,15 +482,24 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 			}
 		}
 
+		switch {
 		// if parent context is fine but script context was cancelled we ensure the build error
 		// failure reason is "canceled".
-		if ctx.Err() == nil && errors.Is(scriptCtx.Err(), context.Canceled) {
+		case ctx.Err() == nil && errors.Is(scriptCtx.Err(), context.Canceled):
 			err = &BuildError{
-				Inner:         errors.New("canceled"),
+				Inner:         ErrJobCanceled,
 				FailureReason: JobCanceled,
 			}
 
 			b.logger.Warningln("script canceled externally (UI, API)")
+
+		// If the parent context reached deadline, don't do anything different than usual.
+		// If the script context reached deadline, return the deadline error.
+		case !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(scriptCtx.Err(), context.DeadlineExceeded):
+			err = &BuildError{
+				Inner:         fmt.Errorf("%w: %w", ErrJobScriptTimeout, scriptCtx.Err()),
+				FailureReason: JobExecutionTimeout,
+			}
 		}
 
 		afterScriptCtx, cancel := timeouts["RUNNER_AFTER_SCRIPT_TIMEOUT"]()
@@ -496,15 +510,6 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 				// the parent deadline being exceeded is reported at a later stage, so we
 				// only focus on errors specific to after_script here
 				b.logger.Warningln("after_script failed, but job will continue unaffected:", afterScriptErr)
-			}
-		}
-
-		// If the parent context reached deadline, don't do anything different than usual.
-		// If the script context reached deadline, return the deadline error.
-		if !errors.Is(ctx.Err(), context.DeadlineExceeded) && errors.Is(scriptCtx.Err(), context.DeadlineExceeded) {
-			err = &BuildError{
-				Inner:         fmt.Errorf("script timeout context: %w", scriptCtx.Err()),
-				FailureReason: JobExecutionTimeout,
 			}
 		}
 	}
@@ -653,13 +658,13 @@ func (b *Build) handleError(err error) error {
 
 func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	switch {
-	case errors.Is(err, context.Canceled):
+	case errors.Is(err, context.Canceled), errors.Is(err, ErrJobCanceled):
 		return BuildRunRuntimeCanceled, &BuildError{
-			Inner:         errors.New("canceled"),
+			Inner:         ErrJobCanceled,
 			FailureReason: JobCanceled,
 		}
 
-	case errors.Is(err, context.DeadlineExceeded):
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, ErrJobScriptTimeout):
 		return BuildRunRuntimeTimedout, &BuildError{
 			Inner:         fmt.Errorf("execution took longer than %v seconds", b.GetBuildTimeout()),
 			FailureReason: JobExecutionTimeout,

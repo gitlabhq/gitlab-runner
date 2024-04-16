@@ -1,3 +1,4 @@
+//nolint:goconst
 package common
 
 import (
@@ -254,39 +255,49 @@ func GetRemoteLongRunningBuildCMD() (JobResponse, error) {
 	return GetLocalBuildResponse("ping 127.0.0.1 -n 3600 > nul")
 }
 
-func GetRemoteLongRunningBuildWithAfterScript() (JobResponse, error) {
-	jobResponse, err := GetRemoteLongRunningBuild()
+func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error) {
+	var jobResponse JobResponse
+	var err error
+	switch shell {
+	default:
+		jobResponse, err = GetRemoteLongRunningBuild()
+	case "cmd":
+		jobResponse, err = GetRemoteLongRunningBuildCMD()
+	}
 	if err != nil {
 		return JobResponse{}, err
 	}
 
-	addAfterScript(&jobResponse)
-
-	return jobResponse, nil
-}
-
-func GetRemoteLongRunningBuildWithAfterScriptCMD() (JobResponse, error) {
-	jobResponse, err := GetRemoteLongRunningBuildCMD()
-	if err != nil {
-		return JobResponse{}, err
-	}
-
-	addAfterScript(&jobResponse)
-
-	return jobResponse, nil
-}
-
-func addAfterScript(jobResponse *JobResponse) {
-	jobResponse.Steps = append(
-		jobResponse.Steps,
-		Step{
+	switch shell {
+	default:
+		jobResponse.Steps = append(jobResponse.Steps, Step{
 			Name: StepNameAfterScript,
 			Script: []string{
-				"echo Hello World from after_script",
+				"echo \"Hello World from after_script\"",
+				"echo \"job status $CI_JOB_STATUS\"",
 			},
-			When: StepWhenAlways,
-		},
-	)
+		})
+
+	case "pwsh":
+		jobResponse.Steps = append(jobResponse.Steps, Step{
+			Name: StepNameAfterScript,
+			Script: []string{
+				"echo \"Hello World from after_script\"",
+				"echo \"job status $env:CI_JOB_STATUS\"",
+			},
+		})
+
+	case "cmd":
+		jobResponse.Steps = append(jobResponse.Steps, Step{
+			Name: StepNameAfterScript,
+			Script: []string{
+				"echo \"Hello World from after_script\"",
+				"echo \"job status %CI_JOB_STATUS%\"",
+			},
+		})
+	}
+
+	return jobResponse, nil
 }
 
 func GetMultilineBashBuild() (JobResponse, error) {
