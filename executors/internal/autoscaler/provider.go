@@ -23,6 +23,7 @@ import (
 	tsprometheus "gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/autoscaler/logger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
 
@@ -45,7 +46,7 @@ type provider struct {
 
 	// Testing hooks
 	taskscalerNew     func(context.Context, fleetingprovider.InstanceGroup, ...taskscaler.Option) (taskscaler.Taskscaler, error)
-	fleetingRunPlugin func(string, []byte) (fleetingPlugin, error)
+	fleetingRunPlugin func(string, []byte, ...fleeting.PluginOption) (fleetingPlugin, error)
 	generateUniqueID  func() (string, error)
 }
 
@@ -75,13 +76,13 @@ func New(ep common.ExecutorProvider, cfg Config) common.ExecutorProvider {
 		cfg:              cfg,
 		scalers:          make(map[string]scaler),
 		taskscalerNew:    taskscaler.New,
-		fleetingRunPlugin: func(name string, config []byte) (fleetingPlugin, error) {
+		fleetingRunPlugin: func(name string, config []byte, opts ...fleeting.PluginOption) (fleetingPlugin, error) {
 			pluginPath, err := installer.LookPath(name, "")
 			if err != nil {
 				return nil, fmt.Errorf("loading fleeting plugin: %w", err)
 			}
 
-			return fleeting.RunPlugin(pluginPath, config)
+			return fleeting.RunPlugin(pluginPath, config, opts...)
 		},
 		generateUniqueID: func() (string, error) {
 			return helpers.GenerateRandomUUID(8)
@@ -128,7 +129,9 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		return nil, false, fmt.Errorf("marshaling plugin config: %w", err)
 	}
 
-	runner, err := p.fleetingRunPlugin(config.Autoscaler.Plugin, pluginCfg)
+	logger := logger.New(config.RunnerCredentials.Log())
+
+	runner, err := p.fleetingRunPlugin(config.Autoscaler.Plugin, pluginCfg, fleeting.WithPluginLogger(logger.Named("fleeting-plugin")))
 	if err != nil {
 		return nil, false, fmt.Errorf("running autoscaler plugin: %w", err)
 	}
@@ -187,6 +190,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		taskscaler.WithInstanceUpFunc(instanceReadyUp(shutdownCtx, config)),
 		taskscaler.WithUpdateInterval(time.Minute),
 		taskscaler.WithUpdateIntervalWhenExpecting(time.Second),
+		taskscaler.WithLogger(logger.Named("taskscaler")),
 	}
 
 	if config.Autoscaler.DeleteInstancesOnShutdown {
