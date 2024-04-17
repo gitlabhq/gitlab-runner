@@ -52,44 +52,58 @@ func writeLines(w io.Writer) {
 }
 
 func TestWithTimestamps(t *testing.T) {
-	buf := new(bytes.Buffer)
+	// reset local
+	local := time.Local
+	defer func() {
+		time.Local = local
+	}()
 
-	defer setupDummyTime()()
+	for _, tz := range []string{"UTC", "Africa/Cairo", "US/Alaska"} {
+		t.Run(tz, func(t *testing.T) {
+			// change timezone
+			loc, _ := time.LoadLocation(tz)
+			time.Local = loc
 
-	w := New(buf, StderrType, 255, true)
-	writeLines(w)
-	w.Close()
+			buf := new(bytes.Buffer)
 
-	expected := []string{
-		"2021-01-01T01:00:00.000000Z ffE PREFIX This is the beginning of a new line\n",
-		"2021-01-01T02:00:00.000000Z ffE PREFIX This is a split up line\n",
-		"2021-01-01T03:00:00.000000Z ffE PREFIX Progress bar: .\r\n",
-		"2021-01-01T04:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T05:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T06:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T07:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T08:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T09:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T10:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T11:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T12:00:00.000000Z ffE+.\r\n",
-		"2021-01-01T13:00:00.000000Z ffE+Done.\r\n",
-		"2021-01-01T14:00:00.000000Z ffE PREFIX Another windows new-line\r\n",
-		"2021-01-01T15:00:00.000000Z ffE PREFIX multiple\n",
-		"2021-01-01T16:00:00.000000Z ffE new\n",
-		"2021-01-01T17:00:00.000000Z ffE lines\n",
-		"2021-01-01T18:00:00.000000Z ffE in\n",
-		"2021-01-01T19:00:00.000000Z ffE one\n",
-		"2021-01-01T20:00:00.000000Z ffE \n",
-		"2021-01-01T21:00:00.000000Z ffE start\n",
-		"2021-01-01T22:00:00.000000Z ffE end\n",
-		"2021-01-01T23:00:00.000000Z ffE PREFIX Eat carriages\r\r\r\r\r\r\r\n",
-		"2021-01-02T00:00:00.000000Z ffE PREFIX This is across\n",
-		"2021-01-02T01:00:00.000000Z ffE two lines\n",
-		"2021-01-02T02:00:00.000000Z ffE PREFIX The end\n",
+			defer setupDummyTime()()
+
+			w := New(buf, StderrType, 255, true)
+			writeLines(w)
+			w.Close()
+
+			expected := []string{
+				"2021-01-01T01:00:00.000000Z ffE PREFIX This is the beginning of a new line\n",
+				"2021-01-01T02:00:00.000000Z ffE PREFIX This is a split up line\n",
+				"2021-01-01T03:00:00.000000Z ffE PREFIX Progress bar: .\r\n",
+				"2021-01-01T04:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T05:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T06:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T07:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T08:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T09:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T10:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T11:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T12:00:00.000000Z ffE+.\r\n",
+				"2021-01-01T13:00:00.000000Z ffE+Done.\r\n",
+				"2021-01-01T14:00:00.000000Z ffE PREFIX Another windows new-line\r\n",
+				"2021-01-01T15:00:00.000000Z ffE PREFIX multiple\n",
+				"2021-01-01T16:00:00.000000Z ffE new\n",
+				"2021-01-01T17:00:00.000000Z ffE lines\n",
+				"2021-01-01T18:00:00.000000Z ffE in\n",
+				"2021-01-01T19:00:00.000000Z ffE one\n",
+				"2021-01-01T20:00:00.000000Z ffE \n",
+				"2021-01-01T21:00:00.000000Z ffE start\n",
+				"2021-01-01T22:00:00.000000Z ffE end\n",
+				"2021-01-01T23:00:00.000000Z ffE PREFIX Eat carriages\r\r\r\r\r\r\r\n",
+				"2021-01-02T00:00:00.000000Z ffE PREFIX This is across\n",
+				"2021-01-02T01:00:00.000000Z ffE two lines\n",
+				"2021-01-02T02:00:00.000000Z ffE PREFIX The end\n",
+			}
+
+			assert.Equal(t, strings.Join(expected, ""), buf.String())
+		})
 	}
-
-	assert.Equal(t, strings.Join(expected, ""), buf.String())
 }
 
 func TestWithoutTimestamp(t *testing.T) {
