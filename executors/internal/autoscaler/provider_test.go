@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.com/gitlab-org/fleeting/fleeting"
 	fleetingprovider "gitlab.com/gitlab-org/fleeting/fleeting/provider"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	"gitlab.com/gitlab-org/fleeting/taskscaler/mocks"
@@ -229,8 +230,8 @@ func mockTaskscalerNew(
 	}
 }
 
-func mockFleetingRunPlugin(wantErr bool) func(string, []byte) (fleetingPlugin, error) {
-	return func(string, []byte) (fleetingPlugin, error) {
+func mockFleetingRunPlugin(wantErr bool) func(string, []byte, ...fleeting.PluginOption) (fleetingPlugin, error) {
+	return func(string, []byte, ...fleeting.PluginOption) (fleetingPlugin, error) {
 		if wantErr {
 			return nil, fmt.Errorf("test error")
 		}
