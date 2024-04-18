@@ -1,3 +1,40 @@
+## v16.11.0 (2024-04-18)
+
+### New features
+
+- Taskscaler and fleeting now use logrus logger !4719
+- Add autoscaler instance_ready_command option !4709
+- Implement timestamped logs !4591
+- Add Jfrog Artifactory Secretes engine as External Secrets option in Hashicorp Vault !4486 (Ivo Ivanov @urbanwax)
+- Add fleeting subcommand to manage fleeting plugins !4690
+- Extend GitInfo with RepoObjectFormat to store object format !4645
+
+### Bug fixes
+
+- Fix log timestamps fixed format !4712
+- Avoid errors when creating files in pwsh 2.0 !4661 (Robin Lambertz @roblabla)
+- Give up on the trace finalUpdate if it keeps on failing !4692
+- Fix test coverage report job !4701
+- Fix Makefile.build.mk for armv7l (#36976) !4682 (Alexander Puck Neuwirth @APN-Pucky)
+- Rename ssh.Config to common.SshConfig to avoid misleading config.toml validation error !4694
+- Update GO_FIPS_VERSION to match GO_VERSION !4687
+- Revert "Merge branch 'avonbertoldi/27443/graceful-shutdown-shell' into 'main'" !4686
+
+### Maintenance
+
+- Bump Go version to 1.21.9 !4711
+- Re-enable SAST scanning !4683
+- Update a few dependencies !4700
+- docs: Remove period in the middle of a sentence !4708 (Markus Heidelberg @marcows)
+- Runner: Updates docs-lint image for new SVG use !4697
+- Remove extra square brackets in podman section !4705
+- Check docker version before using deprecated arg !4699 (Anthony Juckel @ajuckel)
+- Change beta to pre in version string !4681
+- Upgrade github.com/BurntSushi/toml to v1.3.2 !4695
+- Docs Update - Missing Hosted Runner Renaming !4693
+- Use fork of moby/spdystream to fix race condition !4685
+- Fix typo in note !4691
+
 ## v16.10.0 (2024-03-21)
 
 ### New features
