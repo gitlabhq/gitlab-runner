@@ -875,11 +875,11 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	logger := buildlogger.New(trace, b.Log().WithFields(logrus.Fields{
 		"duration_s": b.Duration().Seconds(),
 	}), buildlogger.Options{Timestamping: b.IsFeatureFlagOn(featureflags.UseTimestamps)})
+	defer logger.Close()
 
 	if err == nil {
 		logger.Infoln("Job succeeded")
 		logTerminationError(logger, "Success", trace.Success())
-		logger.Close()
 
 		return
 	}
@@ -892,7 +892,6 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 		}
 
 		logger.SoftErrorln(msg)
-		logger.Close()
 
 		trace.SetSupportedFailureReasonMapper(newFailureReasonMapper(b.Features.FailureReasons))
 		err = trace.Fail(err, JobFailureData{
@@ -906,7 +905,6 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 
 	logger.Errorln("Job failed (system failure):", err)
 	logTerminationError(logger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure}))
-	logger.Close()
 }
 
 func logTerminationError(logger buildlogger.Logger, name string, err error) {
