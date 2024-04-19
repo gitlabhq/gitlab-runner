@@ -81,6 +81,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_CLEAN_UP_FAILED_CACHE_EXTRACT` | `false` | **{dotted-circle}** No |  | When enabled, commands are inserted into build scripts to detect a failed cache extraction and clean up partial cache contents left behind. |
 | `FF_USE_WINDOWS_JOB_OBJECT` | `false` | **{dotted-circle}** No |  | When enabled, a job object is created for each process that the runner creates on Windows with the shell and custom executors. To force-kill the processes, the runner closes the job object. This should improve the termination of difficult-to-kill processes. |
 | `FF_TIMESTAMPS` | `false` | **{dotted-circle}** No |  | When enabled timestamps are added to the beginning of each log trace line. |
+| `FF_DISABLE_AUTOMATIC_TOKEN_ROTATION` | `false` | **{dotted-circle}** No |  | When enabled, it restricts automatic token rotation and logs a warning when the token is about to expire. |
 
 <!-- feature_flags_list_end -->
 
