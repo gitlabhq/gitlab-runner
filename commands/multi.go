@@ -24,6 +24,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/certificate"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	prometheus_helper "gitlab.com/gitlab-org/gitlab-runner/helpers/prometheus"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/sentry"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
@@ -300,6 +301,16 @@ func (mr *RunCommand) resetOneRunnerToken() bool {
 
 	select {
 	case runner := <-runnerResetCh:
+		// When the FF is enabled, the token is not reset, however, a message is logged to warn the user
+		// that his token is about to expire
+		if runner.IsFeatureFlagOn(featureflags.DisableAutomaticTokenRotation) {
+			mr.log().Warningln(fmt.Printf(
+				"Automatic token rotation is disabled for runner: %s-%s. Your token is about to expire",
+				runner.ShortDescription(),
+				runner.GetSystemID(),
+			))
+			return false
+		}
 		if common.ResetToken(mr.network, &runner.RunnerCredentials, runner.GetSystemID(), "") {
 			err := mr.saveConfig()
 			if err != nil {
