@@ -40,6 +40,7 @@ const (
 	CleanUpFailedCacheExtract            string = "FF_CLEAN_UP_FAILED_CACHE_EXTRACT"
 	UseWindowsJobObject                  string = "FF_USE_WINDOWS_JOB_OBJECT"
 	UseTimestamps                        string = "FF_TIMESTAMPS"
+	DisableAutomaticTokenRotation        string = "FF_DISABLE_AUTOMATIC_TOKEN_ROTATION"
 )
 
 type FeatureFlag struct {
@@ -331,6 +332,12 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled timestamps are added to the beginning of each log trace line.",
+	},
+	{
+		Name:         DisableAutomaticTokenRotation,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, it restricts automatic token rotation and logs a warning when the token is about to expire.",
 	},
 }
 
