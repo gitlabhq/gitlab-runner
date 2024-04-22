@@ -191,6 +191,15 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		taskscaler.WithUpdateInterval(time.Minute),
 		taskscaler.WithUpdateIntervalWhenExpecting(time.Second),
 		taskscaler.WithLogger(logger.Named("taskscaler")),
+		taskscaler.WithScaleThrottle(config.Autoscaler.ScaleThrottle.Limit, config.Autoscaler.ScaleThrottle.Burst),
+	}
+
+	if config.Autoscaler.UpdateInterval > 0 {
+		options = append(options, taskscaler.WithUpdateInterval(config.Autoscaler.UpdateInterval))
+	}
+
+	if config.Autoscaler.UpdateIntervalWhenExpecting > 0 {
+		options = append(options, taskscaler.WithUpdateIntervalWhenExpecting(config.Autoscaler.UpdateIntervalWhenExpecting))
 	}
 
 	if config.Autoscaler.DeleteInstancesOnShutdown {

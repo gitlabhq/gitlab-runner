@@ -278,7 +278,10 @@ type AutoscalerConfig struct {
 	ConnectorConfig     ConnectorConfig          `toml:"connector_config,omitempty"`
 	Policy              []AutoscalerPolicyConfig `toml:"policy,omitempty" json:",omitempty"`
 
-	InstanceReadyCommand string `toml:"instance_ready_command,omitempty"`
+	InstanceReadyCommand        string                  `toml:"instance_ready_command,omitempty" json:",omitempty"`
+	UpdateInterval              time.Duration           `toml:"update_interval,omitempty" json:",omitempty"`
+	UpdateIntervalWhenExpecting time.Duration           `toml:"update_interval_when_expecting,omitempty" json:",omitempty"`
+	ScaleThrottle               AutoscalerScaleThrottle `toml:"scale_throttle,omitempty" json:",omitempty"`
 
 	DeleteInstancesOnShutdown bool `toml:"delete_instances_on_shutdown,omitempty" json:",omitempty"`
 
@@ -296,6 +299,11 @@ type AutoscalerConfig struct {
 	InstanceReadinessTimeBuckets []float64 `toml:"instance_readiness_time_buckets,omitempty" json:",omitempty"`
 
 	InstanceLifeDurationBuckets []float64 `toml:"instance_life_duration_buckets,omitempty" json:",omitempty"`
+}
+
+type AutoscalerScaleThrottle struct {
+	Limit int `toml:"limit,omitempty" json:",omitempty"`
+	Burst int `toml:"burst,omitempty" json:",omitempty"`
 }
 
 func (c AutoscalerConfig) GetInstanceCreationTimeBuckets() []float64 {
