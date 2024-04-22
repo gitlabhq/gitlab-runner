@@ -198,6 +198,7 @@ in GitLab 18.0. Runner authentication tokens should be used instead. For more in
 
 Prerequisites:
 
+- Runner registration tokens must be [enabled](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#enable-runner-registrations-tokens) in the Admin Area.
 - Obtain a runner registration token
   for a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-registration-token-deprecated),
   [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
