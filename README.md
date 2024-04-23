@@ -12,7 +12,7 @@ The old name of this project was GitLab CI Multi Runner but please use "GitLab R
 ## Runner and GitLab CE/EE compatibility
 
 For a list of compatible versions between GitLab and GitLab Runner, consult
-the [compatibility section](https://docs.gitlab.com/runner/#compatibility-with-gitlab-versions).
+the [compatibility section](https://docs.gitlab.com/runner/#gitlab-runner-versions).
 
 ## Release process
 
@@ -53,10 +53,6 @@ by following some branch naming conventions, as described in <https://docs.gitla
 The documentation source files can be found under the [docs/](docs/) directory. You can
 read the documentation online at <https://docs.gitlab.com/runner/>.
 
-## Requirements
-
-[Read about the requirements of GitLab Runner.](https://docs.gitlab.com/runner/#requirements)
-
 ## Features
 
 [Read about the features of GitLab Runner.](https://docs.gitlab.com/runner/#features)
@@ -71,7 +67,7 @@ Visit the [installation documentation](https://docs.gitlab.com/runner/install/).
 
 ## Use GitLab Runner
 
-See [https://docs.gitlab.com/runner/#using-gitlab-runner](https://docs.gitlab.com/runner/#using-gitlab-runner).
+See [https://docs.gitlab.com/runner/commands/](https://docs.gitlab.com/runner/commands/).
 
 ## Select executor
 
@@ -83,7 +79,7 @@ Read the [FAQ](https://docs.gitlab.com/runner/faq/).
 
 ## Advanced Configuration
 
-See [https://docs.gitlab.com/runner/#advanced-configuration](https://docs.gitlab.com/runner/#advanced-configuration).
+See [https://docs.gitlab.com/runner/configuration/advanced-configuration.html](https://docs.gitlab.com/runner/configuration/advanced-configuration.html).
 
 ## Building and development
 
