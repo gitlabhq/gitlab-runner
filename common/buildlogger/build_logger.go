@@ -94,6 +94,7 @@ func (l *Logger) Stream(streamID int, streamType StreamType) io.WriteCloser {
 // writes are processed, e.g. last added filter is the first to process data.
 //
 // order:
+// - sync writer to ensure that multiple writes cannot happen concurrently
 // - mask phrases (masker.New)
 // - mask sensitive URL parameters (urlsanitizer.New)
 // - mask secrets with a prefixed token (tokentanitizer.New)
@@ -106,6 +107,7 @@ func (l *Logger) wrap(w io.WriteCloser, streamID int, streamType StreamType) io.
 	w = tokensanitizer.New(w, l.maskTokenPrefixes)
 	w = urlsanitizer.New(w)
 	w = masker.New(w, l.maskPhrases)
+	w = internal.NewSync(w)
 
 	return w
 }
