@@ -599,7 +599,6 @@ type KubernetesConfig struct {
 	HelperImage                                       string                             `toml:"helper_image,omitempty" json:"helper_image" long:"helper-image" env:"KUBERNETES_HELPER_IMAGE" description:"[ADVANCED] Override the default helper image used to clone repos and upload artifacts"`
 	HelperImageFlavor                                 string                             `toml:"helper_image_flavor,omitempty" json:"helper_image_flavor" long:"helper-image-flavor" env:"KUBERNETES_HELPER_IMAGE_FLAVOR" description:"Set helper image flavor (alpine, ubuntu), defaults to alpine"`
 	HelperImageAutosetArchAndOS                       bool                               `toml:"helper_image_autoset_arch_and_os,omitempty" json:"helper_image_autoset_arch_and_os" long:"helper-image-autoset-arch-and-os" env:"KUBERNETES_HELPER_IMAGE_AUTOSET_ARCH_AND_OS" description:"When set, it uses the underlying OS to set the Helper Image ARCH and OS"`
-	TerminationGracePeriodSeconds                     *int64                             `toml:"terminationGracePeriodSeconds,omitzero" json:"terminationGracePeriodSeconds,omitempty" long:"terminationGracePeriodSeconds" env:"KUBERNETES_TERMINATIONGRACEPERIODSECONDS" description:"Duration after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal.DEPRECATED: use KUBERNETES_POD_TERMINATION_GRACE_PERIOD_SECONDS and KUBERNETES_CLEANUP_GRACE_PERIOD_SECONDS instead."`
 	PodTerminationGracePeriodSeconds                  *int64                             `toml:"pod_termination_grace_period_seconds,omitzero" json:"pod_termination_grace_period_seconds,omitempty" long:"pod_termination_grace_period_seconds" env:"KUBERNETES_POD_TERMINATION_GRACE_PERIOD_SECONDS" description:"Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if KUBERNETES_TERMINATIONGRACEPERIODSECONDS is specified."`
 	CleanupGracePeriodSeconds                         *int64                             `toml:"cleanup_grace_period_seconds" json:"cleanup_grace_period_seconds,omitempty" long:"cleanup_grace_period_seconds" env:"KUBERNETES_CLEANUP_GRACE_PERIOD_SECONDS" description:"When cleaning up a pod on completion of a job, the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if KUBERNETES_TERMINATIONGRACEPERIODSECONDS is specified."`
 	CleanupResourcesTimeout                           *time.Duration                     `toml:"cleanup_resources_timeout,omitzero" json:"cleanup_resources_timeout,omitempty" long:"cleanup_resources_timeout" env:"KUBERNETES_CLEANUP_RESOURCES_TIMEOUT" description:"The total amount of time for Kubernetes resources to be cleaned up after the job completes. Supported syntax: '1h30m', '300s', '10m'. Default is 5 minutes ('5m')."`
@@ -1545,39 +1544,6 @@ func (c *KubernetesConfig) GetPodSecurityContext() *api.PodSecurityContext {
 		SupplementalGroups: podSecurityContext.SupplementalGroups,
 		SELinuxOptions:     seLinuxOptions,
 	}
-}
-
-// GetCleanupGracePeriodSeconds returns the effective value of CleanupGracePeriodSeconds
-// depending on TerminationGracePeriodSeconds.
-// Support for TerminationGracePeriodSeconds will be removed with
-// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.
-func (c *KubernetesConfig) GetCleanupGracePeriodSeconds() *int64 {
-	if c.TerminationGracePeriodSeconds != nil {
-		return c.TerminationGracePeriodSeconds
-	}
-
-	return c.CleanupGracePeriodSeconds
-}
-
-// GetPodTerminationGracePeriodSeconds returns the effective value of PodTerminationGracePeriodSeconds
-// depending on TerminationGracePeriodSeconds.
-// Support for TerminationGracePeriodSeconds will be removed with
-// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.
-func (c *KubernetesConfig) GetPodTerminationGracePeriodSeconds() *int64 {
-	if c.TerminationGracePeriodSeconds != nil {
-		return c.TerminationGracePeriodSeconds
-	}
-
-	// For backwards compatibility, the default value of the Pod termination should remain zero since that means
-	// "terminate immediately" as opposed to nil, which by default is a timeout of 30 seconds as per http://gitlab.com/gitlab-org/gitlab-runner/blob/45472cdf02591942c9a95d2ce38ef5ff3a38d842/vendor/k8s.io/api/core/v1/types.go#L2988-2988.
-	// For details refer to https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2130.
-	// Will be removed with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28165.
-	var defaultPodTerminationGracePeriod int64
-	if c.PodTerminationGracePeriodSeconds == nil {
-		return &defaultPodTerminationGracePeriod
-	}
-
-	return c.PodTerminationGracePeriodSeconds
 }
 
 func (c *KubernetesConfig) GetAffinity() *api.Affinity {

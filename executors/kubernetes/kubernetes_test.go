@@ -1045,34 +1045,6 @@ func TestCleanup(t *testing.T) {
 			},
 		},
 		{
-			Name: "Pod cleanup specifies GracePeriodSeconds with TerminationGracePeriodSeconds set",
-			Config: &common.KubernetesConfig{
-				TerminationGracePeriodSeconds: common.Int64Ptr(15),
-			},
-			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
-				switch p, m := req.URL.Path, req.Method; {
-				case m == http.MethodDelete && p == podsEndpointURI:
-					defer req.Body.Close()
-					b, err := io.ReadAll(req.Body)
-					if err != nil {
-						return nil, err
-					}
-
-					var opts metav1.DeleteOptions
-					err = json.Unmarshal(b, &opts)
-					if err != nil {
-						return nil, err
-					}
-
-					assert.EqualValues(t, common.Int64Ptr(15), opts.GracePeriodSeconds)
-					return fakeKubeDeleteResponse(http.StatusOK), nil
-				default:
-					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
-				}
-			},
-			Pod: &api.Pod{ObjectMeta: objectMeta},
-		},
-		{
 			Name: "Pod cleanup specifies GracePeriodSeconds with CleanupGracePeriodSeconds set",
 			Config: &common.KubernetesConfig{
 				CleanupGracePeriodSeconds: common.Int64Ptr(10),
@@ -5591,22 +5563,6 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "error setting ownerReferences")
 				assert.Contains(t, err.Error(), "cannot set owner-dependent relationship")
-			},
-		},
-		"supports TerminationGracePeriodSeconds": {
-			RunnerConfig: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						TerminationGracePeriodSeconds: common.Int64Ptr(10),
-					},
-				},
-			},
-			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				assert.EqualValues(
-					t,
-					test.RunnerConfig.Kubernetes.TerminationGracePeriodSeconds,
-					e.pod.Spec.TerminationGracePeriodSeconds,
-				)
 			},
 		},
 		"supports TerminationGracePeriodSeconds through PodTerminationGracePeriodSeconds": {

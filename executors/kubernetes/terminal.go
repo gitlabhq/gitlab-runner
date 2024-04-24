@@ -49,9 +49,6 @@ func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
 	}
 
 	wsURL := s.getTerminalWebSocketURL()
-	if err != nil {
-		return nil, err
-	}
 
 	caCert := ""
 	if len(config.CAFile) > 0 {

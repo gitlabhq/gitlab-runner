@@ -1075,7 +1075,7 @@ func (s *executor) cleanupResources() {
 			return s.kubeClient.CoreV1().
 				Pods(s.pod.Namespace).
 				Delete(ctx, s.pod.Name, metav1.DeleteOptions{
-					GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
+					GracePeriodSeconds: s.Config.Kubernetes.CleanupGracePeriodSeconds,
 					PropagationPolicy:  &PropagationPolicy,
 				})
 		})
@@ -1091,7 +1091,7 @@ func (s *executor) cleanupResources() {
 			return s.kubeClient.CoreV1().
 				Secrets(s.configurationOverwrites.namespace).
 				Delete(ctx, s.credentials.Name, metav1.DeleteOptions{
-					GracePeriodSeconds: s.Config.Kubernetes.GetCleanupGracePeriodSeconds(),
+					GracePeriodSeconds: s.Config.Kubernetes.CleanupGracePeriodSeconds,
 				})
 		})
 		if err := kubeRequest.Run(); err != nil {
@@ -1926,7 +1926,7 @@ func (s *executor) preparePodConfig(opts podConfigPrepareOpts) (api.Pod, error) 
 				buildContainer,
 				helperContainer,
 			}, opts.services...),
-			TerminationGracePeriodSeconds: s.Config.Kubernetes.GetPodTerminationGracePeriodSeconds(),
+			TerminationGracePeriodSeconds: s.Config.Kubernetes.PodTerminationGracePeriodSeconds,
 			ActiveDeadlineSeconds:         s.getPodActiveDeadlineSeconds(),
 			ImagePullSecrets:              opts.imagePullSecrets,
 			SecurityContext:               s.Config.Kubernetes.GetPodSecurityContext(),

@@ -2047,32 +2047,16 @@ func TestKubernetesTerminationPeriod(t *testing.T) {
 	}{
 		"all default values": {
 			cfg:                                      KubernetesConfig{},
-			expectedPodTerminationGracePeriodSeconds: Int64Ptr(0),
+			expectedPodTerminationGracePeriodSeconds: nil,
 			expectedCleanupGracePeriodSeconds:        nil,
-		},
-		"only TerminationGracePeriodSeconds is specified": {
-			cfg: KubernetesConfig{
-				TerminationGracePeriodSeconds: Int64Ptr(10),
-			},
-			expectedPodTerminationGracePeriodSeconds: Int64Ptr(10),
-			expectedCleanupGracePeriodSeconds:        Int64Ptr(10),
 		},
 		"all specified": {
 			cfg: KubernetesConfig{
-				TerminationGracePeriodSeconds:    Int64Ptr(10),
-				CleanupGracePeriodSeconds:        Int64Ptr(5),
 				PodTerminationGracePeriodSeconds: Int64Ptr(3),
+				CleanupGracePeriodSeconds:        Int64Ptr(5),
 			},
-			expectedPodTerminationGracePeriodSeconds: Int64Ptr(10),
-			expectedCleanupGracePeriodSeconds:        Int64Ptr(10),
-		},
-		"only CleanupGracePeriodSeconds and PodTerminationGracePeriodSeconds specified": {
-			cfg: KubernetesConfig{
-				CleanupGracePeriodSeconds:        Int64Ptr(8),
-				PodTerminationGracePeriodSeconds: Int64Ptr(10),
-			},
-			expectedCleanupGracePeriodSeconds:        Int64Ptr(8),
-			expectedPodTerminationGracePeriodSeconds: Int64Ptr(10),
+			expectedPodTerminationGracePeriodSeconds: Int64Ptr(3),
+			expectedCleanupGracePeriodSeconds:        Int64Ptr(5),
 		},
 	}
 
@@ -2081,12 +2065,12 @@ func TestKubernetesTerminationPeriod(t *testing.T) {
 			assert.EqualValues(
 				t,
 				tt.expectedPodTerminationGracePeriodSeconds,
-				tt.cfg.GetPodTerminationGracePeriodSeconds(),
+				tt.cfg.PodTerminationGracePeriodSeconds,
 			)
 			assert.EqualValues(
 				t,
 				tt.expectedCleanupGracePeriodSeconds,
-				tt.cfg.GetCleanupGracePeriodSeconds(),
+				tt.cfg.CleanupGracePeriodSeconds,
 			)
 		})
 	}
