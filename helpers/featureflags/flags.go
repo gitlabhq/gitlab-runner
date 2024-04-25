@@ -20,7 +20,6 @@ const (
 	UsePowershellPathResolver            string = "FF_USE_POWERSHELL_PATH_RESOLVER"
 	UseDynamicTraceForceSendInterval     string = "FF_USE_DYNAMIC_TRACE_FORCE_SEND_INTERVAL"
 	ScriptSections                       string = "FF_SCRIPT_SECTIONS"
-	UseNewShellEscape                    string = "FF_USE_NEW_SHELL_ESCAPE"
 	EnableJobCleanup                     string = "FF_ENABLE_JOB_CLEANUP"
 	KubernetesHonorEntrypoint            string = "FF_KUBERNETES_HONOR_ENTRYPOINT"
 	PosixlyCorrectEscapes                string = "FF_POSIXLY_CORRECT_ESCAPES"
@@ -176,13 +175,6 @@ var flags = []FeatureFlag{
 			"section in the job output, and shows the duration of each line. " +
 			"When the command spans multiple lines, the complete command is " +
 			"displayed within the job log output terminal.",
-	},
-	{
-		Name:            UseNewShellEscape,
-		DefaultValue:    false,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description:     "When enabled, a faster implementation of shell escape is used.",
 	},
 	{
 		Name:            EnableJobCleanup,
