@@ -12,20 +12,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-func TestBash_CommandShellEscapesLegacy(t *testing.T) {
-	writer := &BashWriter{useNewEscape: false}
-	writer.Command("foo", "x&(y)")
-
-	assert.Equal(t, `$'foo' $'x&(y)'`+"\n", writer.String())
-}
-
-func TestBash_IfCmdShellEscapesLegacy(t *testing.T) {
-	writer := &BashWriter{useNewEscape: false}
-	writer.IfCmd("foo", "x&(y)")
-
-	assert.Equal(t, `if $'foo' $'x&(y)' >/dev/null 2>&1; then`+"\n", writer.String())
-}
-
 func TestBash_CommandShellEscapes(t *testing.T) {
 	tests := []struct {
 		command  string
@@ -50,7 +36,7 @@ func TestBash_CommandShellEscapes(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		writer := &BashWriter{useNewEscape: true}
+		writer := &BashWriter{}
 		writer.Command(tc.command, tc.args...)
 
 		assert.Equal(t, tc.expected, writer.String())
@@ -58,7 +44,7 @@ func TestBash_CommandShellEscapes(t *testing.T) {
 }
 
 func TestBash_IfCmdShellEscapes(t *testing.T) {
-	writer := &BashWriter{useNewEscape: true}
+	writer := &BashWriter{}
 	writer.IfCmd("foo", "x&(y)")
 
 	assert.Equal(t, "if foo $'x&(y)' >/dev/null 2>&1; then\n", writer.String())
@@ -222,7 +208,7 @@ func Test_BashWriter_Variable(t *testing.T) {
 		"tmp file var, absolute path": {
 			variable: common.JobVariable{Key: "KEY", Value: "/foo/bar/KEY2"},
 			writer:   BashWriter{TemporaryPath: "/foo/bar"},
-			want:     "export KEY=$'/foo/bar/KEY2'\n",
+			want:     "export KEY=/foo/bar/KEY2\n",
 		},
 		"regular var": {
 			variable: common.JobVariable{Key: "KEY", Value: "VALUE"},
