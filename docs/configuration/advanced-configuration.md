@@ -722,6 +722,15 @@ executors are in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-suppor
 | `max_use_count`                         | The maximum number of times an instance can be used before it is scheduled for removal. |
 | `max_instances`                         | The maximum number of instances that are allowed, this is regardless of the instance state (pending, running, deleting). Default: `0` (unlimited). |
 | `plugin`                                | The [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugin to use. Binary must be discoverable via the `PATH` environment variable. |
+| `delete_instances_on_shutdown`          | Specifies if all provision instances are deleted when GitLab Runner is shutting down. Default: `false`. Introduced in [GitLab Runner 15.11](https://gitlab.com/gitlab-org/fleeting/taskscaler/-/merge_requests/24) |
+| `instance_ready_command`                | Executes this command on each instance provisioned by the autoscaler to ensure that it is ready for use. A failure results in the instance being removed. Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37473). |
+| `update_interval`                       | The interval to check with the fleeting plugin for instance updates. Default: `1m` (1 minute). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
+| `update_interval_when_expecting`        | The interval to check with the fleeting plugin for instance updates when expecting a state change. For example, when an instance has provisioned an instance and the runner is waiting to transition from `pending` to `running`). Default: `2s` (2 seconds). Introduced in [GitLab Runner 16.11](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4722). |
+
+NOTE:
+If the `instance_ready_command` frequently fails with idle scale rules, instances might be removed and created
+faster than the runner accepts jobs. To support scale throttling, an exponential backoff was added in
+[GitLab 17.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37497).
 
 ## The `[runners.autoscaler.plugin_config]` section
 
@@ -729,6 +738,15 @@ This hash table is re-encoded to JSON and passed directly to the configured plug
 
 [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins typically have accompanying documentation on
 the supported configuration.
+
+## The `[runners.autoscaler.scale_throttle]` section
+
+> - Introduced in GitLab Runner v17.0.0.
+
+| Parameter                | Description |
+|--------------------------|-------------|
+| `limit`                  | The rate limit of new instances per second that can provisioned. `-1` is infinite. The default (`0`), sets the limit to `100`. |
+| `burst`                  | The burst limit of new instances. Defaults to `max_instances` or `limit` when `max_instances` is not set. If `limit` is infinite, `burst` is ignored. |
 
 ## The `[runners.autoscaler.connector_config]` section
 
@@ -765,6 +783,22 @@ the empty values that the plugin cannot determine.
 
 When `scale_factor` is set, `idle_count` becomes the minimum `idle` capacity and the `scaler_factor_limit` the maximum `idle` capacity.
 
+You can define multiple policies. The last matching policy is the one used.
+
+In the following example, the idle count `1` is used between 08:00 and 15:59, Monday through Friday. Otherwise, the idle count is 0.
+
+```toml
+[[runners.autoscaler.policy]]
+  idle_count        = 1
+  idle_time         = "30m0s"
+  periods           = ["* 8-15 * * mon-fri"]
+
+[[runners.autoscaler.policy]]
+  idle_count        = 0
+  idle_time         = "0s"
+  periods           = ["* * * * *"]
+```
+
 ### Periods syntax
 
 The `periods` setting contains an array of unix-cron formatted strings to denote the period a policy is enabled for. The
@@ -791,6 +825,24 @@ It's worth keeping in mind that this cron job represents a range in time. For ex
 | `1 * * * * *`        | Rule enabled for the period of 1 minute every hour (unlikely to be very useful) |
 | `* 0-12 * * *`       | Rule enabled for the period of 12 hours at the beginning of each day |
 | `0-30 13,16 * * SUN` | Rule enabled for the period of each Sunday for 30 minutes at 1pm and 30 minutes at 4pm. |
+
+## The `[runners.autoscaler.vm_isolation]` section
+
+VM Isolation uses [`nesting`](https://gitlab.com/gitlab-org/fleeting/nesting), which is currently only supported
+on MacOS.
+
+| Parameter                | Description |
+|--------------------------|-------------|
+| `enabled`                | Specifies if VM Isolation is enabled or not. Default: `false`. |
+| `nesting_host`           | The `nesting` daemon host. |
+| `nesting_config`         | The `nesting` config. This is serialized to JSON and sent to the `nesting` daemon. |
+| `image`                  | The default image used by the nesting daemon if no job image is specified. |
+
+## The `[runners.autoscaler.vm_isolation.connector_config]` section
+
+The parameters for the `[runners.autoscaler.vm_isolation.connector_config]` section are identical to the
+[`[runners.autoscaler.connector_config]`](#the-runnersautoscalerconnector_config-section) section,
+but are used to connect to the `nesting` provisioned virtual machine, rather than the autoscaled instance.
 
 ## The `[runners.custom]` section
 
