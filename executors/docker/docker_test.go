@@ -1041,6 +1041,18 @@ func TestDockerCPUSetCPUsSetting(t *testing.T) {
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
 }
 
+func TestDockerCPUSetMemsSetting(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		CPUSetMems: "1-3,5",
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		assert.Equal(t, "1-3,5", hostConfig.CpusetMems)
+	}
+
+	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
+}
+
 func TestDockerServiceSettings(t *testing.T) {
 	tests := map[string]struct {
 		dockerConfig common.DockerConfig
