@@ -169,6 +169,51 @@ oc apply -f catalogsource.yaml
 
 In a minute the new Runner should show up in the OpenShift cluster's OperatorHub section.
 
+## Install GitLab Runner Operator on Kubernetes clusters in offline environments
+
+Prerequisites:
+
+- Images required by the installation process are accessible.
+
+To pull container images during installation, 
+the GitLab Runner Operator requires a connection to the public internet on an external
+network. If you have Kubernetes clusters installed
+in an offline environment, you can use local a image registry or a local package repository
+to pull images or packages during installation.
+
+The local repository must provide the following images:
+
+| Image                                                 | Default value                                                                                                               |
+|-------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| **GitLab Runner Operator** image                      | `registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/gitlab-runner-operator:vGITLAB_RUNNER_OPERATOR_VERSION` |
+| **GitLab Runner** and **GitLab Runner Helper** images | These images are downloaded from the GitLab Runner UBI Images registry and are used when installing the Runner Custom Resources. The version used depends on your requirements. |
+| **RBAC Proxy** image                                  |`registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/openshift4/ose-kube-rbac-proxy:v4.13.0`|
+
+1. Set up local repositories or registries in the disconnected network environment 
+   to host the downloaded software packages and container images. You can use:
+   
+   - A Docker registry for container images.
+   - A local package registry for Kubernetes binaries and dependencies.
+
+1. For GitLab Runner Operator v1.23.2 and later, download the latest version of `operator.k8s.yaml` file:
+
+   ```shell
+   curl -O "https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner- 
+   operator/-/releases/vGITLAB_RUNNER_OPERATOR_VERSION/downloads/operator.k8s.yaml"
+   ```
+
+1. In the `operator.k8s.yaml` file, update the following URLS:
+   
+   - `GitLab Runner Operator image`
+   - `RBAC Proxy image`
+
+1. Install the updated version of the `operator.k8s.yaml` file:
+
+   ```shell
+   kubectl apply -f PATH_TO_UPDATED_OPERATOR_K8S_YAML
+   GITLAB_RUNNER_OPERATOR_VERSION = 1.23.2+
+   ```
+
 ## Uninstall Operator
 
 ### Uninstall on Red Hat OpenShift
