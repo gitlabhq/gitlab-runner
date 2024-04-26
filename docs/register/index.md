@@ -32,7 +32,7 @@ Before you register a runner:
 Prerequisites:
 
 - Obtain a runner authentication token. You can either:
-  - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
+  - Create an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token),
     [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
     [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
   - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
@@ -200,7 +200,7 @@ Prerequisites:
 
 - Runner registration tokens must be [enabled](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#enable-runner-registrations-tokens) in the Admin Area.
 - Obtain a runner registration token
-  for a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-registration-token-deprecated),
+  for an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-registration-token-deprecated),
   [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
   [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated) runner.
 
@@ -406,11 +406,11 @@ Prerequisites:
 - The volume for the location of the template file must be mounted on the GitLab Runner container.
 - A runner authentication or registration token:
   - Obtain a runner authentication token (recommended). You can either:
-    - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
+    - Create an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token),
     [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
     [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
     - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
-  - Obtain a runner registration token (deprecated) for a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-registration-token-deprecated),
+  - Obtain a runner registration token (deprecated) for an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-registration-token-deprecated),
   [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
   [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated) runner.
 
