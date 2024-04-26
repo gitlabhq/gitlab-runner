@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -20,22 +21,24 @@ import (
 )
 
 type StubSSHServer struct {
+	Options
+
 	User     string
 	Password string
 	Config   *ssh.ServerConfig
 
-	ExecuteLocal bool
-	Shell        []string
+	Shell []string
 
 	host               string
 	port               string
 	privateKeyLocation string
 	stopped            chan struct{}
-	closed             bool
 	tempDir            string
 	listener           net.Listener
 	once               sync.Once
 	err                error
+
+	closed atomic.Bool
 }
 
 var TestSSHKeyPair = struct {
@@ -61,13 +64,38 @@ tlxpSUh4YUnfTGi4kAAAAham9obmNhaUBKb2hucy1NYWNCb29rLVByby0zLmxvY2FsAQI=
 	PublicKey: `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDYWe6ER/dsK1J7p7KDn8iveTOMbHeAWKPUfdCZ6sYjPPslb6jFVZ+v7HsjHrV1lwT/xVejDgLYEU5dE2hrwoU3WBCH6NttlOBzWxYJPKvqIpkgOgpHn1bilx5M9OcBDhEc00nCEJMMOxiWSUJEGknv13qe32vk7aRtWO7f/BMJSw==`,
 }
 
-func NewStubServer(user, pass string) (server *StubSSHServer, err error) {
+type Option func(*Options)
+
+type Options struct {
+	DontAcceptConnections bool
+	ExecuteLocal          bool
+}
+
+func WithDontAcceptConnections() Option {
+	return func(o *Options) {
+		o.DontAcceptConnections = true
+	}
+}
+
+func WithExecuteLocal() Option {
+	return func(o *Options) {
+		o.ExecuteLocal = true
+	}
+}
+
+func NewStubServer(user, pass string, opts ...Option) (server *StubSSHServer, err error) {
 	tempDir, err := os.MkdirTemp("", "ssh-stub-server")
 	if err != nil {
 		return nil, err
 	}
 
+	var options Options
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	server = &StubSSHServer{
+		Options:  options,
 		User:     user,
 		Password: pass,
 		Config: &ssh.ServerConfig{
@@ -153,11 +181,11 @@ func (s *StubSSHServer) Port() string {
 }
 
 func (s *StubSSHServer) Stop() error {
-	if s.closed {
+	if s.closed.Load() {
 		return s.err
 	}
 
-	s.closed = true
+	s.closed.Store(true)
 	s.listener.Close()
 	os.RemoveAll(s.tempDir)
 
@@ -187,6 +215,15 @@ func (s *StubSSHServer) mainLoop(listener net.Listener) {
 	defer cancel()
 
 	for {
+		if s.closed.Load() {
+			return
+		}
+
+		if s.DontAcceptConnections {
+			time.Sleep(time.Second)
+			continue
+		}
+
 		conn, err := listener.Accept()
 		if errors.Is(err, net.ErrClosed) {
 			return
