@@ -204,6 +204,7 @@ type DockerConfig struct {
 	MemoryReservation          string             `toml:"memory_reservation,omitempty" json:"memory_reservation" long:"memory-reservation" env:"DOCKER_MEMORY_RESERVATION" description:"Memory soft limit (format: <number>[<unit>]). Unit can be one of b, k, m, or g."`
 	CgroupParent               string             `toml:"cgroup_parent,omitempty" json:"cgroup_parent" long:"cgroup-parent" env:"DOCKER_CGROUP_PARENT" description:"String value containing the cgroup parent to use"`
 	CPUSetCPUs                 string             `toml:"cpuset_cpus,omitempty" json:"cpuset_cpus" long:"cpuset-cpus" env:"DOCKER_CPUSET_CPUS" description:"String value containing the cgroups CpusetCpus to use"`
+	CPUSetMems                 string             `toml:"cpuset_mems,omitempty" json:"cpuset_mems" long:"cpuset-mems" env:"DOCKER_CPUSET_MEMS" description:"String value containing the cgroups CpusetMems to use"`
 	CPUS                       string             `toml:"cpus,omitempty" json:"cpus" long:"cpus" env:"DOCKER_CPUS" description:"Number of CPUs"`
 	CPUShares                  int64              `toml:"cpu_shares,omitzero" json:"cpu_shares" long:"cpu-shares" env:"DOCKER_CPU_SHARES" description:"Number of CPU shares"`
 	DNS                        []string           `toml:"dns,omitempty" json:"dns,omitempty" long:"dns" env:"DOCKER_DNS" description:"A list of DNS servers for the container to use"`

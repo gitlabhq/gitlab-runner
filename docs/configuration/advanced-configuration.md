@@ -294,6 +294,7 @@ The following settings define the Docker container parameters.
 | `cap_add`                      | Add additional Linux capabilities to the container. |
 | `cap_drop`                     | Drop additional Linux capabilities from the container. |
 | `cpuset_cpus`                  | The control group's `CpusetCpus`. A string. |
+| `cpuset_mems`                  | The control group's `CpusetMems`. A string. |
 | `cpu_shares`                   | Number of CPU shares used to set relative CPU usage. Default is `1024`. |
 | `cpus`                         | Number of CPUs (available in Docker 1.13 or later). A string.  |
 | `devices`                      | Share additional host devices with the container. |
@@ -372,6 +373,7 @@ Example:
   memory_reservation = "64m"
   oom_kill_disable = false
   cpuset_cpus = "0,1"
+  cpuset_mems = "0,1"
   cpus = "2"
   dns = ["8.8.8.8"]
   dns_search = [""]

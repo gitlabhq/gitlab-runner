@@ -733,6 +733,7 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 			MemoryReservation: e.Config.Docker.GetMemoryReservation(),
 			CgroupParent:      e.Config.Docker.CgroupParent,
 			CpusetCpus:        e.Config.Docker.CPUSetCPUs,
+			CpusetMems:        e.Config.Docker.CPUSetMems,
 			CPUShares:         e.Config.Docker.CPUShares,
 			NanoCPUs:          nanoCPUs,
 			Devices:           e.devices,
