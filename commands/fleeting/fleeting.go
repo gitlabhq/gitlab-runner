@@ -16,6 +16,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+var osExit = os.Exit
+
 type runnerFleetingPlugin struct {
 	RunnerName string
 	Plugin     string
@@ -62,7 +64,7 @@ func install(clictx *cli.Context) {
 		fmt.Printf("runner: %v, plugin: %v, path: %v\n", plugin.RunnerName, plugin.Plugin, path)
 	}
 
-	os.Exit(exitCode)
+	osExit(exitCode)
 }
 
 func list(clictx *cli.Context) {
@@ -78,7 +80,7 @@ func list(clictx *cli.Context) {
 		fmt.Printf("runner: %v, plugin: %v, path: %v\n", plugin.RunnerName, plugin.Plugin, path)
 	}
 
-	os.Exit(exitCode)
+	osExit(exitCode)
 }
 
 func login(clictx *cli.Context) error {
@@ -88,7 +90,7 @@ func login(clictx *cli.Context) error {
 		pass, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			fmt.Println("reading password from stdin:", err)
-			os.Exit(1)
+			osExit(1)
 		}
 		password = strings.TrimSuffix(strings.TrimSuffix(string(pass), "\n"), "\r")
 	}
