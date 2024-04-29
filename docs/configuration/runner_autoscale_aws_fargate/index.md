@@ -438,3 +438,16 @@ Ensure that the task container has port 22 exposed and port mapping is configure
 1. View tasks with a status of `Stopped` and check the latest one that failed. The **logs** tab has more details if there is a container failure.
 
 Alternatively, ensure that you can run the Docker container locally.
+
+### `ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain` when running jobs
+
+The following error occurs if an unsupported key type is being used due to an older version of the AWS Fargate driver.
+
+`Application execution failed PID=xxxx error="executing the script on the remote host: executing script on container with IP \"172.x.x.x\": connecting to server: connecting to server \"172.x.x.x:22\" as user \"root\": ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain"`
+
+To resolve this issue, install the latest AWS Fargate driver on the GitLab Runner EC2 instance:
+
+```shell
+sudo curl -Lo /opt/gitlab-runner/fargate "https://gitlab-runner-custom-fargate-downloads.s3.amazonaws.com/latest/fargate-linux-amd64"
+sudo chmod +x /opt/gitlab-runner/fargate
+```
