@@ -86,7 +86,7 @@ func TestCreateAdapter(t *testing.T) {
 				Type: adapterTypeName,
 			}
 
-			adapter, err := CreateAdapter(config, defaultTimeout, "key")
+			adapter, err := getCreateAdapter(config, defaultTimeout, "key")
 
 			if test.expectedError == "" {
 				assert.NoError(t, err)

@@ -64,7 +64,7 @@ func Factories() *FactoriesMap {
 	return factories
 }
 
-func CreateAdapter(cacheConfig *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
+func getCreateAdapter(cacheConfig *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error) {
 	create, err := Factories().Find(cacheConfig.Type)
 	if err != nil {
 		return nil, fmt.Errorf("cache factory not found: %w", err)

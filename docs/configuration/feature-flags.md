@@ -82,6 +82,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_USE_WINDOWS_JOB_OBJECT` | `false` | **{dotted-circle}** No |  | When enabled, a job object is created for each process that the runner creates on Windows with the shell and custom executors. To force-kill the processes, the runner closes the job object. This should improve the termination of difficult-to-kill processes. |
 | `FF_TIMESTAMPS` | `false` | **{dotted-circle}** No |  | When enabled timestamps are added to the beginning of each log trace line. |
 | `FF_DISABLE_AUTOMATIC_TOKEN_ROTATION` | `false` | **{dotted-circle}** No |  | When enabled, it restricts automatic token rotation and logs a warning when the token is about to expire. |
+| `FF_USE_LEGACY_GCS_CACHE_ADAPTER` | `false` | **{dotted-circle}** No |  | When enabled, the legacy GCS Cache adapter is used. When disabled (default), a newer GCS Cache adapter is used which uses Google Cloud Storage's SDK for authentication. This should resolve authentication problems in environments that the legacy adapter struggled with, such as workload identity configurations in GKE. |
 
 <!-- feature_flags_list_end -->
 
