@@ -129,7 +129,6 @@ Supported features by different executors:
 | Executor                                     | SSH  | Shell   |VirtualBox  | Parallels | Docker | Kubernetes | Custom |
 |:---------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|:------:|
 | Secure Variables                             | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |
-| GitLab Runner Exec command                   | ✗    | ✓       | ✗          | ✗         | ✓      | ✓          | ✓      |
 | `.gitlab-ci.yml`: image                      | ✗    | ✗       | ✓ (1)      | ✓ (1)     | ✓      | ✓          | ✓ (via [`$CUSTOM_ENV_CI_JOB_IMAGE`](custom.md#stages))      |
 | `.gitlab-ci.yml`: services                   | ✗    | ✗       | ✗          | ✗         | ✓      | ✓          | ✓      |
 | `.gitlab-ci.yml`: cache                      | ✓    | ✓       | ✓          | ✓         | ✓      | ✓          | ✓      |

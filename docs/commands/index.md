@@ -117,8 +117,8 @@ following commands support the following signals:
 | Command                     | Signal                  | Action                                                                                                   |
 | --------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
 | `register`                  | **SIGINT**              | Cancel runner registration and delete if it was already registered.                                      |
-| `run`, `exec`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**).    |
-| `run`, `exec`, `run-single` | **SIGQUIT**             | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
+| `run`, `run-single` | **SIGINT**, **SIGTERM** | Abort all running builds and exit as soon as possible. Use twice to exit now (**forceful shutdown**).    |
+| `run`, `run-single` | **SIGQUIT**             | Stop accepting a new builds. Exit as soon as currently running builds do finish (**graceful shutdown**). |
 | `run`                       | **SIGHUP**              | Force to reload configuration file.                                                                      |
 
 For example, to force a reload of a runner's configuration file, run:
@@ -158,7 +158,6 @@ AUTHOR:
    GitLab Inc. <support@gitlab.com>
 
 COMMANDS:
-   exec                  execute a build locally
    list                  List all configured runners
    run                   run multi runner service
    register              register a new runner
@@ -515,122 +514,16 @@ default of `0` means that the runner has no build limit and jobs run forever.
 You can also use the `--wait-timeout` option to control how long the runner waits for a job before
 exiting. The default of `0` means that the runner has no timeout and waits forever between jobs.
 
-### `gitlab-runner exec` (deprecated)
+<!--- start_remove The following content will be removed on remove_date: '2024-08-01' -->
 
-WARNING:
+### `gitlab-runner exec` (removed)
+
 This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/385235) in GitLab 15.7
-and is planned for removal in 17.0. Pipeline syntax and validation [simulation](https://docs.gitlab.com/ee/ci/pipeline_editor/#simulate-a-cicd-pipeline) are available in the GitLab pipeline editor. This change is a breaking change.
+and [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4740) in 17.0.
+Pipeline syntax and validation [simulation](https://docs.gitlab.com/ee/ci/pipeline_editor/#simulate-a-cicd-pipeline)
+are available in the GitLab pipeline editor.
 
-NOTE:
-Not all features of `.gitlab-ci.yml` are supported by `exec`. Please
-check what exactly is supported in the [limitations of `gitlab-runner exec`](#limitations-of-gitlab-runner-exec)
-section.
-
-This command allows you to run builds locally, trying to replicate the CI
-environment as much as possible. It doesn't need to connect to GitLab, instead
-it reads the local `.gitlab-ci.yml` and creates a new build environment in
-which all the build steps are executed.
-
-This command is useful for fast checking and verifying `.gitlab-ci.yml` as well
-as debugging broken builds since everything is run locally.
-
-When executing `exec` you need to specify the executor and the job name that is
-present in `.gitlab-ci.yml`. The command should be executed from the root
-directory of your Git repository that contains `.gitlab-ci.yml`.
-
-`gitlab-runner exec` clones the current state of the local Git repository.
-Make sure you have committed any changes you want to test beforehand.
-
-For example, the following command executes the job named `tests` locally
-using a shell executor:
-
-```shell
-gitlab-runner exec shell tests
-```
-
-To see a list of available executors, run:
-
-```shell
-gitlab-runner exec
-```
-
-To see a list of all available options for the `shell` executor, run:
-
-```shell
-gitlab-runner exec shell
-```
-
-If you want to use the `docker` executor with the `exec` command, use that in
-context of `docker-machine shell` or `boot2docker shell`. This is required to
-properly map your local directory to the directory inside the Docker container.
-
-Other options are also available:
-
-- To view all possible configuration options, use `--help`:
-
-  ```shell
-  gitlab-runner exec --help
-  ```
-
-- To specify the path of the CI/CD configuration file, if your project doesn't use the default
-  `.gitlab-ci.yml`, use `--cicd-config-file`.
-- To set the job execution timeout (in seconds), use `--timeout`.
-  The default of `1800` means that the execution times out after 30 minutes.
-
-#### Limitations of `gitlab-runner exec`
-
-With the current implementation of `exec`, some of the features of GitLab CI/CD
-may not work or may work partially.
-
-We're currently thinking about how to replace current `exec` implementation,
-to make it fully compatible with all features. Please track [the issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2797)
-for more details.
-
-**Compatibility table - features based on `.gitlab-ci.yml`**
-
-The following features are supported. If a feature is not listed in this table, it is not supported.
-
-| GitLab CI feature | Available with `exec` | Comments                                                                                                                                                                                                                                                  |
-| ----------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `image`           | yes                   | Extended configuration (`name`, `entrypoint`) are also supported.                                                                                                                                                                                         |
-| `services`        | yes                   | Extended configuration (`name`, `alias`, `entrypoint`, `command`) are also supported.                                                                                                                                                                     |
-| `before_script`   | yes                   | Supports both global and job-level `before_script`.                                                                                                                                                                                                       |
-| `after_script`    | partially             | Global `after_script` is not supported. Only job-level `after_script`; only commands are taken into consideration, `when` is hardcoded to `always`.                                                                                                       |
-| `variables`       | yes                   | Supports default (partially), global, and job-level variables. Default variables are pre-set as seen [in the code](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/c715666c059cc88a354d7cbcb5948b992d23f2a8/helpers/gitlab_ci_yaml_parser/parser.go#L149). |
-| `cache`           | partially             | Regarding the specific configuration it may or may not work as expected.                                                                                                                                                                                  |
-| YAML features     | yes                   | Anchors (`&`), aliases (`*`), map merging (`<<`) are part of YAML specification and are handled by the parser.                                                                                                                                            |
-| `pages`           | partially             | Job's script is executed if explicitly asked, but it doesn't affect pages state, which is managed by GitLab.                                                                                                                                              |
-
-**Compatibility table - features based on variables**
-
-| GitLab CI feature          | Available with `exec` | Comments                     |
-| -------------------------- | --------------------- | ---------------------------- |
-| `GIT_STRATEGY`               | yes                   |                              |
-| `GIT_CHECKOUT`               | yes                   |                              |
-| `GIT_SUBMODULE_STRATEGY`     | yes                   |                              |
-| `GIT_SUBMODULE_PATHS`        | yes                   |                              |
-| `GIT_SUBMODULE_UPDATE_FLAGS` | yes                   |                              |
-| `GIT_SUBMODULE_DEPTH`        | yes                   |                              |
-| `GIT_SUBMODULE_FORCE_HTTPS`  | yes                   |                              |
-| `GET_SOURCES_ATTEMPTS`       | yes                   |                              |
-| `ARTIFACT_DOWNLOAD_ATTEMPTS` | no                    | Artifacts are not supported. |
-| `RESTORE_CACHE_ATTEMPTS`     | yes                   |                              |
-
-**Compatibility table - other features**
-
-| GitLab CI feature | Available with `exec` | Comments             |
-| ----------------- | --------------------- | -------------------- |
-| Secret Variables  | no                    |                      |
-| triggers          | no                    |                      |
-| schedules         | no                    |                      |
-| job timeout       | no                    | Hardcoded to 1 hour. |
-| `[ci skip]`       | no                    |                      |
-
-**Other requirements and limitations**
-
-`gitlab-runner exec docker` can only be used when Docker is installed locally.
-This is needed because GitLab Runner is using host-bind volumes to access the
-Git sources.
+<!--- end_remove -->
 
 ## Internal commands
 
