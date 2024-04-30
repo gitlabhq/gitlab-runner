@@ -84,7 +84,6 @@ type BashWriter struct {
 
 	checkForErrors                   bool
 	useNewEval                       bool
-	useNewEscape                     bool
 	usePosixEscape                   bool
 	useJSONInitializationTermination bool
 
@@ -97,7 +96,6 @@ func NewBashWriter(build *common.Build, shell string) *BashWriter {
 		Shell:          shell,
 		checkForErrors: build.IsFeatureFlagOn(featureflags.EnableBashExitCodeCheck),
 		useNewEval:     build.IsFeatureFlagOn(featureflags.UseNewEvalStrategy),
-		useNewEscape:   build.IsFeatureFlagOn(featureflags.UseNewShellEscape),
 		usePosixEscape: build.IsFeatureFlagOn(featureflags.PosixlyCorrectEscapes),
 		// useJSONInitializationTermination is only used for kubernetes executor when
 		// the feature flag FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY is set to false
@@ -136,7 +134,7 @@ func (b *BashWriter) Unindent() {
 }
 
 func (b *BashWriter) Command(command string, arguments ...string) {
-	b.Line(b.buildCommand(b.escapeNoLegacy, command, arguments...))
+	b.Line(b.buildCommand(b.escape, command, arguments...))
 	b.CheckForErrors()
 }
 
@@ -208,13 +206,13 @@ func (b *BashWriter) IfFile(path string) {
 }
 
 func (b *BashWriter) IfCmd(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(b.escapeNoLegacy, cmd, arguments...)
+	cmdline := b.buildCommand(b.escape, cmd, arguments...)
 	b.Linef("if %s >/dev/null 2>&1; then", cmdline)
 	b.Indent()
 }
 
 func (b *BashWriter) IfCmdWithOutput(cmd string, arguments ...string) {
-	cmdline := b.buildCommand(b.escapeNoLegacy, cmd, arguments...)
+	cmdline := b.buildCommand(b.escape, cmd, arguments...)
 	b.Linef("if %s; then", cmdline)
 	b.Indent()
 }
@@ -343,20 +341,6 @@ func (b *BashWriter) Finish(trace bool) string {
 }
 
 func (b *BashWriter) escape(input string) string {
-	if b.usePosixEscape {
-		return helpers.PosixShellEscape(input)
-	}
-
-	if b.useNewEscape {
-		return helpers.ShellEscape(input)
-	}
-
-	return helpers.ShellEscapeLegacy(input)
-}
-
-func (b *BashWriter) escapeNoLegacy(input string) string {
-	// We don't want to use the `escape` function since the legacy
-	// escape will not always work for us, opening us for vulnerabilities
 	if b.usePosixEscape {
 		return helpers.PosixShellEscape(input)
 	}
