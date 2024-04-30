@@ -12,9 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 )
 
-var createAdapter = CreateAdapter
+var createAdapter = getCreateAdapter
 
 // generateObjectName returns a fully-qualified name for the cache object,
 // ensuring there's no path traversal outside.
@@ -63,6 +64,10 @@ func getAdaptorForBuild(build *common.Build, key string) Adapter {
 	if objectName == "" {
 		logrus.Warning("Empty cache key. Skipping adapter selection.")
 		return nil
+	}
+
+	if build.Runner.Cache.Type == "gcs" && !build.IsFeatureFlagOn(featureflags.UseLegacyGCSCacheAdapter) {
+		build.Runner.Cache.Type = "gcsv2"
 	}
 
 	adapter, err := createAdapter(build.Runner.Cache, build.GetBuildTimeout(), objectName)

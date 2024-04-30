@@ -41,6 +41,7 @@ const (
 	UseWindowsJobObject                  string = "FF_USE_WINDOWS_JOB_OBJECT"
 	UseTimestamps                        string = "FF_TIMESTAMPS"
 	DisableAutomaticTokenRotation        string = "FF_DISABLE_AUTOMATIC_TOKEN_ROTATION"
+	UseLegacyGCSCacheAdapter             string = "FF_USE_LEGACY_GCS_CACHE_ADAPTER"
 )
 
 type FeatureFlag struct {
@@ -338,6 +339,14 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, it restricts automatic token rotation and logs a warning when the token is about to expire.",
+	},
+	{
+		Name:         UseLegacyGCSCacheAdapter,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the legacy GCS Cache adapter is used. When disabled (default), a newer GCS Cache adapter is used which uses Google Cloud Storage's SDK " +
+			"for authentication. This should resolve authentication problems in environments that the legacy adapter struggled with, such as workload identity " +
+			"configurations in GKE.",
 	},
 }
 
