@@ -17,6 +17,14 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/network"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
+
+	// Force to load shell executor, executes init() on them
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/custom"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/parallels"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/shell"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/ssh"
+	_ "gitlab.com/gitlab-org/gitlab-runner/executors/virtualbox"
 )
 
 type configTemplate struct {
