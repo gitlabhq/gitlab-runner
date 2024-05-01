@@ -1174,7 +1174,7 @@ type RunnerSettings struct {
 
 	FeatureFlags map[string]bool `toml:"feature_flags" json:"feature_flags,omitempty" long:"feature-flags" env:"FEATURE_FLAGS" description:"Enable/Disable feature flags https://docs.gitlab.com/runner/configuration/feature-flags.html"`
 
-	Monitoring *runner.Monitoring `toml:"monitoring" long:"runner-monitoring" description:"(Experimental) Monitoring configuration specific to this runner"`
+	Monitoring *runner.Monitoring `toml:"monitoring,omitempty" json:"monitoring,omitempty" long:"runner-monitoring" description:"(Experimental) Monitoring configuration specific to this runner"`
 
 	Instance   *InstanceConfig   `toml:"instance,omitempty" json:"instance,omitempty"`
 	SSH        *SshConfig        `toml:"ssh,omitempty" json:"ssh,omitempty" group:"ssh executor" namespace:"ssh"`
