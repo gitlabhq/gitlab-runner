@@ -789,7 +789,18 @@ func (e *executor) startAndWatchContainer(ctx context.Context, id string, input 
 		// send SIGTERM to all processes in the build container.
 		gracefulExitFunc = e.sendSIGTERMToContainerProcs
 	}
-	return dockerExec.Exec(ctx, id, streams, gracefulExitFunc)
+
+	err := dockerExec.Exec(ctx, id, streams, gracefulExitFunc)
+
+	// if the context is canceled we attempt to remove the container,
+	// as Exec making calls such as ContainerAttach that are canceled
+	// can leave the container in a state that cannot easily be recovered
+	// from.
+	if ctx.Err() != nil {
+		_ = e.removeContainer(e.Context, id)
+	}
+
+	return err
 }
 
 func (e *executor) removeContainer(ctx context.Context, id string) error {

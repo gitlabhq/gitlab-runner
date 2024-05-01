@@ -56,11 +56,12 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 	}
 
 	tests := map[string]struct {
-		setupFn       func(*common.Build)
-		onUserStep    func(*common.Build, common.JobTrace)
-		includesStage []common.BuildStage
-		excludesStage []common.BuildStage
-		expectedErr   error
+		setupFn         func(*common.Build)
+		onUserStep      func(*common.Build, common.JobTrace)
+		includesStage   []common.BuildStage
+		excludesStage   []common.BuildStage
+		includesContent []string
+		expectedErr     error
 	}{
 		"job script timeout": {
 			setupFn: func(build *common.Build) {
@@ -82,7 +83,8 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 				common.BuildStageUploadOnFailureArtifacts,
 				common.BuildStageUploadOnSuccessArtifacts,
 			},
-			expectedErr: &common.BuildError{FailureReason: common.JobExecutionTimeout},
+			includesContent: []string{"job status timedout"},
+			expectedErr:     &common.BuildError{FailureReason: common.JobExecutionTimeout},
 		},
 		"system interrupt": {
 			onUserStep: func(build *common.Build, _ common.JobTrace) {
@@ -104,13 +106,14 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 			onUserStep: func(_ *common.Build, trace common.JobTrace) {
 				trace.Cancel()
 			},
-			includesStage: cancelIncludeStages,
-			excludesStage: cancelExcludeStages,
-			expectedErr:   &common.BuildError{FailureReason: common.JobCanceled},
+			includesStage:   cancelIncludeStages,
+			excludesStage:   cancelExcludeStages,
+			includesContent: []string{"job status canceled"},
+			expectedErr:     &common.BuildError{FailureReason: common.JobCanceled},
 		},
 	}
 
-	resp, err := common.GetRemoteLongRunningBuildWithAfterScript()
+	resp, err := common.GetRemoteLongRunningBuildWithAfterScript(config.Shell)
 	require.NoError(t, err)
 
 	for tn, tc := range tests {
@@ -148,12 +151,15 @@ func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSe
 			for _, stage := range tc.excludesStage {
 				assert.NotContains(t, buf.String(), common.GetStageDescription(stage))
 			}
+			for _, content := range tc.includesContent {
+				assert.Contains(t, buf.String(), content)
+			}
 		})
 	}
 }
 
 func RunBuildWithExecutorCancel(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	resp, err := common.GetRemoteLongRunningBuildWithAfterScript()
+	resp, err := common.GetRemoteLongRunningBuildWithAfterScript(config.Shell)
 	require.NoError(t, err)
 
 	build := &common.Build{
