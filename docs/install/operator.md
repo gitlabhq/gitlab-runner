@@ -175,7 +175,7 @@ Prerequisites:
 
 - Images required by the installation process are accessible.
 
-To pull container images during installation, 
+To pull container images during installation,
 the GitLab Runner Operator requires a connection to the public internet on an external
 network. If you have Kubernetes clusters installed
 in an offline environment, you can use local a image registry or a local package repository
@@ -189,9 +189,9 @@ The local repository must provide the following images:
 | **GitLab Runner** and **GitLab Runner Helper** images | These images are downloaded from the GitLab Runner UBI Images registry and are used when installing the Runner Custom Resources. The version used depends on your requirements. |
 | **RBAC Proxy** image                                  |`registry.gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/openshift4/ose-kube-rbac-proxy:v4.13.0`|
 
-1. Set up local repositories or registries in the disconnected network environment 
+1. Set up local repositories or registries in the disconnected network environment
    to host the downloaded software packages and container images. You can use:
-   
+
    - A Docker registry for container images.
    - A local package registry for Kubernetes binaries and dependencies.
 
@@ -203,7 +203,7 @@ The local repository must provide the following images:
    ```
 
 1. In the `operator.k8s.yaml` file, update the following URLS:
-   
+
    - `GitLab Runner Operator image`
    - `RBAC Proxy image`
 

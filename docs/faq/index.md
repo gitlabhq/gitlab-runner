@@ -71,7 +71,7 @@ to be protected in job log output, but not in container logs.
 
 ### In the command line
 
-From a terminal, logged in as root, run the following. 
+From a terminal, logged in as root, run the following.
 
 WARNING:
 This should not be performed on runners with the [Shell executor](../executors/shell.md), because it redefines the `systemd` service
