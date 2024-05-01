@@ -111,13 +111,13 @@ helm search repo -l gitlab/gitlab-runner
 Example of the output is shown below:
 
 ```plaintext
-NAME                 CHART VERSION APP VERSION DESCRIPTION
-gitlab/gitlab-runner 0.58.2        16.5.0      GitLab Runner
-gitlab/gitlab-runner 0.58.1        16.5.0      GitLab Runner
-gitlab/gitlab-runner 0.58.0        16.5.0      GitLab Runner
-gitlab/gitlab-runner 0.57.2        16.4.2      GitLab Runner
-gitlab/gitlab-runner 0.57.1        16.4.1      GitLab Runner
-gitlab/gitlab-runner 0.57.0        16.4.0      GitLab Runner
+NAME                  CHART VERSION APP VERSION DESCRIPTION
+gitlab/gitlab-runner  0.64.0        16.11.0     GitLab Runner
+gitlab/gitlab-runner  0.63.0        16.10.0     GitLab Runner
+gitlab/gitlab-runner  0.62.1        16.9.1      GitLab Runner
+gitlab/gitlab-runner  0.62.0        16.9.0      GitLab Runner
+gitlab/gitlab-runner  0.61.3        16.8.1      GitLab Runner
+gitlab/gitlab-runner  0.61.2        16.8.0      GitLab Runner
 ...
 ```
 
@@ -592,7 +592,10 @@ Although `run_as_user` points to the user ID of `nonroot` user (59417), the imag
 It's important that this user ID is part of the root group. Being part of the root group doesn't give it any specific privileges.
 
 ```yaml
-image: registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-ocp:v16.5.0
+image:
+  registry: registry.gitlab.com
+  image: gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-ocp
+  tag: v16.11.0
 
 securityContext:
     runAsNonRoot: true
@@ -602,7 +605,7 @@ runners:
     config: |
         [[runners]]
           [runners.kubernetes]
-            helper_image = "registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:x86_64-v16.5.0"
+            helper_image = "registry.gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/gitlab-runner-helper-ocp:x86_64-v16.11.0"
             [runners.kubernetes.pod_security_context]
               run_as_non_root = true
               run_as_user = 59417
@@ -613,7 +616,10 @@ runners:
 To use a [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner) change the GitLab Runner image and the Helper image as follows:
 
 ```yaml
-image: gitlab/gitlab-runner:ubi-fips
+image:
+  registry: docker.io
+  image: gitlab/gitlab-runner
+  tag: ubi-fips
 
 runners:
     config: |
