@@ -281,6 +281,94 @@ func TestRunnerByURLAndID(t *testing.T) {
 	}
 }
 
+func TestRunnerByNameAndToken(t *testing.T) {
+	examples := map[string]struct {
+		runners       []*common.RunnerConfig
+		runnerName    string
+		runnerToken   string
+		expectedIndex int
+		expectedError error
+	}{
+		"finds runner by name and token": {
+			runners: []*common.RunnerConfig{
+				{
+					Name: "runner1",
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "token1",
+					},
+				},
+				{
+					Name: "runner2",
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "token2",
+					},
+				},
+			},
+			runnerName:    "runner1",
+			runnerToken:   "token1",
+			expectedIndex: 0,
+		},
+		"does not find runner with wrong name": {
+			runners: []*common.RunnerConfig{
+				{
+					Name: "runner1",
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "token1",
+					},
+				},
+				{
+					Name: "runner2",
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "token2",
+					},
+				},
+			},
+			runnerName:    "runner3",
+			runnerToken:   "token1",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the Name 'runner3' and Token 'token1'`),
+		},
+		"does not find runner with wrong token": {
+			runners: []*common.RunnerConfig{
+				{
+					Name: "runner1",
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "token1",
+					},
+				},
+				{
+					Name: "runner2",
+					RunnerCredentials: common.RunnerCredentials{
+						Token: "token2",
+					},
+				},
+			},
+			runnerName:    "runner1",
+			runnerToken:   "token3",
+			expectedIndex: -1,
+			expectedError: fmt.Errorf(`could not find a runner with the Name 'runner1' and Token 'token3'`),
+		},
+	}
+
+	for tn, tt := range examples {
+		t.Run(tn, func(t *testing.T) {
+			config := configOptions{
+				config: &common.Config{
+					Runners: tt.runners,
+				},
+			}
+
+			runner, err := config.RunnerByNameAndToken(tt.runnerName, tt.runnerToken)
+			if tt.expectedIndex == -1 {
+				assert.Nil(t, runner)
+			} else {
+				assert.Equal(t, tt.runners[tt.expectedIndex], runner)
+			}
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
 func Test_loadConfig(t *testing.T) {
 	const expectedSystemIDRegexPattern = "^[sr]_[0-9a-zA-Z]{12}$"
 

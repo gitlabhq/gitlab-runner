@@ -229,17 +229,33 @@ func (c *configOptions) RunnerByToken(token string) (*common.RunnerConfig, error
 }
 
 func (c *configOptions) RunnerByURLAndID(url string, id int64) (*common.RunnerConfig, error) {
-	if c.config == nil {
+	config := c.getConfig()
+	if config == nil {
 		return nil, fmt.Errorf("config has not been loaded")
 	}
 
-	for _, runner := range c.config.Runners {
+	for _, runner := range config.Runners {
 		if runner.URL == url && runner.ID == id {
 			return runner, nil
 		}
 	}
 
 	return nil, fmt.Errorf("could not find a runner with the URL %q and ID %d", url, id)
+}
+
+func (c *configOptions) RunnerByNameAndToken(name string, token string) (*common.RunnerConfig, error) {
+	config := c.getConfig()
+	if config == nil {
+		return nil, fmt.Errorf("config has not been loaded")
+	}
+
+	for _, runner := range config.Runners {
+		if runner.Name == name && runner.Token == token {
+			return runner, nil
+		}
+	}
+
+	return nil, fmt.Errorf("could not find a runner with the Name '%s' and Token '%s'", name, token)
 }
 
 type configOptionsWithListenAddress struct {

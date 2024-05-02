@@ -29,13 +29,20 @@ func (c *UnregisterCommand) unregisterAllRunners() (runners []*common.RunnerConf
 }
 
 func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
-	if len(c.Name) > 0 { // Unregister when given a name
-		runnerConfig, err := c.RunnerByName(c.Name)
-		if err != nil {
-			logrus.Fatalln(err)
-		}
-		c.RunnerCredentials = runnerConfig.RunnerCredentials
+	var runnerConfig *common.RunnerConfig
+	var err error
+	switch {
+	case c.Name != "" && c.Token != "":
+		runnerConfig, err = c.RunnerByNameAndToken(c.Name, c.Token)
+	case c.Token != "":
+		runnerConfig, err = c.RunnerByToken(c.Token)
+	case c.Name != "":
+		runnerConfig, err = c.RunnerByName(c.Name)
 	}
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+	c.RunnerCredentials = runnerConfig.RunnerCredentials
 
 	// Unregister given Token and URL of the runner
 	if !c.unregisterRunner(c.RunnerCredentials) {
