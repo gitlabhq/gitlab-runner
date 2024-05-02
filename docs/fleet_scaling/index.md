@@ -6,7 +6,7 @@ info: >-
   this page, see
   https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
-# Plan and operate a fleet of shared instance or group runners
+# Plan and operate a fleet of instance or group runners
 
 This guide contains best practices for scaling a fleet of runners in a shared service model.
 
