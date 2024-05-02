@@ -150,7 +150,7 @@ func TestPowershell_GetName(t *testing.T) {
 func TestPowershell_IsDefault(t *testing.T) {
 	for _, shellName := range []string{SNPwsh, SNPowershell} {
 		shell := common.GetShell(shellName)
-		assert.False(t, shell.IsDefault())
+		assert.Equal(t, runtime.GOOS == OSWindows, shell.IsDefault())
 	}
 }
 
