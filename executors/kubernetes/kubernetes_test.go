@@ -7192,6 +7192,16 @@ func TestRetryLimits(t *testing.T) {
 			err:                errors.New("error dialing backend"),
 			expectedRetryCount: 2,
 		},
+		"retry limits with manually constructed error that contains retry key": {
+			config: common.KubernetesConfig{
+				RequestRetryLimit: 6,
+				RequestRetryLimits: map[string]int{
+					"error dialing backend": 2,
+				},
+			},
+			err:                errors.New("--error dialing backend--"),
+			expectedRetryCount: 2,
+		},
 	}
 
 	for tn, tt := range tests {
