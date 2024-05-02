@@ -99,10 +99,6 @@ func TestInstanceReadyCommand(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-				if shell == "cmd" {
-					t.Skip()
-				}
-
 				successfulBuild, err := common.GetRemoteSuccessfulBuild()
 				require.NoError(t, err)
 
@@ -128,10 +124,6 @@ func TestInstanceReadyCommand(t *testing.T) {
 
 func TestBuildSuccess(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			t.Skip()
-		}
-
 		successfulBuild, err := common.GetRemoteSuccessfulBuild()
 		require.NoError(t, err)
 
@@ -147,30 +139,18 @@ func TestBuildSuccess(t *testing.T) {
 
 func TestBuildCancel(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			t.Skip()
-		}
-
 		buildtest.RunBuildWithCancel(t, newRunnerConfig(t, shell), setupAcquireBuild)
 	})
 }
 
 func TestBuildMasking(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			t.Skip()
-		}
-
 		buildtest.RunBuildWithMasking(t, newRunnerConfig(t, shell), setupAcquireBuild)
 	})
 }
 
 func TestBuildExpandedFileVariable(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			t.Skip()
-		}
-
 		buildtest.RunBuildWithExpandedFileVariable(t, newRunnerConfig(t, shell), setupAcquireBuild)
 	})
 }

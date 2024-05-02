@@ -26,10 +26,6 @@ func runShell(t *testing.T, shell, cwd string, writer shells.ShellWriter) string
 	case "bash":
 		extension = "sh"
 
-	case "cmd":
-		extension = "cmd"
-		cmdArgs = append(cmdArgs, "/Q", "/C")
-
 	case "powershell", "pwsh":
 		extension = "ps1"
 		cmdArgs = append(cmdArgs, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command")
@@ -101,10 +97,6 @@ func TestRmFilesRecursive(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, writer shells.ShellWriter) {
-		if shell == "cmd" {
-			t.Skip("cmd shell is no longer actively developed")
-		}
-
 		var tmpFiles []string
 
 		// lockfiles can be in multiple subdirs
@@ -142,9 +134,6 @@ func TestCommandArgumentExpansion(t *testing.T) {
 		case "bash", "powershell", "pwsh":
 			argumentsNoExpand = []string{"$a", "$b", "$c"}
 			argumentsExpand = []string{"$d", "$e", "$f"}
-		case "cmd":
-			argumentsNoExpand = []string{"%a%", "%b%", "%c%"}
-			argumentsExpand = []string{"%d%", "%e%", "%f%"}
 		default:
 			require.FailNow(t, "unknown shell %q", shell)
 		}

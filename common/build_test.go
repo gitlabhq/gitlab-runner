@@ -794,7 +794,7 @@ func TestDefaultEnvVariables(t *testing.T) {
 			buildDir:      `\\host\share\tmp\test-build\dir`,
 			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("//host/share/tmp/test-build/dir"),
 		},
-		"Windows-style BuildDir (CMD or PS)": {
+		"Windows-style BuildDir (PS)": {
 			buildDir:      `C:\tmp\test-build\dir`,
 			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
 		},

@@ -1166,15 +1166,6 @@ func TestBuildGitFetchStrategySubmoduleRecursiveCleanup(t *testing.T) {
 
 func TestBuildGitFetchStrategyFallback(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			// This test doesn't work on cmd because the worktree is never cleaned
-			// up. It appears that the exit code of the fetch sources script isn't
-			// returned properly to `os.Exec.Wait()` unless "& exit" is appended to
-			// "cmd /c script.cmd".  Since cmd is deprecated, skip this test.
-			// https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37393
-			t.Skip("Skipping test for cmd shell because it's deprecated")
-		}
-
 		successfulBuild, err := common.GetLocalBuildResponse()
 		assert.NoError(t, err)
 
@@ -1323,7 +1314,7 @@ func TestBuildWithoutDebugTrace(t *testing.T) {
 		assert.NoError(t, err)
 
 		switch shell {
-		case "pwsh", "powershell", "cmd":
+		case "pwsh", "powershell":
 			assert.NotRegexp(t, `>\s?echo Hello World`, out)
 		default:
 			assert.NotRegexp(t, `[^$] echo Hello World`, out)
@@ -1342,7 +1333,7 @@ func TestBuildWithDebugTrace(t *testing.T) {
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
 		switch shell {
-		case "pwsh", "powershell", "cmd":
+		case "pwsh", "powershell":
 			assert.Regexp(t, `>\s?echo Hello World`, out)
 		default:
 			assert.Regexp(t, `[^$] echo Hello World`, out)
@@ -1501,12 +1492,6 @@ func TestInteractiveTerminal(t *testing.T) {
 			shell:              "bash",
 			command:            "sleep 5",
 			expectedStatusCode: http.StatusSwitchingProtocols,
-		},
-		{
-			app:                "cmd.exe",
-			shell:              "cmd",
-			command:            "timeout 2",
-			expectedStatusCode: http.StatusInternalServerError,
 		},
 		{
 			app:                "powershell.exe",
@@ -1770,9 +1755,9 @@ func TestBuildPwshHandlesScriptEncodingCorrectly(t *testing.T) {
 
 func TestBuildScriptSections(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" || shell == "pwsh" || shell == "powershell" {
+		if shell == "pwsh" || shell == "powershell" {
 			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
-			t.Skip("CMD not supported")
+			t.Skip("pwsh and powershell not supported")
 		}
 		build := newBuild(t, common.JobResponse{}, shell)
 
@@ -1901,8 +1886,6 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 				switch shell {
 				case "powershell", "pwsh":
 					cmd = "Get-Item -Path $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
-				case "cmd":
-					cmd = `dir "%CI_BUILDS_DIR%/go/src/gitlab.com/gitlab-org/repo"`
 				default:
 					cmd = "ls -al $CI_BUILDS_DIR/go/src/gitlab.com/gitlab-org/repo"
 				}

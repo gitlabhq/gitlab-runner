@@ -24,11 +24,7 @@ func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
 	// In theory, pwsh should work if getImage() is upgraded to use the alpine powershell image,
 	// however, in practice, we get errors in CI with the pwsh helper image selected.
 	// TODO: fix this for pwsh when using pwsh helper image
-	if shell == "pwsh" {
-		t.Skip()
-	}
-
-	if shell == "cmd" || shell == "powershell" {
+	if shell == "pwsh" || shell == "powershell" {
 		t.Skip()
 	}
 
