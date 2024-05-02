@@ -12,7 +12,7 @@ import (
 type shellWriterFactory func() shells.ShellWriter
 
 func OnEachShell(t *testing.T, f func(t *testing.T, shell string)) {
-	shells := []string{"bash", "cmd", "powershell", "pwsh"}
+	shells := []string{"bash", "powershell", "pwsh"}
 
 	for _, shell := range shells {
 		t.Run(shell, func(t *testing.T) {
@@ -27,9 +27,6 @@ func OnEachShellWithWriter(t *testing.T, f func(t *testing.T, shell string, writ
 	writers := map[string]shellWriterFactory{
 		"bash": func() shells.ShellWriter {
 			return &shells.BashWriter{}
-		},
-		"cmd": func() shells.ShellWriter {
-			return &shells.CmdWriter{}
 		},
 		"powershell": func() shells.ShellWriter {
 			return &shells.PsWriter{Shell: "powershell", EOL: "\r\n"}

@@ -195,9 +195,6 @@ func getShellPrintVars(shell string, vars ...string) []string {
 	var fmtStr string
 
 	switch shell {
-	case "cmd":
-		// Using double %% so % is escaped in fmt.
-		fmtStr = "echo %s=%%%s%%"
 	case "powershell", "pwsh":
 		fmtStr = "echo %s=$env:%s"
 	default:
@@ -249,21 +246,11 @@ func GetRemoteLongRunningBuild() (JobResponse, error) {
 	return GetRemoteBuildResponse("sleep 3600")
 }
 
-func GetRemoteLongRunningBuildCMD() (JobResponse, error) {
-	// Can't use TIMEOUT since it requires input redirection,
-	// https://knowledge.broadcom.com/external/article/29524/the-timeout-command-in-batch-script-job.html
-	return GetLocalBuildResponse("ping 127.0.0.1 -n 3600 > nul")
-}
-
 func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error) {
 	var jobResponse JobResponse
 	var err error
-	switch shell {
-	default:
-		jobResponse, err = GetRemoteLongRunningBuild()
-	case "cmd":
-		jobResponse, err = GetRemoteLongRunningBuildCMD()
-	}
+
+	jobResponse, err = GetRemoteLongRunningBuild()
 	if err != nil {
 		return JobResponse{}, err
 	}
@@ -309,12 +296,6 @@ fi
 
 func GetMultilineBashBuildPowerShell() (JobResponse, error) {
 	return GetRemoteBuildResponse("if (0 -eq 0) {\n\recho \"Hello World\"\n\r}")
-}
-
-func GetMultilineBashBuildCmd() (JobResponse, error) {
-	return GetRemoteBuildResponse(`IF 0==0 (
-  echo Hello World
-)`)
 }
 
 func GetRemoteBrokenTLSBuild() (JobResponse, error) {
