@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	CmdDisableDelayedErrorLevelExpansion string = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION"
 	NetworkPerBuild                      string = "FF_NETWORK_PER_BUILD"
 	UseLegacyKubernetesExecutionStrategy string = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
 	UseDirectDownload                    string = "FF_USE_DIRECT_DOWNLOAD"
@@ -62,14 +61,6 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   true,
 		Description:  "FF_TEST_FEATURE is a feature flag that is used to test the feature flag functionality in tests.",
-	},
-	{
-		Name:            CmdDisableDelayedErrorLevelExpansion,
-		DefaultValue:    false,
-		Deprecated:      false,
-		ToBeRemovedWith: "",
-		Description: "Disables [EnableDelayedExpansion](https://ss64.com/nt/delayedexpansion.html) for " +
-			"error checking for when using [Window Batch](../shells/index.md#windows-batch) shell",
 	},
 	{
 		Name:            NetworkPerBuild,
