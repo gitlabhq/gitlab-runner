@@ -56,6 +56,8 @@ type BuildSettings struct {
 	RestoreCacheAttempts       int
 	ExecutorJobSectionAttempts int
 
+	AfterScriptIgnoreErrors bool
+
 	CacheRequestTimeout int
 
 	DockerAuthConfig string
@@ -86,31 +88,7 @@ func (b *Build) initSettings() {
 		defaultGitStategy = GitFetch
 	}
 
-	errs := []error{
-		validate(variables, "CI_DEBUG_SERVICES", &b.buildSettings.CIDebugServices, false),
-		validate(variables, "CI_DEBUG_TRACE", &b.buildSettings.CIDebugTrace, false),
-
-		validate(variables, "GIT_CLONE_PATH", &b.buildSettings.GitClonePath, ""),
-		validate(variables, "GIT_STRATEGY", &b.buildSettings.GitStrategy, defaultGitStategy),
-		validate(variables, "GIT_CHECKOUT", &b.buildSettings.GitCheckout, true),
-		validate(variables, "GIT_SUBMODULE_STRATEGY", &b.buildSettings.GitSubmoduleStrategy, SubmoduleInvalid),
-		validate(variables, "GIT_SUBMODULE_PATHS", &b.buildSettings.GitSubmodulePaths, nil),
-		validate(variables, "GIT_SUBMODULE_DEPTH", &b.buildSettings.GitSubmoduleDepth, b.GitInfo.Depth),
-		validate(variables, "GIT_CLEAN_FLAGS", &b.buildSettings.GitCleanFlags, gitCleanFlagsDefault),
-		validate(variables, "GIT_FETCH_EXTRA_FLAGS", &b.buildSettings.GitFetchExtraFlags, gitFetchFlagsDefault),
-		validate(variables, "GIT_SUBMODULE_UPDATE_FLAGS", &b.buildSettings.GitSubmoduleUpdateFlags, nil),
-		validate(variables, "GIT_LFS_SKIP_SMUDGE", &b.buildSettings.GitLFSSkipSmudge, false),
-		validate(variables, "GIT_SUBMODULE_FORCE_HTTPS", &b.buildSettings.GitSubmoduleForceHTTPS, false),
-
-		validate(variables, "GET_SOURCES_ATTEMPTS", &b.buildSettings.GetSourcesAttempts, DefaultGetSourcesAttempts),
-		validate(variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", &b.buildSettings.ArtifactDownloadAttempts, DefaultArtifactDownloadAttempts),
-		validate(variables, "RESTORE_CACHE_ATTEMPTS", &b.buildSettings.RestoreCacheAttempts, DefaultRestoreCacheAttempts),
-		validate(variables, "EXECUTOR_JOB_SECTION_ATTEMPTS", &b.buildSettings.ExecutorJobSectionAttempts, DefaultExecutorStageAttempts),
-
-		validate(variables, "CACHE_REQUEST_TIMEOUT", &b.buildSettings.CacheRequestTimeout, DefaultCacheRequestTimeout),
-
-		validate(variables, "DOCKER_AUTH_CONFIG", &b.buildSettings.DockerAuthConfig, ""),
-	}
+	errs := validateVariables(variables, b, defaultGitStategy)
 
 	if b.Runner != nil && b.Runner.DebugTraceDisabled {
 		if b.buildSettings.CIDebugTrace {
@@ -133,6 +111,36 @@ func (b *Build) initSettings() {
 	b.buildSettings.Errors = slices.DeleteFunc(errs, func(err error) bool {
 		return err == nil
 	})
+}
+
+func validateVariables(variables JobVariables, b *Build, defaultGitStategy GitStrategy) []error {
+	return []error{
+		validate(variables, "CI_DEBUG_SERVICES", &b.buildSettings.CIDebugServices, false),
+		validate(variables, "CI_DEBUG_TRACE", &b.buildSettings.CIDebugTrace, false),
+
+		validate(variables, "GIT_CLONE_PATH", &b.buildSettings.GitClonePath, ""),
+		validate(variables, "GIT_STRATEGY", &b.buildSettings.GitStrategy, defaultGitStategy),
+		validate(variables, "GIT_CHECKOUT", &b.buildSettings.GitCheckout, true),
+		validate(variables, "GIT_SUBMODULE_STRATEGY", &b.buildSettings.GitSubmoduleStrategy, SubmoduleInvalid),
+		validate(variables, "GIT_SUBMODULE_PATHS", &b.buildSettings.GitSubmodulePaths, nil),
+		validate(variables, "GIT_SUBMODULE_DEPTH", &b.buildSettings.GitSubmoduleDepth, b.GitInfo.Depth),
+		validate(variables, "GIT_CLEAN_FLAGS", &b.buildSettings.GitCleanFlags, gitCleanFlagsDefault),
+		validate(variables, "GIT_FETCH_EXTRA_FLAGS", &b.buildSettings.GitFetchExtraFlags, gitFetchFlagsDefault),
+		validate(variables, "GIT_SUBMODULE_UPDATE_FLAGS", &b.buildSettings.GitSubmoduleUpdateFlags, nil),
+		validate(variables, "GIT_LFS_SKIP_SMUDGE", &b.buildSettings.GitLFSSkipSmudge, false),
+		validate(variables, "GIT_SUBMODULE_FORCE_HTTPS", &b.buildSettings.GitSubmoduleForceHTTPS, false),
+
+		validate(variables, "GET_SOURCES_ATTEMPTS", &b.buildSettings.GetSourcesAttempts, DefaultGetSourcesAttempts),
+		validate(variables, "ARTIFACT_DOWNLOAD_ATTEMPTS", &b.buildSettings.ArtifactDownloadAttempts, DefaultArtifactDownloadAttempts),
+		validate(variables, "RESTORE_CACHE_ATTEMPTS", &b.buildSettings.RestoreCacheAttempts, DefaultRestoreCacheAttempts),
+		validate(variables, "EXECUTOR_JOB_SECTION_ATTEMPTS", &b.buildSettings.ExecutorJobSectionAttempts, DefaultExecutorStageAttempts),
+
+		validate(variables, "AFTER_SCRIPT_IGNORE_ERRORS", &b.buildSettings.AfterScriptIgnoreErrors, DefaultAfterScriptIgnoreErrors),
+
+		validate(variables, "CACHE_REQUEST_TIMEOUT", &b.buildSettings.CacheRequestTimeout, DefaultCacheRequestTimeout),
+
+		validate(variables, "DOCKER_AUTH_CONFIG", &b.buildSettings.DockerAuthConfig, ""),
+	}
 }
 
 //nolint:funlen

@@ -157,14 +157,19 @@ func TestMultistepBuild(t *testing.T) {
 	failingReleaseBuild, err := common.GetRemoteFailingMultistepBuild("release")
 	require.NoError(t, err)
 
+	failingAfterScriptBuild, err := common.GetRemoteFailingMultistepBuild(common.StepNameAfterScript)
+	require.NoError(t, err)
+
 	tests := map[string]struct {
-		jobResponse    common.JobResponse
-		expectedOutput []string
-		unwantedOutput []string
-		errExpected    bool
+		jobResponse             common.JobResponse
+		afterScriptIgnoreErrors bool
+		expectedOutput          []string
+		unwantedOutput          []string
+		errExpected             bool
 	}{
 		"Successful build with release and after_script step": {
-			jobResponse: successfulBuild,
+			jobResponse:             successfulBuild,
+			afterScriptIgnoreErrors: true,
 			expectedOutput: []string{
 				"echo Hello World",
 				"echo Release",
@@ -173,7 +178,8 @@ func TestMultistepBuild(t *testing.T) {
 			errExpected: false,
 		},
 		"Failure on script step Release is skipped After script runs": {
-			jobResponse: failingScriptBuild,
+			jobResponse:             failingScriptBuild,
+			afterScriptIgnoreErrors: true,
 			expectedOutput: []string{
 				"echo Hello World",
 				"echo After Script",
@@ -184,7 +190,28 @@ func TestMultistepBuild(t *testing.T) {
 			errExpected: true,
 		},
 		"Failure on release step. After script runs.": {
-			jobResponse: failingReleaseBuild,
+			jobResponse:             failingReleaseBuild,
+			afterScriptIgnoreErrors: true,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: true,
+		},
+		"Failure in after script step (ignored).": {
+			jobResponse:             failingAfterScriptBuild,
+			afterScriptIgnoreErrors: true,
+			expectedOutput: []string{
+				"echo Hello World",
+				"echo Release",
+				"echo After Script",
+			},
+			errExpected: false,
+		},
+		"Failure in after script step (not ignored).": {
+			jobResponse:             failingAfterScriptBuild,
+			afterScriptIgnoreErrors: false,
 			expectedOutput: []string{
 				"echo Hello World",
 				"echo Release",
@@ -198,6 +225,12 @@ func TestMultistepBuild(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 				build := newBuild(t, tt.jobResponse, shell)
+				if !tt.afterScriptIgnoreErrors {
+					build.Variables = append(build.Variables, common.JobVariable{
+						Key:   "AFTER_SCRIPT_IGNORE_ERRORS",
+						Value: "false",
+					})
+				}
 
 				out, err := buildtest.RunBuildReturningOutput(t, build)
 
