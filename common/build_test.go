@@ -794,7 +794,7 @@ func TestDefaultEnvVariables(t *testing.T) {
 			buildDir:      `\\host\share\tmp\test-build\dir`,
 			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("//host/share/tmp/test-build/dir"),
 		},
-		"Windows-style BuildDir (CMD or PS)": {
+		"Windows-style BuildDir (PS)": {
 			buildDir:      `C:\tmp\test-build\dir`,
 			expectedValue: "CI_PROJECT_DIR=" + filepath.FromSlash("C:/tmp/test-build/dir"),
 		},
@@ -2169,7 +2169,7 @@ func TestBuild_GetExecutorJobSectionAttempts(t *testing.T) {
 }
 
 func TestBuild_getFeatureFlagInfo(t *testing.T) {
-	const changedFeatureFlags = "FF_CMD_DISABLE_DELAYED_ERROR_LEVEL_EXPANSION:true"
+	const changedFeatureFlags = "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY:true"
 	tests := []struct {
 		value          string
 		expectedStatus string
@@ -2194,7 +2194,7 @@ func TestBuild_getFeatureFlagInfo(t *testing.T) {
 				JobResponse: JobResponse{
 					Variables: JobVariables{
 						{
-							Key:    featureflags.CmdDisableDelayedErrorLevelExpansion,
+							Key:    featureflags.UseLegacyKubernetesExecutionStrategy,
 							Value:  tt.value,
 							Public: true,
 						},

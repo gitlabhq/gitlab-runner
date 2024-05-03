@@ -250,10 +250,6 @@ func createCommand(shell string, script string, stage string) *exec.Cmd {
 			command: "pwsh",
 			args:    []string{"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command"},
 		},
-		"cmd": {
-			command: "cmd",
-			args:    []string{"/C"},
-		},
 	}
 
 	shellConfig, ok := shellConfigs[shell]

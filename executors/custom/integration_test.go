@@ -113,9 +113,9 @@ func TestBuildSuccess(t *testing.T) {
 
 func TestBuildScriptSections(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" || shell == "pwsh" || shell == "powershell" {
+		if shell == "pwsh" || shell == "powershell" {
 			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
-			t.Skip("CMD, pwsh, powershell not supported")
+			t.Skip("pwsh, powershell not supported")
 		}
 		successfulBuild, err := common.GetSuccessfulMultilineCommandBuild()
 		require.NoError(t, err)
@@ -355,7 +355,6 @@ func TestBuildMultilineCommand(t *testing.T) {
 		"bash":       common.GetMultilineBashBuild,
 		"powershell": common.GetMultilineBashBuildPowerShell,
 		"pwsh":       common.GetMultilineBashBuildPowerShell,
-		"cmd":        common.GetMultilineBashBuildCmd,
 	}
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
@@ -378,10 +377,6 @@ func TestBuildMultilineCommand(t *testing.T) {
 
 func TestBuildWithGoodGitSSLCAInfo(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			t.Skip("This test doesn't support Windows CMD (which is deprecated)")
-		}
-
 		successfulBuild, err := common.GetRemoteGitLabComTLSBuild()
 		require.NoError(t, err)
 
@@ -500,10 +495,6 @@ func TestBuildOnCustomDirectory(t *testing.T) {
 	}
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" {
-			t.Skip("This test doesn't support Windows CMD (which is deprecated)")
-		}
-
 		for testName, tt := range tests {
 			t.Run(testName, func(t *testing.T) {
 				cmd, ok := commands[shell]

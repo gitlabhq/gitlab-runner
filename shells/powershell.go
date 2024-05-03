@@ -693,7 +693,7 @@ func (b *PowerShell) ensurePrepareStageHostnameMessage(
 }
 
 func (b *PowerShell) IsDefault() bool {
-	return false
+	return runtime.GOOS == OSWindows
 }
 
 func init() {

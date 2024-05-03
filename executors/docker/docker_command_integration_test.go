@@ -252,7 +252,7 @@ func TestBuildPassingEnvsMultistep(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "docker", "info")
 
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" || shell == "pwsh" {
+		if shell == "pwsh" {
 			t.Skipf("%s not supported", shell)
 		}
 
@@ -307,9 +307,9 @@ func TestDockerCommandSuccessRunFileVariableContent(t *testing.T) {
 
 func TestBuildScriptSections(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
-		if shell == "cmd" || shell == "pwsh" || shell == "powershell" {
+		if shell == "pwsh" || shell == "powershell" {
 			// support for pwsh and powershell tracked in https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28119
-			t.Skip("CMD, pwsh, powershell not supported")
+			t.Skip("pwsh, powershell not supported")
 		}
 
 		build := getBuildForOS(t, func() (common.JobResponse, error) {

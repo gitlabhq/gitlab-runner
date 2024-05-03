@@ -2300,7 +2300,6 @@ func BenchmarkScriptStage(b *testing.B) {
 		&BashShell{Shell: "bash"},
 		&PowerShell{Shell: SNPwsh, EOL: "\n"},
 		&PowerShell{Shell: SNPowershell, EOL: "\r\n"},
-		&CmdShell{},
 	}
 
 	for _, shell := range shells {

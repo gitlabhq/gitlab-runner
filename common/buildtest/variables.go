@@ -56,28 +56,17 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 
 //nolint:funlen
 func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
-	if config.Shell == shells.SNCmd {
-		t.Skip("sourcing environment variables is unsupported on cmd for now")
-	}
-
 	envVarFn := func(name string) string {
 		switch config.Shell {
 		case shells.SNPwsh, shells.SNPowershell:
 			return "$env:" + name
-		case shells.SNCmd:
-			return "%" + name + "%"
 		default:
 			return "$" + name
 		}
 	}
 
 	echoPipeFn := func(v string) string {
-		switch config.Shell {
-		case shells.SNCmd:
-			return `(echo ` + v + `) >> `
-		default:
-			return `echo '` + v + `' >> `
-		}
+		return `echo '` + v + `' >> `
 	}
 
 	resp, err := common.GetRemoteBuildResponse(echoPipeFn("hello=world") + envVarFn("GITLAB_ENV"))
