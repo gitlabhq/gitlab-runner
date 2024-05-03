@@ -16,7 +16,6 @@ import (
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	slsa_common "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
-	slsa_v02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	slsa_v1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,58 +72,6 @@ func TestGenerateMetadataToFile(t *testing.T) {
 	endedAtRFC3339 := time.Now().Add(time.Minute).Format(time.RFC3339)
 	endedAt, err := time.Parse(time.RFC3339, endedAtRFC3339)
 	require.NoError(t, err)
-
-	var testStatementV02 = func(
-		version string,
-		g *artifactStatementGenerator,
-		opts generateStatementOptions,
-	) *in_toto.ProvenanceStatementSLSA02 {
-		return &in_toto.ProvenanceStatementSLSA02{
-			StatementHeader: in_toto.StatementHeader{
-				Type:          in_toto.StatementInTotoV01,
-				PredicateType: slsa_v02.PredicateSLSAProvenance,
-				Subject: []in_toto.Subject{
-					{
-						Name:   tmpFile.Name(),
-						Digest: slsa_common.DigestSet{"sha256": hex.EncodeToString(checksum)},
-					},
-				},
-			},
-			Predicate: slsa_v02.ProvenancePredicate{
-				Builder: slsa_common.ProvenanceBuilder{
-					ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID),
-				},
-				BuildType: fmt.Sprintf(attestationTypeFormat, version),
-				Invocation: slsa_v02.ProvenanceInvocation{
-					ConfigSource: slsa_v02.ConfigSource{
-						URI: g.RepoURL,
-						Digest: slsa_common.DigestSet{
-							"sha256": g.RepoDigest,
-						},
-					},
-					Parameters: map[string]interface{}{
-						"testparam": "",
-					},
-					Environment: slsaV02Environment{
-						Name:         g.RunnerName,
-						Executor:     g.ExecutorName,
-						Architecture: common.AppVersion.Architecture,
-						Job:          slsaV02EnvironmentJob{ID: opts.jobID},
-					},
-				},
-				Metadata: &slsa_v02.ProvenanceMetadata{
-					BuildStartedOn:  &startedAt,
-					BuildFinishedOn: &endedAt,
-					Reproducible:    false,
-					Completeness: slsa_v02.ProvenanceComplete{
-						Parameters:  true,
-						Environment: true,
-						Materials:   false,
-					},
-				},
-			},
-		}
-	}
 
 	var testsStatementV1 = func(
 		version string,
@@ -185,11 +132,9 @@ func TestGenerateMetadataToFile(t *testing.T) {
 		switch g.SLSAProvenanceVersion {
 		case slsaProvenanceVersion1:
 			return testsStatementV1(version, g, opts)
-		case slsaProvenanceVersion02:
-			return testStatementV02(version, g, opts)
+		default:
+			panic("unreachable, invalid statement version")
 		}
-
-		panic("unreachable, invalid statement version")
 	}
 
 	var setVersion = func(version string) (string, func()) {
@@ -305,7 +250,7 @@ func TestGenerateMetadataToFile(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			for _, v := range []string{slsaProvenanceVersion1, slsaProvenanceVersion02} {
+			for _, v := range []string{slsaProvenanceVersion1} {
 				t.Run(v, func(t *testing.T) {
 					g := tt.newGenerator(v)
 
@@ -345,35 +290,6 @@ func TestGenerateMetadataToFile(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestGeneratePredicateV02(t *testing.T) {
-	gen := &artifactStatementGenerator{
-		RunnerID:              1001,
-		RepoURL:               "testurl",
-		RepoDigest:            "testdigest",
-		JobName:               "testjobname",
-		ExecutorName:          "testexecutorname",
-		RunnerName:            "testrunnername",
-		Parameters:            []string{"testparam"},
-		SLSAProvenanceVersion: slsaProvenanceVersion02,
-	}
-
-	startTime := time.Now()
-	endTime := startTime.Add(time.Minute)
-
-	originalVersion := common.AppVersion.Version
-	testVersion := "vTest"
-	common.AppVersion.Version = testVersion
-
-	defer func() {
-		common.AppVersion.Version = originalVersion
-	}()
-
-	actualPredicate := gen.generateSLSAv02Predicate(10001, startTime, endTime)
-
-	expectedBuildType := fmt.Sprintf(attestationTypeFormat, testVersion)
-	assert.Equal(t, expectedBuildType, actualPredicate.BuildType)
 }
 
 func TestGeneratePredicateV1(t *testing.T) {

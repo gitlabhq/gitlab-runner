@@ -14,7 +14,6 @@ import (
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	slsa_common "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
-	slsa_v02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	slsa_v1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 	"github.com/sirupsen/logrus"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -49,13 +48,11 @@ type generateStatementOptions struct {
 
 const (
 	slsaProvenanceVersion1       = "v1"
-	slsaProvenanceVersion02      = "v0.2"
-	defaultSLSAProvenanceVersion = slsaProvenanceVersion02
+	defaultSLSAProvenanceVersion = slsaProvenanceVersion1
 )
 
 var provenanceSchemaPredicateType = map[string]string{
-	slsaProvenanceVersion1:  slsa_v1.PredicateSLSAProvenance,
-	slsaProvenanceVersion02: slsa_v02.PredicateSLSAProvenance,
+	slsaProvenanceVersion1: slsa_v1.PredicateSLSAProvenance,
 }
 
 func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatementOptions) (string, error) {
@@ -65,7 +62,7 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 	}
 
 	provenanceVersion := g.SLSAProvenanceVersion
-	if provenanceVersion != slsaProvenanceVersion1 && provenanceVersion != slsaProvenanceVersion02 {
+	if provenanceVersion != slsaProvenanceVersion1 {
 		logrus.Warnln(fmt.Sprintf("Unknown SLSA provenance version %s, defaulting to %s", provenanceVersion, defaultSLSAProvenanceVersion))
 		provenanceVersion = defaultSLSAProvenanceVersion
 	}
@@ -75,18 +72,9 @@ func (g *artifactStatementGenerator) generateStatementToFile(opts generateStatem
 		return "", err
 	}
 
-	var statement any
-	switch provenanceVersion {
-	case slsaProvenanceVersion1:
-		statement = &in_toto.ProvenanceStatementSLSA1{
-			StatementHeader: header,
-			Predicate:       g.generateSLSAv1Predicate(opts.jobID, start, end),
-		}
-	case slsaProvenanceVersion02:
-		statement = &in_toto.ProvenanceStatementSLSA02{
-			StatementHeader: header,
-			Predicate:       g.generateSLSAv02Predicate(opts.jobID, start, end),
-		}
+	var statement = &in_toto.ProvenanceStatementSLSA1{
+		StatementHeader: header,
+		Predicate:       g.generateSLSAv1Predicate(opts.jobID, start, end),
 	}
 
 	b, err := json.MarshalIndent(statement, "", " ")
@@ -131,49 +119,6 @@ func (g *artifactStatementGenerator) generateSLSAv1Predicate(jobId int64, start 
 				InvocationID: fmt.Sprint(jobId),
 				StartedOn:    &start,
 				FinishedOn:   &end,
-			},
-		},
-	}
-}
-
-type slsaV02Environment struct {
-	Name         string                `json:"name"`
-	Executor     string                `json:"executor"`
-	Architecture string                `json:"architecture"`
-	Job          slsaV02EnvironmentJob `json:"job"`
-}
-
-type slsaV02EnvironmentJob struct {
-	ID int64 `json:"id"`
-}
-
-func (g *artifactStatementGenerator) generateSLSAv02Predicate(jobID int64, start time.Time, end time.Time) slsa_v02.ProvenancePredicate {
-	return slsa_v02.ProvenancePredicate{
-		Builder:   slsa_common.ProvenanceBuilder{ID: fmt.Sprintf(attestationRunnerIDFormat, g.RepoURL, g.RunnerID)},
-		BuildType: fmt.Sprintf(attestationTypeFormat, g.version()),
-		Invocation: slsa_v02.ProvenanceInvocation{
-			ConfigSource: slsa_v02.ConfigSource{
-				URI: g.RepoURL,
-				Digest: slsa_common.DigestSet{
-					"sha256": g.RepoDigest,
-				},
-			},
-			Parameters: g.params(),
-			Environment: slsaV02Environment{
-				Name:         g.RunnerName,
-				Executor:     g.ExecutorName,
-				Architecture: common.AppVersion.Architecture,
-				Job:          slsaV02EnvironmentJob{ID: jobID},
-			},
-		},
-		Metadata: &slsa_v02.ProvenanceMetadata{
-			BuildStartedOn:  &start,
-			BuildFinishedOn: &end,
-			Reproducible:    false,
-			Completeness: slsa_v02.ProvenanceComplete{
-				Parameters:  true,
-				Environment: true,
-				Materials:   false,
 			},
 		},
 	}
