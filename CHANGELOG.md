@@ -1,3 +1,17 @@
+## v16.11.1 (2024-05-03)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler for fixes !4745
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Fix fleeting install subcommand for Windows !4753
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
+
+### Maintenance
+
+- Remove license scanning template !4735
+
 ## v16.11.0 (2024-05-03)
 
 ### New features
