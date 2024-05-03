@@ -20,6 +20,10 @@ The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/flee
 _Fleeting_ is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
 like Google Cloud, AWS, and Azure.
 
+The Docker Autoscaler executor is still in Beta so it is [**not** recommended for production use](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). For Production environments, please consider following the [Docker Machine executor fleet scaling guide instead](../fleet_scaling/index.html#monitoring-runners).
+
+Before using the Docker Autoscaler executor, consider reading through the [GitLab Runner Autoscaling - Feedback issue for the new runner autoscaling solution issue](https://gitlab.com/gitlab-org/gitlab/-/issues/408131) and understanding limitations.
+
 ## Install a fleeting plugin
 
 To enable autoscaling for your target platform, install a fleeting plugin. You can install
