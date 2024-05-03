@@ -250,7 +250,15 @@ func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error)
 	var jobResponse JobResponse
 	var err error
 
-	jobResponse, err = GetRemoteLongRunningBuild()
+func GetRemoteLongRunningBuildWithAfterScript(shell string) (JobResponse, error) {
+	var jobResponse JobResponse
+	var err error
+	switch shell {
+	default:
+		jobResponse, err = GetRemoteLongRunningBuild()
+	case "cmd":
+		jobResponse, err = GetRemoteLongRunningBuildCMD()
+	}
 	if err != nil {
 		return JobResponse{}, err
 	}

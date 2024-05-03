@@ -1,4 +1,18 @@
-## v16.11.0 (2024-04-18)
+## v16.11.1 (2024-05-03)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler for fixes !4745
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Fix fleeting install subcommand for Windows !4753
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
+
+### Maintenance
+
+- Remove license scanning template !4735
+
+## v16.11.0 (2024-05-03)
 
 ### New features
 
@@ -11,6 +25,11 @@
 
 ### Bug fixes
 
+- Upgrade fleeting and taskscaler for fixes !4745
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Fix fleeting install subcommand for Windows !4753
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
 - Fix log timestamps fixed format !4712
 - Avoid errors when creating files in pwsh 2.0 !4661 (Robin Lambertz @roblabla)
 - Give up on the trace finalUpdate if it keeps on failing !4692
@@ -22,10 +41,11 @@
 
 ### Maintenance
 
+- Remove license scanning template !4735
 - Bump Go version to 1.21.9 !4711
 - Re-enable SAST scanning !4683
 - Update a few dependencies !4700
-- docs: Remove period in the middle of a sentence !4708 (Markus Heidelberg @marcows)
+- Remove period in the middle of a sentence !4708 (Markus Heidelberg @marcows)
 - Runner: Updates docs-lint image for new SVG use !4697
 - Remove extra square brackets in podman section !4705
 - Check docker version before using deprecated arg !4699 (Anthony Juckel @ajuckel)
