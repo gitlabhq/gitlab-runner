@@ -4,7 +4,9 @@ package instance_test
 
 import (
 	"context"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -15,20 +17,18 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 )
 
-func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
+func newRunnerConfig(t *testing.T, shell string, opts ...ssh.Option) *common.RunnerConfig {
 	helpers.SkipIntegrationTests(t, "fleeting-plugin-static", "--version")
 
 	dir := t.TempDir()
 
 	t.Log("Build directory:", dir)
 
-	srv, err := ssh.NewStubServer("root", "password")
+	srv, err := ssh.NewStubServer("root", "password", append([]ssh.Option{ssh.WithExecuteLocal()}, opts...)...)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, srv.Stop())
 	})
-
-	srv.ExecuteLocal = true
 
 	switch shell {
 	case "bash", "sh":
@@ -51,12 +51,14 @@ func newRunnerConfig(t *testing.T, shell string) *common.RunnerConfig {
 				CapacityPerInstance: 10,
 				MaxInstances:        1,
 				Plugin:              "fleeting-plugin-static",
+				ConnectorConfig: common.ConnectorConfig{
+					Timeout: time.Minute,
+				},
 				PluginConfig: common.AutoscalerSettingsMap{
 					"instances": map[string]map[string]string{
 						"local": {
 							"username":      srv.User,
 							"password":      srv.Password,
-							"timeout":       "1m",
 							"external_addr": srv.Host() + ":" + srv.Port(),
 							"internal_addr": srv.Host() + ":" + srv.Port(),
 						},
@@ -143,6 +145,26 @@ func TestBuildSuccess(t *testing.T) {
 
 		require.NoError(t, buildtest.RunBuild(t, build))
 	})
+}
+
+func TestConnectionFailed(t *testing.T) {
+	shell := "bash"
+	if runtime.GOOS == "windows" {
+		shell = "pwsh"
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	require.NoError(t, err)
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner:      newRunnerConfig(t, shell, ssh.WithDontAcceptConnections()),
+	}
+	build.Runner.Autoscaler.ConnectorConfig.Timeout = 5 * time.Second
+	setupAcquireBuild(t, build)
+
+	require.ErrorContains(t, buildtest.RunBuild(t, build), "creating instance environment: dial ssh:")
+	require.ErrorContains(t, buildtest.RunBuild(t, build), "ssh: handshake failed: read tcp")
 }
 
 func TestBuildCancel(t *testing.T) {
