@@ -6,7 +6,7 @@ info: >-
   this page, see
   https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
-# Plan and operate a fleet of shared runners
+# Plan and operate a fleet of instance or group runners
 
 This guide contains best practices for scaling a fleet of runners in a shared service model.
 
@@ -172,15 +172,15 @@ To delete runners and runner managers registered with a runner registration toke
 command.
 
 To delete runners and runner managers created with a runner authentication token, use the
-[UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#delete-shared-runners) or
+[UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#delete-instance-runners) or
 [API](https://docs.gitlab.com/ee/api/runners.html#delete-a-runner).
 Runners created with a runner authentication token are reusable configurations that can be reused in multiple machines.
 If you use the [`gitlab-runner unregister`](../commands/index.md#gitlab-runner-unregister) command, only the
 runner manager is deleted, not the runner.
 
-## Configure instance-level shared runners
+## Configure instance runners
 
-Using instance-level shared runners in an autoscaling configuration (where a runner acts as a "runner manager")
+Using instance runners in an autoscaling configuration (where a runner acts as a "runner manager")
 is an efficient and effective way to start.
 
 The compute capacity of the infrastructure stack where you host your VMs or pods depends on:
@@ -191,7 +191,7 @@ The compute capacity of the infrastructure stack where you host your VMs or pods
 You will probably need to adjust your computing capacity after you start
 running CI/CD workloads and analyzing the performance over time.
 
-For configurations that use instance-level shared runners with an autoscaling executor,
+For configurations that use instance runners with an autoscaling executor,
 we recommend that you start with, at minimum, two runner managers.
 
 The total number of runner managers you may need over time depends on:

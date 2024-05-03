@@ -17,7 +17,7 @@ GitLab Runner is an application that works with GitLab CI/CD to run jobs in a pi
 If you use GitLab.com or GitLab Dedicated, you can run your CI/CD jobs on [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/index.html).
 These runners are managed by GitLab and fully integrated with GitLab.com.
 By default these runners are enabled for all projects.
-You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-shared-runners) if you have
+You can [disable the runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#disable-instance-runners) if you have
 the Owner role for the project.
 
 ## Use self-managed runners
@@ -95,7 +95,7 @@ should have access to it, or if you want to limit it to a specific GitLab group 
 
 There are three types of runners, based on who you want to have access:
 
-- [Shared runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#shared-runners) are for use by all projects
+- [Instance runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#instance-runners) are for use by all projects
 - [Group runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#group-runners) are for all projects and subgroups in a group
 - [Project runners](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#project-runners) are for individual projects
 
