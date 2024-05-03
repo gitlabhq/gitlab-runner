@@ -19,8 +19,10 @@ BUILD_ARCHS ?= -arch '386' -arch 'arm' -arch 'amd64' -arch 'arm64' -arch 's390x'
 BUILD_PLATFORMS ?= -osarch 'darwin/amd64' -osarch 'darwin/arm64' -os 'linux' -os 'freebsd' -os 'windows' ${BUILD_ARCHS}
 S3_UPLOAD_PATH ?= main
 
+ifeq ($(shell mage >/dev/null 2>&1; echo $$?), 0)
 DEB_ARCHS := $(shell mage package:archs deb)
 RPM_ARCHS := $(shell mage package:archs rpm)
+endif
 
 PKG = gitlab.com/gitlab-org/$(PACKAGE_NAME)
 COMMON_PACKAGE_NAMESPACE = $(PKG)/common
@@ -176,7 +178,10 @@ check_mocks: mocks
 		!(git ls-files -o | grep 'mock_') && \
 		echo "Mocks up-to-date!"
 
-check_magefiles: $(shell mage generate)
+generate_magefiles:
+	$(shell mage generate)
+
+check_magefiles: generate_magefiles
 	# Checking the differences
 	@git --no-pager diff --compact-summary --exit-code -- ./magefiles \
 		$(shell git ls-files | grep '^magefiles/') && \

@@ -20,7 +20,7 @@ GitLab Runner is open-source and written in [Go](https://go.dev). It can run
 as a single binary and has no language-specific requirements.
 
 After you install GitLab Runner, you must [create and register runners](../register/index.md)
-with your GitLab instance. This instance can be self-managed, or you can use GitLab.com.
+with your GitLab instance. The GitLab instance can be self-managed or you can use GitLab.com.
 You can also follow the tutorial,
 [Create, register, and run your own project runner](https://docs.gitlab.com/ee/tutorials/create_register_first_runner/).
 

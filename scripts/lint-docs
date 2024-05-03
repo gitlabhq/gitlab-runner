@@ -14,7 +14,7 @@ if command -v vale >/dev/null 2>&1; then
     fi
     vale --config "${GIT_ROOT}/.vale.ini" "${args[@]}" "${GIT_ROOT}/docs" || ((ERROR_RESULTS++))
 else
-    echo "vale is missing, please install it from https://errata-ai.gitbook.io/vale/#installation"
+    echo "Vale is missing, please install it from https://vale.sh/docs/vale-cli/installation/"
 fi
 
 echo "Lint Markdown"
@@ -22,6 +22,13 @@ if command -v markdownlint-cli2 >/dev/null 2>&1; then
     markdownlint-cli2 'docs/**/*.md' || ((ERROR_RESULTS++))
 else
     echo "markdownlint-cli2 is missing, please install it from https://github.com/DavidAnson/markdownlint-cli2#install"
+fi
+
+echo "Check links"
+if command -v lychee >/dev/null 2>&1; then
+   lychee --offline --include-fragments docs/**/*.md || ((ERROR_RESULTS++))
+else
+    echo "Lychee is missing, please install it from https://lychee.cli.rs/installation/"
 fi
 
 if [ "${ERROR_RESULTS}" -ne 0 ]; then

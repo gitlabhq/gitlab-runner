@@ -19,36 +19,15 @@ check version definition:
 
 # Perform documentation linting on Markdown files
 docs lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.19-vale-3.0.7-markdownlint-0.39.0-markdownlint2-0.12.1
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.19-vale-3.4.1-markdownlint2-0.13.0-lychee-0.14.3
   stage: test
   extends:
   - .rules:merge_request_pipelines
   - .no_cache_and_dependencies
   needs: []
   script:
-  # Lint prose and Markdown
+  # Lint content and Markdown, and check links
   - make lint-docs VALE_MIN_ALERT_LEVEL=error
-
-# Perform link checks on published HTML files
-docs check links:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-html:alpine-3.19-ruby-3.2.3-a5032206
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines
-  - .no_cache_and_dependencies
-  needs: []
-  script:
-  # Put documentation in location expected by nanoc and configured in nanoc.yaml. For more information, see:
-  # https://gitlab.com/gitlab-org/gitlab-docs/-/blob/eee6c4c03621ff13743828ad74a8f0e8b96dfe7c/nanoc.yaml#L43
-  - mkdir /tmp/gitlab-runner
-  - mv docs/ /tmp/gitlab-runner
-  - cd /tmp/gitlab-docs
-  # Build HTML from Markdown
-  - make compile
-  # Check the internal links and anchors (in parallel)
-  # Links from the home page aren't checked because they aren't rendered here. For information, see:
-  # https://gitlab.com/gitlab-org/gitlab-docs/-/blob/eee6c4c03621ff13743828ad74a8f0e8b96dfe7c/content/index.erb#L6
-  - "parallel time bundle exec nanoc check ::: internal_links internal_anchors"
 
 check feature flags docs:
   stage: test
