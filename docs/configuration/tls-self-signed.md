@@ -206,8 +206,6 @@ curl --cacert "${CI_SERVER_TLS_CA_FILE}"  ${URL} -o ${FILE}
 
 ### Trusting the certificate for the other CI/CD stages
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3371) in GitLab 13.3.
-
 You can map a certificate file to `/etc/gitlab-runner/certs/ca.crt` on Linux,
 or `C:\GitLab-Runner\certs\ca.crt` on Windows.
 The Runner helper image installs this user-defined `ca.crt` file at start-up, and uses it

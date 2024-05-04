@@ -1887,7 +1887,7 @@ To retry an entirely different error, such as `exceeded quota` 20 times:
 > - [Updated](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3212) in GitLab Runner 15.1.
 
 NOTE:
-In GitLab 14.5 to 15.0, GitLab Runner uses the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
+In 15.0, GitLab Runner uses the entrypoint defined in a Docker image when used with the Kubernetes executor with `kube attach`.
 In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with the Kubernetes executor when `FF_KUBERNETES_HONOR_ENTRYPOINT` is set.
 
 The container entry point has the following known issues:

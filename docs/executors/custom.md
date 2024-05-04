@@ -441,8 +441,7 @@ process and will not try to stop/kill anymore. If both these timeouts
 are reached during `config_exec`, `prepare_exec` or `run_exec` the build
 is marked as failed.
 
-As of [GitLab 13.1](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1743)
-any child process that is spawned by the driver will also receive the
+Any child process that is spawned by the driver will also receive the
 graceful termination process explained above on UNIX based systems. This
 is achieved by having the main process set as a [process group](https://man7.org/linux/man-pages/man2/setpgid.2.html)
 which all the child processes belong too.

@@ -75,7 +75,7 @@ To install GitLab Runner:
    ```
 
    NOTE:
-   In GitLab 14.7 and later, a FIPS 140-2 compliant version of GitLab Runner is
+   A FIPS 140-2 compliant version of GitLab Runner is
    available for RHEL distributions. You can install this version by using
    `gitlab-runner-fips` as the package name, instead of `gitlab-runner`.
 

@@ -98,14 +98,6 @@ GitLab Runner terminates processes when:
 - A job [times out](https://docs.gitlab.com/ee/ci/pipelines/settings.html#timeout).
 - A job is canceled.
 
-### GitLab 13.0 and earlier
-
-On UNIX systems `gitlab-runner` sends a `SIGKILL` to the process to
-terminate it, because the child processes belong to the same process
-group the signal is also sent to them. Windows sends a `taskkill /F /T`.
-
-### GitLab 13.1 and later
-
 On UNIX system `gitlab-runner` sends `SIGTERM` to the process and its
 child processes, and after 10 minutes sends `SIGKILL`. This allows for
 graceful termination for the process. Windows doesn't have a `SIGTERM`
