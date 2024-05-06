@@ -98,6 +98,11 @@ func TestCacheExtractorForNotExistingFile(t *testing.T) {
 	})
 }
 
+func testServeCacheWithETag(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("ETag", "some-etag")
+	testServeCache(w, r)
+}
+
 func testServeCache(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "408 Method not allowed", 408)
@@ -162,32 +167,45 @@ func TestCacheExtractorRemoteServerTimedOut(t *testing.T) {
 }
 
 func TestCacheExtractorRemoteServer(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(testServeCache))
-	defer ts.Close()
-
-	defer os.Remove(cacheExtractorArchive)
-	defer os.Remove(cacheExtractorTestArchivedFile)
-	os.Remove(cacheExtractorArchive)
-	os.Remove(cacheExtractorTestArchivedFile)
-
-	removeHook := helpers.MakeWarningToPanic()
-	defer removeHook()
-	cmd := CacheExtractorCommand{
-		File:    cacheExtractorArchive,
-		URL:     ts.URL + "/cache.zip",
-		Timeout: 0,
+	testCases := map[string]struct {
+		handler http.Handler
+	}{
+		"no ETag": {
+			handler: http.HandlerFunc(testServeCache),
+		},
+		"ETag": {
+			handler: http.HandlerFunc(testServeCacheWithETag),
+		},
 	}
-	assert.NotPanics(t, func() {
-		cmd.Execute(nil)
-	})
 
-	_, err := os.Stat(cacheExtractorTestArchivedFile)
-	assert.NoError(t, err)
+	for _, tc := range testCases {
+		ts := httptest.NewServer(tc.handler)
+		defer ts.Close()
 
-	err = os.Chtimes(cacheExtractorArchive, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
-	assert.NoError(t, err)
+		defer os.Remove(cacheExtractorArchive)
+		defer os.Remove(cacheExtractorTestArchivedFile)
+		os.Remove(cacheExtractorArchive)
+		os.Remove(cacheExtractorTestArchivedFile)
 
-	assert.NotPanics(t, func() { cmd.Execute(nil) }, "archive is up to date")
+		removeHook := helpers.MakeWarningToPanic()
+		defer removeHook()
+		cmd := CacheExtractorCommand{
+			File:    cacheExtractorArchive,
+			URL:     ts.URL + "/cache.zip",
+			Timeout: 0,
+		}
+		assert.NotPanics(t, func() {
+			cmd.Execute(nil)
+		})
+
+		_, err := os.Stat(cacheExtractorTestArchivedFile)
+		assert.NoError(t, err)
+
+		err = os.Chtimes(cacheExtractorArchive, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
+		assert.NoError(t, err)
+
+		assert.NotPanics(t, func() { cmd.Execute(nil) }, "archive is up to date")
+	}
 }
 
 func TestCacheExtractorRemoteServerFailOnInvalidServer(t *testing.T) {
