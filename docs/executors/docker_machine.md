@@ -55,7 +55,7 @@ installed in the same machine:
       - Read [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)
 1. The **first time** you're using Docker Machine, it is best to manually execute the
    `docker-machine create ...` command with your [Docker Machine Driver](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/tree/main/drivers).
-   Run this command alongside with the options that you intend to configure in the
+   Run this command with the options that you intend to configure in the
    [MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section) under the `[runners.machine]` section.
    This will set up the Docker Machine environment properly and will also be a good
    validation of the specified options. After this, you can destroy the machine with
