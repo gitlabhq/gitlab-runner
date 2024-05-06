@@ -69,7 +69,8 @@ $ curl -s "http://localhost:9252/metrics" | grep -E "# HELP"
 ...
 ```
 
-For a complete list of available metrics see [Monitoring runners](../fleet_scaling/index.md#monitoring-runners).
+The list includes [Go-specific process metrics](https://github.com/prometheus/client_golang/blob/v1.19.0/prometheus/go_collector.go).
+For a list of available metrics that do not include Go-specific processes, see [Monitoring runners](../fleet_scaling/index.md#monitoring-runners).
 
 ## `pprof` HTTP endpoints
 
