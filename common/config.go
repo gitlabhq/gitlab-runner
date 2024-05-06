@@ -1142,13 +1142,6 @@ type RunnerSettings struct {
 
 	Environment []string `toml:"environment,omitempty" json:"environment,omitempty" long:"env" env:"RUNNER_ENV" description:"Custom environment variables injected to build environment"`
 
-	// DEPRECATED
-	// TODO: Remove in 16.0. For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29405
-	PreCloneScript string `toml:"pre_clone_script,omitempty" json:"pre_clone_script" long:"pre-clone-script" env:"RUNNER_PRE_CLONE_SCRIPT" description:"[DEPRECATED] Use pre_get_sources_script instead"`
-	// DEPRECATED
-	// TODO: Remove in 16.0. For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29405
-	PostCloneScript string `toml:"post_clone_script,omitempty" json:"post_clone_script" long:"post-clone-script" env:"RUNNER_POST_CLONE_SCRIPT" description:"[DEPRECATED] Use post_get_sources_script instead"`
-
 	PreGetSourcesScript  string `toml:"pre_get_sources_script,omitempty" json:"pre_get_sources_script" long:"pre-get-sources-script" env:"RUNNER_PRE_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner before updating the Git repository an updating submodules."`
 	PostGetSourcesScript string `toml:"post_get_sources_script,omitempty" json:"post_get_sources_script" long:"post-get-sources-script" env:"RUNNER_POST_GET_SOURCES_SCRIPT" description:"Runner-specific commands to be executed on the runner after updating the Git repository and updating submodules."`
 
@@ -1320,22 +1313,6 @@ func (r *RunnerSettings) IsFeatureFlagDefined(name string) bool {
 	_, ok := r.FeatureFlags[name]
 
 	return ok
-}
-
-func (r *RunnerSettings) GetPreGetSourcesScript() string {
-	if r.PreGetSourcesScript != "" {
-		return r.PreGetSourcesScript
-	}
-
-	return r.PreCloneScript
-}
-
-func (r *RunnerSettings) GetPostGetSourcesScript() string {
-	if r.PostGetSourcesScript != "" {
-		return r.PostGetSourcesScript
-	}
-
-	return r.PostCloneScript
 }
 
 func getDuration(source *int, defaultValue time.Duration) time.Duration {
@@ -1944,39 +1921,6 @@ func (c *RunnerConfig) GetVariables() JobVariables {
 	return variables
 }
 
-// rewriteGetSourcesHooks Updates values of (pre|post)_get_sources_script setting with the value of
-// (pre|post)_clone_script.
-//
-// Update happens only when the "source" (old) setting is non empty and the "target" (new) setting
-// is empty
-//
-// DEPRECATED
-// TODO: Remove in 16.0. For more details read https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29405
-func (c *RunnerConfig) rewriteGetSourcesHooks() {
-	log := logrus.WithFields(logrus.Fields{
-		"runner":      c.ShortDescription(),
-		"runner_name": c.Name,
-	})
-
-	if c.PreCloneScript != "" {
-		log.Warning("pre_clone_script is deprecated; use pre_get_sources_script instead")
-
-		if c.PreGetSourcesScript == "" {
-			c.PreGetSourcesScript = c.PreCloneScript
-			log.Warning("pre_get_sources_script is not defined; copying value of pre_clone_script")
-		}
-	}
-
-	if c.PostCloneScript != "" {
-		log.Warning("post_clone_script is deprecated; use post_get_sources_script instead")
-
-		if c.PostGetSourcesScript == "" {
-			c.PostGetSourcesScript = c.PostCloneScript
-			log.Warning("post_get_sources_script is not defined; copying value of post_clone_script")
-		}
-	}
-}
-
 // DeepCopy attempts to make a deep clone of the object
 func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	var r RunnerConfig
@@ -2042,8 +1986,6 @@ func (c *Config) LoadConfig(configFile string) error {
 	}
 
 	for _, runner := range c.Runners {
-		runner.rewriteGetSourcesHooks()
-
 		if runner.Machine != nil {
 			err := runner.Machine.CompilePeriods()
 			if err != nil {

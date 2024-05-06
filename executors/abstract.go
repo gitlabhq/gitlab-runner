@@ -48,8 +48,8 @@ func (e *AbstractExecutor) ExpandValue(value string) string {
 
 func (e *AbstractExecutor) generateShellConfiguration() error {
 	info := e.Shell()
-	info.PreGetSourcesScript = e.Config.GetPreGetSourcesScript()
-	info.PostGetSourcesScript = e.Config.GetPostGetSourcesScript()
+	info.PreGetSourcesScript = e.Config.PreGetSourcesScript
+	info.PostGetSourcesScript = e.Config.PostGetSourcesScript
 	info.PreBuildScript = e.Config.PreBuildScript
 	info.PostBuildScript = e.Config.PostBuildScript
 	shellConfiguration, err := common.GetShellConfiguration(*info)
