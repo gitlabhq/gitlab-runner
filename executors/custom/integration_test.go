@@ -252,8 +252,8 @@ func TestBuildWithGitStrategyCloneWithoutLFS(t *testing.T) {
 
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Runner.PreCloneScript = "echo pre-clone-script"
-		build.Runner.PostCloneScript = "echo post-clone-script"
+		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
+		build.Runner.PostGetSourcesScript = "echo post-clone-script"
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
@@ -276,8 +276,8 @@ func TestBuildWithGitStrategyCloneNoCheckoutWithoutLFS(t *testing.T) {
 
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Runner.PreCloneScript = "echo pre-clone-script"
-		build.Runner.PostCloneScript = "echo post-clone-script"
+		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
+		build.Runner.PostGetSourcesScript = "echo post-clone-script"
 		build.Variables = append(
 			build.Variables,
 			common.JobVariable{Key: "GIT_STRATEGY", Value: "clone"},
@@ -399,8 +399,8 @@ func TestBuildWithGitSSLAndStrategyFetch(t *testing.T) {
 
 		build := newBuild(t, successfulBuild, shell)
 
-		build.Runner.PreCloneScript = "echo pre-clone-script"
-		build.Runner.PostCloneScript = "echo post-clone-script"
+		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
+		build.Runner.PostGetSourcesScript = "echo post-clone-script"
 		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "fetch"})
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
