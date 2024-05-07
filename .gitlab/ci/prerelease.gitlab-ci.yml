@@ -22,14 +22,14 @@ development servercore1809 helper docker images:
   extends:
     - .windows1809
     - .release_windows_docker_images
-    - .rules:release:development:merge-requests
+    - .rules:release:development:merge-requests:no-community-mr
     - .docker_images_registry_base_variables_overwrite
 
 development nanoserver1809 helper docker images:
   extends:
     - .windows1809_nano
     - .release_windows_docker_images
-    - .rules:release:development:merge-requests
+    - .rules:release:development:merge-requests:no-community-mr
     - .docker_images_registry_base_variables_overwrite
 
 development servercore21H2 helper docker images:
