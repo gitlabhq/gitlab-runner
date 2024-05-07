@@ -13,6 +13,11 @@ type mockLogProcessor struct {
 	mock.Mock
 }
 
+// Finalize provides a mock function with given fields:
+func (_m *mockLogProcessor) Finalize() {
+	_m.Called()
+}
+
 // Process provides a mock function with given fields: ctx
 func (_m *mockLogProcessor) Process(ctx context.Context) (<-chan string, <-chan error) {
 	ret := _m.Called(ctx)
