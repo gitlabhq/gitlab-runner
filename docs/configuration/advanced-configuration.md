@@ -638,7 +638,7 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 | `MaxBuilds`         | Maximum job (build) count before machine is removed. |
 | `MachineName`       | Name of the machine. It **must** contain `%s`, which is replaced with a unique machine identifier. |
 | `MachineDriver`     | Docker Machine `driver`. View details in the [Cloud Providers Section in the Docker Machine configuration](autoscale.md#supported-cloud-providers). |
-| `MachineOptions`    |  Docker Machine options for the MachineDriver. For more information, see [Supported Cloud Providers). For more information about all options for AWS, see the [AWS](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md) and [GCP](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md) projects in the Docker Machine repository. |
+| `MachineOptions`    |  Docker Machine options for the MachineDriver. For more information, see [Supported Cloud Providers](autoscale.md#supported-cloud-providers). For more information about all options for AWS, see the [AWS](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/aws.md) and [GCP](https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/blob/main/docs/drivers/gce.md) projects in the Docker Machine repository. |
 
 ### The `[[runners.machine.autoscaling]]` sections
 
