@@ -606,7 +606,7 @@ The following parameters define the SSH connection.
 | `user`     | Username. |
 | `password` | Password. |
 | `identity_file` | File path to SSH private key (`id_rsa`, `id_dsa`, or `id_edcsa`). The file must be stored unencrypted. |
-| `disable_strict_host_key_checking` | In GitLab 14.3 and later, this value determines if the runner should use strict host key checking. Default is `true`. In GitLab 15.0, the default value, or the value if it's not specified, will be `false`. |
+| `disable_strict_host_key_checking` | This value determines if the runner should use strict host key checking. Default is `true`. In GitLab 15.0, the default value, or the value if it's not specified, will be `false`. |
 
 Example:
 
@@ -927,7 +927,7 @@ The following parameters define S3 storage for cache.
 | `BucketName`        | string           | Name of the storage bucket where cache is stored. |
 | `BucketLocation`    | string           | Name of S3 region. |
 | `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
-| `AuthenticationType`| string           | In GitLab 14.4 and later, set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
+| `AuthenticationType`| string           | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
 | `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. |
 | `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. |
 
@@ -1292,8 +1292,6 @@ valid and point to the same image.
 
 #### When using PowerShell Core
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27252) in GitLab 13.9.
-
 An additional version of the helper image for Linux,
 which contains PowerShell Core, is published with the `gitlab/gitlab-runner-helper:XYZ-pwsh` tag.
 
@@ -1369,9 +1367,6 @@ required for your CI, we recommend installing them in some other
 place.
 
 ## The `[runners.referees]` section
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/1545) in GitLab Runner 12.7.
-> - Requires [GitLab v12.6](https://about.gitlab.com/releases/2019/12/22/gitlab-12-6-released/) or later.
 
 Use GitLab Runner referees to pass extra job monitoring data to GitLab. Referees are workers in the runner manager that query and collect additional data related to a job. The results
 are uploaded to GitLab as job artifacts.

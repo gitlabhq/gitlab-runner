@@ -61,8 +61,6 @@ connecting to via SSH.
 
 ## Configure strict host key checking
 
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3074) in GitLab 14.3.
-
 To enable SSH `StrictHostKeyChecking`, make sure the `[runners.ssh.disable_strict_host_key_checking]` is set
 to `false`. The current default is `true`.
 

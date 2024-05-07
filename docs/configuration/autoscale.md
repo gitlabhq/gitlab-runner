@@ -462,15 +462,6 @@ default can be stated as `Timezone = "Local"` explicitly.
 More information about the syntax of `[[runner.machine.autoscaling]]` sections can be found
 in [GitLab Runner - Advanced Configuration - The `[runners.machine]` section](advanced-configuration.md#the-runnersmachine-section).
 
-<!--- start_remove The following content will be removed on remove_date: '2024-04-25' -->
-
-## Off peak time mode configuration (removed)
-
-This feature was [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/25555) in GitLab 14.0
-Use [autoscaling periods](#configure-autoscaling-periods) instead.
-
-<!--- end_remove -->
-
 ## Distributed runners caching
 
 NOTE:

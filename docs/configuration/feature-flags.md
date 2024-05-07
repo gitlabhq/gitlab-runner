@@ -6,8 +6,6 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # GitLab Runner feature flags
 
-> - Introduced in GitLab 11.4.
-
 WARNING:
 Data corruption, stability degradation, performance degradation, and security issues may occur if you enable a feature that's disabled by default. Before you enable feature flags, you should be aware of the risks involved. For more information, see [Risks when enabling features still in development](https://docs.gitlab.com/ee/administration/feature_flags.html#risks-when-enabling-features-still-in-development).
 
