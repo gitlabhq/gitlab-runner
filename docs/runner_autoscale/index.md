@@ -6,6 +6,10 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # GitLab Runner Autoscaling
 
+DETAILS:
+**Tier:** Free, Premium, Ultimate
+**Offering:** GitLab.com, Self-managed
+
 You can use GitLab Runner autoscaling to automatically scale the runner on public cloud instances.
 When you configure a runner to use an autoscaler, you can manage increases in CI/CD job load by
 leveraging your cloud infrastructure to run multiple jobs simultaneously.
