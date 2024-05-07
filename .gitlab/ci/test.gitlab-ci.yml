@@ -294,7 +294,7 @@ windows 1809 compile tests:
   extends:
   - .windows unit test
   - .windows1809
-  - .rules:merge_request_pipelines:no_docs
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
   parallel: null
   script:
     - go test -count=1 --tags=integration,kubernetes -run=nope ./...
@@ -316,7 +316,7 @@ windows 1809 unit tests:
   extends:
   - .windows unit test
   - .windows1809
-  - .rules:merge_request_pipelines:no_docs
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
 
 windows 21H2 unit tests:
   extends:
