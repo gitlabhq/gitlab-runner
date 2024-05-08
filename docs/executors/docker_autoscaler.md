@@ -13,7 +13,7 @@ DETAILS:
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
 
 This feature is in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) and is not recommended for production use. 
-For production environments, you should use the [Docker Machine executor](../fleet_scaling/index.md#monitoring-runners).
+For production environments, you should use the [Docker Machine executor](../fleet_scaling/index.md#docker-machine-executor).
 
 Before you use the Docker Autoscaler executor, see the [feedback issue](https://gitlab.com/gitlab-org/gitlab/-/issues/408131) about
 GitLab Runner autoscaling for a list of known issues.
