@@ -17,6 +17,7 @@ For production environments, you should use the [Docker Machine executor](../fle
 
 Before you use the Docker Autoscaler executor, see the [feedback issue](https://gitlab.com/gitlab-org/gitlab/-/issues/408131) about
 GitLab Runner autoscaling for a list of known issues.
+
 The Docker Autoscaler executor is an autoscale-enabled Docker executor that creates instances on-demand to
 accommodate the jobs that the runner manager processes. It wraps the [Docker executor](docker.md) so that all
 Docker executor options and features are supported.
@@ -24,10 +25,6 @@ Docker executor options and features are supported.
 The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
 _Fleeting_ is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
 like Google Cloud, AWS, and Azure.
-
-The Docker Autoscaler executor is still in Beta so it is [**not** recommended for production use](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). For Production environments, please consider following the [Docker Machine executor fleet scaling guide instead](../fleet_scaling/index.html#monitoring-runners).
-
-Before using the Docker Autoscaler executor, consider reading through the [GitLab Runner Autoscaling - Feedback issue for the new runner autoscaling solution issue](https://gitlab.com/gitlab-org/gitlab/-/issues/408131) and understanding limitations.
 
 ## Install a fleeting plugin
 
