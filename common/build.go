@@ -1276,8 +1276,8 @@ func (b *Build) expandContainerOptions() {
 	}
 }
 
-func (b *Build) getURLWithAuth(URL string) string {
-	u, _ := url.Parse(URL)
+func (b *Build) getURLWithAuth(repoURL string) string {
+	u, _ := url.Parse(repoURL)
 
 	if u.Scheme == "ssh" {
 		if u.User == nil {

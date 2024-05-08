@@ -84,7 +84,7 @@ func (n *client) getLastUpdate() string {
 }
 
 func (n *client) setLastUpdate(headers http.Header) {
-	if lu := headers.Get("X-GitLab-Last-Update"); len(lu) > 0 {
+	if lu := headers.Get("X-GitLab-Last-Update"); lu != "" {
 		n.lastUpdate = lu
 	}
 }

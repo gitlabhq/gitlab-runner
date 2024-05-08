@@ -172,7 +172,7 @@ func (mr *RunCommand) Start(_ service.Service) error {
 
 	userModeWarning(false)
 
-	if len(mr.WorkingDirectory) > 0 {
+	if mr.WorkingDirectory != "" {
 		err := os.Chdir(mr.WorkingDirectory)
 		if err != nil {
 			return err

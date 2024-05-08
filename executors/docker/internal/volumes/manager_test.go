@@ -139,7 +139,7 @@ func TestDefaultManager_CreateUserVolumes_HostVolume(t *testing.T) {
 			err := m.Create(context.Background(), existingBinding)
 			require.NoError(t, err)
 
-			if len(testCase.volume) > 0 {
+			if testCase.volume != "" {
 				volumeParser.On("ParseVolume", testCase.volume).
 					Return(testCase.parsedVolume, nil).
 					Once()
@@ -215,7 +215,7 @@ func TestDefaultManager_CreateUserVolumes_CacheVolume_Disabled(t *testing.T) {
 			err := m.Create(context.Background(), "/host:/duplicated")
 			require.NoError(t, err)
 
-			if len(testCase.volume) > 0 {
+			if testCase.volume != "" {
 				volumeParser.On("ParseVolume", testCase.volume).
 					Return(testCase.parsedVolume, nil).
 					Once()

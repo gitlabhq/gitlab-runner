@@ -894,12 +894,11 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 }
 
 func (s *executor) buildRedirectionCmd(shell string) string {
-	switch shell {
-	// powershell outputs utf16, so we re-encode the output to utf8
-	// this is important because our json decoder that detects the exit status
-	// of a job requires utf8.Converting command output to strings with %{"$_"}
-	// prevents a powershell complaint about native command output on stderr.
-	case shells.SNPowershell:
+	if shell == shells.SNPowershell {
+		// powershell outputs utf16, so we re-encode the output to utf8
+		// this is important because our json decoder that detects the exit status
+		// of a job requires utf8.Converting command output to strings with %{"$_"}
+		// prevents a powershell complaint about native command output on stderr.
 		return fmt.Sprintf("2>&1 | %%{ \"$_\" } | Out-File -Append -Encoding UTF8 %s", s.logFile())
 	}
 
@@ -2207,7 +2206,7 @@ func (s *executor) getDNSPolicy() api.DNSPolicy {
 }
 
 func (s *executor) getHelperImage() string {
-	if len(s.Config.Kubernetes.HelperImage) > 0 {
+	if s.Config.Kubernetes.HelperImage != "" {
 		return s.ExpandValue(s.Config.Kubernetes.HelperImage)
 	}
 
