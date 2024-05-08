@@ -26,8 +26,7 @@ runners on public cloud virtual machines. You can read the issue discussing the
 [strategy in response to the deprecation of Docker Machine](https://gitlab.com/gitlab-org/gitlab/-/issues/341856)
 for more details.
 
-NOTE:
-Docker Machine autoscaler will create one container per VM, regardless of `limit` and `concurrent` configuration.
+Docker Machine autoscaler creates one container per VM, regardless of the `limit` and `concurrent` configuration.
 
 ## Overview
 
