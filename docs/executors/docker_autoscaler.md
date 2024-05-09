@@ -12,6 +12,12 @@ DETAILS:
 > - Introduced in GitLab Runner 15.11.0 as an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
 
+This feature is in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) and is not recommended for production use. 
+For production environments, you should use the [Docker Machine executor](../fleet_scaling/index.md#docker-machine-executor).
+
+Before you use the Docker Autoscaler executor, see the [feedback issue](https://gitlab.com/gitlab-org/gitlab/-/issues/408131) about
+GitLab Runner autoscaling for a list of known issues.
+
 The Docker Autoscaler executor is an autoscale-enabled Docker executor that creates instances on-demand to
 accommodate the jobs that the runner manager processes. It wraps the [Docker executor](docker.md) so that all
 Docker executor options and features are supported.
