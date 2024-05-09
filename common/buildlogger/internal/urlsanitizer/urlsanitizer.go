@@ -125,7 +125,7 @@ func (s *URLSanitizer) Write(p []byte) (n int, err error) {
 			continue
 		}
 
-		key := append(s.match, p[n:n+off]...)
+		key := append(s.match, p[n:n+off]...) //nolint:gocritic
 		n += off + 1
 
 		// check if the key is one supported, and if so, write data until this

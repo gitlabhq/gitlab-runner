@@ -392,7 +392,7 @@ func (s *StubSSHServer) handleSession(ctx context.Context, channel ssh.NewChanne
 			if len(s.Shell) == 0 {
 				s.Shell = []string{"sh", "-c"}
 			}
-			args := append(s.Shell, string(command.Value))
+			args := append(s.Shell, string(command.Value)) //nolint:gocritic
 
 			cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 			cmd.Dir = s.tempDir

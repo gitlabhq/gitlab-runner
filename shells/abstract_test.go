@@ -838,7 +838,7 @@ func TestGitFetchFlags(t *testing.T) {
 			command = append(command, test.expectedGitFetchFlags...)
 
 			if test.depth == 0 {
-				unshallowArgs := append(command, "--unshallow")
+				unshallowArgs := append(command, "--unshallow") //nolint:gocritic
 				mockWriter.EXPECT().IfFile(".git/shallow").Once()
 				mockWriter.EXPECT().Command("git", unshallowArgs...).Once()
 				mockWriter.EXPECT().Else().Once()

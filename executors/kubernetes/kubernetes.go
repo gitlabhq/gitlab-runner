@@ -811,7 +811,7 @@ func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []strin
 			// We use redirection here since the "gitlab-runner-build" helper doesn't pass input args
 			// to the shell it executes, so we technically pass the script to the stdin of the underlying shell
 			// translates roughly to "gitlab-runner-build <<< /stage/script/path.sh"
-			containerCommand = append(
+			containerCommand = append( //nolint:gocritic
 				s.helperImageInfo.Cmd,
 				"<<<",
 				s.scriptPath(cmd.Stage),

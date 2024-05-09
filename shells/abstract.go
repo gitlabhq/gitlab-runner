@@ -512,10 +512,10 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(depth))
 	}
 
-	fetchArgs = append(fetchArgs, build.GetGitFetchFlags()...)
+	fetchArgs = append(fetchArgs, build.GetGitFetchFlags()...) //nolint:gocritic
 
 	if depth <= 0 {
-		fetchUnshallowArgs := append(fetchArgs, "--unshallow")
+		fetchUnshallowArgs := append(fetchArgs, "--unshallow") //nolint:gocritic
 
 		w.IfFile(".git/shallow")
 		w.Command("git", fetchUnshallowArgs...)
@@ -1169,11 +1169,11 @@ func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info com
 			}
 
 			if len(cleanFlags) > 0 {
-				submoduleCleanArgs := append(submoduleArgs, append([]string{"git"}, cleanArgs...)...)
+				submoduleCleanArgs := append(submoduleArgs, append([]string{"git"}, cleanArgs...)...) //nolint:gocritic
 				w.Command("git", submoduleCleanArgs...)
 			}
 
-			submoduleResetArgs := append(submoduleArgs, append([]string{"git"}, resetArgs...)...)
+			submoduleResetArgs := append(submoduleArgs, append([]string{"git"}, resetArgs...)...) //nolint:gocritic
 			w.Command("git", submoduleResetArgs...)
 		}
 	case common.GitNone:

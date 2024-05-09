@@ -63,7 +63,7 @@ func createPackage(blueprint Blueprint, opts []string) error {
 
 	pkgName := build.AppName
 
-	args := append(opts, []string{
+	args := append(opts, []string{ //nolint:gocritic
 		"--package", p.pkgFile,
 		"--force",
 		"--iteration", blueprint.Env().Value(iteration),
