@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"hash/crc32"
+	"path/filepath"
 
 	sm "cloud.google.com/go/secretmanager/apiv1"
 	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
@@ -112,6 +113,16 @@ func toTokenSource(resp *sts.GoogleIdentityStsV1ExchangeTokenResponse) oauth2.To
 }
 
 func secretVersionResourceName(secret *common.GCPSecretManagerSecret) string {
+	// Support secrets where the full secret resource path is provided. Note that filepath.Match can only return an error
+	// when the pattern is malformed which should be impossible as it is a static string. If the pattern is still somehow
+	// malformed or to handle filepath.Match gaining additional errors in future, we revert to the implicit use of project
+	// number if an error is returned.
+	isSecretResourceName, err := filepath.Match("projects/*/secrets/*", secret.Name)
+	if isSecretResourceName && err == nil {
+		return fmt.Sprintf("%s/versions/%s", secret.Name, secret.Version)
+	}
+
+	// Any other secret format is considered to be a plain secret id.
 	return fmt.Sprintf("projects/%s/secrets/%s/versions/%s", secret.Server.ProjectNumber, secret.Name, secret.Version)
 }
 
