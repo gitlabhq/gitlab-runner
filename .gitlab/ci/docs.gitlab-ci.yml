@@ -67,10 +67,10 @@ check Kubernetes API docs:
     - job: 'prepare ci image'
       optional: true
   script:
-    - cp docs/executors/kubernetes.md docs/executors/kubernetes.md.orig
+    - cp docs/executors/kubernetes/index.md docs/executors/kubernetes/index.md.orig
     - mage k8s:generatePermissionsDocs
     - |
-        diff docs/executors/kubernetes.md.orig docs/executors/kubernetes.md || (
+        diff docs/executors/kubernetes/index.md.orig docs/executors/kubernetes/index.md || (
           echo
           echo "Kubernetes API list in documentation is not up-to-date"
           echo "Run 'mage k8s:generatePermissionsDocs' to update it"

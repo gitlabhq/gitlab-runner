@@ -1114,7 +1114,7 @@ Example:
 > - Introduced in GitLab Runner v1.6.0.
 
 The following parameters define Kubernetes behavior.
-For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes.md).
+For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes/index.md).
 
 | Parameter        | Type    | Description |
 |------------------|---------|-------------|
@@ -1331,7 +1331,7 @@ GitLab Runner clones the repository to a path that exists under a
 base path better known as the _Builds Directory_. The default location
 of this base directory depends on the executor. For:
 
-- [Kubernetes](../executors/kubernetes.md),
+- [Kubernetes](../executors/kubernetes/index.md),
   [Docker](../executors/docker.md) and [Docker Machine](../executors/docker_machine.md) executors, it is
   `/builds` inside of the container.
 - [Shell](../executors/shell.md) executor, it is `$PWD/builds`.
