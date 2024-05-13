@@ -438,7 +438,7 @@ and then AWS won't accept any more. Then once the Spot price is acceptable, you
 are locked out for a bit because the call amount limit is exceeded.
 
 If you encounter that case, you can use the following command in the runner manager
-machine to see the Docker Machines state:
+machine to see the Docker Machine's state:
 
 ```shell
 docker-machine ls -q --filter state=Error --format "{{.NAME}}"
