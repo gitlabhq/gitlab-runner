@@ -78,7 +78,7 @@ curl -LJO "https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/
 
 1. [Register a runner](../register/index.md)
 
-### Update
+### Upgrade
 
 Download the latest package for your system then upgrade as follows:
 
@@ -162,7 +162,7 @@ the `install` command. This means that some of the job functions like cache and
 artifacts will need to execute `/usr/local/bin/gitlab-runner` command,
 therefore the user under which jobs are run, needs to have access to the executable.
 
-### Update
+### Upgrade
 
 1. Stop the service (you need elevated command prompt as before):
 

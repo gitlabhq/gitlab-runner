@@ -124,9 +124,9 @@ Pin-Priority: 1001
 EOF
 ```
 
-## Updating GitLab Runner
+## Upgrade GitLab Runner
 
-Simply execute to install latest version:
+To install the latest version of GitLab Runner:
 
 For Debian/Ubuntu/Mint:
 

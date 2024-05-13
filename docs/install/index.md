@@ -109,3 +109,17 @@ Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814
 
 - [Install in autoscaling mode using Docker machine](../executors/docker_machine.md)
 - [Install the registry and cache servers](../configuration/speed_up_job_execution.md)
+
+## Upgrading GitLab Runner
+
+To upgrade your version of GitLab Runner, see the instructions for each operating system:
+
+- [Docker](docker.md#upgrade-version)
+- [Debian, Ubuntu, Mint, RHEL, CentOS, or Fedora](linux-repository.md#upgrade-gitlab-runner)
+- [FreeBSD](freebsd.md#upgrading-to-gitlab-runner-10)
+- GNU/Linux
+  - [Upgrade with the deb/rpm package](linux-manually.md#upgrade)
+  - [Upgrade with the binary file](linux-manually.md#upgrade-1)
+- [Kubernetes](kubernetes.md#upgrading-gitlab-runner-using-the-helm-chart)
+- [macOS](osx.md#upgrade-gitlab-runner)
+- [Windows](windows.md#upgrade)
