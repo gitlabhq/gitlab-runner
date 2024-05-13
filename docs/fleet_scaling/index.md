@@ -133,7 +133,7 @@ manager-only configuration, the runner agent is itself not executing any CI/CD j
 - You should test the performance of your CI/CD jobs on various machine types.
 - You should consider optimizing your compute hosts based on speed or cost.
 
-#### [Kubernetes executor](../executors/kubernetes.md)
+#### [Kubernetes executor](../executors/kubernetes/index.md)
 
 - The runner manager provisions pods on the target Kubernetes cluster.
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.

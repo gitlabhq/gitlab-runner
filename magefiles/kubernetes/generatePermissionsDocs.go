@@ -15,7 +15,7 @@ import (
 const (
 	startPlaceholder = "<!-- k8s_api_permissions_list_start -->"
 	endPlaceholder   = "<!-- k8s_api_permissions_list_end -->"
-	docsFilePath     = "docs/executors/kubernetes.md"
+	docsFilePath     = "docs/executors/kubernetes/index.md"
 )
 
 var tableTemplate = fmt.Sprintf(` %s

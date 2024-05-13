@@ -15,7 +15,7 @@ Kubernetes cluster is by using the `gitlab-runner` Helm chart.
 
 This chart configures GitLab Runner to:
 
-- Run using the [Kubernetes executor](../executors/kubernetes.md) for GitLab Runner.
+- Run using the [Kubernetes executor](../executors/kubernetes/index.md) for GitLab Runner.
 - For each new job it receives from GitLab CI/CD, provision a new pod within the specified namespace to run it.
 
 ## Prerequisites
