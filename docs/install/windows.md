@@ -63,7 +63,7 @@ With GitLab Runner 10, the executable was renamed to `gitlab-runner`.
 Voila! Runner is installed, running, and will start again after each system reboot.
 Logs are stored in Windows Event Log.
 
-## Update
+## Upgrade
 
 1. Stop the service (you need an [elevated command prompt](https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/starting-windows-powershell?view=powershell-7.3#with-administrative-privileges-run-as-administrator) as before):
 
