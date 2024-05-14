@@ -72,9 +72,9 @@ var (
 	}
 )
 
-func NewClient(URL string, namespace string) (Client, error) {
+func NewClient(apiURL string, namespace string) (Client, error) {
 	config := &api.Config{
-		Address: URL,
+		Address: apiURL,
 	}
 
 	client, err := newAPIClient(config)

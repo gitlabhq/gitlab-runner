@@ -48,7 +48,7 @@ func getKubeClientConfig(
 	config *common.KubernetesConfig,
 	overwrites *overwrites,
 ) (kubeConfig *restclient.Config, err error) {
-	if len(config.Host) > 0 {
+	if config.Host != "" {
 		kubeConfig, err = getOutClusterClientConfig(config)
 	} else {
 		kubeConfig, err = guessClientConfig()

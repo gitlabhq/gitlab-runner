@@ -121,7 +121,7 @@ func GetDefaultSnapshot(vmName string) (string, error) {
 		if pos >= 0 {
 			snapshot := line[pos+2:]
 			snapshot = strings.TrimSpace(snapshot)
-			if len(snapshot) > 0 { // It uses UUID so it should be 38
+			if snapshot != "" { // It uses UUID so it should be 38
 				return snapshot, nil
 			}
 		}

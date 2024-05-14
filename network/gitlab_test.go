@@ -2296,7 +2296,7 @@ func checkTestArtifactsUploadHandlerContent(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set(ContentType, "application/json")
 
-	if len(testCase.formValueKey) > 0 {
+	if testCase.formValueKey != "" {
 		if r.FormValue(testCase.formValueKey) != body {
 			return
 		}

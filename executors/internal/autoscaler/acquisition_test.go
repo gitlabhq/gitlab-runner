@@ -223,10 +223,8 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 				if tc.tunnelDialErr != nil || tc.mockNestingClientDelete {
 					nestingClient.EXPECT().Delete(mock.Anything, testVM.id).Return(nil).Once()
 				}
-			} else {
-				if tc.mockDialerClose {
-					fleetingDialer.EXPECT().Close().Return(nil).Once()
-				}
+			} else if tc.mockDialerClose {
+				fleetingDialer.EXPECT().Close().Return(nil).Once()
 			}
 
 			logger, _ := test.NewNullLogger()

@@ -51,7 +51,7 @@ func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
 	wsURL := s.getTerminalWebSocketURL()
 
 	caCert := ""
-	if len(config.CAFile) > 0 {
+	if config.CAFile != "" {
 		buf, err := os.ReadFile(config.CAFile)
 		if err != nil {
 			return nil, err

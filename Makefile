@@ -51,7 +51,7 @@ MOCKERY = mockery
 SPLITIC = splitic
 MAGE = mage
 
-GOLANGLINT_VERSION ?= v1.53.2
+GOLANGLINT_VERSION ?= v1.58.0
 GOLANGLINT ?= .tmp/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= .tmp/goargs.so
 

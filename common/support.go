@@ -153,7 +153,7 @@ func GetRemoteFailingMultistepBuild(failingStepName StepName) (JobResponse, erro
 
 	for i, step := range jobResponse.Steps {
 		if step.Name == failingStepName {
-			jobResponse.Steps[i].Script = append(step.Script, "exit 1")
+			jobResponse.Steps[i].Script = append(step.Script, "exit 1") //nolint:gocritic
 		}
 	}
 

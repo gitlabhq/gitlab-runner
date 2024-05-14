@@ -667,7 +667,7 @@ func (s *KubernetesPodSpec) PodSpecPatch() ([]byte, KubernetesPodSpecPatchType, 
 	}
 
 	if s.PatchPath != "" {
-		if len(s.Patch) > 0 {
+		if s.Patch != "" {
 			return nil, "", fmt.Errorf("%w (%s)", errPatchAmbiguous, s.Name)
 		}
 

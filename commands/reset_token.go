@@ -52,7 +52,7 @@ func (c *ResetTokenCommand) resetSingleRunnerToken() bool {
 }
 
 func (c *ResetTokenCommand) getRunnerCredentials() (*common.RunnerCredentials, error) {
-	if len(c.Name) > 0 {
+	if c.Name != "" {
 		runnerConfig, err := c.RunnerByName(c.Name)
 		if err != nil {
 			return nil, err

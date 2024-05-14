@@ -1,6 +1,6 @@
 run:
   concurrency: 8
-  deadline: 1m
+  timeout: 1m
   issues-exit-code: 1
   tests: true
   skip-dirs:
@@ -9,7 +9,9 @@ run:
   - mock_*.go
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
+      path: stdout
   print-issued-lines: true
   print-linter-name: true
 

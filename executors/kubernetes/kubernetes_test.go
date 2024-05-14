@@ -1025,10 +1025,8 @@ func TestCleanup(t *testing.T) {
 			Pod:      nil, // a failed POD create request will cause a nil Pod
 			Services: []api.Service{{ObjectMeta: objectMeta}},
 			ClientFunc: func(t *testing.T, req *http.Request) (*http.Response, error) {
-				switch p, m := req.URL.Path, req.Method; {
-				default:
-					return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
-				}
+				p, m := req.URL.Path, req.Method
+				return nil, fmt.Errorf("unexpected request. method: %s, path: %s", m, p)
 			},
 			Error: false,
 		},

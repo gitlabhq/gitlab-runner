@@ -314,7 +314,7 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 		stage = "build_script"
 	}
 
-	args := append(e.config.RunArgs, scriptFile, string(stage))
+	args := append(e.config.RunArgs, scriptFile, string(stage)) //nolint:gocritic
 
 	opts := prepareCommandOpts{
 		executable: e.config.RunExec,

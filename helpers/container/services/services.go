@@ -45,7 +45,7 @@ func SplitNameAndVersion(serviceDescription string) Service {
 	service := Service{}
 	service.Service = registry + imageName
 
-	if len(imageVersion) > 0 {
+	if imageVersion != "" {
 		service.ImageName = serviceDescription
 		service.Version = imageVersion
 	} else {
