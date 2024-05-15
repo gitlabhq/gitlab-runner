@@ -28,18 +28,7 @@ like Google Cloud, AWS, and Azure.
 
 ## Install a fleeting plugin
 
-To enable autoscaling for your target platform, install a fleeting plugin. You can install
-the AWS, Google Cloud, or Azure fleeting plugin. The AWS, Google Cloud and Azure plugins are currently in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). See [epic 2502](https://gitlab.com/groups/gitlab-org/-/epics/2502) for a timeline.
-
-For other official plugins developed by GitLab, see the [fleeting project](https://gitlab.com/gitlab-org/fleeting).
-
-To install the plugin:
-
-1. Install the binary for your host platform:
-   - [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases)
-   - [Google Cloud fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
-   - [Azure fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-azure/-/releases)
-1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
+To install a plugin for your target platform, see [Install the fleeting plugin](../fleet_scaling/fleeting.md#install-a-fleeting-plugin).
 
 ## Configure Docker Autoscaler
 
@@ -98,7 +87,10 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-aws"
+    plugin = "aws" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-aws"
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -164,7 +156,10 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-googlecompute"
+    plugin = "googlecloud" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-googlecompute"
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -228,7 +223,10 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-azure"
+    plugin = "azure" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-azure"
 
     capacity_per_instance = 1
     max_use_count = 1

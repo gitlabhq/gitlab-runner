@@ -1,0 +1,196 @@
+---
+stage: Verify
+group: Runner
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+---
+
+# Fleeting
+
+[Fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) is a library that GitLab Runner uses to provide a plugin-based abstraction for a cloud provider's instance groups.
+
+The following executors use fleeting to scale runners:
+
+- [Docker Autoscaler](../executors/docker_autoscaler.md)
+- [Instance](../executors/instance.md)
+
+GitLab maintains these official plugins (currently in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta)):
+
+- [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws), which uses [AWS Autoscaling Groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html).
+- [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud), which uses [Google Cloud Instance Groups](https://cloud.google.com/compute/docs/instance-groups).
+- [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure), which uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview).
+
+To configure fleeting, in the `config.toml`, use the [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
+configuration section.
+
+## Install a fleeting plugin
+
+To install a fleeting plugin, use either the:
+
+- OCI registry distribution (recommended)
+- Manual binary installation
+
+## Install with the OCI registry distribution
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4690) OCI registry distribution in GitLab Runner 16.11
+
+Plugins are installed to `~/.config/fleeting/plugins` on UNIX systems, and `%APPDATA%/fleeting/plugins` on Windows. To override
+where plugins are installed, update the environment variable `FLEETING_PLUGIN_PATH`.
+
+To install the fleeting plugin:
+
+1. In the `config.toml`, in the `[runners.autoscaler]` section, add the fleeting plugin:
+
+   ::Tabs
+
+   :::TabTitle AWS
+
+   ```toml
+   [[runners]]
+     name = "my runner"
+     url = "https://gitlab.com"
+     token = "<token>"
+     shell = "sh"
+
+   executor = "instance"
+
+   [runners.autoscaler]
+     plugin = "aws:latest"
+   ```
+
+   :::TabTitle Google Cloud
+
+   ```toml
+   [[runners]]
+     name = "my runner"
+     url = "https://gitlab.com"
+     token = "<token>"
+     shell = "sh"
+
+   executor = "instance"
+
+   [runners.autoscaler]
+     plugin = "googlecloud:latest"
+   ```
+
+   :::TabTitle Azure
+
+   ```toml
+   [[runners]]
+     name = "my runner"
+     url = "https://gitlab.com"
+     token = "<token>"
+     shell = "sh"
+
+   executor = "instance"
+
+   [runners.autoscaler]
+     plugin = "azure:latest"
+   ```
+
+   ::EndTabs
+
+1. Run `gitlab-runner fleeting install`.
+
+### `plugin` formats
+
+The `plugin` parameter supports the following formats:
+
+- `<name>`
+- `<name>:<version constraint>`
+- `<repository>/<name>`
+- `<repository>/<name>:<version constraint>`
+- `<registry>/<repository>/<name>`
+- `<registry>/<repository>/<name>:<version constraint>`
+
+Where:
+
+- `registry.gitlab.com` is the default registry.
+- `gitlab-org/fleeting/plugins` is the default repository.
+- `latest` is the default version.
+
+### Version constraint formats
+
+The `gitlab-runner fleeting install` command uses the version constraint to find the latest matching
+version in the remote repository.
+
+When GitLab Runner runs, it uses the version constraint to find the latest matching version that is installed locally.
+
+Use the following version constraint formats:
+
+| Format                    | Description                                                                                               |
+|---------------------------|-----------------------------------------------------------------------------------------------------------|
+| `latest`                  | Latest version.                                                                                            |
+| `<MAJOR>`                 | Selects the major version. For example, `1` selects the version that matches `1.*.*`.                     |
+| `<MAJOR>:<MINOR>`         | Selects the major and minor version. For example, `1:5` selects the latest version that matches `1.5.*`. |
+| `<MAJOR>:<MINOR>:<PATCH>` | Selects the major and minor version, and patch. For example, `1:5:1` selects the version `1.5.1`.         |
+
+## Install binary manually
+
+To manually install a fleeting plugin:
+
+1. Download the fleeting plugin binary for your system:
+   - [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws/-/releases).
+   - [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud/-/releases)
+   - [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure/-/releases)
+1. Ensure the binary has a name in the format of `fleeting-plugin-<name>`. For example, `fleeting-plugin-aws`.
+1. Ensure the binary can be discovered from `$PATH`. For example, move it to `/usr/bin/local`.
+1. In the `config.toml`, in the `[runners.autoscaler]` section, add the fleeting plugin. For example:
+
+   ::Tabs
+
+   :::TabTitle AWS
+
+   ```toml
+   [[runners]]
+     name = "my runner"
+     url = "https://gitlab.com"
+     token = "<token>"
+     shell = "sh"
+
+   executor = "instance"
+
+   [runners.autoscaler]
+     plugin = "fleeting-plugin-aws"
+    ```
+
+   :::TabTitle Google Cloud
+
+      ```toml
+   [[runners]]
+     name = "my runner"
+     url = "https://gitlab.com"
+     token = "<token>"
+     shell = "sh"
+
+   executor = "instance"
+
+   [runners.autoscaler]
+     plugin = "fleeting-plugin-googlecloud"
+    ```
+
+   :::TabTitle Azure
+
+     ```toml
+   [[runners]]
+     name = "my runner"
+     url = "https://gitlab.com"
+     token = "<token>"
+     shell = "sh"
+
+   executor = "instance"
+
+   [runners.autoscaler]
+     plugin = "fleeting-plugin-azure"
+    ```
+
+   ::EndTabs
+
+## Fleeting plugin management
+
+Use the following `fleeting` subcommands to manage fleeting plugins:
+
+| Command                          | Description                                                     |
+|----------------------------------|-----------------------------------------------------------------|
+| `gitlab-runner fleeting install` | Install the fleeting plugin from the OCI registry distribution. |
+| `gitlab-runner fleeting list`    | List referenced plugins and the version used.                   |
+| `gitlab-runner fleeting login`   | Sign in to private registries.                                  |
