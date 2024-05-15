@@ -28,18 +28,9 @@ Nesting is only supported on Apple Silicon instances.
 
 ## Prepare the environment for autoscaling
 
-To enable scaling for your target platform, install the AWS, Google Cloud, or Azure fleeting plugins.
-The AWS and Google Cloud plugins are in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). The Azure plugin is an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
-
-For other official plugins developed by GitLab, see the [`fleeting` project](https://gitlab.com/gitlab-org/fleeting).
-
 To prepare the environment for autoscaling:
 
-1. Install the binary for your host platform:
-   - [AWS fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws/-/releases)
-   - [Google Cloud fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute/-/releases)
-   - [Azure fleeting plugin](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-azure/-/releases)
-1. Ensure plugin binaries are discoverable through the `PATH` environment variable.
+1. [Install a fleeting plugin](../fleet_scaling/fleeting.md#install-a-fleeting-plugin) for your target platform.
 1. Create a VM image for the platform you're using. The image must include:
    - Git
    - GitLab Runner
@@ -95,7 +86,10 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-aws"
+    plugin = "aws" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-aws"
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -157,7 +151,10 @@ concurrent = 50
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-aws"
+    plugin = "aws" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-aws"
 
     capacity_per_instance = 5
     max_use_count = 0
@@ -231,7 +228,10 @@ concurrent = 8
     max_use_count = 0
     max_instances = 4
 
-    plugin = "fleeting-plugin-aws"
+    plugin = "aws" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-aws"
 
     [[runners.autoscaler.policy]]
       idle_count = 2
@@ -295,7 +295,10 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-googlecompute"
+    plugin = "googlecloud" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-googlecompute"
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -357,7 +360,10 @@ concurrent = 50
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-googlecompute"
+    plugin = "googlecloud" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-googlecompute"
 
     capacity_per_instance = 5
     max_use_count = 0
@@ -417,7 +423,10 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-azure"
+    plugin = "azure" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-azure"
 
     capacity_per_instance = 1
     max_use_count = 1
@@ -480,7 +489,10 @@ concurrent = 50
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "fleeting-plugin-azure"
+    plugin = "azure" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+
+    # for versions < 17.0, manually install the plugin and use:
+    # plugin = "fleeting-plugin-azure"
 
     capacity_per_instance = 5
     max_use_count = 0
