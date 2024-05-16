@@ -9,10 +9,10 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 DETAILS:
 **Status:** Beta
 
-> - Introduced in GitLab Runner 15.11.0 as an [Experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
-> - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
+> - Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
+> - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
 
-This feature is in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) and is not recommended for production use. 
+This feature is in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) and is not recommended for production use. 
 For production environments, you should use the [Docker Machine executor](../fleet_scaling/index.md#docker-machine-executor).
 
 Before you use the Docker Autoscaler executor, see the [feedback issue](https://gitlab.com/gitlab-org/gitlab/-/issues/408131) about

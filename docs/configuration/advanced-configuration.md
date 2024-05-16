@@ -702,7 +702,7 @@ DETAILS:
 **Status:** Beta
 
 The following parameters define the configuration for the [instance executor](../executors/instance.md).
-The instance executor is in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta)
+The instance executor is in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta)
 
 | Parameter        | Type         | Description |
 |------------------|--------------|-------------|
@@ -714,7 +714,7 @@ The instance executor is in [Beta](https://docs.gitlab.com/ee/policy/experiment-
 
 The following parameters configure the autoscaler feature. You can only use these parameters with the
 [Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors. These
-executors are in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta).
+executors are in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta).
 
 | Parameter                               | Description |
 |-----------------------------------------|-------------|
