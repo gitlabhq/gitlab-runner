@@ -1,3 +1,73 @@
+## v17.0.0 (2024-05-16)
+
+### New features
+
+- Add fleeting docs describing new plugin installation method !4749
+- Support Google Cloud secrets from projects other than the one containing the WIF pool !4718 (Rich Wareham @rjw57)
+- Interpret failed pods as system failures rather than script failures for Kubernetes executor !4698 (Daniel Barnes @dbarnes3)
+- Implement new GCS Cache adapter that uses Google Cloud SDKs auth discovery defaults !4706
+- Add cpuset_mems option to Docker executor !4725 (Karthik Natarajan @karthiknatarajan)
+- Add docs for Runner Operator in disconnected network environments !4716
+- Add support for taskscaler scale throttle !4722
+- Add the ability to disable the automatic token rotation !4721
+
+### Security fixes
+
+- Stop installing tar in ubi fips base image !4703
+
+### Bug fixes
+
+- Revert "Merge remote-tracking branch 'origin/16-11-stable'" !4761
+- Upgrade fleeting and taskscaler for fixes !4745
+- Upgrade fleeting and taskscaler for fixes !4745
+- Remove runner from config when unregister with token !4750 (Karthik Natarajan @karthiknatarajan)
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Fix fleeting install subcommand for Windows !4753
+- Fix fleeting install subcommand for Windows !4753
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
+
+### Maintenance
+
+- Require ci prep before incept !4762
+- Upgrade runner-linters image and golangci-lint for Go 1.22 !4776
+- Improve upgrade docs !4780
+- Clean up docs redirects, runner - 2024-05-02 !4756
+- Added missing apostrophe !4781
+- State clearly one job = one VM = one container !4774
+- Add information regarding Beta feature !4757
+- Updating docs tier badge rules !4779
+- Fix broken link and typo !4775
+- Add badge info to autoscaler page !4772
+- Provide examples and clarify how MachineOptions work for the MachineDriver !4768
+- Update GitLab Runner Version !4773
+- Fix stuck Windows 1809 jobs !4771
+- Remove unsupported GitLab versions from Verify Runner group docs !4764
+- Remove support for old pre_clone_script and post_clone_script configuration settings !4767
+- Clarify "circular" docs links !4738
+- Remove slsa_v02 from artifact_metadata !4760
+- Remove cmd shell !4754
+- Remove shared runner naming from gitlab runner docs !4744
+- Switch to Lychee for link checking !4737
+- Convert custom kubernetes error to retryError !4662 (Nabil ZOUABI @nabil_zouabi)
+- Remove license scanning template !4735
+- Fix jsonschema validation warning for monitoring struct !4724 (Malte Morgenstern @malmor)
+- Updated examples to avoid helm error !4752
+- April: fixes trailing whitespace in GitLab Runner project !4751
+- Remove legacy shell quoting and FF_USE_NEW_SHELL_ESCAPE feature flag !4742
+- Remove `gitlab-runner exec` command !4740
+- Add ssh: handshake failed to troubleshooting !4743
+- Update autoscaler config option documentation !4730
+- Fix dead documentation anchor links in README !4733 (Markus Heidelberg @marcows)
+- Remove terminationGracePeriodSeconds !4739
+- Remove license scanning template !4735
+- Add prerequisite info to runner registration token section !4714
+- Document the Beta status of the Google Cloud plugin for fleeting !4726
+- Add security risk on runner debug for Shell executors !4586
+
 ## v16.11.1 (2024-05-03)
 
 ### Bug fixes
