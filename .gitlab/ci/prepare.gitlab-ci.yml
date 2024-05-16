@@ -93,8 +93,6 @@ prepare runner-incept variables:
   stage: prepare
   extends:
     - .rules:merge_request_pipelines:no_docs:only_canonical
-  needs:
-    - job: "prepare ci image"
   script:
     - echo "UPSTREAM_CI_COMMIT_REF=$(./ci/upstream_commit_ref)" >> incept.env
   after_script:
