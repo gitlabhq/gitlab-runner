@@ -25,6 +25,9 @@ type RunSingleCommand struct {
 	finished         *abool.AtomicBool
 	interruptSignals chan os.Signal
 
+	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
+	RunnerName string `short:"r" long:"runner" description:"Runner name from the config file to use instead of command-line arguments"`
+
 	shutdownTimeout int `long:"shutdown-timeout" description:"Number of seconds after which the forceful shutdown operation will timeout and process will exit"`
 }
 
@@ -135,7 +138,19 @@ func (r *RunSingleCommand) checkFinishedConditions() {
 	}
 }
 
-func (r *RunSingleCommand) Execute(c *cli.Context) {
+func (r *RunSingleCommand) HandleArgs() {
+	if r.RunnerName != "" {
+		fileConfig := &configOptions{ConfigFile: r.ConfigFile}
+		err := fileConfig.loadConfig()
+		if err != nil {
+			logrus.Fatalf("Error loading config: %v", err)
+		}
+		runner, err := fileConfig.RunnerByName(r.RunnerName)
+		if err != nil {
+			logrus.Fatalf("Error loading runner by name: %v", err)
+		}
+		r.RunnerConfig = *runner
+	}
 	if r.URL == "" {
 		logrus.Fatalln("Missing URL")
 	}
@@ -145,6 +160,10 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 	if r.Executor == "" {
 		logrus.Fatalln("Missing Executor")
 	}
+}
+
+func (r *RunSingleCommand) Execute(c *cli.Context) {
+	r.HandleArgs()
 
 	executorProvider := common.GetExecutorProvider(r.Executor)
 	if executorProvider == nil {

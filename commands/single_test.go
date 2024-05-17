@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -50,6 +52,35 @@ func TestSingleRunnerMaxBuilds(t *testing.T) {
 	defer cleanup()
 
 	single.Execute(nil)
+}
+
+func TestConfigFile(t *testing.T) {
+	// create config file
+	config_file, err := os.CreateTemp("", "gitlab-runner-test")
+	require.NoError(t, err)
+	filename := config_file.Name()
+	defer os.Remove(filename)
+	// fill config file with multiple runners
+	_, err = config_file.WriteString(`[[runners]]
+	name = "runner"
+	token= "t1"
+	url = "https://example.com/"
+	executor = "shell"
+	[[runners]]
+	name = "runner2"
+	token="t2"
+	url = "https://example.com/"
+	executor = "shell"`)
+	require.NoError(t, err)
+	err = config_file.Close()
+	require.NoError(t, err)
+	// create command config for runner2
+	config := RunSingleCommand{ConfigFile: filename, RunnerName: "runner2"}
+
+	config.HandleArgs()
+
+	assert.Equal(t, "t2", config.Token)
+
 }
 
 func newRunSingleCommand(executorName string, network common.Network) *RunSingleCommand {
