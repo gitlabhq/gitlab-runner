@@ -17,7 +17,7 @@ const SkipTerminateOption = "skip-terminate-signals"
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Printf("Usage: %s duration [%s]\n", os.Args[0], SkipTerminateOption)
-		os.Exit(1)
+		os.Exit(2)
 	}
 
 	duration, err := time.ParseDuration(os.Args[1])
@@ -54,6 +54,6 @@ func main() {
 		fmt.Println("Sleep duration achieved")
 	case <-ctx.Done():
 		fmt.Println("Forced to quit by signal; terminating")
-		os.Exit(1)
+		os.Exit(3)
 	}
 }

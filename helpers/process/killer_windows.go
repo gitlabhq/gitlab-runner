@@ -33,7 +33,7 @@ func (pk *windowsKiller) Terminate() {
 		return
 	}
 
-	if err := taskTerminate(pk.cmd.Process().Pid); err != nil {
+	if err := taskTerminate(pk.cmd.Process().Pid, pk.cmd.options.UseWindowsLegacyProcessStrategy); err != nil {
 		pk.logger.Warn("Failed to terminate process:", err)
 
 		// try to kill right-after
@@ -57,7 +57,7 @@ func (pk *windowsKiller) ForceKill() {
 // Send a CTRL_C_EVENT signal (like SIGTERM in unix) to a console process via
 // kernel32 APIs.
 // See https://learn.microsoft.com/en-us/windows/console/console-functions
-func taskTerminate(pid int) error {
+func taskTerminate(pid int, UseWindowsLegacyProcessStrategy bool) error {
 	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
 	if err := kernel32.Load(); err != nil {
 		return fmt.Errorf("failed to load kernel32: %w", err)
@@ -77,27 +77,36 @@ func taskTerminate(pid int) error {
 	setConsoleCtrlHandler := kernel32Function("SetConsoleCtrlHandler")
 	generateConsoleCtrlEvent := kernel32Function("GenerateConsoleCtrlEvent")
 
-	if err := freeConsole("detach the runner process from its console"); err != nil {
-		return err
-	}
-	if err := attachConsole("attach to the console of the process being terminated", uintptr(pid)); err != nil {
-		return err
-	}
-	if err := setConsoleCtrlHandler("disable Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(1)); err != nil {
-		return err
+	if UseWindowsLegacyProcessStrategy {
+		if err := freeConsole("detach the runner process from its console"); err != nil {
+			return err
+		}
+		if err := attachConsole("attach to the console of the process being terminated", uintptr(pid)); err != nil {
+			return err
+		}
+		if err := setConsoleCtrlHandler("disable Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(1)); err != nil {
+			return err
+		}
 	}
 
 	// always attempt to restore console and Ctrl-C handler for runner process
 	// so collect any errors together instead of returning early
 	var errors *multierror.Error
-	errors = multierror.Append(errors, generateConsoleCtrlEvent(
-		"send Ctrl-C event to process being terminated", uintptr(windows.CTRL_C_EVENT), uintptr(pid)))
-	errors = multierror.Append(errors, freeConsole(
-		"detach the runner process from the console of the terminated process"))
-	errors = multierror.Append(errors, attachConsole(
-		"attach the runner process to the console of its parent process", uintptr(math.MaxUint32)))
-	errors = multierror.Append(errors, setConsoleCtrlHandler(
-		"restore Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(0)))
+
+	if UseWindowsLegacyProcessStrategy {
+		errors = multierror.Append(errors, generateConsoleCtrlEvent(
+			"send Ctrl-C event to process being terminated", uintptr(windows.CTRL_C_EVENT), uintptr(pid)))
+		errors = multierror.Append(errors, freeConsole(
+			"detach the runner process from the console of the terminated process"))
+		errors = multierror.Append(errors, attachConsole(
+			"attach the runner process to the console of its parent process", uintptr(math.MaxUint32)))
+		errors = multierror.Append(errors, setConsoleCtrlHandler(
+			"restore Ctrl-C event handler for runner process", uintptr(unsafe.Pointer(nil)), uintptr(0)))
+	} else {
+		errors = multierror.Append(errors, generateConsoleCtrlEvent(
+			"send Ctrl-Break event to process being terminated", uintptr(windows.CTRL_BREAK_EVENT), uintptr(pid)))
+	}
+
 	return errors.ErrorOrNil()
 }
 

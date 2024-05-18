@@ -128,7 +128,7 @@ func pwshStdinCmdArgs(shell string, preCmds ...string) []string {
 		sb.WriteString(preCmd + "\r\n")
 	}
 	sb.WriteString("$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r\n")
-	sb.WriteString(shell + " -NoProfile -Command -\r\n")
+	sb.WriteString(shell + " -NoProfile -NonInteractive -Command -\r\n")
 	sb.WriteString("if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
 	encoded, _ := encoder.String(sb.String())
 

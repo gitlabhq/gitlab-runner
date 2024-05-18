@@ -118,7 +118,13 @@ func TestKiller(t *testing.T) {
 			}()
 
 			time.Sleep(1 * time.Second)
-			k.Terminate()
+
+			if testCase.useWindowsJobObject {
+				k.ForceKill()
+
+			} else {
+				k.Terminate()
+			}
 
 			err := <-waitCh
 			if testCase.expectedError == "" {
