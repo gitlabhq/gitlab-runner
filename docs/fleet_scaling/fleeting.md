@@ -13,7 +13,7 @@ The following executors use fleeting to scale runners:
 - [Docker Autoscaler](../executors/docker_autoscaler.md)
 - [Instance](../executors/instance.md)
 
-GitLab maintains these official plugins (currently in [Beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta)):
+GitLab maintains these official plugins (currently in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta)):
 
 - [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws), which uses [AWS Autoscaling Groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html).
 - [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud), which uses [Google Cloud Instance Groups](https://cloud.google.com/compute/docs/instance-groups).
