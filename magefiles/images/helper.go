@@ -12,6 +12,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/env"
 )
 
+const helperImageOverrideEntrypoint = `["/usr/bin/dumb-init", "/entrypoint"]`
+
 var helperImageName = env.NewDefault("HELPER_IMAGE_NAME", "gitlab-runner-helper")
 
 var platformMap = map[string]string{
@@ -204,7 +206,7 @@ func releaseImageTags(builder *docker.Builder, build helperBuild, publish bool) 
 	versionTag := build.tags.versionTag()
 	latestTag, isLatest := build.tags.latestTag()
 
-	if err := builder.Import(build.archive, baseTag, build.platform); err != nil {
+	if err := builder.Import(build.archive, baseTag, build.platform, helperImageOverrideEntrypoint); err != nil {
 		return err
 	}
 
