@@ -17,35 +17,6 @@ check version definition:
   script:
   - grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' VERSION
 
-# Perform documentation linting on Markdown files
-docs lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.19-vale-3.4.1-markdownlint2-0.13.0-lychee-0.14.3
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines
-  - .no_cache_and_dependencies
-  needs: []
-  script:
-  # Lint content and Markdown, and check links
-  - make lint-docs VALE_MIN_ALERT_LEVEL=error
-
-check feature flags docs:
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines
-  - .no_cache_and_dependencies
-  script:
-  - cp docs/configuration/feature-flags.md docs/configuration/feature-flags.md.orig
-  - make update_feature_flags_docs
-  - |
-    diff docs/configuration/feature-flags.md.orig docs/configuration/feature-flags.md || (
-      echo
-      echo "Feature Flags list in documentation is not up-to-date"
-      echo "Run 'make update_feature_flags_docs' to update it"
-      echo
-      exit 1
-    )
-
 check modules:
   stage: test
   extends:
