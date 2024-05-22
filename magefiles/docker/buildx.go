@@ -134,7 +134,7 @@ func (b *Builder) Import(archive, tag, platform, entrypoint string) error {
 	fmt.Println("Importing tag", archive, "as", tag, "platform", platform)
 	args := []string{"import", archive, tag, "--platform", platform}
 	if entrypoint != "" {
-		args = append(args, "--change", fmt.Sprintf("ENTRYPOINT %q", entrypoint))
+		args = append(args, "--change", fmt.Sprintf("ENTRYPOINT %s", entrypoint))
 
 	}
 	return b.Docker(args...)
