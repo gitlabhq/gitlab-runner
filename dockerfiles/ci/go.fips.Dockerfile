@@ -15,7 +15,7 @@ RUN curl -LO https://go.dev/dl/go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && 
 
 ENV PATH="$PATH:/usr/go/bin"
 
-ARG GO_RELEASE_VERSION=${GO_VERSION}-1
+ARG GO_RELEASE_VERSION=${GO_VERSION}-2
 RUN git clone \
     https://github.com/golang-fips/go \
     --branch go${GO_RELEASE_VERSION}-openssl-fips \
