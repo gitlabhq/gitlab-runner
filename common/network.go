@@ -610,10 +610,58 @@ type JobResponse struct {
 	Features      GitlabFeatures `json:"features"`
 	Secrets       Secrets        `json:"secrets,omitempty"`
 	Hooks         Hooks          `json:"hooks,omitempty"`
+	Run           string         `json:"run"`
 
 	TLSCAChain  string `json:"-"`
 	TLSAuthCert string `json:"-"`
 	TLSAuthKey  string `json:"-"`
+}
+
+func (j *JobResponse) UnsupportedRunOptions() error {
+	if j.Run == "" {
+		// Steps are not being used. Normal behavior.
+		return nil
+	}
+	for _, s := range j.Steps {
+		for _, s := range s.Script {
+			if len(s) != 0 {
+				return fmt.Errorf("the `run` and `script` keywords cannot be used together")
+			}
+		}
+	}
+	for _, v := range j.Variables {
+		if v.Key == "STEPS" {
+			return fmt.Errorf("the `run` keyword requires the exclusive use of the variable STEPS")
+		}
+	}
+	return nil
+}
+
+// GitLabStepsShim is a function which shims GitLab Steps from the `run` keyword
+// into the step-runner image. This is a temporary mechanism for executing steps
+// which will be replaced by a gRPC connection to step-runner in each executor.
+func (j *JobResponse) RunStepsShim() {
+	if j.Run == "" {
+		return
+	}
+	if j.Image.Name == "" {
+		// Experiment requires step-runner to be present in
+		// the container image. If no image is provided then
+		// we use the step-runner v0 image.
+		j.Image.Name = "registry.gitlab.com/gitlab-org/step-runner:v0"
+	}
+	j.Variables = append(j.Variables, JobVariable{
+		Key:   "STEPS",
+		Value: j.Run,
+		Raw:   true,
+	})
+	j.Steps = Steps{{
+		Name:         "script",
+		Script:       StepScript{"/step-runner ci"},
+		Timeout:      3600,
+		When:         "on_success",
+		AllowFailure: false,
+	}}
 }
 
 type Secrets map[string]Secret
@@ -803,6 +851,7 @@ func (j *JobResponse) UnsupportedOptions() error {
 	return errors.Join(
 		j.Image.UnsupportedOptions(),
 		j.Services.UnsupportedOptions(),
+		j.UnsupportedRunOptions(),
 	)
 }
 
