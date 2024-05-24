@@ -3,6 +3,8 @@ variables:
   GO_VERSION: "1.22.3"
   # Sometimes the FIPS repo lags behind the official releases
   GO_FIPS_VERSION: "1.22.3"
+  # Account for the suffix used in https://github.com/golang-fips/go/releases/tag/go1.22.3-2-openssl-fips
+  GO_FIPS_VERSION_SUFFIX: "-2-openssl-fips"
   GO_CI_IMAGE: "$GO_VERSION-bookworm"
   CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_CI_IMAGE-1"
   # Feature flags
