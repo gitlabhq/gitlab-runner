@@ -2,7 +2,7 @@ module gitlab.com/gitlab-org/gitlab-runner
 
 go 1.22
 
-toolchain go1.22.2
+toolchain go1.22.3
 
 replace github.com/moby/spdystream => github.com/gravitational/spdystream v0.0.0-20230511100431-ddc12af7b31d
 
