@@ -80,7 +80,6 @@ func TestConfigFile(t *testing.T) {
 	config.HandleArgs()
 
 	assert.Equal(t, "t2", config.Token)
-
 }
 
 func newRunSingleCommand(executorName string, network common.Network) *RunSingleCommand {
