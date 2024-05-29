@@ -934,21 +934,16 @@ func (mr *RunCommand) requestJob(
 		return nil, nil, err
 	}
 
-	for _, fn := range []func() error{
-		jobData.UnsupportedOptions,
-		jobData.StepsShim,
-	} {
-		if err := fn(); err != nil {
-			_, _ = trace.Write([]byte(err.Error() + "\n"))
+	if err := errors.Join(jobData.UnsupportedOptions(), jobData.StepsShim()); err != nil {
+		_, _ = trace.Write([]byte(err.Error() + "\n"))
 
-			err = trace.Fail(err, common.JobFailureData{
-				Reason:   common.RunnerSystemFailure,
-				ExitCode: common.ExitCodeUnsupportedOptions,
-			})
-			logTerminationError(mr.log(), "Fail", err)
+		err = trace.Fail(err, common.JobFailureData{
+			Reason:   common.RunnerSystemFailure,
+			ExitCode: common.ExitCodeUnsupportedOptions,
+		})
+		logTerminationError(mr.log(), "Fail", err)
 
-			return nil, nil, err
-		}
+		return nil, nil, err
 	}
 
 	trace.SetFailuresCollector(mr.failuresCollector)
