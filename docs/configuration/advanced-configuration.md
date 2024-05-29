@@ -929,7 +929,7 @@ The following parameters define S3 storage for cache.
 | `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
 | `AuthenticationType`| string           | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
 | `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. |
-| `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. |
+| `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. If you use an alias, it must be preceded with `alias/`|
 
 Example:
 
