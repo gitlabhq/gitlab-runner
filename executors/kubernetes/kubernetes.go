@@ -2664,7 +2664,7 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 
 	podLogs, err := retry.WithValueFn(s, func() (io.ReadCloser, error) {
 		//nolint:gocritic
-		// kubeAPI: pods/logs, get, list, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+		// kubeAPI: pods/log, get, list, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 		return s.kubeClient.CoreV1().
 			Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
 	}).Run()
