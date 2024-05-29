@@ -621,18 +621,17 @@ func TestJobResponse_Run(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			jobResponse := &JobResponse{}
-			err := json.Unmarshal([]byte(tt.json), &jobResponse)
-			require.NoError(t, err)
-			err = jobResponse.UnsupportedRunOptions()
+			require.NoError(t, json.Unmarshal([]byte(tt.json), &jobResponse))
+
+			err := jobResponse.StepsShim()
 			if tt.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
+
 			want := &JobResponse{}
-			err = json.Unmarshal([]byte(tt.wantJSON), &want)
-			require.NoError(t, err)
-			jobResponse.RunStepsShim()
+			require.NoError(t, json.Unmarshal([]byte(tt.wantJSON), &want))
 			require.Equal(t, want, jobResponse)
 		})
 	}
