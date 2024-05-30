@@ -68,14 +68,14 @@ func TestConfigFile(t *testing.T) {
 	executor = "shell"
 	[[runners]]
 	name = "runner2"
-	token="t2"
+	token = "t2"
 	url = "https://example.com/"
 	executor = "shell"`)
 	require.NoError(t, err)
 	err = config_file.Close()
 	require.NoError(t, err)
 	// create command config for runner2
-	config := RunSingleCommand{ConfigFile: filename, RunnerName: "runner2"}
+	config := RunSingleCommand{configOptions: configOptions{ConfigFile: filename}, RunnerName: "runner2"}
 
 	config.HandleArgs()
 

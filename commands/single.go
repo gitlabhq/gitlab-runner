@@ -25,7 +25,7 @@ type RunSingleCommand struct {
 	finished         *abool.AtomicBool
 	interruptSignals chan os.Signal
 
-	ConfigFile string `short:"c" long:"config" env:"CONFIG_FILE" description:"Config file"`
+	configOptions
 	RunnerName string `short:"r" long:"runner" description:"Runner name from the config file to use instead of command-line arguments"`
 
 	shutdownTimeout int `long:"shutdown-timeout" description:"Number of seconds after which the forceful shutdown operation will timeout and process will exit"`
