@@ -49,10 +49,9 @@ func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDocker
 	// specific order.
 	options = append(
 		options,
+		client.WithHost(c.Host),
 		WithCustomHTTPClient(),
 		WithCustomTLSClientConfig(c),
-		client.WithHost(c.Host),
-		WithCustomKeepalive(),
 	)
 
 	options = append(options, opts...)

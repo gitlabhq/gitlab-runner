@@ -28,20 +28,6 @@ var (
 	}
 )
 
-func WithCustomHTTPClient() client.Opt {
-	return client.WithHTTPClient(&http.Client{
-		Transport: &http.Transport{
-			TLSHandshakeTimeout:   defaultTLSHandshakeTimeout,
-			ResponseHeaderTimeout: defaultResponseHeaderTimeout,
-			ExpectContinueTimeout: defaultExpectContinueTimeout,
-			IdleConnTimeout:       defaultIdleConnTimeout,
-		},
-		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-			return ErrRedirectNotAllowed
-		},
-	})
-}
-
 func WithCustomTLSClientConfig(c Credentials) client.Opt {
 	return func(cli *client.Client) error {
 		var cacertPath, certPath, keyPath string
@@ -63,21 +49,37 @@ func WithCustomTLSClientConfig(c Credentials) client.Opt {
 	}
 }
 
-func WithCustomKeepalive() client.Opt {
+func WithCustomHTTPClient() client.Opt {
 	return func(c *client.Client) error {
 		url, err := client.ParseHostURL(c.DaemonHost())
 		if err != nil {
 			return err
 		}
 
-		switch url.Scheme {
-		case "tcp", "http", "https":
-		default:
-			return nil
+		transport := &http.Transport{}
+		err = sockets.ConfigureTransport(transport, url.Scheme, url.Host)
+		if err != nil {
+			return err
 		}
 
-		transport, ok := c.HTTPClient().Transport.(*http.Transport)
-		if !ok {
+		// customize http client
+		if err := client.WithHTTPClient(&http.Client{
+			Transport: transport,
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+				return ErrRedirectNotAllowed
+			},
+		})(c); err != nil {
+			return err
+		}
+
+		switch url.Scheme {
+		case "tcp", "http", "https":
+			// only set timeouts for remote schemes
+			transport.TLSHandshakeTimeout = defaultTLSHandshakeTimeout
+			transport.ResponseHeaderTimeout = defaultResponseHeaderTimeout
+			transport.ExpectContinueTimeout = defaultExpectContinueTimeout
+			transport.IdleConnTimeout = defaultIdleConnTimeout
+		default:
 			return nil
 		}
 

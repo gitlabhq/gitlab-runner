@@ -202,7 +202,7 @@ func TestClientConfiguration(t *testing.T) {
 		useTestDialerFunc = false
 	}()
 
-	for _, scheme := range []string{"http", "unix"} {
+	for _, scheme := range []string{"http", "unix", "https"} {
 		t.Run(scheme, func(t *testing.T) {
 			if runtime.GOOS == "windows" && scheme == "unix" {
 				t.Skip("unix scheme unsupported on windows")
@@ -219,10 +219,12 @@ func TestClientConfiguration(t *testing.T) {
 
 			transport := httpClient.Transport.(*http.Transport)
 
-			assert.Equal(t, defaultTLSHandshakeTimeout, transport.TLSHandshakeTimeout)
-			assert.Equal(t, defaultResponseHeaderTimeout, transport.ResponseHeaderTimeout)
-			assert.Equal(t, defaultExpectContinueTimeout, transport.ExpectContinueTimeout)
-			assert.Equal(t, defaultIdleConnTimeout, transport.IdleConnTimeout)
+			if scheme != "unix" {
+				assert.Equal(t, defaultTLSHandshakeTimeout, transport.TLSHandshakeTimeout)
+				assert.Equal(t, defaultResponseHeaderTimeout, transport.ResponseHeaderTimeout)
+				assert.Equal(t, defaultExpectContinueTimeout, transport.ExpectContinueTimeout)
+				assert.Equal(t, defaultIdleConnTimeout, transport.IdleConnTimeout)
+			}
 			assert.NotNil(t, transport.TLSClientConfig)
 			assert.Equal(t, scheme == "unix", transport.DisableCompression)
 			assert.Equal(t, scheme+"://example.org", client.client.DaemonHost())
