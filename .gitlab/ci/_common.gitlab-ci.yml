@@ -28,6 +28,7 @@ variables:
   # This will disable all other rules.
   DEPENDENCY_SCANNING_DISABLED: "true"
   TRANSFER_METER_FREQUENCY: "5s"
+  CACHE_COMPRESSION_FORMAT: tarzstd
   GO111MODULE: "on"
   GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$GO_FIPS_VERSION
   # Leaving the Alpine and UBI versions defined here until the renovate pattern is changed
