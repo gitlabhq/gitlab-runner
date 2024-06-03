@@ -112,9 +112,11 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 1. Enter your GitLab URL:
    - For runners on GitLab self-managed, use the URL for your GitLab instance. For example,
    if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
-   - For runners on GitLab.com, the `gitlab-ci coordinator URL` is `https://gitlab.com`.
+   - For runners on GitLab.com, the GitLab instance URL is `https://gitlab.com`.
 1. Enter the runner authentication token.
-1. Enter a name for the runner.
+1. Enter a description for the runner.
+1. Enter the job tags, separated by commas.
+1. Enter an optional maintenance note for the runner.
 1. Enter the type of [executor](../executors/index.md).
 
 - To register multiple runners on the same host machine, each with a different configuration,
@@ -200,9 +202,9 @@ Prerequisites:
 
 - Runner registration tokens must be [enabled](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#enable-runner-registrations-tokens) in the Admin Area.
 - Obtain a runner registration token
-  for an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-registration-token-deprecated),
+  at the desired [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-registration-token-deprecated),
   [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
-  [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated) runner.
+  [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-registration-token-deprecated).
 
 After you register the runner, the configuration is saved to the `config.toml`.
 
@@ -272,7 +274,7 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
 1. Enter your GitLab URL:
    - For GitLab self-managed runners, use the URL for your GitLab instance. For example,
    if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
-   - For GitLab.com, the `gitlab-ci coordinator URL` is `https://gitlab.com`.
+   - For GitLab.com, the GitLab instance URL is `https://gitlab.com`.
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner.
 1. Enter the job tags, separated by commas.
@@ -376,7 +378,7 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 - `--access-level` creates a [protected runner](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#prevent-runners-from-revealing-sensitive-information).
   - For a protected runner, use the `--access-level="ref_protected"` parameter.
   - For an unprotected runner, use `--access-level="not_protected"` or leave the value undefined.
-- `--maintenance-note` adds information related to runner maintenance. The maximum length is 255 characters.
+- `--maintenance-note` allows adding information you might find helpful for runner maintenance. The maximum length is 255 characters.
 
 ### Legacy-compatible registration process
 
@@ -443,13 +445,13 @@ To register a runner:
 
      ```shell
      $ sudo gitlab-runner register \
-     --template-config /tmp/test-config.template.toml \
-     --non-interactive \
-     --url "https://gitlab.com" \
-     --token <TOKEN> \ "# --registration-token if using the deprecated runner registration token"
-     --name test-runner \
-     --executor kubernetes
-     --host = "http://localhost:9876/"
+         --template-config /tmp/test-config.template.toml \
+         --non-interactive \
+         --url "https://gitlab.com" \
+         --token <TOKEN> \ "# --registration-token if using the deprecated runner registration token"
+         --name test-runner \
+         --executor kubernetes
+         --host = "http://localhost:9876/"
      ```
 
    - The environment variable in the `.gitlab.yaml` file:
@@ -475,7 +477,7 @@ check_interval = 0
 [[runners]]
   name = "test-runner"
   url = "https://gitlab.com"
-  token = glrt-<TOKEN>
+  token = "glrt-<TOKEN>"
   executor = "kubernetes"
   [runners.kubernetes]
     host = "http://localhost:9876/"
@@ -624,3 +626,15 @@ When this error occurs, you can ask a GitLab administrator to:
 
 - Verify that the runner registration token is valid.
 - Confirm that runner registration in the project or group is [permitted](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#restrict-runner-registration-by-all-members-in-a-group).
+
+### `410 Gone - runner registration disallowed` error
+
+The `410 Gone - runner registration disallowed` error message displays when runner registration through
+registration tokens has been disabled.
+
+When this error occurs, you can ask a GitLab administrator to:
+
+- Verify that the runner registration token is valid.
+- Confirm that runner registration in the instance is [permitted](https://docs.gitlab.com/ee/administration/settings/continuous_integration.html#enable-runner-registrations-tokens).
+- In the case of a group or project runner registration token, verify that runner registration in the respective group
+  and/or project [is allowed](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#enable-use-of-runner-registration-tokens-in-projects-and-groups).
