@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samber/lo"
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
@@ -693,7 +692,7 @@ func (b *AbstractShell) writeDownloadArtifactsScript(
 
 // Write the given string of commands using the provided ShellWriter object.
 func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo, prefix string, commands ...string) {
-	lo.ForEach(commands, func(command string, i int) {
+	writeCommand := func(i int, command string) {
 		command = strings.TrimSpace(command)
 		defer func() {
 			w.Line(command)
@@ -717,7 +716,11 @@ func (b *AbstractShell) writeCommands(w ShellWriter, info common.ShellScriptInfo
 		} else {
 			w.Noticef("$ %s # collapsed multi-line command", command[:nlIndex])
 		}
-	})
+	}
+
+	for i, command := range commands {
+		writeCommand(i, command)
+	}
 }
 
 func stringifySectionOptions(opts []string) string {

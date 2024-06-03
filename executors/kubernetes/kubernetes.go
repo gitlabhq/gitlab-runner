@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,7 +20,6 @@ import (
 	"github.com/docker/cli/cli/config/types"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/jpillora/backoff"
-	"github.com/samber/lo"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -112,44 +112,23 @@ var (
 
 	// network errors to retry on
 	// make sure to update the documentation in kubernetes/index.md to keep it in sync
-	retryNetworkErrorsGroup = []error{
-		&retryError{errors.New("error dialing backend")},
-		&retryError{errors.New("TLS handshake timeout")},
-		&retryError{errors.New("read: connection timed out")},
-		&retryError{errors.New("connect: connection timed out")},
-		&retryError{errors.New("Timeout occurred")},
-		&retryError{errors.New("http2: client connection lost")},
-		&retryError{errors.New("connection refused")},
-		&retryError{errors.New("tls: internal error")},
+	retryNetworkErrorsGroup = []string{
+		"error dialing backend",
+		"TLS handshake timeout",
+		"read: connection timed out",
+		"connect: connection timed out",
+		"Timeout occurred",
+		"http2: client connection lost",
+		"connection refused",
+		"tls: internal error",
 
-		&retryError{io.ErrUnexpectedEOF},
-
-		&retryError{syscall.ECONNRESET},
-		&retryError{syscall.ECONNREFUSED},
-		&retryError{syscall.ECONNABORTED},
-		&retryError{syscall.EPIPE},
+		io.ErrUnexpectedEOF.Error(),
+		syscall.ECONNRESET.Error(),
+		syscall.ECONNREFUSED.Error(),
+		syscall.ECONNABORTED.Error(),
+		syscall.EPIPE.Error(),
 	}
 )
-
-type retryError struct {
-	error
-}
-
-func (n *retryError) Error() string {
-	return n.error.Error()
-}
-
-func (n *retryError) Is(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	if errors.Is(err, n.error) {
-		return true
-	}
-
-	return strings.Contains(err.Error(), n.error.Error())
-}
 
 type commandTerminatedError struct {
 	exitCode int
@@ -166,33 +145,30 @@ func (c *commandTerminatedError) Is(err error) bool {
 
 func (s *executor) NewRetry() *retry.Retry {
 	retryLimits := s.Config.Kubernetes.RequestRetryLimits
-
-	retryLimitsAsRetryErrors := lo.Map(retryLimits.AsErrors(), func(err error, _ int) error {
-		return &retryError{err}
-	})
-
 	retryBackoffConfig := s.getRetryBackoffConfig()
 
 	return retry.New().
 		WithCheck(func(_ int, err error) bool {
-			_, found := isGroupError(err, retryNetworkErrorsGroup, retryLimitsAsRetryErrors)
-			return found
+			for key := range retryLimits {
+				if strings.Contains(err.Error(), key) {
+					return true
+				}
+			}
+
+			return slices.ContainsFunc(retryNetworkErrorsGroup, func(v string) bool {
+				return strings.Contains(err.Error(), v)
+			})
 		}).
 		WithMaxTriesFunc(func(err error) int {
-			matchingErr, found := isGroupError(err, retryNetworkErrorsGroup, retryLimitsAsRetryErrors)
-			if found && retryLimits[matchingErr.Error()] > 0 {
-				return retryLimits[matchingErr.Error()]
+			for key, limit := range retryLimits {
+				if strings.Contains(err.Error(), key) {
+					return limit
+				}
 			}
 
 			return s.Config.Kubernetes.RequestRetryLimit.Get()
 		}).
 		WithBackoff(retryBackoffConfig.min, retryBackoffConfig.max)
-}
-
-func isGroupError(err error, groups ...[]error) (error, bool) {
-	return lo.Find(lo.Flatten(groups), func(err2 error) bool {
-		return errors.Is(err2, err)
-	})
 }
 
 type retryBackoffConfig struct {
@@ -2521,7 +2497,9 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 	// the log file and the log processor moves things forward.
 
 	// Non-network errors don't concern this function
-	if _, ok := isGroupError(err, retryNetworkErrorsGroup); ok {
+	if slices.ContainsFunc(retryNetworkErrorsGroup, func(v string) bool {
+		return strings.Contains(err.Error(), v)
+	}) {
 		return err
 	}
 

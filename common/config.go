@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samber/lo"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -645,12 +644,6 @@ func (r RequestRetryLimit) Get() int {
 }
 
 type RequestRetryLimits map[string]int
-
-func (r RequestRetryLimits) AsErrors() []error {
-	return lo.Map(lo.Keys(r), func(err string, _ int) error {
-		return errors.New(err)
-	})
-}
 
 type RequestRetryBackoffMax int
 
