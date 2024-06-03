@@ -57,7 +57,7 @@ GitLab Runner supports the following options:
 
 - **Read a PEM certificate**: GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
   predefined file:
-  - `/etc/gitlab-runner/certs/gitlab.example.com.crt` on *nix systems when GitLab Runner is executed as `root`.
+  - `/etc/gitlab-runner/certs/gitlab.example.com.crt` on \*nix systems when GitLab Runner is executed as `root`.
 
     If your server address is `https://gitlab.example.com:8443/`, create the
     certificate file at: `/etc/gitlab-runner/certs/gitlab.example.com.crt`.
@@ -74,7 +74,7 @@ GitLab Runner supports the following options:
     echo | openssl s_client -CAfile /etc/gitlab-runner/certs/gitlab.example.com.crt -connect gitlab.example.com:443 -servername gitlab.example.com
     ```
 
-  - `~/.gitlab-runner/certs/gitlab.example.com.crt` on *nix systems when GitLab Runner is executed as non-`root`.
+  - `~/.gitlab-runner/certs/gitlab.example.com.crt` on \*nix systems when GitLab Runner is executed as non-`root`.
   - `./certs/gitlab.example.com.crt` on other systems. If running GitLab Runner as a Windows service,
     this will not work. Specify a custom certificate file instead.
 
