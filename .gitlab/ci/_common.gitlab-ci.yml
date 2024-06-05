@@ -41,7 +41,7 @@ variables:
   # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
   UBUNTU_VERSION: "20.04"
   # renovate: datasource=docker depName=redhat/ubi8-minimal versioning=redhat allowedVersions=/8\.8-.+/
-  UBI_FIPS_VERSION: "9.4-947"
+  UBI_FIPS_VERSION: "9.4-949"
   UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base
   PACKAGES_ITERATION: "1"
 
