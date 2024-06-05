@@ -491,7 +491,7 @@ It accepts the following parameters.
 
 ### `gitlab-runner run-single`
 
-- Ability to use a configuration file [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37670) in GitLab Runner 17.1.
+> - Ability to use a configuration file [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37670) in GitLab Runner 17.1.
 
 This is a supplementary command that can be used to run only a single build from
 a single GitLab instance. It can:
