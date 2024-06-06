@@ -270,7 +270,7 @@ func TestListenReadLines(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch, _ := processor.Process(ctx)
+	ch, errCh := processor.Process(ctx)
 	receivedLogs := make([]string, 0)
 	for log := range ch {
 		wg.Done()
@@ -278,6 +278,8 @@ func TestListenReadLines(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedLines, receivedLogs)
+	drainProcessLogsChannels(ch, errCh)
+	processor.Finalize()
 }
 
 func makeMockLogStreamer(t *testing.T) *mockLogStreamer {
@@ -334,6 +336,7 @@ func TestListenCancelContext(t *testing.T) {
 
 	ch, errCh := processor.Process(ctx)
 	assert.NoError(t, drainProcessLogsChannels(ch, errCh), "No error should be returned!")
+	processor.Finalize()
 }
 
 func TestAttachReconnectLogStream(t *testing.T) {
@@ -367,6 +370,7 @@ func TestAttachReconnectLogStream(t *testing.T) {
 
 	ch, errCh := processor.Process(ctx)
 	_ = drainProcessLogsChannels(ch, errCh)
+	processor.Finalize()
 }
 
 func TestAttachReconnectReadLogs(t *testing.T) {
@@ -402,6 +406,7 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 
 	ch, errCh := processor.Process(ctx)
 	assert.NoError(t, drainProcessLogsChannels(ch, errCh), "No error should be returned!")
+	processor.Finalize()
 }
 
 func drainProcessLogsChannels(ch <-chan string, errCh <-chan error) error {
@@ -471,10 +476,13 @@ func TestAttachCorrectOffset(t *testing.T) {
 	processor := newTestKubernetesLogProcessor()
 	processor.logStreamer = mockLogStreamer
 
-	ch, _ := processor.Process(ctx)
+	ch, errCh := processor.Process(ctx)
 	for range ch {
 		wg.Done()
 	}
+
+	drainProcessLogsChannels(ch, errCh)
+	processor.Finalize()
 }
 
 func TestScanHandlesStreamError(t *testing.T) {
@@ -516,8 +524,8 @@ func TestScanHandlesCancelledContext(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	scanner, ch := processor.scan(ctx, logsToReader(log{}))
 	var wg sync.WaitGroup
+	scanner, ch := processor.scan(ctx, logsToReader(log{}))
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

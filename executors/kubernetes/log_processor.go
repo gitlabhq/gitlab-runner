@@ -8,6 +8,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -81,6 +82,8 @@ type logProcessor interface {
 	// consumers must read from the channel until it's closed
 	// consumers are also notified in case of error through the error channel
 	Process(ctx context.Context) (<-chan string, <-chan error)
+	// Finalize waits for all Goroutines called in Process() to finish.
+	Finalize()
 }
 
 //go:generate mockery --name=backoffCalculator --inpackage
@@ -94,6 +97,7 @@ type kubernetesLogProcessor struct {
 	backoff     backoffCalculator
 	logger      logrus.FieldLogger
 	logStreamer logStreamer
+	wg          sync.WaitGroup
 
 	logsOffset int64
 }
@@ -137,6 +141,10 @@ func (l *kubernetesLogProcessor) Process(ctx context.Context) (<-chan string, <-
 	}()
 
 	return outCh, errCh
+}
+
+func (l *kubernetesLogProcessor) Finalize() {
+	l.wg.Wait()
 }
 
 func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, errCh chan error) {
@@ -260,7 +268,10 @@ func (l *kubernetesLogProcessor) scan(ctx context.Context, logs io.Reader) (*log
 	}
 
 	linesCh := make(chan string)
+	l.wg.Add(1)
+
 	go func() {
+		defer l.wg.Done()
 		defer close(linesCh)
 
 		// This goroutine will exit when the calling method closes the logs stream or the context is cancelled

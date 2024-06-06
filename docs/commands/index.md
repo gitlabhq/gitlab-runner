@@ -491,16 +491,24 @@ It accepts the following parameters.
 
 ### `gitlab-runner run-single`
 
-This is a supplementary command that can be used to run only a single build
-from a single GitLab instance. It doesn't use any configuration file and
-requires to pass all options either as parameters or environment variables.
-The GitLab URL and Runner token need to be specified too.
+> - Ability to use a configuration file [introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37670) in GitLab Runner 17.1.
 
-For example:
+This is a supplementary command that can be used to run only a single build from
+a single GitLab instance. It can:
 
-```shell
-gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:2.7
-```
+- Take all options either as CLI parameters or environment variables, including the GitLab URL
+  and Runner token. For example, a single job with all parameters specified explicitly:
+
+  ```shell
+  gitlab-runner run-single -u http://gitlab.example.com -t my-runner-token --executor docker --docker-image ruby:2.7
+  ```
+
+- Read from a configuration file to use a specific runner's configuration. For example,
+  a single job with a configuration file:
+
+  ```shell
+  gitlab-runner run-single -c ~/.gitlab-runner/config.toml -r runner-name
+  ```
 
 You can see all possible configuration options by using the `--help` flag:
 

@@ -1,8 +1,10 @@
 variables:
   # renovate: datasource=docker depName=golang allowedVersions=/1\.21\..+/
-  GO_VERSION: "1.21.9"
+  GO_VERSION: "1.22.3"
   # Sometimes the FIPS repo lags behind the official releases
-  GO_FIPS_VERSION: "1.21.9"
+  GO_FIPS_VERSION: "1.22.3"
+  # Account for the suffix used in https://github.com/golang-fips/go/releases/tag/go1.22.3-2-openssl-fips
+  GO_FIPS_VERSION_SUFFIX: "-2-openssl-fips"
   GO_CI_IMAGE: "$GO_VERSION-bookworm"
   CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_CI_IMAGE-1"
   # Feature flags
@@ -18,7 +20,7 @@ variables:
   AWS_CLI_VERSION: 2.4.19
   GIT_VERSION: "2.40.1"
   GIT_VERSION_BUILD: "1"
-  GIT_LFS_VERSION: "3.4.0"
+  GIT_LFS_VERSION: "3.5.1"
   YQ_VERSION: "4.30.5"
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
@@ -114,7 +116,7 @@ default:
 .windows-dependency-checksums:
   variables:
     GIT_WINDOWS_AMD64_CHECKSUM: "36498716572394918625476ca207df3d5f8b535a669e9aad7a99919d0179848c"
-    GIT_LFS_WINDOWS_AMD64_CHECKSUM: "5edafb149bc6cf7e2e8e52d18b031bdaad9a26101cc9dbbf8a3a5da03ac066f2"
+    GIT_LFS_WINDOWS_AMD64_CHECKSUM: "94435072f6b3a6f9064b277760c8340e432b5ede0db8205d369468b9be52c6b6"
     PWSH_WINDOWS_AMD64_CHECKSUM: "CF0C8BD757EEC6434A5830352EA6F15ACE237296BB7E4AE778F7707583023AC3"
 
 .windows1809_variables:

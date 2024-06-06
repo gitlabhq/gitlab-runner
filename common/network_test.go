@@ -523,3 +523,116 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestJobResponse_Run(t *testing.T) {
+	tests := map[string]struct {
+		json     string
+		wantJSON string
+		wantErr  bool
+	}{
+		"steps not used": {
+			json:     `{}`,
+			wantJSON: `{}`,
+		},
+		"steps not used, image is left alone": {
+			json:     `{"Image":{"Name":"registry.gitlab.com/project/image:v1"}}`,
+			wantJSON: `{"Image":{"Name":"registry.gitlab.com/project/image:v1"}}`,
+		},
+		"steps are used": {
+			json: `{"Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]"}`,
+			wantJSON: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"STEPS",
+      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+      "Raw":true
+    }
+  ],
+  "Steps":[
+    {
+      "Name":"script",
+      "Script":["/step-runner ci"],
+      "Timeout":3600,
+      "When":"on_success"
+    }
+  ],
+  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+}`,
+		},
+		"steps are used with image": {
+			json: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Image":{"Name":"registry.gitlab.com/project/image:v1"}
+}`,
+			wantJSON: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"STEPS",
+      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+      "Raw":true
+    }
+  ],
+  "Steps":[
+    {
+      "Name":"script",
+      "Script":["/step-runner ci"],
+      "Timeout":3600,
+      "When":"on_success"
+    }
+  ],
+  "Image":{"Name":"registry.gitlab.com/project/image:v1"}
+}`,
+		},
+		"steps are used with script": {
+			json: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Steps":[
+    {
+      "Name":"script",
+      "Script":["echo hello job"],
+      "Timeout":3600,
+      "When":"on_success"
+    }
+  ]
+}`,
+			wantErr: true,
+		},
+		"steps variable already used": {
+			json: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"STEPS",
+      "Value":"not steps",
+      "Raw":true
+    }
+  ]
+}`,
+			wantErr: true,
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			jobResponse := &JobResponse{}
+			require.NoError(t, json.Unmarshal([]byte(tt.json), &jobResponse))
+
+			err := jobResponse.StepsShim()
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			want := &JobResponse{}
+			require.NoError(t, json.Unmarshal([]byte(tt.wantJSON), &want))
+			require.Equal(t, want, jobResponse)
+		})
+	}
+}

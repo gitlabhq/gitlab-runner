@@ -934,7 +934,7 @@ Set the `never` policy in the `config.toml`:
   executor = "docker"
   [runners.docker]
     (...)
-    pull_policy = "if-not-present"
+    pull_policy = "never"
 ```
 
 ### Set multiple pull policies

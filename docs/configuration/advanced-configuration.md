@@ -627,7 +627,7 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 |---------------------|-------------|
 | `MaxGrowthRate`     | The maximum number of machines that can be added to the runner in parallel. Default is `0` (no limit). |
 | `IdleCount`         | Number of machines that need to be created and waiting in _Idle_ state. |
-| `IdleScaleFactor`   | (Experimental) The number of _Idle_ machines as a factor of the number of machines currently in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
+| `IdleScaleFactor`   | (Experiment) The number of _Idle_ machines as a factor of the number of machines in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
 | `IdleCountMin`      | Minimal number of machines that need to be created and waiting in _Idle_ state when the `IdleScaleFactor` is in use. Default is 1. |
 | `IdleTime`          | Time (in seconds) for machine to be in _Idle_ state before it is removed. |
 | `[[runners.machine.autoscaling]]` | Multiple sections, each containing overrides for autoscaling configuration. The last section with an expression that matches the current time is selected. |
@@ -646,7 +646,7 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 |---------------------|-------------|
 | `Periods`           | Time periods during which this schedule is active. An array of cron-style patterns (described [below](#periods-syntax)). |
 | `IdleCount`         | Number of machines that need to be created and waiting in _Idle_ state. |
-| `IdleScaleFactor`   | (Experimental) The number of _Idle_ machines as a factor of the number of machines currently in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
+| `IdleScaleFactor`   | (Experiment) The number of _Idle_ machines as a factor of the number of machines in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
 | `IdleCountMin`      | Minimal number of machines that need to be created and waiting in _Idle_ state when the `IdleScaleFactor` is in use. Default is 1. |
 | `IdleTime`          | Time (in seconds) for a machine to be in _Idle_ state before it is removed. |
 | `Timezone`   | Timezone for the times given in `Periods`. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
@@ -929,7 +929,7 @@ The following parameters define S3 storage for cache.
 | `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
 | `AuthenticationType`| string           | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
 | `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. |
-| `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. |
+| `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. If you use an alias, it must be preceded with `alias/`|
 
 Example:
 

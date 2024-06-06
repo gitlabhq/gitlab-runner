@@ -130,9 +130,14 @@ func (b *Builder) Logout(registry string) error {
 	return b.Docker("logout", registry)
 }
 
-func (b *Builder) Import(archive, tag, platform string) error {
+func (b *Builder) Import(archive, tag, platform, entrypoint string) error {
 	fmt.Println("Importing tag", archive, "as", tag, "platform", platform)
-	return b.Docker("import", archive, tag, "--platform", platform)
+	args := []string{"import", archive, tag, "--platform", platform}
+	if entrypoint != "" {
+		args = append(args, "--change", fmt.Sprintf("ENTRYPOINT %s", entrypoint))
+	}
+
+	return b.Docker(args...)
 }
 
 func (b *Builder) Tag(tagFrom, tagTo string) error {
