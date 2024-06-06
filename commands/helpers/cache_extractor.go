@@ -85,11 +85,17 @@ func (c *CacheExtractorCommand) download(_ int) error {
 	}()
 
 	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
-
+	etag := resp.Header.Get("ETag")
 	// For legacy purposes, caches written to disk use the extension `.zip`
 	// even when a different compression format is used. To avoid confusion,
 	// we avoid the extension name in logs.
-	logrus.Infoln("Downloading", name, "from", url_helpers.CleanURL(c.URL))
+	cleanedURL := url_helpers.CleanURL(c.URL)
+
+	if etag != "" {
+		logrus.WithField("ETag", etag).Infoln("Downloading", name, "from", cleanedURL)
+	} else {
+		logrus.Infoln("Downloading", name, "from", cleanedURL)
+	}
 
 	writer := meter.NewWriter(
 		file,
