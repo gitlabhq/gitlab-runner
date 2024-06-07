@@ -47,7 +47,7 @@ var (
 	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.2")
 	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
 	ubiFIPSBaseImage = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
-	ubiFIPSVersion   = env.NewDefault("UBI_FIPS_VERSION", "8.8-860")
+	ubiFIPSVersion   = env.NewDefault("UBI_FIPS_VERSION", "9.4-949")
 
 	buildxRetry = env.NewDefault("RUNNER_IMAGES_DOCKER_BUILDX_RETRY", "0")
 )

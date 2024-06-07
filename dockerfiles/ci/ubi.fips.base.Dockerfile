@@ -1,6 +1,6 @@
 ARG UBI_VERSION
 
-FROM redhat/ubi8-minimal:${UBI_VERSION}
+FROM redhat/ubi9-minimal:${UBI_VERSION}
 
 # these packages are required by downstream images, but we don't know anymore specifically which images require which
 # packages, so we'll install them all here...
