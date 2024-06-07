@@ -26,7 +26,7 @@ fi
 
 echo "Check links"
 if command -v lychee >/dev/null 2>&1; then
-   lychee --offline --include-fragments docs/**/*.md || ((ERROR_RESULTS++))
+   lychee --offline --include-fragments docs || ((ERROR_RESULTS++))
 else
     echo "Lychee is missing, please install it from https://lychee.cli.rs/installation/"
 fi

@@ -26,7 +26,7 @@ on other Linux distributions.
 | Amazon Linux | <https://aws.amazon.com/linux/> |
 
 NOTE:
-Packages for distributions that are not on the list are currently not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket.
+Packages for distributions that are not on the list are not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket.
 
 ## Prerequisites
 
