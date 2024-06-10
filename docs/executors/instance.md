@@ -7,7 +7,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 # Instance executor
 
 DETAILS:
-**Status:** Beta
+**Status:** GA
 
 > - Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
