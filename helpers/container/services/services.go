@@ -16,6 +16,7 @@ type Service struct {
 }
 
 var referenceRegexpNoPort = regexp.MustCompile(`^(.*?)(|:[0-9]+)(|/.*)$`)
+var referenceRegexOnlyDigest = regexp.MustCompile(`@sha256:.{64}$`)
 
 const imageVersionLatest = "latest"
 
@@ -48,6 +49,11 @@ func SplitNameAndVersion(serviceDescription string) Service {
 	if len(imageVersion) > 0 {
 		service.ImageName = serviceDescription
 		service.Version = imageVersion
+	} else if len(referenceRegexOnlyDigest.FindStringSubmatch(serviceDescription)) > 0 {
+		// if it doesn't have the version check maybe it only has the sha digest
+		// service@sha256:64-char-string
+		service.ImageName = serviceDescription
+		service.Version = referenceRegexOnlyDigest.FindStringSubmatch(serviceDescription)[0]
 	} else {
 		service.ImageName = fmt.Sprintf("%s:%s", imageWithoutVersion, imageVersionLatest)
 		service.Version = imageVersionLatest
