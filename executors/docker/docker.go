@@ -393,7 +393,14 @@ func (e *executor) createService(
 		return nil, errVolumesManagerUndefined
 	}
 
-	e.BuildLogger.Println("Starting service", service+":"+version, "...")
+	var serviceName string
+	if strings.HasPrefix(version, "@sha256") {
+		serviceName = fmt.Sprintf("%s%s...", service, version) // service@digest
+	} else {
+		serviceName = fmt.Sprintf("%s:%s...", service, version) // service:version
+	}
+
+	e.BuildLogger.Println("Starting service", serviceName)
 	serviceImage, err := e.pullManager.GetDockerImage(image, definition.ExecutorOptions.Docker, definition.PullPolicies)
 	if err != nil {
 		return nil, err
