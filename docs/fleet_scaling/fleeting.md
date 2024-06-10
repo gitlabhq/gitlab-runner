@@ -15,9 +15,12 @@ The following executors use fleeting to scale runners:
 
 GitLab maintains these official plugins in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta):
 
-- [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws), which uses [AWS Autoscaling Groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html).
-- [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud), which uses [Google Cloud Instance Groups](https://cloud.google.com/compute/docs/instance-groups).
-- [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure), which uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview).
+
+ |Cloud Provider | Release Status |Notes|
+|--------|-------------|-------------|
+|[Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud)|GA|Uses [Google Cloud Instance Groups](https://cloud.google.com/compute/docs/instance-groups).|
+|[AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws)|Beta|Uses [AWS Autoscaling Groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html).|
+|[Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure)|Beta|Uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview).|
 
 To configure fleeting, in the `config.toml`, use the [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 configuration section.
