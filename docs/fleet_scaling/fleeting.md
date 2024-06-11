@@ -13,8 +13,7 @@ The following executors use fleeting to scale runners:
 - [Docker Autoscaler](../executors/docker_autoscaler.md)
 - [Instance](../executors/instance.md)
 
-GitLab maintains these official plugins in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta):
-
+GitLab maintains these official plugins:
 
 | Cloud provider                                                             | Release status      | Notes |
 |----------------------------------------------------------------------------|---------------------|-------|
