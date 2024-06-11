@@ -6,11 +6,9 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 # Docker Autoscaler executor
 
-DETAILS:
-**Status:** Beta
-
 > - Introduced in GitLab Runner 15.11.0 as an [experiment](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#experiment).
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
+> - [Generally available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29221) in GitLab Runner 17.1.
 
 This feature is in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) and is not recommended for production use.
 For production environments, you should use the [Docker Machine executor](../fleet_scaling/index.md#docker-machine-executor).
