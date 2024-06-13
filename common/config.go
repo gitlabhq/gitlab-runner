@@ -607,6 +607,7 @@ type KubernetesConfig struct {
 	PollTimeout                                       int                                `toml:"poll_timeout,omitzero" json:"poll_timeout" long:"poll-timeout" env:"KUBERNETES_POLL_TIMEOUT" description:"The total amount of time, in seconds, that needs to pass before the runner will timeout attempting to connect to the pod it has just created (useful for queueing more builds that the cluster can handle at a time)"`
 	ResourceAvailabilityCheckMaxAttempts              int                                `toml:"resource_availability_check_max_attempts,omitzero" json:"resource_availability_check_max_attempts" long:"resource-availability-check-max-attempts" env:"KUBERNETES_RESOURCE_AVAILABILITY_CHECK_MAX_ATTEMPTS" default:"5" description:"The maximum number of attempts to check if a resource (service account and/or pull secret) set is available before giving up. There is 5 seconds interval between each attempt"`
 	RequestRetryLimit                                 RequestRetryLimit                  `toml:"retry_limit,omitzero" json:"retry_limit" long:"retry-limit" env:"KUBERNETES_REQUEST_RETRY_LIMIT" default:"5" description:"The maximum number of attempts to communicate with Kubernetes API. The retry interval between each attempt is based on a backoff algorithm starting at 500 ms"`
+	RequestRetryBackoffMax                            RequestRetryBackoffMax             `toml:"retry_backoff_max,omitzero" json:"retry_backoff_max" long:"retry-backoff-max" env:"KUBERNETES_REQUEST_RETRY_BACKOFF_MAX" default:"2000" description:"The max backoff interval value in milliseconds that can be reached for retry attempts to communicate with Kubernetes API"`
 	RequestRetryLimits                                RequestRetryLimits                 `toml:"retry_limits" json:"retry_limits,omitempty" long:"retry-limits" env:"KUBERNETES_RETRY_LIMITS" description:"How many times each request error is to be retried"`
 	PodLabels                                         map[string]string                  `toml:"pod_labels,omitempty" json:"pod_labels,omitempty" long:"pod-labels" description:"A toml table/json object of key-value. Value is expected to be a string. When set, this will create pods with the given pod labels. Environment variables will be substituted for values here."`
 	PodLabelsOverwriteAllowed                         string                             `toml:"pod_labels_overwrite_allowed" json:"pod_labels_overwrite_allowed" long:"pod_labels_overwrite_allowed" env:"KUBERNETES_POD_LABELS_OVERWRITE_ALLOWED" description:"Regex to validate 'KUBERNETES_POD_LABELS_*' values"`
@@ -649,6 +650,19 @@ func (r RequestRetryLimits) AsErrors() []error {
 	return lo.Map(lo.Keys(r), func(err string, _ int) error {
 		return errors.New(err)
 	})
+}
+
+type RequestRetryBackoffMax int
+
+func (r RequestRetryBackoffMax) Get() time.Duration {
+	switch {
+	case r <= 0:
+		return DefaultRequestRetryBackoffMax
+	case time.Duration(r)*time.Millisecond <= RequestRetryBackoffMin:
+		return RequestRetryBackoffMin
+	default:
+		return time.Duration(r) * time.Millisecond
+	}
 }
 
 type KubernetesPodSpec struct {
