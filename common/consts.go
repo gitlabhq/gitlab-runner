@@ -36,6 +36,8 @@ const WaitForBuildFinishTimeout = 5 * time.Minute
 const SecretVariableDefaultsToFile = true
 const TokenResetIntervalFactor = 0.75
 const DefaultRequestRetryLimit = 5
+const RequestRetryBackoffMin = 500 * time.Millisecond
+const DefaultRequestRetryBackoffMax = 2000 * time.Millisecond
 
 const (
 	DefaultTraceOutputLimit = 4 * 1024 * 1024 // in bytes

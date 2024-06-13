@@ -71,9 +71,6 @@ const (
 
 	k8sAnnotationPrefix = "runner.gitlab.com/"
 
-	defaultRetryMinBackoff = 500 * time.Millisecond
-	defaultRetryMaxBackoff = 2 * time.Second
-
 	// The suffix is built using alphanumeric character
 	// that means there is 34^8 possibilities for a resource name using the same pattern
 	// Considering that the k8s resources are deleted after they run,
@@ -174,6 +171,8 @@ func (s *executor) NewRetry() *retry.Retry {
 		return &retryError{err}
 	})
 
+	retryBackoffConfig := s.getRetryBackoffConfig()
+
 	return retry.New().
 		WithCheck(func(_ int, err error) bool {
 			_, found := isGroupError(err, retryNetworkErrorsGroup, retryLimitsAsRetryErrors)
@@ -187,13 +186,22 @@ func (s *executor) NewRetry() *retry.Retry {
 
 			return s.Config.Kubernetes.RequestRetryLimit.Get()
 		}).
-		WithBackoff(defaultRetryMinBackoff, defaultRetryMaxBackoff)
+		WithBackoff(retryBackoffConfig.min, retryBackoffConfig.max)
 }
 
 func isGroupError(err error, groups ...[]error) (error, bool) {
 	return lo.Find(lo.Flatten(groups), func(err2 error) bool {
 		return errors.Is(err2, err)
 	})
+}
+
+type retryBackoffConfig struct {
+	min time.Duration
+	max time.Duration
+}
+
+func (s *executor) getRetryBackoffConfig() retryBackoffConfig {
+	return retryBackoffConfig{min: common.RequestRetryBackoffMin, max: s.Config.Kubernetes.RequestRetryBackoffMax.Get()}
 }
 
 type podPhaseError struct {

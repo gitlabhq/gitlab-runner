@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jpillora/backoff"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -7151,14 +7152,16 @@ containers:
 
 func TestRetryLimits(t *testing.T) {
 	tests := map[string]struct {
-		config             common.KubernetesConfig
-		err                error
-		expectedRetryCount int
+		config                   common.KubernetesConfig
+		err                      error
+		expectedRetryCount       int
+		expectedLastRetryBackoff time.Duration
 	}{
 		"no retry limits": {
-			config:             common.KubernetesConfig{},
-			err:                syscall.ECONNRESET,
-			expectedRetryCount: 5,
+			config:                   common.KubernetesConfig{},
+			err:                      syscall.ECONNRESET,
+			expectedRetryCount:       5,
+			expectedLastRetryBackoff: common.DefaultRequestRetryBackoffMax,
 		},
 		"retry limits": {
 			config: common.KubernetesConfig{
@@ -7167,8 +7170,9 @@ func TestRetryLimits(t *testing.T) {
 					syscall.ECONNRESET.Error(): 3,
 				},
 			},
-			err:                syscall.ECONNRESET,
-			expectedRetryCount: 3,
+			err:                      syscall.ECONNRESET,
+			expectedRetryCount:       3,
+			expectedLastRetryBackoff: common.DefaultRequestRetryBackoffMax,
 		},
 		"retry limits fallback to default": {
 			config: common.KubernetesConfig{
@@ -7177,8 +7181,9 @@ func TestRetryLimits(t *testing.T) {
 					syscall.ECONNRESET.Error(): 3,
 				},
 			},
-			err:                syscall.ECONNABORTED,
-			expectedRetryCount: 6,
+			err:                      syscall.ECONNABORTED,
+			expectedRetryCount:       6,
+			expectedLastRetryBackoff: common.DefaultRequestRetryBackoffMax,
 		},
 		"retry limits with manually constructed error": {
 			config: common.KubernetesConfig{
@@ -7187,8 +7192,9 @@ func TestRetryLimits(t *testing.T) {
 					"error dialing backend": 2,
 				},
 			},
-			err:                errors.New("error dialing backend"),
-			expectedRetryCount: 2,
+			err:                      errors.New("error dialing backend"),
+			expectedRetryCount:       2,
+			expectedLastRetryBackoff: 1000 * time.Millisecond,
 		},
 		"retry limits with manually constructed error that contains retry key": {
 			config: common.KubernetesConfig{
@@ -7197,8 +7203,42 @@ func TestRetryLimits(t *testing.T) {
 					"error dialing backend": 2,
 				},
 			},
-			err:                errors.New("--error dialing backend--"),
-			expectedRetryCount: 2,
+			err:                      errors.New("--error dialing backend--"),
+			expectedRetryCount:       2,
+			expectedLastRetryBackoff: 1000 * time.Millisecond,
+		},
+		"retry with custom backoff max": {
+			config: common.KubernetesConfig{
+				RequestRetryBackoffMax: 4000,
+				RequestRetryLimits: map[string]int{
+					"error dialing backend": 6,
+				},
+			},
+			err:                      errors.New("--error dialing backend--"),
+			expectedRetryCount:       6,
+			expectedLastRetryBackoff: 4000 * time.Millisecond,
+		},
+		"retry with custom backoff max lower than default backoff min": {
+			config: common.KubernetesConfig{
+				RequestRetryBackoffMax: 300,
+				RequestRetryLimits: map[string]int{
+					"error dialing backend": 3,
+				},
+			},
+			err:                      errors.New("--error dialing backend--"),
+			expectedRetryCount:       3,
+			expectedLastRetryBackoff: common.RequestRetryBackoffMin,
+		},
+		"retry with custom backoff max between min and default max": {
+			config: common.KubernetesConfig{
+				RequestRetryBackoffMax: 1100,
+				RequestRetryLimits: map[string]int{
+					"error dialing backend": 3,
+				},
+			},
+			err:                      errors.New("--error dialing backend--"),
+			expectedRetryCount:       3,
+			expectedLastRetryBackoff: 1100 * time.Millisecond,
 		},
 	}
 
@@ -7207,14 +7247,22 @@ func TestRetryLimits(t *testing.T) {
 			e := &executor{}
 			e.Config.Kubernetes = &tt.config
 
+			retryBackoffConfig := e.getRetryBackoffConfig()
+
+			backoff := &backoff.Backoff{Min: retryBackoffConfig.min, Max: retryBackoffConfig.max}
+
 			var counter int
+			var lastRetryBackoff time.Duration
+
 			err := retry.WithFn(e, func() error {
 				counter++
+				lastRetryBackoff = backoff.Duration()
 				return tt.err
 			}).Run()
 
 			require.Equal(t, err, tt.err)
 			require.Equal(t, tt.expectedRetryCount, counter)
+			require.Equal(t, tt.expectedLastRetryBackoff, lastRetryBackoff)
 		})
 	}
 }
