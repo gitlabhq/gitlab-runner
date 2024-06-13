@@ -84,9 +84,9 @@ concurrent = 10
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "aws" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+    plugin = "aws" # in GitLab 16.11 and later, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
 
-    # for versions < 17.0, manually install the plugin and use:
+    # in GitLab 16.10 and earlier, manually install the plugin and use:
     # plugin = "fleeting-plugin-aws"
 
     capacity_per_instance = 1
@@ -149,9 +149,9 @@ concurrent = 50
 
   # Autoscaler config
   [runners.autoscaler]
-    plugin = "aws" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+    plugin = "aws" # in GitLab 16.11 and later, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
 
-    # for versions < 17.0, manually install the plugin and use:
+    # in GitLab 16.10 and earlier, manually install the plugin and use:
     # plugin = "fleeting-plugin-aws"
 
     capacity_per_instance = 5
@@ -226,9 +226,9 @@ concurrent = 8
     max_use_count = 0
     max_instances = 4
 
-    plugin = "aws" # for >= 16.11, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
+    plugin = "aws" # in GitLab 16.11 and later, ensure you run `gitlab-runner fleeting install` to automatically install the plugin
 
-    # for versions < 17.0, manually install the plugin and use:
+    # in GitLab 16.10 and earlier, manually install the plugin and use:
     # plugin = "fleeting-plugin-aws"
 
     [[runners.autoscaler.policy]]
