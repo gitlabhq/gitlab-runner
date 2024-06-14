@@ -23,6 +23,7 @@ const DefaultGetSourcesAttempts = 1
 const DefaultArtifactDownloadAttempts = 1
 const DefaultRestoreCacheAttempts = 1
 const DefaultExecutorStageAttempts = 1
+const DefaultAfterScriptIgnoreErrors = true
 const KubernetesPollInterval = 3
 const KubernetesPollTimeout = 180
 const KubernetesCleanupResourcesTimeout = 5 * time.Minute

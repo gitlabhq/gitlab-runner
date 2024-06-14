@@ -506,10 +506,19 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		defer cancel()
 
 		if afterScriptErr := b.executeAfterScript(afterScriptCtx, err, executor); afterScriptErr != nil {
+			// the parent deadline being exceeded is reported at a later stage, so we
+			// only focus on errors specific to after_script here.
 			if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				// the parent deadline being exceeded is reported at a later stage, so we
-				// only focus on errors specific to after_script here
-				b.logger.Warningln("after_script failed, but job will continue unaffected:", afterScriptErr)
+				// By default after-script ignores errors, but this can
+				// be disabled via the AFTER_SCRIPT_IGNORE_ERRORS variable.
+
+				if b.Settings().AfterScriptIgnoreErrors {
+					b.logger.Warningln("after_script failed, but job will continue unaffected:", afterScriptErr)
+				} else if err == nil {
+					// If there's an existing error don't overwrite it with
+					// the after-script error.
+					err = afterScriptErr
+				}
 			}
 		}
 	}
