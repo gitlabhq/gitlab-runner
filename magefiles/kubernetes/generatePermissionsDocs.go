@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/samber/lo"
-	"golang.org/x/exp/slices"
 )
 
 const (
@@ -69,8 +69,8 @@ func mergePermissions(permissions permissionsGroup) []permissionsRender {
 		}
 	})
 
-	slices.SortFunc(render, func(i, j permissionsRender) bool {
-		return strings.Compare(i.Resource, j.Resource) < 0
+	slices.SortFunc(render, func(i, j permissionsRender) int {
+		return strings.Compare(i.Resource, j.Resource)
 	})
 
 	return render

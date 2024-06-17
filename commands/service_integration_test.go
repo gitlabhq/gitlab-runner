@@ -4,13 +4,13 @@ package commands_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/kardianos/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/commands"
-	"golang.org/x/exp/slices"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
