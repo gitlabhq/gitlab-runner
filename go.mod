@@ -47,7 +47,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kardianos/service v1.2.2
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/klauspost/compress v1.17.6
+	github.com/klauspost/compress v1.17.9
 	github.com/klauspost/pgzip v1.2.5
 	github.com/magefile/mage v1.15.0
 	github.com/minio/minio-go/v7 v7.0.70
