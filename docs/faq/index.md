@@ -375,3 +375,18 @@ This error can occur when the Docker machine is not able to successfully create 
 about the error, manually create the virtual machine with the same `MachineOptions` that you have defined in your `config.toml`.  
 
 For example: `docker-machine create --driver=google --google-project=GOOGLE-PROJECT-ID --google-zone=GOOGLE-ZONE ...`.
+
+## `No unique index found for name`
+
+This error might occur when you create or update a runner and
+the database does not have a unique index for the `tags` table.
+To resolve this issue:
+
+1. In the [Rails console](https://docs.gitlab.com/ee/administration/operations/rails_console.html), consolidate any duplicate tags that
+   might exist in the table by running the [`dedupe.rb`](https://gitlab.com/gitlab-org/gitlab/-/snippets/3700665) script.
+1. Create a unique index for the `tags` table:
+
+   ```sql
+   DROP INDEX IF EXISTS index_tags_on_name; -- Drop a potentially invalid index
+   CREATE UNIQUE INDEX index_tags_on_name ON tags USING btree (name);
+   ```
