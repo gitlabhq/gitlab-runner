@@ -150,18 +150,18 @@ func (s *executor) NewRetry() *retry.Retry {
 	return retry.New().
 		WithCheck(func(_ int, err error) bool {
 			for key := range retryLimits {
-				if strings.Contains(err.Error(), key) {
+				if err != nil && strings.Contains(err.Error(), key) {
 					return true
 				}
 			}
 
 			return slices.ContainsFunc(retryNetworkErrorsGroup, func(v string) bool {
-				return strings.Contains(err.Error(), v)
+				return err != nil && strings.Contains(err.Error(), v)
 			})
 		}).
 		WithMaxTriesFunc(func(err error) int {
 			for key, limit := range retryLimits {
-				if strings.Contains(err.Error(), key) {
+				if err != nil && strings.Contains(err.Error(), key) {
 					return limit
 				}
 			}
@@ -2498,7 +2498,7 @@ func (s *executor) checkScriptExecution(stage common.BuildStage, err error) erro
 
 	// Non-network errors don't concern this function
 	if slices.ContainsFunc(retryNetworkErrorsGroup, func(v string) bool {
-		return strings.Contains(err.Error(), v)
+		return err != nil && strings.Contains(err.Error(), v)
 	}) {
 		return err
 	}
