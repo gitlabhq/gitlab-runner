@@ -33,7 +33,7 @@ RUN rm -rf /tmp/* /etc/gitlab-runner/.runner_system_id
 FROM $BASE_IMAGE
 
 COPY --from=0 / /
-COPY --chmod=777 entrypoint /
+COPY --chmod=755 entrypoint /
 
 RUN apk update && apk upgrade --no-cache
 
