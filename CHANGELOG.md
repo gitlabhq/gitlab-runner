@@ -1,3 +1,52 @@
+## v17.1.0 (2024-06-20)
+
+### New features
+
+- Add AFTER_SCRIPT_IGNORE_ERRORS variable allow not ignoring after_script errors !4758 (Tim @timmmm)
+- Add Kubernetes configurable retry backoff ceiling !4790 (Nabil ZOUABI @nabil_zouabi)
+- Remove Beta from runner autoscaler supported public cloud docs section !4823
+- Update Fleeting docs to reflect GCP plugin transition to GA !4820
+- Change status of Docker Autoscaler and Instance to GA !4821
+- Log ETag of extracted cache archive if available !4769
+- Allow reading run-single configuration from a config file !4789 (Tobias Ribizel @upsj)
+- Add steps shim !4803
+
+### Bug fixes
+
+- Fix panic when err is nil on retry for k8s executor !4834
+- Fix linter violation !4827
+- Support handling docker images with @digest !4557
+- Fix docker client intermittently failing to connect to unix socket !4801
+- Override helper images entrypoint on docker import !4793
+- Fix jsonschema validation warning for docker services_limit !4782 (Malte Morgenstern @malmor)
+- Propagate exit codes through nested pwsh calls !4715 (Andy Durant @AJDurant)
+- Fix jsonschema validation warning for kubernetes retry_limits !4786 (Malte Morgenstern @malmor)
+
+### Maintenance
+
+- Add exact commands to fix signed by unknown authority !4833
+- Document troubleshooting steps for 500 error creating tags !4831
+- Remove BETA from the autoscaler docs !4832
+- Upgrade github.com/minio/minio-go to v7.0.70 !4819 (Mathieu Quesnel @xmath279)
+- Remove github.com/samber/lo dependency from main application !4811
+- Update Docker Autoscaler executor docs !4822
+- Enable tarzstd archive format for caches !4807
+- Bump docker+machine version to v0.16.2-gitlab.26 !4816
+- Upgrade ubi fips base image from ubi8 to ubi9 !4814
+- Check links in more files !4815
+- Upgrade helper image git-lfs to 3.5.1 !4812
+- Update runner registration documentation !4809
+- Update docs linting Docker images !4806
+- Add note about KMS Alias syntax - Documentation !4792
+- Fix external links in docs !4802
+- Remove trailing whitespace !4799
+- Bump to Go 1.22.3 !4795
+- Move docs-related CI jobs to the same file !4787
+- Docs: match example to text !4794 (Anton Dollmaier @a.dollmaier)
+- Bump to Go 1.22.2 !4759
+- Use lowercase for beta and experiment !4788
+- Made beta and experiment lowercase !4785
+
 ## v17.0.0 (2024-05-16)
 
 ### New features
