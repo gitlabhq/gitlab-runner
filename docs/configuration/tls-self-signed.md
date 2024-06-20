@@ -299,9 +299,22 @@ In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runn
 
 This error occurs when the Docker host or Kubernetes node where the runner schedules the
 executors does not trust the certificate used by the private registry. To fix the error,
-add the relevant root certificate authority, or certificate chain, to the system's trust store based
-on your operating system, then restart the container service. Depending on your GitLab Runner version
-and Docker host environment, you might need to also set the runner feature flag `FF_RESOLVE_FULL_TLS_CHAIN` to `FALSE`.
+add the relevant root certificate authority or certificate chain to the system's trust store
+and restart the container service.
+
+If you're on Ubuntu or Alpine, run the following commands:
+
+```shell
+cp ca.crt /usr/local/share/ca-certificates/ca.crt
+update-ca-certificates
+systemctl restart docker.service
+```
+
+If you're not on Ubuntu or Alpine, check your operating system
+and the Docker documentation for the commands to run.
+
+Depending on your version of GitLab Runner and the Docker host environment,
+you might also have to disable the `FF_RESOLVE_FULL_TLS_CHAIN` feature flag.
 
 ### `apt-get: not found` errors in jobs
 
