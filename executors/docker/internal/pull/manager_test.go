@@ -36,17 +36,16 @@ func TestDockerForNamedImage(t *testing.T) {
 	dockerOptions := common.ImageDockerOptions{}
 
 	m := newDefaultTestManager(c, dockerConfig)
-	options := buildImagePullOptions()
 
-	c.On("ImagePullBlocking", m.context, "test:latest", options).
+	c.On("ImagePullBlocking", m.context, "test:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(os.ErrNotExist).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "tagged:tag", options).
+	c.On("ImagePullBlocking", m.context, "tagged:tag", mock.AnythingOfType("ImagePullOptions")).
 		Return(os.ErrNotExist).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, validSHA, options).
+	c.On("ImagePullBlocking", m.context, validSHA, mock.AnythingOfType("ImagePullOptions")).
 		Return(os.ErrNotExist).
 		Once()
 
@@ -71,17 +70,16 @@ func TestDockerForImagePullFailures(t *testing.T) {
 	dockerConfig := &common.DockerConfig{}
 	dockerOptions := common.ImageDockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
-	options := buildImagePullOptions()
 
 	tests := map[string]struct {
 		imageName string
-		initMock  func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument)
+		initMock  func(c *docker.MockClient, imageName string)
 		assert    func(t *testing.T, m *manager, imageName string)
 	}{
 		"ImagePullBlocking unwrapped system failure": {
 			imageName: "unwrapped-system:failure",
-			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
-				c.On("ImagePullBlocking", m.context, imageName, options).
+			initMock: func(c *docker.MockClient, imageName string) {
+				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("ImagePullOptions")).
 					Return(errdefs.System(errTest)).
 					Once()
 			},
@@ -96,8 +94,8 @@ func TestDockerForImagePullFailures(t *testing.T) {
 		},
 		"ImagePullBlocking wrapped system failure": {
 			imageName: "wrapped-system:failure",
-			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
-				c.On("ImagePullBlocking", m.context, imageName, options).
+			initMock: func(c *docker.MockClient, imageName string) {
+				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("ImagePullOptions")).
 					Return(fmt.Errorf("wrapped error: %w", errdefs.System(errTest))).
 					Once()
 			},
@@ -112,8 +110,8 @@ func TestDockerForImagePullFailures(t *testing.T) {
 		},
 		"ImagePullBlocking two level wrapped system failure": {
 			imageName: "two-level-wrapped-system:failure",
-			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
-				c.On("ImagePullBlocking", m.context, imageName, options).
+			initMock: func(c *docker.MockClient, imageName string) {
+				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("ImagePullOptions")).
 					Return(fmt.Errorf("wrapped error: %w", fmt.Errorf("wrapped error: %w", errdefs.System(errTest)))).
 					Once()
 			},
@@ -128,8 +126,8 @@ func TestDockerForImagePullFailures(t *testing.T) {
 		},
 		"ImagePullBlocking wrapped request timeout failure": {
 			imageName: "wrapped-request-timeout:failure",
-			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
-				c.On("ImagePullBlocking", m.context, imageName, options).
+			initMock: func(c *docker.MockClient, imageName string) {
+				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("ImagePullOptions")).
 					Return(fmt.Errorf(
 						"wrapped error: %w", errdefs.System(errors.New(
 							"request canceled while waiting for connection",
@@ -147,8 +145,8 @@ func TestDockerForImagePullFailures(t *testing.T) {
 		},
 		"ImagePullBlocking two level wrapped request timeout failure": {
 			imageName: "lwo-level-wrapped-request-timeout:failure",
-			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
-				c.On("ImagePullBlocking", m.context, imageName, options).
+			initMock: func(c *docker.MockClient, imageName string) {
+				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("ImagePullOptions")).
 					Return(fmt.Errorf(
 						"wrapped error: %w", fmt.Errorf(
 							"wrapped error: %w", errdefs.System(errors.New(
@@ -167,8 +165,8 @@ func TestDockerForImagePullFailures(t *testing.T) {
 		},
 		"ImagePullBlocking unwrapped script failure": {
 			imageName: "unwrapped-script:failure",
-			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
-				c.On("ImagePullBlocking", m.context, imageName, options).
+			initMock: func(c *docker.MockClient, imageName string) {
+				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("ImagePullOptions")).
 					Return(errdefs.NotFound(errTest)).
 					Once()
 			},
@@ -183,8 +181,8 @@ func TestDockerForImagePullFailures(t *testing.T) {
 		},
 		"ImagePullBlocking wrapped script failure": {
 			imageName: "wrapped-script:failure",
-			initMock: func(c *docker.MockClient, imageName string, options mock.AnythingOfTypeArgument) {
-				c.On("ImagePullBlocking", m.context, imageName, options).
+			initMock: func(c *docker.MockClient, imageName string) {
+				c.On("ImagePullBlocking", m.context, imageName, mock.AnythingOfType("ImagePullOptions")).
 					Return(fmt.Errorf("wrapped error: %w", errdefs.NotFound(errTest))).
 					Once()
 			},
@@ -201,7 +199,7 @@ func TestDockerForImagePullFailures(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			tc.initMock(c, tc.imageName, options)
+			tc.initMock(c, tc.imageName)
 			tc.assert(t, m, tc.imageName)
 		})
 	}
@@ -214,7 +212,7 @@ func TestDockerForExistingImage(t *testing.T) {
 	dockerConfig := &common.DockerConfig{}
 	dockerOptions := common.ImageDockerOptions{}
 	m := newDefaultTestManager(c, dockerConfig)
-	c.On("ImagePullBlocking", m.context, "existing:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(nil).
 		Once()
 
@@ -317,7 +315,7 @@ func TestDockerPolicyModeIfNotPresentForNotExistingImage(t *testing.T) {
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "not-existing:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(nil).
 		Once()
 
@@ -355,7 +353,7 @@ func TestDockerPolicyModeAlwaysForExistingImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "existing:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(nil).
 		Once()
 
@@ -384,7 +382,7 @@ func TestDockerPolicyModeAlwaysForLocalOnlyImage(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "existing:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(fmt.Errorf("not found")).
 		Once()
 
@@ -406,8 +404,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	options := buildImagePullOptions()
-	c.On("ImagePullBlocking", m.context, "to-pull:latest", options).
+	c.On("ImagePullBlocking", m.context, "to-pull:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(os.ErrNotExist).
 		Once()
 
@@ -419,7 +416,7 @@ func TestDockerGetExistingDockerImageIfPullFails(t *testing.T) {
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "not-existing:latest", options).
+	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(os.ErrNotExist).
 		Once()
 
@@ -445,7 +442,7 @@ func TestCombinedDockerPolicyModesAlwaysAndIfNotPresentForExistingImage(t *testi
 		Return(types.ImageInspect{ID: "image-id"}, nil, nil).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "existing:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(errors.New("received unexpected HTTP status: 502 Bad Gateway")).
 		Once()
 
@@ -475,7 +472,7 @@ func TestCombinedDockerPolicyModeAlwaysAndIfNotPresentForNonExistingImage(t *tes
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "not-existing:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(os.ErrNotExist).
 		Twice()
 
@@ -555,7 +552,7 @@ func TestPullPolicyPassedAsIfNotPresentForNonExistingAndConfigAlways(t *testing.
 		Return(types.ImageInspect{}, nil, os.ErrNotExist).
 		Once()
 
-	c.On("ImagePullBlocking", m.context, "not-existing:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "not-existing:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(nil).
 		Once()
 
@@ -704,12 +701,6 @@ func TestPullPolicyWhenConfigAllowedPullPoliciesIsInvalid(t *testing.T) {
 	)
 }
 
-// ImagePullOptions contains the RegistryAuth which is inferred from the docker
-// configuration for the user, so just mock it out here.
-func buildImagePullOptions() mock.AnythingOfTypeArgument {
-	return mock.AnythingOfType("ImagePullOptions")
-}
-
 func newLoggerMock() *mockPullLogger {
 	loggerMock := new(mockPullLogger)
 	loggerMock.On(
@@ -805,7 +796,7 @@ func addPullsRemoteImageExpectations(c *docker.MockClient, imageName string) {
 		Return(types.ImageInspect{ID: "not-this-image"}, nil, nil).
 		Once()
 
-	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("types.ImagePullOptions")).
+	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("ImagePullOptions")).
 		Return(nil).
 		Once()
 
@@ -819,7 +810,7 @@ func addDeniesPullExpectations(c *docker.MockClient, imageName string) {
 		Return(types.ImageInspect{ID: "image"}, nil, nil).
 		Once()
 
-	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("types.ImagePullOptions")).
+	c.On("ImagePullBlocking", mock.Anything, imageName, mock.AnythingOfType("ImagePullOptions")).
 		Return(fmt.Errorf("deny pulling")).
 		Once()
 }
@@ -879,7 +870,7 @@ func TestDockerGetImagePlatformSuccess(t *testing.T) {
 
 	m := newDefaultTestManager(c, dockerConfig)
 
-	c.On("ImagePullBlocking", m.context, "test:latest", buildImagePullOptions()).
+	c.On("ImagePullBlocking", m.context, "test:latest", mock.AnythingOfType("ImagePullOptions")).
 		Return(nil).
 		Once()
 
