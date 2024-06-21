@@ -1393,6 +1393,13 @@ concurrent = 4
       hostnames = ["web14", "web15"]
 ```
 
+You can also configure host aliases by using the command-line parameter `--kubernetes-host_aliases` with JSON input.
+For example:
+
+```shell
+gitlab-runner register --kubernetes-host_aliases '[{"ip":"192.168.1.100","hostnames":["myservice.local"]},{"ip":"192.168.1.101","hostnames":["otherservice.local"]}]'
+```
+
 ## Volumes
 
 ### Using the cache with the Kubernetes executor

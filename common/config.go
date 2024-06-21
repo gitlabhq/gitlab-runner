@@ -535,6 +535,12 @@ func (p KubernetesDNSPolicy) Get() (api.DNSPolicy, error) {
 	return "", fmt.Errorf("unsupported kubernetes-dns-policy: %q", p)
 }
 
+type KubernetesHostAliasesFlag []KubernetesHostAliases
+
+func (h *KubernetesHostAliasesFlag) UnmarshalFlag(value string) error {
+	return json.Unmarshal([]byte(value), h)
+}
+
 type KubernetesConfig struct {
 	Host                                              string                             `toml:"host" json:"host" long:"host" env:"KUBERNETES_HOST" description:"Optional Kubernetes master host URL (auto-discovery attempted if not specified)"`
 	CertFile                                          string                             `toml:"cert_file,omitempty" json:"cert_file" long:"cert-file" env:"KUBERNETES_CERT_FILE" description:"Optional Kubernetes master auth certificate"`
@@ -622,7 +628,7 @@ type KubernetesConfig struct {
 	HelperContainerSecurityContext                    KubernetesContainerSecurityContext `toml:"helper_container_security_context,omitempty" namespace:"helper_container_security_context" description:"A security context attached to the helper container inside the build pod"`
 	ServiceContainerSecurityContext                   KubernetesContainerSecurityContext `toml:"service_container_security_context,omitempty" namespace:"service_container_security_context" description:"A security context attached to the service containers inside the build pod"`
 	Volumes                                           KubernetesVolumes                  `toml:"volumes"`
-	HostAliases                                       []KubernetesHostAliases            `toml:"host_aliases,omitempty" json:"host_aliases,omitempty" long:"host_aliases" description:"Add a custom host-to-IP mapping"`
+	HostAliases                                       KubernetesHostAliasesFlag          `toml:"host_aliases,omitempty" json:"host_aliases,omitempty" long:"host_aliases" description:"Add a custom host-to-IP mapping"`
 	Services                                          []Service                          `toml:"services,omitempty" json:"services,omitempty" description:"Add service that is started with container"`
 	CapAdd                                            []string                           `toml:"cap_add" json:"cap_add,omitempty" long:"cap-add" env:"KUBERNETES_CAP_ADD" description:"Add Linux capabilities"`
 	CapDrop                                           []string                           `toml:"cap_drop" json:"cap_drop,omitempty" long:"cap-drop" env:"KUBERNETES_CAP_DROP" description:"Drop Linux capabilities"`
