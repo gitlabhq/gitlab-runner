@@ -3,6 +3,7 @@
 package common
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/process"
+	clihelpers "gitlab.com/gitlab-org/golang-cli-helpers"
 )
 
 func TestCacheS3Config_AuthType(t *testing.T) {
@@ -2265,6 +2267,62 @@ func TestLoadConfig(t *testing.T) {
 
 			if tt.validateConfig != nil {
 				tt.validateConfig(t, cfg)
+			}
+		})
+	}
+}
+
+func Test_CommandLineFlags(t *testing.T) {
+	tests := map[string]struct {
+		args          []string
+		expectedError bool
+		verifyArgs    func(t *testing.T, config *RunnerConfig)
+	}{
+		"Kubernetes host aliases": {
+			args: []string{
+				"--request-concurrency",
+				"10",
+				"--kubernetes-host_aliases",
+				`[{"ip":"192.168.1.100","hostnames":["myservice.local"]},{"ip":"192.168.1.101","hostnames":["otherservice.local"]}]`,
+			},
+			verifyArgs: func(t *testing.T, config *RunnerConfig) {
+				assert.Equal(t, 10, config.RequestConcurrency)
+				assert.Len(t, config.Kubernetes.HostAliases, 2)
+				assert.Equal(t, "192.168.1.100", config.Kubernetes.HostAliases[0].IP)
+				assert.Len(t, config.Kubernetes.HostAliases[0].Hostnames, 1)
+				assert.Equal(t, "myservice.local", config.Kubernetes.HostAliases[0].Hostnames[0])
+				assert.Len(t, config.Kubernetes.HostAliases[1].Hostnames, 1)
+				assert.Equal(t, "otherservice.local", config.Kubernetes.HostAliases[1].Hostnames[0])
+			},
+		},
+		"Bad Kubernetes host aliases": {
+			args: []string{
+				"--kubernetes-host_aliases",
+				"{ bad",
+			},
+			expectedError: true,
+		},
+	}
+
+	// Loop across tests
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			config := &RunnerConfig{}
+			flags := clihelpers.GetFlagsFromStruct(config)
+			flagSet := flag.NewFlagSet("test-flags", flag.ContinueOnError)
+			for _, f := range flags {
+				f.Apply(flagSet)
+			}
+
+			err := flagSet.Parse(tt.args)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				if tt.verifyArgs != nil {
+					tt.verifyArgs(t, config)
+				}
 			}
 		})
 	}
