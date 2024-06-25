@@ -129,7 +129,7 @@ ${BASE_BINARY_PATH}-fips: $(HELPER_GO_FILES)
 
 ${BASE_BINARY_PATH}-fips-docker: export GOOS ?= linux
 ${BASE_BINARY_PATH}-fips-docker: export GOARCH ?= amd64
-${BASE_BINARY_PATH}-fips-docker: export GO_VERSION ?= 1.21
+${BASE_BINARY_PATH}-fips-docker: export GO_VERSION ?= 1.22
 ${BASE_BINARY_PATH}-fips-docker: $(HELPER_GO_FILES)
 	# Building $(NAME)-helper in version $(VERSION) for FIPS $(GOOS) $(GOARCH)
 	@docker build -t gitlab-runner-helper-fips --build-arg GOOS="$(GOOS)" --build-arg GOARCH="$(GOARCH)" --build-arg GO_VERSION="$(GO_VERSION)" -f dockerfiles/fips/helper.fips.Dockerfile .
