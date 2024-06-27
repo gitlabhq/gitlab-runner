@@ -17,32 +17,43 @@ A [Critical Security release](https://about.gitlab.com/releases/2022/02/25/criti
 
 ## General troubleshooting tips
 
-View the logs:
+### View the logs
 
-- `tail -100 /var/log/syslog` (Debian)
-- `tail -100 /var/log/messages` (RHEL)
-- `docker logs gitlab-runner-container` (Docker)
-- `kubectl logs gitlab-runner-pod` (Kubernetes)
+The GitLab Runner service sends logs to syslog. To view the logs, see your distribution documentation.
+If your distribution includes the `journalctl` command, you can use the command to view the logs:
 
-Restart the service:
+```shell
+journalctl --unit=gitlab-runner.service -n 100 --no-pager
+docker logs gitlab-runner-container # Docker
+kubectl logs gitlab-runner-pod # Kubernetes
+```
 
-- `service gitlab-runner restart`
+### Restart the service
 
-View the Docker machines:
+```shell
+systemctl restart gitlab-runner.service
+```
 
-- `sudo docker-machine ls`
-- `sudo su - && docker-machine ls`
+### View the Docker machines
 
-Delete all Docker machines:
+```shell
+sudo docker-machine ls
+sudo su - && docker-machine ls
+```
 
-- `docker-machine rm $(docker-machine ls -q)`
+### Delete all Docker machines
 
-After making changes to your `config.toml`:
+```shell
+docker-machine rm $(docker-machine ls -q)
+```
 
-- `service gitlab-runner restart`
-- `docker-machine rm $(docker-machine ls -q)`
-- `tail -f /var/log/syslog` (Debian)
-- `tail -f /var/log/messages` (RHEL)
+### Apply changes to `config.toml`
+
+```shell
+systemctl restart gitlab-runner.service
+docker-machine rm $(docker-machine ls -q) # Docker machine
+journalctl --unit=gitlab-runner.service -f # Tail the logs to check for potential errors
+```
 
 ## Confirm your GitLab and GitLab Runner versions
 
