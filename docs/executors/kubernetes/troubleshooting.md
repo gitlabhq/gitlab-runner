@@ -245,3 +245,115 @@ the runner might not be able to request CI job payloads.
 ## `failed to reserve container name` for init-permissions container when `gcs-fuse-csi-driver` is used
 
 The `gcs-fuse-csi-driver` `csi` driver [does not support mounting volumes for the init container](https://github.com/GoogleCloudPlatform/gcs-fuse-csi-driver/issues/38). This can cause failures starting the init container when using this driver. Features [introduced in Kubernetes 1.28](https://kubernetes.io/blog/2023/08/25/native-sidecar-containers/) must be supported in the driver's project to resolve this bug.
+
+## Error: `only read-only root filesystem container is allowed`
+
+In clusters with admission policies that force containers to run on read-only mounted root filesystems,
+this error might appear when:
+
+- You install GitLab Runner.
+- GitLab Runner tries to schedule a build pod.
+
+These admission policies are usually enforced by an admission controller like
+[Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/) or [Kyverno](https://kyverno.io/).
+For example, a policy forcing containers to run on read-only root filesystems is
+the [`readOnlyRootFilesystem`](https://open-policy-agent.github.io/gatekeeper-library/website/validation/read-only-root-filesystem/) Gatekeeper policy.
+
+To resolve this issue:
+
+- All pods that are deployed to the cluster must adhere to the admission policies by setting
+  `securityContext.readOnlyRootFilesystem` to `true` for their containers so the
+  admission controller does not block the pod.
+- The containers must run successfully and be able to write to the filesystem
+  even though the root filesystem is mounted read-only.
+
+### For GitLab Runner
+
+If GitLab Runner is deployed with the [GitLab Runner Helm chart](/runner/install/kubernetes.md),
+you must update the GitLab chart configuration to have:
+
+- A proper `securityContext` value:
+
+  ```yaml
+  <...>
+  securityContext:
+    readOnlyRootFilesystem: true
+  <...>
+  ```
+
+- A writable filesystem mounted where the pod can write:
+
+  ```yaml
+  <...>
+  volumeMounts:
+  - name: tmp-dir
+    mountPath: /tmp
+  volumes:
+  - name: tmp-dir
+    emptyDir:
+      medium: "Memory"
+  <...>
+  ```
+
+### For the build pod
+
+To make the build pod run on a read-only root filesystem,
+configure the different containers' security contexts in `config.toml`.
+You can set the GitLab chart variable `runners.config`, which is passed to the build pod:
+
+```yaml
+runners:
+  config: |
+   <...>
+   [[runners]]
+     [runners.kubernetes.build_container_security_context]
+       read_only_root_filesystem = true
+     [runners.kubernetes.init_permissions_container_security_context]
+       read_only_root_filesystem = true
+     [runners.kubernetes.helper_container_security_context,omitempty]
+       read_only_root_filesystem = true
+     # This section is only needed if jobs with services are used
+     [runners.kubernetes.service_container_security_context,omitempty]
+       read_only_root_filesystem = true
+   <...>
+```
+
+To make the build pod and its containers run successfully on a read-only
+filesystem, you must have writable filesystems in locations where the build pod can write.
+At a minimum, these locations are the build and home directories.
+Ensure the build process has write access to other locations if necessary.
+
+The home directory must generally be writable so programs can store
+their configuration and other data they need for successful execution.
+The `git` binary is one example of a program that expects to be able to
+write to the home directory.
+
+To make the home directory writable regardless of its path in different
+container images:
+
+1. Mount a volume on a stable path (regardless of which build image you use).
+1. Change the home directory by setting the environment variable `$HOME` globally for all builds.
+
+You can configure the build pod and its containers in `config.toml` by
+updating the value of the GitLab chart variable `runners.config`.
+
+```yaml
+runners:
+  config: |
+   <...>
+   [[runners]]
+     environment = ["HOME=/build_home"]
+     [[runners.kubernetes.volumes.empty_dir]]
+       name = "repo"
+       mount_path = "/builds"
+     [[runners.kubernetes.volumes.empty_dir]]
+       name = "build-home"
+       mount_path = "/build_home"
+   <...>
+```
+
+NOTE:
+Instead of `emptyDir`, you can use any other
+[supported volume types](/runner/executors/kubernetes.md#configure-volume-types).
+Because all files that are not explicitly handled and stored as build
+artefacts are usually ephemeral, `emptyDir` works for most cases.
