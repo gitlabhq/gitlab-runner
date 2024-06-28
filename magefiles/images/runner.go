@@ -58,7 +58,7 @@ var checksumsFiles = map[string]string{
 }
 
 var flavorAliases = map[string][]string{
-	"alpine3.18": {"alpine", "alpine3.18"},
+	"alpine3.19": {"alpine", "alpine3.19"},
 }
 
 type buildRunnerParams struct {
