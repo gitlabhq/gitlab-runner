@@ -402,7 +402,7 @@ To test the state of the build directives in test files, `make check_test_direct
 
 ## Developing for Windows on a non-windows environment
 
-We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/tree/main/Vagrantfile)
+We provide a [Vagrantfile](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/Vagrantfile)
 to help you run a Windows Server 2019 or Windows 10 instance, since we
 are using [multiple machines](https://developer.hashicorp.com/vagrant/docs/multi-machine) inside of Vagrant.
 

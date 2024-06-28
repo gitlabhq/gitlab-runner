@@ -61,13 +61,13 @@ GitLab Runner system requirements vary widely and depend on variables unique to 
   - Projects in active development.
   - Developers expected to work in parallel.
 
-For more information, see what [machine types are available for Linux (x86-64)](https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#machine-types-available-for-linux-x86-64) on SaaS.
+For more information, see what [machine types are available for Linux (x86-64)](https://docs.gitlab.com/ee/ci/runners/hosted_runners/linux.html#machine-types-available-for-linux---x86-64) on SaaS.
 
 ## FIPS compliant GitLab Runner
 
 In GitLab Runner 14.7 and later, a GitLab Runner binary that is FIPS 140-12 compliant is provided. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
 
-In GitLab Runner 15.1 and later, a [UBI-8 minimal](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) is used as the base for creating the GitLab Runner FIPS image.
+In GitLab Runner 15.1 and later, a [UBI-8 minimal](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) is used as the base for creating the GitLab Runner FIPS image.
 
 NOTE:
 Only Red Hat Enterprise Linux (RHEL) distributions are supported.
@@ -80,7 +80,7 @@ Docker images and RPM packages for the same architectures are also provided.
 
 ### FIPS compliant GitLab Runner in RHEL
 
-When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS mode](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/security_hardening/assembly_installing-a-rhel-8-system-with-fips-mode-enabled_security-hardening).
+When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS mode](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/security_hardening/assembly_installing-a-rhel-8-system-with-fips-mode-enabled_security-hardening).
 
 ### FIPS compliant GitLab Runner in other systems and architectures
 

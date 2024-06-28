@@ -74,7 +74,7 @@ world can't.
 NOTE:
 The following apply to OSes with systemd support.
 
-Follow [Docker's documentation](https://docs.docker.com/config/daemon/systemd/#httphttps-proxy)
+Follow [Docker's documentation](https://docs.docker.com/config/daemon/proxy/)
 how to use a proxy.
 
 The service file should look like this:

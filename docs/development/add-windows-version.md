@@ -119,12 +119,12 @@ fork project and to the ['liveness' test support](https://gitlab.com/gitlab-org/
 Install a new instance of
 [autoscaler](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/autoscaler)
 to have a specific `config.toml` for that Windows version. We need to
-update our [Ansible repository](https://ops.gitlab.net/gitlab-com/gl-infra/ci-infrastructure-windows)
+update our Ansible repository (`https://ops.gitlab.net/gitlab-com/gl-infra/ci-infrastructure-windows`)
 to include the new Windows version.
 
 For example, if we want to add support for `Windows Server Core 2004` in
-the 13.7 milestone we can see the following
-[merge request](https://ops.gitlab.net/gitlab-com/gl-infra/ci-infrastructure-windows/-/merge_requests/70),
+the 13.7 milestone we can see this
+merge request: `https://ops.gitlab.net/gitlab-com/gl-infra/ci-infrastructure-windows/-/merge_requests/70`,
 where we update the following files:
 
 1. `ansible/roles/runner/tasks/main.yml`

@@ -94,7 +94,7 @@ In the end, it's your responsibility to verify and update the title **before the
 We use labels assigned to merge requests to group changelog entries in different groups and define
 some special features of individual entries.
 
-For changelog generation we're using our own [Changelog generator](https://gitlab.com/gitlab-org/ci-cd/runner-tools/changelog-generator).
+For changelog generation we're using our own [Changelog generator](https://gitlab.com/gitlab-org/ci-cd/runner-tools/gitlab-changelog).
 The tool is using [a configuration file](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/.gitlab/changelog.yml)
 that is committed to the GitLab Runner repository.
 
