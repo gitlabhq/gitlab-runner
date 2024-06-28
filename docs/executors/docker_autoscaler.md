@@ -44,7 +44,7 @@ Prerequisites:
 
 - An AMI with [Docker Engine](https://docs.docker.com/engine/) installed. To enable Runner Manager's access to the Docker socket on the AMI, the user must be part of the `docker` group.
 - An AWS Autoscaling group. For the scaling policy use "none", as Runner handles the scaling.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy)
+- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy)
 
 This configuration supports:
 
@@ -113,7 +113,7 @@ Prerequisites:
 - A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [COS](https://cloud.google.com/container-optimized-os/docs).
 - A Google Cloud instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
 the Google Cloud instance group.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
+- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
 
 This configuration supports:
 

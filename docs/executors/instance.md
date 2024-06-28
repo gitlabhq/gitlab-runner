@@ -53,7 +53,7 @@ Prerequisites:
 
 - An AMI with at least `git` and GitLab Runner installed.
 - An AWS Autoscaling group. For the scaling policy use `none`. The runner handles the scaling.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy).
+- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy).
 
 This configuration supports:
 
@@ -114,7 +114,7 @@ Prerequisites:
 
 - An AMI with at least `git` and GitLab Runner installed.
 - An AWS Autoscaling group with the scaling policy set to `none`. The runner handles the scaling.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy).
+- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy).
 
 This configuration supports:
 
@@ -184,7 +184,7 @@ Prerequisites:
   of the job. The VM images should have at least `git` and GitLab Runner installed.
 - An AWS Autoscaling group. For the scaling policy use `none`, because runner handles the scaling.
   For information about how to set up an ASG for MacOS, see [Implementing autoscaling for EC2 Mac instances](https://aws.amazon.com/blogs/compute/implementing-autoscaling-for-ec2-mac-instances/).
-- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-aws#recommended-iam-policy).
+- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/aws#recommended-iam-policy).
 
 This configuration supports:
 
@@ -262,7 +262,7 @@ Prerequisites:
 
 - A custom image with at least `git` and GitLab Runner installed.
 - A Google Cloud instance group where the autoscaling mode is set to `do not autoscale`. The runner handles the scaling.
-- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
+- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
 
 This configuration supports:
 
@@ -323,7 +323,7 @@ Prerequisites:
 
 - A custom image with at least `git` and GitLab Runner installed.
 - An Instance group. For the "Autoscaling mode" select "do not autoscale", as Runner handles the scaling.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/fleeting-plugin-googlecompute#recommended-iam-policy).
+- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
 
 This configuration supports:
 

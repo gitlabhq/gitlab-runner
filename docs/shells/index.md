@@ -288,7 +288,7 @@ demonstrates how to gain access to the CMD shell when PowerShell is the default 
 ### Video walkthrough of working PowerShell examples
 
 The [Slicing and Dicing with PowerShell on GitLab CI](https://www.youtube.com/watch?v=UZvtAYwruFc)
-video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/gitlab-ci-yml-powershell-tips-tricks-and-hacks/powershell-pipelines-on-gitlab-ci)
+video is a walkthrough of the [PowerShell Pipelines on GitLab CI](https://gitlab.com/guided-explorations/microsoft/powershell/powershell-pipelines-on-gitlab-ci)
 Guided Exploration project. It was tested on:
 
 - Windows PowerShell and PowerShell Core 7 on [hosted runners on Windows for GitLab.com](https://docs.gitlab.com/ee/ci/runners/hosted_runners/windows.html).

@@ -122,7 +122,7 @@ Use the following keywords:
 
 - `image`: The name of the Docker image that the runner uses to run jobs.
   - Enter an image from the local Docker Engine, or any image in
-  Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/get-started/overview/).
+  Docker Hub. For more information, see the [Docker documentation](https://docs.docker.com/guides/getting-started/).
   - To define the image version, use a colon (`:`) to add a tag. If you don't specify a tag,
    Docker uses `latest` as the version.
 - `services`: The additional image that creates another container and links to the `image`. For more information about types of services, see [Services](https://docs.gitlab.com/ee/ci/services/).
@@ -725,7 +725,7 @@ Prerequisites:
 1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
    by using your system's package manager, it automatically creates a `gitlab-runner` user.
 1. Sign in as the user that will run GitLab Runner. You must do so in a way that
-   doesn't go around [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/pam_systemd.html).
+   doesn't go around [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/latest/pam_systemd.html).
    You can use SSH with the correct user. This ensures you can run `systemctl` as this user.
 1. Make sure that your system fulfills the prerequisites for
    [a rootless Podman setup](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md).
