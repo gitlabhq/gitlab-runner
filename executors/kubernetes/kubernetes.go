@@ -244,8 +244,25 @@ type podConfigPrepareOpts struct {
 	hostAliases      []api.HostAlias
 }
 
+// KubeClientCreator abstract the creation of a kubernetes client. Its zero-value can be used.
+type KubeClientCreator func(config *restclient.Config) (kubernetes.Interface, error)
+
+func (creator KubeClientCreator) Create(config *restclient.Config) (kubernetes.Interface, error) {
+	if creator == nil {
+		creator = defaultKubeClientCreator
+	}
+	return creator(config)
+}
+
+var defaultKubeClientCreator = func(config *restclient.Config) (kubernetes.Interface, error) {
+	return kubernetes.NewForConfig(config)
+}
+
 type executor struct {
 	executors.AbstractExecutor
+
+	// To inject a kubernetes client
+	KubeClientCreator KubeClientCreator
 
 	kubeClient  kubernetes.Interface
 	kubeConfig  *restclient.Config
@@ -313,7 +330,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("getting Kubernetes config: %w", err)
 	}
 
-	s.kubeClient, err = kubernetes.NewForConfig(s.kubeConfig)
+	s.kubeClient, err = s.KubeClientCreator.Create(s.kubeConfig)
 	if err != nil {
 		return fmt.Errorf("connecting to Kubernetes: %w", err)
 	}
