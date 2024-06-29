@@ -108,7 +108,7 @@ func loadDefaultKubectlConfig() (*restclient.Config, error) {
 	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
-func closeKubeClient(client *kubernetes.Clientset) bool {
+func closeKubeClient(client kubernetes.Interface) bool {
 	if client == nil {
 		return false
 	}
@@ -142,7 +142,7 @@ type podPhaseResponse struct {
 	err   error
 }
 
-func getPodPhase(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer) podPhaseResponse {
+func getPodPhase(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer) podPhaseResponse {
 	pod, err := c.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return podPhaseResponse{true, api.PodUnknown, err}
@@ -203,7 +203,7 @@ func getPodPhase(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
-func triggerPodPhaseCheck(ctx context.Context, c *kubernetes.Clientset, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
+func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
 	errc := make(chan podPhaseResponse)
 	go func() {
 		defer close(errc)
@@ -222,7 +222,7 @@ func triggerPodPhaseCheck(ctx context.Context, c *kubernetes.Clientset, pod *api
 // parameters.
 func waitForPodRunning(
 	ctx context.Context,
-	c *kubernetes.Clientset,
+	c kubernetes.Interface,
 	pod *api.Pod,
 	out io.Writer,
 	config *common.KubernetesConfig,

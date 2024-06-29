@@ -247,7 +247,7 @@ type podConfigPrepareOpts struct {
 type executor struct {
 	executors.AbstractExecutor
 
-	kubeClient  *kubernetes.Clientset
+	kubeClient  kubernetes.Interface
 	kubeConfig  *restclient.Config
 	pod         *api.Pod
 	credentials *api.Secret
