@@ -1,53 +1,27 @@
 run:
   concurrency: 8
-  timeout: 1m
-  issues-exit-code: 1
-  tests: true
-  skip-dirs:
-  - vendor
-  skip-files:
-  - mock_*.go
-
-output:
-  formats:
-    - format: colored-line-number
-      path: stdout
-  print-issued-lines: true
-  print-linter-name: true
 
 linters-settings:
   errcheck:
     check-type-assertions: true
   gocognit:
     min-complexity: 15
-  goconst:
-    min-len: 3
-    min-occurrences: 3
   gocritic:
     enabled-checks:
     - appendCombine
-    - badCall
-    - badCond
     - boolExprSimplify
-    - codegenComment
-    - commentFormatting
     - commentedOutCode
-    - deprecatedComment
     - dupImport
     - emptyFallthrough
     - emptyStringTest
     - equalFold
     - evalOrder
-    - exitAfterDefer
-    - flagName
     - hexLiteral
     - indexAlloc
     - initClause
     - methodExprCall
     - nestingReduce
-    - newDeref
     - nilValReturn
-    - offBy1
     - ptrToRefParam
     - rangeExprCopy
     - regexpPattern
@@ -56,18 +30,11 @@ linters-settings:
     - truncateCmp
     - typeAssertChain
     - typeUnparen
-    - underef
     - unnecessaryBlock
-    - valSwap
     - weakCond
-    - wrapperFunc
     - yodaStyleExpr
   gocyclo:
     min-complexity: 10
-  govet:
-    check-shadowing: false
-  nestif:
-    min-complexity: 5
   revive:
     rules:
       - name: unused-parameter
@@ -100,6 +67,8 @@ linters:
   fast: false
 
 issues:
+  exclude-files:
+  - mock_*.go
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
   - path: helpers/shell_escape.go
