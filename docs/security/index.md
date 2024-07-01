@@ -179,3 +179,11 @@ the Internet - for dependency pulling etc.
 If you are using a static host for a runner, whether bare-metal or virtual machine, you should implement security best practices for the host operating system.
 
 Malicious code executed in the context of a CI job could compromise the host, so security protocols can help mitigate the impact. Other points to keep in mind include securing or removing files such as SSH keys from the host system that may enable an attacker to access other endpoints in the environment.
+
+### Clean up the `.git` folder after each build
+
+If you use a static host for your runner, you can implement an additional layer of security by enabling
+the `FF_ENABLE_JOB_CLEANUP` [feature flag](../configuration/feature-flags.md).
+
+When you enable `FF_ENABLE_JOB_CLEANUP`, the build directory your runner uses on the host is cleaned up after each build.
+This setting prevents a previous build from, for example, adding scripts to `.git/hooks` that can then be executed by subsequent builds.
