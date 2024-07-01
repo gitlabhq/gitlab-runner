@@ -258,11 +258,22 @@ var defaultKubeClientCreator = func(config *restclient.Config) (kubernetes.Inter
 	return kubernetes.NewForConfig(config)
 }
 
+// KubeConfigGetter abstracts the creation of the kube client config. Its zero-value can be used.
+type KubeConfigGetter func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error)
+
+func (getter KubeConfigGetter) Get(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
+	if getter == nil {
+		getter = getKubeClientConfig
+	}
+	return getter(conf, overwrites)
+}
+
 type executor struct {
 	executors.AbstractExecutor
 
 	// To create the actual kubernetes client; can be used to inject a specific/special kubernetes client.
 	KubeClientCreator KubeClientCreator
+	KubeConfigGetter  KubeConfigGetter
 
 	kubeClient  kubernetes.Interface
 	kubeConfig  *restclient.Config
@@ -320,7 +331,7 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("check defaults error: %w", err)
 	}
 
-	s.kubeConfig, err = getKubeClientConfig(s.Config.Kubernetes, s.configurationOverwrites)
+	s.kubeConfig, err = s.KubeConfigGetter.Get(s.Config.Kubernetes, s.configurationOverwrites)
 	if err != nil {
 		return fmt.Errorf("getting Kubernetes config: %w", err)
 	}

@@ -7384,6 +7384,9 @@ func TestContainerPullPolicies(t *testing.T) {
 				KubeClientCreator: func(_ *restclient.Config) (kubernetes.Interface, error) {
 					return fakeKubeClient, nil
 				},
+				KubeConfigGetter: func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
+					return nil, nil
+				},
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: executorOptions,
 				},
