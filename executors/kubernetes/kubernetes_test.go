@@ -34,7 +34,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kuberuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	testclient "k8s.io/client-go/kubernetes/fake"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/util/exec"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -7270,4 +7274,183 @@ func TestRetryLimits(t *testing.T) {
 			require.Equal(t, tt.expectedLastRetryBackoff, lastRetryBackoff)
 		})
 	}
+}
+
+// TestContainerPullPolicies assert that all containers have the proper pull policies as configured in the job
+// definition
+// TODO(hhoerl): do we need to test this with any feature flags?
+func TestContainerPullPolicies(t *testing.T) {
+	allPullPolicies := []common.DockerPullPolicy{
+		"",
+		common.PullPolicyNever,
+		common.PullPolicyAlways,
+		common.PullPolicyIfNotPresent,
+	}
+
+	testCases := map[string]struct {
+		Services            common.Services
+		AllowedPullPolicies []common.DockerPullPolicy
+		DefaultPullPolicies common.StringOrArray
+		JobImageName        string
+
+		ExpectedPullPolicyPerContainer map[string]api.PullPolicy
+	}{
+		"with explicitly all pull policies enabled and services": {
+			AllowedPullPolicies: allPullPolicies,
+			Services: common.Services{
+				{Name: "withNone"},
+				{Name: "withAlways", PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways}},
+				{Name: "withINP", PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent}},
+				{Name: "withNever", PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever}},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullPolicy(""),
+				"helper": api.PullPolicy(""),
+				"svc-0":  api.PullPolicy(""),
+				"svc-1":  api.PullAlways,
+				"svc-2":  api.PullIfNotPresent,
+				"svc-3":  api.PullNever,
+			},
+		},
+		"with explicit default pull policies": {
+			DefaultPullPolicies: common.StringOrArray{"always", "never"},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullAlways,
+				"helper": api.PullAlways,
+			},
+		},
+		"with image from job and pull policy from config": {
+			JobImageName:        "not the image you looking for",
+			DefaultPullPolicies: common.StringOrArray{"if-not-present"},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullIfNotPresent,
+				"helper": api.PullIfNotPresent,
+			},
+		},
+		"with allowed pull policies from build container pull policy": {
+			DefaultPullPolicies: common.StringOrArray{"never", "always"},
+			Services: common.Services{
+				{Name: "foo"},
+				{Name: "bar", PullPolicies: []common.DockerPullPolicy{"always"}},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullNever,
+				"helper": api.PullNever,
+				"svc-0":  api.PullNever,
+				"svc-1":  api.PullAlways,
+			},
+		},
+		"with nothing re pull policies set": {
+			Services: common.Services{
+				{Name: "foo"},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullPolicy(""),
+				"helper": api.PullPolicy(""),
+				"svc-0":  api.PullPolicy(""),
+			},
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			fakeKubeClient := testclient.NewSimpleClientset()
+
+			runnerConfig := &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "some-build-image",
+						AllowedPullPolicies: tc.AllowedPullPolicies,
+						PullPolicy:          tc.DefaultPullPolicies,
+					},
+				},
+			}
+
+			build := &common.Build{
+				JobResponse: common.JobResponse{
+					Services: tc.Services,
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Kubernetes: &common.KubernetesConfig{},
+					},
+				},
+			}
+			if tc.JobImageName != "" {
+				build.JobResponse.Image.Name = tc.JobImageName
+			}
+
+			executor := &executor{
+				KubeClientCreator: func(_ *restclient.Config) (kubernetes.Interface, error) {
+					return fakeKubeClient, nil
+				},
+				AbstractExecutor: executors.AbstractExecutor{
+					ExecutorOptions: executorOptions,
+				},
+			}
+
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config: runnerConfig,
+				Build:  build,
+			}
+
+			err := executor.Prepare(prepareOptions)
+			require.NoError(t, err)
+
+			err = executor.setupBuildPod(context.TODO(), []api.Container{})
+			require.NoError(t, err)
+
+			// get all pods we've observed create requests for
+			pods := getActionObjects[*api.Pod](fakeKubeClient.Actions(), "create")
+			require.Len(t, pods, 1, "expected to observe exactly 1 pod creation")
+
+			pod := pods[0]
+			for containerName, expectedPullPolicy := range tc.ExpectedPullPolicyPerContainer {
+				container, err := containerByName(pod.Spec.Containers, containerName)
+				require.NoError(t, err, "container not found on pod")
+
+				actualPullPolicy := container.ImagePullPolicy
+				assert.Equal(t, expectedPullPolicy, actualPullPolicy, "expected pull policy %q on container %q, but got %q", expectedPullPolicy, containerName, actualPullPolicy)
+			}
+		})
+	}
+}
+
+func getActionObjects[T kuberuntime.Object](actions []k8stesting.Action, verb string) []T {
+	res := []T{}
+
+	for _, action := range actions {
+		if action.GetVerb() != verb {
+			continue
+		}
+
+		objectAction, ok := action.(interface {
+			GetObject() kuberuntime.Object
+		})
+		if !ok {
+			continue
+		}
+
+		obj, ok := objectAction.GetObject().(T)
+		if !ok {
+			continue
+		}
+
+		res = append(res, obj)
+	}
+
+	return res
+}
+
+func containerByName(containers []api.Container, name string) (api.Container, error) {
+	availableContainers := make([]string, len(containers))
+
+	for i, c := range containers {
+		availableContainers[i] = c.Name
+		if c.Name == name {
+			return c, nil
+		}
+	}
+
+	return api.Container{}, fmt.Errorf("container %q not found, available containers: %v", name, availableContainers)
 }

@@ -261,7 +261,7 @@ var defaultKubeClientCreator = func(config *restclient.Config) (kubernetes.Inter
 type executor struct {
 	executors.AbstractExecutor
 
-	// To inject a kubernetes client
+	// To create the actual kubernetes client; can be used to inject a specific/special kubernetes client.
 	KubeClientCreator KubeClientCreator
 
 	kubeClient  kubernetes.Interface
