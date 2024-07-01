@@ -14,7 +14,7 @@ import (
 const buildImage = "alpine:latest"
 
 func TestNewPullManager(t *testing.T) {
-	m := NewPullManager([]api.PullPolicy{}, nil)
+	m := NewPullManager(map[string][]api.PullPolicy{}, nil)
 	assert.NotNil(t, m)
 }
 
@@ -31,15 +31,17 @@ func TestMarkPullFailureFor(t *testing.T) {
 		l := new(mockPullLogger)
 		defer l.AssertExpectations(t)
 
-		m := NewPullManager([]api.PullPolicy{}, l)
+		m := NewPullManager(map[string][]api.PullPolicy{}, l)
 		require.NotNil(t, m)
 
 		pullPolicy, err := m.GetPullPolicyFor(buildImage)
 		assert.NoError(t, err)
 		assert.Equal(t, api.PullPolicy(""), pullPolicy)
 
-		l.On("Warningln", `Failed to pull image with policy "": server down`).
-			Once()
+		l.On(
+			"Warningln",
+			failedToPullMsg(buildImage, ""),
+		).Once()
 		repeat := m.UpdatePolicyForImage(1, &ImagePullError{Image: buildImage, Message: "server down"})
 		assert.False(t, repeat, "UpdatePolicyForImage should return false")
 
@@ -57,8 +59,10 @@ func TestMarkPullFailureFor(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, api.PullAlways, pullPolicy)
 
-		l.On("Warningln", `Failed to pull image with policy "Always": server down`).
-			Once()
+		l.On(
+			"Warningln",
+			failedToPullMsg(buildImage, "Always"),
+		).Once()
 		l.On(
 			"Infoln",
 			fmt.Sprintf(`Attempt #2: Trying "IfNotPresent" pull policy for %q image`, buildImage),
@@ -79,8 +83,10 @@ func TestMarkPullFailureFor(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, api.PullAlways, pullPolicy)
 
-		l.On("Warningln", `Failed to pull image with policy "Always": server down`).
-			Once()
+		l.On(
+			"Warningln",
+			failedToPullMsg(buildImage, "Always"),
+		).Once()
 		l.On(
 			"Infoln",
 			fmt.Sprintf(`Attempt #2: Trying "IfNotPresent" pull policy for %q image`, buildImage),
@@ -96,8 +102,10 @@ func TestMarkPullFailureFor(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, api.PullIfNotPresent, pullPolicy)
 
-		l.On("Warningln", `Failed to pull image with policy "Always": server down`).
-			Once()
+		l.On(
+			"Warningln",
+			failedToPullMsg("helper", "Always"),
+		).Once()
 		l.On(
 			"Infoln",
 			fmt.Sprintf(`Attempt #2: Trying "IfNotPresent" pull policy for %q image`, "helper"),
@@ -118,8 +126,10 @@ func TestMarkPullFailureFor(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, api.PullAlways, pullPolicy)
 
-		l.On("Warningln", `Failed to pull image with policy "Always": server down`).
-			Once()
+		l.On(
+			"Warningln",
+			failedToPullMsg(buildImage, "Always"),
+		).Once()
 		l.On(
 			"Infoln",
 			fmt.Sprintf(`Attempt #2: Trying "IfNotPresent" pull policy for %q image`, buildImage),
@@ -131,8 +141,10 @@ func TestMarkPullFailureFor(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, api.PullIfNotPresent, pullPolicy)
 
-		l.On("Warningln", `Failed to pull image with policy "IfNotPresent": server down`).
-			Once()
+		l.On(
+			"Warningln",
+			failedToPullMsg(buildImage, "IfNotPresent"),
+		).Once()
 		repeat = m.UpdatePolicyForImage(2, &ImagePullError{Image: buildImage, Message: "server down"})
 		assert.False(t, repeat, "UpdatePolicyForImage should return false")
 
@@ -141,8 +153,56 @@ func TestMarkPullFailureFor(t *testing.T) {
 	})
 }
 
+func TestMultipleImagesConcurrently(t *testing.T) {
+	l := new(mockPullLogger)
+	defer l.AssertExpectations(t)
+
+	imagePolicies := map[string][]api.PullPolicy{
+		"img1": {api.PullAlways, api.PullIfNotPresent, "", api.PullNever},
+		"img2": {api.PullIfNotPresent, api.PullNever},
+	}
+
+	m := NewPullManager(imagePolicies, l)
+	require.NotNil(t, m)
+
+	for img, policies := range imagePolicies {
+		t.Run(img, func(t *testing.T) {
+			t.Parallel()
+
+			nrOfPolicies := len(policies)
+			for i, policy := range policies {
+				l.On("Warningln", failedToPullMsg(img, string(policy))).Once()
+
+				curPolicy, err := m.GetPullPolicyFor(img)
+				assert.NoError(t, err)
+				assert.Equal(t, policy, curPolicy, "expected image %q to currently have the policy %q, but has %q", img, policy, curPolicy)
+
+				nextPolicy := policies[nrOfPolicies-1]
+				if i < nrOfPolicies-1 {
+					nextPolicy = imagePolicies[img][i+1]
+				}
+				l.On("Infoln", fmt.Sprintf("Attempt #%d: Trying %q pull policy for %q image", i+1, nextPolicy, img)).Once()
+
+				hasAnotherPolicy := m.UpdatePolicyForImage(i, &ImagePullError{Image: img, Message: "server down"})
+				if i == nrOfPolicies-1 {
+					assert.False(t, hasAnotherPolicy, "expected to stop on attempt %d", i)
+				} else {
+					assert.True(t, hasAnotherPolicy, "expected to continue on attempt %d", i)
+				}
+			}
+		})
+	}
+}
+
+func failedToPullMsg(img, policy string) string {
+	return fmt.Sprintf(`Failed to pull image %q with policy %q: server down`, img, policy)
+}
+
 func newPullManagerForTest(t *testing.T, l *mockPullLogger) Manager {
-	m := NewPullManager([]api.PullPolicy{api.PullAlways, api.PullIfNotPresent}, l)
+	m := NewPullManager(map[string][]api.PullPolicy{
+		buildImage: {api.PullAlways, api.PullIfNotPresent},
+		"helper":   {api.PullAlways, api.PullIfNotPresent},
+	}, l)
 	require.NotNil(t, m)
 	return m
 }

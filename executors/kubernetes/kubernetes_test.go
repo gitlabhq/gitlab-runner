@@ -2621,7 +2621,7 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "failed to pull image 'test-image': " +
+			Error: "invalid pull policy for image 'test-image': " +
 				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "Runner config", "[Always Never]"),
 		},
 		{
@@ -2686,7 +2686,7 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "failed to pull image 'test-image': " +
+			Error: "invalid pull policy for image 'test-image': " +
 				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]"),
 		},
 		{

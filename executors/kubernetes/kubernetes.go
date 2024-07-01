@@ -310,11 +310,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("couldn't prepare explicit service overwrites: %w", err)
 	}
 
-	s.pullManager, err = s.preparePullManager(options)
-	if err != nil {
-		return err
-	}
-
 	s.prepareOptions(options.Build)
 
 	// Dynamically configure use of shared build dir allowing
@@ -352,6 +347,12 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		s.BuildLogger.Println("Using attach strategy to execute scripts...")
 	}
 
+	// pull manager can only be prepared once we know the image / helper image
+	s.pullManager, err = s.preparePullManager(options)
+	if err != nil {
+		return err
+	}
+
 	s.BuildLogger.Debugln(fmt.Sprintf("Using helper image: %s:%s", s.helperImageInfo.Name, s.helperImageInfo.Tag))
 
 	if err = s.AbstractExecutor.PrepareBuildAndShell(); err != nil {
@@ -367,28 +368,39 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 }
 
 func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pull.Manager, error) {
-	var (
-		err                 error
-		pullPolicies        []api.PullPolicy
-		allowedPullPolicies []api.PullPolicy
-	)
-
-	pullPolicies, err = s.getPullPolicies(options.Build.Image.PullPolicies)
+	allowedPullPolicies, err := s.Config.Kubernetes.GetAllowedPullPolicies()
 	if err != nil {
 		return nil, err
 	}
 
-	allowedPullPolicies, err = s.Config.Kubernetes.GetAllowedPullPolicies()
-	if err != nil {
-		return nil, err
+	// collect which images have set which policies
+	imagePullPolicies := map[string][]api.PullPolicy{}
+
+	buildImage := options.Build.Image
+	if buildImage.Name == "" {
+		// fallback on the image name in the config
+		buildImage.Name = s.options.Image.Name
 	}
 
-	err = s.verifyPullPolicies(pullPolicies, allowedPullPolicies, options.Build.Image.PullPolicies)
-	if err != nil {
-		return nil, fmt.Errorf("failed to pull image '%s': %w", options.Build.Image.Name, err)
+	// verify all images pull policies, the main build image's and the service images'
+	for _, image := range append(options.Build.Services, buildImage) {
+		k8sPullPolicies, err := s.getPullPolicies(image.PullPolicies)
+		if err != nil {
+			return nil, fmt.Errorf("converting pull policy for image '%s': %w", image.Name, err)
+		}
+
+		err = s.verifyPullPolicies(k8sPullPolicies, allowedPullPolicies, image.PullPolicies)
+		if err != nil {
+			return nil, fmt.Errorf("invalid pull policy for image '%s': %w", image.Name, err)
+		}
+
+		imagePullPolicies[image.Name] = k8sPullPolicies
 	}
 
-	return pull.NewPullManager(pullPolicies, &s.BuildLogger), nil
+	// the helper image uses the same pull policies as the build image
+	imagePullPolicies[s.getHelperImage()] = imagePullPolicies[buildImage.Name]
+
+	return pull.NewPullManager(imagePullPolicies, &s.BuildLogger), nil
 }
 
 // getPullPolicies selects the pull_policy configurations originating from
