@@ -1,3 +1,9 @@
+## v16.11.2 (2024-07-02)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4843
+
 ## v16.11.1 (2024-05-03)
 
 ### Bug fixes
