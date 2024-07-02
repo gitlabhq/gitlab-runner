@@ -2885,12 +2885,17 @@ func TestPrepare(t *testing.T) {
 				assert.Contains(t, err.Error(), test.Error)
 				return
 			}
+			assert.NoError(t, err)
 
 			// Set this to nil so we aren't testing the functionality of the
 			// base AbstractExecutor's Prepare method
 			e.AbstractExecutor = executors.AbstractExecutor{}
 
-			pullPolicy, err := e.pullManager.GetPullPolicyFor(prepareOptions.Build.Image.Name)
+			// Different tests either set the image name on the build or on the config
+			buildImage, err := first(test.Build.Image.Name, test.RunnerConfig.Kubernetes.Image)
+			require.NoError(t, err, "build image neither set on the build nor in the runner config")
+
+			pullPolicy, err := e.pullManager.GetPullPolicyFor(buildImage)
 			assert.NoError(t, err)
 			assert.Equal(t, test.ExpectedPullPolicy, pullPolicy)
 
@@ -7456,4 +7461,16 @@ func containerByName(containers []api.Container, name string) (api.Container, er
 	}
 
 	return api.Container{}, fmt.Errorf("container %q not found, available containers: %v", name, availableContainers)
+}
+
+func first[T comparable](options ...T) (T, error) {
+	var zero T
+
+	for _, item := range options {
+		if item != zero {
+			return item, nil
+		}
+	}
+
+	return zero, fmt.Errorf("no non-zero item in list of options: %+v", options)
 }
