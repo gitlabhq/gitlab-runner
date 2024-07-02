@@ -1,3 +1,9 @@
+## v17.0.1 (2024-07-02)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
+
 ## v17.0.0 (2024-05-16)
 
 ### New features
