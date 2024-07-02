@@ -1225,7 +1225,6 @@ func TestPrepare(t *testing.T) {
 		Name  string
 		Error string
 
-		GlobalConfig *common.Config
 		RunnerConfig *common.RunnerConfig
 		Build        *common.Build
 
@@ -1234,8 +1233,7 @@ func TestPrepare(t *testing.T) {
 		ExpectedSharedBuildsDir bool
 	}{
 		{
-			Name:         "all with limits",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1288,8 +1286,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullIfNotPresent,
 		},
 		{
-			Name:         "all with limits and requests",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and requests",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1353,9 +1350,8 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "unmatched service account",
-			Error:        "couldn't prepare overwrites: provided value \"not-default\" does not match \"allowed-.*\"",
-			GlobalConfig: &common.Config{},
+			Name:  "unmatched service account",
+			Error: "couldn't prepare overwrites: provided value \"not-default\" does not match \"allowed-.*\"",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1400,8 +1396,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "regexp match on service account and namespace",
-			GlobalConfig: &common.Config{},
+			Name: "regexp match on service account and namespace",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1466,8 +1461,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "regexp match on namespace",
-			GlobalConfig: &common.Config{},
+			Name: "regexp match on namespace",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1510,8 +1504,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "minimal configuration",
-			GlobalConfig: &common.Config{},
+			Name: "minimal configuration",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1539,8 +1532,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "minimal configuration with namespace isolation",
-			GlobalConfig: &common.Config{},
+			Name: "minimal configuration with namespace isolation",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1581,8 +1573,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "minimal configuration with pwsh shell",
-			GlobalConfig: &common.Config{},
+			Name: "minimal configuration with pwsh shell",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Shell: shells.SNPwsh,
@@ -1621,8 +1612,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "image and one service",
-			GlobalConfig: &common.Config{},
+			Name: "image and one service",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1668,8 +1658,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "merge services",
-			GlobalConfig: &common.Config{},
+			Name: "merge services",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1760,8 +1749,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "all with limits and request and explicit services limits and requests",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and request and explicit services limits and requests",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1901,8 +1889,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "all with limits and request and explicit services limits and requests without max override",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and request and explicit services limits and requests without max override",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2038,8 +2025,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "all with limits and request and explicit services limits and requests without max override and without default values",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and request and explicit services limits and requests without max override and without default values",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2169,8 +2155,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "Default helper image",
-			GlobalConfig: &common.Config{},
+			Name: "Default helper image",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2197,8 +2182,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image with ubuntu flavour default registry",
-			GlobalConfig: &common.Config{},
+			Name: "helper image with ubuntu flavour default registry",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2233,8 +2217,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image from node selector (linux, arm)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector (linux, arm)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2284,8 +2267,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image from node selector (windows, amd64)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector (windows, amd64)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2351,8 +2333,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image from node selector (unknown)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector (unknown)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2384,8 +2365,7 @@ func TestPrepare(t *testing.T) {
 			Error: `prepare helper image: unsupported OSType "unknown"`,
 		},
 		{
-			Name:         "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2439,8 +2419,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "builds dir default",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir default",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2464,8 +2443,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: false,
 		},
 		{
-			Name:         "builds dir user specified empty_dir",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir user specified empty_dir",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2499,8 +2477,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: false,
 		},
 		{
-			Name:         "builds dir user specified host_path",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir user specified host_path",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2533,8 +2510,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: true,
 		},
 		{
-			Name:         "builds dir user specified pvc",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir user specified pvc",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2566,8 +2542,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: true,
 		},
 		{
-			Name:         "runner pull policy is one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "runner pull policy is one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2598,8 +2573,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullNever,
 		},
 		{
-			Name:         "runner pull policy is not one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "runner pull policy is not one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2629,8 +2603,7 @@ func TestPrepare(t *testing.T) {
 				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "Runner config", "[Always Never]"),
 		},
 		{
-			Name:         "image pull policy is one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "image pull policy is one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2663,8 +2636,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullNever,
 		},
 		{
-			Name:         "image pull policy is not one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "image pull policy is not one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2694,8 +2666,7 @@ func TestPrepare(t *testing.T) {
 				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]"),
 		},
 		{
-			Name:         "both runner and image pull policies are defined",
-			GlobalConfig: &common.Config{},
+			Name: "both runner and image pull policies are defined",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2733,8 +2704,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullIfNotPresent,
 		},
 		{
-			Name:         "one of allowed pull policies is invalid",
-			GlobalConfig: &common.Config{},
+			Name: "one of allowed pull policies is invalid",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2765,8 +2735,7 @@ func TestPrepare(t *testing.T) {
 			Error: "allowed_pull_policies config: unsupported pull policy: \"invalid\"",
 		},
 		{
-			Name:         "one of config pull policies is invalid",
-			GlobalConfig: &common.Config{},
+			Name: "one of config pull policies is invalid",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2797,8 +2766,7 @@ func TestPrepare(t *testing.T) {
 			Error: "pull_policy config: unsupported pull policy: \"invalid\"",
 		},
 		{
-			Name:         "one of image pull policies is invalid",
-			GlobalConfig: &common.Config{},
+			Name: "one of image pull policies is invalid",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2833,8 +2801,7 @@ func TestPrepare(t *testing.T) {
 			Error: "conversion to Kubernetes policy: unsupported pull policy: \"invalid\"",
 		},
 		{
-			Name:         "autoset helper arch and os",
-			GlobalConfig: &common.Config{},
+			Name: "autoset helper arch and os",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
