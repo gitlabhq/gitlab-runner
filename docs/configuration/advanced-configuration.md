@@ -1130,6 +1130,8 @@ For more parameters, see the [documentation for the Kubernetes executor](../exec
 | `allow_privilege_escalation` | boolean | Optional. Runs all containers with the `allowPrivilegeEscalation` flag enabled. |
 | `node_selector`  | table   | A `table` of `key=value` pairs of `string=string`. Limits the creation of pods to Kubernetes nodes that match all the `key=value` pairs. |
 | `image_pull_secrets` | array | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
+| `logs_base_dir` | string | Base directory to be prepended to the generated path to store build logs. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760) in GitLab Runner 17.2. |
+| `scripts_base_dir` | string | Base directory to be prepended to the generated path to store build scripts. [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760) in GitLab Runner 17.2. |
 
 Example:
 
@@ -1145,6 +1147,8 @@ Example:
   image_pull_secrets = ["docker-registry-credentials", "optional-additional-credentials"]
   allowed_images = ["ruby:*", "python:*", "php:*"]
   allowed_services = ["postgres:9.4", "postgres:latest"]
+  logs_base_dir = "/tmp"
+  scripts_base_dir = "/tmp"
   [runners.kubernetes.node_selector]
     gitlab = "true"
 ```

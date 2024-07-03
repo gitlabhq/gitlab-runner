@@ -244,6 +244,8 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `retry_limit` | The maximum number of attempts to communicate with Kubernetes API. The retry interval between each attempt is based on a backoff algorithm starting at 500 ms. |
 | `retry_backoff_max` | Custom maximum backoff value in milliseconds for the retry interval to reach for each attempt. The default value is 2000 ms and it can not be lower than 500 ms. The default maximum retry interval to reach for each attempt is 2 seconds and can be customized with `retry_backoff_max`. |
 | `retry_limits` | How many times each request error is to be retried. |
+| `logs_base_dir` | Base directory to be prepended to the generated path to store build logs. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
+| `scripts_base_dir` | Base directory to be prepended to the generated path to store build scripts. For more information, see [Change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts). |
 
 ### Configuration example
 
@@ -277,6 +279,8 @@ concurrent = 4
     poll_timeout = 3600
     dns_policy = "cluster-first"
     priority_class_name = "priority-1"
+    logs_base_dir = "/tmp"
+    scripts_base_dir = "/tmp"
     [runners.kubernetes.node_selector]
       gitlab = "true"
     [runners.kubernetes.node_tolerations]
@@ -992,6 +996,83 @@ check_interval = 30
     [runners.kubernetes]
       runtime_class_name = "myclass"
 ```
+
+### Change the base directory for build logs and scripts
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37760) in GitLab Runner 17.2.
+
+You can change the directory where `emptyDir` volumes are mounted to the pod for build logs and scripts.
+You can use the directory to:
+
+- Run job pods with a modified image.
+- Run as an unprivileged user.
+- Customize `SecurityContext` settings.
+
+To change the directory:
+
+- For build logs, set `logs_base_dir`.
+- For build scripts, set `scripts_base_dir`.
+
+The expected value is a string that represents a base directory without the trailing slash
+(for example, `/tmp` or `/mydir/example`). **The directory must already exist.**
+
+This value is prepended to the generated path for build logs and scripts.
+For example:
+
+```toml
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+    [runners.kubernetes]
+      logs_base_dir = "/tmp"
+      scripts_base_dir = "/tmp"
+```
+
+This configuration would result in an `emptyDir` volume mounted in:
+
+- `/tmp/logs-${CI_PROJECT_ID}-${CI_JOB_ID}` for build logs
+  instead of the default `/logs-${CI_PROJECT_ID}-${CI_JOB_ID}`.
+- `/tmp/scripts-${CI_PROJECT_ID}-${CI_JOB_ID}` for build scripts.
+
+### User namespaces
+
+In Kubernetes 1.30 and later, you can isolate the user running in the container from the one on
+the host with [user namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/).
+A process running as root in the container can run as a different unprivileged user on the host.
+
+With user namespaces, you can have more control over which images are used to run your CI/CD jobs.
+Operations that require additional settings (such as running as root) can also function
+without opening up additional attack surface on the host.
+
+To use this feature, ensure your cluster has been [properly configured](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/#introduction).
+The following example adds `pod_spec` for the `hostUsers` key
+and disables both privileged pods and privilege escalation:
+
+```toml
+  [[runners]]
+    environment = ["FF_USE_ADVANCED_POD_SPEC_CONFIGURATION=true"]
+    builds_dir = "/tmp/builds"
+  [runners.kubernetes]
+    logs_base_dir = "/tmp"
+    scripts_base_dir = "/tmp"
+    privileged = false
+    allowPrivilegeEscalation = false
+  [[runners.kubernetes.pod_spec]]
+    name = "hostUsers"
+    patch = '''
+      [{"op": "add", "path": "/hostUsers", "value": false}]
+    '''
+    patch_type = "json"
+```
+
+With user namespaces, you cannot use the default path for the build directory (`builds_dir`),
+the build logs (`logs_base_dir`), or the build scripts (`scripts_base_dir`).
+Otherwise, even the container's root user does not have permission to mount volumes
+or create directories in the root of the container's file system.
+
+Instead, you can [change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts).
+You can also change the build directory by setting `[[runners]].builds_dir`.
 
 ## Nodes
 
