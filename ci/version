@@ -2,12 +2,6 @@
 
 set -eo pipefail
 
-if git version | grep 'git version 1' >/dev/null; then
-  # Old version of git. This will cause errors in the git1.8-test CI job, so if we're executing in CI, let's just
-  # ignore it as the job does not require this info
-  [ -n "${CI}" ] && exit 0
-fi
-
 version=$(cat VERSION || echo dev | sed -e 's/^v//g')
 exact_tag=$(git describe --exact-match 2>/dev/null | sed -e 's/^v//g' || echo "")
 
