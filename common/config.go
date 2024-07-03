@@ -637,6 +637,8 @@ type KubernetesConfig struct {
 	ContainerLifecycle                                KubernetesContainerLifecyle        `toml:"container_lifecycle,omitempty" json:"container_lifecycle,omitempty" description:"Actions that the management system should take in response to container lifecycle events"`
 	PriorityClassName                                 string                             `toml:"priority_class_name,omitempty" json:"priority_class_name" long:"priority_class_name" env:"KUBERNETES_PRIORITY_CLASS_NAME" description:"If set, the Kubernetes Priority Class to be set to the Pods"`
 	PodSpec                                           []KubernetesPodSpec                `toml:"pod_spec" json:",omitempty"`
+	LogsBaseDir                                       string                             `toml:"logs_base_dir,omitempty" json:"logs_base_dir" long:"logs-base-dir" env:"KUBERNETES_LOGS_BASE_DIR" description:"Base directory for the path where build logs are stored. This directory is prepended to the final generated path. For example, <logs_base_dir>/logs-<project_id>-<job_id>."`
+	ScriptsBaseDir                                    string                             `toml:"scripts_base_dir,omitempty" json:"scripts_base_dir" long:"scripts-base-dir" env:"KUBERNETES_SCRIPTS_BASE_DIR" description:"Base directory for the path where build scripts are stored. This directory is prepended to the final generated path. For example, <scripts_base_dir>/scripts-<project_id>-<job_id>."`
 }
 
 type RequestRetryLimit int

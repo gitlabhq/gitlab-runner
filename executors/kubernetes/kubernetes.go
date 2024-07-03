@@ -20,6 +20,18 @@ import (
 	"github.com/docker/cli/cli/config/types"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/jpillora/backoff"
+	api "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/util/exec"
+
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/executors"
@@ -32,17 +44,6 @@ import (
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
-	api "k8s.io/api/core/v1"
-	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth" // Register all available authentication methods
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/util/exec"
 )
 
 const (
@@ -107,6 +108,9 @@ var (
 	DefaultResourceIdentifier  = "default"
 	resourceTypeServiceAccount = "ServiceAccount"
 	resourceTypePullSecret     = "ImagePullSecret"
+
+	defaultLogsBaseDir    = "/logs"
+	defaultScriptsBaseDir = "/scripts"
 
 	chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
@@ -1199,11 +1203,19 @@ func (s *executor) logFile() string {
 }
 
 func (s *executor) logsDir() string {
-	return fmt.Sprintf("/logs-%d-%d", s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
+	baseDir := defaultLogsBaseDir
+	if s.Config.Kubernetes.LogsBaseDir != "" {
+		baseDir = s.Config.Kubernetes.LogsBaseDir
+	}
+	return fmt.Sprintf("%s-%d-%d", baseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
 }
 
 func (s *executor) scriptsDir() string {
-	return fmt.Sprintf("/scripts-%d-%d", s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
+	baseDir := defaultScriptsBaseDir
+	if s.Config.Kubernetes.LogsBaseDir != "" {
+		baseDir = s.Config.Kubernetes.ScriptsBaseDir
+	}
+	return fmt.Sprintf("%s-%d-%d", baseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
 }
 
 func (s *executor) scriptPath(stage common.BuildStage) string {
@@ -2778,6 +2790,11 @@ func newExecutor() *executor {
 	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
+			Config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+			},
 		},
 		remoteProcessTerminated: make(chan shells.StageCommandStatus),
 	}

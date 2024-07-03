@@ -6509,6 +6509,11 @@ func setupExecutor(shell string, successfulResponse common.JobResponse) *executo
 			Cmd: []string{"custom", "command"},
 		},
 		AbstractExecutor: executors.AbstractExecutor{
+			Config: common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{},
+				},
+			},
 			ExecutorOptions: executors.ExecutorOptions{
 				DefaultBuildsDir: "/builds",
 				DefaultCacheDir:  "/cache",
