@@ -1,8 +1,12 @@
-## v17.0.1 (2024-07-02)
+## v17.0.1 (2024-07-05)
 
 ### Bug fixes
 
 - Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
+
+### Maintenance
+
+- Remove git 1.8.3.1 test !4856
 
 ## v17.0.0 (2024-05-16)
 
