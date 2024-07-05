@@ -112,7 +112,7 @@ You can either:
 | events | list (`FF_RETRIEVE_POD_WARNING_EVENTS=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create, delete |
 | pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get |
-| pods/logs | get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/log | get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | secrets | create, delete, get, update |
 | serviceAccounts | get |
 | services | create, get |
