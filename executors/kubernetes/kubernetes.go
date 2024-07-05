@@ -244,10 +244,10 @@ type podConfigPrepareOpts struct {
 	hostAliases      []api.HostAlias
 }
 
-// KubeClientCreator abstract the creation of a kubernetes client. Its zero-value can be used.
-type KubeClientCreator func(config *restclient.Config) (kubernetes.Interface, error)
+// kubeClientCreator abstract the creation of a kubernetes client. Its zero-value can be used.
+type kubeClientCreator func(config *restclient.Config) (kubernetes.Interface, error)
 
-func (creator KubeClientCreator) Create(config *restclient.Config) (kubernetes.Interface, error) {
+func (creator kubeClientCreator) Create(config *restclient.Config) (kubernetes.Interface, error) {
 	if creator == nil {
 		creator = defaultKubeClientCreator
 	}
@@ -258,10 +258,10 @@ var defaultKubeClientCreator = func(config *restclient.Config) (kubernetes.Inter
 	return kubernetes.NewForConfig(config)
 }
 
-// KubeConfigGetter abstracts the creation of the kube client config. Its zero-value can be used.
-type KubeConfigGetter func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error)
+// kubeConfigGetter abstracts the creation of the kube client config. Its zero-value can be used.
+type kubeConfigGetter func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error)
 
-func (getter KubeConfigGetter) Get(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
+func (getter kubeConfigGetter) Get(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
 	if getter == nil {
 		getter = getKubeClientConfig
 	}
@@ -271,12 +271,12 @@ func (getter KubeConfigGetter) Get(conf *common.KubernetesConfig, overwrites *ov
 type executor struct {
 	executors.AbstractExecutor
 
-	// To create the actual kubernetes client; can be used to inject a specific/special kubernetes client.
-	KubeClientCreator KubeClientCreator
-	KubeConfigGetter  KubeConfigGetter
+	kubeClientCreator kubeClientCreator
+	kubeClient        kubernetes.Interface
 
-	kubeClient  kubernetes.Interface
-	kubeConfig  *restclient.Config
+	kubeConfigGetter kubeConfigGetter
+	kubeConfig       *restclient.Config
+
 	pod         *api.Pod
 	credentials *api.Secret
 	options     *kubernetesOptions
@@ -331,12 +331,12 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("check defaults error: %w", err)
 	}
 
-	s.kubeConfig, err = s.KubeConfigGetter.Get(s.Config.Kubernetes, s.configurationOverwrites)
+	s.kubeConfig, err = s.kubeConfigGetter.Get(s.Config.Kubernetes, s.configurationOverwrites)
 	if err != nil {
 		return fmt.Errorf("getting Kubernetes config: %w", err)
 	}
 
-	s.kubeClient, err = s.KubeClientCreator.Create(s.kubeConfig)
+	s.kubeClient, err = s.kubeClientCreator.Create(s.kubeConfig)
 	if err != nil {
 		return fmt.Errorf("connecting to Kubernetes: %w", err)
 	}

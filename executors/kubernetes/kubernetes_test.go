@@ -7353,10 +7353,10 @@ func TestContainerPullPolicies(t *testing.T) {
 			}
 
 			executor := &executor{
-				KubeClientCreator: func(_ *restclient.Config) (kubernetes.Interface, error) {
+				kubeClientCreator: func(_ *restclient.Config) (kubernetes.Interface, error) {
 					return fakeKubeClient, nil
 				},
-				KubeConfigGetter: func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
+				kubeConfigGetter: func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
 					return nil, nil
 				},
 				AbstractExecutor: executors.AbstractExecutor{
