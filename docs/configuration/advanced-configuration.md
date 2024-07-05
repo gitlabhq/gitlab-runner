@@ -789,14 +789,14 @@ In the following example, the idle count `1` is used between 08:00 and 15:59, Mo
 
 ```toml
 [[runners.autoscaler.policy]]
-  idle_count        = 1
-  idle_time         = "30m0s"
-  periods           = ["* 8-15 * * mon-fri"]
-
-[[runners.autoscaler.policy]]
   idle_count        = 0
   idle_time         = "0s"
   periods           = ["* * * * *"]
+
+[[runners.autoscaler.policy]]
+  idle_count        = 1
+  idle_time         = "30m0s"
+  periods           = ["* 8-15 * * mon-fri"]
 ```
 
 ### Periods syntax
