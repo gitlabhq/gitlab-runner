@@ -173,6 +173,21 @@ func (b *Build) Log() *logrus.Entry {
 	return b.Runner.Log().WithField("job", b.ID).WithField("project", b.JobInfo.ProjectID)
 }
 
+// ProjectUniqueShortName returns a unique name for the current build.
+// It is similar to ProjectUniqueName but removes unnecessary string
+// and adds the current BuildID as an additional composition to the unique string
+func (b *Build) ProjectUniqueShortName() string {
+	projectUniqueName := fmt.Sprintf(
+		"runner-%s-%d-%d-%d",
+		b.Runner.ShortDescription(),
+		b.JobInfo.ProjectID,
+		b.ProjectRunnerID,
+		b.ID,
+	)
+
+	return dns.MakeRFC1123Compatible(projectUniqueName)
+}
+
 func (b *Build) ProjectUniqueName() string {
 	projectUniqueName := fmt.Sprintf(
 		"runner-%s-project-%d-concurrent-%d",

@@ -2089,6 +2089,69 @@ func TestProjectUniqueName(t *testing.T) {
 	}
 }
 
+func TestProjectUniqueShortName(t *testing.T) {
+	tests := map[string]struct {
+		build        *Build
+		expectedName string
+	}{
+		"project non rfc1132 unique name": {
+			build: &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "Ze_n8E6en622WxxSg4r8",
+					},
+				},
+				JobResponse: JobResponse{
+					JobInfo: JobInfo{
+						ProjectID: 1234567890,
+					},
+				},
+				ProjectRunnerID: 0,
+			},
+			expectedName: "runner-zen8e6e-1234567890-0-0",
+		},
+		"project normal unique name without build id": {
+			build: &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "xYzWabc-Ij3xlKjmoPO9",
+					},
+				},
+				JobResponse: JobResponse{
+					JobInfo: JobInfo{
+						ProjectID: 1234567890,
+					},
+				},
+				ProjectRunnerID: 0,
+			},
+			expectedName: "runner-xyzwabc--1234567890-0-0",
+		},
+		"project normal unique name with build id": {
+			build: &Build{
+				Runner: &RunnerConfig{
+					RunnerCredentials: RunnerCredentials{
+						Token: "xYzWabc-Ij3xlKjmoPO9",
+					},
+				},
+				JobResponse: JobResponse{
+					ID: 12345,
+					JobInfo: JobInfo{
+						ProjectID: 1234567890,
+					},
+				},
+				ProjectRunnerID: 222222,
+			},
+			expectedName: "runner-xyzwabc--1234567890-222222-12345",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.expectedName, test.build.ProjectUniqueShortName())
+		})
+	}
+}
+
 func TestBuildStages(t *testing.T) {
 	scriptOnlyBuild, err := GetRemoteSuccessfulBuild()
 	require.NoError(t, err)

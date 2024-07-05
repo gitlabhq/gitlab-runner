@@ -89,7 +89,7 @@ func TestCreateNetwork(t *testing.T) {
 		"network create per-build network": {
 			networkMode:         "",
 			networkPerBuild:     "true",
-			expectedNetworkMode: container.NetworkMode("runner-test-tok-project-0-concurrent-0-job-0-network"),
+			expectedNetworkMode: container.NetworkMode("runner-test-tok-0-0-0"),
 			clientAssertions: func(mc *docker.MockClient) {
 				mc.On(
 					"NetworkCreate",
@@ -158,7 +158,7 @@ func TestCreateNetwork(t *testing.T) {
 		"IPv6 network created": {
 			networkMode:         "",
 			networkPerBuild:     "true",
-			expectedNetworkMode: container.NetworkMode("runner-test-tok-project-0-concurrent-0-job-0-network"),
+			expectedNetworkMode: container.NetworkMode("runner-test-tok-0-0-0"),
 			enableIPv6:          true,
 			clientAssertions: func(mc *docker.MockClient) {
 				mc.On(

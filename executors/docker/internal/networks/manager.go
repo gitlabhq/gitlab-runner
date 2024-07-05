@@ -60,7 +60,7 @@ func (m *manager) Create(ctx context.Context, networkMode string, enableIPv6 boo
 		return "", errBuildNetworkExists
 	}
 
-	networkName := fmt.Sprintf("%s-job-%d-network", m.build.ProjectUniqueName(), m.build.ID)
+	networkName := m.build.ProjectUniqueShortName()
 
 	m.logger.Debugln("Creating build network ", networkName)
 
