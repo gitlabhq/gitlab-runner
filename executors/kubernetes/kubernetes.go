@@ -40,6 +40,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker/auth"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	os_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/os"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/retry"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
@@ -244,6 +245,16 @@ type podConfigPrepareOpts struct {
 	hostAliases      []api.HostAlias
 }
 
+// windowsKernelVersionGetter abstracts getting the windows kernel version. It's zero-value can be used.
+type windowsKernelVersionGetter func() string
+
+func (getter windowsKernelVersionGetter) Get() string {
+	if getter == nil {
+		getter = os_helpers.LocalKernelVersion
+	}
+	return getter()
+}
+
 // kubeClientCreator abstract the creation of a kubernetes client. Its zero-value can be used.
 type kubeClientCreator func(config *restclient.Config) (kubernetes.Interface, error)
 
@@ -270,6 +281,8 @@ func (getter kubeConfigGetter) Get(conf *common.KubernetesConfig, overwrites *ov
 
 type executor struct {
 	executors.AbstractExecutor
+
+	windowsKernelVersionGetter windowsKernelVersionGetter
 
 	kubeClientCreator kubeClientCreator
 	kubeClient        kubernetes.Interface
@@ -509,6 +522,7 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 	cfg.Architecture = common.AppVersion.Architecture
 	if helperimage.OSTypeWindows == common.AppVersion.OS {
 		cfg.OSType = helperimage.OSTypeWindows
+		cfg.KernelVersion = s.windowsKernelVersionGetter.Get()
 	}
 
 	return cfg

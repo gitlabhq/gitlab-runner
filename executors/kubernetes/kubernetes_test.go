@@ -1204,11 +1204,13 @@ func TestPrepare(t *testing.T) {
 		}
 		if runtime.GOOS == helperimage.OSTypeWindows {
 			hi.OSType = helperimage.OSTypeWindows
-			hi.Name = ""
-			hi.Architecture = ""
-			hi.Tag = ""
+			hi.Name = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"
+			hi.Architecture = "x86_64"
+			hi.Tag = "x86_64-latest-servercore1809"
 			hi.IsSupportingLocalImport = false
-			hi.Cmd = nil
+			hi.Cmd = []string{
+				"powershell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-",
+			}
 		}
 		return &executor{
 			options: &kubernetesOptions{
@@ -1225,8 +1227,12 @@ func TestPrepare(t *testing.T) {
 		Name  string
 		Error string
 
-		RunnerConfig *common.RunnerConfig
-		Build        *common.Build
+		// if Precondition is set and returns false, the test-case is skipped with the message provided
+		Precondition func() (bool, string)
+
+		RunnerConfig               *common.RunnerConfig
+		Build                      *common.Build
+		WindowsKernelVersionGetter windowsKernelVersionGetter
 
 		Expected                *executor
 		ExpectedPullPolicy      api.PullPolicy
@@ -2811,6 +2817,10 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
+			WindowsKernelVersionGetter: func() string {
+				// this should produce an executor with an auto-detected helper image config as per `getExecutorForHelperAutoset`
+				return "10.0.17763"
+			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
 					GitInfo: common.GitInfo{
@@ -2824,15 +2834,77 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: getExecutorForHelperAutoset(),
 		},
+		{
+			Name: "autoset helper arch and os on unsupported windows kernel",
+			Precondition: func() (bool, string) {
+				if runtime.GOOS != "windows" {
+					return false, "skipping test, because we are not running on windows but on " + runtime.GOOS
+				}
+				return true, ""
+			},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:                       "test-image",
+						Host:                        "test-server",
+						HelperImageAutosetArchAndOS: true,
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			WindowsKernelVersionGetter: func() string { return "unsupported-kernel-version" },
+			Error:                      "prepare helper image: detecting base image: unsupported Windows version: unsupported-kernel-version",
+		},
+		{
+			Name: "autoset helper arch and os on non windows does not need windows kernel version",
+			Precondition: func() (bool, string) {
+				if runtime.GOOS == "windows" {
+					return false, "skipping test, because we are running on windows"
+				}
+				return true, ""
+			},
+			WindowsKernelVersionGetter: func() string {
+				panic("this should never be called on non-windows")
+			},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:                       "test-image",
+						Host:                        "test-server",
+						HelperImageAutosetArchAndOS: true,
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
+			if precondition := test.Precondition; precondition != nil {
+				if shouldRun, msg := precondition(); !shouldRun {
+					t.Skip(msg)
+				}
+			}
 			e := &executor{
 				AbstractExecutor: executors.AbstractExecutor{
 					ExecutorOptions: executorOptions,
 				},
-				options: &kubernetesOptions{},
+				options:                    &kubernetesOptions{},
+				windowsKernelVersionGetter: test.WindowsKernelVersionGetter,
 			}
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
@@ -2852,7 +2924,7 @@ func TestPrepare(t *testing.T) {
 				assert.Contains(t, err.Error(), test.Error)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Set this to nil so we aren't testing the functionality of the
 			// base AbstractExecutor's Prepare method
@@ -2869,12 +2941,15 @@ func TestPrepare(t *testing.T) {
 			sharedBuildsDir := e.isSharedBuildsDirRequired()
 			assert.Equal(t, test.ExpectedSharedBuildsDir, sharedBuildsDir)
 
+			// we deliberately set some things on the executor to nil, to make the comparison to the expected & artificially
+			// constructed executor succeed
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
 			e.pullManager = nil
 			e.requireDefaultBuildsDirVolume = nil
 			e.requireSharedBuildsDir = nil
+			e.windowsKernelVersionGetter = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
