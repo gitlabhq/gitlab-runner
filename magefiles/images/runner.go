@@ -388,6 +388,7 @@ func tags(baseImages []string, registryImage, imageName, refTag string) []string
 
 	for _, base := range baseImages {
 		tags = append(tags, fmt.Sprintf("%s:%s-%s", image, base, refTag))
+		tags = append(tags, fmt.Sprintf("%s:%s-%s", image, base, build.Revision()))
 		if base == DefaultFlavor {
 			tags = append(tags, fmt.Sprintf("%s:%s", image, refTag))
 		}
