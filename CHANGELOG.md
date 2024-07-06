@@ -1,29 +1,12 @@
-## v17.0.1 (2024-07-02)
-
-### Bug fixes
-
-- Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
-
-## v17.0.0 (2024-05-16)
-
-### New features
-
-- Add fleeting docs describing new plugin installation method !4749
-- Support Google Cloud secrets from projects other than the one containing the WIF pool !4718 (Rich Wareham @rjw57)
-- Interpret failed pods as system failures rather than script failures for Kubernetes executor !4698 (Daniel Barnes @dbarnes3)
-- Implement new GCS Cache adapter that uses Google Cloud SDKs auth discovery defaults !4706
-- Add cpuset_mems option to Docker executor !4725 (Karthik Natarajan @karthiknatarajan)
-- Add docs for Runner Operator in disconnected network environments !4716
-- Add support for taskscaler scale throttle !4722
-- Add the ability to disable the automatic token rotation !4721
-
-### Security fixes
-
-- Stop installing tar in ubi fips base image !4703
+## v16.11.2 (2024-07-05)
 
 ### Bug fixes
 
 - Upgrade fleeting and taskscaler to fix instance churn/runaway !4843
+
+### Maintenance
+
+- Remove git 1.8.3.1 test !4856
 
 ## v16.11.1 (2024-05-03)
 
