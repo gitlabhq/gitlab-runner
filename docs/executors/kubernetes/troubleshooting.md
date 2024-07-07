@@ -354,6 +354,6 @@ runners:
 
 NOTE:
 Instead of `emptyDir`, you can use any other
-[supported volume types](/runner/executors/kubernetes.md#configure-volume-types).
+[supported volume types](index.md#configure-volume-types).
 Because all files that are not explicitly handled and stored as build
 artefacts are usually ephemeral, `emptyDir` works for most cases.
