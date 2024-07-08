@@ -140,6 +140,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesFailingBuildForBashAndPwshFeatureFlag":     testKubernetesFailingBuildForBashAndPwshFeatureFlag,
 		"testKubernetesPodEvents":                                 testKubernetesPodEvents,
 		"testKubernetesDumbInitSuccessRun":                        testKubernetesDumbInitSuccessRun,
+		"testKubernetesDisableUmask":                              testKubernetesDisableUmask,
 	}
 
 	featureFlags := []string{
@@ -253,6 +254,119 @@ func testKubernetesDumbInitSuccessRun(t *testing.T, featureFlagName string, feat
 
 	err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 	assert.NoError(t, err)
+}
+
+func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	customBuildDir := "/custom_builds_dir"
+	tests := map[string]struct {
+		image        string
+		shell        string
+		buildDir     string
+		script       string
+		runAsUser    int64
+		runAsGroup   int64
+		disableUmask bool
+		envars       common.JobVariables
+		verifyFn     func(t *testing.T, out string)
+	}{
+		"umask enabled": {
+			image:      common.TestAlpineImage,
+			shell:      "bash",
+			script:     "ls -lR /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests",
+			runAsUser:  int64(1234),
+			runAsGroup: int64(5678),
+			verifyFn: func(t *testing.T, out string) {
+				assert.NotContains(t, out, "1234")
+				assert.NotContains(t, out, "5678")
+				assert.Regexp(t, regexp.MustCompile(`(?m)^.*root\s*root.*gitlab-test.*$`), out)
+			},
+		},
+		"umask disabled": {
+			image:        common.TestAlpineImage,
+			shell:        "bash",
+			script:       "ls -lR /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests",
+			runAsUser:    int64(1234),
+			runAsGroup:   int64(5678),
+			disableUmask: true,
+			verifyFn: func(t *testing.T, out string) {
+				assert.NotContains(t, out, "root")
+				assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
+			},
+		},
+		"umask enabled with custom builds_dir": {
+			image:      common.TestAlpineImage,
+			shell:      "bash",
+			buildDir:   customBuildDir,
+			script:     "ls -lR $BUILDS_DIRECTORY/gitlab-org/ci-cd/gitlab-runner-pipeline-tests",
+			runAsUser:  int64(1234),
+			runAsGroup: int64(5678),
+			envars: common.JobVariables{
+				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.NotContains(t, out, "1234")
+				assert.NotContains(t, out, "5678")
+				assert.Regexp(t, regexp.MustCompile(`(?m)^.*root\s*root.*gitlab-test.*$`), out)
+			},
+		},
+		"umask disabled with custom builds_dir": {
+			image:        common.TestAlpineImage,
+			shell:        "bash",
+			buildDir:     customBuildDir,
+			script:       "ls -lR $BUILDS_DIRECTORY/gitlab-org/ci-cd/gitlab-runner-pipeline-tests",
+			runAsUser:    int64(1234),
+			runAsGroup:   int64(5678),
+			disableUmask: true,
+			envars: common.JobVariables{
+				common.JobVariable{Key: "BUILDS_DIRECTORY", Value: customBuildDir},
+			},
+			verifyFn: func(t *testing.T, out string) {
+				assert.NotContains(t, out, "root")
+				assert.Regexp(t, regexp.MustCompile(`(?m)^.*1234\s*5678.*gitlab-test.*$`), out)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(tc.script)
+			})
+
+			build.Variables = append(build.Variables, tc.envars...)
+			build.Runner.RunnerSettings.Shell = tc.shell
+			build.JobResponse.Image.Name = tc.image
+
+			if tc.buildDir != "" {
+				build.Runner.BuildsDir = tc.buildDir
+				build.Runner.Kubernetes.Volumes = common.KubernetesVolumes{
+					EmptyDirs: []common.KubernetesEmptyDir{
+						common.KubernetesEmptyDir{
+							Name:      "repo",
+							MountPath: "$BUILDS_DIRECTORY",
+						},
+					},
+				}
+			}
+
+			build.Runner.Kubernetes.BuildContainerSecurityContext = common.KubernetesContainerSecurityContext{
+				RunAsUser:  &tc.runAsUser,
+				RunAsGroup: &tc.runAsGroup,
+			}
+			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
+
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			buildtest.SetBuildFeatureFlag(build, "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR", tc.disableUmask)
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			assert.NoError(t, err)
+
+			tc.verifyFn(t, buf.String())
+		})
+	}
 }
 
 func TestBuildScriptSections(t *testing.T) {
