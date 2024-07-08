@@ -146,7 +146,7 @@ func pwshStdinCmdArgs(shell string) []string {
 
 // Avoid using -EncodedCommand due to the powershell progress stream leaking to
 // to the output: https://github.com/PowerShell/PowerShell/issues/5912.
-func powershellStdinCmdArgs(shell string) []string {
+func powershellStdinCmdArgs(_ string) []string {
 	return []string{
 		"-NoProfile",
 		"-NoLogo",
