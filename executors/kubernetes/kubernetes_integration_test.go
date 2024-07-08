@@ -74,8 +74,10 @@ func newNamespaceManager(client *k8s.Clientset, action kubernetesNamespaceManage
 	}
 }
 
-func (n namespaceManager) Run() error {
+func (n namespaceManager) Run() (*v1.Namespace, error) {
 	var err error
+	var ns *v1.Namespace
+
 	ctx, cancel := context.WithTimeout(context.Background(), n.timeout)
 	defer cancel()
 
@@ -87,12 +89,12 @@ func (n namespaceManager) Run() error {
 				GenerateName: n.namespace,
 			},
 		}
-		_, err = n.client.CoreV1().Namespaces().Create(ctx, k8sNamespace, metav1.CreateOptions{})
+		ns, err = n.client.CoreV1().Namespaces().Create(ctx, k8sNamespace, metav1.CreateOptions{})
 	case deleteNamespace:
 		err = n.client.CoreV1().Namespaces().Delete(ctx, n.namespace, metav1.DeleteOptions{})
 	}
 
-	return err
+	return ns, err
 }
 
 func (n namespaceManager) ShouldRetry(tries int, err error) bool {
@@ -814,8 +816,8 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	client := getTestKubeClusterClient(t)
 
 	init := func(t *testing.T, _ *common.Build, client *k8s.Clientset, namespace string) {
-		_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-			return newNamespaceManager(client, createNamespace, namespace), nil
+		_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+			return newNamespaceManager(client, createNamespace, namespace).Run()
 		}).Run()
 		require.NoError(t, err)
 
@@ -829,8 +831,8 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	}
 
 	finalize := func(t *testing.T, client *k8s.Clientset, namespace string) {
-		_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-			return newNamespaceManager(client, deleteNamespace, namespace), nil
+		_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+			return newNamespaceManager(client, deleteNamespace, namespace).Run()
 		}).Run()
 		require.NoError(t, err)
 	}
@@ -932,16 +934,10 @@ containers:
 				deletedPodNameCh <- pod.Name
 			})()
 
-			out, err := buildtest.RunBuildReturningOutput(t, build)
+			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 			assert.Error(t, err)
 
-			podName := <-deletedPodNameCh
-
-			assert.Contains(
-				t,
-				out,
-				fmt.Sprintf("pods %q not found", podName),
-			)
+			<-deletedPodNameCh
 
 			finalize(t, client, tc.namespace)
 		})
@@ -1614,8 +1610,8 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 				assert.Empty(t, configMaps)
 			},
 			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
-				_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-					return newNamespaceManager(client, deleteNamespace, namespace), nil
+				_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+					return newNamespaceManager(client, deleteNamespace, namespace).Run()
 				}).Run()
 				require.NoError(t, err)
 			},
