@@ -632,15 +632,11 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 		return err
 	}
 
-	var initContainers []api.Container
-	if s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) &&
-		s.helperImageInfo.OSType != helperimage.OSTypeWindows {
-		permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
-		if err != nil {
-			return fmt.Errorf("building permissions init container: %w", err)
-		}
-		initContainers = append(initContainers, permissionsInitContainer)
+	initContainers, err := s.buildInitContainers()
+	if err != nil {
+		return err
 	}
+
 	err = s.setupBuildPod(ctx, initContainers)
 	if err != nil {
 		return err
@@ -717,11 +713,12 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up credentials: %w", err)
 	}
 
-	permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
+	initContainers, err := s.buildInitContainers()
 	if err != nil {
-		return fmt.Errorf("building permissions init container: %w", err)
+		return err
 	}
-	err = s.setupBuildPod(ctx, []api.Container{permissionsInitContainer})
+
+	err = s.setupBuildPod(ctx, initContainers)
 	if err != nil {
 		return fmt.Errorf("setting up build pod: %w", err)
 	}
@@ -758,6 +755,32 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	s.captureContainersLogs(ctx, s.pod.Spec.Containers)
 
 	return nil
+}
+
+func (s *executor) buildInitContainers() ([]api.Container, error) {
+	var initContainers []api.Container
+
+	if s.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor) {
+		uidGidCollectorInitContainer, err := s.buildUiGidCollector(s.helperImageInfo.OSType)
+		if err != nil {
+			return nil, fmt.Errorf("building umask init container: %w", err)
+		}
+
+		initContainers = append(initContainers, uidGidCollectorInitContainer)
+	}
+
+	if !s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy) ||
+		(s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) &&
+			s.helperImageInfo.OSType != helperimage.OSTypeWindows) {
+		permissionsInitContainer, err := s.buildPermissionsInitContainer(s.helperImageInfo.OSType)
+		if err != nil {
+			return nil, fmt.Errorf("building permissions init container: %w", err)
+		}
+
+		initContainers = append(initContainers, permissionsInitContainer)
+	}
+
+	return initContainers, nil
 }
 
 func (s *executor) getContainerInfo(cmd common.ExecutorCommand) (string, []string) {
@@ -876,6 +899,46 @@ func (s *executor) buildPermissionsInitContainer(os string) (api.Container, erro
 			initCommand = append(initCommand, fmt.Sprintf("cp /usr/bin/dumb-init %s", s.scriptsDir()))
 		}
 		container.Command = []string{"sh", "-c", strings.Join(initCommand, ";\n")}
+	}
+
+	return container, nil
+}
+
+func (s *executor) buildUiGidCollector(os string) (api.Container, error) {
+	opts := containerBuildOpts{
+		name:            "init-build-uid-gid-collector",
+		image:           s.options.Image.Name,
+		imageDefinition: s.options.Image,
+		requests:        s.configurationOverwrites.buildRequests,
+		limits:          s.configurationOverwrites.buildLimits,
+		securityContext: s.Config.Kubernetes.GetContainerSecurityContext(
+			s.Config.Kubernetes.BuildContainerSecurityContext,
+			s.defaultCapDrop()...,
+		),
+	}
+
+	err := s.verifyAllowedImages(opts)
+	if err != nil {
+		return api.Container{}, err
+	}
+
+	pullPolicy, err := s.pullManager.GetPullPolicyFor(opts.image)
+	if err != nil {
+		return api.Container{}, err
+	}
+
+	container := api.Container{
+		Name:            opts.name,
+		Image:           opts.image,
+		VolumeMounts:    s.getVolumeMounts(),
+		ImagePullPolicy: pullPolicy,
+		// let's use build container resources
+		Resources:       api.ResourceRequirements{Limits: opts.limits, Requests: opts.requests},
+		SecurityContext: opts.securityContext,
+	}
+
+	if os == helperimage.OSTypeLinux {
+		container.Command = []string{"sh", "-c", fmt.Sprintf("> %s/%s", s.RootDir(), shells.BuildUiGidFile)}
 	}
 
 	return container, nil
@@ -1096,36 +1159,16 @@ func (s *executor) cleanupResources() {
 	}
 }
 
-//nolint:funlen
 func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error) {
-	// check if the image/service is allowed
-	internalImages := []string{
-		s.ExpandValue(s.Config.Kubernetes.Image),
-		s.ExpandValue(s.helperImageInfo.Name),
-	}
+	var envVars []common.JobVariable
 
-	var (
-		optionName    string
-		allowedImages []string
-		envVars       []common.JobVariable
-	)
 	if strings.HasPrefix(opts.name, serviceContainerPrefix) {
-		optionName = "services"
-		allowedImages = s.Config.Kubernetes.AllowedServices
 		envVars = s.getServiceVariables(opts.imageDefinition)
 	} else if opts.name == buildContainerName {
-		optionName = "images"
-		allowedImages = s.Config.Kubernetes.AllowedImages
 		envVars = s.Build.GetAllVariables().PublicOrInternal()
 	}
 
-	verifyAllowedImageOptions := common.VerifyAllowedImageOptions{
-		Image:          opts.image,
-		OptionName:     optionName,
-		AllowedImages:  allowedImages,
-		InternalImages: internalImages,
-	}
-	err := common.VerifyAllowedImage(verifyAllowedImageOptions, s.BuildLogger)
+	err := s.verifyAllowedImages(opts)
 	if err != nil {
 		return api.Container{}, err
 	}
@@ -1167,10 +1210,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		Command:         command,
 		Args:            args,
 		Env:             buildVariables(envVars),
-		Resources: api.ResourceRequirements{
-			Limits:   opts.limits,
-			Requests: opts.requests,
-		},
+		Resources:       api.ResourceRequirements{Limits: opts.limits, Requests: opts.requests},
 		Ports:           containerPorts,
 		VolumeMounts:    s.getVolumeMounts(),
 		SecurityContext: opts.securityContext,
@@ -1179,6 +1219,35 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 	}
 
 	return container, nil
+}
+
+func (s *executor) verifyAllowedImages(opts containerBuildOpts) error {
+	// check if the image/service is allowed
+	internalImages := []string{
+		s.ExpandValue(s.Config.Kubernetes.Image),
+		s.ExpandValue(s.helperImageInfo.Name),
+	}
+
+	var (
+		optionName    string
+		allowedImages []string
+	)
+	if strings.HasPrefix(opts.name, serviceContainerPrefix) {
+		optionName = "services"
+		allowedImages = s.Config.Kubernetes.AllowedServices
+	} else if opts.name == buildContainerName {
+		optionName = "images"
+		allowedImages = s.Config.Kubernetes.AllowedImages
+	}
+
+	verifyAllowedImageOptions := common.VerifyAllowedImageOptions{
+		Image:          opts.image,
+		OptionName:     optionName,
+		AllowedImages:  allowedImages,
+		InternalImages: internalImages,
+	}
+
+	return common.VerifyAllowedImage(verifyAllowedImageOptions, s.BuildLogger)
 }
 
 func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {

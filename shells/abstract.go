@@ -17,6 +17,12 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
 
+// When umask is disabled for the Kubernetes executor,
+// a hidden file, .giltab-build-uid-gid, is created in the `builds_dir` directory to assist the helper container
+// in retrieving the build image's configured `uid:gid`.
+// This information is then applied to the working directories to prevent them from being writable by anyone.
+const BuildUiGidFile = ".giltab-build-uid-gid"
+
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
 type stringQuoter func(string) string
@@ -137,6 +143,11 @@ func (b *AbstractShell) cacheExtractor(ctx context.Context, w ShellWriter, info 
 		return common.ErrSkipBuildStage
 	}
 
+	if info.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor) &&
+		info.Build.Runner.Shell == Bash {
+		b.changeFilesOwnership(w, info.Build, info.Build.CacheDir)
+	}
+
 	return nil
 }
 
@@ -255,6 +266,11 @@ func (b *AbstractShell) downloadAllArtifacts(w ShellWriter, info common.ShellScr
 		}
 	})
 
+	if info.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor) &&
+		info.Build.Runner.Shell == Bash {
+		b.changeFilesOwnership(w, info.Build, info.Build.CacheDir)
+	}
+
 	return nil
 }
 
@@ -290,6 +306,11 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 
 	if err := b.writeSubmoduleUpdateCmds(w, info); err != nil {
 		return err
+	}
+
+	if info.Build.IsFeatureFlagOn(featureflags.DisableUmaskForKubernetesExecutor) &&
+		info.Build.Runner.Shell == Bash {
+		b.changeFilesOwnership(w, info.Build, info.Build.FullProjectDir(), info.Build.TmpProjectDir())
 	}
 
 	b.guardGetSourcesScriptHooks(w, info, "post_clone_script", func() []string {
@@ -430,6 +451,21 @@ func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScri
 	}
 
 	return nil
+}
+
+func (b *AbstractShell) changeFilesOwnership(w ShellWriter, build *common.Build, dir ...string) {
+	// ensure all parts are quoted with single quotes, so that whitespaces
+	// and all don't trip us up and to ensure no unwanted variable expansion is happening
+	unquotedUidGidFile := fmt.Sprintf(`%s/%s`, build.RootDir, BuildUiGidFile)
+	quotedUidGidFile := fmt.Sprintf(`'%s'`, unquotedUidGidFile)
+	quotedDirs := make([]string, len(dir))
+	for i, d := range dir {
+		quotedDirs[i] = fmt.Sprintf(`'%s'`, d)
+	}
+
+	w.IfFile(unquotedUidGidFile) // IfFIle does use `%q` internally
+	w.Line(fmt.Sprintf(`chown -R "$(stat -c '%%u:%%g' %s)" %s`, quotedUidGidFile, strings.Join(quotedDirs, " ")))
+	w.EndIf()
 }
 
 func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {

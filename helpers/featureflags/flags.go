@@ -40,6 +40,7 @@ const (
 	UseTimestamps                        string = "FF_TIMESTAMPS"
 	DisableAutomaticTokenRotation        string = "FF_DISABLE_AUTOMATIC_TOKEN_ROTATION"
 	UseLegacyGCSCacheAdapter             string = "FF_USE_LEGACY_GCS_CACHE_ADAPTER"
+	DisableUmaskForKubernetesExecutor    string = "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR"
 )
 
 type FeatureFlag struct {
@@ -330,6 +331,16 @@ var flags = []FeatureFlag{
 		Description: "When enabled, the legacy GCS Cache adapter is used. When disabled (default), a newer GCS Cache adapter is used which uses Google Cloud Storage's SDK " +
 			"for authentication. This should resolve authentication problems in environments that the legacy adapter struggled with, such as workload identity " +
 			"configurations in GKE.",
+	},
+	{
+		Name:            DisableUmaskForKubernetesExecutor,
+		DefaultValue:    false,
+		Deprecated:      false,
+		ToBeRemovedWith: "",
+		Description: "When enabled, removes the `umask 0000` call for jobs executed with the Kubernetes " +
+			"executor. Instead, the runner tries to discover the user ID (UID) and group ID (GID) of the user the build container runs as. " +
+			"The runner also changes the ownership of the working directory and files by running the `chown` " +
+			"command in the predefined container (after updating sources, restoring cache, and downloading artifacts).",
 	},
 }
 
