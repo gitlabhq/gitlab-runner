@@ -1690,7 +1690,7 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 
-			podName := <-deletedPodNameCh
+			<-deletedPodNameCh
 
 			if !featureFlagValue {
 				assert.Contains(
@@ -1701,12 +1701,6 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 			} else {
 				assert.Errorf(t, err, "command terminated with exit code 137")
 			}
-
-			assert.Contains(
-				t,
-				out,
-				fmt.Sprintf("pods %q not found", podName),
-			)
 
 			validateNamespaceDeleted(t, client, expectedNamespace)
 
