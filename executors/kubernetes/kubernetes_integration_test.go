@@ -181,8 +181,6 @@ func testKubernetesSuccessRunFeatureFlag(t *testing.T, featureFlagName string, f
 
 func testKubernetesPodEvents(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
-	// this test is known to fail spectacularly when run against minikube.
-	skipIfRunningAgainstMiniKube(t)
 
 	build := getTestBuild(t, common.GetRemoteSuccessfulBuild)
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
@@ -198,10 +196,9 @@ func testKubernetesPodEvents(t *testing.T, featureFlagName string, featureFlagVa
 	expectedLines := []string{
 		"Type     Reason      Message",
 		"Normal   Scheduled   Successfully assigned",
-		"Normal   Pulled   Container image",
 	}
 
-	if build.Variables.Get(featureflags.UseLegacyKubernetesExecutionStrategy) == "true" {
+	if build.Variables.Get(featureflags.UseLegacyKubernetesExecutionStrategy) == "false" {
 		expectedLines = append(
 			expectedLines,
 			"Normal   Created   Created container init-permissions",
@@ -211,17 +208,15 @@ func testKubernetesPodEvents(t *testing.T, featureFlagName string, featureFlagVa
 
 	expectedLines = append(
 		expectedLines,
-		"Normal   Pulling   Pulling image",
-		"Normal   Pulled   Successfully pulled image",
+		"Normal   Pulling   Pulling image|Normal   Pulled   Successfully pulled image|Normal   Pulled   Container image .* already present on machine",
 		"Normal   Created   Created container build",
 		"Normal   Started   Started container build",
-		"Normal   Pulled   Container image",
 		"Normal   Created   Created container helper",
 		"Normal   Started   Started container helper",
 	)
 
 	for _, l := range expectedLines {
-		assert.Contains(t, out, l)
+		assert.Regexp(t, regexp.MustCompile(fmt.Sprintf(`(?m)%s`, l)), out)
 	}
 }
 
