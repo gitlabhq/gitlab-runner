@@ -100,6 +100,12 @@ This snippet is in the runners.machine section of the `config.toml` file.
     ]
 ```
 
+NOTE:
+The credentials file is optional.
+You can use an [AWS Identity and Access Management](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html)
+(IAM) instance profile for the runner manager in the AWS environment.
+If you do not want to host the runner manager in AWS, you can use the credentials file.
+
 ## Configure runner autoscaling executors
 
 After you configure the runner manager, configure the executors specific to autoscaling:
