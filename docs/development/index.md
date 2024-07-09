@@ -21,7 +21,7 @@ In order to provide Docker and Kubernetes locally Step 3 has you setting Rancher
 
 ## Recommended Environment
 
-The recommended environment on which to install Go and Rancher Desktop for development is a local laptop or desktop. It is possible to use nested-virtualization to run Rancher Desktop in the cloud (which runs `k3s` in a VM) but it's more tricky to setup.
+The recommended environment on which to install Go and Rancher Desktop for development is a local laptop or desktop. It is possible to use nested-virtualization to run Rancher Desktop in the cloud (which runs `k3s` in a VM) but it's more tricky to set up.
 
 ## Runner Shorts Video Tutorials
 
