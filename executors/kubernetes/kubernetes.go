@@ -486,8 +486,8 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 			err = s.runWithAttach(cmd)
 		}
 
-		if err != nil && s.Build.IsFeatureFlagOn(featureflags.RetrievePodWarningEvents) {
-			s.logPodWarningEvents(k8sEventWarningType)
+		if err != nil {
+			s.logPodWarningEvents(cmd.Context, k8sEventWarningType)
 		}
 
 		var imagePullErr *pull.ImagePullError
@@ -556,21 +556,20 @@ func (s *executor) printPodEvents() {
 	}
 }
 
-func (s *executor) logPodWarningEvents(eventType string) {
+func (s *executor) logPodWarningEvents(ctx context.Context, eventType string) {
 	if s.pod == nil {
 		return
 	}
 
 	events, err := retry.WithValueFn(s, func() (*api.EventList, error) {
-		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
-		// kubeAPI: events, list, FF_RETRIEVE_POD_WARNING_EVENTS=true
+		// kubeAPI: events, list
 		return s.kubeClient.CoreV1().Events(s.pod.Namespace).
-			List(context.Background(), metav1.ListOptions{
+			List(ctx, metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.pod.Name, eventType),
 			})
 	}).Run()
 	if err != nil {
-		s.BuildLogger.Errorln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
+		s.BuildLogger.Debugln(fmt.Sprintf("Error retrieving events list: %s", err.Error()))
 		return
 	}
 

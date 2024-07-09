@@ -254,9 +254,12 @@ var flags = []FeatureFlag{
 	},
 	{
 		Name:         RetrievePodWarningEvents,
-		DefaultValue: false,
-		Deprecated:   false,
-		Description:  "When enabled, all warning events associated with the Pod are retrieved when the job fails.",
+		DefaultValue: true,
+		Deprecated:   true,
+		Description: "When enabled, all warning events associated with the pod are retrieved when the job fails. " +
+			"This flag was deprecated in GitLab Runner 17.2 and is planned for removal in 18.0. " +
+			"In GitLab Runner 17.2 and later, pod warning events are retrieved and logged unconditionally. " +
+			"However, no failure occurs even if RBAC permissions are missing.",
 	},
 	{
 		Name:         PrintPodEvents,
