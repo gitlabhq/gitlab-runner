@@ -63,6 +63,10 @@ Docker and GitLab Runner supports, like Ubuntu, Debian, CentOS, or RHEL.
 1. [Install GitLab Runner](../install/linux-repository.md) on the instance.
 1. Add the cloud provider credentials to the Runner Manager host machine.
 
+NOTE:
+You can host the runner manager in a container.
+For [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/), the runner manager is hosted on a virtual machine instance.
+
 ### Example credentials configuration for the GitLab Runner Autoscaler
 
 ``` toml
