@@ -327,7 +327,7 @@ The following settings define the Docker container parameters.
 | `shm_size`                     | Shared memory size for images (in bytes). |
 | `sysctls`                      | The `sysctl` options. |
 | `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Useful in `boot2docker`. |
-| `tls_verify`                   | Enable or disable TLS verification of connections to Docker daemon. Disabled by default. |
+| `tls_verify`                   | Enable or disable TLS verification of connections to the Docker daemon. Disabled by default. By default, GitLab Runner connects to the Docker Unix socket over SSH. The Unix socket does not support RTLS and communicates over HTTP with SSH to provide encryption and authentication. Enabling `tls_verify` is not typically needed and requires additional configuration. To enable `tls_verify`, the daemon must listen on a port (rather than the default Unix socket) and the GitLab Runner Docker host must use the address the daemon is listening on. |
 | `user`                         | Run all commands in the container as the specified user. |
 | `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
 | `ulimit`                       | Ulimit values that are passed to the container. Uses the same syntax as the Docker `--ulimit` flag. |
