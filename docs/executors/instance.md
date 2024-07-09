@@ -45,6 +45,19 @@ To configure the instance executor for autoscaling, update the following section
 - [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 - [`[runners.instance]`](../configuration/advanced-configuration.md#the-runnersinstance-section)
 
+## `idle_count` and preemptive mode
+
+With fleeting and taskscaler:
+
+- If `idle_count` is greater than `0`, preemptive mode is enabled.
+  The runner manager does not request new CI/CD jobs until idle instances are available.
+  In this mode, CI/CD jobs run almost immediately.
+- If `idle_count` is `0`, preemptive mode is disabled.
+  The runner manager requests new CI/CD jobs regardless of whether idle instances are available to run those jobs.
+  The number of jobs is based on `max_instances` and `capacity_per_instance`.
+  In this mode, start times for CI/CD jobs are slower.
+  You might also not be able to provision new instances and so CI/CD jobs might not run.
+
 ## AWS autoscaling group configuration examples
 
 ### One job per instance
