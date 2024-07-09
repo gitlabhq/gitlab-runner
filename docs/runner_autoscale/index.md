@@ -106,6 +106,18 @@ You can use an [AWS Identity and Access Management](https://docs.aws.amazon.com/
 (IAM) instance profile for the runner manager in the AWS environment.
 If you do not want to host the runner manager in AWS, you can use the credentials file.
 
+## Implement a fault-tolerant design
+
+To implement a fault-tolerant design and mitigate the risk of a runner manager host failure,
+start with at least two runner managers configured with the same runner tags.
+
+For example, on GitLab.com, multiple runner managers are configured for
+[hosted runners on Linux](https://docs.gitlab.com/ee/ci/runners/hosted_runners/linux.html).
+Each runner manager has the tag `saas-linux-small-amd64`.
+
+With observability and runner fleet metrics, you can adjust the autoscaling parameters to find the
+right balance between efficiency and performance for your organization's typical CI/CD workloads.
+
 ## Configure runner autoscaling executors
 
 After you configure the runner manager, configure the executors specific to autoscaling:
