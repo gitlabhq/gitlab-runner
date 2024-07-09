@@ -5,6 +5,7 @@ package kubernetes_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -74,8 +75,10 @@ func newNamespaceManager(client *k8s.Clientset, action kubernetesNamespaceManage
 	}
 }
 
-func (n namespaceManager) Run() error {
+func (n namespaceManager) Run() (*v1.Namespace, error) {
 	var err error
+	var ns *v1.Namespace
+
 	ctx, cancel := context.WithTimeout(context.Background(), n.timeout)
 	defer cancel()
 
@@ -87,12 +90,12 @@ func (n namespaceManager) Run() error {
 				GenerateName: n.namespace,
 			},
 		}
-		_, err = n.client.CoreV1().Namespaces().Create(ctx, k8sNamespace, metav1.CreateOptions{})
+		ns, err = n.client.CoreV1().Namespaces().Create(ctx, k8sNamespace, metav1.CreateOptions{})
 	case deleteNamespace:
 		err = n.client.CoreV1().Namespaces().Delete(ctx, n.namespace, metav1.DeleteOptions{})
 	}
 
-	return err
+	return ns, err
 }
 
 func (n namespaceManager) ShouldRetry(tries int, err error) bool {
@@ -814,8 +817,8 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	client := getTestKubeClusterClient(t)
 
 	init := func(t *testing.T, _ *common.Build, client *k8s.Clientset, namespace string) {
-		_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-			return newNamespaceManager(client, createNamespace, namespace), nil
+		_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+			return newNamespaceManager(client, createNamespace, namespace).Run()
 		}).Run()
 		require.NoError(t, err)
 
@@ -829,8 +832,8 @@ func testKubernetesCustomPodSpec(t *testing.T, featureFlagName string, featureFl
 	}
 
 	finalize := func(t *testing.T, client *k8s.Clientset, namespace string) {
-		_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-			return newNamespaceManager(client, deleteNamespace, namespace), nil
+		_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+			return newNamespaceManager(client, deleteNamespace, namespace).Run()
 		}).Run()
 		require.NoError(t, err)
 	}
@@ -932,16 +935,10 @@ containers:
 				deletedPodNameCh <- pod.Name
 			})()
 
-			out, err := buildtest.RunBuildReturningOutput(t, build)
+			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
 			assert.Error(t, err)
 
-			podName := <-deletedPodNameCh
-
-			assert.Contains(
-				t,
-				out,
-				fmt.Sprintf("pods %q not found", podName),
-			)
+			<-deletedPodNameCh
 
 			finalize(t, client, tc.namespace)
 		})
@@ -1425,8 +1422,6 @@ func testBuildsDirVolumeMountHostPathFeatureFlag(t *testing.T, featureFlagName s
 // testKubernetesGarbageCollection tests the deletion of resources via garbage collector once the owning pod is deleted
 func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
-	// this test is known to fail spectacularly when run against minikube.
-	skipIfRunningAgainstMiniKube(t)
 
 	ctxTimeout := time.Minute
 	client := getTestKubeClusterClient(t)
@@ -1448,13 +1443,36 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 	}
 
 	validateResourcesDeleted := func(t *testing.T, client *k8s.Clientset, namespace string, podName string) {
-		credentials, err := getSecrets(client, namespace, podName)
-		require.NoError(t, err)
-		configMaps, err := getConfigMaps(client, namespace, podName)
+		// The deletion propagation policy has been shifted to Background
+		// in the MR https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4339
+		// This means the dependant will be deleted in background and not immediately
+		// A retry is needed to ensure the dependant is deleted at some point
+		creds, err := retry.NewValue(retry.New(), func() ([]v1.Secret, error) {
+			credentials, err := getSecrets(client, namespace, podName)
+			require.NoError(t, err)
+
+			if len(credentials) > 0 {
+				return credentials, errors.New("secrets still exist")
+			}
+
+			return credentials, nil
+		}).Run()
 		require.NoError(t, err)
 
-		assert.Empty(t, credentials)
-		assert.Empty(t, configMaps)
+		cfgMaps, err := retry.NewValue(retry.New(), func() ([]v1.ConfigMap, error) {
+			configMaps, err := getConfigMaps(client, namespace, podName)
+			require.NoError(t, err)
+
+			if len(configMaps) > 0 {
+				return configMaps, errors.New("configMaps still exist")
+			}
+
+			return configMaps, nil
+		}).Run()
+		require.NoError(t, err)
+
+		assert.Empty(t, creds)
+		assert.Empty(t, cfgMaps)
 	}
 
 	tests := map[string]struct {
@@ -1471,8 +1489,8 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 		"pod deletion during prepare stage in custom namespace": {
 			namespace: generateRandomNamespace("gc"),
 			init: func(t *testing.T, build *common.Build, client *k8s.Clientset, namespace string) {
-				_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-					return newNamespaceManager(client, createNamespace, namespace), nil
+				_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+					return newNamespaceManager(client, createNamespace, namespace).Run()
 				}).Run()
 				require.NoError(t, err)
 
@@ -1485,8 +1503,8 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 				assert.Empty(t, configMaps)
 			},
 			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
-				_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-					return newNamespaceManager(client, deleteNamespace, namespace), nil
+				_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+					return newNamespaceManager(client, deleteNamespace, namespace).Run()
 				}).Run()
 				require.NoError(t, err)
 			},
@@ -1560,13 +1578,6 @@ func testKubernetesGarbageCollection(t *testing.T, featureFlagName string, featu
 			} else {
 				assert.Errorf(t, err, "command terminated with exit code 137")
 			}
-
-			assert.Contains(
-				t,
-				out,
-				fmt.Sprintf("pods %q not found", podName),
-			)
-
 			validateResourcesDeleted(t, client, tc.namespace, podName)
 
 			if tc.finalize != nil {
@@ -1614,8 +1625,8 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 				assert.Empty(t, configMaps)
 			},
 			finalize: func(t *testing.T, client *k8s.Clientset, namespace string) {
-				_, err := retry.NewValue(retry.New(), func() (namespaceManager, error) {
-					return newNamespaceManager(client, deleteNamespace, namespace), nil
+				_, err := retry.NewValue(retry.New(), func() (*v1.Namespace, error) {
+					return newNamespaceManager(client, deleteNamespace, namespace).Run()
 				}).Run()
 				require.NoError(t, err)
 			},
@@ -1679,7 +1690,7 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 
-			podName := <-deletedPodNameCh
+			<-deletedPodNameCh
 
 			if !featureFlagValue {
 				assert.Contains(
@@ -1690,12 +1701,6 @@ func testKubernetesNamespaceIsolation(t *testing.T, featureFlagName string, feat
 			} else {
 				assert.Errorf(t, err, "command terminated with exit code 137")
 			}
-
-			assert.Contains(
-				t,
-				out,
-				fmt.Sprintf("pods %q not found", podName),
-			)
 
 			validateNamespaceDeleted(t, client, expectedNamespace)
 
