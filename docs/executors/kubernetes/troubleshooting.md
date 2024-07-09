@@ -269,7 +269,7 @@ To resolve this issue:
 
 ### For GitLab Runner
 
-If GitLab Runner is deployed with the [GitLab Runner Helm chart](/runner/install/kubernetes.md),
+If GitLab Runner is deployed with the [GitLab Runner Helm chart](../../install/kubernetes.md),
 you must update the GitLab chart configuration to have:
 
 - A proper `securityContext` value:

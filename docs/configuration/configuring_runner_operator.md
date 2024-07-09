@@ -52,9 +52,9 @@ Some properties are only available with more recent versions of the Operator.
 | `cacheType`      | all      | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`. |
 | `cachePath`      | all      | Defines the cache path on the file system. |
 | `cacheShared`    | all      | Enable sharing of cache between runners. |
-| `s3`             | all      | Options used to setup S3 cache. Refer to [Cache properties](#cache-properties). |
-| `gcs`            | all      | Options used to setup GCS cache. Refer to [Cache properties](#cache-properties). |
-| `azure`          | all      | Options used to setup Azure cache. Refer to [Cache properties](#cache-properties). |
+| `s3`             | all      | Options used to set up S3 cache. Refer to [Cache properties](#cache-properties). |
+| `gcs`            | all      | Options used to set up GCS cache. Refer to [Cache properties](#cache-properties). |
+| `azure`          | all      | Options used to set up Azure cache. Refer to [Cache properties](#cache-properties). |
 | `ca`             | all      | Name of TLS secret containing the custom certificate authority (CA) certificates. |
 | `serviceaccount` | all      | Use to override service account used to run the Runner pod. |
 | `config`         | all      | Use to provide a custom config map with a [configuration template](../register/index.md#register-with-a-configuration-template). |

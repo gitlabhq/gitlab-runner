@@ -426,6 +426,7 @@ Gzip
 Hackathon
 Haml
 HAProxy
+HAR
 hardcode
 hardcoded
 hardcodes
@@ -470,6 +471,7 @@ injective
 innersource
 innersourcing
 inodes
+Instrumentor
 interdependencies
 interdependency
 interruptible
@@ -505,8 +507,10 @@ Karma
 KCachegrind
 Kerberos
 Keycloak
+keyless
 keyset
 keyspace
+keystore
 keytab
 keytabs
 Kibana
@@ -531,6 +535,8 @@ ldapsearch
 Lefthook
 Leiningen
 Lemmy
+LLM
+LLMs
 libFuzzer
 Libgcrypt
 Libravatar
@@ -549,8 +555,10 @@ lookbehinds
 Lookbook
 lookups
 loopback
+LSP
 Lua
 Lucene
+Lucidchart
 macOS
 Mailchimp
 Maildir
@@ -559,6 +567,7 @@ Mailroom
 Makefile
 Makefiles
 malloc
+Maniphest
 Markdown
 markdownlint
 Marketo
@@ -620,6 +629,7 @@ Nanoc
 NAT
 navigations
 negatable
+Neovim
 Netlify
 NGINX
 ngrok
@@ -655,6 +665,7 @@ Opsgenie
 Opstrace
 ORMs
 OS
+osquery
 OSs
 OTel
 outdent
@@ -679,10 +690,12 @@ PgBouncer
 pgFormatter
 pgLoader
 pgMustard
+pgvector
 Phabricator
 phaser
 phasers
 phpenv
+Phorge
 PHPUnit
 PIDs
 pipenv
@@ -980,6 +993,7 @@ sunsetting
 supercookie
 supercookies
 supergroup
+supergroups
 superset
 supersets
 supertype
@@ -996,6 +1010,7 @@ syslog
 systemd
 tablespace
 tablespaces
+Tamland
 tanuki
 taskscaler
 tcpdump
@@ -1173,6 +1188,7 @@ virtualizing
 Vite
 VMs
 VPCs
+VSCodium
 Vue
 Vuex
 waitlist
