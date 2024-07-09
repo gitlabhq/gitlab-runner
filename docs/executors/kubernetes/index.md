@@ -109,7 +109,7 @@ You can either:
 
 | Resource | Verb (Optional Feature Flags) |
 |----------|-------------------------------|
-| events | list (`FF_RETRIEVE_POD_WARNING_EVENTS=true`), watch (`FF_PRINT_POD_EVENTS=true`) |
+| events | list, watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create, delete |
 | pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get |
 | pods/log | get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
