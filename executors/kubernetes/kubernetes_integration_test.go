@@ -1990,17 +1990,32 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
 	tests := map[string]struct {
-		image    string
-		verifyFn func(*testing.T, string, error)
+		image           string
+		retrieveWarning bool
+		verifyFn        func(*testing.T, string, error)
 	}{
 		"invalid image": {
+			image:           "alpine:invalid-tag",
+			retrieveWarning: true,
+			verifyFn: func(t *testing.T, out string, err error) {
+				assert.Error(t, err)
+				assert.Contains(
+					t,
+					out,
+					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine:invalid-tag\"",
+				)
+				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ErrImagePull")
+				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ImagePullBackOff")
+			},
+		},
+		"invalid image with feature flag disabled": {
 			image: "alpine:invalid-tag",
 			verifyFn: func(t *testing.T, out string, err error) {
 				assert.Error(t, err)
 				assert.Contains(
 					t,
 					out,
-					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine:invalid-tag\": rpc error:",
+					"WARNING: Event retrieved from the cluster: Failed to pull image \"alpine:invalid-tag\"",
 				)
 				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ErrImagePull")
 				assert.Contains(t, out, "WARNING: Event retrieved from the cluster: Error: ImagePullBackOff")
@@ -2020,7 +2035,8 @@ func testKubernetesClusterWarningEvent(t *testing.T, featureFlagName string, fea
 			})
 			build.Runner.Kubernetes.Image = tc.image
 			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
-			buildtest.SetBuildFeatureFlag(build, "FF_RETRIEVE_POD_WARNING_EVENTS", true)
+			buildtest.SetBuildFeatureFlag(build, "FF_RETRIEVE_POD_WARNING_EVENTS", tc.retrieveWarning)
+			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			tc.verifyFn(t, out, err)
