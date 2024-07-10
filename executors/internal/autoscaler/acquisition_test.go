@@ -243,6 +243,7 @@ func TestAcquisitionRef_Prepare(t *testing.T) {
 			}
 
 			if setAcq {
+				acq.EXPECT().WithContext(ctx).Return(ctx, cancel)
 				acq.EXPECT().InstanceConnectInfo(mock.Anything).Return(fleetingprovider.ConnectInfo{}, tc.instanceConnectInfoErr).Once()
 				if tc.vmIsolationEnabled && tc.mockNestingClientCreate {
 					acq.EXPECT().Slot().Return(testSlot).Once()
