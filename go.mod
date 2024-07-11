@@ -2,7 +2,7 @@ module gitlab.com/gitlab-org/gitlab-runner
 
 go 1.22
 
-toolchain go1.22.4
+toolchain go1.22.5
 
 require (
 	cloud.google.com/go/compute/metadata v0.2.3
