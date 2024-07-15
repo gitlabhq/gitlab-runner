@@ -96,15 +96,15 @@ func NewPsWriter(b *PowerShell, info common.ShellScriptInfo) *PsWriter {
 
 var encoder = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewEncoder()
 
-func stdinCmdArgs(shell string) []string {
+func stdinCmdArgs(shell string, preCmds ...string) []string {
 	if shell == SNPwsh {
-		return pwshStdinCmdArgs(shell)
+		return pwshStdinCmdArgs(shell, preCmds...)
 	}
 
-	return powershellStdinCmdArgs(shell)
+	return powershellStdinCmdArgs(shell, preCmds...)
 }
 
-func pwshStdinCmdArgs(shell string) []string {
+func pwshStdinCmdArgs(shell string, preCmds ...string) []string {
 	// The stdin script we pass is always UTF-8 encoded, however, depending on
 	// how powershell is configured, it may not be expecting UTF-8.
 	//
@@ -124,42 +124,51 @@ func pwshStdinCmdArgs(shell string) []string {
 	// encoded initialization script should be kept small.
 	var sb strings.Builder
 
+	for _, preCmd := range preCmds {
+		sb.WriteString(preCmd + "\r\n")
+	}
 	sb.WriteString("$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r\n")
 	sb.WriteString(shell + " -NoProfile -Command -\r\n")
 	sb.WriteString("if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }")
 	encoded, _ := encoder.String(sb.String())
 
-	return []string{
-		"-NoProfile",
-		"-NoLogo",
-		"-InputFormat",
-		"text",
-		"-OutputFormat",
-		"text",
-		"-NonInteractive",
-		"-ExecutionPolicy",
-		"Bypass",
+	return append(
+		defaultPowershellFlags,
 		"-EncodedCommand",
 		base64.StdEncoding.EncodeToString([]byte(encoded)),
-	}
+	)
+}
+
+var defaultPowershellFlags = []string{
+	"-NoProfile",
+	"-NoLogo",
+	"-InputFormat",
+	"text",
+	"-OutputFormat",
+	"text",
+	"-NonInteractive",
+	"-ExecutionPolicy",
+	"Bypass",
 }
 
 // Avoid using -EncodedCommand due to the powershell progress stream leaking to
 // to the output: https://github.com/PowerShell/PowerShell/issues/5912.
-func powershellStdinCmdArgs(_ string) []string {
-	return []string{
-		"-NoProfile",
-		"-NoLogo",
-		"-InputFormat",
-		"text",
-		"-OutputFormat",
-		"text",
-		"-NonInteractive",
-		"-ExecutionPolicy",
-		"Bypass",
-		"-Command",
-		"-",
+func powershellStdinCmdArgs(shell string, preCmds ...string) []string {
+	script := "-"
+
+	if len(preCmds) > 0 {
+		script = ""
+		for _, preCmd := range preCmds {
+			script += preCmd + "; "
+		}
+		script += shell + " -NoProfile -Command -"
 	}
+
+	return append(
+		defaultPowershellFlags,
+		"-Command",
+		script,
+	)
 }
 
 func fileCmdArgs() []string {
@@ -170,8 +179,8 @@ func PwshJSONTerminationScript(shell string) string {
 	return fmt.Sprintf(pwshJSONTerminationScript, shell)
 }
 
-func PowershellDockerCmd(shell string) []string {
-	return append([]string{shell}, stdinCmdArgs(shell)...)
+func PowershellDockerCmd(shell string, preCmds ...string) []string {
+	return append([]string{shell}, stdinCmdArgs(shell, preCmds...)...)
 }
 
 func psReplaceSpecialChars(text string) string {
@@ -563,6 +572,14 @@ func (p *PsWriter) finishPowerShell(buf *strings.Builder, trace bool) {
 
 func (b *PowerShell) GetName() string {
 	return b.Shell
+}
+
+func (b *PowerShell) GetEntrypointCommand(_ common.ShellScriptInfo, probeFile string) []string {
+	preCmds := []string{}
+	if probeFile != "" {
+		preCmds = append(preCmds, fmt.Sprintf("Out-File -Force -FilePath '%s'", probeFile))
+	}
+	return PowershellDockerCmd(b.Shell, preCmds...)
 }
 
 func (b *PowerShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {

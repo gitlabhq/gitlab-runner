@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -281,6 +282,8 @@ type executor struct {
 	remoteStageStatus      shells.StageCommandStatus
 
 	eventsStream watch.Interface
+
+	entrypointLogForwarder *entrypointLogForwarder
 }
 
 type serviceCreateResponse struct {
@@ -350,6 +353,16 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	if s.BuildShell.PassFile {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
+	}
+
+	// If we allow to run the image's entrypoint, we need to set up directly pulling in logs from the k8s api, so we can
+	// forward the entrypoint logs to the build logger
+	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
+		s.entrypointLogForwarder = &entrypointLogForwarder{
+			LogSink:       s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stdout),
+			LogGatherer:   s.captureContainerLogs,
+			WithTimestamp: true,
+		}
 	}
 
 	err = s.waitForServices(options.Context)
@@ -670,6 +683,23 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 		}
 	}
 
+	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
+		go s.entrypointLogForwarder.Run(ctx, buildContainerName, nil)
+	}
+
+	if s.shouldUseStartupProbe() {
+		// If we honor the image's entrypoint, we need to wait until the entrypoint has started the shell. We do this by
+		// leveraging a startup probe, thus we need to wait for the pod to be ready, ie. all containers being ready, before
+		// we can continue
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, io.Discard, s.Config.Kubernetes)
+		if err != nil {
+			return fmt.Errorf("waiting for pod running: %w", err)
+		}
+		if status != api.PodRunning {
+			return fmt.Errorf("pod failed to enter running state: %s", status)
+		}
+	}
+
 	return nil
 }
 
@@ -808,8 +838,16 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("setting up trapping scripts on emptyDir: %w", err)
 	}
 
+	// start pulling in logs from the build container, to capture entrypoint logs
+	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
+		go s.entrypointLogForwarder.Run(ctx, buildContainerName, nil)
+	}
+
+	// This starts the log processing, where we run the helper bin (in the helper container) to pull logs from the
+	// logfile.
 	go s.processLogs(ctx)
 
+	// This pulls the services containers logs directly from the kubeapi and pushes them into the buildlogger.
 	s.captureServiceContainersLogs(ctx, s.pod.Spec.Containers)
 
 	return nil
@@ -1304,7 +1342,20 @@ func (s *executor) verifyAllowedImages(opts containerBuildOpts) error {
 	return common.VerifyAllowedImage(verifyAllowedImageOptions, s.BuildLogger)
 }
 
-func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) ([]string, []string) {
+func (s *executor) shouldUseStartupProbe() bool {
+	honorEntrypoint := s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint)
+	legacyExecMode := s.Build.IsFeatureFlagOn(featureflags.UseLegacyKubernetesExecutionStrategy)
+
+	// For attach mode, the system waits until the entrypoint ran and the shell is spawned anyway, regardless if there is
+	// something running as part of the entrypoint or not. For legacy exec mode, we don't wait for the entrypoint (we run
+	// a separate process as opposed to attaching to the "main" process), thus we need a signal when the entrypoint is
+	// done and the shell is spawned. However, when in exec mode and ignoring the image's entrypoint (thus only starting
+	// the shell), we don't really have to wait, either.
+	// Thus, in summary: We only need a startupProbe if we run in exec mode *and* honor the image's entrypoint.
+	return honorEntrypoint && legacyExecMode
+}
+
+func (s *executor) getCommandAndArgs(imageDefinition common.Image, command ...string) (retCommand []string, retArgs []string) {
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
 		return []string{}, command
 	}
@@ -2116,6 +2167,11 @@ func (s *executor) getPodActiveDeadlineSeconds() *int64 {
 }
 
 func (s *executor) createBuildAndHelperContainers() (api.Container, api.Container, error) {
+	buildCmd, err := s.getContainerCommand(buildContainerName)
+	if err != nil {
+		return api.Container{}, api.Container{}, err
+	}
+
 	buildContainer, err := s.buildContainer(containerBuildOpts{
 		name:            buildContainerName,
 		image:           s.options.Image.Name,
@@ -2126,12 +2182,16 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 			s.Config.Kubernetes.BuildContainerSecurityContext,
 			s.defaultCapDrop()...,
 		),
-		command: s.getBuildAndHelperContainersCommand(),
+		command: buildCmd,
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building build container: %w", err)
 	}
 
+	helperCmd, err := s.getContainerCommand(helperContainerName)
+	if err != nil {
+		return api.Container{}, api.Container{}, err
+	}
 	helperContainer, err := s.buildContainer(containerBuildOpts{
 		name:     helperContainerName,
 		image:    s.getHelperImage(),
@@ -2141,25 +2201,74 @@ func (s *executor) createBuildAndHelperContainers() (api.Container, api.Containe
 			s.Config.Kubernetes.HelperContainerSecurityContext,
 			s.defaultCapDrop()...,
 		),
-		command: s.getBuildAndHelperContainersCommand(),
+		command: helperCmd,
 	})
 	if err != nil {
 		return api.Container{}, api.Container{}, fmt.Errorf("building helper container: %w", err)
 	}
 
+	if s.shouldUseStartupProbe() {
+		buildContainer.StartupProbe = s.buildContainerStartupProbe()
+	}
+
 	return buildContainer, helperContainer, nil
 }
 
-func (s *executor) getBuildAndHelperContainersCommand() []string {
+func (s *executor) buildContainerStartupProbe() *api.Probe {
+	var notUpLog = "gitlab-runner shell not up yet"
+	var startupProbeFile = s.getStartupProbeFile()
+	var probeCommand []string
+
+	switch shell := s.Shell().Shell; shell {
+	case shells.SNPwsh, shells.SNPowershell:
+		probeCommand = []string{
+			shell, "-CommandWithArgs", "if (-Not (Test-Path $args[0] -PathType Leaf)) { $args[1] ; exit 1 }", startupProbeFile, notUpLog,
+		}
+	default:
+		probeCommand = []string{
+			shell, "-c", `test -e "$1" || { echo -n "$2"; exit 1; }`, "--", startupProbeFile, notUpLog,
+		}
+	}
+
+	pollInterval := s.Config.Kubernetes.GetPollInterval()
+	pollAttempts := s.Config.Kubernetes.GetPollAttempts()
+
+	return &api.Probe{
+		ProbeHandler: api.ProbeHandler{
+			Exec: &api.ExecAction{Command: probeCommand},
+		},
+		SuccessThreshold:    1,
+		InitialDelaySeconds: 1,
+		PeriodSeconds:       int32(pollInterval),
+		FailureThreshold:    int32(pollAttempts),
+	}
+}
+
+func (s *executor) getStartupProbeFile() string {
+	return filepath.Join(s.RootDir(), shells.StartupProbeFile)
+}
+
+func (s *executor) getContainerCommand(containerName string) ([]string, error) {
+	command := s.BuildShell.DockerCommand
+
+	if s.shouldUseStartupProbe() && containerName == buildContainerName {
+		shell, err := s.retrieveShell()
+		if err != nil {
+			return nil, fmt.Errorf("retrieving shell: %w", err)
+		}
+
+		return shell.GetEntrypointCommand(*s.Shell(), s.getStartupProbeFile()), nil
+	}
+
 	if !s.Build.IsFeatureFlagOn(featureflags.UseDumbInitWithKubernetesExecutor) {
-		return s.BuildShell.DockerCommand
+		return command, nil
 	}
 
 	switch s.Shell().Shell {
 	case shells.SNPowershell:
-		return s.BuildShell.DockerCommand
+		return command, nil
 	default:
-		return append([]string{fmt.Sprintf("%s/dumb-init", s.scriptsDir()), "--"}, s.BuildShell.DockerCommand...)
+		return append([]string{fmt.Sprintf("%s/dumb-init", s.scriptsDir()), "--"}, command...), nil
 	}
 }
 
@@ -2777,7 +2886,7 @@ func (s *executor) captureServiceContainersLogs(ctx context.Context, containers 
 	}
 }
 
-// captureContainerLogs tails (i.e. reads) logs emitted to stdout or stdin from
+// captureContainerLogs tails (i.e. reads) logs emitted to stdout or stderr from
 // processes in the specified kubernetes managed container, and redirects them
 // to the specified sink, which can be any io.Writer (e.g. this process's
 // stdout, a file, a log aggregator). The logs are streamed as they are emitted,
@@ -2790,12 +2899,15 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		Follow:     true,
 		Timestamps: true,
 	}
+	watchTimeoutSeconds := common.Int64Ptr(int64(s.Config.Kubernetes.GetPollTimeout()))
 
 	podLogs, err := retry.WithValueFn(s, func() (io.ReadCloser, error) {
-		//nolint:gocritic
-		// kubeAPI: pods/log, get, list, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
-		return s.kubeClient.CoreV1().
-			Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
+		err := waitForRunningContainer(ctx, s.kubeClient, watchTimeoutSeconds, s.pod.Namespace, s.pod.Name, containerName)
+		if err != nil {
+			return nil, err
+		}
+		// kubeAPI: pods/log, get, list, FF_KUBERNETES_HONOR_ENTRYPOINT=true,FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+		return s.kubeClient.CoreV1().Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
 	}).Run()
 	if err != nil {
 		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)

@@ -23,6 +23,8 @@ import (
 // This information is then applied to the working directories to prevent them from being writable by anyone.
 const BuildUiGidFile = ".giltab-build-uid-gid"
 
+const StartupProbeFile = ".gitlab-startup-marker"
+
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
 type stringQuoter func(string) string

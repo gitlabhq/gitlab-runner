@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
@@ -108,10 +109,41 @@ func loadDefaultKubectlConfig() (*restclient.Config, error) {
 	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
+func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, timeoutSeconds *int64, namespace, pod, container string) error {
+	// kubeAPI: pods, watch, FF_KUBERNETES_HONOR_ENTRYPOINT=true,FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+	watcher, err := client.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
+		FieldSelector:  "status.phase=Running,metadata.name=" + pod,
+		TimeoutSeconds: timeoutSeconds,
+	})
+	if err != nil {
+		return err
+	}
+	defer watcher.Stop()
+
+	for event := range watcher.ResultChan() {
+		pod, ok := event.Object.(*api.Pod)
+		if !ok {
+			return fmt.Errorf("event object is not a pod: %v", event.Object)
+		}
+
+		containerStatus, ok := podutil.GetContainerStatus(pod.Status.ContainerStatuses, container)
+		if !ok {
+			return fmt.Errorf("container status for %q not found", container)
+		}
+
+		if running := containerStatus.State.Running; running != nil {
+			break
+		}
+	}
+
+	return nil
+}
+
 func closeKubeClient(client kubernetes.Interface) bool {
 	if client == nil {
 		return false
 	}
+	// kubeAPI: ignore
 	rest, ok := client.CoreV1().RESTClient().(*restclient.RESTClient)
 	if !ok || rest.Client == nil || rest.Client.Transport == nil {
 		return false
@@ -124,9 +156,11 @@ func closeKubeClient(client kubernetes.Interface) bool {
 }
 
 func isRunning(pod *api.Pod) (bool, error) {
-	switch pod.Status.Phase {
-	case api.PodRunning:
+	if podutil.IsPodReady(pod) {
 		return true, nil
+	}
+
+	switch pod.Status.Phase {
 	case api.PodSucceeded:
 		return false, fmt.Errorf("pod already succeeded before it begins running")
 	case api.PodFailed:
@@ -142,14 +176,14 @@ type podPhaseResponse struct {
 	err   error
 }
 
-func getPodPhase(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer) podPhaseResponse {
-	pod, err := c.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer) (pf podPhaseResponse) {
+	// kubeAPI: pods, get
+	pod, err := client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
-	ready, err := isRunning(pod)
-	if err != nil || ready {
+	if ready, err := isRunning(pod); err != nil || ready {
 		return podPhaseResponse{true, pod.Status.Phase, err}
 	}
 
@@ -158,6 +192,7 @@ func getPodPhase(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out 
 		if container.Ready {
 			continue
 		}
+
 		waiting := container.State.Waiting
 		if waiting == nil {
 			continue
@@ -165,8 +200,9 @@ func getPodPhase(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out 
 
 		switch waiting.Reason {
 		case "InvalidImageName":
-			err = &common.BuildError{Inner: fmt.Errorf("image pull failed: %s", waiting.Message)}
-			return podPhaseResponse{true, api.PodUnknown, err}
+			return podPhaseResponse{true, api.PodUnknown, &common.BuildError{
+				Inner: fmt.Errorf("image pull failed: %s", waiting.Message),
+			}}
 		case "ErrImagePull", "ImagePullBackOff":
 			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
 			imagePullErr := &pull.ImagePullError{Message: msg, Image: container.Image}

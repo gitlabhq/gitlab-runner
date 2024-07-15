@@ -356,6 +356,23 @@ func (b *BashShell) GetName() string {
 	return b.Shell
 }
 
+func (b *BashShell) GetEntrypointCommand(info common.ShellScriptInfo, probeFile string) []string {
+	script := b.bashDetectScript(info.Type == common.LoginShell)
+	if probeFile != "" {
+		script = fmt.Sprintf(">'%s'", probeFile) + "; " + script
+	}
+	return []string{"sh", "-c", script}
+}
+
+func (b *BashShell) bashDetectScript(loginShell bool) string {
+	args := ""
+	if loginShell {
+		args = "-l"
+	}
+
+	return strings.ReplaceAll(BashDetectShellScript, "$@", args)
+}
+
 func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.ShellConfiguration, error) {
 	script := &common.ShellConfiguration{
 		Command: b.Shell,
@@ -365,10 +382,8 @@ func (b *BashShell) GetConfiguration(info common.ShellScriptInfo) (*common.Shell
 	if info.Type == common.LoginShell {
 		script.CmdLine += " -l"
 		script.Arguments = []string{"-l"}
-		script.DockerCommand = []string{"sh", "-c", strings.ReplaceAll(BashDetectShellScript, "$@", "-l")}
-	} else {
-		script.DockerCommand = []string{"sh", "-c", strings.ReplaceAll(BashDetectShellScript, "$@", "")}
 	}
+	script.DockerCommand = []string{"sh", "-c", b.bashDetectScript(info.Type == common.LoginShell)}
 
 	if info.User == "" {
 		return script, nil

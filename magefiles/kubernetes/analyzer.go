@@ -5,11 +5,19 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/samber/lo"
 )
+
+var supportedKubeClientNames = []string{
+	"kubeClient",
+	"KubeClient",
+	"client",
+}
 
 type simplePosition struct {
 	fileName string
@@ -53,7 +61,7 @@ type permissionsGroup map[string][]verb
 
 func parsePermissions() (permissionsGroup, error) {
 	fset := token.NewFileSet()
-	f, err := parser.ParseDir(fset, "executors/kubernetes", nil, parser.ParseComments)
+	f, err := parser.ParseDir(fset, "executors/kubernetes", filterTestFiles, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +91,10 @@ func parsePermissions() (permissionsGroup, error) {
 	return nil, fmt.Errorf("%s\n\nAnnotations must be written as comments directly above each `kubeClient.CoreV1` call and in the format of // kubeAPI: <Resource>, <Verb>, <FF=VALUE>(optional)", strings.Join(errs, "\n"))
 }
 
+func filterTestFiles(fileInfo fs.FileInfo) bool {
+	return !strings.HasSuffix(fileInfo.Name(), "_test.go")
+}
+
 func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, node ast.Node) bool {
 	expr, ok := node.(*ast.CallExpr)
 	if !ok {
@@ -98,13 +110,18 @@ func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, no
 		return true
 	}
 
-	selectorIdents, ok := sel.X.(*ast.SelectorExpr)
-	if !ok {
+	var name string
+	switch selectorIdents := sel.X.(type) {
+	case *ast.SelectorExpr:
+		name = selectorIdents.Sel.Name
+	case *ast.Ident:
+		name = selectorIdents.Name
+	default:
 		return true
 	}
 
 	// TODO: Check for the type of the field instead of the Name
-	if selectorIdents.Sel.Name != "kubeClient" && selectorIdents.Sel.Name != "KubeClient" {
+	if !slices.Contains(supportedKubeClientNames, name) {
 		return true
 	}
 

@@ -171,7 +171,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 		expectedPassFile     bool
 		expectedCommand      string
 		expectedCmdLine      string
-		getExpectedArguments func(shell string) []string
+		getExpectedArguments func(shell string, preCmds ...string) []string
 	}{
 		"powershell on docker-windows": {
 			shell:    SNPowershell,
@@ -227,7 +227,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile: false,
 			expectedCommand:  "su",
 			expectedCmdLine:  "su -s /usr/bin/pwsh custom -c " + pwshStdinExpectedLine,
-			getExpectedArguments: func(shell string) []string {
+			getExpectedArguments: func(shell string, preCmds ...string) []string {
 				return []string{"-s", "/usr/bin/pwsh", "custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
 			},
 		},
@@ -240,7 +240,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile: false,
 			expectedCommand:  "su",
 			expectedCmdLine:  "su custom -c " + pwshStdinExpectedLine,
-			getExpectedArguments: func(shell string) []string {
+			getExpectedArguments: func(shell string, preCdms ...string) []string {
 				return []string{"custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
 			},
 		},
@@ -253,7 +253,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 			expectedPassFile: false,
 			expectedCommand:  "su",
 			expectedCmdLine:  "su custom -c " + pwshStdinExpectedLine,
-			getExpectedArguments: func(shell string) []string {
+			getExpectedArguments: func(shell string, preCmds ...string) []string {
 				return []string{"custom", "-c", SNPwsh + " " + strings.Join(stdinCmdArgs(shell), " ")}
 			},
 		},
@@ -264,7 +264,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 
 			expectedPassFile: true,
 			expectedCommand:  SNPowershell,
-			getExpectedArguments: func(_ string) []string {
+			getExpectedArguments: func(_ string, _ ...string) []string {
 				return fileCmdArgs()
 			},
 			expectedCmdLine: "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File",
@@ -275,7 +275,7 @@ func TestPowershell_GetConfiguration(t *testing.T) {
 
 			expectedPassFile: false,
 			expectedCommand:  SNPowershell,
-			getExpectedArguments: func(_ string) []string {
+			getExpectedArguments: func(_ string, _ ...string) []string {
 				return stdinCmdArgs(SNPowershell)
 			},
 			expectedCmdLine: powershellStdinExpectedLine,
@@ -736,6 +736,59 @@ func Test_PsWriter_Variable(t *testing.T) {
 				assert.Equal(t, tt.wantWindows, tt.writer.String())
 			} else {
 				assert.Equal(t, tt.wantLinux, tt.writer.String())
+			}
+		})
+	}
+}
+
+func TestPowershellEntrypointCommand(t *testing.T) {
+	// utf8 -> utf16 & base64 encoded
+	// 	$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r
+	// 	pwsh -NoProfile -Command -\r
+	// 	if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }
+	encodedCommandBlobWithoutProbe := "JABPAHUAdABwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AEkAbgBwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAAWwBjAG8AbgBzAG8AbABlAF0AOgA6AE8AdQB0AHAAdQB0AEUAbgBjAG8AZABpAG4AZwAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBUAGUAeAB0AC4AVQBUAEYAOABFAG4AYwBvAGQAaQBuAGcADQAKAHAAdwBzAGgAIAAtAE4AbwBQAHIAbwBmAGkAbABlACAALQBDAG8AbQBtAGEAbgBkACAALQANAAoAaQBmACgAIQAkAD8AKQAgAHsAIABFAHgAaQB0ACAAJgB7AGkAZgAoACQATABBAFMAVABFAFgASQBUAEMATwBEAEUAKQAgAHsAJABMAEEAUwBUAEUAWABJAFQAQwBPAEQARQB9ACAAZQBsAHMAZQAgAHsAMQB9AH0AIAB9AA=="
+
+	// utf8 -> utf16 & base64 encoded
+	// 	Out-File -Force -FilePath 'someFile'\r
+	// 	$OutputEncoding = [console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding\r
+	// 	pwsh -NoProfile -Command -\r
+	// 	if(!$?) { Exit &{if($LASTEXITCODE) {$LASTEXITCODE} else {1}} }
+	encodedCommandBlobWithProbe := "TwB1AHQALQBGAGkAbABlACAALQBGAG8AcgBjAGUAIAAtAEYAaQBsAGUAUABhAHQAaAAgACcAcwBvAG0AZQBGAGkAbABlACcADQAKACQATwB1AHQAcAB1AHQARQBuAGMAbwBkAGkAbgBnACAAPQAgAFsAYwBvAG4AcwBvAGwAZQBdADoAOgBJAG4AcAB1AHQARQBuAGMAbwBkAGkAbgBnACAAPQAgAFsAYwBvAG4AcwBvAGwAZQBdADoAOgBPAHUAdABwAHUAdABFAG4AYwBvAGQAaQBuAGcAIAA9ACAATgBlAHcALQBPAGIAagBlAGMAdAAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAFUAVABGADgARQBuAGMAbwBkAGkAbgBnAA0ACgBwAHcAcwBoACAALQBOAG8AUAByAG8AZgBpAGwAZQAgAC0AQwBvAG0AbQBhAG4AZAAgAC0ADQAKAGkAZgAoACEAJAA/ACkAIAB7ACAARQB4AGkAdAAgACYAewBpAGYAKAAkAEwAQQBTAFQARQBYAEkAVABDAE8ARABFACkAIAB7ACQATABBAFMAVABFAFgASQBUAEMATwBEAEUAfQAgAGUAbABzAGUAIAB7ADEAfQB9ACAAfQA="
+
+	tests := map[string]map[string]struct {
+		probeFile       string
+		expectedCommand []string
+	}{
+		SNPwsh: {
+			"no probe": {
+				expectedCommand: []string{"pwsh", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedCommandBlobWithoutProbe},
+			},
+			"with probe": {
+				probeFile:       "someFile",
+				expectedCommand: []string{"pwsh", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedCommandBlobWithProbe},
+			},
+		},
+		SNPowershell: {
+			"no probe": {
+				expectedCommand: []string{"powershell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-"},
+			},
+			"with probe": {
+				probeFile:       "someFile",
+				expectedCommand: []string{"powershell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "Out-File -Force -FilePath 'someFile'; powershell -NoProfile -Command -"},
+			},
+		},
+	}
+
+	for shellName, testCases := range tests {
+		t.Run(shellName, func(t *testing.T) {
+			for tn, tc := range testCases {
+				t.Run(tn, func(t *testing.T) {
+					shell := common.GetShell(shellName)
+					unusedShellScriptInfo := common.ShellScriptInfo{}
+
+					actualCommand := shell.GetEntrypointCommand(unusedShellScriptInfo, tc.probeFile)
+					assert.Equal(t, tc.expectedCommand, actualCommand)
+				})
 			}
 		})
 	}

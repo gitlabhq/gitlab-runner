@@ -3189,6 +3189,151 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 	assert.Regexp(t, `\[service:postgres-db\]`, out)
 }
 
+func TestEntrypointLogging(t *testing.T) {
+	t.Run("succeed", testEntrypointLoggingSuccesses)
+	t.Run("fail", testEntrypointLoggingFailures)
+}
+
+func testEntrypointLoggingFailures(t *testing.T) {
+	// When the pollTimeout is smaller than the time it takes for the entrypoint to start the shell, and thus resolve the
+	// startupProbe (roughly 1sec * iterations), then the build should fail but still show _some_ of the entrypoint logs (until
+	// the pod gets killed because of the timeout)
+	// Note: We only use a startup probe in exec mode
+	t.Run("startupProbe does not resolve in time", func(t *testing.T) {
+		const pollTimeout = 4
+		const iterations = 8
+
+		successfulBuild, err := common.GetRemoteSuccessfulBuild()
+		require.NoError(t, err)
+
+		build := &common.Build{
+			JobResponse: successfulBuild,
+			Runner: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Executor: common.ExecutorKubernetes,
+					Kubernetes: &common.KubernetesConfig{
+						Image:       "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-pre-post-trap",
+						PollTimeout: pollTimeout,
+					},
+					FeatureFlags: mapFromKeySlices(true, []string{
+						featureflags.KubernetesHonorEntrypoint,
+						featureflags.UseLegacyKubernetesExecutionStrategy,
+					}),
+					Environment: []string{
+						fmt.Sprintf("LOOP_ITERATIONS=%d", iterations),
+					},
+				},
+			},
+		}
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		if assert.Error(t, err, "expected build to fail, but did not") {
+			assert.Contains(t, err.Error(), "timed out")
+		}
+
+		// we see some entrypoint logs
+		assert.Contains(t, out, "some pre message")
+	})
+}
+
+func testEntrypointLoggingSuccesses(t *testing.T) {
+	const pollTimeout = 12
+	const loopIterations = 5
+	defaultFeatureFlags := []string{featureflags.ScriptSections, featureflags.PrintPodEvents}
+
+	expectedLogs := func(phase string, count int) []string {
+		expectedLogs := make([]string, count*2)
+		for idx := 0; idx < count; idx++ {
+			// produces something like: "[entrypoint][post][stdout][5/10] "
+			expectedLogs[idx] = fmt.Sprintf("[entrypoint][%s][stdout][%d/%d] ", phase, idx, count)
+			expectedLogs[idx+count] = fmt.Sprintf("[entrypoint][%s][stderr][%d/%d] ", phase, idx, count)
+		}
+		return expectedLogs
+	}
+
+	runtimeEnvs := map[string]struct {
+		shell string
+		image string
+	}{
+		"bash": {shell: shells.Bash, image: "registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-pre-post-trap"},
+		"pwsh": {shell: shells.SNPwsh, image: "registry.gitlab.com/gitlab-org/gitlab-runner/powershell-entrypoint-pre-post-trap"},
+	}
+	modes := map[string][]string{
+		"attach mode": { /* attach mode is the default, no additional FFs needed */ },
+		"exec mode":   {featureflags.UseLegacyKubernetesExecutionStrategy},
+	}
+	tests := map[string]struct {
+		featureFlags  []string
+		expectLogs    []string
+		notExpectLogs []string
+	}{
+		"not honoring entrypoint": {
+			notExpectLogs: append(expectedLogs("pre", loopIterations), expectedLogs("post", loopIterations)...),
+		},
+		"honoring entrypoint": {
+			featureFlags: []string{featureflags.KubernetesHonorEntrypoint},
+			expectLogs:   expectedLogs("pre", loopIterations),
+		},
+	}
+
+	for runtimeName, runtimeEnv := range runtimeEnvs {
+		t.Run(runtimeName, func(t *testing.T) {
+			for mode, modeFeatureFlags := range modes {
+				t.Run(mode, func(t *testing.T) {
+					for testName, testConfig := range tests {
+						t.Run(testName, func(t *testing.T) {
+							successfulBuild, err := common.GetRemoteSuccessfulBuild()
+							require.NoError(t, err)
+
+							build := &common.Build{
+								JobResponse: successfulBuild,
+								Runner: &common.RunnerConfig{
+									RunnerSettings: common.RunnerSettings{
+										Executor: common.ExecutorKubernetes,
+										Kubernetes: &common.KubernetesConfig{
+											Image:       runtimeEnv.image,
+											PollTimeout: pollTimeout,
+										},
+										Shell:        runtimeEnv.shell,
+										FeatureFlags: mapFromKeySlices(true, defaultFeatureFlags, modeFeatureFlags, testConfig.featureFlags),
+										Environment: []string{
+											fmt.Sprintf("LOOP_ITERATIONS=%d", loopIterations),
+										},
+									},
+								},
+							}
+
+							out, err := buildtest.RunBuildReturningOutput(t, build)
+							assert.NoError(t, err)
+
+							for _, s := range testConfig.expectLogs {
+								occurrences := strings.Count(out, s)
+								assert.Equal(t, 1, occurrences, "expected to find %q exactly once, found it %d times", s, occurrences)
+							}
+							for _, s := range testConfig.notExpectLogs {
+								assert.NotContains(t, out, s, "expected output not to contain %q, but does", s)
+							}
+						}) // tests
+					}
+				}) // modes
+			}
+		}) // runtimeEnvs
+	}
+}
+
+// mapFromKeySlices gives you a new map, with some keys already set to the value provided.
+func mapFromKeySlices[K comparable, V any](value V, keySlices ...[]K) map[K]V {
+	m := map[K]V{}
+
+	for _, keySlice := range keySlices {
+		for _, key := range keySlice {
+			m[key] = value
+		}
+	}
+
+	return m
+}
+
 func skipIfRunningAgainstMiniKube(t *testing.T, args ...string) {
 	executable, err := exec.LookPath("minikube")
 	if err != nil {
