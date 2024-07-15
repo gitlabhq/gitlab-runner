@@ -80,7 +80,7 @@ Docker images and RPM packages for the same architectures are also provided.
 
 ### FIPS compliant GitLab Runner in RHEL
 
-When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS mode](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/security_hardening/assembly_installing-a-rhel-8-system-with-fips-mode-enabled_security-hardening).
+When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS mode](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/security_hardening/switching-rhel-to-fips-mode_security-hardening).
 
 ### FIPS compliant GitLab Runner in other systems and architectures
 
