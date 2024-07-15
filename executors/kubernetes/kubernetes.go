@@ -1369,10 +1369,11 @@ func (s *executor) getVolumeMountsForConfig() []api.VolumeMount {
 
 	for _, mount := range s.Config.Kubernetes.Volumes.PVCs {
 		mounts = append(mounts, api.VolumeMount{
-			Name:      s.Build.GetAllVariables().ExpandValue(mount.Name),
-			MountPath: s.Build.GetAllVariables().ExpandValue(mount.MountPath),
-			SubPath:   s.Build.GetAllVariables().ExpandValue(mount.SubPath),
-			ReadOnly:  mount.ReadOnly,
+			Name:             s.Build.GetAllVariables().ExpandValue(mount.Name),
+			MountPath:        s.Build.GetAllVariables().ExpandValue(mount.MountPath),
+			SubPath:          s.Build.GetAllVariables().ExpandValue(mount.SubPath),
+			ReadOnly:         mount.ReadOnly,
+			MountPropagation: (*api.MountPropagationMode)(mount.MountPropagation),
 		})
 	}
 
