@@ -6823,7 +6823,7 @@ func (frc *failingReadCloser) Close() error {
 	return nil
 }
 
-func Test_Executor_captureContainersLogs(t *testing.T) {
+func Test_Executor_captureServiceContainersLogs(t *testing.T) {
 	containers := []api.Container{
 		{Name: "not a service container"},
 		{Name: "svc-0-a service container", Image: "postgres"},
@@ -6892,7 +6892,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 			}
 
 			e.prepareOptions(e.Build)
-			e.captureContainersLogs(ctx, containers)
+			e.captureServiceContainersLogs(ctx, containers)
 			tt.assert(t)
 		})
 	}

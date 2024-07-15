@@ -810,7 +810,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 
 	go s.processLogs(ctx)
 
-	s.captureContainersLogs(ctx, s.pod.Spec.Containers)
+	s.captureServiceContainersLogs(ctx, s.pod.Spec.Containers)
 
 	return nil
 }
@@ -2750,12 +2750,10 @@ func (s *executor) checkDefaults() error {
 	return nil
 }
 
-// captureContainersLogs initiates capturing logs for the specified kubernetes
-// managed containers to a desired additional sink. The sink can be any
-// io.Writer. Currently the sink is the jobs main trace, which is wrapped in an
-// inlineServiceLogWriter instance to add additional context to logs. In the
-// future this could be separate file.
-func (s *executor) captureContainersLogs(ctx context.Context, containers []api.Container) {
+// captureServiceContainersLogs initiates capturing logs for the services containers to a desired additional sink. The
+// sink can be any io.Writer. Currently the sink is the jobs main trace, which is wrapped in an inlineServiceLogWriter
+// instance to add additional context to logs. In the future this could be separate file.
+func (s *executor) captureServiceContainersLogs(ctx context.Context, containers []api.Container) {
 	if !s.Build.IsCIDebugServiceEnabled() {
 		return
 	}
