@@ -54,6 +54,7 @@ func newAcquisitionRef(key string, mapJobImageToVMImage bool) *acquisitionRef {
 	}
 }
 
+//nolint:funlen
 func (ref *acquisitionRef) Prepare(
 	ctx context.Context,
 	logger buildlogger.Logger,
@@ -63,7 +64,13 @@ func (ref *acquisitionRef) Prepare(
 		return nil, errRefAcqNotSet
 	}
 
-	info, err := ref.acq.InstanceConnectInfo(ctx)
+	dialCtx, cancel := ref.acq.WithContext(ctx)
+	defer cancel()
+
+	info, err := ref.acq.InstanceConnectInfo(dialCtx)
+	if cause := context.Cause(dialCtx); cause != nil {
+		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("getting instance connect info: %w", err)
 	}
@@ -85,7 +92,10 @@ func (ref *acquisitionRef) Prepare(
 	}
 
 	logger.Println(fmt.Sprintf("Dialing instance %s...", info.ID))
-	fleetingDialer, err := ref.dialAcquisitionInstance(ctx, info, fleetingDialOpts)
+	fleetingDialer, err := ref.dialAcquisitionInstance(dialCtx, info, fleetingDialOpts)
+	if cause := context.Cause(dialCtx); cause != nil {
+		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +245,15 @@ func (ref *acquisitionRef) createTunneledDialer(
 		},
 	}
 
-	return ref.dialTunnel(ctx, info, options)
+	ctx, cancel := ref.acq.WithContext(ctx)
+	defer cancel()
+
+	client, err := ref.dialTunnel(ctx, info, options)
+	if cause := context.Cause(ctx); cause != nil {
+		return nil, &common.BuildError{Inner: cause, FailureReason: common.RunnerSystemFailure}
+	}
+
+	return client, err
 }
 
 type client struct {
