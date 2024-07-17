@@ -2919,7 +2919,10 @@ func newExecutor() *executor {
 				},
 			},
 		},
-		remoteProcessTerminated: make(chan shells.StageCommandStatus),
+		remoteProcessTerminated:    make(chan shells.StageCommandStatus),
+		kubeClientCreator:          defaultKubeClientCreator,
+		kubeConfigGetter:           getKubeClientConfig,
+		windowsKernelVersionGetter: os_helpers.LocalKernelVersion,
 	}
 
 	e.newLogProcessor = func() logProcessor {

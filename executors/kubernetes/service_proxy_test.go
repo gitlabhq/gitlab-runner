@@ -25,17 +25,13 @@ import (
 	"k8s.io/client-go/rest/fake"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/executors"
 	"gitlab.com/gitlab-org/gitlab-runner/session/proxy"
 )
 
 func TestPoolGetter(t *testing.T) {
 	pool := proxy.Pool{"test": &proxy.Proxy{Settings: fakeProxySettings()}}
-	ex := executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			ProxyPool: pool,
-		},
-	}
+	ex := newExecutor()
+	ex.AbstractExecutor.ProxyPool = pool
 
 	assert.Equal(t, pool, ex.Pool())
 }
@@ -75,24 +71,22 @@ func TestProxyRequestError(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			ex := executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					Context: context.Background(),
-				},
-				pod: &api.Pod{ObjectMeta: objectInfo},
-				kubeClient: testKubernetesClient(
-					version,
-					fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-						return mockPodRunningStatus(
-							req,
-							version,
-							codec,
-							objectInfo,
-							test.podStatus,
-							test.containerReady,
-						)
-					})),
-			}
+			ex := newExecutor()
+			ex.AbstractExecutor.Context = context.Background()
+			ex.pod = &api.Pod{ObjectMeta: objectInfo}
+			ex.kubeClient = testKubernetesClient(
+				version,
+				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					return mockPodRunningStatus(
+						req,
+						version,
+						codec,
+						objectInfo,
+						test.podStatus,
+						test.containerReady,
+					)
+				}),
+			)
 
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				ex.ProxyRequest(w, r, "", test.port, fakeProxySettings())
@@ -146,12 +140,9 @@ func TestProxyRequestHTTP(t *testing.T) {
 		},
 	}
 
-	ex := executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Context: context.Background(),
-		},
-		pod: &api.Pod{ObjectMeta: objectInfo},
-	}
+	ex := newExecutor()
+	ex.AbstractExecutor.Context = context.Background()
+	ex.pod = &api.Pod{ObjectMeta: objectInfo}
 
 	tests := map[string]struct {
 		podStatus          api.PodPhase
@@ -255,12 +246,9 @@ func TestProxyRequestHTTPError(t *testing.T) {
 	version, codec := testVersionAndCodec()
 	objectInfo := metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}
 
-	ex := executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Context: context.Background(),
-		},
-		pod: &api.Pod{ObjectMeta: objectInfo},
-	}
+	ex := newExecutor()
+	ex.AbstractExecutor.Context = context.Background()
+	ex.pod = &api.Pod{ObjectMeta: objectInfo}
 
 	proxySettings := proxy.Settings{
 		ServiceName: "service-name",
@@ -372,20 +360,13 @@ func TestProxyRequestWebsockets(t *testing.T) {
 		},
 	}
 
-	ex := executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{
-						Host: "localhost",
-					},
-				},
-			},
-			Context: context.Background(),
-		},
-		configurationOverwrites: &overwrites{},
-		pod:                     &api.Pod{ObjectMeta: objectInfo},
+	ex := newExecutor()
+	ex.AbstractExecutor.Context = context.Background()
+	ex.AbstractExecutor.Config.RunnerSettings.Kubernetes = &common.KubernetesConfig{
+		Host: "localhost",
 	}
+	ex.pod = &api.Pod{ObjectMeta: objectInfo}
+	ex.configurationOverwrites = &overwrites{}
 
 	tests := map[string]struct {
 		podStatus          api.PodPhase

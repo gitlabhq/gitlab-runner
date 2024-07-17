@@ -12,7 +12,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
 	"sort"
 	"strconv"
@@ -426,13 +425,9 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build:           tt.Build,
-					Config:          tt.RunnerConfig,
-				},
-			}
+			e := newExecutor()
+			e.AbstractExecutor.Build = tt.Build
+			e.AbstractExecutor.Config = tt.RunnerConfig
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 			assert.Equal(t, tt.Expected(featureFlagValue), e.getVolumeMounts())
@@ -682,13 +677,9 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build:           tt.Build,
-					Config:          tt.RunnerConfig,
-				},
-			}
+			e := newExecutor()
+			e.AbstractExecutor.Build = tt.Build
+			e.AbstractExecutor.Config = tt.RunnerConfig
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 			assert.Equal(t, tt.Expected(featureFlagValue), e.getVolumes())
@@ -698,11 +689,6 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 
 func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	version, _ := testVersionAndCodec()
-	helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
-		OSType:       helperimage.OSTypeLinux,
-		Architecture: "amd64",
-	})
-	require.NoError(t, err)
 
 	runnerConfig := common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
@@ -745,42 +731,37 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	mockFc.On("IsHostAliasSupported").Return(true, nil)
 	mockPullManager := &pull.MockManager{}
 	defer mockPullManager.AssertExpectations(t)
-	ex := executor{
-		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
-		options: &kubernetesOptions{
-			Image: common.Image{
-				Name:  "test-image",
-				Ports: []common.Port{{Number: 80}},
-			},
-			Services: common.Services{
-				{
-					Name:  "test-service",
-					Alias: "custom_name",
-					Ports: []common.Port{
-						{
-							Number:   81,
-							Name:     "custom_port_name",
-							Protocol: "http",
-						},
+
+	ex := newExecutor()
+	ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper))
+	ex.options = &kubernetesOptions{
+		Image: common.Image{
+			Name:  "test-image",
+			Ports: []common.Port{{Number: 80}},
+		},
+		Services: common.Services{
+			{
+				Name:  "test-service",
+				Alias: "custom_name",
+				Ports: []common.Port{
+					{
+						Number:   81,
+						Name:     "custom_port_name",
+						Protocol: "http",
 					},
 				},
 			},
 		},
-		AbstractExecutor: executors.AbstractExecutor{
-			Config:     runnerConfig,
-			BuildShell: &common.ShellConfiguration{},
-			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Variables: []common.JobVariable{},
-				},
-				Runner: &runnerConfig,
-			},
-			ProxyPool: proxy.NewPool(),
-		},
-		helperImageInfo: helperImageInfo,
-		featureChecker:  mockFc,
-		pullManager:     mockPullManager,
 	}
+	ex.AbstractExecutor.Config = runnerConfig
+	ex.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
+	ex.AbstractExecutor.Build = &common.Build{
+		Runner: &runnerConfig,
+	}
+	ex.AbstractExecutor.ProxyPool = proxy.NewPool()
+	ex.featureChecker = mockFc
+	ex.pullManager = mockPullManager
+
 	buildtest.SetBuildFeatureFlag(ex.Build, featureFlagName, featureFlagValue)
 
 	mockPullManager.On("GetPullPolicyFor", ex.options.Services[0].Name).
@@ -793,7 +774,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 		Return(api.PullAlways, nil).
 		Once()
 
-	err = ex.prepareOverwrites(make(common.JobVariables, 0))
+	err := ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
 
 	err = ex.setupBuildPod(context.Background(), nil)
@@ -823,28 +804,26 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 			mockPullManager := &pull.MockManager{}
 			defer mockPullManager.AssertExpectations(t)
 
-			e := executor{
-				options: &kubernetesOptions{
-					Image: common.Image{
-						Name: "test-build",
-					},
-					Services: common.Services{
-						{
-							Name: "test-service",
-						},
+			e := newExecutor()
+			e.options = &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-build",
+				},
+				Services: common.Services{
+					{
+						Name: "test-service",
 					},
 				},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config:     runnerConfig,
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{},
-						Runner:      &runnerConfig,
-					},
-				},
-				featureChecker: mockFc,
-				pullManager:    mockPullManager,
 			}
+			e.AbstractExecutor.Config = runnerConfig
+			e.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
+			e.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{},
+				Runner:      &runnerConfig,
+			}
+			e.featureChecker = mockFc
+			e.pullManager = mockPullManager
+
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
 			mockPullManager.On("GetPullPolicyFor", failOnImage).
@@ -887,21 +866,11 @@ func testGetPodActiveDeadlineSecondsFeatureFlag(t *testing.T, featureFlagName st
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							RunnerInfo: common.RunnerInfo{
-								Timeout: tc.timeoutSeconds,
-							},
-						},
-						Runner: &common.RunnerConfig{},
-					},
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{},
-						},
+			e := newExecutor()
+			e.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{
+					RunnerInfo: common.RunnerInfo{
+						Timeout: tc.timeoutSeconds,
 					},
 				},
 			}
@@ -1079,20 +1048,17 @@ func TestCleanup(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			ex := executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					Context: context.Background(),
-				},
-				kubeClient: testKubernetesClient(
-					version,
-					fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-						return test.ClientFunc(t, req)
-					}),
-				),
-				pod:         test.Pod,
-				credentials: test.Credentials,
-				services:    test.Services,
-			}
+			ex := newExecutor()
+			ex.AbstractExecutor.Context = context.Background()
+			ex.kubeClient = testKubernetesClient(
+				version,
+				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					return test.ClientFunc(t, req)
+				}),
+			)
+			ex.pod = test.Pod
+			ex.credentials = test.Credentials
+			ex.services = test.Services
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
 
 			errored := false
@@ -1132,6 +1098,15 @@ func TestCleanup(t *testing.T) {
 	}
 }
 
+// TestPrepare tests the prepare step.
+// They do so by running the Prepare step and then run certain assertions against the internal state of the executor,
+// most prominently comparing it to a artificially created, expected executor. To make this work, before we do that
+// comparison:
+//
+//   - we nil out some parts of the actually created executor
+//
+//   - we don't use the constructor function to create the executor, but use the struct directly, which gives us a
+//     "smaller"/"emptier" executor, which makes it easier to compare it with the actual one.
 func TestPrepare(t *testing.T) {
 	helperImageTag := "latest"
 	// common.VERSION is overridden at build time.
@@ -1212,6 +1187,7 @@ func TestPrepare(t *testing.T) {
 				"powershell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-",
 			}
 		}
+
 		return &executor{
 			options: &kubernetesOptions{
 				Image: common.Image{
@@ -2899,13 +2875,10 @@ func TestPrepare(t *testing.T) {
 					t.Skip(msg)
 				}
 			}
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-				},
-				options:                    &kubernetesOptions{},
-				windowsKernelVersionGetter: test.WindowsKernelVersionGetter,
-			}
+			e := newExecutor()
+			e.AbstractExecutor.ExecutorOptions = executorOptions
+			e.options = &kubernetesOptions{}
+			e.windowsKernelVersionGetter = test.WindowsKernelVersionGetter
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
@@ -2949,6 +2922,10 @@ func TestPrepare(t *testing.T) {
 			e.pullManager = nil
 			e.requireDefaultBuildsDirVolume = nil
 			e.requireSharedBuildsDir = nil
+			e.newLogProcessor = nil
+			e.remoteProcessTerminated = nil
+			e.kubeConfigGetter = nil
+			e.kubeClientCreator = nil
 			e.windowsKernelVersionGetter = nil
 
 			assert.NoError(t, err)
@@ -2971,12 +2948,7 @@ func TestSetupDefaultExecutorOptions(t *testing.T) {
 
 	for os, tc := range tests {
 		t.Run(os, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-				},
-			}
-
+			e := newExecutor()
 			e.setupDefaultExecutorOptions(os)
 			tc(t, e)
 		})
@@ -3076,26 +3048,15 @@ func TestSetupCredentials(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace: "default",
-							},
-						},
-					},
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables:   []common.JobVariable{},
-							Credentials: test.Credentials,
-						},
-						Runner: &common.RunnerConfig{},
-					},
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test)))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = "default"
+			ex.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{
+					// Variables:   []common.JobVariable{},
+					Credentials: test.Credentials,
 				},
+				Runner: &common.RunnerConfig{},
 			}
 
 			if test.RunnerCredentials != nil {
@@ -3179,28 +3140,12 @@ func TestSetupBuildNamespace(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace:       "default",
-								Image:           "default-image",
-								NamespacePerJob: test.NamespaceIsolation,
-							},
-						},
-					},
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables: []common.JobVariable{},
-						},
-						Runner: &common.RunnerConfig{},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test)))
+			ex.options = &kubernetesOptions{}
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Image = "default-image"
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.NamespacePerJob = test.NamespaceIsolation
+			ex.AbstractExecutor.Build = &common.Build{}
 
 			executed = false
 
@@ -3264,28 +3209,12 @@ func TestTeardownBuildNamespace(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace:       "default",
-								Image:           "default-image",
-								NamespacePerJob: test.NamespaceIsolation,
-							},
-						},
-					},
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables: []common.JobVariable{},
-						},
-						Runner: &common.RunnerConfig{},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test)))
+			ex.options = &kubernetesOptions{}
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Image = "default-image"
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.NamespacePerJob = test.NamespaceIsolation
+			ex.AbstractExecutor.Build = &common.Build{}
 
 			executed = false
 
@@ -3358,19 +3287,9 @@ func TestServiceAccountExists(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace: namespace,
-							},
-						},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = namespace
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
@@ -3433,19 +3352,9 @@ func TestSecretExists(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace: DefaultResourceIdentifier,
-							},
-						},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
@@ -3652,22 +3561,10 @@ func TestWaitForResources(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace:                            DefaultResourceIdentifier,
-								ServiceAccount:                       tc.serviceAccount,
-								ImagePullSecrets:                     tc.imagePullSecrets,
-								ResourceAvailabilityCheckMaxAttempts: 3,
-							},
-						},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.ResourceAvailabilityCheckMaxAttempts = 3
 
 			var err error
 
@@ -5790,11 +5687,6 @@ containers:
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
 			ctx := context.Background()
-			helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
-				OSType:       helperimage.OSTypeLinux,
-				Architecture: "amd64",
-			})
-			require.NoError(t, err)
 
 			vars := test.Variables
 			if vars == nil {
@@ -5830,25 +5722,21 @@ containers:
 			mockPullManager := &pull.MockManager{}
 			defer mockPullManager.AssertExpectations(t)
 
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
-				options:    options,
-				AbstractExecutor: executors.AbstractExecutor{
-					Config:     test.RunnerConfig,
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables:   vars,
-							Credentials: creds,
-						},
-						Runner: &test.RunnerConfig,
-					},
-					ProxyPool: proxy.NewPool(),
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip))
+			ex.options = options
+			ex.AbstractExecutor.Config = test.RunnerConfig
+			ex.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
+			ex.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{
+					Variables:   vars,
+					Credentials: creds,
 				},
-				helperImageInfo: helperImageInfo,
-				featureChecker:  mockFc,
-				pullManager:     mockPullManager,
+				Runner: &test.RunnerConfig,
 			}
+			ex.AbstractExecutor.ProxyPool = proxy.NewPool()
+			ex.featureChecker = mockFc
+			ex.pullManager = mockPullManager
 
 			if ex.options.Image.Name == "" {
 				// Ensure we have a valid Docker image name in the configuration,
@@ -5857,7 +5745,7 @@ containers:
 			}
 
 			if test.PrepareFn != nil {
-				test.PrepareFn(t, test, &ex)
+				test.PrepareFn(t, test, ex)
 			}
 
 			if test.Options != nil && test.Options.Services != nil {
@@ -5875,7 +5763,7 @@ containers:
 				Return(api.PullAlways, nil).
 				Maybe()
 
-			err = ex.prepareOverwrites(test.Variables)
+			err := ex.prepareOverwrites(test.Variables)
 			assert.NoError(t, err, "error preparing overwrites")
 
 			if test.Credentials != nil {
@@ -5892,7 +5780,7 @@ containers:
 			}
 
 			if test.VerifyExecutorFn != nil {
-				test.VerifyExecutorFn(t, test, &ex)
+				test.VerifyExecutorFn(t, test, ex)
 			}
 		})
 	}
@@ -6144,15 +6032,12 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 
 			client := testKubernetesClient(version, fakeClient)
 
-			e := executor{}
-			e.Config = common.RunnerConfig{}
+			e := newExecutor()
 			e.Config.Kubernetes = &common.KubernetesConfig{
 				PollInterval: 1,
 				PollTimeout:  2,
 			}
 			e.kubeClient = client
-			e.remoteProcessTerminated = make(chan shells.StageCommandStatus)
-			e.BuildLogger = buildlogger.New(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod"
 			e.pod.Namespace = "namespace"
@@ -6326,14 +6211,9 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 
 	for testName, tt := range tests {
 		t.Run(testName, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build: &common.Build{
-						Runner: &tt.config,
-					},
-					Config: tt.config,
-				},
+			e := newExecutor()
+			e.AbstractExecutor.Build = &common.Build{
+				Runner: &tt.config,
 			}
 
 			prepareOptions := common.ExecutorPrepareOptions{
@@ -6359,20 +6239,8 @@ func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {
 	mockPullManager := &pull.MockManager{}
 	defer mockPullManager.AssertExpectations(t)
 
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			ExecutorOptions: executorOptions,
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{},
-				},
-			},
-		},
-		pullManager: mockPullManager,
-	}
+	e := newExecutor()
+	e.pullManager = mockPullManager
 
 	mockPullManager.On("GetPullPolicyFor", mock.Anything).
 		Return(api.PullAlways, assert.AnError).
@@ -6386,28 +6254,18 @@ func TestExecutor_buildPermissionsInitContainer_CheckResources(t *testing.T) {
 	mockPullManager := &pull.MockManager{}
 	cpu := resource.MustParse("1")
 	memory := resource.MustParse("1Gi")
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			ExecutorOptions: executorOptions,
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{},
-				},
-			},
+
+	e := newExecutor()
+	e.AbstractExecutor.Build = &common.Build{}
+	e.pullManager = mockPullManager
+	e.configurationOverwrites = &overwrites{
+		helperLimits: api.ResourceList{
+			"cpu":    cpu,
+			"memory": memory,
 		},
-		pullManager: mockPullManager,
-		configurationOverwrites: &overwrites{
-			helperLimits: api.ResourceList{
-				"cpu":    cpu,
-				"memory": memory,
-			},
-			helperRequests: api.ResourceList{
-				"cpu":    cpu,
-				"memory": memory,
-			},
+		helperRequests: api.ResourceList{
+			"cpu":    cpu,
+			"memory": memory,
 		},
 	}
 
@@ -6555,46 +6413,27 @@ func setupExecutor(shell string, successfulResponse common.JobResponse) *executo
 		},
 	}
 
-	return &executor{
-		helperImageInfo: helperimage.Info{
-			Cmd: []string{"custom", "command"},
-		},
-		AbstractExecutor: executors.AbstractExecutor{
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{},
-				},
-			},
-			ExecutorOptions: executors.ExecutorOptions{
-				DefaultBuildsDir: "/builds",
-				DefaultCacheDir:  "/cache",
-				Shell: common.ShellScriptInfo{
-					Shell: shell,
-					Build: build,
-				},
-			},
+	e := newExecutor()
+	e.helperImageInfo = helperimage.Info{
+		Cmd: []string{"custom", "command"},
+	}
+	e.AbstractExecutor.Build = build
+	e.AbstractExecutor.ExecutorOptions = executors.ExecutorOptions{
+		DefaultBuildsDir: "/builds",
+		DefaultCacheDir:  "/cache",
+		Shell: common.ShellScriptInfo{
+			Shell: shell,
 			Build: build,
 		},
 	}
+	return e
 }
 
 func TestLifecyclePrepare(t *testing.T) {
 	initExecutor := func(lifecycleCfg common.KubernetesContainerLifecyle) *executor {
-		return &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: executorOptions,
-				Build: &common.Build{
-					Runner: &common.RunnerConfig{},
-				},
-				Config: common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Kubernetes: &common.KubernetesConfig{
-							ContainerLifecycle: lifecycleCfg,
-						},
-					},
-				},
-			},
-		}
+		e := newExecutor()
+		e.AbstractExecutor.Config.RunnerSettings.Kubernetes.ContainerLifecycle = lifecycleCfg
+		return e
 	}
 
 	execHandler := &api.ExecAction{
@@ -6924,11 +6763,8 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			e := &executor{
-				pod: &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
-			}
-			e.options = &kubernetesOptions{}
-			e.Config.Kubernetes = &common.KubernetesConfig{}
+			e := newExecutor()
+			e.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
 
 			buf, err := trace.New()
 			require.NoError(t, err)
@@ -7010,12 +6846,10 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 	}
 
 	version, _ := testVersionAndCodec()
-	e := executor{
-		pod:        &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
-		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
-	}
+	e := newExecutor()
+	e.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
+	e.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper))
 	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
-	e.Config.Kubernetes = &common.KubernetesConfig{}
 
 	ctx := context.Background()
 
@@ -7300,7 +7134,7 @@ func TestRetryLimits(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{}
+			e := newExecutor()
 			e.Config.Kubernetes = &tt.config
 
 			retryBackoffConfig := e.getRetryBackoffConfig()
@@ -7427,16 +7261,12 @@ func TestContainerPullPolicies(t *testing.T) {
 				build.JobResponse.Image.Name = tc.JobImageName
 			}
 
-			executor := &executor{
-				kubeClientCreator: func(_ *restclient.Config) (kubernetes.Interface, error) {
-					return fakeKubeClient, nil
-				},
-				kubeConfigGetter: func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
-					return nil, nil
-				},
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-				},
+			executor := newExecutor()
+			executor.kubeClientCreator = func(_ *restclient.Config) (kubernetes.Interface, error) {
+				return fakeKubeClient, nil
+			}
+			executor.kubeConfigGetter = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
+				return nil, nil
 			}
 
 			prepareOptions := common.ExecutorPrepareOptions{
