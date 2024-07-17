@@ -18,7 +18,7 @@ GitLab maintains these official plugins:
 | Cloud provider                                                             | Release status      | Notes |
 |----------------------------------------------------------------------------|---------------------|-------|
 | [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud) | Generally available | Uses [Google Cloud instance groups](https://cloud.google.com/compute/docs/instance-groups) |
-| [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws)                  | Beta                | Uses [AWS Auto Scaling groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html) |
+| [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws)                  |Generally available  | Uses [AWS Auto Scaling groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html) |
 | [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure)              | Beta                | Uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) |
 
 To configure fleeting, in the `config.toml`, use the [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
