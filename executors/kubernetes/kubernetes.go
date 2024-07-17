@@ -245,50 +245,16 @@ type podConfigPrepareOpts struct {
 	hostAliases      []api.HostAlias
 }
 
-// windowsKernelVersionGetter abstracts getting the windows kernel version. It's zero-value can be used.
-type windowsKernelVersionGetter func() string
-
-func (getter windowsKernelVersionGetter) Get() string {
-	if getter == nil {
-		getter = os_helpers.LocalKernelVersion
-	}
-	return getter()
-}
-
-// kubeClientCreator abstract the creation of a kubernetes client. Its zero-value can be used.
-type kubeClientCreator func(config *restclient.Config) (kubernetes.Interface, error)
-
-func (creator kubeClientCreator) Create(config *restclient.Config) (kubernetes.Interface, error) {
-	if creator == nil {
-		creator = defaultKubeClientCreator
-	}
-	return creator(config)
-}
-
-var defaultKubeClientCreator = func(config *restclient.Config) (kubernetes.Interface, error) {
-	return kubernetes.NewForConfig(config)
-}
-
-// kubeConfigGetter abstracts the creation of the kube client config. Its zero-value can be used.
-type kubeConfigGetter func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error)
-
-func (getter kubeConfigGetter) Get(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error) {
-	if getter == nil {
-		getter = getKubeClientConfig
-	}
-	return getter(conf, overwrites)
-}
-
 type executor struct {
 	executors.AbstractExecutor
 
-	windowsKernelVersionGetter windowsKernelVersionGetter
-
-	kubeClientCreator kubeClientCreator
+	kubeClientCreator func(config *restclient.Config) (kubernetes.Interface, error)
 	kubeClient        kubernetes.Interface
 
-	kubeConfigGetter kubeConfigGetter
+	kubeConfigGetter func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error)
 	kubeConfig       *restclient.Config
+
+	windowsKernelVersionGetter func() string
 
 	pod         *api.Pod
 	credentials *api.Secret
@@ -344,12 +310,12 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("check defaults error: %w", err)
 	}
 
-	s.kubeConfig, err = s.kubeConfigGetter.Get(s.Config.Kubernetes, s.configurationOverwrites)
+	s.kubeConfig, err = s.kubeConfigGetter(s.Config.Kubernetes, s.configurationOverwrites)
 	if err != nil {
 		return fmt.Errorf("getting Kubernetes config: %w", err)
 	}
 
-	s.kubeClient, err = s.kubeClientCreator.Create(s.kubeConfig)
+	s.kubeClient, err = s.kubeClientCreator(s.kubeConfig)
 	if err != nil {
 		return fmt.Errorf("connecting to Kubernetes: %w", err)
 	}
@@ -522,7 +488,7 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 	cfg.Architecture = common.AppVersion.Architecture
 	if helperimage.OSTypeWindows == common.AppVersion.OS {
 		cfg.OSType = helperimage.OSTypeWindows
-		cfg.KernelVersion = s.windowsKernelVersionGetter.Get()
+		cfg.KernelVersion = s.windowsKernelVersionGetter()
 	}
 
 	return cfg
@@ -2919,8 +2885,10 @@ func newExecutor() *executor {
 				},
 			},
 		},
-		remoteProcessTerminated:    make(chan shells.StageCommandStatus),
-		kubeClientCreator:          defaultKubeClientCreator,
+		remoteProcessTerminated: make(chan shells.StageCommandStatus),
+		kubeClientCreator: func(config *restclient.Config) (kubernetes.Interface, error) {
+			return kubernetes.NewForConfig(config)
+		},
 		kubeConfigGetter:           getKubeClientConfig,
 		windowsKernelVersionGetter: os_helpers.LocalKernelVersion,
 	}

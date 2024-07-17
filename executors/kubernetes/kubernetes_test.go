@@ -1208,7 +1208,7 @@ func TestPrepare(t *testing.T) {
 
 		RunnerConfig               *common.RunnerConfig
 		Build                      *common.Build
-		WindowsKernelVersionGetter windowsKernelVersionGetter
+		WindowsKernelVersionGetter func() string
 
 		Expected                *executor
 		ExpectedPullPolicy      api.PullPolicy
