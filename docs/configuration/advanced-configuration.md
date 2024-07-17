@@ -226,6 +226,29 @@ If the runner can reach the node on `192.168.1.23`, set the `clone_url` to `http
 If the `clone_url` is set, the runner constructs a clone URL in the form
 of `http://gitlab-ci-token:s3cr3tt0k3n@192.168.1.23/namespace/project.git`.
 
+NOTE:
+`clone_url` does not affect Git LFS endpoints.
+
+#### Modify Git LFS endpoints
+
+To modify Git LFS endpoints, set `pre_get_sources_script` in one of the following files:
+
+- `config.toml`:
+
+  ```toml
+  pre_get_sources_script = "mkdir -p $RUNNER_TEMP_PROJECT_DIR/git-template; git config -f $RUNNER_TEMP_PROJECT_DIR/git-template/config lfs.url https://<alternative-endpoint>"
+  ```
+
+- `.gitlab-ci.yml`:
+
+  ```yaml
+  default:
+    hooks:
+      pre_get_sources_script:
+        - mkdir -p $RUNNER_TEMP_PROJECT_DIR/git-template
+        - git config -f $RUNNER_TEMP_PROJECT_DIR/git-template/config lfs.url https://localhost
+  ```
+
 ### How `unhealthy_requests_limit` and `unhealthy_interval` works
 
 When a GitLab instance is unavailable for an extended period of time (for example, during a
