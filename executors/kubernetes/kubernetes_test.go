@@ -2878,7 +2878,7 @@ func TestPrepare(t *testing.T) {
 			e := newExecutor()
 			e.AbstractExecutor.ExecutorOptions = executorOptions
 			e.options = &kubernetesOptions{}
-			e.windowsKernelVersionGetter = test.WindowsKernelVersionGetter
+			e.windowsKernelVersion = test.WindowsKernelVersionGetter
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
@@ -2924,9 +2924,9 @@ func TestPrepare(t *testing.T) {
 			e.requireSharedBuildsDir = nil
 			e.newLogProcessor = nil
 			e.remoteProcessTerminated = nil
-			e.kubeConfigGetter = nil
-			e.kubeClientCreator = nil
-			e.windowsKernelVersionGetter = nil
+			e.getKubeConfig = nil
+			e.newKubeClient = nil
+			e.windowsKernelVersion = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
@@ -7262,10 +7262,10 @@ func TestContainerPullPolicies(t *testing.T) {
 			}
 
 			executor := newExecutor()
-			executor.kubeClientCreator = func(_ *restclient.Config) (kubernetes.Interface, error) {
+			executor.newKubeClient = func(_ *restclient.Config) (kubernetes.Interface, error) {
 				return fakeKubeClient, nil
 			}
-			executor.kubeConfigGetter = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
+			executor.getKubeConfig = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
 				return nil, nil
 			}
 

@@ -248,13 +248,13 @@ type podConfigPrepareOpts struct {
 type executor struct {
 	executors.AbstractExecutor
 
-	kubeClientCreator func(config *restclient.Config) (kubernetes.Interface, error)
-	kubeClient        kubernetes.Interface
+	newKubeClient func(config *restclient.Config) (kubernetes.Interface, error)
+	kubeClient    kubernetes.Interface
 
-	kubeConfigGetter func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error)
-	kubeConfig       *restclient.Config
+	getKubeConfig func(conf *common.KubernetesConfig, overwrites *overwrites) (*restclient.Config, error)
+	kubeConfig    *restclient.Config
 
-	windowsKernelVersionGetter func() string
+	windowsKernelVersion func() string
 
 	pod         *api.Pod
 	credentials *api.Secret
@@ -310,12 +310,12 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		return fmt.Errorf("check defaults error: %w", err)
 	}
 
-	s.kubeConfig, err = s.kubeConfigGetter(s.Config.Kubernetes, s.configurationOverwrites)
+	s.kubeConfig, err = s.getKubeConfig(s.Config.Kubernetes, s.configurationOverwrites)
 	if err != nil {
 		return fmt.Errorf("getting Kubernetes config: %w", err)
 	}
 
-	s.kubeClient, err = s.kubeClientCreator(s.kubeConfig)
+	s.kubeClient, err = s.newKubeClient(s.kubeConfig)
 	if err != nil {
 		return fmt.Errorf("connecting to Kubernetes: %w", err)
 	}
@@ -488,7 +488,7 @@ func (s *executor) retrieveHelperImageConfig() helperimage.Config {
 	cfg.Architecture = common.AppVersion.Architecture
 	if helperimage.OSTypeWindows == common.AppVersion.OS {
 		cfg.OSType = helperimage.OSTypeWindows
-		cfg.KernelVersion = s.windowsKernelVersionGetter()
+		cfg.KernelVersion = s.windowsKernelVersion()
 	}
 
 	return cfg
@@ -2886,11 +2886,11 @@ func newExecutor() *executor {
 			},
 		},
 		remoteProcessTerminated: make(chan shells.StageCommandStatus),
-		kubeClientCreator: func(config *restclient.Config) (kubernetes.Interface, error) {
+		newKubeClient: func(config *restclient.Config) (kubernetes.Interface, error) {
 			return kubernetes.NewForConfig(config)
 		},
-		kubeConfigGetter:           getKubeClientConfig,
-		windowsKernelVersionGetter: os_helpers.LocalKernelVersion,
+		getKubeConfig:        getKubeClientConfig,
+		windowsKernelVersion: os_helpers.LocalKernelVersion,
 	}
 
 	e.newLogProcessor = func() logProcessor {
