@@ -34,6 +34,10 @@ To prepare the environment for autoscaling:
    - GitLab Runner
    - Dependencies required by the jobs you plan to run
 
+NOTE:
+You must install the GitLab Runner binary on the virtual machine to process job artifacts and cache.
+You do not have to configure or start the GitLab Runner service itself on the virtual machine.    
+
 ## Configure the executor to autoscale
 
 Prerequisites:
