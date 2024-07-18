@@ -1,3 +1,62 @@
+## v17.2.0 (2024-07-18)
+
+### New features
+
+- Add mount propagation volume option for kubernetes executor !4784 (Subhashis Suara @subhashissuara)
+- Always attempt to retrieve pod warning events !4852
+- Ability to turn on/off running umask 0000 command for Kubernetes executor !4842
+- Make directories for scripts and logs configurable for k8s Executor !4805 (Thomas John Randowski @WojoInc)
+
+### Bug fixes
+
+- Ensure that dialing fleeting instance can be canceled !4874
+- Upgrade fleeting/taskscaler: fixes reservation/unavailability instance churn !4865
+- Shorten network names created by FF_NETWORK_PER_BUILD !4830 (Ricardo Katz @rikatz)
+- Docs: fix kubernetes executor runner api permission !4800 (EuVen @euven)
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4843
+- Fix default runner alpine flavour version !4850
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
+- Update clear-docker-cache script to keep cache volumes !4847
+- Set file permissions before creating runner rpm/deb packages !4835
+- Fix parsing of --kubernetes-host_aliases command-line flag !4837
+
+### Maintenance
+
+- Change product lifecycle status of the Fleeting Plugin for AWS from Beta to generally available !4887
+- Manually update linting configuration and update Vale version !4881
+- Update docs for modifying Git LFS endpoints !4886
+- Add note about Runner install requirement !4885
+- Update dependency danger-review to v1.4.1 !4860
+- Docs maintenance: Fix 404 links !4882
+- Fix periods example in [[runners.autoscaler.policy]] documentation. !4863 (Jan Jörke @janjoerke)
+- Add note that AWS and GCP Fleeting plugins is beta !4879
+- Bump golang to 1.22.5 !4878
+- Fix more k8s integration test !4869
+- Manually update Vale and markdownlint rules and fix docs !4873
+- Add note to runner autoscaling for runner manager on fault tolerant design !4870
+- Add note to runner autoscaling for runner manager on preemptive mode !4871
+- Add note on the runner `tls_verify` setting to the docs !4872
+- Add note to runner autoscaling on use of credentials file !4868
+- Add note to runner autoscaling for runner manager on containers !4867
+- Fix testKubernetesPodEvents integration test !4866
+- Fix link that is broken when published !4864
+- Remove git 1.8.3.1 test !4856
+- Remove git 1.8.3.1 test !4856
+- Bump docker+machine version to v0.16.2-gitlab.27 !4859
+- Use the danger-review component !4828
+- Adress CVE-2024-6104 in github.com/hashicorp/go-retryablehttp !4858
+- Bump UBI bases image from `9.4-949` to `9.4-1134` !4857
+- Remove git 1.8.3.1 test !4856
+- Add note about `FF_ENABLE_JOB_CLEANUP` feature flag !4849
+- Suppress golangci-lint config deprecations and warnings !4845
+- Fix some external links in the project !4851
+- Document k8s executors for read-only root filesystem !4848
+- Replace sysvinit-adjacent commands with systemd equivalents !4841
+- Bump to Go 1.22.4 !4838
+- Specify in which scenarios missing index has been seen !4839
+- Create issue template for bumping golang !4840
+- Use upstream spdystream again !4836
+
 ## v17.0.1 (2024-07-05)
 
 ### Bug fixes
