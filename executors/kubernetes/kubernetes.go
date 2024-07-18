@@ -791,13 +791,11 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return nil
 	}
 
-	err := s.setupBuildNamespace(ctx)
-	if err != nil {
+	if err := s.setupBuildNamespace(ctx); err != nil {
 		return fmt.Errorf("setting up build namespace: %w", err)
 	}
 
-	err = s.setupCredentials(ctx)
-	if err != nil {
+	if err := s.setupCredentials(ctx); err != nil {
 		return fmt.Errorf("setting up credentials: %w", err)
 	}
 
@@ -806,8 +804,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return err
 	}
 
-	err = s.setupBuildPod(ctx, initContainers)
-	if err != nil {
+	if err := s.setupBuildPod(ctx, initContainers); err != nil {
 		return fmt.Errorf("setting up build pod: %w", err)
 	}
 
@@ -833,8 +830,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		return fmt.Errorf("pod failed to enter running state: %s", status)
 	}
 
-	err = s.setupTrappingScripts(ctx)
-	if err != nil {
+	if err := s.setupTrappingScripts(ctx); err != nil {
 		return fmt.Errorf("setting up trapping scripts on emptyDir: %w", err)
 	}
 
