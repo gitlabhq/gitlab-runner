@@ -582,6 +582,14 @@ func TestAbstractShell_writeCleanupBuildDirectoryScript(t *testing.T) {
 			},
 		},
 		{
+			name:        "empty git strategy",
+			buildDir:    "build/dir",
+			gitStrategy: "empty",
+			setupExpectations: func(m *MockShellWriter) {
+				m.On("RmDir", "build/dir")
+			},
+		},
+		{
 			name:        "no git strategy",
 			buildDir:    "build/dir",
 			gitStrategy: "none",

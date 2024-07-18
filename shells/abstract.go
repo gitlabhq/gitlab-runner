@@ -480,6 +480,10 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
+	case common.GitEmpty:
+		w.Noticef("Skipping Git repository setup and creating an empty build directory")
+		w.RmDir(projectDir)
+		w.MkDir(projectDir)
 	default:
 		return errUnknownGitStrategy
 	}
@@ -1184,7 +1188,7 @@ func (b *AbstractShell) writeCleanupScript(_ context.Context, w ShellWriter, inf
 
 func (b *AbstractShell) writeCleanupBuildDirectoryScript(w ShellWriter, info common.ShellScriptInfo) error {
 	switch info.Build.GetGitStrategy() {
-	case common.GitClone:
+	case common.GitClone, common.GitEmpty:
 		w.RmDir(info.Build.FullProjectDir())
 	case common.GitFetch:
 		b.writeCdBuildDir(w, info)
