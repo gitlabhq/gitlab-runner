@@ -308,11 +308,23 @@ Linked containers share their environment variables.
 
 #### Overriding the MTU of the created network
 
-For some environments, like VMs in OpenStack, a custom MTU is necessary. The Docker daemon does not respect the MTU in `docker.json` (see [moby issue](https://github.com/moby/moby/issues/34981)), so you can set the `network_mtu` in your `config.toml` to any valid value. This instructs the Docker daemon to use the correct MTU for the newly-created network.
+For some environments, like virtual machines in OpenStack, a custom MTU is necessary.
+The Docker daemon does not respect the MTU in `docker.json` (see [Moby issue 34981](https://github.com/moby/moby/issues/34981)).
+You can set `network_mtu` in your `config.toml` to any valid value so
+the Docker daemon can use the correct MTU for the newly created network.
+You must also enable [`FF_NETWORK_PER_BUILD`](#create-a-network-for-each-job) for the override to take effect.
+
+The following configuration sets the MTU to `1402` for the network created for each job.
+Make sure to adjust the value to your specific environment requirements.
 
 ```toml
-[runners.docker]
-  network_mtu = 1402
+[[runners]]
+  (...)
+  executor = "docker"
+  [runners.docker]
+    network_mtu = 1402
+    [runners.feature_flags]
+      FF_NETWORK_PER_BUILD = true
 ```
 
 ## Restrict Docker images and services
