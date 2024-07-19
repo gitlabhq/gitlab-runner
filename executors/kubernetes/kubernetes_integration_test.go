@@ -2249,8 +2249,6 @@ func TestDeletedPodSystemFailureDuringExecution(t *testing.T) {
 
 func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
-	// this test is known to fail spectacularly when run against minikube.
-	skipIfRunningAgainstMiniKube(t)
 
 	build := getTestBuild(t, func() (common.JobResponse, error) {
 		return common.GetRemoteBuildResponse("id")
@@ -2263,6 +2261,17 @@ func testKubernetesWithNonRootSecurityContext(t *testing.T, featureFlagName stri
 		RunAsNonRoot: &runAsNonRoot,
 		RunAsUser:    &runAsUser,
 	}
+
+	// We override the home directory, else we get this error from the git run:
+	// 	```
+	// 	Fetching changes...
+	// 	error: could not lock config file //.gitconfig: Permission denied
+	// 	ERROR: Job failed: command terminated with exit code 1
+	// 	```
+	build.Variables = append(build.Variables, common.JobVariable{
+		Key:   "HOME",
+		Value: "/dev/shm",
+	})
 
 	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
 
