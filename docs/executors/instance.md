@@ -280,6 +280,10 @@ Prerequisites:
 - A custom image with at least `git` and GitLab Runner installed.
 - A Google Cloud instance group where the autoscaling mode is set to `do not autoscale`. The runner handles the scaling.
 - An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
+  If you're deploying your runner in a GKE cluster, you can add an IAM binding
+  between the Kubernetes service account and the GCP service account.
+  You can add this binding with the `iam.workloadIdentityUser` role to authenticate
+  to GCP instead of using a key file with `credentials_file`.
 
 This configuration supports:
 

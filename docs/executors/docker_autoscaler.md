@@ -119,7 +119,11 @@ Prerequisites:
 - A VM image with [Docker Engine](https://docs.docker.com/engine/) installed, such as [COS](https://cloud.google.com/container-optimized-os/docs).
 - A Google Cloud instance group. For **Autoscaling mode**, select **Do not autoscale**. The runner handles autoscaling, not
 the Google Cloud instance group.
-- An IAM Policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
+- An IAM policy with the [correct permissions](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud#required-permissions).
+  If you're deploying your runner in a GKE cluster, you can add an IAM binding
+  between the Kubernetes service account and the GCP service account.
+  You can add this binding with the `iam.workloadIdentityUser` role to authenticate
+  to GCP instead of using a key file with `credentials_file`.
 
 This configuration supports:
 
