@@ -2958,7 +2958,8 @@ func Test_CaptureServiceLogs(t *testing.T) {
 				Public: true,
 			}},
 			assert: func(out string, err error) {
-				assert.Contains(t, out, "WARNING: failed to parse value 'blammo' for CI_DEBUG_SERVICES variable")
+				assert.NoError(t, err)
+				assert.Contains(t, out, `WARNING: CI_DEBUG_SERVICES: expected bool got "blammo", using default value: false`)
 				assert.NotRegexp(t, `\[service:postgres-db\] .* Error: Database is uninitialized and superuser password is not specified`, out)
 				assert.NotRegexp(t, `\[service:redis-cache\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
 				assert.NotRegexp(t, `\[service:redis-cache\] .* Ready to accept connections`, out)
@@ -2966,13 +2967,13 @@ func Test_CaptureServiceLogs(t *testing.T) {
 		},
 	}
 
-	build := getTestBuildWithServices(t, common.GetRemoteSuccessfulBuild, "postgres:14.4", "redis:7.0")
-	build.Services[0].Alias = "db"
-	build.Services[1].Alias = "cache"
-
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
+			build := getTestBuildWithServices(t, common.GetRemoteSuccessfulBuild, "postgres:14.4", "redis:7.0")
+			build.Services[0].Alias = "db"
+			build.Services[1].Alias = "cache"
 			build.Variables = tt.buildVars
+
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			tt.assert(out, err)
 		})
