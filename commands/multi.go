@@ -384,13 +384,13 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 	reloadNeeded := false
 
 	config := mr.getConfig()
-	logLevel := "info"
-	if config.LogLevel != nil {
-		logLevel = *config.LogLevel
-	}
 
+	level := "info"
+	if config.LogLevel != nil {
+		level = *config.LogLevel
+	}
 	if !log.Configuration().IsLevelSetWithCli() {
-		err := log.Configuration().SetLevel(logLevel)
+		err := log.Configuration().SetLevel(level)
 		if err != nil {
 			return err
 		}
@@ -398,8 +398,12 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 		reloadNeeded = true
 	}
 
-	if config.LogFormat != nil && !log.Configuration().IsFormatSetWithCli() {
-		err := log.Configuration().SetFormat(*config.LogFormat)
+	format := "text"
+	if config.LogFormat != nil {
+		format = *config.LogFormat
+	}
+	if !log.Configuration().IsFormatSetWithCli() {
+		err := log.Configuration().SetFormat(format)
 		if err != nil {
 			return err
 		}
