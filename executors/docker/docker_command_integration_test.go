@@ -169,17 +169,6 @@ func getBuildForOS(t *testing.T, getJobResp func() (common.JobResponse, error)) 
 		Runner:      getRunnerConfigForOS(t),
 	}
 
-	// There's a problem with some of our Windows docker tests and git-lfs that makes them flaky.
-	//
-	// To avoid this, for now we're skipping git-lfs calls where possible. This can eventually be removed.
-	// see: https://gitlab.com/gitlab-org/gitlab-runner/-/issues/30865
-	if runtime.GOOS == "windows" {
-		build.Variables = append(build.Variables, common.JobVariable{
-			Key:   "GIT_LFS_SKIP_SMUDGE",
-			Value: "1",
-		})
-	}
-
 	return build
 }
 
