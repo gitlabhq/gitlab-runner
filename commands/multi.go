@@ -384,8 +384,13 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 	reloadNeeded := false
 
 	config := mr.getConfig()
-	if config.LogLevel != nil && !log.Configuration().IsLevelSetWithCli() {
-		err := log.Configuration().SetLevel(*config.LogLevel)
+	logLevel := "info"
+	if config.LogLevel != nil {
+		logLevel = *config.LogLevel
+	}
+
+	if !log.Configuration().IsLevelSetWithCli() {
+		err := log.Configuration().SetLevel(logLevel)
 		if err != nil {
 			return err
 		}
