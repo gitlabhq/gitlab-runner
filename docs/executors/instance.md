@@ -28,7 +28,8 @@ Nesting is only supported on Apple Silicon instances.
 
 To prepare the environment for autoscaling:
 
-1. [Install a fleeting plugin](../fleet_scaling/fleeting.md#install-a-fleeting-plugin) for your target platform.
+1. [Install a fleeting plugin](../fleet_scaling/fleeting.md#install-a-fleeting-plugin) for your target platform
+   where the runner manager is installed and configured.
 1. Create a VM image for the platform you're using. The image must include:
    - Git
    - GitLab Runner
