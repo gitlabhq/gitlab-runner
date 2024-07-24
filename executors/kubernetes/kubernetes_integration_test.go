@@ -2555,14 +2555,22 @@ func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
 
-	assert.Regexp(
-		t,
-		`(?s).*WARNING: Failed to pull image with policy "Always": image pull failed:.*`+
-			`Attempt #2: Trying "IfNotPresent" pull policy for "some\/non-existing\/image" image.*`+
-			`WARNING: Failed to pull image with policy "IfNotPresent":.*`+
-			`image pull failed:.*`,
-		outBuffer.String(),
+	quotedImage := regexp.QuoteMeta("some/non-existing/image")
+	warningFmt := `WARNING: Failed to pull image "%s" with policy "%s": image pull failed:`
+	attemptFmt := `Attempt #%d: Trying "%s" pull policy for "%s" image`
+
+	// We expect
+	//  - the warning for the 1st attempt with "Always", telling us about the pull issue
+	//  - the log of the 2nd attempt with "IfNotPresent"
+	//  - the warning for the 2. attempt with "IfNotPresent", telling us about the 2nd pull issue
+	expectedLogRE := fmt.Sprintf(
+		`(?s)%s.*%s.*%s`,
+		fmt.Sprintf(warningFmt, quotedImage, "Always"),
+		fmt.Sprintf(attemptFmt, 2, "IfNotPresent", quotedImage),
+		fmt.Sprintf(warningFmt, quotedImage, "IfNotPresent"),
 	)
+
+	assert.Regexp(t, expectedLogRE, outBuffer.String())
 
 	return err
 }
@@ -2918,7 +2926,7 @@ func TestConflictingPullPolicies(t *testing.T) {
 
 			require.Error(t, gotErr)
 			assert.Contains(t, gotErr.Error(), test.wantErrMsg)
-			assert.Contains(t, gotErr.Error(), "failed to pull image '"+common.TestAlpineImage)
+			assert.Contains(t, gotErr.Error(), "invalid pull policy for image '"+common.TestAlpineImage)
 		})
 	}
 }

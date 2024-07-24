@@ -86,7 +86,7 @@ type AttachOptions struct {
 	Command       []string
 
 	Executor   RemoteExecutor
-	KubeClient *kubernetes.Clientset
+	KubeClient kubernetes.Interface
 	Config     *restclient.Config
 
 	Context context.Context
@@ -142,7 +142,7 @@ type ExecOptions struct {
 	Err io.Writer
 
 	Executor   RemoteExecutor
-	KubeClient *kubernetes.Clientset
+	KubeClient kubernetes.Interface
 	Config     *restclient.Config
 
 	Context context.Context

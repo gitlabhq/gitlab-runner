@@ -29,17 +29,13 @@ type pullLogger interface {
 
 type manager struct {
 	logger       pullLogger
-	pullPolicies []api.PullPolicy
+	pullPolicies map[string][]api.PullPolicy
 
 	mu         sync.Mutex
 	failureMap map[string]int
 }
 
-func NewPullManager(pullPolicies []api.PullPolicy, logger pullLogger) Manager {
-	if len(pullPolicies) == 0 {
-		pullPolicies = []api.PullPolicy{""}
-	}
-
+func NewPullManager(pullPolicies map[string][]api.PullPolicy, logger pullLogger) Manager {
 	return &manager{
 		pullPolicies: pullPolicies,
 		failureMap:   map[string]int{},
@@ -52,8 +48,13 @@ func (m *manager) GetPullPolicyFor(image string) (api.PullPolicy, error) {
 	defer m.mu.Unlock()
 
 	failureCount := m.failureMap[image]
-	if failureCount < len(m.pullPolicies) {
-		return m.pullPolicies[failureCount], nil
+	pullPolicies, ok := m.pullPolicies[image]
+	if !ok {
+		pullPolicies = []api.PullPolicy{""}
+	}
+
+	if failureCount < len(pullPolicies) {
+		return pullPolicies[failureCount], nil
 	}
 
 	return "", errors.New("pull failed")
@@ -65,7 +66,8 @@ func (m *manager) UpdatePolicyForImage(attempt int, imagePullErr *ImagePullError
 	m.markPullFailureFor(imagePullErr.Image)
 
 	m.logger.Warningln(fmt.Sprintf(
-		"Failed to pull image with policy %q: %v",
+		"Failed to pull image %q with policy %q: %v",
+		imagePullErr.Image,
 		pullPolicy,
 		imagePullErr.Message,
 	))

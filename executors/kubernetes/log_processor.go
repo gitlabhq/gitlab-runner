@@ -39,7 +39,7 @@ func (ls *logScanner) Err() error {
 type kubernetesLogStreamer struct {
 	kubernetesLogProcessorPodConfig
 
-	client       *kubernetes.Clientset
+	client       kubernetes.Interface
 	clientConfig *restclient.Config
 	executor     RemoteExecutor
 }
@@ -111,7 +111,7 @@ type kubernetesLogProcessorPodConfig struct {
 }
 
 func newKubernetesLogProcessor(
-	client *kubernetes.Clientset,
+	client kubernetes.Interface,
 	clientConfig *restclient.Config,
 	backoff backoffCalculator,
 	logger logrus.FieldLogger,

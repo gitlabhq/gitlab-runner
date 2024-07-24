@@ -12,7 +12,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
 	"sort"
 	"strconv"
@@ -34,7 +33,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kuberuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	testclient "k8s.io/client-go/kubernetes/fake"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/util/exec"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -422,13 +425,9 @@ func testVolumeMountsFeatureFlag(t *testing.T, featureFlagName string, featureFl
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build:           tt.Build,
-					Config:          tt.RunnerConfig,
-				},
-			}
+			e := newExecutor()
+			e.AbstractExecutor.Build = tt.Build
+			e.AbstractExecutor.Config = tt.RunnerConfig
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 			assert.Equal(t, tt.Expected(featureFlagValue), e.getVolumeMounts())
@@ -678,13 +677,9 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build:           tt.Build,
-					Config:          tt.RunnerConfig,
-				},
-			}
+			e := newExecutor()
+			e.AbstractExecutor.Build = tt.Build
+			e.AbstractExecutor.Config = tt.RunnerConfig
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 			assert.Equal(t, tt.Expected(featureFlagValue), e.getVolumes())
@@ -694,11 +689,6 @@ func testVolumesFeatureFlag(t *testing.T, featureFlagName string, featureFlagVal
 
 func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
 	version, _ := testVersionAndCodec()
-	helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
-		OSType:       helperimage.OSTypeLinux,
-		Architecture: "amd64",
-	})
-	require.NoError(t, err)
 
 	runnerConfig := common.RunnerConfig{
 		RunnerSettings: common.RunnerSettings{
@@ -741,42 +731,37 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 	mockFc.On("IsHostAliasSupported").Return(true, nil)
 	mockPullManager := &pull.MockManager{}
 	defer mockPullManager.AssertExpectations(t)
-	ex := executor{
-		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
-		options: &kubernetesOptions{
-			Image: common.Image{
-				Name:  "test-image",
-				Ports: []common.Port{{Number: 80}},
-			},
-			Services: common.Services{
-				{
-					Name:  "test-service",
-					Alias: "custom_name",
-					Ports: []common.Port{
-						{
-							Number:   81,
-							Name:     "custom_port_name",
-							Protocol: "http",
-						},
+
+	ex := newExecutor()
+	ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper))
+	ex.options = &kubernetesOptions{
+		Image: common.Image{
+			Name:  "test-image",
+			Ports: []common.Port{{Number: 80}},
+		},
+		Services: common.Services{
+			{
+				Name:  "test-service",
+				Alias: "custom_name",
+				Ports: []common.Port{
+					{
+						Number:   81,
+						Name:     "custom_port_name",
+						Protocol: "http",
 					},
 				},
 			},
 		},
-		AbstractExecutor: executors.AbstractExecutor{
-			Config:     runnerConfig,
-			BuildShell: &common.ShellConfiguration{},
-			Build: &common.Build{
-				JobResponse: common.JobResponse{
-					Variables: []common.JobVariable{},
-				},
-				Runner: &runnerConfig,
-			},
-			ProxyPool: proxy.NewPool(),
-		},
-		helperImageInfo: helperImageInfo,
-		featureChecker:  mockFc,
-		pullManager:     mockPullManager,
 	}
+	ex.AbstractExecutor.Config = runnerConfig
+	ex.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
+	ex.AbstractExecutor.Build = &common.Build{
+		Runner: &runnerConfig,
+	}
+	ex.AbstractExecutor.ProxyPool = proxy.NewPool()
+	ex.featureChecker = mockFc
+	ex.pullManager = mockPullManager
+
 	buildtest.SetBuildFeatureFlag(ex.Build, featureFlagName, featureFlagValue)
 
 	mockPullManager.On("GetPullPolicyFor", ex.options.Services[0].Name).
@@ -789,7 +774,7 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 		Return(api.PullAlways, nil).
 		Once()
 
-	err = ex.prepareOverwrites(make(common.JobVariables, 0))
+	err := ex.prepareOverwrites(make(common.JobVariables, 0))
 	assert.NoError(t, err)
 
 	err = ex.setupBuildPod(context.Background(), nil)
@@ -819,28 +804,26 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 			mockPullManager := &pull.MockManager{}
 			defer mockPullManager.AssertExpectations(t)
 
-			e := executor{
-				options: &kubernetesOptions{
-					Image: common.Image{
-						Name: "test-build",
-					},
-					Services: common.Services{
-						{
-							Name: "test-service",
-						},
+			e := newExecutor()
+			e.options = &kubernetesOptions{
+				Image: common.Image{
+					Name: "test-build",
+				},
+				Services: common.Services{
+					{
+						Name: "test-service",
 					},
 				},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config:     runnerConfig,
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{},
-						Runner:      &runnerConfig,
-					},
-				},
-				featureChecker: mockFc,
-				pullManager:    mockPullManager,
 			}
+			e.AbstractExecutor.Config = runnerConfig
+			e.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
+			e.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{},
+				Runner:      &runnerConfig,
+			}
+			e.featureChecker = mockFc
+			e.pullManager = mockPullManager
+
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
 			mockPullManager.On("GetPullPolicyFor", failOnImage).
@@ -883,21 +866,11 @@ func testGetPodActiveDeadlineSecondsFeatureFlag(t *testing.T, featureFlagName st
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							RunnerInfo: common.RunnerInfo{
-								Timeout: tc.timeoutSeconds,
-							},
-						},
-						Runner: &common.RunnerConfig{},
-					},
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{},
-						},
+			e := newExecutor()
+			e.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{
+					RunnerInfo: common.RunnerInfo{
+						Timeout: tc.timeoutSeconds,
 					},
 				},
 			}
@@ -1075,20 +1048,17 @@ func TestCleanup(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			ex := executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					Context: context.Background(),
-				},
-				kubeClient: testKubernetesClient(
-					version,
-					fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-						return test.ClientFunc(t, req)
-					}),
-				),
-				pod:         test.Pod,
-				credentials: test.Credentials,
-				services:    test.Services,
-			}
+			ex := newExecutor()
+			ex.AbstractExecutor.Context = context.Background()
+			ex.kubeClient = testKubernetesClient(
+				version,
+				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+					return test.ClientFunc(t, req)
+				}),
+			)
+			ex.pod = test.Pod
+			ex.credentials = test.Credentials
+			ex.services = test.Services
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
 
 			errored := false
@@ -1128,6 +1098,15 @@ func TestCleanup(t *testing.T) {
 	}
 }
 
+// TestPrepare tests the prepare step.
+// They do so by running the Prepare step and then run certain assertions against the internal state of the executor,
+// most prominently comparing it to a artificially created, expected executor. To make this work, before we do that
+// comparison:
+//
+//   - we nil out some parts of the actually created executor
+//
+//   - we don't use the constructor function to create the executor, but use the struct directly, which gives us a
+//     "smaller"/"emptier" executor, which makes it easier to compare it with the actual one.
 func TestPrepare(t *testing.T) {
 	helperImageTag := "latest"
 	// common.VERSION is overridden at build time.
@@ -1200,12 +1179,15 @@ func TestPrepare(t *testing.T) {
 		}
 		if runtime.GOOS == helperimage.OSTypeWindows {
 			hi.OSType = helperimage.OSTypeWindows
-			hi.Name = ""
-			hi.Architecture = ""
-			hi.Tag = ""
+			hi.Name = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"
+			hi.Architecture = "x86_64"
+			hi.Tag = "x86_64-latest-servercore1809"
 			hi.IsSupportingLocalImport = false
-			hi.Cmd = nil
+			hi.Cmd = []string{
+				"powershell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-",
+			}
 		}
+
 		return &executor{
 			options: &kubernetesOptions{
 				Image: common.Image{
@@ -1221,17 +1203,19 @@ func TestPrepare(t *testing.T) {
 		Name  string
 		Error string
 
-		GlobalConfig *common.Config
-		RunnerConfig *common.RunnerConfig
-		Build        *common.Build
+		// if Precondition is set and returns false, the test-case is skipped with the message provided
+		Precondition func() (bool, string)
+
+		RunnerConfig               *common.RunnerConfig
+		Build                      *common.Build
+		WindowsKernelVersionGetter func() string
 
 		Expected                *executor
 		ExpectedPullPolicy      api.PullPolicy
 		ExpectedSharedBuildsDir bool
 	}{
 		{
-			Name:         "all with limits",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1284,8 +1268,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullIfNotPresent,
 		},
 		{
-			Name:         "all with limits and requests",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and requests",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1349,9 +1332,8 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "unmatched service account",
-			Error:        "couldn't prepare overwrites: provided value \"not-default\" does not match \"allowed-.*\"",
-			GlobalConfig: &common.Config{},
+			Name:  "unmatched service account",
+			Error: "couldn't prepare overwrites: provided value \"not-default\" does not match \"allowed-.*\"",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1396,8 +1378,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "regexp match on service account and namespace",
-			GlobalConfig: &common.Config{},
+			Name: "regexp match on service account and namespace",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1462,8 +1443,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "regexp match on namespace",
-			GlobalConfig: &common.Config{},
+			Name: "regexp match on namespace",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1506,8 +1486,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "minimal configuration",
-			GlobalConfig: &common.Config{},
+			Name: "minimal configuration",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1535,8 +1514,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "minimal configuration with namespace isolation",
-			GlobalConfig: &common.Config{},
+			Name: "minimal configuration with namespace isolation",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1577,8 +1555,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "minimal configuration with pwsh shell",
-			GlobalConfig: &common.Config{},
+			Name: "minimal configuration with pwsh shell",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Shell: shells.SNPwsh,
@@ -1617,8 +1594,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "image and one service",
-			GlobalConfig: &common.Config{},
+			Name: "image and one service",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1664,8 +1640,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "merge services",
-			GlobalConfig: &common.Config{},
+			Name: "merge services",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1756,8 +1731,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "all with limits and request and explicit services limits and requests",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and request and explicit services limits and requests",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1897,8 +1871,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "all with limits and request and explicit services limits and requests without max override",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and request and explicit services limits and requests without max override",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2034,8 +2007,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "all with limits and request and explicit services limits and requests without max override and without default values",
-			GlobalConfig: &common.Config{},
+			Name: "all with limits and request and explicit services limits and requests without max override and without default values",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2165,8 +2137,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "Default helper image",
-			GlobalConfig: &common.Config{},
+			Name: "Default helper image",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2193,8 +2164,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image with ubuntu flavour default registry",
-			GlobalConfig: &common.Config{},
+			Name: "helper image with ubuntu flavour default registry",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2229,8 +2199,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image from node selector (linux, arm)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector (linux, arm)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2280,8 +2249,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image from node selector (windows, amd64)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector (windows, amd64)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2347,8 +2315,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "helper image from node selector (unknown)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector (unknown)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2380,8 +2347,7 @@ func TestPrepare(t *testing.T) {
 			Error: `prepare helper image: unsupported OSType "unknown"`,
 		},
 		{
-			Name:         "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
-			GlobalConfig: &common.Config{},
+			Name: "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2435,8 +2401,7 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:         "builds dir default",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir default",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2460,8 +2425,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: false,
 		},
 		{
-			Name:         "builds dir user specified empty_dir",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir user specified empty_dir",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2495,8 +2459,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: false,
 		},
 		{
-			Name:         "builds dir user specified host_path",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir user specified host_path",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2529,8 +2492,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: true,
 		},
 		{
-			Name:         "builds dir user specified pvc",
-			GlobalConfig: &common.Config{},
+			Name: "builds dir user specified pvc",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2562,8 +2524,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedSharedBuildsDir: true,
 		},
 		{
-			Name:         "runner pull policy is one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "runner pull policy is one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2594,8 +2555,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullNever,
 		},
 		{
-			Name:         "runner pull policy is not one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "runner pull policy is not one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2621,12 +2581,11 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "failed to pull image 'test-image': " +
+			Error: "invalid pull policy for image 'test-image': " +
 				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "Runner config", "[Always Never]"),
 		},
 		{
-			Name:         "image pull policy is one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "image pull policy is one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2659,8 +2618,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullNever,
 		},
 		{
-			Name:         "image pull policy is not one of allowed pull policies",
-			GlobalConfig: &common.Config{},
+			Name: "image pull policy is not one of allowed pull policies",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2686,12 +2644,11 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "failed to pull image 'test-image': " +
+			Error: "invalid pull policy for image 'test-image': " +
 				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]"),
 		},
 		{
-			Name:         "both runner and image pull policies are defined",
-			GlobalConfig: &common.Config{},
+			Name: "both runner and image pull policies are defined",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2729,8 +2686,7 @@ func TestPrepare(t *testing.T) {
 			ExpectedPullPolicy: api.PullIfNotPresent,
 		},
 		{
-			Name:         "one of allowed pull policies is invalid",
-			GlobalConfig: &common.Config{},
+			Name: "one of allowed pull policies is invalid",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2761,8 +2717,7 @@ func TestPrepare(t *testing.T) {
 			Error: "allowed_pull_policies config: unsupported pull policy: \"invalid\"",
 		},
 		{
-			Name:         "one of config pull policies is invalid",
-			GlobalConfig: &common.Config{},
+			Name: "one of config pull policies is invalid",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2793,8 +2748,7 @@ func TestPrepare(t *testing.T) {
 			Error: "pull_policy config: unsupported pull policy: \"invalid\"",
 		},
 		{
-			Name:         "one of image pull policies is invalid",
-			GlobalConfig: &common.Config{},
+			Name: "one of image pull policies is invalid",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2829,8 +2783,7 @@ func TestPrepare(t *testing.T) {
 			Error: "conversion to Kubernetes policy: unsupported pull policy: \"invalid\"",
 		},
 		{
-			Name:         "autoset helper arch and os",
-			GlobalConfig: &common.Config{},
+			Name: "autoset helper arch and os",
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -2839,6 +2792,10 @@ func TestPrepare(t *testing.T) {
 						HelperImageAutosetArchAndOS: true,
 					},
 				},
+			},
+			WindowsKernelVersionGetter: func() string {
+				// this should produce an executor with an auto-detected helper image config as per `getExecutorForHelperAutoset`
+				return "10.0.17763"
 			},
 			Build: &common.Build{
 				JobResponse: common.JobResponse{
@@ -2853,16 +2810,75 @@ func TestPrepare(t *testing.T) {
 			},
 			Expected: getExecutorForHelperAutoset(),
 		},
+		{
+			Name: "autoset helper arch and os on unsupported windows kernel",
+			Precondition: func() (bool, string) {
+				if runtime.GOOS != "windows" {
+					return false, "skipping test, because we are not running on windows but on " + runtime.GOOS
+				}
+				return true, ""
+			},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:                       "test-image",
+						Host:                        "test-server",
+						HelperImageAutosetArchAndOS: true,
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			WindowsKernelVersionGetter: func() string { return "unsupported-kernel-version" },
+			Error:                      "prepare helper image: detecting base image: unsupported Windows version: unsupported-kernel-version",
+		},
+		{
+			Name: "autoset helper arch and os on non windows does not need windows kernel version",
+			Precondition: func() (bool, string) {
+				if runtime.GOOS == "windows" {
+					return false, "skipping test, because we are running on windows"
+				}
+				return true, ""
+			},
+			WindowsKernelVersionGetter: func() string {
+				panic("this should never be called on non-windows")
+			},
+			RunnerConfig: &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:                       "test-image",
+						Host:                        "test-server",
+						HelperImageAutosetArchAndOS: true,
+					},
+				},
+			},
+			Build: &common.Build{
+				Runner: &common.RunnerConfig{},
+			},
+			Expected: &executor{
+				options: &kubernetesOptions{
+					Image: common.Image{
+						Name: "test-image",
+					},
+				},
+				configurationOverwrites: defaultOverwrites,
+				helperImageInfo:         defaultHelperImage,
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-				},
-				options: &kubernetesOptions{},
+			if precondition := test.Precondition; precondition != nil {
+				if shouldRun, msg := precondition(); !shouldRun {
+					t.Skip(msg)
+				}
 			}
+			e := newExecutor()
+			e.AbstractExecutor.ExecutorOptions = executorOptions
+			e.options = &kubernetesOptions{}
+			e.windowsKernelVersion = test.WindowsKernelVersionGetter
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
@@ -2881,24 +2897,36 @@ func TestPrepare(t *testing.T) {
 				assert.Contains(t, err.Error(), test.Error)
 				return
 			}
+			require.NoError(t, err)
 
 			// Set this to nil so we aren't testing the functionality of the
 			// base AbstractExecutor's Prepare method
 			e.AbstractExecutor = executors.AbstractExecutor{}
 
-			pullPolicy, err := e.pullManager.GetPullPolicyFor(prepareOptions.Build.Image.Name)
+			// Different tests either set the image name on the build or on the config
+			buildImage, err := first(test.Build.Image.Name, test.RunnerConfig.Kubernetes.Image)
+			require.NoError(t, err, "build image neither set on the build nor in the runner config")
+
+			pullPolicy, err := e.pullManager.GetPullPolicyFor(buildImage)
 			assert.NoError(t, err)
 			assert.Equal(t, test.ExpectedPullPolicy, pullPolicy)
 
 			sharedBuildsDir := e.isSharedBuildsDirRequired()
 			assert.Equal(t, test.ExpectedSharedBuildsDir, sharedBuildsDir)
 
+			// we deliberately set some things on the executor to nil, to make the comparison to the expected & artificially
+			// constructed executor succeed
 			e.kubeClient = nil
 			e.kubeConfig = nil
 			e.featureChecker = nil
 			e.pullManager = nil
 			e.requireDefaultBuildsDirVolume = nil
 			e.requireSharedBuildsDir = nil
+			e.newLogProcessor = nil
+			e.remoteProcessTerminated = nil
+			e.getKubeConfig = nil
+			e.newKubeClient = nil
+			e.windowsKernelVersion = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
@@ -2920,12 +2948,7 @@ func TestSetupDefaultExecutorOptions(t *testing.T) {
 
 	for os, tc := range tests {
 		t.Run(os, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-				},
-			}
-
+			e := newExecutor()
 			e.setupDefaultExecutorOptions(os)
 			tc(t, e)
 		})
@@ -3025,26 +3048,15 @@ func TestSetupCredentials(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace: "default",
-							},
-						},
-					},
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables:   []common.JobVariable{},
-							Credentials: test.Credentials,
-						},
-						Runner: &common.RunnerConfig{},
-					},
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test)))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = "default"
+			ex.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{
+					// Variables:   []common.JobVariable{},
+					Credentials: test.Credentials,
 				},
+				Runner: &common.RunnerConfig{},
 			}
 
 			if test.RunnerCredentials != nil {
@@ -3128,28 +3140,12 @@ func TestSetupBuildNamespace(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace:       "default",
-								Image:           "default-image",
-								NamespacePerJob: test.NamespaceIsolation,
-							},
-						},
-					},
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables: []common.JobVariable{},
-						},
-						Runner: &common.RunnerConfig{},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test)))
+			ex.options = &kubernetesOptions{}
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Image = "default-image"
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.NamespacePerJob = test.NamespaceIsolation
+			ex.AbstractExecutor.Build = &common.Build{}
 
 			executed = false
 
@@ -3213,28 +3209,12 @@ func TestTeardownBuildNamespace(t *testing.T) {
 
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test))),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace:       "default",
-								Image:           "default-image",
-								NamespacePerJob: test.NamespaceIsolation,
-							},
-						},
-					},
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables: []common.JobVariable{},
-						},
-						Runner: &common.RunnerConfig{},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeClientRoundTripper(test)))
+			ex.options = &kubernetesOptions{}
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Image = "default-image"
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.NamespacePerJob = test.NamespaceIsolation
+			ex.AbstractExecutor.Build = &common.Build{}
 
 			executed = false
 
@@ -3307,19 +3287,9 @@ func TestServiceAccountExists(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace: namespace,
-							},
-						},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = namespace
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
@@ -3382,19 +3352,9 @@ func TestSecretExists(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace: DefaultResourceIdentifier,
-							},
-						},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
@@ -3601,22 +3561,10 @@ func TestWaitForResources(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc)),
-				options:    &kubernetesOptions{},
-				AbstractExecutor: executors.AbstractExecutor{
-					Config: common.RunnerConfig{
-						RunnerSettings: common.RunnerSettings{
-							Kubernetes: &common.KubernetesConfig{
-								Namespace:                            DefaultResourceIdentifier,
-								ServiceAccount:                       tc.serviceAccount,
-								ImagePullSecrets:                     tc.imagePullSecrets,
-								ResourceAvailabilityCheckMaxAttempts: 3,
-							},
-						},
-					},
-				},
-			}
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(tc.clientFunc))
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.Namespace = DefaultResourceIdentifier
+			ex.AbstractExecutor.Config.RunnerSettings.Kubernetes.ResourceAvailabilityCheckMaxAttempts = 3
 
 			var err error
 
@@ -5739,11 +5687,6 @@ containers:
 	for testName, test := range tests {
 		t.Run(testName, func(t *testing.T) {
 			ctx := context.Background()
-			helperImageInfo, err := helperimage.Get(common.VERSION, helperimage.Config{
-				OSType:       helperimage.OSTypeLinux,
-				Architecture: "amd64",
-			})
-			require.NoError(t, err)
 
 			vars := test.Variables
 			if vars == nil {
@@ -5779,25 +5722,21 @@ containers:
 			mockPullManager := &pull.MockManager{}
 			defer mockPullManager.AssertExpectations(t)
 
-			ex := executor{
-				kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip)),
-				options:    options,
-				AbstractExecutor: executors.AbstractExecutor{
-					Config:     test.RunnerConfig,
-					BuildShell: &common.ShellConfiguration{},
-					Build: &common.Build{
-						JobResponse: common.JobResponse{
-							Variables:   vars,
-							Credentials: creds,
-						},
-						Runner: &test.RunnerConfig,
-					},
-					ProxyPool: proxy.NewPool(),
+			ex := newExecutor()
+			ex.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(rt.RoundTrip))
+			ex.options = options
+			ex.AbstractExecutor.Config = test.RunnerConfig
+			ex.AbstractExecutor.BuildShell = &common.ShellConfiguration{}
+			ex.AbstractExecutor.Build = &common.Build{
+				JobResponse: common.JobResponse{
+					Variables:   vars,
+					Credentials: creds,
 				},
-				helperImageInfo: helperImageInfo,
-				featureChecker:  mockFc,
-				pullManager:     mockPullManager,
+				Runner: &test.RunnerConfig,
 			}
+			ex.AbstractExecutor.ProxyPool = proxy.NewPool()
+			ex.featureChecker = mockFc
+			ex.pullManager = mockPullManager
 
 			if ex.options.Image.Name == "" {
 				// Ensure we have a valid Docker image name in the configuration,
@@ -5806,7 +5745,7 @@ containers:
 			}
 
 			if test.PrepareFn != nil {
-				test.PrepareFn(t, test, &ex)
+				test.PrepareFn(t, test, ex)
 			}
 
 			if test.Options != nil && test.Options.Services != nil {
@@ -5824,7 +5763,7 @@ containers:
 				Return(api.PullAlways, nil).
 				Maybe()
 
-			err = ex.prepareOverwrites(test.Variables)
+			err := ex.prepareOverwrites(test.Variables)
 			assert.NoError(t, err, "error preparing overwrites")
 
 			if test.Credentials != nil {
@@ -5841,7 +5780,7 @@ containers:
 			}
 
 			if test.VerifyExecutorFn != nil {
-				test.VerifyExecutorFn(t, test, &ex)
+				test.VerifyExecutorFn(t, test, ex)
 			}
 		})
 	}
@@ -6093,15 +6032,12 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 
 			client := testKubernetesClient(version, fakeClient)
 
-			e := executor{}
-			e.Config = common.RunnerConfig{}
+			e := newExecutor()
 			e.Config.Kubernetes = &common.KubernetesConfig{
 				PollInterval: 1,
 				PollTimeout:  2,
 			}
 			e.kubeClient = client
-			e.remoteProcessTerminated = make(chan shells.StageCommandStatus)
-			e.BuildLogger = buildlogger.New(&common.Trace{Writer: os.Stdout}, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
 			e.pod = &api.Pod{}
 			e.pod.Name = "pod"
 			e.pod.Namespace = "namespace"
@@ -6275,14 +6211,9 @@ func TestExecutor_buildPermissionsInitContainer(t *testing.T) {
 
 	for testName, tt := range tests {
 		t.Run(testName, func(t *testing.T) {
-			e := &executor{
-				AbstractExecutor: executors.AbstractExecutor{
-					ExecutorOptions: executorOptions,
-					Build: &common.Build{
-						Runner: &tt.config,
-					},
-					Config: tt.config,
-				},
+			e := newExecutor()
+			e.AbstractExecutor.Build = &common.Build{
+				Runner: &tt.config,
 			}
 
 			prepareOptions := common.ExecutorPrepareOptions{
@@ -6308,20 +6239,8 @@ func TestExecutor_buildPermissionsInitContainer_FailPullPolicy(t *testing.T) {
 	mockPullManager := &pull.MockManager{}
 	defer mockPullManager.AssertExpectations(t)
 
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			ExecutorOptions: executorOptions,
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{},
-				},
-			},
-		},
-		pullManager: mockPullManager,
-	}
+	e := newExecutor()
+	e.pullManager = mockPullManager
 
 	mockPullManager.On("GetPullPolicyFor", mock.Anything).
 		Return(api.PullAlways, assert.AnError).
@@ -6335,28 +6254,18 @@ func TestExecutor_buildPermissionsInitContainer_CheckResources(t *testing.T) {
 	mockPullManager := &pull.MockManager{}
 	cpu := resource.MustParse("1")
 	memory := resource.MustParse("1Gi")
-	e := &executor{
-		AbstractExecutor: executors.AbstractExecutor{
-			ExecutorOptions: executorOptions,
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{},
-				},
-			},
+
+	e := newExecutor()
+	e.AbstractExecutor.Build = &common.Build{}
+	e.pullManager = mockPullManager
+	e.configurationOverwrites = &overwrites{
+		helperLimits: api.ResourceList{
+			"cpu":    cpu,
+			"memory": memory,
 		},
-		pullManager: mockPullManager,
-		configurationOverwrites: &overwrites{
-			helperLimits: api.ResourceList{
-				"cpu":    cpu,
-				"memory": memory,
-			},
-			helperRequests: api.ResourceList{
-				"cpu":    cpu,
-				"memory": memory,
-			},
+		helperRequests: api.ResourceList{
+			"cpu":    cpu,
+			"memory": memory,
 		},
 	}
 
@@ -6504,46 +6413,27 @@ func setupExecutor(shell string, successfulResponse common.JobResponse) *executo
 		},
 	}
 
-	return &executor{
-		helperImageInfo: helperimage.Info{
-			Cmd: []string{"custom", "command"},
-		},
-		AbstractExecutor: executors.AbstractExecutor{
-			Config: common.RunnerConfig{
-				RunnerSettings: common.RunnerSettings{
-					Kubernetes: &common.KubernetesConfig{},
-				},
-			},
-			ExecutorOptions: executors.ExecutorOptions{
-				DefaultBuildsDir: "/builds",
-				DefaultCacheDir:  "/cache",
-				Shell: common.ShellScriptInfo{
-					Shell: shell,
-					Build: build,
-				},
-			},
+	e := newExecutor()
+	e.helperImageInfo = helperimage.Info{
+		Cmd: []string{"custom", "command"},
+	}
+	e.AbstractExecutor.Build = build
+	e.AbstractExecutor.ExecutorOptions = executors.ExecutorOptions{
+		DefaultBuildsDir: "/builds",
+		DefaultCacheDir:  "/cache",
+		Shell: common.ShellScriptInfo{
+			Shell: shell,
 			Build: build,
 		},
 	}
+	return e
 }
 
 func TestLifecyclePrepare(t *testing.T) {
 	initExecutor := func(lifecycleCfg common.KubernetesContainerLifecyle) *executor {
-		return &executor{
-			AbstractExecutor: executors.AbstractExecutor{
-				ExecutorOptions: executorOptions,
-				Build: &common.Build{
-					Runner: &common.RunnerConfig{},
-				},
-				Config: common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Kubernetes: &common.KubernetesConfig{
-							ContainerLifecycle: lifecycleCfg,
-						},
-					},
-				},
-			},
-		}
+		e := newExecutor()
+		e.AbstractExecutor.Config.RunnerSettings.Kubernetes.ContainerLifecycle = lifecycleCfg
+		return e
 	}
 
 	execHandler := &api.ExecAction{
@@ -6873,11 +6763,8 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			e := &executor{
-				pod: &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
-			}
-			e.options = &kubernetesOptions{}
-			e.Config.Kubernetes = &common.KubernetesConfig{}
+			e := newExecutor()
+			e.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
 
 			buf, err := trace.New()
 			require.NoError(t, err)
@@ -6959,12 +6846,10 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 	}
 
 	version, _ := testVersionAndCodec()
-	e := executor{
-		pod:        &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}},
-		kubeClient: testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper)),
-	}
+	e := newExecutor()
+	e.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
+	e.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper))
 	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
-	e.Config.Kubernetes = &common.KubernetesConfig{}
 
 	ctx := context.Background()
 
@@ -7249,7 +7134,7 @@ func TestRetryLimits(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			e := &executor{}
+			e := newExecutor()
 			e.Config.Kubernetes = &tt.config
 
 			retryBackoffConfig := e.getRetryBackoffConfig()
@@ -7270,4 +7155,194 @@ func TestRetryLimits(t *testing.T) {
 			require.Equal(t, tt.expectedLastRetryBackoff, lastRetryBackoff)
 		})
 	}
+}
+
+// TestContainerPullPolicies assert that all containers have the proper pull policies as configured in the job
+// definition
+// TODO(hhoerl): do we need to test this with any feature flags?
+func TestContainerPullPolicies(t *testing.T) {
+	allPullPolicies := []common.DockerPullPolicy{
+		"",
+		common.PullPolicyNever,
+		common.PullPolicyAlways,
+		common.PullPolicyIfNotPresent,
+	}
+
+	testCases := map[string]struct {
+		Services            common.Services
+		AllowedPullPolicies []common.DockerPullPolicy
+		DefaultPullPolicies common.StringOrArray
+		JobImageName        string
+
+		ExpectedPullPolicyPerContainer map[string]api.PullPolicy
+	}{
+		"with explicitly all pull policies enabled and services": {
+			AllowedPullPolicies: allPullPolicies,
+			Services: common.Services{
+				{Name: "withNone"},
+				{Name: "withAlways", PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways}},
+				{Name: "withINP", PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent}},
+				{Name: "withNever", PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever}},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullPolicy(""),
+				"helper": api.PullPolicy(""),
+				"svc-0":  api.PullPolicy(""),
+				"svc-1":  api.PullAlways,
+				"svc-2":  api.PullIfNotPresent,
+				"svc-3":  api.PullNever,
+			},
+		},
+		"with explicit default pull policies": {
+			DefaultPullPolicies: common.StringOrArray{"always", "never"},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullAlways,
+				"helper": api.PullAlways,
+			},
+		},
+		"with image from job and pull policy from config": {
+			JobImageName:        "not the image you looking for",
+			DefaultPullPolicies: common.StringOrArray{"if-not-present"},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullIfNotPresent,
+				"helper": api.PullIfNotPresent,
+			},
+		},
+		"with allowed pull policies from build container pull policy": {
+			DefaultPullPolicies: common.StringOrArray{"never", "always"},
+			Services: common.Services{
+				{Name: "foo"},
+				{Name: "bar", PullPolicies: []common.DockerPullPolicy{"always"}},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullNever,
+				"helper": api.PullNever,
+				"svc-0":  api.PullNever,
+				"svc-1":  api.PullAlways,
+			},
+		},
+		"with nothing re pull policies set": {
+			Services: common.Services{
+				{Name: "foo"},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullPolicy(""),
+				"helper": api.PullPolicy(""),
+				"svc-0":  api.PullPolicy(""),
+			},
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			fakeKubeClient := testclient.NewSimpleClientset()
+
+			runnerConfig := &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Kubernetes: &common.KubernetesConfig{
+						Image:               "some-build-image",
+						AllowedPullPolicies: tc.AllowedPullPolicies,
+						PullPolicy:          tc.DefaultPullPolicies,
+					},
+				},
+			}
+
+			build := &common.Build{
+				JobResponse: common.JobResponse{
+					Services: tc.Services,
+				},
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Kubernetes: &common.KubernetesConfig{},
+					},
+				},
+			}
+			if tc.JobImageName != "" {
+				build.JobResponse.Image.Name = tc.JobImageName
+			}
+
+			executor := newExecutor()
+			executor.newKubeClient = func(_ *restclient.Config) (kubernetes.Interface, error) {
+				return fakeKubeClient, nil
+			}
+			executor.getKubeConfig = func(_ *common.KubernetesConfig, _ *overwrites) (*restclient.Config, error) {
+				return nil, nil
+			}
+
+			prepareOptions := common.ExecutorPrepareOptions{
+				Config: runnerConfig,
+				Build:  build,
+			}
+
+			err := executor.Prepare(prepareOptions)
+			require.NoError(t, err)
+
+			err = executor.setupBuildPod(context.TODO(), []api.Container{})
+			require.NoError(t, err)
+
+			// get all pods we've observed create requests for
+			pods := getActionObjects[*api.Pod](fakeKubeClient.Actions(), "create")
+			require.Len(t, pods, 1, "expected to observe exactly 1 pod creation")
+
+			pod := pods[0]
+			for containerName, expectedPullPolicy := range tc.ExpectedPullPolicyPerContainer {
+				container, err := containerByName(pod.Spec.Containers, containerName)
+				require.NoError(t, err, "container not found on pod")
+
+				actualPullPolicy := container.ImagePullPolicy
+				assert.Equal(t, expectedPullPolicy, actualPullPolicy, "expected pull policy %q on container %q, but got %q", expectedPullPolicy, containerName, actualPullPolicy)
+			}
+		})
+	}
+}
+
+func getActionObjects[T kuberuntime.Object](actions []k8stesting.Action, verb string) []T {
+	res := []T{}
+
+	for _, action := range actions {
+		if action.GetVerb() != verb {
+			continue
+		}
+
+		objectAction, ok := action.(interface {
+			GetObject() kuberuntime.Object
+		})
+		if !ok {
+			continue
+		}
+
+		obj, ok := objectAction.GetObject().(T)
+		if !ok {
+			continue
+		}
+
+		res = append(res, obj)
+	}
+
+	return res
+}
+
+func containerByName(containers []api.Container, name string) (api.Container, error) {
+	availableContainers := make([]string, len(containers))
+
+	for i, c := range containers {
+		availableContainers[i] = c.Name
+		if c.Name == name {
+			return c, nil
+		}
+	}
+
+	return api.Container{}, fmt.Errorf("container %q not found, available containers: %v", name, availableContainers)
+}
+
+func first[T comparable](options ...T) (T, error) {
+	var zero T
+
+	for _, item := range options {
+		if item != zero {
+			return item, nil
+		}
+	}
+
+	return zero, fmt.Errorf("no non-zero item in list of options: %+v", options)
 }

@@ -15,7 +15,7 @@ type featureChecker interface {
 }
 
 type kubeClientFeatureChecker struct {
-	kubeClient *kubernetes.Clientset
+	kubeClient kubernetes.Interface
 }
 
 // https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
@@ -37,7 +37,7 @@ func (s *badVersionError) Is(err error) bool {
 }
 
 func (c *kubeClientFeatureChecker) IsHostAliasSupported() (bool, error) {
-	verInfo, err := c.kubeClient.ServerVersion()
+	verInfo, err := c.kubeClient.Discovery().ServerVersion()
 	if err != nil {
 		return false, err
 	}
