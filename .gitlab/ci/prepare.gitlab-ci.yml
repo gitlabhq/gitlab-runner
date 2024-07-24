@@ -40,6 +40,14 @@ prepare alpine-entrypoint-stderr image:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-stderr:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile.stderr
 
+prepare alpine-entrypoint-pre-post-trap image:
+  extends:
+  - .image_builder
+  - .rules:prepare:alpine-entrypoint:image:merge-requests
+  variables:
+    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-pre-post-trap:latest
+    BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile.pre-post-trap
+
 prepare alpine-id-overflow image:
   extends:
   - .image_builder
