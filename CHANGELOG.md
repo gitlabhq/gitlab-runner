@@ -1,3 +1,9 @@
+## v17.0.2 (2024-07-25)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode !4813
+
 ## v17.0.1 (2024-07-05)
 
 ### Bug fixes
