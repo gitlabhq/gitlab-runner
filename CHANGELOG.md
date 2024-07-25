@@ -1,4 +1,4 @@
-## v17.2.0 (2024-07-18)
+## v17.2.0 (2024-07-25)
 
 ### New features
 
@@ -9,10 +9,11 @@
 
 ### Bug fixes
 
+- Cancel stage script upon job cancellation in attach mode !4813
 - Ensure that dialing fleeting instance can be canceled !4874
 - Upgrade fleeting/taskscaler: fixes reservation/unavailability instance churn !4865
 - Shorten network names created by FF_NETWORK_PER_BUILD !4830 (Ricardo Katz @rikatz)
-- Docs: fix kubernetes executor runner api permission !4800 (EuVen @euven)
+- Fix kubernetes executor runner api permission !4800 (EuVen @euven)
 - Upgrade fleeting and taskscaler to fix instance churn/runaway !4843
 - Fix default runner alpine flavour version !4850
 - Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
