@@ -1,3 +1,13 @@
+## v17.1.1 (2024-07-25)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode !4813
+
+### Maintenance
+
+- Remove git 1.8.3.1 test !4856
+
 ## v17.1.0 (2024-06-20)
 
 ### New features
