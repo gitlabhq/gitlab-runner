@@ -1049,7 +1049,7 @@ func (s *executor) processLogs(ctx context.Context) {
 func (s *executor) forwardLogLine(w io.Writer, line string) {
 	var status shells.StageCommandStatus
 	if !status.TryUnmarshal(line) {
-		if _, err := s.writeRunnerLog(w, line); err != nil {
+		if _, err := w.Write([]byte(line)); err != nil {
 			s.BuildLogger.Warningln(fmt.Sprintf("Error writing log line to trace: %v", err))
 		}
 
@@ -1064,16 +1064,6 @@ func (s *executor) forwardLogLine(w io.Writer, line string) {
 	if status.IsExited() {
 		s.remoteProcessTerminated <- status
 	}
-}
-
-func (s *executor) writeRunnerLog(w io.Writer, log string) (int, error) {
-	size := len(log)
-
-	if size > common.DefaultReaderBufferSize && string(log[size-1]) == "\n" {
-		log = log[:size-1]
-	}
-
-	return w.Write([]byte(log))
 }
 
 // getExitCode tries to extract the exit code from an inner exec.CodeExitError
