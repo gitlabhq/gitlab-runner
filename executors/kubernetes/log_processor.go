@@ -239,6 +239,7 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan s
 }
 
 func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, outCh chan string) error {
+	var previousLogsOffset int64 = -1
 	logsScanner, linesCh := l.scan(ctx, logs)
 
 	for {
@@ -255,6 +256,17 @@ func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, o
 			if newLogsOffset != -1 {
 				l.logsOffset = newLogsOffset
 			}
+
+			// Helper when reading the log add a new line when the buffer doesn't end with a new line
+			// This makes the buffer size greater than the log offset shift
+			// When the buffer size is greater than the log offset shift and the additional character is a \n
+			// it can then be safely removed as it is likely the addition character added by helper
+			if l := len(logLine); previousLogsOffset != -1 &&
+				l > int(newLogsOffset-previousLogsOffset) && logLine[l-1] == '\n' {
+				logLine = logLine[:l-1]
+			}
+
+			previousLogsOffset = newLogsOffset
 
 			outCh <- logLine
 		}
