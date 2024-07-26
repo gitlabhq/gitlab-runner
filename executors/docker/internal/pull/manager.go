@@ -199,6 +199,7 @@ func (m *manager) resolveAuthConfigForImage(imageName string) (*cli.AuthConfig, 
 		m.config.AuthConfig,
 		m.config.ShellUser,
 		m.config.Credentials,
+		m.logger,
 	)
 	if err != nil {
 		return nil, err

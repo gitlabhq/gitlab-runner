@@ -1729,7 +1729,7 @@ func (s *executor) isSharedBuildsDirRequired() bool {
 func (s *executor) setupCredentials(ctx context.Context) error {
 	s.BuildLogger.Debugln("Setting up secrets")
 
-	authConfigs, err := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials)
+	authConfigs, err := auth.ResolveConfigs(s.Build.GetDockerAuthConfig(), s.Shell().User, s.Build.Credentials, &s.BuildLogger)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/docker/cli/cli/config/types"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -286,12 +287,14 @@ func TestGetConfigForImage(t *testing.T) {
 	err = os.Setenv("PATH", filepath.Join(dir, "testdata")+pathSep+originalPATH)
 	require.NoError(t, err)
 
+	logger, _ := test.NewNullLogger()
+
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			cleanup := setupTestHomeDirectoryConfig(t, tt.configFileContents)
 			defer cleanup()
 
-			result, err := ResolveConfigForImage(tt.image, tt.dockerAuthValue, "", tt.credentials)
+			result, err := ResolveConfigForImage(tt.image, tt.dockerAuthValue, "", tt.credentials, logger)
 			tt.assertResult(result, err)
 		})
 	}
@@ -385,7 +388,8 @@ func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) func(
 func TestGetConfigs(t *testing.T) {
 	cleanup := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
 	defer cleanup()
-	result, err := ResolveConfigs(testDockerAuthConfigs, "", gitlabRegistryCredentials)
+	logger, _ := test.NewNullLogger()
+	result, err := ResolveConfigs(testDockerAuthConfigs, "", gitlabRegistryCredentials, logger)
 	assert.NoError(t, err)
 
 	assert.Equal(t, map[string]RegistryInfo{
@@ -428,7 +432,9 @@ func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
 
 	cleanup := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
 	defer cleanup()
-	result, err := ResolveConfigs("", "", registryCredentials)
+
+	logger, _ := test.NewNullLogger()
+	result, err := ResolveConfigs("", "", registryCredentials, logger)
 	assert.NoError(t, err)
 
 	expectedResult := map[string]RegistryInfo{
