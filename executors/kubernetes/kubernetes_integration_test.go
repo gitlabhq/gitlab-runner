@@ -144,6 +144,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesPodEvents":                                 testKubernetesPodEvents,
 		"testKubernetesDumbInitSuccessRun":                        testKubernetesDumbInitSuccessRun,
 		"testKubernetesDisableUmask":                              testKubernetesDisableUmask,
+		"testKubernetesNoAdditionalNewLines":                      testKubernetesNoAdditionalNewLines,
 	}
 
 	featureFlags := []string{
@@ -365,6 +366,25 @@ func testKubernetesDisableUmask(t *testing.T, featureFlagName string, featureFla
 			tc.verifyFn(t, buf.String())
 		})
 	}
+}
+
+func testKubernetesNoAdditionalNewLines(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	build := getTestBuild(t, func() (common.JobResponse, error) {
+		return common.GetRemoteBuildResponse("for i in $(seq 1 120); do printf .; sleep 0.02; done; echo")
+	})
+
+	build.Runner.RunnerSettings.Shell = "bash"
+	build.JobResponse.Image.Name = common.TestAlpineImage
+	build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
+
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	var buf bytes.Buffer
+	err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), "........................................................................................................................")
 }
 
 func TestBuildScriptSections(t *testing.T) {
