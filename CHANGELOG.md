@@ -1,3 +1,9 @@
+## v16.11.3 (2024-07-25)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode !4813
+
 ## v17.2.0 (2024-07-18)
 
 ### New features
@@ -62,6 +68,16 @@
 ### Bug fixes
 
 - Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
+
+### Maintenance
+
+- Remove git 1.8.3.1 test !4856
+
+## v16.11.2 (2024-07-05)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4843
 
 ### Maintenance
 
