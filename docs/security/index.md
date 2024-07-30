@@ -186,4 +186,3 @@ If you use a static host for your runner, you can implement an additional layer 
 the `FF_ENABLE_JOB_CLEANUP` [feature flag](../configuration/feature-flags.md).
 
 When you enable `FF_ENABLE_JOB_CLEANUP`, the build directory your runner uses on the host is cleaned up after each build.
-This setting prevents a previous build from, for example, adding scripts to `.git/hooks` that can then be executed by subsequent builds.
