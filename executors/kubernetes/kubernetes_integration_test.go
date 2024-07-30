@@ -2964,10 +2964,6 @@ func Test_CaptureServiceLogs(t *testing.T) {
 					Key:    "CI_DEBUG_SERVICES",
 					Value:  "1",
 					Public: true,
-				}, {
-					Key:    "POSTGRES_PASSWORD",
-					Value:  "password",
-					Public: true,
 				},
 			},
 			assert: func(out string, err error) {
@@ -2983,7 +2979,8 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			assert: func(out string, err error) {
 				assert.NoError(t, err)
 				assert.NotContains(t, out, "WARNING: invalid value '1' for CI_DEBUG_SERVICES variable")
-				assert.NotRegexp(t, `\[service:postgres-db\] .* Error: Database is uninitialized and superuser password is not specified`, out)
+				assert.NotRegexp(t, `\[service:postgres-db\] .* The files belonging to this database system will be owned by user "postgres"`, out)
+				assert.NotRegexp(t, `\[service:postgres-db\] .* database system is ready to accept connections`, out)
 				assert.NotRegexp(t, `\[service:redis-cache\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
 				assert.NotRegexp(t, `\[service:redis-cache\] .* Ready to accept connections`, out)
 			},
@@ -2997,7 +2994,8 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			assert: func(out string, err error) {
 				assert.NoError(t, err)
 				assert.Contains(t, out, `WARNING: CI_DEBUG_SERVICES: expected bool got "blammo", using default value: false`)
-				assert.NotRegexp(t, `\[service:postgres-db\] .* Error: Database is uninitialized and superuser password is not specified`, out)
+				assert.NotRegexp(t, `\[service:postgres-db\] .* The files belonging to this database system will be owned by user "postgres"`, out)
+				assert.NotRegexp(t, `\[service:postgres-db\] .* database system is ready to accept connections`, out)
 				assert.NotRegexp(t, `\[service:redis-cache\] .* oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0O`, out)
 				assert.NotRegexp(t, `\[service:redis-cache\] .* Ready to accept connections`, out)
 			},
@@ -3010,6 +3008,11 @@ func Test_CaptureServiceLogs(t *testing.T) {
 			build.Services[0].Alias = "db"
 			build.Services[1].Alias = "cache"
 			build.Variables = tt.buildVars
+			build.Variables = append(build.Variables, common.JobVariable{
+				Key:    "POSTGRES_PASSWORD",
+				Value:  "password",
+				Public: true,
+			})
 
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			tt.assert(out, err)
