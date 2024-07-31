@@ -1119,3 +1119,80 @@ func TestRunCommand_configReloadingRegression(t *testing.T) {
 
 	assert.Equal(t, int64(3), configReloadedCount.Load())
 }
+
+func TestRunCommand_configReloading(t *testing.T) {
+	_, cleanup := test.NewHook()
+	defer cleanup()
+
+	config := `concurrent = 1
+check_interval = 1
+log_level = "debug"
+shutdown_timeout = 0`
+
+	configChanged := `concurrent = 1
+check_interval = 1
+shutdown_timeout = 0`
+
+	configName := filepath.Join(t.TempDir(), "config-reload-test")
+	require.NoError(t, os.WriteFile(configName, []byte(config), 0o777))
+
+	c := &RunCommand{
+		configOptionsWithListenAddress: configOptionsWithListenAddress{
+			configOptions: configOptions{
+				ConfigFile: configName,
+			},
+		},
+		runInterruptSignal:   make(chan os.Signal, 1),
+		reloadSignal:         make(chan os.Signal, 1),
+		configReloaded:       make(chan int, 1),
+		reloadConfigInterval: 10 * time.Millisecond,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Counting discovered configuration reloads
+	var configReloadedCount atomic.Int64
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				wg.Done()
+				return
+			case <-c.configReloaded:
+				configReloadedCount.Add(1)
+			default:
+				c.updateConfig()
+			}
+		}
+	}()
+
+	// force reload twice
+	require.NoError(t, c.reloadConfig())
+	require.NoError(t, c.reloadConfig())
+
+	// trigger automatic reload (by changing time of config file) and wait
+	file, err := os.OpenFile(configName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o777)
+	require.NoError(t, err)
+	_, err = file.WriteString(configChanged)
+	require.NoError(t, err)
+	file.Close()
+
+	// sleep for 15 times the reload config interval to make sure we don't reload
+	// more than we should
+	time.Sleep(c.reloadConfigInterval * 15)
+
+	cancel()
+	for len(c.configReloaded) > 0 {
+		<-c.configReloaded
+		configReloadedCount.Add(1)
+	}
+
+	wg.Wait()
+
+	assert.Equal(t, "info", logrus.GetLevel().String())
+	assert.Equal(t, int64(3), configReloadedCount.Load())
+}
