@@ -33,11 +33,14 @@ To prepare the environment for autoscaling:
 1. Create a VM image for the platform you're using. The image must include:
    - Git
    - GitLab Runner
+     
+     NOTE:
+     You must install the GitLab Runner binary on the virtual machine, and keep the 
+     runner executable in the default path to process job artifacts and cache.
+     You do not have to configure or start the GitLab Runner service itself on the 
+     virtual machine.
+     
    - Dependencies required by the jobs you plan to run
-
-NOTE:
-You must install the GitLab Runner binary on the virtual machine to process job artifacts and cache.
-You do not have to configure or start the GitLab Runner service itself on the virtual machine.    
 
 ## Configure the executor to autoscale
 
