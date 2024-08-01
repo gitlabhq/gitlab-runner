@@ -48,6 +48,14 @@ prepare alpine-entrypoint-pre-post-trap image:
     BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/alpine-entrypoint-pre-post-trap:latest
     BUILD_DOCKERFILE: ./tests/dockerfiles/alpine-entrypoint/Dockerfile.pre-post-trap
 
+prepare powershell-entrypoint-pre-post-trap image:
+  extends:
+  - .image_builder
+  - .rules:prepare:powershell-entrypoint:image:merge-requests
+  variables:
+    BUILD_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/powershell-entrypoint-pre-post-trap:latest
+    BUILD_DOCKERFILE: ./tests/dockerfiles/powershell-entrypoint/Dockerfile.pre-post-trap
+
 prepare alpine-id-overflow image:
   extends:
   - .image_builder
