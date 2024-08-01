@@ -10,6 +10,9 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
+WARNING:
+The Fargate driver is not officially supported by GitLab Support. A best effort will be made to address issues, but no guarantees are made.
+
 The GitLab [custom executor](../../executors/custom.md) driver for
 [AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)
 automatically launches a container on the Amazon Elastic Container Service (ECS) to
