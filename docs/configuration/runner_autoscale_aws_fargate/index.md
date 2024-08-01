@@ -11,7 +11,7 @@ DETAILS:
 **Offering:** GitLab.com, Self-managed
 
 WARNING:
-The Fargate driver is not officially supported by GitLab Support. A best effort will be made to address issues, but no guarantees are made.
+The Fargate driver is community supported. GitLab Support will make a best effort attempt to help debug any problems, but no guarantees are made.
 
 The GitLab [custom executor](../../executors/custom.md) driver for
 [AWS Fargate](https://gitlab.com/gitlab-org/ci-cd/custom-executor-drivers/fargate)
