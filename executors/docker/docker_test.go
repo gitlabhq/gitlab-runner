@@ -1011,6 +1011,21 @@ func TestDockerIsolationWithIncorrectValue(t *testing.T) {
 	assert.Contains(t, err.Error(), `the isolation value "someIncorrectValue" is not valid`)
 }
 
+func TestDockerContainerConfigIncludesDockerLabels(t *testing.T) {
+	dockerConfig := &common.DockerConfig{
+		HelperImage:     "gitlab/gitlab-runner:${CI_RUNNER_REVISION}",
+		ContainerLabels: map[string]string{"dockerConfigLabel": "dockerConfigLabelValue"},
+	}
+
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
+	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
+
+	containerConfig := executor.createServiceContainerConfig("service_name", "service_tag", "abc123def456", common.Image{Name: "alpine"})
+
+	assert.Equal(t, "dockerConfigLabelValue", containerConfig.Labels["com.gitlab.gitlab-runner.dockerConfigLabel"])
+}
+
 func TestDockerMacAddress(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		MacAddress: "92:d0:c6:0a:29:33",

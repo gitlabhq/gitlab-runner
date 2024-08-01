@@ -2329,6 +2329,71 @@ func Test_FF_USE_INIT_WITH_DOCKER_EXECUTOR(t *testing.T) {
 	}
 }
 
+func Test_ServiceLabels(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	client, err := docker.New(docker.Credentials{})
+	require.NoError(t, err)
+	defer client.Close()
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		// wait for service container to appear and get its name
+		nameFilter := filters.NewArgs(filters.Arg("name", "redis-0"))
+		containerList := container.ListOptions{Filters: nameFilter}
+		var container string
+
+		require.Eventually(t, func() bool {
+			list, err := client.ContainerList(context.Background(), containerList)
+			require.NoError(t, err)
+			if len(list) != 1 {
+				return false
+			}
+			container = list[0].ID
+			return true
+		}, time.Second*10, time.Millisecond*500)
+
+		// inspect container and assert expected labels exist...
+		info, err := client.ContainerInspect(context.Background(), container)
+		require.NoError(t, err)
+		assert.Contains(t, info.Config.Labels, "com.gitlab.gitlab-runner.FOO")
+		assert.Equal(t, "FOO", info.Config.Labels["com.gitlab.gitlab-runner.FOO"])
+		assert.Contains(t, info.Config.Labels, "com.gitlab.gitlab-runner.BAR")
+		assert.Equal(t, "BAR", info.Config.Labels["com.gitlab.gitlab-runner.BAR"])
+	}()
+
+	successfulBuild, err := common.GetRemoteBuildResponse("sleep 3")
+	successfulBuild.Services = common.Services{{Name: "redis:7.0", Alias: "service-1"}}
+
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image: "alpine:latest",
+					ContainerLabels: map[string]string{
+						"FOO": "FOO",
+						"BAR": "BAR",
+					},
+				},
+			},
+			SystemIDState: systemIDState,
+		},
+	}
+
+	err = build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+	assert.NoError(t, err)
+
+	wg.Wait()
+}
+
 func TestDockerCommandWithPlatform(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
