@@ -398,7 +398,7 @@ func (mr *RunCommand) updateLoggingConfiguration() error {
 		reloadNeeded = true
 	}
 
-	format := "text"
+	format := log.FormatRunner
 	if config.LogFormat != nil {
 		format = *config.LogFormat
 	}
