@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/user"
@@ -40,14 +41,18 @@ type RegistryInfo struct {
 
 type authConfigResolver func() (string, map[string]types.AuthConfig, error)
 
+type DebugLogger interface {
+	Debugln(args ...interface{})
+}
+
 // ResolveConfigForImage returns the auth configuration for a particular image.
 // Returns nil on no config found.
 // See ResolveConfigs for source information.
 func ResolveConfigForImage(
 	imageName, dockerAuthConfig, username string,
-	credentials []common.Credentials,
+	credentials []common.Credentials, logger DebugLogger,
 ) (*RegistryInfo, error) {
-	authConfigs, err := ResolveConfigs(dockerAuthConfig, username, credentials)
+	authConfigs, err := ResolveConfigs(dockerAuthConfig, username, credentials, logger)
 	if len(authConfigs) == 0 || err != nil {
 		return nil, err
 	}
@@ -69,7 +74,7 @@ func ResolveConfigForImage(
 // Returns a map of registry hostname to RegistryInfo
 func ResolveConfigs(
 	dockerAuthConfig, username string,
-	credentials []common.Credentials,
+	credentials []common.Credentials, logger DebugLogger,
 ) (map[string]RegistryInfo, error) {
 	resolvers := []authConfigResolver{
 		func() (string, map[string]types.AuthConfig, error) {
@@ -90,8 +95,20 @@ func ResolveConfigs(
 			return nil, err
 		}
 
+		registryConfig := make(map[string]types.AuthConfig)
+		var hostnames []string
 		for registry, conf := range configs {
 			registryHostname := convertToHostname(registry)
+			registryConfig[registryHostname] = conf
+			hostnames = append(hostnames, registryHostname)
+		}
+
+		// Source can be blank if there is no home dir configuration
+		if source != "" {
+			logger.Debugln(fmt.Sprintf("Loaded Docker credentials, source = %q, hostnames = %v, error = %v", source, hostnames, err))
+		}
+
+		for registryHostname, conf := range registryConfig {
 			if _, ok := res[registryHostname]; !ok {
 				res[registryHostname] = RegistryInfo{
 					Source:     source,
