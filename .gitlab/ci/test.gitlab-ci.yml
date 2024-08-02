@@ -1,5 +1,6 @@
 include:
 - template: Jobs/Dependency-Scanning.latest.gitlab-ci.yml
+- template: Jobs/License-Scanning.latest.gitlab-ci.yml
 - template: Jobs/SAST.latest.gitlab-ci.yml
 - template: Security/Coverage-Fuzzing.latest.gitlab-ci.yml
 
@@ -7,6 +8,14 @@ include:
 # we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
 gemnasium-dependency_scanning:
+  rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
+
+# Overriding 'License-Scanning.gitlab-ci.yml' template, because
+# we need to replace the rules with our own, the same
+# as in `.merge_request_pipelines` template.
+license_scanning:
+  variables:
+    LICENSE_FINDER_CLI_OPTS: '--decisions-file=.gitlab/dependency_decisions.yml'
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
 check version definition:
