@@ -608,12 +608,8 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	stdout, stderr := s.getExecutorIoWriters()
-	defer stdout.Close()
-	defer stderr.Close()
-
 	select {
-	case err := <-s.runInContainerWithExec(ctx, containerName, containerCommand, cmd.Script, stdout, stderr):
+	case err := <-s.runInContainerWithExec(ctx, containerName, containerCommand, cmd.Script):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
@@ -707,43 +703,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return &common.BuildError{Inner: err}
 	case <-ctx.Done():
-		s.remoteStageStatusMutex.Lock()
-		defer s.remoteStageStatusMutex.Unlock()
-		script := s.stageCancellationScript(string(cmd.Stage))
-		s.BuildLogger.Debugln("Running job cancellation script:", script)
-		if !s.remoteStageStatus.IsExited() {
-			err := <-s.runInContainerWithExec(
-				s.Context,
-				containerName,
-				s.BuildShell.DockerCommand,
-				script,
-				nil, nil,
-			)
-
-			s.BuildLogger.Debugln("Job cancellation script exited with error:", err)
-		}
 		return fmt.Errorf("build aborted")
-	}
-}
-
-func (s *executor) stageCancellationScript(stage string) string {
-	switch s.Shell().Shell {
-	case shells.SNPwsh, shells.SNPowershell:
-		return "$processId=(Get-WmiObject Win32_Process -Filter \"CommandLine LIKE '%" +
-			s.scriptName(stage) + "%'\").ProcessId;If($processId) { Stop-Process -Id $processId; }"
-	default:
-		// ps command is not available on all unix-like OS
-		// To bypass this limitation, we use the following command to search for existing PIDs in the /proc directory
-		// Some post processing are then made to only display the process PID and the command line executed.
-		searchPIDs := "for prc in /proc/[0-9]*/cmdline; do (printf \"$prc \"; cat -A \"$prc\") | " +
-			"sed 's/\\^@/ /g;s|/proc/||;s|/cmdline||'; echo; done"
-
-		// a filtration is made to only keep those related to the ongoing stage script name
-		// The subprocess of each PIDs is also retrieve if any.
-		return "kill -TERM $(for item in $(" + searchPIDs + " | grep -e '" +
-			s.scriptName(stage) +
-			" $' | awk '{print $1}'); do test -f /proc/${item}/task/${item}/children" +
-			" && cat /proc/${item}/task/${item}/children && echo; done) 2> /dev/null"
 	}
 }
 
@@ -1037,18 +997,12 @@ func (s *executor) saveScriptOnEmptyDir(ctx context.Context, scriptName, contain
 	}
 	s.BuildLogger.Debugln(fmt.Sprintf("Saving stage script %s on Container %q", saveScript, containerName))
 
-	stdout, stderr := s.getExecutorIoWriters()
-	defer stdout.Close()
-	defer stderr.Close()
-
 	select {
 	case err := <-s.runInContainerWithExec(
 		ctx,
 		containerName,
 		s.BuildShell.DockerCommand,
 		saveScript,
-		stdout,
-		stderr,
 	):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
 		var exitError exec.CodeExitError
@@ -2485,7 +2439,6 @@ func (s *executor) runInContainerWithExec(
 	name string,
 	command []string,
 	script string,
-	stdout, stderr io.WriteCloser,
 ) <-chan error {
 	errCh := make(chan error, 1)
 	go func() {
@@ -2791,12 +2744,8 @@ func (s *executor) waitForServices(ctx context.Context) error {
 
 	podStatusCh := s.watchPodStatus(ctx, checkServiceStatus)
 
-	stdout, stderr := s.getExecutorIoWriters()
-	defer stdout.Close()
-	defer stderr.Close()
-
 	select {
-	case err := <-s.runInContainerWithExec(ctx, helperContainerName, s.BuildShell.DockerCommand, command, stdout, stderr):
+	case err := <-s.runInContainerWithExec(ctx, helperContainerName, s.BuildShell.DockerCommand, command):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container helper exited with error: %v", err))
 		var exitError exec.CodeExitError
 		if err != nil && errors.As(err, &exitError) {
@@ -2811,11 +2760,6 @@ func (s *executor) waitForServices(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s *executor) getExecutorIoWriters() (io.WriteCloser, io.WriteCloser) {
-	return s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout),
-		s.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stderr)
 }
 
 func newExecutor() *executor {
