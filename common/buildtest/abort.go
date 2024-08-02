@@ -24,7 +24,7 @@ func (c *withContext) WithContext(ctx context.Context) (context.Context, context
 	return context.WithCancel(ctx)
 }
 
-//nolint:funlen,gocognit
+//nolint:gocognit
 func RunBuildWithCancel(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	abortIncludeStages := []common.BuildStage{
 		common.BuildStagePrepare,

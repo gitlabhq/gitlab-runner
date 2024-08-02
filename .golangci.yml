@@ -46,7 +46,6 @@ linters:
   - bodyclose
   - dogsled
   - errcheck
-  - funlen
   - gocognit
   - goconst
   - gocritic
@@ -98,7 +97,6 @@ issues:
   - path: ".*_test.go"
     linters:
     - bodyclose
-    - funlen
     - gocognit
     - goconst
   - path: ".*_test.go"

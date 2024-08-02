@@ -90,7 +90,7 @@ type tokenSanitizer struct {
 	next     io.WriteCloser
 }
 
-//nolint:funlen,gocognit
+//nolint:gocognit
 func (m *tokenSanitizer) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil

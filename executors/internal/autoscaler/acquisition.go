@@ -54,7 +54,6 @@ func newAcquisitionRef(key string, mapJobImageToVMImage bool) *acquisitionRef {
 	}
 }
 
-//nolint:funlen
 func (ref *acquisitionRef) Prepare(
 	ctx context.Context,
 	logger buildlogger.Logger,

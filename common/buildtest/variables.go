@@ -54,7 +54,6 @@ func RunBuildWithExpandedFileVariable(t *testing.T, config *common.RunnerConfig,
 	}
 }
 
-//nolint:funlen
 func RunBuildWithPassingEnvsMultistep(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	envVarFn := func(name string) string {
 		switch config.Shell {

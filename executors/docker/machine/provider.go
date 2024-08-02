@@ -624,7 +624,6 @@ func (m *machineProvider) Create() common.Executor {
 	}
 }
 
-//nolint:funlen
 func newMachineProvider() *machineProvider {
 	name := "docker+machine"
 	provider := common.GetExecutorProvider("docker")

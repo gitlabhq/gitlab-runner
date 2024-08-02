@@ -49,7 +49,7 @@ func New(w io.WriteCloser) *URLSanitizer {
 	return &URLSanitizer{w: w, match: make([]byte, 0, max)}
 }
 
-//nolint:funlen,gocognit
+//nolint:gocognit
 func (s *URLSanitizer) Write(p []byte) (n int, err error) {
 	var last int
 

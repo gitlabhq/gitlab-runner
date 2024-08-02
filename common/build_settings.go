@@ -143,7 +143,6 @@ func validateVariables(variables JobVariables, b *Build, defaultGitStategy GitSt
 	}
 }
 
-//nolint:funlen
 func validate[T any](variables JobVariables, name string, value *T, def T) error {
 	raw := variables.Value(name)
 	var err error

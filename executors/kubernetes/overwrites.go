@@ -131,7 +131,6 @@ type overwrites struct {
 	explicitServiceRequests map[string]api.ResourceList
 }
 
-//nolint:funlen
 func createOverwrites(
 	config *common.KubernetesConfig,
 	variables common.JobVariables,

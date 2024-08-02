@@ -80,7 +80,6 @@ var jobOutputLimitExceededTestCases = map[string]jobOutputLimitExceededTestCase{
 	},
 }
 
-// nolint:funlen
 func runBuildWithJobOutputLimitExceeded(
 	t *testing.T,
 	config *common.RunnerConfig,

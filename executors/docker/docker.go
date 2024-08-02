@@ -378,7 +378,6 @@ func (e *executor) isInPrivilegedServiceList(serviceDefinition common.Image) boo
 	return isInAllowedPrivilegedImages(serviceDefinition.Name, e.Config.Docker.AllowedPrivilegedServices)
 }
 
-//nolint:funlen
 func (e *executor) createService(
 	serviceIndex int,
 	service, version, image string,
@@ -586,7 +585,6 @@ func (e *executor) isInPrivilegedImageList(imageDefinition common.Image) bool {
 	return isInAllowedPrivilegedImages(imageDefinition.Name, e.Config.Docker.AllowedPrivilegedImages)
 }
 
-//nolint:funlen
 func (e *executor) createContainer(
 	containerType string,
 	imageDefinition common.Image,
@@ -908,7 +906,7 @@ func (e *executor) overwriteEntrypoint(image *common.Image) []string {
 	return nil
 }
 
-//nolint:funlen,nestif
+//nolint:nestif
 func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 	var opts []client.Opt
 
@@ -1244,7 +1242,6 @@ func (e *executor) prepareBuildsDir(options common.ExecutorPrepareOptions) error
 	return nil
 }
 
-//nolint:funlen
 func (e *executor) Cleanup() {
 	if e.Config.Docker == nil {
 		// if there's no Docker config, we got here because Prepare() failed

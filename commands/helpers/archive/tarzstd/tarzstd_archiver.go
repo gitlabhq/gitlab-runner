@@ -42,7 +42,7 @@ func NewArchiver(w io.Writer, dir string, level archive.CompressionLevel) (archi
 
 // Archive archives all files.
 //
-//nolint:funlen,gocognit
+//nolint:gocognit
 func (a *archiver) Archive(ctx context.Context, files map[string]os.FileInfo) error {
 	sorted := make([]string, 0, len(files))
 	for filename := range files {

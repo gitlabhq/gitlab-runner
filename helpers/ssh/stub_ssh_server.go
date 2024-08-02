@@ -204,7 +204,7 @@ func (s *StubSSHServer) Stop() error {
 	}
 }
 
-//nolint:gocognit,funlen
+//nolint:gocognit
 func (s *StubSSHServer) mainLoop(listener net.Listener) {
 	defer close(s.stopped)
 
@@ -361,7 +361,7 @@ func copier(to io.Writer, from io.Reader, desc string) (err error) {
 	return nil
 }
 
-//nolint:gocognit,funlen
+//nolint:gocognit
 func (s *StubSSHServer) handleSession(ctx context.Context, channel ssh.NewChannel) error {
 	conn, reqs, err := channel.Accept()
 	if err != nil {

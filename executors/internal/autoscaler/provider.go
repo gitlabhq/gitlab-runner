@@ -110,7 +110,6 @@ func (p *provider) Shutdown(ctx context.Context) {
 	wg.Wait()
 }
 
-//nolint:funlen
 func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, bool, error) {
 	if config.Autoscaler == nil {
 		return nil, false, fmt.Errorf("executor requires autoscaler config")
@@ -340,7 +339,7 @@ func (p *provider) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-//nolint:gocognit,funlen
+//nolint:gocognit
 func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscaler.UpFunc {
 	return func(id string, info fleetingprovider.ConnectInfo, cause fleeting.Cause) (keys []string, used int, err error) {
 		useExternalAddr := true

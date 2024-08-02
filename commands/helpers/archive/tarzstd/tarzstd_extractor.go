@@ -29,7 +29,7 @@ func NewExtractor(r io.ReaderAt, size int64, dir string) (archive.Extractor, err
 // Extract extracts files from the reader to the directory passed to
 // NewZipExtractor.
 //
-//nolint:funlen,gocognit
+//nolint:gocognit
 func (e *extractor) Extract(ctx context.Context) error {
 	zr, err := zstd.NewReader(io.NewSectionReader(e.r, 0, e.size), zstd.WithDecoderLowmem(true))
 	if err != nil {
