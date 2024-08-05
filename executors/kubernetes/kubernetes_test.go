@@ -5945,6 +5945,50 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 				assert.Equal(t, int32(http.StatusNotFound), statusErr.ErrStatus.Code)
 			},
 		},
+		"pod service OOM": {
+			responses: []podResponse{
+				{
+					response: &http.Response{
+						StatusCode: http.StatusOK,
+						Body: objBody(codec, &api.Pod{
+							ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test", ResourceVersion: "10"},
+							Spec: api.PodSpec{
+								RestartPolicy: api.RestartPolicyAlways,
+								DNSPolicy:     api.DNSClusterFirst,
+								Containers: []api.Container{
+									{
+										Name: "bar",
+									},
+								},
+							},
+							Status: api.PodStatus{
+								Phase: api.PodRunning,
+								ContainerStatuses: []api.ContainerStatus{
+									{
+										Name: "bar",
+										State: api.ContainerState{
+											Terminated: &api.ContainerStateTerminated{
+												Reason:   "OOMKilled",
+												ExitCode: 137,
+											},
+										},
+									},
+								},
+							},
+						}),
+					},
+					err: nil,
+				},
+			},
+			verifyErr: func(t *testing.T, errCh <-chan error) {
+				err := <-errCh
+				require.Error(t, err)
+				var serviceError *podServiceError
+				assert.ErrorAs(t, err, &serviceError)
+				assert.Equal(t, "bar", serviceError.serviceName)
+				assert.Equal(t, 137, serviceError.exitCode)
+			},
+		},
 		"general error continues": {
 			responses: []podResponse{
 				{
@@ -6016,7 +6060,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			e.pod.Name = "pod"
 			e.pod.Namespace = "namespace"
 
-			tt.verifyErr(t, e.watchPodStatus(ctx, checkExtendedPodStatusNoOp))
+			tt.verifyErr(t, e.watchPodStatus(ctx, checkServiceOOM))
 		})
 	}
 }

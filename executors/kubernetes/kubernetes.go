@@ -2602,7 +2602,17 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkE
 
 type checkExtendedPodStatusFunc func(context.Context, *api.Pod) error
 
-func checkExtendedPodStatusNoOp(_ context.Context, _ *api.Pod) error { return nil }
+func checkServiceOOM(ctx context.Context, pod *api.Pod) error {
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason == "OOMKilled" {
+			return &podServiceError{
+				serviceName: containerStatus.Name,
+				exitCode:    int(containerStatus.State.Terminated.ExitCode),
+			}
+		}
+	}
+	return nil
+}
 
 func checkServiceStatus(ctx context.Context, pod *api.Pod) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
