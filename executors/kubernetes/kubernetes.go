@@ -725,7 +725,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx, checkExtendedPodStatusNoOp)
+	podStatusCh := s.watchPodStatus(ctx, checkServiceOOM)
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -737,7 +737,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) {
+		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodServiceError(err) {
 			return err
 		}
 
@@ -2991,6 +2991,11 @@ func IsKubernetesPodFailedError(err error) bool {
 	var podPhaseErr *podPhaseError
 	return errors.As(err, &podPhaseErr) &&
 		podPhaseErr.phase == api.PodFailed
+}
+
+func IsKubernetesPodServiceError(err error) bool {
+	var podServiceError *podServiceError
+	return errors.As(err, &podServiceError)
 }
 
 // Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
