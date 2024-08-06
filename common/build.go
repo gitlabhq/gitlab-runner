@@ -236,6 +236,11 @@ func (b *Build) ProjectUniqueDir(sharedDir bool) string {
 			dir,
 		)
 	}
+
+	if b.GetGitStrategy() == GitEmpty {
+		dir += "-empty"
+	}
+
 	return dir
 }
 
