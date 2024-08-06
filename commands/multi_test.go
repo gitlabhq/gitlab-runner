@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	helper_test "gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
 )
 
@@ -1121,6 +1122,10 @@ func TestRunCommand_configReloadingRegression(t *testing.T) {
 }
 
 func TestRunCommand_configReloading(t *testing.T) {
+	// This test is flaky on Win21H2 platform
+	// Skipping until https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37920 is resolved.
+	helper_test.SkipIfGitLabCIOn(t, helper_test.OSWindows)
+
 	_, cleanup := test.NewHook()
 	defer cleanup()
 
