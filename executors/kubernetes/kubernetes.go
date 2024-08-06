@@ -737,7 +737,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodServiceError(err) {
+		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodServiceOOMError(err) {
 			return err
 		}
 
@@ -2993,9 +2993,9 @@ func IsKubernetesPodFailedError(err error) bool {
 		podPhaseErr.phase == api.PodFailed
 }
 
-func IsKubernetesPodServiceError(err error) bool {
+func IsKubernetesPodServiceOOMError(err error) bool {
 	var podServiceError *podServiceError
-	return errors.As(err, &podServiceError)
+	return errors.As(err, &podServiceError) && podServiceError.exitCode == 137
 }
 
 // Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
