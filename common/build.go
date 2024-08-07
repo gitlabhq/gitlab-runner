@@ -317,7 +317,6 @@ func (b *Build) StartBuild(
 	return nil
 }
 
-//nolint:funlen
 func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -448,7 +447,7 @@ func (b *Build) executeArchiveCache(ctx context.Context, state error, executor E
 	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
 }
 
-//nolint:funlen,gocognit
+//nolint:gocognit
 func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Executor) error {
 	// track job start and create referees
 	startTime := time.Now()
@@ -702,7 +701,6 @@ func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	}
 }
 
-//nolint:funlen
 func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err error) {
 	b.setCurrentState(BuildRunRuntimeRunning)
 
@@ -958,7 +956,6 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 	return b.executorStageResolver()
 }
 
-//nolint:funlen
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.setCurrentState(BuildRunStatePending)
 

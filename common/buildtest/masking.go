@@ -11,7 +11,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/trace"
 )
 
-//nolint:funlen
 func RunBuildWithMasking(t *testing.T, config *common.RunnerConfig, setup BuildSetupFn) {
 	resp, err := common.GetRemoteSuccessfulBuildPrintVars(
 		config.Shell,

@@ -582,7 +582,6 @@ func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 	}
 }
 
-//nolint:funlen
 func (n *GitLabClient) RequestJob(
 	ctx context.Context,
 	config common.RunnerConfig,

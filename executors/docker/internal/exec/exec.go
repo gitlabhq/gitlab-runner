@@ -64,7 +64,6 @@ type defaultDocker struct {
 	logger logrus.FieldLogger
 }
 
-//nolint:funlen
 func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IOStreams, gracefulExitFunc wait.GracefulExitFunc) error {
 	d.logger.Debugln("Attaching to container", containerID, "...")
 

@@ -487,7 +487,6 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 	return nil
 }
 
-//nolint:funlen
 func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string) {
 	depth := build.GitInfo.Depth
 
@@ -616,7 +615,6 @@ func (b *AbstractShell) writeSubmoduleUpdateCmds(w ShellWriter, info common.Shel
 	return nil
 }
 
-//nolint:funlen
 func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Build, recursive bool) error {
 	depth := build.GetSubmoduleDepth()
 

@@ -288,7 +288,6 @@ type serviceCreateResponse struct {
 	err     error
 }
 
-// nolint:funlen
 func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	s.AbstractExecutor.PrepareConfiguration(options)
 

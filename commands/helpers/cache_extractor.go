@@ -54,7 +54,6 @@ func getRemoteCacheSize(resp *http.Response) int64 {
 	return int64(length)
 }
 
-//nolint:funlen
 func (c *CacheExtractorCommand) download(_ int) error {
 	err := os.MkdirAll(filepath.Dir(c.File), 0o700)
 	if err != nil {
