@@ -535,6 +535,72 @@ func TestBuildWithGitStrategyNoneWithLFS(t *testing.T) {
 	})
 }
 
+func TestBuildWithGitStrategyEmptyWithoutLFS(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build := newBuild(t, successfulBuild, shell)
+
+		build.Runner.PreGetSourcesScript = "echo pre-clone-script"
+		build.Runner.PostGetSourcesScript = "echo post-clone-script"
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "empty"})
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
+
+		testFilePath := filepath.Join(build.BuildDir, "test.txt")
+		err = os.WriteFile(testFilePath, []byte{}, os.ModePerm)
+		require.NoError(t, err)
+
+		out, err = buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
+		assert.Contains(t, out, "pre-clone-script")
+		assert.Contains(t, out, "post-clone-script")
+
+		_, err = os.Stat(testFilePath)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, os.ErrNotExist, "build directory not cleaned before next build")
+	})
+}
+
+func TestBuildWithGitStrategyEmptyWithLFS(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetRemoteSuccessfulLFSBuild()
+		assert.NoError(t, err)
+		build := newBuild(t, successfulBuild, shell)
+
+		build.Variables = append(build.Variables, common.JobVariable{Key: "GIT_STRATEGY", Value: "empty"})
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
+		assertLFSFileNotPresent(t, build)
+
+		testFilePath := filepath.Join(build.BuildDir, "test.txt")
+		err = os.WriteFile(testFilePath, []byte{}, os.ModePerm)
+		require.NoError(t, err)
+
+		out, err = buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
+		assertLFSFileNotPresent(t, build)
+
+		_, err = os.Stat(testFilePath)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, os.ErrNotExist, "build directory not cleaned before next build")
+	})
+}
+
 func TestBuildWithGitStrategyFetchWithoutLFS(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()
@@ -1278,6 +1344,29 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
 		assert.Contains(t, out, "Skipping Git repository setup")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+		assert.Contains(t, out, "Skipping Git submodules setup")
+	})
+}
+
+func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyEmpty(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		assert.NoError(t, err)
+		build := newBuild(t, successfulBuild, shell)
+
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "empty"},
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+		)
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 		assert.NotContains(t, out, "Updating/initializing submodules...")
 		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
 		assert.Contains(t, out, "Skipping Git submodules setup")
