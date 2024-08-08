@@ -99,9 +99,10 @@ rmdir /s GitLab-Runner
 Make sure that you read the [FAQ](../faq/index.md) section which describes
 some of the most common problems with GitLab Runner.
 
-If you encounter an error like _The account name is invalid_ try to add `.\` before the username:
+If you encounter an error like _The account name is invalid_, try:
 
 ```powershell
+# Add \. before the username
 .\gitlab-runner.exe install --user ".\ENTER-YOUR-USERNAME" --password "ENTER-YOUR-PASSWORD"
 ```
 
