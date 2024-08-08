@@ -321,6 +321,30 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyNone(t *testing.T) 
 	})
 }
 
+func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyEmpty(t *testing.T) {
+	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+		successfulBuild, err := common.GetSuccessfulBuild()
+		require.NoError(t, err)
+
+		build := newBuild(t, successfulBuild, shell)
+
+		build.Variables = append(
+			build.Variables,
+			common.JobVariable{Key: "GIT_STRATEGY", Value: "empty"},
+			common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+		)
+
+		out, err := buildtest.RunBuildReturningOutput(t, build)
+		assert.NoError(t, err)
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
+		assert.Contains(t, out, "Skipping Git submodules setup")
+		assert.NotContains(t, out, "Created fresh repository")
+		assert.NotContains(t, out, "Fetching changes")
+		assert.NotContains(t, out, "Updating/initializing submodules...")
+		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
+	})
+}
+
 func TestBuildWithoutDebugTrace(t *testing.T) {
 	shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 		successfulBuild, err := common.GetSuccessfulBuild()

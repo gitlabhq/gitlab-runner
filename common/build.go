@@ -236,6 +236,11 @@ func (b *Build) ProjectUniqueDir(sharedDir bool) string {
 			dir,
 		)
 	}
+
+	if b.GetGitStrategy() == GitEmpty {
+		dir += "-empty"
+	}
+
 	return dir
 }
 
@@ -1449,7 +1454,7 @@ func (b *Build) GetRepositoryObjectFormat() string {
 }
 
 func (b *Build) GetGitCheckout() bool {
-	if b.GetGitStrategy() == GitNone {
+	if b.GetGitStrategy() == GitNone || b.GetGitStrategy() == GitEmpty {
 		return false
 	}
 
@@ -1457,7 +1462,7 @@ func (b *Build) GetGitCheckout() bool {
 }
 
 func (b *Build) GetSubmoduleStrategy() SubmoduleStrategy {
-	if b.GetGitStrategy() == GitNone {
+	if b.GetGitStrategy() == GitNone || b.GetGitStrategy() == GitEmpty {
 		return SubmoduleNone
 	}
 

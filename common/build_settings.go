@@ -15,6 +15,7 @@ const (
 	GitClone GitStrategy = "clone"
 	GitFetch GitStrategy = "fetch"
 	GitNone  GitStrategy = "none"
+	GitEmpty GitStrategy = "empty"
 )
 
 type cmdFlags []string
@@ -162,13 +163,13 @@ func validate[T any](variables JobVariables, name string, value *T, def T) error
 
 	case *GitStrategy:
 		switch strategy := GitStrategy(raw); strategy {
-		case GitClone, GitFetch, GitNone:
+		case GitClone, GitFetch, GitNone, GitEmpty:
 			*v = strategy
 		case "":
 			*value = def
 		default:
 			*value = def
-			return fmt.Errorf("%s: expected either 'clone', 'fetch' or 'none' got %q, using default value '%v'", name, raw, def)
+			return fmt.Errorf("%s: expected either 'clone', 'fetch', 'none' or 'empty' got %q, using default value '%v'", name, raw, def)
 		}
 		return nil
 	}
