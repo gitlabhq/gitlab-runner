@@ -60,7 +60,22 @@ fi
 # re-register runner
 gitlab-runner stop >/dev/null 2>/dev/null || :
 gitlab-runner uninstall >/dev/null 2>/dev/null || :
-gitlab-runner install --user=$USER --working-directory=$HOMEDIR
+
+# Fix https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37000 by installing gitlab-runner with --init-user if
+# $USE_INIT_USER was specified.
+if [ -z "${USE_INIT_USER}" ];
+then
+    gitlab-runner install --user=$USER --working-directory="${HOMEDIR}"
+else
+    gitlab-runner install --init-user=$USER --working-directory="${HOMEDIR}"
+    # If a config.toml does not already exist in the user's $HOMEDIR, copy it from the default config location. This
+    # will only be true when using $USE_INIT_USER for the first time.
+    targetPath="${HOMEDIR}/config.toml"
+    if [ ! -f "${targetPath}" ] && [ -f /etc/gitlab-runner/config.toml ]; then
+        cp /etc/gitlab-runner/config.toml "${targetPath}"
+        chown $USER:$USER "${targetPath}"
+    fi
+fi
 
 # start runner service
 gitlab-runner start || :

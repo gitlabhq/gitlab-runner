@@ -3,6 +3,8 @@ package commands
 import (
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 	"runtime"
 
 	"github.com/kardianos/service"
@@ -31,7 +33,7 @@ func (n *NullService) Stop(s service.Service) error {
 }
 
 func runServiceInstall(s service.Service, c *cli.Context) error {
-	if user := c.String("user"); user == "" && os.Getuid() == 0 {
+	if c.String("user") == "" && c.String("init-user") == "" && os.Getuid() == 0 {
 		logrus.Fatal("Please specify user that will run gitlab-runner service")
 	}
 
@@ -78,18 +80,24 @@ func runServiceStatus(displayName string, s service.Service) {
 	fmt.Printf("%s: %s\n", displayName, description)
 }
 
+func getUserHomeDir(username string) string {
+	u, err := user.Lookup(username)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get home for user %q: %s", username, err.Error()))
+	}
+	return u.HomeDir
+}
+
 func GetServiceArguments(c *cli.Context) (arguments []string) {
-	if wd := c.String("working-directory"); wd != "" {
-		arguments = append(arguments, "--working-directory", wd)
+	// Update the default config-file path if it was not actually set and --init-user was specified...
+	config := c.String("config")
+	if !c.IsSet("config") && c.String("init-user") != "" {
+		config = filepath.Join(getUserHomeDir(c.String("init-user")), "config.toml")
 	}
+	arguments = append(arguments, "--config", config)
 
-	if config := c.String("config"); config != "" {
-		arguments = append(arguments, "--config", config)
-	}
-
-	if sn := c.String("service"); sn != "" {
-		arguments = append(arguments, "--service", sn)
-	}
+	applyStrArg(c, "working-directory", false, func(val string) { arguments = append(arguments, "--working-directory", val) })
+	applyStrArg(c, "service", false, func(val string) { arguments = append(arguments, "--service", val) })
 
 	// syslogging doesn't make sense for systemd systems as those log straight to journald
 	syslog := !c.IsSet("syslog") || c.Bool("syslog")
@@ -119,6 +127,10 @@ func createServiceConfig(c *cli.Context) *service.Config {
 }
 
 func RunServiceControl(c *cli.Context) {
+	if c.String("user") != "" && c.String("init-user") != "" {
+		logrus.Fatal("Only one of 'user' or 'init-user' can be specified.")
+	}
+
 	svcConfig := createServiceConfig(c)
 
 	s, err := service_helpers.New(&NullService{}, svcConfig)
@@ -184,11 +196,17 @@ func GetInstallFlags() []cli.Flag {
 				Usage: "Specify user password to install service (required)",
 			})
 	} else if os.Getuid() == 0 {
-		installFlags = append(installFlags, cli.StringFlag{
-			Name:  "user, u",
-			Value: "",
-			Usage: "Specify user-name to secure the runner",
-		})
+		installFlags = append(installFlags,
+			cli.StringFlag{
+				Name:  "user, u",
+				Value: "",
+				Usage: "Specify user-name to secure the runner",
+			},
+			cli.StringFlag{
+				Name:  "init-user, i",
+				Value: "",
+				Usage: "Specify user-name to secure the runner in the init script or systemd unit file",
+			})
 	}
 
 	return installFlags
@@ -234,4 +252,19 @@ func init() {
 		Action: RunServiceControl,
 		Flags:  flags,
 	})
+}
+
+// applyStrArg applies the named string-typed runtime argument to the service configuration in whatever way the `apply`
+// function dictates.
+func applyStrArg(c *cli.Context, argname string, rootonly bool, apply func(val string)) {
+	argval := c.String(argname)
+	if argval == "" {
+		return
+	}
+
+	if rootonly && os.Getuid() != 0 {
+		logrus.Fatalf("The --%s is not supported for non-root users", argname)
+	}
+
+	apply(argval)
 }
