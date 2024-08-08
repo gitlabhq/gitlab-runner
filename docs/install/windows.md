@@ -155,6 +155,8 @@ The [NTFSSecurity](https://github.com/raandree/NTFSSecurity) PowerShell module p
 a *Remove-Item2* method which supports long paths. GitLab Runner will
 detect it if it is available and automatically make use of it.
 
+<!-- markdownlint-disable line-length -->
+
 ### I can't run Windows BASH scripts; I'm getting `The system cannot find the batch label specified - buildscript`
 
 You need to prepend `call` to your Batch file line in `.gitlab-ci.yml` so that it looks like `call C:\path\to\test.bat`. Here
@@ -166,6 +168,8 @@ before_script:
 ```
 
 Additional info can be found under issue [#1025](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1025).
+
+<!-- markdownlint-enable line-length -->
 
 ### How can I get colored output on the web terminal?
 

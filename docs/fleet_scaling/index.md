@@ -126,14 +126,18 @@ When GitLab Runner is set up for autoscaling, you can configure a runner to act 
 You can do this with the `docker-machine` or `kubernetes` executors. In this type of
 manager-only configuration, the runner agent is itself not executing any CI/CD jobs.
 
-#### [Docker Machine executor](../executors/docker_machine.md)
+#### Docker Machine executor
+
+With the [Docker Machine executor](../executors/docker_machine.md):
 
 - The runner manager provisions on-demand virtual machine instances with Docker.
 - On these VMs, GitLab Runner executes the CI/CD jobs using a container image that you specify in your `.gitlab-ci.yml` file.
 - You should test the performance of your CI/CD jobs on various machine types.
 - You should consider optimizing your compute hosts based on speed or cost.
 
-#### [Kubernetes executor](../executors/kubernetes/index.md)
+#### Kubernetes executor
+
+WIth the [Kubernetes executor](../executors/kubernetes/index.md):
 
 - The runner manager provisions pods on the target Kubernetes cluster.
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.

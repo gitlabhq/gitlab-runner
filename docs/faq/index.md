@@ -373,6 +373,8 @@ Without the role binding, the runner pod no longer has access.
 See [this issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/225)
 for details.
 
+<!-- markdownlint-disable line-length -->
+
 ## Elasticsearch service container startup error `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
 
 Elasticsearch has a `vm.max_map_count` requirement that has to be set on the instance on which Elasticsearch is run.
@@ -386,6 +388,8 @@ This error can occur when the Docker machine is not able to successfully create 
 about the error, manually create the virtual machine with the same `MachineOptions` that you have defined in your `config.toml`.
 
 For example: `docker-machine create --driver=google --google-project=GOOGLE-PROJECT-ID --google-zone=GOOGLE-ZONE ...`.
+
+<!-- markdownlint-enable line-length -->
 
 ## `No unique index found for name`
 

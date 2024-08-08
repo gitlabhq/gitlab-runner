@@ -439,6 +439,8 @@ Ensure that the task container has port 22 exposed and port mapping is configure
 
 Alternatively, ensure that you can run the Docker container locally.
 
+<!-- markdownlint-disable line-length -->
+
 ### `ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain` when running jobs
 
 The following error occurs if an unsupported key type is being used due to an older version of the AWS Fargate driver.
@@ -451,3 +453,5 @@ To resolve this issue, install the latest AWS Fargate driver on the GitLab Runne
 sudo curl -Lo /opt/gitlab-runner/fargate "https://gitlab-runner-custom-fargate-downloads.s3.amazonaws.com/latest/fargate-linux-amd64"
 sudo chmod +x /opt/gitlab-runner/fargate
 ```
+
+<!-- markdownlint-enable line-length -->

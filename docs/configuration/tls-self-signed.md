@@ -295,6 +295,8 @@ documentation.
 
 In addition, you can use the [`tlsctl`](https://gitlab.com/gitlab-org/ci-cd/runner-tools/tlsctl) tool to debug GitLab certificates from the Runner's end.
 
+<!-- markdownlint-disable line-length -->
+
 ### `x509: certificate signed by unknown authority` while trying to pull executor images from private registry
 
 This error occurs when the Docker host or Kubernetes node where the runner schedules the
@@ -315,6 +317,8 @@ and the Docker documentation for the commands to run.
 
 Depending on your version of GitLab Runner and the Docker host environment,
 you might also have to disable the `FF_RESOLVE_FULL_TLS_CHAIN` feature flag.
+
+<!-- markdownlint-enable line-length -->
 
 ### `apt-get: not found` errors in jobs
 
