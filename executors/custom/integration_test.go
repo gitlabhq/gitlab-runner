@@ -336,12 +336,12 @@ func TestBuildWithGitSubmoduleStrategyRecursiveAndGitStrategyEmpty(t *testing.T)
 
 		out, err := buildtest.RunBuildReturningOutput(t, build)
 		assert.NoError(t, err)
+		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
+		assert.Contains(t, out, "Skipping Git submodules setup")
 		assert.NotContains(t, out, "Created fresh repository")
 		assert.NotContains(t, out, "Fetching changes")
-		assert.Contains(t, out, "Skipping Git repository setup and creating an empty build directory")
 		assert.NotContains(t, out, "Updating/initializing submodules...")
 		assert.NotContains(t, out, "Updating/initializing submodules recursively...")
-		assert.Contains(t, out, "Skipping Git submodules setup")
 	})
 }
 
