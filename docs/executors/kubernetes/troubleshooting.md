@@ -121,12 +121,16 @@ A failure from an admission control webhook may instead appear as:
 Job failed (system failure): prepare environment: setting up credentials: Internal error occurred: failed calling webhook "example.webhook.service"
 ```
 
+<!-- markdownlint-disable line-length -->
+
 ## `fatal: unable to access 'https://gitlab-ci-token:token@example.com/repo/proj.git/': Could not resolve host: example.com`
 
 If using the `alpine` flavor of the [helper image](../../configuration/advanced-configuration.md#helper-image),
 there can be [DNS issues](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129) related to Alpine's `musl`'s DNS resolver.
 
 Using the `helper_image_flavor = "ubuntu"` option should resolve this.
+
+<!-- markdownlint-enable line-length -->
 
 ## `docker: Cannot connect to the Docker daemon at tcp://docker:2375. Is the docker daemon running?`
 
@@ -173,9 +177,13 @@ This issue happens when the worker node IAM role does not have the permission to
 }
 ```
 
+<!-- markdownlint-disable line-length -->
+
 ## `Preparation failed: invalid pull policy for image 'image-name:latest': pull_policy ([Always]) defined in GitLab pipeline config is not one of the allowed_pull_policies ([])`
 
 This issue happens if you specified a `pull_policy` in your `.gitlab-ci.yml` but there is no policy configured in the Runner's config file. To fix this, add `allowed_pull_policies` to your config according to [Restrict Docker pull policies](../kubernetes/index.md#restrict-docker-pull-policies).
+
+<!-- markdownlint-enable line-length -->
 
 ## Background processes cause jobs to hang and timeout
 

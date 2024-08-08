@@ -13,9 +13,12 @@ ignorecase: true
 swap:
   active user: "billable user"
   active users: "billable users"
+  agnostic: "platform-independent' or 'vendor-neutral"
   air(?:-| )?gapped: "offline environment"
   bullet: "list item"
   (?<!right-)click(?!-through): "select"
+  cancelled: "canceled"
+  cancelling: "canceling"
   code base: "codebase"
   config: "configuration"
   confirmation box: "confirmation dialog"
@@ -35,6 +38,8 @@ swap:
   installation from source: self-compiled installation
   installations from source: self-compiled installations
   it is recommended: "you should"
+  log in: "sign in"
+  log-in: "sign in"
   logged in user: "authenticated user"
   logged-in user: "authenticated user"
   machine-learning: "machine learning"
@@ -43,6 +48,8 @@ swap:
   modal: "dialog"
   n/a: "not applicable"
   navigate to: "go to"
+  normally: "usually' or 'typically"
+  normal: "typical' or 'standard"
   OAuth2: "OAuth 2.0"
   omnibus gitlab: "Linux package"
   'omnibus(?!\))': "Linux package"

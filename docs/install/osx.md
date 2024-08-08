@@ -259,6 +259,8 @@ causes to why this happens:
    Then you can verify that `~/Library/LaunchAgents/gitlab-runner.plist` has
    `SessionCreate` set to `false`.
 
+<!-- markdownlint-disable line-length -->
+
 ### `fatal: unable to access 'https://path:3000/user/repo.git/': Failed to connect to path port 3000: Operation timed out` error in the job
 
 If one of the jobs fails with this error, make sure the runner can connect to your GitLab instance. The connection could be blocked by things like:
@@ -280,6 +282,8 @@ If this error is encountered when running the `gitlab-runner start` command, ens
 ```
 
 If the directories do not exist, create them and ensure that the runner service user has appropriate permissions to read and write to them.
+
+<!-- markdownlint-enable line-length -->
 
 ### `ERROR: Error on fetching TLS Data from API response... error  error=couldn't build CA Chain`
 
