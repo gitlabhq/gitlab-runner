@@ -26,10 +26,8 @@ like Google Cloud, AWS, and Azure.
 To install a plugin for your target platform, see [Install the fleeting plugin](../fleet_scaling/fleeting.md#install-a-fleeting-plugin).
 
 NOTE:
-Only the fleeting plugin for GCP is generally available.
-The fleeting plugins for AWS and Azure are still in beta.
-For more information, see [issue 408131](https://gitlab.com/gitlab-org/gitlab/-/issues/408131).
-To report a problem with the beta plugins, leave a comment in the issue.
+The fleeting plugin for Azure is still in beta.
+To report a problem with the plugin, leave a comment on [issue 408131](https://gitlab.com/gitlab-org/gitlab/-/issues/408131).
 
 ## Configure Docker Autoscaler
 
