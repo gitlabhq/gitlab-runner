@@ -88,7 +88,6 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
        docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
        ```
 
-       NOTE:
        If you used a configuration volume other than `/srv/gitlab-runner/config`
        during installation, update the command with the correct volume.
 
@@ -256,7 +255,6 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
      docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
      ```
 
-     NOTE:
      If you used a configuration volume other than `/srv/gitlab-runner/config`
      during installation, update the command with the correct volume.
 
