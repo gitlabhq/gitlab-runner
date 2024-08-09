@@ -1,10 +1,7 @@
 ---
 stage: Verify
 group: Runner
-info: >-
-  To determine the technical writer assigned to the Stage/Group associated with
-  this page, see
-  https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
+info: To determine the technical writer assigned to the Stage/Group associated with this page, see https://handbook.gitlab.com/handbook/product/ux/technical-writing/#assignments
 ---
 
 # Registering runners
@@ -85,33 +82,33 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 
    - Use a short-lived `gitlab-runner` container with the correct config volume mount:
 
-      - For local system volume mounts:
+     - For local system volume mounts:
 
-        ```shell
-        docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
-        ```
+       ```shell
+       docker run --rm -it -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-runner register
+       ```
 
-        NOTE:
-        If you used a configuration volume other than `/srv/gitlab-runner/config`
-        during installation, update the command with the correct volume.
+       NOTE:
+       If you used a configuration volume other than `/srv/gitlab-runner/config`
+       during installation, update the command with the correct volume.
 
-      - For Docker volume mounts:
+     - For Docker volume mounts:
 
-        ```shell
-        docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
-        ```
+       ```shell
+       docker run --rm -it -v gitlab-runner-config:/etc/gitlab-runner gitlab/gitlab-runner:latest register
+       ```
 
    - Use the executable inside an active runner container:
 
-        ```shell
-        docker exec -it gitlab-runner gitlab-runner register
-        ```
+     ```shell
+     docker exec -it gitlab-runner gitlab-runner register
+     ```
 
    ::EndTabs
 
 1. Enter your GitLab URL:
    - For runners on GitLab self-managed, use the URL for your GitLab instance. For example,
-   if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
+     if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
    - For runners on GitLab.com, the GitLab instance URL is `https://gitlab.com`.
 1. Enter the runner authentication token.
 1. Enter a description for the runner.
@@ -120,9 +117,9 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 1. Enter the type of [executor](../executors/index.md).
 
 - To register multiple runners on the same host machine, each with a different configuration,
-repeat the `register` command.
+  repeat the `register` command.
 - To register the same configuration on multiple host machines, use the same runner authentication token
-for each runner registration. For more information, see [Reusing a runner configuration](../fleet_scaling/index.md#reusing-a-runner-configuration).
+  for each runner registration. For more information, see [Reusing a runner configuration](../fleet_scaling/index.md#reusing-a-runner-configuration).
 
 You can also use the [non-interactive mode](../commands/index.md#non-interactive-registration) to use additional arguments to register the runner:
 
@@ -273,7 +270,7 @@ To register the runner with a [runner registration token](https://docs.gitlab.co
 
 1. Enter your GitLab URL:
    - For GitLab self-managed runners, use the URL for your GitLab instance. For example,
-   if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
+     if your project is hosted on `gitlab.example.com/yourname/yourproject`, your GitLab instance URL is `https://gitlab.example.com`.
    - For GitLab.com, the GitLab instance URL is `https://gitlab.com`.
 1. Enter the token you obtained to register the runner.
 1. Enter a description for the runner.
@@ -409,8 +406,8 @@ Prerequisites:
 - A runner authentication or registration token:
   - Obtain a runner authentication token (recommended). You can either:
     - Create an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token),
-    [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
-    [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
+      [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
+      [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
     - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
   - Obtain a runner registration token (deprecated) for an [instance](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-registration-token-deprecated),
   [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-registration-token-deprecated), or
@@ -461,8 +458,8 @@ To register a runner:
        TEMPLATE_CONFIG_FILE = <file_path>
      ```
 
-    If you update the environment variable, you do not need to
-    add the file path in the `register` command each time you register.
+     If you update the environment variable, you do not need to
+     add the file path in the `register` command each time you register.
 
 After you register the runner, the settings in the configuration template
 are merged with the `[[runners]]` entry created in the `config.toml`:
@@ -491,10 +488,10 @@ check_interval = 0
     pod_annotations_overwrite_allowed = ""
     [runners.kubernetes.volumes]
 
-       [[runners.kubernetes.volumes.empty_dir]]
-         name = "empty_dir"
-         mount_path = "/path/to/empty_dir"
-         medium = "Memory"
+      [[runners.kubernetes.volumes.empty_dir]]
+        name = "empty_dir"
+        mount_path = "/path/to/empty_dir"
+        medium = "Memory"
 ```
 
 Template settings are merged only for options that are:
