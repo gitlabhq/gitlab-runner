@@ -1,3 +1,51 @@
+## v17.3.0 (2024-08-09)
+
+### New features
+
+- Add GIT_STRATEGY of "empty" to support clean build directories !4889 (Nathan Cain @nathan.cain)
+- Add debug log message for resolving Docker credentials !4902
+
+### Security fixes
+
+- Update azidentity dependency !4903
+
+### Bug fixes
+
+- Gracefully stop long running processes when using the shell executor - Take 2 !4896
+- Upgrade fleeting: fix tcpchan deadline for tunnelled connections !4917
+- Fix default log format to FormatRunner !4910
+- Reset log level and format to default values when not set !4897
+- Prevent additional newline in job in attach mode !4901
+- Use pull policy configuration for services !4854
+- Cancel stage script upon job cancellation in attach mode !4813
+- Cancel stage script upon job cancellation in attach mode !4813
+- Cancel stage script upon job cancellation in attach mode !4813
+- Cancel stage script upon job cancellation in attach mode !4813
+- Cancel stage script upon job cancellation in attach mode !4813
+
+### Maintenance
+
+- Remove unneeded notes in tabs !4922
+- Fix formatting in runner registration doc !4921
+- Work around a syntax highlighting problem !4920
+- Remove Beta plugin warning for AWS !4919
+- Apply split Vale rules to project !4918
+- Remove funlen !4912
+- Skip `TestRunCommand_configReloading` unit test on windows platform !4916
+- Bump UBI base image from `9.4-1134` to `9.4-1194` !4909
+- Add runner path requirement !4904
+- Update index.md !4908
+- Merge back 16.11, 17.0, 17.1 and 17.2 patches in main branch !4905
+- Add a Runner Docker image tag for the build's revision !4862
+- Re-enable Windows Docker git-lfs tests !4900
+- Remove git 1.8.3.1 test !4856
+- Clarify where to install the fleeting plugin !4894
+- Docs maintenance: Add internal pages to ignore list !4895
+- [k8s] Fix `testKubernetesWithNonRootSecurityContext` integration tests !4892
+- [k8s] Fix `CaptureServiceLogs` integration tests !4891
+- Add missing requirement for network_mtu !4890
+- Add note about using Workload Identity Federation for GKE !4884 (Nabil ZOUABI @nabil_zouabi)
+
 ## v17.2.1 (2024-07-25)
 
 ### Bug fixes
