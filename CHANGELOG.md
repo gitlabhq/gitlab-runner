@@ -18,10 +18,6 @@
 - Prevent additional newline in job in attach mode !4901
 - Use pull policy configuration for services !4854
 - Cancel stage script upon job cancellation in attach mode !4813
-- Cancel stage script upon job cancellation in attach mode !4813
-- Cancel stage script upon job cancellation in attach mode !4813
-- Cancel stage script upon job cancellation in attach mode !4813
-- Cancel stage script upon job cancellation in attach mode !4813
 
 ### Maintenance
 
