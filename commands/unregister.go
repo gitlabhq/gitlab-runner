@@ -72,7 +72,6 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 	err := c.loadConfig()
 	if err != nil {
 		logrus.Fatalln(err)
-		return
 	}
 
 	var runners []*common.RunnerConfig
