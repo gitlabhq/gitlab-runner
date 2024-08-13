@@ -40,16 +40,16 @@ To use the autoscale feature, Docker and GitLab Runner must be
 installed in the same machine:
 
 1. Log in to a new Linux-based machine that will serve as a bastion server
-   where Docker will spawn new machines from
-1. [Install GitLab Runner](../install/index.md)
-1. Install Docker Machine from the [Docker Machine fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine)
+   where Docker will spawn new machines from.
+1. [Install GitLab Runner](../install/index.md).
+1. Install Docker Machine from the [Docker Machine fork](https://gitlab.com/gitlab-org/ci-cd/docker-machine).
 1. Optionally but recommended, prepare a
    [proxy container registry and a cache server](../configuration/speed_up_job_execution.md)
-   to be used with the autoscaled runners
+   to be used with the autoscaled runners.
 
 ## Configuring GitLab Runner
 
-1. Familiarize yourself with the core concepts of using `docker-machine` together
+1. Familiarize yourself with the core concepts of using `docker-machine` 
    with `gitlab-runner`:
       - Read [GitLab Runner Autoscaling](../configuration/autoscale.md)
       - Read [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)
@@ -101,8 +101,8 @@ installed in the same machine:
      ```
 
    NOTE:
-   Sending the [`SIGQUIT` signal](../commands/index.md#signals) will make the
-   process stop gracefully. The process will stop accepting new jobs, and will exit
+   Sending the [`SIGQUIT` signal](../commands/index.md#signals) makes the
+   process stop gracefully. The process stops accepting new jobs, and exits 
    as soon as the current jobs are finished.
 
 1. Wait until GitLab Runner exits. You can check its status with `gitlab-runner status`
@@ -152,7 +152,7 @@ To create an instance with GPUs, use these Docker Machine options:
 |Option|Example|Description|
 |------|-------|-----------|
 |`--google-accelerator`|`type=nvidia-tesla-p4,count=1`|Specifies the type and number of GPU accelerators to attach to the instance (`type=TYPE,count=N` format)|
-|`--google-maintenance-policy`|`TERMINATE`|Always use `TERMINATE` because [Google Cloud does not allow GPU instances to be live migrated](https://cloud.google.com/compute/docs/instances/live-migration-process).|
+|`--google-maintenance-policy`|`TERMINATE`|Always use `TERMINATE` because [Google Cloud does not allow live migration of GPU instances](https://cloud.google.com/compute/docs/instances/live-migration-process).|
 |`--google-machine-image`|`https://www.googleapis.com/compute/v1/projects/deeplearning-platform-release/global/images/family/tf2-ent-2-3-cu110`|The URL of a GPU-enabled operating system. See the [list of available images](https://cloud.google.com/deep-learning-vm/docs/images).|
 |`--google-metadata`|`install-nvidia-driver=True`|This flag tells the image to install the NVIDIA GPU driver.|
 
