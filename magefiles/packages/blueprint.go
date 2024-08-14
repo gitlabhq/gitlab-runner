@@ -74,17 +74,18 @@ func (b blueprintImpl) Data() blueprintParams {
 func Assemble(pkgType Type, arch, packageArch string) Blueprint {
 	base := build.NewBlueprintBase(gPGKeyID, gPGPassphrase, iteration)
 
+	// This depends on pkgType == RpmFips, which we alter below.
+	prebuiltImages := prebuiltImages(pkgType)
+
 	var postfix string
 	if pkgType == RpmFips {
 		pkgType = Rpm
 		postfix = "-fips"
 	}
-	runnerBinary := fmt.Sprintf("out/binaries/%s-linux-%s", build.AppName, arch)
+	runnerBinary := fmt.Sprintf("out/binaries/%s-linux-%s%s", build.AppName, arch, postfix)
 
 	pkgName := build.AppName
 	pkgFile := fmt.Sprintf("out/%s/%s_%s%s.%s", pkgType, pkgName, packageArch, postfix, pkgType)
-
-	prebuiltImages := prebuiltImages(pkgType)
 
 	params := blueprintParams{
 		pkgType:        pkgType,
