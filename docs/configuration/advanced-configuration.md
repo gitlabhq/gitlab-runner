@@ -1285,7 +1285,7 @@ One of the main reasons for providing these images is that GitLab Runner is usin
 `gitlab-runner-helper` binary. This binary is compiled from part of the GitLab Runner source. This binary uses an internal
 API that is expected to be the same in both binaries.
 
-By default, GitLab Runner references a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
+By default, GitLab Runner references a `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ` image, where `XYZ` is based
 on the GitLab Runner architecture and Git revision. In GitLab Runner 11.3 and later, you can define the
 image version by using one of the
 [version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/common/version.go#L48-49):
