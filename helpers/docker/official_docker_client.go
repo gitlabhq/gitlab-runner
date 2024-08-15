@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -36,7 +37,8 @@ func IsErrNotFound(err error) bool {
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
 // giving it the methods it needs to satisfy the docker.Client interface
 type officialDockerClient struct {
-	client *client.Client
+	client    *client.Client
+	transport *http.Transport
 }
 
 func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDockerClient, error) {
@@ -45,12 +47,17 @@ func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDocker
 		client.WithVersionFromEnv(),
 	}
 
+	// create the http.Transport instance here so we can cache it. In docker SKD >= v25 the http.Client's Transport
+	// instance is overwritten with an otelhttp.Transport, which does not expose its TSLCientConfig. Some tests need to
+	// access the TSLCientConfig to assert TSL was configured correctly.
+	transport := http.Transport{}
+
 	// options acting upon the client and transport need to be done in a
 	// specific order.
 	options = append(
 		options,
 		client.WithHost(c.Host),
-		WithCustomHTTPClient(),
+		WithCustomHTTPClient(&transport),
 		WithCustomTLSClientConfig(c),
 	)
 
@@ -63,7 +70,8 @@ func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDocker
 	}
 
 	return &officialDockerClient{
-		client: dockerClient,
+		client:    dockerClient,
+		transport: &transport,
 	}, nil
 }
 

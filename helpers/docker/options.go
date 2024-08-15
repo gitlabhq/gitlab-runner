@@ -49,14 +49,13 @@ func WithCustomTLSClientConfig(c Credentials) client.Opt {
 	}
 }
 
-func WithCustomHTTPClient() client.Opt {
+func WithCustomHTTPClient(transport *http.Transport) client.Opt {
 	return func(c *client.Client) error {
 		url, err := client.ParseHostURL(c.DaemonHost())
 		if err != nil {
 			return err
 		}
 
-		transport := &http.Transport{}
 		err = sockets.ConfigureTransport(transport, url.Scheme, url.Host)
 		if err != nil {
 			return err
