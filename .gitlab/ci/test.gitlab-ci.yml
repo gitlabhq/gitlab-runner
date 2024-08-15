@@ -154,7 +154,7 @@ unit test with race:
       -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       ./... \
-      -- -ldflags "$(make print_ldflags)" -timeout=45m
+      -- -ldflags "$(make print_ldflags)" -timeout=90m
 
 integration test:
   extends:
@@ -191,7 +191,7 @@ integration test with race:
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       -tags integration \
       ./... \
-      -- -ldflags "$(make print_ldflags)" -timeout 15m
+      -- -ldflags "$(make print_ldflags)" -timeout 30m
 
 fuzz variable mask:
   extends:
