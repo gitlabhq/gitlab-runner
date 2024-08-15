@@ -579,7 +579,7 @@ func TestDefaultManager_RemoveTemporary(t *testing.T) {
 			clientAssertions: func(c *docker.MockClient) {
 				c.On("VolumeRemove", mock.Anything, "nonexistent-volume", true).Return(&test.NotFoundError{}).Once()
 			},
-			expectedError: nil,
+			expectedError: &test.NotFoundError{},
 		},
 		"failed to remove volume": {
 			temporaryVolumes: []string{"volume-name-1"},
