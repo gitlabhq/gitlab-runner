@@ -328,7 +328,7 @@ The following settings define the Docker container parameters.
 | `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
 | `group_add`                    | Add additional groups the container process will run as. |
 | `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
-| `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.18`. |
+| `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.19`. |
 | `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image ARCH and OS. |
 | `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
 | `hostname`                     | Custom hostname for the Docker container. |
@@ -339,8 +339,8 @@ The following settings define the Docker container parameters.
 | `memory_reservation`           | The memory soft limit. A string. |
 | `network_mode`                 | Add container to a custom network. |
 | `mac_address`                  | Container MAC address (e.g., 92:d0:c6:0a:29:33). |
-| `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not kill processes in a container. |
-| `oom_score_adjust`             | OOM score adjustment. Positive means kill earlier. |
+| `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not terminate processes in a container. |
+| `oom_score_adjust`             | OOM score adjustment. Positive means terminate the processes earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
 | `services_privileged`          | Allow services to run in privileged mode. If unset (default) `privileged` value is used instead. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. Insecure. |
 | `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images). You can also add [multiple pull policies](../executors/docker.md#set-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#allow-docker-pull-policies). |
