@@ -231,7 +231,7 @@ NOTE:
 
 #### Modify Git LFS endpoints
 
-To modify Git LFS endpoints, set `pre_get_sources_script` in one of the following files:
+To modify [Git LFS](https://docs.gitlab.com/ee/topics/git/lfs/) endpoints, set `pre_get_sources_script` in one of the following files:
 
 - `config.toml`:
 
