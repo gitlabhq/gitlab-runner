@@ -369,7 +369,7 @@ The following settings define the Docker container parameters.
 
 ### The `[[runners.docker.services]]` section
 
-Specify additional services to run with the job. For a list of available images, see the
+Specify additional [services](https://docs.gitlab.com/ee/ci/services/) to run with the job. For a list of available images, see the
 [Docker Registry](https://hub.docker.com).
 Each service runs in a separate container and is linked to the job.
 
