@@ -23,6 +23,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1591,7 +1592,7 @@ func removeBuildContainer(t *testing.T) <-chan string {
 	for len(list) == 0 {
 		time.Sleep(time.Second)
 		nameFilter := filters.Arg("name", "misscont")
-		containerList := types.ContainerListOptions{
+		containerList := container.ListOptions{
 			Filters: filters.NewArgs(nameFilter),
 		}
 		list, err = client.ContainerList(context.Background(), containerList)
@@ -1599,7 +1600,7 @@ func removeBuildContainer(t *testing.T) <-chan string {
 	}
 
 	for _, ctr := range list {
-		err := client.ContainerRemove(context.Background(), ctr.ID, types.ContainerRemoveOptions{Force: true})
+		err := client.ContainerRemove(context.Background(), ctr.ID, container.RemoveOptions{Force: true})
 		require.NoError(t, err)
 	}
 
@@ -2467,7 +2468,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 			var ctr types.Container
 			// wait for the build container to be created...
 			require.Eventually(t, func() bool {
-				list, err := client.ContainerList(ctx, types.ContainerListOptions{})
+				list, err := client.ContainerList(ctx, container.ListOptions{})
 				assert.NoError(t, err, "listing containers")
 
 				for _, l := range list {

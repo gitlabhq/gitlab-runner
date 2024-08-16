@@ -212,7 +212,7 @@ func (e *executor) runServiceHealthCheckContainer(service *types.Container, time
 	defer func() { _ = e.removeContainer(e.Context, resp.ID) }()
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service healthcheck container %s (%s)...", containerName, resp.ID))
-	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
+	err = e.client.ContainerStart(e.Context, resp.ID, container.StartOptions{})
 	if err != nil {
 		return fmt.Errorf("start service container: %w", err)
 	}
@@ -328,7 +328,7 @@ func (e *executor) captureContainersLogs(ctx context.Context, linksMap map[strin
 // and written when we disconnect from the container (or it is stopped). The
 // specified sink is closed when the source is completely drained.
 func (e *executor) captureContainerLogs(ctx context.Context, cid, containerName string, sink io.WriteCloser) error {
-	source, err := e.client.ContainerLogs(ctx, cid, types.ContainerLogsOptions{
+	source, err := e.client.ContainerLogs(ctx, cid, container.LogsOptions{
 		ShowStderr: true,
 		ShowStdout: true,
 		Timestamps: true,

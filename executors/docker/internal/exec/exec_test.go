@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -52,7 +53,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 		clientMock.On("ContainerAttach", expectedCtx, id, attachOptions()).
 			Return(hijacked, nil).
 			Once()
-		clientMock.On("ContainerStart", expectedCtx, id, types.ContainerStartOptions{}).
+		clientMock.On("ContainerStart", expectedCtx, id, container.StartOptions{}).
 			Return(nil).
 			Once()
 	}
@@ -92,7 +93,7 @@ func TestDefaultDocker_Exec(t *testing.T) {
 				clientMock.On("ContainerAttach", expectedCtx, id, attachOptions()).
 					Return(hijacked, nil).
 					Once()
-				clientMock.On("ContainerStart", expectedCtx, id, types.ContainerStartOptions{}).
+				clientMock.On("ContainerStart", expectedCtx, id, container.StartOptions{}).
 					Return(assert.AnError).
 					Once()
 			},

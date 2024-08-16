@@ -50,7 +50,7 @@ func (d *dockerLinuxSetter) Set(ctx context.Context, volumeName string, labels m
 	}
 
 	defer func() {
-		removeErr := d.client.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{Force: true})
+		removeErr := d.client.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true})
 		if removeErr != nil {
 			d.logger.WithError(removeErr).
 				WithField("container_id", containerID).
@@ -102,7 +102,7 @@ func (d *dockerLinuxSetter) createContainer(
 }
 
 func (d *dockerLinuxSetter) runContainer(ctx context.Context, containerID string) error {
-	err := d.client.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
+	err := d.client.ContainerStart(ctx, containerID, container.StartOptions{})
 	if err != nil {
 		return fmt.Errorf("starting permission container: %w", err)
 	}

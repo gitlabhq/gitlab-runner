@@ -13,7 +13,11 @@ func FixHOME(app *cli.App) {
 
 	app.Before = func(c *cli.Context) error {
 		// Fix home
-		if key := homedir.Key(); os.Getenv(key) == "" {
+		key, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to get user home dir: %w", err)
+		}
+		if os.Getenv(key) == "" {
 			value := homedir.Get()
 			if value == "" {
 				return fmt.Errorf("the %q is not set", key)

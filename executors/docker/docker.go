@@ -20,6 +20,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -85,7 +86,7 @@ type executor struct {
 	client                    docker.Client
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
-	info                      types.Info
+	info                      system.Info
 	waiter                    wait.KillWaiter
 
 	temporary        []string // IDs of containers that should be removed
@@ -433,7 +434,7 @@ func (e *executor) createService(
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service container %s (%s)...", containerName, resp.ID))
-	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
+	err = e.client.ContainerStart(e.Context, resp.ID, container.StartOptions{})
 	if err != nil {
 		e.temporary = append(e.temporary, resp.ID)
 		return nil, err
@@ -814,7 +815,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 
 	e.disconnectNetwork(ctx, id)
 
-	options := types.ContainerRemoveOptions{
+	options := container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
@@ -1487,7 +1488,7 @@ func (e *executor) getContainerExposedPorts(container *types.Container) ([]int, 
 func (e *executor) readContainerLogs(containerID string) string {
 	var buf bytes.Buffer
 
-	options := types.ContainerLogsOptions{
+	options := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,

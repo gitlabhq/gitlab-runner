@@ -16,6 +16,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/go-connections/nat"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +50,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 
 	e := &executor{
 		client: c,
-		info: types.Info{
+		info: system.Info{
 			OSType:       helperimage.OSTypeLinux,
 			Architecture: "amd64",
 		},
@@ -88,7 +90,7 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		"ContainerRemove",
 		e.Context,
 		containerNameMatcher,
-		types.ContainerRemoveOptions{RemoveVolumes: true, Force: true},
+		container.RemoveOptions{RemoveVolumes: true, Force: true},
 	).
 		Return(nil).
 		Once()
@@ -164,7 +166,7 @@ func TestDockerServicesTmpfsSetting(t *testing.T) {
 		},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		require.NotEmpty(t, hostConfig.Tmpfs)
 	}
 
@@ -176,7 +178,7 @@ func TestDockerServicesDNSSetting(t *testing.T) {
 		DNS: []string{"2001:db8::1", "192.0.2.1"},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		require.Equal(t, dockerConfig.DNS, hostConfig.DNS)
 	}
 
@@ -188,7 +190,7 @@ func TestDockerServicesDNSSearchSetting(t *testing.T) {
 		DNSSearch: []string{"mydomain.example"},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		require.Equal(t, dockerConfig.DNSSearch, hostConfig.DNSSearch)
 	}
 
@@ -200,7 +202,7 @@ func TestDockerServicesExtraHostsSetting(t *testing.T) {
 		ExtraHosts: []string{"foo.example:2001:db8::1", "bar.example:192.0.2.1"},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		require.Equal(t, dockerConfig.ExtraHosts, hostConfig.ExtraHosts)
 	}
 
@@ -213,10 +215,10 @@ func TestDockerServiceUserNSSetting(t *testing.T) {
 		UsernsMode: "host",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, container.UsernsMode(""), hostConfig.UsernsMode)
 	}
-	cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
 	}
 
@@ -279,7 +281,7 @@ func TestDockerServicePrivilegedSetting(t *testing.T) {
 			AllowedPrivilegedServices: test.allowedImages,
 		}
 
-		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 			var message string
 			if test.expectedPrivileged {
 				message = "%q must be allowed by %q"
@@ -301,7 +303,8 @@ func TestDockerWithNoDockerConfigAndWithServiceImagePullPolicyAlways(t *testing.
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
 
 	c, e := prepareTestDockerConfiguration(t, dockerConfig, cce)
 	defer c.AssertExpectations(t)
@@ -334,7 +337,8 @@ func TestDockerWithDockerConfigAlwaysAndIfNotPresentAndWithServiceImagePullPolic
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
 
 	c, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
@@ -373,7 +377,8 @@ func TestDockerWithDockerConfigAlwaysButNotAllowedAndWithNoServiceImagePullPolic
 	}
 	serviceConfig := common.Image{}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
 	_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
 	err := e.createVolumesManager()
@@ -411,7 +416,8 @@ func TestDockerWithDockerConfigAlwaysAndWithServiceImagePullPolicyIfNotPresent(t
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
 	_, e := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
 	err := e.createVolumesManager()
@@ -448,7 +454,7 @@ func TestGetServiceDefinitions(t *testing.T) {
 	e.Config = common.RunnerConfig{}
 	e.Config.Docker = &common.DockerConfig{}
 
-	var testServicesLimit = func(i int) *int {
+	testServicesLimit := func(i int) *int {
 		return &i
 	}
 
