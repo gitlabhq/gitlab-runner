@@ -736,8 +736,7 @@ The instance executor is in [beta](https://docs.gitlab.com/ee/policy/experiment-
 > - Introduced in GitLab Runner v15.10.0.
 
 The following parameters configure the autoscaler feature. You can only use these parameters with the
-[Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors. These
-executors are in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta).
+[Instance](../executors/instance.md) and [Docker Autoscaler](../executors/docker_autoscaler.md) executors.
 
 | Parameter                               | Description |
 |-----------------------------------------|-------------|
