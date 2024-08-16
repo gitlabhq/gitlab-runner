@@ -851,8 +851,7 @@ It's worth keeping in mind that this cron job represents a range in time. For ex
 
 ## The `[runners.autoscaler.vm_isolation]` section
 
-VM Isolation uses [`nesting`](https://gitlab.com/gitlab-org/fleeting/nesting), which is currently only supported
-on MacOS.
+VM Isolation uses [`nesting`](../executors/instance.md#nested-virtualization), which is currently only supported on MacOS.
 
 | Parameter                | Description |
 |--------------------------|-------------|
