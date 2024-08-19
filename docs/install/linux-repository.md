@@ -45,7 +45,7 @@ To install GitLab Runner:
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
    ```
 
-   For RHEL/CentOS/Fedora:
+   For RHEL/CentOS/Fedora/Amazon Linux:
 
    ```shell
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
@@ -68,7 +68,7 @@ To install GitLab Runner:
    sudo apt-get install gitlab-runner
    ```
 
-   For RHEL/CentOS/Fedora:
+   For RHEL/CentOS/Fedora/Amazon Linux:
 
    ```shell
    sudo yum install gitlab-runner
@@ -135,7 +135,7 @@ sudo apt-get update
 sudo apt-get install gitlab-runner
 ```
 
-For RHEL/CentOS/Fedora:
+For RHEL/CentOS/Fedora/Amazon Linux:
 
 ```shell
 sudo yum update
@@ -309,7 +309,7 @@ For Debian/Ubuntu/Mint:
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E apt-get install gitlab-runner
 ```
 
-For RHEL/CentOS/Fedora:
+For RHEL/CentOS/Fedora/Amazon Linux:
 
 ```shell
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner
