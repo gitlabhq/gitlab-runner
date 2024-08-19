@@ -1212,7 +1212,7 @@ To use the `arm64` helper image on `arm64` Kubernetes clusters, set the followin
 
 ```toml
 [runners.kubernetes]
-        helper_image = "gitlab/gitlab-runner-helper:arm64-latest"
+        helper_image = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-latest"
 ```
 
 ### Runner images that use an old version of Alpine Linux
@@ -1237,7 +1237,7 @@ the GitLab Runner helper images are based on do not support `alpine:latest`.
 Example:
 
 ```shell
-docker pull gitlab/gitlab-runner-helper:alpine3.18-x86_64-v16.1.0-pwsh
+docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:alpine3.18-x86_64-v16.1.0-pwsh
 ```
 
 ### Helper image registry
@@ -1254,7 +1254,7 @@ In some cases, you may need to override the helper image. There are many reasons
 
 1. **To speed up jobs execution**: In environments with slower internet connection, downloading the
    same image multiple times can increase the time it takes to execute a job. Downloading the helper image from
-   a local registry, where the exact copy of `gitlab/gitlab-runner-helper:XYZ` is stored, can speed things up.
+   a local registry, where the exact copy of `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ` is stored, can speed things up.
 
 1. **Security concerns**: You may not want to download external dependencies that were not checked before. There
    might be a business rule to use only dependencies that were reviewed and stored in local repositories.
@@ -1283,7 +1283,7 @@ One of the main reasons for providing these images is that GitLab Runner is usin
 `gitlab-runner-helper` binary. This binary is compiled from part of the GitLab Runner source. This binary uses an internal
 API that is expected to be the same in both binaries.
 
-By default, GitLab Runner references a `gitlab/gitlab-runner-helper:XYZ` image, where `XYZ` is based
+By default, GitLab Runner references a `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ` image, where `XYZ` is based
 on the GitLab Runner architecture and Git revision. In GitLab Runner 11.3 and later, you can define the
 image version by using one of the
 [version variables](https://gitlab.com/gitlab-org/gitlab-runner/blob/main/common/version.go#L48-49):
@@ -1318,7 +1318,7 @@ valid and point to the same image.
 #### When using PowerShell Core
 
 An additional version of the helper image for Linux,
-which contains PowerShell Core, is published with the `gitlab/gitlab-runner-helper:XYZ-pwsh` tag.
+which contains PowerShell Core, is published with the `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ-pwsh` tag.
 
 ## The `[runners.custom_build_dir]` section
 
