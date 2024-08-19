@@ -650,7 +650,7 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 |---------------------|-------------|
 | `MaxGrowthRate`     | The maximum number of machines that can be added to the runner in parallel. Default is `0` (no limit). |
 | `IdleCount`         | Number of machines that need to be created and waiting in _Idle_ state. |
-| `IdleScaleFactor`   | (Experiment) The number of _Idle_ machines as a factor of the number of machines in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
+| `IdleScaleFactor`   | The number of _Idle_ machines as a factor of the number of machines in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
 | `IdleCountMin`      | Minimal number of machines that need to be created and waiting in _Idle_ state when the `IdleScaleFactor` is in use. Default is 1. |
 | `IdleTime`          | Time (in seconds) for machine to be in _Idle_ state before it is removed. |
 | `[[runners.machine.autoscaling]]` | Multiple sections, each containing overrides for autoscaling configuration. The last section with an expression that matches the current time is selected. |
