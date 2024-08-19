@@ -279,7 +279,7 @@ The following executors are available.
 
 ## The shells
 
-The available shells can run on different platforms.
+CI/CD jobs run locally on the host machine when configured to use the shell executor. The supported operating system shells are:
 
 | Shell | Description |
 | ----- | ----------- |
