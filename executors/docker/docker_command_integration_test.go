@@ -41,9 +41,11 @@ import (
 // Specifying container image platform requires API version >= 1.41
 const minDockerDaemonVersion = "1.41"
 
-var getWindowsImageOnce sync.Once
-var windowsImage string
-var systemIDState = common.NewSystemIDState()
+var (
+	getWindowsImageOnce sync.Once
+	windowsImage        string
+	systemIDState       = common.NewSystemIDState()
+)
 
 var windowsDockerImageTagMappings = map[string]string{
 	windows.V1809: "ltsc2019",
@@ -717,8 +719,7 @@ func TestDockerCommandOutput(t *testing.T) {
 	err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
 	assert.NoError(t, err)
 
-	re, err :=
-		regexp.Compile("(?m)^Initialized empty Git repository in /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test/.git/")
+	re, err := regexp.Compile("(?m)^Initialized empty Git repository in /builds/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/gitlab-test/.git/")
 	require.NoError(t, err)
 	assert.Regexp(t, re, buffer.String())
 }
@@ -2337,4 +2338,154 @@ func TestDockerCommandWithUser(t *testing.T) {
 	require.NoError(t, build.Run(&common.Config{}, &common.Trace{Writer: &buffer}))
 
 	assert.Regexp(t, "whoami.*\nsquid", buffer.String())
+}
+
+func TestDockerCommand_MacAddressConfig(t *testing.T) {
+	// test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+	test.SkipIfDockerDaemonAPIVersionNotAtLeast(t, minDockerDaemonVersion)
+
+	macAddress := "92:d0:c6:0a:29:33"
+
+	type testCase struct {
+		networkMode     string
+		networkPerBuild bool
+		expectedRunErr  bool
+		validate        func(*testing.T, types.ContainerJSON)
+	}
+
+	tests := map[string]testCase{
+		"empty (user defined), enabled": {networkMode: "", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
+			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+			assert.Equal(t, "", info.NetworkSettings.MacAddress, "net settings")
+			assert.Len(t, info.NetworkSettings.Networks, 1)
+			for k, v := range info.NetworkSettings.Networks {
+				assert.Contains(t, k, "runner-")
+				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+			}
+		}},
+		"empty (user defined), disabled": {networkMode: "", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
+			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+			assert.Len(t, info.NetworkSettings.Networks, 1)
+			for k, v := range info.NetworkSettings.Networks {
+				assert.Equal(t, "bridge", k)
+				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+			}
+		}},
+		"default, enabled": {networkMode: "default", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
+			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+			assert.Len(t, info.NetworkSettings.Networks, 1)
+			for k, v := range info.NetworkSettings.Networks {
+				assert.Equal(t, "bridge", k)
+				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+			}
+		}},
+		"default, disabled": {networkMode: "default", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
+			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+			assert.Len(t, info.NetworkSettings.Networks, 1)
+			for k, v := range info.NetworkSettings.Networks {
+				assert.Equal(t, "bridge", k)
+				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+			}
+		}},
+		"bridge, enabled": {networkMode: "bridge", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
+			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+			assert.Len(t, info.NetworkSettings.Networks, 1)
+			for k, v := range info.NetworkSettings.Networks {
+				assert.Equal(t, "bridge", k)
+				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+			}
+		}},
+		"bridge, disabled": {networkMode: "bridge", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
+			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
+			assert.Len(t, info.NetworkSettings.Networks, 1)
+			for k, v := range info.NetworkSettings.Networks {
+				assert.Equal(t, "bridge", k)
+				assert.Equal(t, macAddress, v.MacAddress, k+" network")
+			}
+		}},
+		// the cases below fail with "exit code 1" when run in a CI pipeline, and "conflicting options: mac-address and
+		// the network mode" when run locally.
+		"none, enabled":  {networkMode: "none", networkPerBuild: true, expectedRunErr: true},
+		"none, disabled": {networkMode: "none", networkPerBuild: false, expectedRunErr: true},
+		// the cases below fail with "conflicting options: mac-address and the network mode"
+		"host, enabled":  {networkMode: "host", networkPerBuild: true, expectedRunErr: true},
+		"host, disabled": {networkMode: "host", networkPerBuild: false, expectedRunErr: true},
+	}
+
+	// we'll make some direct docker API calls in this tests...
+	client, err := docker.New(docker.Credentials{})
+	require.NoError(t, err, "creating docker client")
+	defer client.Close()
+
+	ctx := context.Background()
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			runnerID := 987654321
+			// make a build according to the test case parameters...
+			rc := getRunnerConfigForOS(t)
+			rc.Docker.MacAddress = macAddress
+			rc.Docker.NetworkMode = tc.networkMode
+			build := getBuildForOS(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse("sleep 3")
+			})
+			build.Runner = rc
+			build.ProjectRunnerID = runnerID
+			build.Variables = append(build.Variables, common.JobVariable{
+				Key:   featureflags.NetworkPerBuild,
+				Value: strconv.FormatBool(tc.networkPerBuild),
+			})
+
+			wg := sync.WaitGroup{}
+			wg.Add(1)
+			defer wg.Wait() // wait for build job to finish
+
+			go func(t *testing.T, tc testCase) {
+				defer wg.Done()
+				// run the build...
+				err := build.Run(&common.Config{}, &common.Trace{Writer: &bytes.Buffer{}})
+
+				if tc.expectedRunErr {
+					assert.Error(t, err, "running build")
+				} else {
+					require.NoError(t, err, "running build")
+				}
+			}(t, tc)
+
+			if tc.expectedRunErr {
+				// we expect build.Run to fail so there's noting else to do...
+				return
+			}
+
+			re := regexp.MustCompile("runner-.*-project-0-concurrent-" + strconv.Itoa(runnerID) + "-.*-build")
+			var ctr types.Container
+			// wait for the build container to be created...
+			require.Eventually(t, func() bool {
+				list, err := client.ContainerList(ctx, types.ContainerListOptions{})
+				assert.NoError(t, err, "listing containers")
+
+				for _, l := range list {
+					for _, n := range l.Names {
+						if re.MatchString(n) {
+							ctr = l
+							return true
+						}
+					}
+				}
+				return false
+			}, time.Second*10, time.Millisecond*500)
+
+			// inspect the build container to examine the MacAddress configuration
+			info, err := client.ContainerInspect(ctx, ctr.ID)
+			assert.NoError(t, err, "inspecting container %q", ctr.ID)
+
+			tc.validate(t, info)
+		})
+	}
 }
