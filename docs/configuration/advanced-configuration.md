@@ -1189,7 +1189,7 @@ The helper image has a few flavors: `alpine`, `alpine3.16`, `alpine3.17`, `alpin
 footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
 Using `helper_image_flavor = "ubuntu"` will select the `ubuntu` flavor of the helper image.
 
-In GitLab Runner 16.1 and later the `alpine` flavor is an alias for `alpine3.18`.
+In GitLab Runner 16.1 to 17.1, the `alpine` flavor is an alias for `alpine3.18`. In GitLab Runner 17.2 and later, it's an alias for `alpine3.19`.
 
 The `alpine-latest` flavor uses `alpine:latest` as its base image, which could potentially mean it will be more unstable.
 
@@ -1228,7 +1228,7 @@ For the helper image, change the `helper_image_flavor` or read the [Helper image
 For the GitLab Runner image, follow the same logic, where alpine, alpine3.16, alpine3.17, alpine3.18, alpine3.19 or alpine-latest is used as a prefix in the image, before the version:
 
 ```shell
-docker pull gitlab/gitlab-runner:alpine3.18-v16.1.0
+docker pull gitlab/gitlab-runner:alpine3.19-v16.1.0
 ```
 
 ### Alpine pwsh images
