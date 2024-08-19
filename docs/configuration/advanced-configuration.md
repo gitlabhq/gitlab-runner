@@ -665,6 +665,8 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 
 ### The `[[runners.machine.autoscaling]]` sections
 
+The following parameters define the configuration available when using the [Instance](../executors/instance.md) or [Docker Autoscaler](../executors/docker_autoscaler.md#example-aws-autoscaling-for-1-job-per-instance) executor.
+
 | Parameter           | Description |
 |---------------------|-------------|
 | `Periods`           | Time periods during which this schedule is active. An array of cron-style patterns (described [below](#periods-syntax)). |
