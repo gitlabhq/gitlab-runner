@@ -1136,7 +1136,7 @@ Example:
 
 > - Introduced in GitLab Runner v1.6.0.
 
-The following parameters define Kubernetes behavior.
+The following table lists configuration parameters available for the Kubernetes executor.
 For more parameters, see the [documentation for the Kubernetes executor](../executors/kubernetes/index.md).
 
 | Parameter        | Type    | Description |
