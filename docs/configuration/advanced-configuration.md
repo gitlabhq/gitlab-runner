@@ -1301,9 +1301,11 @@ docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:al
 
 ### Helper image registry
 
-In GitLab 15.0 and later, the helper image is pulled from the GitLab Container Registry.
+In GitLab 15.0 and earlier, you configure helper images to use images from Docker Hub.
 
-In GitLab 15.0 and earlier, you configure helper images to use images from Docker Hub. To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
+In GitLab 15.1 and later, the helper image is pulled from the GitLab Container Registry.
+
+To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
 
 Self-managed instances also pull the helper image from the GitLab Container Registry on GitLab.com. To check the status of the GitLab Container Registry, see the [GitLab System Status](https://status.gitlab.com/).
 
