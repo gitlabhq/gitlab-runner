@@ -52,11 +52,35 @@ These settings are global. They apply to all runners.
 | `listen_address`   | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
 | `shutdown_timeout` | Number of seconds until the [forceful shutdown operation](../commands/index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
 
-Configuration example:
+Here's a configuration example:
 
 ```toml
-concurrent = 4
+
+# Example `config.toml` file 
+
+concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file
 log_level = "warning"
+log_format = "info"
+check_interval = 3 # Value in seconds
+
+[[runners]]
+  name = "first"
+  url = "Your Gitlab instance URL (for example, `https://gitlab.com`)"
+  executor = "shell"
+  (...)
+
+[[runners]]
+  name = "second"
+  url = "Your Gitlab instance URL (for example, `https://gitlab.com`)"
+  executor = "docker"
+  (...)
+
+  [[runners]]
+  name = "third"
+  url = "Your Gitlab instance URL (for example, `https://gitlab.com`)"
+  executor = "docker-autoscaler"
+  (...)
+
 ```
 
 ### `log_format` examples (truncated)
