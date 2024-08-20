@@ -145,6 +145,29 @@ The following example has `check_interval` of 10 seconds and two `[[runners]]` s
     1. Sleep for `5s`.
     1. Repeat.
 
+Here's a `check_interval` configuration example:
+
+```toml
+# Example `config.toml` file 
+
+concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file.
+log_level = "warning"
+log_format = "info"
+check_interval = 10 # Value in seconds
+
+[[runners]]
+  name = "runner-1"
+  url = "Your Gitlab instance URL (for example, `https://gitlab.com`)"
+  executor = "shell"
+  (...)
+
+[[runners]]
+  name = "runner-2"
+  url = "Your Gitlab instance URL (for example, `https://gitlab.com`)"
+  executor = "docker"
+  (...)
+```
+
 In this example, a job request from the runner's process is made every five seconds.
 If `runner-1` and `runner-2` are connected to the same
 GitLab instance, this GitLab instance also receives a new request from this runner
