@@ -1320,9 +1320,7 @@ In some cases, you may need to override the helper image. There are many reasons
 1. **Security concerns**: You may not want to download external dependencies that were not checked before. There
    might be a business rule to use only dependencies that were reviewed and stored in local repositories.
 
-1. **Build environments without internet access**: In some cases, jobs are executed in an environment that has
-   a dedicated, closed network. This doesn't apply to the `kubernetes` executor, where the image still needs to be downloaded
-   from an external registry that is available to the Kubernetes cluster.
+1. **Build environments without internet access**: If you have [Kubernetes clusters installed in an offline environment](../install/operator.md#install-gitlab-runner-operator-on-kubernetes-clusters-in-offline-environments), you can use a local image registry or package repository to pull images used in CI/CD jobs.
 
 1. **Additional software**: You may want to install some additional software to the helper image, like
    `openssh` to support submodules accessible with `git+ssh` instead of `git+http`.
