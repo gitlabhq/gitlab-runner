@@ -197,6 +197,7 @@ ${BASE_TAR_PATH}-%-pwsh.tar.xz: ${BASE_TAR_PATH}-%-pwsh.tar
 ${BASE_TAR_PATH}-%.tar.xz: ${BASE_TAR_PATH}-%.tar
 	xz $(TAR_XZ_ARGS) $<
 
+${BASE_TAR_PATH}-ubi-fips-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export TARGET_DOCKERFILE ?= Dockerfile.fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar: export HELPER_BINARY_POSTFIX ?= -fips
 ${BASE_TAR_PATH}-ubi-fips-%.tar:
