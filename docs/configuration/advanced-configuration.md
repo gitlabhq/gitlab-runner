@@ -142,10 +142,18 @@ The `[session_server]` section should be specified at the root level, not per ru
 It should be defined outside the `[[runners]]` section.
 
 ```toml
+# Example `config.toml` file with session server configured
+
+concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file
+log_level = "warning"
+log_format = "info"
+check_interval = 3 # Value in seconds
+
 [session_server]
-  listen_address = "[::]:8093" #  listen on all available interfaces on port 8093
+  listen_address = "[::]:8093" # Listen on all available interfaces on port `8093`
   advertise_address = "runner-host-name.tld:8093"
   session_timeout = 1800
+  
 ```
 
 When you configure the `[session_server]` section:
