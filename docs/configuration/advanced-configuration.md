@@ -1418,6 +1418,11 @@ of this base directory depends on the executor. For:
 - [Kubernetes](../executors/kubernetes/index.md),
   [Docker](../executors/docker.md) and [Docker Machine](../executors/docker_machine.md) executors, it is
   `/builds` inside of the container.
+- [Instance](../executors/instance.md), it is
+  `~/builds` in the home directory of the user configured to handle the
+  SSH or WinRM connection to the target machine.
+- [Docker Autoscaler](../executors/docker_autoscaler.md), it is
+  `/builds` inside of the container.
 - [Shell](../executors/shell.md) executor, it is `$PWD/builds`.
 - [SSH](../executors/ssh.md), [VirtualBox](../executors/virtualbox.md)
   and [Parallels](../executors/parallels.md) executors, it is
