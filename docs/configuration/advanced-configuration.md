@@ -1388,7 +1388,7 @@ which contains PowerShell Core, is published with the `registry.gitlab.com/gitla
 This section defines [custom build directories](https://docs.gitlab.com/ee/ci/runners/configure_runners.html#custom-build-directories) parameters.
 
 This feature, if not configured explicitly, is
-enabled by default for `kubernetes`, `docker` and `docker+machine`
+enabled by default for `kubernetes`, `docker`, `docker+machine`, `docker autoscaler`, and `instance`
 executors. For all other executors, it is disabled by default.
 
 This feature requires that `GIT_CLONE_PATH` is in a path defined
