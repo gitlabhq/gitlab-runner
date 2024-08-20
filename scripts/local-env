@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# local-env,  to be used with `source scripts/local-env`
+
+## Source the CI variables, via YQ trick
+# omitting "problem strings" via `omit([x,y,z])`
+# can not use `--output-format shell` because that will not allow interpolation
+# shellcheck source=/dev/null
+. <(yq -P '.variables | omit(["LICENSE_MANAGEMENT_SETUP_CMD"]) | to_entries | .[] | "export " + .key +"=\"" + .value + "\""'  ./.gitlab/ci/_common.gitlab-ci.yml)

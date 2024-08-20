@@ -92,6 +92,7 @@ BINARIES += ${BASE_BINARY_PATH}.riscv64
 GO_ARCH_x86_64 = linux/amd64
 GO_ARCH_arm = linux/arm
 GO_ARCH_arm64 = linux/arm64
+GO_ARCH_aarch64 = linux/arm64
 GO_ARCH_s390x = linux/s390x
 GO_ARCH_ppc64le = linux/ppc64le
 GO_ARCH_riscv64 = linux/riscv64

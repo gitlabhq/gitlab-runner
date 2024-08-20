@@ -100,7 +100,6 @@ func (b *Builder) SetupContext() error {
 
 	if err := b.Docker(
 		"context", "create", b.contextName,
-		"--default-stack-orchestrator", "swarm",
 		"--description", "Temporary buildx Docker context",
 		"--docker", docker,
 	); err != nil {

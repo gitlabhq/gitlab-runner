@@ -68,6 +68,7 @@ The simplest way to get your development environment setup is to use `asdf`.
 cd gitlab-runner
 asdf plugin add golang
 asdf plugin add vale
+asdf plugin add yq
 asdf install
 ```
 
@@ -78,6 +79,9 @@ sudo apt-get install -y mercurial git-core wget make build-essential
 wget https://storage.googleapis.com/golang/go1.22.5.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
+YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
+wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.gz
+sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
 :::TabTitle CentOS
@@ -88,6 +92,9 @@ sudo yum groupinstall 'Development Tools'
 wget https://storage.googleapis.com/golang/go1.22.5.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
+YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
+wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.gz
+sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
 :::TabTitle macOS
@@ -98,6 +105,9 @@ Using binary package:
 wget https://storage.googleapis.com/golang/go1.22.5.darwin-amd64.tar.gz
 sudo tar -C /usr/local -xzf go*-*.tar.gz
 export PATH="$(go env GOBIN):$PATH"
+YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
+wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.gz
+sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
 Using installation package:
@@ -106,6 +116,9 @@ Using installation package:
 wget https://storage.googleapis.com/golang/go1.22.5.darwin-amd64.pkg
 open go*-*.pkg
 export PATH="$(go env GOBIN):$PATH"
+YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
+wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.gz
+sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
 :::TabTitle FreeBSD
@@ -113,6 +126,9 @@ export PATH="$(go env GOBIN):$PATH"
 ```shell
 pkg install go-1.22.5 gmake git mercurial
 export PATH="$(go env GOBIN):$PATH"
+YQ_BINARY="yq_$(go env GOHOSTOS)_$(go env GOHOSTARCH).tar.gz"
+wget https://github.com/mikefarah/yq/releases/download/latest/${YQ_BINARY}.tar.gz
+sudo tar -C /usr/local -xzf ${YQ_BINARY}.tar.gz
 ```
 
 ::EndTabs
