@@ -7,7 +7,7 @@ ARG DUMB_INIT_VERSION
 # gitlab-runner-helper will try to resolve `sh` from the path. We ensure the PATH is populated by default, as some container runtimes do no longer set a default (e.g. containerd v1.2.8)
 ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
 
-RUN curl -L  https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_x86_64 -o /usr/bin/dumb-init && \
+RUN curl -L --fail https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_x86_64 -o /usr/bin/dumb-init && \
     chmod +x /usr/bin/dumb-init
 
 COPY ./helpers/entrypoint /
