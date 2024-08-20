@@ -1193,7 +1193,7 @@ The helper image is available for amd64, arm, arm64, s390x, and ppc64le architec
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
 of available commands, as well as Git, Git LFS and SSL certificates store.
 
-The helper image has a few flavors: `alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is currently the default due to its small
+The helper image has a few flavors: `alpine`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is currently the default due to its small
 footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
 Using `helper_image_flavor = "ubuntu"` will select the `ubuntu` flavor of the helper image.
 
