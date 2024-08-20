@@ -284,6 +284,8 @@ The following executors are available.
 | `virtualbox` | `[runners.virtualbox]` and `[runners.ssh]` | VirtualBox VM, but connect with SSH. |
 | `docker+machine` | `[runners.docker]` and `[runners.machine]` | Like `docker`, but use [auto-scaled Docker machines](autoscale.md). |
 | `kubernetes` | `[runners.kubernetes]` | Kubernetes pods. |
+| `docker-autoscaler` | `[docker-autoscaler]` and `[runners.autoscaler]` | Like `docker`, but uses autoscaled instances to run CI/CD jobs in containers. |
+| `instance` | `[docker-autoscaler]` and `[runners.autoscaler]` | Like `shell`, but uses autoscaled instances to run CI/CD jobs directly on the host instance. |
 
 ## The shells
 
