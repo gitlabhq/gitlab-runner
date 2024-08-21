@@ -1,3 +1,9 @@
+## v17.3.1 (2024-08-21)
+
+### Bug fixes
+
+- Make image generation fail upon failure to download dumb-init ubi-fips [!4955](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4955)
+
 ## v17.3.0 (2024-08-21)
 
 ### New features
