@@ -1,46 +1,47 @@
-## v17.3.0 (2024-08-09)
+## v17.3.0 (2024-08-21)
 
 ### New features
 
-- Add GIT_STRATEGY of "empty" to support clean build directories !4889 (Nathan Cain @nathan.cain)
-- Add debug log message for resolving Docker credentials !4902
+- Add debug log message for resolving Docker credentials [!4902](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4902)
+- Add GIT_STRATEGY of "empty" to support clean build directories [!4889](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4889) (Nathan Cain @nathan.cain)
 
 ### Security fixes
 
-- Update azidentity dependency !4903
+- Update azidentity dependency [!4903](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4903)
 
 ### Bug fixes
 
-- Gracefully stop long running processes when using the shell executor - Take 2 !4896
-- Upgrade fleeting: fix tcpchan deadline for tunnelled connections !4917
-- Fix default log format to FormatRunner !4910
-- Reset log level and format to default values when not set !4897
-- Prevent additional newline in job in attach mode !4901
-- Use pull policy configuration for services !4854
-- Cancel stage script upon job cancellation in attach mode !4813
+- Gracefully stop long running processes when using the shell executor - Take 2 [!4896](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4896)
+- Fix default log format to FormatRunner [!4910](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4910)
+- Use pull policy configuration for services [!4854](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4854)
+- Upgrade fleeting: fix tcpchan deadline for tunnelled connections [!4917](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4917)
+- Cancel stage script upon job cancellation in attach mode [!4813](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4813)
+- Reset log level and format to default values when not set [!4897](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4897)
+- Prevent additional newline in job in attach mode [!4901](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4901)
+- Make image generation fail upon failure to download dumb-init ubi-fips [!4955](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4955)
 
 ### Maintenance
 
-- Remove unneeded notes in tabs !4922
-- Fix formatting in runner registration doc !4921
-- Work around a syntax highlighting problem !4920
-- Remove Beta plugin warning for AWS !4919
-- Apply split Vale rules to project !4918
-- Remove funlen !4912
-- Skip `TestRunCommand_configReloading` unit test on windows platform !4916
-- Bump UBI base image from `9.4-1134` to `9.4-1194` !4909
-- Add runner path requirement !4904
-- Update index.md !4908
-- Merge back 16.11, 17.0, 17.1 and 17.2 patches in main branch !4905
-- Add a Runner Docker image tag for the build's revision !4862
-- Re-enable Windows Docker git-lfs tests !4900
-- Remove git 1.8.3.1 test !4856
-- Clarify where to install the fleeting plugin !4894
-- Docs maintenance: Add internal pages to ignore list !4895
-- [k8s] Fix `testKubernetesWithNonRootSecurityContext` integration tests !4892
-- [k8s] Fix `CaptureServiceLogs` integration tests !4891
-- Add missing requirement for network_mtu !4890
-- Add note about using Workload Identity Federation for GKE !4884 (Nabil ZOUABI @nabil_zouabi)
+- Fix formatting in runner registration doc [!4921](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4921)
+- Remove funlen [!4912](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4912)
+- Add a Runner Docker image tag for the build's revision [!4862](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4862)
+- Apply split Vale rules to project [!4918](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4918)
+- Skip `TestRunCommand_configReloading` unit test on windows platform [!4916](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4916)
+- Re-enable Windows Docker git-lfs tests [!4900](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4900)
+- Remove git 1.8.3.1 test [!4856](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4856)
+- Merge back 16.11, 17.0, 17.1 and 17.2 patches in main branch [!4905](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4905)
+- Work around a syntax highlighting problem [!4920](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4920)
+- Remove Beta plugin warning for AWS [!4919](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4919)
+- Clarify where to install the fleeting plugin [!4894](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4894)
+- Docs maintenance: Add internal pages to ignore list [!4895](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4895)
+- [k8s] Fix `testKubernetesWithNonRootSecurityContext` integration tests [!4892](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4892)
+- Remove unneeded notes in tabs [!4922](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4922)
+- Bump UBI base image from `9.4-1134` to `9.4-1194` [!4909](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4909)
+- Add runner path requirement [!4904](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4904)
+- Update index.md [!4908](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4908)
+- Add missing requirement for network_mtu [!4890](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4890)
+- Add note about using Workload Identity Federation for GKE [!4884](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4884) (Nabil ZOUABI @nabil_zouabi)
+- [k8s] Fix `CaptureServiceLogs` integration tests [!4891](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4891)
 
 ## v17.2.1 (2024-07-25)
 
