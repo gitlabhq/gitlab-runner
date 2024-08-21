@@ -19,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/go-connections/nat"
+	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -73,6 +74,8 @@ func testServiceFromNamedImage(t *testing.T, description, imageName, serviceName
 		KernelVersion: e.info.KernelVersion,
 	})
 	require.NoError(t, err)
+
+	e.serverAPIVersion = version.Must(version.NewVersion("1.43"))
 
 	err = e.createLabeler()
 	require.NoError(t, err)

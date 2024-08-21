@@ -525,6 +525,36 @@ func (e *executor) createServiceContainerConfig(
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
+	// setting a container's mac-address changed in API version 1.44
+	if e.serverAPIVersion.LessThan(version1_44) {
+		return e.networkConfigLegacy(aliases)
+	}
+
+	nm := string(e.networkMode)
+	nc := network.NetworkingConfig{}
+
+	if nm == "" {
+		// docker defaults to using "bridge" network driver if none was specified.
+		nc.EndpointsConfig = map[string]*network.EndpointSettings{
+			"bridge": {MacAddress: e.Config.Docker.MacAddress},
+		}
+		return &nc
+	}
+
+	nc.EndpointsConfig = map[string]*network.EndpointSettings{
+		nm: {MacAddress: e.Config.Docker.MacAddress},
+	}
+
+	if e.networkMode.IsUserDefined() {
+		nc.EndpointsConfig[nm].Aliases = aliases
+	}
+
+	return &nc
+}
+
+// Setting a container's mac-address changed in API version 1.44. This is the original/legacy/pre-1.44 way to set
+// mac-address.
+func (e *executor) networkConfigLegacy(aliases []string) *network.NetworkingConfig {
 	if e.networkMode.UserDefined() == "" {
 		return &network.NetworkingConfig{}
 	}
@@ -699,7 +729,12 @@ func (e *executor) createContainerConfig(
 	}
 
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
-	config.MacAddress = e.Config.Docker.MacAddress
+
+	// setting a container's mac-address changed in API version 1.44
+	if e.serverAPIVersion.LessThan(version1_44) {
+		//nolint:staticcheck
+		config.MacAddress = e.Config.Docker.MacAddress
+	}
 
 	return config, nil
 }

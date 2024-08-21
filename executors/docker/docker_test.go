@@ -19,6 +19,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/go-units"
+	"github.com/hashicorp/go-version"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
@@ -347,6 +348,7 @@ var (
 
 func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
 	e := &executor{}
+	e.serverAPIVersion = version.Must(version.NewVersion("1.43"))
 
 	clientMock := new(docker.MockClient)
 	clientMock.On("Close").Return(nil).Once()
@@ -845,6 +847,8 @@ func createExecutorForTestDockerConfiguration(
 
 	err = e.createLabeler()
 	require.NoError(t, err)
+
+	e.serverAPIVersion = version.Must(version.NewVersion("1.43"))
 
 	return c, e
 }
