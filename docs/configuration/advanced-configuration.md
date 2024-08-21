@@ -1202,7 +1202,7 @@ For more parameters, see the [documentation for the Kubernetes executor](../exec
 | `cert_file`      | string  | Optional. Kubernetes auth certificate. |
 | `key_file`       | string  | Optional. Kubernetes auth private key. |
 | `ca_file`        | string  | Optional. Kubernetes auth ca certificate. |
-| `image`          | string  | Default Docker image to use for jobs when none is specified. |
+| `image`          | string  | Default container image to use for jobs when none is specified. |
 | `allowed_images` | array   | Wildcard list of container images that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. |
 | `allowed_services` | array | Wildcard list of services that are allowed in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. |
 | `namespace`      | string  | Namespace to run Kubernetes jobs in. |
