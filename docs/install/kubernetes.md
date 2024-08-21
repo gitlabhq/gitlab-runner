@@ -684,12 +684,24 @@ runners:
 
 To resolve this error, [switch to the Ubuntu-based GitLab Runner Docker image](#switching-to-the-ubuntu-based-gitlab-runner-docker-image).
 
-<!-- markdownlint-disable line-length -->
+### Error: `invalid header field for "Private-Token"`
 
-### FATAL: Runner configuration other than name and executor configuration is reserved (specifically --locked, --access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note) and cannot be specified when registering with a runner authentication token. This configuration is specified on the GitLab server. Please try again without specifying any of those arguments
+You might get the following error if the `runner-token` value in `gitlab-runner-secret`
+is base64-encoded with a newline character at the end:
 
-You may get this error in the pod logs after installing GitLab Runner Helm chart.
+```plaintext
+couldn't execute POST against "https:/gitlab.example.com/api/v4/runners/verify": net/http: invalid header field for "Private-Token"
+```
+
+To resolve this issue, ensure a newline is not appended to the token value (for example, `echo -n glrt-A5sFGybkt0pY8AdVLnx4 | base64`).
+
+### Runner configuration is reserved
+
+You might get the following error in the pod logs after installing the GitLab Runner Helm chart:
+
+```plaintext
+FATAL: Runner configuration other than name and executor configuration is reserved (specifically --locked, --access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note) and cannot be specified when registering with a runner authentication token. This configuration is specified on the GitLab server. Please try again without specifying any of those arguments
+```
+
 It happens if you use an authentication token and [provide a token through a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
 To fix this error, review your values YAML file and make sure that you are not using any deprecated values. For more information about which values are deprecated, see [Installing GitLab Runner with Helm chart](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#installing-gitlab-runner-with-helm-chart).
-
-<!-- markdownlint-enable line-length -->
