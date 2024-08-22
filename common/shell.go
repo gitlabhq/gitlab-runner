@@ -52,6 +52,8 @@ type Shell interface {
 	GetConfiguration(info ShellScriptInfo) (*ShellConfiguration, error)
 	GenerateScript(ctx context.Context, buildStage BuildStage, info ShellScriptInfo) (string, error)
 	GenerateSaveScript(info ShellScriptInfo, scriptPath, script string) (string, error)
+
+	GetEntrypointCommand(info ShellScriptInfo, probeFile string) []string
 }
 
 var shells map[string]Shell

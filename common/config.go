@@ -1455,12 +1455,22 @@ func (c *DockerConfig) GetServicesLimit() int {
 	return *c.ServicesLimit
 }
 
-func (c *KubernetesConfig) GetPollAttempts() int {
+func (c *KubernetesConfig) GetPollTimeout() int {
 	if c.PollTimeout <= 0 {
 		c.PollTimeout = KubernetesPollTimeout
 	}
+	return c.PollTimeout
+}
 
-	return c.PollTimeout / c.GetPollInterval()
+func (c *KubernetesConfig) GetPollInterval() int {
+	if c.PollInterval <= 0 {
+		c.PollInterval = KubernetesPollInterval
+	}
+	return c.PollInterval
+}
+
+func (c *KubernetesConfig) GetPollAttempts() int {
+	return c.GetPollTimeout() / c.GetPollInterval()
 }
 
 func (c *KubernetesConfig) GetCleanupResourcesTimeout() time.Duration {
@@ -1469,14 +1479,6 @@ func (c *KubernetesConfig) GetCleanupResourcesTimeout() time.Duration {
 	}
 
 	return *c.CleanupResourcesTimeout
-}
-
-func (c *KubernetesConfig) GetPollInterval() int {
-	if c.PollInterval <= 0 {
-		c.PollInterval = KubernetesPollInterval
-	}
-
-	return c.PollInterval
 }
 
 func (c *KubernetesConfig) GetResourceAvailabilityCheckMaxAttempts() int {

@@ -6731,11 +6731,29 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 	)
 
 	fakeRoundTripper := func(body io.ReadCloser, err error) func(req *http.Request) (*http.Response, error) {
-		return func(_ *http.Request) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       body,
-			}, err
+		return func(req *http.Request) (*http.Response, error) {
+			require.Equal(t, "GET", req.Method, "expected a GET request, got: %s", req.Method)
+			path := req.URL.Path
+			query := req.URL.Query()
+
+			// the fake response for the watch request
+			if path == "/api/v1/namespaces/test-ns/pods" && query["fieldSelector"][0] == "status.phase=Running,metadata.name=test-pod" {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+				}, nil
+			}
+
+			// the fake response for the pods/log request
+			if path == "/api/v1/namespaces/test-ns/pods/test-pod/log" && query["container"][0] == "some container" {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       body,
+				}, err
+			}
+
+			err := fmt.Errorf("unexpected request: %+v", req)
+			require.NoError(t, err)
+			return nil, err
 		}
 	}
 
@@ -6823,7 +6841,7 @@ func (frc *failingReadCloser) Close() error {
 	return nil
 }
 
-func Test_Executor_captureContainersLogs(t *testing.T) {
+func Test_Executor_captureServiceContainersLogs(t *testing.T) {
 	containers := []api.Container{
 		{Name: "not a service container"},
 		{Name: "svc-0-a service container", Image: "postgres"},
@@ -6892,7 +6910,7 @@ func Test_Executor_captureContainersLogs(t *testing.T) {
 			}
 
 			e.prepareOptions(e.Build)
-			e.captureContainersLogs(ctx, containers)
+			e.captureServiceContainersLogs(ctx, containers)
 			tt.assert(t)
 		})
 	}

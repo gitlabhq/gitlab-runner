@@ -111,8 +111,8 @@ You can either:
 |----------|-------------------------------|
 | events | list, watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create, delete |
-| pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get |
-| pods/log | get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get, watch (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | secrets | create, delete, get, update |
 | serviceAccounts | get |
 | services | create, get |
@@ -133,6 +133,12 @@ You can either:
 - _The `namespace` permission is needed only:_
 
   - _When enabling namespace isolation via `namespace_per_job`._
+
+- _The `pods/log` permission is only needed when one of the following scenarios are true:_
+
+  - _The [`FF_KUBERNETES_HONOR_ENTRYPOINT` feature flag](../../configuration/feature-flags.md) is enabled._
+
+  - _The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md) is disabled when the [`CI_DEBUG_SERVICES` variable](https://docs.gitlab.com/ee/ci/services/#capturing-service-container-logs) is set to `true`._
 
 ## Configuration settings
 
@@ -1982,7 +1988,11 @@ In GitLab 15.1 and later, the entrypoint defined in a Docker image is used with 
 
 The container entry point has the following known issues:
 
-- If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the job hangs.
+- <a id="open-valid-shell"></a> If an entrypoint is defined in the Dockerfile for an image, it must open a valid shell. Otherwise, the job hangs.
+
+  - To open a shell, the system passes the command as
+    [`args`](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint)
+    for the build container.
 - [File type CI/CD variables](https://docs.gitlab.com/ee/ci/variables/index.html#use-file-type-cicd-variables)
   are not written to disk when the entrypoint is executed. The file is only accessible
   in the job during script execution.
@@ -1991,6 +2001,32 @@ The container entry point has the following known issues:
   any setup changes before running script commands:
   - [CI/CD variables defined in the settings](https://docs.gitlab.com/ee/ci/variables/#define-a-cicd-variable-in-the-ui).
   - [Masked CI/CD variables](https://docs.gitlab.com/ee/ci/variables/#mask-a-cicd-variable).
+
+Before GitLab Runner 17.4:
+
+- The entrypoint logs were not forwarded to the build's log.
+- With the Kubernetes executor with `kube exec`, GitLab Runner did not wait for the entrypoint to open a shell (see [above](#open-valid-shell)).
+
+Starting with GitLab Runner 17.4, the entrypoint logs are now forwarded. The system waits
+for the entrypoint to run and spawn the shell. This has the following
+implications:
+
+- If `FF_KUBERNETES_HONOR_ENTRYPOINT` is set, and the image's entrypoint takes
+  longer than `poll_timeout` (default: 180s), the build fails. The
+  `poll_timeout` value (and potentially `poll_interval`)
+  must be adapted if the entrypoint is expected to run longer.
+- When `FF_KUBERNETES_HONOR_ENTRYPOINT` *and* `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` are set, the system adds a
+  [startup probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes)
+  to the build container, so that it knows when the entrypoint is spawning
+  the shell. If a custom entrypoint uses the provided `args`
+  to spawn the expected shell, then the startup probe is resolved
+  automatically. However, if the container image is spawning the shell without
+  using the command passed in through `args`, the entrypoint must resolve the
+  startup probe itself by creating a file named `.gitlab-startup-marker` inside
+  the root of the build directory.  
+  The startup probe checks every `poll_interval` for the `.gitlab-startup-marker`
+  file. If the file is not present within `poll_timeout`, the pod is considered
+  unhealthy, and the system abort the build.
 
 ### Restrict access to job variables
 
