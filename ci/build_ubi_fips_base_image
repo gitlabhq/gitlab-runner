@@ -15,10 +15,10 @@ build() {
     setup_docker_context
 
     _docker_buildx build \
-           --platform linux/amd64,linux/ppc64le,linux/arm64  \
-           --no-cache \
-           --build-arg UBI_VERSION="${UBI_VERSION}" \
-           --push \
+           --platform linux/amd64,linux/ppc64le,linux/arm64 \
+           --build-arg UBI_MICRO_IMAGE="${UBI_MICRO_IMAGE}" \
+           --build-arg UBI_MINIMAL_IMAGE="${UBI_MINIMAL_IMAGE}" \
+           --pull \
            -t "${BUILD_IMAGE}" \
            -f "${BUILD_DOCKERFILE}" \
            "${GIT_ROOT}"

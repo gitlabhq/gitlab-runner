@@ -24,8 +24,9 @@ go-fips-docker:
 	# Building Go FIPS Docker image
 	@./ci/build_go_fips_image
 
-ubi-fips-base-docker: export UBI_VERSION ?= $(UBI_FIPS_VERSION)
-ubi-fips-base-docker: export BUILD_IMAGE ?= registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base:$(UBI_FIPS_VERSION)
+ubi-fips-base-docker: export UBI_MICRO_IMAGE := $(UBI_MICRO_IMAGE):$(UBI_MICRO_VERSION)
+ubi-fips-base-docker: export UBI_MINIMAL_IMAGE := $(UBI_MINIMAL_IMAGE):$(UBI_MINIMAL_VERSION)
+ubi-fips-base-docker: export BUILD_IMAGE ?= $(UBI_FIPS_BASE_IMAGE):$(UBI_FIPS_VERSION)
 ubi-fips-base-docker: export BUILD_DOCKERFILE ?= ./dockerfiles/ci/ubi.fips.base.Dockerfile
 ubi-fips-base-docker:
 	# Building UBI FIPS base Docker image
