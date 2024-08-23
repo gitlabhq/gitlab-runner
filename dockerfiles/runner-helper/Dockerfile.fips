@@ -1,20 +1,26 @@
 ARG BASE_IMAGE
+ARG UBI_MINIMAL_IMAGE
 
-FROM $BASE_IMAGE
+FROM ${UBI_MINIMAL_IMAGE} AS build
 
 ARG DUMB_INIT_VERSION
 
+RUN mkdir -p /assets/usr/bin
+
+RUN curl -L --fail https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_x86_64 -o /tmp/dumb-init && \
+    install -m 555 -o 0 -g 0 /tmp/dumb-init /assets/usr/bin/dumb-init
+
+COPY ./helpers/entrypoint /assets/
+RUN chmod 555 /assets/entrypoint
+
+COPY ./scripts/ ./binaries/gitlab-runner-helper /assets/usr/bin/
+
+FROM ${BASE_IMAGE} AS final
+
+COPY --from=build /assets/ /
+
 # gitlab-runner-helper will try to resolve `sh` from the path. We ensure the PATH is populated by default, as some container runtimes do no longer set a default (e.g. containerd v1.2.8)
 ENV PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}"
-
-RUN curl -L  https://github.com/Yelp/dumb-init/releases/download/v${DUMB_INIT_VERSION}/dumb-init_${DUMB_INIT_VERSION}_x86_64 -o /usr/bin/dumb-init && \
-    chmod +x /usr/bin/dumb-init
-
-COPY ./helpers/entrypoint /
-RUN chmod +x /entrypoint
-
-COPY ./scripts/ ./binaries/gitlab-runner-helper /usr/bin/
-
 RUN echo 'hosts: files dns' >> /etc/nsswitch.conf
 
 # NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
