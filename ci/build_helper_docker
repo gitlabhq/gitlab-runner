@@ -103,6 +103,7 @@ _docker_buildx build \
         --platform "${platform}" \
         --no-cache \
         --build-arg "BASE_IMAGE=${BASE_IMAGE}" \
+        --build-arg "UBI_MINIMAL_IMAGE=${UBI_MINIMAL_IMAGE}:${UBI_MINIMAL_VERSION}" \
         --build-arg "ARCH=${platform_arch}" \
         --build-arg "http_proxy=${http_proxy}" \
         --build-arg "DUMB_INIT_VERSION=${DUMB_INIT_VERSION}" \
