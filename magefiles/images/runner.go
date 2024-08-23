@@ -262,17 +262,19 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 
 		checksumsFile := filepath.Join(runnerHomeDir, fmt.Sprintf("checksums-%s", arch))
 
-		copyMap["ubuntu"] = append(
-			copyMap["ubuntu"],
-			checksumsFile,
-			fmt.Sprintf("out/deb/gitlab-runner_%s.deb", debArch),
-		)
+		if flavor != "ubi-fips" {
+			copyMap["ubuntu"] = append(
+				copyMap["ubuntu"],
+				checksumsFile,
+				fmt.Sprintf("out/deb/gitlab-runner_%s.deb", debArch),
+			)
 
-		copyMap["alpine"] = append(
-			copyMap["alpine"],
-			checksumsFile,
-			fmt.Sprintf("out/binaries/gitlab-runner-linux-%s", arch),
-		)
+			copyMap["alpine"] = append(
+				copyMap["alpine"],
+				checksumsFile,
+				fmt.Sprintf("out/binaries/gitlab-runner-linux-%s", arch),
+			)
+		}
 
 		if flavor == "ubi-fips" && arch == "amd64" {
 			copyMap["ubi-fips"] = append(
