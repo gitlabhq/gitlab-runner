@@ -3,10 +3,13 @@ include:
 - template: Jobs/SAST.latest.gitlab-ci.yml
 - template: Security/Coverage-Fuzzing.latest.gitlab-ci.yml
 
-# Overriding 'Dependency-Scanning.gitlab-ci.yml' template, because
+# Overriding security scanning jobs from templates, because
 # we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
 gemnasium-dependency_scanning:
+  rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
+
+semgrep-sast:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
 check version definition:
