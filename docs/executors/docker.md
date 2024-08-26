@@ -992,7 +992,7 @@ For example, to allow only the `always` and `if-not-present` pull policies, add 
     allowed_pull_policies = ["always", "if-not-present"]
 ```
 
-- If you don't specify `allowed_pull_policies`, the default is the value in the `pull_policy` keyword.
+- If you don't specify `allowed_pull_policies`, the list matches the values specified in the `pull_policy` keyword.
 - If you don't specify `pull_policy`, the default is `always`.
 - The existing [`pull_policy` keyword](../executors/docker.md#configure-how-runners-pull-images) must not
   include a pull policy that is not specified in `allowed_pull_policies`. If it does, the job returns an error.
