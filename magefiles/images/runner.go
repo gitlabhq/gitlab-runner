@@ -21,6 +21,7 @@ const (
 	DefaultArchs  = "amd64"
 
 	runnerHomeDir = "dockerfiles/runner"
+	ubiFipsFlavor = "ubi-fips"
 )
 
 var (
@@ -47,10 +48,10 @@ var (
 	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.2")
 	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
 
-	ubiFIPSBaseImage    = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
-	ubiFIPSVersion      = env.NewDefault("UBI_FIPS_VERSION", "9.4-13")
-	ubiMinimalImage     = env.NewDefault("UBI_MINIMAL_IMAGE", "redhat/ubi9-minimal")
-	ubiMinimalVersion   = env.NewDefault("UBI_MINIMAL_VERSION", "9.4-1194")
+	ubiFIPSBaseImage  = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
+	ubiFIPSVersion    = env.NewDefault("UBI_FIPS_VERSION", "9.4-13")
+	ubiMinimalImage   = env.NewDefault("UBI_MINIMAL_IMAGE", "redhat/ubi9-minimal")
+	ubiMinimalVersion = env.NewDefault("UBI_MINIMAL_VERSION", "9.4-1194")
 
 	buildxRetry = env.NewDefault("RUNNER_IMAGES_DOCKER_BUILDX_RETRY", "0")
 )
@@ -173,7 +174,7 @@ func BuildRunner(blueprint build.TargetBlueprint[runnerImageFileDependency, buil
 		"alpine3.18":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine318Version)),
 		"alpine3.19":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine319Version)),
 		"alpine-latest": "alpine:latest",
-		"ubi-fips": fmt.Sprintf(
+		ubiFipsFlavor: fmt.Sprintf(
 			"%s:%s",
 			blueprint.Env().Value(ubiFIPSBaseImage),
 			blueprint.Env().Value(ubiFIPSVersion),
@@ -254,9 +255,9 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 	}
 
 	copyMap := map[string][]string{
-		"ubuntu":   installDeps,
-		"alpine":   installDeps,
-		"ubi-fips": installDeps,
+		"ubuntu":      installDeps,
+		"alpine":      installDeps,
+		ubiFipsFlavor: installDeps,
 	}
 
 	for _, arch := range archs {
@@ -267,7 +268,7 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 
 		checksumsFile := filepath.Join(runnerHomeDir, fmt.Sprintf("checksums-%s", arch))
 
-		if flavor != "ubi-fips" {
+		if flavor != ubiFipsFlavor {
 			copyMap["ubuntu"] = append(
 				copyMap["ubuntu"],
 				checksumsFile,
@@ -281,9 +282,9 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 			)
 		}
 
-		if flavor == "ubi-fips" && arch == "amd64" {
-			copyMap["ubi-fips"] = append(
-				copyMap["ubi-fips"],
+		if flavor == ubiFipsFlavor && arch == "amd64" {
+			copyMap[ubiFipsFlavor] = append(
+				copyMap[ubiFipsFlavor],
 				checksumsFile,
 				fmt.Sprintf("out/binaries/gitlab-runner-linux-%s-fips", arch),
 				fmt.Sprintf("out/rpm/gitlab-runner_%s-fips.rpm", arch),
