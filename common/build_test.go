@@ -847,6 +847,33 @@ func TestSharedEnvVariables(t *testing.T) {
 	}
 }
 
+func TestBasicAuthHeader(t *testing.T) {
+	testCases := map[string]struct {
+		token          string
+		expectedHeader string
+	}{
+		"no token": {
+			/* empty token -> empty header */
+		},
+		"some token": {
+			token: "some-token",
+			// echo "Authorization: Basic $(echo -n 'gitlab-ci-token:some-token' | base64)"
+			expectedHeader: "Authorization: Basic Z2l0bGFiLWNpLXRva2VuOnNvbWUtdG9rZW4=",
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			build := &Build{}
+			build.Token = tc.token
+
+			header := build.BasicAuthHeader()
+
+			assert.Equal(t, tc.expectedHeader, header)
+		})
+	}
+}
+
 func TestGetRemoteURL(t *testing.T) {
 	const (
 		exampleJobToken    = "job-token"
@@ -863,25 +890,25 @@ func TestGetRemoteURL(t *testing.T) {
 			runner: RunnerSettings{
 				CloneURL: "http://test.local/",
 			},
-			expectedURL: "http://gitlab-ci-token:job-token@test.local/my/project.git",
+			expectedURL: "http://test.local/my/project.git",
 		},
 		"using clone_url with https protocol": {
 			runner: RunnerSettings{
 				CloneURL: "https://test.local",
 			},
-			expectedURL: "https://gitlab-ci-token:job-token@test.local/my/project.git",
+			expectedURL: "https://test.local/my/project.git",
 		},
 		"using clone_url with relative URL": {
 			runner: RunnerSettings{
 				CloneURL: "https://test.local/gitlab",
 			},
-			expectedURL: "https://gitlab-ci-token:job-token@test.local/gitlab/my/project.git",
+			expectedURL: "https://test.local/gitlab/my/project.git",
 		},
 		"using clone_url with relative URL with trailing slash": {
 			runner: RunnerSettings{
 				CloneURL: "https://test.local/gitlab/",
 			},
-			expectedURL: "https://gitlab-ci-token:job-token@test.local/gitlab/my/project.git",
+			expectedURL: "https://test.local/gitlab/my/project.git",
 		},
 		"using clone_url with ssh protocol": {
 			runner: RunnerSettings{
@@ -897,19 +924,19 @@ func TestGetRemoteURL(t *testing.T) {
 		},
 		"not using clone_url": {
 			runner:      RunnerSettings{},
-			expectedURL: exampleRepoURL,
+			expectedURL: "http://test.remote/my/project.git",
 		},
 		"overwriting job token with variable and clone_url": {
 			runner: RunnerSettings{
 				CloneURL: "https://test.local",
 			},
 			jobTokenVariableOverwrite: "wrong-token",
-			expectedURL:               "https://gitlab-ci-token:job-token@test.local/my/project.git",
+			expectedURL:               "https://test.local/my/project.git",
 		},
 		"overwriting job token with variable and no clone_url": {
 			runner:                    RunnerSettings{},
 			jobTokenVariableOverwrite: "wrong-token",
-			expectedURL:               exampleRepoURL,
+			expectedURL:               "http://test.remote/my/project.git",
 		},
 	}
 
@@ -937,7 +964,9 @@ func TestGetRemoteURL(t *testing.T) {
 				})
 			}
 
-			assert.Equal(t, tc.expectedURL, build.GetRemoteURL())
+			remoteURL, err := build.GetRemoteURL()
+			assert.NoError(t, err, "getting build's remote URL")
+			assert.Equal(t, tc.expectedURL, remoteURL.String())
 		})
 	}
 }
@@ -957,39 +986,27 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 		forceHTTPS   bool
 	}{
 		"with default url": {
-			expectedArgs: []string{
-				"-c", "url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
-			},
+			expectedArgs: []string{},
 		},
 		"with clone_url": {
-			cloneURL: "https://custom.local",
-			expectedArgs: []string{
-				"-c", "url.https://gitlab-ci-token:job-token@custom.local.insteadOf=https://custom.local",
-			},
+			cloneURL:     "https://custom.local",
+			expectedArgs: []string{},
 		},
 		"with http protocol": {
-			serverURL: "http://test.local",
-			expectedArgs: []string{
-				"-c", "url.http://gitlab-ci-token:job-token@test.local.insteadOf=http://test.local",
-			},
+			serverURL:    "http://test.local",
+			expectedArgs: []string{},
 		},
 		"with clone_url and http protocol": {
-			cloneURL: "http://test.local",
-			expectedArgs: []string{
-				"-c", "url.http://gitlab-ci-token:job-token@test.local.insteadOf=http://test.local",
-			},
+			cloneURL:     "http://test.local",
+			expectedArgs: []string{},
 		},
 		"with directory URL": {
-			serverURL: "https://test.local/gitlab",
-			expectedArgs: []string{
-				"-c", "url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=https://test.local/gitlab",
-			},
+			serverURL:    "https://test.local/gitlab",
+			expectedArgs: []string{},
 		},
 		"with directory URL with trailing slash stripped": {
-			cloneURL: "https://test.local/gitlab/",
-			expectedArgs: []string{
-				"-c", "url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=https://test.local/gitlab",
-			},
+			cloneURL:     "https://test.local/gitlab/",
+			expectedArgs: []string{},
 		},
 		"with clone_url and ssh protocol ignored": {
 			cloneURL:     "ssh://git@test.local",
@@ -999,11 +1016,9 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 			forceHTTPS: true,
 			expectedArgs: []string{
 				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
+				"url.https://test.local/.insteadOf=git@test.local:",
 				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local/.insteadOf=git@test.local:",
-				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=ssh://git@test.local",
+				"url.https://test.local.insteadOf=ssh://git@test.local",
 			},
 		},
 		"with default url and custom SSH port and force HTTPS": {
@@ -1011,9 +1026,7 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 			serverPort: "8022",
 			expectedArgs: []string{
 				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
-				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=ssh://git@test.local:8022",
+				"url.https://test.local.insteadOf=ssh://git@test.local:8022",
 			},
 		},
 		"with default url and trailing slash stripped and force HTTPS": {
@@ -1021,11 +1034,9 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 			serverURL:  "https://test.local/",
 			expectedArgs: []string{
 				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=https://test.local",
+				"url.https://test.local/.insteadOf=git@test.local:",
 				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local/.insteadOf=git@test.local:",
-				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local.insteadOf=ssh://git@test.local",
+				"url.https://test.local.insteadOf=ssh://git@test.local",
 			},
 		},
 		"with default url and directory URL and force HTTPS": {
@@ -1033,11 +1044,9 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 			serverURL:  "https://test.local/gitlab",
 			expectedArgs: []string{
 				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=https://test.local/gitlab",
+				"url.https://test.local/gitlab/.insteadOf=git@test.local:",
 				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local/gitlab/.insteadOf=git@test.local:",
-				"-c",
-				"url.https://gitlab-ci-token:job-token@test.local/gitlab.insteadOf=ssh://git@test.local",
+				"url.https://test.local/gitlab.insteadOf=ssh://git@test.local",
 			},
 		},
 		"with clone_url and ssh protocol and force HTTPS ignored": {
@@ -1084,7 +1093,9 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 				})
 			}
 
-			assert.Equal(t, tc.expectedArgs, build.GetURLInsteadOfArgs())
+			gitURLArgs, err := build.GetURLInsteadOfArgs()
+			assert.NoError(t, err, "getting git URL args")
+			assert.Equal(t, tc.expectedArgs, gitURLArgs)
 		})
 	}
 }

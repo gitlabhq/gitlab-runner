@@ -865,7 +865,6 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 	const (
 		exampleBaseURL  = "http://test.remote"
 		exampleJobToken = "job-token"
-		insteadOf       = "url.http://gitlab-ci-token:job-token@test.remote.insteadOf=http://test.remote"
 	)
 
 	tests := map[string]struct {
@@ -926,27 +925,21 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					tc.ExpectedGitForEachFlags...,
 				)
 			}
-			expectedGitInsteadOfForEachArgsFn := func() []interface{} {
-				return append(
-					[]interface{}{"-c", insteadOf, "submodule", "foreach"},
-					tc.ExpectedGitForEachFlags...,
-				)
-			}
 			mockWriter.EXPECT().Noticef(tc.ExpectedNoticeArgs[0], tc.ExpectedNoticeArgs[1:]...).Once()
 			mockWriter.EXPECT().Command("git", "submodule", "init").Once()
 			mockWriter.EXPECT().Command("git", append([]any{"submodule", "sync"}, tc.ExpectedGitForEachFlags...)...).Times(3)
-			mockWriter.EXPECT().IfCmdWithOutput("git", append([]any{"-c", insteadOf, "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...).Once()
+			mockWriter.EXPECT().IfCmdWithOutput("git", append([]any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...).Once()
 			mockWriter.EXPECT().Noticef("Updated submodules").Once()
 			mockWriter.EXPECT().Else().Once()
 			mockWriter.EXPECT().Warningf("Updating submodules failed. Retrying...").Once()
-			mockWriter.EXPECT().Command("git", append([]any{"-c", insteadOf, "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...)
+			mockWriter.EXPECT().Command("git", append([]any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...)
 			mockWriter.EXPECT().EndIf().Once()
 			cleanCmd := mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git clean "+strings.Join(tc.ExpectedGitCleanFlags, " "))...).Once()
 			mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git reset --hard")...).Run(func(command string, arguments ...string) {
 				cleanCmd.Once()
 			}).Twice()
 			mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
-			mockWriter.EXPECT().Command("git", append(expectedGitInsteadOfForEachArgsFn(), "git lfs pull")...).Once()
+			mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git lfs pull")...).Once()
 			mockWriter.EXPECT().EndIf().Once()
 			err := shell.writeSubmoduleUpdateCmd(
 				mockWriter,
@@ -1554,8 +1547,6 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 		return command
 	}
 
-	insteadOf := "url.https://gitlab-ci-token:xxx@example.com.insteadOf=https://example.com"
-
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			shell := AbstractShell{}
@@ -1565,11 +1556,11 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 			mockWriter.EXPECT().Noticef("Updating/initializing submodules...").Once()
 			mockWriter.EXPECT().Command("git", "submodule", "init").Once()
 			mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "sync")...).Times(3)
-			mockWriter.EXPECT().IfCmdWithOutput("git", submoduleCommand(test.paths, "-c", insteadOf, "submodule", "update", "--init")...).Once()
+			mockWriter.EXPECT().IfCmdWithOutput("git", submoduleCommand(test.paths, "submodule", "update", "--init")...).Once()
 			mockWriter.EXPECT().Noticef("Updated submodules").Once()
 			mockWriter.EXPECT().Else().Once()
 			mockWriter.EXPECT().Warningf("Updating submodules failed. Retrying...").Once()
-			mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "-c", insteadOf, "submodule", "update", "--init")...).Once()
+			mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "update", "--init")...).Once()
 			mockWriter.EXPECT().EndIf().Once()
 
 			cleanCmd := mockWriter.EXPECT().Command("git", "submodule", "foreach", "git clean -ffdx").Once()
@@ -1578,7 +1569,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 			}).Twice()
 
 			mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
-			mockWriter.EXPECT().Command("git", "-c", insteadOf, "submodule", "foreach", "git lfs pull").Once()
+			mockWriter.EXPECT().Command("git", "submodule", "foreach", "git lfs pull").Once()
 			mockWriter.EXPECT().EndIf().Once()
 
 			build := &common.Build{
@@ -2426,12 +2417,13 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	info := common.ShellScriptInfo{
 		Build: &common.Build{
 			JobResponse: common.JobResponse{
+				Token: "some-token",
 				Variables: common.JobVariables{
 					{Key: "GIT_STRATEGY", Value: "fetch"},
 					{Key: "GIT_CHECKOUT", Value: "false"},
 				},
 				GitInfo: common.GitInfo{
-					RepoURL: "repo-url",
+					RepoURL: "https://repo-url",
 				},
 				Hooks: common.Hooks{
 					{
@@ -2474,10 +2466,11 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	m.EXPECT().RmFile(mock.Anything)
 	m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
 	m.EXPECT().Cd("build-dir").Once()
-	m.EXPECT().IfCmd("git", "remote", "add", "origin", "repo-url").Once()
+	m.EXPECT().Command("git", "config", mock.Anything, mock.Anything).Once()
+	m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url").Once()
 	m.EXPECT().Noticef("Created fresh repository.").Once()
 	m.EXPECT().Else().Once()
-	m.EXPECT().Command("git", "remote", "set-url", "origin", "repo-url").Once()
+	m.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url").Once()
 	m.EXPECT().EndIf().Once()
 
 	m.EXPECT().IfFile(".git/shallow").Once()

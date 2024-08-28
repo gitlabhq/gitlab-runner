@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -986,8 +987,12 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.expandContainerOptions()
 
+	maskPhrases := b.GetAllVariables().Masked()
+	if creds := b.encodedAuthCreds(); creds != "" {
+		maskPhrases = append(maskPhrases, creds)
+	}
 	b.logger = buildlogger.New(trace, b.Log(), buildlogger.Options{
-		MaskPhrases:       b.GetAllVariables().Masked(),
+		MaskPhrases:       maskPhrases,
 		MaskTokenPrefixes: b.JobResponse.Features.TokenMaskPrefixes,
 		Timestamping:      b.IsFeatureFlagOn(featureflags.UseTimestamps),
 	})
@@ -1302,63 +1307,104 @@ func (b *Build) expandContainerOptions() {
 	}
 }
 
-func (b *Build) getURLWithAuth(repoURL string) string {
-	u, _ := url.Parse(repoURL)
-
-	if u.Scheme == "ssh" {
-		if u.User == nil {
-			u.User = url.User("git")
-		}
-	} else {
-		u.User = url.UserPassword("gitlab-ci-token", b.Token)
+// BasicAuthHeader returns a Authorization header to be used with http(s) clients.
+// If creds (the token) is not available, this returns the empty string.
+func (b *Build) BasicAuthHeader() string {
+	creds := b.encodedAuthCreds()
+	if creds == "" {
+		return ""
 	}
 
-	return u.String()
+	return "Authorization: Basic " + creds
+}
+
+// encodedAuthCreds returns the username/password pair encoded in such a way to be usable for basic auth. If the
+// password/token is empty, this returns an empty string, too, to signal upstream not to use this. Note: Using an auth
+// header only with the username and without a password will block auth, even for e.g. public repos.
+func (b *Build) encodedAuthCreds() string {
+	if b.Token == "" {
+		return ""
+	}
+
+	userInfo := url.UserPassword("gitlab-ci-token", b.Token)
+	return base64.StdEncoding.Strict().EncodeToString([]byte(
+		userInfo.String(),
+	))
+}
+
+// cleanAuthData returns a new URL with auth data set up so that:
+// - on ssh URLs we ensure UserInfo is defaulted correctly
+// - on other URLs we ensure UserInfo is not set at all, so that we don't leak creds
+// We don't manipulate the original URL but only manipulate a clone.
+func cleanAuthData(orgURL *url.URL) *url.URL {
+	newURL := *orgURL
+
+	if newURL.Scheme == "ssh" {
+		if newURL.User == nil {
+			newURL.User = url.User("git")
+		}
+	} else {
+		newURL.User = nil
+	}
+
+	return &newURL
 }
 
 // GetRemoteURL checks if the default clone URL is overwritten by the runner
 // configuration option: 'CloneURL'. If it is, we use that to create the clone
 // URL.
-func (b *Build) GetRemoteURL() string {
+func (b *Build) GetRemoteURL() (*url.URL, error) {
 	u, _ := url.Parse(b.Runner.CloneURL)
 
 	if u == nil || u.Scheme == "" {
-		return b.GitInfo.RepoURL
+		var err error
+		u, err = url.Parse(b.GitInfo.RepoURL)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		projectPath := b.GetAllVariables().Value("CI_PROJECT_PATH") + ".git"
+		u.Path = path.Join(u.Path, projectPath)
 	}
 
-	projectPath := b.GetAllVariables().Value("CI_PROJECT_PATH") + ".git"
-	u.Path = path.Join(u.Path, projectPath)
-
-	return b.getURLWithAuth(u.String())
+	return cleanAuthData(u), nil
 }
 
-func (b *Build) getBaseURL() string {
+func (b *Build) getBaseURL() (*url.URL, error) {
 	u, _ := url.Parse(b.Runner.CloneURL)
 
+	var err error
 	if u == nil || u.Scheme == "" {
-		return b.Runner.RunnerCredentials.URL
+		u, err = url.Parse(b.Runner.RunnerCredentials.URL)
 	}
 
-	return u.String()
+	return u, err
 }
 
-func (b *Build) getURLInsteadOf(target string, source string) []string {
+func getURLInsteadOf(target string, source string) []string {
+	if target == source {
+		return []string{}
+	}
 	return []string{"-c", fmt.Sprintf("url.%s.insteadOf=%s", target, source)}
 }
 
 // GetURLInsteadOfArgs rewrites a plain HTTPS base URL and the most commonly used SSH/Git
 // protocol URLs (including custom SSH ports) into an HTTPS URL with injected job token
 // auth, and returns an array of strings to pass as options to git commands.
-func (b *Build) GetURLInsteadOfArgs() []string {
-	baseURL := strings.TrimRight(b.getBaseURL(), "/")
-	if !strings.HasPrefix(baseURL, "http") {
-		return []string{}
+func (b *Build) GetURLInsteadOfArgs() ([]string, error) {
+	baseURL, err := b.getBaseURL()
+	if err != nil {
+		return nil, err
 	}
 
-	baseURLWithAuth := b.getURLWithAuth(baseURL)
+	if !strings.HasPrefix(baseURL.Scheme, "http") {
+		return []string{}, nil
+	}
 
-	// https://example.com/ 		-> https://gitlab-ci-token:abc123@example.com/
-	args := b.getURLInsteadOf(baseURLWithAuth, baseURL)
+	baseURL.Path = strings.TrimRight(baseURL.Path, "/")
+	baseURLCleanedAuth := cleanAuthData(baseURL)
+
+	args := getURLInsteadOf(baseURLCleanedAuth.String(), baseURL.String())
 
 	if b.Settings().GitSubmoduleForceHTTPS {
 		ciServerPort := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_PORT")
@@ -1368,20 +1414,21 @@ func (b *Build) GetURLInsteadOfArgs() []string {
 		}
 
 		if ciServerPort == "" || ciServerPort == "22" {
-			// git@example.com: 		-> https://gitlab-ci-token:abc123@example.com/
+			// git@example.com: 		-> https://example.com/
 			baseGitURL := fmt.Sprintf("git@%s:", ciServerHost)
+			args = append(args, getURLInsteadOf(baseURLCleanedAuth.String()+"/", baseGitURL)...)
 
-			args = append(args, b.getURLInsteadOf(baseURLWithAuth+"/", baseGitURL)...)
-			// ssh://git@example.com/ 	-> https://gitlab-ci-token:abc123@example.com/
+			// ssh://git@example.com/ 	-> https://example.com/
 			baseSSHGitURL := fmt.Sprintf("ssh://git@%s", ciServerHost)
-			args = append(args, b.getURLInsteadOf(baseURLWithAuth, baseSSHGitURL)...)
+			args = append(args, getURLInsteadOf(baseURLCleanedAuth.String(), baseSSHGitURL)...)
 		} else {
-			// ssh://git@example.com:8022/ 	-> https://gitlab-ci-token:abc123@example.com/
+			// ssh://git@example.com:8022/ 	-> https://example.com/
 			baseSSHGitURLWithPort := fmt.Sprintf("ssh://git@%s:%s", ciServerHost, ciServerPort)
-			args = append(args, b.getURLInsteadOf(baseURLWithAuth, baseSSHGitURLWithPort)...)
+			args = append(args, getURLInsteadOf(baseURLCleanedAuth.String(), baseSSHGitURLWithPort)...)
 		}
 	}
-	return args
+
+	return args, nil
 }
 
 type stageTimeout struct {

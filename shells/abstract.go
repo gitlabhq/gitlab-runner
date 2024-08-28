@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -381,9 +380,9 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
-	repoURL, err := url.Parse(build.GetRemoteURL())
+	repoURL, err := build.GetRemoteURL()
 	if err != nil {
-		w.Warningf("git SSL config: Can't parse repository URL. %s", err)
+		w.Warningf("git SSL config: Can't get repository URL. %s", err)
 		return
 	}
 
@@ -473,12 +472,14 @@ func (b *AbstractShell) changeFilesOwnership(w ShellWriter, build *common.Build,
 func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {
 	projectDir := build.FullProjectDir()
 
+	var err error
+
 	switch build.GetGitStrategy() {
 	case common.GitFetch:
-		b.writeRefspecFetchCmd(w, build, projectDir)
+		err = b.writeRefspecFetchCmd(w, build, projectDir)
 	case common.GitClone:
 		w.RmDir(projectDir)
-		b.writeRefspecFetchCmd(w, build, projectDir)
+		err = b.writeRefspecFetchCmd(w, build, projectDir)
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
@@ -490,10 +491,11 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Bu
 		return errUnknownGitStrategy
 	}
 
-	return nil
+	return err
 }
 
-func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string) {
+//nolint:funlen
+func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build, projectDir string) error {
 	depth := build.GitInfo.Depth
 
 	if depth > 0 {
@@ -536,11 +538,20 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Cd(projectDir)
 
+	remoteURL, err := build.GetRemoteURL()
+	if err != nil {
+		return err
+	}
+
+	if authHeader := build.BasicAuthHeader(); authHeader != "" && strings.HasPrefix(remoteURL.Scheme, "http") {
+		w.Command("git", "config", "http."+remoteURL.String()+".extraHeader", authHeader)
+	}
+
 	// Add `git remote` or update existing
-	w.IfCmd("git", "remote", "add", "origin", build.GetRemoteURL())
+	w.IfCmd("git", "remote", "add", "origin", remoteURL.String())
 	w.Noticef("Created fresh repository.")
 	w.Else()
-	w.Command("git", "remote", "set-url", "origin", build.GetRemoteURL())
+	w.Command("git", "remote", "set-url", "origin", remoteURL.String())
 	w.EndIf()
 
 	v := common.AppVersion
@@ -565,6 +576,8 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	} else {
 		w.Command("git", fetchArgs...)
 	}
+
+	return nil
 }
 
 func (b *AbstractShell) writeGitCleanup(w ShellWriter, submoduleStrategy common.SubmoduleStrategy, projectDir string) {
@@ -650,7 +663,12 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", syncArgs...)
 
 	// Update / initialize submodules
-	updateArgs := append(build.GetURLInsteadOfArgs(), "submodule", "update", "--init")
+	gitURLArgs, err := build.GetURLInsteadOfArgs()
+	if err != nil {
+		return err
+	}
+
+	updateArgs := append([]string{}, append(gitURLArgs, "submodule", "update", "--init")...)
 	foreachArgs := []string{"submodule", "foreach"}
 	if recursive {
 		updateArgs = append(updateArgs, "--recursive")
@@ -687,7 +705,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 
 	if !build.IsLFSSmudgeDisabled() {
 		w.IfCmd("git", "lfs", "version")
-		w.Command("git", append(append(build.GetURLInsteadOfArgs(), foreachArgs...), "git lfs pull")...)
+		w.Command("git", append(append(gitURLArgs, foreachArgs...), "git lfs pull")...)
 		w.EndIf()
 	}
 

@@ -5,6 +5,7 @@ package kubernetes_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -3373,6 +3374,90 @@ func mapFromKeySlices[K comparable, V any](value V, keySlices ...[]K) map[K]V {
 	}
 
 	return m
+}
+
+func TestCredentialLeaks(t *testing.T) {
+	tokenGetters := map[string]func(*testing.T) string{
+		"no token": func(t *testing.T) string {
+			return ""
+		},
+		"token from env": func(t *testing.T) string {
+			token, ok := os.LookupEnv("GITLAB_TOKEN")
+			if !ok {
+				t.Skip("GITLAB_TOKEN not set, skipping test " + t.Name())
+			}
+			return token
+		},
+	}
+
+	for testName, tokenGetter := range tokenGetters {
+		t.Run(testName, func(t *testing.T) {
+			token := tokenGetter(t)
+
+			job, err := common.GetRemoteBuildResponse("git config -l")
+			require.NoError(t, err, "getting job")
+
+			job.Token = token
+
+			build := &common.Build{
+				JobResponse: job,
+				Runner: &common.RunnerConfig{
+					RunnerSettings: common.RunnerSettings{
+						Executor: common.ExecutorKubernetes,
+						Kubernetes: &common.KubernetesConfig{
+							Image: common.TestDockerGitImage,
+						},
+						Environment: []string{
+							"GIT_TRACE=1",
+							"GIT_CURL_VERBOSE=1",
+							"GIT_TRANSFER_TRACE=1",
+							"CI_DEBUG_TRACE=1",
+						},
+					},
+				},
+			}
+
+			authUser := "gitlab-ci-token"
+			encodedAuthData := base64.StdEncoding.Strict().EncodeToString([]byte(
+				url.UserPassword(authUser, token).String(),
+			))
+
+			out, err := buildtest.RunBuildReturningOutput(t, build)
+			assert.NoError(t, err, "running build")
+
+			repoURL, err := url.Parse(job.GitInfo.RepoURL)
+			assert.NoError(t, err, "parsing repo url")
+
+			assert.NotContains(t, out, authUser, "expected auth user not to leak")
+			assert.NotContains(t, out, "@"+repoURL.Host, "expected not to see the repo url with auth data")
+			assert.NotContains(t, out, encodedAuthData, "expected encoded auth data not to leak")
+
+			if token == "" {
+				assert.NotContains(t, out, "uthorization", "expected not to see any Authorization header")
+				assert.NotContains(t, out, "extraheader", "expected not to see any auth header git config")
+
+				return
+			}
+
+			assert.NotContains(t, out, token, "expected plain (not encoded) token not to leak")
+
+			assert.Contains(t, out,
+				// the curl traces redact the creds
+				"Send header: Authorization: Basic <redacted>",
+				"expected git to log the auth header, and to mask it",
+			)
+			assert.Contains(t, out,
+				// the curl http2 traces do not redact, but the runner/buildlogger does
+				"[authorization: Basic [MASKED]]",
+				"expected git to log the (http2) auth header, and runner to mask it",
+			)
+			assert.Contains(t, out,
+				// when showing the git config, the auth data should be masked
+				"http."+repoURL.String()+".extraheader=Authorization: Basic [MASKED]",
+				"expected git config for the auth header, and runner to mask it",
+			)
+		})
+	}
 }
 
 func skipIfRunningAgainstMiniKube(t *testing.T, args ...string) {
