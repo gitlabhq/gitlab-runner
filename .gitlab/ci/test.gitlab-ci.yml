@@ -3,6 +3,9 @@ include:
 - template: Jobs/SAST.latest.gitlab-ci.yml
 - template: Security/Coverage-Fuzzing.latest.gitlab-ci.yml
 
+variables:
+  GITLAB_ADVANCED_SAST_ENABLED: 'true'
+
 # Overriding security scanning jobs from templates, because
 # we need to replace the rules with our own, the same
 # as in `.merge_request_pipelines` template.
