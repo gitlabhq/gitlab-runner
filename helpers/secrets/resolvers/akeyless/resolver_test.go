@@ -3,10 +3,10 @@
 package akeyless
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/akeyless/service"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/secrets"
@@ -65,7 +65,7 @@ func TestResolver_Resolve(t *testing.T) {
 		"error on accessing secret": {
 			secret: secret,
 			setupMock: func(c *service.MockAkeyless) {
-				c.On("GetAkeylessSecret", context.Background(), secret.Akeyless).
+				c.On("GetAkeylessSecret", mock.Anything, secret.Akeyless).
 					Return("", assert.AnError).
 					Once()
 			},
@@ -74,7 +74,7 @@ func TestResolver_Resolve(t *testing.T) {
 		"secret resolved successfully": {
 			secret: secret,
 			setupMock: func(c *service.MockAkeyless) {
-				c.On("GetAkeylessSecret", context.Background(), secret.Akeyless).
+				c.On("GetAkeylessSecret", mock.Anything, secret.Akeyless).
 					Return("p@assword", nil).
 					Once()
 			},

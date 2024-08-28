@@ -21,8 +21,8 @@ const (
 	AccessTypeAzureAd AccessType = "azure_ad"
 	AccessTypeGCP     AccessType = "gcp"
 	AccessTypeUid     AccessType = "universal_identity"
-	K8S               AccessType = "k8s"
-	JWT               AccessType = "jwt"
+	AccessTypeK8S     AccessType = "k8s"
+	AccessTypeJWT     AccessType = "jwt"
 )
 
 type ItemType string
@@ -70,9 +70,10 @@ func (v *defaultAkeyless) GetAkeylessSecret(ctx context.Context, secret *common.
 		Servers:       []akeyless_api.ServerConfiguration{{URL: secret.Server.AkeylessApiUrl}},
 		DefaultHeader: map[string]string{"akeylessclienttype": "gitlab"},
 	}).V2Api
+
 	token := secret.Server.AkeylessToken
-	var err error
 	if token == "" {
+		var err error
 		token, err = v.authFunc(ctx, secret.Server, apiService)
 		if err != nil {
 			return nil, err
@@ -251,12 +252,12 @@ func setupAuthParams(server common.AkeylessServer) (*akeyless_api.Auth, error) {
 		}
 		authParams.SetUidToken(server.UidToken)
 
-	case K8S:
+	case AccessTypeK8S:
 		authParams.SetGatewayUrl(server.AkeylessApiUrl)
 		authParams.SetK8sServiceAccountToken(server.K8SServiceAccountToken)
 		authParams.SetK8sAuthConfigName(server.K8SAuthConfigName)
 
-	case JWT:
+	case AccessTypeJWT:
 		authParams.SetJwt(server.JWT)
 
 	default:
