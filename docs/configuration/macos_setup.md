@@ -74,11 +74,11 @@ Now configure rbenv and install Ruby.
    source ~/.bash_profile
    ```
 
-1. Install Ruby 2.74 and set it as the machine's global default:
+1. Install Ruby 3.3.x and set it as the machine's global default:
 
    ```shell
-   rbenv install 2.7.4
-   rbenv global 2.7.4
+   rbenv install 3.3.4
+   rbenv global 3.3.4
    ```
 
 ## Install Xcode

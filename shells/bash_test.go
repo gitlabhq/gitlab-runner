@@ -224,3 +224,39 @@ func Test_BashWriter_Variable(t *testing.T) {
 		})
 	}
 }
+
+func TestBashEntrypointCommand(t *testing.T) {
+	tests := map[string]struct {
+		probeFile       string
+		expectedCommand []string
+		shellType       common.ShellType
+	}{
+		"normal shell/no probe": {
+			shellType:       common.NormalShell,
+			expectedCommand: []string{"sh", "-c", "if [ -x /usr/local/bin/bash ]; then\n\texec /usr/local/bin/bash \nelif [ -x /usr/bin/bash ]; then\n\texec /usr/bin/bash \nelif [ -x /bin/bash ]; then\n\texec /bin/bash \nelif [ -x /usr/local/bin/sh ]; then\n\texec /usr/local/bin/sh \nelif [ -x /usr/bin/sh ]; then\n\texec /usr/bin/sh \nelif [ -x /bin/sh ]; then\n\texec /bin/sh \nelif [ -x /busybox/sh ]; then\n\texec /busybox/sh \nelse\n\techo shell not found\n\texit 1\nfi\n\n"},
+		},
+		"normal shell/with probe": {
+			shellType:       common.NormalShell,
+			probeFile:       "someFile",
+			expectedCommand: []string{"sh", "-c", ">'someFile'; if [ -x /usr/local/bin/bash ]; then\n\texec /usr/local/bin/bash \nelif [ -x /usr/bin/bash ]; then\n\texec /usr/bin/bash \nelif [ -x /bin/bash ]; then\n\texec /bin/bash \nelif [ -x /usr/local/bin/sh ]; then\n\texec /usr/local/bin/sh \nelif [ -x /usr/bin/sh ]; then\n\texec /usr/bin/sh \nelif [ -x /bin/sh ]; then\n\texec /bin/sh \nelif [ -x /busybox/sh ]; then\n\texec /busybox/sh \nelse\n\techo shell not found\n\texit 1\nfi\n\n"},
+		},
+		"login shell/no probe": {
+			shellType:       common.LoginShell,
+			expectedCommand: []string{"sh", "-c", "if [ -x /usr/local/bin/bash ]; then\n\texec /usr/local/bin/bash -l\nelif [ -x /usr/bin/bash ]; then\n\texec /usr/bin/bash -l\nelif [ -x /bin/bash ]; then\n\texec /bin/bash -l\nelif [ -x /usr/local/bin/sh ]; then\n\texec /usr/local/bin/sh -l\nelif [ -x /usr/bin/sh ]; then\n\texec /usr/bin/sh -l\nelif [ -x /bin/sh ]; then\n\texec /bin/sh -l\nelif [ -x /busybox/sh ]; then\n\texec /busybox/sh -l\nelse\n\techo shell not found\n\texit 1\nfi\n\n"},
+		},
+		"login shell/with probe": {
+			shellType:       common.LoginShell,
+			probeFile:       "someFile",
+			expectedCommand: []string{"sh", "-c", ">'someFile'; if [ -x /usr/local/bin/bash ]; then\n\texec /usr/local/bin/bash -l\nelif [ -x /usr/bin/bash ]; then\n\texec /usr/bin/bash -l\nelif [ -x /bin/bash ]; then\n\texec /bin/bash -l\nelif [ -x /usr/local/bin/sh ]; then\n\texec /usr/local/bin/sh -l\nelif [ -x /usr/bin/sh ]; then\n\texec /usr/bin/sh -l\nelif [ -x /bin/sh ]; then\n\texec /bin/sh -l\nelif [ -x /busybox/sh ]; then\n\texec /busybox/sh -l\nelse\n\techo shell not found\n\texit 1\nfi\n\n"},
+		},
+	}
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			shell := common.GetShell("bash")
+			shellScriptInfo := common.ShellScriptInfo{Type: tc.shellType}
+
+			actualCommand := shell.GetEntrypointCommand(shellScriptInfo, tc.probeFile)
+			assert.Equal(t, tc.expectedCommand, actualCommand)
+		})
+	}
+}

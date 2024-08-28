@@ -11,43 +11,44 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
-GitLab Runner runs the CI/CD jobs that are defined in GitLab.
+[GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner) runs the CI/CD jobs defined in GitLab.
+GitLab Runner can run as a single binary and has no language-specific requirements.
 
-You can install GitLab Runner on your infrastructure,
-inside a Docker container, or deployed to a Kubernetes cluster.
+For security and performance reasons, install GitLab Runner on a machine
+separate from the machine that hosts your GitLab instance.
 
-GitLab Runner is open-source and written in [Go](https://go.dev). It can run
-as a single binary and has no language-specific requirements.
+## Supported operating systems
 
-After you install GitLab Runner, you must [create and register runners](../register/index.md)
-with your GitLab instance. The GitLab instance can be self-managed or you can use GitLab.com.
-You can also follow the tutorial,
-[Create, register, and run your own project runner](https://docs.gitlab.com/ee/tutorials/create_register_first_runner/).
+You can install GitLab Runner on:
 
-GitLab Runner can be installed and used on GNU/Linux, macOS, FreeBSD, and Windows.
-You can install it:
+- Linux from a [GitLab repository](linux-repository.md) or [manually](linux-manually.md)
+- [FreeBSD](freebsd.md)
+- [macOS](osx.md)
+- [Windows](windows.md)
 
-- In a container.
-- By downloading a binary manually.
-- By using a repository for rpm/deb packages.
+[Bleeding-edge binaries](bleeding-edge.md) are also available.
 
-GitLab Runner officially supported binaries are available for the following architectures:
+To use a different operating system, ensure the operating system can compile a Go binary.
 
-- x86, AMD64, ARM64, ARM, s390x, ppc64le
+## Supported containers
 
-Official packages are available for the following Linux distributions:
+You can install GitLab Runner with:
 
-- CentOS, Debian, Ubuntu, RHEL, Fedora, Mint, Oracle, Amazon
+- [Docker](docker.md)
+- [The GitLab Helm chart](kubernetes.md)
+- [The GitLab agent for Kubernetes](kubernetes-agent.md)
+- [The GitLab Operator](operator.md)
 
-GitLab Runner officially supports the following operating systems. If you prefer to use a
-different operating system that is not officially supported, it must be able to compile a
-Go binary.
+## Supported architectures
 
-- Linux, Windows, macOS, FreeBSD
+GitLab Runner is available for the following architectures:
 
-NOTE:
-For security and performance reasons, you should install GitLab Runner on a machine that
-is separate to the machine that hosts your GitLab instance.
+- x86
+- AMD64
+- ARM64
+- ARM
+- s390x
+- ppc64le
 
 ## System Requirements
 
@@ -85,25 +86,6 @@ When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS 
 ### FIPS compliant GitLab Runner in other systems and architectures
 
 Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to follow progress on adding other architectures and distributions.
-
-## Repositories
-
-- [Install using the GitLab repository for Debian/Ubuntu/CentOS/Red Hat](linux-repository.md)
-
-## Binaries
-
-- [Install on GNU/Linux](linux-manually.md)
-- [Install on macOS](osx.md)
-- [Install on Windows](windows.md)
-- [Install on FreeBSD](freebsd.md)
-- [Install nightly builds](bleeding-edge.md)
-
-## Containers
-
-- [Install as a Docker service](docker.md)
-- [Install on Kubernetes](kubernetes.md)
-- [Install using the agent for Kubernetes](kubernetes-agent.md)
-- [Install as GitLab Runner Operator](operator.md)
 
 ## Autoscale
 

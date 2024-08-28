@@ -99,6 +99,26 @@ func (_m *MockShell) GetConfiguration(info ShellScriptInfo) (*ShellConfiguration
 	return r0, r1
 }
 
+// GetEntrypointCommand provides a mock function with given fields: info, probeFile
+func (_m *MockShell) GetEntrypointCommand(info ShellScriptInfo, probeFile string) []string {
+	ret := _m.Called(info, probeFile)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEntrypointCommand")
+	}
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func(ShellScriptInfo, string) []string); ok {
+		r0 = rf(info, probeFile)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
 // GetFeatures provides a mock function with given fields: features
 func (_m *MockShell) GetFeatures(features *FeaturesInfo) {
 	_m.Called(features)

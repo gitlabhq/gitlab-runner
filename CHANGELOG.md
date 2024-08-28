@@ -1,3 +1,53 @@
+## v17.3.1 (2024-08-21)
+
+### Bug fixes
+
+- Make image generation fail upon failure to download dumb-init ubi-fips [!4955](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4955)
+
+## v17.3.0 (2024-08-09)
+
+### New features
+
+- Add debug log message for resolving Docker credentials [!4902](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4902)
+- Add Git_STRATEGY of "empty" to support clean build directories [!4889](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4889) (Nathan Cain @nathan.cain)
+
+### Security fixes
+
+- Update azidentity dependency [!4903](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4903)
+
+### Bug fixes
+
+- Gracefully stop long running processes when using the shell executor - Take 2 [!4896](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4896)
+- Fix default log format to FormatRunner [!4910](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4910)
+- Use pull policy configuration for services [!4854](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4854)
+- Upgrade fleeting: fix tcpchan deadline for tunnelled connections [!4917](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4917)
+- Cancel stage script upon job cancellation in attach mode [!4813](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4813)
+- Reset log level and format to default values when not set [!4897](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4897)
+- Prevent additional newline in job in attach mode [!4901](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4901)
+
+### Maintenance
+
+- Fix formatting in runner registration doc [!4921](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4921)
+- Remove funlen [!4912](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4912)
+- Add a Runner Docker image tag for the build's revision [!4862](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4862)
+- Apply split Vale rules to project [!4918](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4918)
+- Skip `TestRunCommand_configReloading` unit test on windows platform [!4916](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4916)
+- Re-enable Windows Docker Git-lfs tests [!4900](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4900)
+- Remove Git 1.8.3.1 test [!4856](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4856)
+- Merge back 16.11, 17.0, 17.1 and 17.2 patches in main branch [!4905](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4905)
+- Work around a syntax highlighting problem [!4920](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4920)
+- Remove Beta plugin warning for AWS [!4919](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4919)
+- Clarify where to install the fleeting plugin [!4894](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4894)
+- Docs maintenance: Add internal pages to ignore list [!4895](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4895)
+- [k8s] Fix `testKubernetesWithNonRootSecurityContext` integration tests [!4892](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4892)
+- Remove unneeded notes in tabs [!4922](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4922)
+- Bump UBI base image from `9.4-1134` to `9.4-1194` [!4909](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4909)
+- Add runner path requirement [!4904](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4904)
+- Update index.md [!4908](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4908)
+- Add missing requirement for network_mtu [!4890](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4890)
+- Add note about using Workload Identity Federation for GKE [!4884](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4884) (Nabil ZOUABI @nabil_zouabi)
+- [k8s] Fix `CaptureServiceLogs` integration tests [!4891](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4891)
+
 ## v17.2.1 (2024-07-25)
 
 ### Bug fixes
@@ -12,7 +62,7 @@
 
 ### Maintenance
 
-- Remove git 1.8.3.1 test !4856
+- Remove Git 1.8.3.1 test !4856
 
 ## v17.0.2 (2024-07-25)
 
@@ -91,7 +141,7 @@
 
 ### Maintenance
 
-- Remove git 1.8.3.1 test !4856
+- Remove Git 1.8.3.1 test !4856
 
 ## v16.11.2 (2024-07-05)
 
@@ -101,7 +151,7 @@
 
 ### Maintenance
 
-- Remove git 1.8.3.1 test !4856
+- Remove Git 1.8.3.1 test !4856
 
 ## v17.1.0 (2024-06-20)
 
@@ -120,26 +170,26 @@
 
 - Fix panic when err is nil on retry for k8s executor !4834
 - Fix linter violation !4827
-- Support handling docker images with @digest !4557
-- Fix docker client intermittently failing to connect to unix socket !4801
-- Override helper images entrypoint on docker import !4793
-- Fix jsonschema validation warning for docker services_limit !4782 (Malte Morgenstern @malmor)
+- Support handling Docker images with @digest !4557
+- Fix Docker client intermittently failing to connect to unix socket !4801
+- Override helper images entrypoint on Docker import !4793
+- Fix jsonschema validation warning for Docker services_limit !4782 (Malte Morgenstern @malmor)
 - Propagate exit codes through nested pwsh calls !4715 (Andy Durant @AJDurant)
-- Fix jsonschema validation warning for kubernetes retry_limits !4786 (Malte Morgenstern @malmor)
+- Fix jsonschema validation warning for Kubernetes retry_limits !4786 (Malte Morgenstern @malmor)
 
 ### Maintenance
 
 - Add exact commands to fix signed by unknown authority !4833
 - Document troubleshooting steps for 500 error creating tags !4831
 - Remove BETA from the autoscaler docs !4832
-- Upgrade github.com/minio/minio-go to v7.0.70 !4819 (Mathieu Quesnel @xmath279)
-- Remove github.com/samber/lo dependency from main application !4811
+- Upgrade GitHub.com/MinIO/MinIO-go to v7.0.70 !4819 (Mathieu Quesnel @xmath279)
+- Remove GitHub.com/samber/lo dependency from main application !4811
 - Update Docker Autoscaler executor docs !4822
 - Enable tarzstd archive format for caches !4807
-- Bump docker+machine version to v0.16.2-gitlab.26 !4816
+- Bump Docker+machine version to v0.16.2-GitLab.26 !4816
 - Upgrade ubi fips base image from ubi8 to ubi9 !4814
 - Check links in more files !4815
-- Upgrade helper image git-lfs to 3.5.1 !4812
+- Upgrade helper image Git-lfs to 3.5.1 !4812
 - Update runner registration documentation !4809
 - Update docs linting Docker images !4806
 - Add note about KMS Alias syntax - Documentation !4792
@@ -204,16 +254,16 @@
 - Clarify "circular" docs links !4738
 - Remove slsa_v02 from artifact_metadata !4760
 - Remove cmd shell !4754
-- Remove shared runner naming from gitlab runner docs !4744
+- Remove shared runner naming from GitLab Runner docs !4744
 - Switch to Lychee for link checking !4737
-- Convert custom kubernetes error to retryError !4662 (Nabil ZOUABI @nabil_zouabi)
+- Convert custom Kubernetes error to retryError !4662 (Nabil ZOUABI @nabil_zouabi)
 - Remove license scanning template !4735
 - Fix jsonschema validation warning for monitoring struct !4724 (Malte Morgenstern @malmor)
-- Updated examples to avoid helm error !4752
+- Updated examples to avoid Helm error !4752
 - April: fixes trailing whitespace in GitLab Runner project !4751
 - Remove legacy shell quoting and FF_USE_NEW_SHELL_ESCAPE feature flag !4742
 - Remove `gitlab-runner exec` command !4740
-- Add ssh: handshake failed to troubleshooting !4743
+- Add SSH: handshake failed to troubleshooting !4743
 - Update autoscaler config option documentation !4730
 - Fix dead documentation anchor links in README !4733 (Markus Heidelberg @marcows)
 - Remove terminationGracePeriodSeconds !4739

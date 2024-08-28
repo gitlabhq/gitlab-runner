@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -14,9 +15,14 @@ func GetKubeClientConfig(config *common.KubernetesConfig) (kubeConfig *restclien
 
 // NewDefaultExecutorForTest is used to expose the executor to integration tests
 func NewDefaultExecutorForTest() common.Executor {
-	return &executor{
+	e := &executor{
 		AbstractExecutor: executors.AbstractExecutor{
 			ExecutorOptions: executorOptions,
 		},
 	}
+	e.getKubeConfig = getKubeClientConfig
+	e.newKubeClient = func(config *restclient.Config) (kubernetes.Interface, error) {
+		return kubernetes.NewForConfig(config)
+	}
+	return e
 }

@@ -45,7 +45,7 @@ To install GitLab Runner:
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
    ```
 
-   For RHEL/CentOS/Fedora:
+   For RHEL/CentOS/Fedora/Amazon Linux:
 
    ```shell
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
@@ -68,7 +68,7 @@ To install GitLab Runner:
    sudo apt-get install gitlab-runner
    ```
 
-   For RHEL/CentOS/Fedora:
+   For RHEL/CentOS/Fedora/Amazon Linux:
 
    ```shell
    sudo yum install gitlab-runner
@@ -135,7 +135,7 @@ sudo apt-get update
 sudo apt-get install gitlab-runner
 ```
 
-For RHEL/CentOS/Fedora:
+For RHEL/CentOS/Fedora/Amazon Linux:
 
 ```shell
 sudo yum update
@@ -277,8 +277,8 @@ Signatures made by these keys should not be trusted anymore.
 
 | Sl. No. | Key Fingerprint                                      | Status    | Expiry Date  | Download (revoked keys only)                     |
 |---------|------------------------------------------------------|-----------|--------------|--------------------------------------------------|
-| 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [revoked key](gpg-keys/9CE45ABC880721D4.pub.gpg) |
-| 2       | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` | `revoked` | `2023-04-26` | [revoked key](gpg-keys/A674BF8135DFA027.pub.gpg) |
+| 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [revoked key](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/9CE45ABC880721D4.pub.gpg) |
+| 2       | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` | `revoked` | `2023-04-26` | [revoked key](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/A674BF8135DFA027.pub.gpg) |
 
 ## Manually download packages
 
@@ -309,7 +309,7 @@ For Debian/Ubuntu/Mint:
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E apt-get install gitlab-runner
 ```
 
-For RHEL/CentOS/Fedora:
+For RHEL/CentOS/Fedora/Amazon Linux:
 
 ```shell
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner

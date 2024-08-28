@@ -251,6 +251,13 @@
     - tests/dockerfiles/alpine-entrypoint/*
     - .gitlab/ci/prepare.gitlab-ci.yml
 
+.rules:prepare:powershell-entrypoint:image:merge-requests:
+  rules:
+  - <<: *if-runner-merge-request-pipeline
+    changes:
+    - tests/dockerfiles/powershell-entrypoint/*
+    - .gitlab/ci/prepare.gitlab-ci.yml
+
 .rules:prepare:alpine-id-overflow:image:merge-requests:
   rules:
   - <<: *if-runner-merge-request-pipeline

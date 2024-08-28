@@ -38,10 +38,13 @@ func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
 		runnerConfig, err = c.RunnerByToken(c.Token)
 	case c.Name != "":
 		runnerConfig, err = c.RunnerByName(c.Name)
+	default:
+		logrus.Fatalln("at least one of --name or --token must be specified")
 	}
 	if err != nil {
 		logrus.Fatalln(err)
 	}
+
 	c.RunnerCredentials = runnerConfig.RunnerCredentials
 
 	// Unregister given Token and URL of the runner
@@ -72,7 +75,6 @@ func (c *UnregisterCommand) Execute(context *cli.Context) {
 	err := c.loadConfig()
 	if err != nil {
 		logrus.Fatalln(err)
-		return
 	}
 
 	var runners []*common.RunnerConfig
