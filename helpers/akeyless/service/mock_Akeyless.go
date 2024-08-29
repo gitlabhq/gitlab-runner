@@ -5,8 +5,6 @@ package service
 import (
 	context "context"
 
-	common "gitlab.com/gitlab-org/gitlab-runner/common"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -15,29 +13,29 @@ type MockAkeyless struct {
 	mock.Mock
 }
 
-// GetAkeylessSecret provides a mock function with given fields: ctx, secret
-func (_m *MockAkeyless) GetAkeylessSecret(ctx context.Context, secret *common.AkeylessSecret) (interface{}, error) {
-	ret := _m.Called(ctx, secret)
+// GetSecret provides a mock function with given fields: ctx
+func (_m *MockAkeyless) GetSecret(ctx context.Context) (interface{}, error) {
+	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAkeylessSecret")
+		panic("no return value specified for GetSecret")
 	}
 
 	var r0 interface{}
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *common.AkeylessSecret) (interface{}, error)); ok {
-		return rf(ctx, secret)
+	if rf, ok := ret.Get(0).(func(context.Context) (interface{}, error)); ok {
+		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *common.AkeylessSecret) interface{}); ok {
-		r0 = rf(ctx, secret)
+	if rf, ok := ret.Get(0).(func(context.Context) interface{}); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(interface{})
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *common.AkeylessSecret) error); ok {
-		r1 = rf(ctx, secret)
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}

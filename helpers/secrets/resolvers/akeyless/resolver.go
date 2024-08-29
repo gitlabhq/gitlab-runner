@@ -16,19 +16,21 @@ const (
 )
 
 type akeylessResolver struct {
-	secret   common.Secret
-	akeyless service.Akeyless
+	secret common.Secret
 }
 
 func newResolver(secret common.Secret) common.SecretResolver {
 	return &akeylessResolver{
-		secret:   secret,
-		akeyless: service.NewAkeyless(),
+		secret: secret,
 	}
 }
 
 func init() {
 	common.GetSecretResolverRegistry().Register(newResolver)
+}
+
+var newAkeyless = func(secret *common.AkeylessSecret) service.Akeyless {
+	return service.NewAkeyless(secret)
 }
 
 func (a *akeylessResolver) Name() string {
@@ -48,8 +50,8 @@ func (a *akeylessResolver) Resolve() (string, error) {
 	defer cancel()
 
 	secret := a.secret.Akeyless
-
-	data, err := a.akeyless.GetAkeylessSecret(ctx, secret)
+	akeyless := newAkeyless(secret)
+	data, err := akeyless.GetSecret(ctx)
 	if err != nil {
 		return "", err
 	}

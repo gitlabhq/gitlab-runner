@@ -13,6 +13,67 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+//go:generate mockery --name=akeylessAPIClient --inpackage
+type akeylessAPIClient interface {
+	GetSecretValue(ctx context.Context, body akeyless_api.GetSecretValue) (map[string]string, error)
+	Auth(ctx context.Context, params akeyless_api.Auth) (akeyless_api.AuthOutput, error)
+	DescribeItem(ctx context.Context, params akeyless_api.DescribeItem) (akeyless_api.Item, error)
+	GetDynamicSecretValue(ctx context.Context, params akeyless_api.GetDynamicSecretValue) (map[string]string, error)
+	GetRotatedSecretValue(ctx context.Context, params akeyless_api.GetRotatedSecretValue) (map[string]any, error)
+	GetSSHCertificate(ctx context.Context, params akeyless_api.GetSSHCertificate) (akeyless_api.GetSSHCertificateOutput, error)
+	GetPKICertificate(ctx context.Context, params akeyless_api.GetPKICertificate) (akeyless_api.GetPKICertificateOutput, error)
+}
+
+type akeylessClient struct {
+	api *akeyless_api.V2ApiService
+}
+
+func newClient(secret *common.AkeylessSecret) *akeylessClient {
+	apiService := akeyless_api.NewAPIClient(&akeyless_api.Configuration{
+		Servers:       []akeyless_api.ServerConfiguration{{URL: secret.Server.AkeylessApiUrl}},
+		DefaultHeader: map[string]string{"akeylessclienttype": "gitlab"},
+	}).V2Api
+
+	return &akeylessClient{
+		api: apiService,
+	}
+}
+
+func (c *akeylessClient) GetSecretValue(ctx context.Context, body akeyless_api.GetSecretValue) (map[string]string, error) {
+	resp, _, err := c.api.GetSecretValue(ctx).Body(body).Execute()
+	return resp, err
+}
+
+func (c *akeylessClient) Auth(ctx context.Context, body akeyless_api.Auth) (akeyless_api.AuthOutput, error) {
+	out, _, err := c.api.Auth(ctx).Body(body).Execute()
+	return out, err
+}
+
+func (c *akeylessClient) DescribeItem(ctx context.Context, body akeyless_api.DescribeItem) (akeyless_api.Item, error) {
+	out, _, err := c.api.DescribeItem(ctx).Body(body).Execute()
+	return out, err
+}
+
+func (c *akeylessClient) GetDynamicSecretValue(ctx context.Context, body akeyless_api.GetDynamicSecretValue) (map[string]string, error) {
+	resp, _, err := c.api.GetDynamicSecretValue(ctx).Body(body).Execute()
+	return resp, err
+}
+
+func (c *akeylessClient) GetRotatedSecretValue(ctx context.Context, body akeyless_api.GetRotatedSecretValue) (map[string]any, error) {
+	resp, _, err := c.api.GetRotatedSecretValue(ctx).Body(body).Execute()
+	return resp, err
+}
+
+func (c *akeylessClient) GetSSHCertificate(ctx context.Context, body akeyless_api.GetSSHCertificate) (akeyless_api.GetSSHCertificateOutput, error) {
+	resp, _, err := c.api.GetSSHCertificate(ctx).Body(body).Execute()
+	return resp, err
+}
+
+func (c *akeylessClient) GetPKICertificate(ctx context.Context, body akeyless_api.GetPKICertificate) (akeyless_api.GetPKICertificateOutput, error) {
+	resp, _, err := c.api.GetPKICertificate(ctx).Body(body).Execute()
+	return resp, err
+}
+
 type AccessType string
 
 const (
@@ -51,112 +112,112 @@ type Config struct {
 
 //go:generate mockery --name=Akeyless --inpackage
 type Akeyless interface {
-	GetAkeylessSecret(ctx context.Context, secret *common.AkeylessSecret) (any, error)
-}
-type defaultAkeyless struct {
-	authFunc      authenticateFunc
-	getSecretFunc getSecretFunc
+	GetSecret(ctx context.Context) (any, error)
 }
 
-func NewAkeyless() Akeyless {
-	return &defaultAkeyless{
-		authFunc:      authenticate,
-		getSecretFunc: getSecret,
+type AkeylessAPI struct {
+	secret *common.AkeylessSecret
+	client akeylessAPIClient
+}
+
+func NewAkeyless(secret *common.AkeylessSecret) *AkeylessAPI {
+	return &AkeylessAPI{
+		secret: secret,
+		client: newClient(secret),
 	}
 }
 
-func (v *defaultAkeyless) GetAkeylessSecret(ctx context.Context, secret *common.AkeylessSecret) (any, error) {
-	apiService := akeyless_api.NewAPIClient(&akeyless_api.Configuration{
-		Servers:       []akeyless_api.ServerConfiguration{{URL: secret.Server.AkeylessApiUrl}},
-		DefaultHeader: map[string]string{"akeylessclienttype": "gitlab"},
-	}).V2Api
-
-	token := secret.Server.AkeylessToken
+func (v *AkeylessAPI) GetSecret(ctx context.Context) (any, error) {
+	token := v.secret.Server.AkeylessToken
 	if token == "" {
 		var err error
-		token, err = v.authFunc(ctx, secret.Server, apiService)
+		token, err = v.authenticate(ctx, v.secret.Server)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if secret.Name == "" {
+	if v.secret.Name == "" {
 		return token, nil
 	}
 
-	return v.getSecretFunc(ctx, secret, token, apiService)
+	return v.getSecret(ctx, token)
 }
 
-type getSecretFunc func(ctx context.Context, secret *common.AkeylessSecret, token string, apiService *akeyless_api.V2ApiService) (any, error)
-
-func getSecret(ctx context.Context, secret *common.AkeylessSecret, token string, apiService *akeyless_api.V2ApiService) (any, error) {
-	name := secret.Name
-	itemType, err := getItemType(ctx, name, token, apiService)
-	if err != nil {
-		return nil, err
-	}
-
-	switch ItemType(itemType) {
-	case ItemTypeStaticSecret:
-		return getStaticSecret(ctx, name, token, apiService)
-	case ItemTypeDynamicSecret:
-		return getDynamicSecret(ctx, name, token, apiService)
-	case ItemTypeRotatedSecret:
-		return getRotatedSecret(ctx, name, token, apiService)
-	case ItemTypeSSHCertIssuer:
-		return getSSHCertificate(ctx, name, secret.CertUserName, secret.PublicKeyData, token, apiService)
-	case ItemTypePkiCertIssuer:
-		return getPKICertificate(ctx, name, secret.CsrData, secret.PublicKeyData, token, apiService)
-	default:
-		return nil, fmt.Errorf("unknown item type: %s", itemType)
-	}
-}
-
-type authenticateFunc func(ctx context.Context, server common.AkeylessServer, apiService *akeyless_api.V2ApiService) (string, error)
-
-func authenticate(ctx context.Context, server common.AkeylessServer, apiService *akeyless_api.V2ApiService) (string, error) {
+func (v *AkeylessAPI) authenticate(ctx context.Context, server common.AkeylessServer) (string, error) {
 	authParams, err := setupAuthParams(server)
 	if err != nil {
 		return "", err
 	}
 
-	out, _, err := apiService.Auth(ctx).Body(*authParams).Execute()
+	out, err := v.client.Auth(ctx, *authParams)
 	if err != nil {
 		return "", getAklApiErrMsg(err)
 	}
+
 	return out.GetToken(), nil
 }
 
-func getStaticSecret(ctx context.Context, name, token string, apiService *akeyless_api.V2ApiService) (string, error) {
-	secretsVal, _, err := apiService.GetSecretValue(ctx).Body(akeyless_api.GetSecretValue{
+func (v *AkeylessAPI) getSecret(ctx context.Context, token string) (any, error) {
+	name := v.secret.Name
+	itemType, err := v.getItemType(ctx, name, token)
+	if err != nil {
+		return nil, err
+	}
+
+	var value any
+
+	switch ItemType(itemType) {
+	case ItemTypeStaticSecret:
+		value, err = v.getStaticSecret(ctx, name, token)
+	case ItemTypeDynamicSecret:
+		value, err = v.getDynamicSecret(ctx, name, token)
+	case ItemTypeRotatedSecret:
+		value, err = v.getRotatedSecret(ctx, name, token)
+	case ItemTypeSSHCertIssuer:
+		value, err = v.getSSHCertificate(ctx, name, v.secret.CertUserName, v.secret.PublicKeyData, token)
+	case ItemTypePkiCertIssuer:
+		value, err = v.getPKICertificate(ctx, name, v.secret.CsrData, v.secret.PublicKeyData, token)
+	default:
+		return nil, fmt.Errorf("unknown item type: %s", itemType)
+	}
+
+	// since we return all kinds of values avoid wrapping the value in the `any` type,
+	// so it's consistently nil
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (v *AkeylessAPI) getStaticSecret(ctx context.Context, name, token string) (any, error) {
+	secretsVal, err := v.client.GetSecretValue(ctx, akeyless_api.GetSecretValue{
 		Names: []string{name},
 		Token: akeyless_api.PtrString(token),
-	}).Execute()
+	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if val, ok := secretsVal[name]; ok {
 		return val, nil
 	}
-	return "", getSecretNotFoundError(name)
+
+	return nil, getSecretNotFoundError(name)
 }
 
-func getDynamicSecret(ctx context.Context, name string, token string, apiService *akeyless_api.V2ApiService) (any, error) {
-	resp, _, err := apiService.GetDynamicSecretValue(ctx).Body(akeyless_api.GetDynamicSecretValue{
+func (v *AkeylessAPI) getDynamicSecret(ctx context.Context, name string, token string) (any, error) {
+	return v.client.GetDynamicSecretValue(ctx, akeyless_api.GetDynamicSecretValue{
 		Name:  name,
 		Token: akeyless_api.PtrString(token),
-	}).Execute()
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	})
 }
 
-func getRotatedSecret(ctx context.Context, name string, token string, apiService *akeyless_api.V2ApiService) (any, error) {
-	resp, _, err := apiService.GetRotatedSecretValue(ctx).Body(akeyless_api.GetRotatedSecretValue{
+func (v *AkeylessAPI) getRotatedSecret(ctx context.Context, name string, token string) (any, error) {
+	resp, err := v.client.GetRotatedSecretValue(ctx, akeyless_api.GetRotatedSecretValue{
 		Names: name,
 		Token: akeyless_api.PtrString(token),
-	}).Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -166,47 +227,50 @@ func getRotatedSecret(ctx context.Context, name string, token string, apiService
 	return nil, getSecretNotFoundError(name)
 }
 
-func getSSHCertificate(ctx context.Context, name, certUserName, publicKeyData, token string, apiService *akeyless_api.V2ApiService) (string, error) {
-	resp, _, err := apiService.GetSSHCertificate(ctx).Body(akeyless_api.GetSSHCertificate{
+func (v *AkeylessAPI) getSSHCertificate(ctx context.Context, name, certUserName, publicKeyData, token string) (any, error) {
+	resp, err := v.client.GetSSHCertificate(ctx, akeyless_api.GetSSHCertificate{
 		CertIssuerName: name,
 		CertUsername:   certUserName,
 		PublicKeyData:  akeyless_api.PtrString(publicKeyData),
 		Token:          akeyless_api.PtrString(token),
-	}).Execute()
+	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if resp.Data != nil {
 		return *resp.Data, nil
 	}
-	return "", getSecretNotFoundError(name)
+
+	return nil, getSecretNotFoundError(name)
 }
 
-func getPKICertificate(ctx context.Context, name, csrData, publicKeyData, token string, apiService *akeyless_api.V2ApiService) (string, error) {
-	resp, _, err := apiService.GetPKICertificate(ctx).Body(akeyless_api.GetPKICertificate{
+func (v *AkeylessAPI) getPKICertificate(ctx context.Context, name, csrData, publicKeyData, token string) (any, error) {
+	resp, err := v.client.GetPKICertificate(ctx, akeyless_api.GetPKICertificate{
 		CertIssuerName: name,
 		CsrDataBase64:  akeyless_api.PtrString(csrData),
 		KeyDataBase64:  akeyless_api.PtrString(publicKeyData),
 		Token:          akeyless_api.PtrString(token),
-	}).Execute()
+	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+
 	if resp.Data != nil {
 		return *resp.Data, nil
 	}
-	return "", getSecretNotFoundError(name)
+
+	return nil, getSecretNotFoundError(name)
 }
 
-func getItemType(ctx context.Context, name, token string, apiService *akeyless_api.V2ApiService) (string, error) {
-	describeItemOut, _, err := apiService.DescribeItem(ctx).Body(akeyless_api.DescribeItem{
+func (v *AkeylessAPI) getItemType(ctx context.Context, name, token string) (string, error) {
+	describeItemOut, err := v.client.DescribeItem(ctx, akeyless_api.DescribeItem{
 		Name:  name,
 		Token: akeyless_api.PtrString(token),
-	}).Execute()
-
+	})
 	if err != nil {
 		return "", getAklApiErrMsg(err)
 	}
+
 	return describeItemOut.GetItemType(), nil
 }
 

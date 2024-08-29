@@ -65,7 +65,7 @@ func TestResolver_Resolve(t *testing.T) {
 		"error on accessing secret": {
 			secret: secret,
 			setupMock: func(c *service.MockAkeyless) {
-				c.On("GetAkeylessSecret", mock.Anything, secret.Akeyless).
+				c.On("GetSecret", mock.Anything).
 					Return("", assert.AnError).
 					Once()
 			},
@@ -74,7 +74,7 @@ func TestResolver_Resolve(t *testing.T) {
 		"secret resolved successfully": {
 			secret: secret,
 			setupMock: func(c *service.MockAkeyless) {
-				c.On("GetAkeylessSecret", mock.Anything, secret.Akeyless).
+				c.On("GetSecret", mock.Anything).
 					Return("p@assword", nil).
 					Once()
 			},
@@ -85,14 +85,16 @@ func TestResolver_Resolve(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			akeylessMock := new(service.MockAkeyless)
-			if tt.setupMock != nil {
-				tt.setupMock(akeylessMock)
-			}
+			tt.setupMock(akeylessMock)
+
 			defer akeylessMock.AssertExpectations(t)
 
 			r := &akeylessResolver{
-				secret:   tt.secret,
-				akeyless: akeylessMock,
+				secret: tt.secret,
+			}
+
+			newAkeyless = func(secret *common.AkeylessSecret) service.Akeyless {
+				return akeylessMock
 			}
 
 			value, err := r.Resolve()
