@@ -85,7 +85,9 @@ func TestResolver_Resolve(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			akeylessMock := new(service.MockAkeyless)
-			tt.setupMock(akeylessMock)
+			if tt.setupMock != nil {
+				tt.setupMock(akeylessMock)
+			}
 
 			defer akeylessMock.AssertExpectations(t)
 
