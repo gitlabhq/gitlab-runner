@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes/internal/pull"
@@ -109,6 +108,28 @@ func loadDefaultKubectlConfig() (*restclient.Config, error) {
 	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
+func getContainerStatus(containerStatuses []api.ContainerStatus, containerName string) (api.ContainerStatus, bool) {
+	for i := range containerStatuses {
+		if containerStatuses[i].Name == containerName {
+			return containerStatuses[i], true
+		}
+	}
+	return api.ContainerStatus{}, false
+}
+
+func isPodReady(pod *api.Pod) bool {
+	if pod == nil {
+		return false
+	}
+	conditions := pod.Status.Conditions
+	for i := range conditions {
+		if conditions[i].Type == api.PodReady {
+			return conditions[i].Status == api.ConditionTrue
+		}
+	}
+	return false
+}
+
 func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, timeoutSeconds *int64, namespace, pod, container string) error {
 	// kubeAPI: pods, watch, FF_KUBERNETES_HONOR_ENTRYPOINT=true,FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 	watcher, err := client.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
@@ -126,7 +147,7 @@ func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, t
 			return fmt.Errorf("event object is not a pod: %v", event.Object)
 		}
 
-		containerStatus, ok := podutil.GetContainerStatus(pod.Status.ContainerStatuses, container)
+		containerStatus, ok := getContainerStatus(pod.Status.ContainerStatuses, container)
 		if !ok {
 			return fmt.Errorf("container status for %q not found", container)
 		}
@@ -156,7 +177,7 @@ func closeKubeClient(client kubernetes.Interface) bool {
 }
 
 func isRunning(pod *api.Pod) (bool, error) {
-	if podutil.IsPodReady(pod) {
+	if isPodReady(pod) {
 		return true, nil
 	}
 
