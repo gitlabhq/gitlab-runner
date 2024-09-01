@@ -217,10 +217,11 @@ func (r *resourceCheckError) Is(err error) bool {
 type podServiceError struct {
 	serviceName string
 	exitCode    int
+	reason      string
 }
 
 func (p *podServiceError) Error() string {
-	return fmt.Sprintf("Error in service %s: exit code %d", p.serviceName, p.exitCode)
+	return fmt.Sprintf("Error in service %s: exit code: %d, reason: '%s'", p.serviceName, p.exitCode, p.reason)
 }
 
 type kubernetesOptions struct {
@@ -725,7 +726,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx, checkServiceOOM)
+	podStatusCh := s.watchPodStatus(ctx, checkServiceStatus)
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -737,7 +738,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodServiceOOMError(err) {
+		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodServiceError(err) {
 			return err
 		}
 
@@ -2602,25 +2603,14 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkE
 
 type checkExtendedPodStatusFunc func(context.Context, *api.Pod) error
 
-func checkServiceOOM(ctx context.Context, pod *api.Pod) error {
-	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason == "OOMKilled" {
-			return &podServiceError{
-				serviceName: containerStatus.Name,
-				exitCode:    int(containerStatus.State.Terminated.ExitCode),
-			}
-		}
-	}
-	return nil
-}
-
 func checkServiceStatus(ctx context.Context, pod *api.Pod) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.State.Terminated != nil &&
-			containerStatus.State.Terminated.Reason == "Error" {
+			containerStatus.State.Terminated.ExitCode >= 0 {
 			return &podServiceError{
 				serviceName: containerStatus.Name,
 				exitCode:    int(containerStatus.State.Terminated.ExitCode),
+				reason:      containerStatus.State.Terminated.Reason,
 			}
 		}
 	}
@@ -2993,9 +2983,9 @@ func IsKubernetesPodFailedError(err error) bool {
 		podPhaseErr.phase == api.PodFailed
 }
 
-func IsKubernetesPodServiceOOMError(err error) bool {
+func IsKubernetesPodServiceError(err error) bool {
 	var podServiceError *podServiceError
-	return errors.As(err, &podServiceError) && podServiceError.exitCode == 137
+	return errors.As(err, &podServiceError)
 }
 
 // Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
