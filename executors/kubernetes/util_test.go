@@ -568,3 +568,125 @@ func TestBuildVariables(t *testing.T) {
 	envVars := buildVariables(bv)
 	validate(t, envVars)
 }
+
+func TestGetContainerStatus(t *testing.T) {
+	const containerName = "some-container"
+
+	testCases := map[string]struct {
+		statuses []api.ContainerStatus
+		expectOK bool
+	}{
+		"no statuses": {},
+		"container has status": {
+			statuses: []api.ContainerStatus{
+				{Name: containerName},
+			},
+			expectOK: true,
+		},
+		"container has no status": {
+			statuses: []api.ContainerStatus{
+				{Name: "some-other-container"},
+			},
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			status, ok := getContainerStatus(tc.statuses, containerName)
+
+			if tc.expectOK {
+				assert.True(t, ok)
+				assert.NotEqual(t, api.ContainerStatus{}, status, "expected not to receive the zero-value")
+			} else {
+				assert.False(t, ok)
+			}
+		})
+	}
+}
+
+func TestIsPodReady(t *testing.T) {
+	testCases := map[string]struct {
+		pod         *api.Pod
+		expectReady bool
+	}{
+		"no pod": {},
+		"empty pod": {
+			pod: &api.Pod{},
+		},
+		"empty status": {
+			pod: &api.Pod{
+				Status: api.PodStatus{},
+			},
+		},
+		"empty conditions": {
+			pod: &api.Pod{
+				Status: api.PodStatus{
+					Conditions: []api.PodCondition{},
+				},
+			},
+		},
+		"no ready condition": {
+			pod: &api.Pod{
+				Status: api.PodStatus{
+					Conditions: []api.PodCondition{{}},
+				},
+			},
+		},
+		"empty ready condition": {
+			pod: &api.Pod{
+				Status: api.PodStatus{
+					Conditions: []api.PodCondition{
+						{Type: api.PodReady},
+					},
+				},
+			},
+		},
+		"ready condition is false": {
+			pod: &api.Pod{
+				Status: api.PodStatus{
+					Conditions: []api.PodCondition{
+						{Type: api.PodReady, Status: api.ConditionFalse},
+					},
+				},
+			},
+		},
+		"ready condition is unknown": {
+			pod: &api.Pod{
+				Status: api.PodStatus{
+					Conditions: []api.PodCondition{
+						{Type: api.PodReady, Status: api.ConditionUnknown},
+					},
+				},
+			},
+		},
+		"ready condition is random": {
+			pod: &api.Pod{
+				Status: api.PodStatus{
+					Conditions: []api.PodCondition{
+						{Type: api.PodReady, Status: "true"}, // close, but not really
+					},
+				},
+			},
+		},
+		"ready condition true": {
+			pod: &api.Pod{
+				Status: api.PodStatus{
+					Conditions: []api.PodCondition{
+						{Type: api.PodReady, Status: api.ConditionTrue},
+					},
+				},
+			},
+			expectReady: true,
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn, func(t *testing.T) {
+			ready := isPodReady(tc.pod)
+
+			assert.Equal(t, tc.expectReady, ready,
+				"expected pod to have ready condition == %t, but does not.\nPod: %+v", tc.expectReady, tc.pod,
+			)
+		})
+	}
+}

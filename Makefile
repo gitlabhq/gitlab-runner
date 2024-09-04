@@ -327,6 +327,9 @@ check_modules:
 	@git diff go.sum > /tmp/gosum-$${CI_JOB_ID}-after
 	@diff -U0 /tmp/gosum-$${CI_JOB_ID}-before /tmp/gosum-$${CI_JOB_ID}-after
 
+	# check dependency resolution
+	@go list -m all >/dev/null
+
 # development tools
 $(GOCOVER_COBERTURA):
 	go install github.com/boumenot/gocover-cobertura@v1.2.0
