@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,9 +22,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	testclient "k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
@@ -688,5 +692,85 @@ func TestIsPodReady(t *testing.T) {
 				"expected pod to have ready condition == %t, but does not.\nPod: %+v", tc.expectReady, tc.pod,
 			)
 		})
+	}
+}
+
+func TestWaitForRunningContainer(t *testing.T) {
+	const (
+		podName       = "some-pod"
+		podNamespace  = "some-namespace"
+		containerName = "some-container"
+	)
+	podTemplate := func() *api.Pod {
+		return &api.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      podName,
+				Namespace: podNamespace,
+			},
+			Status: api.PodStatus{
+				ContainerStatuses: []api.ContainerStatus{
+					{Name: containerName},
+				},
+			},
+		}
+	}
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "pods"}
+	ctx := context.TODO()
+
+	fakeKubeClient := testclient.NewSimpleClientset()
+	tracker := fakeKubeClient.Tracker()
+
+	fakeKubeClient.PrependWatchReactor("pods", func(action k8stesting.Action) (handled bool, ret watch.Interface, err error) {
+		watchAction, ok := action.(k8stesting.WatchAction)
+		require.True(t, ok, "action is not a WatchAction, action: %+v", action)
+
+		assert.Equal(t, podNamespace, watchAction.GetNamespace())
+		assert.Equal(t, gvr, watchAction.GetResource())
+		assert.Equal(t, "metadata.name="+podName+",status.phase=Running", watchAction.GetWatchRestrictions().Fields.String())
+
+		watch, err := tracker.Watch(watchAction.GetResource(), watchAction.GetNamespace())
+		if err != nil {
+			return false, nil, err
+		}
+		return true, watch, nil
+	})
+
+	// Start waiting for the container to come up
+	returned := make(chan struct{})
+	go func() {
+		err := waitForRunningContainer(ctx, fakeKubeClient, nil, podNamespace, podName, containerName)
+		assert.NoError(t, err, "expected no error from the container waiter")
+		close(returned)
+	}()
+
+	// After a bit ...
+	// - add the pod
+	time.AfterFunc(time.Millisecond*10, func() {
+		err := tracker.Add(podTemplate())
+		require.NoError(t, err, "adding the pod to the tracker")
+	})
+
+	// - set the container to be waiting
+	time.AfterFunc(time.Millisecond*20, func() {
+		pod := podTemplate()
+		pod.Status.ContainerStatuses[0].State.Waiting = &api.ContainerStateWaiting{}
+		err := tracker.Update(gvr, pod, podNamespace)
+		require.NoError(t, err, "updating container to waiting")
+	})
+
+	// - set the container to be running
+	time.AfterFunc(time.Millisecond*30, func() {
+		pod := podTemplate()
+		pod.Status.ContainerStatuses[0].State.Running = &api.ContainerStateRunning{}
+		err := tracker.Update(gvr, pod, podNamespace)
+		require.NoError(t, err, "updating container to running")
+	})
+
+	select {
+	case <-returned:
+	case <-time.After(time.Millisecond * 100):
+		obj, err := tracker.Get(gvr, podNamespace, podName)
+		assert.NoError(t, err, "getting current pod state")
+		require.FailNowf(t, "container waiter did not return in time", "current object state: %+v", obj)
 	}
 }
