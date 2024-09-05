@@ -57,6 +57,8 @@ For information about troubleshooting, see [Troubleshooting GitLab Runner](../fa
       gitlab-runner install
       gitlab-runner start
       ```
+      
+   See the [troubleshooting section](#macos-troubleshooting) for details on resolving potential errors when running these commands.
 
 1. Reboot your system.
 
