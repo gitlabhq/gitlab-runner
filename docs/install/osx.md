@@ -10,7 +10,7 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
-GitLab Runner can be installed and updated on macOS.
+This page contains instructions about installing GitLab Runner on macOS (Apple Silicon and Intel x86-64).
 
 For information about troubleshooting, see [Troubleshooting GitLab Runner](../faq/index.md).
 
