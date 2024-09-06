@@ -34,11 +34,11 @@ var (
 	dockerMachineS390xChecksum   = env.New("DOCKER_MACHINE_S390X_CHECKSUM")
 	dockerMachinePpc64leChecksum = env.New("DOCKER_MACHINE_PPC64LE_CHECKSUM")
 
-	dumbInitVersion         = env.NewDefault("DUMB_INIT_VERSION", "1.2.2")
-	dumbInitAmd64Checksum   = env.NewDefault("DUMB_INIT_AMD64_CHECKSUM", "37f2c1f0372a45554f1b89924fbb134fc24c3756efaedf11e07f599494e0eff9")
-	dumbInitArm64Checksum   = env.NewDefault("DUMB_INIT_ARM64_CHECKSUM", "45b1bbf56cc03edda81e4220535a025bfe3ed6e93562222b9be4471005b3eeb3")
-	dumbInitS390xChecksum   = env.NewDefault("DUMB_INIT_S390X_CHECKSUM", "8b3808c3c06d008b8f2eeb2789c7c99e0450b678d94fb50fd446b8f6a22e3a9d")
-	dumbInitPpc64leChecksum = env.NewDefault("DUMB_INIT_PPC64LE_CHECKSUM", "88b02a3bd014e4c30d8d54389597adc4f5a36d1d6b49200b5a4f6a71026c2246")
+	dumbInitVersion         = env.NewDefault("DUMB_INIT_VERSION", "1.2.5")
+	dumbInitAmd64Checksum   = env.NewDefault("DUMB_INIT_AMD64_CHECKSUM", "e874b55f3279ca41415d290c512a7ba9d08f98041b28ae7c2acb19a545f1c4df")
+	dumbInitArm64Checksum   = env.NewDefault("DUMB_INIT_ARM64_CHECKSUM", "b7d648f97154a99c539b63c55979cd29f005f88430fb383007fe3458340b795e")
+	dumbInitS390xChecksum   = env.NewDefault("DUMB_INIT_S390X_CHECKSUM", "47e4601b152fc6dcb1891e66c30ecc62a2939fd7ffd1515a7c30f281cfec53b7")
+	dumbInitPpc64leChecksum = env.NewDefault("DUMB_INIT_PPC64LE_CHECKSUM", "3d15e80e29f0f4fa1fc686b00613a2220bc37e83a35283d4b4cca1fbd0a5609f")
 
 	gitLfsVersion = env.NewDefault("GIT_LFS_VERSION", "3.4.0")
 
@@ -49,9 +49,9 @@ var (
 	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
 
 	ubiFIPSBaseImage  = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
-	ubiFIPSVersion    = env.NewDefault("UBI_FIPS_VERSION", "9.4-13")
+	ubiFIPSVersion    = env.NewDefault("UBI_FIPS_VERSION", "9.4-15")
 	ubiMinimalImage   = env.NewDefault("UBI_MINIMAL_IMAGE", "redhat/ubi9-minimal")
-	ubiMinimalVersion = env.NewDefault("UBI_MINIMAL_VERSION", "9.4-1194")
+	ubiMinimalVersion = env.NewDefault("UBI_MINIMAL_VERSION", "9.4-1227")
 
 	buildxRetry = env.NewDefault("RUNNER_IMAGES_DOCKER_BUILDX_RETRY", "0")
 )

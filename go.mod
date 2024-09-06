@@ -84,7 +84,6 @@ require (
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.26.1
-	k8s.io/kubernetes v1.26.15
 	mvdan.cc/sh/v3 v3.5.1
 	sigs.k8s.io/yaml v1.3.0
 )

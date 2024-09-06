@@ -50,58 +50,29 @@ GitLab Runner is available for the following architectures:
 - s390x
 - ppc64le
 
-## System Requirements
+## System requirements
 
-GitLab Runner system requirements vary widely and depend on variables unique to each use-case. GitLab Runner instances can be sized individually given these variables and scaled higher or lower as necessary. These variables include:
+The system requirements for GitLab Runner depend on the:
 
-- The anticipated:
-  - CPU load of CI jobs.
-  - Memory usage of CI jobs.
-- The number of:
-  - Concurrent CI jobs.
-  - Projects in active development.
-  - Developers expected to work in parallel.
+- Anticipated CPU load of CI/CD jobs
+- Anticipated memory usage of CI/CD jobs
+- Number of concurrent CI/CD jobs
+- Number of projects in active development
+- Number of developers expected to work in parallel
 
-For more information, see what [machine types are available for Linux (x86-64)](https://docs.gitlab.com/ee/ci/runners/hosted_runners/linux.html#machine-types-available-for-linux---x86-64) on SaaS.
+For more information about the machine types available for GitLab.com,
+see [GitLab-hosted runners](https://docs.gitlab.com/ee/ci/runners/).
 
-## FIPS compliant GitLab Runner
+## FIPS-compliant GitLab Runner
 
-In GitLab Runner 14.7 and later, a GitLab Runner binary that is FIPS 140-12 compliant is provided. This binary, built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux), bypasses the standard library cryptographic routines and instead calls into a FIPS 140-2 validated cryptographic library.
+A GitLab Runner binary compliant with FIPS 140-2 is available for
+Red Hat Enterprise Linux (RHEL) distributions and the AMD64 architecture.
+Support for other distributions and architectures is proposed in
+[issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814).
 
-In GitLab Runner 15.1 and later, a [UBI-8 minimal](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) is used as the base for creating the GitLab Runner FIPS image.
+This binary is built with the [Red Hat Go compiler](https://developers.redhat.com/blog/2019/06/24/go-and-fips-140-2-on-red-hat-enterprise-linux)
+and calls into a FIPS 140-2 validated cryptographic library.
+A [UBI-8 minimal image](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-minimal-images_assembly_types-of-container-images) is used as the base for creating the GitLab Runner FIPS image.
 
-NOTE:
-Only Red Hat Enterprise Linux (RHEL) distributions are supported.
-
-FIPS compliant GitLab Runner binaries are provided for the following architectures:
-
-- AMD64
-
-Docker images and RPM packages for the same architectures are also provided.
-
-### FIPS compliant GitLab Runner in RHEL
-
-When you use the FIPS version of GitLab Runner in RHEL, you should [enable FIPS mode](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/security_hardening/switching-rhel-to-fips-mode_security-hardening).
-
-### FIPS compliant GitLab Runner in other systems and architectures
-
-Refer to this [issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to follow progress on adding other architectures and distributions.
-
-## Autoscale
-
-- [Install in autoscaling mode using Docker machine](../executors/docker_machine.md)
-- [Install the registry and cache servers](../configuration/speed_up_job_execution.md)
-
-## Upgrading GitLab Runner
-
-To upgrade your version of GitLab Runner, see the instructions for each operating system:
-
-- [Docker](docker.md#upgrade-version)
-- [Debian, Ubuntu, Mint, RHEL, CentOS, or Fedora](linux-repository.md#upgrade-gitlab-runner)
-- [FreeBSD](freebsd.md#upgrading-to-gitlab-runner-10)
-- GNU/Linux
-  - [Upgrade with the deb/rpm package](linux-manually.md#upgrade)
-  - [Upgrade with the binary file](linux-manually.md#upgrade-1)
-- [Kubernetes](kubernetes.md#upgrading-gitlab-runner-using-the-helm-chart)
-- [macOS](osx.md#upgrade-gitlab-runner)
-- [Windows](windows.md#upgrade)
+For more information about using FIPS-compliant GitLab Runner in RHEL, see
+[Switching RHEL to FIPS mode](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/security_hardening/switching-rhel-to-fips-mode_security-hardening).

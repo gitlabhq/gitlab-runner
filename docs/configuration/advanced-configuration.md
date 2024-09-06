@@ -780,12 +780,6 @@ values, ranges, lists, and asterisks. View [a detailed description of the syntax
 
 ## The `[runners.instance]` section
 
-DETAILS:
-**Status:** Beta
-
-The following parameters define the configuration for the [instance executor](../executors/instance.md).
-The instance executor is in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta)
-
 | Parameter        | Type         | Description |
 |------------------|--------------|-------------|
 | `allowed_images` | string       | When VM Isolation is enabled, `allowed_images` controls which images a job is allowed to specify. |
