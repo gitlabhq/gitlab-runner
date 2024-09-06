@@ -155,6 +155,35 @@ func TestCacheS3Config_AuthType(t *testing.T) {
 	}
 }
 
+func TestCacheS3Config_DualStack(t *testing.T) {
+	useDualStack := true
+	disableDualStack := false
+
+	tests := map[string]struct {
+		s3       CacheS3Config
+		expected bool
+	}{
+		"Dual Stack omitted": {
+			s3:       CacheS3Config{},
+			expected: true,
+		},
+		"Dual Stack set to true": {
+			s3:       CacheS3Config{DualStack: &useDualStack},
+			expected: true,
+		},
+		"Dual Stack set to false": {
+			s3:       CacheS3Config{DualStack: &disableDualStack},
+			expected: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.s3.DualStackEnabled())
+		})
+	}
+}
+
 func TestConfigParse(t *testing.T) {
 	httpHeaders := []KubernetesLifecycleHTTPGetHeader{
 		{Name: "header_name_1", Value: "header_value_1"},

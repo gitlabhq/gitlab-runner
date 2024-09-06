@@ -130,7 +130,8 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*s3.Client, error) {
 		if endpoint != "" {
 			o.BaseEndpoint = aws.String(endpoint)
 		} else {
-			o.UseDualstack = true
+			o.UseDualstack = s3Config.DualStackEnabled() // nolint:staticcheck
+			o.UseAccelerate = s3Config.Accelerate
 		}
 		o.UsePathStyle = usePathStyle
 	})

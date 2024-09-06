@@ -977,6 +977,8 @@ This table lists `config.toml`, CLI options, and ENV variables for `register`.
 | `S3.AuthenticationType` | `[runners.cache.s3] -> AuthenticationType`                                                        | `--cache-s3-authentication_type`                               | `$CACHE_S3_AUTHENTICATION_TYPE`                                          |
 | `S3.ServerSideEncryption` | `[runners.cache.s3] -> ServerSideEncryption` | `--cache-s3-server-side-encryption` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION` |
 | `S3.ServerSideEncryptionKeyID`         | `[runners.cache.s3] -> ServerSideEncryptionKeyID` | `--cache-s3-server-side-encryption-key-id` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID` |
+| `S3.DualStack`          | `[runners.cache.s3] -> DualStack` | `--cache-s3-dual-stack` | `$CACHE_S3_DUAL_STACK` |
+| `S3.Accelerate`         | `[runners.cache.s3] -> Accelerate` | `--cache-s3-accelerate` | `$CACHE_S3_ACCELERATE` |
 | `GCS.AccessID`          | `[runners.cache.gcs] -> AccessID`                                                                 | `--cache-gcs-access-id`                                        | `$CACHE_GCS_ACCESS_ID`                                                   |
 | `GCS.PrivateKey`        | `[runners.cache.gcs] -> PrivateKey`                                                               | `--cache-gcs-private-key`                                      | `$CACHE_GCS_PRIVATE_KEY`                                                 |
 | `GCS.CredentialsFile`   | `[runners.cache.gcs] -> CredentialsFile`                                                          | `--cache-gcs-credentials-file`                                 | `$GOOGLE_APPLICATION_CREDENTIALS`                                        |
@@ -1002,6 +1004,8 @@ The following parameters define S3 storage for cache.
 | `AuthenticationType`| string           | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
 | `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. |
 | `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. If you use an alias, it must be preceded with `alias/`|
+| `DualStack`         | boolean         | In GitLab 17.4 and later, enables the use of IPv4 and IPv6 endpoints (default: true). Disable this if you are using AWS S3 Express. This is ignored if `ServerAddress` is set. |
+| `Accelerate`        | bool            | In GitLab 17.4 and later, enables the use of AWS S3 Transfer Acceleration. This will be set to true automatically if `ServerAddress` is configured as an Accelerated endpoint. |
 
 Example:
 

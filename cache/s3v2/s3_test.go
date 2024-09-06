@@ -57,12 +57,16 @@ func setupMockS3Server(t *testing.T) *common.CacheS3Config {
 }
 
 func TestNewS3ClientOptions(t *testing.T) {
+	disableDualStack := false
+
 	tests := map[string]struct {
-		s3Config         common.CacheS3Config
-		expectedRegion   string
-		expectedScheme   string
-		usePathStyle     bool
-		expectedEndpoint string
+		s3Config           common.CacheS3Config
+		expectedRegion     string
+		expectedScheme     string
+		usePathStyle       bool
+		expectedAccelerate bool
+		expectedDualStack  bool
+		expectedEndpoint   string
 	}{
 		"s3-standard": {
 			s3Config: common.CacheS3Config{
@@ -70,37 +74,55 @@ func TestNewS3ClientOptions(t *testing.T) {
 				SecretKey:      "test-secret-key",
 				BucketName:     "test-bucket",
 				BucketLocation: "us-west-2",
-				Insecure:       false,
 			},
-			expectedRegion:   "us-west-2",
-			expectedScheme:   "https",
-			usePathStyle:     false,
-			expectedEndpoint: "",
+			expectedRegion:    "us-west-2",
+			expectedScheme:    "https",
+			expectedEndpoint:  "",
+			expectedDualStack: true,
+		},
+		"s3-standard-dual-stack": {
+			s3Config: common.CacheS3Config{
+				BucketName:     "test-bucket",
+				BucketLocation: "us-west-2",
+				DualStack:      &disableDualStack,
+			},
+			expectedDualStack: false,
+			expectedRegion:    "us-west-2",
+			expectedScheme:    "https",
+			expectedEndpoint:  "",
 		},
 		"s3-iam-profile": {
 			s3Config: common.CacheS3Config{
 				BucketName:     "test-bucket",
 				BucketLocation: "us-west-2",
-				Insecure:       false,
 			},
-			expectedRegion:   "us-west-2",
-			expectedScheme:   "https",
-			usePathStyle:     false,
-			expectedEndpoint: "",
+			expectedRegion:    "us-west-2",
+			expectedScheme:    "https",
+			expectedEndpoint:  "",
+			expectedDualStack: true,
 		},
 		"s3-accelerate": {
 			s3Config: common.CacheS3Config{
-				ServerAddress:  "s3-accelerate.amazonaws.com",
-				AccessKey:      "test-access-key",
-				SecretKey:      "test-secret-key",
 				BucketName:     "test-bucket",
 				BucketLocation: "us-east-1",
-				Insecure:       false,
+				Accelerate:     true,
 			},
-			expectedRegion:   "us-east-1",
-			expectedScheme:   "https",
-			usePathStyle:     false,
-			expectedEndpoint: "https://s3-accelerate.amazonaws.com",
+			expectedRegion:     "us-east-1",
+			expectedScheme:     "https",
+			expectedAccelerate: true,
+			expectedDualStack:  true,
+		},
+		"s3-accelerate-custom-endpoint": {
+			s3Config: common.CacheS3Config{
+				ServerAddress:  "s3-accelerate.amazonaws.com",
+				BucketName:     "test-bucket",
+				BucketLocation: "us-east-1",
+			},
+			expectedRegion:     "us-east-1",
+			expectedScheme:     "https",
+			expectedEndpoint:   "https://s3-accelerate.amazonaws.com",
+			expectedAccelerate: true,
+			expectedDualStack:  false,
 		},
 		"s3-custom-endpoint": {
 			s3Config: common.CacheS3Config{
@@ -109,10 +131,44 @@ func TestNewS3ClientOptions(t *testing.T) {
 				BucketLocation: "us-west-2",
 				Insecure:       true,
 			},
-			expectedRegion:   "us-west-2",
-			expectedScheme:   "http",
-			usePathStyle:     true, // Not virtual-host compatible
-			expectedEndpoint: "http://localhost:9000",
+			expectedRegion:    "us-west-2",
+			expectedScheme:    "http",
+			usePathStyle:      true, // Not virtual-host compatible
+			expectedEndpoint:  "http://localhost:9000",
+			expectedDualStack: false,
+		},
+		"s3-dual-stack": {
+			s3Config: common.CacheS3Config{
+				BucketName:     "test-bucket",
+				BucketLocation: "us-east-1",
+			},
+			expectedRegion:    "us-east-1",
+			expectedScheme:    "https",
+			usePathStyle:      false,
+			expectedDualStack: true,
+		},
+		"s3-dual-stack-and-accelerate": {
+			s3Config: common.CacheS3Config{
+				BucketName:     "test-bucket",
+				BucketLocation: "us-east-1",
+				Accelerate:     true,
+			},
+			expectedRegion:    "us-east-1",
+			expectedScheme:    "https",
+			usePathStyle:      false,
+			expectedDualStack: true,
+		},
+		"s3-dual-stack-and-endpoint": {
+			s3Config: common.CacheS3Config{
+				ServerAddress:  "localhost:9000",
+				BucketName:     "test-bucket",
+				BucketLocation: "us-east-1",
+			},
+			expectedRegion:    "us-east-1",
+			expectedScheme:    "https",
+			usePathStyle:      true,
+			expectedEndpoint:  "https://localhost:9000",
+			expectedDualStack: false,
 		},
 	}
 
@@ -124,7 +180,8 @@ func TestNewS3ClientOptions(t *testing.T) {
 			clientOptions := client.(*s3Client).client.Options()
 
 			require.Equal(t, tt.expectedRegion, clientOptions.Region)
-			require.False(t, clientOptions.UseAccelerate)
+			require.Equal(t, tt.s3Config.Accelerate, clientOptions.UseAccelerate)
+			require.Equal(t, tt.expectedDualStack, clientOptions.UseDualstack) // nolint:staticcheck
 			require.Equal(t, tt.usePathStyle, clientOptions.UsePathStyle)
 
 			if tt.expectedEndpoint == "" {
