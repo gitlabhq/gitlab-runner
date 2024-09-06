@@ -58,7 +58,7 @@ func onFakeS3URLGenerator(tc cacheOperationTest) func() {
 			"PresignURL", mock.Anything, mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything,
 		).
-		Return(tc.presignedURL, err)
+		Return(cache.PresignedURL{URL: tc.presignedURL}, err)
 
 	oldS3URLGenerator := newS3Client
 	newS3Client = func(s3 *common.CacheS3Config) (s3Presigner, error) {
@@ -76,7 +76,7 @@ func onFakeS3URLGenerator(tc cacheOperationTest) func() {
 func testCacheOperation(
 	t *testing.T,
 	operationName string,
-	operation func(adapter cache.Adapter) *url.URL,
+	operation func(adapter cache.Adapter) cache.PresignedURL,
 	tc cacheOperationTest,
 	cacheConfig *common.CacheConfig,
 ) {
@@ -94,10 +94,7 @@ func testCacheOperation(
 		require.NoError(t, err)
 
 		URL := operation(adapter)
-		assert.Equal(t, tc.expectedURL, URL)
-
-		uploadHeaders := adapter.GetUploadHeaders()
-		assert.Nil(t, uploadHeaders)
+		assert.Equal(t, tc.expectedURL, URL.URL)
 
 		assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
 		assert.Empty(t, adapter.GetUploadEnv())
@@ -128,14 +125,14 @@ func TestCacheOperation(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
 				test,
 				defaultCacheFactory(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
 				test,
 				defaultCacheFactory(),
 			)

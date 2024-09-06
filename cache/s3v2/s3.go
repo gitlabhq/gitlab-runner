@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -32,7 +33,7 @@ type s3Presigner interface {
 		bucketName string,
 		objectName string,
 		expires time.Duration,
-	) (*url.URL, error)
+	) (cache.PresignedURL, error)
 }
 
 type s3Client struct {
@@ -45,7 +46,7 @@ func (c *s3Client) PresignURL(ctx context.Context,
 	method string,
 	bucketName string,
 	objectName string,
-	expires time.Duration) (*url.URL, error) {
+	expires time.Duration) (cache.PresignedURL, error) {
 	var presignedReq *v4.PresignedHTTPRequest
 	var err error
 
@@ -70,21 +71,21 @@ func (c *s3Client) PresignURL(ctx context.Context,
 		}
 		presignedReq, err = c.presignClient.PresignPutObject(ctx, putObjectInput, s3.WithPresignExpires(expires))
 	default:
-		return nil, fmt.Errorf("unsupported method: %s", method)
+		return cache.PresignedURL{}, fmt.Errorf("unsupported method: %s", method)
 	}
 
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
-		return nil, err
+		return cache.PresignedURL{}, err
 	}
 
 	u, err := url.Parse(presignedReq.URL)
 	if err != nil {
 		logrus.WithError(err).WithField("url", presignedReq.URL).Errorf("error parsing S3 URL")
-		return nil, err
+		return cache.PresignedURL{}, err
 	}
 
-	return u, nil
+	return cache.PresignedURL{URL: u, Headers: presignedReq.SignedHeader}, nil
 }
 
 func newRawS3Client(s3Config *common.CacheS3Config) (*s3.Client, error) {

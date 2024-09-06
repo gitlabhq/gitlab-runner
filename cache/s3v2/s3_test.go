@@ -163,7 +163,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 			encryptionType:     "S3",
 			accessKey:          "test-access-key",
 			secretKey:          "test-secret-key",
-			expectedEncryption: "S3",
+			expectedEncryption: "AES256",
 			expectedKMSKeyID:   "",
 		},
 		"kms-encryption-with-credentials": {
@@ -191,24 +191,18 @@ func TestS3Client_PresignURL(t *testing.T) {
 			url, err := s3Client.PresignURL(context.Background(), http.MethodPut, s3Config.BucketName, objectName, 5*time.Minute)
 			require.NoError(t, err)
 
-			// Intercept the HTTP request to inspect headers
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Verify encryption headers
-				if tt.expectedEncryption != "" {
-					assert.Equal(t, tt.expectedEncryption, r.Header.Get("x-amz-server-side-encryption"))
-				}
-				if tt.expectedKMSKeyID != "" {
-					assert.Equal(t, tt.expectedKMSKeyID, r.Header.Get("x-amz-server-side-encryption-aws-kms-key-id"))
-				}
+			// Verify encryption headers
+			if tt.expectedEncryption != "" {
+				assert.Equal(t, tt.expectedEncryption, url.Headers.Get("x-amz-server-side-encryption"))
+			}
 
-				// Respond with 200 OK to simulate a successful upload
-				w.WriteHeader(http.StatusOK)
-			}))
-			defer server.Close()
+			if tt.expectedKMSKeyID != "" {
+				assert.Equal(t, tt.expectedKMSKeyID, url.Headers.Get("x-amz-server-side-encryption-aws-kms-key-id"))
+			}
 
 			// Use the presigned URL to upload an object
 			content := []byte("Hello, world!")
-			req, err := http.NewRequest(http.MethodPut, url.String(), bytes.NewReader(content))
+			req, err := http.NewRequest(http.MethodPut, url.URL.String(), bytes.NewReader(content))
 			require.NoError(t, err)
 
 			client := &http.Client{}
@@ -222,7 +216,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 			url, err = s3Client.PresignURL(context.Background(), http.MethodGet, s3Config.BucketName, objectName, 5*time.Minute)
 			require.NoError(t, err)
 
-			req, err = http.NewRequest(http.MethodGet, url.String(), bytes.NewReader(content))
+			req, err = http.NewRequest(http.MethodGet, url.URL.String(), bytes.NewReader(content))
 			require.NoError(t, err)
 
 			resp, err = client.Do(req)
