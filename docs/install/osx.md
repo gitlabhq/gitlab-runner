@@ -37,7 +37,7 @@ For information about troubleshooting, see [Troubleshooting GitLab Runner](../fa
    sudo chmod +x /usr/local/bin/gitlab-runner
    ```
 
-1. As the user who will run the runners:
+1. In the user account where you will run the GitLab Runner application:
 
    1. [Register a runner](../register/index.md). When you build iOS or macOS applications on macOS, use
       [the shell executor](../executors/shell.md). Jobs will run directly on the host and use
