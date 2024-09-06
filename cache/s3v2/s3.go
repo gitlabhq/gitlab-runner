@@ -132,6 +132,8 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*s3.Client, error) {
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		if endpoint != "" {
 			o.BaseEndpoint = aws.String(endpoint)
+		} else {
+			o.UseDualstack = true
 		}
 		o.UsePathStyle = usePathStyle
 		o.UseAccelerate = s3AcceleratePattern.MatchString(endpoint)
