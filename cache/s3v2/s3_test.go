@@ -62,7 +62,6 @@ func TestNewS3ClientOptions(t *testing.T) {
 		expectedRegion   string
 		expectedScheme   string
 		usePathStyle     bool
-		useAccelerate    bool
 		expectedEndpoint string
 	}{
 		"s3-standard": {
@@ -76,7 +75,6 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedRegion:   "us-west-2",
 			expectedScheme:   "https",
 			usePathStyle:     false,
-			useAccelerate:    false,
 			expectedEndpoint: "",
 		},
 		"s3-iam-profile": {
@@ -88,7 +86,6 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedRegion:   "us-west-2",
 			expectedScheme:   "https",
 			usePathStyle:     false,
-			useAccelerate:    false,
 			expectedEndpoint: "",
 		},
 		"s3-accelerate": {
@@ -103,7 +100,6 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedRegion:   "us-east-1",
 			expectedScheme:   "https",
 			usePathStyle:     false,
-			useAccelerate:    true,
 			expectedEndpoint: "https://s3-accelerate.amazonaws.com",
 		},
 		"s3-custom-endpoint": {
@@ -116,7 +112,6 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedRegion:   "us-west-2",
 			expectedScheme:   "http",
 			usePathStyle:     true, // Not virtual-host compatible
-			useAccelerate:    false,
 			expectedEndpoint: "http://localhost:9000",
 		},
 	}
@@ -129,7 +124,7 @@ func TestNewS3ClientOptions(t *testing.T) {
 			clientOptions := client.(*s3Client).client.Options()
 
 			require.Equal(t, tt.expectedRegion, clientOptions.Region)
-			require.Equal(t, tt.useAccelerate, clientOptions.UseAccelerate)
+			require.False(t, clientOptions.UseAccelerate)
 			require.Equal(t, tt.usePathStyle, clientOptions.UsePathStyle)
 
 			if tt.expectedEndpoint == "" {

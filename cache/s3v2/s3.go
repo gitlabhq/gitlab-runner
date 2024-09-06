@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -22,8 +21,6 @@ import (
 
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 )
-
-var s3AcceleratePattern = regexp.MustCompile(`s3-accelerate.*\.amazonaws\.com$`)
 
 //go:generate mockery --name=s3Presigner --inpackage
 type s3Presigner interface {
@@ -136,7 +133,6 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*s3.Client, error) {
 			o.UseDualstack = true
 		}
 		o.UsePathStyle = usePathStyle
-		o.UseAccelerate = s3AcceleratePattern.MatchString(endpoint)
 	})
 
 	return client, nil
