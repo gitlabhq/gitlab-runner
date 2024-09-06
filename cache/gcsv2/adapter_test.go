@@ -122,7 +122,7 @@ func TestAdapter(t *testing.T) {
 
 				u := adapter.GetDownloadURL(context.Background())
 				require.NotNil(t, u)
-				assert.Contains(t, u.String(), expectedURL)
+				assert.Contains(t, u.URL.String(), expectedURL)
 			}
 
 			if putURL != nil {
@@ -130,13 +130,13 @@ func TestAdapter(t *testing.T) {
 
 				u := adapter.GetUploadURL(context.Background())
 				require.NotNil(t, u)
-				assert.Contains(t, u.String(), expectedURL)
-			}
+				assert.Contains(t, u.URL.String(), expectedURL)
 
-			if tc.config.MaxUploadedArchiveSize != 0 {
-				assert.Equal(t, adapter.GetUploadHeaders(), http.Header{"X-Goog-Content-Length-Range": []string{fmt.Sprintf("0,%d", tc.config.MaxUploadedArchiveSize)}})
-			} else {
-				assert.Nil(t, adapter.GetUploadHeaders())
+				if tc.config.MaxUploadedArchiveSize != 0 {
+					assert.Equal(t, u.Headers, http.Header{"X-Goog-Content-Length-Range": []string{fmt.Sprintf("0,%d", tc.config.MaxUploadedArchiveSize)}})
+				} else {
+					assert.Nil(t, u.Headers)
+				}
 			}
 		})
 	}

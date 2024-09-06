@@ -20,23 +20,21 @@ type s3Adapter struct {
 	client     s3Presigner
 }
 
-func (a *s3Adapter) GetDownloadURL(ctx context.Context) *url.URL {
+func (a *s3Adapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	presignedURL, err := a.presignURL(ctx, http.MethodGet)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
-
-		return nil
+		return cache.PresignedURL{}
 	}
 
 	return presignedURL
 }
 
-func (a *s3Adapter) GetUploadURL(ctx context.Context) *url.URL {
+func (a *s3Adapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	presignedURL, err := a.presignURL(ctx, http.MethodPut)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
-
-		return nil
+		return cache.PresignedURL{}
 	}
 
 	return presignedURL
@@ -54,13 +52,13 @@ func (a *s3Adapter) GetUploadEnv() map[string]string {
 	return nil
 }
 
-func (a *s3Adapter) presignURL(ctx context.Context, method string) (*url.URL, error) {
+func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.PresignedURL, error) {
 	if a.config.BucketName == "" {
-		return nil, fmt.Errorf("config BucketName cannot be empty")
+		return cache.PresignedURL{}, fmt.Errorf("config BucketName cannot be empty")
 	}
 
 	if a.objectName == "" {
-		return nil, fmt.Errorf("object name cannot be empty")
+		return cache.PresignedURL{}, fmt.Errorf("object name cannot be empty")
 	}
 
 	return a.client.PresignURL(ctx, method, a.config.BucketName, a.objectName, a.timeout)

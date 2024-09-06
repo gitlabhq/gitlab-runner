@@ -22,32 +22,30 @@ type s3Adapter struct {
 	client     minioClient
 }
 
-func (a *s3Adapter) GetDownloadURL(ctx context.Context) *url.URL {
+func (a *s3Adapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	URL, err := a.client.PresignHeader(
 		ctx, http.MethodGet, a.config.BucketName,
 		a.objectName, a.timeout, nil, nil,
 	)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
-
-		return nil
+		return cache.PresignedURL{}
 	}
 
-	return URL
+	return cache.PresignedURL{URL: URL}
 }
 
-func (a *s3Adapter) GetUploadURL(ctx context.Context) *url.URL {
+func (a *s3Adapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	URL, err := a.client.PresignHeader(
 		ctx, http.MethodPut, a.config.BucketName,
 		a.objectName, a.timeout, nil, a.GetUploadHeaders(),
 	)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
-
-		return nil
+		return cache.PresignedURL{}
 	}
 
-	return URL
+	return cache.PresignedURL{URL: URL, Headers: a.GetUploadHeaders()}
 }
 
 func (a *s3Adapter) GetUploadHeaders() http.Header {

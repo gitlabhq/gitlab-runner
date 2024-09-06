@@ -23,22 +23,22 @@ type gcsAdapter struct {
 	maxUploadedArchiveSize int64
 }
 
-func (a *gcsAdapter) GetDownloadURL(ctx context.Context) *url.URL {
+func (a *gcsAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	u, err := a.presignURL(ctx, http.MethodGet, "")
 	if err != nil {
 		logrus.Error(err)
 	}
 
-	return u
+	return cache.PresignedURL{URL: u}
 }
 
-func (a *gcsAdapter) GetUploadURL(ctx context.Context) *url.URL {
+func (a *gcsAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	u, err := a.presignURL(ctx, http.MethodPut, "application/octet-stream")
 	if err != nil {
 		logrus.Error(err)
 	}
 
-	return u
+	return cache.PresignedURL{URL: u, Headers: a.GetUploadHeaders()}
 }
 
 func (a *gcsAdapter) GetUploadHeaders() http.Header {

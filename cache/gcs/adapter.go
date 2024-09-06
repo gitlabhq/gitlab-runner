@@ -27,12 +27,15 @@ type gcsAdapter struct {
 	credentialsResolver credentialsResolver
 }
 
-func (a *gcsAdapter) GetDownloadURL(ctx context.Context) *url.URL {
-	return a.presignURL(ctx, http.MethodGet, "")
+func (a *gcsAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{URL: a.presignURL(ctx, http.MethodGet, "")}
 }
 
-func (a *gcsAdapter) GetUploadURL(ctx context.Context) *url.URL {
-	return a.presignURL(ctx, http.MethodPut, "application/octet-stream")
+func (a *gcsAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{
+		URL:     a.presignURL(ctx, http.MethodPut, "application/octet-stream"),
+		Headers: a.GetUploadHeaders(),
+	}
 }
 
 func (a *gcsAdapter) GetUploadHeaders() http.Header {
