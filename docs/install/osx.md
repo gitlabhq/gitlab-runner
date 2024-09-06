@@ -220,6 +220,23 @@ user and want access to the signing certificates installed by that user for code
 
 The following relate to troubleshooting on macOS.
 
+### `killed: 9` 
+
+On Apple Silicon-based systems, you might encounter this error when running the `gitlab-runner install`, `gitlab-runner start`, or `gitlab-runner register` commands. 
+
+To resolve these errors, ensure that the directories specified in `~/Library/LaunchAgents/gitlab-runner.plist` values `StandardOutPath` and `StandardErrorPath` are writable. 
+
+In the following example, the `/Users/USERNAME/Library/LaunchAgents/gitlab-runner.plist` file has been edited to include a new writable directory, `gitlab-runner-log`, for the log files.
+
+```xml
+ <key>StandardErrorPath</key>
+  <string>/Users/USERNAME/gitlab-runner-log/gitlab-runner.err.log</string>
+ <key>StandardOutPath</key>
+  <string>/Users/USERNAME/gitlab-runner-log/gitlab-runner.out.log</string>
+</dict>
+
+```
+
 ### `"launchctl" failed: exit status 112, Could not find domain for`
 
 This message may occur when you try to install GitLab Runner on macOS. Make sure
