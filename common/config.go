@@ -1229,10 +1229,16 @@ type RunnerSettings struct {
 
 type StoreConfig struct {
 	Name           string `toml:"name,omitempty" json:"name,omitempty" long:"name" env:"STORE_NAME" description:"Name of the store to use"`
-	HealthInterval *int   `toml:"health_interval,omitempty" json:"health_interval,omitempty" long:"health-interval" env:"STORE_HEALTH_INTERVAL" description:"Interval in seconds to update the health of the job in the store. Defaults to 5 seconds."`
-	HealthTimeout  *int   `toml:"health_timeout,omitempty" json:"health_timeout,omitempty" long:"health-timeout" env:"STORE_HEALTH_TIMEOUT" description:"Timeout in seconds to consider a job unhealthy. Unhealthy jobs will be resumed from the store. Defaults to 30 seconds."`
-	StaleTimeout   *int   `toml:"stale_timeout,omitempty" json:"stale_timeout,omitempty" long:"stale-timeout" env:"STORE_STALE_TIMEOUT" description:"Timeout in seconds to consider a job stale. Stale jobs are removed from the store. Defaults to 3 hours."`
-	MaxRetries     *int   `toml:"max_retries,omitempty" json:"max_retries,omitempty" long:"max-retries" env:"STORE_MAX_RETRIES" description:"Maximum number of times a job will be retried. Defaults to 10."`
+	HealthInterval *int   `toml:"health_interval,omitempty" json:"health_interval,omitempty" long:"health-interval" env:"STORE_HEALTH_INTERVAL" description:"Interval to update the health of the job in the store, in seconds. Defaults to 5 seconds." jsonschema:"oneof_type=number;null"`
+	HealthTimeout  *int   `toml:"health_timeout,omitempty" json:"health_timeout,omitempty" long:"health-timeout" env:"STORE_HEALTH_TIMEOUT" description:"Timeout in seconds to consider a job unhealthy, in seconds. Unhealthy jobs will be resumed from the store. Defaults to 30 seconds." jsonschema:"oneof_type=number;null"`
+	StaleTimeout   *int   `toml:"stale_timeout,omitempty" json:"stale_timeout,omitempty" long:"stale-timeout" env:"STORE_STALE_TIMEOUT" description:"Timeout in seconds to consider a job stale, in seconds. Stale jobs are removed from the store. Defaults to 3 hours." jsonschema:"oneof_type=number;null"`
+	MaxRetries     *int   `toml:"max_retries,omitempty" json:"max_retries,omitempty" long:"max-retries" env:"STORE_MAX_RETRIES" description:"Maximum number of times a job will be retried. Defaults to 10." jsonschema:"oneof_type=number;null"`
+
+	File *FileStore `toml:"file,omitempty" json:"file,omitempty" group:"file store" namespace:"file"`
+}
+
+type FileStore struct {
+	Path *string `toml:"path" json:"path" long:"path" env:"STORE_FILE_PATH" description:"Path to the file store" jsonschema:"oneof_type=string;null"`
 }
 
 type RunnerConfig struct {

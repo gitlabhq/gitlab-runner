@@ -3146,8 +3146,7 @@ func TestBuildDurationsAndBoundaryTimes(t *testing.T) {
 	rc := new(RunnerConfig)
 	rc.RunnerSettings.Executor = t.Name()
 
-	build, err := NewBuild(JobResponse{}, rc, nil, nil)
-	require.NoError(t, err)
+	build := NewBuild(NewJob(&JobResponse{}), rc)
 
 	startedAt1 := build.StartedAt()
 

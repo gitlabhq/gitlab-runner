@@ -75,12 +75,12 @@ func (s *StatefulJobManager) ProcessJob(credentials *JobCredentials) (JobTrace, 
 		trace.Disable()
 	}
 
-	go s.updateJobHealth(trace, s.config.Store.GetHealthInterval())
+	go s.updateJobHealth(s.config.Store.GetHealthInterval(), trace.Done())
 
 	return trace, nil
 }
 
-func (s *StatefulJobManager) updateJobHealth(trace JobTrace, healthInterval time.Duration) {
+func (s *StatefulJobManager) updateJobHealth(healthInterval time.Duration, done <-chan struct{}) {
 	t := time.NewTicker(healthInterval)
 	defer t.Stop()
 
@@ -88,7 +88,7 @@ func (s *StatefulJobManager) updateJobHealth(trace JobTrace, healthInterval time
 		select {
 		case <-t.C:
 			s.updateJobStore(JobStoreUpdate{ev: JobStoreUpdateHealth})
-		case <-trace.Done():
+		case <-done:
 			return
 		}
 	}
@@ -142,9 +142,9 @@ func (s *StatefulJobManager) updateJobStore(update JobStoreUpdate) {
 	}
 }
 
-func (s *StatefulJobManager) log() *logrus.Entry {
+func (s *StatefulJobManager) log() logrus.FieldLogger {
 	if s.job == nil {
-		return s.logger.WithField("job", "nil")
+		return s.logger
 	}
 
 	return s.logger.WithField("job", s.job.ID)
