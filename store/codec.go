@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"io"
 
@@ -13,7 +14,7 @@ type jobEncoder interface {
 }
 
 type jobDecoder interface {
-	Decode(io.Reader, *common.Job) error
+	Decode(io.Reader) (*common.Job, error)
 }
 
 type jobCodec interface {
@@ -28,13 +29,39 @@ func (gobJobCodec) Encode(w io.Writer, job *common.Job) error {
 		return errors.New("cannot encode nil job")
 	}
 
-	return gob.NewEncoder(w).Encode(job)
-}
-
-func (gobJobCodec) Decode(r io.Reader, job *common.Job) error {
-	if job == nil {
-		return errors.New("cannot decode into nil job")
+	state, err := job.ToEncoded()
+	if err != nil {
+		return err
 	}
 
-	return gob.NewDecoder(r).Decode(job)
+	return gob.NewEncoder(w).Encode(state)
+}
+
+func (gobJobCodec) Decode(r io.Reader) (*common.Job, error) {
+	var encodedJob common.EncodedJob
+
+	if err := gob.NewDecoder(r).Decode(&encodedJob); err != nil {
+		return nil, err
+	}
+
+	return encodedJob.FromEncoded()
+}
+
+type JSONJobCodec struct{}
+
+func (JSONJobCodec) Encode(w io.Writer, job *common.Job) error {
+	if job == nil {
+		return errors.New("cannot encode nil job")
+	}
+
+	state, err := job.ToEncoded()
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(w).Encode(state)
+}
+
+func (JSONJobCodec) Decode(_ io.Reader) (*common.Job, error) {
+	return nil, errors.New("not implemented")
 }

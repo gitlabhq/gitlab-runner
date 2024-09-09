@@ -269,6 +269,5 @@ func (f *fileStoreJobScanner) Job() (*common.Job, error) {
 	}
 	defer file.Close()
 
-	job := common.NewJob(nil)
-	return job, f.decoder.Decode(file, job)
+	return f.decoder.Decode(file)
 }

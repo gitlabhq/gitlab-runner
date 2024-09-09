@@ -115,7 +115,7 @@ func TestStatefulJobManager_ProcessJob_Not_Resumed(t *testing.T) {
 
 	job := NewJob(&response)
 	job.State.SetSentTrace(11)
-	job.State.HealthCheckAt = healthCheck
+	job.State.healthCheckAt = healthCheck
 
 	store := NewMockJobStore(t)
 	store.On("Update", job).Return(nil)
@@ -167,7 +167,7 @@ func TestStatefulJobManager_ProcessJob_Resumed(t *testing.T) {
 	job.State.SetSentTrace(11)
 	job.State.SetBuildState(BuildRunRuntimeRunning)
 	job.State.SetStage(BuildStageResolveSecrets)
-	job.State.HealthCheckAt = healthCheck
+	job.State.healthCheckAt = healthCheck
 	job.State.Resume()
 
 	store := NewMockJobStore(t)
