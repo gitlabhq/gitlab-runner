@@ -365,3 +365,9 @@ Instead of `emptyDir`, you can use any other
 [supported volume types](index.md#configure-volume-types).
 Because all files that are not explicitly handled and stored as build
 artefacts are usually ephemeral, `emptyDir` works for most cases.
+
+## AWS EKS: Error cleaning up pod: pods "runner-**" not found or status is "Failed"
+
+The Amazon EKS zone rebalancing feature balances the availability zones in an autoscaling group. This feature might stop a node in one availability zone and create it in another.
+
+Runner jobs cannot be stopped and moved to another node. Disable this feature for runner jobs to resolve this error. 
