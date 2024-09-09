@@ -380,10 +380,10 @@ func TestCacheUploadEnv(t *testing.T) {
 			}()
 
 			if tc.cacheConfig != nil && tc.createCacheAdapter {
-				cacheAdapter.On("GetUploadEnv").Return(tc.getUploadEnvResult)
+				cacheAdapter.On("GetUploadEnv", mock.Anything).Return(tc.getUploadEnvResult)
 			}
 
-			envs := GetCacheUploadEnv(build, "key")
+			envs := GetCacheUploadEnv(context.Background(), build, "key")
 			assert.Equal(t, tc.expectedEnvs, envs)
 
 			if tc.expectedLogEntry != "" {

@@ -26,8 +26,8 @@ func (cr *defaultCredentialsResolver) Resolve() error {
 }
 
 func (cr *defaultCredentialsResolver) readCredentialsFromConfig() error {
-	if cr.config.AccountName == "" || cr.config.AccountKey == "" {
-		return fmt.Errorf("config for Azure present, but credentials are not configured")
+	if cr.config.AccountName == "" {
+		return fmt.Errorf("config for Azure present, but account name is not configured")
 	}
 
 	cr.credentials.AccountName = cr.config.AccountName

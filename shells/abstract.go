@@ -922,7 +922,7 @@ func (b *AbstractShell) addCacheUploadCommand(
 	// Generate cache upload address
 	args = append(args, getCacheUploadURL(ctx, info.Build, cacheKey)...)
 
-	env := cache.GetCacheUploadEnv(info.Build, cacheKey)
+	env := cache.GetCacheUploadEnv(ctx, info.Build, cacheKey)
 
 	// Execute cache-archiver command. Failure is not fatal.
 	b.guardRunnerCommand(w, info.RunnerCommand, "Creating cache", func() {

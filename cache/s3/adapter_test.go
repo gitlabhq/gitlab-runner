@@ -126,7 +126,7 @@ func testCacheOperation(
 		}
 
 		assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
-		assert.Empty(t, adapter.GetUploadEnv())
+		assert.Empty(t, adapter.GetUploadEnv(context.Background()))
 	})
 }
 

@@ -3,6 +3,7 @@
 package azure
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -67,7 +68,7 @@ func TestAzureClientURLGeneration(t *testing.T) {
 				Timeout: 1 * time.Hour,
 			}
 
-			url, err := presignedURL(objectName, opts)
+			url, err := presignedURL(context.Background(), objectName, opts)
 
 			if tt.expectedErrorOnGeneration {
 				assert.Error(t, err)
@@ -87,7 +88,7 @@ func TestAzureClientURLGeneration(t *testing.T) {
 			require.NotNil(t, url)
 
 			q := url.Query()
-			token, err := getSASToken(objectName, opts)
+			token, err := getSASToken(context.Background(), objectName, opts)
 			require.NoError(t, err)
 			assert.Equal(t, q.Encode(), token)
 

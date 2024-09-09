@@ -369,7 +369,7 @@ func TestAdapterOperation(t *testing.T) {
 			assert.Equal(t, headers, tc.expectedHeaders)
 
 			assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
-			assert.Empty(t, adapter.GetUploadEnv())
+			assert.Empty(t, adapter.GetUploadEnv(context.Background()))
 		})
 	}
 }

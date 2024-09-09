@@ -14,8 +14,8 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
-type signedURLGenerator func(name string, options *signedURLOptions) (*url.URL, error)
-type blobTokenGenerator func(name string, options *signedURLOptions) (string, error)
+type signedURLGenerator func(ctx context.Context, name string, options *signedURLOptions) (*url.URL, error)
+type blobTokenGenerator func(ctx context.Context, name string, options *signedURLOptions) (string, error)
 
 type azureAdapter struct {
 	timeout    time.Duration
@@ -27,12 +27,17 @@ type azureAdapter struct {
 	credentialsResolver credentialsResolver
 }
 
-func (a *azureAdapter) GetDownloadURL(_ context.Context) cache.PresignedURL {
-	return cache.PresignedURL{URL: a.presignURL(http.MethodGet)}
+func (a *azureAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{
+		URL: a.presignURL(ctx, http.MethodGet),
+	}
 }
 
-func (a *azureAdapter) GetUploadURL(_ context.Context) cache.PresignedURL {
-	return cache.PresignedURL{URL: a.presignURL(http.MethodPut), Headers: a.GetUploadHeaders()}
+func (a *azureAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{
+		URL:     a.presignURL(ctx, http.MethodPut),
+		Headers: a.GetUploadHeaders(),
+	}
 }
 
 func (a *azureAdapter) GetUploadHeaders() http.Header {
@@ -63,8 +68,8 @@ func (a *azureAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	return u
 }
 
-func (a *azureAdapter) GetUploadEnv() map[string]string {
-	token := a.generateWriteToken()
+func (a *azureAdapter) GetUploadEnv(ctx context.Context) map[string]string {
+	token := a.generateWriteToken(ctx)
 	if token == "" {
 		return map[string]string{}
 	}
@@ -76,13 +81,13 @@ func (a *azureAdapter) GetUploadEnv() map[string]string {
 	}
 }
 
-func (a *azureAdapter) presignURL(method string) *url.URL {
+func (a *azureAdapter) presignURL(ctx context.Context, method string) *url.URL {
 	credentials := a.getCredentials()
 	if credentials == nil {
 		return nil
 	}
 
-	u, err := a.generateSignedURL(a.objectName, &signedURLOptions{
+	u, err := a.generateSignedURL(ctx, a.objectName, &signedURLOptions{
 		ContainerName: a.config.ContainerName,
 		StorageDomain: a.config.StorageDomain,
 		Credentials:   credentials,
@@ -97,13 +102,13 @@ func (a *azureAdapter) presignURL(method string) *url.URL {
 	return u
 }
 
-func (a *azureAdapter) generateWriteToken() string {
+func (a *azureAdapter) generateWriteToken(ctx context.Context) string {
 	credentials := a.getCredentials()
 	if credentials == nil {
 		return ""
 	}
 
-	t, err := a.blobTokenGenerator(a.objectName, &signedURLOptions{
+	t, err := a.blobTokenGenerator(ctx, a.objectName, &signedURLOptions{
 		ContainerName: a.config.ContainerName,
 		StorageDomain: a.config.StorageDomain,
 		Credentials:   credentials,

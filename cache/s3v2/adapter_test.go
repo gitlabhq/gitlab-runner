@@ -96,8 +96,9 @@ func testCacheOperation(
 		URL := operation(adapter)
 		assert.Equal(t, tc.expectedURL, URL.URL)
 
-		assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
-		assert.Empty(t, adapter.GetUploadEnv())
+		ctx := context.Background()
+		assert.Nil(t, adapter.GetGoCloudURL(ctx))
+		assert.Empty(t, adapter.GetUploadEnv(ctx))
 	})
 }
 

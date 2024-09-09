@@ -52,7 +52,7 @@ func (a *gcsAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	return nil
 }
 
-func (a *gcsAdapter) GetUploadEnv() map[string]string {
+func (a *gcsAdapter) GetUploadEnv(_ context.Context) map[string]string {
 	return nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,17 +135,25 @@ func testUploadEnvWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *azureAdapter,
-	operation func() map[string]string,
+	operation func(context.Context) map[string]string,
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 
-		u := operation()
+		u := operation(context.Background())
 		assert.Empty(t, u)
 	})
 }
 
 func TestAdapterOperation_InvalidConfig(t *testing.T) {
+	oldCredentialRetriever := retrieveUserCredentials
+	retrieveUserCredentials = func(ctx context.Context, o *signedURLOptions) (*service.UserDelegationCredential, error) {
+		return nil, fmt.Errorf("error retrieving user credentials")
+	}
+	defer func() {
+		retrieveUserCredentials = oldCredentialRetriever
+	}()
+
 	tests := map[string]adapterOperationInvalidConfigTestCase{
 		"no-azure-config": {
 			containerName:    containerName,
@@ -178,14 +187,14 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account key\"",
+			expectedErrorMsg:   "error retrieving user credentials",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"invalid-container-name-and-no-account-key": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      "\x00",
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account key\"",
+			expectedErrorMsg:   "error retrieving user credentials",
 		},
 		"container-not-specified": {
 			provideAzureConfig: true,
@@ -261,7 +270,7 @@ func prepareMockedSignedURLGenerator(
 	expectedMethod string,
 	adapter *azureAdapter,
 ) {
-	adapter.generateSignedURL = func(name string, opts *signedURLOptions) (*url.URL, error) {
+	adapter.generateSignedURL = func(ctx context.Context, name string, opts *signedURLOptions) (*url.URL, error) {
 		assert.Equal(t, containerName, opts.ContainerName)
 		assert.Equal(t, accountName, opts.Credentials.AccountName)
 		assert.Equal(t, accountKey, opts.Credentials.AccountKey)
@@ -370,7 +379,7 @@ func TestAdapterOperation(t *testing.T) {
 			u := adapter.GetGoCloudURL(context.Background())
 			assert.Equal(t, "azblob://test/key", u.String())
 
-			env := adapter.GetUploadEnv()
+			env := adapter.GetUploadEnv(context.Background())
 			assert.Len(t, env, 3)
 			assert.Equal(t, accountName, env["AZURE_STORAGE_ACCOUNT"])
 			assert.NotEmpty(t, env["AZURE_STORAGE_SAS_TOKEN"])

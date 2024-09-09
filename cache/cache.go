@@ -108,11 +108,11 @@ func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string) *u
 	return adaptor.GetGoCloudURL(ctx)
 }
 
-func GetCacheUploadEnv(build *common.Build, key string) map[string]string {
+func GetCacheUploadEnv(ctx context.Context, build *common.Build, key string) map[string]string {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
 		return nil
 	}
 
-	return adaptor.GetUploadEnv()
+	return adaptor.GetUploadEnv(ctx)
 }

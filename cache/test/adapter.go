@@ -39,7 +39,7 @@ func (t *testAdapter) GetGoCloudURL(ctx context.Context) *url.URL {
 	return nil
 }
 
-func (t *testAdapter) GetUploadEnv() map[string]string {
+func (t *testAdapter) GetUploadEnv(_ context.Context) map[string]string {
 	return map[string]string{
 		"FIRST_VAR":  "123",
 		"SECOND_VAR": "456",
