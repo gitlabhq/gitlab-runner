@@ -1089,6 +1089,10 @@ type JobTrace interface {
 	SetSupportedFailureReasonMapper(f SupportedFailureReasonMapper)
 	SetDebugModeEnabled(isEnabled bool)
 	IsStdout() bool
+	Disable()
+	Enable()
+	Start()
+	Done() <-chan struct{}
 }
 
 type UpdateJobResult struct {
@@ -1113,6 +1117,10 @@ func NewPatchTraceResult(sentOffset int, state PatchState, newUpdateInterval int
 }
 
 type Network interface {
+	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
+	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte, startOffset int, debugModeEnabled bool) PatchTraceResult
+	RequestJob(ctx context.Context, config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
+
 	SetConnectionMaxAge(time.Duration)
 	RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse
 	VerifyRunner(config RunnerCredentials, systemID string) *VerifyRunnerResponse
@@ -1120,11 +1128,6 @@ type Network interface {
 	UnregisterRunnerManager(config RunnerCredentials, systemID string) bool
 	ResetToken(runner RunnerCredentials, systemID string) *ResetTokenResponse
 	ResetTokenWithPAT(runner RunnerCredentials, systemID string, pat string) *ResetTokenResponse
-	RequestJob(ctx context.Context, config RunnerConfig, sessionInfo *SessionInfo) (*JobResponse, bool)
-	UpdateJob(config RunnerConfig, jobCredentials *JobCredentials, jobInfo UpdateJobInfo) UpdateJobResult
-	PatchTrace(config RunnerConfig, jobCredentials *JobCredentials, content []byte,
-		startOffset int, debugModeEnabled bool) PatchTraceResult
 	DownloadArtifacts(config JobCredentials, artifactsFile io.WriteCloser, directDownload *bool) DownloadState
 	UploadRawArtifacts(config JobCredentials, bodyProvider ContentProvider, options ArtifactsOptions) (UploadState, string)
-	ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error)
 }

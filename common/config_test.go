@@ -2866,3 +2866,63 @@ func TestConfig_SaveConfig_CustomBuildDir(t *testing.T) {
 func ptr[T any](v T) *T {
 	return &v
 }
+
+func TestStoreConfig(t *testing.T) {
+	validateDefaults := func(t *testing.T, cfg *StoreConfig) {
+		assert.Equal(t, DefaultStoreHealthInterval, cfg.GetHealthInterval())
+		assert.Equal(t, DefaultStoreHealthTimeout, cfg.GetHealthTimeout())
+		assert.Equal(t, DefaultStoreStaleTimeout, cfg.GetStaleTimeout())
+		assert.Equal(t, DefaultStoreMaxRetries, cfg.GetMaxRetries())
+	}
+
+	tests := map[string]struct {
+		cfg      *StoreConfig
+		validate func(t *testing.T, cfg *StoreConfig)
+	}{
+		"defaults": {
+			cfg:      &StoreConfig{},
+			validate: validateDefaults,
+		},
+		"defaults nil": {
+			validate: validateDefaults,
+		},
+		"less than 0": {
+			cfg: &StoreConfig{
+				HealthInterval: ptr(-1),
+				HealthTimeout:  ptr(-1),
+				StaleTimeout:   ptr(-1),
+				MaxRetries:     ptr(-1),
+			},
+			validate: validateDefaults,
+		},
+		"equal to 0": {
+			cfg: &StoreConfig{
+				HealthInterval: ptr(0),
+				HealthTimeout:  ptr(0),
+				StaleTimeout:   ptr(0),
+				MaxRetries:     ptr(0),
+			},
+			validate: validateDefaults,
+		},
+		"valid": {
+			cfg: &StoreConfig{
+				HealthInterval: ptr(1),
+				HealthTimeout:  ptr(2),
+				StaleTimeout:   ptr(3),
+				MaxRetries:     ptr(4),
+			},
+			validate: func(t *testing.T, cfg *StoreConfig) {
+				assert.Equal(t, time.Second, cfg.GetHealthInterval())
+				assert.Equal(t, 2*time.Second, cfg.GetHealthTimeout())
+				assert.Equal(t, 3*time.Second, cfg.GetStaleTimeout())
+				assert.Equal(t, 4, cfg.GetMaxRetries())
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			tt.validate(t, tt.cfg)
+		})
+	}
+}

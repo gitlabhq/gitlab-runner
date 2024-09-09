@@ -122,65 +122,6 @@ func (_c *MockNetwork_PatchTrace_Call) RunAndReturn(run func(RunnerConfig, *JobC
 	return _c
 }
 
-// ProcessJob provides a mock function with given fields: config, buildCredentials
-func (_m *MockNetwork) ProcessJob(config RunnerConfig, buildCredentials *JobCredentials) (JobTrace, error) {
-	ret := _m.Called(config, buildCredentials)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ProcessJob")
-	}
-
-	var r0 JobTrace
-	var r1 error
-	if rf, ok := ret.Get(0).(func(RunnerConfig, *JobCredentials) (JobTrace, error)); ok {
-		return rf(config, buildCredentials)
-	}
-	if rf, ok := ret.Get(0).(func(RunnerConfig, *JobCredentials) JobTrace); ok {
-		r0 = rf(config, buildCredentials)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(JobTrace)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(RunnerConfig, *JobCredentials) error); ok {
-		r1 = rf(config, buildCredentials)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockNetwork_ProcessJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ProcessJob'
-type MockNetwork_ProcessJob_Call struct {
-	*mock.Call
-}
-
-// ProcessJob is a helper method to define mock.On call
-//   - config RunnerConfig
-//   - buildCredentials *JobCredentials
-func (_e *MockNetwork_Expecter) ProcessJob(config interface{}, buildCredentials interface{}) *MockNetwork_ProcessJob_Call {
-	return &MockNetwork_ProcessJob_Call{Call: _e.mock.On("ProcessJob", config, buildCredentials)}
-}
-
-func (_c *MockNetwork_ProcessJob_Call) Run(run func(config RunnerConfig, buildCredentials *JobCredentials)) *MockNetwork_ProcessJob_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(RunnerConfig), args[1].(*JobCredentials))
-	})
-	return _c
-}
-
-func (_c *MockNetwork_ProcessJob_Call) Return(_a0 JobTrace, _a1 error) *MockNetwork_ProcessJob_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockNetwork_ProcessJob_Call) RunAndReturn(run func(RunnerConfig, *JobCredentials) (JobTrace, error)) *MockNetwork_ProcessJob_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RegisterRunner provides a mock function with given fields: config, parameters
 func (_m *MockNetwork) RegisterRunner(config RunnerCredentials, parameters RegisterRunnerParameters) *RegisterRunnerResponse {
 	ret := _m.Called(config, parameters)

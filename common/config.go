@@ -1199,6 +1199,7 @@ type RunnerSettings struct {
 	CustomBuildDir CustomBuildDir   `toml:"custom_build_dir,omitempty" json:"custom_build_dir,omitempty" group:"custom build dir configuration" namespace:"custom_build_dir"`
 	Referees       *referees.Config `toml:"referees,omitempty" json:"referees,omitempty" group:"referees configuration" namespace:"referees"`
 	Cache          *CacheConfig     `toml:"cache,omitempty" json:"cache,omitempty" group:"cache configuration" namespace:"cache"`
+	Store          *StoreConfig     `toml:"store,omitempty" json:"store,omitempty" group:"store configuration" namespace:"store"`
 
 	// GracefulKillTimeout and ForceKillTimeout aren't exposed to the users yet
 	// because not every executor supports it. We also have to keep in mind that
@@ -1224,6 +1225,14 @@ type RunnerSettings struct {
 	Autoscaler *AutoscalerConfig `toml:"autoscaler,omitempty" json:",omitempty"`
 
 	StepRunnerImage string `toml:"step_runner_image,omitempty" json:"step_runner_image" long:"step-runner-image" env:"STEP_RUNNER_IMAGE" description:"[ADVANCED] Override the default step-runner image used to inject the step-runner binary into the build container"`
+}
+
+type StoreConfig struct {
+	Name           string `toml:"name,omitempty" json:"name,omitempty" long:"name" env:"STORE_NAME" description:"Name of the store to use"`
+	HealthInterval *int   `toml:"health_interval,omitempty" json:"health_interval,omitempty" long:"health-interval" env:"STORE_HEALTH_INTERVAL" description:"Interval in seconds to update the health of the job in the store. Defaults to 5 seconds."`
+	HealthTimeout  *int   `toml:"health_timeout,omitempty" json:"health_timeout,omitempty" long:"health-timeout" env:"STORE_HEALTH_TIMEOUT" description:"Timeout in seconds to consider a job unhealthy. Unhealthy jobs will be resumed from the store. Defaults to 30 seconds."`
+	StaleTimeout   *int   `toml:"stale_timeout,omitempty" json:"stale_timeout,omitempty" long:"stale-timeout" env:"STORE_STALE_TIMEOUT" description:"Timeout in seconds to consider a job stale. Stale jobs are removed from the store. Defaults to 3 hours."`
+	MaxRetries     *int   `toml:"max_retries,omitempty" json:"max_retries,omitempty" long:"max-retries" env:"STORE_MAX_RETRIES" description:"Maximum number of times a job will be retried. Defaults to 10."`
 }
 
 type RunnerConfig struct {
@@ -2287,4 +2296,36 @@ func maskField(field *string) {
 	if field != nil && *field != "" {
 		*field = mask
 	}
+}
+
+func (c *StoreConfig) GetHealthInterval() time.Duration {
+	if c == nil {
+		return DefaultStoreHealthInterval
+	}
+
+	return getDuration(c.HealthInterval, DefaultStoreHealthInterval)
+}
+
+func (c *StoreConfig) GetHealthTimeout() time.Duration {
+	if c == nil {
+		return DefaultStoreHealthTimeout
+	}
+
+	return getDuration(c.HealthTimeout, DefaultStoreHealthTimeout)
+}
+
+func (c *StoreConfig) GetStaleTimeout() time.Duration {
+	if c == nil {
+		return DefaultStoreStaleTimeout
+	}
+
+	return getDuration(c.StaleTimeout, DefaultStoreStaleTimeout)
+}
+
+func (c *StoreConfig) GetMaxRetries() int {
+	if c == nil || c.MaxRetries == nil || *c.MaxRetries <= 0 {
+		return DefaultStoreMaxRetries
+	}
+
+	return *c.MaxRetries
 }

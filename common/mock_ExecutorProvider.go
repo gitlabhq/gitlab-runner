@@ -292,6 +292,64 @@ func (_c *MockExecutorProvider_GetFeatures_Call) RunAndReturn(run func(*Features
 	return _c
 }
 
+// GetStore provides a mock function with given fields: config
+func (_m *MockExecutorProvider) GetStore(config *RunnerConfig) (JobStore, error) {
+	ret := _m.Called(config)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetStore")
+	}
+
+	var r0 JobStore
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*RunnerConfig) (JobStore, error)); ok {
+		return rf(config)
+	}
+	if rf, ok := ret.Get(0).(func(*RunnerConfig) JobStore); ok {
+		r0 = rf(config)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(JobStore)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*RunnerConfig) error); ok {
+		r1 = rf(config)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockExecutorProvider_GetStore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetStore'
+type MockExecutorProvider_GetStore_Call struct {
+	*mock.Call
+}
+
+// GetStore is a helper method to define mock.On call
+//   - config *RunnerConfig
+func (_e *MockExecutorProvider_Expecter) GetStore(config interface{}) *MockExecutorProvider_GetStore_Call {
+	return &MockExecutorProvider_GetStore_Call{Call: _e.mock.On("GetStore", config)}
+}
+
+func (_c *MockExecutorProvider_GetStore_Call) Run(run func(config *RunnerConfig)) *MockExecutorProvider_GetStore_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*RunnerConfig))
+	})
+	return _c
+}
+
+func (_c *MockExecutorProvider_GetStore_Call) Return(_a0 JobStore, _a1 error) *MockExecutorProvider_GetStore_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockExecutorProvider_GetStore_Call) RunAndReturn(run func(*RunnerConfig) (JobStore, error)) *MockExecutorProvider_GetStore_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Release provides a mock function with given fields: config, data
 func (_m *MockExecutorProvider) Release(config *RunnerConfig, data ExecutorData) {
 	_m.Called(config, data)
