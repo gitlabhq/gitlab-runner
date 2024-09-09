@@ -11,6 +11,7 @@ type DefaultExecutorProvider struct {
 	FeaturesUpdater  func(features *common.FeaturesInfo)
 	ConfigUpdater    func(input *common.RunnerConfig, output *common.ConfigInfo)
 	DefaultShellName string
+	StoreProvider    common.JobStoreProvider
 }
 
 func (e DefaultExecutorProvider) CanCreate() bool {
@@ -49,4 +50,12 @@ func (e DefaultExecutorProvider) GetConfigInfo(input *common.RunnerConfig, outpu
 
 func (e DefaultExecutorProvider) GetDefaultShell() string {
 	return e.DefaultShellName
+}
+
+func (e DefaultExecutorProvider) GetStore(config *common.RunnerConfig) (common.JobStore, error) {
+	if e.StoreProvider == nil {
+		return common.NoopJobStore{}, nil
+	}
+
+	return e.StoreProvider.Get(config)
 }

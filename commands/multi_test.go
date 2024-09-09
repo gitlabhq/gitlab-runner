@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	helper_test "gitlab.com/gitlab-org/gitlab-runner/helpers/test"
 	"gitlab.com/gitlab-org/gitlab-runner/log/test"
@@ -27,11 +26,13 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	hook, cleanup := test.NewHook()
 	defer cleanup()
 
+	const buildsCount = 3
+
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(io.Discard)
 
 	cfg := common.RunnerConfig{
-		Limit:              2,
+		Limit:              buildsCount - 1,
 		RequestConcurrency: 10,
 		RunnerSettings: common.RunnerSettings{
 			Executor: "multi-runner-build-limit",
@@ -63,11 +64,14 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	mJobTrace.On("SetAbortFunc", mock.Anything)
 	mJobTrace.On("SetDebugModeEnabled", mock.Anything)
 	mJobTrace.On("Success").Return(nil)
+	mJobTrace.On("Start")
+	ch := make(chan struct{})
+	close(ch)
+	mJobTrace.On("Done").Return((<-chan struct{})(ch))
 
 	mNetwork := common.MockNetwork{}
 	defer mNetwork.AssertExpectations(t)
 	mNetwork.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).Return(&jobData, true)
-	mNetwork.On("ProcessJob", mock.Anything, mock.Anything).Return(&mJobTrace, nil)
 
 	var runningBuilds uint32
 	e := common.MockExecutor{}
@@ -91,12 +95,16 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil)
 	p.On("Create").Return(&e)
+	p.On("GetStore", mock.Anything).Return(common.NoopJobStore{}, nil).Times(buildsCount - 1)
 
 	common.RegisterExecutorProvider("multi-runner-build-limit", &p)
 
 	cmd := RunCommand{
 		network:      &mNetwork,
 		buildsHelper: newBuildsHelper(),
+		jobTraceProvider: func(_ common.JobManager, _ common.RunnerConfig, _ *common.JobCredentials, _ int64) (common.JobTrace, error) {
+			return &mJobTrace, nil
+		},
 		configOptionsWithListenAddress: configOptionsWithListenAddress{
 			configOptions: configOptions{
 				config: &common.Config{
@@ -110,8 +118,8 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 
 	// Start 2 builds.
 	wg := sync.WaitGroup{}
-	wg.Add(3)
-	for i := 0; i < 3; i++ {
+	wg.Add(buildsCount)
+	for i := 0; i < buildsCount; i++ {
 		go func(i int) {
 			defer wg.Done()
 
@@ -139,7 +147,7 @@ func TestProcessRunner_BuildLimit(t *testing.T) {
 }
 
 func TestRunCommand_doJobRequest(t *testing.T) {
-	returnedJob := new(common.JobResponse)
+	returnedJob := common.NewJob(new(common.JobResponse))
 
 	waitForContext := func(ctx context.Context) {
 		<-ctx.Done()
@@ -178,12 +186,8 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
-			runner := new(common.RunnerConfig)
-
-			network := new(common.MockNetwork)
-			defer network.AssertExpectations(t)
-
-			network.On("RequestJob", mock.Anything, *runner, mock.Anything).
+			mockManager := common.NewMockJobManager(t)
+			mockManager.On("RequestJob", mock.Anything, mock.Anything).
 				Run(func(args mock.Arguments) {
 					ctx, ok := args.Get(0).(context.Context)
 					require.True(t, ok)
@@ -194,17 +198,16 @@ func TestRunCommand_doJobRequest(t *testing.T) {
 				Once()
 
 			c := &RunCommand{
-				network:            network,
 				runInterruptSignal: make(chan os.Signal),
 				runFinished:        make(chan bool),
 			}
 
-			ctx, cancelFn := context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancelFn := context.WithTimeout(context.Background(), time.Second)
 			defer cancelFn()
 
 			go tt.passSignal(c)
 
-			job, _ := c.doJobRequest(ctx, runner, nil)
+			job, _ := c.doJobRequest(ctx, mockManager, nil)
 
 			assert.Equal(t, returnedJob, job)
 

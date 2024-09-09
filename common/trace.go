@@ -90,3 +90,21 @@ func (s *Trace) SetSupportedFailureReasonMapper(f SupportedFailureReasonMapper) 
 func (s *Trace) IsStdout() bool {
 	return true
 }
+
+func (s *Trace) Start() {
+
+}
+
+func (s *Trace) Enable() {
+
+}
+
+func (s *Trace) Disable() {
+
+}
+
+func (s *Trace) Done() <-chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}

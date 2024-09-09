@@ -552,6 +552,9 @@ func addTLSData(response *common.JobResponse, tlsData ResponseTLSData) {
 	}
 }
 
+// RequestJob will request a common.JobResponse from the backend. The second return value
+// is whether the runner requesting the job is healthy, meaning that the backend didn't
+// refuse its requests.
 func (n *GitLabClient) RequestJob(
 	ctx context.Context,
 	config common.RunnerConfig,
@@ -1110,19 +1113,6 @@ func (n *GitLabClient) downloadArtifactFile(
 	log.Println("Downloading artifacts from coordinator...", "ok")
 
 	return common.DownloadSucceeded
-}
-
-func (n *GitLabClient) ProcessJob(
-	config common.RunnerConfig,
-	jobCredentials *common.JobCredentials,
-) (common.JobTrace, error) {
-	trace, err := newJobTrace(n, config, jobCredentials)
-	if err != nil {
-		return nil, err
-	}
-
-	trace.start()
-	return trace, nil
 }
 
 func (n *GitLabClient) handleResponse(ctx context.Context, res *http.Response, discardBody bool) {

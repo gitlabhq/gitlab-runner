@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"sync/atomic"
@@ -17,7 +18,10 @@ import (
 
 type RunSingleCommand struct {
 	common.RunnerConfig
-	network          common.Network
+
+	network       common.Network
+	traceProvider common.JobTraceProviderFunc
+
 	WaitTimeout      int `long:"wait-timeout" description:"How long to wait in seconds before receiving the first job"`
 	lastBuild        time.Time
 	runForever       bool
@@ -79,48 +83,68 @@ func (r *RunSingleCommand) postBuild() {
 	r.lastBuild = time.Now()
 }
 
-func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal chan os.Signal) error {
-	jobData, healthy := r.network.RequestJob(context.Background(), r.RunnerConfig, nil)
+func (r *RunSingleCommand) processBuild(data common.ExecutorData, provider common.ExecutorProvider, abortSignal chan os.Signal) error {
+	store, err := provider.GetStore(&r.RunnerConfig)
+	if err != nil {
+		return err
+	}
+
+	manager := common.NewStatefulJobManager(
+		r.network,
+		store,
+		r.traceProvider,
+		&r.RunnerConfig,
+	)
+	job, healthy := manager.RequestJob(context.Background(), nil)
 	if !healthy {
 		logrus.Println("Runner is not healthy!")
 		select {
 		case <-time.After(common.NotHealthyCheckInterval * time.Second):
 		case <-abortSignal:
 		}
+
 		return nil
 	}
 
-	if jobData == nil {
+	if job == nil {
 		select {
 		case <-time.After(common.CheckInterval):
 		case <-abortSignal:
 		}
+
 		return nil
 	}
 
 	config := common.NewConfig()
-	newBuild, err := common.NewBuild(*jobData, &r.RunnerConfig, abortSignal, data)
+	// Attempt to perform a deep copy of the RunnerConfig
+	runnerConfigCopy, err := r.RunnerConfig.DeepCopy()
 	if err != nil {
-		return err
+		return fmt.Errorf("deep copy of runner config failed: %w", err)
 	}
+
+	build := common.NewBuild(job, runnerConfigCopy)
+	build.JobStore = store
+	build.SystemInterrupt = abortSignal
+	build.ExecutorData = data
 
 	jobCredentials := &common.JobCredentials{
-		ID:    jobData.ID,
-		Token: jobData.Token,
+		ID:    job.ID,
+		Token: job.Token,
 	}
-	trace, err := r.network.ProcessJob(r.RunnerConfig, jobCredentials)
+
+	trace, err := manager.ProcessJob(jobCredentials)
 	if err != nil {
 		return err
 	}
 
-	trace.SetDebugModeEnabled(newBuild.IsDebugModeEnabled())
+	trace.SetDebugModeEnabled(build.IsDebugModeEnabled())
 
 	defer func() {
 		err := trace.Success()
 		logTerminationError(logrus.StandardLogger(), "Success", err)
 	}()
 
-	err = newBuild.Run(config, trace)
+	err = build.Run(config, trace)
 
 	r.postBuild()
 
@@ -196,7 +220,7 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 			logrus.Warningln("Executor update:", err)
 		}
 
-		pErr := r.processBuild(data, abortSignal)
+		pErr := r.processBuild(data, executorProvider, abortSignal)
 		if pErr != nil {
 			logrus.WithError(pErr).Error("Failed to process build")
 		}
@@ -225,6 +249,7 @@ func (r *RunSingleCommand) getShutdownTimeout() time.Duration {
 
 func init() {
 	common.RegisterCommand2("run-single", "start single runner", &RunSingleCommand{
-		network: network.NewGitLabClient(),
+		network:       network.NewGitLabClient(),
+		traceProvider: network.ClientJobTraceProviderFunc,
 	})
 }
