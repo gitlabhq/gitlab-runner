@@ -5983,9 +5983,9 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			verifyErr: func(t *testing.T, errCh <-chan error) {
 				err := <-errCh
 				require.Error(t, err)
-				var serviceError *podServiceError
+				var serviceError *podContainerError
 				assert.ErrorAs(t, err, &serviceError)
-				assert.Equal(t, "bar", serviceError.serviceName)
+				assert.Equal(t, "bar", serviceError.containerName)
 				assert.Equal(t, 137, serviceError.exitCode)
 				assert.Equal(t, "OOMKilled", serviceError.reason)
 			},
@@ -6028,9 +6028,9 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			verifyErr: func(t *testing.T, errCh <-chan error) {
 				err := <-errCh
 				require.Error(t, err)
-				var serviceError *podServiceError
+				var serviceError *podContainerError
 				assert.ErrorAs(t, err, &serviceError)
-				assert.Equal(t, "bar", serviceError.serviceName)
+				assert.Equal(t, "bar", serviceError.containerName)
 				assert.Equal(t, 1, serviceError.exitCode)
 				assert.Equal(t, "Error", serviceError.reason)
 			},
@@ -6106,7 +6106,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			e.pod.Name = "pod"
 			e.pod.Namespace = "namespace"
 
-			tt.verifyErr(t, e.watchPodStatus(ctx, checkServiceStatus))
+			tt.verifyErr(t, e.watchPodStatus(ctx, checkContainerStatus))
 		})
 	}
 }

@@ -214,14 +214,14 @@ func (r *resourceCheckError) Is(err error) bool {
 	return ok
 }
 
-type podServiceError struct {
-	serviceName string
-	exitCode    int
-	reason      string
+type podContainerError struct {
+	containerName string
+	exitCode      int
+	reason        string
 }
 
-func (p *podServiceError) Error() string {
-	return fmt.Sprintf("Error in service %s: exit code: %d, reason: '%s'", p.serviceName, p.exitCode, p.reason)
+func (p *podContainerError) Error() string {
+	return fmt.Sprintf("Error in service %s: exit code: %d, reason: '%s'", p.containerName, p.exitCode, p.reason)
 }
 
 type kubernetesOptions struct {
@@ -726,7 +726,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx, checkServiceStatus)
+	podStatusCh := s.watchPodStatus(ctx, checkContainerStatus)
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -738,7 +738,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodServiceError(err) {
+		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodContainerError(err) {
 			return err
 		}
 
@@ -2603,14 +2603,14 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkE
 
 type checkExtendedPodStatusFunc func(context.Context, *api.Pod) error
 
-func checkServiceStatus(ctx context.Context, pod *api.Pod) error {
+func checkContainerStatus(ctx context.Context, pod *api.Pod) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.State.Terminated != nil &&
 			containerStatus.State.Terminated.ExitCode >= 0 {
-			return &podServiceError{
-				serviceName: containerStatus.Name,
-				exitCode:    int(containerStatus.State.Terminated.ExitCode),
-				reason:      containerStatus.State.Terminated.Reason,
+			return &podContainerError{
+				containerName: containerStatus.Name,
+				exitCode:      int(containerStatus.State.Terminated.ExitCode),
+				reason:        containerStatus.State.Terminated.Reason,
 			}
 		}
 	}
@@ -2983,8 +2983,8 @@ func IsKubernetesPodFailedError(err error) bool {
 		podPhaseErr.phase == api.PodFailed
 }
 
-func IsKubernetesPodServiceError(err error) bool {
-	var podServiceError *podServiceError
+func IsKubernetesPodContainerError(err error) bool {
+	var podServiceError *podContainerError
 	return errors.As(err, &podServiceError)
 }
 
@@ -3013,7 +3013,7 @@ func (s *executor) waitForServices(ctx context.Context) error {
 		return err
 	}
 
-	podStatusCh := s.watchPodStatus(ctx, checkServiceStatus)
+	podStatusCh := s.watchPodStatus(ctx, checkContainerStatus)
 
 	stdout, stderr := s.getExecutorIoWriters()
 	defer stdout.Close()
