@@ -812,6 +812,7 @@ shutdown_timeout = 0
     [runners.cache.gcs]
     [runners.cache.azure]
   [runners.store]
+    [runners.store.file]
 `
 	)
 
@@ -880,6 +881,7 @@ shutdown_timeout = 0
     [runners.cache.gcs]
     [runners.cache.azure]
   [runners.store]
+    [runners.store.file]
 `,
 		},
 		"incorrect config template merge": {
