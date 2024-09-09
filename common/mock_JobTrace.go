@@ -111,6 +111,117 @@ func (_c *MockJobTrace_Cancel_Call) RunAndReturn(run func() bool) *MockJobTrace_
 	return _c
 }
 
+// Disable provides a mock function with no fields
+func (_m *MockJobTrace) Disable() {
+	_m.Called()
+}
+
+// MockJobTrace_Disable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Disable'
+type MockJobTrace_Disable_Call struct {
+	*mock.Call
+}
+
+// Disable is a helper method to define mock.On call
+func (_e *MockJobTrace_Expecter) Disable() *MockJobTrace_Disable_Call {
+	return &MockJobTrace_Disable_Call{Call: _e.mock.On("Disable")}
+}
+
+func (_c *MockJobTrace_Disable_Call) Run(run func()) *MockJobTrace_Disable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockJobTrace_Disable_Call) Return() *MockJobTrace_Disable_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockJobTrace_Disable_Call) RunAndReturn(run func()) *MockJobTrace_Disable_Call {
+	_c.Run(run)
+	return _c
+}
+
+// Done provides a mock function with no fields
+func (_m *MockJobTrace) Done() <-chan struct{} {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Done")
+	}
+
+	var r0 <-chan struct{}
+	if rf, ok := ret.Get(0).(func() <-chan struct{}); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan struct{})
+		}
+	}
+
+	return r0
+}
+
+// MockJobTrace_Done_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Done'
+type MockJobTrace_Done_Call struct {
+	*mock.Call
+}
+
+// Done is a helper method to define mock.On call
+func (_e *MockJobTrace_Expecter) Done() *MockJobTrace_Done_Call {
+	return &MockJobTrace_Done_Call{Call: _e.mock.On("Done")}
+}
+
+func (_c *MockJobTrace_Done_Call) Run(run func()) *MockJobTrace_Done_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockJobTrace_Done_Call) Return(_a0 <-chan struct{}) *MockJobTrace_Done_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockJobTrace_Done_Call) RunAndReturn(run func() <-chan struct{}) *MockJobTrace_Done_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Enable provides a mock function with no fields
+func (_m *MockJobTrace) Enable() {
+	_m.Called()
+}
+
+// MockJobTrace_Enable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Enable'
+type MockJobTrace_Enable_Call struct {
+	*mock.Call
+}
+
+// Enable is a helper method to define mock.On call
+func (_e *MockJobTrace_Expecter) Enable() *MockJobTrace_Enable_Call {
+	return &MockJobTrace_Enable_Call{Call: _e.mock.On("Enable")}
+}
+
+func (_c *MockJobTrace_Enable_Call) Run(run func()) *MockJobTrace_Enable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockJobTrace_Enable_Call) Return() *MockJobTrace_Enable_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockJobTrace_Enable_Call) RunAndReturn(run func()) *MockJobTrace_Enable_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Fail provides a mock function with given fields: err, failureData
 func (_m *MockJobTrace) Fail(err error, failureData JobFailureData) error {
 	ret := _m.Called(err, failureData)
@@ -364,6 +475,38 @@ func (_c *MockJobTrace_SetSupportedFailureReasonMapper_Call) Return() *MockJobTr
 }
 
 func (_c *MockJobTrace_SetSupportedFailureReasonMapper_Call) RunAndReturn(run func(SupportedFailureReasonMapper)) *MockJobTrace_SetSupportedFailureReasonMapper_Call {
+	_c.Run(run)
+	return _c
+}
+
+// Start provides a mock function with no fields
+func (_m *MockJobTrace) Start() {
+	_m.Called()
+}
+
+// MockJobTrace_Start_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Start'
+type MockJobTrace_Start_Call struct {
+	*mock.Call
+}
+
+// Start is a helper method to define mock.On call
+func (_e *MockJobTrace_Expecter) Start() *MockJobTrace_Start_Call {
+	return &MockJobTrace_Start_Call{Call: _e.mock.On("Start")}
+}
+
+func (_c *MockJobTrace_Start_Call) Run(run func()) *MockJobTrace_Start_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockJobTrace_Start_Call) Return() *MockJobTrace_Start_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockJobTrace_Start_Call) RunAndReturn(run func()) *MockJobTrace_Start_Call {
 	_c.Run(run)
 	return _c
 }

@@ -59,12 +59,24 @@ func ignoreOptionalTouchJob(mockNetwork *common.MockNetwork) {
 }
 
 func newTestJobTrace(network *common.MockNetwork, config common.RunnerConfig) (*clientJobTrace, error) {
-	trace, err := newJobTrace(network, config, jobCredentials)
+	m := common.NewStatefulJobManager(
+		network,
+		common.NoopJobStore{},
+		ClientJobTraceProviderFunc,
+		&config,
+	)
+
+	network.On("RequestJob", mock.Anything, mock.Anything, mock.Anything).
+		Return(&common.JobResponse{}, true).Once()
+
+	_, _ = m.RequestJob(context.Background(), &common.SessionInfo{})
+
+	trace, err := m.ProcessJob(jobCredentials)
 	if err != nil {
 		return nil, err
 	}
 
-	return trace, err
+	return trace.(*clientJobTrace), err
 }
 
 func TestIgnoreStatusChange(t *testing.T) {
@@ -80,7 +92,6 @@ func TestIgnoreStatusChange(t *testing.T) {
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
-	b.start()
 	assert.NoError(t, b.Success())
 	assert.NoError(t, b.Fail(errors.New("test"), common.JobFailureData{Reason: "script_failure"}))
 }
@@ -109,11 +120,12 @@ func TestTouchJobAbort(t *testing.T) {
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
+	b.lock.Lock()
 	b.updateInterval = 0
+	b.lock.Unlock()
 	b.SetAbortFunc(abort)
 	b.SetCancelFunc(cancel)
 
-	b.start()
 	assert.NotNil(t, <-abortCtx.Done(), "should abort the job")
 	assert.Nil(t, cancelCtx.Err(), "should not cancel job")
 	assert.NoError(t, b.Success())
@@ -143,11 +155,12 @@ func TestTouchJobCancel(t *testing.T) {
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
+	b.lock.Lock()
 	b.updateInterval = 0
+	b.lock.Unlock()
 	b.SetCancelFunc(cancel)
 	b.SetAbortFunc(abort)
 
-	b.start()
 	assert.NotNil(t, <-cancelCtx.Done(), "should cancel the job")
 	assert.NoError(t, abortCtx.Err())
 	assert.NoError(t, b.Success())
@@ -178,10 +191,9 @@ func TestSendPatchAbort(t *testing.T) {
 	require.NoError(t, err)
 
 	b.SetAbortFunc(cancel)
-	b.updateInterval = time.Microsecond
+	b.setUpdateInterval(time.Microsecond)
 
 	fmt.Fprint(b, "Trace\n")
-	b.start()
 	assert.NotNil(t, <-ctx.Done(), "should abort the job")
 	assert.NoError(t, b.Success())
 }
@@ -197,7 +209,7 @@ func TestJobOutputLimit(t *testing.T) {
 	require.NoError(t, err)
 
 	// prevent any UpdateJob before `b.Success()` call
-	b.updateInterval = 25 * time.Second
+	b.setUpdateInterval(25 * time.Second)
 
 	updateMatcher := generateJobInfoMatcher(jobCredentials.ID, common.Success, "")
 
@@ -221,7 +233,6 @@ func TestJobOutputLimit(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobOutputLimit, jobCredentials, updateMatcher).
 		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
-	b.start()
 	// Write 5k to the buffer
 	for i := 0; i < traceMessageSize; i++ {
 		fmt.Fprint(b, traceMessage)
@@ -276,7 +287,6 @@ func TestJobFinishTraceUpdateRetry(t *testing.T) {
 		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).
 		Once()
 
-	b.start()
 	fmt.Fprint(b, "My trace send")
 	assert.NoError(t, b.Success())
 }
@@ -352,7 +362,6 @@ func TestJobDelayedTraceProcessingWithRejection(t *testing.T) {
 
 	b.maxTracePatchSize = 10
 
-	b.start()
 	fmt.Fprint(b, "My trace send")
 	assert.NoError(t, b.Success())
 }
@@ -383,10 +392,11 @@ func TestJobMaxTracePatchSize(t *testing.T) {
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
-	b.updateInterval = 10 * time.Millisecond
+	b.setUpdateInterval(10 * time.Millisecond)
+	b.lock.Lock()
 	b.maxTracePatchSize = 5
+	b.lock.Unlock()
 
-	b.start()
 	fmt.Fprint(b, "My trace send")
 	assert.NoError(t, b.Success())
 }
@@ -416,7 +426,6 @@ func TestJobFinishStatusUpdateRetry(t *testing.T) {
 	mockNetwork.On("UpdateJob", jobConfig, jobCredentials, updateMatcher).
 		Return(common.UpdateJobResult{State: common.UpdateSucceeded}).Once()
 
-	b.start()
 	assert.NoError(t, b.Success())
 }
 
@@ -445,8 +454,7 @@ func TestJobIncrementalPatchSend(t *testing.T) {
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
-	b.updateInterval = time.Millisecond * 10
-	b.start()
+	b.setUpdateInterval(time.Millisecond * 10)
 	fmt.Fprint(b, "123456789\n")
 	wg.Wait()
 	assert.NoError(t, b.Success())
@@ -476,13 +484,11 @@ func TestJobIncrementalStatusRefresh(t *testing.T) {
 	b, err := newTestJobTrace(mockNetwork, jobConfig)
 	require.NoError(t, err)
 
-	b.updateInterval = time.Millisecond * 10
-
 	// Test for: https://gitlab.com/gitlab-org/gitlab-ce/issues/63972
 	// 1. lock, to prevent incrementalUpdate to read state
 	// 2. inject final state as early as possible
+	b.setUpdateInterval(time.Millisecond * 10)
 	b.lock.Lock()
-	b.start()
 	b.state = common.Success
 	b.lock.Unlock()
 
@@ -551,10 +557,12 @@ func TestCancelingJobIncrementalUpdate(t *testing.T) {
 			b, err := newTestJobTrace(mockNetwork, jobConfig)
 			require.NoError(t, err)
 
-			b.updateInterval = time.Millisecond * 10
+			b.setUpdateInterval(time.Millisecond * 10)
+			b.lock.Lock()
 			b.maxTracePatchSize = 10
 			b.forceSendInterval = time.Millisecond
-			b.start()
+			b.lock.Unlock()
+
 			fmt.Fprint(b, "123456789\n987654321\n")
 			wg.Wait()
 			assert.NoError(t, b.Success())
@@ -669,9 +677,8 @@ func TestUpdateIntervalChanges(t *testing.T) {
 				trace, err := newTestJobTrace(client, jobConfig)
 				require.NoError(t, err)
 
-				trace.updateInterval = tt.initialUpdateInterval
+				trace.setUpdateInterval(tt.initialUpdateInterval)
 
-				trace.start()
 				assert.Equal(t, tt.initialUpdateInterval, trace.getUpdateInterval())
 
 				_, err = fmt.Fprint(trace, testTrace)
@@ -714,9 +721,8 @@ func TestUpdateIntervalChanges(t *testing.T) {
 				trace, err := newTestJobTrace(client, jobConfig)
 				require.NoError(t, err)
 
-				trace.updateInterval = tt.initialUpdateInterval
+				trace.setUpdateInterval(tt.initialUpdateInterval)
 
-				trace.start()
 				assert.Equal(t, tt.initialUpdateInterval, trace.getUpdateInterval())
 
 				waitForTouchJob.Wait()
@@ -754,9 +760,8 @@ func TestUpdateIntervalChanges(t *testing.T) {
 				trace, err := newTestJobTrace(client, jobConfig)
 				require.NoError(t, err)
 
-				trace.updateInterval = tt.initialUpdateInterval
+				trace.setUpdateInterval(tt.initialUpdateInterval)
 
-				trace.start()
 				assert.Equal(t, tt.initialUpdateInterval, trace.getUpdateInterval())
 				assert.NoError(t, trace.Success())
 
@@ -793,7 +798,6 @@ func TestJobChecksum(t *testing.T) {
 	require.NoError(t, err)
 
 	jobTrace.maxTracePatchSize = maxTraceSize
-	jobTrace.start()
 
 	_, err = jobTrace.Write([]byte(traceMessage))
 	require.NoError(t, err)
@@ -825,7 +829,6 @@ func TestJobBytesize(t *testing.T) {
 	require.NoError(t, err)
 
 	jobTrace.maxTracePatchSize = 100
-	jobTrace.start()
 
 	_, err = jobTrace.Write([]byte(traceMessage))
 	require.NoError(t, err)
@@ -851,17 +854,19 @@ func TestDynamicForceSendUpdate(t *testing.T) {
 				},
 			}
 
-			trace, err := newJobTrace(nil, config, jobCredentials)
+			trace, err := ClientJobTraceProviderFunc(nil, config, jobCredentials, 0)
 			require.NoError(t, err)
+
+			clientTrace := trace.(*clientJobTrace)
 
 			for updateInterval, forceInterval := range intervals {
 				t.Run(fmt.Sprintf("%v => %v", updateInterval, forceInterval), func(t *testing.T) {
-					trace.setUpdateInterval(updateInterval)
+					clientTrace.setUpdateInterval(updateInterval)
 
 					if enabled {
-						assert.Equal(t, forceInterval, trace.forceSendInterval)
+						assert.Equal(t, forceInterval, clientTrace.forceSendInterval)
 					} else {
-						assert.Equal(t, common.MinTraceForceSendInterval, trace.forceSendInterval)
+						assert.Equal(t, common.MinTraceForceSendInterval, clientTrace.forceSendInterval)
 					}
 				})
 			}

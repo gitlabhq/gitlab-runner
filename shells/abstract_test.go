@@ -834,7 +834,7 @@ func TestGitFetchFlags(t *testing.T) {
 						mockWriter.EXPECT().Noticef("Fetching changes with git depth set to %d...", test.depth).Once()
 					}
 
-					var expectedObjectFormat = "sha1"
+					expectedObjectFormat := "sha1"
 					if test.objectFormat != "" {
 						expectedObjectFormat = test.objectFormat
 					}

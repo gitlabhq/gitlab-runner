@@ -17,6 +17,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
+	testfaulttolerance "gitlab.com/gitlab-org/gitlab-runner/common/buildtest_fault_tolerance"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/custom/command"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
@@ -681,4 +682,8 @@ func TestCleanupProjectGitSubmoduleRecursive(t *testing.T) {
 
 		buildtest.RunBuildWithCleanupNormalSubmoduleStrategy(t, build, untrackedFile, untrackedSubmoduleFile)
 	})
+}
+
+func TestFaultTolerance(t *testing.T) {
+	testfaulttolerance.TestFaultTolerance(t)
 }
