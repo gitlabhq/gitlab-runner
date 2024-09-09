@@ -1,7 +1,9 @@
 package common
 
 type JobStoreProvider interface {
-	// Get returns a store instance per runner. Stores are used to store data between separate manager runs. Get will always return a valid store.
+	// Name returns the name of the store the provider creates. The name must match the name set in the store config.
+	Name() string
+	// Get returns a store instance per runner. Stores are used to store data between separate manager runs. Get will always return a valid store when there's no error.
 	Get(config *RunnerConfig) (JobStore, error)
 }
 
