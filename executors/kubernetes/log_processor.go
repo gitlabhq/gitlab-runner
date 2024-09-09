@@ -75,11 +75,16 @@ func (s *kubernetesLogStreamer) String() string {
 	return fmt.Sprintf("%s/%s/%s:%s", s.namespace, s.pod, s.container, s.logPath)
 }
 
+type logLineData struct {
+	line   string
+	offset int64
+}
+
 type logProcessor interface {
 	// Process listens for log lines
 	// consumers must read from the channel until it's closed
 	// consumers are also notified in case of error through the error channel
-	Process(ctx context.Context) (<-chan string, <-chan error)
+	Process(ctx context.Context) (<-chan logLineData, <-chan error)
 	// Finalize waits for all Goroutines called in Process() to finish.
 	Finalize()
 }
@@ -112,6 +117,7 @@ func newKubernetesLogProcessor(
 	clientConfig *restclient.Config,
 	backoff backoffCalculator,
 	logger logrus.FieldLogger,
+	offset int64,
 	podCfg kubernetesLogProcessorPodConfig,
 ) *kubernetesLogProcessor {
 	logStreamer := &kubernetesLogStreamer{
@@ -125,11 +131,12 @@ func newKubernetesLogProcessor(
 		backoff:     backoff,
 		logger:      logger,
 		logStreamer: logStreamer,
+		logsOffset:  offset,
 	}
 }
 
-func (l *kubernetesLogProcessor) Process(ctx context.Context) (<-chan string, <-chan error) {
-	outCh := make(chan string)
+func (l *kubernetesLogProcessor) Process(ctx context.Context) (<-chan logLineData, <-chan error) {
+	outCh := make(chan logLineData)
 	errCh := make(chan error)
 	go func() {
 		defer close(outCh)
@@ -144,7 +151,7 @@ func (l *kubernetesLogProcessor) Finalize() {
 	l.wg.Wait()
 }
 
-func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, errCh chan error) {
+func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan logLineData, errCh chan error) {
 	var (
 		attempt         float64 = -1
 		backoffDuration time.Duration
@@ -190,7 +197,7 @@ func (l *kubernetesLogProcessor) attach(ctx context.Context, outCh chan string, 
 	}
 }
 
-func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan string) error {
+func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan logLineData) error {
 	reader, writer := io.Pipe()
 	defer func() {
 		_ = reader.Close()
@@ -235,7 +242,7 @@ func (l *kubernetesLogProcessor) processStream(ctx context.Context, outCh chan s
 	return gr.Wait()
 }
 
-func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, outCh chan string) error {
+func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, outCh chan logLineData) error {
 	var previousLogsOffset int64 = -1
 	logsScanner, linesCh := l.scan(ctx, logs)
 
@@ -265,7 +272,10 @@ func (l *kubernetesLogProcessor) readLogs(ctx context.Context, logs io.Reader, o
 
 			previousLogsOffset = newLogsOffset
 
-			outCh <- logLine
+			outCh <- logLineData{
+				line:   logLine,
+				offset: l.logsOffset,
+			}
 		}
 	}
 }

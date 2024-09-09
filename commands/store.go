@@ -1,12 +1,13 @@
 package commands
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/store"
 )
 
 type StoreListJobsCommand struct {
@@ -38,32 +39,32 @@ func (c *StoreListJobsCommand) Execute(_ *cli.Context) {
 		logrus.Fatalln(fmt.Sprintf("Executor %q is not known", runner.Executor))
 	}
 
-	store, err := provider.GetStore(runner)
+	jobStore, err := provider.GetStore(runner)
 	if err != nil {
 		logrus.Fatalln("getting store for runner", err)
 	}
 
-	jobs, err := store.List()
+	jobs, err := jobStore.List()
 	if err != nil {
 		logrus.Fatalln("store list", err)
 	}
 
-	if len(jobs) == 0 {
-		return
-	}
-
+	var data [][]byte
 	for _, j := range jobs {
 		j.JobResponse.Variables = nil
 		j.JobResponse.Credentials = nil
 		j.JobResponse.Token = ""
+
+		var buf bytes.Buffer
+		if err := (store.JSONJobCodec{}).Encode(&buf, j); err != nil {
+			logrus.Fatalln(err)
+		}
+
+		data = append(data, buf.Bytes())
 	}
 
-	jobsJSON, err := json.Marshal(jobs)
-	if err != nil {
-		logrus.Fatalln("marshal jobs", err)
-	}
-
-	fmt.Println(string(jobsJSON))
+	jsonData := fmt.Sprintf("[%s]", bytes.Join(data, []byte(",")))
+	fmt.Println(jsonData)
 }
 
 func init() {

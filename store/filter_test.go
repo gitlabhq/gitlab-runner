@@ -18,10 +18,15 @@ type testFilterJobState struct {
 }
 
 func (t testFilterJobState) Job() *common.Job {
-	job := common.NewJob(nil)
-	job.State.SetBuildState(t.buildState)
-	job.State.HealthCheckAt = t.healthCheck
-	job.State.Retries = t.retries
+	encodedJob := &common.EncodedJob{
+		State: &common.EncodedJobRuntimeState{},
+	}
+
+	encodedJob.State.BuildState = t.buildState
+	encodedJob.State.HealthCheckAt = t.healthCheck
+	encodedJob.State.Retries = t.retries
+
+	job, _ := encodedJob.FromEncoded()
 
 	return job
 }
