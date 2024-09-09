@@ -215,9 +215,9 @@ this is done depends on how the runner is launched. For example:
 
 1. Remove this test instance to save money:
 
-    ```shell
-    docker-machine rm test-gpu
-    ```
+   ```shell
+   docker-machine rm test-gpu
+   ```
 
 #### Configuring GitLab Runner
 

@@ -107,11 +107,11 @@ fork project and to the ['liveness' test support](https://gitlab.com/gitlab-org/
 1. Go to the Runners section of the [Runner project CI/CD settings page](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd);
 1. Unlock the new Runner by editing its properties and unchecking `Lock to current projects`;
 1. For the [security](https://gitlab.com/gitlab-org/security/gitlab-runner) fork project:
-    1. Go to the Runners section of the [project's CI/CD settings page](https://gitlab.com/gitlab-org/security/gitlab-runner/-/settings/ci_cd);
-    1. Scroll down to the `Other available runners` section and enable the runner for this project;
+   1. Go to the Runners section of the [project's CI/CD settings page](https://gitlab.com/gitlab-org/security/gitlab-runner/-/settings/ci_cd);
+   1. Scroll down to the `Other available runners` section and enable the runner for this project;
 1. For the ['liveness' test support](https://gitlab.com/gitlab-org/ci-cd/tests/liveness) project:
-    1. Go to the Runners section of the [project's CI/CD settings page](https://gitlab.com/gitlab-org/ci-cd/tests/liveness/-/settings/ci_cd);
-    1. Scroll down to the `Other available runners` section and enable the runner for this project;
+   1. Go to the Runners section of the [project's CI/CD settings page](https://gitlab.com/gitlab-org/ci-cd/tests/liveness/-/settings/ci_cd);
+   1. Scroll down to the `Other available runners` section and enable the runner for this project;
 1. Lock the Runner back again in the [Runner project CI/CD settings page](https://gitlab.com/gitlab-org/gitlab-runner/-/settings/ci_cd).
 
 #### Install

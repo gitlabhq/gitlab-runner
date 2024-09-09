@@ -32,8 +32,8 @@ First you must install the OpenShift Operator.
 1. To install, click the GitLab Runner Operator.
 1. On the GitLab Runner Operator summary page, click **Install**.
 1. On the Install Operator page:
-    1. Under **Update Channel**, select **stable**.
-    1. Under **Installed Namespace**, select the desired namespace and click **Install**.
+   1. Under **Update Channel**, select **stable**.
+   1. Under **Installed Namespace**, select the desired namespace and click **Install**.
 
    ![GitLab Operator Install Page](img/openshift_installoperator_v13_3.png)
 
@@ -64,11 +64,10 @@ Follow the instructions at [OperatorHub.io](https://operatorhub.io/operator/gitl
 #### Install GitLab Runner
 
 1. Obtain a runner authentication token. You can either:
-    - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
-      [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
-      [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
-    - Locate the runner authentication token in the `config.toml` file.
-      Runner authentication tokens have the prefix, `glrt-`.
+   - Create a [shared](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-shared-runner-with-a-runner-authentication-token),
+     [group](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-group-runner-with-a-runner-authentication-token), or
+     [project](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-a-project-runner-with-a-runner-authentication-token) runner.
+   - Locate the runner authentication token in the `config.toml` file. Runner authentication tokens have the prefix, `glrt-`.
 1. Create the secret file with your GitLab Runner token:
 
    ```shell
