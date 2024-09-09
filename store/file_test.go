@@ -80,7 +80,7 @@ func TestConcurrentFileJobStore(t *testing.T) {
 		defer parentWg.Done()
 
 		var wg sync.WaitGroup
-		for i := 0; i < count; i++ {
+		for range count {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -424,7 +424,7 @@ func TestJobFileStore(t *testing.T) {
 					}
 
 					var previousCall *mock.Call
-					for i := 0; i < 3; i++ {
+					for i := range 3 {
 						file, err := os.Create(filepath.Join(tmpDir, fmt.Sprintf("%d.state", i)))
 						require.NoError(t, err)
 
@@ -434,8 +434,7 @@ func TestJobFileStore(t *testing.T) {
 						firstCall := codec.On(
 							"Decode",
 							mock.MatchedBy(fileMatcher(file)),
-							mock.Anything,
-						).Return(nil)
+						).Return(nil, nil)
 						if previousCall != nil {
 							firstCall = firstCall.NotBefore(previousCall)
 						}
@@ -443,8 +442,7 @@ func TestJobFileStore(t *testing.T) {
 						previousCall = codec.On(
 							"Decode",
 							mock.MatchedBy(fileMatcher(tmpFile)),
-							mock.Anything,
-						).Return(nil).NotBefore(firstCall)
+						).Return(nil, nil).NotBefore(firstCall)
 					}
 
 					scanner, err := newFileStoreJobScanner(tmpDir, codec)

@@ -11,6 +11,7 @@ type Trace struct {
 	Writer     io.Writer
 	cancelFunc context.CancelFunc
 	abortFunc  context.CancelFunc
+	disabled   bool
 	mutex      sync.Mutex
 }
 
@@ -24,6 +25,10 @@ type JobFailureData struct {
 func (s *Trace) Write(p []byte) (n int, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	if s.disabled {
+		return len(p), nil
+	}
 
 	if s.Writer == nil {
 		return 0, os.ErrInvalid
@@ -92,15 +97,20 @@ func (s *Trace) IsStdout() bool {
 }
 
 func (s *Trace) Start() {
-
 }
 
 func (s *Trace) Enable() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
+	s.disabled = false
 }
 
 func (s *Trace) Disable() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
+	s.disabled = true
 }
 
 func (s *Trace) Done() <-chan struct{} {

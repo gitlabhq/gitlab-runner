@@ -54,23 +54,23 @@ func (_c *mockLogProcessor_Finalize_Call) RunAndReturn(run func()) *mockLogProce
 }
 
 // Process provides a mock function with given fields: ctx
-func (_m *mockLogProcessor) Process(ctx context.Context) (<-chan string, <-chan error) {
+func (_m *mockLogProcessor) Process(ctx context.Context) (<-chan logLineData, <-chan error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Process")
 	}
 
-	var r0 <-chan string
+	var r0 <-chan logLineData
 	var r1 <-chan error
-	if rf, ok := ret.Get(0).(func(context.Context) (<-chan string, <-chan error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (<-chan logLineData, <-chan error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) <-chan string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) <-chan logLineData); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan string)
+			r0 = ret.Get(0).(<-chan logLineData)
 		}
 	}
 
@@ -103,12 +103,12 @@ func (_c *mockLogProcessor_Process_Call) Run(run func(ctx context.Context)) *moc
 	return _c
 }
 
-func (_c *mockLogProcessor_Process_Call) Return(_a0 <-chan string, _a1 <-chan error) *mockLogProcessor_Process_Call {
+func (_c *mockLogProcessor_Process_Call) Return(_a0 <-chan logLineData, _a1 <-chan error) *mockLogProcessor_Process_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockLogProcessor_Process_Call) RunAndReturn(run func(context.Context) (<-chan string, <-chan error)) *mockLogProcessor_Process_Call {
+func (_c *mockLogProcessor_Process_Call) RunAndReturn(run func(context.Context) (<-chan logLineData, <-chan error)) *mockLogProcessor_Process_Call {
 	_c.Call.Return(run)
 	return _c
 }

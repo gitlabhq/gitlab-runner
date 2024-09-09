@@ -23,22 +23,34 @@ func (_m *mockJobDecoder) EXPECT() *mockJobDecoder_Expecter {
 	return &mockJobDecoder_Expecter{mock: &_m.Mock}
 }
 
-// Decode provides a mock function with given fields: _a0, _a1
-func (_m *mockJobDecoder) Decode(_a0 io.Reader, _a1 *common.Job) error {
-	ret := _m.Called(_a0, _a1)
+// Decode provides a mock function with given fields: _a0
+func (_m *mockJobDecoder) Decode(_a0 io.Reader) (*common.Job, error) {
+	ret := _m.Called(_a0)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Decode")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(io.Reader, *common.Job) error); ok {
-		r0 = rf(_a0, _a1)
+	var r0 *common.Job
+	var r1 error
+	if rf, ok := ret.Get(0).(func(io.Reader) (*common.Job, error)); ok {
+		return rf(_a0)
+	}
+	if rf, ok := ret.Get(0).(func(io.Reader) *common.Job); ok {
+		r0 = rf(_a0)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.Job)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(io.Reader) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // mockJobDecoder_Decode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Decode'
@@ -48,24 +60,23 @@ type mockJobDecoder_Decode_Call struct {
 
 // Decode is a helper method to define mock.On call
 //   - _a0 io.Reader
-//   - _a1 *common.Job
-func (_e *mockJobDecoder_Expecter) Decode(_a0 interface{}, _a1 interface{}) *mockJobDecoder_Decode_Call {
-	return &mockJobDecoder_Decode_Call{Call: _e.mock.On("Decode", _a0, _a1)}
+func (_e *mockJobDecoder_Expecter) Decode(_a0 interface{}) *mockJobDecoder_Decode_Call {
+	return &mockJobDecoder_Decode_Call{Call: _e.mock.On("Decode", _a0)}
 }
 
-func (_c *mockJobDecoder_Decode_Call) Run(run func(_a0 io.Reader, _a1 *common.Job)) *mockJobDecoder_Decode_Call {
+func (_c *mockJobDecoder_Decode_Call) Run(run func(_a0 io.Reader)) *mockJobDecoder_Decode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(io.Reader), args[1].(*common.Job))
+		run(args[0].(io.Reader))
 	})
 	return _c
 }
 
-func (_c *mockJobDecoder_Decode_Call) Return(_a0 error) *mockJobDecoder_Decode_Call {
-	_c.Call.Return(_a0)
+func (_c *mockJobDecoder_Decode_Call) Return(_a0 *common.Job, _a1 error) *mockJobDecoder_Decode_Call {
+	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *mockJobDecoder_Decode_Call) RunAndReturn(run func(io.Reader, *common.Job) error) *mockJobDecoder_Decode_Call {
+func (_c *mockJobDecoder_Decode_Call) RunAndReturn(run func(io.Reader) (*common.Job, error)) *mockJobDecoder_Decode_Call {
 	_c.Call.Return(run)
 	return _c
 }

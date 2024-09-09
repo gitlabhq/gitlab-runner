@@ -150,9 +150,46 @@ func (s *StatefulJobManager) log() logrus.FieldLogger {
 	return s.logger.WithField("job", s.job.ID)
 }
 
+type JobStateToEncoded[T any] interface {
+	ToEncoded() (T, error)
+}
+
+type JobStateFromEncoded[T any] interface {
+	FromEncoded() (T, error)
+}
+
 type Job struct {
 	*JobResponse
 	State *JobRuntimeState
+}
+
+var _ JobStateToEncoded[*EncodedJob] = (*Job)(nil)
+
+type EncodedJob struct {
+	*JobResponse
+	State *EncodedJobRuntimeState
+}
+
+var _ JobStateFromEncoded[*Job] = (*EncodedJob)(nil)
+
+func (j *Job) ToEncoded() (*EncodedJob, error) {
+	job := &EncodedJob{JobResponse: j.JobResponse}
+
+	state, err := j.State.ToEncoded()
+	if err != nil {
+		return nil, err
+	}
+	job.State = state
+
+	return job, nil
+}
+
+func (from *EncodedJob) FromEncoded() (*Job, error) {
+	job := NewJob(from.JobResponse)
+	var err error
+	job.State, err = from.State.FromEncoded()
+
+	return job, err
 }
 
 func NewJob(response *JobResponse) *Job {

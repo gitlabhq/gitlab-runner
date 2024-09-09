@@ -23,6 +23,7 @@ import (
 	"github.com/docker/cli/cli/config/types"
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/jpillora/backoff"
+	"gitlab.com/gitlab-org/gitlab-runner/store"
 	api "k8s.io/api/core/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -283,10 +284,7 @@ type executor struct {
 
 	windowsKernelVersion func() string
 
-	pod         *api.Pod
-	credentials *api.Secret
-	options     *kubernetesOptions
-	services    []api.Service
+	options *kubernetesOptions
 
 	configurationOverwrites *overwrites
 	pullManager             pull.Manager
@@ -295,7 +293,7 @@ type executor struct {
 
 	featureChecker featureChecker
 
-	newLogProcessor func() logProcessor
+	newLogProcessor func(offset int64) logProcessor
 
 	remoteProcessTerminated chan shells.StageCommandStatus
 
@@ -311,6 +309,8 @@ type executor struct {
 
 	podWatcher    podWatcher
 	newPodWatcher func(podWatcherConfig) podWatcher
+
+	state *executorStateMetadata
 }
 
 type podWatcher interface {
@@ -560,7 +560,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 		if errors.As(err, &imagePullErr) {
 			if s.pullManager.UpdatePolicyForContainer(attempt, imagePullErr) {
 				s.cleanupResources()
-				s.pod = nil
+				s.state.setPod(nil)
 				continue
 			}
 		}
@@ -594,8 +594,8 @@ func (s *executor) watchPodEvents() error {
 	s.eventsStream, err = retry.WithValueFn(s, func() (watch.Interface, error) {
 		// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 		// kubeAPI: events, watch, FF_PRINT_POD_EVENTS=true
-		return s.kubeClient.CoreV1().Events(s.pod.Namespace).Watch(context.Background(), metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("involvedObject.name=%s", s.pod.Name),
+		return s.kubeClient.CoreV1().Events(s.state.pod.Namespace).Watch(context.Background(), metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("involvedObject.name=%s", s.state.pod.Name),
 		})
 	}).Run()
 
@@ -623,15 +623,15 @@ func (s *executor) printPodEvents() {
 }
 
 func (s *executor) logPodWarningEvents(ctx context.Context, eventType string) {
-	if s.pod == nil {
+	if s.state.pod == nil {
 		return
 	}
 
 	events, err := retry.WithValueFn(s, func() (*api.EventList, error) {
 		// kubeAPI: events, list
-		return s.kubeClient.CoreV1().Events(s.pod.Namespace).
+		return s.kubeClient.CoreV1().Events(s.state.pod.Namespace).
 			List(ctx, metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.pod.Name, eventType),
+				FieldSelector: fmt.Sprintf("involvedObject.name=%s,type=%s", s.state.pod.Name, eventType),
 			})
 	}).Run()
 	if err != nil {
@@ -692,7 +692,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 
 //nolint:gocognit
 func (s *executor) setupPodLegacy(ctx context.Context) error {
-	if s.pod != nil {
+	if s.state.pod != nil {
 		return nil
 	}
 
@@ -770,7 +770,6 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 	))
 
 	podStatusCh := s.watchPodStatus(ctx, &podContainerStatusChecker{shouldCheckContainerFilter: isNotServiceContainer})
-
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
 		s.BuildLogger.Debugln(fmt.Sprintf("Container %q exited with error: %v", containerName, err))
@@ -781,15 +780,10 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodContainerError(err) {
-			return err
-		}
-		return &common.BuildError{Inner: err}
-
+		return s.handlePodStatusError(err)
 	case err := <-s.podWatcher.Errors():
 		// if we observe terminal pod errors via the pod watcher, we can exit immediately
 		return err
-
 	case <-ctx.Done():
 		s.remoteStageStatusMutex.Lock()
 		defer s.remoteStageStatusMutex.Unlock()
@@ -806,8 +800,17 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 			s.BuildLogger.Debugln("Job cancellation script exited with error:", err)
 		}
+
 		return fmt.Errorf("build aborted")
 	}
+}
+
+func (s *executor) handlePodStatusError(err error) error {
+	if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) {
+		return err
+	}
+
+	return &common.BuildError{Inner: err}
 }
 
 func (s *executor) stageCancellationScript(stage string) string {
@@ -835,7 +838,7 @@ func (s *executor) stageCancellationScript(stage string) string {
 }
 
 func (s *executor) ensurePodsConfigured(ctx context.Context) error {
-	if s.pod != nil {
+	if s.state.pod != nil {
 		return nil
 	}
 
@@ -862,7 +865,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		}
 	}
 
-	var out io.WriteCloser = buildlogger.NewNopCloser(io.Discard)
+	out := buildlogger.NewNopCloser(io.Discard)
 	if !s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
 		out = s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr)
 	}
@@ -887,14 +890,18 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 		}
 	}
 
+	s.initializeLogsProcessing(ctx)
+
+	return nil
+}
+
+func (s *executor) initializeLogsProcessing(ctx context.Context) {
 	// This starts the log processing, where we run the helper bin (in the helper container) to pull logs from the
 	// logfile.
 	go s.processLogs(ctx)
 
 	// This pulls the services containers logs directly from the kubeapi and pushes them into the buildlogger.
-	s.captureServiceContainersLogs(ctx, s.pod.Spec.Containers)
-
-	return nil
+	s.captureServiceContainersLogs(ctx, s.state.pod.Spec.Containers)
 }
 
 func (s *executor) buildInitContainers() ([]api.Container, error) {
@@ -924,7 +931,7 @@ func (s *executor) buildInitContainers() ([]api.Container, error) {
 }
 
 func (s *executor) waitForPod(ctx context.Context, writer io.WriteCloser) error {
-	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, writer, s.Config.Kubernetes, buildContainerName)
+	status, err := waitForPodRunning(ctx, s.kubeClient, s.state.pod, writer, s.Config.Kubernetes, buildContainerName)
 	if err != nil {
 		return fmt.Errorf("waiting for pod running: %w", err)
 	}
@@ -937,7 +944,7 @@ func (s *executor) waitForPod(ctx context.Context, writer io.WriteCloser) error 
 		return nil
 	}
 
-	if err := WaitForPodReachable(ctx, s.kubeClient, s.pod, s.Config.Kubernetes); err != nil {
+	if err := WaitForPodReachable(ctx, s.kubeClient, s.state.pod, s.Config.Kubernetes); err != nil {
 		return fmt.Errorf("pod failed to become attachable %v", err)
 	}
 
@@ -1118,7 +1125,7 @@ func (s *executor) buildRedirectionCmd(shell string) string {
 }
 
 func (s *executor) processLogs(ctx context.Context) {
-	processor := s.newLogProcessor()
+	processor := s.newLogProcessor(s.state.offset)
 	logsCh, errCh := processor.Process(ctx)
 
 	// todo: update kubernetes log processor to support separate stdout/stderr streams
@@ -1131,7 +1138,9 @@ func (s *executor) processLogs(ctx context.Context) {
 			if !ok {
 				return
 			}
-			s.forwardLogLine(logger, line)
+
+			s.state.setOffset(line.offset)
+			s.forwardLogLine(logger, line.line)
 		case err, ok := <-errCh:
 			if !ok {
 				continue
@@ -1146,6 +1155,26 @@ func (s *executor) processLogs(ctx context.Context) {
 			s.remoteProcessTerminated <- shells.StageCommandStatus{CommandExitCode: &exitCode}
 		}
 	}
+}
+
+func (s *executor) listenForCommandExit() chan error {
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(errCh)
+
+		exitStatus := <-s.remoteProcessTerminated
+		s.BuildLogger.Debugln("Remote process exited with the status:", exitStatus)
+
+		// CommandExitCode is guaranteed to be non nil when sent over the remoteProcessTerminated channel
+		if *exitStatus.CommandExitCode == 0 {
+			errCh <- nil
+			return
+		}
+
+		errCh <- &commandTerminatedError{exitCode: *exitStatus.CommandExitCode}
+	}()
+
+	return errCh
 }
 
 func (s *executor) forwardLogLine(w io.Writer, line string) {
@@ -1254,7 +1283,7 @@ func (s *executor) Finish(err error) {
 	if IsKubernetesPodNotFoundError(err) {
 		// Avoid an additional error message when trying to
 		// cleanup a pod that we know no longer exists
-		s.pod = nil
+		s.state.setPod(nil)
 	}
 
 	s.AbstractExecutor.Finish(err)
@@ -1282,12 +1311,12 @@ func (s *executor) cleanupResources() {
 	ctx, cancel := context.WithTimeout(context.Background(), s.Config.Kubernetes.GetCleanupResourcesTimeout())
 	defer cancel()
 
-	if s.pod != nil {
+	if s.state.pod != nil {
 		kubeRequest := retry.WithFn(s, func() error {
 			// kubeAPI: pods, delete
 			return s.kubeClient.CoreV1().
-				Pods(s.pod.Namespace).
-				Delete(ctx, s.pod.Name, metav1.DeleteOptions{
+				Pods(s.state.pod.Namespace).
+				Delete(ctx, s.state.pod.Name, metav1.DeleteOptions{
 					GracePeriodSeconds: s.Config.Kubernetes.CleanupGracePeriodSeconds,
 					PropagationPolicy:  &PropagationPolicy,
 				})
@@ -1298,12 +1327,12 @@ func (s *executor) cleanupResources() {
 		}
 	}
 
-	if s.credentials != nil && len(s.credentials.OwnerReferences) == 0 {
+	if s.state.credentials != nil && len(s.state.credentials.OwnerReferences) == 0 {
 		kubeRequest := retry.WithFn(s, func() error {
 			// kubeAPI: secrets, delete
 			return s.kubeClient.CoreV1().
 				Secrets(s.configurationOverwrites.namespace).
-				Delete(ctx, s.credentials.Name, metav1.DeleteOptions{
+				Delete(ctx, s.state.credentials.Name, metav1.DeleteOptions{
 					GracePeriodSeconds: s.Config.Kubernetes.CleanupGracePeriodSeconds,
 				})
 		})
@@ -1867,10 +1896,15 @@ func (s *executor) setupCredentials(ctx context.Context) error {
 	secret.Data = map[string][]byte{}
 	secret.Data[api.DockerConfigKey] = dockerCfgContent
 
-	s.credentials, err = retry.WithValueFn(s, func() (*api.Secret, error) {
+	credentials, err := retry.WithValueFn(s, func() (*api.Secret, error) {
 		return s.requestSecretCreation(ctx, &secret, s.configurationOverwrites.namespace)
 	}).Run()
-	return err
+	if err != nil {
+		return err
+	}
+	s.state.setCredentials(credentials)
+
+	return nil
 }
 
 func (s *executor) requestSecretCreation(
@@ -1916,6 +1950,7 @@ func (s *executor) setupBuildNamespace(ctx context.Context) error {
 	if !s.Config.Kubernetes.NamespacePerJob {
 		return nil
 	}
+
 	s.BuildLogger.Debugln("Setting up build namespace")
 
 	nsconfig := api.Namespace{
@@ -1930,7 +1965,8 @@ func (s *executor) setupBuildNamespace(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create namespace: %w", err)
 	}
-	return err
+
+	return nil
 }
 
 func (s *executor) teardownBuildNamespace(ctx context.Context) error {
@@ -1983,12 +2019,13 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 
 	s.BuildLogger.Debugln("Creating build pod")
 
-	s.pod, err = retry.WithValueFn(s, func() (*api.Pod, error) {
+	pod, err := retry.WithValueFn(s, func() (*api.Pod, error) {
 		return s.requestPodCreation(ctx, &podConfig, s.configurationOverwrites.namespace)
 	}).Run()
 	if err != nil {
 		return err
 	}
+	s.state.setPod(pod)
 
 	ownerReferences := s.buildPodReferences()
 	err = s.setOwnerReferencesForResources(ctx, ownerReferences)
@@ -1996,7 +2033,12 @@ func (s *executor) setupBuildPod(ctx context.Context, initContainers []api.Conta
 		return fmt.Errorf("error setting ownerReferences: %w", err)
 	}
 
-	s.services, err = s.makePodProxyServices(ctx, ownerReferences)
+	services, err := s.makePodProxyServices(ctx, ownerReferences)
+	if err != nil {
+		return err
+	}
+	s.state.setServices(services)
+
 	return err
 }
 
@@ -2152,8 +2194,8 @@ func (s *executor) prepareImagePullSecrets() []api.LocalObjectReference {
 		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: imagePullSecret})
 	}
 
-	if s.credentials != nil {
-		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.credentials.Name})
+	if s.state.credentials != nil {
+		imagePullSecrets = append(imagePullSecrets, api.LocalObjectReference{Name: s.state.credentials.Name})
 	}
 
 	return imagePullSecrets
@@ -2458,13 +2500,12 @@ func doPodSpecMerge(original []byte, spec common.KubernetesPodSpec) ([]byte, err
 }
 
 func (s *executor) setOwnerReferencesForResources(ctx context.Context, ownerReferences []metav1.OwnerReference) error {
-	if s.credentials == nil {
+	if s.state.credentials == nil {
 		return nil
 	}
 
-	var err error
-	s.credentials, err = retry.WithValueFn(s, func() (*api.Secret, error) {
-		credentials := s.credentials.DeepCopy()
+	credentials, err := retry.WithValueFn(s, func() (*api.Secret, error) {
+		credentials := s.state.credentials.DeepCopy()
 		credentials.SetOwnerReferences(ownerReferences)
 
 		// kubeAPI: secrets, update
@@ -2472,8 +2513,12 @@ func (s *executor) setOwnerReferencesForResources(ctx context.Context, ownerRefe
 			Secrets(s.configurationOverwrites.namespace).
 			Update(ctx, credentials, metav1.UpdateOptions{})
 	}).Run()
+	if err != nil {
+		return err
+	}
+	s.state.setCredentials(credentials)
 
-	return err
+	return nil
 }
 
 func (s *executor) buildPodReferences() []metav1.OwnerReference {
@@ -2481,8 +2526,8 @@ func (s *executor) buildPodReferences() []metav1.OwnerReference {
 		{
 			APIVersion: apiVersion,
 			Kind:       ownerReferenceKind,
-			Name:       s.pod.GetName(),
-			UID:        s.pod.GetUID(),
+			Name:       s.state.pod.GetName(),
+			UID:        s.state.pod.GetUID(),
 		},
 	}
 }
@@ -2645,7 +2690,7 @@ func (s *executor) createKubernetesService(
 
 	var err error
 	service, err = retry.WithValueFn(s, func() (*api.Service, error) {
-		return s.requestServiceCreation(ctx, service, s.pod.Namespace)
+		return s.requestServiceCreation(ctx, service, s.state.pod.Namespace)
 	}).Run()
 
 	if err == nil {
@@ -2745,7 +2790,7 @@ func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck podSt
 	pod, err := retry.WithValueFn(s, func() (*api.Pod, error) {
 		// kubeAPI: pods, get
 		return s.kubeClient.CoreV1().
-			Pods(s.pod.Namespace).Get(ctx, s.pod.Name, metav1.GetOptions{})
+			Pods(s.state.pod.Namespace).Get(ctx, s.state.pod.Name, metav1.GetOptions{})
 	}).Run()
 	if IsKubernetesPodNotFoundError(err) {
 		return err
@@ -2759,7 +2804,7 @@ func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck podSt
 
 	if pod.Status.Phase != api.PodRunning {
 		return &podPhaseError{
-			name:  s.pod.Name,
+			name:  s.state.pod.Name,
 			phase: pod.Status.Phase,
 		}
 	}
@@ -2773,13 +2818,11 @@ func (s *executor) runInContainer(
 	name string,
 	command []string,
 ) <-chan error {
-	errCh := make(chan error, 1)
+	errCh := s.listenForCommandExit()
 	go func() {
-		defer close(errCh)
-
 		attach := AttachOptions{
-			PodName:       s.pod.Name,
-			Namespace:     s.pod.Namespace,
+			PodName:       s.state.pod.Name,
+			Namespace:     s.state.pod.Namespace,
 			ContainerName: name,
 			Command:       command,
 
@@ -2799,17 +2842,6 @@ func (s *executor) runInContainer(
 		if err := kubeRequest.Run(); err != nil {
 			errCh <- err
 		}
-
-		exitStatus := <-s.remoteProcessTerminated
-		s.BuildLogger.Debugln("Remote process exited with the status:", exitStatus)
-
-		// CommandExitCode is guaranteed to be non nil when sent over the remoteProcessTerminated channel
-		if *exitStatus.CommandExitCode == 0 {
-			errCh <- nil
-			return
-		}
-
-		errCh <- &commandTerminatedError{exitCode: *exitStatus.CommandExitCode}
 	}()
 
 	return errCh
@@ -2827,8 +2859,8 @@ func (s *executor) runInContainerWithExec(
 		defer close(errCh)
 
 		exec := ExecOptions{
-			PodName:       s.pod.Name,
-			Namespace:     s.pod.Namespace,
+			PodName:       s.state.pod.Name,
+			Namespace:     s.state.pod.Namespace,
 			ContainerName: name,
 			Command:       command,
 			In:            strings.NewReader(script),
@@ -3061,13 +3093,13 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 	}
 
 	podLogs, err := retry.WithValueFn(s, func() (io.ReadCloser, error) {
-		err := waitForRunningContainer(ctx, s.kubeClient, s.Config.Kubernetes.GetPollTimeout(), s.pod.Namespace, s.pod.Name, containerName)
+		err := waitForRunningContainer(ctx, s.kubeClient, s.Config.Kubernetes.GetPollTimeout(), s.state.pod.Namespace, s.state.pod.Name, containerName)
 		if err != nil {
 			return nil, err
 		}
 
 		// kubeAPI: pods/log, get, list, FF_KUBERNETES_HONOR_ENTRYPOINT=true,FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
-		return s.kubeClient.CoreV1().Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
+		return s.kubeClient.CoreV1().Pods(s.state.pod.Namespace).GetLogs(s.state.pod.Name, &podLogOpts).Stream(ctx)
 	}).Run()
 	if err != nil {
 		return fmt.Errorf("failed to open log stream for container %s: %w", containerName, err)
@@ -3206,6 +3238,7 @@ func newExecutor() *executor {
 		},
 		getKubeConfig:        getKubeClientConfig,
 		windowsKernelVersion: os_helpers.LocalKernelVersion,
+		state:                &executorStateMetadata{},
 	}
 
 	type resourceCheckResult struct {
@@ -3235,15 +3268,16 @@ func newExecutor() *executor {
 		return watchers.NewPodWatcher(c.ctx, c.logger, c.kubeClient, c.namespace, c.labels, c.maxSyncDuration)
 	}
 
-	e.newLogProcessor = func() logProcessor {
+	e.newLogProcessor = func(offset int64) logProcessor {
 		return newKubernetesLogProcessor(
 			e.kubeClient,
 			e.kubeConfig,
 			&backoff.Backoff{Min: time.Second, Max: 30 * time.Second},
 			e.Build.Log(),
+			offset,
 			kubernetesLogProcessorPodConfig{
-				namespace:          e.pod.Namespace,
-				pod:                e.pod.Name,
+				namespace:          e.state.pod.Namespace,
+				pod:                e.state.pod.Name,
 				container:          helperContainerName,
 				logPath:            e.logFile(),
 				waitLogFileTimeout: waitLogFileTimeout,
@@ -3275,5 +3309,6 @@ func init() {
 		},
 		FeaturesUpdater:  featuresFn,
 		DefaultShellName: executorOptions.Shell.Shell,
+		StoreProvider:    common.NewCompoundStoreProvider(store.FileProvider()),
 	})
 }

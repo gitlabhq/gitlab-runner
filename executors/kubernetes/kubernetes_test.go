@@ -1078,9 +1078,9 @@ func TestCleanup(t *testing.T) {
 					return test.ClientFunc(t, req)
 				}),
 			)
-			ex.pod = test.Pod
-			ex.credentials = test.Credentials
-			ex.services = test.Services
+			ex.state.pod = test.Pod
+			ex.state.credentials = test.Credentials
+			ex.state.services = test.Services
 			ex.configurationOverwrites = &overwrites{namespace: "test-ns"}
 
 			errored := false
@@ -2981,6 +2981,7 @@ func TestPrepare(t *testing.T) {
 			e.options.Image.PullPolicies = nil
 			e.newPodWatcher = nil
 			e.podWatcher = nil
+			e.state = nil
 
 			if test.Expected.Config.IsProxyExec() {
 				test.Expected.helperImageInfo.Cmd = append(
@@ -3811,7 +3812,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			PrepareFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				e.credentials = &api.Secret{
+				e.state.credentials = &api.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "job-credentials",
 					},
@@ -4516,7 +4517,7 @@ func TestSetupBuildPod(t *testing.T) {
 				// We reset it to empty string before the assert
 				// Everything else should be as expected.
 				srvs := make([]api.Service, 0)
-				for _, s := range e.services {
+				for _, s := range e.state.services {
 					s.ObjectMeta.Name = s.ObjectMeta.Name[:len(s.ObjectMeta.Name)-k8sResourcesNameSuffixLength-1]
 					srvs = append(srvs, *s.DeepCopy())
 				}
@@ -4545,7 +4546,7 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				assert.Equal(
 					t, "build",
-					e.services[0].GetName()[:len(e.services[0].GetName())-k8sResourcesNameSuffixLength-1],
+					e.state.services[0].GetName()[:len(e.state.services[0].GetName())-k8sResourcesNameSuffixLength-1],
 				)
 			},
 		},
@@ -4578,7 +4579,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				for _, service := range e.services {
+				for _, service := range e.state.services {
 					assert.Equal(t, map[string]string{"job.runner.gitlab.com/pod": "runner--project-0-concurrent-0"}, service.Spec.Selector)
 				}
 			},
@@ -4610,7 +4611,7 @@ func TestSetupBuildPod(t *testing.T) {
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
 				assert.Equal(
 					t, "custom-name",
-					e.services[0].GetName()[:len(e.services[0].GetName())-k8sResourcesNameSuffixLength-1],
+					e.state.services[0].GetName()[:len(e.state.services[0].GetName())-k8sResourcesNameSuffixLength-1],
 				)
 			},
 		},
@@ -4699,16 +4700,16 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				sort.Slice(e.services, func(i, j int) bool {
-					return e.services[i].GetName() > e.services[j].GetName()
+				sort.Slice(e.state.services, func(i, j int) bool {
+					return e.state.services[i].GetName() > e.state.services[j].GetName()
 				})
 				assert.Equal(
 					t, "service",
-					e.services[0].GetName()[:len(e.services[0].GetName())-k8sResourcesNameSuffixLength-1],
+					e.state.services[0].GetName()[:len(e.state.services[0].GetName())-k8sResourcesNameSuffixLength-1],
 				)
 				assert.Equal(
 					t, "name-non-compatble",
-					e.services[1].GetName()[:len(e.services[1].GetName())-k8sResourcesNameSuffixLength-1],
+					e.state.services[1].GetName()[:len(e.state.services[1].GetName())-k8sResourcesNameSuffixLength-1],
 				)
 
 				assert.NotEmpty(t, e.ProxyPool["service"])
@@ -5557,13 +5558,13 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				require.Len(t, e.services[0].OwnerReferences, 1)
+				require.Len(t, e.state.services[0].OwnerReferences, 1)
 
-				ownerReference := e.services[0].OwnerReferences[0]
+				ownerReference := e.state.services[0].OwnerReferences[0]
 				assert.Equal(t, apiVersion, ownerReference.APIVersion)
 				assert.Equal(t, ownerReferenceKind, ownerReference.Kind)
-				assert.Equal(t, e.pod.GetName(), ownerReference.Name)
-				assert.Equal(t, e.pod.GetUID(), ownerReference.UID)
+				assert.Equal(t, e.state.pod.GetName(), ownerReference.Name)
+				assert.Equal(t, e.state.pod.GetUID(), ownerReference.UID)
 			},
 		},
 		"supports adding ownerReferences to a credentials": {
@@ -5593,13 +5594,13 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				require.Len(t, e.credentials.OwnerReferences, 1)
+				require.Len(t, e.state.credentials.OwnerReferences, 1)
 
-				ownerReference := e.credentials.OwnerReferences[0]
+				ownerReference := e.state.credentials.OwnerReferences[0]
 				assert.Equal(t, "v1", ownerReference.APIVersion)
 				assert.Equal(t, "Pod", ownerReference.Kind)
-				assert.Equal(t, e.pod.GetName(), ownerReference.Name)
-				assert.Equal(t, e.pod.GetUID(), ownerReference.UID)
+				assert.Equal(t, e.state.pod.GetName(), ownerReference.Name)
+				assert.Equal(t, e.state.pod.GetUID(), ownerReference.UID)
 			},
 		},
 		"supports failure to set owner-dependent relationship": {
@@ -5649,7 +5650,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.EqualValues(
 					t,
 					test.RunnerConfig.Kubernetes.PodTerminationGracePeriodSeconds,
-					e.pod.Spec.TerminationGracePeriodSeconds,
+					e.state.pod.Spec.TerminationGracePeriodSeconds,
 				)
 			},
 		},
@@ -5668,7 +5669,7 @@ func TestSetupBuildPod(t *testing.T) {
 				assert.EqualValues(
 					t,
 					*test.RunnerConfig.Kubernetes.RuntimeClassName,
-					*e.pod.Spec.RuntimeClassName,
+					*e.state.pod.Spec.RuntimeClassName,
 				)
 			},
 		},
@@ -5679,7 +5680,7 @@ func TestSetupBuildPod(t *testing.T) {
 				},
 			},
 			VerifyExecutorFn: func(t *testing.T, test setupBuildPodTestDef, e *executor) {
-				assert.Nil(t, e.pod.Spec.RuntimeClassName)
+				assert.Nil(t, e.state.pod.Spec.RuntimeClassName)
 			},
 		},
 		"service account and pull image secret set": {
@@ -6049,27 +6050,27 @@ func TestPodWatcherGracefulDegrade(t *testing.T) {
 
 func TestProcessLogs(t *testing.T) {
 	tests := map[string]struct {
-		lineCh           chan string
+		lineCh           chan logLineData
 		errCh            chan error
 		expectedExitCode int
 		expectedScript   string
-		run              func(ch chan string, errCh chan error)
+		run              func(ch chan logLineData, errCh chan error)
 	}{
 		"Successful Processing": {
-			lineCh:           make(chan string, 2),
+			lineCh:           make(chan logLineData, 2),
 			errCh:            make(chan error, 1),
 			expectedExitCode: 1,
 			expectedScript:   "script",
-			run: func(ch chan string, errCh chan error) {
-				ch <- getCommandExitStatus(1, "script")
+			run: func(ch chan logLineData, errCh chan error) {
+				ch <- logLineData{line: getCommandExitStatus(1, "script")}
 			},
 		},
 		"Reattach failure with CodeExitError": {
-			lineCh:           make(chan string, 1),
+			lineCh:           make(chan logLineData, 1),
 			errCh:            make(chan error, 1),
 			expectedExitCode: 2,
 			expectedScript:   "",
-			run: func(ch chan string, errCh chan error) {
+			run: func(ch chan logLineData, errCh chan error) {
 				errCh <- exec.CodeExitError{
 					Err:  fmt.Errorf("giving up reattaching to log"),
 					Code: 2,
@@ -6077,31 +6078,31 @@ func TestProcessLogs(t *testing.T) {
 			},
 		},
 		"Reattach failure with EOF error": {
-			lineCh:           make(chan string, 1),
+			lineCh:           make(chan logLineData, 1),
 			errCh:            make(chan error, 1),
 			expectedExitCode: unknownLogProcessorExitCode,
 			expectedScript:   "",
-			run: func(ch chan string, errCh chan error) {
+			run: func(ch chan logLineData, errCh chan error) {
 				errCh <- fmt.Errorf("Custom error for test with EOF %s", io.EOF)
 			},
 		},
 		"Reattach failure with custom error": {
-			lineCh:           make(chan string, 1),
+			lineCh:           make(chan logLineData, 1),
 			errCh:            make(chan error, 1),
 			expectedExitCode: unknownLogProcessorExitCode,
 			expectedScript:   "",
-			run: func(ch chan string, errCh chan error) {
+			run: func(ch chan logLineData, errCh chan error) {
 				errCh <- errors.New("Custom error")
 			},
 		},
 		"Error channel closed before line channel": {
-			lineCh:           make(chan string, 2),
+			lineCh:           make(chan logLineData, 2),
 			errCh:            make(chan error, 1),
 			expectedExitCode: 3,
 			expectedScript:   "script",
-			run: func(ch chan string, errCh chan error) {
+			run: func(ch chan logLineData, errCh chan error) {
 				close(errCh)
-				ch <- getCommandExitStatus(3, "script")
+				ch <- logLineData{line: getCommandExitStatus(3, "script")}
 				close(ch)
 			},
 		},
@@ -6131,19 +6132,19 @@ func TestProcessLogs(t *testing.T) {
 			mockLogProcessor := new(mockLogProcessor)
 			defer mockLogProcessor.AssertExpectations(t)
 
-			tc.lineCh <- "line\n"
+			tc.lineCh <- logLineData{line: "line\n"}
 			mockLogProcessor.On("Process", mock.Anything).
-				Return((<-chan string)(tc.lineCh), (<-chan error)(tc.errCh)).
+				Return((<-chan logLineData)(tc.lineCh), (<-chan error)(tc.errCh)).
 				Once()
 
 			tc.run(tc.lineCh, tc.errCh)
 
 			e := newExecutor()
 			e.BuildLogger = buildlogger.New(mockTrace, logrus.WithFields(logrus.Fields{}), buildlogger.Options{})
-			e.pod = &api.Pod{}
-			e.pod.Name = "pod_name"
-			e.pod.Namespace = "namespace"
-			e.newLogProcessor = func() logProcessor {
+			e.state.pod = &api.Pod{}
+			e.state.pod.Name = "pod_name"
+			e.state.pod.Namespace = "namespace"
+			e.newLogProcessor = func(_ int64) logProcessor {
 				return mockLogProcessor
 			}
 
@@ -6389,9 +6390,9 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 				PollTimeout:  2,
 			}
 			e.kubeClient = client
-			e.pod = &api.Pod{}
-			e.pod.Name = "pod"
-			e.pod.Namespace = "namespace"
+			e.state.pod = &api.Pod{}
+			e.state.pod.Name = "pod"
+			e.state.pod.Namespace = "namespace"
 
 			tt.verifyErr(t, e.watchPodStatus(ctx, &podContainerStatusChecker{}))
 		})
@@ -6419,7 +6420,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 	offset := 15
 
 	e := newExecutor()
-	e.pod = pod
+	e.state.pod = pod
 	e.Build = &common.Build{
 		Runner: new(common.RunnerConfig),
 	}
@@ -6448,7 +6449,7 @@ func TestNewLogStreamerStream(t *testing.T) {
 		On("Execute", mock.Anything, http.MethodPost, urlMatcher, mock.Anything, nil, output, output, false).
 		Return(abortErr)
 
-	p, ok := e.newLogProcessor().(*kubernetesLogProcessor)
+	p, ok := e.newLogProcessor(0).(*kubernetesLogProcessor)
 	require.True(t, ok)
 	p.logsOffset = int64(offset)
 
@@ -7248,7 +7249,7 @@ func Test_Executor_captureContainerLogs(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			e := newExecutor()
-			e.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
+			e.state.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
 
 			buf, err := trace.New()
 			require.NoError(t, err)
@@ -7331,7 +7332,7 @@ func Test_Executor_captureServiceContainersLogs(t *testing.T) {
 
 	version, _ := testVersionAndCodec()
 	e := newExecutor()
-	e.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
+	e.state.pod = &api.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "test-ns"}}
 	e.kubeClient = testKubernetesClient(version, fake.CreateHTTPClient(fakeRoundTripper))
 	e.BuildLogger = buildlogger.New(&common.Trace{Writer: &logs}, logrus.NewEntry(lentry), buildlogger.Options{})
 

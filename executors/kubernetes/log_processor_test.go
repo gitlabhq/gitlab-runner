@@ -64,7 +64,7 @@ func TestNewKubernetesLogProcessor(t *testing.T) {
 	testBackoff := new(backoff.Backoff)
 	logger := logrus.New()
 	clientConfig := new(restclient.Config)
-	p := newKubernetesLogProcessor(client, clientConfig, testBackoff, logger, kubernetesLogProcessorPodConfig{
+	p := newKubernetesLogProcessor(client, clientConfig, testBackoff, logger, 0, kubernetesLogProcessorPodConfig{
 		namespace: "namespace",
 		pod:       "pod",
 		container: "container",
@@ -140,7 +140,7 @@ func TestReadLogsBrokenReader(t *testing.T) {
 	logger.SetLevel(logrus.DebugLevel)
 	proc.logger = logger
 
-	output := make(chan string)
+	output := make(chan logLineData)
 	err := proc.readLogs(context.Background(), newBrokenReader(new(brokenReaderError)), output)
 
 	assert.ErrorIs(t, err, new(brokenReaderError))
@@ -153,7 +153,7 @@ func TestProcessedOffsetSet(t *testing.T) {
 	logger.SetLevel(logrus.DebugLevel)
 	proc.logger = logger
 
-	ch := make(chan string)
+	ch := make(chan logLineData)
 	go func() {
 		for range ch {
 		}
@@ -230,7 +230,7 @@ func TestParseLogs(t *testing.T) {
 func TestListenReadLines(t *testing.T) {
 	line1 := "line 1"
 	line2 := "line 2"
-	expectedLines := []string{line1 + "\n", line2 + "\n"}
+	expectedLines := []logLineData{{line: line1 + "\n", offset: 10}, {line: line2 + "\n", offset: 20}}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -271,7 +271,7 @@ func TestListenReadLines(t *testing.T) {
 	processor.logStreamer = mockLogStreamer
 
 	ch, errCh := processor.Process(ctx)
-	receivedLogs := make([]string, 0)
+	receivedLogs := make([]logLineData, 0)
 	for log := range ch {
 		wg.Done()
 		receivedLogs = append(receivedLogs, log)
@@ -409,7 +409,7 @@ func TestAttachReconnectReadLogs(t *testing.T) {
 	processor.Finalize()
 }
 
-func drainProcessLogsChannels(ch <-chan string, errCh <-chan error) error {
+func drainProcessLogsChannels(ch <-chan logLineData, errCh <-chan error) error {
 	var firstErr error
 	for {
 		select {

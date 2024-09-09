@@ -73,7 +73,7 @@ func TestProxyRequestError(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ex := newExecutor()
 			ex.AbstractExecutor.Context = context.Background()
-			ex.pod = &api.Pod{ObjectMeta: objectInfo}
+			ex.state.pod = &api.Pod{ObjectMeta: objectInfo}
 			ex.kubeClient = testKubernetesClient(
 				version,
 				fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
@@ -142,7 +142,7 @@ func TestProxyRequestHTTP(t *testing.T) {
 
 	ex := newExecutor()
 	ex.AbstractExecutor.Context = context.Background()
-	ex.pod = &api.Pod{ObjectMeta: objectInfo}
+	ex.state.pod = &api.Pod{ObjectMeta: objectInfo}
 
 	tests := map[string]struct {
 		podStatus          api.PodPhase
@@ -248,7 +248,7 @@ func TestProxyRequestHTTPError(t *testing.T) {
 
 	ex := newExecutor()
 	ex.AbstractExecutor.Context = context.Background()
-	ex.pod = &api.Pod{ObjectMeta: objectInfo}
+	ex.state.pod = &api.Pod{ObjectMeta: objectInfo}
 
 	proxySettings := proxy.Settings{
 		ServiceName: "service-name",
@@ -365,7 +365,7 @@ func TestProxyRequestWebsockets(t *testing.T) {
 	ex.AbstractExecutor.Config.RunnerSettings.Kubernetes = &common.KubernetesConfig{
 		Host: "localhost",
 	}
-	ex.pod = &api.Pod{ObjectMeta: objectInfo}
+	ex.state.pod = &api.Pod{ObjectMeta: objectInfo}
 	ex.configurationOverwrites = &overwrites{}
 
 	tests := map[string]struct {
