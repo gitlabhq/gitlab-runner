@@ -6,8 +6,9 @@ outpkg: "{{.PackageName}}"
 filename: "mock_{{.InterfaceName}}.go"
 all: True
 packages:
- gitlab.com/gitlab-org/gitlab-runner:
+  gitlab.com/gitlab-org/gitlab-runner:
     config:
       recursive: True
       exclude:
         - executors/internal/autoscaler
+        - common/buildtest_fault_tolerance

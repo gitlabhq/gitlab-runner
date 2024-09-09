@@ -106,6 +106,7 @@ type RunCommand struct {
 
 	failuresCollector    *prometheus_helper.FailuresCollector
 	apiRequestsCollector prometheus.Collector
+	jobTraceProvider     common.JobTraceProviderFunc
 
 	sessionServer *session.Server
 
@@ -856,6 +857,7 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 			Debugln("Failed to request job: 'request_concurrency' already reached, see https://docs.gitlab.com/runner/configuration/advanced-configuration.html#the-runners-section")
 		return nil
 	}
+	defer mr.buildsHelper.releaseRequest(runner)
 
 	mr.log().WithField("runner", runner.ShortDescription()).Debug("Acquiring executor from provider")
 	executorData, err := provider.Acquire(runner)
@@ -871,34 +873,39 @@ func (mr *RunCommand) processRunner(id int, runner *common.RunnerConfig, runners
 }
 
 func (mr *RunCommand) processBuildOnRunner(
-	runner *common.RunnerConfig,
+	runnerConfig *common.RunnerConfig,
 	runners chan *common.RunnerConfig,
-	provider common.ExecutorProvider,
+	executorProvider common.ExecutorProvider,
 	executorData common.ExecutorData,
 ) error {
-	buildSession, sessionInfo, err := mr.createSession(provider)
+	buildSession, sessionInfo, err := mr.createSession(executorProvider)
 	if err != nil {
-		// Release job request
-		mr.buildsHelper.releaseRequest(runner)
 		return err
 	}
 
-	// Receive a new build
-	trace, jobData, err := mr.requestJob(runner, sessionInfo)
-	// Release job request
-	mr.buildsHelper.releaseRequest(runner)
-	if err != nil || jobData == nil {
+	store, err := executorProvider.GetStore(runnerConfig)
+	if err != nil {
+		return err
+	}
+
+	manager := common.NewStatefulJobManager(
+		mr.network,
+		store,
+		mr.jobTraceProvider,
+		runnerConfig,
+	)
+
+	// Receive a new job
+	trace, job, err := mr.requestJob(runnerConfig, sessionInfo, manager)
+	if err != nil || job == nil {
 		return err
 	}
 	defer func() { mr.traceOutcome(trace, err) }()
 
-	// Create a new build
-	build, err := common.NewBuild(*jobData, runner, mr.abortBuilds, executorData)
+	build, err := mr.assembleBuild(runnerConfig, job, store, buildSession, executorData)
 	if err != nil {
 		return err
 	}
-	build.Session = buildSession
-	build.ArtifactUploader = mr.network.UploadRawArtifacts
 
 	trace.SetDebugModeEnabled(build.IsDebugModeEnabled())
 
@@ -919,9 +926,9 @@ func (mr *RunCommand) processBuildOnRunner(
 
 			mr.usageLoggerStore(usage_log.Record{
 				Runner: usage_log.Runner{
-					ID:       runner.ShortDescription(),
-					Name:     runner.Name,
-					SystemID: runner.GetSystemID(),
+					ID:       runnerConfig.ShortDescription(),
+					Name:     runnerConfig.Name,
+					SystemID: runnerConfig.GetSystemID(),
 				},
 				Job: usage_log.Job{
 					URL:             build.JobURL(),
@@ -937,10 +944,34 @@ func (mr *RunCommand) processBuildOnRunner(
 
 	// Process the same runner by different worker again
 	// to speed up taking the builds
-	mr.requeueRunner(runner, runners)
+	mr.requeueRunner(runnerConfig, runners)
 
 	// Process a build
 	return build.Run(mr.getConfig(), trace)
+}
+
+func (mr *RunCommand) assembleBuild(
+	runnerConfig *common.RunnerConfig,
+	job *common.Job,
+	store common.JobStore,
+	buildSession *session.Session,
+	executorData common.ExecutorData,
+) (*common.Build, error) {
+	// Attempt to perform a deep copy of the RunnerConfig
+	runnerConfigCopy, err := runnerConfig.DeepCopy()
+	if err != nil {
+		return nil, fmt.Errorf("deep copy of runner config failed: %w", err)
+	}
+
+	// Create a new build
+	build := common.NewBuild(job, runnerConfigCopy)
+	build.JobStore = store
+	build.SystemInterrupt = mr.abortBuilds
+	build.ExecutorData = executorData
+	build.Session = buildSession
+	build.ArtifactUploader = mr.network.UploadRawArtifacts
+
+	return build, nil
 }
 
 func (mr *RunCommand) traceOutcome(trace common.JobTrace, err error) {
@@ -1012,21 +1043,21 @@ func (mr *RunCommand) createSession(provider common.ExecutorProvider) (*session.
 func (mr *RunCommand) requestJob(
 	runner *common.RunnerConfig,
 	sessionInfo *common.SessionInfo,
-) (common.JobTrace, *common.JobResponse, error) {
-	jobData, healthy := mr.doJobRequest(context.Background(), runner, sessionInfo)
+	manager common.JobManager,
+) (common.JobTrace, *common.Job, error) {
+	job, healthy := mr.doJobRequest(context.Background(), manager, sessionInfo)
 	mr.healthHelper.markHealth(runner, healthy)
-
-	if jobData == nil {
+	if job == nil {
 		return nil, nil, nil
 	}
 
 	// Make sure to always close output
 	jobCredentials := &common.JobCredentials{
-		ID:    jobData.ID,
-		Token: jobData.Token,
+		ID:    job.ID,
+		Token: job.Token,
 	}
 
-	trace, err := mr.network.ProcessJob(*runner, jobCredentials)
+	trace, err := manager.ProcessJob(jobCredentials)
 	if err != nil {
 		jobInfo := common.UpdateJobInfo{
 			ID:            jobCredentials.ID,
@@ -1035,12 +1066,12 @@ func (mr *RunCommand) requestJob(
 		}
 
 		// send failure once
-		mr.network.UpdateJob(*runner, jobCredentials, jobInfo)
+		manager.UpdateJob(jobCredentials, jobInfo)
 		return nil, nil, err
 	}
 
-	if err := errors.Join(jobData.UnsupportedOptions(),
-		jobData.ValidateStepsJobRequest(mr.executorSupportsNativeSteps(runner))); err != nil {
+	if err := errors.Join(job.UnsupportedOptions(),
+		job.ValidateStepsJobRequest(mr.executorSupportsNativeSteps(runner))); err != nil {
 		_, _ = trace.Write([]byte(err.Error() + "\n"))
 
 		err = trace.Fail(err, common.JobFailureData{
@@ -1053,7 +1084,7 @@ func (mr *RunCommand) requestJob(
 	}
 
 	trace.SetFailuresCollector(mr.failuresCollector)
-	return trace, jobData, nil
+	return trace, job, nil
 }
 
 func (mr *RunCommand) executorSupportsNativeSteps(runnerConfig *common.RunnerConfig) bool {
@@ -1065,9 +1096,9 @@ func (mr *RunCommand) executorSupportsNativeSteps(runnerConfig *common.RunnerCon
 // caused by interrupt signals or process execution finalization
 func (mr *RunCommand) doJobRequest(
 	ctx context.Context,
-	runner *common.RunnerConfig,
+	manager common.JobManager,
 	sessionInfo *common.SessionInfo,
-) (*common.JobResponse, bool) {
+) (*common.Job, bool) {
 	// Terminate opened requests to GitLab when interrupt signal
 	// is broadcast.
 	ctx, cancelFn := context.WithCancel(ctx)
@@ -1083,7 +1114,7 @@ func (mr *RunCommand) doJobRequest(
 		}
 	}()
 
-	return mr.network.RequestJob(ctx, *runner, sessionInfo)
+	return manager.RequestJob(ctx, sessionInfo)
 }
 
 // requeueRunner feeds the runners channel in a non-blocking way. This replicates the
@@ -1450,6 +1481,7 @@ func init() {
 		ServiceName:          defaultServiceName,
 		network:              network.NewGitLabClientWithAPIRequestsCollector(apiRequestsCollector),
 		apiRequestsCollector: apiRequestsCollector,
+		jobTraceProvider:     network.ClientJobTraceProviderFunc,
 		prometheusLogHook:    prometheus_helper.NewLogHook(),
 		failuresCollector:    prometheus_helper.NewFailuresCollector(),
 		healthHelper:         newHealthHelper(),

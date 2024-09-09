@@ -115,9 +115,10 @@ type ExecutorProvider interface {
 	GetFeatures(features *FeaturesInfo) error
 	// GetConfigInfo extracts metadata about the config the executor is using, e.g. GPUs.
 	GetConfigInfo(input *RunnerConfig, output *ConfigInfo)
-
 	// GetDefaultShell returns the name of the default shell for the executor.
 	GetDefaultShell() string
+	// GetStore returns a store per runner. Stores are used to store data between separate manager runs.
+	GetStore(config *RunnerConfig) (JobStore, error)
 }
 
 // BuildError represents an error during build execution, not related to

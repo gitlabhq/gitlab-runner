@@ -193,8 +193,7 @@ func TestBuildPanic(t *testing.T) {
 
 			cfg := &RunnerConfig{}
 			cfg.Executor = t.Name()
-			build, err := NewBuild(res, cfg, nil, nil)
-			require.NoError(t, err)
+			build := NewBuild(NewJob(&res), cfg)
 			var out bytes.Buffer
 			err = build.Run(&Config{}, &Trace{Writer: &out})
 			assert.EqualError(t, err, "panic: panic message")
@@ -253,9 +252,9 @@ func TestJobImageExposed(t *testing.T) {
 }
 
 func TestBuildRunNoModifyConfig(t *testing.T) {
-	expectHostAddr := "10.0.0.1"
+	expectHostAddr := "10.0.0.2"
 	p, assertFn := setupSuccessfulMockExecutor(t, func(options ExecutorPrepareOptions) error {
-		options.Config.Docker.Credentials.Host = "10.0.0.2"
+		options.Config.Docker.Credentials.Host = expectHostAddr
 		return nil
 	})
 	defer assertFn()
@@ -264,7 +263,7 @@ func TestBuildRunNoModifyConfig(t *testing.T) {
 		RunnerSettings: RunnerSettings{
 			Docker: &DockerConfig{
 				Credentials: docker.Credentials{
-					Host: expectHostAddr,
+					Host: "10.0.0.1",
 				},
 			},
 		},
@@ -290,7 +289,7 @@ func TestRetryPrepare(t *testing.T) {
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
 
-	p.On("Create").Return(&e).Times(3)
+	p.On("Create").Return(&e).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -323,7 +322,7 @@ func TestPrepareFailure(t *testing.T) {
 	p.On("GetDefaultShell").Return("bash").Once()
 	p.On("GetFeatures", mock.Anything).Return(nil).Twice()
 
-	p.On("Create").Return(&e).Times(3)
+	p.On("Create").Return(&e).Once()
 
 	// Prepare plan
 	e.On("Prepare", mock.Anything, mock.Anything, mock.Anything).
@@ -1633,6 +1632,7 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 
 			e := &MockExecutor{}
 			defer e.AssertExpectations(t)
+			build.executor = e
 
 			s.On("GenerateScript", mock.Anything, mock.Anything, mock.Anything).Return("script", ErrSkipBuildStage)
 			e.On("Shell").Return(&ShellScriptInfo{Shell: "skip-build-stage-shell"})
@@ -1641,7 +1641,7 @@ func TestSkipBuildStageFeatureFlag(t *testing.T) {
 				e.On("Run", matchBuildStage(BuildStageAfterScript)).Return(nil).Once()
 			}
 
-			err := build.executeStage(context.Background(), BuildStageAfterScript, e)
+			err := build.executeStage(context.Background(), BuildStageAfterScript)
 			assert.NoError(t, err)
 		})
 	}
@@ -2439,8 +2439,7 @@ func registerExecutorWithSuccessfulBuild(t *testing.T, p *MockExecutorProvider, 
 		// Ensure we set the executor name if not already defined
 		rc.RunnerSettings.Executor = t.Name()
 	}
-	build, err := NewBuild(successfulBuild, rc, nil, nil)
-	assert.NoError(t, err)
+	build := NewBuild(NewJob(&successfulBuild), rc)
 	return build
 }
 
@@ -2465,8 +2464,9 @@ func TestSecretsResolving(t *testing.T) {
 		p := new(MockExecutorProvider)
 
 		p.On("CanCreate").Return(true).Once()
+		p.On("Create").Return(e).Once()
 		p.On("GetDefaultShell").Return("bash").Once()
-		p.On("GetFeatures", mock.Anything).Return(nil).Once()
+		p.On("GetFeatures", mock.Anything).Return(nil).Times(2)
 
 		assertFn := func() {
 			e.AssertExpectations(t)
@@ -2555,8 +2555,7 @@ func TestSecretsResolving(t *testing.T) {
 			rc := new(RunnerConfig)
 			rc.RunnerSettings.Executor = t.Name()
 
-			build, err := NewBuild(successfulBuild, rc, nil, nil)
-			assert.NoError(t, err)
+			build := NewBuild(NewJob(&successfulBuild), rc)
 
 			build.secretsResolver = func(_ logger, _ SecretResolverRegistry, _ func(string) bool) (SecretsResolver, error) {
 				return secretsResolverMock, tt.resolverCreationError
@@ -2615,6 +2614,8 @@ func TestSetTraceStatus(t *testing.T) {
 			trace := new(MockJobTrace)
 			defer trace.AssertExpectations(t)
 
+			b.trace = trace
+
 			trace.On("IsStdout").Return(true)
 			trace.On("Write", mock.Anything).Return(0, nil)
 
@@ -2624,7 +2625,7 @@ func TestSetTraceStatus(t *testing.T) {
 			}
 
 			tc.assert(t, trace, tc.err)
-			b.setTraceStatus(trace, tc.err)
+			b.setTraceStatus(tc.err)
 		})
 	}
 }

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/dns"
@@ -110,7 +109,11 @@ const (
 var ErrSkipBuildStage = errors.New("skip build stage")
 
 type Build struct {
+	// Even thought we have the job in the Build keep JobResponse for backwards compatibility
 	JobResponse `yaml:",inline"`
+
+	jobLock sync.Mutex
+	Job     *Job
 
 	SystemInterrupt  chan os.Signal `json:"-" yaml:"-"`
 	RootDir          string         `json:"-" yaml:"-"`
@@ -120,6 +123,7 @@ type Build struct {
 	Runner           *RunnerConfig  `json:"runner"`
 	ExecutorData     ExecutorData
 	ExecutorFeatures FeaturesInfo `json:"-" yaml:"-"`
+	JobStore         JobStore
 
 	SafeDirectoryCheckout bool `json:"-" yaml:"-"`
 
@@ -129,12 +133,10 @@ type Build struct {
 	// Unique ID for all running builds on this runner and this project
 	ProjectRunnerID int `json:"project_runner_id"`
 
-	// CurrentStage(), CurrentState() and CurrentExecutorStage() are called
-	// from the metrics go routine whilst a build is in-flight, so access
-	// to these variables requires a lock.
+	executor Executor
+	trace    JobTrace
+
 	statusLock            sync.Mutex
-	currentStage          BuildStage
-	currentState          BuildRuntimeState
 	executorStageResolver func() ExecutorStage
 
 	failureReason JobFailureReason
@@ -162,42 +164,27 @@ type Build struct {
 }
 
 func (b *Build) setCurrentStage(stage BuildStage) {
-	b.statusLock.Lock()
-	defer b.statusLock.Unlock()
-
-	b.currentStage = stage
+	b.GetJob().State.SetStage(stage)
 }
 
 func (b *Build) CurrentStage() BuildStage {
-	b.statusLock.Lock()
-	defer b.statusLock.Unlock()
-
-	return b.currentStage
+	return b.GetJob().State.GetStage()
 }
 
 func (b *Build) setCurrentState(state BuildRuntimeState) {
-	b.statusLock.Lock()
-	defer b.statusLock.Unlock()
-
-	b.currentState = state
+	b.GetJob().State.SetBuildState(state)
 }
 
 func (b *Build) setCurrentStateIf(existingState BuildRuntimeState, newState BuildRuntimeState) {
-	b.statusLock.Lock()
-	defer b.statusLock.Unlock()
-
-	if b.currentState != existingState {
+	if b.CurrentState() != existingState {
 		return
 	}
 
-	b.currentState = newState
+	b.setCurrentState(newState)
 }
 
 func (b *Build) CurrentState() BuildRuntimeState {
-	b.statusLock.Lock()
-	defer b.statusLock.Unlock()
-
-	return b.currentState
+	return b.GetJob().State.GetBuildState()
 }
 
 func (b *Build) FailureReason() JobFailureReason {
@@ -357,7 +344,13 @@ func (b *Build) StartBuild(
 	return nil
 }
 
-func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executor Executor) error {
+func (b *Build) executeStage(ctx context.Context, buildStage BuildStage) error {
+	if b.GetJob().State.GetResumedFromStage() != "" && b.GetJob().State.GetResumedFromStage() != buildStage {
+		return nil
+	}
+
+	defer b.GetJob().State.UnsetResumedFromStage()
+
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -377,7 +370,7 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		}
 	}()
 
-	shell := executor.Shell()
+	shell := b.executor.Shell()
 	if shell == nil {
 		return errors.New("no shell defined")
 	}
@@ -412,15 +405,22 @@ func (b *Build) executeStage(ctx context.Context, buildStage BuildStage, executo
 		Name:        string(buildStage),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			msg := fmt.Sprintf(
-				"%s%s%s",
-				helpers.ANSI_BOLD_CYAN,
-				GetStageDescription(buildStage),
-				helpers.ANSI_RESET,
-			)
-			b.logger.Println(msg)
+			_ = b.buildPrepareSectionEnableTrace(buildStage, func() error {
+				b.logger.Println(fmt.Sprintf(
+					"%s%s%s",
+					helpers.ANSI_BOLD_CYAN,
+					GetStageDescription(buildStage),
+					helpers.ANSI_RESET,
+				))
 
-			return executor.Run(cmd)
+				return nil
+			})
+
+			if statefulExecutor, ok := b.executor.(StatefulExecutor); ok && b.GetJob().State.IsResumed() {
+				return statefulExecutor.Resume(cmd)
+			}
+
+			return b.executor.Run(cmd)
 		},
 	}
 
@@ -475,30 +475,30 @@ func GetStageDescription(stage BuildStage) string {
 	return description
 }
 
-func (b *Build) executeUploadArtifacts(ctx context.Context, state error, executor Executor) (err error) {
+func (b *Build) executeUploadArtifacts(ctx context.Context, state error) (err error) {
 	if state == nil {
-		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts, executor)
+		return b.executeStage(ctx, BuildStageUploadOnSuccessArtifacts)
 	}
 
-	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts, executor)
+	return b.executeStage(ctx, BuildStageUploadOnFailureArtifacts)
 }
 
-func (b *Build) executeArchiveCache(ctx context.Context, state error, executor Executor) (err error) {
+func (b *Build) executeArchiveCache(ctx context.Context, state error) (err error) {
 	if state == nil {
-		return b.executeStage(ctx, BuildStageArchiveOnSuccessCache, executor)
+		return b.executeStage(ctx, BuildStageArchiveOnSuccessCache)
 	}
 
-	return b.executeStage(ctx, BuildStageArchiveOnFailureCache, executor)
+	return b.executeStage(ctx, BuildStageArchiveOnFailureCache)
 }
 
 //nolint:gocognit
-func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Executor) error {
+func (b *Build) executeScript(ctx context.Context) error {
 	// track job start and create referees
 	startTime := time.Now()
-	b.createReferees(executor)
+	b.createReferees(b.executor)
 
 	// Prepare stage
-	err := b.executeStage(ctx, BuildStagePrepare, executor)
+	err := b.executeStage(ctx, BuildStagePrepare)
 	if err != nil {
 		return fmt.Errorf(
 			"prepare environment: %w. "+
@@ -507,13 +507,13 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		)
 	}
 
-	err = b.attemptGetSourcesStage(ctx, executor, b.GetGetSourcesAttempts())
+	err = b.attemptGetSourcesStage(ctx, b.GetGetSourcesAttempts())
 
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, executor, b.GetRestoreCacheAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageRestoreCache, b.GetRestoreCacheAttempts())
 	}
 	if err == nil {
-		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, executor, b.GetDownloadArtifactsAttempts())
+		err = b.attemptExecuteStage(ctx, BuildStageDownloadArtifacts, b.GetDownloadArtifactsAttempts())
 	}
 
 	//nolint:nestif
@@ -527,14 +527,14 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 
 		// update trace's cancel function so that the main script can be cancelled,
 		// with after_script and later stages to still complete.
-		trace.SetCancelFunc(cancel)
+		b.trace.SetCancelFunc(cancel)
 
 		for _, s := range b.Steps {
 			// after_script has a separate BuildStage. See common.BuildStageAfterScript
 			if s.Name == StepNameAfterScript {
 				continue
 			}
-			err = b.executeStage(scriptCtx, StepToBuildStage(s), executor)
+			err = b.executeStage(scriptCtx, StepToBuildStage(s))
 			if err != nil {
 				break
 			}
@@ -563,7 +563,7 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		afterScriptCtx, cancel := timeouts["RUNNER_AFTER_SCRIPT_TIMEOUT"]()
 		defer cancel()
 
-		if afterScriptErr := b.executeAfterScript(afterScriptCtx, err, executor); afterScriptErr != nil {
+		if afterScriptErr := b.executeAfterScript(afterScriptCtx, err); afterScriptErr != nil {
 			// the parent deadline being exceeded is reported at a later stage, so we
 			// only focus on errors specific to after_script here.
 			if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
@@ -581,15 +581,15 @@ func (b *Build) executeScript(ctx context.Context, trace JobTrace, executor Exec
 		}
 	}
 
-	archiveCacheErr := b.executeArchiveCache(ctx, err, executor)
+	archiveCacheErr := b.executeArchiveCache(ctx, err)
 
-	artifactUploadErr := b.executeUploadArtifacts(ctx, err, executor)
+	artifactUploadErr := b.executeUploadArtifacts(ctx, err)
 
 	// track job end and execute referees
 	endTime := time.Now()
 	b.executeUploadReferees(ctx, startTime, endTime)
 
-	b.removeFileBasedVariables(ctx, executor)
+	b.removeFileBasedVariables(ctx)
 
 	return b.pickPriorityError(err, archiveCacheErr, artifactUploadErr)
 }
@@ -608,14 +608,14 @@ func (b *Build) pickPriorityError(jobErr error, archiveCacheErr error, artifactU
 	return artifactUploadErr
 }
 
-func (b *Build) executeAfterScript(ctx context.Context, err error, executor Executor) error {
+func (b *Build) executeAfterScript(ctx context.Context, err error) error {
 	state, _ := b.runtimeStateAndError(err)
 	b.GetAllVariables().OverwriteKey("CI_JOB_STATUS", JobVariable{
 		Key:   "CI_JOB_STATUS",
 		Value: string(state),
 	})
 
-	return b.executeStage(ctx, BuildStageAfterScript, executor)
+	return b.executeStage(ctx, BuildStageAfterScript)
 }
 
 // StepToBuildStage returns the BuildStage corresponding to a step.
@@ -627,8 +627,8 @@ func (b *Build) createReferees(executor Executor) {
 	b.Referees = referees.CreateReferees(executor, b.Runner.Referees, b.Log())
 }
 
-func (b *Build) removeFileBasedVariables(ctx context.Context, executor Executor) {
-	err := b.executeStage(ctx, BuildStageCleanup, executor)
+func (b *Build) removeFileBasedVariables(ctx context.Context) {
+	err := b.executeStage(ctx, BuildStageCleanup)
 	if err != nil {
 		b.Log().WithError(err).Warning("Error while executing file based variables removal script")
 	}
@@ -675,7 +675,6 @@ func (b *Build) executeUploadReferees(ctx context.Context, startTime, endTime ti
 
 func (b *Build) attemptGetSourcesStage(
 	ctx context.Context,
-	executor Executor,
 	attempts int,
 ) (err error) {
 	if attempts < 1 || attempts > 10 {
@@ -686,11 +685,11 @@ func (b *Build) attemptGetSourcesStage(
 			// If GetSources fails we delete all tracked and untracked files. This is
 			// because Git's submodule support has various bugs that cause fetches to
 			// fail if submodules have changed.
-			if err = b.executeStage(ctx, BuildStageClearWorktree, executor); err != nil {
+			if err = b.executeStage(ctx, BuildStageClearWorktree); err != nil {
 				continue
 			}
 		}
-		if err = b.executeStage(ctx, BuildStageGetSources, executor); err == nil {
+		if err = b.executeStage(ctx, BuildStageGetSources); err == nil {
 			return
 		}
 	}
@@ -700,14 +699,13 @@ func (b *Build) attemptGetSourcesStage(
 func (b *Build) attemptExecuteStage(
 	ctx context.Context,
 	buildStage BuildStage,
-	executor Executor,
 	attempts int,
 ) (err error) {
 	if attempts < 1 || attempts > 10 {
 		return fmt.Errorf("number of attempts out of the range [1, 10] for stage: %s", buildStage)
 	}
 	for attempt := 0; attempt < attempts; attempt++ {
-		if err = b.executeStage(ctx, buildStage, executor); err == nil {
+		if err = b.executeStage(ctx, buildStage); err == nil {
 			return
 		}
 	}
@@ -719,7 +717,17 @@ func (b *Build) GetBuildTimeout() time.Duration {
 	if buildTimeout <= 0 {
 		buildTimeout = DefaultTimeout
 	}
+
 	return time.Duration(buildTimeout) * time.Second
+}
+
+func (b *Build) GetBuildContextTimeout() time.Duration {
+	timeout := b.GetBuildTimeout()
+	if b.GetJob().State.IsResumed() {
+		timeout -= time.Since(b.GetJob().State.GetStartedAt())
+	}
+
+	return timeout
 }
 
 func (b *Build) handleError(err error) error {
@@ -751,7 +759,7 @@ func (b *Build) runtimeStateAndError(err error) (BuildRuntimeState, error) {
 	}
 }
 
-func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err error) {
+func (b *Build) run(ctx context.Context) (err error) {
 	b.setCurrentState(BuildRunRuntimeRunning)
 
 	buildFinish := make(chan error, 1)
@@ -760,12 +768,16 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 	runContext, runCancel := context.WithCancel(ctx)
 	defer runCancel()
 
-	if term, ok := executor.(terminal.InteractiveTerminal); b.Session != nil && ok {
+	if term, ok := b.executor.(terminal.InteractiveTerminal); b.Session != nil && ok {
 		b.Session.SetInteractiveTerminal(term)
 	}
 
-	if proxyPooler, ok := executor.(proxy.Pooler); b.Session != nil && ok {
+	if proxyPooler, ok := b.executor.(proxy.Pooler); b.Session != nil && ok {
 		b.Session.SetProxyPool(proxyPooler)
+	}
+
+	if _, ok := b.executor.(StatefulExecutor); ok {
+		b.logger.Println("This executor supports stateful job execution")
 	}
 
 	// Run build script
@@ -779,7 +791,7 @@ func (b *Build) run(ctx context.Context, trace JobTrace, executor Executor) (err
 			}
 		}()
 
-		buildFinish <- b.executeScript(runContext, trace, executor)
+		buildFinish <- b.executeScript(runContext)
 	}()
 
 	// Wait for signals: cancel, timeout, abort or finish
@@ -843,31 +855,29 @@ func (b *Build) waitForBuildFinish(buildFinish <-chan error, timeout time.Durati
 	}
 }
 
-func (b *Build) retryCreateExecutor(
+func (b *Build) runPrepareStage(
 	options ExecutorPrepareOptions,
-	provider ExecutorProvider,
 	logger buildlogger.Logger,
-) (Executor, error) {
+) error {
 	var err error
 
 	for tries := 0; tries < PreparationRetries; tries++ {
-		executor := provider.Create()
-		if executor == nil {
-			return nil, errors.New("failed to create executor")
+		b.setExecutorStageResolver(b.executor.GetCurrentStage)
+		if err := b.initializeJobExecutorState(); err != nil {
+			return err
 		}
 
-		b.setExecutorStageResolver(executor.GetCurrentStage)
-
-		err = executor.Prepare(options)
+		err = b.executor.Prepare(options)
 		if err == nil {
-			return executor, nil
+			return nil
 		}
-		executor.Cleanup()
+
+		b.executor.Cleanup()
 		var buildErr *BuildError
 		if errors.As(err, &buildErr) {
-			return nil, err
+			return err
 		} else if options.Context.Err() != nil {
-			return nil, b.handleError(context.Cause(options.Context))
+			return b.handleError(context.Cause(options.Context))
 		}
 
 		logger.SoftErrorln("Preparation failed:", err)
@@ -875,7 +885,27 @@ func (b *Build) retryCreateExecutor(
 		time.Sleep(PreparationRetryInterval)
 	}
 
-	return nil, err
+	return err
+}
+
+func (b *Build) initializeJobExecutorState() error {
+	var statefulExecutor StatefulExecutor
+	var ok bool
+	if statefulExecutor, ok = b.executor.(StatefulExecutor); !ok {
+		return nil
+	}
+
+	executorState := b.GetJob().State.GetExecutorState()
+	if executorState == nil {
+		b.GetJob().State.SetExecutorState(statefulExecutor.GetState())
+		return nil
+	}
+
+	if !statefulExecutor.SetState(executorState) {
+		return errors.New("failed to restore executor state")
+	}
+
+	return nil
 }
 
 func (b *Build) waitForTerminal(ctx context.Context, timeout time.Duration) error {
@@ -945,9 +975,9 @@ func (b *Build) getTerminalTimeout(ctx context.Context, timeout time.Duration) t
 //
 // If an error cannot be unwrapped to `BuildError`, `SystemFailure`
 // is used as the failure reason.
-func (b *Build) setTraceStatus(trace JobTrace, err error) {
+func (b *Build) setTraceStatus(err error) {
 	logger := buildlogger.New(
-		trace, b.Log().WithFields(logrus.Fields{
+		b.trace, b.Log().WithFields(logrus.Fields{
 			"duration_s": b.FinalDuration().Seconds(),
 		}),
 		buildlogger.Options{
@@ -959,7 +989,7 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 
 	if err == nil {
 		logger.Infoln("Job succeeded")
-		logTerminationError(logger, "Success", trace.Success())
+		logTerminationError(logger, "Success", b.trace.Success())
 
 		return
 	}
@@ -977,8 +1007,8 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 
 		logger.SoftErrorln(msg)
 
-		trace.SetSupportedFailureReasonMapper(newFailureReasonMapper(b.Features.FailureReasons))
-		err = trace.Fail(err, JobFailureData{
+		b.trace.SetSupportedFailureReasonMapper(newFailureReasonMapper(b.Features.FailureReasons))
+		err = b.trace.Fail(err, JobFailureData{
 			Reason:   buildError.FailureReason,
 			ExitCode: buildError.ExitCode,
 		})
@@ -988,7 +1018,7 @@ func (b *Build) setTraceStatus(trace JobTrace, err error) {
 	}
 
 	logger.Errorln("Job failed (system failure):", err)
-	logTerminationError(logger, "Fail", trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure}))
+	logTerminationError(logger, "Fail", b.trace.Fail(err, JobFailureData{Reason: RunnerSystemFailure}))
 }
 
 func logTerminationError(logger buildlogger.Logger, name string, err error) {
@@ -1019,11 +1049,26 @@ func (b *Build) CurrentExecutorStage() ExecutorStage {
 }
 
 func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
-	b.setCurrentState(BuildRunStatePending)
+	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildContextTimeout())
+	defer cancel()
+
+	provider := GetExecutorProvider(b.Runner.Executor)
+	err = provider.GetFeatures(&b.ExecutorFeatures)
+	if err != nil {
+		return fmt.Errorf("retrieving executor features: %w", err)
+	}
+
+	executor := provider.Create()
+	if executor == nil {
+		return errors.New("failed to create executor")
+	}
+
+	b.executor = executor
+	b.trace = trace
 
 	// These defers are ordered because runBuild could panic and the recover needs to handle that panic.
 	// setTraceStatus needs to be last since it needs a correct error value to report the job's status
-	defer func() { b.setTraceStatus(trace, err) }()
+	defer func() { b.setTraceStatus(err) }()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -1034,9 +1079,10 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	}()
 
 	b.logUsedImages()
-	b.printRunningWithHeader(trace)
+	b.printRunningWithHeader()
+	b.setCurrentState(BuildRunStatePending)
 
-	err = b.resolveSecrets(trace)
+	err = b.runResolveSecrets()
 	if err != nil {
 		return err
 	}
@@ -1044,7 +1090,7 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	b.expandContainerOptions()
 
 	b.logger = buildlogger.New(
-		trace,
+		b.trace,
 		b.Log(),
 		buildlogger.Options{
 			MaskPhrases:          b.GetAllVariables().Masked(),
@@ -1055,29 +1101,17 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 	)
 	defer b.logger.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), b.GetBuildTimeout())
-	defer cancel()
-
-	b.configureTrace(trace, cancel)
+	b.configureTrace(cancel)
 
 	b.printSettingErrors()
 
 	options := b.createExecutorPrepareOptions(ctx, globalConfig)
-	provider := GetExecutorProvider(b.Runner.Executor)
-	if provider == nil {
-		return errors.New("executor not found")
-	}
 
-	err = provider.GetFeatures(&b.ExecutorFeatures)
-	if err != nil {
-		return fmt.Errorf("retrieving executor features: %w", err)
-	}
-
-	executor, err := b.executeBuildSection(options, provider)
-	if err != nil {
+	if err := b.runBuildPrepare(options); err != nil {
 		return err
 	}
-	defer executor.Cleanup()
+
+	defer b.executor.Cleanup()
 
 	// override context that can be canceled by the executor if supported
 	if withContext, ok := b.ExecutorData.(WithContext); ok {
@@ -1085,11 +1119,11 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 		defer cancel()
 	}
 
-	err = b.run(ctx, trace, executor)
+	err = b.run(ctx)
 	if errWait := b.waitForTerminal(ctx, globalConfig.SessionServer.GetSessionTimeout()); errWait != nil {
 		b.Log().WithError(errWait).Debug("Stopped waiting for terminal")
 	}
-	executor.Finish(err)
+	b.executor.Finish(err)
 
 	return err
 }
@@ -1109,9 +1143,9 @@ func (b *Build) logUsedImages() {
 	}
 }
 
-func (b *Build) configureTrace(trace JobTrace, cancel context.CancelFunc) {
-	trace.SetCancelFunc(cancel)
-	trace.SetAbortFunc(cancel)
+func (b *Build) configureTrace(cancel context.CancelFunc) {
+	b.trace.SetCancelFunc(cancel)
+	b.trace.SetAbortFunc(cancel)
 }
 
 func (b *Build) createExecutorPrepareOptions(ctx context.Context, globalConfig *Config) ExecutorPrepareOptions {
@@ -1124,7 +1158,7 @@ func (b *Build) createExecutorPrepareOptions(ctx context.Context, globalConfig *
 	}
 }
 
-func (b *Build) resolveSecrets(trace JobTrace) error {
+func (b *Build) runResolveSecrets() error {
 	if b.Secrets == nil {
 		return nil
 	}
@@ -1138,40 +1172,51 @@ func (b *Build) resolveSecrets(trace JobTrace) error {
 		Name:        string(BuildStageResolveSecrets),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			logger := buildlogger.New(
-				trace,
-				b.Log(),
-				buildlogger.Options{
-					Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
-					MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
-				},
-			)
-			defer logger.Close()
+			return b.buildPrepareSectionEnableTrace(BuildStageResolveSecrets, func() error {
+				logger := buildlogger.New(
+					b.trace,
+					b.Log(),
+					buildlogger.Options{
+						Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),
+						MaskAllDefaultTokens: b.IsFeatureFlagOn(featureflags.MaskAllDefaultTokens),
+					},
+				)
+				defer logger.Close()
 
-			resolver, err := b.secretsResolver(&logger, GetSecretResolverRegistry(), b.IsFeatureFlagOn)
-			if err != nil {
-				return fmt.Errorf("creating secrets resolver: %w", err)
-			}
+				resolver, err := b.secretsResolver(&logger, GetSecretResolverRegistry(), b.IsFeatureFlagOn)
+				if err != nil {
+					return fmt.Errorf("creating secrets resolver: %w", err)
+				}
 
-			variables, err := resolver.Resolve(b.Secrets)
-			if err != nil {
-				return fmt.Errorf("resolving secrets: %w", err)
-			}
+				variables, err := resolver.Resolve(b.Secrets)
+				if err != nil {
+					return fmt.Errorf("resolving secrets: %w", err)
+				}
 
-			b.secretsVariables = variables
-			b.RefreshAllVariables()
+				b.secretsVariables = variables
+				b.RefreshAllVariables()
 
-			return nil
+				return nil
+			})
 		},
 	}
 
 	return section.Execute(&b.logger)
 }
 
-func (b *Build) executeBuildSection(options ExecutorPrepareOptions, provider ExecutorProvider) (Executor, error) {
-	var executor Executor
-	var err error
+// Prepare sections need to have their trace disabled during the whole stage.
+// The script/resume stages needs to have it disabled only while buildPrepareSectionEnableTrace
+// is running. The executor.Resume method will be called after the Prepare section.
+func (b *Build) buildPrepareSectionEnableTrace(stage BuildStage, prepare func() error) error {
+	err := prepare()
+	if b.GetJob().State.GetResumedFromStage() == stage {
+		b.trace.Enable()
+	}
 
+	return err
+}
+
+func (b *Build) runBuildPrepare(options ExecutorPrepareOptions) error {
 	b.OnBuildStageStartFn.Call(BuildStagePrepareExecutor)
 	defer b.OnBuildStageEndFn.Call(BuildStagePrepareExecutor)
 
@@ -1179,19 +1224,20 @@ func (b *Build) executeBuildSection(options ExecutorPrepareOptions, provider Exe
 		Name:        string(BuildStagePrepareExecutor),
 		SkipMetrics: !b.JobResponse.Features.TraceSections,
 		Run: func() error {
-			msg := fmt.Sprintf(
-				"%sPreparing the %q executor%s",
-				helpers.ANSI_BOLD_CYAN,
-				b.Runner.Executor,
-				helpers.ANSI_RESET,
-			)
-			b.logger.Println(msg)
-			executor, err = b.retryCreateExecutor(options, provider, b.logger)
-			return err
+			return b.buildPrepareSectionEnableTrace(BuildStagePrepareExecutor, func() error {
+				b.logger.Println(fmt.Sprintf(
+					"%sPreparing the %q executor%s",
+					helpers.ANSI_BOLD_CYAN,
+					b.Runner.Executor,
+					helpers.ANSI_RESET,
+				))
+
+				return b.runPrepareStage(options, b.logger)
+			})
 		},
 	}
-	err = section.Execute(&b.logger)
-	return executor, err
+
+	return section.Execute(&b.logger)
 }
 
 func (b *Build) String() string {
@@ -1592,25 +1638,33 @@ type urlHelper interface {
 }
 
 func NewBuild(
-	jobData JobResponse,
+	job *Job,
 	runnerConfig *RunnerConfig,
-	systemInterrupt chan os.Signal,
-	executorData ExecutorData,
-) (*Build, error) {
-	// Attempt to perform a deep copy of the RunnerConfig
-	runnerConfigCopy, err := runnerConfig.DeepCopy()
-	if err != nil {
-		return nil, fmt.Errorf("deep copy of runner config failed: %w", err)
-	}
+) *Build {
+	jobStore := NoopJobStore{}
 
 	return &Build{
-		JobResponse:     jobData,
-		Runner:          runnerConfigCopy,
-		SystemInterrupt: systemInterrupt,
-		ExecutorData:    executorData,
+		JobResponse: *job.JobResponse,
+		Runner:      runnerConfig,
+		JobStore:    jobStore,
+		Job:         job,
+
 		startedAt:       time.Now(),
 		secretsResolver: newSecretsResolver,
-	}, nil
+	}
+}
+
+// GetJob is a getter that will return a proper Job object.
+// It's mostly useful in tests where only the JobResponse is initialized
+func (b *Build) GetJob() *Job {
+	b.jobLock.Lock()
+	defer b.jobLock.Unlock()
+
+	if b.Job == nil {
+		b.Job = NewJob(&b.JobResponse)
+	}
+
+	return b.Job
 }
 
 func (b *Build) IsFeatureFlagOn(name string) bool {
@@ -1633,9 +1687,9 @@ func (b *Build) getFeatureFlagInfo() string {
 	return strings.Join(statuses, ", ")
 }
 
-func (b *Build) printRunningWithHeader(trace JobTrace) {
+func (b *Build) printRunningWithHeader() {
 	logger := buildlogger.New(
-		trace,
+		b.trace,
 		b.Log(),
 		buildlogger.Options{
 			Timestamping:         b.IsFeatureFlagOn(featureflags.UseTimestamps),

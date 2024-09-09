@@ -39,9 +39,17 @@ type Buffer struct {
 }
 
 type options struct {
+	offset int64
 }
 
 type Option func(*options) error
+
+func WithOffset(offset int64) Option {
+	return func(o *options) error {
+		o.offset = offset
+		return nil
+	}
+}
 
 func (b *Buffer) SetLimit(size int) {
 	b.lock.Lock()
@@ -197,6 +205,11 @@ func New(opts ...Option) (*Buffer, error) {
 		}
 	}
 
+	_, err = logFile.Seek(options.offset, 0)
+	if err != nil {
+		return nil, err
+	}
+
 	buffer := &Buffer{
 		logFile:  logFile,
 		bufw:     bufio.NewWriter(logFile),
@@ -206,7 +219,7 @@ func New(opts ...Option) (*Buffer, error) {
 
 	buffer.lw = &limitWriter{
 		w:       io.MultiWriter(buffer.bufw, buffer.checksum),
-		written: 0,
+		written: options.offset,
 		limit:   defaultBytesLimit,
 	}
 

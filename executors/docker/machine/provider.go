@@ -8,12 +8,15 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/gitlab-org/gitlab-runner/executors"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 )
 
 type machineProvider struct {
+	executors.DefaultExecutorProvider
+
 	name        string
 	machine     docker.Machine
 	details     machinesDetails
@@ -632,6 +635,8 @@ func newMachineProvider() *machineProvider {
 	}
 
 	return &machineProvider{
+		DefaultExecutorProvider: executors.DefaultExecutorProvider{},
+
 		name:     name,
 		details:  make(machinesDetails),
 		runners:  make(runnersDetails),

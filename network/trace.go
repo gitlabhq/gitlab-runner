@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -18,7 +19,7 @@ var (
 )
 
 type clientJobTrace struct {
-	client         common.Network
+	jobManager     common.JobManager
 	config         common.RunnerConfig
 	jobCredentials *common.JobCredentials
 	id             int64
@@ -31,12 +32,12 @@ type clientJobTrace struct {
 
 	lock     sync.RWMutex
 	state    common.JobState
-	finished chan bool
+	finished chan struct{}
 
 	failureReason                common.JobFailureReason
 	supportedFailureReasonMapper common.SupportedFailureReasonMapper
 
-	sentTrace int
+	sentTrace int64
 	sentTime  time.Time
 
 	updateInterval        time.Duration
@@ -48,6 +49,8 @@ type clientJobTrace struct {
 	exitCode          int
 
 	finalUpdateRetryLimit int
+
+	enabled atomic.Bool
 }
 
 func (c *clientJobTrace) Success() error {
@@ -76,7 +79,11 @@ func (c *clientJobTrace) Fail(err error, failureData common.JobFailureData) erro
 	return c.complete(err, failureData)
 }
 
-func (c *clientJobTrace) Write(data []byte) (n int, err error) {
+func (c *clientJobTrace) Write(data []byte) (int, error) {
+	if !c.enabled.Load() {
+		return 0, nil
+	}
+
 	return c.buffer.Write(data)
 }
 
@@ -112,6 +119,14 @@ func (c *clientJobTrace) Cancel() bool {
 	c.SetCancelFunc(nil)
 	cancelFunc()
 	return true
+}
+
+func (c *clientJobTrace) Disable() {
+	c.enabled.Store(false)
+}
+
+func (c *clientJobTrace) Enable() {
+	c.enabled.Store(true)
 }
 
 // SetAbortFunc sets the function to be called by Abort(). The function
@@ -183,8 +198,8 @@ func (c *clientJobTrace) ensureNonEmptyFailureReason(reason common.JobFailureRea
 	return reason
 }
 
-func (c *clientJobTrace) start() {
-	c.finished = make(chan bool)
+func (c *clientJobTrace) Start() {
+	c.finished = make(chan struct{})
 	c.state = common.Running
 	c.setupLogLimit()
 	go c.watch()
@@ -244,7 +259,7 @@ func (c *clientJobTrace) finalUpdate() error {
 
 func (c *clientJobTrace) finish() error {
 	c.buffer.Finish()
-	c.finished <- true
+	close(c.finished)
 	err := retry.NewNoValue(
 		retry.New().
 			WithMaxTries(c.finalUpdateRetryLimit).
@@ -291,12 +306,12 @@ func (c *clientJobTrace) anyTraceToSend() bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	return c.buffer.Size() != c.sentTrace
+	return int64(c.buffer.Size()) != c.sentTrace
 }
 
 func (c *clientJobTrace) sendPatch() common.PatchTraceResult {
 	c.lock.RLock()
-	content, err := c.buffer.Bytes(c.sentTrace, c.maxTracePatchSize)
+	content, err := c.buffer.Bytes(int(c.sentTrace), c.maxTracePatchSize)
 	sentTrace := c.sentTrace
 	c.lock.RUnlock()
 
@@ -308,14 +323,15 @@ func (c *clientJobTrace) sendPatch() common.PatchTraceResult {
 		return common.PatchTraceResult{State: common.PatchSucceeded}
 	}
 
-	result := c.client.PatchTrace(c.config, c.jobCredentials, content, sentTrace, c.debugModeEnabled)
+	result := c.jobManager.PatchTrace(c.jobCredentials, content, int(sentTrace), c.debugModeEnabled)
 
 	c.setUpdateInterval(result.NewUpdateInterval)
 
 	if result.State == common.PatchSucceeded || result.State == common.PatchRangeMismatch {
 		c.lock.Lock()
 		c.sentTime = time.Now()
-		c.sentTrace = result.SentOffset
+		sentOffset := int64(result.SentOffset)
+		c.sentTrace = sentOffset
 		c.lock.Unlock()
 	}
 
@@ -369,7 +385,7 @@ func (c *clientJobTrace) touchJob() common.UpdateJobResult {
 		},
 	}
 
-	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
+	result := c.jobManager.UpdateJob(c.jobCredentials, jobInfo)
 
 	c.setUpdateInterval(result.NewUpdateInterval)
 
@@ -398,7 +414,7 @@ func (c *clientJobTrace) sendUpdate() common.UpdateState {
 		ExitCode: c.exitCode,
 	}
 
-	result := c.client.UpdateJob(c.config, c.jobCredentials, jobInfo)
+	result := c.jobManager.UpdateJob(c.jobCredentials, jobInfo)
 
 	c.setUpdateInterval(result.NewUpdateInterval)
 
@@ -452,18 +468,23 @@ func (c *clientJobTrace) SetDebugModeEnabled(isEnabled bool) {
 	c.debugModeEnabled = isEnabled
 }
 
-func newJobTrace(
-	client common.Network,
+func (c *clientJobTrace) Done() <-chan struct{} {
+	return c.finished
+}
+
+func ClientJobTraceProviderFunc(
+	jobManager common.JobManager,
 	config common.RunnerConfig,
 	jobCredentials *common.JobCredentials,
-) (*clientJobTrace, error) {
-	buffer, err := trace.New()
+	startOffset int64,
+) (common.JobTrace, error) {
+	buffer, err := trace.New(trace.WithOffset(startOffset))
 	if err != nil {
 		return nil, err
 	}
 
-	return &clientJobTrace{
-		client:                client,
+	trace := &clientJobTrace{
+		jobManager:            jobManager,
 		config:                config,
 		buffer:                buffer,
 		jobCredentials:        jobCredentials,
@@ -473,5 +494,10 @@ func newJobTrace(
 		forceSendInterval:     common.MinTraceForceSendInterval,
 		finalUpdateBackoffMax: common.DefaultfinalUpdateBackoffMax,
 		finalUpdateRetryLimit: config.GetJobStatusFinalUpdateRetryLimit(),
-	}, nil
+		sentTrace:             startOffset,
+	}
+
+	trace.Enable()
+
+	return trace, nil
 }
