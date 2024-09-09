@@ -1,6 +1,6 @@
 # Perform documentation linting and link checking on Markdown files
 docs:lint markdown:
-  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.20-vale-3.6.1-markdownlint2-0.13.0-lychee-0.15.1
+  image: registry.gitlab.com/gitlab-org/gitlab-docs/lint-markdown:alpine-3.20-vale-3.7.1-markdownlint2-0.13.0-lychee-0.15.1
   stage: test
   extends:
   - .rules:merge_request_pipelines

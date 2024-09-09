@@ -14,10 +14,9 @@ To change the behavior of GitLab Runner and individual registered runners, modif
 
 You can find the `config.toml` file in:
 
-- `/etc/gitlab-runner/` on \*nix systems when GitLab Runner is
-   executed as root. This directory is also the path for service configuration.
-- `~/.gitlab-runner/` on \*nix systems when GitLab Runner is
-   executed as non-root.
+- `/etc/gitlab-runner/` on \*nix systems when GitLab Runner is executed as root. This directory is also the path for
+  service configuration.
+- `~/.gitlab-runner/` on \*nix systems when GitLab Runner is executed as non-root.
 - `./` on other systems.
 
 GitLab Runner does not require a restart when you change most options. This includes parameters
@@ -139,11 +138,11 @@ The following example has `check_interval` of 10 seconds and two `[[runners]]` s
 1. Get list of runners (`runner-1`, `runner-2`).
 1. Calculate the sleep interval (`10s / 2 = 5s`).
 1. Start an infinite loop:
-    1. Request a job for `runner-1`.
-    1. Sleep for `5s`.
-    1. Request a job for `runner-2`.
-    1. Sleep for `5s`.
-    1. Repeat.
+   1. Request a job for `runner-1`.
+   1. Sleep for `5s`.
+   1. Request a job for `runner-2`.
+   1. Sleep for `5s`.
+   1. Repeat.
 
 Here's a `check_interval` configuration example:
 
@@ -200,7 +199,6 @@ check_interval = 3 # Value in seconds
   listen_address = "[::]:8093" # Listen on all available interfaces on port `8093`
   advertise_address = "runner-host-name.tld:8093"
   session_timeout = 1800
-  
 ```
 
 When you configure the `[session_server]` section:

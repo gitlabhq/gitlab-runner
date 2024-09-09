@@ -854,14 +854,11 @@ check_interval = 30
 
 When you specify the capabilities:
 
-- User-defined `cap_drop` has priority over user-defined `cap_add`. If
-   you define the same capability in both settings, only the capability from `cap_drop` is passed
-   to the container.
-
+- User-defined `cap_drop` has priority over user-defined `cap_add`. If you define the same capability in both settings,
+  only the capability from `cap_drop` is passed to the container.
 - Remove the `CAP_` prefix from capability identifiers passed to the container configuration.
   For example, if you want to add or drop the `CAP_SYS_TIME` capability,
   in the configuration file, enter the string, `SYS_TIME`.
-
 - The owner of the Kubernetes cluster
   [can define a PodSecurityPolicy](https://kubernetes.io/docs/concepts/security/pod-security-policy/#capabilities),
   where specific capabilities are allowed, restricted, or added by default. These rules take precedence over any user-defined configuration.

@@ -173,35 +173,35 @@ You can customize the runner's `config.toml` file by using the [configuration te
 
 1. Set the `config` property of the `Runner`:
 
-    ```yaml
-    apiVersion: apps.gitlab.com/v1beta2
-    kind: Runner
-    metadata:
-      name: dev
-    spec:
-      gitlabUrl: https://gitlab.example.com
-      token: gitlab-runner-secret
-      config: custom-config-toml
-    ```
+   ```yaml
+   apiVersion: apps.gitlab.com/v1beta2
+   kind: Runner
+   metadata:
+     name: dev
+   spec:
+     gitlabUrl: https://gitlab.example.com
+     token: gitlab-runner-secret
+     config: custom-config-toml
+   ```
 
 ## Configure a custom TLS cert
 
 1. To set a custom TLS cert, create a secret with key `tls.crt`. In this example, the file is named `custom-tls-ca-secret.yaml`:
 
-    ```yaml
-    apiVersion: v1
-    kind: Secret
-    metadata:
-        name: custom-tls-ca
-    type: Opaque
-    stringData:
-        tls.crt: |
-            -----BEGIN CERTIFICATE-----
-            MIIEczCCA1ugAwIBAgIBADANBgkqhkiG9w0BAQQFAD..AkGA1UEBhMCR0Ix
-            .....
-            7vQMfXdGsRrXNGRGnX+vWDZ3/zWI0joDtCkNnqEpVn..HoX
-            -----END CERTIFICATE-----
-    ```
+   ```yaml
+   apiVersion: v1
+   kind: Secret
+   metadata:
+       name: custom-tls-ca
+   type: Opaque
+   stringData:
+       tls.crt: |
+           -----BEGIN CERTIFICATE-----
+           MIIEczCCA1ugAwIBAgIBADANBgkqhkiG9w0BAQQFAD..AkGA1UEBhMCR0Ix
+           .....
+           7vQMfXdGsRrXNGRGnX+vWDZ3/zWI0joDtCkNnqEpVn..HoX
+           -----END CERTIFICATE-----
+   ```
 
 1. Create the secret:
 
@@ -211,16 +211,16 @@ You can customize the runner's `config.toml` file by using the [configuration te
 
 1. Set the `ca` key in the `runner.yaml` to the same name as the name of our secret:
 
-    ```yaml
-    apiVersion: apps.gitlab.com/v1beta2
-    kind: Runner
-    metadata:
-      name: dev
-    spec:
-      gitlabUrl: https://gitlab.example.com
-      token: gitlab-runner-secret
-      ca: custom-tls-ca
-    ```
+   ```yaml
+   apiVersion: apps.gitlab.com/v1beta2
+   kind: Runner
+   metadata:
+     name: dev
+   spec:
+     gitlabUrl: https://gitlab.example.com
+     token: gitlab-runner-secret
+     ca: custom-tls-ca
+   ```
 
 ## Configure the CPU and memory size of runner pods
 
@@ -230,16 +230,16 @@ To set [CPU limits](../executors/kubernetes/index.md#cpu-requests-and-limits) an
 
 Set the `concurrent` property of the `Runner` resource:
 
-   ```yaml
-   apiVersion: apps.gitlab.com/v1beta2
-   kind: Runner
-   metadata:
-     name: dev
-   spec:
-     gitlabUrl: https://gitlab.example.com
-     token: gitlab-runner-secret
-     concurrent: 2
-   ```
+```yaml
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: dev
+spec:
+  gitlabUrl: https://gitlab.example.com
+  token: gitlab-runner-secret
+  concurrent: 2
+```
 
 Job concurrency is dictated by the requirements of the project.
 
@@ -339,34 +339,34 @@ Some jobs (for example, buildah) need the `SETFCAP` capability granted to run co
 
 1. Add the SETFCAP capability to the SCC that GitLab Runner is using (replace the `gitlab-scc` with the SCC assigned to your GitLab Runner pod):
 
-    ```shell
-    oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'
-    ```
+   ```shell
+   oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'
+   ```
 
 1. Update your `config.toml` and add the `SETFCAP` capability under the `kubernetes` section:
 
-    ```yaml
-    [[runners]]
-      [runners.kubernetes]
-      [runners.kubernetes.pod_security_context]
-        [runners.kubernetes.build_container_security_context]
-        [runners.kubernetes.build_container_security_context.capabilities]
-          add = ["SETFCAP"]
-    ```
+   ```yaml
+   [[runners]]
+     [runners.kubernetes]
+     [runners.kubernetes.pod_security_context]
+       [runners.kubernetes.build_container_security_context]
+       [runners.kubernetes.build_container_security_context.capabilities]
+         add = ["SETFCAP"]
+   ```
 
 1. Create a configmap using this `config.toml` in the namespace where GitLab Runner is deployed:
 
-    ```shell
-    oc create configmap custom-config-toml --from-file config.toml=config.toml
-    ```
+   ```shell
+   oc create configmap custom-config-toml --from-file config.toml=config.toml
+   ```
 
 1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner pod name)
 
-    ```shell
-    oc patch runner my-runner --type merge -p '{"spec": {"config": "custom-config-toml"}}'
-    ```
+   ```shell
+   oc patch runner my-runner --type merge -p '{"spec": {"config": "custom-config-toml"}}'
+   ```
 
-For more inforamtion, see the [Red Hat documentation](https://access.redhat.com/solutions/7016013).
+For more information, see the [Red Hat documentation](https://access.redhat.com/solutions/7016013).
 
 ### Using FIPS Compliant GitLab Runner
 

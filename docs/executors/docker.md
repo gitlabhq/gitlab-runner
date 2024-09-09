@@ -506,18 +506,18 @@ To clear Docker build images:
 
 1. Confirm what disk space can be reclaimed:
 
-    ```shell
-    clear-docker-cache space
+   ```shell
+   clear-docker-cache space
 
-    Show docker disk usage
-    ----------------------
+   Show docker disk usage
+   ----------------------
 
-    TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-    Images          14        9         1.306GB   545.8MB (41%)
-    Containers      19        18        115kB     0B (0%)
-    Local Volumes   0         0         0B        0B
-    Build Cache     0         0         0B        0B
-    ```
+   TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+   Images          14        9         1.306GB   545.8MB (41%)
+   Containers      19        18        115kB     0B (0%)
+   Local Volumes   0         0         0B        0B
+   Build Cache     0         0         0B        0B
+   ```
 
 1. To remove all unused containers, networks, images (dangling and unreferenced), and untagged volumes, run [`docker system prune`](https://docs.docker.com/reference/cli/docker/system/prune/).
 
