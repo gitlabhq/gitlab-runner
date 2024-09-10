@@ -221,7 +221,7 @@ type podContainerError struct {
 }
 
 func (p *podContainerError) Error() string {
-	return fmt.Sprintf("Error in service %s: exit code: %d, reason: '%s'", p.containerName, p.exitCode, p.reason)
+	return fmt.Sprintf("Error in container %s: exit code: %d, reason: '%s'", p.containerName, p.exitCode, p.reason)
 }
 
 type kubernetesOptions struct {
