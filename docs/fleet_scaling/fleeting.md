@@ -135,7 +135,7 @@ To manually install a fleeting plugin:
    - [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud/-/releases)
    - [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure/-/releases)
 1. Ensure the binary has a name in the format of `fleeting-plugin-<name>`. For example, `fleeting-plugin-aws`.
-1. Ensure the binary can be discovered from `$PATH`. For example, move it to `/usr/bin/local`.
+1. Ensure the binary can be discovered from `$PATH`. For example, move it to `/usr/local/bin`.
 1. In the `config.toml`, in the `[runners.autoscaler]` section, add the fleeting plugin. For example:
 
    ::Tabs
