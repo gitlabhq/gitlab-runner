@@ -290,6 +290,20 @@ If one of the jobs fails with this error, make sure the runner can connect to yo
 - permissions
 - routing configurations
 
+### `FATAL: Failed to start gitlab-runner: exit status 134` on `gitlab-runner start` command
+
+This error indicates that the GitLab Runner service is not installed properly.
+Run the following commands to resolve the error:
+
+```shell
+gitlab-runner uninstall
+gitlab-runner install
+gitlab-runner start
+```
+
+If the error persists, do a graphical login. A graphical login bootstraps the `LaunchAgent`, which is required to launch the service.
+For more details, see [Limitations on macOS](osx.md#limitations-on-macos).
+
 ### `FATAL: Failed to start gitlab-runner: "launchctl" failed with stderr: Load failed: 5: Input/output error` on `gitlab-runner start` command
 
 If this error is encountered when running the `gitlab-runner start` command, ensure that the directories specified in the `~/Library/LaunchAgents/gitlab-runner.plist` values `StandardOutPath` and `StandardErrorPath` exist:
