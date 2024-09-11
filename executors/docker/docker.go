@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/hashicorp/go-version"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 
@@ -87,6 +88,7 @@ type executor struct {
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
 	info                      system.Info
+	serverAPIVersion          *version.Version
 	waiter                    wait.KillWaiter
 
 	temporary        []string // IDs of containers that should be removed
@@ -112,6 +114,8 @@ type executor struct {
 
 	tunnelClient executors.Client
 }
+
+var version1_44 = version.Must(version.NewVersion("1.44"))
 
 func init() {
 	runner, err := os.Executable()
@@ -959,10 +963,21 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
+	serverVersion, err := e.client.ServerVersion(e.Context)
+	if err != nil {
+		return fmt.Errorf("getting server version info: %w", err)
+	}
+
+	e.serverAPIVersion, err = version.NewVersion(serverVersion.APIVersion)
+	if err != nil {
+		return fmt.Errorf("parsing server API version %q: %w", serverVersion.APIVersion, err)
+	}
+
 	e.BuildLogger.Debugln(fmt.Sprintf(
-		"Connected to docker daemon (api version: %s, server version: %s, kernel: %s, os: %s/%s)",
+		"Connected to docker daemon (client version: %s, server version: %s, api version: %s, kernel: %s, os: %s/%s)",
 		e.client.ClientVersion(),
 		e.info.ServerVersion,
+		serverVersion.APIVersion,
 		e.info.KernelVersion,
 		e.info.OSType,
 		e.info.Architecture,
