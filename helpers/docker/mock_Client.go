@@ -590,6 +590,34 @@ func (_m *MockClient) NetworkRemove(ctx context.Context, networkID string) error
 	return r0
 }
 
+// ServerVersion provides a mock function with given fields: _a0
+func (_m *MockClient) ServerVersion(_a0 context.Context) (types.Version, error) {
+	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ServerVersion")
+	}
+
+	var r0 types.Version
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (types.Version, error)); ok {
+		return rf(_a0)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) types.Version); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Get(0).(types.Version)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // VolumeCreate provides a mock function with given fields: ctx, options
 func (_m *MockClient) VolumeCreate(ctx context.Context, options volume.CreateOptions) (volume.Volume, error) {
 	ret := _m.Called(ctx, options)

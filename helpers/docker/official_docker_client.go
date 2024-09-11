@@ -94,6 +94,10 @@ func (c *officialDockerClient) ClientVersion() string {
 	return c.client.ClientVersion()
 }
 
+func (c *officialDockerClient) ServerVersion(ctx context.Context) (types.Version, error) {
+	return c.client.ServerVersion(ctx)
+}
+
 func (c *officialDockerClient) ImageInspectWithRaw(
 	ctx context.Context,
 	imageID string,

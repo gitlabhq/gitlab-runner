@@ -15,6 +15,7 @@ import (
 //go:generate mockery --name=Client --inpackage
 type Client interface {
 	ClientVersion() string
+	ServerVersion(context.Context) (types.Version, error)
 
 	ImageInspectWithRaw(ctx context.Context, imageID string) (types.ImageInspect, []byte, error)
 
