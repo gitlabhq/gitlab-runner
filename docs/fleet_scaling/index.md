@@ -137,7 +137,7 @@ With the [Docker Machine executor](../executors/docker_machine.md):
 
 #### Kubernetes executor
 
-WIth the [Kubernetes executor](../executors/kubernetes/index.md):
+With the [Kubernetes executor](../executors/kubernetes/index.md):
 
 - The runner manager provisions pods on the target Kubernetes cluster.
 - The CI/CD jobs are executed on each pod, which is comprised of multiple containers.
