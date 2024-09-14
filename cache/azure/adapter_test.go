@@ -141,7 +141,9 @@ func testUploadEnvWithInvalidConfig(
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 
 		u := operation(context.Background())
-		assert.Empty(t, u)
+		assert.Equal(t, accountName, u["AZURE_STORAGE_ACCOUNT"])
+		assert.Equal(t, storageDomain, u["AZURE_STORAGE_DOMAIN"])
+		assert.NotContains(t, u, "AZURE_SAS_TOKEN")
 	})
 }
 

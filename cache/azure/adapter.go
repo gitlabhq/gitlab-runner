@@ -70,15 +70,19 @@ func (a *azureAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 
 func (a *azureAdapter) GetUploadEnv(ctx context.Context) map[string]string {
 	token := a.generateWriteToken(ctx)
+
+	// Return what we do have if the token is missing so the user
+	// sees the right error message instead of "options.AccountName is required".
+	env := map[string]string{
+		"AZURE_STORAGE_ACCOUNT": a.config.AccountName,
+		"AZURE_STORAGE_DOMAIN":  a.config.StorageDomain,
+	}
 	if token == "" {
-		return map[string]string{}
+		return env
 	}
 
-	return map[string]string{
-		"AZURE_STORAGE_ACCOUNT":   a.config.AccountName,
-		"AZURE_STORAGE_SAS_TOKEN": token,
-		"AZURE_STORAGE_DOMAIN":    a.config.StorageDomain,
-	}
+	env["AZURE_STORAGE_SAS_TOKEN"] = token
+	return env
 }
 
 func (a *azureAdapter) presignURL(ctx context.Context, method string) *url.URL {
