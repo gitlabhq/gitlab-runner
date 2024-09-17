@@ -70,6 +70,10 @@ func getAdaptorForBuild(build *common.Build, key string) Adapter {
 		build.Runner.Cache.Type = "gcsv2"
 	}
 
+	if build.Runner.Cache.Type == "s3" && !build.IsFeatureFlagOn(featureflags.UseLegacyS3CacheAdapter) {
+		build.Runner.Cache.Type = "s3v2"
+	}
+
 	adapter, err := createAdapter(build.Runner.Cache, build.GetBuildTimeout(), objectName)
 	if err != nil {
 		logrus.WithError(err).Error("Could not create cache adapter")
