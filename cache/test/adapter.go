@@ -15,12 +15,12 @@ type testAdapter struct {
 	useGoCloud bool
 }
 
-func (t *testAdapter) GetDownloadURL(ctx context.Context) *url.URL {
-	return t.getURL("download")
+func (t *testAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{URL: t.getURL("download")}
 }
 
-func (t *testAdapter) GetUploadURL(ctx context.Context) *url.URL {
-	return t.getURL("upload")
+func (t *testAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
+	return cache.PresignedURL{URL: t.getURL("upload"), Headers: t.GetUploadHeaders()}
 }
 
 func (t *testAdapter) GetUploadHeaders() http.Header {

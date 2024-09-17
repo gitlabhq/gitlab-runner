@@ -41,6 +41,7 @@ const (
 	DisableAutomaticTokenRotation        string = "FF_DISABLE_AUTOMATIC_TOKEN_ROTATION"
 	UseLegacyGCSCacheAdapter             string = "FF_USE_LEGACY_GCS_CACHE_ADAPTER"
 	DisableUmaskForKubernetesExecutor    string = "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR"
+	UseLegacyS3CacheAdapter              string = "FF_USE_LEGACY_S3_CACHE_ADAPTER"
 )
 
 type FeatureFlag struct {
@@ -344,6 +345,13 @@ var flags = []FeatureFlag{
 			"executor. Instead, the runner tries to discover the user ID (UID) and group ID (GID) of the user the build container runs as. " +
 			"The runner also changes the ownership of the working directory and files by running the `chown` " +
 			"command in the predefined container (after updating sources, restoring cache, and downloading artifacts).",
+	},
+	{
+		Name:         UseLegacyS3CacheAdapter,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled, the legacy S3 Cache adapter is used. When disabled (default), a newer S3 Cache adapter is used which uses Amazon's S3 SDK " +
+			"for authentication. This should resolve authentication problems in environments that the legacy adapter struggled with, such as custom STS endpoints.",
 	},
 }
 

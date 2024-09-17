@@ -1,14 +1,12 @@
-package s3
+package s3v2
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/sirupsen/logrus"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
@@ -19,62 +17,31 @@ type s3Adapter struct {
 	timeout    time.Duration
 	config     *common.CacheS3Config
 	objectName string
-	client     minioClient
+	client     s3Presigner
 }
 
 func (a *s3Adapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
-	URL, err := a.client.PresignHeader(
-		ctx, http.MethodGet, a.config.BucketName,
-		a.objectName, a.timeout, nil, nil,
-	)
+	presignedURL, err := a.presignURL(ctx, http.MethodGet)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
 		return cache.PresignedURL{}
 	}
 
-	return cache.PresignedURL{URL: URL}
+	return presignedURL
 }
 
 func (a *s3Adapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
-	URL, err := a.client.PresignHeader(
-		ctx, http.MethodPut, a.config.BucketName,
-		a.objectName, a.timeout, nil, a.GetUploadHeaders(),
-	)
+	presignedURL, err := a.presignURL(ctx, http.MethodPut)
 	if err != nil {
 		logrus.WithError(err).Error("error while generating S3 pre-signed URL")
 		return cache.PresignedURL{}
 	}
 
-	return cache.PresignedURL{URL: URL, Headers: a.GetUploadHeaders()}
+	return presignedURL
 }
 
 func (a *s3Adapter) GetUploadHeaders() http.Header {
-	var ss encrypt.ServerSide
-
-	var err error
-	switch encrypt.Type(strings.ToUpper(a.config.ServerSideEncryption)) {
-	case encrypt.S3:
-		ss = encrypt.NewSSE()
-
-	case encrypt.KMS:
-		ss, err = encrypt.NewSSEKMS(a.config.ServerSideEncryptionKeyID, nil)
-		if err != nil {
-			err = fmt.Errorf("initializing server-side-encryption key id: %w", err)
-		}
-
-	default:
-		return nil
-	}
-
-	if err != nil {
-		logrus.WithError(err).Error("error configuring S3 SSE configuration")
-		return nil
-	}
-
-	headers := http.Header{}
-	ss.Marshal(headers)
-
-	return headers
+	return nil
 }
 
 func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
@@ -85,19 +52,31 @@ func (a *s3Adapter) GetUploadEnv() map[string]string {
 	return nil
 }
 
+func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.PresignedURL, error) {
+	if a.config.BucketName == "" {
+		return cache.PresignedURL{}, fmt.Errorf("config BucketName cannot be empty")
+	}
+
+	if a.objectName == "" {
+		return cache.PresignedURL{}, fmt.Errorf("object name cannot be empty")
+	}
+
+	return a.client.PresignURL(ctx, method, a.config.BucketName, a.objectName, a.timeout)
+}
+
 func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {
-	s3 := config.S3
-	if s3 == nil {
+	s3Config := config.S3
+	if s3Config == nil {
 		return nil, fmt.Errorf("missing S3 configuration")
 	}
 
-	client, err := newMinioClient(s3)
+	client, err := newS3Client(s3Config)
 	if err != nil {
 		return nil, fmt.Errorf("error while creating S3 cache storage client: %w", err)
 	}
 
 	a := &s3Adapter{
-		config:     s3,
+		config:     s3Config,
 		timeout:    timeout,
 		objectName: objectName,
 		client:     client,
@@ -107,7 +86,7 @@ func New(config *common.CacheConfig, timeout time.Duration, objectName string) (
 }
 
 func init() {
-	err := cache.Factories().Register("s3", New)
+	err := cache.Factories().Register("s3v2", New)
 	if err != nil {
 		panic(err)
 	}
