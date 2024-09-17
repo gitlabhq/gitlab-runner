@@ -44,6 +44,7 @@ const (
 	UseLegacyS3CacheAdapter              string = "FF_USE_LEGACY_S3_CACHE_ADAPTER"
 	GitURLsWithoutTokens                 string = "FF_GIT_URLS_WITHOUT_TOKENS"
 	WaitForPodReachable                  string = "FF_WAIT_FOR_POD_TO_BE_REACHABLE"
+	UseNativeSteps                       string = "FF_USE_NATIVE_STEPS"
 )
 
 type FeatureFlag struct {
@@ -368,6 +369,14 @@ var flags = []FeatureFlag{
 		DefaultValue: false,
 		Deprecated:   false,
 		Description:  "When enabled, the runner waits for the Pod status to be 'Running', and for the Pod to be ready with its certificates attached.",
+	},
+	{
+		Name:         UseNativeSteps,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description: "When enabled and when a job is specified using the 'run' keyword, steps are executed using " +
+			"[Native Step Runner Integration](../executors/docker.md#native-step-runner-integration). " +
+			"This applies only to executors that support native steps integration like Docker, Docker Autoscaler, Docker for Windows.",
 	},
 }
 
