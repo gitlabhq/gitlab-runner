@@ -647,7 +647,7 @@ func (j *JobResponse) StepsShim() error {
 	})
 
 	j.Steps = Steps{{
-		Name:         "script",
+		Name:         StepNameScript,
 		Script:       StepScript{"/step-runner ci"},
 		Timeout:      3600,
 		When:         "on_success",
