@@ -720,6 +720,10 @@ func TestWaitForRunningContainer(t *testing.T) {
 	fakeKubeClient := testclient.NewSimpleClientset()
 	tracker := fakeKubeClient.Tracker()
 
+	// Channels to synchronize the test steps
+	watchAdded := make(chan struct{})
+	returned := make(chan struct{})
+
 	fakeKubeClient.PrependWatchReactor("pods", func(action k8stesting.Action) (handled bool, ret watch.Interface, err error) {
 		watchAction, ok := action.(k8stesting.WatchAction)
 		require.True(t, ok, "action is not a WatchAction, action: %+v", action)
@@ -732,43 +736,37 @@ func TestWaitForRunningContainer(t *testing.T) {
 		if err != nil {
 			return false, nil, err
 		}
+
+		// Start the process by signaling to add the pod
+		close(watchAdded)
+
 		return true, watch, nil
 	})
 
-	// Start waiting for the container to come up
-	returned := make(chan struct{})
 	go func() {
 		err := waitForRunningContainer(ctx, fakeKubeClient, nil, podNamespace, podName, containerName)
 		assert.NoError(t, err, "expected no error from the container waiter")
 		close(returned)
 	}()
 
-	// After a bit ...
-	// - add the pod
-	time.AfterFunc(time.Millisecond*10, func() {
+	go func() {
+		<-watchAdded
 		err := tracker.Add(podTemplate())
 		require.NoError(t, err, "adding the pod to the tracker")
-	})
 
-	// - set the container to be waiting
-	time.AfterFunc(time.Millisecond*20, func() {
 		pod := podTemplate()
 		pod.Status.ContainerStatuses[0].State.Waiting = &api.ContainerStateWaiting{}
-		err := tracker.Update(gvr, pod, podNamespace)
+		err = tracker.Update(gvr, pod, podNamespace)
 		require.NoError(t, err, "updating container to waiting")
-	})
 
-	// - set the container to be running
-	time.AfterFunc(time.Millisecond*30, func() {
-		pod := podTemplate()
 		pod.Status.ContainerStatuses[0].State.Running = &api.ContainerStateRunning{}
-		err := tracker.Update(gvr, pod, podNamespace)
+		err = tracker.Update(gvr, pod, podNamespace)
 		require.NoError(t, err, "updating container to running")
-	})
+	}()
 
 	select {
 	case <-returned:
-	case <-time.After(time.Millisecond * 100):
+	case <-time.After(5 * time.Second):
 		obj, err := tracker.Get(gvr, podNamespace, podName)
 		assert.NoError(t, err, "getting current pod state")
 		require.FailNowf(t, "container waiter did not return in time", "current object state: %+v", obj)
