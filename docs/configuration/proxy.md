@@ -88,7 +88,7 @@ Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
 ## Adding Proxy variables to the GitLab Runner configuration
 
 The proxy variables need to also be added to the GitLab Runner configuration, so that it can
-get builds assigned from GitLab behind the proxy.
+connect to GitLab.com from behind the proxy.
 
 This is basically the same as adding the proxy to the Docker service above:
 
@@ -105,6 +105,16 @@ This is basically the same as adding the proxy to the Docker service above:
    [Service]
    Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
    Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
+   ```
+
+   To connect GitLab Runner to any internal URLs like a self-managed GitLab
+   instance, set a value for the `NO_PROXY` environment variable.
+
+   ```ini
+   [Service]
+   Environment="HTTP_PROXY=http://docker0_interface_ip:3128/"
+   Environment="HTTPS_PROXY=http://docker0_interface_ip:3128/"
+   Environment="NO_PROXY=gitlab.example.com"
    ```
 
 1. Save the file and flush changes:
