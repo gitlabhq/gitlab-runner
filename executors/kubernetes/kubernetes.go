@@ -282,8 +282,6 @@ type executor struct {
 	remoteStageStatus      shells.StageCommandStatus
 
 	eventsStream watch.Interface
-
-	entrypointLogForwarder *entrypointLogForwarder
 }
 
 type serviceCreateResponse struct {
@@ -353,16 +351,6 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 
 	if s.BuildShell.PassFile {
 		return fmt.Errorf("kubernetes doesn't support shells that require script file")
-	}
-
-	// If we allow to run the image's entrypoint, we need to set up directly pulling in logs from the k8s api, so we can
-	// forward the entrypoint logs to the build logger
-	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
-		s.entrypointLogForwarder = &entrypointLogForwarder{
-			LogSink:       s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stdout),
-			LogGatherer:   s.captureContainerLogs,
-			WithTimestamp: true,
-		}
 	}
 
 	err = s.waitForServices(options.Context)
@@ -657,6 +645,7 @@ func (s *executor) runWithExecLegacy(cmd common.ExecutorCommand) error {
 	}
 }
 
+//nolint:gocognit
 func (s *executor) setupPodLegacy(ctx context.Context) error {
 	if s.pod != nil {
 		return nil
@@ -689,7 +678,12 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 	}
 
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
-		go s.entrypointLogForwarder.Run(ctx, buildContainerName, nil)
+		err := s.captureContainerLogs(ctx, buildContainerName, &entrypointLogForwarder{
+			Sink: s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stdout),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	if s.shouldUseStartupProbe() {
@@ -841,7 +835,12 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 
 	// start pulling in logs from the build container, to capture entrypoint logs
 	if s.Build.IsFeatureFlagOn(featureflags.KubernetesHonorEntrypoint) {
-		go s.entrypointLogForwarder.Run(ctx, buildContainerName, nil)
+		err := s.captureContainerLogs(ctx, buildContainerName, &entrypointLogForwarder{
+			Sink: s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stdout),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// This starts the log processing, where we run the helper bin (in the helper container) to pull logs from the
@@ -2900,10 +2899,8 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		Follow:     true,
 		Timestamps: true,
 	}
-	watchTimeoutSeconds := common.Int64Ptr(int64(s.Config.Kubernetes.GetPollTimeout()))
-
 	podLogs, err := retry.WithValueFn(s, func() (io.ReadCloser, error) {
-		err := waitForRunningContainer(ctx, s.kubeClient, watchTimeoutSeconds, s.pod.Namespace, s.pod.Name, containerName)
+		err := waitForRunningContainer(ctx, s.kubeClient, s.Config.Kubernetes.GetPollTimeout(), s.pod.Namespace, s.pod.Name, containerName)
 		if err != nil {
 			return nil, err
 		}

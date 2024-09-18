@@ -738,7 +738,7 @@ func TestWaitForRunningContainer(t *testing.T) {
 	// Start waiting for the container to come up
 	returned := make(chan struct{})
 	go func() {
-		err := waitForRunningContainer(ctx, fakeKubeClient, nil, podNamespace, podName, containerName)
+		err := waitForRunningContainer(ctx, fakeKubeClient, 0, podNamespace, podName, containerName)
 		assert.NoError(t, err, "expected no error from the container waiter")
 		close(returned)
 	}()
