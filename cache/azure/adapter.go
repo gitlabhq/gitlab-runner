@@ -27,12 +27,12 @@ type azureAdapter struct {
 	credentialsResolver credentialsResolver
 }
 
-func (a *azureAdapter) GetDownloadURL(_ context.Context) *url.URL {
-	return a.presignURL(http.MethodGet)
+func (a *azureAdapter) GetDownloadURL(_ context.Context) cache.PresignedURL {
+	return cache.PresignedURL{URL: a.presignURL(http.MethodGet)}
 }
 
-func (a *azureAdapter) GetUploadURL(_ context.Context) *url.URL {
-	return a.presignURL(http.MethodPut)
+func (a *azureAdapter) GetUploadURL(_ context.Context) cache.PresignedURL {
+	return cache.PresignedURL{URL: a.presignURL(http.MethodPut), Headers: a.GetUploadHeaders()}
 }
 
 func (a *azureAdapter) GetUploadHeaders() http.Header {

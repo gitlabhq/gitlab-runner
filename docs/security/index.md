@@ -60,10 +60,6 @@ containers.
 By enabling privileged mode, you are effectively disabling all the container's security
 mechanisms and exposing your host to privilege escalation, which can lead to container breakout.
 
-It is especially risky when runners are shared between several organizations.
-For example, an instance-wide runner in a service like GitLab.com, where multiple
-separate organizations can work concurrently.
-
 If you use a Docker Machine executor, we also strongly recommend to use the `MaxBuilds = 1` setting,
 which ensures that a single autoscaled VM (potentially compromised because of the security weakness
 introduced by the privileged mode) is used to handle one and only one job.

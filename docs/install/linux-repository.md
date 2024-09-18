@@ -214,24 +214,24 @@ method supports only manual verification of packages.
 
 1. Install `dpkg-sig`
 
-    ```shell
-    apt-get update && apt-get install dpkg-sig
-    ```
+   ```shell
+   apt-get update && apt-get install dpkg-sig
+   ```
 
 1. Download and import the [package signing public key](#current-gpg-public-key)
 
-    ```shell
-    curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg"
-    gpg --import runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg
-    ```
+   ```shell
+   curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg"
+   gpg --import runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg
+   ```
 
 1. Verify downloaded package with `dpkg-sig`
 
-    ```shell
-    dpkg-sig --verify gitlab-runner_amd64.deb
-    Processing gitlab-runner_amd64.deb...
-    GOODSIG _gpgbuilder 931DA69CFA3AFEBBC97DAA8C6C57C29C6BA75A4E 1623755049
-    ```
+   ```shell
+   dpkg-sig --verify gitlab-runner_amd64.deb
+   Processing gitlab-runner_amd64.deb...
+   GOODSIG _gpgbuilder 931DA69CFA3AFEBBC97DAA8C6C57C29C6BA75A4E 1623755049
+   ```
 
    Verification of package with invalid signature or signed with an invalid key (for example
    a revoked one) will generate an output similar to:

@@ -19,7 +19,7 @@ GitLab maintains these official plugins:
 |----------------------------------------------------------------------------|---------------------|-------|
 | [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud) | Generally available | Uses [Google Cloud instance groups](https://cloud.google.com/compute/docs/instance-groups) |
 | [AWS](https://gitlab.com/gitlab-org/fleeting/plugins/aws)                  |Generally available  | Uses [AWS Auto Scaling groups](https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html) |
-| [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure)              | Beta                | Uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) |
+| [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure)              | Generally available                | Uses Azure [Virtual Machine Scale Sets](https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/overview) |
 
 To configure fleeting, in the `config.toml`, use the [`[runners.autoscaler]`](../configuration/advanced-configuration.md#the-runnersautoscaler-section)
 configuration section.
@@ -135,7 +135,7 @@ To manually install a fleeting plugin:
    - [Google Cloud](https://gitlab.com/gitlab-org/fleeting/plugins/googlecloud/-/releases)
    - [Azure](https://gitlab.com/gitlab-org/fleeting/plugins/azure/-/releases)
 1. Ensure the binary has a name in the format of `fleeting-plugin-<name>`. For example, `fleeting-plugin-aws`.
-1. Ensure the binary can be discovered from `$PATH`. For example, move it to `/usr/bin/local`.
+1. Ensure the binary can be discovered from `$PATH`. For example, move it to `/usr/local/bin`.
 1. In the `config.toml`, in the `[runners.autoscaler]` section, add the fleeting plugin. For example:
 
    ::Tabs

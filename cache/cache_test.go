@@ -23,7 +23,7 @@ type cacheOperationTest struct {
 	configExists           bool
 	adapterExists          bool
 	errorOnAdapterCreation bool
-	adapterURL             *url.URL
+	adapterURL             PresignedURL
 	expectedURL            *url.URL
 	expectedOutput         []string
 }
@@ -35,8 +35,12 @@ func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperat
 	if tc.adapterExists {
 		a := new(MockAdapter)
 
-		if tc.adapterURL != nil {
-			a.On(operationName, mock.Anything).Return(tc.adapterURL)
+		if tc.adapterURL.URL != nil {
+			if operationName == "GetGoCloudURL" {
+				a.On(operationName, mock.Anything).Return(tc.adapterURL.URL)
+			} else {
+				a.On(operationName, mock.Anything).Return(tc.adapterURL)
+			}
 		}
 
 		assertAdapterExpectations = a.AssertExpectations
@@ -77,10 +81,14 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 	return build
 }
 
+func getCacheGoCloudURLAdapter(ctx context.Context, build *common.Build, key string) PresignedURL {
+	return PresignedURL{URL: GetCacheGoCloudURL(ctx, build, key)}
+}
+
 func testCacheOperation(
 	t *testing.T,
 	operationName string,
-	operation func(ctx context.Context, build *common.Build, key string) *url.URL,
+	operation func(ctx context.Context, build *common.Build, key string) PresignedURL,
 	tc cacheOperationTest,
 ) {
 	t.Run(operationName, func(t *testing.T) {
@@ -92,7 +100,7 @@ func testCacheOperation(
 
 		build := prepareFakeBuild(tc)
 		generatedURL := operation(ctx, build, tc.key)
-		assert.Equal(t, tc.expectedURL, generatedURL)
+		assert.Equal(t, tc.expectedURL, generatedURL.URL)
 
 		if len(tc.expectedOutput) == 0 {
 			assert.Len(t, hook.AllEntries(), 0)
@@ -114,14 +122,14 @@ func TestCacheOperations(t *testing.T) {
 		"no-config": {
 			key:            "key",
 			adapterExists:  true,
-			adapterURL:     nil,
+			adapterURL:     PresignedURL{},
 			expectedURL:    nil,
 			expectedOutput: nil,
 		},
 		"key-not-specified": {
 			configExists:   true,
 			adapterExists:  true,
-			adapterURL:     nil,
+			adapterURL:     PresignedURL{},
 			expectedURL:    nil,
 			expectedOutput: []string{"Empty cache key. Skipping adapter selection."},
 		},
@@ -129,7 +137,7 @@ func TestCacheOperations(t *testing.T) {
 			key:           "key",
 			configExists:  true,
 			adapterExists: false,
-			adapterURL:    exampleURL,
+			adapterURL:    PresignedURL{URL: exampleURL},
 			expectedURL:   nil,
 		},
 		"adapter-error-on-factorization": {
@@ -137,7 +145,7 @@ func TestCacheOperations(t *testing.T) {
 			configExists:           true,
 			adapterExists:          true,
 			errorOnAdapterCreation: true,
-			adapterURL:             exampleURL,
+			adapterURL:             PresignedURL{URL: exampleURL},
 			expectedURL:            exampleURL,
 			expectedOutput: []string{
 				"test error",
@@ -147,7 +155,7 @@ func TestCacheOperations(t *testing.T) {
 			key:           "key",
 			configExists:  true,
 			adapterExists: true,
-			adapterURL:    exampleURL,
+			adapterURL:    PresignedURL{URL: exampleURL},
 			expectedURL:   exampleURL,
 		},
 	}
@@ -156,7 +164,7 @@ func TestCacheOperations(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			testCacheOperation(t, "GetDownloadURL", GetCacheDownloadURL, tc)
 			testCacheOperation(t, "GetUploadURL", GetCacheUploadURL, tc)
-			testCacheOperation(t, "GetGoCloudURL", GetCacheGoCloudURL, tc)
+			testCacheOperation(t, "GetGoCloudURL", getCacheGoCloudURLAdapter, tc)
 		})
 	}
 }

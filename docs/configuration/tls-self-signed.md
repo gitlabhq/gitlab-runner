@@ -138,65 +138,65 @@ To install the certificate:
    the scripts can see them. Do this by adding a volume inside the respective key inside
    the `[runners.docker]` in the `config.toml` file, for example:
 
-    - **Linux**:
+   - **Linux**:
+
+     ```toml
+     [[runners]]
+       name = "docker"
+       url = "https://example.com/"
+       token = "TOKEN"
+       executor = "docker"
+
+       [runners.docker]
+          image = "ubuntu:latest"
+
+          # Add path to your ca.crt file in the volumes list
+          volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
+     ```
+
+1. **Linux-only**: Use the mapped file (e.g `ca.crt`) in a [`pre_build_script`](advanced-configuration.md#the-runners-section) that:
+   1. Copies it to `/usr/local/share/ca-certificates/ca.crt` inside the Docker container.
+   1. Installs it by running `update-ca-certificates --fresh`. For example (commands
+      vary based on the distribution you're using):
+
+      - On Ubuntu:
 
         ```toml
         [[runners]]
-         name = "docker"
-         url = "https://example.com/"
-         token = "TOKEN"
-         executor = "docker"
+          name = "docker"
+          url = "https://example.com/"
+          token = "TOKEN"
+          executor = "docker"
 
-         [runners.docker]
-           image = "ubuntu:latest"
+          # Copy and install CA certificate before each job
+          pre_build_script = """
+          apt-get update -y > /dev/null
+          apt-get install -y ca-certificates > /dev/null
 
-           # Add path to your ca.crt file in the volumes list
-           volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
+          cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
+          update-ca-certificates --fresh > /dev/null
+          """
         ```
 
-1. **Linux-only**: Use the mapped file (e.g `ca.crt`) in a [`pre_build_script`](advanced-configuration.md#the-runners-section) that:
-    1. Copies it to `/usr/local/share/ca-certificates/ca.crt` inside the Docker container.
-    1. Installs it by running `update-ca-certificates --fresh`. For example (commands
-       vary based on the distribution you're using):
+      - On Alpine:
 
-        - On Ubuntu:
+        ```toml
+        [[runners]]
+          name = "docker"
+          url = "https://example.com/"
+          token = "TOKEN"
+          executor = "docker"
 
-            ```toml
-            [[runners]]
-              name = "docker"
-              url = "https://example.com/"
-              token = "TOKEN"
-              executor = "docker"
+          # Copy and install CA certificate before each job
+          pre_build_script = """
+          apk update >/dev/null
+          apk add ca-certificates > /dev/null
+          rm -rf /var/cache/apk/*
 
-              # Copy and install CA certificate before each job
-              pre_build_script = """
-              apt-get update -y > /dev/null
-              apt-get install -y ca-certificates > /dev/null
-
-              cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
-              update-ca-certificates --fresh > /dev/null
-              """
-            ```
-
-        - On Alpine:
-
-            ```toml
-            [[runners]]
-              name = "docker"
-              url = "https://example.com/"
-              token = "TOKEN"
-              executor = "docker"
-
-              # Copy and install CA certificate before each job
-              pre_build_script = """
-              apk update >/dev/null
-              apk add ca-certificates > /dev/null
-              rm -rf /var/cache/apk/*
-
-              cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
-              update-ca-certificates --fresh > /dev/null
-              """
-            ```
+          cp /etc/gitlab-runner/certs/ca.crt /usr/local/share/ca-certificates/ca.crt
+          update-ca-certificates --fresh > /dev/null
+          """
+        ```
 
 If you just need the GitLab server CA cert that can be used, you can retrieve it from the file stored in the `CI_SERVER_TLS_CA_FILE` variable:
 
@@ -215,35 +215,35 @@ when performing operations like cloning and uploading artifacts, for example.
 
 - **Linux**:
 
-    ```toml
-    [[runners]]
-     name = "docker"
-     url = "https://example.com/"
-     token = "TOKEN"
-     executor = "docker"
+  ```toml
+  [[runners]]
+    name = "docker"
+    url = "https://example.com/"
+    token = "TOKEN"
+    executor = "docker"
 
-     [runners.docker]
-       image = "ubuntu:latest"
+    [runners.docker]
+      image = "ubuntu:latest"
 
-       # Add path to your ca.crt file in the volumes list
-       volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
-    ```
+      # Add path to your ca.crt file in the volumes list
+      volumes = ["/cache", "/path/to-ca-cert-dir/ca.crt:/etc/gitlab-runner/certs/ca.crt:ro"]
+  ```
 
 - **Windows**:
 
-    ```toml
-    [[runners]]
-     name = "docker"
-     url = "https://example.com/"
-     token = "TOKEN"
-     executor = "docker"
+  ```toml
+  [[runners]]
+    name = "docker"
+    url = "https://example.com/"
+    token = "TOKEN"
+    executor = "docker"
 
-     [runners.docker]
-       image = "mcr.microsoft.com/windows/servercore:21H2"
+    [runners.docker]
+      image = "mcr.microsoft.com/windows/servercore:21H2"
 
-       # Add directory holding your ca.crt file in the volumes list
-       volumes = ["c:\\cache", "c:\\path\\to-ca-cert-dir:C:\\GitLab-Runner\\certs:ro"]
-    ```
+      # Add directory holding your ca.crt file in the volumes list
+      volumes = ["c:\\cache", "c:\\path\\to-ca-cert-dir:C:\\GitLab-Runner\\certs:ro"]
+  ```
 
 #### Kubernetes
 

@@ -300,7 +300,12 @@ func (e *executor) Run(cmd common.ExecutorCommand) error {
 		return err
 	}
 
-	scriptFile := filepath.Join(scriptDir, "script."+e.BuildShell.Extension)
+	scriptName := "script"
+	if e.BuildShell.Extension != "" {
+		scriptName += "." + e.BuildShell.Extension
+	}
+
+	scriptFile := filepath.Join(scriptDir, scriptName)
 	err = os.WriteFile(scriptFile, []byte(cmd.Script), 0o700)
 	if err != nil {
 		return err

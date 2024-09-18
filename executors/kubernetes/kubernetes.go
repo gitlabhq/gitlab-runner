@@ -426,6 +426,11 @@ func (s *executor) verifyPullPolicies(
 	allowedPullPolicies []api.PullPolicy,
 	imagePullPolicies []common.DockerPullPolicy,
 ) error {
+	// Allow an empty pull_policy since it will result in the kubernetes cluster’s default pull_policy being used.
+	if len(pullPolicies) == 0 {
+		return nil
+	}
+
 	for _, policy := range pullPolicies {
 		for _, allowedPolicy := range allowedPullPolicies {
 			if policy == allowedPolicy {

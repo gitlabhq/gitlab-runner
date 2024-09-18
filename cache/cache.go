@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"path"
 	"strconv"
@@ -70,6 +69,10 @@ func getAdaptorForBuild(build *common.Build, key string) Adapter {
 		build.Runner.Cache.Type = "gcsv2"
 	}
 
+	if build.Runner.Cache.Type == "s3" && !build.IsFeatureFlagOn(featureflags.UseLegacyS3CacheAdapter) {
+		build.Runner.Cache.Type = "s3v2"
+	}
+
 	adapter, err := createAdapter(build.Runner.Cache, build.GetBuildTimeout(), objectName)
 	if err != nil {
 		logrus.WithError(err).Error("Could not create cache adapter")
@@ -78,31 +81,22 @@ func getAdaptorForBuild(build *common.Build, key string) Adapter {
 	return adapter
 }
 
-func GetCacheDownloadURL(ctx context.Context, build *common.Build, key string) *url.URL {
+func GetCacheDownloadURL(ctx context.Context, build *common.Build, key string) PresignedURL {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
-		return nil
+		return PresignedURL{}
 	}
 
 	return adaptor.GetDownloadURL(ctx)
 }
 
-func GetCacheUploadURL(ctx context.Context, build *common.Build, key string) *url.URL {
+func GetCacheUploadURL(ctx context.Context, build *common.Build, key string) PresignedURL {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
-		return nil
+		return PresignedURL{}
 	}
 
 	return adaptor.GetUploadURL(ctx)
-}
-
-func GetCacheUploadHeaders(build *common.Build, key string) http.Header {
-	adaptor := getAdaptorForBuild(build, key)
-	if adaptor == nil {
-		return nil
-	}
-
-	return adaptor.GetUploadHeaders()
 }
 
 func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string) *url.URL {

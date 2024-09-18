@@ -11,11 +11,15 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
+type PresignedURL struct {
+	URL     *url.URL
+	Headers http.Header
+}
+
 //go:generate mockery --name=Adapter --inpackage
 type Adapter interface {
-	GetDownloadURL(context.Context) *url.URL
-	GetUploadURL(context.Context) *url.URL
-	GetUploadHeaders() http.Header
+	GetDownloadURL(context.Context) PresignedURL
+	GetUploadURL(context.Context) PresignedURL
 
 	GetGoCloudURL(context.Context) *url.URL
 	GetUploadEnv() map[string]string

@@ -92,7 +92,7 @@ func onFakeMinioURLGenerator(tc cacheOperationTest) func() {
 func testCacheOperation(
 	t *testing.T,
 	operationName string,
-	operation func(adapter cache.Adapter) *url.URL,
+	operation func(adapter cache.Adapter) cache.PresignedURL,
 	tc cacheOperationTest,
 	cacheConfig *common.CacheConfig,
 ) {
@@ -109,17 +109,20 @@ func testCacheOperation(
 		}
 		require.NoError(t, err)
 
-		URL := operation(adapter)
-		assert.Equal(t, tc.expectedURL, URL)
+		u := operation(adapter)
+		assert.Equal(t, tc.expectedURL, u.URL)
 
-		uploadHeaders := adapter.GetUploadHeaders()
-		if tc.expectedUploadHeaders != nil {
-			require.NotNil(t, uploadHeaders)
-			expectedUploadHeaders := tc.expectedUploadHeaders
-			assert.Len(t, uploadHeaders, len(expectedUploadHeaders))
-			assert.True(t, reflect.DeepEqual(expectedUploadHeaders, uploadHeaders))
+		uploadHeaders := u.Headers
+		if operationName == "GetDownloadURL" {
+			assert.Empty(t, uploadHeaders)
 		} else {
-			assert.Nil(t, uploadHeaders)
+			if tc.expectedUploadHeaders != nil {
+				expectedUploadHeaders := tc.expectedUploadHeaders
+				assert.Len(t, uploadHeaders, len(expectedUploadHeaders))
+				assert.True(t, reflect.DeepEqual(expectedUploadHeaders, uploadHeaders))
+			} else {
+				assert.Empty(t, uploadHeaders)
+			}
 		}
 
 		assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
@@ -151,14 +154,14 @@ func TestCacheOperation(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
 				test,
 				defaultCacheFactory(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
 				test,
 				defaultCacheFactory(),
 			)
@@ -181,7 +184,7 @@ func TestCacheOperationEncryptionAES(t *testing.T) {
 			errorOnURLPresigning:  true,
 			presignedURL:          URL,
 			expectedURL:           nil,
-			expectedUploadHeaders: headers,
+			expectedUploadHeaders: nil,
 		},
 		"presigned-url-aes": {
 			presignedURL:          URL,
@@ -195,14 +198,14 @@ func TestCacheOperationEncryptionAES(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionAES(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionAES(),
 			)
@@ -220,13 +223,13 @@ func TestCacheOperationEncryptionKMS(t *testing.T) {
 	tests := map[string]cacheOperationTest{
 		"error-on-minio-client-initialization": {
 			errorOnMinioClientInitialization: true,
-			expectedUploadHeaders:            headers,
+			expectedUploadHeaders:            nil,
 		},
 		"error-on-presigning-url": {
 			errorOnURLPresigning:  true,
 			presignedURL:          URL,
 			expectedURL:           nil,
-			expectedUploadHeaders: headers,
+			expectedUploadHeaders: nil,
 		},
 		"presigned-url-kms": {
 			presignedURL:          URL,
@@ -240,14 +243,14 @@ func TestCacheOperationEncryptionKMS(t *testing.T) {
 			testCacheOperation(
 				t,
 				"GetDownloadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetDownloadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetDownloadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionKMS(),
 			)
 			testCacheOperation(
 				t,
 				"GetUploadURL",
-				func(adapter cache.Adapter) *url.URL { return adapter.GetUploadURL(context.Background()) },
+				func(adapter cache.Adapter) cache.PresignedURL { return adapter.GetUploadURL(context.Background()) },
 				test,
 				defaultCacheFactoryEncryptionKMS(),
 			)

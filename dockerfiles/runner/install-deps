@@ -46,7 +46,7 @@ mkdir -p /etc/gitlab-runner/certs
 chmod -R 700 /etc/gitlab-runner
 
 if grep 'docker-machine' "${SCRIPTPATH}/checksums-${ARCH}"; then
-  curl -L "https://gitlab.com/gitlab-org/ci-cd/docker-machine/-/releases/${DOCKER_MACHINE_VERSION}/downloads/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" \
+  curl -L "https://gitlab-docker-machine-downloads.s3.amazonaws.com/${DOCKER_MACHINE_VERSION}/docker-machine-Linux-${DOCKER_MACHINE_ARCH}" \
     -o /tmp/docker-machine
   install -m 555 -o 0 -g 0 /tmp/docker-machine ${TARGET_BIN_PATH}/docker-machine
   docker-machine --version

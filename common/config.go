@@ -1126,6 +1126,8 @@ type CacheS3Config struct {
 	AuthenticationType        S3AuthType `toml:"AuthenticationType,omitempty" long:"authentication_type" env:"CACHE_S3_AUTHENTICATION_TYPE" description:"IAM or credentials"`
 	ServerSideEncryption      string     `toml:"ServerSideEncryption,omitempty" long:"server-side-encryption" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION" description:"Server side encryption type (S3, or KMS)"`
 	ServerSideEncryptionKeyID string     `toml:"ServerSideEncryptionKeyID,omitempty" long:"server-side-encryption-key-id" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID" description:"Server side encryption key ID (alias or Key ID)"`
+	DualStack                 *bool      `toml:"DualStack,omitempty" long:"dual-stack" env:"CACHE_S3_DUAL_STACK" description:"Enable dual-stack (IPv4 and IPv6) endpoints (default: true)"`
+	Accelerate                bool       `toml:"Accelerate,omitempty" long:"accelerate" env:"CACHE_S3_ACCELERATE" description:"Enable S3 Transfer Acceleration"`
 }
 
 type CacheAzureCredentials struct {
@@ -1289,6 +1291,13 @@ func (c *CacheS3Config) AuthType() S3AuthType {
 	}
 
 	return S3AuthTypeAccessKey
+}
+
+func (c *CacheS3Config) DualStackEnabled() bool {
+	if c.DualStack == nil {
+		return true
+	}
+	return *c.DualStack
 }
 
 func (c *CacheConfig) GetPath() string {

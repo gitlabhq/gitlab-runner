@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
 
@@ -93,14 +94,14 @@ func testAdapterOperationWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *azureAdapter,
-	operation func(context.Context) *url.URL,
+	operation func(context.Context) cache.PresignedURL,
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 		hook := test.NewGlobal()
 
 		u := operation(context.Background())
-		assert.Nil(t, u)
+		assert.Nil(t, u.URL)
 
 		message, err := hook.LastEntry().String()
 		require.NoError(t, err)
@@ -281,7 +282,7 @@ func testAdapterOperation(
 	name string,
 	expectedMethod string,
 	adapter *azureAdapter,
-	operation func(context.Context) *url.URL,
+	operation func(context.Context) cache.PresignedURL,
 ) {
 	t.Run(name, func(t *testing.T) {
 		cleanupCredentialsResolverMock := prepareMockedCredentialsResolver(adapter)
@@ -301,7 +302,7 @@ func testAdapterOperation(
 
 		assert.Empty(t, hook.AllEntries())
 
-		assert.Equal(t, tc.returnedURL, u.String())
+		assert.Equal(t, tc.returnedURL, u.URL.String())
 	})
 }
 

@@ -197,8 +197,8 @@ func (b *AbstractShell) addExtractCacheCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	if url := cache.GetCacheDownloadURL(ctx, info.Build, cacheKey); url != nil {
-		args = append(args, "--url", url.String())
+	if url := cache.GetCacheDownloadURL(ctx, info.Build, cacheKey); url.URL != nil {
+		args = append(args, "--url", url.URL.String())
 	}
 
 	w.Noticef("Checking cache for %s...", cacheKey)
@@ -950,13 +950,12 @@ func getCacheUploadURL(ctx context.Context, build *common.Build, cacheKey string
 	}
 
 	uploadURL := cache.GetCacheUploadURL(ctx, build, cacheKey)
-	if uploadURL == nil {
+	if uploadURL.URL == nil {
 		return []string{}
 	}
 
-	urlArgs := []string{"--url", uploadURL.String()}
-	httpHeaders := cache.GetCacheUploadHeaders(build, cacheKey)
-	for key, values := range httpHeaders {
+	urlArgs := []string{"--url", uploadURL.URL.String()}
+	for key, values := range uploadURL.Headers {
 		for _, value := range values {
 			urlArgs = append(urlArgs, "--header", fmt.Sprintf("%s: %s", key, value))
 		}
