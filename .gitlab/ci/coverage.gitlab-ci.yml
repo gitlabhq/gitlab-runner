@@ -14,12 +14,13 @@ test coverage report:
     optional: true
   - job: windows 21H2 integration tests
     optional: true
-  - windows 1809 unit tests
+  - job: windows 1809 unit tests
+    optional: true
   - job: windows 21H2 unit tests
     optional: true
   script:
   - make cobertura_report
-  - splitic junit-check -quarantined ci/.test-failures.servercore1809.txt .splitic/junit_servercore1809_*.xml
+  - test -z "$(find .splitic -name 'junit_servercore1809_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore1809.txt .splitic/junit_servercore1809_*.xml
   - test -z "$(find .splitic -name 'junit_servercore21H2_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore21H2.txt .splitic/junit_servercore21H2_*.xml
   artifacts:
     reports:
