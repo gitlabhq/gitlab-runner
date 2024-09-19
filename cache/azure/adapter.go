@@ -27,12 +27,18 @@ type azureAdapter struct {
 	credentialsResolver credentialsResolver
 }
 
+// GetDownloadURL returns a pre-signed URL for downloading the cache. In
+// the future we should convert the cache extractor to use a GoCloud URL
+// to eliminate this code.
 func (a *azureAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{
 		URL: a.presignURL(ctx, http.MethodGet),
 	}
 }
 
+// GetUploadURL returns a legacy URL that is no longer used
+// because uploading via a pre-signed URL is limited to 5 MB (https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob-from-url?tabs=microsoft-entra-id).
+// We depend on GoCloud to handle the upload.
 func (a *azureAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{
 		URL:     a.presignURL(ctx, http.MethodPut),
@@ -40,6 +46,9 @@ func (a *azureAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	}
 }
 
+// GetUploadHeaders returns legacy HTTP headers that are no longer used because
+// uploading via a pre-signed URL is limited to 5 MB (https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob-from-url?tabs=microsoft-entra-id).
+// We depend on GoCloud to handle the upload.
 func (a *azureAdapter) GetUploadHeaders() http.Header {
 	httpHeaders := http.Header{}
 	httpHeaders.Set(common.ContentType, "application/octet-stream")
@@ -86,15 +95,14 @@ func (a *azureAdapter) GetUploadEnv(ctx context.Context) map[string]string {
 }
 
 func (a *azureAdapter) presignURL(ctx context.Context, method string) *url.URL {
-	credentials := a.getCredentials()
-	if credentials == nil {
+	signer := a.getSigner()
+	if signer == nil {
 		return nil
 	}
 
 	u, err := a.generateSignedURL(ctx, a.objectName, &signedURLOptions{
 		ContainerName: a.config.ContainerName,
-		StorageDomain: a.config.StorageDomain,
-		Credentials:   credentials,
+		Signer:        signer,
 		Method:        method,
 		Timeout:       a.timeout,
 	})
@@ -107,15 +115,14 @@ func (a *azureAdapter) presignURL(ctx context.Context, method string) *url.URL {
 }
 
 func (a *azureAdapter) generateWriteToken(ctx context.Context) string {
-	credentials := a.getCredentials()
-	if credentials == nil {
+	signer := a.getSigner()
+	if signer == nil {
 		return ""
 	}
 
 	t, err := a.blobTokenGenerator(ctx, a.objectName, &signedURLOptions{
 		ContainerName: a.config.ContainerName,
-		StorageDomain: a.config.StorageDomain,
-		Credentials:   credentials,
+		Signer:        signer,
 		Method:        http.MethodPut,
 		Timeout:       a.timeout,
 	})
@@ -127,19 +134,20 @@ func (a *azureAdapter) generateWriteToken(ctx context.Context) string {
 	return t
 }
 
-func (a *azureAdapter) getCredentials() *common.CacheAzureCredentials {
-	if a.config.ContainerName == "" {
-		logrus.Errorf("ContainerName can't be empty")
-		return nil
-	}
-
+func (a *azureAdapter) getSigner() sasSigner {
 	err := a.credentialsResolver.Resolve()
 	if err != nil {
 		logrus.WithError(err).Errorf("error resolving Azure credentials")
 		return nil
 	}
 
-	return a.credentialsResolver.Credentials()
+	signer, err := a.credentialsResolver.Signer()
+	if err != nil {
+		logrus.WithError(err).Errorf("error creating Azure SAS signer")
+		return nil
+	}
+
+	return signer
 }
 
 func New(config *common.CacheConfig, timeout time.Duration, objectName string) (cache.Adapter, error) {

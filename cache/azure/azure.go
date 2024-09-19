@@ -2,7 +2,6 @@ package azure
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -19,12 +18,56 @@ import (
 
 const DefaultAzureServer = "blob.core.windows.net"
 
+type sasSigner interface {
+	ServiceURL() string
+	Prepare(ctx context.Context, o *signedURLOptions) error
+	Sign(values sas.BlobSignatureValues) (sas.QueryParameters, error)
+}
+
+type accountKeySigner struct {
+	blobServiceURL string
+	credential     *service.SharedKeyCredential
+}
+
+type userDelegationKeySigner struct {
+	blobServiceURL string
+	transport      *http.Transport
+	userCredential *service.UserDelegationCredential
+	credential     *azidentity.DefaultAzureCredential
+}
+
+type userDelegationKeyOption func(*userDelegationKeySigner)
+
 type signedURLOptions struct {
 	ContainerName string
-	StorageDomain string
-	Credentials   *common.CacheAzureCredentials
+	Signer        sasSigner
 	Method        string
 	Timeout       time.Duration
+}
+
+// withBlobServiceEndpoint allows the caller to override the default service
+// URL. This should only be used in testing.
+func withBlobServiceEndpoint(endpoint string) userDelegationKeyOption {
+	return func(s *userDelegationKeySigner) {
+		s.blobServiceURL = endpoint
+	}
+}
+
+// withBlobServiceTransports allows the caller to override the underlying
+// HTTP transport for the service URL. This should only be used in testing.
+func withBlobServiceTransport(transport *http.Transport) userDelegationKeyOption {
+	return func(s *userDelegationKeySigner) {
+		s.transport = transport
+	}
+}
+
+// transportAdapter wraps http.Transport to implement service.Transporter
+type transportAdapter struct {
+	transport *http.Transport
+}
+
+func (t *transportAdapter) Do(req *http.Request) (*http.Response, error) {
+	return t.transport.RoundTrip(req)
 }
 
 func presignedURL(ctx context.Context, name string, o *signedURLOptions) (*url.URL, error) {
@@ -33,18 +76,15 @@ func presignedURL(ctx context.Context, name string, o *signedURLOptions) (*url.U
 		return nil, err
 	}
 
-	domain := DefaultAzureServer
-	if o.StorageDomain != "" {
-		domain = o.StorageDomain
+	endpoint := o.Signer.ServiceURL()
+	parts, err := sas.ParseURL(endpoint)
+	if err != nil {
+		return nil, err
 	}
 
-	parts := sas.URLParts{
-		Scheme:        "https",
-		Host:          fmt.Sprintf("%s.%s", o.Credentials.AccountName, domain),
-		ContainerName: o.ContainerName,
-		BlobName:      name,
-		SAS:           sasQueryParams,
-	}
+	parts.ContainerName = o.ContainerName
+	parts.BlobName = name
+	parts.SAS = sasQueryParams
 
 	u, err := url.Parse(parts.String())
 	if err != nil {
@@ -62,16 +102,64 @@ func getSASToken(ctx context.Context, name string, o *signedURLOptions) (string,
 	return sas.Encode(), nil
 }
 
+func getBlobServiceURL(config *common.CacheAzureConfig) string {
+	domain := DefaultAzureServer
+	if config.StorageDomain != "" {
+		domain = config.StorageDomain
+	}
+	return fmt.Sprintf("https://%s.%s", config.CacheAzureCredentials.AccountName, domain)
+}
+
+func newAccountKeySigner(config *common.CacheAzureConfig) (sasSigner, error) {
+	credentials := config.CacheAzureCredentials
+	if credentials.AccountName == "" {
+		return nil, fmt.Errorf("missing Azure storage account name")
+	}
+	if credentials.AccountKey == "" {
+		return nil, fmt.Errorf("missing Azure storage account key")
+	}
+	if config.ContainerName == "" {
+		return nil, fmt.Errorf("ContainerName can't be empty")
+	}
+
+	blobServiceURL := getBlobServiceURL(config)
+	credential, err := azblob.NewSharedKeyCredential(credentials.AccountName, credentials.AccountKey)
+	if err != nil {
+		return nil, fmt.Errorf("creating Azure signature: %w", err)
+	}
+
+	return &accountKeySigner{blobServiceURL: blobServiceURL, credential: credential}, nil
+}
+
+func newUserDelegationKeySigner(config *common.CacheAzureConfig, options ...userDelegationKeyOption) (sasSigner, error) {
+	if config.AccountName == "" {
+		return nil, fmt.Errorf("no Azure storage account name provided")
+	}
+
+	credential, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Azure identity credentials: %w", err)
+	}
+
+	blobServiceURL := getBlobServiceURL(config)
+	signer := &userDelegationKeySigner{blobServiceURL: blobServiceURL, credential: credential}
+
+	for _, opt := range options {
+		opt(signer)
+	}
+
+	return signer, nil
+}
+
 func getSASQueryParameters(ctx context.Context, name string, o *signedURLOptions) (sas.QueryParameters, error) {
-	if o.Credentials.AccountName == "" {
-		return sas.QueryParameters{}, errors.New("missing Azure storage account name")
+	serviceSASValues := generateBlobSignatureValues(name, o)
+
+	err := o.Signer.Prepare(ctx, o)
+	if err != nil {
+		return sas.QueryParameters{}, err
 	}
 
-	if o.Credentials.AccountKey == "" {
-		return getSASWithManagedIdentity(ctx, name, o)
-	}
-
-	return getSASWithSharedCredentials(name, o)
+	return o.Signer.Sign(serviceSASValues)
 }
 
 func generateBlobSignatureValues(name string, o *signedURLOptions) sas.BlobSignatureValues {
@@ -83,7 +171,7 @@ func generateBlobSignatureValues(name string, o *signedURLOptions) sas.BlobSigna
 	// Set the desired SAS signature values.
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas
 	return sas.BlobSignatureValues{
-		Protocol:      sas.ProtocolHTTPS,
+		Protocol:      sas.ProtocolHTTPS, // Users MUST use HTTPS (not HTTP)
 		StartTime:     time.Now().Add(-1 * time.Hour).UTC(),
 		ExpiryTime:    time.Now().Add(o.Timeout).UTC(),
 		Permissions:   permissions.String(),
@@ -92,16 +180,17 @@ func generateBlobSignatureValues(name string, o *signedURLOptions) sas.BlobSigna
 	}
 }
 
-func getSASWithSharedCredentials(name string, o *signedURLOptions) (sas.QueryParameters, error) {
+func (s *accountKeySigner) ServiceURL() string {
+	return s.blobServiceURL
+}
+
+func (s *accountKeySigner) Prepare(ctx context.Context, o *signedURLOptions) error {
+	return nil
+}
+
+func (s *accountKeySigner) Sign(values sas.BlobSignatureValues) (sas.QueryParameters, error) {
 	empty := sas.QueryParameters{}
-
-	credential, err := azblob.NewSharedKeyCredential(o.Credentials.AccountName, o.Credentials.AccountKey)
-	if err != nil {
-		return empty, fmt.Errorf("creating Azure signature: %w", err)
-	}
-
-	serviceSASValues := generateBlobSignatureValues(name, o)
-	sas, err := serviceSASValues.SignWithSharedKey(credential)
+	sas, err := values.SignWithSharedKey(s.credential)
 	if err != nil {
 		return empty, fmt.Errorf("creating Azure SAS: %w", err)
 	}
@@ -109,17 +198,32 @@ func getSASWithSharedCredentials(name string, o *signedURLOptions) (sas.QueryPar
 	return sas, nil
 }
 
-var retrieveUserCredentials = func(ctx context.Context, o *signedURLOptions) (*service.UserDelegationCredential, error) {
-	domain := DefaultAzureServer
-	if o.StorageDomain != "" {
-		domain = o.StorageDomain
-	}
+func (s *userDelegationKeySigner) ServiceURL() string {
+	return s.blobServiceURL
+}
 
-	credential, err := azidentity.NewDefaultAzureCredential(nil)
+func (s *userDelegationKeySigner) Prepare(ctx context.Context, o *signedURLOptions) error {
+	userDelegationKey, err := s.retrieveUserCredentials(ctx, o)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Azure identity credentials: %w", err)
+		return fmt.Errorf("failed to get User Delegation Key: %w", err)
 	}
 
+	s.userCredential = userDelegationKey
+
+	return nil
+}
+
+func (s *userDelegationKeySigner) Sign(values sas.BlobSignatureValues) (sas.QueryParameters, error) {
+	empty := sas.QueryParameters{}
+	sas, err := values.SignWithUserDelegation(s.userCredential)
+	if err != nil {
+		return empty, fmt.Errorf("creating Azure SAS: %w", err)
+	}
+
+	return sas, nil
+}
+
+func (s *userDelegationKeySigner) retrieveUserCredentials(ctx context.Context, o *signedURLOptions) (*service.UserDelegationCredential, error) {
 	start := time.Now().UTC()
 	expiry := start.Add(o.Timeout)
 	info := service.KeyInfo{
@@ -127,28 +231,15 @@ var retrieveUserCredentials = func(ctx context.Context, o *signedURLOptions) (*s
 		Expiry: to.Ptr(expiry.UTC().Format(sas.TimeFormat)),
 	}
 
-	blobServiceURL := fmt.Sprintf("https://%s.%s", o.Credentials.AccountName, domain)
-	blobServiceClient, err := service.NewClient(blobServiceURL, credential, nil)
+	clientOptions := &service.ClientOptions{}
+	if s.transport != nil {
+		clientOptions.Transport = &transportAdapter{transport: s.transport}
+	}
+
+	blobServiceClient, err := service.NewClient(s.blobServiceURL, s.credential, clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob Service Client: %w", err)
 	}
 
 	return blobServiceClient.GetUserDelegationCredential(ctx, info, nil)
-}
-
-func getSASWithManagedIdentity(ctx context.Context, name string, o *signedURLOptions) (sas.QueryParameters, error) {
-	empty := sas.QueryParameters{}
-
-	userDelegationKey, err := retrieveUserCredentials(ctx, o)
-	if err != nil {
-		return empty, fmt.Errorf("failed to get User Delegation Key: %w", err)
-	}
-
-	serviceSASValues := generateBlobSignatureValues(name, o)
-	sasQueryParams, err := serviceSASValues.SignWithUserDelegation(userDelegationKey)
-	if err != nil {
-		return empty, fmt.Errorf("creating Azure SAS with User Delegation Key: %w", err)
-	}
-
-	return sasQueryParams, nil
 }

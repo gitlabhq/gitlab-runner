@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -82,10 +81,14 @@ func prepareMockedCredentialsResolverForInvalidConfig(adapter *azureAdapter, tc 
 		resolveCall.Return(nil)
 	}
 
-	cr.On("Credentials").Return(&common.CacheAzureCredentials{
-		AccountName: tc.accountName,
-		AccountKey:  tc.accountKey,
-	})
+	config := defaultAzureCache()
+	config.Azure.CacheAzureCredentials.AccountName = tc.accountName
+	config.Azure.CacheAzureCredentials.AccountKey = tc.accountKey
+	config.Azure.ContainerName = tc.containerName
+
+	// Always return an account key signer to avoid metadata lookups
+	signer, err := newAccountKeySigner(config.Azure)
+	cr.On("Signer").Return(signer, err)
 
 	adapter.credentialsResolver = cr
 }
@@ -148,14 +151,6 @@ func testUploadEnvWithInvalidConfig(
 }
 
 func TestAdapterOperation_InvalidConfig(t *testing.T) {
-	oldCredentialRetriever := retrieveUserCredentials
-	retrieveUserCredentials = func(ctx context.Context, o *signedURLOptions) (*service.UserDelegationCredential, error) {
-		return nil, fmt.Errorf("error retrieving user credentials")
-	}
-	defer func() {
-		retrieveUserCredentials = oldCredentialRetriever
-	}()
-
 	tests := map[string]adapterOperationInvalidConfigTestCase{
 		"no-azure-config": {
 			containerName:    containerName,
@@ -175,28 +170,28 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 		"no-credentials": {
 			provideAzureConfig: true,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account name\"",
+			expectedErrorMsg:   "error creating Azure SAS signer\" error=\"missing Azure storage account name\"",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"no-account-name": {
 			provideAzureConfig: true,
 			accountKey:         accountKey,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account name\"",
+			expectedErrorMsg:   "error creating Azure SAS signer\" error=\"missing Azure storage account name\"",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"no-account-key": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      containerName,
-			expectedErrorMsg:   "error retrieving user credentials",
+			expectedErrorMsg:   "missing Azure storage account key",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"invalid-container-name-and-no-account-key": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      "\x00",
-			expectedErrorMsg:   "error retrieving user credentials",
+			expectedErrorMsg:   "missing Azure storage account key",
 		},
 		"container-not-specified": {
 			provideAzureConfig: true,
@@ -252,12 +247,12 @@ type adapterOperationTestCase struct {
 }
 
 func prepareMockedCredentialsResolver(adapter *azureAdapter) func(t *testing.T) {
+	config := defaultAzureCache()
+	signer, err := newAccountKeySigner(config.Azure)
+
 	cr := &mockCredentialsResolver{}
 	cr.On("Resolve").Return(nil)
-	cr.On("Credentials").Return(&common.CacheAzureCredentials{
-		AccountName: accountName,
-		AccountKey:  accountKey,
-	})
+	cr.On("Signer").Return(signer, err)
 
 	adapter.credentialsResolver = cr
 
@@ -274,8 +269,6 @@ func prepareMockedSignedURLGenerator(
 ) {
 	adapter.generateSignedURL = func(ctx context.Context, name string, opts *signedURLOptions) (*url.URL, error) {
 		assert.Equal(t, containerName, opts.ContainerName)
-		assert.Equal(t, accountName, opts.Credentials.AccountName)
-		assert.Equal(t, accountKey, opts.Credentials.AccountKey)
 		assert.Equal(t, expectedMethod, opts.Method)
 
 		u, err := url.Parse(tc.returnedURL)
