@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -30,10 +31,11 @@ type accountKeySigner struct {
 }
 
 type userDelegationKeySigner struct {
-	blobServiceURL string
-	transport      *http.Transport
-	userCredential *service.UserDelegationCredential
-	credential     *azidentity.DefaultAzureCredential
+	blobServiceURL  string
+	credTransporter policy.Transporter
+	transport       *http.Transport
+	userCredential  *service.UserDelegationCredential
+	credential      *azidentity.DefaultAzureCredential
 }
 
 type userDelegationKeyOption func(*userDelegationKeySigner)
@@ -58,6 +60,12 @@ func withBlobServiceEndpoint(endpoint string) userDelegationKeyOption {
 func withBlobServiceTransport(transport *http.Transport) userDelegationKeyOption {
 	return func(s *userDelegationKeySigner) {
 		s.transport = transport
+	}
+}
+
+func withDefaultCredentialTransporter(transporter policy.Transporter) userDelegationKeyOption {
+	return func(s *userDelegationKeySigner) {
+		s.credTransporter = transporter
 	}
 }
 
@@ -136,17 +144,24 @@ func newUserDelegationKeySigner(config *common.CacheAzureConfig, options ...user
 		return nil, fmt.Errorf("no Azure storage account name provided")
 	}
 
-	credential, err := azidentity.NewDefaultAzureCredential(nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Azure identity credentials: %w", err)
-	}
-
 	blobServiceURL := getBlobServiceURL(config)
-	signer := &userDelegationKeySigner{blobServiceURL: blobServiceURL, credential: credential}
+	signer := &userDelegationKeySigner{blobServiceURL: blobServiceURL}
 
 	for _, opt := range options {
 		opt(signer)
 	}
+
+	opts := &azidentity.DefaultAzureCredentialOptions{}
+	if signer.credTransporter != nil {
+		opts.ClientOptions = policy.ClientOptions{Transport: signer.credTransporter}
+	}
+
+	credential, err := azidentity.NewDefaultAzureCredential(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Azure identity credentials: %w", err)
+	}
+
+	signer.credential = credential
 
 	return signer, nil
 }

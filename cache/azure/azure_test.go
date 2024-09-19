@@ -3,11 +3,15 @@
 package azure
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,6 +30,38 @@ type azureSigningTest struct {
 
 	expectedErrorOnGeneration bool
 	expectedServiceURL        string
+}
+
+const (
+	mockClientInfo = "my-client"
+	mockIDToken    = "my-idt"
+)
+
+type mockSTS struct{}
+
+var accessTokenRespSuccess = []byte(fmt.Sprintf(`{"access_token": "%s", "expires_in": 3600}`, "tokenValue"))
+
+func (m *mockSTS) Do(req *http.Request) (*http.Response, error) {
+	res := &http.Response{StatusCode: http.StatusNotFound}
+	s := strings.Split(req.URL.Path, "/")
+	if s[len(s)-1] != "token" {
+		return res, nil
+	}
+
+	if err := req.ParseForm(); err != nil {
+		return nil, fmt.Errorf("mockSTS failed to parse a request body: %w", err)
+	}
+	if grant := req.FormValue("grant_type"); grant == "device_code" || grant == "password" {
+		// include account info because we're authenticating a user
+		res.Body = io.NopCloser(bytes.NewReader(
+			[]byte(fmt.Sprintf(`{"access_token":"at","expires_in": 3600,"refresh_token":"rt","client_info":%q,"id_token":%q}`, mockClientInfo, mockIDToken)),
+		))
+	} else {
+		res.Body = io.NopCloser(bytes.NewReader(accessTokenRespSuccess))
+	}
+
+	res.StatusCode = http.StatusOK
+	return res, nil
 }
 
 func TestAccountKeySigning(t *testing.T) {
@@ -186,6 +222,7 @@ func TestUserDelegationSigning(t *testing.T) {
 			}
 
 			signer, err := newUserDelegationKeySigner(config,
+				withDefaultCredentialTransporter(&mockSTS{}),
 				withBlobServiceEndpoint(tt.endpoint),
 				withBlobServiceTransport(customTransport))
 			if tt.expectedErrorOnGeneration {
