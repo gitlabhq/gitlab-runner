@@ -236,7 +236,7 @@ asked multiple questions during a runner's registration.
 This question can be pre-filled by adding arguments when invoking the registration command:
 
 ```shell
-gitlab-runner register --name my-runner --url "http://gitlab.example.com" --registration-token my-registration-token
+gitlab-runner register --name my-runner --url "http://gitlab.example.com" --token my-authentication-token
 ```
 
 Or by configuring the environment variable before the `register` command:
@@ -244,7 +244,7 @@ Or by configuring the environment variable before the `register` command:
 ```shell
 export CI_SERVER_URL=http://gitlab.example.com
 export RUNNER_NAME=my-runner
-export REGISTRATION_TOKEN=my-registration-token
+export CI_SERVER_TOKEN=my-authentication-token
 gitlab-runner register
 ```
 
