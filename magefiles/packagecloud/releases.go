@@ -64,8 +64,8 @@ var (
 	supportedDistros = map[string][]string{
 		"deb/stable":   {"debian", "ubuntu", "raspbian", "linuxmint"},
 		"deb/bleeding": {"debian", "ubuntu"},
-		"rpm/stable":   {"fedora", "ol", "el", "amazon"},
-		"rpm/bleeding": {"fedora", "el", "amazon"},
+		"rpm/stable":   {"fedora", "ol", "el", "amazon", "sles", "opensuse"},
+		"rpm/bleeding": {"fedora", "el", "amazon", "sles", "opensuse"},
 	}
 
 	oldestRelease = map[string]string{
@@ -77,6 +77,8 @@ var (
 		"ol":        "6",
 		"el":        "7",
 		"amazon":    "2",
+		"sles":      "12.3",
+		"opensuse":  "42.3",
 	}
 
 	skipReleases = map[string][]string{
@@ -88,6 +90,8 @@ var (
 		"ol":        {},
 		"el":        {},
 		"amazon":    {},
+		"sles":      {},
+		"opensuse":  {},
 	}
 )
 
