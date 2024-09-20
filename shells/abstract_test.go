@@ -831,6 +831,10 @@ func TestGitFetchFlags(t *testing.T) {
 				mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything).Once()
 			}
 
+			expectedCredSection := "credential."
+			mockWriter.EXPECT().Command("git", "config", "--global", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
+			mockWriter.EXPECT().Command("git", "config", "--global", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+
 			mockWriter.EXPECT().Cd(mock.Anything).Once()
 			mockWriter.EXPECT().Join(mock.Anything, mock.Anything).Return(mock.Anything).Once()
 			mockWriter.EXPECT().IfCmd("git", "remote", "add", "origin", mock.Anything).Once()
@@ -856,7 +860,8 @@ func TestGitFetchFlags(t *testing.T) {
 				mockWriter.EXPECT().Command("git", command...).Once()
 			}
 
-			shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir)
+			err := shell.writeRefspecFetchCmd(mockWriter, build, dummyProjectDir)
+			assert.NoError(t, err, "calling shell.writeRefspecFetchCmd")
 		})
 	}
 }
@@ -2414,85 +2419,103 @@ func benchmarkScriptStage(b *testing.B, shell common.Shell, stage common.BuildSt
 }
 
 func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
-	info := common.ShellScriptInfo{
-		Build: &common.Build{
-			JobResponse: common.JobResponse{
-				Token: "some-token",
-				Variables: common.JobVariables{
-					{Key: "GIT_STRATEGY", Value: "fetch"},
-					{Key: "GIT_CHECKOUT", Value: "false"},
-				},
-				GitInfo: common.GitInfo{
-					RepoURL: "https://repo-url",
-				},
-				Hooks: common.Hooks{
-					{
-						Name:   common.HookPreGetSourcesScript,
-						Script: common.StepScript{"job payload", "pre_get_sources"},
+	shells := []string{"bash", "pwsh", "powershell"}
+
+	for _, shellName := range shells {
+		t.Run(shellName, func(t *testing.T) {
+			info := common.ShellScriptInfo{
+				Build: &common.Build{
+					JobResponse: common.JobResponse{
+						Token: "some-token",
+						Variables: common.JobVariables{
+							{Key: "GIT_STRATEGY", Value: "fetch"},
+							{Key: "GIT_CHECKOUT", Value: "false"},
+						},
+						GitInfo: common.GitInfo{
+							RepoURL: "https://repo-url",
+						},
+						Hooks: common.Hooks{
+							{
+								Name:   common.HookPreGetSourcesScript,
+								Script: common.StepScript{"job payload", "pre_get_sources"},
+							},
+							{
+								Name:   common.HookPostGetSourcesScript,
+								Script: common.StepScript{"job payload", "post_get_sources"},
+							},
+						},
 					},
-					{
-						Name:   common.HookPostGetSourcesScript,
-						Script: common.StepScript{"job payload", "post_get_sources"},
+					Runner: &common.RunnerConfig{
+						RunnerSettings: common.RunnerSettings{
+							Shell: shellName,
+						},
 					},
+					BuildDir: "build-dir",
 				},
-			},
-			Runner:   &common.RunnerConfig{},
-			BuildDir: "build-dir",
-		},
-		PreGetSourcesScript:  "config pre_get_sources",
-		PostGetSourcesScript: "config post_get_sources",
+				PreGetSourcesScript:  "config pre_get_sources",
+				PostGetSourcesScript: "config post_get_sources",
+			}
+
+			m := NewMockShellWriter(t)
+
+			m.EXPECT().Variable(mock.Anything)
+			m.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
+			m.EXPECT().SourceEnv("path/to/env/file").Once()
+
+			// Pre get sources from configuration file
+			m.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
+			m.EXPECT().Line("config pre_get_sources").Once()
+			// Pre get sources from job payload
+			m.EXPECT().Noticef("$ %s", "job payload").Once()
+			m.EXPECT().Line("job payload").Once()
+			m.EXPECT().Noticef("$ %s", "pre_get_sources").Once()
+			m.EXPECT().Line("pre_get_sources").Once()
+
+			m.EXPECT().CheckForErrors()
+			m.EXPECT().Noticef("Fetching changes...").Once()
+			m.EXPECT().MkTmpDir("git-template").Return("git-template-dir").Once()
+			m.EXPECT().Join("git-template-dir", "config").Return("git-template-dir-config").Once()
+			m.EXPECT().Command("git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
+			m.EXPECT().RmFile(mock.Anything)
+			m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
+			m.EXPECT().Cd("build-dir").Once()
+
+			expectedCredSection := "credential.https://repo-url"
+			m.EXPECT().Command("git", "config", "--global", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
+			m.EXPECT().Command("git", "config", "--global", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+
+			m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url").Once()
+			m.EXPECT().Noticef("Created fresh repository.").Once()
+			m.EXPECT().Else().Once()
+			m.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url").Once()
+			m.EXPECT().EndIf().Once()
+
+			m.EXPECT().IfFile(".git/shallow").Once()
+			m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
+			m.EXPECT().Else().Once()
+			m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
+			m.EXPECT().EndIf().Once()
+
+			m.EXPECT().Noticef("Skipping Git checkout").Once()
+			m.EXPECT().Noticef("Skipping Git submodules setup").Once()
+
+			// Post get sources from job payload
+			m.EXPECT().Noticef("$ %s", "job payload").Once()
+			m.EXPECT().Line("job payload").Once()
+			m.EXPECT().Noticef("$ %s", "post_get_sources").Once()
+			m.EXPECT().Line("post_get_sources").Once()
+			// Post get sources from configuration file
+			m.EXPECT().Noticef("$ %s", "config post_get_sources").Once()
+			m.EXPECT().Line("config post_get_sources").Once()
+
+			shell := new(AbstractShell)
+
+			err := shell.writeGetSourcesScript(context.Background(), m, info)
+			assert.NoError(t, err)
+		})
 	}
+}
 
-	m := NewMockShellWriter(t)
-
-	m.EXPECT().Variable(mock.Anything)
-	m.EXPECT().TmpFile("gitlab_runner_env").Return("path/to/env/file").Once()
-	m.EXPECT().SourceEnv("path/to/env/file").Once()
-
-	// Pre get sources from configuration file
-	m.EXPECT().Noticef("$ %s", "config pre_get_sources").Once()
-	m.EXPECT().Line("config pre_get_sources").Once()
-	// Pre get sources from job payload
-	m.EXPECT().Noticef("$ %s", "job payload").Once()
-	m.EXPECT().Line("job payload").Once()
-	m.EXPECT().Noticef("$ %s", "pre_get_sources").Once()
-	m.EXPECT().Line("pre_get_sources").Once()
-
-	m.EXPECT().CheckForErrors()
-	m.EXPECT().Noticef("Fetching changes...").Once()
-	m.EXPECT().MkTmpDir("git-template").Return("git-template-dir").Once()
-	m.EXPECT().Join("git-template-dir", "config").Return("git-template-dir-config").Once()
-	m.EXPECT().Command("git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
-	m.EXPECT().RmFile(mock.Anything)
-	m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
-	m.EXPECT().Cd("build-dir").Once()
-	m.EXPECT().Command("git", "config", mock.Anything, mock.Anything).Once()
-	m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url").Once()
-	m.EXPECT().Noticef("Created fresh repository.").Once()
-	m.EXPECT().Else().Once()
-	m.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url").Once()
-	m.EXPECT().EndIf().Once()
-
-	m.EXPECT().IfFile(".git/shallow").Once()
-	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet", "--unshallow").Once()
-	m.EXPECT().Else().Once()
-	m.EXPECT().Command("git", "-c", mock.Anything, "fetch", "origin", "--no-recurse-submodules", "--prune", "--quiet").Once()
-	m.EXPECT().EndIf().Once()
-
-	m.EXPECT().Noticef("Skipping Git checkout").Once()
-	m.EXPECT().Noticef("Skipping Git submodules setup").Once()
-
-	// Post get sources from job payload
-	m.EXPECT().Noticef("$ %s", "job payload").Once()
-	m.EXPECT().Line("job payload").Once()
-	m.EXPECT().Noticef("$ %s", "post_get_sources").Once()
-	m.EXPECT().Line("post_get_sources").Once()
-	// Post get sources from configuration file
-	m.EXPECT().Noticef("$ %s", "config post_get_sources").Once()
-	m.EXPECT().Line("config post_get_sources").Once()
-
-	shell := new(AbstractShell)
-
-	err := shell.writeGetSourcesScript(context.Background(), m, info)
-	assert.NoError(t, err)
+func startWithBang(val string) bool {
+	return strings.HasPrefix(val, "!")
 }

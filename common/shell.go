@@ -54,6 +54,7 @@ type Shell interface {
 	GenerateSaveScript(info ShellScriptInfo, scriptPath, script string) (string, error)
 
 	GetEntrypointCommand(info ShellScriptInfo, probeFile string) []string
+	GetGitCredHelperCommand() string
 }
 
 var shells map[string]Shell

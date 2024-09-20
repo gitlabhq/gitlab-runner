@@ -793,3 +793,23 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestPowershellGetGitCredHelperCommand(t *testing.T) {
+	const (
+		commonArgs   = "-NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -CommandWithArgs"
+		commonScript = `''if ($args[0] -eq "get") { "password=${env:CI_JOB_TOKEN}" }''`
+	)
+
+	shells := []string{SNPowershell, SNPwsh}
+
+	for _, shellName := range shells {
+		t.Run(shellName, func(t *testing.T) {
+			shell := PowerShell{Shell: shellName}
+
+			actualCmd := shell.GetGitCredHelperCommand()
+			expectedCmd := shellName + " " + commonArgs + " " + commonScript
+
+			assert.Equal(t, expectedCmd, actualCmd)
+		})
+	}
+}

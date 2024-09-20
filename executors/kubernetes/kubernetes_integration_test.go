@@ -5,7 +5,6 @@ package kubernetes_test
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -3376,7 +3375,12 @@ func mapFromKeySlices[K comparable, V any](value V, keySlices ...[]K) map[K]V {
 	return m
 }
 
-func TestCredentialLeaks(t *testing.T) {
+func TestCredentialSetup(t *testing.T) {
+	const (
+		outputMarkerBuild = "#buildGitConfig# "
+		outputMakerHelper = "#helperGitConfig# "
+	)
+
 	tokenGetters := map[string]func(*testing.T) string{
 		"no token": func(t *testing.T) string {
 			return ""
@@ -3390,11 +3394,19 @@ func TestCredentialLeaks(t *testing.T) {
 		},
 	}
 
+	listGitConfig := func(prefix string) string {
+		return fmt.Sprintf("git config -l | sed 's/^/%s/g'", prefix)
+	}
+
 	for testName, tokenGetter := range tokenGetters {
 		t.Run(testName, func(t *testing.T) {
 			token := tokenGetter(t)
 
-			job, err := common.GetRemoteBuildResponse("git config -l")
+			job, err := common.GetRemoteBuildResponse(listGitConfig(outputMarkerBuild))
+			job.Hooks = append(job.Hooks, common.Hook{
+				Name:   common.HookPostGetSourcesScript,
+				Script: common.StepScript{listGitConfig(outputMakerHelper)},
+			})
 			require.NoError(t, err, "getting job")
 
 			job.Token = token
@@ -3403,6 +3415,7 @@ func TestCredentialLeaks(t *testing.T) {
 				JobResponse: job,
 				Runner: &common.RunnerConfig{
 					RunnerSettings: common.RunnerSettings{
+						Shell:    shells.Bash,
 						Executor: common.ExecutorKubernetes,
 						Kubernetes: &common.KubernetesConfig{
 							Image: common.TestDockerGitImage,
@@ -3417,45 +3430,33 @@ func TestCredentialLeaks(t *testing.T) {
 				},
 			}
 
-			authUser := "gitlab-ci-token"
-			encodedAuthData := base64.StdEncoding.Strict().EncodeToString([]byte(
-				url.UserPassword(authUser, token).String(),
-			))
-
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			assert.NoError(t, err, "running build")
 
 			repoURL, err := url.Parse(job.GitInfo.RepoURL)
 			assert.NoError(t, err, "parsing repo url")
 
-			assert.NotContains(t, out, authUser, "expected auth user not to leak")
 			assert.NotContains(t, out, "@"+repoURL.Host, "expected not to see the repo url with auth data")
-			assert.NotContains(t, out, encodedAuthData, "expected encoded auth data not to leak")
 
-			if token == "" {
-				assert.NotContains(t, out, "uthorization", "expected not to see any Authorization header")
-				assert.NotContains(t, out, "extraheader", "expected not to see any auth header git config")
-
-				return
+			gitConfigSection := "credential." + repoURL.String()
+			for _, key := range []string{"username", "helper"} {
+				assert.Regexp(t,
+					// check if there is a non-empty (...username=<something>) setting for this specific config
+					regexp.QuoteMeta(outputMakerHelper+gitConfigSection+"."+key+"=")+"(.+)",
+					out,
+					"expected git config re. credential > "+key+" in the helper container",
+				)
 			}
 
-			assert.NotContains(t, out, token, "expected plain (not encoded) token not to leak")
+			assert.NotContains(t,
+				out,
+				outputMarkerBuild+gitConfigSection,
+				"expected no git config re. credentials in the build container, as we only set that for the helper (git config --global ...)",
+			)
 
-			assert.Contains(t, out,
-				// the curl traces redact the creds
-				"Send header: Authorization: Basic <redacted>",
-				"expected git to log the auth header, and to mask it",
-			)
-			assert.Contains(t, out,
-				// the curl http2 traces do not redact, but the runner/buildlogger does
-				"[authorization: Basic [MASKED]]",
-				"expected git to log the (http2) auth header, and runner to mask it",
-			)
-			assert.Contains(t, out,
-				// when showing the git config, the auth data should be masked
-				"http."+repoURL.String()+".extraheader=Authorization: Basic [MASKED]",
-				"expected git config for the auth header, and runner to mask it",
-			)
+			if token != "" {
+				assert.NotContains(t, out, token, "expected plain job token not to leak")
+			}
 		})
 	}
 }

@@ -260,3 +260,11 @@ func TestBashEntrypointCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestBashGetGitCredHelperCommand(t *testing.T) {
+	const expectedCmd = `f(){ test "$1" = "get" && echo "password=${CI_JOB_TOKEN}"; } ; f`
+
+	shell := BashShell{}
+	actualCmd := shell.GetGitCredHelperCommand()
+	assert.Equal(t, expectedCmd, actualCmd)
+}

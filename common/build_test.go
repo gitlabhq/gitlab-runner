@@ -847,33 +847,6 @@ func TestSharedEnvVariables(t *testing.T) {
 	}
 }
 
-func TestBasicAuthHeader(t *testing.T) {
-	testCases := map[string]struct {
-		token          string
-		expectedHeader string
-	}{
-		"no token": {
-			/* empty token -> empty header */
-		},
-		"some token": {
-			token: "some-token",
-			// echo "Authorization: Basic $(echo -n 'gitlab-ci-token:some-token' | base64)"
-			expectedHeader: "Authorization: Basic Z2l0bGFiLWNpLXRva2VuOnNvbWUtdG9rZW4=",
-		},
-	}
-
-	for tn, tc := range testCases {
-		t.Run(tn, func(t *testing.T) {
-			build := &Build{}
-			build.Token = tc.token
-
-			header := build.BasicAuthHeader()
-
-			assert.Equal(t, tc.expectedHeader, header)
-		})
-	}
-}
-
 func TestGetRemoteURL(t *testing.T) {
 	const (
 		exampleJobToken    = "job-token"

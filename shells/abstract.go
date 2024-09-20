@@ -12,6 +12,7 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
@@ -472,26 +473,24 @@ func (b *AbstractShell) changeFilesOwnership(w ShellWriter, build *common.Build,
 func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, build *common.Build) error {
 	projectDir := build.FullProjectDir()
 
-	var err error
-
 	switch build.GetGitStrategy() {
 	case common.GitFetch:
-		err = b.writeRefspecFetchCmd(w, build, projectDir)
+		return b.writeRefspecFetchCmd(w, build, projectDir)
 	case common.GitClone:
 		w.RmDir(projectDir)
-		err = b.writeRefspecFetchCmd(w, build, projectDir)
+		return b.writeRefspecFetchCmd(w, build, projectDir)
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
+		return nil
 	case common.GitEmpty:
 		w.Noticef("Skipping Git repository setup and creating an empty build directory")
 		w.RmDir(projectDir)
 		w.MkDir(projectDir)
+		return nil
 	default:
 		return errUnknownGitStrategy
 	}
-
-	return err
 }
 
 //nolint:funlen
@@ -543,9 +542,14 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 		return err
 	}
 
-	if authHeader := build.BasicAuthHeader(); authHeader != "" && strings.HasPrefix(remoteURL.Scheme, "http") {
-		w.Command("git", "config", "http."+remoteURL.String()+".extraHeader", authHeader)
+	shell, ok := helpers.FirstNonZero(build.Runner.Shell, common.GetDefaultShell())
+	if !ok {
+		return fmt.Errorf("shell not specified and no default set")
 	}
+	credHelperCommand := "!" + common.GetShell(shell).GetGitCredHelperCommand()
+	credSection := "credential." + remoteURL.String()
+	w.Command("git", "config", "--global", credSection+".username", "gitlab-ci-token")
+	w.Command("git", "config", "--global", credSection+".helper", credHelperCommand)
 
 	// Add `git remote` or update existing
 	w.IfCmd("git", "remote", "add", "origin", remoteURL.String())

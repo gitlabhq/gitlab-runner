@@ -124,6 +124,24 @@ func (_m *MockShell) GetFeatures(features *FeaturesInfo) {
 	_m.Called(features)
 }
 
+// GetGitCredHelperCommand provides a mock function with given fields:
+func (_m *MockShell) GetGitCredHelperCommand() string {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGitCredHelperCommand")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // GetName provides a mock function with given fields:
 func (_m *MockShell) GetName() string {
 	ret := _m.Called()

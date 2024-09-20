@@ -574,6 +574,33 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
+const powershellGitCredHelperScript = `if ($args[0] -eq "get") { "password=${env:CI_JOB_TOKEN}" }`
+
+// GetGitCredHelperCommand returns a command that can be used e.g. in a git config as a credential helper.
+//
+// This returns something like:
+//
+//	pwsh -NoProfile ... -CommandWithFlags ''if (...) { ...}''
+//
+// as a single string.
+//
+// Note the double single-quotes: This is deliberate!
+// This command is used with the shellwriter's Command(...), which will quote the whole string in single-quotes, as we
+// want it to be a single argument (to `git config`) and not split into multiple arguments. Now that we know that the
+// result will be single-quoted again, we need to escape the inner single-quotes, and we do so doubling them.
+//
+// The resulting commandline runs the configured shell (pwsh/powershell) with the default args we use for other shell
+// invocations. It then runs the inner script and accepts arguments, to have the arguments git call this with passed
+// through.
+func (b *PowerShell) GetGitCredHelperCommand() string {
+	return fmt.Sprintf(
+		"%s %s ''%s''",
+		b.GetName(),
+		strings.Join(append(defaultPowershellFlags, "-CommandWithArgs"), " "),
+		powershellGitCredHelperScript,
+	)
+}
+
 func (b *PowerShell) GetEntrypointCommand(_ common.ShellScriptInfo, probeFile string) []string {
 	preCmds := []string{}
 	if probeFile != "" {

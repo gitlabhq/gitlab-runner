@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -987,12 +986,8 @@ func (b *Build) Run(globalConfig *Config, trace JobTrace) (err error) {
 
 	b.expandContainerOptions()
 
-	maskPhrases := b.GetAllVariables().Masked()
-	if creds := b.encodedAuthCreds(); creds != "" {
-		maskPhrases = append(maskPhrases, creds)
-	}
 	b.logger = buildlogger.New(trace, b.Log(), buildlogger.Options{
-		MaskPhrases:       maskPhrases,
+		MaskPhrases:       b.GetAllVariables().Masked(),
 		MaskTokenPrefixes: b.JobResponse.Features.TokenMaskPrefixes,
 		Timestamping:      b.IsFeatureFlagOn(featureflags.UseTimestamps),
 	})
@@ -1307,31 +1302,6 @@ func (b *Build) expandContainerOptions() {
 	}
 }
 
-// BasicAuthHeader returns a Authorization header to be used with http(s) clients.
-// If creds (the token) is not available, this returns the empty string.
-func (b *Build) BasicAuthHeader() string {
-	creds := b.encodedAuthCreds()
-	if creds == "" {
-		return ""
-	}
-
-	return "Authorization: Basic " + creds
-}
-
-// encodedAuthCreds returns the username/password pair encoded in such a way to be usable for basic auth. If the
-// password/token is empty, this returns an empty string, too, to signal upstream not to use this. Note: Using an auth
-// header only with the username and without a password will block auth, even for e.g. public repos.
-func (b *Build) encodedAuthCreds() string {
-	if b.Token == "" {
-		return ""
-	}
-
-	userInfo := url.UserPassword("gitlab-ci-token", b.Token)
-	return base64.StdEncoding.Strict().EncodeToString([]byte(
-		userInfo.String(),
-	))
-}
-
 // cleanAuthData returns a new URL with auth data set up so that:
 // - on ssh URLs we ensure UserInfo is defaulted correctly
 // - on other URLs we ensure UserInfo is not set at all, so that we don't leak creds
@@ -1381,16 +1351,15 @@ func (b *Build) getBaseURL() (*url.URL, error) {
 	return u, err
 }
 
-func getURLInsteadOf(target string, source string) []string {
+func getURLInsteadOf(target, source string) []string {
 	if target == source {
 		return []string{}
 	}
 	return []string{"-c", fmt.Sprintf("url.%s.insteadOf=%s", target, source)}
 }
 
-// GetURLInsteadOfArgs rewrites a plain HTTPS base URL and the most commonly used SSH/Git
-// protocol URLs (including custom SSH ports) into an HTTPS URL with injected job token
-// auth, and returns an array of strings to pass as options to git commands.
+// GetURLInsteadOfArgs rewrites a plain HTTPS base URL and the most commonly used SSH/Git protocol URLs (including
+// custom SSH ports) into an HTTPS URL, and returns an array of strings to pass as options to git commands.
 func (b *Build) GetURLInsteadOfArgs() ([]string, error) {
 	baseURL, err := b.getBaseURL()
 	if err != nil {

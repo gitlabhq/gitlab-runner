@@ -364,6 +364,12 @@ func (b *BashShell) GetName() string {
 	return b.Shell
 }
 
+const bashGitCredHelperScript = `f(){ test "$1" = "get" && echo "password=${CI_JOB_TOKEN}"; } ; f`
+
+func (b *BashShell) GetGitCredHelperCommand() string {
+	return bashGitCredHelperScript
+}
+
 func (b *BashShell) GetEntrypointCommand(info common.ShellScriptInfo, probeFile string) []string {
 	script := b.bashDetectScript(info.Type == common.LoginShell)
 	if probeFile != "" {
