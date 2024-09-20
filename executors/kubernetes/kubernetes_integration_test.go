@@ -155,21 +155,17 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		featureflags.UseLegacyKubernetesExecutionStrategy,
 	}
 
-	for tn, tt := range tests {
-		for _, ff := range featureFlags {
-			testName := tn
-			testFunction := tt
-			featureflag := ff
-			tnn := fmt.Sprintf("%s %s", testName, featureflag)
-			t.Run(tnn, func(t *testing.T) {
+	for name, testFunc := range tests {
+		for _, featureFlag := range featureFlags {
+			t.Run(name, func(t *testing.T) {
 				t.Parallel()
 
-				t.Run(fmt.Sprintf("%s true", tnn), func(t *testing.T) {
-					testFunction(t, featureflag, true)
+				t.Run(featureFlag+":on", func(t *testing.T) {
+					testFunc(t, featureFlag, true)
 				})
 
-				t.Run(fmt.Sprintf("%s false", tnn), func(t *testing.T) {
-					testFunction(t, featureflag, false)
+				t.Run(featureFlag+":off", func(t *testing.T) {
+					testFunc(t, featureFlag, false)
 				})
 			})
 		}
