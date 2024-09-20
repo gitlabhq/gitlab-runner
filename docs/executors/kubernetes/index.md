@@ -1077,12 +1077,183 @@ or create directories in the root of the container's file system.
 Instead, you can [change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts).
 You can also change the build directory by setting `[[runners]].builds_dir`.
 
+## Operating system, architecture, and Windows kernel version
+
+GitLab Runner with the Kubernetes executor can run builds on different
+operating systems if the configured cluster has nodes running those operating systems.
+
+The system determines the helper image's operating system, architecture, and Windows kernel version
+(if applicable). It then uses those parameters for other aspects of the build, for example
+the containers or images to use.
+
+The following diagram explains how the system detects these details:
+
+```mermaid
+%%|fig-align: center
+flowchart TB
+  init[<b>Initial defaults</b>:<br/>OS: linux</br>Arch: amd64]
+  hasAutoset{Configuration<br/><tt><a href="https://docs.gitlab.com/runner/configuration/advanced-configuration.html">helper_image_autoset_arch_and_os</a> == true</tt>?}
+  setArch[<b>Update</b>:<br/>Arch: <i>same as runner</i>]
+  isWin{GitLab Runner runs on Windows?}
+  setWin[<b>Update</b>:<br/>OS: windows<br/>KernelVersion: <i>same as runner</i>]
+  hasNodeSel{<a href="https://docs.gitlab.com/runner/configuration/advanced-configuration.html"><tt>node_selector</tt></a> configured<br/>in <tt>runners.kubernetes</tt> section?}
+  hasNodeSelOverride{<tt>node_selector</tt> configured<br/><a href="https://docs.gitlab.com/runner/executors/kubernetes/#overwrite-the-node-selector">as overwrite</a>?}
+  updateNodeSel[<b>Update from <tt>node_selector</tt></b> if set:<br/>OS: from <tt>kubernetes.io/os</tt><br/>Arch: from <tt>kubernetes.io/arch</tt><br/>KernelVersion: from <tt>node.kubernetes.io/windows-build</tt>]
+  updateNodeSelOverride[<b>Update from <tt>node_selector</tt> overwrites</b> if set:</br>OS: from <tt>kubernetes.io/os</tt><br/>Arch: from <tt>kubernetes.io/arch</tt><br/>KernelVersion: from <tt>node.kubernetes.io/windows-build</tt>]
+  result[final <b>OS</b>, <b>Arch</b>, <b>kernelVersion</b>]
+
+  init --> hasAutoset
+  hasAutoset -->|false | hasNodeSel
+  hasAutoset -->|true | setArch
+  setArch --> isWin
+  isWin -->|false | hasNodeSel
+  isWin -->|true | setWin
+  setWin --> hasNodeSel
+  hasNodeSel -->|false | hasNodeSelOverride
+  hasNodeSel -->|true | updateNodeSel
+  updateNodeSel --> hasNodeSelOverride
+  hasNodeSelOverride -->|false | result
+  hasNodeSelOverride -->|true | updateNodeSelOverride
+  updateNodeSelOverride --> result
+```
+
+The following are the only parameters that influence the operating system, architecture, and Windows kernel version selection of the build.
+
+- The `helper_image_autoset_arch_and_os` configuration
+- The `kubernetes.io/os`, `kubernetes.io/arch`, and `node.kubernetes.io/windows-build` label selectors from:
+  - `node_selector` configuration
+  - `node_selector` overwrites
+
+Other parameters don't have any influence on the above outlined selection process.
+However, other parameters, for example, `affinity` configuration, can be used to further limit the nodes on which builds will be scheduled on.
+
 ## Nodes
+
+### Specify the node to execute builds
+
+Use the `node_selector` option to specify which node in a Kubernetes cluster can be used to execute the builds.
+It is a [`key=value`](https://toml.io/en/v1.0.0#keyvalue-pair) pair in `string=string` format (`string:string` in the case of environment variables).
+
+Runner uses the information provided to determine the operating system and architecture for the build. This ensures that
+the correct [helper image](../../configuration/advanced-configuration.md#helper-image) is used. The default operating system and architecture is `linux/amd64`.
+
+You can use specific labels to schedule nodes with different operating systems and architectures.
+
+#### Example for `linux/arm64`
+
+```toml
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+
+    [runners.kubernetes.node_selector]
+      "kubernetes.io/arch" = "arm64"
+      "kubernetes.io/os" = "linux"
+```
+
+#### Example for `windows/amd64`
+
+Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support). 
+If you are using process isolation, you must also provide the specific Windows build version with the
+[`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
+
+```toml
+  [[runners]]
+    name = "myRunner"
+    url = "gitlab.example.com"
+    executor = "kubernetes"
+
+    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell
+    # to resolve paths for Windows correctly when Runner is operating in a Linux environment
+    # but targeting Windows nodes.
+    environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=true"]
+
+    [runners.kubernetes.node_selector]
+      "kubernetes.io/arch" = "amd64"
+      "kubernetes.io/os" = "windows"
+      "node.kubernetes.io/windows-build" = "10.0.20348"
+```
+
+### Overwrite the node selector
+
+To overwrite the node selector:
+
+1. In the `config.toml` or Helm `values.yaml` file, enable overwriting of the node selector:
+
+   ```toml
+   runners:
+    ...
+    config: |
+      [[runners]]
+        [runners.kubernetes]
+          node_selector_overwrite_allowed = ".*"
+   ```
+
+1. In the `.gitlab-ci.yml` file, define the variable to overwrite the node selector:
+
+   ```yaml
+   variables:
+     KUBERNETES_NODE_SELECTOR_* = ''
+   ```
+
+In the following example, to overwrite the Kubernetes node architecture,
+the settings are configured in the `config.toml` and `.gitlab-ci.yml` file:
+
+::Tabs
+
+:::TabTitle `config.toml`
+
+```toml
+concurrent = 1
+check_interval = 1
+log_level = "debug"
+shutdown_timeout = 0
+
+listen_address = ':9252'
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = ""
+  url = "https://gitlab.com/"
+  id = 0
+  token = "__REDACTED__"
+  token_obtained_at = "0001-01-01T00:00:00Z"
+  token_expires_at = "0001-01-01T00:00:00Z"
+  executor = "kubernetes"
+  shell = "bash"
+  [runners.kubernetes]
+    host = ""
+    bearer_token_overwrite_allowed = false
+    image = "alpine"
+    namespace = ""
+    namespace_overwrite_allowed = ""
+    pod_labels_overwrite_allowed = ""
+    service_account_overwrite_allowed = ""
+    pod_annotations_overwrite_allowed = ""
+    node_selector_overwrite_allowed = "kubernetes.io/arch=.*" # <--- allows overwrite of the architecture
+```
+
+:::TabTitle `.gitlab-ci.yml`
+
+```yaml
+job:
+  image: IMAGE_NAME
+  variables:
+    KUBERNETES_NODE_SELECTOR_ARCH: 'kubernetes.io/arch=amd64'  # <--- select the architecture
+```
+
+::EndTabs
 
 ### Define a list of node affinities
 
-Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to add to a pod specification at build time.
+Define a list of [node affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
+to add to a pod specification at build time.
 
+NOTE:
+`node_affinities` does not determine which operating system a build should run with, only `node_selectors`. For more information, see [Operating system, architecture, and Windows kernel version](#operating-system-architecture-and-windows-kernel-version).
 Example configuration in the `config.toml`:
 
 ```toml
@@ -1191,125 +1362,6 @@ concurrent = 1
               key = "security_2"
               operator = "In"
               values = ["S2"]
-```
-
-### Overwrite the node selector
-
-To overwrite the node selector:
-
-1. In the `config.toml` or Helm `values.yaml` file, enable overwriting of the node selector:
-
-   ```toml
-   runners:
-    ...
-    config: |
-      [[runners]]
-        [runners.kubernetes]
-          node_selector_overwrite_allowed = ".*"
-   ```
-
-1. In the `.gitlab-ci.yml` file, define the variable to overwrite the node selector:
-
-   ```yaml
-   variables:
-     KUBERNETES_NODE_SELECTOR_* = ''
-   ```
-
-In the following example, to overwrite the Kubernetes node architecture,
-the settings are configured in the `config.toml` and `.gitlab-ci.yml`:
-
-::Tabs
-
-:::TabTitle `config.toml`
-
-```toml
-concurrent = 1
-check_interval = 1
-log_level = "debug"
-shutdown_timeout = 0
-
-listen_address = ':9252'
-
-[session_server]
-  session_timeout = 1800
-
-[[runners]]
-  name = ""
-  url = "https://gitlab.com/"
-  id = 0
-  token = "__REDACTED__"
-  token_obtained_at = "0001-01-01T00:00:00Z"
-  token_expires_at = "0001-01-01T00:00:00Z"
-  executor = "kubernetes"
-  shell = "bash"
-  [runners.kubernetes]
-    host = ""
-    bearer_token_overwrite_allowed = false
-    image = "alpine"
-    namespace = ""
-    namespace_overwrite_allowed = ""
-    pod_labels_overwrite_allowed = ""
-    service_account_overwrite_allowed = ""
-    pod_annotations_overwrite_allowed = ""
-    node_selector_overwrite_allowed = "kubernetes.io/arch=.*" # <--- allows overwrite of the architecture
-```
-
-:::TabTitle `.gitlab-ci.yml`
-
-```yaml
-  job:
-    image: IMAGE_NAME
-    variables:
-      KUBERNETES_NODE_SELECTOR_ARCH: 'kubernetes.io/arch=amd64' # <--- select the right architecture
-```
-
-::EndTabs
-
-### Specify the node to execute builds
-
-Use the `node_selector` option to specify which node in a Kubernetes cluster to execute builds on.
-It is a table of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables).
-
-The runner uses the information provided to determine the OS and architecture for the build. This ensures that
-the correct [helper image](../../configuration/advanced-configuration.md#helper-image) is used. By default, the OS and
-architecture is assumed to be `linux/amd64`.
-
-You can use specific labels to schedule nodes with different operating systems and architectures.
-
-#### Example for `linux/arm64`
-
-```toml
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-
-    [runners.kubernetes.node_selector]
-      "kubernetes.io/arch" = "arm64"
-      "kubernetes.io/os" = "linux"
-```
-
-#### Example for `windows/amd64`
-
-Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support),
-so if process isolation is used, you must also provide the specific windows build version with the
-[`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
-
-```toml
-  [[runners]]
-    name = "myRunner"
-    url = "gitlab.example.com"
-    executor = "kubernetes"
-
-    # The FF_USE_POWERSHELL_PATH_RESOLVER feature flag has to be enabled for PowerShell
-    # to resolve paths for Windows correctly when Runner is operating in a Linux environment
-    # but targeting Windows nodes.
-    environment = ["FF_USE_POWERSHELL_PATH_RESOLVER=true"]
-
-    [runners.kubernetes.node_selector]
-      "kubernetes.io/arch" = "amd64"
-      "kubernetes.io/os" = "windows"
-      "node.kubernetes.io/windows-build" = "10.0.20348"
 ```
 
 ## Networking
