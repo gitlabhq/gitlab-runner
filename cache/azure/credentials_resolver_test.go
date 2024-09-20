@@ -18,12 +18,19 @@ type credentialsResolverTestCase struct {
 	expectedCredentials           *common.CacheAzureCredentials
 }
 
+type signerTestCase struct {
+	config                *common.CacheAzureConfig
+	errorExpectedOnSigner bool
+	expectedSignerType    string
+}
+
 func getCredentialsConfig(accountName string, accountKey string) *common.CacheAzureConfig {
 	return &common.CacheAzureConfig{
 		CacheAzureCredentials: common.CacheAzureCredentials{
 			AccountName: accountName,
 			AccountKey:  accountKey,
 		},
+		ContainerName: "test-container",
 	}
 }
 
@@ -71,6 +78,49 @@ func TestDefaultCredentialsResolver(t *testing.T) {
 
 			require.NoError(t, err, "Error on credentials resolving is not expected")
 			assert.Equal(t, tt.expectedCredentials, cr.Credentials())
+		})
+	}
+}
+
+func TestSigner(t *testing.T) {
+	cases := map[string]signerTestCase{
+		"account name not set": {
+			config:                getCredentialsConfig("", accountKey),
+			errorExpectedOnSigner: true,
+		},
+		"account key not set": {
+			config:                getCredentialsConfig(accountName, ""),
+			errorExpectedOnSigner: false,
+			expectedSignerType:    "userDelegationKeySigner",
+		},
+		"account name and key set": {
+			config:                getCredentialsConfig(accountName, accountKey),
+			errorExpectedOnSigner: false,
+			expectedSignerType:    "accounyKeySigner",
+		},
+	}
+
+	for tn, tt := range cases {
+		t.Run(tn, func(t *testing.T) {
+			cr, err := newDefaultCredentialsResolver(tt.config)
+			require.NoError(t, err, "Error on resolver initialization is not expected")
+
+			signer, err := cr.Signer()
+			if tt.errorExpectedOnSigner {
+				assert.Error(t, err)
+				assert.Nil(t, signer)
+				return
+			}
+
+			require.NoError(t, err, "Error on signer is not expected")
+
+			if tt.expectedSignerType == "accountKeySigner" {
+				_, ok := signer.(*accountKeySigner)
+				assert.True(t, ok, "Signer is expected to be of accountKeySigner type")
+			} else {
+				_, ok := signer.(*userDelegationKeySigner)
+				assert.True(t, ok, "Signer is expected to be of userDelegationKeySigner type")
+			}
 		})
 	}
 }

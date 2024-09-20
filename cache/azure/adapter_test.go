@@ -81,10 +81,14 @@ func prepareMockedCredentialsResolverForInvalidConfig(adapter *azureAdapter, tc 
 		resolveCall.Return(nil)
 	}
 
-	cr.On("Credentials").Return(&common.CacheAzureCredentials{
-		AccountName: tc.accountName,
-		AccountKey:  tc.accountKey,
-	})
+	config := defaultAzureCache()
+	config.Azure.CacheAzureCredentials.AccountName = tc.accountName
+	config.Azure.CacheAzureCredentials.AccountKey = tc.accountKey
+	config.Azure.ContainerName = tc.containerName
+
+	// Always return an account key signer to avoid metadata lookups
+	signer, err := newAccountKeySigner(config.Azure)
+	cr.On("Signer").Return(signer, err)
 
 	adapter.credentialsResolver = cr
 }
@@ -134,13 +138,15 @@ func testUploadEnvWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *azureAdapter,
-	operation func() map[string]string,
+	operation func(context.Context) map[string]string,
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 
-		u := operation()
-		assert.Empty(t, u)
+		u := operation(context.Background())
+		assert.Equal(t, accountName, u["AZURE_STORAGE_ACCOUNT"])
+		assert.Equal(t, storageDomain, u["AZURE_STORAGE_DOMAIN"])
+		assert.NotContains(t, u, "AZURE_SAS_TOKEN")
 	})
 }
 
@@ -164,28 +170,28 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 		"no-credentials": {
 			provideAzureConfig: true,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account name\"",
+			expectedErrorMsg:   "error creating Azure SAS signer\" error=\"missing Azure storage account name\"",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"no-account-name": {
 			provideAzureConfig: true,
 			accountKey:         accountKey,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account name\"",
+			expectedErrorMsg:   "error creating Azure SAS signer\" error=\"missing Azure storage account name\"",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"no-account-key": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      containerName,
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account key\"",
+			expectedErrorMsg:   "missing Azure storage account key",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"invalid-container-name-and-no-account-key": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      "\x00",
-			expectedErrorMsg:   "error generating Azure pre-signed URL\" error=\"missing Azure storage account key\"",
+			expectedErrorMsg:   "missing Azure storage account key",
 		},
 		"container-not-specified": {
 			provideAzureConfig: true,
@@ -241,12 +247,12 @@ type adapterOperationTestCase struct {
 }
 
 func prepareMockedCredentialsResolver(adapter *azureAdapter) func(t *testing.T) {
+	config := defaultAzureCache()
+	signer, err := newAccountKeySigner(config.Azure)
+
 	cr := &mockCredentialsResolver{}
 	cr.On("Resolve").Return(nil)
-	cr.On("Credentials").Return(&common.CacheAzureCredentials{
-		AccountName: accountName,
-		AccountKey:  accountKey,
-	})
+	cr.On("Signer").Return(signer, err)
 
 	adapter.credentialsResolver = cr
 
@@ -261,10 +267,8 @@ func prepareMockedSignedURLGenerator(
 	expectedMethod string,
 	adapter *azureAdapter,
 ) {
-	adapter.generateSignedURL = func(name string, opts *signedURLOptions) (*url.URL, error) {
+	adapter.generateSignedURL = func(ctx context.Context, name string, opts *signedURLOptions) (*url.URL, error) {
 		assert.Equal(t, containerName, opts.ContainerName)
-		assert.Equal(t, accountName, opts.Credentials.AccountName)
-		assert.Equal(t, accountKey, opts.Credentials.AccountKey)
 		assert.Equal(t, expectedMethod, opts.Method)
 
 		u, err := url.Parse(tc.returnedURL)
@@ -370,7 +374,7 @@ func TestAdapterOperation(t *testing.T) {
 			u := adapter.GetGoCloudURL(context.Background())
 			assert.Equal(t, "azblob://test/key", u.String())
 
-			env := adapter.GetUploadEnv()
+			env := adapter.GetUploadEnv(context.Background())
 			assert.Len(t, env, 3)
 			assert.Equal(t, accountName, env["AZURE_STORAGE_ACCOUNT"])
 			assert.NotEmpty(t, env["AZURE_STORAGE_SAS_TOKEN"])

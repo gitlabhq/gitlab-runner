@@ -1167,7 +1167,7 @@ While S3 and GCS use the word `bucket` for a collection of objects, Azure uses t
 | Parameter         | Type             | Description |
 |-------------------|------------------|-------------|
 | `AccountName`     | string           | Name of the Azure Blob Storage account used to access the storage. |
-| `AccountKey`      | string           | Storage account access key used to access the container. |
+| `AccountKey`      | string           | Storage account access key used to access the container. To omit `AccountKey` from the configuration, use [Azure workload or managed identities](#azure-workload-and-managed-identities). |
 | `ContainerName`   | string           | Name of the [storage container](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction#containers) to save cache data in. |
 | `StorageDomain`   | string           | Domain name [used to service Azure storage endpoints](https://learn.microsoft.com/en-us/azure/china/resources-developer-guide#check-endpoints-in-azure) (optional). Default is `blob.core.windows.net`. |
 
@@ -1184,6 +1184,22 @@ Example:
     ContainerName = "runners-cache"
     StorageDomain = "blob.core.windows.net"
 ```
+
+#### Azure workload and managed identities
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27303) in GitLab Runner v17.5.0.
+
+To use Azure workload or managed identities, omit `AccountKey` from the
+configuration. When `AccountKey` is blank, the runner attempts to:
+
+1. Obtain temporary credentials via [`DefaultAzureCredential`](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azidentity/README.md#defaultazurecredential).
+1. Get a [User Delegation Key](https://learn.microsoft.com/en-us/rest/api/storageservices/get-user-delegation-key).
+1. Generate a SAS token with that key to access a Storage Account blob.
+
+Ensure that the instance has the `Storage Blob Data Contributor`
+role assigned to it. If the instance does not have access
+to perform the actions above, GitLab Runner reports an
+`AuthorizationPermissionMismatch` error.
 
 ## The `[runners.kubernetes]` section
 
