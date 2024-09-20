@@ -7445,15 +7445,3 @@ func containerByName(containers []api.Container, name string) (api.Container, er
 
 	return api.Container{}, fmt.Errorf("container %q not found, available containers: %v", name, availableContainers)
 }
-
-func first[T comparable](options ...T) (T, error) {
-	var zero T
-
-	for _, item := range options {
-		if item != zero {
-			return item, nil
-		}
-	}
-
-	return zero, fmt.Errorf("no non-zero item in list of options: %+v", options)
-}
