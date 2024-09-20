@@ -10,8 +10,13 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
-We provide packages for the following supported versions of Linux distributions with [packagecloud](https://packages.gitlab.com/runner/gitlab-runner/). New runner `deb` or `rpm` packages for new OS distribution releases are added automatically when supported by packagecloud.
-Depending on your setup, other `deb` or `rpm` based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative, so the runner Debian package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
+To install GitLab Runner, use a package from a GitLab repository.
+
+## Supported distributions
+
+GitLab provides packages for the following supported versions of Linux distributions with [Packagecloud](https://packages.gitlab.com/runner/gitlab-runner/). New runner `deb` or `rpm` packages for new OS distribution releases are added automatically when supported by Packagecloud.
+
+Depending on your setup, other DEB or RPM based distributions may also be supported. This refers to distributions that are derivative of a supported GitLab Runner distribution and that have compatible package repositories. For example, Deepin is a Debian derivative, so the runner Debian package should install and run on Deepin. You may also be able to [install GitLab Runner as a binary](linux-manually.md#using-binary-file)
 on other Linux distributions.
 
 | Distribution | Support Information |
@@ -28,51 +33,54 @@ on other Linux distributions.
 NOTE:
 Packages for distributions that are not on the list are not available from our package repository. You can [install](linux-manually.md#using-debrpm-package) them manually by downloading the RPM package from our S3 bucket.
 
-## Prerequisites
-
-If you want to use the [Docker executor](../executors/docker.md), make sure to install Docker before
-using GitLab Runner. [Read how to install Docker for your distribution](https://docs.docker.com/engine/install/).
-
-## Installing GitLab Runner
+## Install GitLab Runner
 
 To install GitLab Runner:
 
 1. Add the official GitLab repository:
 
-   For Debian/Ubuntu/Mint:
+   ::Tabs
+
+   :::TabTitle Debian/Ubuntu/Mint
 
    ```shell
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
    ```
 
-   For RHEL/CentOS/Fedora/Amazon Linux:
+   :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
 
    ```shell
    curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh" | sudo bash
    ```
 
-   NOTE:
-   Debian users should use [APT pinning](#apt-pinning).
+   ::EndTabs
 
 1. Install the latest version of GitLab Runner, or skip to the next step to
    install a specific version:
 
    NOTE:
-   [Starting with GitLab Runner 14.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4845)
-   the `skel` directory usage is [disabled](#disable-skel) by default to prevent
-   [`No such file or directory` job failures](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379)
+   The `skel` directory usage is disabled by default to prevent
+   [`No such file or directory` job failures](#error-no-such-file-or-directory-job-failures).
 
-   For Debian/Ubuntu/Mint:
+   ::Tabs
+
+   :::TabTitle Debian/Ubuntu/Mint
 
    ```shell
-   sudo apt-get install gitlab-runner
+   sudo apt install gitlab-runner
    ```
 
-   For RHEL/CentOS/Fedora/Amazon Linux:
+   :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
 
    ```shell
    sudo yum install gitlab-runner
+
+   or
+
+   sudo dnf install gitlab-runner
    ```
+
+   ::EndTabs
 
    NOTE:
    A FIPS 140-2 compliant version of GitLab Runner is
@@ -81,72 +89,61 @@ To install GitLab Runner:
 
 1. To install a specific version of GitLab Runner:
 
-   For DEB based systems:
+   ::Tabs
+
+   :::TabTitle Debian/Ubuntu/Mint
 
    ```shell
    apt-cache madison gitlab-runner
-   sudo apt-get install gitlab-runner=16.5.0
+   sudo apt install gitlab-runner=16.5.0
    ```
 
-   For RPM based systems:
+   :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
 
    ```shell
    yum list gitlab-runner --showduplicates | sort -r
    sudo yum install gitlab-runner-16.5.0-1
    ```
 
+   ::EndTabs
+
 1. [Register a runner](../register/index.md).
 
-After completing the step above, a runner should be started and be
-ready to be used by your projects!
+After completing the above steps, a runner can be started and will be ready to be used by
+your projects!
 
 Make sure that you read the [FAQ](../faq/index.md) section which describes
 some of the most common problems with GitLab Runner.
-
-### APT pinning
-
-A native package called `gitlab-ci-multi-runner` is available in
-Debian Stretch. By default, when installing `gitlab-runner`, that package
-from the official repositories will have a higher priority.
-
-If you want to use our package, you should manually set the source of
-the package. The best way is to add the pinning configuration file.
-
-If you do this, the next update of the GitLab Runner package - whether it will
-be done manually or automatically - will be done using the same source:
-
-```shell
-cat <<EOF | sudo tee /etc/apt/preferences.d/pin-gitlab-runner.pref
-Explanation: Prefer GitLab provided packages over the Debian native ones
-Package: gitlab-runner
-Pin: origin packages.gitlab.com
-Pin-Priority: 1001
-EOF
-```
 
 ## Upgrade GitLab Runner
 
 To install the latest version of GitLab Runner:
 
-For Debian/Ubuntu/Mint:
+::Tabs
+
+:::TabTitle Debian/Ubuntu/Mint
 
 ```shell
-sudo apt-get update
-sudo apt-get install gitlab-runner
+sudo apt update
+sudo apt install gitlab-runner
 ```
 
-For RHEL/CentOS/Fedora/Amazon Linux:
+:::TabTitle RHEL/CentOS/Fedora/Amazon Linux
 
 ```shell
 sudo yum update
 sudo yum install gitlab-runner
 ```
 
+::EndTabs
+
 ## GPG signatures for package installation
 
-To increase user's confidence about installed software, the GitLab Runner project provides
-two types of GPG signatures for the package installation method: repository metadata
-signing and package signing.
+The GitLab Runner project provides two types of GPG signatures for the package
+installation method:
+
+- [Repository metadata signing](#repository-metadata-signing)
+- [Package signing](#package-signing)
 
 ### Repository metadata signing
 
@@ -164,28 +161,27 @@ on first installation done with the instructions above. For key updates in the f
 existing users need to manually download and install the new keys.
 
 We use one key for all our projects hosted under <https://packages.gitlab.com>. You can find
-the details about the currently used key and technical description of how to update the key when
-needed in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures#package-repository-metadata-signing-keys).
+the details about the currently used key in the [Linux package documentation](https://docs.gitlab.com/omnibus/update/package_signatures#package-repository-metadata-signing-keys).
 This documentation page lists also
 [all keys used in the past](https://docs.gitlab.com/omnibus/update/package_signatures#previous-keys).
 
-### Packages signing
+### Package signing
 
 Repository metadata signing proves that the downloaded version information originates
 at <https://packages.gitlab.com>. It does not prove the integrity of the packages themselves.
-Whatever was uploaded to <https://packages.gitlab.com> - authorized or not - will be properly
+Whatever was uploaded to <https://packages.gitlab.com> - authorized or not - is properly
 verified until the metadata transfer from repository to the user was not affected.
 
-This is where packages signing comes in.
+This is where package signing comes in.
 
-With package signing, each package is signed when it's built. So until you can trust
+With package signing, each package is signed when it's built. So, until you can trust
 the build environment and the secrecy of the used GPG key, the valid signature on the package
-will prove that its origin is authenticated and its integrity was not violated.
+proves that its origin is authenticated and its integrity was not violated.
 
-Packages signing verification is enabled by default only in some of the DEB/RPM based distributions,
-so users wanting to have this kind of verification may need to adjust the configuration.
+Package signing verification is enabled by default only in some of the DEB/RPM based distributions,
+if you want to have this kind of verification, you may need to adjust the configuration.
 
-GPG keys used for packages signature verification can be different for each of the repositories
+GPG keys used for package signature verification can be different for each of the repositories
 hosted at <https://packages.gitlab.com>. The GitLab Runner project uses its own key pair for this
 type of the signature.
 
@@ -199,33 +195,33 @@ verification for RPM-based distributions in the [Linux package documentation](ht
 The GitLab Runner differences are:
 
 - The public key package that should be installed is named `gpg-pubkey-35dfa027-60ba0235`.
-
-- The repository file for RPM based distributions will be named `/etc/yum.repos.d/runner_gitlab-runner.repo`
+- The repository file for RPM-based distributions is named `/etc/yum.repos.d/runner_gitlab-runner.repo`
   (for the stable release) or `/etc/yum.repos.d/runner_unstable.repo` (for the unstable releases).
-
 - The [package signing public key](#current-gpg-public-key) can be imported from
   <https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg>.
 
 #### DEB-based distributions
 
 The DEB format does not officially contain a default and included method for signing packages.
-The GitLab Runner project uses `dpkg-sig` tool for signing and verifying signatures on packages. This
+The GitLab Runner project uses the `dpkg-sig` tool for signing and verifying signatures on packages. This
 method supports only manual verification of packages.
 
-1. Install `dpkg-sig`
+To verify a DEB-based package:
+
+1. Install `dpkg-sig`:
 
    ```shell
-   apt-get update && apt-get install dpkg-sig
+   apt update && apt install dpkg-sig
    ```
 
-1. Download and import the [package signing public key](#current-gpg-public-key)
+1. Download and import the [package signing public key](#current-gpg-public-key):
 
    ```shell
    curl -JLO "https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg"
    gpg --import runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg
    ```
 
-1. Verify downloaded package with `dpkg-sig`
+1. Verify downloaded package with `dpkg-sig`:
 
    ```shell
    dpkg-sig --verify gitlab-runner_amd64.deb
@@ -233,26 +229,26 @@ method supports only manual verification of packages.
    GOODSIG _gpgbuilder 931DA69CFA3AFEBBC97DAA8C6C57C29C6BA75A4E 1623755049
    ```
 
-   Verification of package with invalid signature or signed with an invalid key (for example
-   a revoked one) will generate an output similar to:
+   If a package has an invalid signature or signed with an invalid key (for example
+   a revoked one), the output is similar to the following:
 
-    ```shell
-    dpkg-sig --verify gitlab-runner_amd64.deb
-    Processing gitlab-runner_amd64.deb...
-    BADSIG _gpgbuilder
-    ```
+   ```shell
+   dpkg-sig --verify gitlab-runner_amd64.deb
+   Processing gitlab-runner_amd64.deb...
+   BADSIG _gpgbuilder
+   ```
 
-    If the key is not present in the user's keyring, the output will be similar to:
+   If the key is not present in the user's keyring, the output is similar to:
 
-    ```shell
-    dpkg-sig --verify gitlab-runner_amd64.v13.1.0.deb
-    Processing gitlab-runner_amd64.v13.1.0.deb...
-    UNKNOWNSIG _gpgbuilder 880721D4
-    ```
+   ```shell
+   dpkg-sig --verify gitlab-runner_amd64.v13.1.0.deb
+   Processing gitlab-runner_amd64.v13.1.0.deb...
+   UNKNOWNSIG _gpgbuilder 880721D4
+   ```
 
 #### Current GPG public key
 
-The current public GPG key used for packages signing can be downloaded from
+Download the current public GPG key used for package signing from
 <https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-49F16C5CC3A0F81F.pub.gpg>.
 
 | Key Attribute | Value                                                |
@@ -270,51 +266,58 @@ available in the `<https://gitlab-runner-downloads.s3.dualstack.us-east-1.amazon
 
 Keys used in the past can be found in the table below.
 
-For keys that were revoked it's highly recommended to remove them from package signing
+For keys that were revoked, it's highly recommended to remove them from the package signing
 verification configuration.
 
-Signatures made by these keys should not be trusted anymore.
+Signatures made by the following keys should not be trusted anymore.
 
 | Sl. No. | Key Fingerprint                                      | Status    | Expiry Date  | Download (revoked keys only)                     |
 |---------|------------------------------------------------------|-----------|--------------|--------------------------------------------------|
 | 1       | `3018 3AC2 C4E2 3A40 9EFB  E705 9CE4 5ABC 8807 21D4` | `revoked` | `2021-06-08` | [revoked key](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/9CE45ABC880721D4.pub.gpg) |
 | 2       | `09E5 7083 F34C CA94 D541  BC58 A674 BF81 35DF A027` | `revoked` | `2023-04-26` | [revoked key](https://gitlab.com/gitlab-org/gitlab-runner/-/blob/main/docs/install/gpg-keys/A674BF8135DFA027.pub.gpg) |
 
-## Manually download packages
+## Troubleshooting
 
-You can [manually download and install the packages](linux-manually.md#using-debrpm-package) if necessary.
+Here are some tips on troubleshooting and resolving issues when installing GitLab Runner.
 
-## Disable `skel`
-
-> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379) in GitLab Runner 12.10.
-> - [Set to `true` by default](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4845) in GitLab Runner 14.0.
+### Error: `No such file or directory` job failures
 
 Sometimes the default [skeleton (`skel`) directory](https://www.thegeekdiary.com/understanding-the-etc-skel-directory-in-linux/)
-causes [issues for GitLab Runner](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449),
-and it fails to run a job.
+causes issues for GitLab Runner, and it fails to run a job.
+See [issue 4449](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4449) and
+[issue 1379](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1379).
 
-In GitLab Runner 12.10 we've added support for a special
-variable - `GITLAB_RUNNER_DISABLE_SKEL` - that when set to `true` is preventing usage of `skel`
-when creating the `$HOME` directory of the newly created user.
+To avoid this, when you install GitLab Runner, a `gitlab-runner` user is
+created, and by default, the home directory is created without any skeleton in
+it. Shell configuration added to the home directory with the usage of `skel`
+may interfere with the job execution and introduce unexpected problems like the
+ones mentioned above.
 
-Starting with GitLab Runner 14.0 `GITLAB_RUNNER_DISABLE_SKEL` is being set to `true` by default.
+If you had created the runner before the avoidance of `skel` was made
+the default behavior, you can try removing the following dotfiles:
 
-If for any reason it's needed that `skel` directory will be used to populate the newly
-created `$HOME` directory, the `GITLAB_RUNNER_DISABLE_SKEL` variable should be set explicitly
-to `false` before package installation. For example:
+```shell
+sudo rm /home/gitlab-runner/.profile
+sudo rm /home/gitlab-runner/.bashrc
+sudo rm /home/gitlab-runner/.bash_logout
+```
 
-For Debian/Ubuntu/Mint:
+If you really need to use the `skel` directory to populate the newly
+created `$HOME` directory, the `GITLAB_RUNNER_DISABLE_SKEL` variable must be set explicitly
+to `false` before you install the runner:
+
+::Tabs
+
+:::TabTitle Debian/Ubuntu/Mint
 
 ```shell
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E apt-get install gitlab-runner
 ```
 
-For RHEL/CentOS/Fedora/Amazon Linux:
+:::TabTitle RHEL/CentOS/Fedora/Amazon Linux
 
 ```shell
 export GITLAB_RUNNER_DISABLE_SKEL=false; sudo -E yum install gitlab-runner
 ```
 
-NOTE:
-Shell configuration added to the `$HOME` directory with the usage of `skel` may
-interfere with the job execution and introduce unexpected problems like the ones mentioned above.
+::EndTabs
