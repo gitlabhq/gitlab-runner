@@ -23,6 +23,10 @@ to run each job in a separate and isolated container. To connect to Docker Engin
 - The image and services you define in [`.gitlab-ci.yml`](https://docs.gitlab.com/ee/ci/yaml/index.html).
 - The configurations you define in [`config.toml`](../commands/index.md#configuration-file).
 
+Prerequisites:
+
+- [Install Docker](https://docs.docker.com/engine/install/).
+
 ## Docker executor workflow
 
 The Docker executor uses a special Docker image based on [Alpine Linux](https://alpinelinux.org/) that
