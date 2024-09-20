@@ -1455,7 +1455,7 @@ doesn't apply.
 
 GitLab Runner uses the _Builds Directory_ for all the jobs that it
 runs, but nests them using a specific pattern
-`{builds_dir}/$RUNNER_TOKEN_KEY/$CONCURRENT_ID/$NAMESPACE/$PROJECT_NAME`.
+`{builds_dir}/$RUNNER_TOKEN_KEY/$CONCURRENT_PROJECT_ID/$NAMESPACE/$PROJECT_NAME`.
 For example: `/builds/2mn-ncv-/0/user/playground`.
 
 GitLab Runner does not stop you from storing things inside of the
