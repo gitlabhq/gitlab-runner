@@ -312,8 +312,8 @@ update-ca-certificates
 systemctl restart docker.service
 ```
 
-If you're not on Ubuntu or Alpine, check your operating system
-and the Docker documentation for the commands to run.
+If you're not on Ubuntu or Alpine, read your operating system's documentation
+to find the appropriate commands to install the trusted certificate.
 
 Depending on your version of GitLab Runner and the Docker host environment,
 you might also have to disable the `FF_RESOLVE_FULL_TLS_CHAIN` feature flag.
