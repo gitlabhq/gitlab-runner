@@ -385,6 +385,84 @@ func setupTestHomeDirectoryConfig(t *testing.T, configFileContents string) func(
 	}
 }
 
+func TestDockerImage(t *testing.T) {
+	path := dockerImageNamePath("foo.bar:123/asdf/baz:latest")
+	assert.Equal(t, "foo.bar:123/asdf/baz", path)
+
+	path = dockerImageNamePath("foo.bar/asdf/baz:latest")
+	assert.Equal(t, "foo.bar/asdf/baz", path)
+
+	path = dockerImageNamePath("foo.bar/asdf/baz")
+	assert.Equal(t, "foo.bar/asdf/baz", path)
+
+	path = dockerImageNamePath("registry.local/ns/image")
+	assert.Equal(t, "registry.local/ns/image", path)
+
+	path = dockerImageNamePath("foo.bar:123/asdf/baz")
+	assert.Equal(t, "foo.bar:123/asdf/baz", path)
+
+	path = dockerImageNamePath("FOO.BAR:123/With/Case")
+	assert.Equal(t, "foo.bar:123/With/Case", path)
+}
+
+func TestConvertToRegistryPath(t *testing.T) {
+	path := convertToRegistryPath("my.hostname")
+	assert.Equal(t, "my.hostname", path)
+
+	path = convertToRegistryPath("my.hostname/with/path")
+	assert.Equal(t, "my.hostname/with/path", path)
+
+	path = convertToRegistryPath("MY.HOSTNAME/With/Path/CASE")
+	assert.Equal(t, "my.hostname/With/Path/CASE", path)
+
+	path = convertToRegistryPath("my.hostname/with/tag/image:latest")
+	assert.Equal(t, "my.hostname/with/tag/image", path)
+
+	path = convertToRegistryPath("https://index.docker.io/v1/")
+	assert.Equal(t, "docker.io", path)
+
+	path = convertToRegistryPath("HTTPS://INDEX.DOCKER.IO/V1/")
+	assert.Equal(t, "docker.io", path)
+}
+
+func TestPaths(t *testing.T) {
+	testDockerAuthConfigsPaths := `{"auths":{` +
+		`"registry.local":{"auth":"dGVzdF91c2VyXzE6dGVzdF9wYXNzd29yZF8x"},` +
+		`"registry.local/ns":{"auth":"dGVzdF91c2VyXzI6dGVzdF9wYXNzd29yZF8y"},` +
+		`"registry.local/ns/some/image":{"auth":"dGVzdF91c2VyXzM6dGVzdF9wYXNzd29yZF8z"}` +
+		`}}`
+
+	logger, _ := test.NewNullLogger()
+
+	result, err := ResolveConfigForImage("registry.local/foo/image:3",
+		testDockerAuthConfigsPaths, "", nil, logger)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, result)
+	assert.Equal(t, "$DOCKER_AUTH_CONFIG", result.Source)
+	assert.Equal(t, "test_user_1", result.AuthConfig.Username)
+	assert.Equal(t, "test_password_1", result.AuthConfig.Password)
+
+	result, err = ResolveConfigForImage("registry.local/ns/image:5",
+		testDockerAuthConfigsPaths, "", nil, logger)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, result)
+	assert.Equal(t, "$DOCKER_AUTH_CONFIG", result.Source)
+	assert.Equal(t, "test_user_2", result.AuthConfig.Username)
+	assert.Equal(t, "test_password_2", result.AuthConfig.Password)
+
+	result, err = ResolveConfigForImage("registry.local/ns/some/image:l",
+		testDockerAuthConfigsPaths, "", nil, logger)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, result)
+	assert.Equal(t, "test_user_3", result.AuthConfig.Username)
+	assert.Equal(t, "test_password_3", result.AuthConfig.Password)
+
+	result, err = ResolveConfigForImage("no_auth_configured/image:l",
+		testDockerAuthConfigsPaths, "", nil, logger)
+	assert.NoError(t, err)
+	assert.Nil(t, result)
+}
+
 func TestGetConfigs(t *testing.T) {
 	cleanup := setupTestHomeDirectoryConfig(t, testFileAuthConfigs)
 	defer cleanup()
@@ -459,46 +537,29 @@ func TestGetConfigs_DuplicatedRegistryCredentials(t *testing.T) {
 	assert.Equal(t, expectedResult, result)
 }
 
-func TestSplitDockerImageName(t *testing.T) {
-	remote, image := splitDockerImageName("tutum.co/user/ubuntu")
-	expectedRemote := "tutum.co"
-	expectedImage := "user/ubuntu"
-
-	if remote != expectedRemote {
-		t.Error("Expected ", expectedRemote, ", got ", remote)
-	}
-
-	if image != expectedImage {
-		t.Error("Expected ", expectedImage, ", got ", image)
-	}
+func TestDockerImageNamePath(t *testing.T) {
+	path := dockerImageNamePath("tutum.co/user/ubuntu")
+	assert.Equal(t, "tutum.co/user/ubuntu", path)
 }
 
-func TestSplitDefaultDockerImageName(t *testing.T) {
-	remote, image := splitDockerImageName("user/ubuntu")
-	expectedRemote := "docker.io"
-	expectedImage := "user/ubuntu"
-
-	if remote != expectedRemote {
-		t.Error("Expected ", expectedRemote, ", got ", remote)
-	}
-
-	if image != expectedImage {
-		t.Error("Expected ", expectedImage, ", got ", image)
-	}
+func TestDockerImageNamePathTag(t *testing.T) {
+	path := dockerImageNamePath("tutum.co/user/ubuntu:latest")
+	assert.Equal(t, "tutum.co/user/ubuntu", path)
 }
 
-func TestSplitDefaultIndexDockerImageName(t *testing.T) {
-	remote, image := splitDockerImageName("index.docker.io/user/ubuntu")
-	expectedRemote := "docker.io"
-	expectedImage := "user/ubuntu"
+func TestDockerImageNamePathPort(t *testing.T) {
+	path := dockerImageNamePath("cr.internal:5000/user/ubuntu")
+	assert.Equal(t, "cr.internal:5000/user/ubuntu", path)
+}
 
-	if remote != expectedRemote {
-		t.Error("Expected ", expectedRemote, ", got ", remote)
-	}
+func TestDefaultDockerImageNamePath(t *testing.T) {
+	path := dockerImageNamePath("user/ubuntu")
+	assert.Equal(t, "docker.io/user/ubuntu", path)
+}
 
-	if image != expectedImage {
-		t.Error("Expected ", expectedImage, ", got ", image)
-	}
+func TestDefaultIndexDockerImageNamePath(t *testing.T) {
+	path := dockerImageNamePath("index.docker.io/user/ubuntu")
+	assert.Equal(t, "docker.io/user/ubuntu", path)
 }
 
 type configLocation struct {
