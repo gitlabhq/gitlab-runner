@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/docker/cli/cli/config/configfile"
@@ -45,6 +46,15 @@ type DebugLogger interface {
 	Debugln(args ...interface{})
 }
 
+// the parent directory of a path or ""
+func parentPath(path string) string {
+	index := strings.LastIndex(path, "/")
+	if index == -1 {
+		return ""
+	}
+	return path[:index]
+}
+
 // ResolveConfigForImage returns the auth configuration for a particular image.
 // Returns nil on no config found.
 // See ResolveConfigs for source information.
@@ -57,13 +67,15 @@ func ResolveConfigForImage(
 		return nil, err
 	}
 
-	indexName, _ := splitDockerImageName(imageName)
-	info, ok := authConfigs[indexName]
-	if !ok {
-		return nil, nil
+	path := dockerImageNamePath(imageName)
+	for p := path; p != ""; p = parentPath(p) {
+		info, ok := authConfigs[p]
+		if ok {
+			return &info, nil
+		}
 	}
 
-	return &info, nil
+	return nil, nil
 }
 
 // ResolveConfigs returns the authentication configuration for docker registries.
@@ -95,26 +107,21 @@ func ResolveConfigs(
 			return nil, err
 		}
 
-		registryConfig := make(map[string]types.AuthConfig)
 		var hostnames []string
 		for registry, conf := range configs {
-			registryHostname := convertToHostname(registry)
-			registryConfig[registryHostname] = conf
-			hostnames = append(hostnames, registryHostname)
+			registryPath := convertToRegistryPath(registry)
+			hostnames = append(hostnames, registryPath)
+			if _, ok := res[registryPath]; !ok {
+				res[registryPath] = RegistryInfo{
+					Source:     source,
+					AuthConfig: conf,
+				}
+			}
 		}
 
 		// Source can be blank if there is no home dir configuration
 		if source != "" {
 			logger.Debugln(fmt.Sprintf("Loaded Docker credentials, source = %q, hostnames = %v, error = %v", source, hostnames, err))
-		}
-
-		for registryHostname, conf := range registryConfig {
-			if _, ok := res[registryHostname]; !ok {
-				res[registryHostname] = RegistryInfo{
-					Source:     source,
-					AuthConfig: conf,
-				}
-			}
 		}
 	}
 
@@ -178,25 +185,30 @@ func getBuildConfiguration(credentials []common.Credentials) (string, map[string
 	return authConfigSourceNameJobPayload, authConfigs, nil
 }
 
-// splitDockerImageName breaks a reposName into an index name and remote name
-func splitDockerImageName(reposName string) (string, string) {
-	nameParts := strings.SplitN(reposName, "/", 2)
-	var indexName, remoteName string
+// Given a docker image reference get the path to lookup the authentication credentials
+func dockerImageNamePath(imageName string) string {
+	imageIndex := strings.LastIndex(imageName, "/")
+	image := imageName
+	if imageIndex != -1 {
+		image = imageName[imageIndex+1:]
+	}
+
+	// remove tag
+	image, _, _ = strings.Cut(image, ":")
+
+	path := imageName[:imageIndex+1] + image
+
+	nameParts := strings.SplitN(imageName, "/", 2)
 	if len(nameParts) == 1 || (!strings.Contains(nameParts[0], ".") &&
 		!strings.Contains(nameParts[0], ":") && nameParts[0] != "localhost") {
 		// This is a Docker Index repos (ex: samalba/hipache or ubuntu)
 		// 'docker.io'
-		indexName = DefaultDockerRegistry
-		remoteName = reposName
-	} else {
-		indexName = nameParts[0]
-		remoteName = nameParts[1]
+		path = DefaultDockerRegistry + "/" + path
+	} else if nameParts[0] == "index."+DefaultDockerRegistry {
+		path, _ = strings.CutPrefix(path, "index.")
 	}
 
-	if indexName == "index."+DefaultDockerRegistry {
-		indexName = DefaultDockerRegistry
-	}
-	return indexName, remoteName
+	return pathWithLowerCaseHostname(path)
 }
 
 // readDockerConfigsFromHomeDir reads known docker config from home
@@ -313,17 +325,46 @@ func addAll(to, from map[string]types.AuthConfig) {
 	}
 }
 
-func convertToHostname(url string) string {
-	url = strings.ToLower(url)
-	url = strings.TrimPrefix(url, "http://")
-	url = strings.TrimPrefix(url, "https://")
-
-	nameParts := strings.SplitN(url, "/", 2)
-	url = nameParts[0]
-
-	if url == "index."+DefaultDockerRegistry {
-		return DefaultDockerRegistry
+// convert hostname part to lower case.
+// Since the hostname is case insensitive we convert it to lower case
+// to allow matching with case sensitive comparison
+func pathWithLowerCaseHostname(path string) string {
+	nameParts := strings.SplitN(path, "/", 2)
+	hostname := strings.ToLower(nameParts[0])
+	if len(nameParts) == 1 {
+		return hostname
 	}
 
-	return url
+	return hostname + "/" + nameParts[1]
+}
+
+// Returns the normalized path for a docker registry reference for some credentials.
+func convertToRegistryPath(imageRef string) string {
+	protocol := regexp.MustCompile("(?i)^http[s]://")
+
+	if protocol.MatchString(imageRef) {
+		// old style with protocol and maybe suffix /v1/
+		// just the use hostname
+		path := protocol.ReplaceAllString(imageRef, "")
+
+		nameParts := strings.SplitN(path, "/", 2)
+		path = strings.ToLower(nameParts[0])
+
+		if path == "index."+DefaultDockerRegistry {
+			return DefaultDockerRegistry
+		}
+
+		return path
+	}
+
+	path := strings.TrimSuffix(imageRef, "/")
+
+	tagIndex := strings.LastIndex(path, ":")
+	pathIndex := strings.LastIndex(path, "/")
+	// remove image tag from path
+	if pathIndex != -1 && tagIndex > pathIndex {
+		path = path[:strings.LastIndex(path, ":")]
+	}
+
+	return pathWithLowerCaseHostname(path)
 }
