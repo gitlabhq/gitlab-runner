@@ -184,6 +184,128 @@ func TestCacheS3Config_DualStack(t *testing.T) {
 	}
 }
 
+func TestCacheS3Config_Encryption(t *testing.T) {
+	testARN := "aws:arn:::1234"
+
+	tests := map[string]struct {
+		s3                     CacheS3Config
+		expectedEncryptionType S3EncryptionType
+		expectedKeyID          string
+	}{
+		"no encryption": {
+			s3:                     CacheS3Config{},
+			expectedEncryptionType: S3EncryptionTypeNone,
+		},
+		"S3 encryption": {
+			s3:                     CacheS3Config{ServerSideEncryption: "S3"},
+			expectedEncryptionType: S3EncryptionTypeAes256,
+		},
+		"unknown encryption": {
+			s3:                     CacheS3Config{ServerSideEncryption: "BLAH"},
+			expectedEncryptionType: S3EncryptionTypeNone,
+		},
+		"AES256 encryption": {
+			s3:                     CacheS3Config{ServerSideEncryption: "aes256"},
+			expectedEncryptionType: S3EncryptionTypeAes256,
+		},
+		"KMS encryption": {
+			s3:                     CacheS3Config{ServerSideEncryption: "kms", ServerSideEncryptionKeyID: testARN},
+			expectedEncryptionType: S3EncryptionTypeKms,
+			expectedKeyID:          testARN,
+		},
+		"AWS:KMS encryption": {
+			s3:                     CacheS3Config{ServerSideEncryption: "aws:kms", ServerSideEncryptionKeyID: testARN},
+			expectedEncryptionType: S3EncryptionTypeKms,
+			expectedKeyID:          testARN,
+		},
+		"DSSE-KMS encryption": {
+			s3:                     CacheS3Config{ServerSideEncryption: "DSSE-KMS", ServerSideEncryptionKeyID: testARN},
+			expectedEncryptionType: S3EncryptionTypeDsseKms,
+			expectedKeyID:          testARN,
+		},
+		"aws:kms:dsse encryption": {
+			s3:                     CacheS3Config{ServerSideEncryption: "aws:kms:dsse", ServerSideEncryptionKeyID: testARN},
+			expectedEncryptionType: S3EncryptionTypeDsseKms,
+			expectedKeyID:          testARN,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedEncryptionType, tt.s3.EncryptionType())
+			assert.Equal(t, tt.expectedKeyID, tt.s3.ServerSideEncryptionKeyID)
+		})
+	}
+}
+
+func TestCacheS3Config_Endpoint(t *testing.T) {
+	disabled := false
+
+	tests := map[string]struct {
+		s3                CacheS3Config
+		expected          string
+		expectedPathStyle bool
+	}{
+		"no server address": {
+			s3:                CacheS3Config{},
+			expected:          "",
+			expectedPathStyle: false,
+		},
+		"bad hostname": {
+			s3:                CacheS3Config{ServerAddress: "local\x00host:8080"},
+			expected:          "",
+			expectedPathStyle: false,
+		},
+		"HTTPS server address": {
+			s3:                CacheS3Config{ServerAddress: "minio.example.com:8080"},
+			expected:          "https://minio.example.com:8080",
+			expectedPathStyle: true,
+		},
+		"HTTP server address": {
+			s3:                CacheS3Config{ServerAddress: "minio.example.com:8080", Insecure: true},
+			expected:          "http://minio.example.com:8080",
+			expectedPathStyle: true,
+		},
+		"AWS us-east-2 endpoint": {
+			s3:                CacheS3Config{ServerAddress: "s3.us-east-2.amazonaws.com"},
+			expected:          "https://s3.us-east-2.amazonaws.com",
+			expectedPathStyle: false,
+		},
+		"AWS us-east-2 endpoint with bucket": {
+			s3:                CacheS3Config{ServerAddress: "my-bucket.s3.us-east-2.amazonaws.com", BucketName: "my-bucket", BucketLocation: "us-east-2"},
+			expected:          "https://my-bucket.s3.us-east-2.amazonaws.com",
+			expectedPathStyle: true,
+		},
+		"AWS FIPS endpoint": {
+			s3:                CacheS3Config{ServerAddress: "s3-fips.us-west-1.amazonaws.com"},
+			expected:          "https://s3-fips.us-west-1.amazonaws.com",
+			expectedPathStyle: false,
+		},
+		"Google endpoint": {
+			s3:                CacheS3Config{ServerAddress: "storage.googleapis.com"},
+			expected:          "https://storage.googleapis.com",
+			expectedPathStyle: false,
+		},
+		"Custom HTTPS server with path style disabled": {
+			s3:                CacheS3Config{ServerAddress: "minio.example.com:8080", PathStyle: &disabled},
+			expected:          "https://minio.example.com:8080",
+			expectedPathStyle: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedPathStyle, tt.s3.PathStyleEnabled())
+			if tt.expected != "" {
+				assert.Equal(t, tt.expected, tt.s3.GetEndpoint())
+				assert.Equal(t, tt.expected, tt.s3.GetEndpointURL().String())
+			} else {
+				assert.Nil(t, tt.s3.GetEndpointURL())
+			}
+		})
+	}
+}
+
 func TestConfigParse(t *testing.T) {
 	httpHeaders := []KubernetesLifecycleHTTPGetHeader{
 		{Name: "header_name_1", Value: "header_value_1"},

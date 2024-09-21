@@ -1130,7 +1130,7 @@ type CacheS3Config struct {
 	ServerSideEncryption      string     `toml:"ServerSideEncryption,omitempty" long:"server-side-encryption" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION" description:"Server side encryption type (S3, or KMS)"`
 	ServerSideEncryptionKeyID string     `toml:"ServerSideEncryptionKeyID,omitempty" long:"server-side-encryption-key-id" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID" description:"Server side encryption key ID (alias or Key ID)"`
 	DualStack                 *bool      `toml:"DualStack,omitempty" long:"dual-stack" env:"CACHE_S3_DUAL_STACK" description:"Enable dual-stack (IPv4 and IPv6) endpoints (default: true)" jsonschema:"oneof_type=boolean;null"`
-	UsePathStyle              *bool      `toml:"UsePathStyle,omitempty" long:"use-path-style" env:"CACHE_S3_USE_PATH_STYLE" description:"Use path style access (default: false)" jsonschema:"oneof_type=boolean;null"`
+	PathStyle                 *bool      `toml:"PathStyle,omitempty" long:"path-style" env:"CACHE_S3_PATH_STYLE" description:"Use path style access (default: false)" jsonschema:"oneof_type=boolean;null"`
 	Accelerate                bool       `toml:"Accelerate,omitempty" long:"accelerate" env:"CACHE_S3_ACCELERATE" description:"Enable S3 Transfer Acceleration"`
 	UploadRoleARN             string     `toml:"UploadRoleARN,omitempty" long:"upload-role-arn" env:"CACHE_S3_UPLOAD_ROLE_ARN" description:"Role ARN for uploading cache to S3"`
 }
@@ -1279,6 +1279,15 @@ const (
 	S3AuthTypeIAM       S3AuthType = "iam"
 )
 
+type S3EncryptionType string
+
+const (
+	S3EncryptionTypeNone    S3EncryptionType = ""
+	S3EncryptionTypeAes256  S3EncryptionType = "S3"
+	S3EncryptionTypeKms     S3EncryptionType = "KMS"
+	S3EncryptionTypeDsseKms S3EncryptionType = "DSSE-KMS"
+)
+
 func (c *CacheS3Config) AuthType() S3AuthType {
 	authType := S3AuthType(strings.ToLower(string(c.AuthenticationType)))
 
@@ -1296,6 +1305,24 @@ func (c *CacheS3Config) AuthType() S3AuthType {
 	}
 
 	return S3AuthTypeAccessKey
+}
+
+func (c *CacheS3Config) EncryptionType() S3EncryptionType {
+	encryptionType := S3EncryptionType(strings.ToUpper(c.ServerSideEncryption))
+
+	switch encryptionType {
+	case "":
+		return S3EncryptionTypeNone
+	case "S3", "AES256":
+		return S3EncryptionTypeAes256
+	case "KMS", "AWS:KMS":
+		return S3EncryptionTypeKms
+	case "DSSE-KMS", "AWS:KMS:DSSE":
+		return S3EncryptionTypeDsseKms
+	}
+
+	logrus.Warnf("unknown ServerSideEncryption value: %s", encryptionType)
+	return S3EncryptionTypeNone
 }
 
 func (c *CacheS3Config) GetEndpoint() string {
@@ -1319,15 +1346,20 @@ func (c *CacheS3Config) GetEndpointURL() *url.URL {
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
+		logrus.Errorf("error parsing endpoint URL: %v", err)
 		return nil
 	}
 
 	return u
 }
 
+// PathStyleEnabled() will return true if the endpoint needs to use
+// the legacy, path-style access to S3. If the value is not specified,
+// it will auto-detect and return false if the server address appears
+// to be for AWS or Google. Otherwise, PathStyleEnabled() will return false.
 func (c *CacheS3Config) PathStyleEnabled() bool {
 	// Preserve the previous behavior of auto-detection by default
-	if c.UsePathStyle == nil {
+	if c.PathStyle == nil {
 		u := c.GetEndpointURL()
 		if u == nil {
 			return false
@@ -1336,7 +1368,7 @@ func (c *CacheS3Config) PathStyleEnabled() bool {
 		return !s3utils.IsVirtualHostSupported(*u, c.BucketName)
 	}
 
-	return *c.UsePathStyle
+	return *c.PathStyle
 }
 
 func (c *CacheS3Config) DualStackEnabled() bool {

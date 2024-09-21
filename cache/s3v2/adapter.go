@@ -56,14 +56,14 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
 	}
 
 	q := u.Query()
-	if a.config.BucketLocation != "" {
-		q.Set("region", a.config.BucketLocation)
-	}
-
 	// These are GoCloud AWS SDK v2 query parameters:
 	// https://github.com/google/go-cloud/blob/e5b1bc66f5c42c0a4bb43d179cefdab454559325/blob/s3blob/s3blob.go#L133-L136
 	// https://github.com/google/go-cloud/blob/e5b1bc66f5c42c0a4bb43d179cefdab454559325/aws/aws.go#L194-L199
 	q.Set("awssdk", "v2")
+
+	if a.config.BucketLocation != "" {
+		q.Set("region", a.config.BucketLocation)
+	}
 	endpoint := a.config.GetEndpoint()
 	if endpoint != "" {
 		q.Set("endpoint", a.config.GetEndpoint())
@@ -77,8 +77,10 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
 	if a.config.Accelerate {
 		q.Set("accelerate", "true")
 	}
-	if a.config.ServerSideEncryption != "" {
-		q.Set("ssetype", a.config.ServerSideEncryption)
+
+	ssetype := a.client.ServerSideEncryptionType()
+	if ssetype != "" {
+		q.Set("ssetype", ssetype)
 	}
 	if a.config.ServerSideEncryptionKeyID != "" {
 		q.Set("kmskeyid", a.config.ServerSideEncryptionKeyID)

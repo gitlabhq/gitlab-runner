@@ -75,6 +75,24 @@ func (_m *mockS3Presigner) PresignURL(ctx context.Context, method string, bucket
 	return r0, r1
 }
 
+// ServerSideEncryptionType provides a mock function with given fields:
+func (_m *mockS3Presigner) ServerSideEncryptionType() string {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ServerSideEncryptionType")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // newMockS3Presigner creates a new instance of mockS3Presigner. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func newMockS3Presigner(t interface {
