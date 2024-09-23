@@ -10,6 +10,8 @@ dockerfiles/**/checksums-*
 dockerfiles/runner/*/install-deps
 dockerfiles/runner/alpine/gitlab-runner-linux-*
 dockerfiles/runner/ubuntu/gitlab-runner_*.deb
+dockerfiles/runner/ubi-fips/gitlab-runner-linux-*
+dockerfiles/runner/ubi-fips/gitlab-runner_*.rpm
 dockerfiles/runner-helper/binaries/
 .DS_Store
 .idea/

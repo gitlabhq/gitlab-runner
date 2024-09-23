@@ -21,6 +21,7 @@ const (
 	DefaultArchs  = "amd64"
 
 	runnerHomeDir = "dockerfiles/runner"
+	ubiFipsFlavor = "ubi-fips"
 )
 
 var (
@@ -46,8 +47,11 @@ var (
 	alpine317Version = env.NewDefault("ALPINE_317_VERSION", "3.17.3")
 	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.2")
 	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
-	ubiFIPSBaseImage = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
-	ubiFIPSVersion   = env.NewDefault("UBI_FIPS_VERSION", "9.4-1227")
+
+	ubiFIPSBaseImage  = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
+	ubiFIPSVersion    = env.NewDefault("UBI_FIPS_VERSION", "9.4-15")
+	ubiMinimalImage   = env.NewDefault("UBI_MINIMAL_IMAGE", "redhat/ubi9-minimal")
+	ubiMinimalVersion = env.NewDefault("UBI_MINIMAL_VERSION", "9.4-1227")
 
 	buildxRetry = env.NewDefault("RUNNER_IMAGES_DOCKER_BUILDX_RETRY", "0")
 )
@@ -117,6 +121,8 @@ func AssembleBuildRunner(flavor, targetArchs string) build.TargetBlueprint[runne
 		alpine319Version,
 		ubiFIPSBaseImage,
 		ubiFIPSVersion,
+		ubiMinimalImage,
+		ubiMinimalVersion,
 		dockerMachineAmd64Checksum,
 		dockerMachineArm64Checksum,
 		dockerMachineS390xChecksum,
@@ -168,7 +174,7 @@ func BuildRunner(blueprint build.TargetBlueprint[runnerImageFileDependency, buil
 		"alpine3.18":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine318Version)),
 		"alpine3.19":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine319Version)),
 		"alpine-latest": "alpine:latest",
-		"ubi-fips": fmt.Sprintf(
+		ubiFipsFlavor: fmt.Sprintf(
 			"%s:%s",
 			blueprint.Env().Value(ubiFIPSBaseImage),
 			blueprint.Env().Value(ubiFIPSVersion),
@@ -249,9 +255,9 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 	}
 
 	copyMap := map[string][]string{
-		"ubuntu":   installDeps,
-		"alpine":   installDeps,
-		"ubi-fips": installDeps,
+		"ubuntu":      installDeps,
+		"alpine":      installDeps,
+		ubiFipsFlavor: installDeps,
 	}
 
 	for _, arch := range archs {
@@ -262,21 +268,23 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 
 		checksumsFile := filepath.Join(runnerHomeDir, fmt.Sprintf("checksums-%s", arch))
 
-		copyMap["ubuntu"] = append(
-			copyMap["ubuntu"],
-			checksumsFile,
-			fmt.Sprintf("out/deb/gitlab-runner_%s.deb", debArch),
-		)
+		if flavor != ubiFipsFlavor {
+			copyMap["ubuntu"] = append(
+				copyMap["ubuntu"],
+				checksumsFile,
+				fmt.Sprintf("out/deb/gitlab-runner_%s.deb", debArch),
+			)
 
-		copyMap["alpine"] = append(
-			copyMap["alpine"],
-			checksumsFile,
-			fmt.Sprintf("out/binaries/gitlab-runner-linux-%s", arch),
-		)
+			copyMap["alpine"] = append(
+				copyMap["alpine"],
+				checksumsFile,
+				fmt.Sprintf("out/binaries/gitlab-runner-linux-%s", arch),
+			)
+		}
 
-		if flavor == "ubi-fips" && arch == "amd64" {
-			copyMap["ubi-fips"] = append(
-				copyMap["ubi-fips"],
+		if flavor == ubiFipsFlavor && arch == "amd64" {
+			copyMap[ubiFipsFlavor] = append(
+				copyMap[ubiFipsFlavor],
 				checksumsFile,
 				fmt.Sprintf("out/binaries/gitlab-runner-linux-%s-fips", arch),
 				fmt.Sprintf("out/rpm/gitlab-runner_%s-fips.rpm", arch),
@@ -351,6 +359,7 @@ func buildxArgs(
 	env := blueprint.Env()
 	args := []string{
 		"--build-arg", fmt.Sprintf("BASE_IMAGE=%s", baseImage),
+		"--build-arg", fmt.Sprintf("UBI_MINIMAL_IMAGE=%s", fmt.Sprintf("%s:%s", env.Value(ubiMinimalImage), env.Value(ubiMinimalVersion))),
 		"--build-arg", fmt.Sprintf("DOCKER_MACHINE_VERSION=%s", env.Value(dockerMachineVersion)),
 		"--build-arg", fmt.Sprintf("DUMB_INIT_VERSION=%s", env.Value(dumbInitVersion)),
 		"--build-arg", fmt.Sprintf("GIT_LFS_VERSION=%s", env.Value(gitLfsVersion)),

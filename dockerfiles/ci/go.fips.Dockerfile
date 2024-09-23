@@ -5,7 +5,7 @@ FROM ${GO_FIPS_BASE_IMAGE} AS go
 ARG PLATFORM_ARCH=amd64
 
 RUN microdnf update -y && \
-    microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel tar gzip gcc make && \
+    microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel tar gzip gcc make git git-lfs && \
     microdnf clean all -y
 
 ARG GO_VERSION=1.22
