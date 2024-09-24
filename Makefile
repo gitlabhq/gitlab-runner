@@ -142,8 +142,8 @@ mage-test:
 cobertura_report: $(GOCOVER_COBERTURA) $(SPLITIC)
 	mkdir -p out/cobertura
 	mkdir -p out/coverage
-	$(SPLITIC) cover-merge $(wildcard .splitic/cover_*.profile) > out/coverage/coverprofile.regular.source.txt
-	$(GOCOVER_COBERTURA) < out/coverage/coverprofile.regular.source.txt > out/cobertura/cobertura-coverage-raw.xml
+	$(SPLITIC) cover-merge $(wildcard .splitic/cover_?.profile) > out/coverage/coverprofile.regular.source.txt
+	GOOS=$(GOOS) $(GOCOVER_COBERTURA) < out/coverage/coverprofile.regular.source.txt > out/cobertura/cobertura-coverage-raw.xml
 	@ # NOTE: Remove package paths.
 	@ # See https://gitlab.com/gitlab-org/gitlab/-/issues/217664
 	sed 's;filename=\"gitlab.com/gitlab-org/gitlab-runner/;filename=\";g' out/cobertura/cobertura-coverage-raw.xml > \
