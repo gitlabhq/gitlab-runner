@@ -10,7 +10,7 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
-To install GitLab Runner, use a package from a GitLab repository.
+To install GitLab Runner, you can use a package from [the GitLab repository](https://packages.gitlab.com/runner/gitlab-runner).
 
 ## Supported distributions
 
