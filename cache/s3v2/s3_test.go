@@ -305,10 +305,14 @@ func TestS3Client_PresignURL(t *testing.T) {
 	}
 }
 
-func TestFetchCredentialsForRole(t *testing.T) {
+func newMockSTSHandler(expectedKms bool) http.Handler {
 	roleARN := "arn:aws:iam::123456789012:role/TestRole"
+	expectedStatements := 1
+	if expectedKms {
+		expectedStatements = 2
+	}
 
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/sts" {
 			http.NotFound(w, r)
 			return
@@ -365,8 +369,8 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			return
 		}
 
-		if policyJSON.Statement == nil || len(policyJSON.Statement) != 1 {
-			http.Error(w, "Policy must contain exactly one Statement", http.StatusBadRequest)
+		if policyJSON.Statement == nil || len(policyJSON.Statement) != expectedStatements {
+			http.Error(w, fmt.Sprintf("Policy must contain exactly %d Statements", expectedStatements), http.StatusBadRequest)
 			return
 		}
 
@@ -379,6 +383,18 @@ func TestFetchCredentialsForRole(t *testing.T) {
 		if statement.Action[0] != "s3:PutObject" {
 			http.Error(w, "Action should be s3:PutObject", http.StatusBadRequest)
 			return
+		}
+
+		if expectedKms {
+			kmsStatement := policyJSON.Statement[1]
+			if kmsStatement.Action == nil || len(kmsStatement.Action) != 2 {
+				http.Error(w, "KMS Statement must contain exactly two Actions", http.StatusBadRequest)
+				return
+			}
+			if kmsStatement.Action[0] != "kms:Decrypt" || kmsStatement.Action[1] != "kms:GenerateDataKey" {
+				http.Error(w, "KMS Statement Actions should be kms:Decrypt and kms:GenerateDataKey", http.StatusBadRequest)
+				return
+			}
 		}
 
 		if statement.Resource != fmt.Sprintf("arn:aws:s3:::%s/%s", bucketName, objectName) {
@@ -410,15 +426,16 @@ func TestFetchCredentialsForRole(t *testing.T) {
 		if err != nil {
 			w.WriteHeader(http.StatusExpectationFailed)
 		}
-	}))
+	})
+}
 
-	defer mockServer.Close()
-
+func TestFetchCredentialsForRole(t *testing.T) {
 	tests := map[string]struct {
-		config   *common.CacheConfig
-		roleARN  string
-		expected map[string]string
-		errMsg   string
+		config      *common.CacheConfig
+		roleARN     string
+		expected    map[string]string
+		errMsg      string
+		expectedKms bool
 	}{
 		"successful fetch": {
 			config: &common.CacheConfig{
@@ -436,6 +453,26 @@ func TestFetchCredentialsForRole(t *testing.T) {
 				"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
 				"AWS_SESSION_TOKEN":     "mock-session-token",
 			},
+		},
+		"successful fetch with encryption": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					AccessKey:                 "test-access-key",
+					SecretKey:                 "test-secret-key",
+					AuthenticationType:        "access-key",
+					BucketName:                "test-bucket",
+					UploadRoleARN:             "arn:aws:iam::123456789012:role/TestRole",
+					ServerSideEncryption:      "KMS",
+					ServerSideEncryptionKeyID: "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+				},
+			},
+			roleARN: "arn:aws:iam::123456789012:role/TestRole",
+			expected: map[string]string{
+				"AWS_ACCESS_KEY_ID":     "mock-access-key",
+				"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
+				"AWS_SESSION_TOKEN":     "mock-session-token",
+			},
+			expectedKms: true,
 		},
 		"invalid role ARN": {
 			config: &common.CacheConfig{
@@ -467,6 +504,9 @@ func TestFetchCredentialsForRole(t *testing.T) {
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
 			// Create s3Client and point STS endpoint to it
+			mockServer := httptest.NewServer(newMockSTSHandler(tt.expectedKms))
+			defer mockServer.Close()
+
 			s3Client, err := newS3Client(tt.config.S3, withSTSEndpoint(mockServer.URL+"/sts"))
 			require.NoError(t, err)
 

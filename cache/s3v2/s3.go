@@ -101,17 +101,38 @@ func (c *s3Client) PresignURL(ctx context.Context,
 	return cache.PresignedURL{URL: u, Headers: presignedReq.SignedHeader}, nil
 }
 
+func (c *s3Client) generateSessionPolicy(bucketName, objectName string) string {
+	policy := fmt.Sprintf(`{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Action": ["s3:PutObject"],
+				"Resource": "arn:aws:s3:::%s/%s"
+			}`, bucketName, objectName)
+
+	if c.s3Config.EncryptionType() == common.S3EncryptionTypeKms || c.s3Config.EncryptionType() == common.S3EncryptionTypeDsseKms {
+		// Permissions needed for multipart upload: https://repost.aws/knowledge-center/s3-large-file-encryption-kms-key
+		policy += fmt.Sprintf(`,
+			{
+				"Effect": "Allow",
+				"Action": [
+					"kms:Decrypt",
+					"kms:GenerateDataKey"
+				],
+				"Resource": "%s"
+			}`, c.s3Config.ServerSideEncryptionKeyID)
+	}
+
+	policy += `
+	]
+}`
+
+	return policy
+}
+
 func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string) (map[string]string, error) {
-	sessionPolicy := fmt.Sprintf(`{
-			"Version": "2012-10-17",
-			"Statement": [
-				{
-					"Effect": "Allow",
-					"Action": ["s3:PutObject"],
-					"Resource": "arn:aws:s3:::%s/%s"
-				}
-			]
-		}`, bucketName, objectName)
+	sessionPolicy := c.generateSessionPolicy(bucketName, objectName)
 
 	stsClient := sts.NewFromConfig(*c.awsConfig, func(o *sts.Options) {
 		if c.stsEndpoint != "" {
@@ -131,12 +152,12 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 		DurationSeconds: aws.Int32(ROLE_SESSION_DURATION_S), // Set a short lifetime for the session
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to assume role: %v", err)
+		return nil, fmt.Errorf("failed to assume role: %w", err)
 	}
 	// AssumeRole should always return credentials if successful, but
 	// just in case it doesn't let's check this.
 	if roleCredentials.Credentials == nil {
-		return nil, fmt.Errorf("failed to retrieve credentials: %v", err)
+		return nil, fmt.Errorf("failed to retrieve credentials: %w", err)
 	}
 
 	return map[string]string{
