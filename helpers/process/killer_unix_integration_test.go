@@ -13,7 +13,7 @@ func testKillerTestCases() map[string]testKillerTestCase {
 		"command terminated": {
 			alreadyStopped: false,
 			skipTerminate:  false,
-			expectedError:  "exit status 1",
+			expectedError:  "exit status 3",
 		},
 		"command already stopped": {
 			alreadyStopped: true,
