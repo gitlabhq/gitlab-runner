@@ -18,82 +18,76 @@ This chart configures GitLab Runner to:
 - Run using the [Kubernetes executor](../executors/kubernetes/index.md) for GitLab Runner.
 - Provision a new pod in the specified namespace for each new CI/CD job.
 
-## Prerequisites
-
-- Your GitLab server's API is reachable from the cluster.
-- Kubernetes 1.4+ with beta APIs enabled.
-- The `kubectl` CLI installed locally and authenticated for the cluster.
-- The [Helm client](https://helm.sh/docs/using_helm/#installing-the-helm-client) installed locally on your machine.
-
 ## Installing GitLab Runner using the Helm Chart
 
-Add the GitLab Helm repository:
+Prerequisites:
 
-```shell
-helm repo add gitlab https://charts.gitlab.io
-```
+- Your GitLab server's API is reachable from the cluster.
+- Kubernetes 1.4 or later, with beta APIs enabled.
+- The `kubectl` CLI is installed locally, and authenticated for the cluster.
+- The [Helm client](https://helm.sh/docs/using_helm/#installing-the-helm-client) is installed locally on your machine.
 
-If using Helm 2, you must also initialize Helm:
+To install GitLab Runner by using the Helm chart:
 
-```shell
-helm init
-```
+1. Add the GitLab Helm repository:
 
-If you are unable to access to the latest versions of GitLab Runner, you should update the chart. To update the chart, run:
+   ```shell
+   helm repo add gitlab https://charts.gitlab.io
+   ```
 
-```shell
-helm repo update gitlab
-```
+1. If you use Helm 2, initialize Helm with `helm init`.
+1. Check which GitLab Runner versions you have access to:
 
-To view a list of GitLab Runner versions you have access to, run:
+   ```shell
+   helm search repo -l gitlab/gitlab-runner
+   ```
 
-```shell
-helm search repo -l gitlab/gitlab-runner
-```
+1. If you can't access the latest versions of GitLab Runner, update the chart with this command:
 
-After you [configure](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
-run this command:
+   ```shell
+   helm repo update gitlab
+   ```
 
-```shell
-# For Helm 2
-helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
+1. After you [configure](#configuring-gitlab-runner-using-the-helm-chart) GitLab Runner in your `values.yaml` file,
+   run this command, changing parameters as needed:
 
-# For Helm 3
-helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
-```
+   ```shell
+   # For Helm 2
+   helm install --namespace <NAMESPACE> --name gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
 
-Where:
+   # For Helm 3
+   helm install --namespace <NAMESPACE> gitlab-runner -f <CONFIG_VALUES_FILE> gitlab/gitlab-runner
+   ```
 
-- `<NAMESPACE>` is the Kubernetes namespace where you want to install the GitLab Runner.
-- `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
-  [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
-
-If you want to install a specific version of GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
-to your `helm install` command. You can install any version of the chart
-this way, but more recent `values.yml` might not work with an older version of the chart.
+   - `<NAMESPACE>`: The Kubernetes namespace where you want to install the GitLab Runner.
+   - `<CONFIG_VALUES_FILE>`: The path to values file containing your custom configuration. To create it, see
+     [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart).
+   - To install a specific version of the GitLab Runner Helm Chart, add `--version <RUNNER_HELM_CHART_VERSION>`
+     to your `helm install` command. You can install any version of the chart, but more recent `values.yml` might
+     be incompatible with older versions of the chart.
 
 ## Upgrading GitLab Runner using the Helm Chart
 
-Before upgrading GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.
-Pausing the runner prevents problems arising with the jobs, such as
-[authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
+Prerequisites:
 
-After you install your GitLab Runner Chart, use `helm upgrade` to change configuration or update charts:
+- You've installed your GitLab Runner Chart.
+- You've paused the runner in GitLab. This prevents problems arising with the jobs, such as
+  [authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
+- You've ensured all jobs have completed.
+
+Use `helm upgrade` to change configuration or update charts, changing parameters as needed:
 
 ```shell
 helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
 ```
 
-Where:
-
-- `<NAMESPACE>` is the Kubernetes namespace where GitLab Runner is installed.
-- `<CONFIG_VALUES_FILE>` is the path to values file containing your custom configuration. See the
-  [Configuring GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart) section to create it.
-- `<RELEASE-NAME>` is the name you gave the chart when installing it.
-  In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
-
-If you want to update to a specific version of GitLab Runner Helm Chart instead of the latest one, add `--version <RUNNER_HELM_CHART_VERSION>`
-to your `helm upgrade` command.
+- `<NAMESPACE>`: The Kubernetes namespace where you've installed GitLab Runner.
+- `<CONFIG_VALUES_FILE>`: The path to the values file containing your custom configuration. To create it, see
+  [Configure GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart).
+- `<RELEASE-NAME>`: The name you gave the chart when installing it.
+  In the installation section, the example named it `gitlab-runner`.
+- To update to a specific version of the GitLab Runner Helm Chart, rather than the latest one, add
+  `--version <RUNNER_HELM_CHART_VERSION>` to your `helm upgrade` command.
 
 ## Check available GitLab Runner Helm Chart versions
 
@@ -651,61 +645,3 @@ Where:
 - `<NAMESPACE>` is the Kubernetes namespace where GitLab Runner is installed.
 - `<RELEASE-NAME>` is the name you gave the chart when installing it.
   In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
-
-## Troubleshooting a Kubernetes installation
-
-### Error: `Job failed (system failure): secrets is forbidden`
-
-If you see the following error:
-
-```plaintext
-Using Kubernetes executor with image alpine ...
-ERROR: Job failed (system failure): secrets is forbidden: User "system:serviceaccount:gitlab:default" cannot create resource "secrets" in API group "" in the namespace "gitlab"
-```
-
-[Enable RBAC support](#enabling-rbac-support) to correct the error.
-
-### `Unable to mount volumes for pod`
-
-If you see mount volume failures for a required secret, ensure that you've followed
-[Store registration tokens or runner tokens in secrets](#store-registration-tokens-or-runner-tokens-in-secrets).
-
-### Slow artifact uploads to Google Cloud Storage
-
-<!-- See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28393#note_722733798 -->
-
-Artifact uploads to Google Cloud Storage can experience reduced performance (a slower bandwidth rate) due to the runner helper pod becoming CPU bound. To mitigate this problem, increase the Helper pod CPU Limit:
-
-```yaml
-runners:
-  config: |
-    [[runners]]
-      [runners.kubernetes]
-        helper_cpu_limit = "250m"
-```
-
-### `PANIC: creating directory: mkdir /nonexistent: permission denied`
-
-To resolve this error, switch to the [Ubuntu-based GitLab Runner Docker image](#switching-to-the-ubuntu-based-gitlab-runner-docker-image).
-
-### Error: `invalid header field for "Private-Token"`
-
-You might get the following error if the `runner-token` value in `gitlab-runner-secret`
-is base64-encoded with a newline character at the end:
-
-```plaintext
-couldn't execute POST against "https:/gitlab.example.com/api/v4/runners/verify": net/http: invalid header field for "Private-Token"
-```
-
-To resolve this issue, ensure a newline is not appended to the token value (for example, `echo -n glrt-A5sFGybkt0pY8AdVLnx4 | base64`).
-
-### Runner configuration is reserved
-
-You might get the following error in the pod logs after installing the GitLab Runner Helm chart:
-
-```plaintext
-FATAL: Runner configuration other than name and executor configuration is reserved (specifically --locked, --access-level, --run-untagged, --maximum-timeout, --paused, --tag-list, and --maintenance-note) and cannot be specified when registering with a runner authentication token. This configuration is specified on the GitLab server. Please try again without specifying any of those arguments
-```
-
-It happens if you use an authentication token and [provide a token through a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
-To fix this error, review your values YAML file and make sure that you are not using any deprecated values. For more information about which values are deprecated, see [Installing GitLab Runner with Helm chart](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#installing-gitlab-runner-with-helm-chart).
