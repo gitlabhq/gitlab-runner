@@ -305,7 +305,7 @@ func TestS3Client_PresignURL(t *testing.T) {
 	}
 }
 
-func newMockSTSHandler(expectedKms bool) http.Handler {
+func newMockSTSHandler(expectedKms bool, expectedDurationSecs int) http.Handler {
 	roleARN := "arn:aws:iam::123456789012:role/TestRole"
 	expectedStatements := 1
 	if expectedKms {
@@ -346,7 +346,7 @@ func newMockSTSHandler(expectedKms bool) http.Handler {
 			return
 		}
 
-		if queryValues.Get("DurationSeconds") != fmt.Sprintf("%d", ROLE_SESSION_DURATION_S) {
+		if queryValues.Get("DurationSeconds") != fmt.Sprintf("%d", expectedDurationSecs) {
 			http.Error(w, "Invalid DurationSeconds parameter", http.StatusUnauthorized)
 			return
 		}
@@ -430,29 +430,55 @@ func newMockSTSHandler(expectedKms bool) http.Handler {
 }
 
 func TestFetchCredentialsForRole(t *testing.T) {
+	workingConfig := common.CacheConfig{
+		S3: &common.CacheS3Config{
+			AccessKey:          "test-access-key",
+			SecretKey:          "test-secret-key",
+			AuthenticationType: "access-key",
+			BucketName:         "test-bucket",
+			UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
+		},
+	}
+	mockedCreds := map[string]string{
+		"AWS_ACCESS_KEY_ID":     "mock-access-key",
+		"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
+		"AWS_SESSION_TOKEN":     "mock-session-token",
+	}
+
 	tests := map[string]struct {
-		config      *common.CacheConfig
-		roleARN     string
-		expected    map[string]string
-		errMsg      string
-		expectedKms bool
+		config           *common.CacheConfig
+		roleARN          string
+		expected         map[string]string
+		errMsg           string
+		expectedKms      bool
+		duration         time.Duration
+		expectedDuration time.Duration
 	}{
 		"successful fetch": {
-			config: &common.CacheConfig{
-				S3: &common.CacheS3Config{
-					AccessKey:          "test-access-key",
-					SecretKey:          "test-secret-key",
-					AuthenticationType: "access-key",
-					BucketName:         "test-bucket",
-					UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
-				},
-			},
-			roleARN: "arn:aws:iam::123456789012:role/TestRole",
-			expected: map[string]string{
-				"AWS_ACCESS_KEY_ID":     "mock-access-key",
-				"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
-				"AWS_SESSION_TOKEN":     "mock-session-token",
-			},
+			config:   &workingConfig,
+			roleARN:  "arn:aws:iam::123456789012:role/TestRole",
+			expected: mockedCreds,
+		},
+		"successful fetch with 12-hour timeout": {
+			config:           &workingConfig,
+			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
+			duration:         12 * time.Hour,
+			expected:         mockedCreds,
+			expectedDuration: 12 * time.Hour,
+		},
+		"successful fetch with 10-minute timeout": {
+			config:           &workingConfig,
+			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
+			duration:         10 * time.Minute,
+			expected:         mockedCreds,
+			expectedDuration: 1 * time.Hour,
+		},
+		"successful fetch with 13-hour timeout": {
+			config:           &workingConfig,
+			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
+			duration:         13 * time.Hour,
+			expected:         mockedCreds,
+			expectedDuration: 1 * time.Hour,
 		},
 		"successful fetch with encryption": {
 			config: &common.CacheConfig{
@@ -466,12 +492,8 @@ func TestFetchCredentialsForRole(t *testing.T) {
 					ServerSideEncryptionKeyID: "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 				},
 			},
-			roleARN: "arn:aws:iam::123456789012:role/TestRole",
-			expected: map[string]string{
-				"AWS_ACCESS_KEY_ID":     "mock-access-key",
-				"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
-				"AWS_SESSION_TOKEN":     "mock-session-token",
-			},
+			roleARN:     "arn:aws:iam::123456789012:role/TestRole",
+			expected:    mockedCreds,
 			expectedKms: true,
 		},
 		"invalid role ARN": {
@@ -503,14 +525,18 @@ func TestFetchCredentialsForRole(t *testing.T) {
 
 	for tn, tt := range tests {
 		t.Run(tn, func(t *testing.T) {
+			duration := 3600
+			if tt.duration > 0 {
+				duration = int(tt.expectedDuration.Seconds())
+			}
 			// Create s3Client and point STS endpoint to it
-			mockServer := httptest.NewServer(newMockSTSHandler(tt.expectedKms))
+			mockServer := httptest.NewServer(newMockSTSHandler(tt.expectedKms, duration))
 			defer mockServer.Close()
 
 			s3Client, err := newS3Client(tt.config.S3, withSTSEndpoint(mockServer.URL+"/sts"))
 			require.NoError(t, err)
 
-			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, bucketName, objectName)
+			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, bucketName, objectName, tt.duration)
 
 			if tt.errMsg != "" {
 				require.Error(t, err)

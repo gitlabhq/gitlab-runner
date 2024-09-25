@@ -333,10 +333,10 @@ func TestGetUploadEnv(t *testing.T) {
 			mockClient := adapter.(*s3Adapter).client.(*mockS3Presigner)
 
 			if tt.failedFetch {
-				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.S3.UploadRoleARN, bucketName, objectName).
+				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.S3.UploadRoleARN, bucketName, objectName, mock.Anything).
 					Return(nil, errors.New("error fetching credentials"))
 			} else {
-				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.S3.UploadRoleARN, bucketName, objectName).
+				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.S3.UploadRoleARN, bucketName, objectName, mock.Anything).
 					Return(tt.expected, nil)
 			}
 			env, err := adapter.GetUploadEnv(context.Background())

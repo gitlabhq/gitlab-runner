@@ -101,7 +101,8 @@ func (a *s3Adapter) GetUploadEnv(ctx context.Context) (map[string]string, error)
 		ctx,
 		a.config.UploadRoleARN,
 		a.config.BucketName,
-		a.objectName)
+		a.objectName,
+		a.timeout)
 	if err != nil {
 		return nil, err
 	}

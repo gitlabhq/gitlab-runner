@@ -21,8 +21,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const ROLE_SESSION_DURATION_S = 3600
-
 //go:generate mockery --name=s3Presigner --inpackage
 type s3Presigner interface {
 	PresignURL(
@@ -32,7 +30,7 @@ type s3Presigner interface {
 		objectName string,
 		expires time.Duration,
 	) (cache.PresignedURL, error)
-	FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string) (map[string]string, error)
+	FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, timeout time.Duration) (map[string]string, error)
 	ServerSideEncryptionType() string
 }
 
@@ -131,7 +129,7 @@ func (c *s3Client) generateSessionPolicy(bucketName, objectName string) string {
 	return policy
 }
 
-func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string) (map[string]string, error) {
+func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, timeout time.Duration) (map[string]string, error) {
 	sessionPolicy := c.generateSessionPolicy(bucketName, objectName)
 
 	stsClient := sts.NewFromConfig(*c.awsConfig, func(o *sts.Options) {
@@ -145,11 +143,18 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 	}
 	sessionName := fmt.Sprintf("gitlab-runner-cache-upload-%s", uuid)
 
+	// According to https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_manage-assume.html#id_roles_use_view-role-max-session,
+	// session durations must be between 15 minutes and 12 hours.
+	duration := 1 * time.Hour
+	if timeout >= 15*time.Minute && timeout <= 12*time.Hour {
+		duration = timeout
+	}
+
 	roleCredentials, err := stsClient.AssumeRole(ctx, &sts.AssumeRoleInput{
 		RoleArn:         aws.String(roleARN),
 		RoleSessionName: aws.String(sessionName),
-		Policy:          aws.String(sessionPolicy),          // Limit the role's access
-		DurationSeconds: aws.Int32(ROLE_SESSION_DURATION_S), // Set a short lifetime for the session
+		Policy:          aws.String(sessionPolicy), // Limit the role's access
+		DurationSeconds: aws.Int32(int32(duration.Seconds())),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to assume role: %w", err)
