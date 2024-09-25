@@ -979,6 +979,8 @@ This table lists `config.toml`, CLI options, and ENV variables for `register`.
 | `S3.ServerSideEncryptionKeyID`         | `[runners.cache.s3] -> ServerSideEncryptionKeyID` | `--cache-s3-server-side-encryption-key-id` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID` |
 | `S3.DualStack`          | `[runners.cache.s3] -> DualStack` | `--cache-s3-dual-stack` | `$CACHE_S3_DUAL_STACK` |
 | `S3.Accelerate`         | `[runners.cache.s3] -> Accelerate` | `--cache-s3-accelerate` | `$CACHE_S3_ACCELERATE` |
+| `S3.PathStyle`          | `[runners.cache.s3] -> PathStyle`                                                                 | `--cache-s3-path-style`                                        | `$CACHE_S3_PATH_STYLE`                                                   |
+| `S3.UploadRoleARN`      | `[runners.cache.s3] -> UploadRoleARN`                                                             | `--cache-s3-upload-role-arn`                                   | `$CACHE_S3_UPLOAD_ROLE_ARN`                                              |
 | `GCS.AccessID`          | `[runners.cache.gcs] -> AccessID`                                                                 | `--cache-gcs-access-id`                                        | `$CACHE_GCS_ACCESS_ID`                                                   |
 | `GCS.PrivateKey`        | `[runners.cache.gcs] -> PrivateKey`                                                               | `--cache-gcs-private-key`                                      | `$CACHE_GCS_PRIVATE_KEY`                                                 |
 | `GCS.CredentialsFile`   | `[runners.cache.gcs] -> CredentialsFile`                                                          | `--cache-gcs-credentials-file`                                 | `$GOOGLE_APPLICATION_CREDENTIALS`                                        |
@@ -1002,10 +1004,12 @@ The following parameters define S3 storage for cache.
 | `BucketLocation`    | string           | Name of S3 region. |
 | `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
 | `AuthenticationType`| string           | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
-| `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. |
+| `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. In GitLab 17.5 and later, [`DSSE-KMS`](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingDSSEncryption.html) is supported. |
 | `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. If you use an alias, it must be preceded with `alias/`|
 | `DualStack`         | boolean         | In GitLab 17.4 and later, enables the use of IPv4 and IPv6 endpoints (default: true). Disable this if you are using AWS S3 Express. This is ignored if `ServerAddress` is set. |
 | `Accelerate`        | bool            | In GitLab 17.4 and later, enables the use of AWS S3 Transfer Acceleration. This will be set to true automatically if `ServerAddress` is configured as an Accelerated endpoint. |
+| `PathStyle`         | boolean         | In GitLab 17.5 and later, enables the use of path-style access (default: autodetected based on `ServerAddress`). |
+| `UploadRoleARN`     | boolean         | In GitLab 17.5 and later, specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `PutObject` S3 requests. This enables the use of S3 multipart uploads. |
 
 Example:
 
@@ -1080,6 +1084,108 @@ The IAM policy for the role assigned to the ServiceAccount defined in `rbac.serv
 - `kms:Encrypt`
 - `kms:DescribeKey`
 - `kms:GenerateDataKey`
+
+#### Enable multipart uploads with `UploadRoleARN`
+
+To limit access to the cache, the runner manager generates
+timed-limited, [presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) for jobs to download from and upload to
+the cache. However, AWS S3 limits a [single PUT request to 5 GB](https://docs.aws.amazon.com/AmazonS3/latest/userguide/upload-objects.html).
+For files larger than 5 GB, you must use the multipart upload API.
+
+Multipart uploads are only supported with AWS S3 and not for other S3
+providers. Because the runner manager handles jobs for different
+projects, the runner manager cannot pass around S3 credentials that have
+bucket-wide permissions. Instead, the runner manger uses time-limited
+presigned URLs and narrowly-scoped credentials to restrict access to one
+specific object.
+
+To use S3 multipart uploads with AWS, specify an IAM role in
+`UploadRoleARN` in the `arn:aws:iam:::<ACCOUNT ID>:<YOUR ROLE NAME>`
+format. This role generates time-limited AWS credentials that are
+narrowly scoped to write to a specific blob in the bucket. Ensure that
+your original S3 credentials has access to use `AssumeRole` for the
+specified `UploadRoleARN`.
+
+The IAM role specified in `UploadRoleARN` must have the following
+permissions:
+
+- `s3:PutObject` access to the bucket specified in `BucketName`.
+- `kms:Decrypt` and `kms:GenerateDataKey` if server side encryption with KMS or DSSE-KMS is enabled.
+
+For example, suppose you have an IAM role called `my-instance-role`
+attached to an EC2 instance with the ARN `arn:aws:iam::1234567890123:role/my-instance-role`.
+
+You can create a new role `arn:aws:iam::1234567890123:role/my-upload-role`,
+that only has `s3:PutObject` permissions for `BucketName`. In the AWS settings for `my-instance-role`,
+the `Trust relationships` might look similar to this:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::1234567890123:role/my-upload-role"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+```
+
+You can also reuse `my-instance-role` as the `UploadRoleARN` and avoid
+creating a new role. Make sure that `my-instance-role` has the
+`AssumeRole` permission. For example, an IAM profile associated with an
+EC2 instance might have the following `Trust relationships`:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ec2.amazonaws.com",
+                "AWS": "arn:aws:iam::1234567890123:role/my-upload-role"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+```
+
+You can use the AWS command-line interface to verify that your instance has the
+`AssumeRole` permission. For example:
+
+```shell
+aws sts assume-role --role-arn arn:aws:iam::1234567890123:role/my-upload-role --role-session-name gitlab-runner-test1
+```
+
+##### How uploads work with `UploadRoleARN`
+
+If `UploadRoleARN` is present, every time the runner uploads to the cache:
+
+1. The runner manager retrieves the original S3 credentials (specified through `AuthenticationType`, `AccessKey`, and `SecretKey`).
+1. With the S3 credentials, the runner manager sends a request to the Amazon Security Token Service (STS) for [`AssumeRole`](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html) with `UploadRoleARN`.
+   The policy request looks similar to this:
+
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": ["s3:PutObject"],
+                "Resource": "arn:aws:s3:::<YOUR-BUCKET-NAME>/<CACHE-FILENAME>"
+            }
+        ]
+    }
+    ```
+
+1. If the request is successful, the runner manager obtains temporary AWS credentials with a restricted session.
+1. The runner manager passes these credentials and URL in the `s3://<bucket name>/<filename>` format to
+   the cache archiver, which then uploads the file.
 
 #### Enable IAM roles for Kubernetes ServiceAccount resources
 
