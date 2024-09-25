@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -134,7 +135,7 @@ func New(config *common.CacheConfig, timeout time.Duration, objectName string) (
 	a := &s3Adapter{
 		config:     s3Config,
 		timeout:    timeout,
-		objectName: objectName,
+		objectName: strings.TrimLeft(objectName, "/"),
 		client:     client,
 	}
 

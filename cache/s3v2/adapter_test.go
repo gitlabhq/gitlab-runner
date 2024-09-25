@@ -160,13 +160,23 @@ func TestGoCloudURL(t *testing.T) {
 	roleARN := "aws:arn:role:1234"
 
 	tests := map[string]struct {
-		config   *common.CacheS3Config
-		expected string
+		objectName string
+		config     *common.CacheS3Config
+		expected   string
 	}{
 		"no role ARN": {
 			config: defaultCacheFactory().S3,
 		},
 		"role ARN": {
+			config: &common.CacheS3Config{
+				BucketName:     "role-bucket",
+				BucketLocation: "us-west-1",
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://role-bucket/key?awssdk=v2&dualstack=true&region=us-west-1",
+		},
+		"role ARN with leading slashes in object": {
+			objectName: "//" + objectName,
 			config: &common.CacheS3Config{
 				BucketName:     "role-bucket",
 				BucketLocation: "us-west-1",
@@ -258,7 +268,11 @@ func TestGoCloudURL(t *testing.T) {
 			s3Cache := defaultCacheFactory()
 			s3Cache.S3 = tt.config
 
-			adapter, err := New(s3Cache, defaultTimeout, objectName)
+			if tt.objectName == "" {
+				tt.objectName = objectName
+			}
+
+			adapter, err := New(s3Cache, defaultTimeout, tt.objectName)
 			require.NoError(t, err)
 
 			u := adapter.GetGoCloudURL(context.Background())
