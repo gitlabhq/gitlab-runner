@@ -98,7 +98,10 @@ func testCacheOperation(
 
 		ctx := context.Background()
 		assert.Nil(t, adapter.GetGoCloudURL(ctx))
-		assert.Empty(t, adapter.GetUploadEnv(ctx))
+
+		env, err := adapter.GetUploadEnv(ctx)
+		assert.Empty(t, env)
+		assert.NoError(t, err)
 	})
 }
 
@@ -322,8 +325,14 @@ func TestGetUploadEnv(t *testing.T) {
 				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.S3.UploadRoleARN, bucketName, objectName).
 					Return(tt.expected, nil)
 			}
-			env := adapter.GetUploadEnv(context.Background())
+			env, err := adapter.GetUploadEnv(context.Background())
 			assert.Equal(t, tt.expected, env)
+
+			if tt.failedFetch {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

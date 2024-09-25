@@ -91,9 +91,9 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
 	return &u
 }
 
-func (a *s3Adapter) GetUploadEnv(ctx context.Context) map[string]string {
+func (a *s3Adapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {
 	if a.config.UploadRoleARN == "" {
-		return nil
+		return nil, nil
 	}
 
 	credentials, err := a.client.FetchCredentialsForRole(
@@ -102,10 +102,10 @@ func (a *s3Adapter) GetUploadEnv(ctx context.Context) map[string]string {
 		a.config.BucketName,
 		a.objectName)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	return credentials
+	return credentials, nil
 }
 
 func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.PresignedURL, error) {
