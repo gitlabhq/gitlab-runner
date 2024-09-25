@@ -4,269 +4,229 @@ package kubernetes
 
 import (
 	"bytes"
-	"context"
+	"errors"
 	"fmt"
 	"io"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const logPauseMarker = `{"script": "some/script"}`
-const logResumeMarker = `{"command_exit_code": 0}`
+const (
+	logPauseMarker  = `{"script": "some/script"}`
+	logResumeMarker = `{"command_exit_code": 0}`
+	someTimestamp   = "2024-07-25T09:50:54.008163908Z"
+)
+
+type fakeEntrypointForwarderSink struct {
+	bytes.Buffer
+
+	writeCallCount int
+	closed         bool
+
+	writeError error
+	closeError error
+}
+
+func (s *fakeEntrypointForwarderSink) Write(p []byte) (int, error) {
+	s.writeCallCount++
+	if s.writeError != nil {
+		return 0, s.writeError
+	}
+
+	return s.Buffer.Write(p)
+}
+
+func (s *fakeEntrypointForwarderSink) Close() error {
+	s.closed = true
+	return s.closeError
+}
+
+type timestampBuffer struct {
+	bytes.Buffer
+}
+
+func (b *timestampBuffer) Write(p []byte) (int, error) {
+	return b.Buffer.Write([]byte(fmt.Sprintf("%s %s", someTimestamp, p)))
+}
 
 func TestEntrypointLogForwarder(t *testing.T) {
 	t.Run("forward, pause, resume", func(t *testing.T) {
-		gatherer := newFakeLogGatherer()
-		sink := newFakeSink()
-		ctx, cancel := context.WithCancel(context.Background())
-		runnerErr := make(chan error)
+		sink := &fakeEntrypointForwarderSink{}
 
 		lf := &entrypointLogForwarder{
-			LogGatherer: gatherer.Emitter,
-			LogSink:     sink,
+			Sink: sink,
 		}
 
-		go lf.Run(ctx, "some container", runnerErr)
+		var buf timestampBuffer
 
-		gatherer.EmitLogLn("1")
-		gatherer.EmitLogLn("2")
+		fmt.Fprintln(&buf, "1")
+		fmt.Fprintln(&buf, "2")
 
-		gatherer.EmitLogLn(logPauseMarker)
+		fmt.Fprintln(&buf, logPauseMarker)
 
-		gatherer.EmitLogLn("3")
-		gatherer.EmitLogLn("4")
+		fmt.Fprintln(&buf, "3")
+		fmt.Fprintln(&buf, "4")
 
-		gatherer.EmitLogLn(logResumeMarker)
+		fmt.Fprintln(&buf, logResumeMarker)
 
-		gatherer.EmitLogLn("5")
+		fmt.Fprintln(&buf, "5")
 
-		cancel()
-		<-ctx.Done()
+		_, err := io.Copy(lf, &buf)
+		require.NoError(t, err)
 
-		err := <-runnerErr
-		assert.ErrorIs(t, err, context.Canceled)
-		assert.Equal(t, "1\n2\n5\n", sink.String())
-	})
+		var expectedBuf timestampBuffer
+		fmt.Fprintln(&expectedBuf, "1")
+		fmt.Fprintln(&expectedBuf, "2")
+		fmt.Fprintln(&expectedBuf, "5")
 
-	t.Run("gatherer errors", func(t *testing.T) {
-		ctx := context.Background()
-		gatherer := newFakeLogGatherer()
-		runnerErr := make(chan error)
-
-		lf := &entrypointLogForwarder{
-			LogGatherer: gatherer.Emitter,
-			LogSink:     newNopCloser(io.Discard),
-		}
-
-		go lf.Run(ctx, "some container", runnerErr)
-
-		gatherer.EmitLogLn("blupp")
-		gatherer.EmitErr(fmt.Errorf("some random error"))
-
-		err := <-runnerErr
-		assert.ErrorContains(t, err, "some random error")
+		assert.Equal(t, expectedBuf.String(), sink.String())
 	})
 
 	t.Run("multiple writes, one line", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		gatherer := newFakeLogGatherer()
-		sink := newFakeSink()
-		runnerErr := make(chan error)
+		sink := &fakeEntrypointForwarderSink{}
 
 		lf := &entrypointLogForwarder{
-			LogGatherer: gatherer.Emitter,
-			LogSink:     sink,
+			Sink: sink,
 		}
 
-		go lf.Run(ctx, "some container", runnerErr)
+		var buf timestampBuffer
 
-		gatherer.EmitLog("cat")
-		gatherer.EmitLog("badger")
-		gatherer.EmitLogLn("axolotl")
+		fmt.Fprint(&buf, "cat")
+		fmt.Fprint(&buf, "badger")
+		fmt.Fprintln(&buf, "axolotl")
 
-		cancel()
-		<-ctx.Done()
+		expected := buf.String()
 
-		err := <-runnerErr
-		assert.ErrorIs(t, err, context.Canceled)
-		assert.Equal(t, "catbadgeraxolotl\n", sink.String())
+		_, err := io.Copy(lf, &buf)
+		require.NoError(t, err)
 
-		callCount := sink.CallCount()
-		assert.Equal(t, 1, callCount, "expected write on the sink to be called once, got called %d times", callCount)
+		assert.Equal(t, expected, sink.String())
+		assert.Equal(t, 1, sink.writeCallCount, "expected write on the sink to be called once, got called %d times", sink.writeCallCount)
 	})
 
 	t.Run("one write, multiple lines", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		gatherer := newFakeLogGatherer()
-		sink := newFakeSink()
-		runnerErr := make(chan error)
+		sink := &fakeEntrypointForwarderSink{}
 
 		lf := &entrypointLogForwarder{
-			LogGatherer: gatherer.Emitter,
-			LogSink:     sink,
+			Sink: sink,
 		}
 
-		go lf.Run(ctx, "some container", runnerErr)
+		var buf timestampBuffer
 
-		gatherer.EmitLogLn("cat\nbadger\naxolotl")
+		fmt.Fprintln(&buf, "cat\nbadger\naxolotl")
 
-		cancel()
-		<-ctx.Done()
+		expected := buf.String()
 
-		err := <-runnerErr
-		assert.ErrorIs(t, err, context.Canceled)
-		assert.Equal(t, "cat\nbadger\naxolotl\n", sink.String())
+		_, err := io.Copy(lf, &buf)
+		require.NoError(t, err)
 
-		callCount := sink.CallCount()
-		assert.Equal(t, 3, callCount, "expected write on the sink to be called 3 times, got called %d times", callCount)
+		assert.Equal(t, expected, sink.String())
+
+		assert.Equal(t, 3, sink.writeCallCount, "expected write on the sink to be called 3 times, got called %d times", sink.writeCallCount)
 	})
 
 	t.Run("with timestamp", func(t *testing.T) {
-		const someTimestamp = "2024-07-25T09:50:54.008163908Z"
-
-		ctx, cancel := context.WithCancel(context.Background())
-		gatherer := newFakeLogGatherer()
-		sink := newFakeSink()
-		runnerErr := make(chan error)
+		sink := &fakeEntrypointForwarderSink{}
 
 		lf := &entrypointLogForwarder{
-			LogGatherer:   gatherer.Emitter,
-			LogSink:       sink,
-			WithTimestamp: true,
+			Sink: sink,
 		}
 
-		go lf.Run(ctx, "some container", runnerErr)
+		var buf timestampBuffer
 
-		gatherer.EmitLogLn("cow")
-		gatherer.EmitLogLn(someTimestamp + " " + logPauseMarker)
-		gatherer.EmitLogLn("no cow")
+		fmt.Fprintln(&buf, "cow")
+		fmt.Fprintln(&buf, logPauseMarker)
+		fmt.Fprintln(&buf, "no cow")
 		// we are missing the space between the TS and the marker, thus the marker won't do anything
-		gatherer.EmitLogLn(someTimestamp + logResumeMarker)
-		gatherer.EmitLogLn("still no cow")
-		gatherer.EmitLogLn(someTimestamp + " " + logResumeMarker)
-		gatherer.EmitLogLn("sheep")
+		// write directly to the underlying Buffer to avoid writing the timestamp correctly
+		fmt.Fprintln(&buf.Buffer, someTimestamp+logResumeMarker)
+		fmt.Fprintln(&buf, "still no cow")
+		fmt.Fprintln(&buf, logResumeMarker)
+		fmt.Fprintln(&buf, "sheep")
 
-		cancel()
-		<-ctx.Done()
+		_, err := io.Copy(lf, &buf)
+		require.NoError(t, err)
 
-		err := <-runnerErr
-		assert.ErrorIs(t, err, context.Canceled)
-		assert.Equal(t, "cow\nsheep\n", sink.String())
+		var expectedBuf timestampBuffer
+		fmt.Fprintln(&expectedBuf, "cow")
+		fmt.Fprintln(&expectedBuf, "sheep")
+
+		assert.Equal(t, expectedBuf.String(), sink.String())
 	})
 
-	t.Run("flushes on context cancel", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		gatherer := newFakeLogGatherer()
-		sink := newFakeSink()
-		runnerErr := make(chan error)
+	t.Run("flushes on close", func(t *testing.T) {
+		sink := &fakeEntrypointForwarderSink{}
 
 		lf := &entrypointLogForwarder{
-			LogGatherer:   gatherer.Emitter,
-			LogSink:       sink,
-			WithTimestamp: true,
+			Sink: sink,
 		}
 
-		go lf.Run(ctx, "some container", runnerErr)
+		var buf timestampBuffer
 
-		gatherer.EmitLogLn("armadillo")
-		gatherer.EmitLog("cricket")
+		fmt.Fprintln(&buf, "armadillo")
+		fmt.Fprint(&buf, "cricket")
 
-		cancel()
-		<-ctx.Done()
+		_, err := io.Copy(lf, &buf)
+		require.NoError(t, err)
 
-		err := <-runnerErr
-		assert.ErrorIs(t, err, context.Canceled)
-		assert.Equal(t, "armadillo\ncricket", sink.String())
+		var expectedBuf timestampBuffer
+		fmt.Fprintln(&expectedBuf, "armadillo")
+
+		assert.Equal(t, expectedBuf.String(), sink.String())
+		assert.Equal(t, 1, sink.writeCallCount, "expected write on the sink to be called once, got called %d times", sink.writeCallCount)
+
+		require.NoError(t, lf.Close())
+
+		fmt.Fprint(&expectedBuf, "cricket")
+
+		assert.Equal(t, expectedBuf.String(), sink.String())
+		assert.Equal(t, 2, sink.writeCallCount, "expected write on the sink to be called a second time, got called %d times", sink.writeCallCount)
+	})
+
+	t.Run("closes sink on close", func(t *testing.T) {
+		sink := &fakeEntrypointForwarderSink{}
+
+		lf := &entrypointLogForwarder{
+			Sink: sink,
+		}
+
+		require.NoError(t, lf.Close())
+		assert.True(t, sink.closed)
+	})
+
+	t.Run("closes sink on close when flush fails", func(t *testing.T) {
+		writeErr := errors.New("write error")
+		sink := &fakeEntrypointForwarderSink{
+			writeError: writeErr,
+		}
+
+		lf := &entrypointLogForwarder{
+			Sink: sink,
+		}
+
+		// just write some data we can flush after
+		_, err := lf.Write([]byte("hello"))
+		require.NoError(t, err)
+
+		err = lf.Close()
+		assert.ErrorIs(t, err, writeErr)
+		assert.Equal(t, 1, sink.writeCallCount, "expected write on the sink to be called once, got called %d times", sink.writeCallCount)
+		assert.True(t, sink.closed)
+	})
+
+	t.Run("flush doesn't fail close returns error", func(t *testing.T) {
+		closeErr := errors.New("close error")
+		sink := &fakeEntrypointForwarderSink{
+			closeError: closeErr,
+		}
+
+		lf := &entrypointLogForwarder{
+			Sink: sink,
+		}
+
+		require.Error(t, lf.Close())
+		assert.True(t, sink.closed)
 	})
 }
-
-func newFakeLogGatherer() *fakeLogEmitter {
-	return &fakeLogEmitter{
-		logs: make(chan string),
-		errs: make(chan error),
-	}
-}
-
-type fakeLogEmitter struct {
-	logs chan string
-	errs chan error
-}
-
-func (f *fakeLogEmitter) EmitLog(log string) {
-	f.logs <- log
-}
-
-func (f *fakeLogEmitter) EmitLogLn(log string) {
-	f.EmitLog(log + "\n")
-}
-
-func (f *fakeLogEmitter) EmitErr(err error) {
-	f.errs <- err
-}
-
-func (f *fakeLogEmitter) Emitter(ctx context.Context, container string, sink io.WriteCloser) error {
-	for {
-		select {
-		case log := <-f.logs:
-			_, _ = sink.Write([]byte(log))
-		case err := <-f.errs:
-			return err
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
-type nopCloser struct{ io.Writer }
-
-func (nopCloser) Close() error { return nil }
-
-func newNopCloser(w io.Writer) nopCloser {
-	return nopCloser{w}
-}
-
-type sink struct {
-	sync.RWMutex
-	buffer         *bytes.Buffer
-	closed         bool
-	writeCallCount int
-}
-
-func (s *sink) Write(p []byte) (int, error) {
-	s.Lock()
-	defer s.Unlock()
-	if s.closed {
-		panic("sink: write after close!")
-	}
-	s.writeCallCount += 1
-	return s.buffer.Write(p)
-}
-
-func (s *sink) Close() error {
-	s.Lock()
-	defer s.Unlock()
-	s.closed = true
-	return nil
-}
-
-func (s *sink) CallCount() int {
-	s.RLock()
-	defer s.RUnlock()
-	return s.writeCallCount
-}
-
-func (s *sink) String() string {
-	s.RLock()
-	defer s.RUnlock()
-	return s.buffer.String()
-}
-
-func newFakeSink() *sink {
-	return &sink{
-		buffer: &bytes.Buffer{},
-	}
-}
-
-var _ io.WriteCloser = &sink{}

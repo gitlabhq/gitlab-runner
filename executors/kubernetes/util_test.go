@@ -744,7 +744,7 @@ func TestWaitForRunningContainer(t *testing.T) {
 	})
 
 	go func() {
-		err := waitForRunningContainer(ctx, fakeKubeClient, nil, podNamespace, podName, containerName)
+		err := waitForRunningContainer(ctx, fakeKubeClient, 0, podNamespace, podName, containerName)
 		assert.NoError(t, err, "expected no error from the container waiter")
 		close(returned)
 	}()

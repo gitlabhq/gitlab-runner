@@ -130,11 +130,11 @@ func isPodReady(pod *api.Pod) bool {
 	return false
 }
 
-func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, timeoutSeconds *int64, namespace, pod, container string) error {
+func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, timeoutSeconds int, namespace, pod, container string) error {
 	// kubeAPI: pods, watch, FF_KUBERNETES_HONOR_ENTRYPOINT=true,FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 	watcher, err := client.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
 		FieldSelector:  "status.phase=Running,metadata.name=" + pod,
-		TimeoutSeconds: timeoutSeconds,
+		TimeoutSeconds: common.Int64Ptr(int64(timeoutSeconds)),
 	})
 	if err != nil {
 		return err
