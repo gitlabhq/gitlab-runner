@@ -226,7 +226,7 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 			}}
 		case "ErrImagePull", "ImagePullBackOff":
 			msg := fmt.Sprintf("image pull failed: %s", waiting.Message)
-			imagePullErr := &pull.ImagePullError{Message: msg, Image: container.Image}
+			imagePullErr := &pull.ImagePullError{Message: msg, Container: container.Name, Image: container.Image}
 			return podPhaseResponse{
 				true,
 				api.PodUnknown,

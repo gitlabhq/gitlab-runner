@@ -7,10 +7,11 @@ import "fmt"
 var _ error = &ImagePullError{}
 
 type ImagePullError struct {
-	Message string
-	Image   string
+	Message   string
+	Image     string
+	Container string
 }
 
 func (e *ImagePullError) Error() string {
-	return fmt.Sprintf("pulling image %q: %s", e.Image, e.Message)
+	return fmt.Sprintf("pulling image %q for container %s: %s", e.Image, e.Container, e.Message)
 }

@@ -49,8 +49,9 @@ import (
 )
 
 const (
-	buildContainerName  = "build"
-	helperContainerName = "helper"
+	buildContainerName          = "build"
+	helperContainerName         = "helper"
+	initPermissionContainerName = "init-permissions"
 
 	detectShellScriptName         = "detect_shell_script"
 	pwshJSONTerminationScriptName = "terminate_with_json_script"
@@ -363,34 +364,32 @@ func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pu
 		return nil, err
 	}
 
-	// collect which images have set which policies
-	imagePullPolicies := map[string][]api.PullPolicy{}
-
-	buildImage := options.Build.Image
-	if buildImage.Name == "" {
-		// fallback on the image name in the config
-		buildImage.Name = s.options.Image.Name
+	dockerPullPoliciesPerContainer := map[string][]common.DockerPullPolicy{
+		buildContainerName:          options.Build.Image.PullPolicies,
+		helperContainerName:         options.Build.Image.PullPolicies,
+		initPermissionContainerName: options.Build.Image.PullPolicies,
+	}
+	for i, service := range options.Build.Services {
+		containerName := fmt.Sprintf("%s%d", serviceContainerPrefix, i)
+		dockerPullPoliciesPerContainer[containerName] = service.PullPolicies
 	}
 
-	// verify all images pull policies, the main build image's and the service images'
-	for _, image := range append(options.Build.Services, buildImage) {
-		k8sPullPolicies, err := s.getPullPolicies(image.PullPolicies)
+	k8sPullPoliciesPerContainer := map[string][]api.PullPolicy{}
+	for containerName, pullPolicies := range dockerPullPoliciesPerContainer {
+		k8sPullPolicies, err := s.getPullPolicies(pullPolicies)
 		if err != nil {
-			return nil, fmt.Errorf("converting pull policy for image '%s': %w", image.Name, err)
+			return nil, fmt.Errorf("converting pull policy for container %q: %w", containerName, err)
 		}
 
-		err = s.verifyPullPolicies(k8sPullPolicies, allowedPullPolicies, image.PullPolicies)
+		err = s.verifyPullPolicies(k8sPullPolicies, allowedPullPolicies, pullPolicies)
 		if err != nil {
-			return nil, fmt.Errorf("invalid pull policy for image '%s': %w", image.Name, err)
+			return nil, fmt.Errorf("invalid pull policy for container %q: %w", containerName, err)
 		}
 
-		imagePullPolicies[image.Name] = k8sPullPolicies
+		k8sPullPoliciesPerContainer[containerName] = k8sPullPolicies
 	}
 
-	// the helper image uses the same pull policies as the build image
-	imagePullPolicies[s.getHelperImage()] = imagePullPolicies[buildImage.Name]
-
-	return pull.NewPullManager(imagePullPolicies, &s.BuildLogger), nil
+	return pull.NewPullManager(k8sPullPoliciesPerContainer, &s.BuildLogger), nil
 }
 
 // getPullPolicies selects the pull_policy configurations originating from
@@ -517,7 +516,7 @@ func (s *executor) Run(cmd common.ExecutorCommand) error {
 
 		var imagePullErr *pull.ImagePullError
 		if errors.As(err, &imagePullErr) {
-			if s.pullManager.UpdatePolicyForImage(attempt, imagePullErr) {
+			if s.pullManager.UpdatePolicyForContainer(attempt, imagePullErr) {
 				s.cleanupResources()
 				s.pod = nil
 				continue
@@ -942,13 +941,13 @@ func (s *executor) initContainerResources() api.ResourceRequirements {
 }
 
 func (s *executor) buildPermissionsInitContainer(os string) (api.Container, error) {
-	pullPolicy, err := s.pullManager.GetPullPolicyFor(s.getHelperImage())
+	pullPolicy, err := s.pullManager.GetPullPolicyFor(helperContainerName)
 	if err != nil {
 		return api.Container{}, fmt.Errorf("getting pull policy for permissions init container: %w", err)
 	}
 
 	container := api.Container{
-		Name:            "init-permissions",
+		Name:            initPermissionContainerName,
 		Image:           s.getHelperImage(),
 		VolumeMounts:    s.getVolumeMounts(),
 		ImagePullPolicy: pullPolicy,
@@ -1018,7 +1017,7 @@ func (s *executor) buildUiGidCollector(os string) (api.Container, error) {
 		return api.Container{}, err
 	}
 
-	pullPolicy, err := s.pullManager.GetPullPolicyFor(opts.image)
+	pullPolicy, err := s.pullManager.GetPullPolicyFor(opts.name)
 	if err != nil {
 		return api.Container{}, err
 	}
@@ -1288,7 +1287,7 @@ func (s *executor) buildContainer(opts containerBuildOpts) (api.Container, error
 		}
 	}
 
-	pullPolicy, err := s.pullManager.GetPullPolicyFor(opts.image)
+	pullPolicy, err := s.pullManager.GetPullPolicyFor(opts.name)
 	if err != nil {
 		return api.Container{}, err
 	}

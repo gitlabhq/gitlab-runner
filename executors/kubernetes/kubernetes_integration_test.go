@@ -2576,8 +2576,8 @@ func runMultiPullPolicyBuild(t *testing.T, build *common.Build) error {
 	assert.ErrorIs(t, err, &common.BuildError{FailureReason: common.ImagePullFailure})
 
 	quotedImage := regexp.QuoteMeta("some/non-existing/image")
-	warningFmt := `WARNING: Failed to pull image "%s" with policy "%s": image pull failed:`
-	attemptFmt := `Attempt #%d: Trying "%s" pull policy for "%s" image`
+	warningFmt := `WARNING: Failed to pull image "%s" for container "[^"]+" with policy "%s": image pull failed:`
+	attemptFmt := `Attempt #%d: Trying "%s" pull policy for "%s" image for container "[^"]+"`
 
 	// We expect
 	//  - the warning for the 1st attempt with "Always", telling us about the pull issue
@@ -2946,7 +2946,7 @@ func TestConflictingPullPolicies(t *testing.T) {
 
 			require.Error(t, gotErr)
 			assert.Contains(t, gotErr.Error(), test.wantErrMsg)
-			assert.Contains(t, gotErr.Error(), "invalid pull policy for image '"+common.TestAlpineImage)
+			assert.Contains(t, gotErr.Error(), "invalid pull policy for container")
 		})
 	}
 }
