@@ -3353,3 +3353,122 @@ func skipIfRunningAgainstMiniKube(t *testing.T, args ...string) {
 		t.Skip("Temporarily skipped: issue https://gitlab.com/gitlab-org/gitlab-runner/-/issues/36827")
 	}
 }
+
+func TestKubernetesScriptsBaseDir(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		image    string
+		shell    string
+		script   string
+		baseDir  string
+		verifyFn func(t *testing.T, out string)
+	}{
+		"scripts_base_dir enabled": {
+			image:   common.TestAlpineImage,
+			shell:   "bash",
+			script:  "find /tmp",
+			baseDir: "/tmp",
+			verifyFn: func(t *testing.T, out string) {
+				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/scripts-0-0$`), out)
+			},
+		},
+		"scripts_base_dir trailing slash": {
+			image:   common.TestAlpineImage,
+			shell:   "bash",
+			script:  "find /tmp",
+			baseDir: "/tmp/",
+			verifyFn: func(t *testing.T, out string) {
+				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/scripts-0-0$`), out)
+			},
+		},
+		"scripts_base_dir disabled": {
+			image:   common.TestAlpineImage,
+			shell:   "bash",
+			script:  "find / -maxdepth 1",
+			baseDir: "",
+			verifyFn: func(t *testing.T, out string) {
+				assert.Regexp(t, regexp.MustCompile(`(?m)^/scripts-0-0$`), out)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(tc.script)
+			})
+
+			build.Runner.RunnerSettings.Shell = tc.shell
+			build.Runner.RunnerSettings.Kubernetes.ScriptsBaseDir = tc.baseDir
+			build.JobResponse.Image.Name = tc.image
+			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			assert.NoError(t, err)
+
+			tc.verifyFn(t, buf.String())
+		})
+	}
+}
+
+func TestKubernetesLogsBaseDir(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		image    string
+		shell    string
+		script   string
+		baseDir  string
+		envVars  common.JobVariables
+		verifyFn func(t *testing.T, out string)
+	}{
+		"logs_base_dir enabled": {
+			image:   common.TestAlpineImage,
+			shell:   "bash",
+			script:  "find /tmp",
+			baseDir: "/tmp",
+			verifyFn: func(t *testing.T, out string) {
+				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/logs-0-0$`), out)
+			},
+		},
+		"logs_base_dir trailing slash": {
+			image:   common.TestAlpineImage,
+			shell:   "bash",
+			script:  "find /tmp",
+			baseDir: "/tmp/",
+			verifyFn: func(t *testing.T, out string) {
+				assert.Regexp(t, regexp.MustCompile(`(?m)^/tmp/logs-0-0$`), out)
+			},
+		},
+		"logs_base_dir disabled": {
+			image:   common.TestAlpineImage,
+			shell:   "bash",
+			script:  "find / -maxdepth 1",
+			baseDir: "",
+			verifyFn: func(t *testing.T, out string) {
+				assert.Regexp(t, regexp.MustCompile(`(?m)^/logs-0-0$`), out)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(tc.script)
+			})
+
+			build.Runner.RunnerSettings.Shell = tc.shell
+			build.Runner.RunnerSettings.Kubernetes.LogsBaseDir = tc.baseDir
+			build.JobResponse.Image.Name = tc.image
+			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			assert.NoError(t, err)
+
+			tc.verifyFn(t, buf.String())
+		})
+	}
+}

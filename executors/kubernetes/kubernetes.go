@@ -1377,19 +1377,23 @@ func (s *executor) logFile() string {
 }
 
 func (s *executor) logsDir() string {
-	baseDir := defaultLogsBaseDir
-	if s.Config.Kubernetes.LogsBaseDir != "" {
-		baseDir = s.Config.Kubernetes.LogsBaseDir
-	}
-	return fmt.Sprintf("%s-%d-%d", baseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
+	return s.baseDir(defaultLogsBaseDir,
+		s.Config.Kubernetes.LogsBaseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
 }
 
 func (s *executor) scriptsDir() string {
-	baseDir := defaultScriptsBaseDir
-	if s.Config.Kubernetes.LogsBaseDir != "" {
-		baseDir = s.Config.Kubernetes.ScriptsBaseDir
+	return s.baseDir(defaultScriptsBaseDir,
+		s.Config.Kubernetes.ScriptsBaseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
+}
+
+func (s *executor) baseDir(defaultBaseDir, configDir string, projectId, jobId int64) string {
+	baseDir := defaultBaseDir
+	if configDir != "" {
+		// if path ends with one or more / or \, drop it
+		configDir = strings.TrimRight(configDir, "/\\")
+		baseDir = configDir + defaultBaseDir
 	}
-	return fmt.Sprintf("%s-%d-%d", baseDir, s.Build.JobInfo.ProjectID, s.Build.JobResponse.ID)
+	return fmt.Sprintf("%s-%d-%d", baseDir, projectId, jobId)
 }
 
 func (s *executor) scriptPath(stage common.BuildStage) string {

@@ -6578,6 +6578,116 @@ func TestLifecyclePrepare(t *testing.T) {
 	}
 }
 
+func TestScriptsBaseDir(t *testing.T) {
+	tests := map[string]struct {
+		base_dir      string
+		expected_path string
+	}{
+		"scripts_base_dir not set or empty": {
+			base_dir:      "",
+			expected_path: "/scripts-0-0",
+		},
+		"scripts_base_dir set": {
+			base_dir:      "/tmp",
+			expected_path: "/tmp/scripts-0-0",
+		},
+		"scripts_base_dir trailing slash": {
+			base_dir:      "/tmp/",
+			expected_path: "/tmp/scripts-0-0",
+		},
+		"scripts_base_dir multiple trailing slash": {
+			base_dir:      "/tmp//",
+			expected_path: "/tmp/scripts-0-0",
+		},
+	}
+	mockPullManager := &pull.MockManager{}
+	mockPullManager.On("GetPullPolicyFor", mock.Anything).
+		Return(api.PullAlways, nil).
+		Times(4)
+
+	defer mockPullManager.AssertExpectations(t)
+
+	executor := newExecutor()
+	executor.pullManager = mockPullManager
+	executor.Build = &common.Build{
+		Runner: new(common.RunnerConfig),
+	}
+	executor.Config.Kubernetes = new(common.KubernetesConfig)
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			executor.Config.Kubernetes.ScriptsBaseDir = tt.base_dir
+			opts := containerBuildOpts{
+				name: buildContainerName,
+			}
+			container, err := executor.buildContainer(opts)
+			require.NoError(t, err)
+			for _, mount := range container.VolumeMounts {
+				if mount.Name != "scripts" {
+					continue
+				}
+				assert.Equal(t, tt.expected_path, mount.MountPath)
+				break
+			}
+		})
+	}
+}
+
+func TestLogsBaseDir(t *testing.T) {
+	tests := map[string]struct {
+		base_dir      string
+		expected_path string
+	}{
+		"logs_base_dir not set or empty": {
+			base_dir:      "",
+			expected_path: "/logs-0-0",
+		},
+		"logs_base_dir set": {
+			base_dir:      "/tmp",
+			expected_path: "/tmp/logs-0-0",
+		},
+		"logs_base_dir trailing slash": {
+			base_dir:      "/tmp/",
+			expected_path: "/tmp/logs-0-0",
+		},
+		"logs_base_dir multiple trailing slash": {
+			base_dir:      "/tmp//",
+			expected_path: "/tmp/logs-0-0",
+		},
+	}
+	mockPullManager := &pull.MockManager{}
+	mockPullManager.On("GetPullPolicyFor", mock.Anything).
+		Return(api.PullAlways, nil).
+		Times(4)
+
+	defer mockPullManager.AssertExpectations(t)
+
+	executor := newExecutor()
+	executor.pullManager = mockPullManager
+	executor.Build = &common.Build{
+		Runner: new(common.RunnerConfig),
+	}
+	executor.Config.Kubernetes = new(common.KubernetesConfig)
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			executor.Config.Kubernetes.LogsBaseDir = tt.base_dir
+			opts := containerBuildOpts{
+				name: buildContainerName,
+			}
+			container, err := executor.buildContainer(opts)
+			require.NoError(t, err)
+			for _, mount := range container.VolumeMounts {
+				if mount.Name != "logs" {
+					continue
+				}
+				assert.Equal(t, tt.expected_path, mount.MountPath)
+				break
+			}
+		})
+	}
+}
+
 func TestBuildContainerSecurityContext(t *testing.T) {
 	tests := map[string]struct {
 		getSecurityContext func() *api.SecurityContext
