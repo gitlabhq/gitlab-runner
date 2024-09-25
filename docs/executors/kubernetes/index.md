@@ -408,7 +408,7 @@ This configuration allows overwrite of any of the `pod_annotations` configured i
   executor = "kubernetes"
   [runners.kubernetes]
     image = "alpine"
-    pod_annotations_overwrite_allowed = "*"
+    pod_annotations_overwrite_allowed = ".*"
     [runners.kubernetes.pod_annotations]
       "Key1" = "Val1"
       "Key2" = "Val2"
