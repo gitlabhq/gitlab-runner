@@ -23,6 +23,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1591,7 +1592,7 @@ func removeBuildContainer(t *testing.T) <-chan string {
 	for len(list) == 0 {
 		time.Sleep(time.Second)
 		nameFilter := filters.Arg("name", "misscont")
-		containerList := types.ContainerListOptions{
+		containerList := container.ListOptions{
 			Filters: filters.NewArgs(nameFilter),
 		}
 		list, err = client.ContainerList(context.Background(), containerList)
@@ -1599,7 +1600,7 @@ func removeBuildContainer(t *testing.T) <-chan string {
 	}
 
 	for _, ctr := range list {
-		err := client.ContainerRemove(context.Background(), ctr.ID, types.ContainerRemoveOptions{Force: true})
+		err := client.ContainerRemove(context.Background(), ctr.ID, container.RemoveOptions{Force: true})
 		require.NoError(t, err)
 	}
 
@@ -2347,6 +2348,9 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 
 	macAddress := "92:d0:c6:0a:29:33"
 
+	apiVersionAtLeast1_44, err := test.IsDockerDaemonAPIVersionAtLeast("1.44")
+	require.NoError(t, err)
+
 	type testCase struct {
 		networkMode     string
 		networkPerBuild bool
@@ -2355,8 +2359,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 	}
 
 	tests := map[string]testCase{
-		"empty (user defined), enabled": {networkMode: "", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+		"empty (user defined), network per build enabled": {networkMode: "", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
 			assert.Equal(t, "", info.NetworkSettings.MacAddress, "net settings")
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
@@ -2364,8 +2367,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 				assert.Equal(t, macAddress, v.MacAddress, k+" network")
 			}
 		}},
-		"empty (user defined), disabled": {networkMode: "", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+		"empty (user defined), network per build disabled": {networkMode: "", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
 			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
@@ -2373,8 +2375,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 				assert.Equal(t, macAddress, v.MacAddress, k+" network")
 			}
 		}},
-		"default, enabled": {networkMode: "default", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+		"default, network per build enabled": {networkMode: "default", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
 			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
@@ -2382,8 +2383,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 				assert.Equal(t, macAddress, v.MacAddress, k+" network")
 			}
 		}},
-		"default, disabled": {networkMode: "default", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+		"default, network per build disabled": {networkMode: "default", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
 			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
@@ -2391,8 +2391,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 				assert.Equal(t, macAddress, v.MacAddress, k+" network")
 			}
 		}},
-		"bridge, enabled": {networkMode: "bridge", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+		"bridge, network per build enabled": {networkMode: "bridge", networkPerBuild: true, validate: func(t *testing.T, info types.ContainerJSON) {
 			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
@@ -2400,8 +2399,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 				assert.Equal(t, macAddress, v.MacAddress, k+" network")
 			}
 		}},
-		"bridge, disabled": {networkMode: "bridge", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
-			assert.Equal(t, macAddress, info.Config.MacAddress, "config")
+		"bridge, network per build disabled": {networkMode: "bridge", networkPerBuild: false, validate: func(t *testing.T, info types.ContainerJSON) {
 			assert.Equal(t, macAddress, info.NetworkSettings.MacAddress, "net settings")
 			assert.Len(t, info.NetworkSettings.Networks, 1)
 			for k, v := range info.NetworkSettings.Networks {
@@ -2411,11 +2409,31 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 		}},
 		// the cases below fail with "exit code 1" when run in a CI pipeline, and "conflicting options: mac-address and
 		// the network mode" when run locally.
-		"none, enabled":  {networkMode: "none", networkPerBuild: true, expectedRunErr: true},
-		"none, disabled": {networkMode: "none", networkPerBuild: false, expectedRunErr: true},
-		// the cases below fail with "conflicting options: mac-address and the network mode"
-		"host, enabled":  {networkMode: "host", networkPerBuild: true, expectedRunErr: true},
-		"host, disabled": {networkMode: "host", networkPerBuild: false, expectedRunErr: true},
+		"none, network per build enabled":  {networkMode: "none", networkPerBuild: true, expectedRunErr: true},
+		"none, network per build disabled": {networkMode: "none", networkPerBuild: false, expectedRunErr: true},
+
+		"host, network per build enabled": {
+			networkMode: "host", networkPerBuild: true, expectedRunErr: !apiVersionAtLeast1_44,
+			validate: func(t *testing.T, info types.ContainerJSON) {
+				assert.Equal(t, "", info.NetworkSettings.MacAddress, "net settings")
+				assert.Len(t, info.NetworkSettings.Networks, 1)
+				for k, v := range info.NetworkSettings.Networks {
+					assert.Equal(t, "host", k)
+					assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				}
+			},
+		},
+		"host, network per build disabled": {
+			networkMode: "host", networkPerBuild: false, expectedRunErr: !apiVersionAtLeast1_44,
+			validate: func(t *testing.T, info types.ContainerJSON) {
+				assert.Equal(t, "", info.NetworkSettings.MacAddress, "net settings")
+				assert.Len(t, info.NetworkSettings.Networks, 1)
+				for k, v := range info.NetworkSettings.Networks {
+					assert.Equal(t, "host", k)
+					assert.Equal(t, macAddress, v.MacAddress, k+" network")
+				}
+			},
+		},
 	}
 
 	// we'll make some direct docker API calls in this tests...
@@ -2467,7 +2485,7 @@ func TestDockerCommand_MacAddressConfig(t *testing.T) {
 			var ctr types.Container
 			// wait for the build container to be created...
 			require.Eventually(t, func() bool {
-				list, err := client.ContainerList(ctx, types.ContainerListOptions{})
+				list, err := client.ContainerList(ctx, container.ListOptions{})
 				assert.NoError(t, err, "listing containers")
 
 				for _, l := range list {

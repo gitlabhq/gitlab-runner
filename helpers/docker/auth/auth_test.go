@@ -201,9 +201,12 @@ func TestGetConfigForImage(t *testing.T) {
 			credentials:        emptyCredentials,
 			image:              imageRegistryDomain2,
 			assertResult: func(result *RegistryInfo, err error) {
+				authConfig := registryScriptConfig
+				authConfig.ServerAddress = "https://registry2.domain.tld:5005/v1/"
+
 				expectedResult := &RegistryInfo{
 					Source:     authConfigSourceNameUserVariable,
-					AuthConfig: registryScriptConfig,
+					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)
@@ -215,9 +218,11 @@ func TestGetConfigForImage(t *testing.T) {
 			credentials:        emptyCredentials,
 			image:              imageRegistryDomain2,
 			assertResult: func(result *RegistryInfo, err error) {
+				authConfig := registryScriptConfig
+				authConfig.ServerAddress = "registry2.domain.tld:5005/image/name:version"
 				expectedResult := &RegistryInfo{
 					Source:     authConfigSourceNameUserVariable,
-					AuthConfig: registryScriptConfig,
+					AuthConfig: authConfig,
 				}
 				assert.NoError(t, err)
 				assert.Equal(t, expectedResult, result)

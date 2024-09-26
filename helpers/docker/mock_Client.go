@@ -13,6 +13,8 @@ import (
 
 	network "github.com/docker/docker/api/types/network"
 
+	system "github.com/docker/docker/api/types/system"
+
 	types "github.com/docker/docker/api/types"
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -62,7 +64,7 @@ func (_m *MockClient) Close() error {
 }
 
 // ContainerAttach provides a mock function with given fields: ctx, _a1, options
-func (_m *MockClient) ContainerAttach(ctx context.Context, _a1 string, options types.ContainerAttachOptions) (types.HijackedResponse, error) {
+func (_m *MockClient) ContainerAttach(ctx context.Context, _a1 string, options container.AttachOptions) (types.HijackedResponse, error) {
 	ret := _m.Called(ctx, _a1, options)
 
 	if len(ret) == 0 {
@@ -71,16 +73,16 @@ func (_m *MockClient) ContainerAttach(ctx context.Context, _a1 string, options t
 
 	var r0 types.HijackedResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ContainerAttachOptions) (types.HijackedResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.AttachOptions) (types.HijackedResponse, error)); ok {
 		return rf(ctx, _a1, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ContainerAttachOptions) types.HijackedResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.AttachOptions) types.HijackedResponse); ok {
 		r0 = rf(ctx, _a1, options)
 	} else {
 		r0 = ret.Get(0).(types.HijackedResponse)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, types.ContainerAttachOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, container.AttachOptions) error); ok {
 		r1 = rf(ctx, _a1, options)
 	} else {
 		r1 = ret.Error(1)
@@ -220,7 +222,7 @@ func (_m *MockClient) ContainerKill(ctx context.Context, containerID string, sig
 }
 
 // ContainerList provides a mock function with given fields: ctx, options
-func (_m *MockClient) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+func (_m *MockClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 	ret := _m.Called(ctx, options)
 
 	if len(ret) == 0 {
@@ -229,10 +231,10 @@ func (_m *MockClient) ContainerList(ctx context.Context, options types.Container
 
 	var r0 []types.Container
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, types.ContainerListOptions) ([]types.Container, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, container.ListOptions) ([]types.Container, error)); ok {
 		return rf(ctx, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, types.ContainerListOptions) []types.Container); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, container.ListOptions) []types.Container); ok {
 		r0 = rf(ctx, options)
 	} else {
 		if ret.Get(0) != nil {
@@ -240,7 +242,7 @@ func (_m *MockClient) ContainerList(ctx context.Context, options types.Container
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, types.ContainerListOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, container.ListOptions) error); ok {
 		r1 = rf(ctx, options)
 	} else {
 		r1 = ret.Error(1)
@@ -250,7 +252,7 @@ func (_m *MockClient) ContainerList(ctx context.Context, options types.Container
 }
 
 // ContainerLogs provides a mock function with given fields: ctx, _a1, options
-func (_m *MockClient) ContainerLogs(ctx context.Context, _a1 string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
+func (_m *MockClient) ContainerLogs(ctx context.Context, _a1 string, options container.LogsOptions) (io.ReadCloser, error) {
 	ret := _m.Called(ctx, _a1, options)
 
 	if len(ret) == 0 {
@@ -259,10 +261,10 @@ func (_m *MockClient) ContainerLogs(ctx context.Context, _a1 string, options typ
 
 	var r0 io.ReadCloser
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ContainerLogsOptions) (io.ReadCloser, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.LogsOptions) (io.ReadCloser, error)); ok {
 		return rf(ctx, _a1, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ContainerLogsOptions) io.ReadCloser); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.LogsOptions) io.ReadCloser); ok {
 		r0 = rf(ctx, _a1, options)
 	} else {
 		if ret.Get(0) != nil {
@@ -270,7 +272,7 @@ func (_m *MockClient) ContainerLogs(ctx context.Context, _a1 string, options typ
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, types.ContainerLogsOptions) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, container.LogsOptions) error); ok {
 		r1 = rf(ctx, _a1, options)
 	} else {
 		r1 = ret.Error(1)
@@ -280,7 +282,7 @@ func (_m *MockClient) ContainerLogs(ctx context.Context, _a1 string, options typ
 }
 
 // ContainerRemove provides a mock function with given fields: ctx, containerID, options
-func (_m *MockClient) ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error {
+func (_m *MockClient) ContainerRemove(ctx context.Context, containerID string, options container.RemoveOptions) error {
 	ret := _m.Called(ctx, containerID, options)
 
 	if len(ret) == 0 {
@@ -288,7 +290,7 @@ func (_m *MockClient) ContainerRemove(ctx context.Context, containerID string, o
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ContainerRemoveOptions) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.RemoveOptions) error); ok {
 		r0 = rf(ctx, containerID, options)
 	} else {
 		r0 = ret.Error(0)
@@ -298,7 +300,7 @@ func (_m *MockClient) ContainerRemove(ctx context.Context, containerID string, o
 }
 
 // ContainerStart provides a mock function with given fields: ctx, containerID, options
-func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error {
+func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error {
 	ret := _m.Called(ctx, containerID, options)
 
 	if len(ret) == 0 {
@@ -306,7 +308,7 @@ func (_m *MockClient) ContainerStart(ctx context.Context, containerID string, op
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, types.ContainerStartOptions) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, container.StartOptions) error); ok {
 		r0 = rf(ctx, containerID, options)
 	} else {
 		r0 = ret.Error(0)
@@ -439,22 +441,22 @@ func (_m *MockClient) ImagePullBlocking(ctx context.Context, ref string, options
 }
 
 // Info provides a mock function with given fields: ctx
-func (_m *MockClient) Info(ctx context.Context) (types.Info, error) {
+func (_m *MockClient) Info(ctx context.Context) (system.Info, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Info")
 	}
 
-	var r0 types.Info
+	var r0 system.Info
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (types.Info, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (system.Info, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) types.Info); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) system.Info); ok {
 		r0 = rf(ctx)
 	} else {
-		r0 = ret.Get(0).(types.Info)
+		r0 = ret.Get(0).(system.Info)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
@@ -586,6 +588,34 @@ func (_m *MockClient) NetworkRemove(ctx context.Context, networkID string) error
 	}
 
 	return r0
+}
+
+// ServerVersion provides a mock function with given fields: _a0
+func (_m *MockClient) ServerVersion(_a0 context.Context) (types.Version, error) {
+	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ServerVersion")
+	}
+
+	var r0 types.Version
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (types.Version, error)); ok {
+		return rf(_a0)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) types.Version); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Get(0).(types.Version)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // VolumeCreate provides a mock function with given fields: ctx, options

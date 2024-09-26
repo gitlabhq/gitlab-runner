@@ -6,7 +6,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/sirupsen/logrus"
 
@@ -74,7 +74,7 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 	defer hijacked.Close()
 
 	d.logger.Debugln("Starting container", containerID, "...")
-	err = d.c.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
+	err = d.c.ContainerStart(ctx, containerID, container.StartOptions{})
 	if err != nil {
 		return err
 	}
@@ -131,8 +131,8 @@ func (d *defaultDocker) Exec(ctx context.Context, containerID string, streams IO
 	return d.waiter.StopKillWait(d.ctx, containerID, nil, gracefulExitFunc)
 }
 
-func attachOptions() types.ContainerAttachOptions {
-	return types.ContainerAttachOptions{
+func attachOptions() container.AttachOptions {
+	return container.AttachOptions{
 		Stream: true,
 		Stdin:  true,
 		Stdout: true,

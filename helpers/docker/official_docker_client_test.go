@@ -131,7 +131,7 @@ func TestCredentialsConfigEnvOverride(t *testing.T) {
 				client.EnvTLSVerify: "1",
 			},
 			assert: func(t *testing.T, c *officialDockerClient) {
-				assert.False(t, c.client.HTTPClient().Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify)
+				assert.False(t, c.transport.TLSClientConfig.InsecureSkipVerify)
 			},
 		},
 		// When DOCKER_TLS_VERIFY is "", TLS setup is entirely disabled. For
@@ -144,7 +144,7 @@ func TestCredentialsConfigEnvOverride(t *testing.T) {
 				client.EnvTLSVerify: "",
 			},
 			assert: func(t *testing.T, c *officialDockerClient) {
-				assert.Nil(t, c.client.HTTPClient().Transport.(*http.Transport).TLSClientConfig)
+				assert.Nil(t, c.transport.TLSClientConfig)
 			},
 		},
 
@@ -154,7 +154,7 @@ func TestCredentialsConfigEnvOverride(t *testing.T) {
 				TLSVerify: true,
 			},
 			assert: func(t *testing.T, c *officialDockerClient) {
-				assert.Nil(t, c.client.HTTPClient().Transport.(*http.Transport).TLSClientConfig)
+				assert.Nil(t, c.transport.TLSClientConfig)
 			},
 		},
 		"credentials tls verify set when host is provided": {
@@ -164,7 +164,7 @@ func TestCredentialsConfigEnvOverride(t *testing.T) {
 			},
 			assert: func(t *testing.T, c *officialDockerClient) {
 				assert.Equal(t, "http://credprovided", c.client.DaemonHost())
-				assert.False(t, c.client.HTTPClient().Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify)
+				assert.False(t, c.transport.TLSClientConfig.InsecureSkipVerify)
 			},
 		},
 	}
@@ -177,7 +177,8 @@ func TestCredentialsConfigEnvOverride(t *testing.T) {
 				client.EnvOverrideHost,
 				client.EnvOverrideAPIVersion,
 				client.EnvOverrideCertPath,
-				client.EnvTLSVerify} {
+				client.EnvTLSVerify,
+			} {
 				original, found := os.LookupEnv(key)
 				if found {
 					defer os.Setenv(key, original)
@@ -214,10 +215,7 @@ func TestClientConfiguration(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			httpClient := client.client.HTTPClient()
-			require.NotNil(t, httpClient.Transport)
-
-			transport := httpClient.Transport.(*http.Transport)
+			transport := client.transport
 
 			if scheme != "unix" {
 				assert.Equal(t, defaultTLSHandshakeTimeout, transport.TLSHandshakeTimeout)

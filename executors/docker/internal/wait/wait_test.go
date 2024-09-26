@@ -43,7 +43,7 @@ func TestDockerWaiter_Wait(t *testing.T) {
 		"container not found": {
 			containerOKBody: container.WaitResponse{},
 			waitErr:         new(test.NotFoundError),
-			attempts:        1,
+			attempts:        5,
 			expectedErr:     new(test.NotFoundError),
 		},
 	}

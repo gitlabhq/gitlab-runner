@@ -20,9 +20,11 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/hashicorp/go-version"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 
@@ -85,7 +87,8 @@ type executor struct {
 	client                    docker.Client
 	volumeParser              parser.Parser
 	newVolumePermissionSetter func() (permission.Setter, error)
-	info                      types.Info
+	info                      system.Info
+	serverAPIVersion          *version.Version
 	waiter                    wait.KillWaiter
 
 	temporary        []string // IDs of containers that should be removed
@@ -111,6 +114,8 @@ type executor struct {
 
 	tunnelClient executors.Client
 }
+
+var version1_44 = version.Must(version.NewVersion("1.44"))
 
 func init() {
 	runner, err := os.Executable()
@@ -433,7 +438,7 @@ func (e *executor) createService(
 	}
 
 	e.BuildLogger.Debugln(fmt.Sprintf("Starting service container %s (%s)...", containerName, resp.ID))
-	err = e.client.ContainerStart(e.Context, resp.ID, types.ContainerStartOptions{})
+	err = e.client.ContainerStart(e.Context, resp.ID, container.StartOptions{})
 	if err != nil {
 		e.temporary = append(e.temporary, resp.ID)
 		return nil, err
@@ -520,6 +525,36 @@ func (e *executor) createServiceContainerConfig(
 }
 
 func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
+	// setting a container's mac-address changed in API version 1.44
+	if e.serverAPIVersion.LessThan(version1_44) {
+		return e.networkConfigLegacy(aliases)
+	}
+
+	nm := string(e.networkMode)
+	nc := network.NetworkingConfig{}
+
+	if nm == "" {
+		// docker defaults to using "bridge" network driver if none was specified.
+		nc.EndpointsConfig = map[string]*network.EndpointSettings{
+			"bridge": {MacAddress: e.Config.Docker.MacAddress},
+		}
+		return &nc
+	}
+
+	nc.EndpointsConfig = map[string]*network.EndpointSettings{
+		nm: {MacAddress: e.Config.Docker.MacAddress},
+	}
+
+	if e.networkMode.IsUserDefined() {
+		nc.EndpointsConfig[nm].Aliases = aliases
+	}
+
+	return &nc
+}
+
+// Setting a container's mac-address changed in API version 1.44. This is the original/legacy/pre-1.44 way to set
+// mac-address.
+func (e *executor) networkConfigLegacy(aliases []string) *network.NetworkingConfig {
 	if e.networkMode.UserDefined() == "" {
 		return &network.NetworkingConfig{}
 	}
@@ -694,7 +729,12 @@ func (e *executor) createContainerConfig(
 	}
 
 	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
-	config.MacAddress = e.Config.Docker.MacAddress
+
+	// setting a container's mac-address changed in API version 1.44
+	if e.serverAPIVersion.LessThan(version1_44) {
+		//nolint:staticcheck
+		config.MacAddress = e.Config.Docker.MacAddress
+	}
 
 	return config, nil
 }
@@ -814,7 +854,7 @@ func (e *executor) removeContainer(ctx context.Context, id string) error {
 
 	e.disconnectNetwork(ctx, id)
 
-	options := types.ContainerRemoveOptions{
+	options := container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
@@ -958,10 +998,21 @@ func (e *executor) connectDocker(options common.ExecutorPrepareOptions) error {
 		return err
 	}
 
+	serverVersion, err := e.client.ServerVersion(e.Context)
+	if err != nil {
+		return fmt.Errorf("getting server version info: %w", err)
+	}
+
+	e.serverAPIVersion, err = version.NewVersion(serverVersion.APIVersion)
+	if err != nil {
+		return fmt.Errorf("parsing server API version %q: %w", serverVersion.APIVersion, err)
+	}
+
 	e.BuildLogger.Debugln(fmt.Sprintf(
-		"Connected to docker daemon (api version: %s, server version: %s, kernel: %s, os: %s/%s)",
+		"Connected to docker daemon (client version: %s, server version: %s, api version: %s, kernel: %s, os: %s/%s)",
 		e.client.ClientVersion(),
 		e.info.ServerVersion,
+		serverVersion.APIVersion,
 		e.info.KernelVersion,
 		e.info.OSType,
 		e.info.Architecture,
@@ -1487,7 +1538,7 @@ func (e *executor) getContainerExposedPorts(container *types.Container) ([]int, 
 func (e *executor) readContainerLogs(containerID string) string {
 	var buf bytes.Buffer
 
-	options := types.ContainerLogsOptions{
+	options := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,

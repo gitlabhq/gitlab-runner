@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	system "github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -36,7 +38,8 @@ func IsErrNotFound(err error) bool {
 // type officialDockerClient wraps a "github.com/docker/docker/client".Client,
 // giving it the methods it needs to satisfy the docker.Client interface
 type officialDockerClient struct {
-	client *client.Client
+	client    *client.Client
+	transport *http.Transport
 }
 
 func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDockerClient, error) {
@@ -45,12 +48,17 @@ func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDocker
 		client.WithVersionFromEnv(),
 	}
 
+	// create the http.Transport instance here so we can cache it. In docker SKD >= v25 the http.Client's Transport
+	// instance is overwritten with an otelhttp.Transport, which does not expose its TSLCientConfig. Some tests need to
+	// access the TSLCientConfig to assert TSL was configured correctly.
+	transport := http.Transport{}
+
 	// options acting upon the client and transport need to be done in a
 	// specific order.
 	options = append(
 		options,
 		client.WithHost(c.Host),
-		WithCustomHTTPClient(),
+		WithCustomHTTPClient(&transport),
 		WithCustomTLSClientConfig(c),
 	)
 
@@ -63,7 +71,8 @@ func newOfficialDockerClient(c Credentials, opts ...client.Opt) (*officialDocker
 	}
 
 	return &officialDockerClient{
-		client: dockerClient,
+		client:    dockerClient,
+		transport: &transport,
 	}, nil
 }
 
@@ -85,6 +94,10 @@ func (c *officialDockerClient) ClientVersion() string {
 	return c.client.ClientVersion()
 }
 
+func (c *officialDockerClient) ServerVersion(ctx context.Context) (types.Version, error) {
+	return c.client.ServerVersion(ctx)
+}
+
 func (c *officialDockerClient) ImageInspectWithRaw(
 	ctx context.Context,
 	imageID string,
@@ -96,7 +109,7 @@ func (c *officialDockerClient) ImageInspectWithRaw(
 
 func (c *officialDockerClient) ContainerList(
 	ctx context.Context,
-	options types.ContainerListOptions,
+	options container.ListOptions,
 ) ([]types.Container, error) {
 	started := time.Now()
 	containers, err := c.client.ContainerList(ctx, options)
@@ -119,7 +132,7 @@ func (c *officialDockerClient) ContainerCreate(
 func (c *officialDockerClient) ContainerStart(
 	ctx context.Context,
 	containerID string,
-	options types.ContainerStartOptions,
+	options container.StartOptions,
 ) error {
 	started := time.Now()
 	err := c.client.ContainerStart(ctx, containerID, options)
@@ -151,7 +164,7 @@ func (c *officialDockerClient) ContainerInspect(ctx context.Context, containerID
 func (c *officialDockerClient) ContainerAttach(
 	ctx context.Context,
 	container string,
-	options types.ContainerAttachOptions,
+	options container.AttachOptions,
 ) (types.HijackedResponse, error) {
 	started := time.Now()
 	response, err := c.client.ContainerAttach(ctx, container, options)
@@ -161,7 +174,7 @@ func (c *officialDockerClient) ContainerAttach(
 func (c *officialDockerClient) ContainerRemove(
 	ctx context.Context,
 	containerID string,
-	options types.ContainerRemoveOptions,
+	options container.RemoveOptions,
 ) error {
 	started := time.Now()
 	err := c.client.ContainerRemove(ctx, containerID, options)
@@ -179,7 +192,7 @@ func (c *officialDockerClient) ContainerWait(
 func (c *officialDockerClient) ContainerLogs(
 	ctx context.Context,
 	container string,
-	options types.ContainerLogsOptions,
+	options container.LogsOptions,
 ) (io.ReadCloser, error) {
 	started := time.Now()
 	rc, err := c.client.ContainerLogs(ctx, container, options)
@@ -264,7 +277,7 @@ func (c *officialDockerClient) VolumeInspect(ctx context.Context, volumeID strin
 	return v, wrapError("VolumeInspect", err, started)
 }
 
-func (c *officialDockerClient) Info(ctx context.Context) (types.Info, error) {
+func (c *officialDockerClient) Info(ctx context.Context) (system.Info, error) {
 	started := time.Now()
 	info, err := c.client.Info(ctx)
 	return info, wrapError("Info", err, started)

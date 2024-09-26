@@ -17,7 +17,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/go-units"
+	"github.com/hashicorp/go-version"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
@@ -346,6 +348,7 @@ var (
 
 func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, func()) {
 	e := &executor{}
+	e.serverAPIVersion = version.Must(version.NewVersion("1.43"))
 
 	clientMock := new(docker.MockClient)
 	clientMock.On("Close").Return(nil).Once()
@@ -411,7 +414,7 @@ func getExecutorForVolumesTests(t *testing.T, test volumesTestCase) (*executor, 
 		},
 	}
 	e.client = clientMock
-	e.info = types.Info{
+	e.info = system.Info{
 		OSType: helperimage.OSTypeLinux,
 	}
 
@@ -790,7 +793,7 @@ func TestCreateDependencies(t *testing.T) {
 	assert.Equal(t, testError, err)
 }
 
-type containerConfigExpectations func(*testing.T, *container.Config, *container.HostConfig)
+type containerConfigExpectations func(*testing.T, *container.Config, *container.HostConfig, *network.NetworkingConfig)
 
 type dockerConfigurationTestFakeDockerClient struct {
 	docker.MockClient
@@ -807,7 +810,7 @@ func (c *dockerConfigurationTestFakeDockerClient) ContainerCreate(
 	platform *v1.Platform,
 	containerName string,
 ) (container.CreateResponse, error) {
-	c.cce(c.t, config, hostConfig)
+	c.cce(c.t, config, hostConfig, networkingConfig)
 	return container.CreateResponse{ID: "abc"}, nil
 }
 
@@ -823,7 +826,7 @@ func createExecutorForTestDockerConfiguration(
 
 	e := new(executor)
 	e.client = c
-	e.info = types.Info{
+	e.info = system.Info{
 		OSType:       helperimage.OSTypeLinux,
 		Architecture: "amd64",
 	}
@@ -844,6 +847,8 @@ func createExecutorForTestDockerConfiguration(
 
 	err = e.createLabeler()
 	require.NoError(t, err)
+
+	e.serverAPIVersion = version.Must(version.NewVersion("1.43"))
 
 	return c, e
 }
@@ -914,7 +919,7 @@ func TestDockerMemorySetting(t *testing.T) {
 		Memory: "42m",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, int64(44040192), hostConfig.Memory)
 	}
 
@@ -926,7 +931,7 @@ func TestDockerMemorySwapSetting(t *testing.T) {
 		MemorySwap: "2g",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, int64(2147483648), hostConfig.MemorySwap)
 	}
 
@@ -938,7 +943,7 @@ func TestDockerMemoryReservationSetting(t *testing.T) {
 		MemoryReservation: "64m",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, int64(67108864), hostConfig.MemoryReservation)
 	}
 
@@ -963,7 +968,7 @@ func TestDockerCPUSSetting(t *testing.T) {
 				CPUS: example.cpus,
 			}
 
-			cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, example.nanocpus, hostConfig.NanoCPUs)
 			}
 
@@ -984,7 +989,7 @@ func TestDockerIsolationWithCorrectValues(t *testing.T) {
 				Isolation: isolation,
 			}
 
-			cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, container.Isolation(isolation), hostConfig.Isolation)
 			}
 
@@ -997,7 +1002,8 @@ func TestDockerIsolationWithIncorrectValue(t *testing.T) {
 	dockerConfig := &common.DockerConfig{
 		Isolation: "someIncorrectValue",
 	}
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {}
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
+	}
 	_, executor := createExecutorForTestDockerConfiguration(t, dockerConfig, cce)
 
 	_, err := executor.createHostConfig()
@@ -1010,8 +1016,10 @@ func TestDockerMacAddress(t *testing.T) {
 		MacAddress: "92:d0:c6:0a:29:33",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
-		assert.Equal(t, "92:d0:c6:0a:29:33", config.MacAddress)
+	cce := func(t *testing.T, _ *container.Config, _ *container.HostConfig, netConfig *network.NetworkingConfig) {
+		for _, ec := range netConfig.EndpointsConfig {
+			assert.Equal(t, "92:d0:c6:0a:29:33", ec.MacAddress)
+		}
 	}
 
 	testDockerConfigurationWithJobContainer(t, dockerConfig, cce)
@@ -1022,7 +1030,7 @@ func TestDockerCgroupParentSetting(t *testing.T) {
 		CgroupParent: "test-docker-cgroup",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, "test-docker-cgroup", hostConfig.CgroupParent)
 	}
 
@@ -1034,7 +1042,7 @@ func TestDockerCPUSetCPUsSetting(t *testing.T) {
 		CPUSetCPUs: "1-3,5",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, "1-3,5", hostConfig.CpusetCpus)
 	}
 
@@ -1046,7 +1054,7 @@ func TestDockerCPUSetMemsSetting(t *testing.T) {
 		CPUSetMems: "1-3,5",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, "1-3,5", hostConfig.CpusetMems)
 	}
 
@@ -1056,13 +1064,13 @@ func TestDockerCPUSetMemsSetting(t *testing.T) {
 func TestDockerServiceSettings(t *testing.T) {
 	tests := map[string]struct {
 		dockerConfig common.DockerConfig
-		verifyFn     func(t *testing.T, config *container.Config, hostConfig *container.HostConfig)
+		verifyFn     func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig)
 	}{
 		"memory": {
 			dockerConfig: common.DockerConfig{
 				ServiceMemory: "42m",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				value, err := units.RAMInBytes("42m")
 				require.NoError(t, err)
 				assert.Equal(t, value, hostConfig.Memory)
@@ -1072,7 +1080,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceMemoryReservation: "64m",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				value, err := units.RAMInBytes("64m")
 				require.NoError(t, err)
 				assert.Equal(t, value, hostConfig.MemoryReservation)
@@ -1082,7 +1090,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceMemorySwap: "2g",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				value, err := units.RAMInBytes("2g")
 				require.NoError(t, err)
 				assert.Equal(t, value, hostConfig.MemorySwap)
@@ -1092,7 +1100,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceCgroupParent: "test-docker-cgroup",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, "test-docker-cgroup", hostConfig.CgroupParent)
 			},
 		},
@@ -1100,7 +1108,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceCPUSetCPUs: "1-3,5",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, "1-3,5", hostConfig.CpusetCpus)
 			},
 		},
@@ -1108,7 +1116,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceCPUS: "0.5",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, int64(500000000), hostConfig.NanoCPUs)
 			},
 		},
@@ -1116,7 +1124,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceCPUS: "0.25",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, int64(250000000), hostConfig.NanoCPUs)
 			},
 		},
@@ -1124,7 +1132,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceCPUS: "1/3",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, int64(333333333), hostConfig.NanoCPUs)
 			},
 		},
@@ -1132,7 +1140,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceCPUS: "1/8",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, int64(125000000), hostConfig.NanoCPUs)
 			},
 		},
@@ -1140,7 +1148,7 @@ func TestDockerServiceSettings(t *testing.T) {
 			dockerConfig: common.DockerConfig{
 				ServiceCPUS: "0.0001",
 			},
-			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+			verifyFn: func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, int64(100000), hostConfig.NanoCPUs)
 			},
 		},
@@ -1158,7 +1166,7 @@ func TestDockerContainerLabelsSetting(t *testing.T) {
 		ContainerLabels: map[string]string{"my.custom.label": "my.custom.value"},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		expected := map[string]string{
 			"com.gitlab.gitlab-runner.job.before_sha":  "",
 			"com.gitlab.gitlab-runner.job.id":          "0",
@@ -1187,7 +1195,7 @@ func TestDockerTmpfsSetting(t *testing.T) {
 		},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		require.NotEmpty(t, hostConfig.Tmpfs)
 	}
 
@@ -1199,10 +1207,10 @@ func TestDockerUserSetting(t *testing.T) {
 		User: "www",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, "www", config.User)
 	}
-	ccePredefined := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	ccePredefined := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, "", config.User)
 	}
 
@@ -1216,10 +1224,10 @@ func TestDockerUserNSSetting(t *testing.T) {
 		UsernsMode: "host",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, container.UsernsMode(""), hostConfig.UsernsMode)
 	}
-	cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cceWithHostUsernsMode := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, container.UsernsMode("host"), hostConfig.UsernsMode)
 	}
 
@@ -1232,7 +1240,7 @@ func TestDockerRuntimeSetting(t *testing.T) {
 		Runtime: "runc",
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, "runc", hostConfig.Runtime)
 	}
 
@@ -1246,7 +1254,7 @@ func TestDockerSysctlsSetting(t *testing.T) {
 		},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, "1", hostConfig.Sysctls["net.ipv4.ip_forward"])
 	}
 
@@ -1354,7 +1362,7 @@ func TestDockerPrivilegedJobSetting(t *testing.T) {
 			AllowedPrivilegedImages: test.allowedImages,
 		}
 
-		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+		cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 			var message string
 			if test.expectedPrivileged {
 				message = "%q must be allowed by %q"
@@ -1558,7 +1566,7 @@ func getExecutorForNetworksTests(t *testing.T, test networksTestCase) (*executor
 			},
 		},
 		client: clientMock,
-		info: types.Info{
+		info: system.Info{
 			OSType: helperimage.OSTypeLinux,
 		},
 	}
@@ -1600,7 +1608,7 @@ func TestCheckOSType(t *testing.T) {
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			e := executor{
-				info: types.Info{
+				info: system.Info{
 					OSType: c.dockerInfoOSType,
 				},
 				AbstractExecutor: executors.AbstractExecutor{},
@@ -2011,7 +2019,7 @@ func TestExpandingDockerImageWithImagePullPolicyAlways(t *testing.T) {
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, int64(44040192), hostConfig.Memory)
 	}
 
@@ -2040,7 +2048,7 @@ func TestExpandingDockerImageWithImagePullPolicyNever(t *testing.T) {
 		PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
 	}
 
-	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig) {
+	cce := func(t *testing.T, config *container.Config, hostConfig *container.HostConfig, _ *network.NetworkingConfig) {
 		assert.Equal(t, int64(44040192), hostConfig.Memory)
 	}
 
@@ -2104,7 +2112,7 @@ func TestDockerImageWithUser(t *testing.T) {
 				},
 			}
 
-			cce := func(t *testing.T, config *container.Config, _ *container.HostConfig) {
+			cce := func(t *testing.T, config *container.Config, _ *container.HostConfig, _ *network.NetworkingConfig) {
 				assert.Equal(t, tt.want, config.User)
 			}
 
