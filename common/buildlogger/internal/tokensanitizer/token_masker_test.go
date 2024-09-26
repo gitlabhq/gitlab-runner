@@ -65,13 +65,13 @@ func TestTokenMasking(t *testing.T) {
 		},
 		"custom prefix with default one multiple packets long input": {
 			prefixes: []string{"tok-"},
-			input:    "Lortok-ipsu dolor sit amt|ok-t, cons-ctg|lpat-tur adipiscing tok-lit, stok-|d do tok-iusmod t|tok-mpor incididunt ut |labortok-=_ tok-t dolortok-=_ magna aliqua. Tglpat-llus orci ac auctor auguglpat-eee mauris auguglpat-wEr_ lorem",
-			expected: "Lortok-[MASKED] dolor sit amtok-[MASKED], cons-ctglpat-[MASKED] adipiscing tok-[MASKED], stok-[MASKED] do tok-[MASKED] ttok-[MASKED] incididunt ut labortok-[MASKED] tok-[MASKED] dolortok-[MASKED] magna aliqua. Tglpat-[MASKED] orci ac auctor auguglpat-[MASKED] mauris auguglpat-[MASKED] lorem",
+			input:    "Lortok-ipsu dolor sit amt|ok-t, cons-ctg|lpat-tur adipiscing tok-lit, stok-|d gltok-test do tok-iusmod t|tok-mpor incididunt ut |labortok-=_ tok-t dolortok-=_ magna aliqua. Tglpat-llus orci ac auctor auguglpat-eee mauris auguglpat-wEr_ lorem",
+			expected: "Lortok-[MASKED] dolor sit amtok-[MASKED], cons-ctglpat-[MASKED] adipiscing tok-[MASKED], stok-[MASKED] gltok-[MASKED] do tok-[MASKED] ttok-[MASKED] incididunt ut labortok-[MASKED] tok-[MASKED] dolortok-[MASKED] magna aliqua. Tglpat-[MASKED] orci ac auctor auguglpat-[MASKED] mauris auguglpat-[MASKED] lorem",
 		},
-		"ignored eleventh prefix and more": {
+		"ignored sixteenth prefix and more": {
 			prefixes: []string{"mask1-", "mask2-", "mask3-", "mask4-", "mask5-", "mask6-", "mask7-", "mask8-", "mask9-", "mask10-", "mask11-"},
 			input:    "Lormask1-ipsu dolor sit amm|ask2-t, cons-ctg|lpat-tur adipiscing mask5-lit, smask11-|d do mask7-iusmod t|glpat-mpor incididunt ut |labormask10-=_ mask9-t",
-			expected: "Lormask1-[MASKED] dolor sit ammask2-[MASKED], cons-ctglpat-[MASKED] adipiscing mask5-[MASKED], smask11-d do mask7-[MASKED] tglpat-[MASKED] incididunt ut labormask10-=_ mask9-[MASKED]",
+			expected: "Lormask1-[MASKED] dolor sit ammask2-[MASKED], cons-ctglpat-[MASKED] adipiscing mask5-[MASKED], smask11-d do mask7-iusmod tglpat-[MASKED] incididunt ut labormask10-=_ mask9-t",
 		},
 	}
 
@@ -79,7 +79,7 @@ func TestTokenMasking(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 
-			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultPATPrefix)))
+			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultTokenPrefixes...)))
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {
