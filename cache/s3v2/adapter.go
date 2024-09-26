@@ -45,11 +45,65 @@ func (a *s3Adapter) GetUploadHeaders() http.Header {
 }
 
 func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
-	return nil
+	if a.config.UploadRoleARN == "" {
+		return nil
+	}
+
+	u := url.URL{
+		Scheme: "s3",
+		Host:   a.config.BucketName,
+		Path:   a.objectName,
+	}
+
+	q := u.Query()
+	if a.config.BucketLocation != "" {
+		q.Set("region", a.config.BucketLocation)
+	}
+
+	// These are GoCloud AWS SDK v2 query parameters:
+	// https://github.com/google/go-cloud/blob/e5b1bc66f5c42c0a4bb43d179cefdab454559325/blob/s3blob/s3blob.go#L133-L136
+	// https://github.com/google/go-cloud/blob/e5b1bc66f5c42c0a4bb43d179cefdab454559325/aws/aws.go#L194-L199
+	q.Set("awssdk", "v2")
+	endpoint := a.config.GetEndpoint()
+	if endpoint != "" {
+		q.Set("endpoint", a.config.GetEndpoint())
+	}
+	if a.config.PathStyleEnabled() {
+		q.Set("hostname_immutable", "true")
+	}
+	if a.config.DualStackEnabled() {
+		q.Set("dualstack", "true")
+	}
+	if a.config.Accelerate {
+		q.Set("accelerate", "true")
+	}
+	if a.config.ServerSideEncryption != "" {
+		q.Set("ssetype", a.config.ServerSideEncryption)
+	}
+	if a.config.ServerSideEncryptionKeyID != "" {
+		q.Set("kmskeyid", a.config.ServerSideEncryptionKeyID)
+	}
+
+	u.RawQuery = q.Encode()
+
+	return &u
 }
 
-func (a *s3Adapter) GetUploadEnv(_ context.Context) map[string]string {
-	return nil
+func (a *s3Adapter) GetUploadEnv(ctx context.Context) map[string]string {
+	if a.config.UploadRoleARN == "" {
+		return nil
+	}
+
+	credentials, err := a.client.FetchCredentialsForRole(
+		ctx,
+		a.config.UploadRoleARN,
+		a.config.BucketName,
+		a.objectName)
+	if err != nil {
+		return nil
+	}
+
+	return credentials
 }
 
 func (a *s3Adapter) presignURL(ctx context.Context, method string) (cache.PresignedURL, error) {

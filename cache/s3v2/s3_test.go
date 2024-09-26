@@ -45,7 +45,7 @@ func setupMockS3Server(t *testing.T) *common.CacheS3Config {
 		ts.Close()
 	})
 
-	client, err := newRawS3Client(s3Config)
+	_, client, err := newRawS3Client(s3Config)
 	require.NoError(t, err)
 
 	_, err = client.CreateBucket(ctx, &s3.CreateBucketInput{
