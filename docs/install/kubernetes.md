@@ -18,6 +18,31 @@ This chart configures GitLab Runner to:
 - Run using the [Kubernetes executor](../executors/kubernetes/index.md) for GitLab Runner.
 - Provision a new pod in the specified namespace for each new CI/CD job.
 
+## Configuring GitLab Runner using the Helm Chart
+
+Store your GitLab Runner configuration changes in `values.yaml`. For help configuring this file, see:
+
+- The default [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml)
+  configuration in the chart repository.
+- The Helm documentation for [Values Files](https://helm.sh/docs/chart_template_guide/values_files/), which explains
+  how your values file overrides the default values.
+
+For GitLab Runner to run properly, you must set these values in your configuration file:
+
+- `gitlabUrl`: The full URL of the GitLab server (like `https://gitlab.example.com`) to register the runner against.
+- `rbac: { create: true }`: Create RBAC (role-based access control) rules for the GitLab Runner to create
+  pods to run jobs in.
+  - Prefer to use an existing `serviceAccount`? You should also set `rbac: { serviceAccountName: "SERVICE_ACCOUNT_NAME" }`.
+  - To learn about the minimal permissions the `serviceAccount` requires, see
+    [Configure runner API permissions](../executors/kubernetes/index.md#configure-runner-api-permissions).
+- `runnerToken`: The authentication token obtained when you
+  [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token).
+  - Set this token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
+
+For more configuration options, see [additional configuration](#additional-configuration).
+
+You're now ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart)!
+
 ## Installing GitLab Runner using the Helm Chart
 
 Prerequisites:
@@ -26,6 +51,7 @@ Prerequisites:
 - Kubernetes 1.4 or later, with beta APIs enabled.
 - The `kubectl` CLI is installed locally, and authenticated for the cluster.
 - The [Helm client](https://helm.sh/docs/using_helm/#installing-the-helm-client) is installed locally on your machine.
+- You've set all [required values in `values.yaml`](#configuring-gitlab-runner-using-the-helm-chart).
 
 To install GitLab Runner by using the Helm chart:
 
@@ -66,33 +92,10 @@ To install GitLab Runner by using the Helm chart:
      to your `helm install` command. You can install any version of the chart, but more recent `values.yml` might
      be incompatible with older versions of the chart.
 
-## Upgrading GitLab Runner using the Helm Chart
+### Check available GitLab Runner Helm Chart versions
 
-Prerequisites:
-
-- You've installed your GitLab Runner Chart.
-- You've paused the runner in GitLab. This prevents problems arising with the jobs, such as
-  [authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
-- You've ensured all jobs have completed.
-
-Use `helm upgrade` to change configuration or update charts, changing parameters as needed:
-
-```shell
-helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
-```
-
-- `<NAMESPACE>`: The Kubernetes namespace where you've installed GitLab Runner.
-- `<CONFIG_VALUES_FILE>`: The path to the values file containing your custom configuration. To create it, see
-  [Configure GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart).
-- `<RELEASE-NAME>`: The name you gave the chart when installing it.
-  In the installation section, the example named it `gitlab-runner`.
-- To update to a specific version of the GitLab Runner Helm Chart, rather than the latest one, add
-  `--version <RUNNER_HELM_CHART_VERSION>` to your `helm upgrade` command.
-
-## Check available GitLab Runner Helm Chart versions
-
-Versions of Helm Chart and GitLab Runner do not follow the same versioning.
-Use the command below to get version mappings between Helm Chart and GitLab Runner:
+Helm Chart and GitLab Runner do not follow the same versioning. To see version mappings
+between the two, run the command for your version of Helm:
 
 ```shell
 # For Helm 2
@@ -115,36 +118,46 @@ gitlab/gitlab-runner  0.61.2        16.8.0      GitLab Runner
 ...
 ```
 
-## Configuring GitLab Runner using the Helm Chart
+## Upgrading GitLab Runner using the Helm Chart
 
-Create a `values.yaml` file for your GitLab Runner configuration. See
-[Values Files](https://helm.sh/docs/chart_template_guide/values_files/) in the Helm documentation
-for information on how your values file overrides the defaults.
+Prerequisites:
 
-The default configuration is always available in the
-[`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml)
-in the chart repository.
+- You've installed your GitLab Runner Chart.
+- You've paused the runner in GitLab. This prevents problems arising with the jobs, such as
+  [authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
+- You've ensured all jobs have completed.
 
-### Required configuration
+To change your configuration or update charts, use `helm upgrade`, changing parameters as needed:
 
-For GitLab Runner to function, your configuration file **must** specify the following:
+```shell
+helm upgrade --namespace <NAMESPACE> -f <CONFIG_VALUES_FILE> <RELEASE-NAME> gitlab/gitlab-runner
+```
 
-- `gitlabUrl`: The GitLab server full URL to register the runner against. For example, `https://gitlab.example.com`.
-- `rbac: { create: true }`: Create RBAC rules for the GitLab Runner to create pods to run jobs in. If you have an existing `serviceAccount` you prefer to use, you should also set `rbac: { serviceAccountName: "SERVICE_ACCOUNT_NAME" }`. For more information about the minimal permissions required for the `serviceAccount`, see [Configure runner API permissions](../executors/kubernetes/index.md#configure-runner-api-permissions).
-- `runnerToken`:
-  - The authentication token you obtain when you [create a runner in the GitLab UI](https://docs.gitlab.com/ee/ci/runners/runners_scope.html#create-an-instance-runner-with-a-runner-authentication-token).
-  - Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
+- `<NAMESPACE>`: The Kubernetes namespace where you've installed GitLab Runner.
+- `<CONFIG_VALUES_FILE>`: The path to the values file containing your custom configuration. To create it, see
+  [Configure GitLab Runner using the Helm Chart](#configuring-gitlab-runner-using-the-helm-chart).
+- `<RELEASE-NAME>`: The name you gave the chart when installing it.
+  In the installation section, the example named it `gitlab-runner`.
+- To update to a specific version of the GitLab Runner Helm Chart, rather than the latest one, add
+  `--version <RUNNER_HELM_CHART_VERSION>` to your `helm upgrade` command.
 
-  \- or -
+## Uninstalling GitLab Runner using the Helm Chart
 
-- `runnerRegistrationToken` ([deprecated](https://gitlab.com/gitlab-org/gitlab/-/merge_requests/102681) in GitLab 15.6):
-  - The registration token [retrieved from your GitLab instance](https://docs.gitlab.com/ee/ci/runners/).
-  - Set the token directly or [store it in a secret](#store-registration-tokens-or-runner-tokens-in-secrets).
+To uninstall GitLab Runner:
 
-Unless you need to add more configuration, you are
-ready to [install GitLab Runner](#installing-gitlab-runner-using-the-helm-chart).
+1. Pause the runner in GitLab, and ensure any jobs have completed. This prevents job-related problems, such as
+   [authorization errors on completion](../faq/index.md#helm-chart-error--unauthorized).
+1. Run, this command, modifying it as needed:
 
-### Additional configuration
+   ```shell
+   helm delete --namespace <NAMESPACE> <RELEASE-NAME>
+   ```
+
+   - `<NAMESPACE>` is the Kubernetes namespace where GitLab Runner is installed.
+   - `<RELEASE-NAME>` is the name you gave the chart when you installed it.
+     In the [installation section](#installing-gitlab-runner-using-the-helm-chart) of this page, we called it `gitlab-runner`.
+
+## Additional configuration
 
 > - [Introduced](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/106) [configuration template](../register/index.md#register-with-a-configuration-template) in Helm Chart 0.23.0. See [deprecation issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/222).
 
@@ -168,14 +181,14 @@ In the `config:` section, the format should be `toml` (`<parameter> = <value>` i
 
 The executor-specific configuration [is documented in the `values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
-### Using cache with configuration template
+## Using cache with configuration template
 
 To use the cache with your configuration template, set the following variables in `values.yaml`:
 
 - `runners.cache.secretName` with the secret name for your object storage provider (`s3access`, `gcsaccess`, `google-application-credentials`, or `azureaccess`).
 - `runners.config` with the other settings for [the cache](../configuration/advanced-configuration.md#the-runnerscache-section). Use `toml` formatting.
 
-#### S3
+### S3
 
 For example, here is an example that configures [S3 with static credentials](https://aws.amazon.com/blogs/security/wheres-my-secret-access-key/):
 
@@ -208,9 +221,9 @@ kubectl create secret generic s3access \
     --from-literal=secretkey="YourSecretKey"
 ```
 
-#### Google Cloud Storage (GCS)
+### Google Cloud Storage (GCS)
 
-#### Static credentials directly configured
+### Static credentials directly configured
 
 The following example shows how to configure
 [GCS with credentials with an access ID and a private key](../configuration/advanced-configuration.md#the-runnerscache-section):
@@ -241,7 +254,7 @@ kubectl create secret generic gcsaccess \
     --from-literal=gcs-private-key="YourPrivateKey"
 ```
 
-#### Static credentials in a JSON file downloaded from GCP
+### Static credentials in a JSON file downloaded from GCP
 
 The following example shows how to
 [configure GCS with credentials in a JSON file](../configuration/advanced-configuration.md#the-runnerscache-section)
@@ -275,7 +288,7 @@ kubectl create secret generic google-application-credentials \
     --from-file=gcs-application-credentials-file=./path-to-your-google-application-credentials-file.json
 ```
 
-#### Azure
+### Azure
 
 The following example shows
 [how to configure Azure Blob Storage](../configuration/advanced-configuration.md#the-runnerscacheazure-section):
@@ -309,7 +322,7 @@ kubectl create secret generic azureaccess \
 
 Read more about the caching in Helm Chart in [`values.yaml`](https://gitlab.com/gitlab-org/charts/gitlab-runner/blob/main/values.yaml).
 
-### Enabling RBAC support
+## Enabling RBAC support
 
 If your cluster has RBAC enabled, you can choose to either have the chart create
 its own service account or [provide one on your own](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#service-account-permissions).
@@ -329,7 +342,7 @@ rbac:
   serviceAccountName: your-service-account
 ```
 
-### Controlling maximum Runner concurrency
+## Controlling maximum Runner concurrency
 
 A single GitLab Runner deployed on Kubernetes is able to execute multiple jobs
 in parallel by automatically starting additional Runner pods. The
@@ -343,12 +356,12 @@ controls the maximum number of pods allowed at a single time, and defaults to `1
 concurrent: 10
 ```
 
-### Running Docker-in-Docker containers with GitLab Runner
+## Running Docker-in-Docker containers with GitLab Runner
 
 See [running privileged containers for the runners](#running-privileged-containers-for-the-runners) for how to enable it,
 and the [GitLab Runner documentation](../executors/kubernetes/index.md#using-docker-in-builds) on running dind.
 
-### Running privileged containers for the runners
+## Running privileged containers for the runners
 
 You can tell the runner to run using privileged containers. You might need
 this setting enabled if you need to use the Docker executable in your GitLab CI/CD jobs.
@@ -372,7 +385,7 @@ runners:
         ...
 ```
 
-### Best practices for building containers without privileged mode
+## Best practices for building containers without privileged mode
 
 Building containers within containers with Docker-in-Docker requires Docker privileged
 mode. Google's [Kaniko](https://github.com/GoogleContainerTools/kaniko) is an alternative
@@ -387,7 +400,7 @@ working example project. It makes use of the documentation for
 
 For testing, copy the working example project to your own group or instance. More details on what other GitLab CI patterns are demonstrated are available at the project page [Kaniko Docker Build](https://gitlab.com/guided-explorations/containers/kaniko-docker-build).
 
-### Using an image from a private registry
+## Using an image from a private registry
 
 Using an image from a private registry requires the configuration of `imagePullSecrets`. For more details on how to create `imagePullSecrets`, see [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) in the Kubernetes documentation.
 
@@ -429,7 +442,7 @@ runners:
 
 Take note of the format. The value is not prefixed by a `name` tag as is the convention in Kubernetes resources. It requires an _array_ of one or more secret names, even if you use only one registry credential.
 
-### Providing a custom certificate for accessing GitLab
+## Providing a custom certificate for accessing GitLab
 
 You can provide a [Kubernetes Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
 to the GitLab Runner Helm Chart, which is used to populate the container's
@@ -508,13 +521,13 @@ Where:
 For more information on how GitLab Runner uses these certificates, see
 [Supported options for self-signed certificates targeting the GitLab server](../configuration/tls-self-signed.md#supported-options-for-self-signed-certificates-targeting-the-gitlab-server).
 
-### Set pod labels to CI environment variables keys
+## Set pod labels to CI environment variables keys
 
 You can't use environment variables as pod labels in the `values.yaml` file.
 For more information, see [Can't set environment variable key as pod label](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173).
 Use [the workaround described in the issue](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/173#note_351057890) as a temporary solution.
 
-### Store registration tokens or runner tokens in secrets
+## Store registration tokens or runner tokens in secrets
 
 > - Introduced in [16.1](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/merge_requests/405).
 
@@ -565,7 +578,7 @@ NOTE:
 If your secret management solution doesn't allow you to set empty string for `runner-registration-token`,
 you can set it to any string. When `runner-token` is present, the string is ignored.
 
-### Switching to the Ubuntu-based `gitlab-runner` Docker image
+## Switching to the Ubuntu-based `gitlab-runner` Docker image
 
 By default the GitLab Runner Helm Chart uses the Alpine version of the `gitlab/gitlab-runner` image,
 which uses `musl libc`. In some cases, consider switching to the Ubuntu-based image, which uses `glibc`.
@@ -582,7 +595,7 @@ securityContext:
   runAsUser: 999
 ```
 
-### Running with non-root user
+## Running with non-root user
 
 By default, the GitLab Runner images don't work with non-root users. The [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421) and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
 images are designed for that scenario. To use them, change the GitLab Runner and GitLab Runner Helper images:
@@ -611,7 +624,7 @@ runners:
               run_as_user = 59417
 ```
 
-### Using FIPS compliant GitLab Runner
+## Using FIPS compliant GitLab Runner
 
 To use a [FIPS compliant GitLab Runner](index.md#fips-compliant-gitlab-runner), change the GitLab Runner image and the Helper image as follows:
 
@@ -627,21 +640,3 @@ runners:
           [runners.kubernetes]
             helper_image_flavor = "ubi-fips"
 ```
-
-## Uninstalling GitLab Runner using the Helm Chart
-
-Before uninstalling GitLab Runner, pause the runner in GitLab and ensure any jobs have completed.
-Pausing the runner prevents problems arising with the jobs, such as
-[authorization errors when they complete](../faq/index.md#helm-chart-error--unauthorized).
-
-To uninstall the GitLab Runner Chart, run the following:
-
-```shell
-helm delete --namespace <NAMESPACE> <RELEASE-NAME>
-```
-
-Where:
-
-- `<NAMESPACE>` is the Kubernetes namespace where GitLab Runner is installed.
-- `<RELEASE-NAME>` is the name you gave the chart when installing it.
-  In the [Installing GitLab Runner using the Helm Chart](#installing-gitlab-runner-using-the-helm-chart) section, we called it `gitlab-runner`.
