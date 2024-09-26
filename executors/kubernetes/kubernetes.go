@@ -338,8 +338,8 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 		s.BuildLogger.Println("Using attach strategy to execute scripts...")
 	}
 
-	// pull manager can only be prepared once we know the image / helper image
-	s.pullManager, err = s.preparePullManager(options)
+	// pull manager can be prepared once s.options.Image & s.options.Services is set up
+	s.pullManager, err = s.preparePullManager()
 	if err != nil {
 		return err
 	}
@@ -358,18 +358,18 @@ func (s *executor) Prepare(options common.ExecutorPrepareOptions) (err error) {
 	return err
 }
 
-func (s *executor) preparePullManager(options common.ExecutorPrepareOptions) (pull.Manager, error) {
+func (s *executor) preparePullManager() (pull.Manager, error) {
 	allowedPullPolicies, err := s.Config.Kubernetes.GetAllowedPullPolicies()
 	if err != nil {
 		return nil, err
 	}
 
 	dockerPullPoliciesPerContainer := map[string][]common.DockerPullPolicy{
-		buildContainerName:          options.Build.Image.PullPolicies,
-		helperContainerName:         options.Build.Image.PullPolicies,
-		initPermissionContainerName: options.Build.Image.PullPolicies,
+		buildContainerName:          s.options.Image.PullPolicies,
+		helperContainerName:         s.options.Image.PullPolicies,
+		initPermissionContainerName: s.options.Image.PullPolicies,
 	}
-	for i, service := range options.Build.Services {
+	for i, service := range s.options.Services {
 		containerName := fmt.Sprintf("%s%d", serviceContainerPrefix, i)
 		dockerPullPoliciesPerContainer[containerName] = service.PullPolicies
 	}

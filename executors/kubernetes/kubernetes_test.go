@@ -7311,6 +7311,7 @@ func TestContainerPullPolicies(t *testing.T) {
 
 	testCases := map[string]struct {
 		Services            common.Services
+		ServicesFromConfig  []common.Service
 		AllowedPullPolicies []common.DockerPullPolicy
 		DefaultPullPolicies common.StringOrArray
 
@@ -7363,6 +7364,25 @@ func TestContainerPullPolicies(t *testing.T) {
 				"svc-0":  api.PullPolicy(""),
 			},
 		},
+		"services from config use the correct pull policy": {
+			DefaultPullPolicies: common.StringOrArray{"never", "if-not-present"},
+			ServicesFromConfig: []common.Service{
+				{Name: "from-toml"},
+			},
+			Services: common.Services{
+				{Name: "from-yaml-0", PullPolicies: []common.DockerPullPolicy{"if-not-present"}},
+				{Name: "from-yaml-1"},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullNever,
+				"helper": api.PullNever,
+				// services from config.toml come first
+				"svc-0": api.PullNever,
+				// then the services from the .gitlab-ci.yaml
+				"svc-1": api.PullIfNotPresent,
+				"svc-2": api.PullNever,
+			},
+		},
 	}
 
 	for tn, tc := range testCases {
@@ -7375,6 +7395,7 @@ func TestContainerPullPolicies(t *testing.T) {
 						Image:               "some-build-image",
 						AllowedPullPolicies: tc.AllowedPullPolicies,
 						PullPolicy:          tc.DefaultPullPolicies,
+						Services:            tc.ServicesFromConfig,
 					},
 				},
 			}
