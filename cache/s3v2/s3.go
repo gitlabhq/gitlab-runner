@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
@@ -17,9 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/sirupsen/logrus"
-
-	"github.com/minio/minio-go/v7/pkg/s3utils"
 )
 
 //go:generate mockery --name=s3Presigner --inpackage
@@ -31,12 +30,24 @@ type s3Presigner interface {
 		objectName string,
 		expires time.Duration,
 	) (cache.PresignedURL, error)
+	FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, timeout time.Duration) (map[string]string, error)
+	ServerSideEncryptionType() string
 }
 
 type s3Client struct {
 	s3Config      *common.CacheS3Config
+	awsConfig     *aws.Config
 	client        *s3.Client
 	presignClient *s3.PresignClient
+	stsEndpoint   string
+}
+
+type s3ClientOption func(*s3Client)
+
+func withSTSEndpoint(endpoint string) s3ClientOption {
+	return func(c *s3Client) {
+		c.stsEndpoint = endpoint
+	}
 }
 
 func (c *s3Client) PresignURL(ctx context.Context,
@@ -59,11 +70,14 @@ func (c *s3Client) PresignURL(ctx context.Context,
 			Bucket: aws.String(bucketName),
 			Key:    aws.String(objectName),
 		}
-		switch strings.ToUpper(c.s3Config.ServerSideEncryption) {
-		case "S3":
+		switch c.s3Config.EncryptionType() {
+		case common.S3EncryptionTypeAes256:
 			putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAes256
-		case "KMS":
+		case common.S3EncryptionTypeKms:
 			putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAwsKms
+			putObjectInput.SSEKMSKeyId = aws.String(c.s3Config.ServerSideEncryptionKeyID)
+		case common.S3EncryptionTypeDsseKms:
+			putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAwsKmsDsse
 			putObjectInput.SSEKMSKeyId = aws.String(c.s3Config.ServerSideEncryptionKeyID)
 		}
 		presignedReq, err = c.presignClient.PresignPutObject(ctx, putObjectInput, s3.WithPresignExpires(expires))
@@ -85,24 +99,97 @@ func (c *s3Client) PresignURL(ctx context.Context,
 	return cache.PresignedURL{URL: u, Headers: presignedReq.SignedHeader}, nil
 }
 
-func newRawS3Client(s3Config *common.CacheS3Config) (*s3.Client, error) {
+func (c *s3Client) generateSessionPolicy(bucketName, objectName string) string {
+	policy := fmt.Sprintf(`{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Action": ["s3:PutObject"],
+				"Resource": "arn:aws:s3:::%s/%s"
+			}`, bucketName, objectName)
+
+	if c.s3Config.EncryptionType() == common.S3EncryptionTypeKms || c.s3Config.EncryptionType() == common.S3EncryptionTypeDsseKms {
+		// Permissions needed for multipart upload: https://repost.aws/knowledge-center/s3-large-file-encryption-kms-key
+		policy += fmt.Sprintf(`,
+			{
+				"Effect": "Allow",
+				"Action": [
+					"kms:Decrypt",
+					"kms:GenerateDataKey"
+				],
+				"Resource": "%s"
+			}`, c.s3Config.ServerSideEncryptionKeyID)
+	}
+
+	policy += `
+	]
+}`
+
+	return policy
+}
+
+func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketName, objectName string, timeout time.Duration) (map[string]string, error) {
+	sessionPolicy := c.generateSessionPolicy(bucketName, objectName)
+
+	stsClient := sts.NewFromConfig(*c.awsConfig, func(o *sts.Options) {
+		if c.stsEndpoint != "" {
+			o.BaseEndpoint = aws.String(c.stsEndpoint)
+		}
+	})
+	uuid, err := helpers.GenerateRandomUUID(8)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate random UUID: %v", err)
+	}
+	sessionName := fmt.Sprintf("gitlab-runner-cache-upload-%s", uuid)
+
+	// According to https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_manage-assume.html#id_roles_use_view-role-max-session,
+	// session durations must be between 15 minutes and 12 hours.
+	duration := 1 * time.Hour
+	if timeout >= 15*time.Minute && timeout <= 12*time.Hour {
+		duration = timeout
+	}
+
+	roleCredentials, err := stsClient.AssumeRole(ctx, &sts.AssumeRoleInput{
+		RoleArn:         aws.String(roleARN),
+		RoleSessionName: aws.String(sessionName),
+		Policy:          aws.String(sessionPolicy), // Limit the role's access
+		DurationSeconds: aws.Int32(int32(duration.Seconds())),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to assume role: %w", err)
+	}
+	// AssumeRole should always return credentials if successful, but
+	// just in case it doesn't let's check this.
+	if roleCredentials.Credentials == nil {
+		return nil, fmt.Errorf("failed to retrieve credentials: %w", err)
+	}
+
+	return map[string]string{
+		"AWS_ACCESS_KEY_ID":     *roleCredentials.Credentials.AccessKeyId,
+		"AWS_SECRET_ACCESS_KEY": *roleCredentials.Credentials.SecretAccessKey,
+		"AWS_SESSION_TOKEN":     *roleCredentials.Credentials.SessionToken,
+	}, nil
+}
+
+func (c *s3Client) ServerSideEncryptionType() string {
+	switch c.s3Config.EncryptionType() {
+	case common.S3EncryptionTypeAes256:
+		return string(types.ServerSideEncryptionAes256)
+	case common.S3EncryptionTypeKms:
+		return string(types.ServerSideEncryptionAwsKms)
+	case common.S3EncryptionTypeDsseKms:
+		return string(types.ServerSideEncryptionAwsKmsDsse)
+	default:
+		return ""
+	}
+}
+
+func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, error) {
 	var cfg aws.Config
 	var err error
 
-	endpoint := s3Config.ServerAddress
-	var endpointURL *url.URL
-	if endpoint != "" {
-		scheme := "https"
-		if s3Config.Insecure {
-			scheme = "http"
-		}
-		endpoint = fmt.Sprintf("%s://%s", scheme, s3Config.ServerAddress)
-		endpointURL, err = url.Parse(endpoint)
-		if err != nil {
-			return nil, fmt.Errorf("parsing S3 endpoint URL: %w", err)
-		}
-	}
-
+	endpoint := s3Config.GetEndpoint()
 	options := []func(*config.LoadOptions) error{config.WithRegion(s3Config.BucketLocation)}
 
 	switch s3Config.AuthType() {
@@ -118,12 +205,7 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*s3.Client, error) {
 	defer cancel()
 	cfg, err = config.LoadDefaultConfig(ctx, options...)
 	if err != nil {
-		return nil, err
-	}
-
-	usePathStyle := false
-	if endpoint != "" {
-		usePathStyle = !s3utils.IsVirtualHostSupported(*endpointURL, s3Config.BucketName)
+		return nil, nil, err
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
@@ -133,23 +215,30 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*s3.Client, error) {
 			o.UseDualstack = s3Config.DualStackEnabled() // nolint:staticcheck
 			o.UseAccelerate = s3Config.Accelerate
 		}
-		o.UsePathStyle = usePathStyle
+		o.UsePathStyle = s3Config.PathStyleEnabled()
 	})
 
-	return client, nil
+	return &cfg, client, nil
 }
 
-var newS3Client = func(s3Config *common.CacheS3Config) (s3Presigner, error) {
-	client, err := newRawS3Client(s3Config)
+var newS3Client = func(s3Config *common.CacheS3Config, options ...s3ClientOption) (s3Presigner, error) {
+	cfg, client, err := newRawS3Client(s3Config)
 	if err != nil {
 		return nil, err
 	}
 
 	presignClient := s3.NewPresignClient(client)
 
-	return &s3Client{
+	c := &s3Client{
 		s3Config:      s3Config,
+		awsConfig:     cfg,
 		client:        client,
 		presignClient: presignClient,
-	}, nil
+	}
+
+	for _, opt := range options {
+		opt(c)
+	}
+
+	return c, nil
 }

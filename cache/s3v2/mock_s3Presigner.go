@@ -17,6 +17,36 @@ type mockS3Presigner struct {
 	mock.Mock
 }
 
+// FetchCredentialsForRole provides a mock function with given fields: ctx, roleARN, bucketName, objectName, timeout
+func (_m *mockS3Presigner) FetchCredentialsForRole(ctx context.Context, roleARN string, bucketName string, objectName string, timeout time.Duration) (map[string]string, error) {
+	ret := _m.Called(ctx, roleARN, bucketName, objectName, timeout)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchCredentialsForRole")
+	}
+
+	var r0 map[string]string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, time.Duration) (map[string]string, error)); ok {
+		return rf(ctx, roleARN, bucketName, objectName, timeout)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, time.Duration) map[string]string); ok {
+		r0 = rf(ctx, roleARN, bucketName, objectName, timeout)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, time.Duration) error); ok {
+		r1 = rf(ctx, roleARN, bucketName, objectName, timeout)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PresignURL provides a mock function with given fields: ctx, method, bucketName, objectName, expires
 func (_m *mockS3Presigner) PresignURL(ctx context.Context, method string, bucketName string, objectName string, expires time.Duration) (cache.PresignedURL, error) {
 	ret := _m.Called(ctx, method, bucketName, objectName, expires)
@@ -43,6 +73,24 @@ func (_m *mockS3Presigner) PresignURL(ctx context.Context, method string, bucket
 	}
 
 	return r0, r1
+}
+
+// ServerSideEncryptionType provides a mock function with given fields:
+func (_m *mockS3Presigner) ServerSideEncryptionType() string {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ServerSideEncryptionType")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
 }
 
 // newMockS3Presigner creates a new instance of mockS3Presigner. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

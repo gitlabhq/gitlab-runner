@@ -52,8 +52,8 @@ func (a *gcsAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	return nil
 }
 
-func (a *gcsAdapter) GetUploadEnv(_ context.Context) map[string]string {
-	return nil
+func (a *gcsAdapter) GetUploadEnv(_ context.Context) (map[string]string, error) {
+	return nil, nil
 }
 
 func (a *gcsAdapter) presignURL(ctx context.Context, method string, contentType string) (*url.URL, error) {

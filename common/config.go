@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -22,7 +23,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docker/go-units"
+	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/sirupsen/logrus"
+
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1127,7 +1130,9 @@ type CacheS3Config struct {
 	ServerSideEncryption      string     `toml:"ServerSideEncryption,omitempty" long:"server-side-encryption" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION" description:"Server side encryption type (S3, or KMS)"`
 	ServerSideEncryptionKeyID string     `toml:"ServerSideEncryptionKeyID,omitempty" long:"server-side-encryption-key-id" env:"CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID" description:"Server side encryption key ID (alias or Key ID)"`
 	DualStack                 *bool      `toml:"DualStack,omitempty" long:"dual-stack" env:"CACHE_S3_DUAL_STACK" description:"Enable dual-stack (IPv4 and IPv6) endpoints (default: true)" jsonschema:"oneof_type=boolean;null"`
+	PathStyle                 *bool      `toml:"PathStyle,omitempty" long:"path-style" env:"CACHE_S3_PATH_STYLE" description:"Use path style access (default: false)" jsonschema:"oneof_type=boolean;null"`
 	Accelerate                bool       `toml:"Accelerate,omitempty" long:"accelerate" env:"CACHE_S3_ACCELERATE" description:"Enable S3 Transfer Acceleration"`
+	UploadRoleARN             string     `toml:"UploadRoleARN,omitempty" long:"upload-role-arn" env:"CACHE_S3_UPLOAD_ROLE_ARN" description:"Role ARN for uploading cache to S3"`
 }
 
 type CacheAzureCredentials struct {
@@ -1274,6 +1279,15 @@ const (
 	S3AuthTypeIAM       S3AuthType = "iam"
 )
 
+type S3EncryptionType string
+
+const (
+	S3EncryptionTypeNone    S3EncryptionType = ""
+	S3EncryptionTypeAes256  S3EncryptionType = "S3"
+	S3EncryptionTypeKms     S3EncryptionType = "KMS"
+	S3EncryptionTypeDsseKms S3EncryptionType = "DSSE-KMS"
+)
+
 func (c *CacheS3Config) AuthType() S3AuthType {
 	authType := S3AuthType(strings.ToLower(string(c.AuthenticationType)))
 
@@ -1291,6 +1305,70 @@ func (c *CacheS3Config) AuthType() S3AuthType {
 	}
 
 	return S3AuthTypeAccessKey
+}
+
+func (c *CacheS3Config) EncryptionType() S3EncryptionType {
+	encryptionType := S3EncryptionType(strings.ToUpper(c.ServerSideEncryption))
+
+	switch encryptionType {
+	case "":
+		return S3EncryptionTypeNone
+	case "S3", "AES256":
+		return S3EncryptionTypeAes256
+	case "KMS", "AWS:KMS":
+		return S3EncryptionTypeKms
+	case "DSSE-KMS", "AWS:KMS:DSSE":
+		return S3EncryptionTypeDsseKms
+	}
+
+	logrus.Warnf("unknown ServerSideEncryption value: %s", encryptionType)
+	return S3EncryptionTypeNone
+}
+
+func (c *CacheS3Config) GetEndpoint() string {
+	if c.ServerAddress == "" {
+		return ""
+	}
+
+	scheme := "https"
+	if c.Insecure {
+		scheme = "http"
+	}
+
+	return fmt.Sprintf("%s://%s", scheme, c.ServerAddress)
+}
+
+func (c *CacheS3Config) GetEndpointURL() *url.URL {
+	endpoint := c.GetEndpoint()
+	if endpoint == "" {
+		return nil
+	}
+
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		logrus.Errorf("error parsing endpoint URL: %v", err)
+		return nil
+	}
+
+	return u
+}
+
+// PathStyleEnabled() will return true if the endpoint needs to use
+// the legacy, path-style access to S3. If the value is not specified,
+// it will auto-detect and return false if the server address appears
+// to be for AWS or Google. Otherwise, PathStyleEnabled() will return false.
+func (c *CacheS3Config) PathStyleEnabled() bool {
+	// Preserve the previous behavior of auto-detection by default
+	if c.PathStyle == nil {
+		u := c.GetEndpointURL()
+		if u == nil {
+			return false
+		}
+
+		return !s3utils.IsVirtualHostSupported(*u, c.BucketName)
+	}
+
+	return *c.PathStyle
 }
 
 func (c *CacheS3Config) DualStackEnabled() bool {

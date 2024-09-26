@@ -53,7 +53,7 @@ func (_m *MockAdapter) GetGoCloudURL(_a0 context.Context) *url.URL {
 }
 
 // GetUploadEnv provides a mock function with given fields: _a0
-func (_m *MockAdapter) GetUploadEnv(_a0 context.Context) map[string]string {
+func (_m *MockAdapter) GetUploadEnv(_a0 context.Context) (map[string]string, error) {
 	ret := _m.Called(_a0)
 
 	if len(ret) == 0 {
@@ -61,6 +61,10 @@ func (_m *MockAdapter) GetUploadEnv(_a0 context.Context) map[string]string {
 	}
 
 	var r0 map[string]string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (map[string]string, error)); ok {
+		return rf(_a0)
+	}
 	if rf, ok := ret.Get(0).(func(context.Context) map[string]string); ok {
 		r0 = rf(_a0)
 	} else {
@@ -69,7 +73,13 @@ func (_m *MockAdapter) GetUploadEnv(_a0 context.Context) map[string]string {
 		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetUploadURL provides a mock function with given fields: _a0

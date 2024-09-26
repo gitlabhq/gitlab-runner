@@ -22,7 +22,7 @@ type Adapter interface {
 	GetUploadURL(context.Context) PresignedURL
 
 	GetGoCloudURL(context.Context) *url.URL
-	GetUploadEnv(context.Context) map[string]string
+	GetUploadEnv(context.Context) (map[string]string, error)
 }
 
 type Factory func(config *common.CacheConfig, timeout time.Duration, objectName string) (Adapter, error)

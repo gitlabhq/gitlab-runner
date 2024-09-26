@@ -77,7 +77,7 @@ func (a *azureAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	return u
 }
 
-func (a *azureAdapter) GetUploadEnv(ctx context.Context) map[string]string {
+func (a *azureAdapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {
 	token := a.generateWriteToken(ctx)
 
 	// Return what we do have if the token is missing so the user
@@ -87,11 +87,11 @@ func (a *azureAdapter) GetUploadEnv(ctx context.Context) map[string]string {
 		"AZURE_STORAGE_DOMAIN":  a.config.StorageDomain,
 	}
 	if token == "" {
-		return env
+		return env, nil
 	}
 
 	env["AZURE_STORAGE_SAS_TOKEN"] = token
-	return env
+	return env, nil
 }
 
 func (a *azureAdapter) presignURL(ctx context.Context, method string) *url.URL {

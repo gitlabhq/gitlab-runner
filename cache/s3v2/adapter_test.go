@@ -61,7 +61,7 @@ func onFakeS3URLGenerator(tc cacheOperationTest) func() {
 		Return(cache.PresignedURL{URL: tc.presignedURL}, err)
 
 	oldS3URLGenerator := newS3Client
-	newS3Client = func(s3 *common.CacheS3Config) (s3Presigner, error) {
+	newS3Client = func(s3 *common.CacheS3Config, opts ...s3ClientOption) (s3Presigner, error) {
 		if tc.errorOnS3ClientInitialization {
 			return nil, errors.New("test error")
 		}
@@ -98,7 +98,10 @@ func testCacheOperation(
 
 		ctx := context.Background()
 		assert.Nil(t, adapter.GetGoCloudURL(ctx))
-		assert.Empty(t, adapter.GetUploadEnv(ctx))
+
+		env, err := adapter.GetUploadEnv(ctx)
+		assert.Empty(t, env)
+		assert.NoError(t, err)
 	})
 }
 
@@ -149,4 +152,201 @@ func TestNoConfiguration(t *testing.T) {
 	assert.Nil(t, adapter)
 
 	assert.EqualError(t, err, "missing S3 configuration")
+}
+
+func TestGoCloudURL(t *testing.T) {
+	enabled := true
+	disabled := false
+	roleARN := "aws:arn:role:1234"
+
+	tests := map[string]struct {
+		objectName string
+		config     *common.CacheS3Config
+		expected   string
+	}{
+		"no role ARN": {
+			config: defaultCacheFactory().S3,
+		},
+		"role ARN": {
+			config: &common.CacheS3Config{
+				BucketName:     "role-bucket",
+				BucketLocation: "us-west-1",
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://role-bucket/key?awssdk=v2&dualstack=true&region=us-west-1",
+		},
+		"role ARN with leading slashes in object": {
+			objectName: "//" + objectName,
+			config: &common.CacheS3Config{
+				BucketName:     "role-bucket",
+				BucketLocation: "us-west-1",
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://role-bucket/key?awssdk=v2&dualstack=true&region=us-west-1",
+		},
+		"custom endpoint": {
+			config: &common.CacheS3Config{
+				ServerAddress:  "custom.s3.endpoint.com",
+				BucketName:     "custom-bucket",
+				BucketLocation: "custom-location",
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fcustom.s3.endpoint.com&hostname_immutable=true&region=custom-location",
+		},
+		"path style": {
+			config: &common.CacheS3Config{
+				ServerAddress:  "minio.example.com:8080",
+				BucketName:     "path-style-bucket",
+				BucketLocation: "us-west-2",
+				PathStyle:      &enabled,
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2",
+		},
+		"HTTP and path style": {
+			config: &common.CacheS3Config{
+				ServerAddress:  "minio.example.com:8080",
+				Insecure:       true,
+				BucketName:     "path-style-bucket",
+				BucketLocation: "us-west-2",
+				PathStyle:      &enabled,
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=http%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2",
+		},
+		"dual stack disabled": {
+			config: &common.CacheS3Config{
+				BucketName:     "dual-stack-bucket",
+				BucketLocation: "eu-central-1",
+				DualStack:      &disabled,
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://dual-stack-bucket/key?awssdk=v2&region=eu-central-1",
+		},
+		"accelerate": {
+			config: &common.CacheS3Config{
+				BucketName:     "accelerate-bucket",
+				BucketLocation: "us-east-1",
+				Accelerate:     true,
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://accelerate-bucket/key?accelerate=true&awssdk=v2&dualstack=true&region=us-east-1",
+		},
+		"S3 encryption": {
+			config: &common.CacheS3Config{
+				BucketName:           "encrypted-bucket",
+				BucketLocation:       "ap-southeast-1",
+				UploadRoleARN:        roleARN,
+				ServerSideEncryption: "S3",
+			},
+			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&region=ap-southeast-1&ssetype=AES256",
+		},
+		"KMS encryption": {
+			config: &common.CacheS3Config{
+				BucketName:                "encrypted-bucket",
+				BucketLocation:            "ap-southeast-1",
+				UploadRoleARN:             roleARN,
+				ServerSideEncryption:      "KMS",
+				ServerSideEncryptionKeyID: "my-kms-key-id",
+			},
+			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&kmskeyid=my-kms-key-id&region=ap-southeast-1&ssetype=aws%3Akms",
+		},
+		"DSSE-KMS encryption": {
+			config: &common.CacheS3Config{
+				BucketName:                "encrypted-bucket",
+				BucketLocation:            "ap-southeast-1",
+				UploadRoleARN:             roleARN,
+				ServerSideEncryption:      "DSSE-KMS",
+				ServerSideEncryptionKeyID: "my-kms-key-id",
+			},
+			expected: "s3://encrypted-bucket/key?awssdk=v2&dualstack=true&kmskeyid=my-kms-key-id&region=ap-southeast-1&ssetype=aws%3Akms%3Adsse",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			s3Cache := defaultCacheFactory()
+			s3Cache.S3 = tt.config
+
+			if tt.objectName == "" {
+				tt.objectName = objectName
+			}
+
+			adapter, err := New(s3Cache, defaultTimeout, tt.objectName)
+			require.NoError(t, err)
+
+			u := adapter.GetGoCloudURL(context.Background())
+			if tt.expected != "" {
+				assert.Equal(t, tt.expected, u.String())
+			} else {
+				assert.Nil(t, u)
+			}
+		})
+	}
+}
+
+func TestGetUploadEnv(t *testing.T) {
+	tests := map[string]struct {
+		config      *common.CacheConfig
+		failedFetch bool
+		expected    map[string]string
+	}{
+		"no upload role ARN": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{},
+			},
+			expected: nil,
+		},
+		"with upload role ARN": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					BucketName:    bucketName,
+					UploadRoleARN: "arn:aws:iam::123456789012:role/S3UploadRole",
+				},
+			},
+			expected: map[string]string{
+				"AWS_ACCESS_KEY_ID":     "mock-access-key",
+				"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
+				"AWS_SESSION_TOKEN":     "mock-session-token",
+			},
+		},
+		"with failed credentials": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					BucketName:    bucketName,
+					UploadRoleARN: "arn:aws:iam::123456789012:role/S3UploadRole",
+				},
+			},
+			failedFetch: true,
+			expected:    nil,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			cleanupS3URLGeneratorMock := onFakeS3URLGenerator(cacheOperationTest{})
+			defer cleanupS3URLGeneratorMock()
+
+			adapter, err := New(tt.config, defaultTimeout, objectName)
+			require.NoError(t, err)
+
+			mockClient := adapter.(*s3Adapter).client.(*mockS3Presigner)
+
+			if tt.failedFetch {
+				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.S3.UploadRoleARN, bucketName, objectName, mock.Anything).
+					Return(nil, errors.New("error fetching credentials"))
+			} else {
+				mockClient.On("FetchCredentialsForRole", mock.Anything, tt.config.S3.UploadRoleARN, bucketName, objectName, mock.Anything).
+					Return(tt.expected, nil)
+			}
+			env, err := adapter.GetUploadEnv(context.Background())
+			assert.Equal(t, tt.expected, env)
+
+			if tt.failedFetch {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

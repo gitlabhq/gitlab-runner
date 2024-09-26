@@ -5,6 +5,8 @@ package s3v2
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +23,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 )
+
+type sessionPolicy struct {
+	Version   string            `json:"Version"`
+	Statement []policyStatement `json:"Statement"`
+}
+
+type policyStatement struct {
+	Effect   string   `json:"Effect"`
+	Action   []string `json:"Action"`
+	Resource string   `json:"Resource"`
+}
 
 func setupMockS3Server(t *testing.T) *common.CacheS3Config {
 	backend := s3mem.New()
@@ -45,7 +58,7 @@ func setupMockS3Server(t *testing.T) *common.CacheS3Config {
 		ts.Close()
 	})
 
-	client, err := newRawS3Client(s3Config)
+	_, client, err := newRawS3Client(s3Config)
 	require.NoError(t, err)
 
 	_, err = client.CreateBucket(ctx, &s3.CreateBucketInput{
@@ -226,6 +239,14 @@ func TestS3Client_PresignURL(t *testing.T) {
 			expectedEncryption: "aws:kms",
 			expectedKMSKeyID:   "alias/my-key",
 		},
+		"kms-dsse-encryption-with-credentials": {
+			encryptionType:     "DSSE-KMS",
+			encryptionKeyID:    "alias/my-key",
+			accessKey:          "test-access-key",
+			secretKey:          "test-secret-key",
+			expectedEncryption: "aws:kms:dsse",
+			expectedKMSKeyID:   "alias/my-key",
+		},
 	}
 
 	for testName, tt := range tests {
@@ -280,6 +301,250 @@ func TestS3Client_PresignURL(t *testing.T) {
 			resp.Body.Close()
 
 			assert.Equal(t, content, body)
+		})
+	}
+}
+
+func newMockSTSHandler(expectedKms bool, expectedDurationSecs int) http.Handler {
+	roleARN := "arn:aws:iam::123456789012:role/TestRole"
+	expectedStatements := 1
+	if expectedKms {
+		expectedStatements = 2
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/sts" {
+			http.NotFound(w, r)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		queryValues, err := url.ParseQuery(string(body))
+		if err != nil {
+			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			return
+		}
+
+		if queryValues.Get("Action") != "AssumeRole" {
+			http.Error(w, "Invalid Action parameter", http.StatusBadRequest)
+			return
+		}
+
+		if queryValues.Get("RoleArn") == "" {
+			http.Error(w, "Missing RoleArn parameter", http.StatusBadRequest)
+			return
+		}
+
+		if queryValues.Get("RoleArn") != roleARN {
+			http.Error(w, "Invalid RoleArn parameter", http.StatusUnauthorized)
+			return
+		}
+
+		if queryValues.Get("DurationSeconds") != fmt.Sprintf("%d", expectedDurationSecs) {
+			http.Error(w, "Invalid DurationSeconds parameter", http.StatusUnauthorized)
+			return
+		}
+
+		if queryValues.Get("RoleSessionName") == "" {
+			http.Error(w, "Missing RoleSessionName parameter", http.StatusBadRequest)
+			return
+		}
+
+		policy := queryValues.Get("Policy")
+		if policy == "" {
+			http.Error(w, "Missing Policy parameter", http.StatusBadRequest)
+			return
+		}
+
+		var policyJSON sessionPolicy
+		err = json.Unmarshal([]byte(policy), &policyJSON)
+		if err != nil {
+			http.Error(w, "Invalid Policy JSON", http.StatusBadRequest)
+			return
+		}
+
+		if policyJSON.Statement == nil || len(policyJSON.Statement) != expectedStatements {
+			http.Error(w, fmt.Sprintf("Policy must contain exactly %d Statements", expectedStatements), http.StatusBadRequest)
+			return
+		}
+
+		statement := policyJSON.Statement[0]
+		if statement.Action == nil || len(statement.Action) != 1 {
+			http.Error(w, "Statement must contain exactly one Action", http.StatusBadRequest)
+			return
+		}
+
+		if statement.Action[0] != "s3:PutObject" {
+			http.Error(w, "Action should be s3:PutObject", http.StatusBadRequest)
+			return
+		}
+
+		if expectedKms {
+			kmsStatement := policyJSON.Statement[1]
+			if kmsStatement.Action == nil || len(kmsStatement.Action) != 2 {
+				http.Error(w, "KMS Statement must contain exactly two Actions", http.StatusBadRequest)
+				return
+			}
+			if kmsStatement.Action[0] != "kms:Decrypt" || kmsStatement.Action[1] != "kms:GenerateDataKey" {
+				http.Error(w, "KMS Statement Actions should be kms:Decrypt and kms:GenerateDataKey", http.StatusBadRequest)
+				return
+			}
+		}
+
+		if statement.Resource != fmt.Sprintf("arn:aws:s3:::%s/%s", bucketName, objectName) {
+			http.Error(w, "Invalid policy statement", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusOK)
+		// See https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
+		_, err = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+<AssumeRoleResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <AssumeRoleResult>
+    <Credentials>
+      <AccessKeyId>mock-access-key</AccessKeyId>
+      <SecretAccessKey>mock-secret-key</SecretAccessKey>
+      <SessionToken>mock-session-token</SessionToken>
+      <Expiration>` + time.Now().Add(time.Hour).Format(time.RFC3339) + `</Expiration>
+    </Credentials>
+    <AssumedRoleUser>
+      <AssumedRoleId>AROATEST123:TestSession</AssumedRoleId>
+      <Arn>arn:aws:sts::123456789012:assumed-role/TestRole/TestSession</Arn>
+    </AssumedRoleUser>
+  </AssumeRoleResult>
+  <ResponseMetadata>
+    <RequestId>c6104cbe-af31-11e0-8154-cbc7ccf896c7</RequestId>
+  </ResponseMetadata>
+</AssumeRoleResponse>`))
+		if err != nil {
+			w.WriteHeader(http.StatusExpectationFailed)
+		}
+	})
+}
+
+func TestFetchCredentialsForRole(t *testing.T) {
+	workingConfig := common.CacheConfig{
+		S3: &common.CacheS3Config{
+			AccessKey:          "test-access-key",
+			SecretKey:          "test-secret-key",
+			AuthenticationType: "access-key",
+			BucketName:         "test-bucket",
+			UploadRoleARN:      "arn:aws:iam::123456789012:role/TestRole",
+		},
+	}
+	mockedCreds := map[string]string{
+		"AWS_ACCESS_KEY_ID":     "mock-access-key",
+		"AWS_SECRET_ACCESS_KEY": "mock-secret-key",
+		"AWS_SESSION_TOKEN":     "mock-session-token",
+	}
+
+	tests := map[string]struct {
+		config           *common.CacheConfig
+		roleARN          string
+		expected         map[string]string
+		errMsg           string
+		expectedKms      bool
+		duration         time.Duration
+		expectedDuration time.Duration
+	}{
+		"successful fetch": {
+			config:   &workingConfig,
+			roleARN:  "arn:aws:iam::123456789012:role/TestRole",
+			expected: mockedCreds,
+		},
+		"successful fetch with 12-hour timeout": {
+			config:           &workingConfig,
+			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
+			duration:         12 * time.Hour,
+			expected:         mockedCreds,
+			expectedDuration: 12 * time.Hour,
+		},
+		"successful fetch with 10-minute timeout": {
+			config:           &workingConfig,
+			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
+			duration:         10 * time.Minute,
+			expected:         mockedCreds,
+			expectedDuration: 1 * time.Hour,
+		},
+		"successful fetch with 13-hour timeout": {
+			config:           &workingConfig,
+			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
+			duration:         13 * time.Hour,
+			expected:         mockedCreds,
+			expectedDuration: 1 * time.Hour,
+		},
+		"successful fetch with encryption": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					AccessKey:                 "test-access-key",
+					SecretKey:                 "test-secret-key",
+					AuthenticationType:        "access-key",
+					BucketName:                "test-bucket",
+					UploadRoleARN:             "arn:aws:iam::123456789012:role/TestRole",
+					ServerSideEncryption:      "KMS",
+					ServerSideEncryptionKeyID: "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+				},
+			},
+			roleARN:     "arn:aws:iam::123456789012:role/TestRole",
+			expected:    mockedCreds,
+			expectedKms: true,
+		},
+		"invalid role ARN": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					AccessKey:          "test-access-key",
+					SecretKey:          "test-secret-key",
+					AuthenticationType: "access-key",
+					BucketName:         bucketName,
+					UploadRoleARN:      "arn:aws:iam::123456789012:role/InvalidRole",
+				},
+			},
+			roleARN: "arn:aws:iam::123456789012:role/InvalidRole",
+			errMsg:  "failed to assume role",
+		},
+		"no role ARN": {
+			config: &common.CacheConfig{
+				S3: &common.CacheS3Config{
+					AccessKey:          "test-access-key",
+					SecretKey:          "test-secret-key",
+					AuthenticationType: "access-key",
+					BucketName:         bucketName,
+				},
+			},
+			expected: nil,
+			errMsg:   "failed to assume role",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			duration := 3600
+			if tt.duration > 0 {
+				duration = int(tt.expectedDuration.Seconds())
+			}
+			// Create s3Client and point STS endpoint to it
+			mockServer := httptest.NewServer(newMockSTSHandler(tt.expectedKms, duration))
+			defer mockServer.Close()
+
+			s3Client, err := newS3Client(tt.config.S3, withSTSEndpoint(mockServer.URL+"/sts"))
+			require.NoError(t, err)
+
+			creds, err := s3Client.FetchCredentialsForRole(context.Background(), tt.roleARN, bucketName, objectName, tt.duration)
+
+			if tt.errMsg != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, creds)
+			}
 		})
 	}
 }

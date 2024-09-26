@@ -138,12 +138,13 @@ func testUploadEnvWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *azureAdapter,
-	operation func(context.Context) map[string]string,
+	operation func(context.Context) (map[string]string, error),
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 
-		u := operation(context.Background())
+		u, err := operation(context.Background())
+		assert.NoError(t, err)
 		assert.Equal(t, accountName, u["AZURE_STORAGE_ACCOUNT"])
 		assert.Equal(t, storageDomain, u["AZURE_STORAGE_DOMAIN"])
 		assert.NotContains(t, u, "AZURE_SAS_TOKEN")
@@ -374,7 +375,8 @@ func TestAdapterOperation(t *testing.T) {
 			u := adapter.GetGoCloudURL(context.Background())
 			assert.Equal(t, "azblob://test/key", u.String())
 
-			env := adapter.GetUploadEnv(context.Background())
+			env, err := adapter.GetUploadEnv(context.Background())
+			require.NoError(t, err)
 			assert.Len(t, env, 3)
 			assert.Equal(t, accountName, env["AZURE_STORAGE_ACCOUNT"])
 			assert.NotEmpty(t, env["AZURE_STORAGE_SAS_TOKEN"])
