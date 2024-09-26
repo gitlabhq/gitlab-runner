@@ -65,7 +65,7 @@ func New(log Trace, entry *logrus.Entry, opts Options) Logger {
 	l := Logger{mu: new(sync.Mutex)}
 
 	l.maskPhrases = internal.Unique(opts.MaskPhrases)
-	l.maskTokenPrefixes = internal.Unique(append(opts.MaskTokenPrefixes, tokensanitizer.DefaultPATPrefix))
+	l.maskTokenPrefixes = internal.Unique(append(opts.MaskTokenPrefixes, tokensanitizer.DefaultTokenPrefixes...))
 	l.timestamping = opts.Timestamping
 
 	if log != nil {
