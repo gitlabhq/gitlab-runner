@@ -2835,15 +2835,12 @@ func (s *executor) getServiceVariables(serviceDefinition common.Image) common.Jo
 
 // checkDefaults Defines the configuration for the Pod on Kubernetes
 func (s *executor) checkDefaults() error {
-	k8sConfigImageName := s.ExpandValue(s.Config.Kubernetes.Image)
 	if s.options.Image.Name == "" {
+		k8sConfigImageName := s.ExpandValue(s.Config.Kubernetes.Image)
 		if k8sConfigImageName == "" {
 			return fmt.Errorf("no image specified and no default set in config")
 		}
-
-		s.options.Image = common.Image{
-			Name: k8sConfigImageName,
-		}
+		s.options.Image.Name = k8sConfigImageName
 	}
 
 	if s.Config.Kubernetes.NamespacePerJob {
