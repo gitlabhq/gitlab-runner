@@ -14,7 +14,7 @@ variables:
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 24.0.5
-  DOCKER_MACHINE_VERSION: "v0.16.2-gitlab.28"
+  DOCKER_MACHINE_VERSION: "v0.16.2-gitlab.29"
   BUILDX_VERSION: 0.10.4
   KUBECTL_VERSION: 1.23.0
   AWS_CLI_VERSION: 2.4.19
