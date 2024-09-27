@@ -1006,8 +1006,8 @@ The following parameters define S3 storage for cache.
 | `AuthenticationType`| string           | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
 | `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. In GitLab 17.5 and later, [`DSSE-KMS`](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingDSSEncryption.html) is supported. |
 | `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. If you use an alias, it must be preceded with `alias/`|
-| `DualStack`         | boolean         | In GitLab 17.4 and later, enables the use of IPv4 and IPv6 endpoints (default: true). Disable this if you are using AWS S3 Express. This is ignored if `ServerAddress` is set. |
-| `Accelerate`        | bool            | In GitLab 17.4 and later, enables the use of AWS S3 Transfer Acceleration. This will be set to true automatically if `ServerAddress` is configured as an Accelerated endpoint. |
+| `DualStack`         | boolean         | In GitLab 17.5 and later, enables the use of IPv4 and IPv6 endpoints (default: true). Disable this if you are using AWS S3 Express. This is ignored if `ServerAddress` is set. |
+| `Accelerate`        | bool            | In GitLab 17.5 and later, enables the use of AWS S3 Transfer Acceleration. This will be set to true automatically if `ServerAddress` is configured as an Accelerated endpoint. |
 | `PathStyle`         | boolean         | In GitLab 17.5 and later, enables the use of path-style access (default: autodetected based on `ServerAddress`). |
 | `UploadRoleARN`     | boolean         | In GitLab 17.5 and later, specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `PutObject` S3 requests. This enables the use of S3 multipart uploads. |
 
