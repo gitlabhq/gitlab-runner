@@ -85,11 +85,10 @@ prepare go fips:
     - .rules:prepare:go-fips:image:merge-requests
   stage: prepare
   image: docker:${DOCKER_VERSION}-git
-  needs:
-    - prepare ubi base
   variables:
     BUILD_IMAGE: $GO_FIPS_IMAGE
     GO_VERSION: $GO_FIPS_VERSION
+    GO_FIPS_BASE_IMAGE: "redhat/${GO_FIPS_UBI_VERSION}-minimal:latest"
   script:
     - apk add --no-cache --upgrade curl make bash
     - make go-fips-docker

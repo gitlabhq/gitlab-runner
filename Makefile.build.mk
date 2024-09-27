@@ -16,16 +16,18 @@ runner-bin-fips:
 		   $(PKG)
 
 go-fips-docker: export GO_VERSION ?= 1.22
-go-fips-docker: export UBI_VERSION ?= $(UBI_FIPS_VERSION)
-go-fips-docker: export BUILD_IMAGE ?= registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$(GO_VERSION)
-go-fips-docker: export GO_FIPS_BASE_IMAGE ?= $(UBI_FIPS_BASE_IMAGE):$(UBI_FIPS_VERSION)
+# BUILD_IMAGE: GO_FIPS_IMAGE: $CI_REGISTRY_IMAGE/go-fips:$GO_FIPS_VERSION
+go-fips-docker: export BUILD_IMAGE ?= $(GO_FIPS_IMAGE)
+go-fips-docker: export GO_FIPS_UBI_VERSION ?= ubi8
+go-fips-docker: export GO_FIPS_BASE_IMAGE ?= redhat/$(GO_FIPS_UBI_VERSION)-minimal:latest
 go-fips-docker: export BUILD_DOCKERFILE ?= ./dockerfiles/ci/go.fips.Dockerfile
 go-fips-docker:
 	# Building Go FIPS Docker image
 	@./ci/build_go_fips_image
 
-ubi-fips-base-docker: export UBI_VERSION ?= $(UBI_FIPS_VERSION)
-ubi-fips-base-docker: export BUILD_IMAGE ?= registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base:$(UBI_FIPS_VERSION)
+ubi-fips-base-docker: export UBI_MICRO_IMAGE := $(UBI_MICRO_IMAGE):$(UBI_MICRO_VERSION)
+ubi-fips-base-docker: export UBI_MINIMAL_IMAGE := $(UBI_MINIMAL_IMAGE):$(UBI_MINIMAL_VERSION)
+ubi-fips-base-docker: export BUILD_IMAGE ?= $(UBI_FIPS_BASE_IMAGE):$(UBI_FIPS_VERSION)
 ubi-fips-base-docker: export BUILD_DOCKERFILE ?= ./dockerfiles/ci/ubi.fips.base.Dockerfile
 ubi-fips-base-docker:
 	# Building UBI FIPS base Docker image
