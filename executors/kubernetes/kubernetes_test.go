@@ -1207,6 +1207,8 @@ func TestPrepare(t *testing.T) {
 		// if Precondition is set and returns false, the test-case is skipped with the message provided
 		Precondition func() (bool, string)
 
+		// Note: this RunnerConfig will be added to the Build before we run the test, there are not 2 different
+		// RunnerConfigs at play, this split is there to ease the preparation of the test cases.
 		RunnerConfig               *common.RunnerConfig
 		Build                      *common.Build
 		WindowsKernelVersionGetter func() string
@@ -1247,7 +1249,6 @@ func TestPrepare(t *testing.T) {
 						{Key: "privileged", Value: "true"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1311,7 +1312,6 @@ func TestPrepare(t *testing.T) {
 						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1377,7 +1377,6 @@ func TestPrepare(t *testing.T) {
 						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 		},
 		{
@@ -1424,7 +1423,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NamespaceOverwriteVariableName, Value: "new-namespace-name"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1468,7 +1466,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NamespaceOverwriteVariableName, Value: "namespace-$CI_CONCURRENT_ID"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1504,7 +1501,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1537,7 +1533,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NamespaceOverwriteVariableName, Value: "ci-job-42"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1575,7 +1570,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1622,7 +1616,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1691,7 +1684,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1804,7 +1796,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1938,7 +1929,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2068,7 +2058,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2154,7 +2143,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2182,7 +2170,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2220,7 +2207,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2272,7 +2258,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2336,7 +2321,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2374,7 +2358,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: api.LabelArchStable + "=arm64"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2415,9 +2398,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2449,9 +2429,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2482,9 +2459,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2513,9 +2487,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2546,7 +2517,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2580,7 +2550,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				configurationOverwrites: defaultOverwrites,
@@ -2611,7 +2580,6 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2645,7 +2613,6 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				configurationOverwrites: defaultOverwrites,
@@ -2681,7 +2648,6 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2712,7 +2678,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2745,7 +2710,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2782,7 +2746,6 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, "invalid"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2821,7 +2784,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: getExecutorForHelperAutoset(),
 		},
@@ -2841,9 +2803,6 @@ func TestPrepare(t *testing.T) {
 						HelperImageAutosetArchAndOS: true,
 					},
 				},
-			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
 			},
 			WindowsKernelVersionGetter: func() string { return "unsupported-kernel-version" },
 			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
@@ -2870,9 +2829,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2892,22 +2848,26 @@ func TestPrepare(t *testing.T) {
 					t.Skip(msg)
 				}
 			}
+
+			testBuild := test.Build
+			if testBuild == nil {
+				testBuild = &common.Build{}
+			}
+			testBuild.Runner = test.RunnerConfig
+
 			e := newExecutor()
-			e.AbstractExecutor.ExecutorOptions = executorOptions
-			e.options = &kubernetesOptions{}
 			e.windowsKernelVersion = test.WindowsKernelVersionGetter
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
-				Config:  test.RunnerConfig,
-				Build:   test.Build,
+				Config:  testBuild.Runner,
+				Build:   testBuild,
 				Context: context.TODO(),
 			}
-			prepareOptions.Build.Runner.Executor = common.ExecutorKubernetes
 
 			err := e.Prepare(prepareOptions)
 			if err != nil {
-				assert.False(t, test.Build.IsSharedEnv())
+				assert.False(t, testBuild.IsSharedEnv())
 			}
 			if test.ErrorRE != nil {
 				assert.Error(t, err)
@@ -2940,6 +2900,7 @@ func TestPrepare(t *testing.T) {
 			e.getKubeConfig = nil
 			e.newKubeClient = nil
 			e.windowsKernelVersion = nil
+			e.options.Image.PullPolicies = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
