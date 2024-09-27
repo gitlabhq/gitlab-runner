@@ -1103,7 +1103,7 @@ To use S3 multipart uploads with AWS, specify an IAM role in
 `UploadRoleARN` in the `arn:aws:iam:::<ACCOUNT ID>:<YOUR ROLE NAME>`
 format. This role generates time-limited AWS credentials that are
 narrowly scoped to write to a specific blob in the bucket. Ensure that
-your original S3 credentials has access to use `AssumeRole` for the
+your original S3 credentials can access `AssumeRole` for the
 specified `UploadRoleARN`.
 
 The IAM role specified in `UploadRoleARN` must have the following
@@ -1115,7 +1115,7 @@ permissions:
 For example, suppose you have an IAM role called `my-instance-role`
 attached to an EC2 instance with the ARN `arn:aws:iam::1234567890123:role/my-instance-role`.
 
-You can create a new role `arn:aws:iam::1234567890123:role/my-upload-role`,
+You can create a new role `arn:aws:iam::1234567890123:role/my-upload-role`
 that only has `s3:PutObject` permissions for `BucketName`. In the AWS settings for `my-instance-role`,
 the `Trust relationships` might look similar to this:
 
@@ -1147,7 +1147,7 @@ EC2 instance might have the following `Trust relationships`:
             "Effect": "Allow",
             "Principal": {
                 "Service": "ec2.amazonaws.com",
-                "AWS": "arn:aws:iam::1234567890123:role/my-upload-role"
+                "AWS": "arn:aws:iam::1234567890123:role/my-instance-role"
             },
             "Action": "sts:AssumeRole"
         }
