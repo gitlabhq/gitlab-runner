@@ -22,13 +22,11 @@ test coverage report:
   - make cobertura_report
   - test -z "$(find .splitic -name 'junit_servercore1809_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore1809.txt .splitic/junit_servercore1809_*.xml
   - test -z "$(find .splitic -name 'junit_servercore21H2_*.xml' -maxdepth 1 -print -quit)" || splitic junit-check -quarantined ci/.test-failures.servercore21H2.txt .splitic/junit_servercore21H2_*.xml
-  variables:
-    GOOS: linux
   artifacts:
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: out/cobertura/cobertura-coverage.xml
+        path: out/cobertura/cobertura-*coverage.xml
     paths:
     - out/coverage/
     expire_in: 7d

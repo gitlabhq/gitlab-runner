@@ -143,11 +143,15 @@ cobertura_report: $(GOCOVER_COBERTURA) $(SPLITIC)
 	mkdir -p out/cobertura
 	mkdir -p out/coverage
 	$(SPLITIC) cover-merge $(wildcard .splitic/cover_?.profile) > out/coverage/coverprofile.regular.source.txt
-	GOOS=$(GOOS) $(GOCOVER_COBERTURA) < out/coverage/coverprofile.regular.source.txt > out/cobertura/cobertura-coverage-raw.xml
+	$(SPLITIC) cover-merge $(wildcard .splitic/cover_windows_?.profile) > out/coverage/coverprofile_windows.regular.source.txt
+	GOOS=linux $(GOCOVER_COBERTURA) < out/coverage/coverprofile.regular.source.txt > out/cobertura/cobertura-coverage-raw.xml
+	GOOS=windows $(GOCOVER_COBERTURA) < out/coverage/coverprofile_windows.regular.source.txt > out/cobertura/cobertura-coverage-windows-raw.xml
 	@ # NOTE: Remove package paths.
 	@ # See https://gitlab.com/gitlab-org/gitlab/-/issues/217664
 	sed 's;filename=\"gitlab.com/gitlab-org/gitlab-runner/;filename=\";g' out/cobertura/cobertura-coverage-raw.xml > \
 	  out/cobertura/cobertura-coverage.xml
+	sed 's;filename=\"gitlab.com/gitlab-org/gitlab-runner/;filename=\";g' out/cobertura/cobertura-coverage-windows-raw.xml > \
+	  out/cobertura/cobertura-windows-coverage.xml
 
 export_test_env:
 	@echo "export GO_LDFLAGS='$(GO_LDFLAGS)'"
