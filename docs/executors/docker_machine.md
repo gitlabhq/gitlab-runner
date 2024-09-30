@@ -49,7 +49,7 @@ installed in the same machine:
 
 ## Configuring GitLab Runner
 
-1. Familiarize yourself with the core concepts of using `docker-machine` 
+1. Familiarize yourself with the core concepts of using `docker-machine`
    with `gitlab-runner`:
       - Read [GitLab Runner Autoscaling](../configuration/autoscale.md)
       - Read [GitLab Runner MachineOptions](../configuration/advanced-configuration.md#the-runnersmachine-section)
@@ -102,7 +102,7 @@ installed in the same machine:
 
    NOTE:
    Sending the [`SIGQUIT` signal](../commands/index.md#signals) makes the
-   process stop gracefully. The process stops accepting new jobs, and exits 
+   process stop gracefully. The process stops accepting new jobs, and exits
    as soon as the current jobs are finished.
 
 1. Wait until GitLab Runner exits. You can check its status with `gitlab-runner status`

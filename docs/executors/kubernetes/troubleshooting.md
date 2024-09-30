@@ -370,4 +370,4 @@ artefacts are usually ephemeral, `emptyDir` works for most cases.
 
 The Amazon EKS zone rebalancing feature balances the availability zones in an autoscaling group. This feature might stop a node in one availability zone and create it in another.
 
-Runner jobs cannot be stopped and moved to another node. Disable this feature for runner jobs to resolve this error. 
+Runner jobs cannot be stopped and moved to another node. Disable this feature for runner jobs to resolve this error.

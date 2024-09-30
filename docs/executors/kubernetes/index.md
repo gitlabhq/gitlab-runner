@@ -1154,7 +1154,7 @@ You can use specific labels to schedule nodes with different operating systems a
 
 #### Example for `windows/amd64`
 
-Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support). 
+Kubernetes for Windows has certain [limitations](https://kubernetes.io/docs/concepts/windows/intro/#windows-os-version-support).
 If you are using process isolation, you must also provide the specific Windows build version with the
 [`node.kubernetes.io/windows-build`](https://kubernetes.io/docs/reference/labels-annotations-taints/#nodekubernetesiowindows-build) label.
 
