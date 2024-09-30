@@ -227,7 +227,7 @@ func (b *Build) ProjectUniqueDir(sharedDir bool) string {
 	}
 
 	// for shared dirs path is constructed like this:
-	// <some-path>/runner-short-id/concurrent-id/group-name/project-name/
+	// <some-path>/runner-short-id/concurrent-project-id/group-name/project-name/
 	// ex.<some-path>/01234567/0/group/repo/
 	if sharedDir {
 		dir = path.Join(
