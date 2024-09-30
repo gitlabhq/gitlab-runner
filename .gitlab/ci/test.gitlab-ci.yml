@@ -357,6 +357,8 @@ git 1.8.3.1:
     GOPATH: /go
     CGO_ENABLED: 0
   before_script:
+  - sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+  - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
   - yum install -y -q git make patch && git version
   - curl https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
   - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx
