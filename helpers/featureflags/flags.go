@@ -42,6 +42,7 @@ const (
 	UseLegacyGCSCacheAdapter             string = "FF_USE_LEGACY_GCS_CACHE_ADAPTER"
 	DisableUmaskForKubernetesExecutor    string = "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR"
 	UseLegacyS3CacheAdapter              string = "FF_USE_LEGACY_S3_CACHE_ADAPTER"
+	GitURLsWithoutTokens                 string = "FF_GIT_URLS_WITHOUT_TOKENS"
 )
 
 type FeatureFlag struct {
@@ -352,6 +353,14 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, the legacy S3 Cache adapter is used. When disabled (default), a newer S3 Cache adapter is used which uses Amazon's S3 SDK " +
 			"for authentication. This should resolve authentication problems in environments that the legacy adapter struggled with, such as custom STS endpoints.",
+	},
+	{
+		Name:         GitURLsWithoutTokens,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, when setting up the Git configuration, or run Git commands, we do not embed the job token anywhere. Rather, we set up " +
+			"a Git credential helper, which - on demand - uses the environment variable to obtain the job token. This limits where the token is stored and " +
+			"therefore the potential for it to leak.",
 	},
 }
 
