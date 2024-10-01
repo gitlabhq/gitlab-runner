@@ -1306,74 +1306,59 @@ func (b *Build) expandContainerOptions() {
 // - on ssh URLs we ensure UserInfo is defaulted correctly
 // - on other URLs we ensure UserInfo is not set at all, so that we don't leak creds
 // We don't manipulate the original URL but only manipulate a clone.
-func cleanAuthData(orgURL *url.URL) *url.URL {
-	newURL := *orgURL
+func cleanAuthData(repoURL string) string {
+	u, _ := url.Parse(repoURL)
 
-	if newURL.Scheme == "ssh" {
-		if newURL.User == nil {
-			newURL.User = url.User("git")
+	if u.Scheme == "ssh" {
+		if u.User == nil {
+			u.User = url.User("git")
 		}
 	} else {
-		newURL.User = nil
+		u.User = nil
 	}
 
-	return &newURL
+	return u.String()
 }
 
 // GetRemoteURL checks if the default clone URL is overwritten by the runner
 // configuration option: 'CloneURL'. If it is, we use that to create the clone
 // URL.
-func (b *Build) GetRemoteURL() (*url.URL, error) {
+func (b *Build) GetRemoteURL() string {
 	u, _ := url.Parse(b.Runner.CloneURL)
 
 	if u == nil || u.Scheme == "" {
-		var err error
-		u, err = url.Parse(b.GitInfo.RepoURL)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		projectPath := b.GetAllVariables().Value("CI_PROJECT_PATH") + ".git"
-		u.Path = path.Join(u.Path, projectPath)
+		return cleanAuthData(b.GitInfo.RepoURL)
 	}
 
-	return cleanAuthData(u), nil
+	projectPath := b.GetAllVariables().Value("CI_PROJECT_PATH") + ".git"
+	u.Path = path.Join(u.Path, projectPath)
+
+	return cleanAuthData(u.String())
 }
 
-func (b *Build) getBaseURL() (*url.URL, error) {
+func (b *Build) getBaseURL() string {
 	u, _ := url.Parse(b.Runner.CloneURL)
 
-	var err error
 	if u == nil || u.Scheme == "" {
-		u, err = url.Parse(b.Runner.RunnerCredentials.URL)
+		return b.Runner.RunnerCredentials.URL
 	}
 
-	return u, err
+	return u.String()
 }
 
 func getURLInsteadOf(target, source string) []string {
-	if target == source {
-		return []string{}
-	}
 	return []string{"-c", fmt.Sprintf("url.%s.insteadOf=%s", target, source)}
 }
 
-// GetURLInsteadOfArgs rewrites a plain HTTPS base URL and the most commonly used SSH/Git protocol URLs (including
-// custom SSH ports) into an HTTPS URL, and returns an array of strings to pass as options to git commands.
-func (b *Build) GetURLInsteadOfArgs() ([]string, error) {
-	baseURL, err := b.getBaseURL()
-	if err != nil {
-		return nil, err
+// GetURLInsteadOfArgs rewrites the most commonly used SSH/Git protocol URLs (including custom SSH ports) into an
+// http(s) URL, and returns an array of strings to pass as options to git commands.
+func (b *Build) GetURLInsteadOfArgs() []string {
+	baseURL := strings.TrimRight(b.getBaseURL(), "/")
+	if !strings.HasPrefix(baseURL, "http") {
+		return []string{}
 	}
 
-	if !strings.HasPrefix(baseURL.Scheme, "http") {
-		return []string{}, nil
-	}
-
-	baseURL.Path = strings.TrimRight(baseURL.Path, "/")
-	baseURLCleanedAuth := cleanAuthData(baseURL)
-
-	args := getURLInsteadOf(baseURLCleanedAuth.String(), baseURL.String())
+	args := []string{}
 
 	if b.Settings().GitSubmoduleForceHTTPS {
 		ciServerPort := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_PORT")
@@ -1385,19 +1370,19 @@ func (b *Build) GetURLInsteadOfArgs() ([]string, error) {
 		if ciServerPort == "" || ciServerPort == "22" {
 			// git@example.com: 		-> https://example.com/
 			baseGitURL := fmt.Sprintf("git@%s:", ciServerHost)
-			args = append(args, getURLInsteadOf(baseURLCleanedAuth.String()+"/", baseGitURL)...)
+			args = append(args, getURLInsteadOf(baseURL+"/", baseGitURL)...)
 
 			// ssh://git@example.com/ 	-> https://example.com/
 			baseSSHGitURL := fmt.Sprintf("ssh://git@%s", ciServerHost)
-			args = append(args, getURLInsteadOf(baseURLCleanedAuth.String(), baseSSHGitURL)...)
+			args = append(args, getURLInsteadOf(baseURL, baseSSHGitURL)...)
 		} else {
 			// ssh://git@example.com:8022/ 	-> https://example.com/
 			baseSSHGitURLWithPort := fmt.Sprintf("ssh://git@%s:%s", ciServerHost, ciServerPort)
-			args = append(args, getURLInsteadOf(baseURLCleanedAuth.String(), baseSSHGitURLWithPort)...)
+			args = append(args, getURLInsteadOf(baseURL, baseSSHGitURLWithPort)...)
 		}
 	}
 
-	return args, nil
+	return args
 }
 
 type stageTimeout struct {

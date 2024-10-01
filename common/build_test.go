@@ -937,9 +937,8 @@ func TestGetRemoteURL(t *testing.T) {
 				})
 			}
 
-			remoteURL, err := build.GetRemoteURL()
-			assert.NoError(t, err, "getting build's remote URL")
-			assert.Equal(t, tc.expectedURL, remoteURL.String())
+			remoteURL := build.GetRemoteURL()
+			assert.Equal(t, tc.expectedURL, remoteURL)
 		})
 	}
 }
@@ -1066,8 +1065,7 @@ func TestGetURLInsteadOfArgs(t *testing.T) {
 				})
 			}
 
-			gitURLArgs, err := build.GetURLInsteadOfArgs()
-			assert.NoError(t, err, "getting git URL args")
+			gitURLArgs := build.GetURLInsteadOfArgs()
 			assert.Equal(t, tc.expectedArgs, gitURLArgs)
 		})
 	}

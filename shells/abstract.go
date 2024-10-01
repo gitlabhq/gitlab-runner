@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -381,9 +382,9 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
-	repoURL, err := build.GetRemoteURL()
+	repoURL, err := url.Parse(build.GetRemoteURL())
 	if err != nil {
-		w.Warningf("git SSL config: Can't get repository URL. %s", err)
+		w.Warningf("git SSL config: Can't parse repository URL. %s", err)
 		return
 	}
 
@@ -537,25 +538,22 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Cd(projectDir)
 
-	remoteURL, err := build.GetRemoteURL()
-	if err != nil {
-		return err
-	}
+	remoteURL := build.GetRemoteURL()
 
 	shell, ok := helpers.FirstNonZero(build.Runner.Shell, common.GetDefaultShell())
 	if !ok {
 		return fmt.Errorf("shell not specified and no default set")
 	}
 	credHelperCommand := "!" + common.GetShell(shell).GetGitCredHelperCommand()
-	credSection := "credential." + remoteURL.String()
+	credSection := "credential." + remoteURL
 	w.Command("git", "config", "--global", credSection+".username", "gitlab-ci-token")
 	w.Command("git", "config", "--global", credSection+".helper", credHelperCommand)
 
 	// Add `git remote` or update existing
-	w.IfCmd("git", "remote", "add", "origin", remoteURL.String())
+	w.IfCmd("git", "remote", "add", "origin", remoteURL)
 	w.Noticef("Created fresh repository.")
 	w.Else()
-	w.Command("git", "remote", "set-url", "origin", remoteURL.String())
+	w.Command("git", "remote", "set-url", "origin", remoteURL)
 	w.EndIf()
 
 	v := common.AppVersion
@@ -667,10 +665,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", syncArgs...)
 
 	// Update / initialize submodules
-	gitURLArgs, err := build.GetURLInsteadOfArgs()
-	if err != nil {
-		return err
-	}
+	gitURLArgs := build.GetURLInsteadOfArgs()
 
 	updateArgs := append([]string{}, append(gitURLArgs, "submodule", "update", "--init")...)
 	foreachArgs := []string{"submodule", "foreach"}
