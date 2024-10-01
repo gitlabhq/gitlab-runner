@@ -24,13 +24,13 @@ some of the most common problems with GitLab Runner.
 
 ## Using deb/rpm package
 
-It is possible to download and install via a `deb` or `rpm` package, if necessary.
+It is possible to download and install by using a `deb` or `rpm` package, if necessary.
 
 ### Download
 
 To download the appropriate package for your system:
 
-1. Find the latest file name and options at
+1. Find the latest filename and options at
    <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/latest/index.html>.
 1. Choose a version and download a binary, as described in the
    documentation for [downloading any other tagged releases](bleeding-edge.md#download-any-other-tagged-release) for
