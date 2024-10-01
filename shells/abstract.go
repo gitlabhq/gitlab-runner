@@ -588,8 +588,8 @@ func (b *AbstractShell) setupGitCredHelper(w ShellWriter, build *common.Build) e
 
 	credHelperCommand := "!" + common.GetShell(shell).GetGitCredHelperCommand()
 	credSection := "credential." + build.GetRemoteURL()
-	w.Command("git", "config", "--global", credSection+".username", "gitlab-ci-token")
-	w.Command("git", "config", "--global", credSection+".helper", credHelperCommand)
+	w.Command("git", "config", credSection+".username", "gitlab-ci-token")
+	w.Command("git", "config", credSection+".helper", credHelperCommand)
 
 	return nil
 }

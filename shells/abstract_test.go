@@ -843,8 +843,8 @@ func TestGitFetchFlags(t *testing.T) {
 
 					if useJobTokenFromEnv {
 						expectedCredSection := "credential."
-						mockWriter.EXPECT().Command("git", "config", "--global", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-						mockWriter.EXPECT().Command("git", "config", "--global", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+						mockWriter.EXPECT().Command("git", "config", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
+						mockWriter.EXPECT().Command("git", "config", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
 					}
 
 					mockWriter.EXPECT().Cd(mock.Anything).Once()
@@ -2568,8 +2568,8 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 
 					if useJobTokenFromEnv {
 						expectedCredSection := "credential.https://repo-url"
-						m.EXPECT().Command("git", "config", "--global", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-						m.EXPECT().Command("git", "config", "--global", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+						m.EXPECT().Command("git", "config", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
+						m.EXPECT().Command("git", "config", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
 					}
 
 					m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url").Once()
