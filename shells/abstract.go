@@ -540,14 +540,12 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	remoteURL := build.GetRemoteURL()
 
-	shell, ok := helpers.FirstNonZero(build.Runner.Shell, common.GetDefaultShell())
-	if !ok {
-		return fmt.Errorf("shell not specified and no default set")
+	if build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
+		err := b.setupGitCredHelper(w, build)
+		if err != nil {
+			return fmt.Errorf("setting up git credential helper: %w", err)
+		}
 	}
-	credHelperCommand := "!" + common.GetShell(shell).GetGitCredHelperCommand()
-	credSection := "credential." + remoteURL
-	w.Command("git", "config", "--global", credSection+".username", "gitlab-ci-token")
-	w.Command("git", "config", "--global", credSection+".helper", credHelperCommand)
 
 	// Add `git remote` or update existing
 	w.IfCmd("git", "remote", "add", "origin", remoteURL)
@@ -578,6 +576,20 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	} else {
 		w.Command("git", fetchArgs...)
 	}
+
+	return nil
+}
+
+func (b *AbstractShell) setupGitCredHelper(w ShellWriter, build *common.Build) error {
+	shell, ok := helpers.FirstNonZero(build.Runner.Shell, common.GetDefaultShell())
+	if !ok {
+		return fmt.Errorf("shell not specified and no default set")
+	}
+
+	credHelperCommand := "!" + common.GetShell(shell).GetGitCredHelperCommand()
+	credSection := "credential." + build.GetRemoteURL()
+	w.Command("git", "config", "--global", credSection+".username", "gitlab-ci-token")
+	w.Command("git", "config", "--global", credSection+".helper", credHelperCommand)
 
 	return nil
 }
