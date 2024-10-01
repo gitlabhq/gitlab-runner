@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 )
@@ -656,6 +657,18 @@ func (j *JobResponse) StepsShim() error {
 	}}
 
 	return nil
+}
+
+func (j *JobResponse) NativeStepsRequested() bool {
+	if j.Run == "" {
+		return false
+	}
+	for _, v := range j.Variables {
+		if v.Key == featureflags.UseNativeSteps {
+			return true
+		}
+	}
+	return false
 }
 
 type Secrets map[string]Secret

@@ -959,6 +959,11 @@ func (mr *RunCommand) requestJob(
 	return trace, jobData, nil
 }
 
+func (mr *RunCommand) executorSupportsNativeSteps(runnerConfig *common.RunnerConfig) bool {
+	netCli, ok := mr.network.(*network.GitLabClient)
+	return ok && netCli.ExecutorSupportsNativeSteps(*runnerConfig)
+}
+
 // doJobRequest will execute the request for a new job, respecting an interruption
 // caused by interrupt signals or process execution finalization
 func (mr *RunCommand) doJobRequest(
