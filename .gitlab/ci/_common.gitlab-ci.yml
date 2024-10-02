@@ -1,10 +1,10 @@
 variables:
   # renovate: datasource=docker depName=golang allowedVersions=/1\.21\..+/
-  GO_VERSION: "1.22.5"
+  GO_VERSION: "1.22.7"
   # ubi version for go.fips image base (see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38034)
   GO_FIPS_UBI_VERSION: "ubi8"
   # Sometimes the FIPS repo lags behind the official releases
-  GO_FIPS_VERSION: "1.22.5"
+  GO_FIPS_VERSION: "1.22.7"
   # Account for the suffix used in https://github.com/golang-fips/go/releases/tag/go1.22.3-2-openssl-fips
   GO_FIPS_VERSION_SUFFIX: "-1-openssl-fips"
   GO_CI_IMAGE: "$GO_VERSION-bookworm"
