@@ -3379,29 +3379,58 @@ func TestCredentialSetup(t *testing.T) {
 	const (
 		outputMarkerBuild = "#buildGitConfig# "
 		outputMakerHelper = "#helperGitConfig# "
+
+		// We can set a random token. Git fetch does still work on public repos, so we can inject anything and assert on the
+		// logs if this token leaked anywhere.
+		token = "some-random-token"
 	)
 
-	tokenGetters := map[string]func(*testing.T) string{
-		"no token": func(t *testing.T) string {
-			return ""
+	tests := []struct {
+		featureFlags map[string]bool
+		validator    func(t *testing.T, out string, remoteURL string, token string)
+	}{
+		{
+			featureFlags: map[string]bool{
+				featureflags.GitURLsWithoutTokens: true,
+			},
+			validator: func(t *testing.T, out string, remoteURL string, token string) {
+				assert.NotContains(t, remoteURL, "@", "the remote URL should not contain any auth data")
+				assert.NotContains(t, remoteURL, "gitlab-ci-token", "the remote URL should not contain the token user")
+
+				// git cred helper is setup in the helper & build container
+				for _, marker := range []string{outputMakerHelper, outputMarkerBuild} {
+					assert.Contains(t, out, marker+"credential."+remoteURL+".username=gitlab-ci-token", "should contain a username setting")
+					assert.Contains(t, out, marker+"credential."+remoteURL+".helper=!", "should contain a credential helper")
+					assert.NotContains(t, out, marker+"remote.origin.url=https://gitlab-ci-token:", "the origin URL should not contain any auth data")
+				}
+			},
 		},
-		"token from env": func(t *testing.T) string {
-			token, ok := os.LookupEnv("GITLAB_TOKEN")
-			if !ok {
-				t.Skip("GITLAB_TOKEN not set, skipping test " + t.Name())
-			}
-			return token
+		{
+			featureFlags: map[string]bool{
+				featureflags.GitURLsWithoutTokens: false,
+			},
+			validator: func(t *testing.T, out string, remoteURL string, token string) {
+				assert.Contains(t, remoteURL, "@", "the remote URL should contain auth data")
+				assert.Contains(t, remoteURL, "gitlab-ci-token", "remote URL should contain the token user")
+
+				// git cred helper is neither setup in the helper or build container
+				for _, marker := range []string{outputMakerHelper, outputMarkerBuild} {
+					assert.NotContains(t, out, marker+"credential."+remoteURL+".username=gitlab-ci-token", "should not contain a username setting")
+					assert.NotContains(t, out, marker+"credential."+remoteURL+".helper=!", "should not contain a credential helper")
+					assert.Contains(t, out, marker+"remote.origin.url=https://gitlab-ci-token:", "should contain the origin URL including auth data")
+				}
+			},
 		},
 	}
 
 	listGitConfig := func(prefix string) string {
-		return fmt.Sprintf("git config -l | sed 's/^/%s/g'", prefix)
+		return fmt.Sprintf("git config -l | sed 's/^/%s/g' && echo \"${CI_JOB_TOKEN}\"", prefix)
 	}
 
-	for testName, tokenGetter := range tokenGetters {
-		t.Run(testName, func(t *testing.T) {
-			token := tokenGetter(t)
+	for _, test := range tests {
+		name := fmt.Sprint(test.featureFlags)
 
+		t.Run(name, func(t *testing.T) {
 			job, err := common.GetRemoteBuildResponse(listGitConfig(outputMarkerBuild))
 			job.Hooks = append(job.Hooks, common.Hook{
 				Name:   common.HookPostGetSourcesScript,
@@ -3409,54 +3438,50 @@ func TestCredentialSetup(t *testing.T) {
 			})
 			require.NoError(t, err, "getting job")
 
-			job.Token = token
+			{
+				// inject the token
+				u, err := url.Parse(job.GitInfo.RepoURL)
+				require.NoError(t, err, "parsing original repo URL")
 
-			build := &common.Build{
-				JobResponse: job,
-				Runner: &common.RunnerConfig{
-					RunnerSettings: common.RunnerSettings{
-						Shell:    shells.Bash,
-						Executor: common.ExecutorKubernetes,
-						Kubernetes: &common.KubernetesConfig{
-							Image: common.TestDockerGitImage,
-						},
-						Environment: []string{
-							"GIT_TRACE=1",
-							"GIT_CURL_VERBOSE=1",
-							"GIT_TRANSFER_TRACE=1",
-							"CI_DEBUG_TRACE=1",
-						},
+				u.User = url.UserPassword("gitlab-ci-token", token)
+				job.GitInfo.RepoURL = u.String()
+
+				job.Token = token
+
+				job.Variables = append(job.Variables, common.JobVariable{
+					Key:    "CI_JOB_TOKEN",
+					Value:  token,
+					Masked: true,
+				})
+			}
+
+			runnerConfig := &common.RunnerConfig{
+				RunnerSettings: common.RunnerSettings{
+					Shell:    shells.Bash,
+					Executor: common.ExecutorKubernetes,
+					Kubernetes: &common.KubernetesConfig{
+						Image: common.TestDockerGitImage,
+					},
+					Environment: []string{
+						"GIT_TRACE=1",
+						"GIT_CURL_VERBOSE=1",
+						"GIT_TRANSFER_TRACE=1",
+						"CI_DEBUG_TRACE=1",
+						"GIT_SUBMODULE_STRATEGY=recursive",
 					},
 				},
 			}
 
+			runnerConfig.FeatureFlags = test.featureFlags
+
+			build, err := common.NewBuild(job, runnerConfig, nil, nil)
+			require.NoError(t, err, "creating new build")
+
 			out, err := buildtest.RunBuildReturningOutput(t, build)
 			assert.NoError(t, err, "running build")
 
-			repoURL, err := url.Parse(job.GitInfo.RepoURL)
-			assert.NoError(t, err, "parsing repo url")
-
-			assert.NotContains(t, out, "@"+repoURL.Host, "expected not to see the repo url with auth data")
-
-			gitConfigSection := "credential." + repoURL.String()
-			for _, key := range []string{"username", "helper"} {
-				assert.Regexp(t,
-					// check if there is a non-empty (...username=<something>) setting for this specific config
-					regexp.QuoteMeta(outputMakerHelper+gitConfigSection+"."+key+"=")+"(.+)",
-					out,
-					"expected git config re. credential > "+key+" in the helper container",
-				)
-			}
-
-			assert.NotContains(t,
-				out,
-				outputMarkerBuild+gitConfigSection,
-				"expected no git config re. credentials in the build container, as we only set that for the helper (git config --global ...)",
-			)
-
-			if token != "" {
-				assert.NotContains(t, out, token, "expected plain job token not to leak")
-			}
+			assert.NotContains(t, out, token, "should not contain the token")
+			test.validator(t, out, build.GetRemoteURL(), token)
 		})
 	}
 }
