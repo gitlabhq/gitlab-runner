@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"runtime"
@@ -116,6 +117,9 @@ func (s *RegisterCommand) askOnce(prompt string, result *string, allowEmpty bool
 	}
 
 	data, _, err := s.reader.ReadLine()
+	if err == io.EOF && !s.NonInteractive {
+		logrus.Panicln("Unexpected EOF. Did you mean to use --non-interactive?")
+	}
 	if err != nil {
 		panic(err)
 	}
