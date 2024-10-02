@@ -679,7 +679,7 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	// Update / initialize submodules
 	gitURLArgs := build.GetURLInsteadOfArgs()
 
-	updateArgs := append([]string{}, append(gitURLArgs, "submodule", "update", "--init")...)
+	updateArgs := append(gitURLArgs, "submodule", "update", "--init") //nolint:gocritic
 	foreachArgs := []string{"submodule", "foreach"}
 	if recursive {
 		updateArgs = append(updateArgs, "--recursive")
