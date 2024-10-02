@@ -52,7 +52,7 @@ type urlsWithoutToken struct {
 // URL.
 // Additionally, we remove auth data, except for SSH URLs and instead rely on the fact that the auth data is made
 // available elsewhere (e.g. git cred helper).
-func (uh *urlsWithoutToken) GetRemoteURL() string {
+func (uh *urlsWithoutToken) GetRemoteURL() (string, error) {
 	u, _ := url.Parse(uh.config.CloneURL)
 
 	if u == nil || u.Scheme == "" {
@@ -67,10 +67,10 @@ func (uh *urlsWithoutToken) GetRemoteURL() string {
 
 // GetURLInsteadOfArgs rewrites the most commonly used SSH/Git protocol URLs (including custom SSH ports) into an
 // http(s) URL, and returns an array of strings to pass as options to git commands.
-func (uh *urlsWithoutToken) GetURLInsteadOfArgs() []string {
+func (uh *urlsWithoutToken) GetURLInsteadOfArgs() ([]string, error) {
 	baseURL := strings.TrimRight(uh.getBaseURL(), "/")
 	if !strings.HasPrefix(baseURL, "http") {
-		return []string{}
+		return []string{}, nil
 	}
 
 	args := []string{}
@@ -97,14 +97,18 @@ func (uh *urlsWithoutToken) GetURLInsteadOfArgs() []string {
 		}
 	}
 
-	return args
+	return args, nil
 }
 
 // cleanAuthData returns a new URL with auth data set up so that:
 // - on ssh URLs we ensure UserInfo is defaulted correctly
 // - on other URLs we ensure UserInfo is not set at all, so that we don't leak creds
-func (uh *urlsWithoutToken) cleanAuthData(repoURL string) string {
+func (uh *urlsWithoutToken) cleanAuthData(repoURL string) (string, error) {
 	u, _ := url.Parse(repoURL)
+
+	if u == nil {
+		return "", fmt.Errorf("invalid URL")
+	}
 
 	if u.Scheme == "ssh" {
 		if u.User == nil {
@@ -114,7 +118,7 @@ func (uh *urlsWithoutToken) cleanAuthData(repoURL string) string {
 		u.User = nil
 	}
 
-	return u.String()
+	return u.String(), nil
 }
 
 // urlsWithToken is a urlHelper which adds auth data / tokens to URLs where necessary, thus not relying on any other
@@ -126,11 +130,11 @@ type urlsWithToken struct {
 // GetRemoteURL checks if the default clone URL is overwritten by the runner
 // configuration option: 'CloneURL'. If it is, we use that to create the clone
 // URL.
-func (uh *urlsWithToken) GetRemoteURL() string {
+func (uh *urlsWithToken) GetRemoteURL() (string, error) {
 	u, _ := url.Parse(uh.config.CloneURL)
 
 	if u == nil || u.Scheme == "" {
-		return uh.config.RepoURL
+		return uh.config.RepoURL, nil
 	}
 
 	projectPath := uh.config.CiProjectPath + ".git"
@@ -142,13 +146,16 @@ func (uh *urlsWithToken) GetRemoteURL() string {
 // GetURLInsteadOfArgs rewrites a plain HTTPS base URL and the most commonly used SSH/Git
 // protocol URLs (including custom SSH ports) into an HTTPS URL with injected job token
 // auth, and returns an array of strings to pass as options to git commands.
-func (uh *urlsWithToken) GetURLInsteadOfArgs() []string {
+func (uh *urlsWithToken) GetURLInsteadOfArgs() ([]string, error) {
 	baseURL := strings.TrimRight(uh.getBaseURL(), "/")
 	if !strings.HasPrefix(baseURL, "http") {
-		return []string{}
+		return []string{}, nil
 	}
 
-	baseURLWithAuth := uh.getURLWithAuth(baseURL)
+	baseURLWithAuth, err := uh.getURLWithAuth(baseURL)
+	if err != nil {
+		return []string{}, err
+	}
 
 	// https://example.com/ 		-> https://gitlab-ci-token:abc123@example.com/
 	args := uh.getURLInsteadOf(baseURLWithAuth, baseURL)
@@ -174,12 +181,16 @@ func (uh *urlsWithToken) GetURLInsteadOfArgs() []string {
 			args = append(args, uh.getURLInsteadOf(baseURLWithAuth, baseSSHGitURLWithPort)...)
 		}
 	}
-	return args
+	return args, nil
 }
 
 // getURLWithAuth ensures the URL has appropriate auth data set.
-func (uh *urlsWithToken) getURLWithAuth(repoURL string) string {
+func (uh *urlsWithToken) getURLWithAuth(repoURL string) (string, error) {
 	u, _ := url.Parse(repoURL)
+
+	if u == nil {
+		return "", fmt.Errorf("invalid URL")
+	}
 
 	if u.Scheme == "ssh" {
 		if u.User == nil {
@@ -189,5 +200,5 @@ func (uh *urlsWithToken) getURLWithAuth(repoURL string) string {
 		u.User = url.UserPassword("gitlab-ci-token", uh.config.Token)
 	}
 
-	return u.String()
+	return u.String(), nil
 }

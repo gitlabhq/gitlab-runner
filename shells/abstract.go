@@ -382,7 +382,13 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
-	repoURL, err := url.Parse(build.GetRemoteURL())
+	repoURLString, err := build.GetRemoteURL()
+	if err != nil {
+		w.Warningf("git SSL config: Can't get repository URL. %s", err)
+		return
+	}
+
+	repoURL, err := url.Parse(repoURLString)
 	if err != nil {
 		w.Warningf("git SSL config: Can't parse repository URL. %s", err)
 		return
@@ -538,12 +544,15 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 
 	w.Cd(projectDir)
 
-	remoteURL := build.GetRemoteURL()
+	remoteURL, err := build.GetRemoteURL()
+	if err != nil {
+		return fmt.Errorf("writing fetch commands: %w", err)
+	}
 
 	if build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
 		err := b.setupGitCredHelper(w, build)
 		if err != nil {
-			return fmt.Errorf("setting up git credential helper: %w", err)
+			return fmt.Errorf("writing fetch commands: %w", err)
 		}
 	}
 
@@ -581,13 +590,23 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 }
 
 func (b *AbstractShell) setupGitCredHelper(w ShellWriter, build *common.Build) error {
-	shell, ok := helpers.FirstNonZero(build.Runner.Shell, common.GetDefaultShell())
+	shellName, ok := helpers.FirstNonZero(build.Runner.Shell, common.GetDefaultShell())
 	if !ok {
 		return fmt.Errorf("shell not specified and no default set")
 	}
 
-	credHelperCommand := "!" + common.GetShell(shell).GetGitCredHelperCommand()
-	credSection := "credential." + build.GetRemoteURL()
+	shell := common.GetShell(shellName)
+	if shell == nil {
+		return fmt.Errorf("unknown shell %q", shellName)
+	}
+
+	remoteURL, err := build.GetRemoteURL()
+	if err != nil {
+		return fmt.Errorf("setting up git credential helper: %w", err)
+	}
+
+	credHelperCommand := "!" + shell.GetGitCredHelperCommand()
+	credSection := "credential." + remoteURL
 	w.Command("git", "config", credSection+".username", "gitlab-ci-token")
 	w.Command("git", "config", credSection+".helper", credHelperCommand)
 
@@ -677,7 +696,10 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	w.Command("git", syncArgs...)
 
 	// Update / initialize submodules
-	gitURLArgs := build.GetURLInsteadOfArgs()
+	gitURLArgs, err := build.GetURLInsteadOfArgs()
+	if err != nil {
+		return fmt.Errorf("writing submodule update commands: %w", err)
+	}
 
 	updateArgs := append(gitURLArgs, "submodule", "update", "--init") //nolint:gocritic
 	foreachArgs := []string{"submodule", "foreach"}

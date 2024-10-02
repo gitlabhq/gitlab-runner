@@ -3481,7 +3481,9 @@ func TestCredentialSetup(t *testing.T) {
 			assert.NoError(t, err, "running build")
 
 			assert.NotContains(t, out, token, "should not contain the token")
-			test.validator(t, out, build.GetRemoteURL(), token)
+			remoteURL, err := build.GetRemoteURL()
+			require.NoError(t, err, "getting build's remote URL")
+			test.validator(t, out, remoteURL, token)
 		})
 	}
 }

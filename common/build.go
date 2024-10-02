@@ -1333,12 +1333,12 @@ func (b *Build) withUrlHelper() urlHelper {
 }
 
 // GetRemoteURL uses the urlHelper to get the remote URL used for fetching the repo.
-func (b *Build) GetRemoteURL() string {
+func (b *Build) GetRemoteURL() (string, error) {
 	return b.withUrlHelper().GetRemoteURL()
 }
 
 // GetURLInsteadOfArgs uses the urlHelper to generate insteadOf URLs to pass on to git.
-func (b *Build) GetURLInsteadOfArgs() []string {
+func (b *Build) GetURLInsteadOfArgs() ([]string, error) {
 	return b.withUrlHelper().GetURLInsteadOfArgs()
 }
 
@@ -1491,8 +1491,8 @@ func (b *Build) Duration() time.Duration {
 }
 
 type urlHelper interface {
-	GetRemoteURL() string
-	GetURLInsteadOfArgs() []string
+	GetRemoteURL() (string, error)
+	GetURLInsteadOfArgs() ([]string, error)
 }
 
 func NewBuild(
