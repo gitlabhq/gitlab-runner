@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -764,13 +765,13 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 
 	buildtest.SetBuildFeatureFlag(ex.Build, featureFlagName, featureFlagValue)
 
-	mockPullManager.On("GetPullPolicyFor", ex.options.Services[0].Name).
+	mockPullManager.On("GetPullPolicyFor", "svc-0").
 		Return(api.PullAlways, nil).
 		Once()
-	mockPullManager.On("GetPullPolicyFor", ex.options.Image.Name).
+	mockPullManager.On("GetPullPolicyFor", buildContainerName).
 		Return(api.PullAlways, nil).
 		Once()
-	mockPullManager.On("GetPullPolicyFor", runnerConfig.RunnerSettings.Kubernetes.HelperImage).
+	mockPullManager.On("GetPullPolicyFor", helperContainerName).
 		Return(api.PullAlways, nil).
 		Once()
 
@@ -783,12 +784,12 @@ func testSetupBuildPodServiceCreationErrorFeatureFlag(t *testing.T, featureFlagN
 }
 
 func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
-	for _, failOnImage := range []string{
-		"test-service",
-		"test-helper",
-		"test-build",
+	for _, failOnContainer := range []string{
+		"svc-0",
+		buildContainerName,
+		helperContainerName,
 	} {
-		t.Run(failOnImage, func(t *testing.T) {
+		t.Run(failOnContainer, func(t *testing.T) {
 			runnerConfig := common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -826,7 +827,7 @@ func testSetupBuildPodFailureGetPullPolicyFeatureFlag(t *testing.T, featureFlagN
 
 			buildtest.SetBuildFeatureFlag(e.Build, featureFlagName, featureFlagValue)
 
-			mockPullManager.On("GetPullPolicyFor", failOnImage).
+			mockPullManager.On("GetPullPolicyFor", failOnContainer).
 				Return(api.PullAlways, assert.AnError).
 				Once()
 
@@ -1200,12 +1201,14 @@ func TestPrepare(t *testing.T) {
 	}
 
 	tests := []struct {
-		Name  string
-		Error string
+		Name    string
+		ErrorRE *regexp.Regexp
 
 		// if Precondition is set and returns false, the test-case is skipped with the message provided
 		Precondition func() (bool, string)
 
+		// Note: this RunnerConfig will be added to the Build before we run the test, there are not 2 different
+		// RunnerConfigs at play, this split is there to ease the preparation of the test cases.
 		RunnerConfig               *common.RunnerConfig
 		Build                      *common.Build
 		WindowsKernelVersionGetter func() string
@@ -1246,7 +1249,6 @@ func TestPrepare(t *testing.T) {
 						{Key: "privileged", Value: "true"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1310,7 +1312,6 @@ func TestPrepare(t *testing.T) {
 						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1332,8 +1333,10 @@ func TestPrepare(t *testing.T) {
 			},
 		},
 		{
-			Name:  "unmatched service account",
-			Error: "couldn't prepare overwrites: provided value \"not-default\" does not match \"allowed-.*\"",
+			Name: "unmatched service account",
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`couldn't prepare overwrites: provided value "not-default" does not match "allowed-.*"`,
+			)),
 			RunnerConfig: &common.RunnerConfig{
 				RunnerSettings: common.RunnerSettings{
 					Kubernetes: &common.KubernetesConfig{
@@ -1374,7 +1377,6 @@ func TestPrepare(t *testing.T) {
 						{Key: ServiceAccountOverwriteVariableName, Value: "not-default"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 		},
 		{
@@ -1421,7 +1423,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NamespaceOverwriteVariableName, Value: "new-namespace-name"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1465,7 +1466,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NamespaceOverwriteVariableName, Value: "namespace-$CI_CONCURRENT_ID"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1501,7 +1501,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1534,7 +1533,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NamespaceOverwriteVariableName, Value: "ci-job-42"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1572,7 +1570,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1619,7 +1616,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1688,7 +1684,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1801,7 +1796,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -1935,7 +1929,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2065,7 +2058,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2151,7 +2143,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2179,7 +2170,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2217,7 +2207,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2269,7 +2258,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2333,7 +2321,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2344,7 +2331,9 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         helperimage.Info{},
 			},
-			Error: `prepare helper image: unsupported OSType "unknown"`,
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`prepare helper image: unsupported OSType "unknown"`,
+			)),
 		},
 		{
 			Name: "helper image from node selector overrides (linux+amd overwritten to linux+arm)",
@@ -2369,7 +2358,6 @@ func TestPrepare(t *testing.T) {
 						{Key: NodeSelectorOverwriteVariablePrefix + "ARCH", Value: api.LabelArchStable + "=arm64"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2410,9 +2398,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2444,9 +2429,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2477,9 +2459,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2508,9 +2487,6 @@ func TestPrepare(t *testing.T) {
 						},
 					},
 				},
-			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2541,7 +2517,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2575,14 +2550,15 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "invalid pull policy for image 'test-image': " +
-				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "Runner config", "[Always Never]"),
+			ErrorRE: regexp.MustCompile(
+				`invalid pull policy for container "(build|helper|init-permissions)": ` +
+					regexp.QuoteMeta(fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "Runner config", "[Always Never]")),
+			),
 		},
 		{
 			Name: "image pull policy is one of allowed pull policies",
@@ -2604,7 +2580,6 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyNever},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2638,14 +2613,15 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "invalid pull policy for image 'test-image': " +
-				fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]"),
+			ErrorRE: regexp.MustCompile(
+				`invalid pull policy for container "(build|helper|init-permissions)": ` +
+					regexp.QuoteMeta(fmt.Sprintf(common.IncompatiblePullPolicy, "[IfNotPresent]", "GitLab pipeline config", "[Always Never]")),
+			),
 		},
 		{
 			Name: "both runner and image pull policies are defined",
@@ -2672,7 +2648,6 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyIfNotPresent},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2703,7 +2678,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2714,7 +2688,9 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "allowed_pull_policies config: unsupported pull policy: \"invalid\"",
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`allowed_pull_policies config: unsupported pull policy: "invalid"`,
+			)),
 		},
 		{
 			Name: "one of config pull policies is invalid",
@@ -2734,7 +2710,6 @@ func TestPrepare(t *testing.T) {
 						Sha: "1234567890",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2745,7 +2720,9 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "pull_policy config: unsupported pull policy: \"invalid\"",
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`pull_policy config: unsupported pull policy: "invalid"`,
+			)),
 		},
 		{
 			Name: "one of image pull policies is invalid",
@@ -2769,7 +2746,6 @@ func TestPrepare(t *testing.T) {
 						PullPolicies: []common.DockerPullPolicy{common.PullPolicyAlways, "invalid"},
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: &executor{
 				options: &kubernetesOptions{
@@ -2780,7 +2756,9 @@ func TestPrepare(t *testing.T) {
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo:         defaultHelperImage,
 			},
-			Error: "conversion to Kubernetes policy: unsupported pull policy: \"invalid\"",
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`conversion to Kubernetes policy: unsupported pull policy: "invalid"`,
+			)),
 		},
 		{
 			Name: "autoset helper arch and os",
@@ -2806,7 +2784,6 @@ func TestPrepare(t *testing.T) {
 						Name: "test-image",
 					},
 				},
-				Runner: &common.RunnerConfig{},
 			},
 			Expected: getExecutorForHelperAutoset(),
 		},
@@ -2827,11 +2804,10 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			WindowsKernelVersionGetter: func() string { return "unsupported-kernel-version" },
-			Error:                      "prepare helper image: detecting base image: unsupported Windows version: unsupported-kernel-version",
+			ErrorRE: regexp.MustCompile(regexp.QuoteMeta(
+				`prepare helper image: detecting base image: unsupported Windows version: unsupported-kernel-version`,
+			)),
 		},
 		{
 			Name: "autoset helper arch and os on non windows does not need windows kernel version",
@@ -2853,9 +2829,6 @@ func TestPrepare(t *testing.T) {
 					},
 				},
 			},
-			Build: &common.Build{
-				Runner: &common.RunnerConfig{},
-			},
 			Expected: &executor{
 				options: &kubernetesOptions{
 					Image: common.Image{
@@ -2875,26 +2848,30 @@ func TestPrepare(t *testing.T) {
 					t.Skip(msg)
 				}
 			}
+
+			testBuild := test.Build
+			if testBuild == nil {
+				testBuild = &common.Build{}
+			}
+			testBuild.Runner = test.RunnerConfig
+
 			e := newExecutor()
-			e.AbstractExecutor.ExecutorOptions = executorOptions
-			e.options = &kubernetesOptions{}
 			e.windowsKernelVersion = test.WindowsKernelVersionGetter
 
 			// TODO: handle the context properly with https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27932
 			prepareOptions := common.ExecutorPrepareOptions{
-				Config:  test.RunnerConfig,
-				Build:   test.Build,
+				Config:  testBuild.Runner,
+				Build:   testBuild,
 				Context: context.TODO(),
 			}
-			prepareOptions.Build.Runner.Executor = common.ExecutorKubernetes
 
 			err := e.Prepare(prepareOptions)
 			if err != nil {
-				assert.False(t, test.Build.IsSharedEnv())
+				assert.False(t, testBuild.IsSharedEnv())
 			}
-			if test.Error != "" {
+			if test.ErrorRE != nil {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), test.Error)
+				assert.Regexp(t, test.ErrorRE, err.Error())
 				return
 			}
 			require.NoError(t, err)
@@ -2903,11 +2880,7 @@ func TestPrepare(t *testing.T) {
 			// base AbstractExecutor's Prepare method
 			e.AbstractExecutor = executors.AbstractExecutor{}
 
-			// Different tests either set the image name on the build or on the config
-			buildImage, err := first(test.Build.Image.Name, test.RunnerConfig.Kubernetes.Image)
-			require.NoError(t, err, "build image neither set on the build nor in the runner config")
-
-			pullPolicy, err := e.pullManager.GetPullPolicyFor(buildImage)
+			pullPolicy, err := e.pullManager.GetPullPolicyFor(buildContainerName)
 			assert.NoError(t, err)
 			assert.Equal(t, test.ExpectedPullPolicy, pullPolicy)
 
@@ -2927,6 +2900,7 @@ func TestPrepare(t *testing.T) {
 			e.getKubeConfig = nil
 			e.newKubeClient = nil
 			e.windowsKernelVersion = nil
+			e.options.Image.PullPolicies = nil
 
 			assert.NoError(t, err)
 			assert.Equal(t, test.Expected, e)
@@ -5749,17 +5723,17 @@ containers:
 			}
 
 			if test.Options != nil && test.Options.Services != nil {
-				for _, service := range test.Options.Services {
-					mockPullManager.On("GetPullPolicyFor", service.Name).
+				for i := range test.Options.Services {
+					mockPullManager.On("GetPullPolicyFor", fmt.Sprintf("svc-%d", i)).
 						Return(api.PullAlways, nil).
 						Once()
 				}
 			}
 
-			mockPullManager.On("GetPullPolicyFor", ex.getHelperImage()).
+			mockPullManager.On("GetPullPolicyFor", helperContainerName).
 				Return(api.PullAlways, nil).
 				Maybe()
-			mockPullManager.On("GetPullPolicyFor", ex.options.Image.Name).
+			mockPullManager.On("GetPullPolicyFor", buildContainerName).
 				Return(api.PullAlways, nil).
 				Maybe()
 
@@ -7298,9 +7272,9 @@ func TestContainerPullPolicies(t *testing.T) {
 
 	testCases := map[string]struct {
 		Services            common.Services
+		ServicesFromConfig  []common.Service
 		AllowedPullPolicies []common.DockerPullPolicy
 		DefaultPullPolicies common.StringOrArray
-		JobImageName        string
 
 		ExpectedPullPolicyPerContainer map[string]api.PullPolicy
 	}{
@@ -7328,14 +7302,6 @@ func TestContainerPullPolicies(t *testing.T) {
 				"helper": api.PullAlways,
 			},
 		},
-		"with image from job and pull policy from config": {
-			JobImageName:        "not the image you looking for",
-			DefaultPullPolicies: common.StringOrArray{"if-not-present"},
-			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
-				"build":  api.PullIfNotPresent,
-				"helper": api.PullIfNotPresent,
-			},
-		},
 		"with allowed pull policies from build container pull policy": {
 			DefaultPullPolicies: common.StringOrArray{"never", "always"},
 			Services: common.Services{
@@ -7359,6 +7325,25 @@ func TestContainerPullPolicies(t *testing.T) {
 				"svc-0":  api.PullPolicy(""),
 			},
 		},
+		"services from config use the correct pull policy": {
+			DefaultPullPolicies: common.StringOrArray{"never", "if-not-present"},
+			ServicesFromConfig: []common.Service{
+				{Name: "from-toml"},
+			},
+			Services: common.Services{
+				{Name: "from-yaml-0", PullPolicies: []common.DockerPullPolicy{"if-not-present"}},
+				{Name: "from-yaml-1"},
+			},
+			ExpectedPullPolicyPerContainer: map[string]api.PullPolicy{
+				"build":  api.PullNever,
+				"helper": api.PullNever,
+				// services from config.toml come first
+				"svc-0": api.PullNever,
+				// then the services from the .gitlab-ci.yaml
+				"svc-1": api.PullIfNotPresent,
+				"svc-2": api.PullNever,
+			},
+		},
 	}
 
 	for tn, tc := range testCases {
@@ -7371,6 +7356,7 @@ func TestContainerPullPolicies(t *testing.T) {
 						Image:               "some-build-image",
 						AllowedPullPolicies: tc.AllowedPullPolicies,
 						PullPolicy:          tc.DefaultPullPolicies,
+						Services:            tc.ServicesFromConfig,
 					},
 				},
 			}
@@ -7384,9 +7370,6 @@ func TestContainerPullPolicies(t *testing.T) {
 						Kubernetes: &common.KubernetesConfig{},
 					},
 				},
-			}
-			if tc.JobImageName != "" {
-				build.JobResponse.Image.Name = tc.JobImageName
 			}
 
 			executor := newExecutor()

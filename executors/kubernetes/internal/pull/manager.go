@@ -14,11 +14,11 @@ import (
 //go:generate mockery --name=Manager --inpackage
 type Manager interface {
 	// GetPullPolicyFor returns the pull policy that should be used for the subsequent pull operation
-	// for the specified image
-	GetPullPolicyFor(image string) (api.PullPolicy, error)
-	// UpdatePolicyForImage updates the pull policy for the image designated in the specified error,
+	// for the specified container
+	GetPullPolicyFor(container string) (api.PullPolicy, error)
+	// UpdatePolicyForContainer updates the pull policy for the container designated in the specified error,
 	// and returns whether a new pull operation with a different pull policy can be attempted
-	UpdatePolicyForImage(attempt int, imagePullErr *ImagePullError) bool
+	UpdatePolicyForContainer(attempt int, imagePullErr *ImagePullError) bool
 }
 
 //go:generate mockery --name=pullLogger --inpackage
@@ -43,12 +43,12 @@ func NewPullManager(pullPolicies map[string][]api.PullPolicy, logger pullLogger)
 	}
 }
 
-func (m *manager) GetPullPolicyFor(image string) (api.PullPolicy, error) {
+func (m *manager) GetPullPolicyFor(container string) (api.PullPolicy, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	failureCount := m.failureMap[image]
-	pullPolicies, ok := m.pullPolicies[image]
+	failureCount := m.failureMap[container]
+	pullPolicies, ok := m.pullPolicies[container]
 	if !ok {
 		pullPolicies = []api.PullPolicy{""}
 	}
@@ -60,25 +60,27 @@ func (m *manager) GetPullPolicyFor(image string) (api.PullPolicy, error) {
 	return "", errors.New("pull failed")
 }
 
-func (m *manager) UpdatePolicyForImage(attempt int, imagePullErr *ImagePullError) bool {
-	pullPolicy, _ := m.GetPullPolicyFor(imagePullErr.Image)
+func (m *manager) UpdatePolicyForContainer(attempt int, imagePullErr *ImagePullError) bool {
+	pullPolicy, _ := m.GetPullPolicyFor(imagePullErr.Container)
 
-	m.markPullFailureFor(imagePullErr.Image)
+	m.markPullFailureFor(imagePullErr.Container)
 
 	m.logger.Warningln(fmt.Sprintf(
-		"Failed to pull image %q with policy %q: %v",
+		"Failed to pull image %q for container %q with policy %q: %v",
 		imagePullErr.Image,
+		imagePullErr.Container,
 		pullPolicy,
 		imagePullErr.Message,
 	))
 
-	nextPullPolicy, errPull := m.GetPullPolicyFor(imagePullErr.Image)
+	nextPullPolicy, errPull := m.GetPullPolicyFor(imagePullErr.Container)
 	if errPull == nil {
 		m.logger.Infoln(fmt.Sprintf(
-			"Attempt #%d: Trying %q pull policy for %q image",
+			"Attempt #%d: Trying %q pull policy for %q image for container %q",
 			attempt+1,
 			nextPullPolicy,
 			imagePullErr.Image,
+			imagePullErr.Container,
 		))
 		return true
 	}
@@ -87,9 +89,9 @@ func (m *manager) UpdatePolicyForImage(attempt int, imagePullErr *ImagePullError
 }
 
 // markPullFailureFor informs of a failure to pull the specified image
-func (m *manager) markPullFailureFor(image string) {
+func (m *manager) markPullFailureFor(container string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.failureMap[image]++
+	m.failureMap[container]++
 }

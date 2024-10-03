@@ -12,9 +12,9 @@ type MockManager struct {
 	mock.Mock
 }
 
-// GetPullPolicyFor provides a mock function with given fields: image
-func (_m *MockManager) GetPullPolicyFor(image string) (v1.PullPolicy, error) {
-	ret := _m.Called(image)
+// GetPullPolicyFor provides a mock function with given fields: container
+func (_m *MockManager) GetPullPolicyFor(container string) (v1.PullPolicy, error) {
+	ret := _m.Called(container)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPullPolicyFor")
@@ -23,16 +23,16 @@ func (_m *MockManager) GetPullPolicyFor(image string) (v1.PullPolicy, error) {
 	var r0 v1.PullPolicy
 	var r1 error
 	if rf, ok := ret.Get(0).(func(string) (v1.PullPolicy, error)); ok {
-		return rf(image)
+		return rf(container)
 	}
 	if rf, ok := ret.Get(0).(func(string) v1.PullPolicy); ok {
-		r0 = rf(image)
+		r0 = rf(container)
 	} else {
 		r0 = ret.Get(0).(v1.PullPolicy)
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(image)
+		r1 = rf(container)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -40,12 +40,12 @@ func (_m *MockManager) GetPullPolicyFor(image string) (v1.PullPolicy, error) {
 	return r0, r1
 }
 
-// UpdatePolicyForImage provides a mock function with given fields: attempt, imagePullErr
-func (_m *MockManager) UpdatePolicyForImage(attempt int, imagePullErr *ImagePullError) bool {
+// UpdatePolicyForContainer provides a mock function with given fields: attempt, imagePullErr
+func (_m *MockManager) UpdatePolicyForContainer(attempt int, imagePullErr *ImagePullError) bool {
 	ret := _m.Called(attempt, imagePullErr)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdatePolicyForImage")
+		panic("no return value specified for UpdatePolicyForContainer")
 	}
 
 	var r0 bool
