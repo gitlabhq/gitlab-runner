@@ -146,8 +146,17 @@ With the [Kubernetes executor](../executors/kubernetes/index.md):
 #### Reusing a runner configuration
 
 Each runner manager associated with the same runner authentication token is assigned a `system_id` identifier.
-The `system_id` identifies the machine where the runner is being used. Runners registered with the same
-authentication token and different `system_id` values are grouped under a single runner.
+The `system_id` identifies the machine where the runner is being used. Runners registered with the same authentication token are grouped under a single runner entry by a unique `system_id.`
+
+Grouping similar runners under a single configuration simplifies runner fleet operations. 
+
+Here is an example scenario where you can group similar runners under a single configuration:
+
+A platform administrator needs to provide multiple runners with the same underlying virtual machine instance sizes (2 vCPU, 8GB RAM) using the tag `docker-builds-2vCPU-8GB`. They want at least two such runners, either for high availability or scaling.
+Instead of creating two distinct runner entries in the UI, the administrator can create one runner configuration for all runners with the same compute instance size. They can reuse the authentication token for the runner configuration to register multiple runners. 
+Each registered runner inherits the `docker-builds-2vCPU-8GB` tag. 
+For all child runners of a single runner configuration, `system_id` acts as a unique identifier.
+
 Grouped runners can be reused to run different jobs by multiple runner managers.
 
 GitLab Runner generates the `system_id` at startup or when the configuration is saved. The `system_id` is saved to the
@@ -155,7 +164,7 @@ GitLab Runner generates the `system_id` at startup or when the configuration is 
 [`config.toml`](../configuration/advanced-configuration.md), and displays in job logs and the runner
 administration page.
 
-##### Generation of `system_id` identifiers
+##### Generating `system_id` identifiers
 
 To generate the `system_id`, GitLab Runner attempts to derive a unique system identifier from hardware identifiers
 (for instance, `/etc/machine-id` in some Linux distributions).
