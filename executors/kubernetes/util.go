@@ -117,19 +117,6 @@ func getContainerStatus(containerStatuses []api.ContainerStatus, containerName s
 	return api.ContainerStatus{}, false
 }
 
-func isPodReady(pod *api.Pod) bool {
-	if pod == nil {
-		return false
-	}
-	conditions := pod.Status.Conditions
-	for i := range conditions {
-		if conditions[i].Type == api.PodReady {
-			return conditions[i].Status == api.ConditionTrue
-		}
-	}
-	return false
-}
-
 func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, timeoutSeconds int, namespace, pod, container string) error {
 	// kubeAPI: pods, watch, FF_KUBERNETES_HONOR_ENTRYPOINT=true,FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 	watcher, err := client.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
@@ -176,12 +163,19 @@ func closeKubeClient(client kubernetes.Interface) bool {
 	return false
 }
 
-func isRunning(pod *api.Pod) (bool, error) {
-	if isPodReady(pod) {
-		return true, nil
-	}
-
+func isRunning(pod *api.Pod, containers ...string) (bool, error) {
 	switch pod.Status.Phase {
+	case api.PodRunning:
+		var readyCount int
+		for _, c := range containers {
+			for _, cs := range pod.Status.ContainerStatuses {
+				if cs.Name == c && cs.Ready {
+					readyCount++
+				}
+			}
+		}
+
+		return readyCount == len(containers), nil
 	case api.PodSucceeded:
 		return false, fmt.Errorf("pod already succeeded before it begins running")
 	case api.PodFailed:
@@ -197,14 +191,15 @@ type podPhaseResponse struct {
 	err   error
 }
 
-func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer) (pf podPhaseResponse) {
+func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod, out io.Writer, containers ...string) (pf podPhaseResponse) {
 	// kubeAPI: pods, get
 	pod, err := client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return podPhaseResponse{true, api.PodUnknown, err}
 	}
 
-	if ready, err := isRunning(pod); err != nil || ready {
+	ready, err := isRunning(pod, containers...)
+	if err != nil || ready {
 		return podPhaseResponse{true, pod.Status.Phase, err}
 	}
 
@@ -260,11 +255,11 @@ func getPodPhase(ctx context.Context, client kubernetes.Interface, pod *api.Pod,
 	return podPhaseResponse{false, pod.Status.Phase, nil}
 }
 
-func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer) <-chan podPhaseResponse {
+func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod, out io.Writer, containers ...string) <-chan podPhaseResponse {
 	errc := make(chan podPhaseResponse)
 	go func() {
 		defer close(errc)
-		errc <- getPodPhase(ctx, c, pod, out)
+		errc <- getPodPhase(ctx, c, pod, out, containers...)
 	}()
 	return errc
 }
@@ -277,18 +272,20 @@ func triggerPodPhaseCheck(ctx context.Context, c kubernetes.Interface, pod *api.
 // reached.
 // The timeout and polling values are configurable through KubernetesConfig
 // parameters.
+// The containers parameter is optional and can be used to wait for a specific containers' readiness
 func waitForPodRunning(
 	ctx context.Context,
 	c kubernetes.Interface,
 	pod *api.Pod,
 	out io.Writer,
 	config *common.KubernetesConfig,
+	containers ...string,
 ) (api.PodPhase, error) {
 	pollInterval := config.GetPollInterval()
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {
 		select {
-		case r := <-triggerPodPhaseCheck(ctx, c, pod, out):
+		case r := <-triggerPodPhaseCheck(ctx, c, pod, out, containers...):
 			if !r.done {
 				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
