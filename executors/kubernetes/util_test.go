@@ -225,14 +225,6 @@ func TestWaitForPodRunning(t *testing.T) {
 						}
 					}
 
-					if retries > 3 {
-						pod.Status.Conditions = []api.PodCondition{
-							{
-								Type:   api.PodReady,
-								Status: api.ConditionTrue,
-							},
-						}
-					}
 					retries++
 					return &http.Response{
 						StatusCode: http.StatusOK,
@@ -246,7 +238,7 @@ func TestWaitForPodRunning(t *testing.T) {
 				}
 			},
 			PodEndPhase: api.PodRunning,
-			Retries:     3,
+			Retries:     2,
 		},
 		{
 			Name: "ensure function errors if pod already succeeded",
@@ -608,93 +600,6 @@ func TestGetContainerStatus(t *testing.T) {
 	}
 }
 
-func TestIsPodReady(t *testing.T) {
-	testCases := map[string]struct {
-		pod         *api.Pod
-		expectReady bool
-	}{
-		"no pod": {},
-		"empty pod": {
-			pod: &api.Pod{},
-		},
-		"empty status": {
-			pod: &api.Pod{
-				Status: api.PodStatus{},
-			},
-		},
-		"empty conditions": {
-			pod: &api.Pod{
-				Status: api.PodStatus{
-					Conditions: []api.PodCondition{},
-				},
-			},
-		},
-		"no ready condition": {
-			pod: &api.Pod{
-				Status: api.PodStatus{
-					Conditions: []api.PodCondition{{}},
-				},
-			},
-		},
-		"empty ready condition": {
-			pod: &api.Pod{
-				Status: api.PodStatus{
-					Conditions: []api.PodCondition{
-						{Type: api.PodReady},
-					},
-				},
-			},
-		},
-		"ready condition is false": {
-			pod: &api.Pod{
-				Status: api.PodStatus{
-					Conditions: []api.PodCondition{
-						{Type: api.PodReady, Status: api.ConditionFalse},
-					},
-				},
-			},
-		},
-		"ready condition is unknown": {
-			pod: &api.Pod{
-				Status: api.PodStatus{
-					Conditions: []api.PodCondition{
-						{Type: api.PodReady, Status: api.ConditionUnknown},
-					},
-				},
-			},
-		},
-		"ready condition is random": {
-			pod: &api.Pod{
-				Status: api.PodStatus{
-					Conditions: []api.PodCondition{
-						{Type: api.PodReady, Status: "true"}, // close, but not really
-					},
-				},
-			},
-		},
-		"ready condition true": {
-			pod: &api.Pod{
-				Status: api.PodStatus{
-					Conditions: []api.PodCondition{
-						{Type: api.PodReady, Status: api.ConditionTrue},
-					},
-				},
-			},
-			expectReady: true,
-		},
-	}
-
-	for tn, tc := range testCases {
-		t.Run(tn, func(t *testing.T) {
-			ready := isPodReady(tc.pod)
-
-			assert.Equal(t, tc.expectReady, ready,
-				"expected pod to have ready condition == %t, but does not.\nPod: %+v", tc.expectReady, tc.pod,
-			)
-		})
-	}
-}
-
 func TestWaitForRunningContainer(t *testing.T) {
 	const (
 		podName       = "some-pod"
@@ -770,5 +675,61 @@ func TestWaitForRunningContainer(t *testing.T) {
 		obj, err := tracker.Get(gvr, podNamespace, podName)
 		assert.NoError(t, err, "getting current pod state")
 		require.FailNowf(t, "container waiter did not return in time", "current object state: %+v", obj)
+	}
+}
+
+func TestIsRunning(t *testing.T) {
+	tests := map[string]struct {
+		statuses   []api.ContainerStatus
+		phase      api.PodPhase
+		containers []string
+		isRunning  bool
+	}{
+		"pod running no containers checked": {
+			statuses: []api.ContainerStatus{
+				{Name: buildContainerName, Ready: true},
+			},
+			phase:      api.PodRunning,
+			containers: nil,
+			isRunning:  true,
+		},
+		"pod running build container checked": {
+			statuses: []api.ContainerStatus{
+				{Name: buildContainerName, Ready: true},
+			},
+			phase:      api.PodRunning,
+			containers: []string{buildContainerName},
+			isRunning:  true,
+		},
+		"pod running build container not ready": {
+			statuses: []api.ContainerStatus{
+				{Name: buildContainerName, Ready: false},
+			},
+			phase:      api.PodRunning,
+			containers: []string{buildContainerName},
+			isRunning:  false,
+		},
+		"pod failed build container ready": {
+			statuses: []api.ContainerStatus{
+				{Name: buildContainerName, Ready: true},
+			},
+			phase:      api.PodFailed,
+			containers: []string{buildContainerName},
+			isRunning:  false,
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			pod := &api.Pod{
+				Status: api.PodStatus{
+					Phase:             tt.phase,
+					ContainerStatuses: tt.statuses,
+				},
+			}
+
+			result, _ := isRunning(pod, tt.containers...)
+			assert.Equal(t, tt.isRunning, result)
+		})
 	}
 }

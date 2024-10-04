@@ -689,9 +689,8 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 
 	if s.shouldUseStartupProbe() {
 		// If we honor the image's entrypoint, we need to wait until the entrypoint has started the shell. We do this by
-		// leveraging a startup probe, thus we need to wait for the pod to be ready, ie. all containers being ready, before
-		// we can continue
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, io.Discard, s.Config.Kubernetes)
+		// leveraging a startup probe, thus we need to wait for the build container being ready, before we can continue
+		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, io.Discard, s.Config.Kubernetes, buildContainerName)
 		if err != nil {
 			return fmt.Errorf("waiting for pod running: %w", err)
 		}
@@ -820,7 +819,7 @@ func (s *executor) ensurePodsConfigured(ctx context.Context) error {
 	}
 	defer out.Close()
 
-	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes)
+	status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes, buildContainerName)
 	if err != nil {
 		return fmt.Errorf("waiting for pod running: %w", err)
 	}

@@ -55,6 +55,8 @@ type kubernetesNamespaceManagerAction int64
 const (
 	createNamespace kubernetesNamespaceManagerAction = iota
 	deleteNamespace
+	// counterServiceImage counts to 10 and exits
+	counterServiceImage = "registry.gitlab.com/gitlab-org/gitlab-runner/test/counter-service:v1"
 )
 
 type namespaceManager struct {
@@ -145,6 +147,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesDumbInitSuccessRun":                        testKubernetesDumbInitSuccessRun,
 		"testKubernetesDisableUmask":                              testKubernetesDisableUmask,
 		"testKubernetesNoAdditionalNewLines":                      testKubernetesNoAdditionalNewLines,
+		"testJobRunningAndPassingWhenServiceStops":                testJobRunningAndPassingWhenServiceStops,
 	}
 
 	featureFlags := []string{
@@ -3190,6 +3193,41 @@ func Test_ContainerOptionsExpansion(t *testing.T) {
 	// the helper image name does not appeart in the logs, but the build will fail if the option was not expanded.
 	assert.Contains(t, out, "Using Kubernetes executor with image alpine:latest")
 	assert.Regexp(t, `\[service:postgres-db\]`, out)
+}
+
+func testJobRunningAndPassingWhenServiceStops(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	successfulBuild, err := common.GetRemoteBuildResponse("sleep 12")
+	require.NoError(t, err)
+
+	successfulBuild.Steps = append(
+		successfulBuild.Steps,
+		common.Step{
+			Name:   common.StepNameAfterScript,
+			Script: []string{"echo after script"},
+		},
+	)
+
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: common.ExecutorKubernetes,
+				Kubernetes: &common.KubernetesConfig{
+					Services: []common.Service{
+						{
+							Name: counterServiceImage,
+						},
+					},
+					Image: common.TestAlpineImage,
+				},
+			},
+		},
+	}
+
+	buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+
+	err = buildtest.RunBuild(t, build)
+	require.NoError(t, err)
 }
 
 func TestEntrypointLogging(t *testing.T) {
