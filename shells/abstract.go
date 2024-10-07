@@ -13,7 +13,6 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/cache"
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
 )
@@ -590,9 +589,10 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 }
 
 func (b *AbstractShell) setupGitCredHelper(w ShellWriter, build *common.Build) error {
-	shellName, ok := helpers.FirstNonZero(build.Runner.Shell, common.GetDefaultShell())
-	if !ok {
-		return fmt.Errorf("shell not specified and no default set")
+	shellName := build.Runner.Shell
+	if shellName == "" {
+		// GetDefaultShell will panic, if it can't find a default shell
+		shellName = common.GetDefaultShell()
 	}
 
 	shell := common.GetShell(shellName)
