@@ -1323,10 +1323,11 @@ func (b *Build) withUrlHelper() urlHelper {
 		CiServerHost:           b.GetAllVariables().Value("CI_SERVER_HOST"),
 	}
 
+	urlHelper := &authenticatedURLHelper{&urlHelperConfig}
+	b.urlHelper = urlHelper
+
 	if b.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
-		b.urlHelper = &urlsWithoutToken{&baseUrlHelper{&urlHelperConfig}}
-	} else {
-		b.urlHelper = &urlsWithToken{&baseUrlHelper{&urlHelperConfig}}
+		b.urlHelper = &unauthenticatedURLHelper{urlHelper}
 	}
 
 	return b.urlHelper
