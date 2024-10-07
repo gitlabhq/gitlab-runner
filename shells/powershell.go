@@ -574,29 +574,40 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-const powershellGitCredHelperScript = `if ($args[0] -eq "get") { "password=${env:CI_JOB_TOKEN}" }`
+const powershellGitCredHelperScript = `function get{ echo "password=${env:CI_JOB_TOKEN}" } ; `
 
 // GetGitCredHelperCommand returns a command that can be used e.g. in a git config as a credential helper.
 //
 // This returns something like:
 //
-//	pwsh -NoProfile ... -CommandWithFlags ''if (...) { ...}''
+//	pwsh -NoProfile ... -Command ''function get { ... } ; ''
 //
 // as a single string.
 //
 // Note the double single-quotes: This is deliberate!
-// This command is used with the shellwriter's Command(...), which will quote the whole string in single-quotes, as we
-// want it to be a single argument (to `git config`) and not split into multiple arguments. Now that we know that the
-// result will be single-quoted again, we need to escape the inner single-quotes, and we do so doubling them.
+// This command is used with the shellwriter's Command(...), which will quote the whole string in single-quotes. We want
+// this to be a single argument (to `git config`) and not split into multiple arguments. Now that we know that the
+// result will be single-quoted again, we need to escape any "inner" single-quotes, and we do so doubling them here.
+//
+// In the end, for a successful configuration, we need the content of the git config to look something like:
+//
+//	[credential."https://some.tld"]
+//		username = "some-user"
+//		helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function get{ echo \"password=${env:CI_JOB_TOKEN}\" } ; '"
 //
 // The resulting commandline runs the configured shell (pwsh/powershell) with the default args we use for other shell
-// invocations. It then runs the inner script and accepts arguments, to have the arguments git call this with passed
-// through.
+// invocations. It then runs the inner script as is, with any arguments from git "tagged on", e.g. ' get'; this is how
+// git passes in args.
+// We can't use -CommandWithArgs, because this is not supported by powershell, but pwsh only.
+// Thus, if git calls the helper with the 'get' arguments, that results in the get function to be called; if git calls
+// the helper with no argument, the whole command becomes a no-op.
+//
+// More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
 func (b *PowerShell) GetGitCredHelperCommand() string {
 	return fmt.Sprintf(
 		"%s %s ''%s''",
 		b.GetName(),
-		strings.Join(append(defaultPowershellFlags, "-CommandWithArgs"), " "),
+		strings.Join(append(defaultPowershellFlags, "-Command"), " "),
 		powershellGitCredHelperScript,
 	)
 }

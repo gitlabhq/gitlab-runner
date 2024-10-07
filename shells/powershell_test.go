@@ -795,19 +795,16 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 }
 
 func TestPowershellGetGitCredHelperCommand(t *testing.T) {
-	const (
-		commonArgs   = "-NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -CommandWithArgs"
-		commonScript = `''if ($args[0] -eq "get") { "password=${env:CI_JOB_TOKEN}" }''`
-	)
-
 	shells := []string{SNPowershell, SNPwsh}
+	commonArgs := strings.Join(defaultPowershellFlags, " ")
 
 	for _, shellName := range shells {
 		t.Run(shellName, func(t *testing.T) {
 			shell := PowerShell{Shell: shellName}
 
 			actualCmd := shell.GetGitCredHelperCommand()
-			expectedCmd := shellName + " " + commonArgs + " " + commonScript
+			// Why the double single-quotes? Please see the comment on powershell's GetGitCredHelperCommand
+			expectedCmd := shellName + " " + commonArgs + " -Command ''" + powershellGitCredHelperScript + "''"
 
 			assert.Equal(t, expectedCmd, actualCmd)
 		})
