@@ -13,6 +13,7 @@ variables:
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"
   FF_USE_NEW_BASH_EVAL_STRATEGY: "true"
+  FF_TIMESTAMPS: "true"
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
   DOCKER_VERSION: 24.0.5
