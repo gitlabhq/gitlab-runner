@@ -390,7 +390,7 @@ func (e *executor) createService(
 	linkNames []string,
 ) (*types.Container, error) {
 	if service == "" {
-		return nil, fmt.Errorf("invalid service name: %s", definition.Name)
+		return nil, common.MakeBuildError("invalid service image name: %s", definition.Name)
 	}
 
 	if e.volumesManager == nil {
