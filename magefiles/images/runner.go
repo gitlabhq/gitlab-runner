@@ -268,7 +268,7 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 
 		checksumsFile := filepath.Join(runnerHomeDir, fmt.Sprintf("checksums-%s", arch))
 
-		if flavor != ubiFipsFlavor {
+		if flavor != "ubi-fips" {
 			copyMap["ubuntu"] = append(
 				copyMap["ubuntu"],
 				checksumsFile,
