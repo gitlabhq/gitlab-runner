@@ -2,7 +2,6 @@
 package common
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -16,9 +15,8 @@ import (
 	"path"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
-
-	"github.com/tevino/abool"
 )
 
 const (
@@ -43,12 +41,8 @@ const (
 
 var (
 	gitLabComChain        string
-	gitLabComChainFetched *abool.AtomicBool
+	gitLabComChainFetched atomic.Bool
 )
-
-func init() {
-	gitLabComChainFetched = abool.New()
-}
 
 func GetGitInfo(url string) GitInfo {
 	return GitInfo{
@@ -433,7 +427,7 @@ func buildSnakeOilCert() (string, error) {
 }
 
 func getGitLabComTLSChain() (string, error) {
-	if gitLabComChainFetched.IsSet() {
+	if gitLabComChainFetched.Load() {
 		return gitLabComChain, nil
 	}
 
@@ -443,7 +437,7 @@ func getGitLabComTLSChain() (string, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	var buff bytes.Buffer
+	var buff strings.Builder
 	for _, certs := range resp.TLS.VerifiedChains {
 		for _, cert := range certs {
 			err = pem.Encode(&buff, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
@@ -454,7 +448,7 @@ func getGitLabComTLSChain() (string, error) {
 	}
 
 	gitLabComChain = buff.String()
-	gitLabComChainFetched.Set()
+	gitLabComChainFetched.Store(true)
 
 	return gitLabComChain, nil
 }

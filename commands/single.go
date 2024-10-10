@@ -4,11 +4,11 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/tevino/abool"
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -22,7 +22,7 @@ type RunSingleCommand struct {
 	lastBuild        time.Time
 	runForever       bool
 	MaxBuilds        int `long:"max-builds" description:"How many builds to process before exiting"`
-	finished         *abool.AtomicBool
+	finished         atomic.Bool
 	interruptSignals chan os.Signal
 
 	configOptions
@@ -32,7 +32,7 @@ type RunSingleCommand struct {
 }
 
 func waitForInterrupts(
-	finished *abool.AtomicBool,
+	finished *atomic.Bool,
 	abortSignal chan os.Signal,
 	doneSignal chan int,
 	interruptSignals chan os.Signal,
@@ -45,7 +45,7 @@ func waitForInterrupts(
 
 	interrupt := <-interruptSignals
 	if finished != nil {
-		finished.Set()
+		finished.Store(true)
 	}
 
 	// request stop, but wait for force exit
@@ -130,11 +130,11 @@ func (r *RunSingleCommand) processBuild(data common.ExecutorData, abortSignal ch
 func (r *RunSingleCommand) checkFinishedConditions() {
 	if r.MaxBuilds < 1 && !r.runForever {
 		logrus.Println("This runner has processed its build limit, so now exiting")
-		r.finished.Set()
+		r.finished.Store(true)
 	}
 	if r.WaitTimeout > 0 && int(time.Since(r.lastBuild).Seconds()) > r.WaitTimeout {
 		logrus.Println("This runner has not received a job in", r.WaitTimeout, "seconds, so now exiting")
-		r.finished.Set()
+		r.finished.Store(true)
 	}
 }
 
@@ -182,16 +182,15 @@ func (r *RunSingleCommand) Execute(c *cli.Context) {
 
 	logrus.Println("Starting runner for", r.URL, "with token", r.ShortDescription(), "...")
 
-	r.finished = abool.New()
 	abortSignal := make(chan os.Signal)
 	doneSignal := make(chan int, 1)
 	r.runForever = r.MaxBuilds == 0
 
-	go waitForInterrupts(r.finished, abortSignal, doneSignal, r.interruptSignals, r.getShutdownTimeout())
+	go waitForInterrupts(&r.finished, abortSignal, doneSignal, r.interruptSignals, r.getShutdownTimeout())
 
 	r.lastBuild = time.Now()
 
-	for !r.finished.IsSet() {
+	for !r.finished.Load() {
 		data, err := executorProvider.Acquire(&r.RunnerConfig)
 		if err != nil {
 			logrus.Warningln("Executor update:", err)
