@@ -1,12 +1,412 @@
-## v16.10.1 (2024-10-10)
+## v17.4.0 (2024-09-19)
+
+### New features
+
+- Forward entrypoint logs [!4883](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4883)
+- Akeyless support [!4975](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4975)
 
 ### Bug fixes
 
-- Cancel stage script upon job cancellation in attach mode [!4813](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4813)
+- Custom executor script shouldn't end with '.' when no file extension [!4898](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4898)
+- Fix docker+machine download url [!5014](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5014)
+- Resolve "`gitlab-runner start` throws "FATAL: Failed to start gitlab-runner: exit status 134" when started prior to being logged in" [!4995](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4995)
+- Fix segfault in unregisterRunner when called with no arguments [!4932](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4932)
+- Prevent script dump on job cancellation through UI [!4980](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4980)
+- Make image generation fail upon failure to download dumb-init ubi-fips [!4955](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4955)
 
 ### Maintenance
 
-- Remove license scanning template [!4735](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4735)
+- Remove the GitLab Hosted Runners as an example of security risks with DIND [!5011](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5011)
+- CTRT: Refactor the intro for Install GitLab Runner [!4974](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4974)
+- Add link to debug trace docs page in the Runner Advanced Configuration doc [!4938](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4938)
+- Add reference to troubleshooting to install step 3c of the Install GitLab Runner on macOS doc [!4991](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4991)
+- Copy edit GitLab Runner system services doc [!4981](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4981)
+- Update the version of Ruby referenced in the Setup macOS runners docs. [!4977](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4977)
+- Add links to new autoscaling executors to the [[runners]] section in the Runner Advanced Configuration doc [!4930](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4930)
+- Update the default container registry of the helper images [!4935](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4935)
+- Fix fleeting plugin version constraint format documentation [!4985](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4985) (joola @jooola)
+- Add GitLab Advanced SAST to CI/CD config [!4965](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4965)
+- Change `Docker` to container in Kubernetes section of the Runner Advanced Configuration doc [!4957](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4957)
+- Update tooling for local development, fix FIPS requirements [!4937](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4937)
+- Add `Instance` and `Docker Autoscaler` executors to the default build dir section in the Runner Advanced Configuration doc [!4964](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4964)
+- Change `docker` to `container` in the image_pull_secrets parameter in the Runner Advanced Configuration doc [!4959](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4959)
+- Docker integration test for MacAddress setting [!4967](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4967)
+- Add `docker autoscaler` and `instance` executors to the runners custom build section in the runner Advanced Configuration doc [!4963](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4963)
+- Change `executor` description in the [[runners]] section in the Runner Advanced Configuration doc [!4931](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4931)
+- Runner instance generally available [!4998](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4998)
+- Update install GitLab runner documentation for Amazon Linux [!4934](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4934)
+- Remove `Beta` from the [[runners.autoscaler]] section in the Runner Advanced Configuration doc [!4952](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4952)
+- Update the intro to the Shells table in Runner Advanced Configuration [!4941](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4941)
+- Add link to the `services` docs page in the Runner Advanced Configuration doc [!4948](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4948)
+- Change URL for nesting to docs page entry in the Runner Advanced Config doc [!4953](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4953)
+- Update 3.18 and 3.19 alpine info [!4944](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4944)
+- Fix broken links [!4936](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4936)
+- Use latest docs docker image and linting configuration docs [!5001](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5001)
+- Revise install step 2 in the Install GitLab Runner on macOS doc [!4989](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4989)
+- Change the intro section in the Install GitLab Runner on macOS doc [!4988](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4988)
+- Don't depend on k8s.io/kubernetes [!4984](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4984)
+- Remove `Alpine 3.16` from the runner images section in the Advanced Configuration doc [!4960](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4960)
+- Skip TestDockerCommand_MacAddressConfig on Windows OS [!4999](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4999)
+- CTRT: Refactor install GitLab Runner [!4983](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4983)
+- Add token newline troubleshooting item [!4966](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4966)
+- Add an example config for check interval [!4928](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4928)
+- Delete `experiment` label from `idleScaleFactor` [!4950](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4950)
+- Change designation of Fleeting plugin for Azure from BETA to generally available [!5013](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5013)
+- Updated Ruby version from 3.3 to 3.3.x [!4979](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4979)
+- Update the config.toml example in Runner Advanced Config [!4927](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4927)
+- Add intro to the [[runners.nachine.autoscaling]] section [!4951](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4951)
+- Add link to the Git LFS page in the Runner Advanced Configuration doc [!4939](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4939)
+- Fleeting.md: fix bin path [!4914](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4914) (Naftoli Gugenheim @nafg)
+- Bump UBI base image from `9.4-1194` to `9.4-1227` [!4997](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4997)
+- Add rules to semgrep-sast job [!4923](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4923)
+- Update the Global Section in the Runner Advanced Config doc [!4926](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4926)
+- Docs(kubernetes): mention AWS ASG Zone rebalancing [!5002](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5002) (Ummet Civi @ummetcivi)
+- Clarify allowed_pull_policies default [!4969](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4969)
+- Re-order sentences in the Helper image registry section of the Runner Advanced Config doc [!4961](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4961)
+- Change `images` to `container images` in the Kubernetes section of the Runner Advanced Configuration doc [!4958](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4958)
+- Add reference to docker executor in the [runners.docker] section [!4942](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4942)
+- Change to terminate process in the runner Advanced Configuration dov [!4947](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4947)
+- Revise install Step 3a in the Install GitLab Runner on macOS doc [!4990](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4990)
+- Backfill test for waitForRunningContainer [!4996](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4996)
+- Address GHSA-xr7q-jx4m-x55m by updating google.golang.org/grpc to 1.64.1 [!4946](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4946)
+- Change text on the use of runner in offline environments in Runner Advanced Configuration doc [!4962](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4962)
+- Add `instance` and `docker-autoscaler` executors to the executors table [!4940](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4940)
+- Improve flaky waitForRunningContainer test [!5016](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5016)
+- Update `dumb-init` version on GitLab Runner images [!4956](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4956)
+- Bump docker-machine to 0.16.2-gitlab.28 [!4924](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4924)
+- Change intro in the [runner.kubernetes] section in the Runner Advanced Config doc [!4954](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4954)
+- Add troubleshooting step to resolve install error on Apple M1 to the Install GitLab Runner on macOS [!4992](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4992)
+- Update from EOL Ruby 2.7 to Ruby 3.3 in examples used in the Runner Advanced Configuration Doc [!4978](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4978)
+- Expand session server configuration example [!4929](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4929)
+
+### Documentation changes
+
+- Add planning issue template [!4986](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4986)
+
+## v17.3.1 (2024-08-21)
+
+### Bug fixes
+
+- Make image generation fail upon failure to download dumb-init ubi-fips [!4955](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4955)
+
+## v17.3.0 (2024-08-09)
+
+### New features
+
+- Add debug log message for resolving Docker credentials [!4902](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4902)
+- Add Git_STRATEGY of "empty" to support clean build directories [!4889](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4889) (Nathan Cain @nathan.cain)
+
+### Security fixes
+
+- Update azidentity dependency [!4903](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4903)
+
+### Bug fixes
+
+- Gracefully stop long running processes when using the shell executor - Take 2 [!4896](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4896)
+- Fix default log format to FormatRunner [!4910](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4910)
+- Use pull policy configuration for services [!4854](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4854)
+- Upgrade fleeting: fix tcpchan deadline for tunnelled connections [!4917](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4917)
+- Cancel stage script upon job cancellation in attach mode [!4813](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4813)
+- Reset log level and format to default values when not set [!4897](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4897)
+- Prevent additional newline in job in attach mode [!4901](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4901)
+
+### Maintenance
+
+- Fix formatting in runner registration doc [!4921](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4921)
+- Remove funlen [!4912](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4912)
+- Add a Runner Docker image tag for the build's revision [!4862](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4862)
+- Apply split Vale rules to project [!4918](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4918)
+- Skip `TestRunCommand_configReloading` unit test on windows platform [!4916](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4916)
+- Re-enable Windows Docker Git-lfs tests [!4900](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4900)
+- Remove Git 1.8.3.1 test [!4856](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4856)
+- Merge back 16.11, 17.0, 17.1 and 17.2 patches in main branch [!4905](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4905)
+- Work around a syntax highlighting problem [!4920](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4920)
+- Remove Beta plugin warning for AWS [!4919](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4919)
+- Clarify where to install the fleeting plugin [!4894](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4894)
+- Docs maintenance: Add internal pages to ignore list [!4895](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4895)
+- [k8s] Fix `testKubernetesWithNonRootSecurityContext` integration tests [!4892](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4892)
+- Remove unneeded notes in tabs [!4922](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4922)
+- Bump UBI base image from `9.4-1134` to `9.4-1194` [!4909](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4909)
+- Add runner path requirement [!4904](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4904)
+- Update index.md [!4908](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4908)
+- Add missing requirement for network_mtu [!4890](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4890)
+- Add note about using Workload Identity Federation for GKE [!4884](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4884) (Nabil ZOUABI @nabil_zouabi)
+- [k8s] Fix `CaptureServiceLogs` integration tests [!4891](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4891)
+
+## v17.2.1 (2024-07-25)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode !4813
+
+## v17.1.1 (2024-07-25)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode !4813
+
+### Maintenance
+
+- Remove Git 1.8.3.1 test !4856
+
+## v17.0.2 (2024-07-25)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode !4813
+
+## v16.11.3 (2024-07-25)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode !4813
+
+## v17.2.0 (2024-07-18)
+
+### New features
+
+- Add mount propagation volume option for Kubernetes executor !4784 (Subhashis Suara @subhashissuara)
+- Always attempt to retrieve pod warning events !4852
+- Ability to turn on/off running umask 0000 command for Kubernetes executor !4842
+- Make directories for scripts and logs configurable for k8s Executor !4805 (Thomas John Randowski @WojoInc)
+
+### Bug fixes
+
+- Ensure that dialing fleeting instance can be canceled !4874
+- Upgrade fleeting/taskscaler: fixes reservation/unavailability instance churn !4865
+- Shorten network names created by FF_NETWORK_PER_BUILD !4830 (Ricardo Katz @rikatz)
+- Fix Kubernetes executor runner API permission !4800 (EuVen @euven)
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4843
+- Fix default runner alpine flavour version !4850
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
+- Update clear-Docker-cache script to keep cache volumes !4847
+- Set file permissions before creating runner rpm/deb packages !4835
+- Fix parsing of --Kubernetes-host_aliases command-line flag !4837
+
+### Maintenance
+
+- Change product lifecycle status of the Fleeting Plugin for AWS from Beta to generally available !4887
+- Manually update linting configuration and update Vale version !4881
+- Update docs for modifying Git LFS endpoints !4886
+- Add note about Runner install requirement !4885
+- Update dependency danger-review to v1.4.1 !4860
+- Docs maintenance: Fix 404 links !4882
+- Fix periods example in [[runners.autoscaler.policy]] documentation. !4863 (Jan Jörke @janjoerke)
+- Add note that AWS and GCP Fleeting plugins is beta !4879
+- Bump golang to 1.22.5 !4878
+- Fix more k8s integration test !4869
+- Manually update Vale and markdownlint rules and fix docs !4873
+- Add note to runner autoscaling for runner manager on fault tolerant design !4870
+- Add note to runner autoscaling for runner manager on preemptive mode !4871
+- Add note on the runner `tls_verify` setting to the docs !4872
+- Add note to runner autoscaling on use of credentials file !4868
+- Add note to runner autoscaling for runner manager on containers !4867
+- Fix testKubernetesPodEvents integration test !4866
+- Fix link that is broken when published !4864
+- Bump Docker+machine version to v0.16.2-GitLab.27 !4859
+- Use the danger-review component !4828
+- Adress CVE-2024-6104 in GitHub.com/hashicorp/go-retryablehttp !4858
+- Bump UBI bases image from `9.4-949` to `9.4-1134` !4857
+- Remove Git 1.8.3.1 test !4856
+- Add note about `FF_ENABLE_JOB_CLEANUP` feature flag !4849
+- Suppress golangci-lint config deprecations and warnings !4845
+- Fix some external links in the project !4851
+- Document k8s executors for read-only root filesystem !4848
+- Replace sysvinit-adjacent commands with systemd equivalents !4841
+- Bump to Go 1.22.4 !4838
+- Specify in which scenarios missing index has been seen !4839
+- Create issue template for bumping golang !4840
+- Use upstream spdystream again !4836
+
+## v17.0.1 (2024-07-05)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4844
+
+### Maintenance
+
+- Remove Git 1.8.3.1 test !4856
+
+## v16.11.2 (2024-07-05)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler to fix instance churn/runaway !4843
+
+### Maintenance
+
+- Remove Git 1.8.3.1 test !4856
+
+## v17.1.0 (2024-06-20)
+
+### New features
+
+- Add AFTER_SCRIPT_IGNORE_ERRORS variable allow not ignoring after_script errors !4758 (Tim @timmmm)
+- Add Kubernetes configurable retry backoff ceiling !4790 (Nabil ZOUABI @nabil_zouabi)
+- Remove Beta from runner autoscaler supported public cloud docs section !4823
+- Update Fleeting docs to reflect GCP plugin transition to GA !4820
+- Change status of Docker Autoscaler and Instance to GA !4821
+- Log ETag of extracted cache archive if available !4769
+- Allow reading run-single configuration from a config file !4789 (Tobias Ribizel @upsj)
+- Add steps shim !4803
+
+### Bug fixes
+
+- Fix panic when err is nil on retry for k8s executor !4834
+- Fix linter violation !4827
+- Support handling Docker images with @digest !4557
+- Fix Docker client intermittently failing to connect to unix socket !4801
+- Override helper images entrypoint on Docker import !4793
+- Fix jsonschema validation warning for Docker services_limit !4782 (Malte Morgenstern @malmor)
+- Propagate exit codes through nested pwsh calls !4715 (Andy Durant @AJDurant)
+- Fix jsonschema validation warning for Kubernetes retry_limits !4786 (Malte Morgenstern @malmor)
+
+### Maintenance
+
+- Add exact commands to fix signed by unknown authority !4833
+- Document troubleshooting steps for 500 error creating tags !4831
+- Remove BETA from the autoscaler docs !4832
+- Upgrade GitHub.com/MinIO/MinIO-go to v7.0.70 !4819 (Mathieu Quesnel @xmath279)
+- Remove GitHub.com/samber/lo dependency from main application !4811
+- Update Docker Autoscaler executor docs !4822
+- Enable tarzstd archive format for caches !4807
+- Bump Docker+machine version to v0.16.2-GitLab.26 !4816
+- Upgrade ubi fips base image from ubi8 to ubi9 !4814
+- Check links in more files !4815
+- Upgrade helper image Git-lfs to 3.5.1 !4812
+- Update runner registration documentation !4809
+- Update docs linting Docker images !4806
+- Add note about KMS Alias syntax - Documentation !4792
+- Fix external links in docs !4802
+- Remove trailing whitespace !4799
+- Bump to Go 1.22.3 !4795
+- Move docs-related CI jobs to the same file !4787
+- Docs: match example to text !4794 (Anton Dollmaier @a.dollmaier)
+- Bump to Go 1.22.2 !4759
+- Use lowercase for beta and experiment !4788
+- Made beta and experiment lowercase !4785
+
+## v17.0.0 (2024-05-16)
+
+### New features
+
+- Add fleeting docs describing new plugin installation method !4749
+- Support Google Cloud secrets from projects other than the one containing the WIF pool !4718 (Rich Wareham @rjw57)
+- Interpret failed pods as system failures rather than script failures for Kubernetes executor !4698 (Daniel Barnes @dbarnes3)
+- Implement new GCS Cache adapter that uses Google Cloud SDKs auth discovery defaults !4706
+- Add cpuset_mems option to Docker executor !4725 (Karthik Natarajan @karthiknatarajan)
+- Add docs for Runner Operator in disconnected network environments !4716
+- Add support for taskscaler scale throttle !4722
+- Add the ability to disable the automatic token rotation !4721
+
+### Security fixes
+
+- Stop installing tar in ubi fips base image !4703
+
+### Bug fixes
+
+- Revert "Merge remote-tracking branch 'origin/16-11-stable'" !4761
+- Upgrade fleeting and taskscaler for fixes !4745
+- Upgrade fleeting and taskscaler for fixes !4745
+- Remove runner from config when unregister with token !4750 (Karthik Natarajan @karthiknatarajan)
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Fix fleeting install subcommand for Windows !4753
+- Fix fleeting install subcommand for Windows !4753
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
+
+### Maintenance
+
+- Require ci prep before incept !4762
+- Upgrade runner-linters image and golangci-lint for Go 1.22 !4776
+- Improve upgrade docs !4780
+- Clean up docs redirects, runner - 2024-05-02 !4756
+- Added missing apostrophe !4781
+- State clearly one job = one VM = one container !4774
+- Add information regarding Beta feature !4757
+- Updating docs tier badge rules !4779
+- Fix broken link and typo !4775
+- Add badge info to autoscaler page !4772
+- Provide examples and clarify how MachineOptions work for the MachineDriver !4768
+- Update GitLab Runner Version !4773
+- Fix stuck Windows 1809 jobs !4771
+- Remove unsupported GitLab versions from Verify Runner group docs !4764
+- Remove support for old pre_clone_script and post_clone_script configuration settings !4767
+- Clarify "circular" docs links !4738
+- Remove slsa_v02 from artifact_metadata !4760
+- Remove cmd shell !4754
+- Remove shared runner naming from GitLab Runner docs !4744
+- Switch to Lychee for link checking !4737
+- Convert custom Kubernetes error to retryError !4662 (Nabil ZOUABI @nabil_zouabi)
+- Remove license scanning template !4735
+- Fix jsonschema validation warning for monitoring struct !4724 (Malte Morgenstern @malmor)
+- Updated examples to avoid Helm error !4752
+- April: fixes trailing whitespace in GitLab Runner project !4751
+- Remove legacy shell quoting and FF_USE_NEW_SHELL_ESCAPE feature flag !4742
+- Remove `gitlab-runner exec` command !4740
+- Add SSH: handshake failed to troubleshooting !4743
+- Update autoscaler config option documentation !4730
+- Fix dead documentation anchor links in README !4733 (Markus Heidelberg @marcows)
+- Remove terminationGracePeriodSeconds !4739
+- Remove license scanning template !4735
+- Add prerequisite info to runner registration token section !4714
+- Document the Beta status of the Google Cloud plugin for fleeting !4726
+- Add security risk on runner debug for Shell executors !4586
+
+## v16.11.1 (2024-05-03)
+
+### Bug fixes
+
+- Upgrade fleeting and taskscaler for fixes !4745
+- Correctly set CI_JOB_STATUS to timedout/canceled when appropriate !4717
+- Fix fleeting install subcommand for Windows !4753
+- Upgrade fleeting-artifact to fix plugin installation !4748
+- Fix buildlogger write race !4734
+
+### Maintenance
+
+- Remove license scanning template !4735
+
+## v16.11.0 (2024-04-18)
+
+### New features
+
+- Taskscaler and fleeting now use logrus logger !4719
+- Add autoscaler instance_ready_command option !4709
+- Implement timestamped logs !4591
+- Add Jfrog Artifactory Secretes engine as External Secrets option in Hashicorp Vault !4486 (Ivo Ivanov @urbanwax)
+- Add fleeting subcommand to manage fleeting plugins !4690
+- Extend GitInfo with RepoObjectFormat to store object format !4645
+
+### Bug fixes
+
+- Fix log timestamps fixed format !4712
+- Avoid errors when creating files in pwsh 2.0 !4661 (Robin Lambertz @roblabla)
+- Give up on the trace finalUpdate if it keeps on failing !4692
+- Fix test coverage report job !4701
+- Fix Makefile.build.mk for armv7l (#36976) !4682 (Alexander Puck Neuwirth @APN-Pucky)
+- Rename SSH.Config to common.SshConfig to avoid misleading config.TOML validation error !4694
+- Update GO_FIPS_VERSION to match GO_VERSION !4687
+- Revert "Merge branch 'avonbertoldi/27443/graceful-shutdown-shell' into 'main'" !4686
+
+### Maintenance
+
+- Bump Go version to 1.21.9 !4711
+- Re-enable SAST scanning !4683
+- Update a few dependencies !4700
+- docs: Remove period in the middle of a sentence !4708 (Markus Heidelberg @marcows)
+- Runner: Updates docs-lint image for new SVG use !4697
+- Remove extra square brackets in podman section !4705
+- Check Docker version before using deprecated arg !4699 (Anthony Juckel @ajuckel)
+- Change beta to pre in version string !4681
+- Upgrade GitHub.com/BurntSushi/TOML to v1.3.2 !4695
+- Docs Update - Missing Hosted Runner Renaming !4693
+- Use fork of moby/spdystream to fix race condition !4685
+- Fix typo in note !4691
 
 ## v16.10.0 (2024-03-21)
 
