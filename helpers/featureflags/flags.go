@@ -358,9 +358,9 @@ var flags = []FeatureFlag{
 		Name:         GitURLsWithoutTokens,
 		DefaultValue: true,
 		Deprecated:   false,
-		Description: "When enabled, when setting up the Git configuration, or run Git commands, we do not embed the job token anywhere. Rather, we set up " +
-			"a Git credential helper, which - on demand - uses the environment variable to obtain the job token. This limits where the token is stored and " +
-			"therefore the potential for it to leak.",
+		Description: "When enabled, GitLab Runner doesn't embed the job token anywhere during Git configuration or command " +
+			"execution. Instead, it sets up a Git credential helper that uses the environment variable to obtain the job token. " +
+			"This approach limits token storage and reduces the potential for leaks.",
 	},
 }
 
