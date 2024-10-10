@@ -142,6 +142,7 @@ type FeaturesInfo struct {
 	ImageExecutorOpts       bool `json:"image_executor_opts"`
 	ServiceExecutorOpts     bool `json:"service_executor_opts"`
 	CancelGracefully        bool `json:"cancel_gracefully"`
+	NativeStepsIntegration  bool `json:"native_steps_integration"`
 }
 
 type ConfigInfo struct {

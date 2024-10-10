@@ -151,7 +151,6 @@ func (n *GitLabClient) doMeasuredRaw(
 			params.requestType,
 			params.headers,
 		)
-
 		if err != nil {
 			return clientError
 		}

@@ -364,6 +364,7 @@ func init() {
 		features.ServiceMultipleAliases = true
 		features.ImageExecutorOpts = true
 		features.ServiceExecutorOpts = true
+		features.NativeStepsIntegration = true
 	}
 
 	common.RegisterExecutorProvider("docker", executors.DefaultExecutorProvider{
