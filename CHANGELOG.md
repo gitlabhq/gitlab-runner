@@ -1,3 +1,13 @@
+## v16.10.1 (2024-10-10)
+
+### Bug fixes
+
+- Cancel stage script upon job cancellation in attach mode [!4813](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4813)
+
+### Maintenance
+
+- Remove license scanning template [!4735](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4735)
+
 ## v16.10.0 (2024-03-21)
 
 ### New features
