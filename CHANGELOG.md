@@ -1,3 +1,10 @@
+## v17.2.2 (2024-10-10)
+
+### Bug fixes
+
+- Prevent script dump on job cancellation through UI [!4980](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4980)
+- Downgrade go-fips base image to ubi8 [!5040](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5040)
+
 ## v17.2.1 (2024-07-25)
 
 ### Bug fixes
