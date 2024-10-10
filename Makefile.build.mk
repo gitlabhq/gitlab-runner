@@ -16,7 +16,6 @@ runner-bin-fips:
 		   $(PKG)
 
 go-fips-docker: export GO_VERSION ?= 1.22
-# BUILD_IMAGE: GO_FIPS_IMAGE: $CI_REGISTRY_IMAGE/go-fips:$GO_FIPS_VERSION
 go-fips-docker: export BUILD_IMAGE ?= $(GO_FIPS_IMAGE)
 go-fips-docker: export GO_FIPS_UBI_VERSION ?= ubi8
 go-fips-docker: export GO_FIPS_BASE_IMAGE ?= redhat/$(GO_FIPS_UBI_VERSION)-minimal:latest
