@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -160,6 +161,7 @@ func (c *configOptions) loadConfig() error {
 	c.config = config
 	for _, runnerCfg := range c.config.Runners {
 		runnerCfg.SystemIDState = systemIDState
+		runnerCfg.ConfigLoadedAt = time.Now()
 	}
 
 	c.loadedSystemIDState = systemIDState
