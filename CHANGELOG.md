@@ -1,3 +1,9 @@
+## v17.0.3 (2024-10-10)
+
+### Bug fixes
+
+- Prevent script dump on job cancellation through UI [!4980](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4980)
+
 ## v16.11.4 (2024-10-10)
 
 ### Bug fixes
