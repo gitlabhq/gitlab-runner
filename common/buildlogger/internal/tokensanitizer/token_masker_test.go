@@ -4,6 +4,10 @@ package tokensanitizer
 
 import (
 	"bytes"
+	"fmt"
+	"io"
+	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +15,10 @@ import (
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal"
 )
+
+var words = []string{"Lorem", "ipsum", "odor", "amet", "consectetuer", "adipiscing", "elit",
+	"Ad", "sagittis", "volutpat", "aptent", "augue", "dis", "dui", "primis", "laoreet",
+	"taciti", "fusce", "sapien", "ullamcorper", "ex", "venenatis"}
 
 func TestTokenMasking(t *testing.T) {
 	tests := map[string]struct {
@@ -93,4 +101,101 @@ func TestTokenMasking(t *testing.T) {
 			assert.Equal(t, tc.expected, buf.String())
 		})
 	}
+}
+
+func BenchmarkTokenMaskingPerformance(b *testing.B) {
+	paragraphs := map[string]struct {
+		input string
+	}{
+		"100K words": {
+			input: generateParagraph(100000, DefaultTokenPrefixes, words),
+		},
+		"300K words": {
+			input: generateParagraph(300000, DefaultTokenPrefixes, words),
+		},
+		"800K words": {
+			input: generateParagraph(800000, DefaultTokenPrefixes, words),
+		},
+		"1.5M words": {
+			input: generateParagraph(1500000, DefaultTokenPrefixes, words),
+		},
+		"5M words": {
+			input: generateParagraph(5000000, DefaultTokenPrefixes, words),
+		},
+	}
+
+	tests := map[string]struct {
+		defaultToken []string
+		// expected     string
+	}{
+		"one default token": {
+			defaultToken: DefaultTokenPrefixes[:1],
+		},
+		"two default tokens": {
+			defaultToken: DefaultTokenPrefixes[:2],
+		},
+		"four default tokens": {
+			defaultToken: DefaultTokenPrefixes[:4],
+		},
+		"all but one default tokens": {
+			defaultToken: DefaultTokenPrefixes[:len(DefaultTokenPrefixes)-1],
+		},
+		"all default tokens": {
+			defaultToken: DefaultTokenPrefixes,
+		},
+	}
+
+	for pn, pc := range paragraphs {
+		for tn, tc := range tests {
+			b.Run(fmt.Sprintf("%s_%s", pn, tn), func(b *testing.B) {
+				b.ResetTimer()
+				b.ReportAllocs()
+
+				for n := 0; n < b.N; n++ {
+					m := New(internal.NewNopCloser(io.Discard), internal.Unique(tc.defaultToken))
+
+					n, err := m.Write([]byte(pc.input))
+					b.SetBytes(int64(n))
+					require.NoError(b, err)
+					require.NoError(b, m.Close())
+					assert.Equal(b, len([]byte(pc.input)), n)
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkTokenMaskingDuration(b *testing.B) {
+	input := generateParagraph(5000000, DefaultTokenPrefixes, words)
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for n := 0; n < b.N; n++ {
+		m := New(internal.NewNopCloser(io.Discard), internal.Unique(DefaultTokenPrefixes))
+
+		n, err := m.Write([]byte(input))
+		b.SetBytes(int64(n))
+		require.NoError(b, err)
+		require.NoError(b, m.Close())
+		assert.Equal(b, len([]byte(input)), n)
+	}
+}
+
+func generateParagraph(numberOfWords int, token, wordPool []string) string {
+	words := append([]string{}, wordPool...)
+	sb := strings.Builder{}
+
+	for _, tok := range token {
+		words = append(words, fmt.Sprintf("%slorem", tok))
+	}
+
+	for i := 0; i < numberOfWords; i++ {
+		if i > 0 {
+			sb.WriteString(" ")
+		}
+
+		sb.WriteString(words[rand.Intn(len(words))])
+	}
+
+	return sb.String()
 }
