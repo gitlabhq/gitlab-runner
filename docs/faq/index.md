@@ -103,7 +103,7 @@ log_level = "debug"
 
 ### In the Helm Chart
 
-If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configuring-gitlab-runner-using-the-helm-chart):
+If GitLab Runner was installed in a Kubernetes cluster by using the [GitLab Runner Helm Chart](../install/kubernetes.md), you can enable debug logging by setting the `logLevel` option in the [`values.yaml` customization](../install/kubernetes.md#configure-gitlab-runner-with-the-helm-chart):
 
 ```yaml
 ## Configure the GitLab Runner logging level. Available values are: debug, info, warn, error, fatal, panic

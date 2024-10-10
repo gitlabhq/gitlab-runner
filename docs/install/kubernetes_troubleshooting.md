@@ -8,7 +8,7 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 
 ## Error: `Job failed (system failure): secrets is forbidden`
 
-If you see the following error, [enable RBAC support](kubernetes.md#enabling-rbac-support) to correct it:
+If you see the following error, [enable RBAC support](kubernetes_helm_chart_configuration.md#enable-rbac-support) to correct it:
 
 ```plaintext
 Using Kubernetes executor with image alpine ...
@@ -19,7 +19,7 @@ cannot create resource "secrets" in API group "" in the namespace "gitlab"
 ## Error: `Unable to mount volumes for pod`
 
 If you see mount volume failures for a required secret, ensure that you have
-[stored registration tokens or runner tokens in secrets](kubernetes.md#store-registration-tokens-or-runner-tokens-in-secrets).
+stored registration tokens or runner tokens in secrets.
 
 ## Slow artifact uploads to Google Cloud Storage
 
@@ -39,7 +39,7 @@ For more information, see [issue 28393](https://gitlab.com/gitlab-org/gitlab-run
 ## `PANIC: creating directory: mkdir /nonexistent: permission denied`
 
 To resolve this error, switch to the
-[Ubuntu-based GitLab Runner Docker image](kubernetes.md#switching-to-the-ubuntu-based-gitlab-runner-docker-image).
+[Ubuntu-based GitLab Runner Docker image](kubernetes_helm_chart_configuration.md#switch-to-the-ubuntu-based-gitlab-runner-docker-image).
 
 ## Error: `invalid header field for "Private-Token"`
 
@@ -66,7 +66,7 @@ on the GitLab server. Please try again without specifying any of those arguments
 ```
 
 This error happens when you use an authentication token, and
-[provide a token through a secret](kubernetes.md#store-registration-tokens-or-runner-tokens-in-secrets).
+provide a token through a secret.
 To fix it, review your values YAML file and make sure that you are not using any deprecated values.
 For more information about which values are deprecated, see
 [Installing GitLab Runner with Helm chart](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html#installing-gitlab-runner-with-helm-chart).

@@ -53,7 +53,7 @@ GitLab Runner supports the following options:
   under the `[[runners]]` section. This allows you to specify a custom certificate file.
   This file will be read every time the Runner tries to access the GitLab server.
   If you are using GitLab Runner Helm chart, you will need to configure certificates as described in
-  [Providing a custom certificate for accessing GitLab](../install/kubernetes.md#providing-a-custom-certificate-for-accessing-gitlab).
+  [Access GitLab with a custom certificate](../install/kubernetes_helm_chart_configuration.md#access-gitlab-with-a-custom-certificate).
 
 - **Read a PEM certificate**: GitLab Runner reads the PEM certificate (**DER format is not supported**) from a
   predefined file:
