@@ -57,8 +57,7 @@ func newHelperTagsList(prefix, suffix, arch, imageName, registryImage string, is
 		registryImage: registryImage,
 		imageName:     imageName,
 		isLatest:      isLatest,
-		baseTemplate:  "{{ .RegistryImage }}/{{ .ImageName }}:{{ .Prefix }}{{ .Arch}}-",
-	}
+		baseTemplate:  "{{ .RegistryImage }}/{{ .ImageName }}:{{ .Prefix }}{{ .Arch}}-"}
 }
 
 func (l helperTagsList) render(raw string) string {
@@ -134,7 +133,6 @@ func (b helperBlueprintImpl) Data() []helperBuild {
 	return b.data
 }
 
-//nolint:goconst
 func AssembleReleaseHelper(flavor, prefix string) build.TargetBlueprint[build.Component, build.Component, []helperBuild] {
 	var archs []string
 	switch flavor {
