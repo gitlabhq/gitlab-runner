@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/gitlab-org/fleeting/fleeting"
@@ -27,6 +28,7 @@ func TestInit(t *testing.T) {
 		wantTaskscaler       taskscaler.Taskscaler
 		wantCreated          bool
 		wantErr              bool
+		refreshConfig        bool
 	}{
 		"nil autoscaler config return error": {
 			config:  common.NewTestRunnerConfig().RunnerConfig,
@@ -86,6 +88,20 @@ func TestInit(t *testing.T) {
 			wantTaskscaler: tokenTaskscaler,
 			wantCreated:    false,
 		},
+		"detect refresh on config change": {
+			config: common.NewTestRunnerConfig().
+				WithAutoscalerConfig(
+					common.NewTestAutoscalerConfig().AutoscalerConfig,
+				).
+				WithToken("runner").
+				RunnerConfig,
+			scalers: map[string]taskscaler.Taskscaler{
+				"runner": tokenTaskscaler,
+			},
+			wantTaskscaler: tokenTaskscaler,
+			wantCreated:    false,
+			refreshConfig:  true,
+		},
 	}
 
 	for name, tt := range tests {
@@ -109,6 +125,16 @@ func TestInit(t *testing.T) {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
+			}
+
+			if tt.refreshConfig {
+				_, created, _ = p.init(tt.config)
+				assert.False(t, created)
+
+				tt.config.ConfigLoadedAt = time.Now()
+
+				_, created, _ = p.init(tt.config)
+				assert.True(t, created)
 			}
 		})
 	}

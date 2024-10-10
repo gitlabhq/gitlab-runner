@@ -51,9 +51,9 @@ type provider struct {
 }
 
 type scaler struct {
-	internal taskscaler.Taskscaler
-	shutdown func(context.Context)
-	cancel   func()
+	internal       taskscaler.Taskscaler
+	shutdown       func(context.Context)
+	configLoadedAt time.Time
 }
 
 type Config struct {
@@ -120,7 +120,10 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 
 	s, ok := p.scalers[config.GetToken()]
 	if ok {
-		return s.internal, false, nil
+		// detect if the config has been reloaded
+		refresh := s.configLoadedAt != config.ConfigLoadedAt
+		s.configLoadedAt = config.ConfigLoadedAt
+		return s.internal, refresh, nil
 	}
 
 	pluginCfg, err := config.Autoscaler.PluginConfig.JSON()
@@ -223,6 +226,7 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 			ts.Shutdown(ctx)
 			runner.Kill()
 		},
+		configLoadedAt: config.ConfigLoadedAt,
 	}
 
 	p.scalers[config.GetToken()] = s
@@ -232,12 +236,13 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 
 //nolint:gocognit
 func (p *provider) Acquire(config *common.RunnerConfig) (common.ExecutorData, error) {
-	scaler, fresh, err := p.init(config)
+	scaler, refresh, err := p.init(config)
 	if err != nil {
 		return nil, fmt.Errorf("initializing taskscaler: %w", err)
 	}
 
-	if fresh /* || todo: detect config updates - based on last modified timestamp? */ {
+	// reconfigure policy if the config has been reloaded
+	if refresh {
 		var schedules []taskscaler.Schedule
 		for _, schedule := range config.Autoscaler.Policy {
 			schedules = append(schedules, taskscaler.Schedule{

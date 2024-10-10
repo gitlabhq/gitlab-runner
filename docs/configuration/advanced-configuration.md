@@ -805,6 +805,10 @@ If the `instance_ready_command` frequently fails with idle scale rules, instance
 faster than the runner accepts jobs. To support scale throttling, an exponential backoff was added in
 [GitLab 17.0](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/37497).
 
+NOTE:
+Autoscaler configuration options don't reload with configuration changes. However, in
+GitLab 17.5.0 or later, `[[runners.autoscaler.policy]]` entries reload when configurations change.
+
 ## The `[runners.autoscaler.plugin_config]` section
 
 This hash table is re-encoded to JSON and passed directly to the configured plugin.

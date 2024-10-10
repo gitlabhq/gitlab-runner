@@ -1213,7 +1213,8 @@ type RunnerConfig struct {
 	UnhealthyRequestsLimit int            `toml:"unhealthy_requests_limit,omitzero" long:"unhealthy-requests-limit" env:"RUNNER_UNHEALTHY_REQUESTS_LIMIT" description:"The number of 'unhealthy' responses to new job requests after which a runner worker will be disabled"`
 	UnhealthyInterval      *time.Duration `toml:"unhealthy_interval,omitzero" json:",omitempty" long:"unhealthy-interval" ENV:"RUNNER_UNHEALTHY_INTERVAL" description:"Duration for which a runner worker is disabled after exceeding the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc"`
 
-	SystemIDState *SystemIDState `toml:"-" json:",omitempty"`
+	SystemIDState  *SystemIDState `toml:"-" json:",omitempty"`
+	ConfigLoadedAt time.Time      `toml:"-" json:",omitempty"`
 
 	RunnerCredentials
 	RunnerSettings
@@ -2041,6 +2042,7 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 	}
 
 	r.SystemIDState = c.SystemIDState
+	r.ConfigLoadedAt = c.ConfigLoadedAt
 
 	if r.Monitoring != nil {
 		err = r.Monitoring.Compile()
