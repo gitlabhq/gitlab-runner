@@ -1,3 +1,10 @@
+## v17.4.1 (2024-10-10)
+
+### Bug fixes
+
+- Require only build container to start in Kubernetes [!5039](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5039)
+- Downgrade go-fips base image to ubi8 [!5040](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5040)
+
 ## v17.4.0 (2024-10-10)
 
 ### New features
