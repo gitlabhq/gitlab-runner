@@ -68,7 +68,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.9.0
-	github.com/tevino/abool v0.0.0-20160628101133-3c25f2fe7cd0
 	github.com/urfave/cli v1.22.14
 	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20240723062336-da5f142b3c7d
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20240501171108-612a68737bba
