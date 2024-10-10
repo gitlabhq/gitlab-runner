@@ -12,7 +12,11 @@ DETAILS:
 
 > - The autoscale feature was introduced in GitLab Runner 1.1.0.
 
-**Note**: In GitLab 17.5, we have deprecated the GitLab Runner Docker Machine executor. We recommend that customers using the Runner Docker Machine executor on Amazon Web Services (AWS) EC2, Microsoft Azure Compute, and Google Compute Engine (GCE) migrate to the [GitLab-developed fleeting and taskscaler autoscaler](../runner_autoscale/index.md).
+NOTE:
+The Docker Machine executor was deprecated in GitLab 17.5.
+If you're using the Docker Machine executor on Amazon Web Services (AWS) EC2,
+Microsoft Azure Compute, or Google Compute Engine (GCE), migrate to the
+[GitLab Runner Autoscaler](../runner_autoscale/index.md).
 
 Autoscale provides the ability to use resources in a more elastic and
 dynamic way.
