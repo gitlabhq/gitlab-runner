@@ -70,13 +70,13 @@ done
 trap runner_script_trap EXIT
 `
 
-	// When the job is cancelled through the UI, GitLab Runner sends SIGTERM to
-	// all PIDs related to the stage script.
-	// On Bash version 4, the procession termination dumps the executed script in the job logs.
-	// To prevent this behaviour the TERM signals are trapped and cause the script to exit 1.
-	bashExitOnScriptTerminationSignal = `trap exit 1 TERM`
+// When the job is cancelled through the UI, GitLab Runner sends SIGTERM to
+// all PIDs related to the stage script.
+// On Bash version 4, the procession termination dumps the executed script in the job logs.
+// To prevent this behaviour the TERM signals are trapped and cause the script to exit 1.
+const bashExitOnScriptTerminationSignal = `trap exit 1 TERM`
 
-	bashJSONInitializationScript = `start_json="{\"script\": \"$0\"}"
+const bashJSONInitializationScript = `start_json="{\"script\": \"$0\"}"
 echo "$start_json"
 `
 )
