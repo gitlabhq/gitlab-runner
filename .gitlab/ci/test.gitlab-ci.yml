@@ -12,6 +12,9 @@ variables:
 gemnasium-dependency_scanning:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
+semgrep-sast:
+  rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
+
 check version definition:
   stage: test
   extends:
@@ -327,29 +330,6 @@ windows 21H2 integration tests:
     optional: true
   - job: 'stable servercore21H2 helper docker images'
     optional: true
-
-git 1.8.3.1:
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .go-cache
-  image: centos:7
-  stage: test
-  variables:
-    GOROOT: /usr/local/go
-    GOPATH: /go
-    CGO_ENABLED: 0
-  before_script:
-  - sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-  - sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-  - yum install -y -q git make patch && git version
-  - curl https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz | tar zx -C $(dirname "$GOROOT")
-  - curl -L https://github.com/git-lfs/git-lfs/releases/download/v${GIT_LFS_VERSION}/git-lfs-linux-amd64-v${GIT_LFS_VERSION}.tar.gz | tar zx
-  - mv git-lfs-${GIT_LFS_VERSION}/git-lfs /usr/bin
-  - git-lfs install --skip-repo
-  - export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
-  - source ci/touch_make_dependencies
-  script:
-  - make git1.8-test
 
 integration_k8s:
   extends:
