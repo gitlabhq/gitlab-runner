@@ -364,6 +364,16 @@ func (b *BashShell) GetName() string {
 	return b.Shell
 }
 
+// Setting up an immediately invoked function is a common pattern in git, to handle arguments which git passes to
+// helpers by just appending those to the script snippet.
+// For more docs on that, and custom git cred helpers in general, see:
+// https://git-scm.com/docs/gitcredentials#_custom_helpers
+const bashGitCredHelperScript = `f(){ if [ "$1" = "get" ] ; then echo "password=${CI_JOB_TOKEN}" ; fi ; } ; f`
+
+func (b *BashShell) GetGitCredHelperCommand() string {
+	return bashGitCredHelperScript
+}
+
 func (b *BashShell) GetEntrypointCommand(info common.ShellScriptInfo, probeFile string) []string {
 	script := b.bashDetectScript(info.Type == common.LoginShell)
 	if probeFile != "" {

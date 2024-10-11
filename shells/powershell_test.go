@@ -793,3 +793,20 @@ func TestPowershellEntrypointCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestPowershellGetGitCredHelperCommand(t *testing.T) {
+	shells := []string{SNPowershell, SNPwsh}
+	commonArgs := strings.Join(defaultPowershellFlags, " ")
+
+	for _, shellName := range shells {
+		t.Run(shellName, func(t *testing.T) {
+			shell := PowerShell{Shell: shellName}
+
+			actualCmd := shell.GetGitCredHelperCommand()
+			// Why the double single-quotes? Please see the comment on powershell's GetGitCredHelperCommand
+			expectedCmd := shellName + " " + commonArgs + " -Command ''" + powershellGitCredHelperScript + "''"
+
+			assert.Equal(t, expectedCmd, actualCmd)
+		})
+	}
+}

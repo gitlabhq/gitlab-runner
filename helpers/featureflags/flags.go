@@ -42,6 +42,7 @@ const (
 	UseLegacyGCSCacheAdapter             string = "FF_USE_LEGACY_GCS_CACHE_ADAPTER"
 	DisableUmaskForKubernetesExecutor    string = "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR"
 	UseLegacyS3CacheAdapter              string = "FF_USE_LEGACY_S3_CACHE_ADAPTER"
+	GitURLsWithoutTokens                 string = "FF_GIT_URLS_WITHOUT_TOKENS"
 )
 
 type FeatureFlag struct {
@@ -352,6 +353,14 @@ var flags = []FeatureFlag{
 		Deprecated:   false,
 		Description: "When enabled, the legacy S3 Cache adapter is used. When disabled (default), a newer S3 Cache adapter is used which uses Amazon's S3 SDK " +
 			"for authentication. This should resolve authentication problems in environments that the legacy adapter struggled with, such as custom STS endpoints.",
+	},
+	{
+		Name:         GitURLsWithoutTokens,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description: "When enabled, GitLab Runner doesn't embed the job token anywhere during Git configuration or command " +
+			"execution. Instead, it sets up a Git credential helper that uses the environment variable to obtain the job token. " +
+			"This approach limits token storage and reduces the potential for leaks.",
 	},
 }
 

@@ -139,6 +139,8 @@ type Build struct {
 
 	Referees         []referees.Referee
 	ArtifactUploader func(config JobCredentials, reader io.ReadCloser, options ArtifactsOptions) (UploadState, string)
+
+	urlHelper urlHelper
 }
 
 func (b *Build) setCurrentStage(stage BuildStage) {
@@ -1302,86 +1304,43 @@ func (b *Build) expandContainerOptions() {
 	}
 }
 
-func (b *Build) getURLWithAuth(repoURL string) string {
-	u, _ := url.Parse(repoURL)
-
-	if u.Scheme == "ssh" {
-		if u.User == nil {
-			u.User = url.User("git")
-		}
-	} else {
-		u.User = url.UserPassword("gitlab-ci-token", b.Token)
+// withUrlHelper lazyly sets up the correct url helper, stores it for the rest of the lifetime of the build, and returns
+// the appropriate url helper.
+func (b *Build) withUrlHelper() urlHelper {
+	if b.urlHelper != nil {
+		return b.urlHelper
 	}
 
-	return u.String()
+	urlHelperConfig := urlHelperConfig{
+		CloneURL:               b.Runner.CloneURL,
+		CredentialsURL:         b.Runner.RunnerCredentials.URL,
+		RepoURL:                b.GitInfo.RepoURL,
+		GitSubmoduleForceHTTPS: b.Settings().GitSubmoduleForceHTTPS,
+		Token:                  b.Token,
+		CiProjectPath:          b.GetAllVariables().Value("CI_PROJECT_PATH"),
+		CiServerShellSshPort:   b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_PORT"),
+		CiServerShellSshHost:   b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_HOST"),
+		CiServerHost:           b.GetAllVariables().Value("CI_SERVER_HOST"),
+	}
+
+	urlHelper := &authenticatedURLHelper{&urlHelperConfig}
+	b.urlHelper = urlHelper
+
+	if b.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
+		b.urlHelper = &unauthenticatedURLHelper{urlHelper}
+	}
+
+	return b.urlHelper
 }
 
-// GetRemoteURL checks if the default clone URL is overwritten by the runner
-// configuration option: 'CloneURL'. If it is, we use that to create the clone
-// URL.
-func (b *Build) GetRemoteURL() string {
-	u, _ := url.Parse(b.Runner.CloneURL)
-
-	if u == nil || u.Scheme == "" {
-		return b.GitInfo.RepoURL
-	}
-
-	projectPath := b.GetAllVariables().Value("CI_PROJECT_PATH") + ".git"
-	u.Path = path.Join(u.Path, projectPath)
-
-	return b.getURLWithAuth(u.String())
+// GetRemoteURL uses the urlHelper to get the remote URL used for fetching the repo.
+func (b *Build) GetRemoteURL() (string, error) {
+	return b.withUrlHelper().GetRemoteURL()
 }
 
-func (b *Build) getBaseURL() string {
-	u, _ := url.Parse(b.Runner.CloneURL)
-
-	if u == nil || u.Scheme == "" {
-		return b.Runner.RunnerCredentials.URL
-	}
-
-	return u.String()
-}
-
-func (b *Build) getURLInsteadOf(target string, source string) []string {
-	return []string{"-c", fmt.Sprintf("url.%s.insteadOf=%s", target, source)}
-}
-
-// GetURLInsteadOfArgs rewrites a plain HTTPS base URL and the most commonly used SSH/Git
-// protocol URLs (including custom SSH ports) into an HTTPS URL with injected job token
-// auth, and returns an array of strings to pass as options to git commands.
-func (b *Build) GetURLInsteadOfArgs() []string {
-	baseURL := strings.TrimRight(b.getBaseURL(), "/")
-	if !strings.HasPrefix(baseURL, "http") {
-		return []string{}
-	}
-
-	baseURLWithAuth := b.getURLWithAuth(baseURL)
-
-	// https://example.com/ 		-> https://gitlab-ci-token:abc123@example.com/
-	args := b.getURLInsteadOf(baseURLWithAuth, baseURL)
-
-	if b.Settings().GitSubmoduleForceHTTPS {
-		ciServerPort := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_PORT")
-		ciServerHost := b.GetAllVariables().Value("CI_SERVER_SHELL_SSH_HOST")
-		if ciServerHost == "" {
-			ciServerHost = b.GetAllVariables().Value("CI_SERVER_HOST")
-		}
-
-		if ciServerPort == "" || ciServerPort == "22" {
-			// git@example.com: 		-> https://gitlab-ci-token:abc123@example.com/
-			baseGitURL := fmt.Sprintf("git@%s:", ciServerHost)
-
-			args = append(args, b.getURLInsteadOf(baseURLWithAuth+"/", baseGitURL)...)
-			// ssh://git@example.com/ 	-> https://gitlab-ci-token:abc123@example.com/
-			baseSSHGitURL := fmt.Sprintf("ssh://git@%s", ciServerHost)
-			args = append(args, b.getURLInsteadOf(baseURLWithAuth, baseSSHGitURL)...)
-		} else {
-			// ssh://git@example.com:8022/ 	-> https://gitlab-ci-token:abc123@example.com/
-			baseSSHGitURLWithPort := fmt.Sprintf("ssh://git@%s:%s", ciServerHost, ciServerPort)
-			args = append(args, b.getURLInsteadOf(baseURLWithAuth, baseSSHGitURLWithPort)...)
-		}
-	}
-	return args
+// GetURLInsteadOfArgs uses the urlHelper to generate insteadOf URLs to pass on to git.
+func (b *Build) GetURLInsteadOfArgs() ([]string, error) {
+	return b.withUrlHelper().GetURLInsteadOfArgs()
 }
 
 type stageTimeout struct {
@@ -1530,6 +1489,11 @@ func (b *Build) StartedAt() time.Time {
 
 func (b *Build) Duration() time.Duration {
 	return time.Since(b.createdAt)
+}
+
+type urlHelper interface {
+	GetRemoteURL() (string, error)
+	GetURLInsteadOfArgs() ([]string, error)
 }
 
 func NewBuild(

@@ -2034,3 +2034,125 @@ func TestBuildWithCustomClonePath(t *testing.T) {
 		})
 	}
 }
+
+func TestCredSetup(t *testing.T) {
+	const (
+		markerForBuild  = "#build# "
+		markerForHelper = "#helper# "
+		token           = "some-random-token"
+	)
+
+	listGitConfig := func(t *testing.T, shell, prefix string) string {
+		switch shell {
+		case shells.Bash:
+			return fmt.Sprintf(`git config -l | sed 's/^/%s/g'`, prefix)
+		case shells.SNPwsh, shells.SNPowershell:
+			return fmt.Sprintf(`(git config -l) -replace '^','%s'`, prefix)
+		default:
+			t.Fatalf("shell %s not supported", shell)
+		}
+		return ""
+	}
+	extractGitConfig := func(blob, prefix string) string {
+		out := []string{}
+		for _, line := range strings.Split(blob, "\n") {
+			if l, ok := strings.CutPrefix(line, prefix); ok {
+				out = append(out, l)
+			}
+		}
+		return strings.Join(out, "\n")
+	}
+
+	tests := []struct {
+		gitUrlsWithoutTokens bool
+		validator            func(t *testing.T, out string, remoteURL string)
+	}{
+		{
+			gitUrlsWithoutTokens: true,
+			validator: func(t *testing.T, out string, remoteURL string) {
+				assert.NotContains(t, remoteURL, "@", "the remote URL should not contain any auth data")
+				assert.NotContains(t, remoteURL, "gitlab-ci-token", "the remote URL should not contain the token user")
+
+				// git cred helper is setup in the helper & build container
+				for _, marker := range []string{markerForHelper, markerForBuild} {
+					gitConfig := extractGitConfig(out, marker)
+					assert.Contains(t, gitConfig, "credential."+remoteURL+".username=gitlab-ci-token", "should contain a username setting")
+					assert.Contains(t, gitConfig, "credential."+remoteURL+".helper=!", "should contain a credential helper")
+					assert.NotContains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "the origin URL should not contain any auth data")
+				}
+			},
+		},
+		{
+			gitUrlsWithoutTokens: false,
+			validator: func(t *testing.T, out string, remoteURL string) {
+				assert.Contains(t, remoteURL, "@", "the remote URL should contain auth data")
+				assert.Contains(t, remoteURL, "gitlab-ci-token", "remote URL should contain the token user")
+
+				// git cred helper is neither setup in the helper or build container
+				for _, marker := range []string{markerForHelper, markerForBuild} {
+					gitConfig := extractGitConfig(out, marker)
+					assert.NotContains(t, gitConfig, "credential."+remoteURL+".username=gitlab-ci-token", "should not contain a username setting")
+					assert.NotContains(t, gitConfig, "credential."+remoteURL+".helper=!", "should not contain a credential helper")
+					assert.Contains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "should contain the origin URL including auth data")
+				}
+			},
+		},
+	}
+
+	for _, test := range tests {
+		name := fmt.Sprintf("tokens:%t", test.gitUrlsWithoutTokens)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				t.Parallel()
+
+				jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
+				require.NoError(t, err)
+
+				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
+					Name:   common.HookPostGetSourcesScript,
+					Script: common.StepScript{listGitConfig(t, shell, markerForHelper)},
+				})
+
+				{
+					// inject token
+					u, err := url.Parse(jobResponse.GitInfo.RepoURL)
+					require.NoError(t, err, "parsing original repo URL")
+
+					u.User = url.UserPassword("gitlab-ci-token", token)
+					jobResponse.GitInfo.RepoURL = u.String()
+
+					jobResponse.Token = token
+
+					jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
+						Key:    "CI_JOB_TOKEN",
+						Value:  token,
+						Masked: true,
+					})
+				}
+
+				build := newBuild(t, jobResponse, shell)
+
+				build.Runner.Environment = append(build.Runner.Environment,
+					"GIT_TRACE=1",
+					"GIT_CURL_VERBOSE=1",
+					"GIT_TRANSFER_TRACE=1",
+					"CI_DEBUG_TRACE=1",
+					"GIT_SUBMODULE_STRATEGY=recursive",
+				)
+
+				buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens)
+
+				out, err := buildtest.RunBuildReturningOutput(t, build)
+				assert.NoError(t, err)
+
+				assert.NotContains(t, out, token, "should not contain the token")
+				remoteURL, err := build.GetRemoteURL()
+				assert.NoError(t, err, "getting build's remote URL")
+
+				test.validator(t, out, remoteURL)
+			})
+		})
+	}
+}
