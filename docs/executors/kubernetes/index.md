@@ -2155,3 +2155,123 @@ To use only designated namespaces during CI runs, in the `config.toml` file, def
     ...
     namespace_overwrite_allowed = "ci-.*"
 ```
+
+## Fault tolerance in Kubernetes clusters
+
+> - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/36951) in GitLab Runner 17.5.
+
+The fault tolerance feature for GitLab Runner helps prevent orphaned resources (such as Kubernetes pods) 
+and jobs stuck in a `Running` state when a runner manager restarts. 
+
+The following steps describe how job execution works under typical conditions.
+The runner manager:
+
+1. Receives a job from GitLab.
+1. Creates the job pod in Kubernetes.
+1. Sends commands to be executed in the job pods. 
+1. Reads the job logs and status, and sends the information back to GitLab.
+   Then, GitLab refreshes the UI.
+
+```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
+flowchart LR
+  accTitle: Typical job execution flow in Kubernetes.
+  accDescr: Diagram showing the flow of job execution from GitLab to runner manager to Kubernetes job pod and back.
+
+  gitlab[(GitLab)] -.->|Job| manager((Runner Manager))
+  manager ===> |Job logs/status| gitlab
+  manager -.->|Create| pod[[Kubernetes Job Pod]]
+  manager -.->|Send Commands| pod
+  manager -.->|Cleanup| pod
+  pod ====>|Job logs/status| manager
+```
+
+On Kubernetes, when the node that hosts the runner manager pod is removed when orchestrating CI/CD
+jobs on the cluster, the runner pods are orphaned.
+They continue to run until removed by any other mechanism.
+A new runner manager can't access the active runner pods and related CI/CD jobs.
+As a result, the orphaned runner pods continue to consume resources on the cluster.
+The GitLab UI doesn't update the job status until the job eventually fails due to the configured
+timeout.
+
+With the fault tolerance feature, GitLab Runner resumes running jobs from where they stopped.
+
+GitLab Runner saves the **Job** and the **Execution State** of each job in the **configured store**.
+Before requesting a new job, GitLab checks the store for jobs that are already running.
+
+A fault-tolerant runner manager:
+
+1. Creates the configured store if the executor is a `Stateful Executor`.
+
+   - If the store is not configured, but the executor is `Stateful`, a `no-op` (no operation) store is used.
+     Thanks to `no-op` stores, you can save on data calls without additional logic branching.
+
+     ```go
+     store := NewNoopStore()
+     if isStatefulExecutor := executor.(StatefulExecutor); isStatefulExecutor {
+      store, _ = provider.GetStore(runnerConfig)
+     }
+     ```
+
+1. Executes jobs as usual, but periodically or on certain events, writes them to the store.
+1. Checks for running jobs in the store during restart. 
+
+   If a job hasn't been updated recently, the runner:
+
+   1. Resumes the job.
+   1. Disables all trace logging to prevent log duplication, as the runner generates numerous job logs during job execution startup.
+   1. Restores the `State Metadata` on the Kubernetes executor first.
+
+      ```go
+      type executorStateMetadata struct {
+        // The secrets created by the executor
+       Credentials *api.Secret   `json:"credentials"`
+       // The build pod
+       Pod         *api.Pod      `json:"pod"`
+       // The services
+       Services    []api.Service `json:"services"`
+       // Offset is the offset off of which to read the job logs from the build pod
+       Offset      int64         `json:"offset"`
+      }
+   
+      // Only the name and namespace of these resources is serialized to the store
+      /*
+      {
+       credentials: { name: "", namespace: "" }
+       pod: { name: "", namespace: "" }
+       services: [{ name: "", namespace: "" }]
+       offset: 0
+      }
+      */
+      ```
+
+   1. Calls the `Prepare` method on the `Executor` to set it up for job processing.
+   1. Re-enables and resumes trace logging.
+   1. Calls the `Restore` method which is part of the `StatefulExecutor` interface. This method queries the Kubernetes cluster for full API objects:
+
+      ```go
+      func (s *executor) Restore(ctx context.Context) error {
+       s.state.Pod, _ = s.kubeClient.CoreV1().Pods(s.state.Pod.Namespace).Get(s.state.Pod.Name)
+       s.state.Credentials, _ = s.kubeClient.CoreV1().Secrets(s.state.Credentials.Namespace).Get(s.state.Credentials.Name)
+       // do the same for services
+   
+       return nil
+      }
+      ```
+
+   1. Calls the `Resume` method on the `StatefulExecutor` interface instead of the usual `Run` method.
+      The `Resume` method re-attaches to the `Pod` and continues sending the job trace and status to GitLab.
+
+After a restart, the new job execution mechanism functions as follows:
+
+```mermaid
+%%{init: { "fontFamily": "GitLab Sans" }}%%
+flowchart LR
+  accTitle: Fault-tolerant job execution flow after restart.
+  accDescr: Diagram showing how the runner manager restores jobs from the Store and resumes execution with Kubernetes job pods after a restart.
+
+ store[(Store)] -.->|Restore job|manager((Runner Manager))
+  manager -.->|Resume| pod[[Kubernetes Job Pod]]
+  manager ===> |Job logs/status| gitlab[(GitLab)]
+  pod ====>|Job logs/status| manager
+```
