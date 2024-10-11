@@ -2495,3 +2495,45 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 	err := shell.writeGetSourcesScript(context.Background(), m, info)
 	assert.NoError(t, err)
 }
+
+func TestSanitizeCacheFallbackKey(t *testing.T) {
+	tests := map[string]struct {
+		fallbackKey string
+		expected    string
+	}{
+		"trailing slash": {
+			fallbackKey: "fallback_key/",
+			expected:    "fallback_key",
+		},
+		"trailing space": {
+			fallbackKey: "fallback_key ",
+			expected:    "fallback_key",
+		},
+		"trailing backslash": {
+			fallbackKey: "fallback_key\\",
+			expected:    "fallback_key",
+		},
+		"trailing multiples unwanted characters": {
+			fallbackKey: "fallback_key/ \\",
+			expected:    "fallback_key",
+		},
+		"trailing multiples unwanted characters with multiple occurrences": {
+			fallbackKey: "fallback_key/ / \\  \\",
+			expected:    "fallback_key",
+		},
+		"unprotected fallback key": {
+			fallbackKey: "fallback_key/o",
+			expected:    "fallback_key/o",
+		},
+		"unprotected fallback key 2": {
+			fallbackKey: "fallback_key / \\o",
+			expected:    "fallback_key / \\o",
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			assert.Equal(t, tt.expected, sanitizeCacheFallbackKey(tt.fallbackKey))
+		})
+	}
+}
