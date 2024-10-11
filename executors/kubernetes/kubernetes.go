@@ -2894,10 +2894,9 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		Follow:     true,
 		Timestamps: true,
 	}
-	watchTimeoutSeconds := common.Int64Ptr(int64(s.Config.Kubernetes.GetPollTimeout()))
 
 	podLogs, err := retry.WithValueFn(s, func() (io.ReadCloser, error) {
-		err := waitForRunningContainer(ctx, s.kubeClient, watchTimeoutSeconds, s.pod.Namespace, s.pod.Name, containerName)
+		err := waitForRunningContainer(ctx, s.kubeClient, s.Config.Kubernetes.GetPollTimeout(), s.pod.Namespace, s.pod.Name, containerName)
 		if err != nil {
 			return nil, err
 		}
