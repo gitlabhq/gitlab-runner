@@ -80,7 +80,7 @@ require (
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.17.0
 	go.uber.org/automaxprocs v1.5.2
-	gocloud.dev v0.39.1-0.20240911165515-aeb964fdbfd4
+	gocloud.dev v0.40.0
 	golang.org/x/crypto v0.27.0
 	golang.org/x/net v0.29.0
 	golang.org/x/oauth2 v0.22.0
