@@ -167,8 +167,9 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 		}
 	}
 
-	defaultFallbackCacheKey := info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY")
-
+	// We make sure that the CACHE_FALLBACK_KEY doesn't end with characters like space, slash and backslash
+	// TrimRight remove all occurrences of those character at the end of the fallback key
+	defaultFallbackCacheKey := sanitizeCacheFallbackKey(info.Build.GetAllVariables().Value("CACHE_FALLBACK_KEY"))
 	if defaultFallbackCacheKey != "" && !strings.HasSuffix(defaultFallbackCacheKey, "-protected") {
 		// The `-protected` suffix is reserved for protected refs, so we disallow it in the global variable.
 		allowedCacheKeys = append(allowedCacheKeys, defaultFallbackCacheKey)
@@ -178,6 +179,10 @@ func (b *AbstractShell) extractCacheOrFallbackCachesWrapper(
 	b.guardRunnerCommand(w, info.RunnerCommand, "Extracting cache", func() {
 		b.addExtractCacheCommand(ctx, w, info, cacheFile, allowedCacheKeys, cacheOptions.Paths)
 	})
+}
+
+func sanitizeCacheFallbackKey(fallbackKey string) string {
+	return strings.TrimRight(fallbackKey, " /\\")
 }
 
 func (b *AbstractShell) addExtractCacheCommand(
