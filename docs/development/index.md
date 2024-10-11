@@ -140,8 +140,9 @@ The Docker Engine is required to create a pre-built image that is embedded into 
 To install Rancher Desktop, follow the
 [installation instructions](https://docs.rancherdesktop.io/getting-started/installation/) for your OS.
 
-NOTE:
-Be sure to configure Rancher Desktop to use `dockerd (moby)` and not `containerd`.
+> Be sure to configure Rancher Desktop to use `dockerd (moby)` and have `Administrative Access` enabled.
+>
+> ![rancher-configuration](img/rancher-configuration.png)
 
 ## 4. Install GitLab Runner dependencies
 
