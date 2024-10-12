@@ -726,7 +726,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx, checkContainerStatus)
+	podStatusCh := s.watchPodStatus(ctx, &containerStatusCheckerImpl{filter: filterNoServiceContainers})
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -2573,7 +2573,7 @@ func (s *executor) requestServiceCreation(
 	return srv, err
 }
 
-func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkExtendedPodStatusFunc) <-chan error {
+func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc containerStatusChecker) <-chan error {
 	// Buffer of 1 in case the context is cancelled while the timer tick case is being executed
 	// and the consumer is no longer reading from the channel while we try to write to it
 	ch := make(chan error, 1)
@@ -2603,8 +2603,19 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkE
 
 type checkExtendedPodStatusFunc func(context.Context, *api.Pod) error
 
-func checkContainerStatus(ctx context.Context, pod *api.Pod) error {
+type containerStatusChecker interface {
+	Check(context.Context, *api.Pod) error
+}
+
+type containerStatusCheckerImpl struct {
+	filter func(api.ContainerStatus) bool
+}
+
+func (c *containerStatusCheckerImpl) Check(ctx context.Context, pod *api.Pod) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if c.filter != nil && !c.filter(containerStatus) {
+			continue
+		}
 		if containerStatus.State.Terminated != nil &&
 			containerStatus.State.Terminated.ExitCode >= 0 {
 			return &podContainerError{
@@ -2617,7 +2628,11 @@ func checkContainerStatus(ctx context.Context, pod *api.Pod) error {
 	return nil
 }
 
-func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck checkExtendedPodStatusFunc) error {
+func filterNoServiceContainers(containerStatus api.ContainerStatus) bool {
+	return !strings.HasPrefix(containerStatus.Name, serviceContainerPrefix)
+}
+
+func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck containerStatusChecker) error {
 	pod, err := retry.WithValueFn(s, func() (*api.Pod, error) {
 		// kubeAPI: pods, get
 		return s.kubeClient.CoreV1().
@@ -2640,7 +2655,7 @@ func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck check
 		}
 	}
 
-	return extendedStatusCheck(ctx, pod)
+	return extendedStatusCheck.Check(ctx, pod)
 }
 
 func (s *executor) runInContainer(
@@ -3013,7 +3028,7 @@ func (s *executor) waitForServices(ctx context.Context) error {
 		return err
 	}
 
-	podStatusCh := s.watchPodStatus(ctx, checkContainerStatus)
+	podStatusCh := s.watchPodStatus(ctx, &containerStatusCheckerImpl{})
 
 	stdout, stderr := s.getExecutorIoWriters()
 	defer stdout.Close()
