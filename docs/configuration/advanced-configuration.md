@@ -847,6 +847,41 @@ the empty values that the plugin cannot determine.
 | `timeout`                | The connection timeout duration. |
 | `use_external_addr`      | Whether to use the external address provided by the plugin. If the plugin only returns an internal address, this will be used regardless of this setting. Default: `false`. |
 
+## The `[runners.autoscaler.state_storage]` section
+
+DETAILS:
+**Status:** Beta
+
+> - Introduced in GitLab Runner 17.5.0.
+
+If GitLab Runner starts when state storage is disabled (default), the existing fleeting instances
+are removed immediately for safety reasons. With configurations such as `max_use_count: 1`,
+we might inadvertently assign a job to an instance that's already been used if we don't
+know its usage status.
+
+Enabling the state storage feature allows an instance's state to persist on the local disk.
+In this case, if an instance exists when GitLab Runner starts, it is not deleted. Its
+cached connection details, use count, and other configurations are restored.
+
+Consider the following information when enabling the state storage feature:
+
+- The authentication details for an instance (username, password, keys)
+  remain in the disk.
+- If an instance is restored when it is actively running a job, GitLab Runner removes it by
+  default. This behavior ensures safety, as GitLab Runner cannot resume jobs. To keep the
+  instance, set `keep_instance_with_acquisitions` to `true`.
+
+  Setting `keep_instance_with_acquisitions` to `true` is useful when you're not concerned about ongoing jobs
+  on the instance. It is also useful to clean the environment. For example, you can use the `instance_ready_command`
+  configuration option to clean the environment to keep the instance. This might involve stopping all
+  executing commands or forcefully removing Docker containers.
+
+| Parameter                         | Description |
+|-----------------------------------|-------------|
+| `enabled`                         | Whether state storage is enabled. Default: `false`. |
+| `dir`                             | The state store directory. Each runner configuration entry has a subdirectory here. Default: `.taskscaler` in the GitLab Runner configuration file directory. |
+| `keep_instance_with_acquisitions` | Whether instances with active jobs are removed. Default: `false`. |
+
 ## The `[[runners.autoscaler.policy]]` sections
 
 **Note** - `idle_count` in this context refers to the number of jobs, not the number of autoscaled machines as in the legacy autoscaling method.

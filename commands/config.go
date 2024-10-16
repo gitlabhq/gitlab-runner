@@ -162,6 +162,7 @@ func (c *configOptions) loadConfig() error {
 	for _, runnerCfg := range c.config.Runners {
 		runnerCfg.SystemIDState = systemIDState
 		runnerCfg.ConfigLoadedAt = time.Now()
+		runnerCfg.ConfigDir = filepath.Dir(c.ConfigFile)
 	}
 
 	c.loadedSystemIDState = systemIDState
