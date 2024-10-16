@@ -6106,7 +6106,7 @@ func TestRunAttachCheckPodStatus(t *testing.T) {
 			e.pod.Name = "pod"
 			e.pod.Namespace = "namespace"
 
-			tt.verifyErr(t, e.watchPodStatus(ctx, &containerStatusCheckerImpl{}))
+			tt.verifyErr(t, e.watchPodStatus(ctx, &podContainerStatusChecker{}))
 		})
 	}
 }
