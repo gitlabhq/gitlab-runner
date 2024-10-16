@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"gitlab.com/gitlab-org/fleeting/nesting/hypervisor"
 	"gitlab.com/gitlab-org/fleeting/taskscaler"
 	tsprometheus "gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus"
+	"gitlab.com/gitlab-org/fleeting/taskscaler/storage"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/internal/autoscaler/logger"
@@ -110,6 +112,7 @@ func (p *provider) Shutdown(ctx context.Context) {
 	wg.Wait()
 }
 
+//nolint:gocognit
 func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, bool, error) {
 	if config.Autoscaler == nil {
 		return nil, false, fmt.Errorf("executor requires autoscaler config")
@@ -132,6 +135,19 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 	}
 
 	logger := logger.New(config.RunnerCredentials.Log())
+
+	var store storage.Storage
+	if config.Autoscaler.StateStorage.Enabled {
+		dir := config.Autoscaler.StateStorage.Dir
+		if dir == "" {
+			dir = filepath.Join(config.ConfigDir, ".taskscaler")
+		}
+
+		store, err = storage.NewFileStorage(filepath.Join(dir, helpers.ShortenToken(config.Token)))
+		if err != nil {
+			return nil, false, fmt.Errorf("creating state storage: %w", err)
+		}
+	}
 
 	runner, err := p.fleetingRunPlugin(config.Autoscaler.Plugin, pluginCfg, fleeting.WithPluginLogger(logger.Named("fleeting-plugin")))
 	if err != nil {
@@ -194,6 +210,10 @@ func (p *provider) init(config *common.RunnerConfig) (taskscaler.Taskscaler, boo
 		taskscaler.WithUpdateIntervalWhenExpecting(time.Second),
 		taskscaler.WithLogger(logger.Named("taskscaler")),
 		taskscaler.WithScaleThrottle(config.Autoscaler.ScaleThrottle.Limit, config.Autoscaler.ScaleThrottle.Burst),
+	}
+
+	if store != nil {
+		options = append(options, taskscaler.WithStorage(store))
 	}
 
 	if config.Autoscaler.UpdateInterval > 0 {
@@ -346,19 +366,33 @@ func (p *provider) Collect(ch chan<- prometheus.Metric) {
 
 //nolint:gocognit
 func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscaler.UpFunc {
-	return func(id string, info fleetingprovider.ConnectInfo, cause fleeting.Cause) (keys []string, used int, err error) {
+	return func(ts taskscaler.Taskscaler, instance taskscaler.UpFuncInstance) error {
+		if len(instance.Acquisitions) > 0 {
+			// We currently have no way to resume acquisitions, so for now we remove them
+			for _, key := range instance.Acquisitions {
+				ts.Release(key)
+			}
+
+			if !config.Autoscaler.StateStorage.KeepInstanceWithAcquisitions {
+				return fmt.Errorf("pre-existing instance has acquisition so removing for safety")
+			}
+		}
+
+		// If the instance pre-existed, and VMIsolation and the instance wasn't
+		// restored from saved state, then we cannot trust the instance.
+		if instance.Cause == fleeting.CausePreexisted &&
+			!instance.Restored && !config.Autoscaler.VMIsolation.Enabled {
+			return fmt.Errorf("no data on pre-existing instance so removing for safety")
+		}
+
 		useExternalAddr := true
 		if config.Autoscaler != nil {
 			useExternalAddr = config.Autoscaler.ConnectorConfig.UseExternalAddr
 		}
 
-		// run instance ready command on instances that didn't pre-exist
-		//
-		// we may later relax the pre-exist rule, but right now (see below) we simply remove
-		// instances that pre-existed if VMIsolation is enabled, and it's very unlikely that
-		// VMIsolation will need the InstanceReadyCommand for now.
-		if config.Autoscaler.InstanceReadyCommand != "" && cause != fleeting.CausePreexisted {
-			err := connector.Run(ctx, info, connector.ConnectorOptions{
+		// run instance ready command on instance
+		if config.Autoscaler.InstanceReadyCommand != "" {
+			err := connector.Run(ctx, instance.Info, connector.ConnectorOptions{
 				RunOptions: connector.RunOptions{
 					Command: config.Autoscaler.InstanceReadyCommand,
 				},
@@ -368,54 +402,53 @@ func instanceReadyUp(ctx context.Context, config *common.RunnerConfig) taskscale
 			})
 
 			if err != nil {
-				return nil, 0, fmt.Errorf("ready command: %w", err)
+				return fmt.Errorf("ready command: %w", err)
 			}
 		}
 
-		// If VMIsolation is disabled, we cannot trust an existing instance that we have no data of,
-		// because we don't know how many times it's been used/its internal state. etc.
-		//
-		// If VMIsolation is enabled, we can trust the instance and re-use it.
 		if !config.Autoscaler.VMIsolation.Enabled {
-			if cause == fleeting.CausePreexisted {
-				return nil, 0, fmt.Errorf("no data on pre-existing instance so removing for safety")
-			}
-			return nil, 0, nil
+			return nil
 		}
 
-		// dial host
-		dialer, err := connector.Dial(ctx, info, connector.DialOptions{
-			UseExternalAddr: useExternalAddr,
-		})
-		if err != nil {
-			return nil, 0, fmt.Errorf("dialing host: %w", err)
-		}
-		defer dialer.Close()
-
-		conn, err := api.NewClientConn(config.Autoscaler.VMIsolation.NestingHost, func(ctx context.Context, network, address string) (net.Conn, error) {
-			return dialer.Dial(network, address)
-		})
-		if err != nil {
-			return nil, 0, fmt.Errorf("dialing nesting daemon: %w", err)
-		}
-
-		nc := api.New(conn)
-		defer nc.Close()
-
-		var vms []hypervisor.VirtualMachine
-		err = withInit(ctx, config, nc, func() error {
-			vms, err = nc.List(ctx)
-			return err
-		})
-		if err != nil {
-			return nil, 0, fmt.Errorf("listing existing vms: %w", err)
-		}
-
-		keys = make([]string, len(vms))
-		for i, vm := range vms {
-			keys[i] = vm.GetId()
-		}
-
-		return keys, 0, nil
+		return readyNestingHost(ctx, config, instance, useExternalAddr)
 	}
+}
+
+func readyNestingHost(ctx context.Context, config *common.RunnerConfig, instance taskscaler.UpFuncInstance, useExternalAddr bool) error {
+	// dial host
+	dialer, err := connector.Dial(ctx, instance.Info, connector.DialOptions{
+		UseExternalAddr: useExternalAddr,
+	})
+	if err != nil {
+		return fmt.Errorf("dialing host: %w", err)
+	}
+	defer dialer.Close()
+
+	conn, err := api.NewClientConn(config.Autoscaler.VMIsolation.NestingHost, func(ctx context.Context, network, address string) (net.Conn, error) {
+		return dialer.Dial(network, address)
+	})
+	if err != nil {
+		return fmt.Errorf("dialing nesting daemon: %w", err)
+	}
+
+	nc := api.New(conn)
+	defer nc.Close()
+
+	var vms []hypervisor.VirtualMachine
+	err = withInit(ctx, config, nc, func() error {
+		vms, err = nc.List(ctx)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("listing existing vms: %w", err)
+	}
+
+	// we can't yet reattach to existing VMs, so we attempt to delete for now
+	// if we can't delete for some reason, these VMs can be stomped by new
+	// jobs anyway.
+	for _, vm := range vms {
+		_ = nc.Delete(ctx, vm.GetId())
+	}
+
+	return nil
 }

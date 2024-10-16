@@ -290,6 +290,8 @@ type AutoscalerConfig struct {
 
 	VMIsolation VMIsolation `toml:"vm_isolation,omitempty"`
 
+	StateStorage AutoscalerStateStorage `toml:"state_storage,omitempty" json:",omitempty"`
+
 	// instance_operation_time_buckets was introduced some time ago, so we can't just delete it.
 	// Someone can already depend on that setting.
 	// Instead, it's now used as a way to define "default" buckets for the different operation
@@ -302,6 +304,13 @@ type AutoscalerConfig struct {
 	InstanceReadinessTimeBuckets []float64 `toml:"instance_readiness_time_buckets,omitempty" json:",omitempty"`
 
 	InstanceLifeDurationBuckets []float64 `toml:"instance_life_duration_buckets,omitempty" json:",omitempty"`
+}
+
+type AutoscalerStateStorage struct {
+	Enabled bool   `toml:"enabled,omitempty" json:",omitempty"`
+	Dir     string `toml:"dir,omitempty" json:",omitempty"`
+
+	KeepInstanceWithAcquisitions bool `toml:"keep_instance_with_acquisitions,omitempty" json:",omitempty"`
 }
 
 type AutoscalerScaleThrottle struct {
@@ -1215,6 +1224,7 @@ type RunnerConfig struct {
 
 	SystemIDState  *SystemIDState `toml:"-" json:",omitempty"`
 	ConfigLoadedAt time.Time      `toml:"-" json:",omitempty"`
+	ConfigDir      string         `toml:"-" json:",omitempty"`
 
 	RunnerCredentials
 	RunnerSettings
@@ -2043,6 +2053,7 @@ func (c *RunnerConfig) DeepCopy() (*RunnerConfig, error) {
 
 	r.SystemIDState = c.SystemIDState
 	r.ConfigLoadedAt = c.ConfigLoadedAt
+	r.ConfigDir = c.ConfigDir
 
 	if r.Monitoring != nil {
 		err = r.Monitoring.Compile()
