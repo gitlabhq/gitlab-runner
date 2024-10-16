@@ -726,7 +726,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx, &containerStatusCheckerImpl{filter: filterNoServiceContainers})
+	podStatusCh := s.watchPodStatus(ctx, &containerStatusCheckerImpl{shouldCheckContainer: isNotServiceContainer})
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -2606,12 +2606,12 @@ type containerStatusChecker interface {
 }
 
 type containerStatusCheckerImpl struct {
-	filter func(api.ContainerStatus) bool
+	shouldCheckContainer func(api.ContainerStatus) bool
 }
 
 func (c *containerStatusCheckerImpl) check(ctx context.Context, pod *api.Pod) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		if c.filter != nil && !c.filter(containerStatus) {
+		if c.shouldCheckContainer != nil && !c.shouldCheckContainer(containerStatus) {
 			continue
 		}
 		if containerStatus.State.Terminated != nil &&
@@ -2626,7 +2626,7 @@ func (c *containerStatusCheckerImpl) check(ctx context.Context, pod *api.Pod) er
 	return nil
 }
 
-func filterNoServiceContainers(containerStatus api.ContainerStatus) bool {
+func isNotServiceContainer(containerStatus api.ContainerStatus) bool {
 	return !strings.HasPrefix(containerStatus.Name, serviceContainerPrefix)
 }
 
