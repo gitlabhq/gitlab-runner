@@ -2601,8 +2601,6 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc contai
 	return ch
 }
 
-type checkExtendedPodStatusFunc func(context.Context, *api.Pod) error
-
 type containerStatusChecker interface {
 	Check(context.Context, *api.Pod) error
 }
