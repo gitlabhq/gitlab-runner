@@ -2601,11 +2601,15 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc podSta
 	return ch
 }
 
+// Interface to check if a job pod is unhealthy
 type podStatusChecker interface {
+	// Checks if a mob pod is unhealthy
 	check(context.Context, *api.Pod) error
 }
 
+// Checks if a pod is unhealthy based on the statuses of its containers
 type podContainerStatusChecker struct {
+	// Filter to determine which containers to check
 	shouldCheckContainerFilter func(api.ContainerStatus) bool
 }
 
