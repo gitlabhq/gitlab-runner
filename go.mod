@@ -69,23 +69,23 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli v1.22.14
-	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20240723062336-da5f142b3c7d
+	gitlab.com/gitlab-org/fleeting/fleeting v0.0.0-20240911165028-a0ce7d6c3260
 	gitlab.com/gitlab-org/fleeting/fleeting-artifact v0.0.0-20240501171108-612a68737bba
-	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20230818161800-377d2aa4b1b5
+	gitlab.com/gitlab-org/fleeting/fleeting/metrics/prometheus v0.0.0-20240911165028-a0ce7d6c3260
 	gitlab.com/gitlab-org/fleeting/nesting v0.1.1-0.20230410214021-ab545632193b
-	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20240708113403-4cb868f68020
+	gitlab.com/gitlab-org/fleeting/taskscaler v0.0.0-20241015171421-f3cdb5de12a4
 	gitlab.com/gitlab-org/fleeting/taskscaler/metrics/prometheus v0.0.0-20230821135503-23448d122365
 	gitlab.com/gitlab-org/gitlab-terminal v0.0.0-20230425133101-519a58790bfd
 	gitlab.com/gitlab-org/golang-cli-helpers v0.0.0-20210929155855-70bef318ae0a
 	gitlab.com/gitlab-org/labkit v1.17.0
 	go.uber.org/automaxprocs v1.5.2
 	gocloud.dev v0.40.0
-	golang.org/x/crypto v0.27.0
-	golang.org/x/net v0.29.0
+	golang.org/x/crypto v0.28.0
+	golang.org/x/net v0.30.0
 	golang.org/x/oauth2 v0.22.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.25.0
-	golang.org/x/text v0.18.0
+	golang.org/x/sys v0.26.0
+	golang.org/x/text v0.19.0
 	google.golang.org/api v0.191.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.1
@@ -176,7 +176,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.6 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/yamux v0.1.1 // indirect
+	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/iancoleman/orderedmap v0.0.0-20190318233801-ac98e3ecb4b0 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
@@ -238,15 +238,15 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20221031165847-c99f073a8326 // indirect
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/term v0.24.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
+	golang.org/x/term v0.25.0 // indirect
+	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	google.golang.org/genproto v0.0.0-20240812133136-8ffd90a71988 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/grpc v1.66.1 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/grpc v1.67.1 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
