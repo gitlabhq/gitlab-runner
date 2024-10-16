@@ -2602,14 +2602,14 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc contai
 }
 
 type containerStatusChecker interface {
-	Check(context.Context, *api.Pod) error
+	check(context.Context, *api.Pod) error
 }
 
 type containerStatusCheckerImpl struct {
 	filter func(api.ContainerStatus) bool
 }
 
-func (c *containerStatusCheckerImpl) Check(ctx context.Context, pod *api.Pod) error {
+func (c *containerStatusCheckerImpl) check(ctx context.Context, pod *api.Pod) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if c.filter != nil && !c.filter(containerStatus) {
 			continue
@@ -2653,7 +2653,7 @@ func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck conta
 		}
 	}
 
-	return extendedStatusCheck.Check(ctx, pod)
+	return extendedStatusCheck.check(ctx, pod)
 }
 
 func (s *executor) runInContainer(
