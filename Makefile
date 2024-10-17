@@ -39,6 +39,10 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(APP_NAME) -X $(COMMON_PACKAG
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED ?= 0
 
+local := $(PWD)/.tmp
+localBin := $(local)/bin
+
+export PATH := $(localBin):$(PATH)
 
 # Development Tools
 GOCOVER_COBERTURA = gocover-cobertura
@@ -48,6 +52,15 @@ GOX = gox
 MOCKERY_VERSION ?= 2.43.0
 MOCKERY = mockery
 
+PROTOC := $(localBin)/protoc
+PROTOC_VERSION := 28.2
+
+PROTOC_GEN_GO := protoc-gen-go
+PROTOC_GEN_GO_VERSION := v1.34.2
+
+PROTOC_GEN_GO_GRPC := protoc-gen-go-grpc
+PROTOC_GEN_GO_GRPC_VERSION := v1.5.1
+
 SPLITIC = splitic
 MAGE = mage
 
@@ -55,7 +68,8 @@ GOLANGLINT_VERSION ?= v1.58.0
 GOLANGLINT ?= .tmp/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= .tmp/goargs.so
 
-DEVELOPMENT_TOOLS = $(GOX) $(MOCKERY) $(MAGE)
+GENERATED_FILES_TOOLS = $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
+DEVELOPMENT_TOOLS = $(GOX) $(MAGE) $(GENERATED_FILES_TOOLS)
 
 RELEASE_INDEX_GEN_VERSION ?= latest
 RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
@@ -164,18 +178,19 @@ pull_images_for_tests:
 dockerfiles:
 	$(MAKE) -C dockerfiles all
 
-.PHONY: mocks
-mocks: $(MOCKERY)
+.PHONY: generated_files
+generated_files: $(GENERATED_FILES_TOOLS)
 	rm -rf ./helpers/service/mocks
 	find . -type f -name 'mock_*' -delete
-	go generate ./...
+	find . -type f -name '*.pb.go' -delete
+	go generate -v -x ./...
 
-check_mocks: mocks
+check_generated_files: generated_files
 	# Checking the differences
 	@git --no-pager diff --compact-summary --exit-code -- ./helpers/service/mocks \
-		$(shell git ls-files | grep 'mock_') && \
-		!(git ls-files -o | grep 'mock_') && \
-		echo "Mocks up-to-date!"
+		$(shell git ls-files | grep -e "mock_" -e "\.pb\.go") && \
+		!(git ls-files -o | grep -e "mock_" -e "\.pb\.go") && \
+		echo "Generated files up-to-date!"
 
 generate_magefiles:
 	$(shell mage generate)
@@ -344,19 +359,22 @@ $(MAGE): .tmp
 	cd mage && \
 	go run bootstrap.go
 
+ifneq ($(GOLANGLINT_VERSION),)
+$(GOLANGLINT): CHECKOUT_REF := -b "$(GOLANGLINT_VERSION)"
+endif
 $(GOLANGLINT): TOOL_BUILD_DIR := .tmp/build/golangci-lint
 $(GOLANGLINT): $(GOLANGLINT_GOARGS)
+$(GOLANGLINT):
 	rm -rf $(TOOL_BUILD_DIR)
-	git clone https://github.com/golangci/golangci-lint.git --no-tags --depth 1 -b "$(GOLANGLINT_VERSION)" $(TOOL_BUILD_DIR) && \
+	git clone https://github.com/golangci/golangci-lint.git --no-tags --depth 1 $(CHECKOUT_REF) $(TOOL_BUILD_DIR)
 	cd $(TOOL_BUILD_DIR) && \
 	export COMMIT=$(shell git rev-parse --short HEAD) && \
 	export DATE=$(shell date -u '+%FT%TZ') && \
 	CGO_ENABLED=1 go build --trimpath -o $(BUILD_DIR)/$(GOLANGLINT) \
 		-ldflags "-s -w -X main.version=$(GOLANGLINT_VERSION) -X main.commit=$${COMMIT} -X main.date=$${DATE}" \
-		./cmd/golangci-lint/ && \
-	cd $(BUILD_DIR) && \
-	rm -rf $(TOOL_BUILD_DIR) && \
+		./cmd/golangci-lint/
 	$(GOLANGLINT) --version
+	rm -rf $(TOOL_BUILD_DIR)
 
 $(GOLANGLINT_GOARGS): TOOL_BUILD_DIR := .tmp/build/goargs
 $(GOLANGLINT_GOARGS):
@@ -369,6 +387,30 @@ $(GOLANGLINT_GOARGS):
 .PHONY: $(MOCKERY)
 $(MOCKERY):
 	go install github.com/vektra/mockery/v2@v$(MOCKERY_VERSION)
+
+$(PROTOC): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/osx/')
+$(PROTOC): DOWNLOAD_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS_TYPE)-x86_64.zip
+$(PROTOC): TOOL_BUILD_DIR = $(local)/build
+$(PROTOC):
+	# Installing $(DOWNLOAD_URL) as $(PROTOC)
+	@mkdir -p $(shell dirname $(PROTOC))
+	@mkdir -p "$(TOOL_BUILD_DIR)"
+	@curl -sL "$(DOWNLOAD_URL)" -o "$(TOOL_BUILD_DIR)/protoc.zip"
+	@unzip "$(TOOL_BUILD_DIR)/protoc.zip" -d "$(TOOL_BUILD_DIR)/"
+	# Moving $(TOOL_BUILD_DIR)/bin/protoc to $(PROTOC)
+	@mv "$(TOOL_BUILD_DIR)/bin/protoc" "$(PROTOC)"
+	@rm -rf "$(TOOL_BUILD_DIR)"
+	# Making $(PROTOC) executable
+	@chmod +x "$(PROTOC)"
+
+.PHONY: $(PROTOC_GEN_GO)
+$(PROTOC_GEN_GO):
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+
+.PHONY: $(PROTOC_GEN_GO_GRPC)
+$(PROTOC_GEN_GO_GRPC):
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
+
 
 $(RELEASE_INDEX_GENERATOR): OS_TYPE ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 $(RELEASE_INDEX_GENERATOR): DOWNLOAD_URL = "https://storage.googleapis.com/gitlab-runner-tools/release-index-generator/$(RELEASE_INDEX_GEN_VERSION)/release-index-gen-$(OS_TYPE)-amd64"
