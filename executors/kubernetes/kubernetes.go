@@ -2603,7 +2603,7 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc podSta
 
 // Interface to check if a job pod is unhealthy
 type podStatusChecker interface {
-	// Checks if a mob pod is unhealthy
+	// Checks if a job pod is unhealthy
 	check(context.Context, *api.Pod) error
 }
 
