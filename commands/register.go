@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/imdario/mergo"
+	"dario.cat/mergo"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
