@@ -1,3 +1,10 @@
+## v17.5.1 (2024-10-18)
+
+### Bug fixes
+
+- Disable FF_GIT_URLS_WITHOUT_TOKENS by default [!5088](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5088)
+- Fix home directory detection [!5087](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5087)
+
 ## v17.5.0 (2024-10-18)
 
 ### New features
