@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/homedir"
 	service_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/service"
 )
 
@@ -168,7 +168,7 @@ func GetInstallFlags() []cli.Flag {
 		installFlags,
 		cli.StringFlag{
 			Name:  "working-directory, d",
-			Value: helpers.GetCurrentWorkingDirectory(),
+			Value: homedir.GetWDOrEmpty(),
 			Usage: "Specify custom root directory where all data are stored",
 		},
 		cli.StringFlag{

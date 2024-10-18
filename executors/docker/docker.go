@@ -43,6 +43,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/homedir"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 )
@@ -135,7 +136,7 @@ func init() {
 		// When gitlab-runner is running from `out/binaries`
 		filepath.Join(runnerFolder, "../helper-images"),
 		// Add working directory path, used when running from temp directory, such as with `go run`
-		filepath.Join(helpers.GetCurrentWorkingDirectory(), "out/helper-images"),
+		filepath.Join(homedir.GetWDOrEmpty(), "out/helper-images"),
 	}
 	if runtime.GOOS == "linux" {
 		// This section covers the Linux packaged app scenario, with the binary in /usr/bin.

@@ -1,26 +1,18 @@
 package cli_helpers
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/urfave/cli"
+
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/homedir"
 )
 
 func FixHOME(app *cli.App) {
 	appBefore := app.Before
 
 	app.Before = func(c *cli.Context) error {
-		//nolint:staticcheck
-		key := homedir.Key()
-
-		if os.Getenv(key) == "" {
-			value := homedir.Get()
-			if value == "" {
-				return fmt.Errorf("the %q is not set", key)
-			}
-			_ = os.Setenv(key, value)
+		err := homedir.Fix()
+		if err != nil {
+			return err
 		}
 
 		if appBefore != nil {
