@@ -12,11 +12,9 @@ func FixHOME(app *cli.App) {
 	appBefore := app.Before
 
 	app.Before = func(c *cli.Context) error {
-		// Fix home
-		key, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("failed to get user home dir: %w", err)
-		}
+		//nolint:staticcheck
+		key := homedir.Key()
+
 		if os.Getenv(key) == "" {
 			value := homedir.Get()
 			if value == "" {
