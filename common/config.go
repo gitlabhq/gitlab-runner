@@ -358,13 +358,13 @@ type ConnectorConfig struct {
 	OS                   string        `toml:"os,omitempty"`
 	Arch                 string        `toml:"arch,omitempty"`
 	Protocol             string        `toml:"protocol,omitempty"`
-	Username             string        `toml:"username"`
-	Password             string        `toml:"password"`
-	KeyPathname          string        `toml:"key_path"`
-	UseStaticCredentials bool          `toml:"use_static_credentials"`
-	Keepalive            time.Duration `toml:"keepalive"`
-	Timeout              time.Duration `toml:"timeout"`
-	UseExternalAddr      bool          `toml:"use_external_addr"`
+	Username             string        `toml:"username,omitempty"`
+	Password             string        `toml:"password,omitempty"`
+	KeyPathname          string        `toml:"key_path,omitempty"`
+	UseStaticCredentials bool          `toml:"use_static_credentials,omitempty"`
+	Keepalive            time.Duration `toml:"keepalive,omitempty"`
+	Timeout              time.Duration `toml:"timeout,omitempty"`
+	UseExternalAddr      bool          `toml:"use_external_addr,omitempty"`
 }
 
 type AutoscalerSettingsMap map[string]interface{}
