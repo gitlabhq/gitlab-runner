@@ -25,7 +25,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.61.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.5
 	github.com/bmatcuk/doublestar/v4 v4.4.0
-	github.com/creack/pty v1.1.18
+	github.com/creack/pty v1.1.21
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v25.0.6+incompatible
 	github.com/docker/distribution v2.8.2+incompatible
@@ -91,7 +91,7 @@ require (
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.26.1
-	mvdan.cc/sh/v3 v3.5.1
+	mvdan.cc/sh/v3 v3.9.0
 	sigs.k8s.io/yaml v1.3.0
 )
 
