@@ -190,7 +190,13 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, er
 	var err error
 
 	endpoint := s3Config.GetEndpoint()
-	options := []func(*config.LoadOptions) error{config.WithRegion(s3Config.BucketLocation)}
+	bucketLocation := s3Config.BucketLocation
+	// The Minio SDK defaults to a us-east-1 region, so use this as default
+	// to preserve backwards compatibility.
+	if bucketLocation == "" {
+		bucketLocation = "us-east-1"
+	}
+	options := []func(*config.LoadOptions) error{config.WithRegion(bucketLocation)}
 
 	switch s3Config.AuthType() {
 	case common.S3AuthTypeIAM:
