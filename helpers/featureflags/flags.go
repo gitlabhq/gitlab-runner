@@ -43,6 +43,7 @@ const (
 	DisableUmaskForKubernetesExecutor    string = "FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR"
 	UseLegacyS3CacheAdapter              string = "FF_USE_LEGACY_S3_CACHE_ADAPTER"
 	GitURLsWithoutTokens                 string = "FF_GIT_URLS_WITHOUT_TOKENS"
+	WaitForPodReachable                  string = "FF_WAIT_FOR_POD_TO_BE_REACHABLE"
 )
 
 type FeatureFlag struct {
@@ -361,6 +362,12 @@ var flags = []FeatureFlag{
 		Description: "When enabled, GitLab Runner doesn't embed the job token anywhere during Git configuration or command " +
 			"execution. Instead, it sets up a Git credential helper that uses the environment variable to obtain the job token. " +
 			"This approach limits token storage and reduces the potential for leaks.",
+	},
+	{
+		Name:         WaitForPodReachable,
+		DefaultValue: false,
+		Deprecated:   false,
+		Description:  "When enabled, the runner waits for the Pod status to be 'Running', and for the Pod to be ready with its certificates attached.",
 	},
 }
 
