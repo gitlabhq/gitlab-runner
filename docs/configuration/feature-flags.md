@@ -82,6 +82,7 @@ The flags are defined in `./helpers/featureflags/flags.go` file.
 | `FF_DISABLE_UMASK_FOR_KUBERNETES_EXECUTOR` | `false` | **{dotted-circle}** No |  | When enabled, removes the `umask 0000` call for jobs executed with the Kubernetes executor. Instead, the runner tries to discover the user ID (UID) and group ID (GID) of the user the build container runs as. The runner also changes the ownership of the working directory and files by running the `chown` command in the predefined container (after updating sources, restoring cache, and downloading artifacts). |
 | `FF_USE_LEGACY_S3_CACHE_ADAPTER` | `false` | **{dotted-circle}** No |  | When enabled, the legacy S3 Cache adapter is used. When disabled (default), a newer S3 Cache adapter is used which uses Amazon's S3 SDK for authentication. This should resolve authentication problems in environments that the legacy adapter struggled with, such as custom STS endpoints. |
 | `FF_GIT_URLS_WITHOUT_TOKENS` | `false` | **{dotted-circle}** No |  | When enabled, GitLab Runner doesn't embed the job token anywhere during Git configuration or command execution. Instead, it sets up a Git credential helper that uses the environment variable to obtain the job token. This approach limits token storage and reduces the potential for leaks. |
+| `FF_WAIT_FOR_POD_TO_BE_REACHABLE` | `false` | **{dotted-circle}** No |  | When enabled, the runner waits for the Pod status to be 'Running', and for the Pod to be ready with its certificates attached. |
 
 <!-- feature_flags_list_end -->
 
