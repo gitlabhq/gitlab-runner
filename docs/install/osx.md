@@ -304,6 +304,11 @@ gitlab-runner start
 If the error persists, do a graphical login. A graphical login bootstraps the `LaunchAgent`, which is required to launch the service.
 For more details, see [Limitations on macOS](osx.md#limitations-on-macos).
 
+The macOS instances hosted on AWS must perform [additional steps](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-to-mac-instance.html) to connect to the instance's GUI.
+Use the `ssh -L` option mentioned in the steps to enable SSH port forwarding to allow a remote desktop client, like VNC, to connect to the remote instance.
+You must also configure `AllowTcpForwarding yes` in the `/private/etc/ssh/sshd_config` on the AWS hosted macOS instance. Restart the instance to apply the change to the SSHD configuration.
+After you sign in to the GUI, repeat the GitLab Runner troubleshooting steps from a terminal in the GUI to resolve the error.
+
 ### `FATAL: Failed to start gitlab-runner: "launchctl" failed with stderr: Load failed: 5: Input/output error` on `gitlab-runner start` command
 
 If this error is encountered when running the `gitlab-runner start` command, ensure that the directories specified in the `~/Library/LaunchAgents/gitlab-runner.plist` values `StandardOutPath` and `StandardErrorPath` exist:
