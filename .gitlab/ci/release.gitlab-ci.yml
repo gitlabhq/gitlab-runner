@@ -172,6 +172,8 @@ bleeding edge packagecloud:
       - el
       - fedora
       - amazon
+      - sles
+      - opensuse
 
 .bleeding_edge_docker_images_base:
   extends:
@@ -229,6 +231,8 @@ stable packagecloud:
       - ol
       - fedora
       - amazon
+      - sles
+      - opensuse
 
 .docker_images_registry_base_variables_overwrite:
   variables:
