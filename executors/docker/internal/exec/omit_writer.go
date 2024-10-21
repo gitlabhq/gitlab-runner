@@ -9,20 +9,20 @@ import (
 	"time"
 )
 
-type stderrOmitWriter struct {
+type omitWriter struct {
 	buf   []byte
 	start int
 	end   int
 	n     int64
 }
 
-func newStderrOmitWriter() *stderrOmitWriter {
-	return &stderrOmitWriter{
+func newOmitWriter() *omitWriter {
+	return &omitWriter{
 		buf: make([]byte, 32*1024),
 	}
 }
 
-func (r *stderrOmitWriter) Write(p []byte) (n int, err error) {
+func (r *omitWriter) Write(p []byte) (n int, err error) {
 	r.n += int64(len(p))
 
 	for _, b := range p {
@@ -35,7 +35,7 @@ func (r *stderrOmitWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (r *stderrOmitWriter) bytes() []byte {
+func (r *omitWriter) bytes() []byte {
 	if r.start == r.end {
 		return nil
 	}
@@ -49,7 +49,7 @@ func (r *stderrOmitWriter) bytes() []byte {
 	return r.buf[r.start:r.end]
 }
 
-func (r *stderrOmitWriter) Error() error {
+func (r *omitWriter) Error() error {
 	length := int64(r.end - r.start)
 	if r.end < r.start {
 		length = int64(cap(r.buf) - (r.start - r.end))

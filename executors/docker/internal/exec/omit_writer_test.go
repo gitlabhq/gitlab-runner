@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStderrOmitWriter(t *testing.T) {
+func Test_OmitWriter(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []string
@@ -39,7 +39,7 @@ func TestStderrOmitWriter(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			writer := newStderrOmitWriter()
+			writer := newOmitWriter()
 
 			for _, input := range tc.input {
 				_, err := writer.Write([]byte(input))
