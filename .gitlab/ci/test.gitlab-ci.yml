@@ -15,6 +15,9 @@ gemnasium-dependency_scanning:
 semgrep-sast:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
+gitlab-advanced-sast:
+  rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
+
 check version definition:
   stage: test
   extends:
