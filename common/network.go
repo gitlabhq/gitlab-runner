@@ -620,46 +620,6 @@ type JobResponse struct {
 	TLSAuthKey  string `json:"-"`
 }
 
-// StepsShim is a function which shims GitLab Steps from the `run`
-// keyword into the step-runner image. This is a temporary mechanism
-// for executing steps which will be replaced by a gRPC connection to
-// step-runner in each executor.
-func (j *JobResponse) StepsShim() error {
-	switch {
-	case j.Run == "":
-		return nil
-
-	case slices.ContainsFunc(j.Steps, func(step Step) bool { return len(step.Script) > 0 }):
-		return fmt.Errorf("the `run` and `script` keywords cannot be used together")
-
-	case j.Variables.Get("STEPS") != "":
-		return fmt.Errorf("the `run` keyword requires the exclusive use of the variable STEPS")
-	}
-
-	if j.Image.Name == "" {
-		// Experiment requires step-runner to be present in
-		// the container image. If no image is provided then
-		// we use the step-runner v0 image.
-		j.Image.Name = "registry.gitlab.com/gitlab-org/step-runner:v0"
-	}
-
-	j.Variables = append(j.Variables, JobVariable{
-		Key:   "STEPS",
-		Value: j.Run,
-		Raw:   true,
-	})
-
-	j.Steps = Steps{{
-		Name:         StepNameScript,
-		Script:       StepScript{"/step-runner ci"},
-		Timeout:      3600,
-		When:         "on_success",
-		AllowFailure: false,
-	}}
-
-	return nil
-}
-
 // ValidateStepsJobRequest does the following:
 // 1. It detects if the JobRequest is requesting execution of the job via Steps.
 // 2. If yes, it ensures the request is a valid steps request, and
