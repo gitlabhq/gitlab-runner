@@ -29,20 +29,37 @@ func TestGitCredHelper(t *testing.T) {
 		tests := map[string]struct {
 			jobToken       string
 			gitCallArg     string
-			expectedOutput string
+			expectedStdout string
+			expectedStderr string
 		}{
 			"no git arg": {
 				gitCallArg:     "",
-				expectedOutput: "",
+				expectedStdout: "",
+				expectedStderr: "",
 			},
 			"happy path": {
 				jobToken:       "blipp blupp",
 				gitCallArg:     "get",
-				expectedOutput: "password=blipp blupp" + eol,
+				expectedStdout: "password=blipp blupp" + eol,
 			},
 			"env var not set": {
 				gitCallArg:     "get",
-				expectedOutput: "password=" + eol,
+				expectedStdout: "password=" + eol,
+			},
+			"erase is noop": {
+				gitCallArg: "erase",
+			},
+			"store is a noop": {
+				gitCallArg: "store",
+			},
+			"everything else logs to stderr": {
+				gitCallArg: "foobar",
+				expectedStderr: func() string {
+					if shellName == shells.Bash {
+						return ""
+					}
+					return "The term 'gch_foobar' is not recognized"
+				}(),
 			},
 		}
 
@@ -50,6 +67,7 @@ func TestGitCredHelper(t *testing.T) {
 			t.Run(tn, func(t *testing.T) {
 				credHelperCmd := shell.GetGitCredHelperCommand()
 				callArgs := prepCallArgs(t, shellName, credHelperCmd, tc.gitCallArg)
+				stdout := &bytes.Buffer{}
 				stderr := &bytes.Buffer{}
 
 				env := os.Environ()
@@ -60,11 +78,18 @@ func TestGitCredHelper(t *testing.T) {
 				cmd := exec.Command(shellName, callArgs...)
 				cmd.Env = env
 				cmd.Stderr = stderr
+				cmd.Stdout = stdout
 
-				output, err := cmd.Output()
-				require.NoError(t, err, "running command failed; stderr: %s", stderr)
+				err := cmd.Run()
+				require.NoError(t, err, "running command failed\n  stdout: %s\n  stderr: %s", stdout, stderr)
 
-				assert.Equal(t, tc.expectedOutput, string(output))
+				assert.Equal(t, tc.expectedStdout, stdout.String())
+
+				if tc.expectedStderr == "" {
+					assert.Equal(t, "", tc.expectedStderr, "exepcted stderr to be empty")
+				} else {
+					assert.Contains(t, stderr.String(), tc.expectedStderr, "expected stderr to contain a warning")
+				}
 			})
 		}
 	})

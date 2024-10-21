@@ -594,13 +594,14 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-const powershellGitCredHelperScript = `function get{ echo "password=${env:CI_JOB_TOKEN}" } ; `
+// const powershellGitCredHelperScript = `function gitCredHelper([string]$cmd){ if ($cmd.equals("get")) { echo "password=${env:CI_JOB_TOKEN}" } }; gitCredHelper`
+const powershellGitCredHelperScript = `function gch_get{ echo "password=${env:CI_JOB_TOKEN}"}; function gch_erase{}; function gch_store{}; function helper([string]$cmd){ & "gch_${cmd}" }; helper`
 
 // GetGitCredHelperCommand returns a command that can be used e.g. in a git config as a credential helper.
 //
 // This returns something like:
 //
-//	pwsh -NoProfile ... -Command ''function get { ... } ; ''
+//	pwsh -NoProfile ... -Command ''function gch_get{...}; ...; helper''
 //
 // as a single string.
 //
@@ -611,16 +612,25 @@ const powershellGitCredHelperScript = `function get{ echo "password=${env:CI_JOB
 //
 // In the end, for a successful configuration, we need the content of the git config to look something like:
 //
-//	[credential."https://some.tld"]
-//		username = "some-user"
-//		helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function get{ echo \"password=${env:CI_JOB_TOKEN}\" } ; '"
+//	[credential "https://gitlab.com"]
+//		username = gitlab-ci-token
+//		helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function gch_get{ echo \"password=${env:CI_JOB_TOKEN}\"}; function gch_erase{}; function gch_store{}; function helper([string]$cmd){ & \"gch_${cmd}\" }; helper'"
 //
-// The resulting commandline runs the configured shell (pwsh/powershell) with the default args we use for other shell
-// invocations. It then runs the inner script as is, with any arguments from git "tagged on", e.g. ' get'; this is how
-// git passes in args.
-// We can't use -CommandWithArgs, because this is not supported by powershell, but pwsh only.
-// Thus, if git calls the helper with the 'get' arguments, that results in the get function to be called; if git calls
-// the helper with no argument, the whole command becomes a no-op.
+// This command works across powershell & pwsh.
+// All cred helper commands except "get" are no-ops; unknown commands will produce an error log, but will not fail, git
+// will ignore that credential helper.
+//
+// Why is this not closer to the bash credhelper, e.g. by making it something like
+//
+//	function helper([string]$cmd){ if ($cmd.equals("get")) { echo "password=${env:CI_JOB_TOKEN}" } }`
+//
+// ? Because:
+// This would fail on powershell: The shell writer does remove the double quotes and thus making the `if`
+// condition bogus and an error, thus failing to produce creds for any (also the "get") case.
+//
+// Also note: git might call the cred helper with "erase"; this is a powershell built-in alias to "Remove-Item", thus we
+// need to ensure that we interpret the args passed in by git as an arg, and e.g. not call a function/cmdlet named after
+// the arg.
 //
 // More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
 func (b *PowerShell) GetGitCredHelperCommand() string {
