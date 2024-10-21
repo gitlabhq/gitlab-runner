@@ -827,13 +827,18 @@ the supported configuration.
 
 ### Relationship between limit and burst
 
-There’s a token "bucket" (not to be confused with object storage buckets). That bucket refills at rate limit X per second. Burst is the maximum size of the bucket.
-If the bucket is empty, you can create X amount of instances per second. If the bucket isn’t empty, you can create that many instances at once, then the bucket will begin to fill again.
+The scale throttle uses a token quota for instance creation, defined by the `burst` value. The `burst` value is the
+maximum size that the quota is allowed to reach. The quota refreshes at the rate specified by the `limit` value, per
+second. The number of instances that can be created at a single time is limited by the amount of quota remaining. If
+there is sufficient quota, you can create a number of instances equal to the remaining quota. If the quota is depleted,
+you can create `limit` amount of instances per second. Once instance creation stops, the quota will begin to increase at
+a rate of `limit` per second until it reached the `burst` value.
 
 For example, if the `limit` is `1` and the `burst` is `60`:
-  - You can create 60 instances instantly, but then you’d be throttled.
-  - If you then waited 60 seconds, you'd be able to instantly create 60 instances again.
-  - If you didn't wait, you could create 1 instance every second.
+
+- You can create 60 instances instantly, but then you'd be throttled.
+- If you then waited 60 seconds, you'd be able to instantly create 60 instances again.
+- If you didn't wait, you could create 1 instance every second.
 
 ## The `[runners.autoscaler.connector_config]` section
 
