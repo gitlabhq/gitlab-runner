@@ -825,6 +825,15 @@ the supported configuration.
 | `limit`                  | The rate limit of new instances per second that can provisioned. `-1` is infinite. The default (`0`), sets the limit to `100`. |
 | `burst`                  | The burst limit of new instances. Defaults to `max_instances` or `limit` when `max_instances` is not set. If `limit` is infinite, `burst` is ignored. |
 
+### Relationship between limit and burst
+There’s a token "bucket" (not to be confused with object storage buckets). That bucket refills at rate limit X per second. Burst is the maximum size of the bucket.
+If the bucket is empty, you can create X amount of instances per second. If the bucket isn’t empty, you can create that many instances at once, then the bucket will begin to fill again.
+
+For exampple, if the `limit` is 1 and the `burst` is 60:
+  * You can create 60 instances instantly, but then you’d be throttled.
+  * If you then waited 60 seconds, you’d be able to instantly create 60 instances again.
+  * If you didn’t wait, you could create 1 instance every second.
+
 ## The `[runners.autoscaler.connector_config]` section
 
 [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins typically have accompanying documentation on
