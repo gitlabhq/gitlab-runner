@@ -526,19 +526,20 @@ func Test_Image_ExecutorOptions_UnmarshalJSON(t *testing.T) {
 
 func TestJobResponse_Run(t *testing.T) {
 	tests := map[string]struct {
-		json     string
-		wantJSON string
-		wantErr  bool
+		json            string
+		wantJSON        string
+		wantErr         bool
+		execNativeSteps bool
 	}{
-		"steps not used": {
+		"steps not requested": {
 			json:     `{}`,
 			wantJSON: `{}`,
 		},
-		"steps not used, image is left alone": {
+		"steps not requested, image is unmodified": {
 			json:     `{"Image":{"Name":"registry.gitlab.com/project/image:v1"}}`,
 			wantJSON: `{"Image":{"Name":"registry.gitlab.com/project/image:v1"}}`,
 		},
-		"steps are used": {
+		"steps are requested via shim, default image set": {
 			json: `{"Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]"}`,
 			wantJSON: `
 {
@@ -561,7 +562,7 @@ func TestJobResponse_Run(t *testing.T) {
   "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
 }`,
 		},
-		"steps are used with image": {
+		"steps are requested via shim, image unmodified": {
 			json: `
 {
   "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
@@ -588,7 +589,7 @@ func TestJobResponse_Run(t *testing.T) {
   "Image":{"Name":"registry.gitlab.com/project/image:v1"}
 }`,
 		},
-		"steps are used with script": {
+		"steps and script are requested": {
 			json: `
 {
   "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
@@ -603,7 +604,7 @@ func TestJobResponse_Run(t *testing.T) {
 }`,
 			wantErr: true,
 		},
-		"steps variable already used": {
+		"steps requested and STEP variable used": {
 			json: `
 {
   "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
@@ -617,13 +618,107 @@ func TestJobResponse_Run(t *testing.T) {
 }`,
 			wantErr: true,
 		},
+
+		"steps request via native exec, executor supports native exec": {
+			execNativeSteps: true,
+			json: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"FF_USE_NATIVE_STEPS",
+      "Value":"true"
+    }
+  ]
+}`,
+			wantJSON: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"FF_USE_NATIVE_STEPS",
+      "Value":"true"
+    }
+  ],
+  "Steps":[
+    {
+      "Name":"run"
+    }
+  ],
+  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+}`,
+		},
+		"steps request via native exec, executor does not support native exec": {
+			execNativeSteps: false,
+			json: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"FF_USE_NATIVE_STEPS",
+      "Value":"true"
+    }
+  ]
+}`,
+			wantJSON: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"FF_USE_NATIVE_STEPS",
+      "Value":"true"
+    },
+    {
+      "Key":"STEPS",
+      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+      "Raw":true
+    }
+  ],
+  "Steps":[
+    {
+      "Name":"script",
+      "Script":["/step-runner ci"],
+      "Timeout":3600,
+      "When":"on_success"
+    }
+  ],
+  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+}`,
+		},
+		"steps are requested via shim, executor supports native exec": {
+			execNativeSteps: true,
+			json: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]"
+}`,
+			wantJSON: `
+{
+  "Run":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+  "Variables":[
+    {
+      "Key":"STEPS",
+      "Value":"[{\"Name:\":\"hello\",\"Script\":\"echo hello world\"}]",
+      "Raw":true
+    }
+  ],
+  "Steps":[
+    {
+      "Name":"script",
+      "Script":["/step-runner ci"],
+      "Timeout":3600,
+      "When":"on_success"
+    }
+  ],
+  "Image":{"Name":"registry.gitlab.com/gitlab-org/step-runner:v0"}
+}`,
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			jobResponse := &JobResponse{}
 			require.NoError(t, json.Unmarshal([]byte(tt.json), &jobResponse))
 
-			err := jobResponse.StepsShim()
+			err := jobResponse.ValidateStepsJobRequest(tt.execNativeSteps)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

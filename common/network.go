@@ -266,6 +266,7 @@ type StepScript []string
 type StepName string
 
 const (
+	StepNameRun         StepName = "run"
 	StepNameScript      StepName = "script"
 	StepNameAfterScript StepName = "after_script"
 )
@@ -642,6 +643,58 @@ func (j *JobResponse) StepsShim() error {
 		j.Image.Name = "registry.gitlab.com/gitlab-org/step-runner:v0"
 	}
 
+	j.Variables = append(j.Variables, JobVariable{
+		Key:   "STEPS",
+		Value: j.Run,
+		Raw:   true,
+	})
+
+	j.Steps = Steps{{
+		Name:         StepNameScript,
+		Script:       StepScript{"/step-runner ci"},
+		Timeout:      3600,
+		When:         "on_success",
+		AllowFailure: false,
+	}}
+
+	return nil
+}
+
+// ValidateStepsJobRequest does the following:
+// 1. It detects if the JobRequest is requesting execution of the job via Steps.
+// 2. If yes, it ensures the request is a valid steps request, and
+// 3. It sets a default build image.
+// 4. It further determines if the request is a valid native steps execution request.
+// 5. If it is, it sets a new, native-steps specific script step and returns.
+// 6. If not, it configures the job to be run via the step shim approach.
+func (j *JobResponse) ValidateStepsJobRequest(executorSupportsNativeSteps bool) error {
+	switch {
+	case j.Run == "":
+		return nil
+	case slices.ContainsFunc(j.Steps, func(step Step) bool { return len(step.Script) > 0 }):
+		return fmt.Errorf("the `run` and `script` keywords cannot be used together")
+	case j.Variables.Get("STEPS") != "":
+		return fmt.Errorf("the `run` keyword requires the exclusive use of the variable STEPS")
+	}
+
+	if j.Image.Name == "" {
+		// Experiment requires step-runner to be present in
+		// the container image. If no image is provided then
+		// we use the step-runner v0 image.
+		j.Image.Name = "registry.gitlab.com/gitlab-org/step-runner:v0"
+	}
+
+	if executorSupportsNativeSteps && j.NativeStepsRequested() {
+		// If native steps is enabled, the script steps won't be executed anyway, but this change ensures the job log
+		// trace is coherent since it will print: Executing "step_run" stage of the job script
+		j.Steps = Steps{{Name: StepNameRun}}
+
+		return nil
+	}
+
+	// Use the shim approach to run steps jobs. This shims GitLab Steps from the `run` keyword into the step-runner
+	// image. This is a temporary mechanism for executing steps which will be replaced by a gRPC connection to
+	// step-runner in each executor.
 	j.Variables = append(j.Variables, JobVariable{
 		Key:   "STEPS",
 		Value: j.Run,
