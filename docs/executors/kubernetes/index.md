@@ -112,7 +112,7 @@ You can either:
 | events | list, watch (`FF_PRINT_POD_EVENTS=true`) |
 | namespaces | create, delete |
 | pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get, watch (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
-| pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | secrets | create, delete, get, update |
 | serviceAccounts | get |
 | services | create, get |
@@ -139,6 +139,8 @@ You can either:
   - _The [`FF_KUBERNETES_HONOR_ENTRYPOINT` feature flag](../../configuration/feature-flags.md) is enabled._
 
   - _The [`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` feature flag](../../configuration/feature-flags.md) is disabled when the [`CI_DEBUG_SERVICES` variable](https://docs.gitlab.com/ee/ci/services/#capturing-service-container-logs) is set to `true`._
+
+  - _The [`FF_WAIT_FOR_POD_TO_BE_REACHABLE` feature flag](../../configuration/feature-flags.md) is enabled._
 
 ## Configuration settings
 
@@ -2072,7 +2074,7 @@ implications:
   automatically. However, if the container image is spawning the shell without
   using the command passed in through `args`, the entrypoint must resolve the
   startup probe itself by creating a file named `.gitlab-startup-marker` inside
-  the root of the build directory.  
+  the root of the build directory.
   The startup probe checks every `poll_interval` for the `.gitlab-startup-marker`
   file. If the file is not present within `poll_timeout`, the pod is considered
   unhealthy, and the system abort the build.
@@ -2160,15 +2162,15 @@ To use only designated namespaces during CI runs, in the `config.toml` file, def
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/36951) in GitLab Runner 17.5.
 
-The fault tolerance feature for GitLab Runner helps prevent orphaned resources (such as Kubernetes pods) 
-and jobs stuck in a `Running` state when a runner manager restarts. 
+The fault tolerance feature for GitLab Runner helps prevent orphaned resources (such as Kubernetes pods)
+and jobs stuck in a `Running` state when a runner manager restarts.
 
 The following steps describe how job execution works under typical conditions.
 The runner manager:
 
 1. Receives a job from GitLab.
 1. Creates the job pod in Kubernetes.
-1. Sends commands to be executed in the job pods. 
+1. Sends commands to be executed in the job pods.
 1. Reads the job logs and status, and sends the information back to GitLab.
    Then, GitLab refreshes the UI.
 
@@ -2214,7 +2216,7 @@ A fault-tolerant runner manager:
      ```
 
 1. Executes jobs as usual, but periodically or on certain events, writes them to the store.
-1. Checks for running jobs in the store during restart. 
+1. Checks for running jobs in the store during restart.
 
    If a job hasn't been updated recently, the runner:
 
@@ -2233,7 +2235,7 @@ A fault-tolerant runner manager:
        // Offset is the offset off of which to read the job logs from the build pod
        Offset      int64         `json:"offset"`
       }
-   
+
       // Only the name and namespace of these resources is serialized to the store
       /*
       {
@@ -2254,7 +2256,7 @@ A fault-tolerant runner manager:
        s.state.Pod, _ = s.kubeClient.CoreV1().Pods(s.state.Pod.Namespace).Get(s.state.Pod.Name)
        s.state.Credentials, _ = s.kubeClient.CoreV1().Secrets(s.state.Credentials.Namespace).Get(s.state.Credentials.Name)
        // do the same for services
-   
+
        return nil
       }
       ```
