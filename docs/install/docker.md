@@ -120,7 +120,7 @@ To use a configuration container to mount your custom data volume:
 ## Update runner configuration
 
 After you [change the runner configuration](../configuration/advanced-configuration.md) in `config.toml`,
-apply your changes by restarting the runner with `gitlab-runner restart`.
+apply your changes by restarting the container with `docker stop` and `docker run`.
 
 ## Upgrade runner version
 
