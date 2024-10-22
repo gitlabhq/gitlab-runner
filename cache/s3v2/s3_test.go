@@ -183,6 +183,17 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedEndpoint:  "https://localhost:9000",
 			expectedDualStack: false,
 		},
+		"s3-no-region": {
+			s3Config: common.CacheS3Config{
+				ServerAddress: "localhost:9000",
+				BucketName:    "test-bucket",
+			},
+			expectedRegion:    "us-east-1",
+			expectedScheme:    "https",
+			usePathStyle:      true,
+			expectedEndpoint:  "https://localhost:9000",
+			expectedDualStack: false,
+		},
 	}
 
 	for testName, tt := range tests {
