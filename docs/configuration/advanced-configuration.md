@@ -825,7 +825,7 @@ the supported configuration.
 | `limit`                  | The rate limit of new instances per second that can provisioned. `-1` is infinite. The default (`0`), sets the limit to `100`. |
 | `burst`                  | The burst limit of new instances. Defaults to `max_instances` or `limit` when `max_instances` is not set. If `limit` is infinite, `burst` is ignored. |
 
-### Relationship between limit and burst
+### Relationship between `limit` and `burst`
 
 The scale throttle uses a token quota for instance creation, defined by the `burst` value. The `burst` value is the
 maximum size that the quota is allowed to reach. The quota refreshes at the rate specified by the `limit` value, per
@@ -834,10 +834,11 @@ there is sufficient quota, you can create a number of instances equal to the rem
 you can create `limit` amount of instances per second. Once instance creation stops, the quota will begin to increase at
 a rate of `limit` per second until it reached the `burst` value.
 
-For example, if the `limit` is `1` and the `burst` is `60`:
+For example, if `limit` is `1` and `burst` is `60`:
 
-- You can create 60 instances instantly, but then you'd be throttled.
-- If you then waited 60 seconds, you'd be able to instantly create 60 instances again.
+- You can create 60 instances instantly, but you're throttled.
+
+- If you wait 60 seconds, you can instantly create another 60 instances.
 - If you didn't wait, you could create 1 instance every second.
 
 ## The `[runners.autoscaler.connector_config]` section
