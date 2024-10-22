@@ -27,7 +27,7 @@ variables:
   DEPENDENCY_SCANNING_DISABLED: "true"
   TRANSFER_METER_FREQUENCY: "5s"
   GO111MODULE: "on"
-  GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$GO_FIPS_VERSION
+  GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips-17-0:$GO_FIPS_VERSION
   # Leaving the Alpine and UBI versions defined here until the renovate pattern is changed
   # to recognize the definitions as a Go variable
   # renovate: datasource=docker depName=alpine allowedVersions=/3\.16\..+/

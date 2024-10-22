@@ -1,6 +1,6 @@
 ARG GO_VERSION=1.21
 
-FROM go-fips:${GO_VERSION}
+FROM go-fips-17-0:${GO_VERSION}
 
 WORKDIR /build
 COPY . /build/
