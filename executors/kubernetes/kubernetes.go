@@ -882,7 +882,11 @@ func (s *executor) waitForPod(ctx context.Context, writer io.WriteCloser) error 
 		return fmt.Errorf("pod failed to enter running state: %s", status)
 	}
 
-	if err := waitForPodAttach(ctx, s.kubeClient, s.pod, s.Config.Kubernetes); err != nil {
+	if !s.Build.IsFeatureFlagOn(featureflags.WaitForPodReachable) {
+		return nil
+	}
+
+	if err := WaitForPodReachable(ctx, s.kubeClient, s.pod, s.Config.Kubernetes); err != nil {
 		return fmt.Errorf("pod failed to become attachable %v", err)
 	}
 

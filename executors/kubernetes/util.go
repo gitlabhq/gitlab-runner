@@ -298,14 +298,17 @@ func waitForPodRunning(
 	return api.PodUnknown, errors.New("timed out waiting for pod to start")
 }
 
-func getPodLog(c kubernetes.Interface, pod *api.Pod) error {
+func getPodLog(client kubernetes.Interface, pod *api.Pod) error {
 	count := int64(10)
 	podLogOptions := api.PodLogOptions{
 		Container: "helper",
 		Follow:    false,
 		TailLines: &count,
 	}
-	req := c.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOptions)
+
+	//nolint:gocritic
+	// kubeAPI: pods/log, get, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true
+	req := client.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOptions)
 	ctx := context.TODO()
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
@@ -325,7 +328,7 @@ func triggerPodAttachCheck(c kubernetes.Interface, pod *api.Pod) <-chan error {
 	return errc
 }
 
-func waitForPodAttach(
+func WaitForPodReachable(
 	ctx context.Context,
 	c kubernetes.Interface,
 	pod *api.Pod,
