@@ -1,3 +1,9 @@
+## v17.3.3 (2024-10-22)
+
+### Bug fixes
+
+- Remove trailing "/" from cache fallback keys [!5076](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5076)
+
 ## v17.3.2 (2024-10-10)
 
 ### Bug fixes
