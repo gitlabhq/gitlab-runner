@@ -107,6 +107,8 @@
     fi
   script:
   - make release_s3
+  tags:
+  - saas-linux-medium-amd64
 
 .release_packagecloud:
   extends:
