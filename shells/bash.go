@@ -148,6 +148,14 @@ func (b *BashWriter) Command(command string, arguments ...string) {
 	b.CheckForErrors()
 }
 
+func (b *BashWriter) CommandWithStdin(stdin, command string, arguments ...string) {
+	producer := b.buildCommand(b.escape, "echo", stdin)
+	consumer := b.buildCommand(b.escape, command, arguments...)
+
+	b.Line(fmt.Sprintf("%s | %s", producer, consumer))
+	b.CheckForErrors()
+}
+
 func (b *BashWriter) CommandArgExpand(command string, arguments ...string) {
 	b.Line(b.buildCommand(doubleQuote, command, arguments...))
 	b.CheckForErrors()

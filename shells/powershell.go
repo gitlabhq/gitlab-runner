@@ -274,6 +274,34 @@ func (p *PsWriter) Command(command string, arguments ...string) {
 	p.checkErrorLevel()
 }
 
+// CommandWithStdin runs command with arguments and provides stdin to standard input stream of the command
+func (p *PsWriter) CommandWithStdin(stdin, command string, arguments ...string) {
+	// This mimics something like `echo "foobar" | blipp.exe` for pwsh/powershell, passing in stdin _as is_ to the
+	// command. It does not mess with the encoding, BOM, ...
+	// The unfortunate side-effect is, that we use a temporary file for this.
+
+	mainCommand := `Start-Process -NoNewWindow -RedirectStandardInput $tmpFile -Wait -FilePath ` + psSingleQuote(command)
+	if len(arguments) > 0 {
+		for i, arg := range arguments {
+			arguments[i] = psSingleQuote(arg)
+		}
+		mainCommand += " -ArgumentList " + strings.Join(arguments, ",")
+	}
+
+	block := strings.Join([]string{
+		`try {`,
+		`$tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())`,
+		fmt.Sprintf(`[System.IO.File]::WriteAllText($tmpFile, %s)`, psSingleQuote(stdin)),
+		mainCommand,
+		`} finally {`,
+		`if ($tmpFile) { Remove-Item -Force -Path $tmpFile }`,
+		`}`,
+	}, p.EOL)
+
+	p.Line(block)
+	p.CheckForErrors()
+}
+
 func (p *PsWriter) CommandArgExpand(command string, arguments ...string) {
 	p.Line(p.buildCommand(psDoubleQuote, command, arguments...))
 	p.checkErrorLevel()
