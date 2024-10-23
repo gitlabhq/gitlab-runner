@@ -686,16 +686,14 @@ func (s *executor) setupPodLegacy(ctx context.Context) error {
 		}
 	}
 
-	if s.shouldUseStartupProbe() {
-		// If we honor the image's entrypoint, we need to wait until the entrypoint has started the shell. We do this by
-		// leveraging a startup probe, thus we need to wait for the build container being ready, before we can continue
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, io.Discard, s.Config.Kubernetes, buildContainerName)
-		if err != nil {
-			return fmt.Errorf("waiting for pod running: %w", err)
-		}
-		if status != api.PodRunning {
-			return fmt.Errorf("pod failed to enter running state: %s", status)
-		}
+	var out io.WriteCloser = buildlogger.NewNopCloser(io.Discard)
+	if !s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
+		out = s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr)
+		defer out.Close()
+	}
+
+	if err := s.waitForPod(ctx, out); err != nil {
+		return err
 	}
 
 	return nil
@@ -2721,24 +2719,6 @@ func (s *executor) runInContainerWithExec(
 	errCh := make(chan error, 1)
 	go func() {
 		defer close(errCh)
-
-		var out io.WriteCloser = buildlogger.NewNopCloser(io.Discard)
-		if !s.Build.IsFeatureFlagOn(featureflags.PrintPodEvents) {
-			out = s.BuildLogger.Stream(buildlogger.StreamExecutorLevel, buildlogger.Stderr)
-		}
-		defer out.Close()
-
-		status, err := waitForPodRunning(ctx, s.kubeClient, s.pod, out, s.Config.Kubernetes)
-		if err != nil {
-			errCh <- err
-			return
-		}
-		out.Close()
-
-		if status != api.PodRunning {
-			errCh <- fmt.Errorf("pod failed to enter running state: %s", status)
-			return
-		}
 
 		exec := ExecOptions{
 			PodName:       s.pod.Name,
