@@ -841,7 +841,6 @@ until it reaches the `burst` value.
 For example, if `limit` is `1` and `burst` is `60`:
 
 - You can create 60 instances instantly, but you're throttled.
-
 - If you wait 60 seconds, you can instantly create another 60 instances.
 - If you do not wait, you can create 1 instance every second.
 
