@@ -695,6 +695,62 @@ func TestDockerCommandTwoServicesFromOneImage(t *testing.T) {
 	}
 }
 
+func TestDockerCommandServiceNameEmpty(t *testing.T) {
+	test.SkipIfGitLabCIOn(t, test.OSWindows)
+	helpers.SkipIntegrationTests(t, "docker", "info")
+
+	tests := map[string]struct {
+		variables common.JobVariables
+	}{
+		"bridge network": {
+			variables: common.JobVariables{},
+		},
+		"network per build": {
+			variables: common.JobVariables{
+				{
+					Key:   featureflags.NetworkPerBuild,
+					Value: "true",
+				},
+			},
+		},
+	}
+
+	successfulBuild, err := common.GetRemoteSuccessfulBuild()
+	successfulBuild.Services = common.Services{
+		{Name: "", Alias: "service-1"}, // Name can be empty if for example env variable expands to empty string.
+	}
+	assert.NoError(t, err)
+	build := &common.Build{
+		JobResponse: successfulBuild,
+		Runner: &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Executor: "docker",
+				Docker: &common.DockerConfig{
+					Image:      common.TestAlpineImage,
+					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
+				},
+			},
+			SystemIDState: systemIDState,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var buffer bytes.Buffer
+
+			build.Variables = tt.variables
+			err = build.Run(&common.Config{}, &common.Trace{Writer: &buffer})
+
+			str := buffer.String()
+
+			// Shouldn't be considered a system failure
+			var buildErr *common.BuildError
+			assert.ErrorAs(t, err, &buildErr)
+			assert.NotContains(t, str, "system failure")
+		})
+	}
+}
+
 func TestDockerCommandOutput(t *testing.T) {
 	test.SkipIfGitLabCIOn(t, test.OSWindows)
 	helpers.SkipIntegrationTests(t, "docker", "info")
