@@ -842,11 +842,7 @@ func TestGitFetchFlags(t *testing.T) {
 					}
 
 					if useJobTokenFromEnv {
-						mockWriter.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
-						expectedCredSection := "credential."
-						mockWriter.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-						mockWriter.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
-						mockWriter.EXPECT().Command("git", "config", "include.path", "/some/path/cred-helper.conf")
+						expectGitCredHelperSetup(mockWriter, "")
 					}
 
 					mockWriter.EXPECT().Cd(mock.Anything).Once()
@@ -2561,12 +2557,7 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 					m.EXPECT().Cd("build-dir").Once()
 
 					if useJobTokenFromEnv {
-						expectedCredSection := "credential.https://repo-url"
-
-						m.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
-						m.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-						m.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
-						m.EXPECT().Command("git", "config", "include.path", "/some/path/cred-helper.conf")
+						expectGitCredHelperSetup(m, "https://repo-url")
 					}
 
 					m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo").Once()
@@ -2601,6 +2592,18 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 			}
 		})
 	}
+}
+
+func expectGitCredHelperSetup(shellWriter *MockShellWriter, remoteURL string) {
+	expectedCredSection := "credential." + remoteURL
+
+	shellWriter.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
+
+	shellWriter.EXPECT().CommandWithStdin("url="+remoteURL, "git", "credential", "reject").Once()
+
+	shellWriter.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+	shellWriter.EXPECT().Command("git", "config", "include.path", "/some/path/cred-helper.conf")
 }
 
 func startWithBang(val string) bool {
