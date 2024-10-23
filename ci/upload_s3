@@ -11,6 +11,7 @@ fi
 
 echo "AWS CLI is installed."
 
-aws s3 cp out/ "s3://$ARTIFACTS_S3_BUCKET/$S3_UPLOAD_PATH/" --acl public-read --recursive
+aws configure set s3.max_concurrent_requests 50
+aws s3 cp out/ "s3://$ARTIFACTS_S3_BUCKET/$S3_UPLOAD_PATH/" --acl public-read --recursive --no-progress
 
 echo -e "\n\033[1m==> Download index file: \033[36mhttps://$ARTIFACTS_S3_BUCKET.s3.amazonaws.com/$S3_UPLOAD_PATH/index.html\033[0m\n"
