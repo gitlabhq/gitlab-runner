@@ -825,6 +825,25 @@ the supported configuration.
 | `limit`                  | The rate limit of new instances per second that can provisioned. `-1` is infinite. The default (`0`), sets the limit to `100`. |
 | `burst`                  | The burst limit of new instances. Defaults to `max_instances` or `limit` when `max_instances` is not set. If `limit` is infinite, `burst` is ignored. |
 
+### Relationship between `limit` and `burst`
+
+The scale throttle uses a token quota system to create instances. This system is defined by two values:
+
+- `burst`: The maximum size of the quota.
+- `limit`: The rate at which the quota refreshes per second.
+ 
+The number of instances you can create at once depends on your remaining quota.
+If you have sufficient quota, you can create instances up to that amount.
+If the quota is depleted, you can create `limit` instances per second.
+When instance creation stops, the quota increases by `limit` per second
+until it reaches the `burst` value.
+
+For example, if `limit` is `1` and `burst` is `60`:
+
+- You can create 60 instances instantly, but you're throttled.
+- If you wait 60 seconds, you can instantly create another 60 instances.
+- If you do not wait, you can create 1 instance every second.
+
 ## The `[runners.autoscaler.connector_config]` section
 
 [fleeting](https://gitlab.com/gitlab-org/fleeting/fleeting) plugins typically have accompanying documentation on
