@@ -168,26 +168,22 @@ func groupPermissions(comment *ast.Comment, permissions permissionsGroup) {
 		permissions[resource] = []verb{}
 	}
 
-	_, verbIndex, _ := lo.FindIndexOf(permissions[resource], func(item verb) bool {
-		return lo.Contains(verbs, item.Verb)
-	})
-	if verbIndex > -1 {
-		for _, ff := range featureFlags {
-			if !lo.ContainsBy(permissions[resource][verbIndex].FeatureFlags, func(item verbFeatureFlag) bool {
-				return item.Name == ff.Name
-			}) {
-				permissions[resource][verbIndex].FeatureFlags = append(permissions[resource][verbIndex].FeatureFlags, ff)
-			}
-		}
-
-		return
-	}
-
+	// Iterate through all verbs. If a verb is already in
+	// the resource list, append the feature flags to the existing
+	// list. Otherwise add a new entry.
 	for _, v := range verbs {
-		permissions[resource] = append(permissions[resource], verb{
-			Verb:         v,
-			FeatureFlags: featureFlags,
+		_, verbIndex, _ := lo.FindIndexOf(permissions[resource], func(p verb) bool {
+			return p.Verb == v
 		})
+
+		if verbIndex != -1 {
+			permissions[resource][verbIndex].FeatureFlags = append(permissions[resource][verbIndex].FeatureFlags, featureFlags...)
+		} else {
+			permissions[resource] = append(permissions[resource], verb{
+				Verb:         v,
+				FeatureFlags: featureFlags,
+			})
+		}
 	}
 }
 
