@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/docker/docker/client"
@@ -33,6 +34,23 @@ func SkipIfGitLabCIWithMessage(t *testing.T, msg string) {
 	_, ok := os.LookupEnv("CI")
 	if ok {
 		t.Skipf("Skipping test on CI builds: %s - %s", t.Name(), msg)
+	}
+}
+
+func SkipIfVariable(t *testing.T, varName string) {
+	val, ok := os.LookupEnv(varName)
+
+	if !ok {
+		return
+	}
+
+	set, err := strconv.ParseBool(val)
+	if err != nil {
+		return
+	}
+
+	if set {
+		t.Skipf("Skipping test %s because variable %s set", t.Name(), varName)
 	}
 }
 
