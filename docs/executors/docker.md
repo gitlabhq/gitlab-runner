@@ -875,7 +875,7 @@ Use this pull policy if:
 
 - Runners must always pull the most recent images.
 - Runners are publicly available and configured for [auto-scale](../configuration/autoscale.md) or as
-  a shared runner in your GitLab instance.
+  an instance runner in your GitLab instance.
 
 **Do not use** this policy if runners must use locally stored images.
 
@@ -905,7 +905,7 @@ Use the `if-not-present` policy to:
 
 **Do not use** this policy:
 
-- For shared runners where different users that use the runner may have access to private images.
+- For instance runners where different users that use the runner may have access to private images.
   For more information about security issues, see
   [Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
 - If jobs are frequently updated and must be run in the most recent image

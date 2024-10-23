@@ -10,7 +10,7 @@ info: >-
 
 This guide contains best practices for scaling a fleet of runners in a shared service model.
 
-When you host a fleet of shared runners, you need a well-planned infrastructure that takes
+When you host a fleet of instance runners, you need a well-planned infrastructure that takes
 into consideration your:
 
 - Computing capacity.

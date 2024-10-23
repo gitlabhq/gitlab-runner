@@ -54,7 +54,7 @@ on [Runtime privilege and Linux capabilities](https://docs.docker.com/engine/ref
 It is **not advised** to run containers in privileged mode.
 
 When privileged mode is enabled, a user running a CI/CD job could gain full root access
-to the runner's host system, permission to mount and unmount volumes, and run nested
+to the runner's host system, permission to mount and detach volumes, and run nested
 containers.
 
 By enabling privileged mode, you are effectively disabling all the container's security
@@ -69,17 +69,17 @@ introduced by the privileged mode) is used to handle one and only one job.
 When using the private Docker images support described in
 [advanced configuration: using a private container registry](../configuration/advanced-configuration.md#use-a-private-container-registry)
 you should use `always` as the `pull_policy` value. Especially you should
-use `always` pull policy if you are hosting a public, shared Runner with the
+use `always` pull policy if you are hosting a public, instance runner with the
 Docker or Kubernetes executors.
 
 Let's consider an example where the pull policy is set to `if-not-present`:
 
 1. User A has a private image at `registry.example.com/image/name`.
-1. User A starts a build on a shared runner: The build receives the registry
+1. User A starts a build on an instance runner: The build receives the registry
    credentials and pulls the image after authorization in registry.
-1. The image is stored on a shared runner's host.
+1. The image is stored on an instance runner's host.
 1. User B doesn't have access to the private image at `registry.example.com/image/name`.
-1. User B starts a build that is using this image on the same shared runner
+1. User B starts a build that is using this image on the same instance runner
    as User A: Runner finds a local version of the image and uses it **even if
    the image could not be pulled because of missing credentials**.
 
