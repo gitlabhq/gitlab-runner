@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -97,8 +98,21 @@ func skipOnGit(t *testing.T, constraints string) {
 	}
 }
 
+// This is an alternative implementation to t.TempDir() since that wouldn't work on Windows due to long file paths.
+func tempDir(t *testing.T) string {
+	dir, err := os.MkdirTemp("", "")
+	require.NoError(t, err, "creating temp dir for test %q", t.Name())
+
+	t.Cleanup(func() {
+		err := os.RemoveAll(dir)
+		require.NoError(t, err, "removing temp dir %q for test %q", dir, t.Name())
+	})
+
+	return dir
+}
+
 func newBuild(t *testing.T, getBuildResponse common.JobResponse, shell string) *common.Build {
-	dir := t.TempDir()
+	dir := tempDir(t)
 
 	t.Log("Build directory:", dir)
 
@@ -2039,7 +2053,6 @@ func TestCredSetup(t *testing.T) {
 	const (
 		markerForBuild  = "#build# "
 		markerForHelper = "#helper# "
-		token           = "some-random-token"
 	)
 
 	listGitConfig := func(t *testing.T, shell, prefix string) string {
@@ -2073,11 +2086,14 @@ func TestCredSetup(t *testing.T) {
 				assert.NotContains(t, remoteURL, "@", "the remote URL should not contain any auth data")
 				assert.NotContains(t, remoteURL, "gitlab-ci-token", "the remote URL should not contain the token user")
 
+				remoteHost, err := onlyHost(remoteURL)
+				assert.NoError(t, err, "getting only host of remote URL")
+
 				// git cred helper is setup in the helper & build container
 				for _, marker := range []string{markerForHelper, markerForBuild} {
 					gitConfig := extractGitConfig(out, marker)
-					assert.Contains(t, gitConfig, "credential."+remoteURL+".username=gitlab-ci-token", "should contain a username setting")
-					assert.Contains(t, gitConfig, "credential."+remoteURL+".helper=!", "should contain a credential helper")
+					assert.Contains(t, gitConfig, "credential."+remoteHost+".username=gitlab-ci-token", "should contain a username setting")
+					assert.Contains(t, gitConfig, "credential."+remoteHost+".helper=!", "should contain a credential helper")
 					assert.NotContains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "the origin URL should not contain any auth data")
 				}
 			},
@@ -2088,11 +2104,14 @@ func TestCredSetup(t *testing.T) {
 				assert.Contains(t, remoteURL, "@", "the remote URL should contain auth data")
 				assert.Contains(t, remoteURL, "gitlab-ci-token", "remote URL should contain the token user")
 
+				remoteHost, err := onlyHost(remoteURL)
+				assert.NoError(t, err, "getting only host of remote URL")
+
 				// git cred helper is neither setup in the helper or build container
 				for _, marker := range []string{markerForHelper, markerForBuild} {
 					gitConfig := extractGitConfig(out, marker)
-					assert.NotContains(t, gitConfig, "credential."+remoteURL+".username=gitlab-ci-token", "should not contain a username setting")
-					assert.NotContains(t, gitConfig, "credential."+remoteURL+".helper=!", "should not contain a credential helper")
+					assert.NotContains(t, gitConfig, "credential."+remoteHost+".username=gitlab-ci-token", "should not contain a username setting")
+					assert.NotContains(t, gitConfig, "credential."+remoteHost+".helper=!", "should not contain a credential helper")
 					assert.Contains(t, gitConfig, "remote.origin.url=https://gitlab-ci-token:", "should contain the origin URL including auth data")
 				}
 			},
@@ -2100,15 +2119,26 @@ func TestCredSetup(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		name := fmt.Sprintf("tokens:%t", test.gitUrlsWithoutTokens)
+		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", test.gitUrlsWithoutTokens)
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				if runtime.GOOS != shells.OSWindows && shell == shells.SNPowershell {
+					t.Skip("powershell is not supported on non-windows platforms")
+				}
+
 				t.Parallel()
+
+				token := getTokenFromEnv(t)
 
 				jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
 				require.NoError(t, err)
+
+				jobResponse.GitInfo = common.GitInfo{
+					RepoURL: "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test",
+					Sha:     "0a1093ff08de939dbd1625689d86deef18126a74",
+				}
 
 				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
 					Name:   common.HookPostGetSourcesScript,
@@ -2126,21 +2156,24 @@ func TestCredSetup(t *testing.T) {
 					jobResponse.Token = token
 
 					jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
-						Key:    "CI_JOB_TOKEN",
-						Value:  token,
-						Masked: true,
+						Key: "CI_JOB_TOKEN", Value: token, Masked: true,
 					})
 				}
 
+				jobResponse.Variables = append(
+					jobResponse.Variables,
+					common.JobVariable{Key: "GIT_TRACE", Value: "1"},
+					common.JobVariable{Key: "GIT_CURL_VERBOSE", Value: "1"},
+					common.JobVariable{Key: "GIT_TRANSFER_TRACE", Value: "1"},
+					common.JobVariable{Key: "CI_DEBUG_TRACE", Value: "1"},
+					common.JobVariable{Key: "GIT_SUBMODULE_STRATEGY", Value: "recursive"},
+					common.JobVariable{Key: "GIT_SUBMODULE_FORCE_HTTPS", Value: "1"},
+					common.JobVariable{Key: "CI_SERVER_HOST", Value: "gitlab.com"},
+				)
+
 				build := newBuild(t, jobResponse, shell)
 
-				build.Runner.Environment = append(build.Runner.Environment,
-					"GIT_TRACE=1",
-					"GIT_CURL_VERBOSE=1",
-					"GIT_TRANSFER_TRACE=1",
-					"CI_DEBUG_TRACE=1",
-					"GIT_SUBMODULE_STRATEGY=recursive",
-				)
+				build.Runner.RunnerCredentials.URL = "https://gitlab.com/"
 
 				buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens)
 
@@ -2148,6 +2181,7 @@ func TestCredSetup(t *testing.T) {
 				assert.NoError(t, err)
 
 				assert.NotContains(t, out, token, "should not contain the token")
+
 				remoteURL, err := build.GetRemoteURL()
 				assert.NoError(t, err, "getting build's remote URL")
 
@@ -2155,4 +2189,29 @@ func TestCredSetup(t *testing.T) {
 			})
 		})
 	}
+}
+
+func onlyHost(remoteURL string) (string, error) {
+	u, err := url.Parse(remoteURL)
+	if err != nil {
+		return "", err
+	}
+
+	u.Path = ""
+	u.User = nil
+
+	return u.String(), nil
+}
+
+var tokenEnvVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN"}
+
+func getTokenFromEnv(t *testing.T) string {
+	for _, envVar := range tokenEnvVars {
+		if token, ok := os.LookupEnv(envVar); ok {
+			t.Log("using token from env var", envVar)
+			return token
+		}
+	}
+	require.Fail(t, "no token available", "considered env vars: %q", tokenEnvVars)
+	return ""
 }
