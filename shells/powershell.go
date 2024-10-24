@@ -622,14 +622,13 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-// const powershellGitCredHelperScript = `function gitCredHelper([string]$cmd){ if ($cmd.equals("get")) { echo "password=${env:CI_JOB_TOKEN}" } }; gitCredHelper`
-const powershellGitCredHelperScript = `function gch_get{ echo "password=${env:CI_JOB_TOKEN}"}; function gch_erase{}; function gch_store{}; function helper([string]$cmd){ & "gch_${cmd}" }; helper`
+const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals("get")) { echo "password=${env:CI_JOB_TOKEN}" } }; f`
 
 // GetGitCredHelperCommand returns a command that can be used e.g. in a git config as a credential helper.
 //
 // This returns something like:
 //
-//	pwsh -NoProfile ... -Command ''function gch_get{...}; ...; helper''
+//	pwsh -NoProfile ... -Command ''function f{...}; ...; f''
 //
 // as a single string.
 //
@@ -638,35 +637,35 @@ const powershellGitCredHelperScript = `function gch_get{ echo "password=${env:CI
 // this to be a single argument (to `git config`) and not split into multiple arguments. Now that we know that the
 // result will be single-quoted again, we need to escape any "inner" single-quotes, and we do so doubling them here.
 //
-// In the end, for a successful configuration, we need the content of the git config to look something like:
+// In the end, for a successful configuration, we need the content of the git config to literally look something like:
 //
 //	[credential "https://gitlab.com"]
-//		username = gitlab-ci-token
-//		helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function gch_get{ echo \"password=${env:CI_JOB_TOKEN}\"}; function gch_erase{}; function gch_store{}; function helper([string]$cmd){ & \"gch_${cmd}\" }; helper'"
+//	   username = gitlab-ci-token
+//	   helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { echo \"password=${env:CI_JOB_TOKEN}\" } }; f'"
 //
-// This command works across powershell & pwsh.
-// All cred helper commands except "get" are no-ops; unknown commands will produce an error log, but will not fail, git
-// will ignore that credential helper.
+// or
 //
-// Why is this not closer to the bash credhelper, e.g. by making it something like
-//
-//	function helper([string]$cmd){ if ($cmd.equals("get")) { echo "password=${env:CI_JOB_TOKEN}" } }`
-//
-// ? Because:
-// This would fail on powershell: The shell writer does remove the double quotes and thus making the `if`
-// condition bogus and an error, thus failing to produce creds for any (also the "get") case.
-//
-// Also note: git might call the cred helper with "erase"; this is a powershell built-in alias to "Remove-Item", thus we
-// need to ensure that we interpret the args passed in by git as an arg, and e.g. not call a function/cmdlet named after
-// the arg.
+//	[credential "https://gitlab.com"]
+//	   username = gitlab-ci-token
+//	   helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { echo \"password=${env:CI_JOB_TOKEN}\" } }; f'"
 //
 // More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
 func (b *PowerShell) GetGitCredHelperCommand() string {
+	shell := b.GetName()
+	script := powershellGitCredHelperScript
+
+	// Some special case for powershell on windows and weird quoting rules thereof.
+	// To be honest, I have no clue what's going on there, if this is a powershell thing, or if the shell writer
+	// interferes, or both; but it seems to be necessary and to work.
+	if shell == SNPowershell && runtime.GOOS == OSWindows {
+		script = strings.ReplaceAll(script, `"`, `\"`)
+	}
+
 	return fmt.Sprintf(
 		"%s %s ''%s''",
-		b.GetName(),
+		shell,
 		strings.Join(append(defaultPowershellFlags, "-Command"), " "),
-		powershellGitCredHelperScript,
+		script,
 	)
 }
 
