@@ -104,6 +104,17 @@ func TestNewS3ClientOptions(t *testing.T) {
 			expectedScheme:    "https",
 			expectedEndpoint:  "",
 		},
+		"s3-default-address-set": {
+			s3Config: common.CacheS3Config{
+				BucketName:     "test-bucket",
+				BucketLocation: "us-west-2",
+				ServerAddress:  "s3.amazonaws.com",
+			},
+			expectedDualStack: true,
+			expectedRegion:    "us-west-2",
+			expectedScheme:    "https",
+			expectedEndpoint:  "",
+		},
 		"s3-iam-profile": {
 			s3Config: common.CacheS3Config{
 				BucketName:     "test-bucket",

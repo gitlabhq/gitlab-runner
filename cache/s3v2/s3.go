@@ -21,6 +21,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const DEFAULT_AWS_S3_ENDPOINT = "https://s3.amazonaws.com"
+
 //go:generate mockery --name=s3Presigner --inpackage
 type s3Presigner interface {
 	PresignURL(
@@ -215,7 +217,13 @@ func newRawS3Client(s3Config *common.CacheS3Config) (*aws.Config, *s3.Client, er
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		if endpoint != "" {
+		// To preserve backwards compatibility, configs that set ServerAddress to
+		// "s3.amazonaws.com" don't need a custom endpoint since that is the default
+		// S3 address.
+		//
+		// The AWS SDK doesn't allow you to generate a pre-signed URL with a custom endpoint
+		// and DualStack or Accelerate options set.
+		if endpoint != "" && endpoint != DEFAULT_AWS_S3_ENDPOINT {
 			o.BaseEndpoint = aws.String(endpoint)
 		} else {
 			o.UseDualstack = s3Config.DualStackEnabled() // nolint:staticcheck
