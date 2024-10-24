@@ -196,7 +196,7 @@ if they want to set a deadline for how long GitLab Runner should wait to
 return the JSON string before terminating the process.
 
 If any of the
-[`config_exec_args`](../configuration/advanced-configuration.md#the-runnerscustom-section)
+[`config_args`](../configuration/advanced-configuration.md#the-runnerscustom-section)
 are defined, these will be added in order to the executable defined in
 `config_exec`. For example we have the `config.toml` content below:
 
