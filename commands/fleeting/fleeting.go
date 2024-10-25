@@ -48,7 +48,11 @@ func getPlugins(context *cli.Context) []runnerFleetingPlugin {
 
 func install(clictx *cli.Context) {
 	var exitCode int
-	for _, plugin := range getPlugins(clictx) {
+	plugins := getPlugins(clictx)
+	if len(plugins) == 0 {
+		logrus.Warnln("No plugins to install, review your runner configuration.")
+	}
+	for _, plugin := range plugins {
 		_, err := installer.LookPath(plugin.Plugin, "")
 		if !errors.Is(err, installer.ErrPluginNotFound) && !clictx.Bool("upgrade") {
 			continue
