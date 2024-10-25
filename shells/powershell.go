@@ -51,6 +51,22 @@ echo ""
 echo "$out_json"
 Exit 0
 `
+
+	// This script expected the PID of the process which must be terminated with its children
+	// It has been designed this way to handle both Kubernetes and Shell executor
+	// For Kubernetes executor, the PID is retrieved through a command
+	// For Shell executor, the process ID as it is already known
+	powershellStageProcessesKillerScript = `
+function List-Children ($ProcessId) {
+    $children = Get-CIMInstance Win32_Process | Where-Object { $_.ParentProcessId -eq $ProcessId }
+	foreach ($child in $children) {
+		List-Children $child.ProcessId
+		If($child.ProcessId) { Stop-Process -Id $child.ProcessId; }
+	}
+};
+
+$processId=%s; List-Children $processId
+`
 )
 
 type powershellChangeUserError struct {
@@ -177,6 +193,10 @@ func fileCmdArgs() []string {
 
 func PwshJSONTerminationScript(shell string) string {
 	return fmt.Sprintf(pwshJSONTerminationScript, shell)
+}
+
+func PowershellStageProcessesKillerScript(processId string) string {
+	return fmt.Sprintf(powershellStageProcessesKillerScript, processId)
 }
 
 func PowershellDockerCmd(shell string, preCmds ...string) []string {
