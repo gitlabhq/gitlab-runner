@@ -184,6 +184,15 @@ func TestGoCloudURL(t *testing.T) {
 			},
 			expected: "s3://role-bucket/key?awssdk=v2&dualstack=true&region=us-west-1",
 		},
+		"global S3 endpoint": {
+			config: &common.CacheS3Config{
+				ServerAddress:  "s3.amazonaws.com",
+				BucketName:     "custom-bucket",
+				BucketLocation: "custom-location",
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&region=custom-location",
+		},
 		"custom endpoint": {
 			config: &common.CacheS3Config{
 				ServerAddress:  "custom.s3.endpoint.com",
