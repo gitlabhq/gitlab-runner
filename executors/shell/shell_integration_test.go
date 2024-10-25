@@ -2203,7 +2203,7 @@ func onlyHost(remoteURL string) (string, error) {
 	return u.String(), nil
 }
 
-var tokenEnvVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN"}
+var tokenEnvVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN", "OUTER_CI_JOB_TOKEN"}
 
 func getTokenFromEnv(t *testing.T) string {
 	for _, envVar := range tokenEnvVars {
