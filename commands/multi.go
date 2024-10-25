@@ -361,7 +361,9 @@ func (mr *RunCommand) reloadConfig() error {
 	config := mr.getConfig()
 	mr.healthHelper.healthy = nil
 	mr.log().Println("Configuration loaded")
-	mr.log().Debugln(helpers.ToYAML(config))
+	if c, err := config.Masked(); err == nil {
+		mr.log().Debugln(helpers.ToYAML(c))
+	}
 
 	// initialize sentry
 	slh := sentry.LogHook{}
