@@ -66,7 +66,10 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
 		q.Set("region", a.config.BucketLocation)
 	}
 	endpoint := a.config.GetEndpoint()
-	if endpoint != "" {
+	// We don't need to set the endpoint if the global S3 endpoint is used.
+	// If we did, this may result in failures since AWS requires regional
+	// endpoints to be used.
+	if endpoint != "" && endpoint != DEFAULT_AWS_S3_ENDPOINT {
 		q.Set("endpoint", a.config.GetEndpoint())
 	}
 	if a.config.PathStyleEnabled() {
