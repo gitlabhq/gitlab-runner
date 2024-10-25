@@ -38,11 +38,11 @@ func TestGitCredHelper(t *testing.T) {
 			"happy path": {
 				jobToken:       "blipp blupp",
 				gitCallArg:     "get",
-				expectedStdout: "password=blipp blupp" + eol,
+				expectedStdout: "password=blipp blupp\n",
 			},
 			"env var not set": {
 				gitCallArg:     "get",
-				expectedStdout: "password=" + eol,
+				expectedStdout: "password=\n",
 			},
 			"everything else is a no-op": {
 				gitCallArg: "foobar",
@@ -95,10 +95,3 @@ func prepCallArgs(t *testing.T, shellName, command, arg string) []string {
 
 	return append(args, command)
 }
-
-var eol = func() string {
-	if os.PathSeparator == '/' {
-		return "\n"
-	}
-	return "\r\n"
-}()

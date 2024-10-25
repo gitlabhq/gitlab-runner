@@ -622,7 +622,7 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals("get")) { echo "password=${env:CI_JOB_TOKEN}" } }; f`
+const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals("get")) { Write-Host -NoNewline "password=${env:CI_JOB_TOKEN}` + "`n" + `" } }; f`
 
 // GetGitCredHelperCommand returns a command that can be used e.g. in a git config as a credential helper.
 //
@@ -640,14 +640,14 @@ const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals
 // In the end, for a successful configuration, we need the content of the git config to literally look something like:
 //
 //	[credential "https://gitlab.com"]
-//	   username = gitlab-ci-token
-//	   helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { echo \"password=${env:CI_JOB_TOKEN}\" } }; f'"
+//		username = gitlab-ci-token
+//		helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
 //
 // or
 //
 //	[credential "https://gitlab.com"]
-//	   username = gitlab-ci-token
-//	   helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { echo \"password=${env:CI_JOB_TOKEN}\" } }; f'"
+//		username = gitlab-ci-token
+//		helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
 //
 // More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
 func (b *PowerShell) GetGitCredHelperCommand() string {
