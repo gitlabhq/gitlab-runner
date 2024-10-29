@@ -619,32 +619,10 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	}
 
 	// initializing
-	templateDir := w.MkTmpDir(gitTemplateDir)
-	templateFile := w.Join(templateDir, "config")
+	templateDir := b.setupTemplateDir(w, build, projectDir)
 	objectFormat := build.GetRepositoryObjectFormat()
 
 	b.writeGitCleanup(w, build)
-
-	if build.SafeDirectoryCheckout {
-		// Solves problem with newer Git versions when files existing in the working directory
-		// are owned by different system owners. This may happen for example with Docker executor,
-		// a root-less image used in previous job and the working directory being persisted between
-		// jobs. More details can be found at https://gitlab.com/gitlab-org/gitlab/-/issues/368133.
-		w.Command("git", "config", "--global", "--add", "safe.directory", projectDir)
-	}
-
-	w.Command("git", "config", "-f", templateFile, "init.defaultBranch", "none")
-	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
-	w.Command("git", "config", "-f", templateFile, "credential.interactive", "never")
-	w.Command("git", "config", "-f", templateFile, "gc.autoDetach", "false")
-
-	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
-		w.Command("git", "config", "-f", templateFile, "transfer.bundleURI", "true")
-	}
-
-	if build.IsSharedEnv() {
-		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
-	}
 
 	if objectFormat != common.DefaultObjectFormat {
 		w.Command("git", "init", projectDir, "--template", templateDir, "--object-format", objectFormat)
@@ -697,6 +675,34 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	}
 
 	return nil
+}
+
+func (b *AbstractShell) setupTemplateDir(w ShellWriter, build *common.Build, projectDir string) string {
+	templateDir := w.MkTmpDir(gitTemplateDir)
+	templateFile := w.Join(templateDir, "config")
+
+	if build.SafeDirectoryCheckout {
+		// Solves problem with newer Git versions when files existing in the working directory
+		// are owned by different system owners. This may happen for example with Docker executor,
+		// a root-less image used in previous job and the working directory being persisted between
+		// jobs. More details can be found at https://gitlab.com/gitlab-org/gitlab/-/issues/368133.
+		w.Command("git", "config", "--global", "--add", "safe.directory", projectDir)
+	}
+
+	w.Command("git", "config", "-f", templateFile, "init.defaultBranch", "none")
+	w.Command("git", "config", "-f", templateFile, "fetch.recurseSubmodules", "false")
+	w.Command("git", "config", "-f", templateFile, "credential.interactive", "never")
+	w.Command("git", "config", "-f", templateFile, "gc.autoDetach", "false")
+
+	if build.IsFeatureFlagOn(featureflags.UseGitBundleURIs) {
+		w.Command("git", "config", "-f", templateFile, "transfer.bundleURI", "true")
+	}
+
+	if build.IsSharedEnv() {
+		b.writeGitSSLConfig(w, build, []string{"-f", templateFile})
+	}
+
+	return templateDir
 }
 
 func (b *AbstractShell) configureGitCredHelper(w ShellWriter, info common.ShellScriptInfo, credConfigFile string) error {

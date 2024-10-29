@@ -838,21 +838,14 @@ func TestGitFetchFlags(t *testing.T) {
 						expectedObjectFormat = test.objectFormat
 					}
 
-					mockWriter.EXPECT().MkTmpDir(mock.Anything).Return(mock.Anything).Once()
-					mockWriter.EXPECT().Command("git", "config", "--global", "--add", "safe.directory", mock.Anything).Once()
-					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "init.defaultBranch", "none").Once()
-					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "fetch.recurseSubmodules", "false").Once()
-					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "credential.interactive", "never").Once()
-					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "gc.autoDetach", "false").Once()
-					mockWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "transfer.bundleURI", "true").Once()
-
+					templateDir := expectSetupTemplate(mockWriter, dummyProjectDir)
 					expectFileCleanup(mockWriter, path.Join(dummyProjectDir, ".git"), false)
 					expectGitConfigCleanup(mockWriter, dummyProjectDir, false)
 
 					if expectedObjectFormat != "sha1" {
-						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything, "--object-format", expectedObjectFormat).Once()
+						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", templateDir, "--object-format", expectedObjectFormat).Once()
 					} else {
-						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", mock.Anything).Once()
+						mockWriter.EXPECT().Command("git", "init", dummyProjectDir, "--template", templateDir).Once()
 					}
 
 					if useJobTokenFromEnv {
@@ -860,7 +853,6 @@ func TestGitFetchFlags(t *testing.T) {
 					}
 
 					mockWriter.EXPECT().Cd(mock.Anything).Once()
-					mockWriter.EXPECT().Join(mock.Anything, mock.Anything).Return(mock.Anything).Once()
 					mockWriter.EXPECT().IfCmd("git", "remote", "add", "origin", mock.Anything).Once()
 					mockWriter.EXPECT().RmFile(mock.Anything)
 					mockWriter.EXPECT().Noticef("Created fresh repository.").Once()
@@ -2742,14 +2734,12 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 
 					m.EXPECT().CheckForErrors()
 					m.EXPECT().Noticef("Fetching changes...").Once()
-					m.EXPECT().MkTmpDir("git-template").Return("git-template-dir").Once()
-					m.EXPECT().Join("git-template-dir", "config").Return("git-template-dir-config").Once()
-					m.EXPECT().Command("git", "config", "-f", "git-template-dir-config", mock.Anything, mock.Anything)
 
+					templateDir := expectSetupTemplate(m, "build-dir")
 					expectFileCleanup(m, "build-dir/.git", false)
 					expectGitConfigCleanup(m, "build-dir", false)
 
-					m.EXPECT().Command("git", "init", "build-dir", "--template", "git-template-dir").Once()
+					m.EXPECT().Command("git", "init", "build-dir", "--template", templateDir).Once()
 					m.EXPECT().Cd("build-dir").Once()
 
 					if useJobTokenFromEnv {
@@ -2793,6 +2783,22 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 			}
 		})
 	}
+}
+
+func expectSetupTemplate(shellWriter *MockShellWriter, dir string) string {
+	templateDir := "git-template-dir"
+	config := path.Join(templateDir, "config")
+
+	shellWriter.EXPECT().MkTmpDir("git-template").Return(templateDir).Once()
+	shellWriter.EXPECT().Command("git", "config", "--global", "--add", "safe.directory", dir).Maybe()
+	shellWriter.EXPECT().Join("git-template-dir", "config").Return(config).Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", config, "init.defaultBranch", "none").Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", config, "fetch.recurseSubmodules", "false").Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", config, "credential.interactive", "never").Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", mock.Anything, "gc.autoDetach", "false").Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", config, "transfer.bundleURI", "true").Maybe()
+
+	return templateDir
 }
 
 func expectFileCleanup(shellWriter *MockShellWriter, dir string, withSubmodules bool) {
@@ -2936,16 +2942,9 @@ func TestAbstractShell_writeGitCleanup(t *testing.T) {
 							expectGitConfigCleanup(sw, "", expectSubmoduleCleanupCalls)
 						}
 
-						sw.EXPECT().MkTmpDir("git-template").Return("someTmpDir").Once()
-						sw.EXPECT().Join("someTmpDir", "config").Return("someGitTemplateConfig").Once()
+						templateDir := expectSetupTemplate(sw, "")
 
-						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "init.defaultBranch", "none").Once()
-						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "fetch.recurseSubmodules", "false").Once()
-						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "credential.interactive", "never").Once()
-						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "gc.autoDetach", "false").Once()
-						sw.EXPECT().Command("git", "config", "-f", "someGitTemplateConfig", "transfer.bundleURI", "true").Once()
-
-						sw.EXPECT().Command("git", "init", "", "--template", "someTmpDir").Once()
+						sw.EXPECT().Command("git", "init", "", "--template", templateDir).Once()
 						sw.EXPECT().Cd("").Once()
 
 						sw.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo")
