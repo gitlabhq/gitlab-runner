@@ -590,8 +590,7 @@ func (b *AbstractShell) handleGetSourcesStrategy(w ShellWriter, info common.Shel
 	case common.GitFetch:
 		return b.writeRefspecFetchCmd(w, info)
 	case common.GitClone:
-		w.RmDir(projectDir)
-		return b.writeRefspecFetchCmd(w, info)
+		return b.writeCloneCmd(w, info)
 	case common.GitNone:
 		w.Noticef("Skipping Git repository setup")
 		w.MkDir(projectDir)
@@ -673,6 +672,55 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, info common.ShellScr
 	} else {
 		w.Command("git", fetchArgs...)
 	}
+
+	return nil
+}
+
+func (b *AbstractShell) writeCloneCmd(w ShellWriter, info common.ShellScriptInfo) error {
+	build := info.Build
+	projectDir := build.FullProjectDir()
+
+	// always ensure the old clone is gone
+	w.RmDir(projectDir)
+
+	if !build.IsFeatureFlagOn(featureflags.UseGitNativeClone) {
+		return b.writeRefspecFetchCmd(w, info)
+	}
+
+	depth := build.GitInfo.Depth
+	templateDir := b.setupTemplateDir(w, build, projectDir)
+
+	switch {
+	case depth > 0:
+		w.Noticef("Cloning repository for %s with git depth set to %d...", build.GitInfo.Ref, depth)
+	case build.GitInfo.Ref != "":
+		w.Noticef("Cloning repository for %s...", build.GitInfo.Ref)
+	default:
+		w.Noticef("Cloning repository...")
+	}
+
+	remoteURL, err := build.GetRemoteURL()
+	if err != nil {
+		return fmt.Errorf("writing clone command: %w", err)
+	}
+
+	v := common.AppVersion
+	userAgent := fmt.Sprintf("http.userAgent=%s %s %s/%s", v.Name, v.Version, v.OS, v.Architecture)
+
+	cloneArgs := []string{"-c", userAgent, "clone", "--no-checkout", remoteURL, projectDir, "--template", templateDir}
+
+	if depth > 0 {
+		cloneArgs = append(cloneArgs, "--depth", strconv.Itoa(depth))
+	}
+
+	if strings.HasPrefix(build.GitInfo.Ref, "refs/") {
+		cloneArgs = append(cloneArgs, "--revision", build.GitInfo.Ref)
+	} else if build.GitInfo.Ref != "" {
+		cloneArgs = append(cloneArgs, "--branch", build.GitInfo.Ref)
+	}
+
+	w.Command("git", cloneArgs...)
+	w.Cd(projectDir)
 
 	return nil
 }
