@@ -16,9 +16,12 @@ trigger runner-incept tests:
     - "binaries: [linux/amd64 linux/arm64]"
     - "binaries: [linux/s390x linux/ppc64le]"
     - "helper images: [alpine]"
+    - "development docker images"
+    - "development helper docker images"
   stage: postrelease
   variables:
     UPSTREAM_CI_COMMIT_REF: $UPSTREAM_CI_COMMIT_REF
+    UPSTREAM_CI_COMMIT_SHORT_SHA: $CI_COMMIT_SHORT_SHA
   trigger:
     project: gitlab-org/ci-cd/tests/runner-incept
     # strategy: depend
