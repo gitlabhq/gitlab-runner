@@ -1145,3 +1145,44 @@ section.
 In [GitLab Runner 12.9 and later](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/1042),
 you can use [services](https://docs.gitlab.com/ee/ci/services/) by
 enabling [a network for each job](#create-a-network-for-each-job).
+
+## Native Step Runner Integration
+
+- [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5069) in GitLab 17.6.0 behind the
+feature-flag `FF_USE_NATIVE_STEPS`, which is disabled by default.
+
+The Docker executor supports running the [CI/CD steps](https://docs.gitlab.com/ee/ci/steps/) natively by using the
+`gRPC` API provided by [`step-runner`](https://gitlab.com/gitlab-org/step-runner).
+
+To enable this mode of execution, you must specify CI/CD jobs using the `run` keyword instead of the legacy `script`
+keyword. Additionally, you must enable the `FF_USE_NATIVE_STEPS` feature flag. You can enable this feature flag at
+either the job or pipeline level.
+
+```yaml
+step job:
+  stage: test
+  variables:
+    FF_USE_NATIVE_STEPS: true
+  image:
+    name: registry.gitlab.com/gitlab-org/step-runner:v0
+  run:
+    - name: step1
+      script: pwd
+    - name: step2
+      script: env
+    - name: step3
+      script: ls -Rlah --ignore .git ../
+```
+
+### Known Issues
+
+- The build image must include a `step-runner` binary in `$PATH`. To achieve this, you can either:
+
+  - Create your own custom build image and include the `step-runner` binary in it.
+  - Use the `registry.gitlab.com/gitlab-org/step-runner:v0` image if it includes the dependencies you need to run your
+  job.
+
+    This is a temporary workaround. In the future, runner will inject a `step-runner` binary into any build image.
+- Running a step that runs a Docker container must adhere to the same configuration parameters and constraints as
+  traditional `scripts`. For example, you must use [Docker-in-Docker](#use-docker-in-docker-with-privileged-mode).
+- This mode of execution does not yet support running [`Github Actions`](https://gitlab.com/components/action-runner).
