@@ -296,11 +296,3 @@ Guided Exploration project. It was tested on:
 
 The example can be copied to your own group or instance for testing. More details
 on what other GitLab CI patterns are demonstrated are available at the project page.
-
-<!--- start_remove The following content will be removed on remove_date: '2024-08-01' -->
-## Windows Batch (removed)
-
-This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/385235) in GitLab 15.7
-and [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4754) in 17.0.
-
-<!--- end_remove -->

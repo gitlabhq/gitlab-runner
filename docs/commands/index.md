@@ -522,17 +522,6 @@ default of `0` means that the runner has no build limit and jobs run forever.
 You can also use the `--wait-timeout` option to control how long the runner waits for a job before
 exiting. The default of `0` means that the runner has no timeout and waits forever between jobs.
 
-<!--- start_remove The following content will be removed on remove_date: '2024-08-01' -->
-
-### `gitlab-runner exec` (removed)
-
-This feature was [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/385235) in GitLab 15.7
-and [removed](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4740) in 17.0.
-Pipeline syntax and validation [simulation](https://docs.gitlab.com/ee/ci/pipeline_editor/#simulate-a-cicd-pipeline)
-are available in the GitLab pipeline editor.
-
-<!--- end_remove -->
-
 ## Internal commands
 
 GitLab Runner is distributed as a single binary and contains a few internal
