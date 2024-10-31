@@ -1,4 +1,4 @@
-## v17.5.2 (2024-10-22)
+## v17.5.2 (2024-10-31)
 
 ### New features
 
@@ -6,9 +6,11 @@
 
 ### Bug fixes
 
-- Fix fleeting plugin installation architecture selection [!5090](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5090)
 - Default to us-east-1 region for AWS SDK v2 [!5093](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5093)
 - Hide Pod wait to be attachable behind a FF [!5098](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5098)
+- Fix UploadRoleARN URL when other regions are used [!5113](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5113)
+- Fix S3 cache access for buckets located outside US [!5111](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5111)
+- Fix fleeting plugin installation architecture selection [!5090](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5090)
 
 ### Maintenance
 
