@@ -14,13 +14,25 @@
 
 - Stop testing UseWindowsLegacyProcessStrategy for KillerTest [!5102](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5102)
 
-## v17.5.1 (2024-10-18)
+## v17.5.1 (2024-10-31)
+
+### New features
+
+- Really publish sles/opensuse runner packages [!5101](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5101)
 
 ### Bug fixes
 
+- Fix UploadRoleARN URL when other regions are used [!5113](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5113)
+- Default to us-east-1 region for AWS SDK v2 [!5093](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5093)
+- Fix S3 cache access for buckets located outside US [!5111](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5111)
+- Fix fleeting plugin installation architecture selection [!5090](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5090)
+- Hide Pod wait to be attachable behind a FF [!5098](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5098)
 - Disable FF_GIT_URLS_WITHOUT_TOKENS by default [!5088](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5088)
 - Fix home directory detection [!5087](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5087)
 
+### Maintenance
+
+- Stop testing UseWindowsLegacyProcessStrategy for KillerTest [!5102](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5102)
 
 ## v17.5.0 (2024-10-31)
 
