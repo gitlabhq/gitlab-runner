@@ -286,6 +286,21 @@ func TestCacheS3Config_Endpoint(t *testing.T) {
 			expected:          "https://storage.googleapis.com",
 			expectedPathStyle: false,
 		},
+		"Custom HTTPS server on standard port": {
+			s3:                CacheS3Config{ServerAddress: "minio.example.com:443", PathStyle: &disabled},
+			expected:          "https://minio.example.com",
+			expectedPathStyle: false,
+		},
+		"Custom HTTP server on standard port": {
+			s3:                CacheS3Config{ServerAddress: "minio.example.com:80", Insecure: true, PathStyle: &disabled},
+			expected:          "http://minio.example.com",
+			expectedPathStyle: false,
+		},
+		"Custom HTTPS server on HTTP port": {
+			s3:                CacheS3Config{ServerAddress: "minio.example.com:80", PathStyle: &disabled},
+			expected:          "https://minio.example.com:80",
+			expectedPathStyle: false,
+		},
 		"Custom HTTPS server with path style disabled": {
 			s3:                CacheS3Config{ServerAddress: "minio.example.com:8080", PathStyle: &disabled},
 			expected:          "https://minio.example.com:8080",
