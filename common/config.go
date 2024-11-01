@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -1346,7 +1347,19 @@ func (c *CacheS3Config) GetEndpoint() string {
 		scheme = "http"
 	}
 
-	return fmt.Sprintf("%s://%s", scheme, c.ServerAddress)
+	host, port, err := net.SplitHostPort(c.ServerAddress)
+	if err != nil {
+		// If SplitHostPort fails, it means there's no port specified
+		// so we can use the ServerAddress as-is.
+		return fmt.Sprintf("%s://%s", scheme, c.ServerAddress)
+	}
+
+	// Omit canonical ports
+	if (scheme == "https" && port == "443") || (scheme == "http" && port == "80") {
+		return fmt.Sprintf("%s://%s", scheme, host)
+	}
+
+	return fmt.Sprintf("%s://%s:%s", scheme, host, port)
 }
 
 func (c *CacheS3Config) GetEndpointURL() *url.URL {
