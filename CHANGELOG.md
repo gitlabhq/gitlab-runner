@@ -1,3 +1,10 @@
+## v17.5.3 (2024-10-31)
+
+### Bug fixes
+
+- Fix UploadRoleARN URL when other regions are used [!5113](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5113)
+- Fix S3 cache access for buckets located outside US [!5111](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5111)
+
 ## v17.5.2 (2024-10-22)
 
 ### New features
