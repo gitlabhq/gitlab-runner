@@ -663,7 +663,7 @@ func (j *JobResponse) ValidateStepsJobRequest(executorSupportsNativeSteps bool) 
 
 	j.Steps = Steps{{
 		Name:         StepNameScript,
-		Script:       StepScript{"/step-runner ci"},
+		Script:       StepScript{"step-runner ci"},
 		Timeout:      3600,
 		When:         "on_success",
 		AllowFailure: false,

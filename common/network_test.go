@@ -554,7 +554,7 @@ func TestJobResponse_Run(t *testing.T) {
   "Steps":[
     {
       "Name":"script",
-      "Script":["/step-runner ci"],
+      "Script":["step-runner ci"],
       "Timeout":3600,
       "When":"on_success"
     }
@@ -581,7 +581,7 @@ func TestJobResponse_Run(t *testing.T) {
   "Steps":[
     {
       "Name":"script",
-      "Script":["/step-runner ci"],
+      "Script":["step-runner ci"],
       "Timeout":3600,
       "When":"on_success"
     }
@@ -677,7 +677,7 @@ func TestJobResponse_Run(t *testing.T) {
   "Steps":[
     {
       "Name":"script",
-      "Script":["/step-runner ci"],
+      "Script":["step-runner ci"],
       "Timeout":3600,
       "When":"on_success"
     }
@@ -704,7 +704,7 @@ func TestJobResponse_Run(t *testing.T) {
   "Steps":[
     {
       "Name":"script",
-      "Script":["/step-runner ci"],
+      "Script":["step-runner ci"],
       "Timeout":3600,
       "When":"on_success"
     }
