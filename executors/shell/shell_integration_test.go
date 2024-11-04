@@ -2121,14 +2121,10 @@ func TestCredSetup(t *testing.T) {
 	for _, test := range tests {
 		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", test.gitUrlsWithoutTokens)
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
 				if runtime.GOOS != shells.OSWindows && shell == shells.SNPowershell {
 					t.Skip("powershell is not supported on non-windows platforms")
 				}
-
-				t.Parallel()
 
 				token := getTokenFromEnv(t)
 
@@ -2158,6 +2154,8 @@ func TestCredSetup(t *testing.T) {
 					jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
 						Key: "CI_JOB_TOKEN", Value: token, Masked: true,
 					})
+
+					setupCachingCredHelperWithFakeCreds(t, u)
 				}
 
 				jobResponse.Variables = append(
@@ -2189,6 +2187,52 @@ func TestCredSetup(t *testing.T) {
 			})
 		})
 	}
+}
+
+// setupCachingCredHelperWithFakeCreds sets up a (global) git credential helper returning fake/wrong credentials for the
+// URL passed in.
+func setupCachingCredHelperWithFakeCreds(t *testing.T, orgURL *url.URL) {
+	gitCredCache, err := os.CreateTemp("", "")
+	require.NoError(t, err, "creating temp file for cred cache")
+	require.NoError(t, gitCredCache.Close(), "closing the temp file for cred cache")
+	t.Cleanup(func() {
+		err := os.Remove(gitCredCache.Name())
+		require.NoError(t, err, "deleting temp file for cred cache")
+	})
+
+	// ignoring error, because unset configs would produce an error too
+	orgCredHelper, _ := exec.Command("git", "config", "--global", "credential.helper").Output()
+	orgCredHelper = bytes.Trim(orgCredHelper, "\n\r")
+
+	err = exec.Command("git", "config", "--global", "credential.helper", "store --file="+gitCredCache.Name()).Run()
+	require.NoError(t, err, "adding caching cred helper")
+	t.Cleanup(func() {
+		if len(orgCredHelper) > 0 {
+			err := exec.Command("git", "config", "--global", "credential.helper", string(orgCredHelper)).Run()
+			require.NoError(t, err, "setting cred helper back to %s", orgCredHelper)
+		} else {
+			err := exec.Command("git", "config", "--global", "--unset", "credential.helper").Run()
+			require.NoError(t, err, "unsetting cred helper")
+		}
+	})
+
+	urlWithFakeCreds := *orgURL
+	urlWithFakeCreds.User = url.UserPassword("some-user", "some-token")
+
+	// save the fake / invalid creds
+	cmd := exec.Command("git", "credential", "approve")
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("url=%s\n", urlWithFakeCreds.String()))
+	err = cmd.Run()
+	require.NoError(t, err, "setting up fake creds")
+
+	// ensure the cred helper is set up and returns the fake creds
+	cmd = exec.Command("git", "credential", "fill")
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("protocol=%s\nhost=%s\n", urlWithFakeCreds.Scheme, urlWithFakeCreds.Host))
+	var out []byte
+	out, err = cmd.Output()
+	require.NoError(t, err, "getting cached git creds")
+	require.Contains(t, string(out), "username=some-user", "wrong user for cached cred")
+	require.Contains(t, string(out), "password=some-token", "wrong password for cached cred")
 }
 
 func onlyHost(remoteURL string) (string, error) {
