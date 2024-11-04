@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 // When umask is disabled for the Kubernetes executor,
@@ -434,10 +435,7 @@ func (b *AbstractShell) getRemoteHost(build *common.Build) (string, error) {
 		return "", fmt.Errorf("parsing remote URL: %w", err)
 	}
 
-	u.Path = ""
-	u.User = nil
-
-	return u.String(), nil
+	return url_helpers.OnlySchemeAndHost(u).String(), nil
 }
 
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {

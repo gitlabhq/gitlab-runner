@@ -28,6 +28,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/test"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/session"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/shells/shellstest"
@@ -2086,8 +2087,7 @@ func TestCredSetup(t *testing.T) {
 				assert.NotContains(t, remoteURL, "@", "the remote URL should not contain any auth data")
 				assert.NotContains(t, remoteURL, "gitlab-ci-token", "the remote URL should not contain the token user")
 
-				remoteHost, err := onlyHost(remoteURL)
-				assert.NoError(t, err, "getting only host of remote URL")
+				remoteHost := onlyHost(t, remoteURL)
 
 				// git cred helper is setup in the helper & build container
 				for _, marker := range []string{markerForHelper, markerForBuild} {
@@ -2104,8 +2104,7 @@ func TestCredSetup(t *testing.T) {
 				assert.Contains(t, remoteURL, "@", "the remote URL should contain auth data")
 				assert.Contains(t, remoteURL, "gitlab-ci-token", "remote URL should contain the token user")
 
-				remoteHost, err := onlyHost(remoteURL)
-				assert.NoError(t, err, "getting only host of remote URL")
+				remoteHost := onlyHost(t, remoteURL)
 
 				// git cred helper is neither setup in the helper or build container
 				for _, marker := range []string{markerForHelper, markerForBuild} {
@@ -2235,16 +2234,13 @@ func setupCachingCredHelperWithFakeCreds(t *testing.T, orgURL *url.URL) {
 	require.Contains(t, string(out), "password=some-token", "wrong password for cached cred")
 }
 
-func onlyHost(remoteURL string) (string, error) {
+func onlyHost(t *testing.T, remoteURL string) string {
+	t.Helper()
+
 	u, err := url.Parse(remoteURL)
-	if err != nil {
-		return "", err
-	}
+	require.NoError(t, err, "parsing URL")
 
-	u.Path = ""
-	u.User = nil
-
-	return u.String(), nil
+	return url_helpers.OnlySchemeAndHost(u).String()
 }
 
 var tokenEnvVars = []string{"GITLAB_TOKEN", "CI_JOB_TOKEN", "OUTER_CI_JOB_TOKEN"}
