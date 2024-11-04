@@ -20,10 +20,6 @@ trigger runner-incept tests:
       optional: true
     - job: "development helper docker images"
       optional: true
-    - job: "bleeding edge docker images"
-      optional: true
-    - job: "bleeding edge helper docker images"
-      optional: true
     - job: "stable docker images"
       optional: true
     - job: "stable helper docker images"
