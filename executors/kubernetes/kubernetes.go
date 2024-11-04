@@ -214,13 +214,14 @@ func (r *resourceCheckError) Is(err error) bool {
 	return ok
 }
 
-type podServiceError struct {
-	serviceName string
-	exitCode    int
+type podContainerError struct {
+	containerName string
+	exitCode      int
+	reason        string
 }
 
-func (p *podServiceError) Error() string {
-	return fmt.Sprintf("Error in service %s: exit code %d", p.serviceName, p.exitCode)
+func (p *podContainerError) Error() string {
+	return fmt.Sprintf("Error in container %s: exit code: %d, reason: '%s'", p.containerName, p.exitCode, p.reason)
 }
 
 type kubernetesOptions struct {
@@ -725,7 +726,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 		cmd.Script,
 	))
 
-	podStatusCh := s.watchPodStatus(ctx, checkExtendedPodStatusNoOp)
+	podStatusCh := s.watchPodStatus(ctx, &podContainerStatusChecker{shouldCheckContainerFilter: isNotServiceContainer})
 
 	select {
 	case err := <-s.runInContainer(ctx, cmd.Stage, containerName, containerCommand):
@@ -737,7 +738,7 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 
 		return err
 	case err := <-podStatusCh:
-		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) {
+		if IsKubernetesPodNotFoundError(err) || IsKubernetesPodFailedError(err) || IsKubernetesPodContainerError(err) {
 			return err
 		}
 
@@ -2572,7 +2573,7 @@ func (s *executor) requestServiceCreation(
 	return srv, err
 }
 
-func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkExtendedPodStatusFunc) <-chan error {
+func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc podStatusChecker) <-chan error {
 	// Buffer of 1 in case the context is cancelled while the timer tick case is being executed
 	// and the consumer is no longer reading from the channel while we try to write to it
 	ch := make(chan error, 1)
@@ -2600,24 +2601,40 @@ func (s *executor) watchPodStatus(ctx context.Context, extendedStatusFunc checkE
 	return ch
 }
 
-type checkExtendedPodStatusFunc func(context.Context, *api.Pod) error
+// Interface to check if a job pod is unhealthy
+type podStatusChecker interface {
+	// Checks if a job pod is unhealthy
+	check(context.Context, *api.Pod) error
+}
 
-func checkExtendedPodStatusNoOp(_ context.Context, _ *api.Pod) error { return nil }
+// Checks if a pod is unhealthy based on the statuses of its containers
+type podContainerStatusChecker struct {
+	// Filter to determine which containers to check
+	shouldCheckContainerFilter func(api.ContainerStatus) bool
+}
 
-func checkServiceStatus(ctx context.Context, pod *api.Pod) error {
+func (c *podContainerStatusChecker) check(ctx context.Context, pod *api.Pod) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if c.shouldCheckContainerFilter != nil && !c.shouldCheckContainerFilter(containerStatus) {
+			continue
+		}
 		if containerStatus.State.Terminated != nil &&
-			containerStatus.State.Terminated.Reason == "Error" {
-			return &podServiceError{
-				serviceName: containerStatus.Name,
-				exitCode:    int(containerStatus.State.Terminated.ExitCode),
+			containerStatus.State.Terminated.ExitCode >= 0 {
+			return &podContainerError{
+				containerName: containerStatus.Name,
+				exitCode:      int(containerStatus.State.Terminated.ExitCode),
+				reason:        containerStatus.State.Terminated.Reason,
 			}
 		}
 	}
 	return nil
 }
 
-func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck checkExtendedPodStatusFunc) error {
+func isNotServiceContainer(containerStatus api.ContainerStatus) bool {
+	return !strings.HasPrefix(containerStatus.Name, serviceContainerPrefix)
+}
+
+func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck podStatusChecker) error {
 	pod, err := retry.WithValueFn(s, func() (*api.Pod, error) {
 		// kubeAPI: pods, get
 		return s.kubeClient.CoreV1().
@@ -2640,7 +2657,7 @@ func (s *executor) checkPodStatus(ctx context.Context, extendedStatusCheck check
 		}
 	}
 
-	return extendedStatusCheck(ctx, pod)
+	return extendedStatusCheck.check(ctx, pod)
 }
 
 func (s *executor) runInContainer(
@@ -2983,6 +3000,11 @@ func IsKubernetesPodFailedError(err error) bool {
 		podPhaseErr.phase == api.PodFailed
 }
 
+func IsKubernetesPodContainerError(err error) bool {
+	var podServiceError *podContainerError
+	return errors.As(err, &podServiceError)
+}
+
 // Use 'gitlab-runner check-health' to wait until any/all configured services are healthy.
 func (s *executor) waitForServices(ctx context.Context) error {
 	portArgs := ""
@@ -3008,7 +3030,7 @@ func (s *executor) waitForServices(ctx context.Context) error {
 		return err
 	}
 
-	podStatusCh := s.watchPodStatus(ctx, checkServiceStatus)
+	podStatusCh := s.watchPodStatus(ctx, &podContainerStatusChecker{})
 
 	stdout, stderr := s.getExecutorIoWriters()
 	defer stdout.Close()
