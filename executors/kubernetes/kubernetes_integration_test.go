@@ -148,6 +148,7 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testKubernetesDisableUmask":                              testKubernetesDisableUmask,
 		"testKubernetesNoAdditionalNewLines":                      testKubernetesNoAdditionalNewLines,
 		"testJobRunningAndPassingWhenServiceStops":                testJobRunningAndPassingWhenServiceStops,
+		"testJobAgainstServiceContainerBehaviour":                 testJobAgainstServiceContainerBehaviour,
 	}
 
 	featureFlags := []string{
@@ -3507,6 +3508,103 @@ func TestKubernetesLogsBaseDir(t *testing.T) {
 			assert.NoError(t, err)
 
 			tc.verifyFn(t, buf.String())
+		})
+	}
+}
+
+func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		services common.Services
+		verifyFn func(t *testing.T, err error)
+	}{
+		"job fails when waiting for service port readiness and service fails": {
+			services: common.Services{
+				{
+					Name: "postgres:12.17-alpine3.19",
+					Variables: common.JobVariables{
+						common.JobVariable{Key: "HEALTHCHECK_TCP_PORT", Value: "5432"},
+					},
+				},
+			},
+			verifyFn: func(t *testing.T, err error) {
+				assert.Error(t, err)
+			},
+		},
+		// Postgres service container will fail because the password and database variables are not provided
+		"job passes when service fails": {
+			services: common.Services{
+				{
+					Name: "postgres:12.17-alpine3.19",
+				},
+			},
+			verifyFn: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse("sleep 5s")
+			})
+
+			buildtest.SetBuildFeatureFlag(build, featureFlagName, featureFlagValue)
+			build.JobResponse.Image.Name = common.TestAlpineImage
+			build.JobResponse.Services = append(build.JobResponse.Services, tc.services...)
+			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
+
+			err := build.Run(&common.Config{}, &common.Trace{Writer: os.Stdout})
+			tc.verifyFn(t, err)
+		})
+	}
+}
+
+func TestBuildContainerOOMKilled(t *testing.T) {
+	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
+
+	tests := map[string]struct {
+		script      string
+		verifyFn    func(t *testing.T, out string, err error)
+		memoryLimit string
+	}{
+		"job fails because build container is OOMKilled": {
+			script: `echo "Starting memory allocation to trigger OOM..."
+
+allocate_memory() {
+	while true; do
+		# Allocate a large block of memory by creating a large variable
+		data=$(printf 'A%.0s' $(seq 1 1000000)) # Adjust this number for more memory allocation
+		sleep 1  # Optional: add a small delay to control the speed of allocation
+	done
+}
+
+allocate_memory
+`,
+			memoryLimit: "10Mi",
+			verifyFn: func(t *testing.T, out string, err error) {
+				assert.Contains(t, out, "Error in container build: exit code: 137, reason: 'OOMKilled'")
+				assert.Error(t, err)
+			},
+		},
+	}
+
+	for tn, tc := range tests {
+		t.Run(tn, func(t *testing.T) {
+			build := getTestBuild(t, func() (common.JobResponse, error) {
+				return common.GetRemoteBuildResponse(tc.script)
+			})
+
+			buildtest.SetBuildFeatureFlag(build, featureflags.UseLegacyKubernetesExecutionStrategy, false)
+			build.JobResponse.Image.Name = common.TestAlpineImage
+			build.Runner.Kubernetes.HelperImage = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest"
+			build.Runner.Kubernetes.MemoryLimit = tc.memoryLimit
+
+			var buf bytes.Buffer
+			err := build.Run(&common.Config{}, &common.Trace{Writer: &buf})
+			tc.verifyFn(t, buf.String(), err)
 		})
 	}
 }
