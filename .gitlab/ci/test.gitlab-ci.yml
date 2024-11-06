@@ -36,7 +36,7 @@ check modules:
   script:
   - make check_modules
 
-check mocks:
+check generated files:
   stage: test
   extends:
   - .rules:merge_request_pipelines:no_docs
@@ -44,7 +44,7 @@ check mocks:
   needs:
   - 'prepare done'
   script:
-  - make check_mocks
+  - make check_generated_files
 
 check magefiles:
   stage: test
