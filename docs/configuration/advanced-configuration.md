@@ -1466,8 +1466,8 @@ docker pull gitlab/gitlab-runner:alpine3.19-v16.1.0
 
 ### Alpine pwsh images
 
-As of GitLab Runner 16.1 and later all `alpine` helper images have a `pwsh` variant. The only exception being `alpine-latest` as the [pwsh Docker images](https://hub.docker.com/_/microsoft-powershell) which
-the GitLab Runner helper images are based on do not support `alpine:latest`.
+As of GitLab Runner 16.1 and later, all `alpine` helper images have a `pwsh` variant. The only exception is `alpine-latest` because the
+[`powershell` Docker images](https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-in-docker?view=powershell-7.4) on which the GitLab Runner helper images are based do not support `alpine:latest`.
 
 Example:
 
