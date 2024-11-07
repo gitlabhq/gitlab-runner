@@ -3,14 +3,10 @@ variables:
   # When updating GO_VERSION, update Go versions in docs/development/index.md
   # or the 'docs:check development docs Go version' job will fail
   GO_VERSION: "1.23.2"
-  # ubi version for go.fips image base (see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38034)
-  GO_FIPS_UBI_VERSION: "ubi8"
-  # Sometimes the FIPS repo lags behind the official releases
-  GO_FIPS_VERSION: "1.23.2"
-  # Account for the suffix used in https://github.com/golang-fips/go/releases/tag/go1.23.2-2-openssl-fips
-  GO_FIPS_VERSION_SUFFIX: "-1-openssl-fips"
-  GO_CI_IMAGE: "$GO_VERSION-bookworm"
-  CI_IMAGE: "registry.gitlab.com/gitlab-org/gitlab-runner/ci:$GO_CI_IMAGE-1"
+  RUNNER_IMAGES_REGISTRY: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/base-images
+  RUNNER_IMAGES_VERSION: "0.0.1"
+  RUNNER_IMAGES_WINDOWS_GO_URL: https://gitlab.com/api/v4/projects/gitlab-org%2fci-cd%2frunner-tools%2fbase-images/packages/generic/runner-images/v${RUNNER_IMAGES_VERSION}/golang-windows-amd64.zip
+  CI_IMAGE: "${RUNNER_IMAGES_REGISTRY}/ci:${RUNNER_IMAGES_VERSION}"
   # Feature flags
   FF_SCRIPT_SECTIONS: "true"
   FF_USE_FASTZIP: "true"
@@ -18,15 +14,7 @@ variables:
   FF_TIMESTAMPS: "true"
   # Following variables are used in some jobs to install specified software
   RELEASE_INDEX_GEN_VERSION: "latest"
-  DOCKER_VERSION: 24.0.5
-  DOCKER_MACHINE_VERSION: "v0.16.2-gitlab.30"
-  BUILDX_VERSION: 0.10.4
-  KUBECTL_VERSION: 1.23.0
-  AWS_CLI_VERSION: 2.4.19
-  GIT_VERSION: "2.40.1"
-  GIT_VERSION_BUILD: "1"
-  GIT_LFS_VERSION: "3.5.1"
-  YQ_VERSION: "4.30.5"
+  DOCKER_VERSION: 27.3.1
   LICENSE_MANAGEMENT_SETUP_CMD: echo "Skip setup. Dependency already vendored"
   DOCS_GITLAB_REPO_SUFFIX: "runner"
   # We're overriding rules for the jobs that we want to run.
@@ -35,26 +23,7 @@ variables:
   TRANSFER_METER_FREQUENCY: "5s"
   CACHE_COMPRESSION_FORMAT: tarzstd
   GO111MODULE: "on"
-  GO_FIPS_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/go-fips:$GO_FIPS_VERSION-$GO_FIPS_UBI_VERSION
-  # Leaving the Alpine and UBI versions defined here until the renovate pattern is changed
-  # to recognize the definitions as a Go variable
-  # renovate: datasource=docker depName=alpine allowedVersions=/3\.18\..+/
-  ALPINE_318_VERSION: "3.18.9"
-  # renovate: datasource=docker depName=alpine allowedVersions=/3\.19\..+/
-  ALPINE_319_VERSION: "3.19.4"
-  # renovate: datasource=docker depName=alpine allowedVersions=/3\.21\..+/
-  ALPINE_321_VERSION: "3.21.0"
-  # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
-  UBUNTU_VERSION: "20.04"
-  # renovate: datasource=docker depName=redhat/ubi9-micro versioning=redhat allowedVersions=/9\.5-[0-9]+/
-  UBI_MICRO_VERSION: "9.5-1731934928"
-  UBI_MICRO_IMAGE: redhat/ubi9-micro
-  # renovate: datasource=docker depName=redhat/ubi9-minimal versioning=redhat allowedVersions=/9\.5-[0-9]+/
-  UBI_MINIMAL_VERSION: "9.5-1731604394"
-  UBI_MINIMAL_IMAGE: redhat/ubi9-minimal
-  UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base
-  ## Note: UBI_FIPS_VERSION=$UBI_MICRO_VERSION, post conversion to ubi-micro
-  UBI_FIPS_VERSION: "$UBI_MICRO_VERSION"
+  # renovate: datasource=docker depName=redhat/ubi9-micro versioning=redhat allowedVersions=/9\.4-[0-9]+/
   PACKAGES_ITERATION: "1"
 
 default:
@@ -85,8 +54,10 @@ default:
   tags:
     - gitlab-org-docker
 
+
 .go-cache:
   variables:
+    GODEBUG: gocachetest=1
     GOCACHE: $CI_PROJECT_DIR/.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
     - mkdir -p "$GOCACHE"
@@ -98,9 +69,11 @@ default:
 
 .go-cache-windows:
   variables:
+    GODEBUG: gocachetest=1
     GOCACHE: $CI_PROJECT_DIR\.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
     - New-Item -Path "$Env:GOCACHE" -Type Directory -Force
+    - $env:GOCACHE = (Resolve-Path $env:GOCACHE).Path
     - ./ci/touch_git.ps1
   cache:
     paths:

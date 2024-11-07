@@ -9,12 +9,13 @@ RUN apk add --no-cache bash ca-certificates dumb-init git git-lfs miniperl \
 
 RUN git lfs install --skip-repo
 
-ENV BASE_PATH tests/dockerfiles/gitlab-runner-helper-entrypoint
+ENV BASE_PATH gitlab-runner-helper-entrypoint
 
 COPY "$BASE_PATH/entrypoint.sh" /entrypoint
 RUN chmod +x /entrypoint
 
-COPY "$BASE_PATH/scripts" "$BASE_PATH/binaries/gitlab-runner-helper" /usr/bin/
+COPY "$BASE_PATH/scripts" /usr/bin/
+COPY --from=binary_dir gitlab-runner-helper.linux-amd64 /usr/bin/gitlab-runner-helper
 RUN chmod +x /usr/bin/gitlab-runner-helper /usr/bin/gitlab-runner-build
 
 RUN echo 'hosts: files dns' >> /etc/nsswitch.conf

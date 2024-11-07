@@ -33,7 +33,7 @@ TARGET_DIR := $(BUILD_DIR)/out
 export MAIN_PACKAGE ?= gitlab.com/gitlab-org/gitlab-runner
 
 GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(APP_NAME) -X $(COMMON_PACKAGE_NAMESPACE).VERSION=$(VERSION) \
-              -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
+              -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) \
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
               -w
 
@@ -49,8 +49,6 @@ export PATH := $(localBin):$(PATH)
 
 # Development Tools
 GOCOVER_COBERTURA = gocover-cobertura
-
-GOX = gox
 
 MOCKERY_VERSION ?= 2.43.0
 MOCKERY = mockery
@@ -72,7 +70,7 @@ GOLANGLINT ?= .tmp/golangci-lint$(GOLANGLINT_VERSION)
 GOLANGLINT_GOARGS ?= .tmp/goargs.so
 
 GENERATED_FILES_TOOLS = $(MOCKERY) $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
-DEVELOPMENT_TOOLS = $(GOX) $(MAGE) $(GENERATED_FILES_TOOLS)
+DEVELOPMENT_TOOLS = $(MOCKERY) $(MAGE)
 
 RELEASE_INDEX_GEN_VERSION ?= latest
 RELEASE_INDEX_GENERATOR ?= .tmp/release-index-gen-$(RELEASE_INDEX_GEN_VERSION)
@@ -176,10 +174,6 @@ export_test_env:
 	@echo "export GO_LDFLAGS='$(GO_LDFLAGS)'"
 	@echo "export MAIN_PACKAGE='$(MAIN_PACKAGE)'"
 
-pull_images_for_tests:
-	# Pulling images required for some tests
-	@go run ./scripts/pull-images-for-tests/main.go
-
 dockerfiles:
 	$(MAKE) -C dockerfiles all
 
@@ -233,18 +227,22 @@ build-and-deploy-binary:
 	@[ -z "$(SERVER)" ] && echo "SERVER variable not specified!" && exit 1
 	scp out/binaries/$(PACKAGE_NAME)-linux-$(ARCH) $(SERVER):/usr/bin/gitlab-runner
 
-s3-upload:
-	@./ci/upload_s3
-
-release_s3: prepare_windows_zip prepare_zoneinfo prepare_index
+release_s3: prepare_windows_zip prepare_zoneinfo release_dir prepare_index
 	# Releasing to S3
 	@./ci/release_s3
 
-out/binaries/gitlab-runner-windows-%.zip: out/binaries/gitlab-runner-windows-%.exe
-	zip --junk-paths $@ $<
-	cd out/ && zip -r ../$@ helper-images
+release_dir:
+	@./ci/release_dir
 
 prepare_windows_zip: out/binaries/gitlab-runner-windows-386.zip out/binaries/gitlab-runner-windows-amd64.zip
+
+out/binaries/gitlab-runner-windows-386.zip: out/binaries/gitlab-runner-windows-386.exe
+	zip -j out/binaries/gitlab-runner-windows-386.zip out/binaries/gitlab-runner-windows-386.exe
+	cd out && zip binaries/gitlab-runner-windows-386.zip helper-images/prebuilt-*.tar.xz
+
+out/binaries/gitlab-runner-windows-amd64.zip: out/binaries/gitlab-runner-windows-amd64.exe
+	zip -j out/binaries/gitlab-runner-windows-amd64.zip out/binaries/gitlab-runner-windows-amd64.exe
+	cd out && zip binaries/gitlab-runner-windows-amd64.zip helper-images/prebuilt-*.tar.xz
 
 prepare_zoneinfo:
 	# preparing the zoneinfo file
@@ -254,7 +252,7 @@ prepare_index: export CI_COMMIT_REF_NAME ?= $(BRANCH)
 prepare_index: export CI_COMMIT_SHA ?= $(REVISION)
 prepare_index: $(RELEASE_INDEX_GENERATOR)
 	# Preparing index file
-	@$(RELEASE_INDEX_GENERATOR) -working-directory out/ \
+	@$(RELEASE_INDEX_GENERATOR) -working-directory out/release \
 								-project-version $(VERSION) \
 								-project-git-ref $(CI_COMMIT_REF_NAME) \
 								-project-git-revision $(CI_COMMIT_SHA) \
@@ -262,16 +260,6 @@ prepare_index: $(RELEASE_INDEX_GENERATOR)
 								-project-repo-url "https://gitlab.com/gitlab-org/gitlab-runner" \
 								-gpg-key-env GPG_KEY \
 								-gpg-password-env GPG_PASSPHRASE
-
-release_docker_images:
-	# Releasing GitLab Runner images
-	@./ci/release_docker_images
-
-test_go_scripts: export LIST ?= sync-docker-images
-test_go_scripts:
-	cd scripts && for file in $$(find . -name "*_test.go"); do \
-		go test -v -tags scripts $$(dirname $$file); \
-	done
 
 run_go_script: export SCRIPT_NAME ?=
 run_go_script: export DEFAULT_ARGS ?=
@@ -307,10 +295,6 @@ packagecloud_releases:
 		SCRIPT_NAME=packagecloud-releases \
 		ARGS="$(ARGS)" \
 		run_go_script
-
-release_helper_docker_images:
-	# Releasing GitLab Runner Helper images
-	@./ci/release_helper_docker_images
 
 generate_changelog: export CHANGELOG_RELEASE ?= $(VERSION)
 generate_changelog: $(GITLAB_CHANGELOG)
@@ -350,9 +334,6 @@ check_modules:
 # development tools
 $(GOCOVER_COBERTURA):
 	go install github.com/boumenot/gocover-cobertura@v1.2.0
-
-$(GOX):
-	go install github.com/mitchellh/gox@9f712387e2d2c810d99040228f89ae5bb5dd21e5
 
 $(SPLITIC):
 	go install gitlab.com/ajwalker/splitic@latest
@@ -443,3 +424,12 @@ print_ldflags:
 
 print_test_ldflags:
 	@echo $(GO_TEST_LDFLAGS)
+
+print_image_tags:
+	@tags="$(REVISION)"; \
+	[ "$(IS_LATEST)" = "true" ] && tags="$$tags latest"; \
+	[ "$(CI_PROJECT_PATH)" = "gitlab-org/gitlab-runner" ] && ( \
+		[ "$(CI_COMMIT_BRANCH)" = "$(CI_DEFAULT_BRANCH)" ] || \
+		echo "$(CI_COMMIT_REF_NAME)" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$$' \
+	) && tags="$$tags bleeding"; \
+	echo "$$tags"

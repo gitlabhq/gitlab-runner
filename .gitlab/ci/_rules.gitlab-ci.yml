@@ -228,69 +228,11 @@
   - <<: *if-runner-merge-request-pipeline
     changes: *code-backstage-patterns
 
-.rules:prepare:ci:image:merge-requests:
+.rules:build:test:images:merge-requests:
   rules:
   - <<: *if-runner-merge-request-pipeline
     changes:
-    - dockerfiles/ci/Dockerfile
-    - dockerfiles/ci/Dockerfile.rebuild
-    - .gitlab/ci/_common.gitlab-ci.yml
-    - .gitlab/ci/prepare.gitlab-ci.yml
-
-.rules:prepare:alpine-no-root:image:merge-requests:
-  rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes:
-    - tests/dockerfiles/alpine-no-root/*
-    - .gitlab/ci/prepare.gitlab-ci.yml
-
-.rules:prepare:alpine-entrypoint:image:merge-requests:
-  rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes:
-    - tests/dockerfiles/alpine-entrypoint/*
-    - .gitlab/ci/prepare.gitlab-ci.yml
-
-.rules:prepare:powershell-entrypoint:image:merge-requests:
-  rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes:
-    - tests/dockerfiles/powershell-entrypoint/*
-    - .gitlab/ci/prepare.gitlab-ci.yml
-
-.rules:prepare:alpine-id-overflow:image:merge-requests:
-  rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes:
-    - tests/dockerfiles/alpine-id-overflow/*
-    - .gitlab/ci/prepare.gitlab-ci.yml
-
-.rules:prepare:go-fips:image:merge-requests:
-  rules:
-    - <<: *if-runner-merge-request-pipeline
-      changes:
-        - dockerfiles/ci/go.fips.Dockerfile
-        - dockerfiles/ci/go.fips.Dockerfile.rebuild
-        - dockerfiles/ci/ubi.fips.base.Dockerfile
-        - dockerfiles/ci/ubi.fips.base.Dockerfile.rebuild
-        - .gitlab/ci/prepare.gitlab-ci.yml
-        - .gitlab/ci/_common.gitlab-ci.yml
-
-.rules:prepare:ubi-base:image:merge-requests:
-  rules:
-    - <<: *if-runner-merge-request-pipeline
-      changes:
-        - dockerfiles/ci/ubi.fips.base.Dockerfile
-        - dockerfiles/ci/ubi.fips.base.Dockerfile.rebuild
-        - .gitlab/ci/prepare.gitlab-ci.yml
-        - .gitlab/ci/_common.gitlab-ci.yml
-
-.rules:prepare:gitlab-runner-helper-entrypoint:image:merge-requests:
-  rules:
-  - <<: *if-runner-merge-request-pipeline
-    changes:
-    - tests/dockerfiles/gitlab-runner-helper-entrypoint/*
-    - .gitlab/ci/prepare.gitlab-ci.yml
+    - tests/dockerfiles/*
 
 .rules:prepare:test-ci-scripts:merge-requests:
   rules:

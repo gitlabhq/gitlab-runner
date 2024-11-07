@@ -1,0 +1,115 @@
+#!/bin/bash
+
+files="
+out/binaries/gitlab-runner-darwin-amd64 out/release/binaries/gitlab-runner-darwin-amd64
+out/binaries/gitlab-runner-darwin-arm64 out/release/binaries/gitlab-runner-darwin-arm64
+out/binaries/gitlab-runner-freebsd-386 out/release/binaries/gitlab-runner-freebsd-386
+out/binaries/gitlab-runner-freebsd-amd64 out/release/binaries/gitlab-runner-freebsd-amd64
+out/binaries/gitlab-runner-freebsd-arm out/release/binaries/gitlab-runner-freebsd-arm
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-arm out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.arm
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-arm64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.arm64
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-ppc64le out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.ppc64le
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-riscv64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.riscv64
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-s390x out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.s390x
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-amd64 out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.linux-amd64-fips out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64-fips
+out/binaries/gitlab-runner-helper/gitlab-runner-helper.windows-amd64.exe out/release/binaries/gitlab-runner-helper/gitlab-runner-helper.x86_64-windows.exe
+out/binaries/gitlab-runner-linux-386 out/release/binaries/gitlab-runner-linux-386
+out/binaries/gitlab-runner-linux-amd64 out/release/binaries/gitlab-runner-linux-amd64
+out/binaries/gitlab-runner-linux-amd64-fips out/release/binaries/gitlab-runner-linux-amd64-fips
+out/binaries/gitlab-runner-linux-arm out/release/binaries/gitlab-runner-linux-arm
+out/binaries/gitlab-runner-linux-arm64 out/release/binaries/gitlab-runner-linux-arm64
+out/binaries/gitlab-runner-linux-ppc64le out/release/binaries/gitlab-runner-linux-ppc64le
+out/binaries/gitlab-runner-linux-riscv64 out/release/binaries/gitlab-runner-linux-riscv64
+out/binaries/gitlab-runner-linux-s390x out/release/binaries/gitlab-runner-linux-s390x
+out/binaries/gitlab-runner-windows-386.exe out/release/binaries/gitlab-runner-windows-386.exe
+out/binaries/gitlab-runner-windows-386.zip out/release/binaries/gitlab-runner-windows-386.zip
+out/binaries/gitlab-runner-windows-amd64.exe out/release/binaries/gitlab-runner-windows-amd64.exe
+out/binaries/gitlab-runner-windows-amd64.zip out/release/binaries/gitlab-runner-windows-amd64.zip
+out/deb/gitlab-runner_aarch64.deb out/release/deb/gitlab-runner_aarch64.deb
+out/deb/gitlab-runner_amd64.deb out/release/deb/gitlab-runner_amd64.deb
+out/deb/gitlab-runner_arm64.deb out/release/deb/gitlab-runner_arm64.deb
+out/deb/gitlab-runner_armel.deb out/release/deb/gitlab-runner_armel.deb
+out/deb/gitlab-runner_armhf.deb out/release/deb/gitlab-runner_armhf.deb
+out/deb/gitlab-runner_i686.deb out/release/deb/gitlab-runner_i686.deb
+out/deb/gitlab-runner_ppc64el.deb out/release/deb/gitlab-runner_ppc64el.deb
+out/deb/gitlab-runner_riscv64.deb out/release/deb/gitlab-runner_riscv64.deb
+out/deb/gitlab-runner_s390x.deb out/release/deb/gitlab-runner_s390x.deb
+out/helper-images/prebuilt-alpine-arm.tar.xz out/release/helper-images/prebuilt-alpine-arm.tar.xz
+out/helper-images/prebuilt-alpine-arm64.tar.xz out/release/helper-images/prebuilt-alpine-arm64.tar.xz
+out/helper-images/prebuilt-alpine-edge-arm.tar.xz out/release/helper-images/prebuilt-alpine-edge-arm.tar.xz
+out/helper-images/prebuilt-alpine-edge-arm64.tar.xz out/release/helper-images/prebuilt-alpine-edge-arm64.tar.xz
+out/helper-images/prebuilt-alpine-edge-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine-edge-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine-edge-riscv64.tar.xz out/release/helper-images/prebuilt-alpine-edge-riscv64.tar.xz
+out/helper-images/prebuilt-alpine-edge-s390x.tar.xz out/release/helper-images/prebuilt-alpine-edge-s390x.tar.xz
+out/helper-images/prebuilt-alpine-edge-x86_64.tar.xz out/release/helper-images/prebuilt-alpine-edge-x86_64.tar.xz
+out/helper-images/prebuilt-alpine-latest-arm.tar.xz out/release/helper-images/prebuilt-alpine-latest-arm.tar.xz
+out/helper-images/prebuilt-alpine-latest-arm64.tar.xz out/release/helper-images/prebuilt-alpine-latest-arm64.tar.xz
+out/helper-images/prebuilt-alpine-latest-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine-latest-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine-latest-s390x.tar.xz out/release/helper-images/prebuilt-alpine-latest-s390x.tar.xz
+out/helper-images/prebuilt-alpine-latest-x86_64.tar.xz out/release/helper-images/prebuilt-alpine-latest-x86_64.tar.xz
+out/helper-images/prebuilt-alpine-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine-s390x.tar.xz out/release/helper-images/prebuilt-alpine-s390x.tar.xz
+out/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz out/release/helper-images/prebuilt-alpine-x86_64-pwsh.tar.xz
+out/helper-images/prebuilt-alpine-x86_64.tar.xz out/release/helper-images/prebuilt-alpine-x86_64.tar.xz
+out/helper-images/prebuilt-alpine3.18-arm.tar.xz out/release/helper-images/prebuilt-alpine3.18-arm.tar.xz
+out/helper-images/prebuilt-alpine3.18-arm64.tar.xz out/release/helper-images/prebuilt-alpine3.18-arm64.tar.xz
+out/helper-images/prebuilt-alpine3.18-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine3.18-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine3.18-s390x.tar.xz out/release/helper-images/prebuilt-alpine3.18-s390x.tar.xz
+out/helper-images/prebuilt-alpine3.18-x86_64-pwsh.tar.xz out/release/helper-images/prebuilt-alpine3.18-x86_64-pwsh.tar.xz
+out/helper-images/prebuilt-alpine3.18-x86_64.tar.xz out/release/helper-images/prebuilt-alpine3.18-x86_64.tar.xz
+out/helper-images/prebuilt-alpine3.19-arm.tar.xz out/release/helper-images/prebuilt-alpine3.19-arm.tar.xz
+out/helper-images/prebuilt-alpine3.19-arm64.tar.xz out/release/helper-images/prebuilt-alpine3.19-arm64.tar.xz
+out/helper-images/prebuilt-alpine3.19-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine3.19-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine3.19-s390x.tar.xz out/release/helper-images/prebuilt-alpine3.19-s390x.tar.xz
+out/helper-images/prebuilt-alpine3.19-x86_64-pwsh.tar.xz out/release/helper-images/prebuilt-alpine3.19-x86_64-pwsh.tar.xz
+out/helper-images/prebuilt-alpine3.19-x86_64.tar.xz out/release/helper-images/prebuilt-alpine3.19-x86_64.tar.xz
+out/helper-images/prebuilt-alpine3.21-arm.tar.xz out/release/helper-images/prebuilt-alpine3.21-arm.tar.xz
+out/helper-images/prebuilt-alpine3.21-arm64.tar.xz out/release/helper-images/prebuilt-alpine3.21-arm64.tar.xz
+out/helper-images/prebuilt-alpine3.21-ppc64le.tar.xz out/release/helper-images/prebuilt-alpine3.21-ppc64le.tar.xz
+out/helper-images/prebuilt-alpine3.21-s390x.tar.xz out/release/helper-images/prebuilt-alpine3.21-s390x.tar.xz
+out/helper-images/prebuilt-alpine3.21-x86_64-pwsh.tar.xz out/release/helper-images/prebuilt-alpine3.21-x86_64-pwsh.tar.xz
+out/helper-images/prebuilt-alpine3.21-x86_64.tar.xz out/release/helper-images/prebuilt-alpine3.21-x86_64.tar.xz
+out/helper-images/prebuilt-ubi-fips-x86_64.tar.xz out/release/helper-images/prebuilt-ubi-fips-x86_64.tar.xz
+out/helper-images/prebuilt-ubuntu-arm.tar.xz out/release/helper-images/prebuilt-ubuntu-arm.tar.xz
+out/helper-images/prebuilt-ubuntu-arm64.tar.xz out/release/helper-images/prebuilt-ubuntu-arm64.tar.xz
+out/helper-images/prebuilt-ubuntu-ppc64le.tar.xz out/release/helper-images/prebuilt-ubuntu-ppc64le.tar.xz
+out/helper-images/prebuilt-ubuntu-s390x.tar.xz out/release/helper-images/prebuilt-ubuntu-s390x.tar.xz
+out/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz out/release/helper-images/prebuilt-ubuntu-x86_64-pwsh.tar.xz
+out/helper-images/prebuilt-ubuntu-x86_64.tar.xz out/release/helper-images/prebuilt-ubuntu-x86_64.tar.xz
+out/rpm/gitlab-runner_aarch64.rpm out/release/rpm/gitlab-runner_aarch64.rpm
+out/rpm/gitlab-runner_amd64-fips.rpm out/release/rpm/gitlab-runner_amd64-fips.rpm
+out/rpm/gitlab-runner_amd64.rpm out/release/rpm/gitlab-runner_amd64.rpm
+out/rpm/gitlab-runner_arm.rpm out/release/rpm/gitlab-runner_arm.rpm
+out/rpm/gitlab-runner_arm64.rpm out/release/rpm/gitlab-runner_arm64.rpm
+out/rpm/gitlab-runner_armhf.rpm out/release/rpm/gitlab-runner_armhf.rpm
+out/rpm/gitlab-runner_i686.rpm out/release/rpm/gitlab-runner_i686.rpm
+out/rpm/gitlab-runner_ppc64el.rpm out/release/rpm/gitlab-runner_ppc64el.rpm
+out/rpm/gitlab-runner_riscv64.rpm out/release/rpm/gitlab-runner_riscv64.rpm
+out/rpm/gitlab-runner_s390x.rpm out/release/rpm/gitlab-runner_s390x.rpm
+out/zoneinfo.zip out/release/zoneinfo.zip
+"
+
+rm -rf out/release
+
+echo "$files" | while read -r src dst; do
+  if [ -z "$src" ] || [ -z "$dst" ]; then
+    continue
+  fi
+
+  # Check if source file exists
+  if [ ! -e "$src" ]; then
+    echo "source file does not exist: $src" >&2
+    exit 1
+  fi
+
+  dst_dir="$(dirname "$dst")"
+
+  if [ ! -d "$dst_dir" ]; then
+    mkdir -p "$dst_dir"
+  fi
+
+  ln -sf "$(realpath "$src")" "$dst"
+
+  echo "symlink: $src -> $dst"
+done

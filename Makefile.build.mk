@@ -1,72 +1,63 @@
-runner-bin: $(GOX)
-	# Building $(NAME) in version $(VERSION) for $(BUILD_PLATFORMS)
-	$(GOX) $(BUILD_PLATFORMS) \
-		   -ldflags "$(GO_LDFLAGS)" \
-		   -output="out/binaries/$(NAME)-{{.OS}}-{{.Arch}}" \
-		   $(PKG)
+BASE_BINARY_PATH := out/binaries/$(NAME)
+BINARIES := ${BASE_BINARY_PATH}-linux-amd64
+BINARIES += ${BASE_BINARY_PATH}-linux-arm64
+BINARIES += ${BASE_BINARY_PATH}-linux-386
+BINARIES += ${BASE_BINARY_PATH}-linux-arm
+BINARIES += ${BASE_BINARY_PATH}-linux-s390x
+BINARIES += ${BASE_BINARY_PATH}-linux-ppc64le
+BINARIES += ${BASE_BINARY_PATH}-linux-riscv64
+BINARIES += ${BASE_BINARY_PATH}-darwin-amd64
+BINARIES += ${BASE_BINARY_PATH}-darwin-arm64
+BINARIES += ${BASE_BINARY_PATH}-freebsd-386
+BINARIES += ${BASE_BINARY_PATH}-freebsd-amd64
+BINARIES += ${BASE_BINARY_PATH}-freebsd-arm
+BINARIES += ${BASE_BINARY_PATH}-windows-386.exe
+BINARIES += ${BASE_BINARY_PATH}-windows-amd64.exe
 
-runner-bin-fips: export GOOS ?= linux
-runner-bin-fips: export GOARCH ?= amd64
-runner-bin-fips:
-	# Building $(NAME) in version $(VERSION) for FIPS $(GOOS) $(GOARCH)
-	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build \
-		   -tags fips \
-		   -ldflags "$(GO_LDFLAGS)" \
-		   -o="out/binaries/$(NAME)-$(GOOS)-$(GOARCH)-fips" \
-		   $(PKG)
 
-go-fips-docker: export GO_VERSION ?= 1.23
-# BUILD_IMAGE: GO_FIPS_IMAGE: $CI_REGISTRY_IMAGE/go-fips:$GO_FIPS_VERSION
-go-fips-docker: export BUILD_IMAGE ?= $(GO_FIPS_IMAGE)
-go-fips-docker: export GO_FIPS_UBI_VERSION ?= ubi8
-go-fips-docker: export GO_FIPS_BASE_IMAGE ?= redhat/$(GO_FIPS_UBI_VERSION)-minimal:latest
-go-fips-docker: export BUILD_DOCKERFILE ?= ./dockerfiles/ci/go.fips.Dockerfile
-go-fips-docker:
-	# Building Go FIPS Docker image
-	@./ci/build_go_fips_image
+.PHONY: runner-bin
+runner-bin: $(BINARIES)
 
-ubi-fips-base-docker: export UBI_MICRO_IMAGE := $(UBI_MICRO_IMAGE):$(UBI_MICRO_VERSION)
-ubi-fips-base-docker: export UBI_MINIMAL_IMAGE := $(UBI_MINIMAL_IMAGE):$(UBI_MINIMAL_VERSION)
-ubi-fips-base-docker: export BUILD_IMAGE ?= $(UBI_FIPS_BASE_IMAGE):$(UBI_FIPS_VERSION)
-ubi-fips-base-docker: export BUILD_DOCKERFILE ?= ./dockerfiles/ci/ubi.fips.base.Dockerfile
-ubi-fips-base-docker:
-	# Building UBI FIPS base Docker image
-	@./ci/build_ubi_fips_base_image
+.PHONY: runner-bin-fips
+runner-bin-fips: $(BASE_BINARY_PATH)-linux-amd64-fips
 
-runner-bin-fips-docker: export GO_VERSION ?= 1.23
-runner-bin-fips-docker: export GOOS ?= linux
-runner-bin-fips-docker: export GOARCH ?= amd64
-runner-bin-fips-docker: export BUILD_IMAGE ?= go-fips
-runner-bin-fips-docker:
-	# Building $(NAME) in version $(VERSION) for FIPS $(GOOS) $(GOARCH)
-	docker build -t gitlab-runner-fips --build-arg GOOS="$(GOOS)" --build-arg GOARCH="$(GOARCH)" --build-arg GO_VERSION="$(GO_VERSION)" --build-arg BUILD_IMAGE="$(BUILD_IMAGE)" -f dockerfiles/fips/runner.fips.Dockerfile .
-	@docker rm -f gitlab-runner-fips && docker create -it --name gitlab-runner-fips gitlab-runner-fips
-	@docker cp gitlab-runner-fips:/gitlab-runner-linux-amd64-fips out/binaries/
-	@docker rm -f gitlab-runner-fips
+.PHONY: runner-images
+runner-images: $(BINARIES)
+runner-images: out/runner-images
+
+$(BASE_BINARY_PATH)-linux-amd64-fips: GOOS=linux
+$(BASE_BINARY_PATH)-linux-amd64-fips: GOARCH=amd64
+$(BASE_BINARY_PATH)-linux-amd64-fips:
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build -tags fips -ldflags "$(GO_LDFLAGS)" -o $@
+
+$(BASE_BINARY_PATH)-%: GOOS=$(firstword $(subst -, ,$*))
+$(BASE_BINARY_PATH)-%: GOARCH=$(lastword $(subst -, ,$(basename $*)))
+$(BASE_BINARY_PATH)-%:
+	GOOS="$(GOOS)" GOARCH="$(GOARCH)" go build -trimpath -ldflags "$(GO_LDFLAGS)" -o $@
+
+out/runner-images: TARGETS ?= ubuntu alpine
+out/runner-images:
+	docker buildx create --name builder --use --driver docker-container default || true
+	mkdir -p out/runner-images
+	cd dockerfiles/runner && docker buildx bake --progress plain $(TARGETS)
 
 ARCH_REPLACE="s/aarch64/arm64/ ; s/armv7l/arm/ ; s/x86_64/amd64/ ; s/i386/386/"
 
 runner-bin-host: OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 runner-bin-host: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-bin-host:
-	# Building $(NAME) in version $(VERSION) for host platform
-	$(MAKE) runner-bin BUILD_PLATFORMS="-osarch=$(OS)/$(ARCH)"
-	cp -f "out/binaries/$(NAME)-$(OS)-$(ARCH)" out/binaries/gitlab-runner
+	$(MAKE) ${BASE_BINARY_PATH}-${OS}-$(ARCH)
 
 runner-bin-linux: OS := 'linux'
+runner-bin-linux: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-bin-linux:
-	$(MAKE) runner-bin BUILD_PLATFORMS="-os=$(OS) $(BUILD_ARCHS)"
+	$(MAKE) ${BASE_BINARY_PATH}-${OS}-$(ARCH)
 
 runner-and-helper-bin-host: runner-bin-host helper-bin-host helper-dockerarchive-host
 
-runner-and-helper-bin-linux: runner-bin-linux helper-dockerarchive
+runner-and-helper-bin-linux: runner-bin-linux helper-images prebuilt-helper-images
 
-runner-and-helper-bin: runner-bin helper-bin helper-dockerarchive
-
-runner-and-helper-docker-host: export CI_COMMIT_REF_SLUG=$(shell echo $(BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
-runner-and-helper-docker-host: runner-and-helper-deb-host
-	$(MAKE) release_docker_images
-	$(MAKE) release_helper_docker_images
+runner-and-helper-bin: runner-bin helper-images prebuilt-helper-images
 
 runner-and-helper-deb-host: ARCH := $(shell uname -m | sed $(ARCH_REPLACE))
 runner-and-helper-deb-host: export BUILD_ARCHS := -arch '$(ARCH)'

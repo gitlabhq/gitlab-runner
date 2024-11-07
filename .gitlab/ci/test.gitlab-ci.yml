@@ -15,88 +15,6 @@ gemnasium-dependency_scanning:
 gitlab-advanced-sast:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
-check version definition:
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines
-  needs: []
-  script:
-  - grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' VERSION
-
-check modules:
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .no_cache_and_dependencies
-  needs:
-  - 'prepare done'
-  script:
-  - make check_modules
-
-check generated files:
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .no_cache_and_dependencies
-  needs:
-  - 'prepare done'
-  script:
-  - make check_generated_files
-
-check magefiles:
-  stage: test
-  extends:
-    - .rules:merge_request_pipelines:no_docs
-    - .no_cache_and_dependencies
-  needs:
-    - 'prepare done'
-  script:
-    - make check_magefiles
-
-check test directives:
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .no_cache_and_dependencies
-  needs:
-  - 'prepare done'
-  script:
-  - make check_test_directives
-
-code_quality:
-  stage: test
-  extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .no_dependencies
-  # Use GOCACHE instead of GOLANGCI_LINT_CACHE
-  # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
-  - .go-cache
-  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:1.62.0-go1.23.3
-  needs: []
-  allow_failure: true
-  variables:
-    REPORT_FILE: gl-code-quality-report.json
-    LINT_FLAGS: "--color never --timeout 15m"
-    OUT_FORMAT: code-climate
-    GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
-  before_script:
-  # Ensure the goargs linter plugin is available at .tmp/goargs.so to suit .golangci.yml
-  - mkdir .tmp && ln -s /usr/lib/goargs.so .tmp/goargs.so
-  # Copy the Docker image's golangci-lint to the location expected by `make lint` so that it is not built
-  - cp $(which golangci-lint) .tmp/golangci-lint
-  script:
-  # Write the code coverage report to gl-code-quality-report.json
-  # and print linting issues to stdout in the format: path/to/file:line description
-  - make --silent lint | tee ${REPORT_FILE}
-  timeout: 15 minutes
-  artifacts:
-    reports:
-      codequality: ${REPORT_FILE}
-    paths:
-    - ${REPORT_FILE}
-    when: always
-    expire_in: 7d
-
 .linux test:
   extends:
   - .rules:merge_request_pipelines:no_docs
@@ -118,6 +36,7 @@ compile tests:
     - "clone test repo"
     - "prepare done"
   script:
+    - make splitic
     - make test-compile
 
 unit test:
@@ -164,9 +83,10 @@ integration test:
   - .with outer token
   needs:
   - 'clone test repo'
-  - 'helper images'
+  - 'prebuilt helper images'
   - 'prepare done'
   script:
+  - make splitic
   - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
   - make splitic
   - >
@@ -200,6 +120,7 @@ integration test with race:
 fuzz variable mask:
   extends:
   - .fuzz_base
+  - .no_dependencies
   - .rules:merge_request_pipelines:no_docs
   image: golang:$GO_VERSION
   stage: test
@@ -220,22 +141,24 @@ fuzz variable mask:
   stage: test
   parallel: 6
   before_script:
+  - !reference [.go-cache-windows, before_script]
   - start-service docker
   - Set-MpPreference -DisableRealtimeMonitoring $true
   - git config --system core.longpaths true
   - New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
     -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
   - $ProgressPreference = 'SilentlyContinue'
-  - (Measure-Command { curl -o golang-windows-amd64.zip "https://go.dev/dl/go${GO_VERSION}.windows-amd64.zip" }).TotalSeconds
-  - (Measure-Command { 7z x .\golang-windows-amd64.zip }).TotalSeconds
+  - (Measure-Command { curl -o golang-windows-amd64.zip $env:RUNNER_IMAGES_WINDOWS_GO_URL }).TotalSeconds
   - if (Test-Path "C:\Program Files\Go") { Remove-Item -Path "C:\Program Files\Go" -Recurse -Force }
-  - Move-Item -Path "go" -Destination "C:\Program Files\Go"
+  - New-Item -Path "C:\Program Files\Go" -ItemType Directory > $null
+  - (Measure-Command { 7z x .\golang-windows-amd64.zip -o"C:\Program Files\Go" }).TotalSeconds
   - rm golang-windows-amd64.zip
   - $env:Path = "C:\Program Files\Go\bin;$env:Path"
   - go version
+  - echo $env:GOCACHE
+  - go env GOCACHE
   - go install gitlab.com/ajwalker/splitic@latest
   - $env:Path += ";$(go env GOPATH)/bin"
-  - !reference [.go-cache-windows, before_script]
   artifacts:
     paths:
     - .splitic/
@@ -252,7 +175,7 @@ fuzz variable mask:
   parallel: 2
   needs:
   - 'clone test repo'
-  - 'prepare done'
+  #- 'prepare done'
   script:
   - splitic test -junit-report .splitic/junit_${WINDOWS_VERSION}_${CI_NODE_INDEX}.xml -quarantined ci/.test-failures.${WINDOWS_VERSION}.txt -cover-report .splitic/cover_windows_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_windows.env -fail-exit-code 99 ./... -- -timeout 20m
 
@@ -340,12 +263,3 @@ windows 21H2 integration tests:
     optional: true
   - job: 'stable servercore21H2 helper docker images'
     optional: true
-
-mage tests:
-  extends:
-    - .rules:merge_request_pipelines:no_docs
-  stage: test
-  needs:
-  - 'prepare done'
-  script:
-  - make mage-test
