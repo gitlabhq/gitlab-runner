@@ -80,7 +80,7 @@ To register the runner with a [runner authentication token](https://docs.gitlab.
 
    To register with a container, you can either:
 
-   - Use a short-lived `gitlab-runner` container with the correct config volume mount:
+   - Use a short-lived `gitlab-runner` container with the correct configuration volume mount:
 
      - For local system volume mounts:
 
@@ -189,9 +189,9 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 ## Register with a runner registration token (deprecated)
 
 WARNING:
-The ability to pass a runner registration token, and support for certain configuration arguments was
-[deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6 and will be removed
-in GitLab 18.0. Runner authentication tokens should be used instead. For more information, see
+The ability to pass a runner registration token and support for certain configuration arguments was
+[deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/380872) in GitLab 15.6. They are scheduled for removal
+in GitLab 18.0. Use runner authentication tokens instead. For more information, see
 [Migrating to the new runner registration workflow](https://docs.gitlab.com/ee/ci/runners/new_creation_workflow.html).
 
 Prerequisites:
@@ -380,8 +380,9 @@ docker run --rm -v /srv/gitlab-runner/config:/etc/gitlab-runner gitlab/gitlab-ru
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/4157) in GitLab 16.2.
 
 Runner registration tokens and several runner configuration arguments were [deprecated](https://gitlab.com/gitlab-org/gitlab/-/issues/379743)
-in GitLab 15.6 and will be removed in GitLab 18.0. To ensure minimal disruption to your automation workflow, the `legacy-compatible registration process` triggers
-if a runner authentication token is specified in the legacy parameter `--registration-token`.
+in GitLab 15.6. They are scheduled for removal in GitLab 18.0.
+To ensure minimal disruption to your automation workflow,
+the `legacy-compatible registration process` triggers if a runner authentication token is specified in the legacy parameter `--registration-token`.
 
 The legacy-compatible registration process ignores the following command-line parameters.
 These parameters can only be configured when a runner is created in the UI or with the API.

@@ -61,7 +61,7 @@ Prerequisites:
 - You have read the [FAQ](../faq/index.md) to learn about common problems in GitLab Runner.
 
 1. When you run `gitlab-runner` in a Docker container, ensure the configuration is not lost when you
-   restart the container. Mount a permanent volume on which the configuration will reside, in either:
+   restart the container. Mount a permanent volume to store the configuration. The volume can be mounted in either:
 
    - [A local system volume](#from-a-local-system-volume)
    - [A Docker volume](#from-a-docker-volume)
