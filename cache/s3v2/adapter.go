@@ -71,9 +71,13 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
 	// endpoints to be used.
 	if endpoint != "" && endpoint != DEFAULT_AWS_S3_ENDPOINT {
 		q.Set("endpoint", a.config.GetEndpoint())
+
+		if a.config.PathStyleEnabled() {
+			q.Set("hostname_immutable", "true")
+		}
 	}
 	if a.config.PathStyleEnabled() {
-		q.Set("hostname_immutable", "true")
+		q.Set("use_path_style", "true")
 	}
 	if a.config.DualStackEnabled() {
 		q.Set("dualstack", "true")
