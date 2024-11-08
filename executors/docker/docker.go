@@ -46,6 +46,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/homedir"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
+	"gitlab.com/gitlab-org/gitlab-runner/steps"
 )
 
 const (
@@ -729,7 +730,16 @@ func (e *executor) createContainerConfig(
 		}
 	}
 
-	config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
+	// only allow entrypoint overwriting if steps is not enabled and this is not the build container.
+	if containerType != buildContainerType || !e.Build.UseNativeSteps() {
+		config.Entrypoint = e.overwriteEntrypoint(&imageDefinition)
+	}
+
+	// Do not add job variables to the build container environment when using native steps integration. The step-runner
+	// will do this.
+	if containerType == buildContainerType && e.Build.UseNativeSteps() {
+		config.Env = nil
+	}
 
 	// setting a container's mac-address changed in API version 1.44
 	if e.serverAPIVersion.LessThan(version1_44) {
@@ -818,6 +828,15 @@ func (e *executor) createHostConfig() (*container.HostConfig, error) {
 
 func (e *executor) startAndWatchContainer(ctx context.Context, id string, input io.Reader) error {
 	dockerExec := exec.NewDocker(e.Context, e.client, e.waiter, e.Build.Log())
+
+	// Use stepsDocker exec implementation if steps is enabled and this is the build container.
+	if id == e.buildContainerID && e.Build.UseNativeSteps() {
+		request, err := steps.NewRequest(e.Build)
+		if err != nil {
+			return common.MakeBuildError("creating steps request: %w", err)
+		}
+		dockerExec = exec.NewStepsDocker(e.Context, e.client, e.waiter, e.Build.Log(), request)
+	}
 
 	stdout := e.BuildLogger.Stream(buildlogger.StreamWorkLevel, buildlogger.Stdout)
 	defer stdout.Close()

@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/vault/auth_methods"
 )
@@ -142,6 +143,7 @@ type FeaturesInfo struct {
 	ImageExecutorOpts       bool `json:"image_executor_opts"`
 	ServiceExecutorOpts     bool `json:"service_executor_opts"`
 	CancelGracefully        bool `json:"cancel_gracefully"`
+	NativeStepsIntegration  bool `json:"native_steps_integration"`
 }
 
 type ConfigInfo struct {
@@ -264,6 +266,7 @@ type StepScript []string
 type StepName string
 
 const (
+	StepNameRun         StepName = "run"
 	StepNameScript      StepName = "script"
 	StepNameAfterScript StepName = "after_script"
 )
@@ -617,18 +620,19 @@ type JobResponse struct {
 	TLSAuthKey  string `json:"-"`
 }
 
-// StepsShim is a function which shims GitLab Steps from the `run`
-// keyword into the step-runner image. This is a temporary mechanism
-// for executing steps which will be replaced by a gRPC connection to
-// step-runner in each executor.
-func (j *JobResponse) StepsShim() error {
+// ValidateStepsJobRequest does the following:
+// 1. It detects if the JobRequest is requesting execution of the job via Steps.
+// 2. If yes, it ensures the request is a valid steps request, and
+// 3. It sets a default build image.
+// 4. It further determines if the request is a valid native steps execution request.
+// 5. If it is, it sets a new, native-steps specific script step and returns.
+// 6. If not, it configures the job to be run via the step shim approach.
+func (j *JobResponse) ValidateStepsJobRequest(executorSupportsNativeSteps bool) error {
 	switch {
 	case j.Run == "":
 		return nil
-
 	case slices.ContainsFunc(j.Steps, func(step Step) bool { return len(step.Script) > 0 }):
 		return fmt.Errorf("the `run` and `script` keywords cannot be used together")
-
 	case j.Variables.Get("STEPS") != "":
 		return fmt.Errorf("the `run` keyword requires the exclusive use of the variable STEPS")
 	}
@@ -640,6 +644,17 @@ func (j *JobResponse) StepsShim() error {
 		j.Image.Name = "registry.gitlab.com/gitlab-org/step-runner:v0"
 	}
 
+	if executorSupportsNativeSteps && j.NativeStepsRequested() {
+		// If native steps is enabled, the script steps won't be executed anyway, but this change ensures the job log
+		// trace is coherent since it will print: Executing "step_run" stage of the job script
+		j.Steps = Steps{{Name: StepNameRun}}
+
+		return nil
+	}
+
+	// Use the shim approach to run steps jobs. This shims GitLab Steps from the `run` keyword into the step-runner
+	// image. This is a temporary mechanism for executing steps which will be replaced by a gRPC connection to
+	// step-runner in each executor.
 	j.Variables = append(j.Variables, JobVariable{
 		Key:   "STEPS",
 		Value: j.Run,
@@ -647,7 +662,7 @@ func (j *JobResponse) StepsShim() error {
 	})
 
 	j.Steps = Steps{{
-		Name:         "script",
+		Name:         StepNameScript,
 		Script:       StepScript{"/step-runner ci"},
 		Timeout:      3600,
 		When:         "on_success",
@@ -655,6 +670,18 @@ func (j *JobResponse) StepsShim() error {
 	}}
 
 	return nil
+}
+
+func (j *JobResponse) NativeStepsRequested() bool {
+	if j.Run == "" {
+		return false
+	}
+	for _, v := range j.Variables {
+		if v.Key == featureflags.UseNativeSteps {
+			return true
+		}
+	}
+	return false
 }
 
 type Secrets map[string]Secret

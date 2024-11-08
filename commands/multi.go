@@ -943,7 +943,8 @@ func (mr *RunCommand) requestJob(
 		return nil, nil, err
 	}
 
-	if err := errors.Join(jobData.UnsupportedOptions(), jobData.StepsShim()); err != nil {
+	if err := errors.Join(jobData.UnsupportedOptions(),
+		jobData.ValidateStepsJobRequest(mr.executorSupportsNativeSteps(runner))); err != nil {
 		_, _ = trace.Write([]byte(err.Error() + "\n"))
 
 		err = trace.Fail(err, common.JobFailureData{
@@ -957,6 +958,11 @@ func (mr *RunCommand) requestJob(
 
 	trace.SetFailuresCollector(mr.failuresCollector)
 	return trace, jobData, nil
+}
+
+func (mr *RunCommand) executorSupportsNativeSteps(runnerConfig *common.RunnerConfig) bool {
+	netCli, ok := mr.network.(*network.GitLabClient)
+	return ok && netCli.ExecutorSupportsNativeSteps(*runnerConfig)
 }
 
 // doJobRequest will execute the request for a new job, respecting an interruption

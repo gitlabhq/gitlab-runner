@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	yamlconv "sigs.k8s.io/yaml"
 )
 
 const (
@@ -35,6 +37,10 @@ const (
 	repoSubmoduleLFSSHA       = "86002a2304d89a193f91b8b0907c4cf2f95a6d28"
 	repoSubmoduleLFSBeforeSHA = "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7"
 	repoSubmoduleLFSRefName   = "add-lfs-submodule"
+
+	repoStepsSHA       = "1142c6530a1eb81f0a5476db25fbfbf9a4e08f30"
+	repoStepsBeforeSHA = "1ea27a9695f80d7816d9e8ce025d9b2df83d0dd7"
+	repoStepsRefName   = "add-steps"
 
 	FilesLFSFile1LFSsize = int64(2097152)
 )
@@ -72,6 +78,17 @@ func GetSubmoduleLFSGitInfo(url string) GitInfo {
 		Sha:       repoSubmoduleLFSSHA,
 		BeforeSha: repoSubmoduleLFSBeforeSHA,
 		Ref:       repoSubmoduleLFSRefName,
+		RefType:   repoRefType,
+		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
+	}
+}
+
+func GetStepsGitInfo(url string) GitInfo {
+	return GitInfo{
+		RepoURL:   url,
+		Sha:       repoStepsSHA,
+		BeforeSha: repoStepsBeforeSHA,
+		Ref:       repoStepsRefName,
 		RefType:   repoRefType,
 		Refspecs:  []string{"+refs/heads/*:refs/origin/heads/*", "+refs/tags/*:refs/tags/*"},
 	}
@@ -210,7 +227,6 @@ func GetRemoteSuccessfulBuildWithDumpedVariables() (JobResponse, error) {
 		fmt.Sprintf("[[ \"${%s}\" != \"\" ]]", variableName),
 		fmt.Sprintf("[[ $(cat $%s) == \"%s\" ]]", variableName, variableValue),
 	)
-
 	if err != nil {
 		return JobResponse{}, err
 	}
@@ -341,6 +357,28 @@ func getBuildResponse(repoURL string, commands []string) JobResponse {
 			Timeout: DefaultTimeout,
 		},
 	}
+}
+
+func getStepsBuildResponse(repoURL string, stepsYAML string) (JobResponse, error) {
+	// steps come from GitLab in json, but it's a whole lot more convenient to write them in yaml in tests. Let's
+	// support the latter and convert the yaml to json here so everything else downstream works as if the steps were
+	// specified in json.
+	stepsJSON, err := yamlconv.YAMLToJSON([]byte(stepsYAML))
+	if err != nil {
+		return JobResponse{}, fmt.Errorf("converting json to yaml: %w", err)
+	}
+	return JobResponse{
+		GitInfo: GetStepsGitInfo(repoURL),
+		Run:     string(stepsJSON),
+		Steps:   Steps{Step{Name: StepNameRun}},
+		RunnerInfo: RunnerInfo{
+			Timeout: DefaultTimeout,
+		},
+	}, nil
+}
+
+func GetRemoteStepsBuildResponse(stepsYAML string) (JobResponse, error) {
+	return getStepsBuildResponse(repoRemoteURL, stepsYAML)
 }
 
 func GetRemoteBuildResponse(commands ...string) (JobResponse, error) {

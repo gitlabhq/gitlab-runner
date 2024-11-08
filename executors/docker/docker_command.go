@@ -177,6 +177,8 @@ func (s *commandExecutor) getHelperImageCmd() []string {
 	return s.helperImageInfo.Cmd
 }
 
+var stepRunnerServiceCommand = []string{"step-runner", "serve"}
+
 func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -185,11 +187,17 @@ func (s *commandExecutor) requestBuildContainer() (*types.ContainerJSON, error) 
 		return s.buildContainer, nil
 	}
 
+	// Overwrite the build container command if using steps
+	cmd := s.BuildShell.DockerCommand
+	if s.Build.UseNativeSteps() {
+		cmd = stepRunnerServiceCommand
+	}
+
 	var err error
 	s.buildContainer, err = s.createContainer(
 		buildContainerType,
 		s.Build.Image,
-		s.BuildShell.DockerCommand,
+		cmd,
 		[]string{},
 	)
 	if err != nil {
@@ -364,6 +372,7 @@ func init() {
 		features.ServiceMultipleAliases = true
 		features.ImageExecutorOpts = true
 		features.ServiceExecutorOpts = true
+		features.NativeStepsIntegration = true
 	}
 
 	common.RegisterExecutorProvider("docker", executors.DefaultExecutorProvider{

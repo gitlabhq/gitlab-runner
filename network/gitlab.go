@@ -86,6 +86,10 @@ func (n *GitLabClient) getFeatures(features *common.FeaturesInfo) {
 	features.CancelGracefully = true
 }
 
+func (n *GitLabClient) ExecutorSupportsNativeSteps(config common.RunnerConfig) bool {
+	return n.getRunnerVersion(config).Features.NativeStepsIntegration
+}
+
 func (n *GitLabClient) getRunnerVersion(config common.RunnerConfig) common.VersionInfo {
 	info := common.VersionInfo{
 		Name:         common.NAME,
@@ -151,7 +155,6 @@ func (n *GitLabClient) doMeasuredRaw(
 			params.requestType,
 			params.headers,
 		)
-
 		if err != nil {
 			return clientError
 		}
