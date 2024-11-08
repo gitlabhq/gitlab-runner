@@ -766,8 +766,11 @@ func (s *executor) runWithAttach(cmd common.ExecutorCommand) error {
 func (s *executor) stageCancellationScript(stage string) string {
 	switch s.Shell().Shell {
 	case shells.SNPwsh, shells.SNPowershell:
-		return "$processId=(Get-WmiObject Win32_Process -Filter \"CommandLine LIKE '%" +
-			s.scriptName(stage) + "%'\").ProcessId;If($processId) { Stop-Process -Id $processId; }"
+		processIdRetrievalCmd := fmt.Sprintf(
+			"(Get-CIMInstance Win32_Process -Filter \"CommandLine LIKE '%%%s%%'\").ProcessId",
+			s.scriptName(stage),
+		)
+		return shells.PowershellStageProcessesKillerScript(processIdRetrievalCmd)
 	default:
 		// ps command is not available on all unix-like OS
 		// To bypass this limitation, we use the following command to search for existing PIDs in the /proc directory
