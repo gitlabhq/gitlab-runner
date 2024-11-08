@@ -10,9 +10,9 @@ import (
 	"github.com/kardianos/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli"
-	"gitlab.com/gitlab-org/gitlab-runner/commands"
 
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/commands"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/homedir"
 )
 
 func newTestGetServiceArgumentsCommand(t *testing.T, expectedArgs []string) func(*cli.Context) {
@@ -48,7 +48,7 @@ func TestGetServiceArguments(t *testing.T) {
 	tests := []getServiceArgumentsTestCase{
 		{
 			expectedArgs: []string{
-				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--working-directory", homedir.GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
@@ -58,7 +58,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--config", "/tmp/config.toml",
 			},
 			expectedArgs: []string{
-				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--working-directory", homedir.GetWDOrEmpty(),
 				"--config", "/tmp/config.toml",
 				"--service", "gitlab-runner",
 			},
@@ -78,7 +78,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--service", "gitlab-runner-service-name",
 			},
 			expectedArgs: []string{
-				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--working-directory", homedir.GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner-service-name",
 			},
@@ -88,7 +88,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--syslog=true",
 			},
 			expectedArgs: []string{
-				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--working-directory", homedir.GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
@@ -98,7 +98,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--syslog=false",
 			},
 			expectedArgs: []string{
-				"--working-directory", helpers.GetCurrentWorkingDirectory(),
+				"--working-directory", homedir.GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},

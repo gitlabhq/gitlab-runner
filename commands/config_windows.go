@@ -1,11 +1,11 @@
 package commands
 
 import (
-	"gitlab.com/gitlab-org/gitlab-runner/helpers"
+	"gitlab.com/gitlab-org/gitlab-runner/helpers/homedir"
 )
 
 func getDefaultConfigDirectory() string {
-	if currentDir := helpers.GetCurrentWorkingDirectory(); currentDir != "" {
+	if currentDir := homedir.GetWDOrEmpty(); currentDir != "" {
 		return currentDir
 	}
 
