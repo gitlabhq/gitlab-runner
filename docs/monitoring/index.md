@@ -92,11 +92,57 @@ NOTE:
 The metrics server exports data about the internal state of the
 GitLab Runner process and should not be publicly available!
 
-The metrics HTTP server can be configured in the following ways:
+Configure the metrics HTTP server by using one of the following methods:
 
-- with a `listen_address` global configuration option in `config.toml` file,
-- with a `--listen-address` command line option for the `run` command,
-- by configuring the [`metrics`](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/main/values.yaml#L247) and [`service`](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/blob/main/values.yaml#L247) configuration options in `values.yaml` for runners using Helm Chart.
+- Use the `listen_address` global configuration option in the `config.toml` file.
+- Use the `--listen-address` command line option for the `run` command.
+- For runners using Helm chart, in the `values.yaml`:
+
+  1. Configure the `metrics` option:
+
+     ```yaml
+     ## Configure integrated Prometheus metrics exporter
+     ##
+     ## ref: https://docs.gitlab.com/runner/monitoring/#configuration-of-the-metrics-http-server
+     ##
+     metrics:
+       enabled: true
+
+       ## Define a name for the metrics port
+       ##
+       portName: metrics
+
+       ## Provide a port number for the integrated Prometheus metrics exporter
+       ##
+       port: 9252
+
+       ## Configure a prometheus-operator serviceMonitor to allow autodetection of
+       ## the scraping target. Requires enabling the service resource below.
+       ##
+       serviceMonitor:
+         enabled: true
+
+         ...
+     ```
+
+  1. Configure the `service` monitor to retrieve the configured `metrics`:
+
+     ```yaml
+     ## Configure a service resource to allow scraping metrics by uisng
+     ## prometheus-operator serviceMonitor
+     service:
+       enabled: true
+
+       ## Provide additonal labels for the service
+       ##
+       labels: {}
+
+       ## Provide additonal annotations for the service
+       ##
+       annotations: {}
+
+       ...
+     ```
 
 If you add the address to your `config.toml` file, to start the metrics HTTP server,
 you must restart the runner process.
