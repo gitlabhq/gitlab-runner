@@ -3565,6 +3565,8 @@ func testJobAgainstServiceContainerBehaviour(t *testing.T, featureFlagName strin
 func TestBuildContainerOOMKilled(t *testing.T) {
 	helpers.SkipIntegrationTests(t, "kubectl", "cluster-info")
 
+	t.Skip("OOMKilled reason is returned depending on the Kubernetes version. Skipping this test")
+
 	tests := map[string]struct {
 		script      string
 		verifyFn    func(t *testing.T, out string, err error)
@@ -3583,7 +3585,7 @@ allocate_memory() {
 
 allocate_memory
 `,
-			memoryLimit: "10Mi",
+			memoryLimit: "6Mi",
 			verifyFn: func(t *testing.T, out string, err error) {
 				assert.Contains(t, out, "Error in container build: exit code: 137, reason: 'OOMKilled'")
 				assert.Error(t, err)
