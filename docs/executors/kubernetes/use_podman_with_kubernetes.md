@@ -10,9 +10,15 @@ Podman is an open-source [Open Container Initiative](https://opencontainers.org/
 
 Podman provides configurations that let you build container images in a CI job, without a root user or [privileged](../../security/index.md#usage-of-docker-executor) escalation on the host.
 
-You can configure Podman to use it with GitLab Runner on Kubernetes.
+This document covers information about how to configure Podman to use it with GitLab Runner on OpenShift and non-OpenShift Kubernetes clusters.
+The configuration applies to container images set as a root and non-root user.
 
-## Run Podman as a non-root user with privileges
+## Run Podman on non-OpenShift Kubernetes cluster
+
+### Run Podman as a non-root user with the `--privileged` flag set to `true`
+
+WARNING:
+When you run Podman with the `--privileged` flag set to `true`, the container engine launches the container with or without any additional security controls.
 
 To run Podman as a non-root user with non-root container processes:
 
@@ -102,204 +108,8 @@ To run Podman as a non-root user with non-root container processes:
 If the jobs pass as expected, the job log should look like in the following example:
 
 ```shell
-Running with gitlab-runner development version (HEAD)
-  on investigation REDACTED, system ID: s_b188029b2abb
-  feature flags: FF_USE_POWERSHELL_PATH_RESOLVER:true, FF_SCRIPT_SECTIONS:true, FF_PRINT_POD_EVENTS:true
-Preparing the "kubernetes" executor
-00:00
-WARNING: Namespace is empty, therefore assuming 'default'.
-Using Kubernetes namespace: default
-Using Kubernetes executor with image quay.io/podman/stable ...
-Using attach strategy to execute scripts...
-Preparing environment
-00:03
-Using FF_USE_POD_ACTIVE_DEADLINE_SECONDS, the Pod activeDeadlineSeconds will be set to the job timeout: 10m0s...
-Subscribing to Kubernetes Pod events...
-Type     Reason      Message
-Normal   Scheduled   Successfully assigned default/runner-REDACTED-project-REDACTED-concurrent-0-l5aszavi to colima
-Normal   Pulled   Container image "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest" already present on machine
-Normal   Created   Created container init-permissions
-Normal   Started   Started container init-permissions
-Normal   Pulling   Pulling image "quay.io/podman/stable"
-Normal   Pulled   Successfully pulled image "quay.io/podman/stable" in 429ms (429ms including waiting). Image size: 713244641 bytes.
-Normal   Created   Created container build
-Normal   Started   Started container build
-Normal   Pulled   Container image "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-latest" already present on machine
-Normal   Created   Created container helper
-Normal   Started   Started container helper
-Running on runner-REDACTED-project-REDACTED-concurrent-0-l5aszavi via ratchade-MBP...
-Getting source from Git repository
-00:02
-Fetching changes with git depth set to 5...
-Initialized empty Git repository in /my_custom_dir/ra-group2/playground-bis/.git/
-Created fresh repository.
-Checking out 433efc98 as detached HEAD (ref is dind-test)...
-Skipping Git submodules setup
-Executing "step_script" stage of the job script
-00:14
-$ podman info
-host:
-  arch: arm64
-  buildahVersion: 1.37.3
-  cgroupControllers:
-  - cpuset
-  - cpu
-  - io
-  - memory
-  - hugetlb
-  - pids
-  - rdma
-  - misc
-  cgroupManager: cgroupfs
-  cgroupVersion: v2
-  conmon:
-    package: conmon-2.1.12-2.fc40.aarch64
-    path: /usr/bin/conmon
-    version: 'conmon version 2.1.12, commit: '
-  cpuUtilization:
-    idlePercent: 98.22
-    systemPercent: 0.77
-    userPercent: 1.01
-  cpus: 2
-  databaseBackend: sqlite
-  distribution:
-    distribution: fedora
-    variant: container
-    version: "40"
-  eventLogger: file
-  freeLocks: 2048
-  hostname: runner-idukxkzgd-project-25452826-concurrent-0-l5aszavi
-  idMappings:
-    gidmap:
-    - container_id: 0
-      host_id: 1000
-      size: 1
-    - container_id: 1
-      host_id: 1
-      size: 999
-    - container_id: 1000
-      host_id: 1001
-      size: 64535
-    uidmap:
-    - container_id: 0
-      host_id: 1000
-      size: 1
-    - container_id: 1
-      host_id: 1
-      size: 999
-    - container_id: 1000
-      host_id: 1001
-      size: 64535
-  kernel: 6.8.0-39-generic
-  linkmode: dynamic
-  logDriver: k8s-file
-  memFree: 550629376
-  memTotal: 2051272704
-  networkBackend: netavark
-  networkBackendInfo:
-    backend: netavark
-    dns:
-      package: aardvark-dns-1.12.2-2.fc40.aarch64
-      path: /usr/libexec/podman/aardvark-dns
-      version: aardvark-dns 1.12.2
-    package: netavark-1.12.2-1.fc40.aarch64
-    path: /usr/libexec/podman/netavark
-    version: netavark 1.12.2
-  ociRuntime:
-    name: crun
-    package: crun-1.17-1.fc40.aarch64
-    path: /usr/bin/crun
-    version: |-
-      crun version 1.17
-      commit: 000fa0d4eeed8938301f3bcf8206405315bc1017
-      rundir: /tmp/storage-run-1000/crun
-      spec: 1.0.0
-      +SYSTEMD +SELINUX +APPARMOR +CAP +SECCOMP +EBPF +CRIU +LIBKRUN +WASM:wasmedge +YAJL
-  os: linux
-  pasta:
-    executable: /usr/bin/pasta
-    package: passt-0^20240906.g6b38f07-1.fc40.aarch64
-    version: |
-      pasta 0^20240906.g6b38f07-1.fc40.aarch64-pasta
-      Copyright Red Hat
-      GNU General Public License, version 2 or later
-        <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>
-      This is free software: you are free to change and redistribute it.
-      There is NO WARRANTY, to the extent permitted by law.
-  remoteSocket:
-    exists: false
-    path: /tmp/storage-run-1000/podman/podman.sock
-  rootlessNetworkCmd: pasta
-  security:
-    apparmorEnabled: false
-    capabilities: CAP_CHOWN,CAP_DAC_OVERRIDE,CAP_FOWNER,CAP_FSETID,CAP_KILL,CAP_NET_BIND_SERVICE,CAP_SETFCAP,CAP_SETGID,CAP_SETPCAP,CAP_SETUID,CAP_SYS_CHROOT
-    rootless: true
-    seccompEnabled: true
-    seccompProfilePath: /usr/share/containers/seccomp.json
-    selinuxEnabled: false
-  serviceIsRemote: false
-  slirp4netns:
-    executable: ""
-    package: ""
-    version: ""
-  swapFree: 0
-  swapTotal: 0
-  uptime: 7h 48m 56.00s (Approximately 0.29 days)
-  variant: v8
-plugins:
-  authorization: null
-  log:
-  - k8s-file
-  - none
-  - passthrough
-  - journald
-  network:
-  - bridge
-  - macvlan
-  - ipvlan
-  volume:
-  - local
-registries:
-  search:
-  - registry.fedoraproject.org
-  - registry.access.redhat.com
-  - docker.io
-store:
-  configFile: /my_custom_dir/.config/containers/storage.conf
-  containerStore:
-    number: 0
-    paused: 0
-    running: 0
-    stopped: 0
-  graphDriverName: overlay
-  graphOptions: {}
-  graphRoot: /my_custom_dir/.local/share/containers/storage
-  graphRootAllocated: 61285326848
-  graphRootUsed: 4142067712
-  graphStatus:
-    Backing Filesystem: extfs
-    Native Overlay Diff: "true"
-    Supports d_type: "true"
-    Supports shifting: "false"
-    Supports volatile: "true"
-    Using metacopy: "false"
-  imageCopyTmpDir: /var/tmp
-  imageStore:
-    number: 0
-  runRoot: /tmp/storage-run-1000/containers
-  transientStore: false
-  volumePath: /my_custom_dir/.local/share/containers/storage/volumes
-version:
-  APIVersion: 5.2.3
-  Built: 1727136000
-  BuiltTime: Tue Sep 24 00:00:00 2024
-  GitCommit: ""
-  GoVersion: go1.22.7
-  Os: linux
-  OsArch: linux/arm64
-  Version: 5.2.3
-$ id
-uid=1000(podman) gid=1000(podman) groups=1000(podman)
+...
+
 $ podman build . -t playground-bis:testing
 STEP 1/6: FROM docker.io/library/golang:1.23.1 AS builder
 Trying to pull docker.io/library/golang:1.23.1...
@@ -398,14 +208,248 @@ Cleaning up project directory and file based variables
 Job succeeded
 ```
 
-## Run Podman as a non-root user without privileges on vanilla Kubernetes
+### Run Podman as a root user with the `--privileged` flag set to `false`
 
-Before you being, make sure you have:
+Prerequisites:
 
-- A Kubernetes cluster using `CRI-O` as runtime engine.
-- Permission to use `fuse-overlayfs` inside of the container.
+- Permission to use `fuse-overlayfs` inside the container.
 
-To run rootless Podman without privileges, follow the steps in [Run Podman as a non-root user with privileges](#run-podman-as-a-non-root-user-with-privileges).
+The following steps are inspired from the "Rootless Podman without the privileged flag" section
+of [How to use Podman inside of Kubernetes](https://www.redhat.com/en/blog/podman-inside-kubernetes).
+
+When running rootless Podman, you can remove the privileged flag by making a few adjustments
+to your system configuration. The container needs access to `/dev/fuse` to use `fuse-overlayfs`
+inside the container.
+
+You must also disable SELinux on the host running the Kubernetes cluster.
+SELinux prevents containerized processes from mounting the required file
+systems inside a container.
+
+To achieve this:
+
+1. Create a device plugin that can be used by the job Pod, for example:
+
+   ```yaml
+   apiVersion: apps/v1
+   kind: DaemonSet
+   metadata:
+    name: fuse-device-plugin-daemonset
+    namespace: kube-system
+   spec:
+    selector:
+      matchLabels:
+        name: fuse-device-plugin-ds
+    template:
+      metadata:
+        labels:
+          name: fuse-device-plugin-ds
+      spec:
+        hostNetwork: true
+        containers:
+        - image: soolaugust/fuse-device-plugin:v1.0
+          name: fuse-device-plugin-ctr
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+        volumes:
+          - name: device-plugin
+            hostPath:
+              path: /var/lib/kubelet/device-plugins
+   ```
+
+1. Configure the `config.toml` to install GitLab Runner on the cluster.
+
+   - Set the job Pod to run as a `root` user with the `--privileged` flag set to `false`:
+
+     ```toml
+     allow_privilege_escalation = false
+     [runners.kubernetes.pod_security_context]
+       run_as_non_root = false
+     [runners.kubernetes.build_container_security_context]
+       run_as_user = 0
+       run_as_group = 0
+     ```
+
+   - Set a resource limit to the job Pod by using the [`pod_spec` feature](../kubernetes/index.md#overwrite-generated-pod-specifications).
+     To use `pod_spec`, set the `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` feature flag to `true`.
+
+     ```toml
+     [[runners.kubernetes.pod_spec]]
+       name = "device-fuse"
+       patch_type = "strategic"
+       patch = '''
+         containers:
+           - name: build
+             resources:
+               limits:
+                 github.com/fuse: 1
+       '''
+     ```
+
+   The `config.toml` should look similar to:
+
+   ```toml
+   [[runners]]
+     [runners.kubernetes]
+       host = ""
+       bearer_token_overwrite_allowed = false
+       pod_termination_grace_period_seconds = 0
+       namespace = ""
+       namespace_overwrite_allowed = ""
+       pod_labels_overwrite_allowed = ""
+       service_account_overwrite_allowed = ""
+       pod_annotations_overwrite_allowed = ""
+       node_selector_overwrite_allowed = ".*"
+       allow_privilege_escalation = false
+       [runners.kubernetes.pod_security_context]
+         run_as_non_root = false
+       [runners.kubernetes.build_container_security_context]
+         run_as_user = 0
+         run_as_group = 0
+       [[runners.kubernetes.services]]
+       [runners.kubernetes.dns_config]
+       [runners.kubernetes.pod_labels]
+       [[runners.kubernetes.pod_spec]]
+         name = "device-fuse"
+         patch_type = "strategic"
+         patch = '''
+           containers:
+             - name: build
+               resources:
+                 limits:
+                   github.com/fuse: 1
+         '''
+   ```
+
+1. Run the job to build an image with Podman.
+
+   ```yaml
+   variables:
+     FF_USE_POWERSHELL_PATH_RESOLVER: "true"
+     FF_RETRIEVE_POD_WARNING_EVENTS: "true"
+     FF_PRINT_POD_EVENTS: "true"
+     FF_SCRIPT_SECTIONS: "true"
+     CI_DEBUG_SERVICES: "true"
+     GIT_DEPTH: 5
+     FF_USE_ADVANCED_POD_SPEC_CONFIGURATION: "true"
+
+   podman-privileged-test:
+     image: quay.io/podman/stable
+     before_script:
+       - podman info
+       - id
+     script:
+       - podman build . -t playground-bis:testing
+   ```
+
+The job runs `podman build`, which should complete successfully.
+
+```shell
+...
+
+$ podman build . -t playground-bis:testing
+time="2024-11-06T16:57:41Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+time="2024-11-06T16:57:41Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+STEP 1/6: FROM docker.io/library/golang:1.23.1 AS builder
+Trying to pull docker.io/library/golang:1.23.1...
+Getting image source signatures
+Copying blob sha256:32d3574b34bd65a6cf89a80e5bd939574c7a9bd3efbaa4881292aaca16d3d0dc
+Copying blob sha256:a47cff7f31e941e78bf63ca19f0811b675283e2c00ddea10c57f78d93b2bc343
+Copying blob sha256:cdd62bf39133c498a16f7a7b1b6555ba43d02b2511c508fa4c0a9b1975ffe20e
+Copying blob sha256:1eb015951d08f558e9805d427f6d30728b0cd94d5c9b9538cd4f7df57598664a
+Copying blob sha256:a173f2aee8e962ea19db1e418ae84a0c9f71480b51f768a19332dfa83d7722a5
+Copying blob sha256:e7bff916ab0c126c9d943f0c481a905f402e00f206a89248f257ef90beaabbd8
+Copying blob sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1
+Copying config sha256:8027d6b1a7f0702ed8a4174fd022be03f87e35c7a7fa00afb2bf4178b22080d4
+Writing manifest to image destination
+STEP 2/6: WORKDIR "/workspace"
+--> 94b34d00b2cb
+STEP 3/6: COPY . .
+--> b807785fe549
+STEP 4/6: RUN go build -v main.go
+internal/goarch
+internal/unsafeheader
+internal/cpu
+internal/abi
+internal/bytealg
+internal/byteorder
+internal/chacha8rand
+internal/coverage/rtcov
+internal/godebugs
+internal/goexperiment
+internal/goos
+internal/profilerecord
+internal/runtime/atomic
+internal/runtime/syscall
+internal/runtime/exithook
+internal/stringslite
+runtime/internal/math
+runtime/internal/sys
+cmp
+internal/itoa
+internal/race
+runtime
+math/bits
+math
+unicode/utf8
+sync/atomic
+unicode
+internal/asan
+internal/msan
+iter
+internal/reflectlite
+sync
+slices
+internal/bisect
+errors
+strconv
+io
+internal/oserror
+path
+internal/godebug
+reflect
+syscall
+time
+io/fs
+internal/fmtsort
+internal/filepathlite
+internal/syscall/unix
+internal/syscall/execenv
+internal/testlog
+internal/poll
+os
+fmt
+command-line-arguments
+--> 5c4fa8b22a3e
+STEP 5/6: RUN ls -halF
+total 2.1M
+drwxr-xr-x  4 root root   18 Nov  6 16:58 ./
+dr-xr-xr-x 19 root root    6 Nov  6 16:58 ../
+drwxrwxrwx  6 root root  128 Nov  6 16:57 .git/
+-rw-rw-rw-  1 root root  743 Nov  6 16:57 .gitlab-ci.yml
+-rw-rw-rw-  1 root root 1.8K Nov  6 16:57 Dockerfile
+-rw-rw-rw-  1 root root   74 Nov  6 16:57 Dockerfile_multistage
+-rw-rw-rw-  1 root root   18 Nov  6 16:57 README.md
+-rw-rw-rw-  1 root root   51 Nov  6 16:57 go.mod
+-rw-rw-rw-  1 root root  258 Nov  6 16:57 long-script-with-cleanup.sh
+-rwxr-xr-x  1 root root 2.1M Nov  6 16:58 main*
+-rw-rw-rw-  1 root root  157 Nov  6 16:57 main.go
+-rw-rw-rw-  1 root root  333 Nov  6 16:57 string_output.sh
+drwxrwxrwx  2 root root   87 Nov  6 16:57 test/
+--> 57bb3eb7e929
+STEP 6/6: CMD ["exec", "main"]
+COMMIT playground-bis:testing
+--> 2cc55d032ba8
+Successfully tagged localhost/playground-bis:testing
+2cc55d032ba852e05c513e4067b55c10fd697c65e07ffe2aae104e8531702274
+Cleaning up project directory and file based variables
+00:00
+Job succeeded
+```
 
 ## Run Podman as a non-root user on OpenShift
 
