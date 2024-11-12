@@ -2054,6 +2054,10 @@ func TestCredSetup(t *testing.T) {
 	const (
 		markerForBuild  = "#build# "
 		markerForHelper = "#helper# "
+
+		// a repo with a mixed bag of submodules: relative, private, public
+		repoURL = "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test"
+		repoSha = "0a1093ff08de939dbd1625689d86deef18126a74"
 	)
 
 	listGitConfig := func(t *testing.T, shell, prefix string) string {
@@ -2117,48 +2121,48 @@ func TestCredSetup(t *testing.T) {
 		},
 	}
 
+	token := getTokenFromEnv(t)
+	repoURLWithToken := func() *url.URL {
+		u, err := url.Parse(repoURL)
+		require.NoError(t, err, "parsing repo URL")
+		u.User = url.UserPassword("gitlab-ci-token", token)
+		return u
+	}()
+	gitInfoWithToken := common.GitInfo{
+		RepoURL: repoURLWithToken.String(),
+		Sha:     repoSha,
+	}
+	setupCachingCredHelper(t)
+	setInvalidGitCreds(t, repoURLWithToken)
+
 	for _, test := range tests {
 		name := fmt.Sprintf("gitUrlsWithoutTokens:%t", test.gitUrlsWithoutTokens)
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			shellstest.OnEachShell(t, func(t *testing.T, shell string) {
+				t.Parallel()
+
 				if runtime.GOOS != shells.OSWindows && shell == shells.SNPowershell {
 					t.Skip("powershell is not supported on non-windows platforms")
 				}
 
-				token := getTokenFromEnv(t)
-
 				jobResponse, err := common.GetRemoteBuildResponse(listGitConfig(t, shell, markerForBuild))
 				require.NoError(t, err)
-
-				jobResponse.GitInfo = common.GitInfo{
-					RepoURL: "https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-pipeline-tests/submodules/mixed-submodules-test",
-					Sha:     "0a1093ff08de939dbd1625689d86deef18126a74",
-				}
 
 				jobResponse.Hooks = append(jobResponse.Hooks, common.Hook{
 					Name:   common.HookPostGetSourcesScript,
 					Script: common.StepScript{listGitConfig(t, shell, markerForHelper)},
 				})
 
-				{
-					// inject token
-					u, err := url.Parse(jobResponse.GitInfo.RepoURL)
-					require.NoError(t, err, "parsing original repo URL")
+				// inject token
+				jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
+					Key: "CI_JOB_TOKEN", Value: token, Masked: true,
+				})
+				jobResponse.Token = token
+				jobResponse.GitInfo = gitInfoWithToken
 
-					u.User = url.UserPassword("gitlab-ci-token", token)
-					jobResponse.GitInfo.RepoURL = u.String()
-
-					jobResponse.Token = token
-
-					jobResponse.Variables = append(jobResponse.Variables, common.JobVariable{
-						Key: "CI_JOB_TOKEN", Value: token, Masked: true,
-					})
-
-					setupCachingCredHelperWithFakeCreds(t, u)
-				}
-
-				jobResponse.Variables = append(
-					jobResponse.Variables,
+				jobResponse.Variables = append(jobResponse.Variables,
 					common.JobVariable{Key: "GIT_TRACE", Value: "1"},
 					common.JobVariable{Key: "GIT_CURL_VERBOSE", Value: "1"},
 					common.JobVariable{Key: "GIT_TRANSFER_TRACE", Value: "1"},
@@ -2174,6 +2178,9 @@ func TestCredSetup(t *testing.T) {
 
 				buildtest.SetBuildFeatureFlag(build, featureflags.GitURLsWithoutTokens, test.gitUrlsWithoutTokens)
 
+				// inject invalid creds into the git cred helper to ensure we try to prune cached creds.
+				setInvalidGitCreds(t, repoURLWithToken)
+
 				out, err := buildtest.RunBuildReturningOutput(t, build)
 				assert.NoError(t, err)
 
@@ -2188,9 +2195,8 @@ func TestCredSetup(t *testing.T) {
 	}
 }
 
-// setupCachingCredHelperWithFakeCreds sets up a (global) git credential helper returning fake/wrong credentials for the
-// URL passed in.
-func setupCachingCredHelperWithFakeCreds(t *testing.T, orgURL *url.URL) {
+// setupCachingCredHelper sets up a (global) caching git credential helper
+func setupCachingCredHelper(t *testing.T) {
 	gitCredCache, err := os.CreateTemp("", "")
 	require.NoError(t, err, "creating temp file for cred cache")
 	require.NoError(t, gitCredCache.Close(), "closing the temp file for cred cache")
@@ -2214,14 +2220,17 @@ func setupCachingCredHelperWithFakeCreds(t *testing.T, orgURL *url.URL) {
 			require.NoError(t, err, "unsetting cred helper")
 		}
 	})
+}
 
+// setInvalidGitCreds injects invalid creds into git cred helpers
+func setInvalidGitCreds(t *testing.T, orgURL *url.URL) {
 	urlWithFakeCreds := *orgURL
 	urlWithFakeCreds.User = url.UserPassword("some-user", "some-token")
 
 	// save the fake / invalid creds
 	cmd := exec.Command("git", "credential", "approve")
 	cmd.Stdin = strings.NewReader(fmt.Sprintf("url=%s\n", urlWithFakeCreds.String()))
-	err = cmd.Run()
+	err := cmd.Run()
 	require.NoError(t, err, "setting up fake creds")
 
 	// ensure the cred helper is set up and returns the fake creds
