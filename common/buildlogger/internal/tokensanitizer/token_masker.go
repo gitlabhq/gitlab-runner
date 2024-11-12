@@ -24,8 +24,15 @@ import (
 )
 
 // https://docs.gitlab.com/ee/security/token_overview.html#token-prefixes
-var DefaultTokenPrefixes = []string{"glpat-", "gloas-", "gldt-", "glrt-", "glcbt-",
-	"glptt-", "glft-", "glimt-", "glagent-", "glsoat-", "glffct-", "_gitlab_session=", "gltok-"}
+func DefaultTokenPrefixes(maskAllDefaultTokens bool) []string {
+	tokenPrefixes := []string{"glpat-"}
+	if maskAllDefaultTokens {
+		tokenPrefixes = append(tokenPrefixes, "gloas-", "gldt-", "glrt-", "glcbt-",
+			"glptt-", "glft-", "glimt-", "glagent-", "glsoat-", "glffct-", "_gitlab_session=", "gltok-")
+	}
+
+	return tokenPrefixes
+}
 
 var (
 	// alphabet is the character set we expect a token to comform to, not all

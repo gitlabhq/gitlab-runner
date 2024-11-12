@@ -87,7 +87,7 @@ func TestTokenMasking(t *testing.T) {
 		t.Run(tn, func(t *testing.T) {
 			buf := new(bytes.Buffer)
 
-			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultTokenPrefixes...)))
+			m := New(internal.NewNopCloser(buf), internal.Unique(append(tc.prefixes, DefaultTokenPrefixes(true)...)))
 
 			parts := bytes.Split([]byte(tc.input), []byte{'|'})
 			for _, part := range parts {
@@ -104,23 +104,24 @@ func TestTokenMasking(t *testing.T) {
 }
 
 func BenchmarkTokenMaskingPerformance(b *testing.B) {
+	prefixes := DefaultTokenPrefixes(true)
 	paragraphs := map[string]struct {
 		input string
 	}{
 		"100K words": {
-			input: generateParagraph(100000, DefaultTokenPrefixes, words),
+			input: generateParagraph(100000, prefixes, words),
 		},
 		"300K words": {
-			input: generateParagraph(300000, DefaultTokenPrefixes, words),
+			input: generateParagraph(300000, prefixes, words),
 		},
 		"800K words": {
-			input: generateParagraph(800000, DefaultTokenPrefixes, words),
+			input: generateParagraph(800000, prefixes, words),
 		},
 		"1.5M words": {
-			input: generateParagraph(1500000, DefaultTokenPrefixes, words),
+			input: generateParagraph(1500000, prefixes, words),
 		},
 		"5M words": {
-			input: generateParagraph(5000000, DefaultTokenPrefixes, words),
+			input: generateParagraph(5000000, prefixes, words),
 		},
 	}
 
@@ -129,19 +130,19 @@ func BenchmarkTokenMaskingPerformance(b *testing.B) {
 		// expected     string
 	}{
 		"one default token": {
-			defaultToken: DefaultTokenPrefixes[:1],
+			defaultToken: prefixes[:1],
 		},
 		"two default tokens": {
-			defaultToken: DefaultTokenPrefixes[:2],
+			defaultToken: prefixes[:2],
 		},
 		"four default tokens": {
-			defaultToken: DefaultTokenPrefixes[:4],
+			defaultToken: prefixes[:4],
 		},
 		"all but one default tokens": {
-			defaultToken: DefaultTokenPrefixes[:len(DefaultTokenPrefixes)-1],
+			defaultToken: prefixes[:len(prefixes)-1],
 		},
 		"all default tokens": {
-			defaultToken: DefaultTokenPrefixes,
+			defaultToken: prefixes,
 		},
 	}
 
@@ -166,12 +167,13 @@ func BenchmarkTokenMaskingPerformance(b *testing.B) {
 }
 
 func BenchmarkTokenMaskingDuration(b *testing.B) {
-	input := generateParagraph(5000000, DefaultTokenPrefixes, words)
+	prefixes := DefaultTokenPrefixes(true)
+	input := generateParagraph(5000000, prefixes, words)
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for n := 0; n < b.N; n++ {
-		m := New(internal.NewNopCloser(io.Discard), internal.Unique(DefaultTokenPrefixes))
+		m := New(internal.NewNopCloser(io.Discard), internal.Unique(prefixes))
 
 		n, err := m.Write([]byte(input))
 		b.SetBytes(int64(n))

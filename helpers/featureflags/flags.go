@@ -45,6 +45,7 @@ const (
 	GitURLsWithoutTokens                 string = "FF_GIT_URLS_WITHOUT_TOKENS"
 	WaitForPodReachable                  string = "FF_WAIT_FOR_POD_TO_BE_REACHABLE"
 	UseNativeSteps                       string = "FF_USE_NATIVE_STEPS"
+	MaskAllDefaultTokens                 string = "FF_MASK_ALL_DEFAULT_TOKENS"
 )
 
 type FeatureFlag struct {
@@ -377,6 +378,12 @@ var flags = []FeatureFlag{
 		Description: "When enabled and when a job is specified using the 'run' keyword, steps are executed using " +
 			"[Native Step Runner Integration](../executors/docker.md#native-step-runner-integration). " +
 			"This applies only to executors that support native steps integration like Docker, Docker Autoscaler, Docker for Windows.",
+	},
+	{
+		Name:         MaskAllDefaultTokens,
+		DefaultValue: true,
+		Deprecated:   false,
+		Description:  "When enabled GitLab Runner will automatically masked all default tokens patterns.",
 	},
 }
 

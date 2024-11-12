@@ -20,9 +20,10 @@ type Trace interface {
 }
 
 type Options struct {
-	MaskPhrases       []string
-	MaskTokenPrefixes []string
-	Timestamping      bool
+	MaskPhrases          []string
+	MaskTokenPrefixes    []string
+	Timestamping         bool
+	MaskAllDefaultTokens bool
 }
 
 const (
@@ -65,7 +66,9 @@ func New(log Trace, entry *logrus.Entry, opts Options) Logger {
 	l := Logger{mu: new(sync.Mutex)}
 
 	l.maskPhrases = internal.Unique(opts.MaskPhrases)
-	l.maskTokenPrefixes = internal.Unique(append(opts.MaskTokenPrefixes, tokensanitizer.DefaultTokenPrefixes...))
+	l.maskTokenPrefixes = internal.Unique(
+		append(opts.MaskTokenPrefixes, tokensanitizer.DefaultTokenPrefixes(opts.MaskAllDefaultTokens)...),
+	)
 	l.timestamping = opts.Timestamping
 
 	if log != nil {
