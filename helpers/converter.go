@@ -3,6 +3,7 @@ package helpers
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 
 	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v2"
@@ -44,7 +45,11 @@ func ToConfigMap(list interface{}) (map[string]interface{}, bool) {
 
 	result := make(map[string]interface{})
 	for k, v := range y {
-		result[k.(string)] = v
+		key, ok := k.(string)
+		if !ok {
+			panic(fmt.Sprintf("failed to coerce config-map key %v to string", k))
+		}
+		result[key] = v
 	}
 
 	return result, true

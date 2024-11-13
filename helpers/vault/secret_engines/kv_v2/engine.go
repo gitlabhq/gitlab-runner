@@ -46,7 +46,11 @@ func (e *engine) Get(path string) (map[string]interface{}, error) {
 		return nil, nil
 	}
 
-	return data["data"].(map[string]interface{}), nil
+	result, ok := data["data"].(map[string]interface{})
+	if !ok {
+		panic("failed to coerce vault data to 'map[string]any'")
+	}
+	return result, nil
 }
 
 func (e *engine) dataPath(p string) string {
