@@ -15,7 +15,7 @@ runner-bin-fips:
 		   -o="out/binaries/$(NAME)-$(GOOS)-$(GOARCH)-fips" \
 		   $(PKG)
 
-go-fips-docker: export GO_VERSION ?= 1.22
+go-fips-docker: export GO_VERSION ?= 1.23
 # BUILD_IMAGE: GO_FIPS_IMAGE: $CI_REGISTRY_IMAGE/go-fips:$GO_FIPS_VERSION
 go-fips-docker: export BUILD_IMAGE ?= $(GO_FIPS_IMAGE)
 go-fips-docker: export GO_FIPS_UBI_VERSION ?= ubi8
@@ -33,7 +33,7 @@ ubi-fips-base-docker:
 	# Building UBI FIPS base Docker image
 	@./ci/build_ubi_fips_base_image
 
-runner-bin-fips-docker: export GO_VERSION ?= 1.22
+runner-bin-fips-docker: export GO_VERSION ?= 1.23
 runner-bin-fips-docker: export GOOS ?= linux
 runner-bin-fips-docker: export GOARCH ?= amd64
 runner-bin-fips-docker: export BUILD_IMAGE ?= go-fips

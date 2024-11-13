@@ -74,7 +74,7 @@ code_quality:
   # Use GOCACHE instead of GOLANGCI_LINT_CACHE
   # to avoid [false lint positives](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2187#note_373008672)
   - .go-cache
-  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:1.59.1-go1.22.7
+  image: registry.gitlab.com/gitlab-org/ci-cd/runner-tools/runner-linters:1.62.0-go1.23.3
   needs: []
   allow_failure: true
   variables:

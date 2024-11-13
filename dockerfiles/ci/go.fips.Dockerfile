@@ -8,7 +8,7 @@ RUN microdnf update -y && \
     microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel tar gzip gcc make git git-lfs && \
     microdnf clean all -y
 
-ARG GO_VERSION=1.22
+ARG GO_VERSION=1.23
 
 RUN curl -LO https://go.dev/dl/go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && \
     tar -C /usr/ -xzf go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz
