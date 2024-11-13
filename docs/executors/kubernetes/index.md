@@ -2158,6 +2158,7 @@ To use only designated namespaces during CI runs, in the `config.toml` file, def
     namespace_overwrite_allowed = "ci-.*"
 ```
 
+<!--
 ## Fault tolerance in Kubernetes clusters
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/36951) in GitLab Runner 17.5.
@@ -2277,3 +2278,4 @@ flowchart LR
   manager ===> |Job logs/status| gitlab[(GitLab)]
   pod ====>|Job logs/status| manager
 ```
+-->
