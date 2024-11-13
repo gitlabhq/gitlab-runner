@@ -842,9 +842,7 @@ func TestGitFetchFlags(t *testing.T) {
 					}
 
 					if useJobTokenFromEnv {
-						expectedCredSection := "credential."
-						mockWriter.EXPECT().Command("git", "config", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-						mockWriter.EXPECT().Command("git", "config", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+						expectGitCredHelperSetup(mockWriter, "")
 					}
 
 					mockWriter.EXPECT().Cd(mock.Anything).Once()
@@ -948,11 +946,9 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 							tc.ExpectedGitForEachFlags...,
 						)
 					}
-					expectedGitInsteadOfForEachArgsFn := func() []interface{} {
-						return append(
-							[]interface{}{"-c", insteadOf, "submodule", "foreach"},
-							tc.ExpectedGitForEachFlags...,
-						)
+					gitSubArgs := []any{"-c", insteadOf}
+					if useJobTokenFromEnv {
+						gitSubArgs = []any{"-c", "include.path=/some/path/cred-helper.conf"}
 					}
 
 					mockWriter.EXPECT().Noticef(tc.ExpectedNoticeArgs[0], tc.ExpectedNoticeArgs[1:]...).Once()
@@ -960,20 +956,16 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					mockWriter.EXPECT().Command("git", append([]any{"submodule", "sync"}, tc.ExpectedGitForEachFlags...)...).Times(3)
 
 					if useJobTokenFromEnv {
-						mockWriter.EXPECT().IfCmdWithOutput("git", append([]any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...).Once()
-					} else {
-						mockWriter.EXPECT().IfCmdWithOutput("git", append([]any{"-c", insteadOf, "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...).Once()
+						mockWriter.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
 					}
+
+					mockWriter.EXPECT().IfCmdWithOutput("git", append(gitSubArgs, append([]any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...)...).Once()
 
 					mockWriter.EXPECT().Noticef("Updated submodules").Once()
 					mockWriter.EXPECT().Else().Once()
 					mockWriter.EXPECT().Warningf("Updating submodules failed. Retrying...").Once()
 
-					if useJobTokenFromEnv {
-						mockWriter.EXPECT().Command("git", append([]any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...)
-					} else {
-						mockWriter.EXPECT().Command("git", append([]any{"-c", insteadOf, "submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...)
-					}
+					mockWriter.EXPECT().Command("git", append(gitSubArgs, append([]any{"submodule", "update", "--init"}, tc.ExpectedGitUpdateFlags...)...)...)
 
 					mockWriter.EXPECT().EndIf().Once()
 					cleanCmd := mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git clean "+strings.Join(tc.ExpectedGitCleanFlags, " "))...).Once()
@@ -982,11 +974,7 @@ func TestAbstractShell_writeSubmoduleUpdateCmd(t *testing.T) {
 					}).Twice()
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
 
-					if useJobTokenFromEnv {
-						mockWriter.EXPECT().Command("git", append(expectedGitForEachArgsFn(), "git lfs pull")...).Once()
-					} else {
-						mockWriter.EXPECT().Command("git", append(expectedGitInsteadOfForEachArgsFn(), "git lfs pull")...).Once()
-					}
+					mockWriter.EXPECT().Command("git", append(append(gitSubArgs, expectedGitForEachArgsFn()...), "git lfs pull")...).Once()
 
 					mockWriter.EXPECT().EndIf().Once()
 					err := shell.writeSubmoduleUpdateCmd(
@@ -1613,25 +1601,26 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 					mockWriter := NewMockShellWriter(t)
 
+					gitSubArgs := []string{"-c", insteadOf}
+					if useJobTokenFromEnv {
+						gitSubArgs = []string{"-c", "include.path=/some/file.conf"}
+					}
+
 					mockWriter.EXPECT().Noticef("Updating/initializing submodules...").Once()
 					mockWriter.EXPECT().Command("git", "submodule", "init").Once()
 					mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "sync")...).Times(3)
 
 					if useJobTokenFromEnv {
-						mockWriter.EXPECT().IfCmdWithOutput("git", submoduleCommand(test.paths, "submodule", "update", "--init")...).Once()
-					} else {
-						mockWriter.EXPECT().IfCmdWithOutput("git", submoduleCommand(test.paths, "-c", insteadOf, "submodule", "update", "--init")...).Once()
+						mockWriter.EXPECT().TmpFile(mock.Anything).Return("/some/file.conf").Once()
 					}
+
+					mockWriter.EXPECT().IfCmdWithOutput("git", submoduleCommand(test.paths, append(gitSubArgs, "submodule", "update", "--init")...)...).Once()
 
 					mockWriter.EXPECT().Noticef("Updated submodules").Once()
 					mockWriter.EXPECT().Else().Once()
 					mockWriter.EXPECT().Warningf("Updating submodules failed. Retrying...").Once()
 
-					if useJobTokenFromEnv {
-						mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "submodule", "update", "--init")...).Once()
-					} else {
-						mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, "-c", insteadOf, "submodule", "update", "--init")...).Once()
-					}
+					mockWriter.EXPECT().Command("git", submoduleCommand(test.paths, append(gitSubArgs, "submodule", "update", "--init")...)...).Once()
 
 					mockWriter.EXPECT().EndIf().Once()
 
@@ -1642,11 +1631,12 @@ func TestAbstractShell_writeSubmoduleUpdateCmdPath(t *testing.T) {
 
 					mockWriter.EXPECT().IfCmd("git", "lfs", "version").Once()
 
-					if useJobTokenFromEnv {
-						mockWriter.EXPECT().Command("git", "submodule", "foreach", "git lfs pull").Once()
-					} else {
-						mockWriter.EXPECT().Command("git", "-c", insteadOf, "submodule", "foreach", "git lfs pull").Once()
+					gitLfsArgs := []any{}
+					for _, s := range gitSubArgs {
+						gitLfsArgs = append(gitLfsArgs, s)
 					}
+					gitLfsArgs = append(gitLfsArgs, "submodule", "foreach", "git lfs pull")
+					mockWriter.EXPECT().Command("git", gitLfsArgs...).Once()
 
 					mockWriter.EXPECT().EndIf().Once()
 
@@ -2515,7 +2505,7 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 									{Key: "GIT_CHECKOUT", Value: "false"},
 								},
 								GitInfo: common.GitInfo{
-									RepoURL: "https://repo-url",
+									RepoURL: "https://repo-url/some/repo",
 								},
 								Hooks: common.Hooks{
 									{
@@ -2567,15 +2557,13 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 					m.EXPECT().Cd("build-dir").Once()
 
 					if useJobTokenFromEnv {
-						expectedCredSection := "credential.https://repo-url"
-						m.EXPECT().Command("git", "config", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
-						m.EXPECT().Command("git", "config", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+						expectGitCredHelperSetup(m, "https://repo-url")
 					}
 
-					m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url").Once()
+					m.EXPECT().IfCmd("git", "remote", "add", "origin", "https://repo-url/some/repo").Once()
 					m.EXPECT().Noticef("Created fresh repository.").Once()
 					m.EXPECT().Else().Once()
-					m.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url").Once()
+					m.EXPECT().Command("git", "remote", "set-url", "origin", "https://repo-url/some/repo").Once()
 					m.EXPECT().EndIf().Once()
 
 					m.EXPECT().IfFile(".git/shallow").Once()
@@ -2604,6 +2592,18 @@ func TestAbstractShell_writeGetSourcesScript_scriptHooks(t *testing.T) {
 			}
 		})
 	}
+}
+
+func expectGitCredHelperSetup(shellWriter *MockShellWriter, remoteURL string) {
+	expectedCredSection := "credential." + remoteURL
+
+	shellWriter.EXPECT().TmpFile(mock.Anything).Return("/some/path/cred-helper.conf").Once()
+
+	shellWriter.EXPECT().CommandWithStdin("url="+remoteURL, "git", "credential", "reject").Once()
+
+	shellWriter.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".username", mock.AnythingOfType("string")).Once()
+	shellWriter.EXPECT().Command("git", "config", "-f", "/some/path/cred-helper.conf", expectedCredSection+".helper", mock.MatchedBy(startWithBang)).Once()
+	shellWriter.EXPECT().Command("git", "config", "include.path", "/some/path/cred-helper.conf")
 }
 
 func startWithBang(val string) bool {

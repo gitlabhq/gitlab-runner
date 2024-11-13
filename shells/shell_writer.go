@@ -10,6 +10,7 @@ type ShellWriter interface {
 	Variable(variable common.JobVariable)
 	SourceEnv(pathname string)
 	Command(command string, arguments ...string)
+	CommandWithStdin(stdin, command string, arguments ...string)
 	CommandArgExpand(command string, arguments ...string)
 	Line(text string)
 	CheckForErrors()

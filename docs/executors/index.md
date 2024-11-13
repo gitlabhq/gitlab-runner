@@ -36,12 +36,17 @@ new ones. For more information, see [Contributing new executors](https://gitlab.
 ## Prerequisites for non-Docker executors
 
 Executors that do not [rely on a helper image](../configuration/advanced-configuration.md#helper-image) require a Git
-installation on the target machine and in the `PATH`. Always use the [latest available version of Git](https://git-scm.com/download/).
+installation on the target machine and in the `PATH`. Always use the [latest available version of Git](https://git-scm.com/downloads).
 
 GitLab Runner uses the `git lfs` command if [Git LFS](https://git-lfs.com/) is installed
 on the target machine. Ensure Git LFS is up to date on any systems where GitLab Runner uses these executors.
 
 Be sure to initialize Git LFS for the user that executes GitLab Runner commands with `git lfs install`. You can initialize Git LFS on an entire system with `git lfs install --system`.
+
+When you enable [FF_GIT_URLS_WITHOUT_TOKENS](../configuration/feature-flags.md), do not cache Git
+credentials across builds, for example, by using Git credential helpers. If you cache credentials,
+the [`CI_JOB_TOKEN`](https://docs.gitlab.com/ee/ci/jobs/ci_job_token.html) might be shared between
+concurrent or consecutive builds, which might cause authentication errors and failed builds.
 
 ## Selecting the executor
 

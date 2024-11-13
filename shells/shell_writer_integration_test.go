@@ -201,3 +201,28 @@ func TestCommandArgumentExpansion(t *testing.T) {
 		}
 	})
 }
+
+func TestCommandWithStdin(t *testing.T) {
+	// We need a command which is available across OSs, behaves identical across OSs, consumes input from stdin, and gives
+	// us a way to assert if the input made it to the command correctly.
+	// "git credential fill" is one such command, but it could be any other command which has above mentioned properties.
+
+	const (
+		input          = "https://some-user:some-pass@some-host/repo"
+		expectedOutput = `protocol=https
+host=some-host
+path=repo
+username=some-user
+password=some-pass
+`
+	)
+
+	shellstest.OnEachShellWithWriter(t, func(t *testing.T, shell string, w shells.ShellWriter) {
+		tmpDir := t.TempDir()
+
+		w.CommandWithStdin("url="+input, "git", "credential", "fill")
+
+		output := runShell(t, shell, tmpDir, w)
+		assert.Equal(t, expectedOutput, output)
+	})
+}

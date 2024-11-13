@@ -29,20 +29,23 @@ func TestGitCredHelper(t *testing.T) {
 		tests := map[string]struct {
 			jobToken       string
 			gitCallArg     string
-			expectedOutput string
+			expectedStdout string
 		}{
 			"no git arg": {
 				gitCallArg:     "",
-				expectedOutput: "",
+				expectedStdout: "",
 			},
 			"happy path": {
 				jobToken:       "blipp blupp",
 				gitCallArg:     "get",
-				expectedOutput: "password=blipp blupp" + eol,
+				expectedStdout: "password=blipp blupp\n",
 			},
 			"env var not set": {
 				gitCallArg:     "get",
-				expectedOutput: "password=" + eol,
+				expectedStdout: "password=\n",
+			},
+			"everything else is a no-op": {
+				gitCallArg: "foobar",
 			},
 		}
 
@@ -50,6 +53,7 @@ func TestGitCredHelper(t *testing.T) {
 			t.Run(tn, func(t *testing.T) {
 				credHelperCmd := shell.GetGitCredHelperCommand()
 				callArgs := prepCallArgs(t, shellName, credHelperCmd, tc.gitCallArg)
+				stdout := &bytes.Buffer{}
 				stderr := &bytes.Buffer{}
 
 				env := os.Environ()
@@ -60,11 +64,13 @@ func TestGitCredHelper(t *testing.T) {
 				cmd := exec.Command(shellName, callArgs...)
 				cmd.Env = env
 				cmd.Stderr = stderr
+				cmd.Stdout = stdout
 
-				output, err := cmd.Output()
-				require.NoError(t, err, "running command failed; stderr: %s", stderr)
+				err := cmd.Run()
+				require.NoError(t, err, "running command failed\n  stdout: %s\n  stderr: %s", stdout, stderr)
 
-				assert.Equal(t, tc.expectedOutput, string(output))
+				assert.Equal(t, tc.expectedStdout, stdout.String())
+				assert.Empty(t, stderr.String(), "expected no errors on stderr")
 			})
 		}
 	})
@@ -89,10 +95,3 @@ func prepCallArgs(t *testing.T, shellName, command, arg string) []string {
 
 	return append(args, command)
 }
-
-var eol = func() string {
-	if os.PathSeparator == '/' {
-		return "\n"
-	}
-	return "\r\n"
-}()

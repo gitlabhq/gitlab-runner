@@ -15,6 +15,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/tls"
+	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 )
 
 // When umask is disabled for the Kubernetes executor,
@@ -24,6 +25,8 @@ import (
 const BuildUiGidFile = ".giltab-build-uid-gid"
 
 const StartupProbeFile = ".gitlab-startup-marker"
+
+const credHelperConfFile = "cred-helper.conf"
 
 var errUnknownGitStrategy = errors.New("unknown GIT_STRATEGY")
 
@@ -338,6 +341,16 @@ func (b *AbstractShell) writeGetSourcesScript(_ context.Context, w ShellWriter, 
 	return nil
 }
 
+// credConfigFile returns the file path were we expect configuration for a credential helper setup. If an empty string
+// is returned, we are not expected to neither setup a cred helper nor use one.
+func (b *AbstractShell) credConfigFile(build *common.Build, w ShellWriter) string {
+	if !build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
+		return ""
+	}
+
+	return w.TmpFile(credHelperConfFile)
+}
+
 func (b *AbstractShell) writeClearWorktreeScript(_ context.Context, w ShellWriter, info common.ShellScriptInfo) error {
 	// Sometimes repos can get into a state where `git clean` isn't enough. A simple
 	// example is if you have an untracked file in an uninitialised submodule.
@@ -386,21 +399,12 @@ func (b *AbstractShell) writeExports(w ShellWriter, info common.ShellScriptInfo)
 }
 
 func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, where []string) {
-	repoURLString, err := build.GetRemoteURL()
+	host, err := b.getRemoteHost(build)
 	if err != nil {
-		w.Warningf("git SSL config: Can't get repository URL. %s", err)
+		w.Warningf("git SSL config: Can't get repository host. %w", err)
 		return
 	}
 
-	repoURL, err := url.Parse(repoURLString)
-	if err != nil {
-		w.Warningf("git SSL config: Can't parse repository URL. %s", err)
-		return
-	}
-
-	repoURL.Path = ""
-	repoURL.User = nil
-	host := repoURL.String()
 	variables := build.GetCITLSVariables()
 	args := append([]string{"config"}, where...)
 
@@ -416,6 +420,22 @@ func (b *AbstractShell) writeGitSSLConfig(w ShellWriter, build *common.Build, wh
 		key := fmt.Sprintf("http.%s.%s", host, config)
 		w.CommandArgExpand("git", append(args, key, w.EnvVariableKey(variable))...)
 	}
+}
+
+// getRemoteHost gets the remote URL of the build, but removes the path and auth data; Thus leaving us with only the
+// host name and scheme.
+func (b *AbstractShell) getRemoteHost(build *common.Build) (string, error) {
+	remoteURL, err := build.GetRemoteURL()
+	if err != nil {
+		return "", fmt.Errorf("getting remote URL: %w", err)
+	}
+
+	u, err := url.Parse(remoteURL)
+	if err != nil {
+		return "", fmt.Errorf("parsing remote URL: %w", err)
+	}
+
+	return url_helpers.OnlySchemeAndHost(u).String(), nil
 }
 
 func (b *AbstractShell) writeCloneFetchCmds(w ShellWriter, info common.ShellScriptInfo) error {
@@ -553,8 +573,8 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 		return fmt.Errorf("writing fetch commands: %w", err)
 	}
 
-	if build.IsFeatureFlagOn(featureflags.GitURLsWithoutTokens) {
-		err := b.setupGitCredHelper(w, build)
+	if credConfigFile := b.credConfigFile(build, w); credConfigFile != "" {
+		err := b.configureGitCredHelper(w, build, credConfigFile)
 		if err != nil {
 			return fmt.Errorf("writing fetch commands: %w", err)
 		}
@@ -593,7 +613,7 @@ func (b *AbstractShell) writeRefspecFetchCmd(w ShellWriter, build *common.Build,
 	return nil
 }
 
-func (b *AbstractShell) setupGitCredHelper(w ShellWriter, build *common.Build) error {
+func (b *AbstractShell) configureGitCredHelper(w ShellWriter, build *common.Build, credConfigFile string) error {
 	shellName := build.Runner.Shell
 	if shellName == "" {
 		// GetDefaultShell will panic, if it can't find a default shell
@@ -605,15 +625,33 @@ func (b *AbstractShell) setupGitCredHelper(w ShellWriter, build *common.Build) e
 		return fmt.Errorf("unknown shell %q", shellName)
 	}
 
-	remoteURL, err := build.GetRemoteURL()
+	remoteHost, err := b.getRemoteHost(build)
 	if err != nil {
-		return fmt.Errorf("setting up git credential helper: %w", err)
+		return fmt.Errorf("getting remote host: %w", err)
 	}
 
+	// Scenario: shell executor & git-credential-manager aka. GCM
+	//
+	// When GCM is at play, and it's configured in the system scope (default for wingit), then it might cache the
+	// credentials from the last pipeline run, ie. the CI_JOB_TOKEN. This token is not valid anymore. Same might be true
+	// for other globally installed credential helpers.
+	//
+	// Thus we clear the cache here.
+	//
+	// This is, strictly speaking, only needed if some git credential helper caches creds across runs, but should not do
+	// harm if nothing is caching creds or the cache is empty.
+	//
+	// `git credential reject` will call all credential helpers with "erase", and therefor prune the cache for this URL
+	// everywhere.
+	w.CommandWithStdin("url="+remoteHost, "git", "credential", "reject")
+
 	credHelperCommand := "!" + shell.GetGitCredHelperCommand()
-	credSection := "credential." + remoteURL
-	w.Command("git", "config", credSection+".username", "gitlab-ci-token")
-	w.Command("git", "config", credSection+".helper", credHelperCommand)
+	credSection := "credential." + remoteHost
+
+	w.Command("git", "config", "-f", credConfigFile, credSection+".username", "gitlab-ci-token")
+	w.Command("git", "config", "-f", credConfigFile, credSection+".helper", credHelperCommand)
+
+	w.Command("git", "config", "include.path", credConfigFile)
 
 	return nil
 }
@@ -704,6 +742,10 @@ func (b *AbstractShell) writeSubmoduleUpdateCmd(w ShellWriter, build *common.Bui
 	gitURLArgs, err := build.GetURLInsteadOfArgs()
 	if err != nil {
 		return fmt.Errorf("writing submodule update commands: %w", err)
+	}
+
+	if credConfigFile := b.credConfigFile(build, w); credConfigFile != "" {
+		gitURLArgs = append(gitURLArgs, "-c", "include.path="+credConfigFile)
 	}
 
 	updateArgs := append(gitURLArgs, "submodule", "update", "--init") //nolint:gocritic

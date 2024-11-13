@@ -274,6 +274,34 @@ func (p *PsWriter) Command(command string, arguments ...string) {
 	p.checkErrorLevel()
 }
 
+// CommandWithStdin runs command with arguments and provides stdin to standard input stream of the command
+func (p *PsWriter) CommandWithStdin(stdin, command string, arguments ...string) {
+	// This mimics something like `echo "foobar" | blipp.exe` for pwsh/powershell, passing in stdin _as is_ to the
+	// command. It does not mess with the encoding, BOM, ...
+	// The unfortunate side-effect is, that we use a temporary file for this.
+
+	mainCommand := `Start-Process -NoNewWindow -RedirectStandardInput $tmpFile -Wait -FilePath ` + psSingleQuote(command)
+	if len(arguments) > 0 {
+		for i, arg := range arguments {
+			arguments[i] = psSingleQuote(arg)
+		}
+		mainCommand += " -ArgumentList " + strings.Join(arguments, ",")
+	}
+
+	block := strings.Join([]string{
+		`try {`,
+		`$tmpFile = Get-Item ([System.IO.Path]::GetTempFilename())`,
+		fmt.Sprintf(`[System.IO.File]::WriteAllText($tmpFile, %s)`, psSingleQuote(stdin)),
+		mainCommand,
+		`} finally {`,
+		`if ($tmpFile) { Remove-Item -Force -Path $tmpFile }`,
+		`}`,
+	}, p.EOL)
+
+	p.Line(block)
+	p.CheckForErrors()
+}
+
 func (p *PsWriter) CommandArgExpand(command string, arguments ...string) {
 	p.Line(p.buildCommand(psDoubleQuote, command, arguments...))
 	p.checkErrorLevel()
@@ -594,13 +622,13 @@ func (b *PowerShell) GetName() string {
 	return b.Shell
 }
 
-const powershellGitCredHelperScript = `function get{ echo "password=${env:CI_JOB_TOKEN}" } ; `
+const powershellGitCredHelperScript = `function f([string]$cmd){ if ($cmd.equals("get")) { Write-Host -NoNewline "password=${env:CI_JOB_TOKEN}` + "`n" + `" } }; f`
 
 // GetGitCredHelperCommand returns a command that can be used e.g. in a git config as a credential helper.
 //
 // This returns something like:
 //
-//	pwsh -NoProfile ... -Command ''function get { ... } ; ''
+//	pwsh -NoProfile ... -Command ''function f{...}; ...; f''
 //
 // as a single string.
 //
@@ -609,26 +637,35 @@ const powershellGitCredHelperScript = `function get{ echo "password=${env:CI_JOB
 // this to be a single argument (to `git config`) and not split into multiple arguments. Now that we know that the
 // result will be single-quoted again, we need to escape any "inner" single-quotes, and we do so doubling them here.
 //
-// In the end, for a successful configuration, we need the content of the git config to look something like:
+// In the end, for a successful configuration, we need the content of the git config to literally look something like:
 //
-//	[credential."https://some.tld"]
-//		username = "some-user"
-//		helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function get{ echo \"password=${env:CI_JOB_TOKEN}\" } ; '"
+//	[credential "https://gitlab.com"]
+//		username = gitlab-ci-token
+//		helper = "!pwsh -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
 //
-// The resulting commandline runs the configured shell (pwsh/powershell) with the default args we use for other shell
-// invocations. It then runs the inner script as is, with any arguments from git "tagged on", e.g. ' get'; this is how
-// git passes in args.
-// We can't use -CommandWithArgs, because this is not supported by powershell, but pwsh only.
-// Thus, if git calls the helper with the 'get' arguments, that results in the get function to be called; if git calls
-// the helper with no argument, the whole command becomes a no-op.
+// or
+//
+//	[credential "https://gitlab.com"]
+//		username = gitlab-ci-token
+//		helper = "!powershell -NoProfile -NoLogo -InputFormat text -OutputFormat text -NonInteractive -ExecutionPolicy Bypass -Command 'function f([string]$cmd){ if ($cmd.equals(\"get\")) { Write-Host -NoNewline \"password=${env:CI_JOB_TOKEN}`n\" } }; f'"
 //
 // More docs about custom git cred helpers can be found at https://git-scm.com/docs/gitcredentials#_custom_helpers .
 func (b *PowerShell) GetGitCredHelperCommand() string {
+	shell := b.GetName()
+	script := powershellGitCredHelperScript
+
+	// Some special case for powershell on windows and weird quoting rules thereof.
+	// To be honest, I have no clue what's going on there, if this is a powershell thing, or if the shell writer
+	// interferes, or both; but it seems to be necessary and to work.
+	if shell == SNPowershell && runtime.GOOS == OSWindows {
+		script = strings.ReplaceAll(script, `"`, `\"`)
+	}
+
 	return fmt.Sprintf(
 		"%s %s ''%s''",
-		b.GetName(),
+		shell,
 		strings.Join(append(defaultPowershellFlags, "-Command"), " "),
-		powershellGitCredHelperScript,
+		script,
 	)
 }
 

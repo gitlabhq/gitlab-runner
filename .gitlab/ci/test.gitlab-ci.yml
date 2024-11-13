@@ -159,9 +159,14 @@ unit test with race:
       ./... \
       -- -ldflags "$(make print_ldflags)" -timeout=90m
 
+.with outer token:
+  variables:
+    OUTER_CI_JOB_TOKEN: ${CI_JOB_TOKEN}
+
 integration test:
   extends:
   - .linux test
+  - .with outer token
   needs:
   - 'clone test repo'
   - 'helper images'
@@ -257,6 +262,7 @@ fuzz variable mask:
 .windows integration test:
   extends:
   - .windows test
+  - .with outer token
   parallel: 4
   needs:
   - 'clone test repo'
