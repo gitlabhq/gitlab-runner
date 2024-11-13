@@ -19,8 +19,7 @@ ARG GO_RELEASE_VERSION=${GO_VERSION}
 ARG GO_FIPS_VERSION_SUFFIX=${GO_FIPS_VERSION_SUFFIX}
 RUN git clone \
     https://github.com/golang-fips/go \
-    --branch go${GO_RELEASE_VERSION}${GO_FIPS_VERSION_SUFFIX} \
-    --single-branch \
+    --branch go-${GO_RELEASE_VERSION}${GO_FIPS_VERSION_SUFFIX} \
     --depth 1 \
     /tmp/go
 
