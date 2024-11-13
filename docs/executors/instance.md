@@ -10,11 +10,11 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 > - [Changed](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29404) to [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta) in GitLab Runner 16.6.
 > - [Generally available](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/29221) in GitLab Runner 17.1.
 
-The instance executor is an autoscale-enabled executor that creates instances on-demand to accommodate
+The instance executor is an autoscale-enabled executor that creates instances on demand to accommodate
 the expected volume of jobs that the runner manager processes.
 
 You can use the instance executor when jobs need full access to the host instance, operating system, and
-attached devices. The instance executor can also be configured to accommodate single and multi-tenant jobs
+attached devices. The instance executor can also be configured to accommodate single-tenant and multi-tenant jobs
 with various levels of isolation and security.
 
 ## Nested virtualization
