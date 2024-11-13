@@ -13,12 +13,12 @@ info: To determine the technical writer assigned to the Stage/Group associated w
 Before you use the Docker Autoscaler executor, see the [feedback issue](https://gitlab.com/gitlab-org/gitlab/-/issues/408131) about
 GitLab Runner autoscaling for a list of known issues.
 
-The Docker Autoscaler executor is an autoscale-enabled Docker executor that creates instances on-demand to
+The Docker Autoscaler executor is an autoscale-enabled Docker executor that creates instances on demand to
 accommodate the jobs that the runner manager processes. It wraps the [Docker executor](docker.md) so that all
 Docker executor options and features are supported.
 
 The Docker Autoscaler uses [fleeting plugins](https://gitlab.com/gitlab-org/fleeting/fleeting) to autoscale.
-_Fleeting_ is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
+Fleeting is an abstraction for a group of autoscaled instances, which uses plugins that support cloud providers,
 like Google Cloud, AWS, and Azure.
 
 ## Install a fleeting plugin
