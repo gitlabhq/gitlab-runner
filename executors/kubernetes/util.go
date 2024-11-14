@@ -298,7 +298,7 @@ func waitForPodRunning(
 	return api.PodUnknown, errors.New("timed out waiting for pod to start")
 }
 
-func getPodLog(client kubernetes.Interface, pod *api.Pod) error {
+func getPodLog(ctx context.Context, client kubernetes.Interface, pod *api.Pod) error {
 	count := int64(10)
 	podLogOptions := api.PodLogOptions{
 		Container: "helper",
@@ -309,7 +309,6 @@ func getPodLog(client kubernetes.Interface, pod *api.Pod) error {
 	//nolint:gocritic
 	// kubeAPI: pods/log, get, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true
 	req := client.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOptions)
-	ctx := context.TODO()
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to open log stream for %s: %v", pod.Name, err)
@@ -319,11 +318,11 @@ func getPodLog(client kubernetes.Interface, pod *api.Pod) error {
 	return nil
 }
 
-func triggerPodAttachCheck(c kubernetes.Interface, pod *api.Pod) <-chan error {
+func triggerPodReachableCheck(ctx context.Context, c kubernetes.Interface, pod *api.Pod) <-chan error {
 	errc := make(chan error)
 	go func() {
 		defer close(errc)
-		errc <- getPodLog(c, pod)
+		errc <- getPodLog(ctx, c, pod)
 	}()
 	return errc
 }
@@ -338,7 +337,7 @@ func WaitForPodReachable(
 	pollAttempts := config.GetPollAttempts()
 	for i := 0; i <= pollAttempts; i++ {
 		select {
-		case r := <-triggerPodAttachCheck(c, pod):
+		case r := <-triggerPodReachableCheck(ctx, c, pod):
 			if r != nil {
 				time.Sleep(time.Duration(pollInterval) * time.Second)
 				continue
