@@ -200,7 +200,7 @@ func TestGoCloudURL(t *testing.T) {
 				BucketLocation: "custom-location",
 				UploadRoleARN:  roleARN,
 			},
-			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fcustom.s3.endpoint.com&hostname_immutable=true&region=custom-location",
+			expected: "s3://custom-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fcustom.s3.endpoint.com&hostname_immutable=true&region=custom-location&use_path_style=true",
 		},
 		"path style": {
 			config: &common.CacheS3Config{
@@ -210,7 +210,7 @@ func TestGoCloudURL(t *testing.T) {
 				PathStyle:      &enabled,
 				UploadRoleARN:  roleARN,
 			},
-			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2",
+			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2&use_path_style=true",
 		},
 		"HTTP and path style": {
 			config: &common.CacheS3Config{
@@ -221,7 +221,17 @@ func TestGoCloudURL(t *testing.T) {
 				PathStyle:      &enabled,
 				UploadRoleARN:  roleARN,
 			},
-			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=http%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2",
+			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=http%3A%2F%2Fminio.example.com%3A8080&hostname_immutable=true&region=us-west-2&use_path_style=true",
+		},
+		"S3 regional endpoint and path style": {
+			config: &common.CacheS3Config{
+				ServerAddress:  "eu-north-1.s3.amazon.aws.com:443",
+				BucketName:     "path-style-bucket",
+				BucketLocation: "eu-north-1",
+				PathStyle:      &enabled,
+				UploadRoleARN:  roleARN,
+			},
+			expected: "s3://path-style-bucket/key?awssdk=v2&dualstack=true&endpoint=https%3A%2F%2Feu-north-1.s3.amazon.aws.com&hostname_immutable=true&region=eu-north-1&use_path_style=true",
 		},
 		"dual stack disabled": {
 			config: &common.CacheS3Config{
