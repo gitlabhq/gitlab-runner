@@ -47,7 +47,7 @@ These settings are global. They apply to all runners.
 | `log_format`       | Specifies the log format. Options are `runner`, `text`, and `json`. This setting has lower priority than the format set by command-line argument `--log-format`. The default value is `runner`, which contains ANSI escape codes for coloring. |
 | `check_interval`   | Defines the interval length, in seconds, between the runner checking for new jobs. The default value is `3`. If set to `0` or lower, the default value is used. |
 | `sentry_dsn`       | Enables tracking of all system level errors to Sentry. |
-| `connection_max_age` | The maximum duration a TLS keepalive connection to the GitLab server should remain open before reconnecting. The default value is `15m` for 15 minutes. If set to `0` or lower, the connection will persist as long as possible. |
+| `connection_max_age` | The maximum duration a TLS keepalive connection to the GitLab server should remain open before reconnecting. The default value is `15m` for 15 minutes. If set to `0` or lower, the connection persists as long as possible. |
 | `listen_address`   | Defines an address (`<host>:<port>`) the Prometheus metrics HTTP server should listen on. |
 | `shutdown_timeout` | Number of seconds until the [forceful shutdown operation](../commands/index.md#signals) times out and exits the process. The default value is `30`. If set to `0` or lower, the default value is used. |
 
@@ -55,7 +55,7 @@ Here's a configuration example:
 
 ```toml
 
-# Example `config.toml` file 
+# Example `config.toml` file
 
 concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file
 log_level = "warning"
@@ -147,7 +147,7 @@ The following example has `check_interval` of 10 seconds and two `[[runners]]` s
 Here's a `check_interval` configuration example:
 
 ```toml
-# Example `config.toml` file 
+# Example `config.toml` file
 
 concurrent = 100 # A global setting for job concurrency that applies to all runner sections defined in this `config.toml` file.
 log_level = "warning"
@@ -227,31 +227,31 @@ adding `-p 8093:8093` to your [`docker run` command](../install/docker.md).
 
 Each `[[runners]]` section defines one runner.
 
-| Setting                    | Description                                                                                                                                                                                                                                                                 |
-|----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`                     | The runner's description. Informational only.                                                                                                                                                                                                                               |
-| `url`                      | GitLab instance URL.                                                                                                                                                                                                                                                        |
-| `token`                    | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens).                                                              |
-| `tls-ca-file`              | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md).                                                                                             |
-| `tls-cert-file`            | When using HTTPS, file that contains the certificate to authenticate with the peer.                                                                                                                                                                                         |
-| `tls-key-file`             | When using HTTPS, file that contains the private key to authenticate with the peer.                                                                                                                                                                                         |
+| Setting                    | Description                                                                                                                                                                                                                                                                                                                                                                                                 |
+|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`                     | The runner's description. Informational only.                                                                                                                                                                                                                                                                                                                                                               |
+| `url`                      | GitLab instance URL.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `token`                    | The runner's authentication token, which is obtained during runner registration. [Not the same as the registration token](https://docs.gitlab.com/ee/api/runners.html#registration-and-authentication-tokens).                                                                                                                                                                                              |
+| `tls-ca-file`              | When using HTTPS, file that contains the certificates to verify the peer. See [Self-signed certificates or custom Certification Authorities documentation](tls-self-signed.md).                                                                                                                                                                                                                             |
+| `tls-cert-file`            | When using HTTPS, file that contains the certificate to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
+| `tls-key-file`             | When using HTTPS, file that contains the private key to authenticate with the peer.                                                                                                                                                                                                                                                                                                                         |
 | `limit`                    | Limit how many jobs can be handled concurrently by this registered runner. `0` (default) means do not limit. View how this setting works with the [Docker Machine](autoscale.md#limit-the-number-of-vms-created-by-the-docker-machine-executor), [Instance](../executors/instance.md), and [Docker Autoscaler](../executors/docker_autoscaler.md#example-aws-autoscaling-for-1-job-per-instance) executors. |
-| `executor`                 | The environment or command processor on the host operating system that the runner uses to run a CI/CD job. For more information, see [executors](../executors/index.md). |
-| `shell`                    | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md).                                                                                                                                                                   |
-| `builds_dir`               | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH.                                                                                                                                         |
-| `cache_dir`                | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter.                                         |
-| `environment`              | Append or overwrite environment variables.                                                                                                                                                                                                                                  |
-| `request_concurrency`      | Limit number of concurrent requests for new jobs from GitLab. Default is `1`.                                                                                                                                                                                               |
-| `output_limit`             | Maximum build log size in kilobytes. Default is `4096` (4MB).                                                                                                                                                                                                               |
-| `pre_get_sources_script`   | Commands to be executed on the runner before updating the Git repository and updating submodules. Use it to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                 |
-| `post_get_sources_script`  | Commands to be executed on the runner after updating the Git repository and updating submodules. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                    |
-| `pre_build_script`         | Commands to be executed on the runner before executing the job. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                   |
-| `post_build_script`        | Commands to be executed on the runner just after executing the job, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                          |
-| `clone_url`                | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                         |
-| `debug_trace_disabled`     | Disables [debug tracing](https://docs.gitlab.com/ee/ci/variables/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                  |
-| `referees`                 | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                            |
-| `unhealthy_requests_limit` | The number of `unhealthy` responses to new job requests after which a runner worker will be disabled.                                                                                                                                                                       |
-| `unhealthy_interval`       | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like '3600s', '1h30min' etc.                                                                                                                                   |
+| `executor`                 | The environment or command processor on the host operating system that the runner uses to run a CI/CD job. For more information, see [executors](../executors/index.md).                                                                                                                                                                                                                                    |
+| `shell`                    | Name of shell to generate the script. Default value is [platform dependent](../shells/index.md).                                                                                                                                                                                                                                                                                                            |
+| `builds_dir`               | Absolute path to a directory where builds are stored in the context of the selected executor. For example, locally, Docker, or SSH.                                                                                                                                                                                                                                                                         |
+| `cache_dir`                | Absolute path to a directory where build caches are stored in context of selected executor. For example, locally, Docker, or SSH. If the `docker` executor is used, this directory needs to be included in its `volumes` parameter.                                                                                                                                                                         |
+| `environment`              | Append or overwrite environment variables.                                                                                                                                                                                                                                                                                                                                                                  |
+| `request_concurrency`      | Limit number of concurrent requests for new jobs from GitLab. Default is `1`.                                                                                                                                                                                                                                                                                                                               |
+| `output_limit`             | Maximum build log size in kilobytes. Default is `4096` (4 MB).                                                                                                                                                                                                                                                                                                                                              |
+| `pre_get_sources_script`   | Commands to be executed on the runner before updating the Git repository and updating submodules. Use it to adjust the Git client configuration first, for example. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                 |
+| `post_get_sources_script`  | Commands to be executed on the runner after updating the Git repository and updating submodules. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                                                                                    |
+| `pre_build_script`         | Commands to be executed on the runner before executing the job. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                                                                                                                     |
+| `post_build_script`        | Commands to be executed on the runner just after executing the job, but before executing `after_script`. To insert multiple commands, use a (triple-quoted) multi-line string or `\n` character.                                                                                                                                                                                                            |
+| `clone_url`                | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                                                                                                                                                                                                                                                                                                         |
+| `debug_trace_disabled`     | Disables [debug tracing](https://docs.gitlab.com/ee/ci/variables/#enable-debug-logging). When set to `true`, the debug log (trace) remains disabled even if `CI_DEBUG_TRACE` is set to `true`.                                                                                                                                                                                                              |
+| `referees`                 | Extra job monitoring workers that pass their results as job artifacts to GitLab.                                                                                                                                                                                                                                                                                                                            |
+| `unhealthy_requests_limit` | The number of `unhealthy` responses to new job requests after which a runner worker is disabled.                                                                                                                                                                                                                                                                                                       |
+| `unhealthy_interval`       | Duration that a runner worker is disabled for after it exceeds the unhealthy requests limit. Supports syntax like '3600 s', '1 h 30 min' etc.                                                                                                                                                                                                                                                                   |
 
 Example:
 
@@ -304,14 +304,14 @@ To modify [Git LFS](https://docs.gitlab.com/ee/topics/git/lfs/) endpoints, set `
 
 ### How `unhealthy_requests_limit` and `unhealthy_interval` works
 
-When a GitLab instance is unavailable for an extended period of time (for example, during a
-version upgrade), the runners configured for that instance become idle and
+When a GitLab instance is unavailable for a long time (for example, during a
+version upgrade), its runners become idle. The runners
 do not resume job processing for 30-60 minutes after
 the GitLab instance is available again.
 
 To increase or decrease the duration that runners are idle, change the `unhealthy_interval` setting.
 
-To change the number of times the runner attempts to connect to the GitLab server and
+To change runner's number of connection attempts to the GitLab server and
 receive an unhealthy sleep before becoming idle, change the `unhealthy_requests_limit` setting.
 For more information, see [How `check_interval` works](advanced-configuration.md#how-check_interval-works).
 
@@ -355,7 +355,7 @@ which is POSIX-compliant shell escaping mechanism, is used.
 
 ## The `[runners.docker]` section
 
-The following settings define the Docker container parameters. This is applicable when the runner is configured to use the Docker executor.
+The following settings define the Docker container parameters. These settings are applicable when the runner is configured to use the Docker executor.
 
 [Docker-in-Docker](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker) as a service, or any container runtime configured inside a job, does not inherit these parameters.
 
@@ -380,11 +380,11 @@ The following settings define the Docker container parameters. This is applicabl
 | `dns`                          | A list of DNS servers for the container to use. |
 | `dns_search`                   | A list of DNS search domains. |
 | `extra_hosts`                  | Hosts that should be defined in container environment. |
-| `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` cli. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
-| `group_add`                    | Add additional groups the container process will run as. |
+| `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
+| `group_add`                    | Add additional groups for the container process to run. |
 | `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
 | `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.19`. |
-| `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image ARCH and OS. |
+| `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image architecture and OS. |
 | `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
 | `hostname`                     | Custom hostname for the Docker container. |
 | `image`                        | The image to run jobs with. |
@@ -393,9 +393,9 @@ The following settings define the Docker container parameters. This is applicabl
 | `memory_swap`                  | The total memory limit. A string. |
 | `memory_reservation`           | The memory soft limit. A string. |
 | `network_mode`                 | Add container to a custom network. |
-| `mac_address`                  | Container MAC address (e.g., 92:d0:c6:0a:29:33). |
-| `oom_kill_disable`             | If an out-of-memory (OOM) error occurs, do not terminate processes in a container. |
-| `oom_score_adjust`             | OOM score adjustment. Positive means terminate the processes earlier. |
+| `mac_address`                  | Container MAC address (for example, 92:d0:c6:0a:29:33). |
+| `oom_kill_disable`             | If an out-of-memory (`OOM`) error occurs, do not terminate processes in a container. |
+| `oom_score_adjust`             | `OOM` score adjustment. Positive means terminate the processes earlier. |
 | `privileged`                   | Make the container run in privileged mode. Insecure. |
 | `services_privileged`          | Allow services to run in privileged mode. If unset (default) `privileged` value is used instead. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. Insecure. |
 | `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images). You can also add [multiple pull policies](../executors/docker.md#set-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#allow-docker-pull-policies). |
@@ -404,7 +404,7 @@ The following settings define the Docker container parameters. This is applicabl
 | `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
 | `shm_size`                     | Shared memory size for images (in bytes). |
 | `sysctls`                      | The `sysctl` options. |
-| `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Useful in `boot2docker`. |
+| `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Use this setting with `boot2docker`. |
 | `tls_verify`                   | Enable or disable TLS verification of connections to the Docker daemon. Disabled by default. By default, GitLab Runner connects to the Docker Unix socket over SSH. The Unix socket does not support RTLS and communicates over HTTP with SSH to provide encryption and authentication. Enabling `tls_verify` is not typically needed and requires additional configuration. To enable `tls_verify`, the daemon must listen on a port (rather than the default Unix socket) and the GitLab Runner Docker host must use the address the daemon is listening on. |
 | `user`                         | Run all commands in the container as the specified user. |
 | `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
@@ -416,7 +416,7 @@ The following settings define the Docker container parameters. This is applicabl
 | `container_labels`             | A set of labels to add to each container created by the runner. The label value can include environment variables for expansion. |
 | `services_limit`               | Set the maximum allowed services per job. `-1` (default) means there is no limit. |
 | `service_cpuset_cpus`          | String value containing the `cgroups CpusetCpus` to use for a service. |
-| `service_cpu_shares`           | Number of CPU shares used to set a service's relative cpu usage (default:  [`1024`](https://docs.docker.com/config/containers/resource_constraints/#cpu)). |
+| `service_cpu_shares`           | Number of CPU shares used to set a service's relative CPU usage (default:  [`1024`](https://docs.docker.com/config/containers/resource_constraints/#cpu)). |
 | `service_cpus`                 | String value of the number of CPUs for a service. Available in Docker 1.13 or later. |
 | `service_memory`               | String value of the memory limit for a service. |
 | `service_memory_swap`          | String value of the total memory limit for a service. |
@@ -432,8 +432,8 @@ Each service runs in a separate container and is linked to the job.
 | --------- | ----------- |
 | `name`  | The name of the image to be run as a service. |
 | `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service .|
-| `entrypoint` | Command or script that should be executed as the container’s entrypoint. The syntax is similar to [Dockerfile’s ENTRYPOINT](https://docs.docker.com/reference/dockerfile/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
-| `command` | Command or script that should be used as the container’s command. The syntax is similar to [Dockerfile’s CMD](https://docs.docker.com/reference/dockerfile/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
+| `entrypoint` | Command or script that should be executed as the container's entrypoint. The syntax is similar to the [Dockerfile ENTRYPOINT](https://docs.docker.com/reference/dockerfile/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
+| `command` | Command or script that should be used as the container's command. The syntax is similar to the [Dockerfile CMD](https://docs.docker.com/reference/dockerfile/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
 | `environment` | Append or overwrite environment variables for the service container. |
 
 Example:
@@ -671,7 +671,7 @@ For instance, if you want to allow only certain VM images, you can use regex lik
   allowed_images = ["^allowed_vm[1-2]$"]
 ```
 
-In this example, only `allowed_vm1` and `allowed_vm2` are allowed. Any other attempts will result in an error.
+In this example, only `allowed_vm1` and `allowed_vm2` are allowed. Any other attempts result in an error.
 
 ## The `[runners.ssh]` section
 
@@ -684,7 +684,7 @@ The following parameters define the SSH connection.
 | `user`     | Username. |
 | `password` | Password. |
 | `identity_file` | File path to SSH private key (`id_rsa`, `id_dsa`, or `id_edcsa`). The file must be stored unencrypted. |
-| `disable_strict_host_key_checking` | This value determines if the runner should use strict host key checking. Default is `true`. In GitLab 15.0, the default value, or the value if it's not specified, will be `false`. |
+| `disable_strict_host_key_checking` | This value determines if the runner should use strict host key checking. Default is `true`. In GitLab 15.0, the default value, or the value if it's not specified, is `false`. |
 
 Example:
 
@@ -710,7 +710,7 @@ The following parameters define the Docker Machine-based autoscaling feature. Fo
 | `IdleTime`          | Time (in seconds) for machine to be in _Idle_ state before it is removed. |
 | `[[runners.machine.autoscaling]]` | Multiple sections, each containing overrides for autoscaling configuration. The last section with an expression that matches the current time is selected. |
 | `OffPeakPeriods`    | Deprecated: Time periods when the scheduler is in the OffPeak mode. An array of cron-style patterns (described [below](#periods-syntax)). |
-| `OffPeakTimezone`   | Deprecated: Timezone for the times given in OffPeakPeriods. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
+| `OffPeakTimezone`   | Deprecated: Time zone for the times given in OffPeakPeriods. A time zone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the time zone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
 | `OffPeakIdleCount`  | Deprecated: Like `IdleCount`, but for _Off Peak_ time periods. |
 | `OffPeakIdleTime`   | Deprecated: Like `IdleTime`, but for _Off Peak_ time periods. |
 | `MaxBuilds`         | Maximum job (build) count before machine is removed. |
@@ -729,7 +729,7 @@ The following parameters define the configuration available when using the [Inst
 | `IdleScaleFactor`   | (Experiment) The number of _Idle_ machines as a factor of the number of machines in use. Must be in float number format. See [the autoscale documentation](autoscale.md#the-idlescalefactor-strategy) for more details. Defaults to `0.0`. |
 | `IdleCountMin`      | Minimal number of machines that need to be created and waiting in _Idle_ state when the `IdleScaleFactor` is in use. Default is 1. |
 | `IdleTime`          | Time (in seconds) for a machine to be in _Idle_ state before it is removed. |
-| `Timezone`   | Timezone for the times given in `Periods`. A timezone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the timezone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
+| `Timezone`   | Time zone for the times given in `Periods`. A time zone string like `Europe/Berlin`. Defaults to the locale system setting of the host if omitted or empty. GitLab Runner attempts to locate the time zone database in the directory or uncompressed zip file named by the `ZONEINFO` environment variable, then looks in known installation locations on Unix systems, and finally looks in `$GOROOT/lib/time/zoneinfo.zip`. |
 
 Example:
 
@@ -831,7 +831,7 @@ The scale throttle uses a token quota system to create instances. This system is
 
 - `burst`: The maximum size of the quota.
 - `limit`: The rate at which the quota refreshes per second.
- 
+
 The number of instances you can create at once depends on your remaining quota.
 If you have sufficient quota, you can create instances up to that amount.
 If the quota is depleted, you can create `limit` instances per second.
@@ -864,7 +864,7 @@ the empty values that the plugin cannot determine.
 | `use_static_credentials` | Disabled automatic credential provisioning. Default: `false`. |
 | `keepalive`              | The connection keepalive duration. |
 | `timeout`                | The connection timeout duration. |
-| `use_external_addr`      | Whether to use the external address provided by the plugin. If the plugin only returns an internal address, this will be used regardless of this setting. Default: `false`. |
+| `use_external_addr`      | Whether to use the external address provided by the plugin. If the plugin only returns an internal address, it is used regardless of this setting. Default: `false`. |
 
 ## The `[runners.autoscaler.state_storage]` section
 
@@ -874,7 +874,7 @@ DETAILS:
 > - Introduced in GitLab Runner 17.5.0.
 
 If GitLab Runner starts when state storage is disabled (default), the existing fleeting instances
-are removed immediately for safety reasons. With configurations such as `max_use_count: 1`,
+are removed immediately for safety reasons. For example, when `max_use_count` is set to `1`,
 we might inadvertently assign a job to an instance that's already been used if we don't
 know its usage status.
 
@@ -890,8 +890,8 @@ Consider the following information when enabling the state storage feature:
   default. This behavior ensures safety, as GitLab Runner cannot resume jobs. To keep the
   instance, set `keep_instance_with_acquisitions` to `true`.
 
-  Setting `keep_instance_with_acquisitions` to `true` is useful when you're not concerned about ongoing jobs
-  on the instance. It is also useful to clean the environment. For example, you can use the `instance_ready_command`
+  Setting `keep_instance_with_acquisitions` to `true` helps when you're not concerned about ongoing jobs
+  on the instance. You can also use the `instance_ready_command`
   configuration option to clean the environment to keep the instance. This might involve stopping all
   executing commands or forcefully removing Docker containers.
 
@@ -906,11 +906,11 @@ Consider the following information when enabling the state storage feature:
 **Note** - `idle_count` in this context refers to the number of jobs, not the number of autoscaled machines as in the legacy autoscaling method.
 
 | `periods`              | An array of unix-cron formatted strings to denote the period this policy is enabled for. Default: `* * * * *` |
-| `timezone`             | The timezone used when evaluating the unix-cron period. Default: The system's local timezone. |
+| `timezone`             | The time zone used when evaluating the unix-cron period. Default: The system's local time zone. |
 | `idle_count`           | The target idle capacity we want to be immediately available for jobs.  |
 | `idle_time`            | The amount of time that an instance can be idle before it is terminated.  |
 | `scale_factor`         | The target idle capacity we want to be immediately available for jobs, on top of the `idle_count`, as a factor of the current in use capacity. Defaults to `0.0`. |
-| `scale_factor_limit`   | The maximum capacity the scale_factor calculation can yield. |
+| `scale_factor_limit`   | The maximum capacity the `scale_factor` calculation can yield. |
 
 When `scale_factor` is set, `idle_count` becomes the minimum `idle` capacity and the `scaler_factor_limit` the maximum `idle` capacity.
 
@@ -951,22 +951,22 @@ cron format consists of 5 fields:
 
 It's worth keeping in mind that this cron job represents a range in time. For example:
 
-| Period               | Affect |
-|----------------------|--------|
-| `1 * * * * *`        | Rule enabled for the period of 1 minute every hour (unlikely to be very useful) |
-| `* 0-12 * * *`       | Rule enabled for the period of 12 hours at the beginning of each day |
+| Period               | Affect                                                                                  |
+|----------------------|-----------------------------------------------------------------------------------------|
+| `1 * * * * *`        | Rule enabled for the period of 1 minute every hour (unlikely to be very effective)      |
+| `* 0-12 * * *`       | Rule enabled for the period of 12 hours at the beginning of each day                    |
 | `0-30 13,16 * * SUN` | Rule enabled for the period of each Sunday for 30 minutes at 1pm and 30 minutes at 4pm. |
 
 ## The `[runners.autoscaler.vm_isolation]` section
 
-VM Isolation uses [`nesting`](../executors/instance.md#nested-virtualization), which is currently only supported on MacOS.
+VM Isolation uses [`nesting`](../executors/instance.md#nested-virtualization), which is only supported on macOS.
 
-| Parameter                | Description |
-|--------------------------|-------------|
-| `enabled`                | Specifies if VM Isolation is enabled or not. Default: `false`. |
-| `nesting_host`           | The `nesting` daemon host. |
-| `nesting_config`         | The `nesting` config. This is serialized to JSON and sent to the `nesting` daemon. |
-| `image`                  | The default image used by the nesting daemon if no job image is specified. |
+| Parameter        | Description                                                                                |
+|------------------|--------------------------------------------------------------------------------------------|
+| `enabled`        | Specifies if VM Isolation is enabled or not. Default: `false`.                             |
+| `nesting_host`   | The `nesting` daemon host.                                                                 |
+| `nesting_config` | The `nesting` configuration, which is serialized to JSON and sent to the `nesting` daemon. |
+| `image`          | The default image used by the nesting daemon if no job image is specified.                 |
 
 ## The `[runners.autoscaler.vm_isolation.connector_config]` section
 
@@ -1018,56 +1018,56 @@ an IAM instance profile, the adapter uses the profile attached to the GitLab Run
 Similarly for [GCS cache adapter](#the-runnerscachegcs-section), if configured to
 use the `CredentialsFile`. The file needs to be present on the GitLab Runner machine.
 
-This table lists `config.toml`, CLI options, and ENV variables for `register`.
+This table lists `config.toml`, CLI options, and environment variables for `register`.
 
-| Setting                 | TOML field                                                                                        | CLI option for `register`                                      | ENV for `register`                                                       |
-|-------------------------|---------------------------------------------------------------------------------------------------|----------------------------------------------------------------|--------------------------------------------------------------------------|
-| `Type`                  | `[runners.cache] -> Type`                                                                         | `--cache-type`                                                 | `$CACHE_TYPE`                                                            |
-| `Path`                  | `[runners.cache] -> Path`                                                                         | `--cache-path` <br> <br> Before 12.0, `--cache-s3-cache-path`  | `$CACHE_PATH` <br> <br> Before 12.0, `$S3_CACHE_PATH`                    |
-| `Shared`                | `[runners.cache] -> Shared`                                                                       | `--cache-shared` <br> <br> Before 12.0, `--cache-cache-shared` | `$CACHE_SHARED`                                                          |
-| `S3.ServerAddress`      | `[runners.cache.s3] -> ServerAddress` <br><br> Before 12.0, `[runners.cache] -> ServerAddress`    | `--cache-s3-server-address`                                    | `$CACHE_S3_SERVER_ADDRESS` <br> <br>Before 12.0, `$S3_SERVER_ADDRESS`    |
-| `S3.AccessKey`          | `[runners.cache.s3] -> AccessKey` <br> <br> Before 12.0, `[runners.cache] -> AccessKey`           | `--cache-s3-access-key`                                        | `$CACHE_S3_ACCESS_KEY` <br> <br>Before 12.0, `$S3_ACCESS_KEY`            |
-| `S3.SecretKey`          | `[runners.cache.s3] -> SecretKey` <br> <br> Before 12.0, `[runners.cache] -> SecretKey`           | `--cache-s3-secret-key`                                        | `$CACHE_S3_SECRET_KEY` <br> <br> Before 12.0, `$S3_SECRET_KEY`           |
-| `S3.SessionToken`       | `[runners.cache.s3] -> SessionToken`                                                              | `--cache-s3-session-token`                                     | `$CACHE_S3_SESSION_TOKEN`                                                |
-| `S3.BucketName`         | `[runners.cache.s3] -> BucketName` <br> <br> Before 12.0, `[runners.cache] -> BucketName`         | `--cache-s3-bucket-name`                                       | `$CACHE_S3_BUCKET_NAME` <br> <br>Before 12.0, `$S3_BUCKET_NAME`          |
-| `S3.BucketLocation`     | `[runners.cache.s3] -> BucketLocation` <br> <br> Before 12.0, `[runners.cache] -> BucketLocation` | `--cache-s3-bucket-location`                                   | `$CACHE_S3_BUCKET_LOCATION` <br> <br> Before 12.0, `$S3_BUCKET_LOCATION` |
-| `S3.Insecure`           | `[runners.cache.s3] -> Insecure` <br> <br> Before 12.0, `[runners.cache] -> Insecure`             | `--cache-s3-insecure`                                          | `$CACHE_S3_INSECURE` <br> <br> Before 12.0, `$S3_INSECURE`               |
-| `S3.AuthenticationType` | `[runners.cache.s3] -> AuthenticationType`                                                        | `--cache-s3-authentication_type`                               | `$CACHE_S3_AUTHENTICATION_TYPE`                                          |
-| `S3.ServerSideEncryption` | `[runners.cache.s3] -> ServerSideEncryption` | `--cache-s3-server-side-encryption` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION` |
-| `S3.ServerSideEncryptionKeyID`         | `[runners.cache.s3] -> ServerSideEncryptionKeyID` | `--cache-s3-server-side-encryption-key-id` | `$CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID` |
-| `S3.DualStack`          | `[runners.cache.s3] -> DualStack` | `--cache-s3-dual-stack` | `$CACHE_S3_DUAL_STACK` |
-| `S3.Accelerate`         | `[runners.cache.s3] -> Accelerate` | `--cache-s3-accelerate` | `$CACHE_S3_ACCELERATE` |
-| `S3.PathStyle`          | `[runners.cache.s3] -> PathStyle`                                                                 | `--cache-s3-path-style`                                        | `$CACHE_S3_PATH_STYLE`                                                   |
-| `S3.UploadRoleARN`      | `[runners.cache.s3] -> UploadRoleARN`                                                             | `--cache-s3-upload-role-arn`                                   | `$CACHE_S3_UPLOAD_ROLE_ARN`                                              |
-| `GCS.AccessID`          | `[runners.cache.gcs] -> AccessID`                                                                 | `--cache-gcs-access-id`                                        | `$CACHE_GCS_ACCESS_ID`                                                   |
-| `GCS.PrivateKey`        | `[runners.cache.gcs] -> PrivateKey`                                                               | `--cache-gcs-private-key`                                      | `$CACHE_GCS_PRIVATE_KEY`                                                 |
-| `GCS.CredentialsFile`   | `[runners.cache.gcs] -> CredentialsFile`                                                          | `--cache-gcs-credentials-file`                                 | `$GOOGLE_APPLICATION_CREDENTIALS`                                        |
-| `GCS.BucketName`        | `[runners.cache.gcs] -> BucketName`                                                               | `--cache-gcs-bucket-name`                                      | `$CACHE_GCS_BUCKET_NAME`                                                 |
-| `Azure.AccountName`     | `[runners.cache.azure] -> AccountName`                                                            | `--cache-azure-account-name`                                   | `$CACHE_AZURE_ACCOUNT_NAME`                                              |
-| `Azure.AccountKey`      | `[runners.cache.azure] -> AccountKey`                                                             | `--cache-azure-account-key`                                    | `$CACHE_AZURE_ACCOUNT_KEY`                                               |
-| `Azure.ContainerName`   | `[runners.cache.azure] -> ContainerName`                                                          | `--cache-azure-container-name`                                 | `$CACHE_AZURE_CONTAINER_NAME`                                            |
-| `Azure.StorageDomain`   | `[runners.cache.azure] -> StorageDomain`                                                          | `--cache-azure-storage-domain`                                 | `$CACHE_AZURE_STORAGE_DOMAIN`                                            |
+| Setting                        | TOML field                                                                                        | CLI option for `register`                                      | Environment variable for `register`                                                       |
+|--------------------------------|---------------------------------------------------------------------------------------------------|----------------------------------------------------------------|--------------------------------------------------------------------------|
+| `Type`                         | `[runners.cache] -> Type`                                                                         | `--cache-type`                                                 | `$CACHE_TYPE`                                                            |
+| `Path`                         | `[runners.cache] -> Path`                                                                         | `--cache-path` <br> <br> Before 12.0, `--cache-s3-cache-path`  | `$CACHE_PATH` <br> <br> Before 12.0, `$S3_CACHE_PATH`                    |
+| `Shared`                       | `[runners.cache] -> Shared`                                                                       | `--cache-shared` <br> <br> Before 12.0, `--cache-cache-shared` | `$CACHE_SHARED`                                                          |
+| `S3.ServerAddress`             | `[runners.cache.s3] -> ServerAddress` <br><br> Before 12.0, `[runners.cache] -> ServerAddress`    | `--cache-s3-server-address`                                    | `$CACHE_S3_SERVER_ADDRESS` <br> <br>Before 12.0, `$S3_SERVER_ADDRESS`    |
+| `S3.AccessKey`                 | `[runners.cache.s3] -> AccessKey` <br> <br> Before 12.0, `[runners.cache] -> AccessKey`           | `--cache-s3-access-key`                                        | `$CACHE_S3_ACCESS_KEY` <br> <br>Before 12.0, `$S3_ACCESS_KEY`            |
+| `S3.SecretKey`                 | `[runners.cache.s3] -> SecretKey` <br> <br> Before 12.0, `[runners.cache] -> SecretKey`           | `--cache-s3-secret-key`                                        | `$CACHE_S3_SECRET_KEY` <br> <br> Before 12.0, `$S3_SECRET_KEY`           |
+| `S3.SessionToken`              | `[runners.cache.s3] -> SessionToken`                                                              | `--cache-s3-session-token`                                     | `$CACHE_S3_SESSION_TOKEN`                                                |
+| `S3.BucketName`                | `[runners.cache.s3] -> BucketName` <br> <br> Before 12.0, `[runners.cache] -> BucketName`         | `--cache-s3-bucket-name`                                       | `$CACHE_S3_BUCKET_NAME` <br> <br>Before 12.0, `$S3_BUCKET_NAME`          |
+| `S3.BucketLocation`            | `[runners.cache.s3] -> BucketLocation` <br> <br> Before 12.0, `[runners.cache] -> BucketLocation` | `--cache-s3-bucket-location`                                   | `$CACHE_S3_BUCKET_LOCATION` <br> <br> Before 12.0, `$S3_BUCKET_LOCATION` |
+| `S3.Insecure`                  | `[runners.cache.s3] -> Insecure` <br> <br> Before 12.0, `[runners.cache] -> Insecure`             | `--cache-s3-insecure`                                          | `$CACHE_S3_INSECURE` <br> <br> Before 12.0, `$S3_INSECURE`               |
+| `S3.AuthenticationType`        | `[runners.cache.s3] -> AuthenticationType`                                                        | `--cache-s3-authentication_type`                               | `$CACHE_S3_AUTHENTICATION_TYPE`                                          |
+| `S3.ServerSideEncryption`      | `[runners.cache.s3] -> ServerSideEncryption`                                                      | `--cache-s3-server-side-encryption`                            | `$CACHE_S3_SERVER_SIDE_ENCRYPTION`                                       |
+| `S3.ServerSideEncryptionKeyID` | `[runners.cache.s3] -> ServerSideEncryptionKeyID`                                                 | `--cache-s3-server-side-encryption-key-id`                     | `$CACHE_S3_SERVER_SIDE_ENCRYPTION_KEY_ID`                                |
+| `S3.DualStack`                 | `[runners.cache.s3] -> DualStack`                                                                 | `--cache-s3-dual-stack`                                        | `$CACHE_S3_DUAL_STACK`                                                   |
+| `S3.Accelerate`                | `[runners.cache.s3] -> Accelerate`                                                                | `--cache-s3-accelerate`                                        | `$CACHE_S3_ACCELERATE`                                                   |
+| `S3.PathStyle`                 | `[runners.cache.s3] -> PathStyle`                                                                 | `--cache-s3-path-style`                                        | `$CACHE_S3_PATH_STYLE`                                                   |
+| `S3.UploadRoleARN`             | `[runners.cache.s3] -> UploadRoleARN`                                                             | `--cache-s3-upload-role-arn`                                   | `$CACHE_S3_UPLOAD_ROLE_ARN`                                              |
+| `GCS.AccessID`                 | `[runners.cache.gcs] -> AccessID`                                                                 | `--cache-gcs-access-id`                                        | `$CACHE_GCS_ACCESS_ID`                                                   |
+| `GCS.PrivateKey`               | `[runners.cache.gcs] -> PrivateKey`                                                               | `--cache-gcs-private-key`                                      | `$CACHE_GCS_PRIVATE_KEY`                                                 |
+| `GCS.CredentialsFile`          | `[runners.cache.gcs] -> CredentialsFile`                                                          | `--cache-gcs-credentials-file`                                 | `$GOOGLE_APPLICATION_CREDENTIALS`                                        |
+| `GCS.BucketName`               | `[runners.cache.gcs] -> BucketName`                                                               | `--cache-gcs-bucket-name`                                      | `$CACHE_GCS_BUCKET_NAME`                                                 |
+| `Azure.AccountName`            | `[runners.cache.azure] -> AccountName`                                                            | `--cache-azure-account-name`                                   | `$CACHE_AZURE_ACCOUNT_NAME`                                              |
+| `Azure.AccountKey`             | `[runners.cache.azure] -> AccountKey`                                                             | `--cache-azure-account-key`                                    | `$CACHE_AZURE_ACCOUNT_KEY`                                               |
+| `Azure.ContainerName`          | `[runners.cache.azure] -> ContainerName`                                                          | `--cache-azure-container-name`                                 | `$CACHE_AZURE_CONTAINER_NAME`                                            |
+| `Azure.StorageDomain`          | `[runners.cache.azure] -> StorageDomain`                                                          | `--cache-azure-storage-domain`                                 | `$CACHE_AZURE_STORAGE_DOMAIN`                                            |
 
 ### The `[runners.cache.s3]` section
 
 The following parameters define S3 storage for cache.
 
-| Parameter           | Type             | Description |
-|---------------------|------------------|-------------|
-| `ServerAddress`     | string           | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
-| `AccessKey`         | string           | The access key specified for your S3 instance. |
-| `SecretKey`         | string           | The secret key specified for your S3 instance. |
-| `SessionToken`      | string           | The session token specified for your S3 instance when temporary credentials are used. |
-| `BucketName`        | string           | Name of the storage bucket where cache is stored. |
-| `BucketLocation`    | string           | Name of S3 region. |
-| `Insecure`          | boolean          | Set to `true` if the S3 service is available by `HTTP`. Default is `false`. |
-| `AuthenticationType`| string           | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing. |
-| `ServerSideEncryption`| string           | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. In GitLab 17.5 and later, [`DSSE-KMS`](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingDSSEncryption.html) is supported. |
-| `ServerSideEncryptionKeyID`| string           | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. If you use an alias, it must be preceded with `alias/`|
-| `DualStack`         | boolean         | In GitLab 17.5 and later, enables the use of IPv4 and IPv6 endpoints (default: true). Disable this if you are using AWS S3 Express. This is ignored if `ServerAddress` is set. |
-| `Accelerate`        | boolean         | In GitLab 17.5 and later, enables the use of AWS S3 Transfer Acceleration. This will be set to true automatically if `ServerAddress` is configured as an Accelerated endpoint. |
-| `PathStyle`         | boolean         | In GitLab 17.5 and later, enables the use of path-style access (default: autodetected based on `ServerAddress`). |
-| `UploadRoleARN`     | string          | In GitLab 17.5 and later, specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `PutObject` S3 requests. This enables the use of S3 multipart uploads. |
+| Parameter                   | Type    | Description                                                                                                                                                                                                                                                      |
+|-----------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ServerAddress`             | string  | A `host:port` for the S3-compatible server. If you are using a server other than AWS, consult the storage product documentation to determine the correct address. For DigitalOcean, the address must be in the format `spacename.region.digitaloceanspaces.com`. |
+| `AccessKey`                 | string  | The access key specified for your S3 instance.                                                                                                                                                                                                                   |
+| `SecretKey`                 | string  | The secret key specified for your S3 instance.                                                                                                                                                                                                                   |
+| `SessionToken`              | string  | The session token specified for your S3 instance when temporary credentials are used.                                                                                                                                                                            |
+| `BucketName`                | string  | Name of the storage bucket where cache is stored.                                                                                                                                                                                                                |
+| `BucketLocation`            | string  | Name of S3 region.                                                                                                                                                                                                                                               |
+| `Insecure`                  | boolean | Set to `true` if the S3 service is available by `HTTP`. Default is `false`.                                                                                                                                                                                      |
+| `AuthenticationType`        | string  | Set to `iam` or `access-key`. Default is `access-key` if `ServerAddress`, `AccessKey`, and `SecretKey` are all provided. Defaults to `iam` if `ServerAddress`, `AccessKey`, or `SecretKey` are missing.                                                          |
+| `ServerSideEncryption`      | string  | In GitLab 15.3 and later, server side encryption type used with S3 available types are `S3`, or `KMS`. In GitLab 17.5 and later, [`DSSE-KMS`](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingDSSEncryption.html) is supported.                       |
+| `ServerSideEncryptionKeyID` | string  | In GitLab 15.3 and later, the alias or ID of a KMS key used for encryption if using `KMS`. If you use an alias, it must be preceded with `alias/`                                                                                                              |
+| `DualStack`                 | boolean | In GitLab 17.5 and later, enables the use of IPv4 and IPv6 endpoints (default: true). Disable this if you are using AWS S3 Express. GitLab ignores this setting if you set `ServerAddress`.                                                                      |
+| `Accelerate`                | boolean | In GitLab 17.5 and later, enables the use of AWS S3 Transfer Acceleration. GitLab sets this to `true` automatically if `ServerAddress` is configured as an Accelerated endpoint.                                                                                 |
+| `PathStyle`                 | boolean | In GitLab 17.5 and later, enables the use of path-style access. By default, GitLab automatically detects this setting based on the `ServerAddress` value.                                                                                                        |
+| `UploadRoleARN`             | string  | In GitLab 17.5 and later, specifies an AWS role ARN that can be used with `AssumeRole` to generate time-limited `PutObject` S3 requests. This enables the use of S3 multipart uploads.                                                                           |
 
 Example:
 
@@ -1090,7 +1090,7 @@ Example:
 If any of `ServerAddress`, `AccessKey` or `SecretKey` aren't specified and `AuthenticationType` is not provided, the S3 client uses the
 IAM instance profile available to the `gitlab-runner` instance. In an [autoscale](autoscale.md) configuration, this is not the on-demand machine
 that jobs are executed on. If `ServerAddress`, `AccessKey` and `SecretKey` are all specified but `AuthenticationType` is not provided,
-`access-key` will be used as the authentication type.
+`access-key` is used as the authentication type.
 
 When you use Helm charts to install GitLab Runner, and `rbac.create` is set to true
 in the `values.yaml` file, a ServiceAccount is created. This ServiceAccount's annotations are retrieved from the
@@ -1116,7 +1116,7 @@ If you use `ServerSideEncryption` of type `KMS`, this role must also have permis
 - `kms:DescribeKey`
 
 `ServerSideEncryption` of type `SSE-C` is not supported.
-`SSE-C` requires that the headers, which contain the user-supplied key, are provided for the download request, in addition to the presigned URL.
+`SSE-C` requires that the headers, which contain the user-supplied key, are provided for the download request, in addition to the pre-signed URL.
 This would mean passing the key material to the job, where the key can't be kept safe. This does have the potential to leak the decryption key.
 A discussion about this issue is in [this merge request](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3295).
 
@@ -1146,7 +1146,7 @@ The IAM policy for the role assigned to the ServiceAccount defined in `rbac.serv
 #### Enable multipart uploads with `UploadRoleARN`
 
 To limit access to the cache, the runner manager generates
-timed-limited, [presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) for jobs to download from and upload to
+timed-limited, [pre-signed URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html) for jobs to download from and upload to
 the cache. However, AWS S3 limits a [single PUT request to 5 GB](https://docs.aws.amazon.com/AmazonS3/latest/userguide/upload-objects.html).
 For files larger than 5 GB, you must use the multipart upload API.
 
@@ -1154,7 +1154,7 @@ Multipart uploads are only supported with AWS S3 and not for other S3
 providers. Because the runner manager handles jobs for different
 projects, the runner manager cannot pass around S3 credentials that have
 bucket-wide permissions. Instead, the runner manger uses time-limited
-presigned URLs and narrowly-scoped credentials to restrict access to one
+pre-signed URLs and narrowly-scoped credentials to restrict access to one
 specific object.
 
 To use S3 multipart uploads with AWS, specify an IAM role in
@@ -1254,7 +1254,7 @@ To use IAM roles for service accounts, an IAM OIDC provider [must exist for your
 
    - The **Trusted entities** section must have the format:
      `arn:aws:iam::<ACCOUNT_ID>:oidc-provider/oidc.eks.<AWS_REGION>.amazonaws.com/id/<OIDC_ID>`.
-     The **OIDC ID** can be found on EKS cluster’s **Configuration** tab.
+     The **OIDC ID** can be found on EKS cluster's **Configuration** tab.
 
    - The **Condition** section must have the GitLab Runner service account
      defined in `rbac.serviceAccountName` or the default service account
@@ -1356,7 +1356,7 @@ Example:
 To use Azure workload or managed identities, omit `AccountKey` from the
 configuration. When `AccountKey` is blank, the runner attempts to:
 
-1. Obtain temporary credentials via [`DefaultAzureCredential`](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azidentity/README.md#defaultazurecredential).
+1. Obtain temporary credentials by using [`DefaultAzureCredential`](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azidentity/README.md#defaultazurecredential).
 1. Get a [User Delegation Key](https://learn.microsoft.com/en-us/rest/api/storageservices/get-user-delegation-key).
 1. Generate a SAS token with that key to access a Storage Account blob.
 
@@ -1416,22 +1416,21 @@ to handle Git, artifacts, and cache operations. This container is created from a
 
 The helper image is available for amd64, arm, arm64, s390x, and ppc64le architectures. It contains
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
-of available commands, as well as Git, Git LFS and SSL certificates store.
+of available commands, and Git, Git LFS, and SSL certificates store.
 
-The helper image has a few flavors: `alpine`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is currently the default due to its small
+The helper image has a few flavors: `alpine`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is the default due to its small
 footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
-Using `helper_image_flavor = "ubuntu"` will select the `ubuntu` flavor of the helper image.
+Using `helper_image_flavor = "ubuntu"` selects the `ubuntu` flavor of the helper image.
 
 In GitLab Runner 16.1 to 17.1, the `alpine` flavor is an alias for `alpine3.18`. In GitLab Runner 17.2 and later, it's an alias for `alpine3.19`.
 
-The `alpine-latest` flavor uses `alpine:latest` as its base image, which could potentially mean it will be more unstable.
+The `alpine-latest` flavor uses `alpine:latest` as its base image, which could potentially mean it is more unstable.
 
-When GitLab Runner is installed from the DEB/RPM packages, images for the supported architectures are installed on the host.
-When the runner prepares to execute the job, if the image in the specified version (based on the runner's Git
-revision) is not found on Docker Engine, it is automatically loaded. Both the
+When GitLab Runner is installed from the `DEB` or RPM packages, images for the supported architectures are installed on the host.
+If Docker Engine can't find the specified image version, the runner automatically downloads it before running the job. Both the
 `docker` and `docker+machine` executors work this way.
 
-For the `alpine` flavors, only the default `alpine` flavor image is included in the package. All other flavors will be downloaded from the registry.
+For the `alpine` flavors, only the default `alpine` flavor image is included in the package. All other flavors are downloaded from the registry.
 
 The `kubernetes` executor and manual installations of GitLab Runner work differently.
 
@@ -1454,17 +1453,17 @@ To use the `arm64` helper image on `arm64` Kubernetes clusters, set the followin
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3122) in GitLab Runner 14.5.
 
-Images are built with multiple versions of Alpine Linux, so you can use a newer version of Alpine, but at the same time use older versions as well.
+Images are built with multiple versions of Alpine Linux. You can use a newer version of Alpine, but at the same time use older versions as well.
 
 For the helper image, change the `helper_image_flavor` or read the [Helper image](#helper-image) section.
 
-For the GitLab Runner image, follow the same logic, where alpine, alpine3.16, alpine3.17, alpine3.18, alpine3.19 or alpine-latest is used as a prefix in the image, before the version:
+For the GitLab Runner image, follow the same logic, where `alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, or `alpine-latest` is used as a prefix in the image, before the version:
 
 ```shell
 docker pull gitlab/gitlab-runner:alpine3.19-v16.1.0
 ```
 
-### Alpine pwsh images
+### Alpine `pwsh` images
 
 As of GitLab Runner 16.1 and later, all `alpine` helper images have a `pwsh` variant. The only exception is `alpine-latest` because the
 [`powershell` Docker images](https://learn.microsoft.com/en-us/powershell/scripting/install/powershell-in-docker?view=powershell-7.4) on which the GitLab Runner helper images are based do not support `alpine:latest`.
@@ -1483,13 +1482,14 @@ In GitLab 15.1 and later, the helper image is pulled from the GitLab Container R
 
 To retrieve the base `gitlab-runner-helper` image from the GitLab registry, use a `helper-image` value: `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v${CI_RUNNER_VERSION}`.
 
-Self-managed instances also pull the helper image from the GitLab Container Registry on GitLab.com. To check the status of the GitLab Container Registry, see the [GitLab System Status](https://status.gitlab.com/).
+Self-managed instances also pull the helper image from the GitLab Container Registry on GitLab.com.
+To check the status of the GitLab Container Registry, see the [GitLab System Status](https://status.gitlab.com/).
 
 ### Override the helper image
 
-In some cases, you may need to override the helper image. There are many reasons for doing this:
+In some cases, you might need to override the helper image for the following reasons:
 
-1. **To speed up jobs execution**: In environments with slower internet connection, downloading the
+1. **Speed up jobs execution**: In environments with slower internet connection, downloading the
    same image multiple times can increase the time it takes to execute a job. Downloading the helper image from
    a local registry, where the exact copy of `registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:XYZ` is stored, can speed things up.
 
@@ -1628,7 +1628,7 @@ _Builds Directory_. For example, you can store tools inside of
 discourage this, you should never store anything inside of the _Builds
 Directory_. GitLab Runner should have total control over it and does not
 provide stability in such cases. If you have dependencies that are
-required for your CI, we recommend installing them in some other
+required for your CI, you must install them in some other
 place.
 
 ## The `[runners.referees]` section
@@ -1644,13 +1644,13 @@ Only the [`docker-machine` executor](../executors/docker_machine.md) supports th
 
 ### Configure the Metrics Runner Referee for GitLab Runner
 
-Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml` file within a `[[runner]]` section and add the following fields:
+Define `[runner.referees]` and `[runner.referees.metrics]` in your `config.toml` file in a `[[runner]]` section and add the following fields:
 
-| Setting              | Description                                                                                                                         |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `prometheus_address` | The server that collects metrics from GitLab Runner instances. It must be accessible by the runner manager when the job finishes.   |
-| `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds).   |
-| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that are executed for each interval.    |
+| Setting              | Description                                                                                                                       |
+|----------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `prometheus_address` | The server that collects metrics from GitLab Runner instances. It must be accessible by the runner manager when the job finishes. |
+| `query_interval`     | The frequency the Prometheus instance associated with a job is queried for time series data, defined as an interval (in seconds). |
+| `queries`            | An array of [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) queries that are executed for each interval.  |
 
 Here is a complete configuration example for `node_exporter` metrics:
 
