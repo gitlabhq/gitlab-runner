@@ -606,7 +606,7 @@ func TestWaitForRunningContainer(t *testing.T) {
 		podNamespace  = "some-namespace"
 		containerName = "some-container"
 	)
-	podTemplate := func() *api.Pod {
+	podTemplate := func(podName, containerName string) *api.Pod {
 		return &api.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podName,
@@ -622,59 +622,181 @@ func TestWaitForRunningContainer(t *testing.T) {
 	gvr := schema.GroupVersionResource{Version: "v1", Resource: "pods"}
 	ctx := context.TODO()
 
-	fakeKubeClient := testclient.NewSimpleClientset()
-	tracker := fakeKubeClient.Tracker()
+	tests := map[string]struct {
+		waiter     func(*testing.T, context.Context, kubernetes.Interface, chan struct{})
+		podUpdater func(*testing.T, context.Context, k8stesting.ObjectTracker, chan struct{})
+	}{
+		"container not found": {
+			waiter: func(
+				t *testing.T,
+				ctx context.Context,
+				fakeKubeClient kubernetes.Interface,
+				returnChan chan struct{},
+			) {
+				err := waitForRunningContainer(ctx, fakeKubeClient, 0, podNamespace, podName, containerName)
+				assert.Error(t, err, "expected error from the container waiter")
+				assert.ErrorContains(t, err, "container status for \"some-container\" not found")
+				close(returnChan)
+			},
+			podUpdater: func(
+				t *testing.T,
+				ctx context.Context,
+				tracker k8stesting.ObjectTracker,
+				watcherChan chan struct{},
+			) {
+				<-watcherChan
 
-	// Channels to synchronize the test steps
-	watchAdded := make(chan struct{})
-	returned := make(chan struct{})
+				pod := podTemplate(podName, "another-container")
+				err := tracker.Add(pod)
+				require.NoError(t, err, "adding the pod to the tracker")
 
-	fakeKubeClient.PrependWatchReactor("pods", func(action k8stesting.Action) (handled bool, ret watch.Interface, err error) {
-		watchAction, ok := action.(k8stesting.WatchAction)
-		require.True(t, ok, "action is not a WatchAction, action: %+v", action)
+				pod.Status.ContainerStatuses[0].State.Waiting = &api.ContainerStateWaiting{}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to waiting")
 
-		assert.Equal(t, podNamespace, watchAction.GetNamespace())
-		assert.Equal(t, gvr, watchAction.GetResource())
-		assert.Equal(t, "metadata.name="+podName+",status.phase=Running", watchAction.GetWatchRestrictions().Fields.String())
+				pod.Status.ContainerStatuses[0].State.Running = &api.ContainerStateRunning{}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to running")
+			},
+		},
+		"no failure": {
+			waiter: func(
+				t *testing.T,
+				ctx context.Context,
+				fakeKubeClient kubernetes.Interface,
+				returnChan chan struct{},
+			) {
+				err := waitForRunningContainer(ctx, fakeKubeClient, 0, podNamespace, podName, containerName)
+				assert.NoError(t, err, "expected no error from the container waiter")
+				close(returnChan)
+			},
+			podUpdater: func(
+				t *testing.T,
+				ctx context.Context,
+				tracker k8stesting.ObjectTracker,
+				watcherChan chan struct{},
+			) {
+				<-watcherChan
 
-		watch, err := tracker.Watch(watchAction.GetResource(), watchAction.GetNamespace())
-		if err != nil {
-			return false, nil, err
-		}
+				pod := podTemplate(podName, containerName)
+				err := tracker.Add(pod)
+				require.NoError(t, err, "adding the pod to the tracker")
 
-		// Start the process by signaling to add the pod
-		close(watchAdded)
+				pod.Status.ContainerStatuses[0].State.Waiting = &api.ContainerStateWaiting{}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to waiting")
 
-		return true, watch, nil
-	})
+				pod.Status.ContainerStatuses[0].State.Running = &api.ContainerStateRunning{}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to running")
+			},
+		},
+		"container terminated with non-zero status": {
+			waiter: func(
+				t *testing.T,
+				ctx context.Context,
+				fakeKubeClient kubernetes.Interface,
+				returnChan chan struct{},
+			) {
+				err := waitForRunningContainer(ctx, fakeKubeClient, 0, podNamespace, podName, containerName)
+				assert.Error(t, err, "expected error from the container waiter")
+				assert.ErrorContains(t, err, "container \"some-container\" terminated with non-zero status: 1")
+				close(returnChan)
+			},
+			podUpdater: func(
+				t *testing.T,
+				ctx context.Context,
+				tracker k8stesting.ObjectTracker,
+				watcherChan chan struct{},
+			) {
+				<-watcherChan
 
-	go func() {
-		err := waitForRunningContainer(ctx, fakeKubeClient, 0, podNamespace, podName, containerName)
-		assert.NoError(t, err, "expected no error from the container waiter")
-		close(returned)
-	}()
+				pod := podTemplate(podName, containerName)
+				err := tracker.Add(pod)
+				require.NoError(t, err, "adding the pod to the tracker")
 
-	go func() {
-		<-watchAdded
-		err := tracker.Add(podTemplate())
-		require.NoError(t, err, "adding the pod to the tracker")
+				pod.Status.ContainerStatuses[0].State.Waiting = &api.ContainerStateWaiting{}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to waiting")
 
-		pod := podTemplate()
-		pod.Status.ContainerStatuses[0].State.Waiting = &api.ContainerStateWaiting{}
-		err = tracker.Update(gvr, pod, podNamespace)
-		require.NoError(t, err, "updating container to waiting")
+				pod.Status.ContainerStatuses[0].State.Terminated = &api.ContainerStateTerminated{ExitCode: 1}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to terminated")
+			},
+		},
+		"container terminated with zero status": {
+			waiter: func(
+				t *testing.T,
+				ctx context.Context,
+				fakeKubeClient kubernetes.Interface,
+				returnChan chan struct{},
+			) {
+				err := waitForRunningContainer(ctx, fakeKubeClient, 0, podNamespace, podName, containerName)
+				assert.NoError(t, err, "no error from the container waiter")
+				close(returnChan)
+			},
+			podUpdater: func(
+				t *testing.T,
+				ctx context.Context,
+				tracker k8stesting.ObjectTracker,
+				watcherChan chan struct{},
+			) {
+				<-watcherChan
 
-		pod.Status.ContainerStatuses[0].State.Running = &api.ContainerStateRunning{}
-		err = tracker.Update(gvr, pod, podNamespace)
-		require.NoError(t, err, "updating container to running")
-	}()
+				pod := podTemplate(podName, containerName)
+				err := tracker.Add(pod)
+				require.NoError(t, err, "adding the pod to the tracker")
 
-	select {
-	case <-returned:
-	case <-time.After(5 * time.Second):
-		obj, err := tracker.Get(gvr, podNamespace, podName)
-		assert.NoError(t, err, "getting current pod state")
-		require.FailNowf(t, "container waiter did not return in time", "current object state: %+v", obj)
+				pod.Status.ContainerStatuses[0].State.Waiting = &api.ContainerStateWaiting{}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to waiting")
+
+				pod.Status.ContainerStatuses[0].State.Terminated = &api.ContainerStateTerminated{ExitCode: 0}
+				err = tracker.Update(gvr, pod, podNamespace)
+				require.NoError(t, err, "updating container to terminated")
+			},
+		},
+	}
+
+	for tn, tt := range tests {
+		t.Run(tn, func(t *testing.T) {
+			// Channels to synchronize the test steps
+			watcherChan := make(chan struct{})
+			returnChan := make(chan struct{})
+
+			fakeKubeClient := testclient.NewSimpleClientset()
+			tracker := fakeKubeClient.Tracker()
+
+			fakeKubeClient.PrependWatchReactor("pods", func(action k8stesting.Action) (handled bool, ret watch.Interface, err error) {
+				watchAction, ok := action.(k8stesting.WatchAction)
+				require.True(t, ok, "action is not a WatchAction, action: %+v", action)
+
+				assert.Equal(t, podNamespace, watchAction.GetNamespace())
+				assert.Equal(t, gvr, watchAction.GetResource())
+				assert.Equal(t, "metadata.name="+podName+",status.phase=Running", watchAction.GetWatchRestrictions().Fields.String())
+
+				watch, err := tracker.Watch(watchAction.GetResource(), watchAction.GetNamespace())
+				if err != nil {
+					return false, nil, err
+				}
+
+				// Start the process by signaling to add the pod
+				close(watcherChan)
+
+				return true, watch, nil
+			})
+
+			go tt.waiter(t, ctx, fakeKubeClient, returnChan)
+			go tt.podUpdater(t, ctx, tracker, watcherChan)
+
+			select {
+			case <-returnChan:
+			case <-time.After(5 * time.Second):
+				obj, err := tracker.Get(gvr, podNamespace, podName)
+				assert.NoError(t, err, "getting current pod state")
+				require.FailNowf(t, "container waiter did not return in time", "current object state: %+v", obj)
+			}
+		})
 	}
 }
 
