@@ -208,11 +208,11 @@ fuzz variable mask:
   image: golang:$GO_VERSION
   stage: test
   variables:
-    COVFUZZ_SEED_CORPUS: './helpers/trace/testdata/corpus'
+    COVFUZZ_SEED_CORPUS: './common/buildlogger/internal/testdata/corpus'
   script:
   - apt update && apt install -y clang
   - go install github.com/dvyukov/go-fuzz/go-fuzz@latest && go install github.com/dvyukov/go-fuzz/go-fuzz-build@latest && go get github.com/dvyukov/go-fuzz/go-fuzz-dep@latest
-  - go-fuzz-build -libfuzzer -o fuzz_variable_mask.a ./helpers/trace
+  - go-fuzz-build -libfuzzer -o fuzz_variable_mask.a -preserve crypto/internal/bigmod ./common/buildlogger/internal
   - clang -fsanitize=fuzzer fuzz_variable_mask.a -o fuzz_variable_mask
   - ./gitlab-cov-fuzz run -- ./fuzz_variable_mask -only_ascii=1 -max_len=128 -max_total_time=300
 
