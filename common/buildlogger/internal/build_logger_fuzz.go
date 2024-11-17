@@ -1,6 +1,6 @@
 //go:build gofuzz
 
-package trace
+package internal
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/masker"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildlogger/internal/tokensanitizer"
@@ -24,30 +23,30 @@ func (nopWriter) Close() error {
 }
 
 func Fuzz(data []byte) int {
-	phrases := []string{
-		strings.Repeat("A", 1024),
-		strings.Repeat("B", 4*1024),
-		strings.Repeat("C", 8*1024),
-		"secret",
-		"secret_suffix",
-		"ssecret",
-		"secrett",
-		"ssecrett",
+	phrases := [][]byte{
+		bytes.Repeat([]byte{'A'}, 1024),
+		bytes.Repeat([]byte{'B'}, 4*1024),
+		bytes.Repeat([]byte{'C'}, 8*1024),
+		[]byte("secret"),
+		[]byte("secret_suffix"),
+		[]byte("ssecret"),
+		[]byte("secrett"),
+		[]byte("ssecrett"),
 	}
 
-	tokenPrefixes := []string{
-		"secret_prefix",
-		"secret-prefix",
-		"secret_prefix-",
-		"secret-prefix-",
-		"secret_prefix_",
-		"secret-prefix_",
+	tokenPrefixes := [][]byte{
+		[]byte("secret_prefix"),
+		[]byte("secret-prefix"),
+		[]byte("secret_prefix-"),
+		[]byte("secret-prefix-"),
+		[]byte("secret_prefix_"),
+		[]byte("secret-prefix_"),
 	}
 
 	// to be combined with tokenPrefixes
-	secretSuffixes := []string{
-		"THIS_IS_SECRET",
-		"ALSO-SECRET",
+	secretSuffixes := [][]byte{
+		[]byte("THIS_IS_SECRET"),
+		[]byte("ALSO-SECRET"),
 	}
 
 	buf := new(bytes.Buffer)
@@ -68,12 +67,12 @@ func Fuzz(data []byte) int {
 	chunk(r, data, func(part []byte) {
 		src = append(src, part...)
 		if r.Intn(2) == 1 {
-			src = append(src, []byte(phrases[r.Intn(len(phrases))])...)
+			src = append(src, phrases[r.Intn(len(phrases))]...)
 		}
 		if r.Intn(2) == 1 {
 			pref := tokenPrefixes[r.Intn(len(tokenPrefixes))]
 			suf := secretSuffixes[r.Intn(len(secretSuffixes))]
-			src = append(src, []byte(pref+suf)...)
+			src = append(src, append(pref, suf...)...)
 		}
 	})
 
@@ -90,13 +89,13 @@ func Fuzz(data []byte) int {
 
 	contents := buf.Bytes()
 	for _, mask := range phrases {
-		if bytes.Contains(contents, []byte(mask)) {
+		if bytes.Contains(contents, mask) {
 			panic(fmt.Sprintf("mask %q present in %q", mask, contents))
 		}
 	}
 
 	for _, mask := range secretSuffixes {
-		if bytes.Contains(contents, []byte(mask)) {
+		if bytes.Contains(contents, mask) {
 			panic(fmt.Sprintf("prefix mask %q present in %q", mask, contents))
 		}
 	}
