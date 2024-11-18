@@ -54,15 +54,15 @@ The executors support different platforms and methodologies for building a
 project. The table below shows the key facts for each executor which helps
 you decide which executor to use.
 
-| Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Kubernetes | Custom         |
-|:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:----------:|---------------:|
-| Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓          |conditional (4) |
-| Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗         | ✓      | ✗          |conditional (4) |
-| Runner file system access protected (5)           | ✓    | ✗       | ✓          | ✓         | ✓      | ✓           |conditional    |
-| Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓          |✓               |
-| Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓          |conditional (4) |
-| Complicated build environments                    | ✗    | ✗ (2)   | ✓ (3)      | ✓ (3)     | ✓      | ✓          |✓               |
-| Debugging build problems                          | easy | easy    | hard       | hard      | medium | medium     |medium          |
+| Executor                                          | SSH  | Shell   | VirtualBox | Parallels | Docker | Docker Autoscaler | Instance       | Kubernetes | Custom         |
+|:--------------------------------------------------|:----:|:-------:|:----------:|:---------:|:------:|:-----------------:|---------------:| :--------: | :------------: |
+| Clean build environment for every build           | ✗    | ✗       | ✓          | ✓         | ✓      | ✓                 |conditional (4) | ✓          |conditional (4) |
+| Reuse previous clone if it exists                 | ✓    | ✓       | ✗          | ✗         | ✓      | ✓                 |conditional (4) | ✗          |conditional (4) |
+| Runner file system access protected (5)           | ✓    | ✗       | ✓          | ✓         | ✓      | ✓                 | ✗              | ✓          |conditional     |
+| Migrate runner machine                            | ✗    | ✗       | partial    | partial   | ✓      | ✓                 | ✓              | ✓          |✓               |
+| Zero-configuration support for concurrent builds  | ✗    | ✗ (1)   | ✓          | ✓         | ✓      | ✓                 | ✓              | ✓          |conditional (4) |
+| Complicated build environments                    | ✗    | ✗ (2)   | ✓ (3)      | ✓ (3)     | ✓      | ✓                 | ✗ (2)          | ✓          |✓               |
+| Debugging build problems                          | easy | easy    | hard       | hard      | medium | medium            | medium         | medium     | medium         |
 
 1. It's possible, but in most cases it is problematic if the build uses services
    installed on the build machine.
