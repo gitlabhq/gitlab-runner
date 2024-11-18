@@ -148,7 +148,7 @@ The example above will set `CUSTOM_ENV_CI_JOB_SERVICES` environment variable wit
 The Config stage is executed by `config_exec`.
 
 Sometimes you might want to set some settings during execution time. For
-example settings a build directory depending on the project ID.
+example setting a build directory depending on the project ID.
 `config_exec` reads from STDOUT and expects a valid JSON string with
 specific keys.
 
