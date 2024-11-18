@@ -74,6 +74,7 @@ Azure
 B-tree
 backfilling
 backfills
+backoff
 backport
 backported
 backporting
@@ -182,6 +183,7 @@ Coinbase
 colocate
 colocated
 colocating
+Colorama
 commit's
 CommonMark
 compilable
@@ -506,6 +508,7 @@ kanbans
 kaniko
 Karma
 KCachegrind
+keepalive
 Kerberos
 Keycloak
 keyless
@@ -640,6 +643,7 @@ nosniff
 noteable
 noteables
 npm
+NTFSSecurity
 NuGet
 nullability
 nullable
@@ -1066,6 +1070,7 @@ Ubuntu
 Udemy
 UI
 UIDs
+ulimit
 unapplied
 unapprove
 unapproved
