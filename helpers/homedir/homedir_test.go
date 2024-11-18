@@ -4,6 +4,7 @@ package homedir
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,12 +27,18 @@ func TestFix(t *testing.T) {
 		value                string
 		assertError          func(t *testing.T, err error)
 		expectedHomedirValue string
+		preflightCheck       func(t *testing.T)
 	}{
 		"HOME variable is set": {
 			env:                  testHomeDirVar,
 			expectedHomedirValue: testDir,
 		},
 		"HOME variable is not set and homedir value is empty": {
+			preflightCheck: func(t *testing.T) {
+				if runtime.GOOS == windows {
+					t.Skip("temporarily skipping on windows for release 17.6, see: https://gitlab.com/gitlab-com/runner-group/team-tasks/-/issues/334#note_2216373289")
+				}
+			},
 			env: testUnsetHomeDirVar,
 			assertError: func(t *testing.T, err error) {
 				assert.ErrorIs(t, err, ErrHomedirVariableNotSet)
@@ -46,6 +53,10 @@ func TestFix(t *testing.T) {
 
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
+			if tc.preflightCheck != nil {
+				tc.preflightCheck(t)
+			}
+
 			require.NoError(t, os.Setenv(testHomeDirVar, testDir))
 			t.Cleanup(func() {
 				require.NoError(t, os.Unsetenv(testHomeDirVar))

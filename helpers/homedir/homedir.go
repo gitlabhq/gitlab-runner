@@ -7,6 +7,9 @@ import (
 	"runtime"
 )
 
+// to make goconst happy
+const windows = "windows"
+
 var (
 	ErrHomedirVariableNotSet = fmt.Errorf("homedir variable is not set")
 )
@@ -24,7 +27,7 @@ func GetWDOrEmpty() string {
 // home directory path. Depending on the current platform.
 func Env() string {
 	switch runtime.GOOS {
-	case "windows":
+	case windows:
 		return "USERPROFILE"
 	case "plan9":
 		return "home"
@@ -45,7 +48,7 @@ func Env() string {
 // to our codebase, leaving track of its origins.
 func Get() string {
 	home, _ := os.UserHomeDir()
-	if home == "" && runtime.GOOS != "windows" {
+	if home == "" && runtime.GOOS != windows {
 		if u, err := user.Current(); err == nil {
 			return u.HomeDir
 		}
