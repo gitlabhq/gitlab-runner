@@ -62,11 +62,11 @@ func (c *UnregisterCommand) unregisterSingleRunner() []*common.RunnerConfig {
 }
 
 func (c *UnregisterCommand) unregisterRunner(r common.RunnerCredentials) bool {
-	if !network.TokenIsCreatedRunnerToken(r.Token) {
-		return c.network.UnregisterRunner(r)
+	if network.TokenIsCreatedRunnerToken(r.Token) {
+		return c.network.UnregisterRunnerManager(r, c.loadedSystemIDState.GetSystemID())
 	}
 
-	return c.network.UnregisterRunnerManager(r, c.loadedSystemIDState.GetSystemID())
+	return c.network.UnregisterRunner(r)
 }
 
 func (c *UnregisterCommand) Execute(context *cli.Context) {
