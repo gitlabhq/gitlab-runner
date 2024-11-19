@@ -1,3 +1,9 @@
+## v17.5.4 (2024-11-19)
+
+### Maintenance
+
+- Fix mage k8s:generatePermissionsDocs intermittent test faliures [!5107](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5107)
+
 ## v17.5.3 (2024-10-31)
 
 ### Bug fixes
