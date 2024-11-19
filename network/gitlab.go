@@ -487,7 +487,7 @@ func (n *GitLabClient) UnregisterRunnerManager(runner common.RunnerCredentials, 
 	)
 	defer func() { n.handleResponse(context.TODO(), resp, false) }()
 
-	const baseLogText = "Unregistering runner from GitLab"
+	const baseLogText = "Unregistering runner manager from GitLab"
 	switch result {
 	case http.StatusNoContent:
 		runner.Log().Println(baseLogText, "succeeded")
