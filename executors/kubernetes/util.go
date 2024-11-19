@@ -139,6 +139,13 @@ func waitForRunningContainer(ctx context.Context, client kubernetes.Interface, t
 			return fmt.Errorf("container status for %q not found", container)
 		}
 
+		if terminated := containerStatus.State.Terminated; terminated != nil {
+			if terminated.ExitCode != 0 {
+				return fmt.Errorf("container %q terminated with non-zero status: %d", container, terminated.ExitCode)
+			}
+			return nil
+		}
+
 		if running := containerStatus.State.Running; running != nil {
 			break
 		}
