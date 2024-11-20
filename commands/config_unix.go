@@ -12,11 +12,13 @@ import (
 var ROOTCONFIGDIR = "/etc/gitlab-runner"
 
 func getDefaultConfigDirectory() string {
+	hd := homedir.New()
+
 	if os.Getuid() == 0 {
 		return ROOTCONFIGDIR
-	} else if homeDir := homedir.Get(); homeDir != "" {
+	} else if homeDir := hd.Get(); homeDir != "" {
 		return filepath.Join(homeDir, ".gitlab-runner")
-	} else if currentDir := homedir.GetWDOrEmpty(); currentDir != "" {
+	} else if currentDir := hd.GetWDOrEmpty(); currentDir != "" {
 		return currentDir
 	}
 	panic("Cannot get default config file location")

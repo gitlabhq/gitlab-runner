@@ -3,88 +3,188 @@
 package homedir
 
 import (
-	"os"
-	"runtime"
+	"os/user"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestFix(t *testing.T) {
-	const (
-		testHomeDirVar      = "TEST_HOME"
-		testUnsetHomeDirVar = "TEST_UNSET_HOME"
-	)
+func TestEnv(t *testing.T) {
+	tests := map[string]string{
+		"windows": "USERPROFILE",
+		"plan9":   "home",
+		"linux":   "HOME",
+		"random":  "HOME",
+	}
 
-	var (
-		testDir  = t.TempDir()
-		testDir2 = t.TempDir()
-	)
+	for os, expectedVarName := range tests {
+		t.Run(os, func(t *testing.T) {
+			hd := HomeDir{os: os}
 
+			assert.Equal(t, expectedVarName, hd.Env())
+		})
+	}
+}
+
+func TestGetWDOrEmpty(t *testing.T) {
 	tests := map[string]struct {
-		env                  string
-		value                string
-		assertError          func(t *testing.T, err error)
-		expectedHomedirValue string
-		preflightCheck       func(t *testing.T)
+		wdDir      string
+		wdErr      error
+		expectedWd string
 	}{
-		"HOME variable is set": {
-			env:                  testHomeDirVar,
-			expectedHomedirValue: testDir,
+		"default": {
+			wdDir:      "/some/dir",
+			expectedWd: "/some/dir",
 		},
-		"HOME variable is not set and homedir value is empty": {
-			preflightCheck: func(t *testing.T) {
-				if runtime.GOOS == windows {
-					t.Skip("temporarily skipping on windows for release 17.6, see: https://gitlab.com/gitlab-com/runner-group/team-tasks/-/issues/334#note_2216373289")
-				}
-			},
-			env: testUnsetHomeDirVar,
-			assertError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, ErrHomedirVariableNotSet)
-			},
+		"empty working dir": {
+			wdDir:      "",
+			expectedWd: "",
 		},
-		"HOME variable is not set and homedir.Get gives a result": {
-			env:                  testUnsetHomeDirVar,
-			value:                testDir2,
-			expectedHomedirValue: testDir2,
+		"WorkingDirectory returns error": {
+			wdDir:      "not-used",
+			wdErr:      assert.AnError,
+			expectedWd: "",
 		},
 	}
 
-	for tn, tc := range tests {
-		t.Run(tn, func(t *testing.T) {
-			if tc.preflightCheck != nil {
-				tc.preflightCheck(t)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			hd := HomeDir{
+				workingDirectory: func() (string, error) {
+					return test.wdDir, test.wdErr
+				},
 			}
 
-			require.NoError(t, os.Setenv(testHomeDirVar, testDir))
-			t.Cleanup(func() {
-				require.NoError(t, os.Unsetenv(testHomeDirVar))
-			})
+			assert.Equal(t, test.expectedWd, hd.GetWDOrEmpty())
+		})
+	}
+}
 
-			oldEnvGetter := envGetter
-			oldHomedirGetter := homedirGetter
-			t.Cleanup(func() {
-				envGetter = oldEnvGetter
-				homedirGetter = oldHomedirGetter
-			})
+func TestGet(t *testing.T) {
+	tests := map[string]struct {
+		os               string
+		userHomeDir      func() (string, error)
+		currenUser       func() (*user.User, error)
+		expectedVarValue string
+	}{
+		"userHomeDir returns dir": {
+			userHomeDir:      func() (string, error) { return "/some/dir", nil },
+			expectedVarValue: "/some/dir",
+		},
+		"userHomeDir returns no dir but currentUser does": {
+			userHomeDir: func() (string, error) { return "", assert.AnError },
+			currenUser: func() (*user.User, error) {
+				return &user.User{HomeDir: "/some/user/home/dir"}, nil
+			},
+			expectedVarValue: "/some/user/home/dir",
+		},
+		"userHomeDir returns no dir and currentUser errors": {
+			userHomeDir:      func() (string, error) { return "", assert.AnError },
+			currenUser:       func() (*user.User, error) { return nil, assert.AnError },
+			expectedVarValue: "",
+		},
+		"userHomeDir returns no dir on windows": {
+			os:               "windows",
+			userHomeDir:      func() (string, error) { return "", assert.AnError },
+			expectedVarValue: "",
+		},
+	}
 
-			envGetter = func() string {
-				return tc.env
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			hd := HomeDir{
+				os:          test.os,
+				currentUser: test.currenUser,
+				userHomeDir: test.userHomeDir,
 			}
 
-			homedirGetter = func() string {
-				return tc.value
+			assert.Equal(t, test.expectedVarValue, hd.Get())
+		})
+	}
+}
+
+func TestFix(t *testing.T) {
+	tests := map[string]struct {
+		os                 string
+		homeEnvVarVal      string
+		userHomeDir        func() (string, error)
+		currenUser         func() (*user.User, error)
+		expectedErr        error
+		expectedHomeEnvVal string
+	}{
+		"home from env": {
+			homeEnvVarVal:      "/some/home/dir",
+			expectedHomeEnvVal: "/some/home/dir",
+		},
+		"home not set but userHomeDir returns home dir": {
+			userHomeDir:        func() (string, error) { return "/some/user/home/dir", nil },
+			expectedHomeEnvVal: "/some/user/home/dir",
+		},
+		"home not set and userHomeDir returns no home dir": {
+			userHomeDir: func() (string, error) { return "", assert.AnError },
+			currenUser: func() (*user.User, error) {
+				return &user.User{HomeDir: "/home/dir/from/current/user"}, nil
+			},
+			expectedHomeEnvVal: "/home/dir/from/current/user",
+		},
+		"home not set and userHomeDir returns no home dir and currentUser returns no home dir": {
+			userHomeDir: func() (string, error) { return "", assert.AnError },
+			currenUser:  func() (*user.User, error) { return nil, assert.AnError },
+			expectedErr: ErrHomedirVariableNotSet,
+		},
+		"home not set and userHomeDir returns no home dir on windows": {
+			os:          "windows",
+			userHomeDir: func() (string, error) { return "", assert.AnError },
+			expectedErr: ErrHomedirVariableNotSet,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			fakeEnv := fakeEnv{}
+
+			hd := HomeDir{
+				setEnv:      fakeEnv.Set,
+				getEnv:      fakeEnv.Get,
+				os:          test.os,
+				currentUser: test.currenUser,
+				userHomeDir: test.userHomeDir,
 			}
 
-			err := Fix()
-			if tc.assertError != nil {
-				tc.assertError(t, err)
+			homeEnvVarName := hd.Env()
+			if test.homeEnvVarVal != "" {
+				_ = fakeEnv.Set(homeEnvVarName, test.homeEnvVarVal)
+			} else {
+				fakeEnv.Unset(homeEnvVarName)
+			}
+
+			err := hd.Fix()
+
+			if test.expectedErr != nil {
+				assert.ErrorIs(t, err, test.expectedErr)
 				return
 			}
 
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedHomedirValue, os.Getenv(tc.env))
+			if assert.NoError(t, err) {
+				assert.Equal(t, test.expectedHomeEnvVal, fakeEnv.Get(homeEnvVarName),
+					"expected the env var %q to be set to %q", homeEnvVarName, test.expectedHomeEnvVal,
+				)
+			}
 		})
 	}
+}
+
+type fakeEnv map[string]string
+
+func (f fakeEnv) Get(k string) string {
+	return f[k]
+}
+
+func (f fakeEnv) Set(k, v string) error {
+	f[k] = v
+	return nil
+}
+
+func (f fakeEnv) Unset(k string) {
+	delete(f, k)
 }
