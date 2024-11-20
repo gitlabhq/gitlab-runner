@@ -24,5 +24,10 @@ func GetFactory(authName string) (Factory, error) {
 		return nil, err
 	}
 
-	return factory.(Factory), nil
+	switch f := factory.(type) {
+	case Factory:
+		return f, nil
+	default:
+		panic("registered factory cannot be coerced into 'Factory' type")
+	}
 }

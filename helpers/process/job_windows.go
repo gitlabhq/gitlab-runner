@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"sync"
@@ -24,20 +25,23 @@ func (c *osCmd) Start() error {
 	setProcessGroup(c.internal, c.options.UseWindowsLegacyProcessStrategy)
 
 	if c.options.UseWindowsJobObject {
-		err := c.createJobObject()
+		jobObj, err := createJobObject()
 		if err != nil {
-			return err
+			return fmt.Errorf("starting OS command: %w", err)
 		}
+		c.jobObject = jobObj
 	}
 
 	err := c.internal.Start()
 	if err != nil {
-		return err
+		return fmt.Errorf("starting OS command: %w", err)
 	}
 
 	if c.options.UseWindowsJobObject {
 		// Any failures here are ignored, since we've already started the process running.
-		c.assignProcessToJobObject()
+		if err := assignProcessToJobObject(c.internal.Process.Pid, c.jobObject); err != nil {
+			c.options.Logger.Warn("assigning process to job object:", err)
+		}
 	}
 	return nil
 }
@@ -59,51 +63,6 @@ func newOSCmd(c *exec.Cmd, options CommandOptions) Commander {
 	}
 }
 
-// Create a Job object.
-func (c *osCmd) createJobObject() error {
-	hJob, err := windows.CreateJobObject(nil, nil)
-	if err != nil {
-		c.options.Logger.Warn("Failed to create job object:", err)
-		return err
-	}
-
-	var info windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION
-	info.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-
-	_, err = windows.SetInformationJobObject(hJob, windows.JobObjectExtendedLimitInformation,
-		uintptr(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info)))
-	if err != nil {
-		c.options.Logger.Warn("Failed to set job object information:", err)
-		return err
-	}
-
-	c.jobObject = uintptr(hJob)
-	return nil
-}
-
-// Assign the osCmd's process to the job object. Processes created as children of
-// that one will also be assigned to the job. When the last handle on the job is closed,
-// all associated processes will be terminated. The handle to the job object is saved
-// in the osCmd.
-func (c *osCmd) assignProcessToJobObject() {
-	type Process struct {
-		pid    int
-		handle uintptr
-		isdone uint32
-		sigMu  sync.RWMutex
-	}
-
-	proc := (*Process)(unsafe.Pointer(c.internal.Process))
-	if proc.handle == 0 {
-		c.options.Logger.Warn("Failed to retrieve handle for process")
-	}
-
-	err := windows.AssignProcessToJobObject(windows.Handle(c.jobObject), windows.Handle(proc.handle))
-	if err != nil {
-		c.options.Logger.Warn("Failed to assign process to job:", err)
-	}
-}
-
 func (c *osCmd) closeJobObject() {
 	if !c.options.UseWindowsJobObject {
 		return
@@ -121,4 +80,53 @@ func setProcessGroup(c *exec.Cmd, useLegacyStrategy bool) {
 	c.SysProcAttr = &syscall.SysProcAttr{
 		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
 	}
+}
+
+func createJobObject() (uintptr, error) {
+	jobObj, err := windows.CreateJobObject(nil, nil)
+	if err != nil {
+		return 0, fmt.Errorf("creating job object: %w", err)
+	}
+
+	info := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{
+		BasicLimitInformation: windows.JOBOBJECT_BASIC_LIMIT_INFORMATION{
+			LimitFlags: windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+		},
+	}
+
+	if _, err = windows.SetInformationJobObject(
+		jobObj,
+		windows.JobObjectExtendedLimitInformation,
+		uintptr(unsafe.Pointer(&info)),
+		uint32(unsafe.Sizeof(info))); err != nil {
+		return 0, fmt.Errorf("setting job object information: %w", err)
+	}
+
+	return uintptr(jobObj), nil
+}
+
+// Assign the process with specified PID to the specified job object. Processes created as children of that one will
+// also be assigned to the job. When the last handle on the job is closed, all associated processes will be terminated.
+func assignProcessToJobObject(pid int, jobObject uintptr) error {
+	procHandle, err := findProcessHandleFromPID(pid)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve handle for process: %w", err)
+	}
+
+	if err = windows.AssignProcessToJobObject(windows.Handle(jobObject), windows.Handle(procHandle)); err != nil {
+		return fmt.Errorf("failed to assign process to job: %w", err)
+	}
+	return nil
+}
+
+func findProcessHandleFromPID(pid int) (uintptr, error) {
+	const da = windows.PROCESS_TERMINATE | windows.PROCESS_SET_QUOTA
+	h, err := syscall.OpenProcess(da, false, uint32(pid))
+	if err != nil {
+		return 0, fmt.Errorf("calling OpenProcess: %w", err)
+	}
+	if uintptr(h) == 0 {
+		return 0, fmt.Errorf("getting process handle for pid %q", pid)
+	}
+	return uintptr(h), nil
 }

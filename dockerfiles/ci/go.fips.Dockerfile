@@ -8,7 +8,7 @@ RUN microdnf update -y && \
     microdnf install -y --setopt=tsflags=nodocs openssl-devel glibc-devel tar gzip gcc make git git-lfs && \
     microdnf clean all -y
 
-ARG GO_VERSION=1.22
+ARG GO_VERSION=1.23
 
 RUN curl -LO https://go.dev/dl/go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz && \
     tar -C /usr/ -xzf go${GO_VERSION}.linux-${PLATFORM_ARCH}.tar.gz
@@ -19,8 +19,7 @@ ARG GO_RELEASE_VERSION=${GO_VERSION}
 ARG GO_FIPS_VERSION_SUFFIX=${GO_FIPS_VERSION_SUFFIX}
 RUN git clone \
     https://github.com/golang-fips/go \
-    --branch go${GO_RELEASE_VERSION}${GO_FIPS_VERSION_SUFFIX} \
-    --single-branch \
+    --branch go-${GO_RELEASE_VERSION}${GO_FIPS_VERSION_SUFFIX} \
     --depth 1 \
     /tmp/go
 

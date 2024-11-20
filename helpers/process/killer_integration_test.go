@@ -3,6 +3,7 @@
 package process_test
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,7 +27,7 @@ func newKillerWithLoggerAndCommand(
 	skipTerminate bool,
 	useWindowsLegacyProcessStrategy bool,
 	useWindowsJobObject bool,
-) (process.Killer, *process.MockLogger, process.Commander, func()) {
+) (process.Killer, *process.MockLogger, process.Commander, func(), *dumbTestLogger) {
 	t.Helper()
 
 	loggerMock := new(process.MockLogger)
@@ -36,10 +38,13 @@ func newKillerWithLoggerAndCommand(
 		args = append(args, "skip-terminate-signals")
 	}
 
+	logger := dumbTestLogger{}
+
 	command := process.NewOSCmd(sleepBinary, args,
 		process.CommandOptions{
 			UseWindowsLegacyProcessStrategy: useWindowsLegacyProcessStrategy,
 			UseWindowsJobObject:             useWindowsJobObject,
+			Logger:                          &logger,
 		})
 	err := command.Start()
 	require.NoError(t, err)
@@ -54,7 +59,30 @@ func newKillerWithLoggerAndCommand(
 		}
 	}
 
-	return k, loggerMock, command, cleanup
+	return k, loggerMock, command, cleanup, &logger
+}
+
+var _ process.Logger = (*dumbTestLogger)(nil)
+
+type dumbTestLogger struct {
+	buf    bytes.Buffer
+	fields []logrus.Fields
+}
+
+func (d *dumbTestLogger) WithFields(fields logrus.Fields) process.Logger {
+	return &dumbTestLogger{
+		fields: append(d.fields, fields),
+	}
+}
+
+func (d *dumbTestLogger) Warn(args ...any) {
+	allArgs := []any{}
+	for _, f := range d.fields {
+		allArgs = append(allArgs, f)
+	}
+	allArgs = append(allArgs, args...)
+
+	d.buf.WriteString(fmt.Sprintln(allArgs))
 }
 
 func prepareTestBinary(t *testing.T) string {
@@ -93,7 +121,7 @@ func TestKiller(t *testing.T) {
 
 	for testName, testCase := range testKillerTestCases() {
 		t.Run(testName, func(t *testing.T) {
-			k, loggerMock, cmd, cleanup := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate, testCase.useWindowsLegacyProcessStrategy, testCase.useWindowsJobObject)
+			k, loggerMock, cmd, cleanup, logs := newKillerWithLoggerAndCommand(t, sleepDuration, testCase.skipTerminate, testCase.useWindowsLegacyProcessStrategy, testCase.useWindowsJobObject)
 			defer cleanup()
 
 			waitCh := make(chan error)
@@ -121,7 +149,6 @@ func TestKiller(t *testing.T) {
 
 			if testCase.useWindowsJobObject {
 				k.ForceKill()
-
 			} else {
 				k.Terminate()
 			}
@@ -132,6 +159,7 @@ func TestKiller(t *testing.T) {
 				return
 			}
 
+			assert.Empty(t, logs.buf.String())
 			assert.EqualError(t, err, testCase.expectedError)
 		})
 	}

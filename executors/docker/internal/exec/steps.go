@@ -75,7 +75,7 @@ func (sd *stepsDocker) executeStepsRequest(ctx context.Context, container string
 }
 
 func errFromStatus(status client.Status) error {
-	berr := &common.BuildError{Inner: fmt.Errorf(status.Message)}
+	berr := &common.BuildError{Inner: errors.New(status.Message)}
 
 	switch status.State {
 	case client.StateSuccess:
