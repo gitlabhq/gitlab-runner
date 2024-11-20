@@ -16,6 +16,7 @@ const (
 var helperImages = map[string]string{
 	windows.V1809: baseImage1809,
 	windows.V21H2: baseImage21H2,
+	windows.V24H2: baseImage21H2, // Re-use the 21H2 base image, taking advantage of the backwards compatibility of newer windows kernels
 }
 
 type windowsInfo struct{}

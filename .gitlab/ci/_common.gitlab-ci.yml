@@ -117,6 +117,23 @@ default:
   variables:
     WINDOWS_VERSION: nanoserver21H2
 
+.windows24H2_variables:
+  variables:
+    WINDOWS_VERSION: servercore21H2 # Re-use existing 21H2 image on 24H2, taking advantage of the down-level compatibility
+
+.windows24H2:
+  extends:
+    - .windows24H2_variables
+  tags:
+    - windows
+    - windows-24h2
+
+.windows24H2_nano:
+  extends:
+    - .windows24H2
+  variables:
+    WINDOWS_VERSION: nanoserver21H2
+
 # .stage_done is used as a sentinel at stage n for stage n-1 completion, so we can kick off builds in later stages
 # without explicitly waiting for the completion of the n-1 stage
 .stage_done:

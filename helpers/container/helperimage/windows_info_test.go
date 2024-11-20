@@ -77,6 +77,22 @@ func Test_windowsInfo_create(t *testing.T) {
 				expectedErr: nil,
 			},
 			{
+				kernelVersion: "10.0 26100 (26100.1.amd64fre.ge_release.240331-1435)",
+				expectedInfo: Info{
+					Architecture: windowsSupportedArchitecture,
+					Name:         GitLabRegistryName,
+					Tag: fmt.Sprintf(
+						"%s-%s-%s",
+						windowsSupportedArchitecture,
+						revision,
+						baseImage21H2,
+					),
+					IsSupportingLocalImport: false,
+					Cmd:                     expectedPowershellCmdLine,
+				},
+				expectedErr: nil,
+			},
+			{
 				kernelVersion: "10.0 17134 (17134.1.amd64fre.rs4_release.180410-1804)",
 				expectedErr:   windows.ErrUnsupportedWindowsVersion,
 			},

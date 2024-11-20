@@ -234,6 +234,12 @@ windows 21H2 unit tests:
   - .windows21H2
   - .rules:merge_request_pipelines:no_docs:no-community-mr
 
+windows 24H2 unit tests:
+  extends:
+  - .windows unit test
+  - .windows24H2
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
+
 windows 1809 integration tests:
   extends:
   - .windows integration test
@@ -253,6 +259,21 @@ windows 21H2 integration tests:
   extends:
   - .windows integration test
   - .windows21H2
+  - .rules:merge_request_pipelines:no_docs:no-community-mr
+  needs:
+  - 'clone test repo'
+  - 'prepare done'
+  - job: 'development servercore21H2 helper docker images'
+    optional: true
+  - job: 'bleeding edge servercore21H2 helper docker images'
+    optional: true
+  - job: 'stable servercore21H2 helper docker images'
+    optional: true
+
+windows 24H2 integration tests:
+  extends:
+  - .windows integration test
+  - .windows24H2
   - .rules:merge_request_pipelines:no_docs:no-community-mr
   needs:
   - 'clone test repo'
