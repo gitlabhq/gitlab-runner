@@ -1,4 +1,4 @@
-package kubernetes
+package docs
 
 import (
 	"fmt"
@@ -24,32 +24,32 @@ type simplePosition struct {
 	line     int
 }
 
-type verbFeatureFlag struct {
+type configFlag struct {
 	Name  string
 	Value string
 }
 
-func (v verbFeatureFlag) valid() bool {
+func (v configFlag) valid() bool {
 	return v.Name != "" && v.Value != ""
 }
 
-func (v verbFeatureFlag) String() string {
+func (v configFlag) String() string {
 	return fmt.Sprintf("%s=%s", v.Name, v.Value)
 }
 
 type verb struct {
-	Verb         string
-	FeatureFlags []verbFeatureFlag
+	Verb        string
+	ConfigFlags []configFlag
 }
 
 func (p verb) String() string {
-	if !lo.EveryBy(p.FeatureFlags, func(ff verbFeatureFlag) bool {
+	if !lo.EveryBy(p.ConfigFlags, func(ff configFlag) bool {
 		return ff.valid()
-	}) || len(p.FeatureFlags) == 0 {
+	}) || len(p.ConfigFlags) == 0 {
 		return p.Verb
 	}
 
-	featureFlagsStrings := lo.Map(p.FeatureFlags, func(ff verbFeatureFlag, _ int) string {
+	featureFlagsStrings := lo.Map(p.ConfigFlags, func(ff configFlag, _ int) string {
 		return ff.String()
 	})
 	sort.Strings(featureFlagsStrings)
@@ -57,9 +57,11 @@ func (p verb) String() string {
 	return fmt.Sprintf("%s (`%s`)", p.Verb, strings.Join(featureFlagsStrings, ", "))
 }
 
-type permissionsGroup map[string][]verb
+type PermissionsGroup map[string][]verb
 
-func parsePermissions() (permissionsGroup, error) {
+// Beware, we currently only support the CoreV1 API. If we add resources that require a different API group,
+// for example "rbac.authorization.k8s.io", we will need to update this function to parse the API group too.
+func parsePermissions() (PermissionsGroup, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseDir(fset, "executors/kubernetes", filterTestFiles, parser.ParseComments)
 	if err != nil {
@@ -67,7 +69,7 @@ func parsePermissions() (permissionsGroup, error) {
 	}
 
 	positions := map[simplePosition]token.Pos{}
-	permissions := permissionsGroup{}
+	permissions := PermissionsGroup{}
 
 	for _, pkg := range f {
 		for _, f := range pkg.Files {
@@ -135,7 +137,7 @@ func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, no
 	return true
 }
 
-func processPermissions(fset *token.FileSet, comments []*ast.CommentGroup, positions map[simplePosition]token.Pos, permissions permissionsGroup) {
+func processPermissions(fset *token.FileSet, comments []*ast.CommentGroup, positions map[simplePosition]token.Pos, permissions PermissionsGroup) {
 	for _, commentGroup := range comments {
 		for _, comment := range commentGroup.List {
 			position := fset.Position(comment.Pos())
@@ -158,7 +160,7 @@ func processPermissions(fset *token.FileSet, comments []*ast.CommentGroup, posit
 	}
 }
 
-func groupPermissions(comment *ast.Comment, permissions permissionsGroup) {
+func groupPermissions(comment *ast.Comment, permissions PermissionsGroup) {
 	resource, verbs, featureFlags := parseComment(comment)
 	if resource == "ignore" {
 		return
@@ -177,17 +179,21 @@ func groupPermissions(comment *ast.Comment, permissions permissionsGroup) {
 		})
 
 		if verbIndex != -1 {
-			permissions[resource][verbIndex].FeatureFlags = append(permissions[resource][verbIndex].FeatureFlags, featureFlags...)
+			permissions[resource][verbIndex].ConfigFlags = append(permissions[resource][verbIndex].ConfigFlags, featureFlags...)
 		} else {
 			permissions[resource] = append(permissions[resource], verb{
-				Verb:         v,
-				FeatureFlags: featureFlags,
+				Verb:        v,
+				ConfigFlags: featureFlags,
 			})
 		}
 	}
+
+	slices.SortFunc(permissions[resource], func(a, b verb) int {
+		return strings.Compare(a.Verb, b.Verb)
+	})
 }
 
-func parseComment(comment *ast.Comment) (string, []string, []verbFeatureFlag) {
+func parseComment(comment *ast.Comment) (string, []string, []configFlag) {
 	components := lo.Map(strings.Split(comment.Text, ","), func(c string, _ int) string {
 		return strings.TrimSpace(c)
 	})
@@ -205,9 +211,9 @@ func parseComment(comment *ast.Comment) (string, []string, []verbFeatureFlag) {
 		verbs = append(verbs, c)
 	}
 
-	featureFlags := lo.Map(ffs, func(ff string, _ int) verbFeatureFlag {
+	featureFlags := lo.Map(ffs, func(ff string, _ int) configFlag {
 		split := strings.Split(ff, "=")
-		return verbFeatureFlag{
+		return configFlag{
 			Name:  strings.TrimSpace(split[0]),
 			Value: strings.TrimSpace(split[1]),
 		}

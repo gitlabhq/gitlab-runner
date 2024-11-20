@@ -1,0 +1,77 @@
+.integration kubernetes:
+  extends:
+    - .rules:merge_request_pipelines:no_docs
+  tags:
+    - kubernetes_integration
+  stage: test kubernetes integration
+  resource_group: $CI_COMMIT_BRANCH
+  needs:
+    - 'provision integration kubernetes'
+  variables:
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-runner-$CI_PIPELINE_ID"
+  before_script:
+    - make splitic
+
+provision integration kubernetes:
+  extends:
+  - .integration kubernetes
+  needs:
+  - 'prepare done'
+  variables:
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
+  script:
+  - mage k8s:provisionIntegrationKubernetes $CI_PIPELINE_ID
+
+integration kubernetes exec legacy:
+  extends:
+  - .integration kubernetes
+  variables:
+    CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
+    CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
+  script:
+  - >
+    splitic test \
+      -tags integration,kubernetes \
+      -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
+      gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+      -- -timeout=10m -parallel 20 -run=TestRunIntegrationTestsWithFeatureFlag
+
+integration kubernetes attach:
+  extends:
+    - .integration kubernetes
+  variables:
+    CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
+    CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
+  script:
+    - >
+      splitic test \
+        -tags integration,kubernetes \
+        -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
+        gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        -- -timeout=10m -parallel 20 -run=TestRunIntegrationTestsWithFeatureFlag
+
+integration kubernetes:
+  extends:
+    - .integration kubernetes
+  script:
+    - >
+      splitic test \
+        -tags integration,kubernetes \
+        -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
+        gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        -- -timeout=10m -parallel 20 -skip=TestRunIntegrationTestsWithFeatureFlag
+
+destroy integration kubernetes:
+  extends:
+  - .integration kubernetes
+  needs:
+  - job: 'integration kubernetes'
+    optional: true
+  - job: 'integration kubernetes exec legacy'
+    optional: true
+  - job: 'integration kubernetes attach'
+    optional: true
+  variables:
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-provisioner"
+  script:
+  - mage k8s:destroyIntegrationKubernetes $CI_PIPELINE_ID

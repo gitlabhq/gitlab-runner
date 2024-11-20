@@ -4,6 +4,7 @@ stages:
 - prebuild
 - prerelease
 - test
+- test kubernetes integration
 - coverage
 - build
 - package
@@ -19,6 +20,7 @@ include:
 - local: /.gitlab/ci/prebuild.gitlab-ci.yml
 - local: /.gitlab/ci/prerelease.gitlab-ci.yml
 - local: /.gitlab/ci/test.gitlab-ci.yml
+- local: /.gitlab/ci/test-kubernetes-integration.gitlab-ci.yml
 - local: /.gitlab/ci/coverage.gitlab-ci.yml
 - local: /.gitlab/ci/build.gitlab-ci.yml
 - local: /.gitlab/ci/package.gitlab-ci.yml

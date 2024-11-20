@@ -341,41 +341,11 @@ windows 21H2 integration tests:
   - job: 'stable servercore21H2 helper docker images'
     optional: true
 
-integration_k8s:
+mage tests:
   extends:
-  - .rules:merge_request_pipelines:no_docs
-  - .docker
+    - .rules:merge_request_pipelines:no_docs
+  stage: test
   needs:
   - 'prepare done'
-  stage: test
-  allow_failure: true # Will be fixed in !4228
-  services:
-  - name: registry.gitlab.com/gitlab-org/cluster-integration/test-utils/k3s-gitlab-ci/releases/v1.26.0-k3s1
-    alias: k3s
-    command:
-      - server
-      - --tls-san=k3s
-      - --kube-apiserver-arg=feature-gates=ProcMountType=true
-      - --disable-network-policy
-  before_script:
-  - curl k3s:8081?service=k3s > k3s.yaml
-  - export KUBECONFIG=$(pwd)/k3s.yaml
-  - kubectl version
-  - kubectl cluster-info
-  - make splitic
   script:
-  - >
-    splitic test \
-      -tags integration,kubernetes \
-      -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-      gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-      -- -timeout=30m
-
-mage tests:
-    extends:
-    - .rules:merge_request_pipelines:no_docs
-    stage: test
-    needs:
-    - 'prepare done'
-    script:
-    - make mage-test
+  - make mage-test
