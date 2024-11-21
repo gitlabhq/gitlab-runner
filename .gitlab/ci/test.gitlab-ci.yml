@@ -231,9 +231,12 @@ fuzz variable mask:
   - git config --system core.longpaths true
   - New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
     -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
-  - go version
-  - curl -o golang.msi "https://go.dev/dl/go$GO_VERSION.windows-amd64.msi"
-  - Start-Process msiexec.exe -Wait -ArgumentList '/I golang.msi /quiet'
+  - $ProgressPreference = 'SilentlyContinue'
+  - (Measure-Command { curl -o golang-windows-amd64.zip "https://go.dev/dl/go${GO_VERSION}.windows-amd64.zip" }).TotalSeconds
+  - (Measure-Command { 7z x .\golang-windows-amd64.zip }).TotalSeconds
+  - if (Test-Path "C:\Program Files\Go") { Remove-Item -Path "C:\Program Files\Go" -Recurse -Force }
+  - Move-Item -Path "go" -Destination "C:\Program Files\Go"
+  - rm golang-windows-amd64.zip
   - $env:Path = "C:\Program Files\Go\bin;$env:Path"
   - go version
   - *go-cache-windows_before_script
