@@ -274,3 +274,16 @@ Docker.
 To troubleshoot this issue, you can enable debugging on Docker
 Machine by setting `MACHINE_DEBUG=true` in the environment
 where GitLab Runner is installed.
+
+### ERROR: Cannot connect to the Docker daemon
+
+The job might fail during the prepare stage with an error message:
+
+```plaintext
+Preparing environment 
+ERROR: Job failed (system failure): prepare environment: Cannot connect to the Docker daemon at tcp://10.200.142.223:2376. Is the docker daemon running? (docker.go:650:120s). Check https://docs.gitlab.com/runner/shells/index.html#shell-profile-loading for more information
+```
+
+This error occurs when the Docker daemon fails to start within the expected time in the VM created
+by the Docker Machine executor. To fix this issue, increase the `wait_for_services_timeout` value in
+the [`[runners.docker]`](../configuration/advanced-configuration.md#the-runnersdocker-section) section.
