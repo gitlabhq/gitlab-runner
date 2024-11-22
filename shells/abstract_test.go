@@ -2136,26 +2136,6 @@ func TestSkipBuildStage(t *testing.T) {
 				},
 			},
 		},
-		common.BuildStageCleanup: {
-			"don't skip if file artifact defined": {
-				common.JobResponse{
-					Variables: common.JobVariables{
-						{
-							Key:      "FILE_VARIABLE",
-							Value:    "CONTENTS",
-							Public:   true,
-							Internal: true,
-							File:     true,
-						},
-					},
-				},
-				common.RunnerConfig{
-					RunnerCredentials: common.RunnerCredentials{
-						URL: "https://example.com",
-					},
-				},
-			},
-		},
 	}
 
 	shell := AbstractShell{}
@@ -2223,6 +2203,9 @@ func TestAbstractShell_writeCleanupFileVariablesScript(t *testing.T) {
 	mockShellWriter.On("RmFile", testPath1).Once()
 	mockShellWriter.On("TmpFile", testVar3).Return(testPath3).Once()
 	mockShellWriter.On("RmFile", testPath3).Once()
+
+	mockShellWriter.On("TmpFile", "gitlab_runner_env").Return("temp_env").Once()
+	mockShellWriter.On("RmFile", "temp_env").Once()
 
 	shell := new(AbstractShell)
 
