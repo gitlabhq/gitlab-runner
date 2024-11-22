@@ -6,7 +6,6 @@ binaries:
   needs:
   - 'prepare done'
   script:
-  - source ci/touch_make_dependencies
   - make runner-bin BUILD_PLATFORMS="-osarch='$PLATFORMS'"
   artifacts:
     paths:
@@ -35,7 +34,6 @@ binaries-fips:
   - job: 'prepare go fips'
     optional: true
   script:
-  - source ci/touch_make_dependencies
   - make runner-bin-fips GOOS=$GOOS GOARCH=$GOARCH
   artifacts:
     paths:

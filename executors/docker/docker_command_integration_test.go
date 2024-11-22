@@ -1517,6 +1517,25 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 
 	successfulBuild, err := common.GetRemoteSuccessfulBuildWithAfterScript()
 
+	dockerSocket := "/var/run/docker.sock"
+	successfulBuild.Variables = append(successfulBuild.Variables, common.JobVariable{
+		Key:   "DOCKER_HOST",
+		Value: "unix://" + dockerSocket,
+	})
+
+	// In CI, it's possible that DOCKER_HOST has been overridden to a different unix
+	// path to usual, so we cater for that.
+	//
+	// This is not something we can typically do outside of CI, because overriding
+	// won't always work (DOCKER_HOST pointing to a file that's on the host, and not VM
+	// in a Docker/Rancher Desktop scenario). In that case, leaving the default is
+	// more likely to work.
+	if _, ok := os.LookupEnv("CI"); ok {
+		if sock := os.Getenv("DOCKER_HOST"); strings.HasPrefix(sock, "unix://") {
+			dockerSocket = strings.TrimPrefix(sock, "unix://")
+		}
+	}
+
 	// This scripts removes self-created containers that do exit
 	// It will fail if: cannot be removed, or no containers is found
 	// It is assuming that name of each runner created container starts
@@ -1539,7 +1558,7 @@ func TestDockerCommandWithDoingPruneAndAfterScript(t *testing.T) {
 					Image:      common.TestDockerGitImage,
 					PullPolicy: common.StringOrArray{common.PullPolicyIfNotPresent},
 					Volumes: []string{
-						"/var/run/docker.sock:/var/run/docker.sock",
+						dockerSocket + ":/var/run/docker.sock",
 					},
 				},
 			},

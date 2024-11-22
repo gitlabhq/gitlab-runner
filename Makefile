@@ -36,6 +36,9 @@ GO_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(APP_NAME) -X $(COMMON_PACKAG
               -X $(COMMON_PACKAGE_NAMESPACE).REVISION=$(REVISION) -X $(COMMON_PACKAGE_NAMESPACE).BUILT=$(BUILT) \
               -X $(COMMON_PACKAGE_NAMESPACE).BRANCH=$(BRANCH) \
               -w
+
+GO_TEST_LDFLAGS ?= -X $(COMMON_PACKAGE_NAMESPACE).NAME=$(APP_NAME)
+
 GO_FILES ?= $(shell find . -name '*.go')
 export CGO_ENABLED ?= 0
 
@@ -437,3 +440,6 @@ clean:
 
 print_ldflags:
 	@echo $(GO_LDFLAGS)
+
+print_test_ldflags:
+	@echo $(GO_TEST_LDFLAGS)

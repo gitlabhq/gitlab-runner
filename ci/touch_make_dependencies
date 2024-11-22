@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-if [ -d out ]; then
-  find out -type f -exec sh -c '
-    echo "touching $1"
-    touch "$1"
-  ' sh {} \;
-fi

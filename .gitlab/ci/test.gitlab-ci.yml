@@ -83,7 +83,6 @@ code_quality:
     OUT_FORMAT: code-climate
     GOLANGLINT_VERSION: "" # Don't add version suffix to Makefile's GOLANGLINT (use plain golangci-lint from image)
   before_script:
-  - source ci/touch_make_dependencies
   # Ensure the goargs linter plugin is available at .tmp/goargs.so to suit .golangci.yml
   - mkdir .tmp && ln -s /usr/lib/goargs.so .tmp/goargs.so
   # Copy the Docker image's golangci-lint to the location expected by `make lint` so that it is not built
@@ -107,8 +106,6 @@ code_quality:
   - .docker
   - .go-cache
   stage: test
-  before_script:
-  - make splitic
   artifacts:
     paths:
     - .splitic/
@@ -133,13 +130,14 @@ unit test:
   - 'clone test repo'
   - 'prepare done'
   script:
+  - make splitic
   - >
     splitic test \
       -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
       -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       ./... \
-      -- -ldflags "$(make print_ldflags)"
+      -- -ldflags "$(make print_test_ldflags)"
   parallel: 2
 
 unit test with race:
@@ -157,7 +155,7 @@ unit test with race:
       -cover-report .splitic/cover_${CI_NODE_INDEX}.profile -cover -coverpkg gitlab.com/gitlab-org/gitlab-runner/... \
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       ./... \
-      -- -ldflags "$(make print_ldflags)" -timeout=90m
+      -- -ldflags "$(make print_test_ldflags)" -timeout=90m
 
 .with outer token:
   variables:
@@ -173,6 +171,7 @@ integration test:
   - 'prepare done'
   script:
   - go install gitlab.com/gitlab-org/fleeting/fleeting-plugin-static/cmd/fleeting-plugin-static@latest
+  - make splitic
   - >
     splitic test \
       -junit-report .splitic/junit_${CI_NODE_INDEX}.xml \
@@ -180,7 +179,7 @@ integration test:
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       -tags integration \
       ./... \
-      -- -ldflags "$(make print_ldflags)" -timeout 15m
+      -- -ldflags "$(make print_test_ldflags)" -timeout 15m
   parallel: 4
 
 integration test with race:
@@ -199,7 +198,7 @@ integration test with race:
       -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
       -tags integration \
       ./... \
-      -- -ldflags "$(make print_ldflags)" -timeout 30m
+      -- -ldflags "$(make print_test_ldflags)" -timeout 30m
 
 fuzz variable mask:
   extends:
@@ -215,9 +214,6 @@ fuzz variable mask:
   - go-fuzz-build -libfuzzer -o fuzz_variable_mask.a -preserve crypto/internal/bigmod ./common/buildlogger/internal
   - clang -fsanitize=fuzzer fuzz_variable_mask.a -o fuzz_variable_mask
   - ./gitlab-cov-fuzz run -- ./fuzz_variable_mask -only_ascii=1 -max_len=128 -max_total_time=300
-
-.go-cache-windows_before_script: &go-cache-windows_before_script
-- New-Item -Path .gocache-$CI_COMMIT_REF_PROTECTED -Type Directory -Force
 
 .windows test:
   extends:
@@ -239,9 +235,9 @@ fuzz variable mask:
   - rm golang-windows-amd64.zip
   - $env:Path = "C:\Program Files\Go\bin;$env:Path"
   - go version
-  - *go-cache-windows_before_script
   - go install gitlab.com/ajwalker/splitic@latest
   - $env:Path += ";$(go env GOPATH)/bin"
+  - !reference [.go-cache-windows, before_script]
   artifacts:
     paths:
     - .splitic/

@@ -2,11 +2,8 @@
   stage: release
   extends:
   - .docker
-  - .docker_qemu
   variables:
     PUBLISH_IMAGES: "true"
-  before_script:
-  - source ci/touch_make_dependencies
   retry: 2
 
 .release_docker_images:
@@ -81,7 +78,7 @@
 .release:
   stage: release
   before_script:
-  - source ci/touch_make_dependencies
+  - ./ci/touch_git
 
 .release_s3:
   extends:
@@ -96,7 +93,7 @@
   - 'package-deb'
   - 'package-rpm'
   before_script:
-  - source ci/touch_make_dependencies
+  - ./ci/touch_git
   - |
     # checking GPG signing support
     if [ -f "$GPG_KEY_PATH" ]; then

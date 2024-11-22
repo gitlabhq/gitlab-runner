@@ -21,7 +21,6 @@
       echo -e "\033[0;31m****** GPG signing disabled ******\033[0m"
     fi
   script:
-  - source ci/touch_make_dependencies
   - mage package:prepare
   - mage package:verifyIterationVariable
   - mage package:$PKGS

@@ -331,10 +331,10 @@ make simple-test
 
 ### Custom `go test` arguments
 
-In case you want a more customized `go test` command, you can use `print_ldflags` as `make` target:
+In case you want a more customized `go test` command, you can use `print_test_ldflags` as `make` target:
 
 ```shell
-go test -ldflags "$(make print_ldflags)" -run TestDockerCommandBuildCancel -v ./executors/docker/...
+go test -ldflags "$(make print_test_ldflags)" -run TestDockerCommandBuildCancel -v ./executors/docker/...
 ```
 
 ### In GoLand

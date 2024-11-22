@@ -83,43 +83,27 @@ default:
   services:
     - docker:${DOCKER_VERSION}-dind
   variables:
-    DOCKER_DRIVER: overlay2
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_VERIFY: 1
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_HOST: "unix:///certs/client/docker.sock"
   tags:
     - gitlab-org-docker
-
-.docker_qemu-before_script: &docker_qemu-before_script
-  - docker run --privileged --rm tonistiigi/binfmt --install all
-
-.docker_qemu:
-  before_script:
-    - *docker_qemu-before_script
 
 .go-cache:
   variables:
     GOCACHE: $CI_PROJECT_DIR/.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
     - mkdir -p "$GOCACHE"
+    - ./ci/touch_git
   cache:
     paths:
       - $CI_PROJECT_DIR/.gocache-false/
     key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
-
-.go-cache-docker-qemu:
-  extends:
-    - .go-cache
-  before_script:
-    - *docker_qemu-before_script
-    - mkdir -p "$GOCACHE"
 
 .go-cache-windows:
   variables:
     GOCACHE: $CI_PROJECT_DIR\.gocache-$CI_COMMIT_REF_PROTECTED
   before_script:
     - New-Item -Path "$Env:GOCACHE" -Type Directory -Force
+    - ./ci/touch_git.ps1
   cache:
     paths:
       - $CI_PROJECT_DIR\.gocache-false\
