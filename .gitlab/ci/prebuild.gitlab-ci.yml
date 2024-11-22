@@ -1,13 +1,13 @@
 .helper images base:
   extends:
   - .docker
-  - .go-cache-docker-qemu
   - .rules:merge_request_pipelines:no_docs
   stage: prebuild
   needs: []
   variables:
     TAR_XZ_ARGS: -f -9
   script:
+  - ./ci/touch_git
   - make "helper-dockerarchive-${IMAGE_BASE}"
   retry: 2
   artifacts:
@@ -41,6 +41,7 @@ helper images fips:
 helper images binaries:
   extends:
   - .rules:merge_request_pipelines:no_docs
+  - .go-cache
   stage: prebuild
   needs: []
   script:

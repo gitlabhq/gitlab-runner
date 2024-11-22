@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+# modify git files to reflect their last change date
+git ls-files | while read file; do
+  commit_date=$(git log -1 --format=%cd --date=unix "$file")
+  touch -d "@$commit_date" "$file"
+done
