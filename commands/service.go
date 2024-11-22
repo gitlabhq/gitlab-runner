@@ -168,7 +168,7 @@ func GetInstallFlags() []cli.Flag {
 		installFlags,
 		cli.StringFlag{
 			Name:  "working-directory, d",
-			Value: homedir.GetWDOrEmpty(),
+			Value: homedir.New().GetWDOrEmpty(),
 			Usage: "Specify custom root directory where all data are stored",
 		},
 		cli.StringFlag{

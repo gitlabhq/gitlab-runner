@@ -10,7 +10,7 @@ func FixHOME(app *cli.App) {
 	appBefore := app.Before
 
 	app.Before = func(c *cli.Context) error {
-		err := homedir.Fix()
+		err := homedir.New().Fix()
 		if err != nil {
 			return err
 		}

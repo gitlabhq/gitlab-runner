@@ -48,7 +48,7 @@ func TestGetServiceArguments(t *testing.T) {
 	tests := []getServiceArgumentsTestCase{
 		{
 			expectedArgs: []string{
-				"--working-directory", homedir.GetWDOrEmpty(),
+				"--working-directory", homedir.New().GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
@@ -58,7 +58,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--config", "/tmp/config.toml",
 			},
 			expectedArgs: []string{
-				"--working-directory", homedir.GetWDOrEmpty(),
+				"--working-directory", homedir.New().GetWDOrEmpty(),
 				"--config", "/tmp/config.toml",
 				"--service", "gitlab-runner",
 			},
@@ -78,7 +78,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--service", "gitlab-runner-service-name",
 			},
 			expectedArgs: []string{
-				"--working-directory", homedir.GetWDOrEmpty(),
+				"--working-directory", homedir.New().GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner-service-name",
 			},
@@ -88,7 +88,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--syslog=true",
 			},
 			expectedArgs: []string{
-				"--working-directory", homedir.GetWDOrEmpty(),
+				"--working-directory", homedir.New().GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},
@@ -98,7 +98,7 @@ func TestGetServiceArguments(t *testing.T) {
 				"--syslog=false",
 			},
 			expectedArgs: []string{
-				"--working-directory", homedir.GetWDOrEmpty(),
+				"--working-directory", homedir.New().GetWDOrEmpty(),
 				"--config", commands.GetDefaultConfigFile(),
 				"--service", "gitlab-runner",
 			},

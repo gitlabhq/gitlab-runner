@@ -5,7 +5,7 @@ import (
 )
 
 func getDefaultConfigDirectory() string {
-	if currentDir := homedir.GetWDOrEmpty(); currentDir != "" {
+	if currentDir := homedir.New().GetWDOrEmpty(); currentDir != "" {
 		return currentDir
 	}
 
