@@ -95,14 +95,14 @@ To install GitLab Runner:
 
    ```shell
    apt-cache madison gitlab-runner
-   sudo apt install gitlab-runner=16.5.0
+   sudo apt install gitlab-runner=17.2.0-1
    ```
 
    :::TabTitle RHEL/CentOS/Fedora/Amazon Linux
 
    ```shell
    yum list gitlab-runner --showduplicates | sort -r
-   sudo yum install gitlab-runner-16.5.0-1
+   sudo yum install gitlab-runner-17.2.0-1
    ```
 
    ::EndTabs
