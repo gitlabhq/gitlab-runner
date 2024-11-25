@@ -538,7 +538,7 @@ func (e *executor) networkConfig(aliases []string) *network.NetworkingConfig {
 	if nm == "" {
 		// docker defaults to using "bridge" network driver if none was specified.
 		nc.EndpointsConfig = map[string]*network.EndpointSettings{
-			"bridge": {MacAddress: e.Config.Docker.MacAddress},
+			network.NetworkDefault: {MacAddress: e.Config.Docker.MacAddress},
 		}
 		return &nc
 	}
