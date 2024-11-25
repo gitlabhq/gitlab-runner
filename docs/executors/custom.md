@@ -23,12 +23,6 @@ The scripts you configure for the custom executor are called `Drivers`.
 For example, you could create an [LXD driver](custom_examples/lxd.md) or a
 [Libvirt driver](custom_examples/libvirt.md).
 
-## Limitations
-
-Below are some current limitations when using the Custom executor:
-
-- No [Interactive Web Terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/) support.
-
 ## Configuration
 
 There are a few configuration keys that you can choose from. Some of them are optional.

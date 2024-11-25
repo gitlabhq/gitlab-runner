@@ -181,11 +181,9 @@ repeated after all requests for the other runners and their sleep periods are ca
 
 ## The `[session_server]` section
 
-The `[session_server]` section lets users interact with jobs, for example, in the
-[interactive web terminal](https://docs.gitlab.com/ee/ci/interactive_web_terminal/index.html).
-
-The `[session_server]` section should be specified at the root level, not per runner.
-It should be defined outside the `[[runners]]` section.
+To interact with jobs, specify the `[session_server]` section
+at the root level, outside the `[[runners]]` section.
+Configure this section once for all runners, not for each individual runner.
 
 ```toml
 # Example `config.toml` file with session server configured
