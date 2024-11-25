@@ -211,6 +211,7 @@ fuzz variable mask:
   - go-fuzz-build -libfuzzer -o fuzz_variable_mask.a -preserve crypto/internal/bigmod ./common/buildlogger/internal
   - clang -fsanitize=fuzzer fuzz_variable_mask.a -o fuzz_variable_mask
   - ./gitlab-cov-fuzz run -- ./fuzz_variable_mask -only_ascii=1 -max_len=128 -max_total_time=300
+  allow_failure: false
 
 .windows test:
   extends:
