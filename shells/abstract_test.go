@@ -1009,30 +1009,43 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 	testCacheKey := "test-cache-key"
 
 	tests := map[string]struct {
+		cacheType                string
 		cacheFallbackKeyVarValue string
 		expectedCacheKey         string
 	}{
 		"using allowed key value": {
+			cacheType:                "test",
 			cacheFallbackKeyVarValue: "test-fallback-cache-key",
 			expectedCacheKey:         "test-fallback-cache-key",
 		},
 		"using reserved suffix": {
+			cacheType:                "test",
+			cacheFallbackKeyVarValue: "main-protected",
+			expectedCacheKey:         "test-cache-key",
+		},
+		"GoCloud cache with allowed key value": {
+			cacheType:                "goCloudTest",
+			cacheFallbackKeyVarValue: "test-fallback-cache-key",
+			expectedCacheKey:         "test-fallback-cache-key",
+		},
+		"GoCloud cache with reserved suffix": {
+			cacheType:                "goCloudTest",
 			cacheFallbackKeyVarValue: "main-protected",
 			expectedCacheKey:         "test-cache-key",
 		},
 	}
 
-	runnerConfig := &common.RunnerConfig{
-		RunnerSettings: common.RunnerSettings{
-			Cache: &common.CacheConfig{
-				Type:   "test",
-				Shared: true,
-			},
-		},
-	}
-	shell := AbstractShell{}
-
 	for tn, tc := range tests {
+		runnerConfig := &common.RunnerConfig{
+			RunnerSettings: common.RunnerSettings{
+				Cache: &common.CacheConfig{
+					Type:   tc.cacheType,
+					Shared: true,
+				},
+			},
+		}
+		shell := AbstractShell{}
+
 		t.Run(tn, func(t *testing.T) {
 			build := &common.Build{
 				BuildDir: "/builds",
@@ -1068,33 +1081,77 @@ func TestAbstractShell_extractCacheWithDefaultFallbackKey(t *testing.T) {
 
 			mockWriter.On("IfCmd", "runner-command", "--version").Once()
 			mockWriter.On("Noticef", "Checking cache for %s...", testCacheKey).Once()
-			mockWriter.On(
-				"IfCmdWithOutput",
-				"runner-command",
-				"cache-extractor",
-				"--file",
-				filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
-				"--timeout",
-				"10",
-				"--url",
-				fmt.Sprintf("test://download/project/1000/%s", testCacheKey),
-			).Once()
-			mockWriter.On("Noticef", "Successfully extracted cache").Once()
-			mockWriter.On("Else").Once()
-			mockWriter.On("Warningf", "Failed to extract cache").Once()
-			if tc.cacheFallbackKeyVarValue == tc.expectedCacheKey {
-				mockWriter.On("Noticef", "Checking cache for %s...", tc.expectedCacheKey).Once()
+
+			if tc.cacheType == "test" {
 				mockWriter.On(
 					"IfCmdWithOutput",
 					"runner-command",
 					"cache-extractor",
 					"--file",
-					filepath.Join("..", build.CacheDir, tc.expectedCacheKey, "cache.zip"),
+					filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
 					"--timeout",
 					"10",
 					"--url",
-					fmt.Sprintf("test://download/project/1000/%s", tc.expectedCacheKey),
+					fmt.Sprintf("test://download/project/1000/%s", testCacheKey),
 				).Once()
+			} else {
+				mockWriter.On(
+					"IfCmdWithOutput",
+					"runner-command",
+					"cache-extractor",
+					"--file",
+					filepath.Join("..", build.CacheDir, testCacheKey, "cache.zip"),
+					"--timeout",
+					"10",
+					"--gocloud-url",
+					fmt.Sprintf("gocloud://test/project/1000/%s", testCacheKey),
+				).Once()
+
+				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+					return v.Key == "FIRST_VAR" && v.Value == "123"
+				})).Once()
+				mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+					return v.Key == "SECOND_VAR" && v.Value == "456"
+				})).Once()
+			}
+			mockWriter.On("Noticef", "Successfully extracted cache").Once()
+			mockWriter.On("Else").Once()
+			mockWriter.On("Warningf", "Failed to extract cache").Once()
+			if tc.cacheFallbackKeyVarValue == tc.expectedCacheKey {
+				mockWriter.On("Noticef", "Checking cache for %s...", tc.expectedCacheKey).Once()
+
+				if tc.cacheType == "test" {
+					mockWriter.On(
+						"IfCmdWithOutput",
+						"runner-command",
+						"cache-extractor",
+						"--file",
+						filepath.Join("..", build.CacheDir, tc.expectedCacheKey, "cache.zip"),
+						"--timeout",
+						"10",
+						"--url",
+						fmt.Sprintf("test://download/project/1000/%s", tc.expectedCacheKey),
+					).Once()
+				} else {
+					mockWriter.On(
+						"IfCmdWithOutput",
+						"runner-command",
+						"cache-extractor",
+						"--file",
+						filepath.Join("..", build.CacheDir, tc.expectedCacheKey, "cache.zip"),
+						"--timeout",
+						"10",
+						"--gocloud-url",
+						fmt.Sprintf("gocloud://test/project/1000/%s", tc.expectedCacheKey),
+					).Once()
+					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+						return v.Key == "FIRST_VAR" && v.Value == "123"
+					})).Once()
+					mockWriter.On("Variable", mock.MatchedBy(func(v common.JobVariable) bool {
+						return v.Key == "SECOND_VAR" && v.Value == "456"
+					})).Once()
+				}
+
 				mockWriter.On("Noticef", "Successfully extracted cache").Once()
 				mockWriter.On("Else").Once()
 				mockWriter.On("Warningf", "Failed to extract cache").Once()

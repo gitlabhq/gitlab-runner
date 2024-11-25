@@ -37,7 +37,7 @@ func prepareFakeCreateAdapter(t *testing.T, operationName string, tc cacheOperat
 
 		if tc.adapterURL.URL != nil {
 			if operationName == "GetGoCloudURL" {
-				a.On(operationName, mock.Anything).Return(tc.adapterURL.URL)
+				a.On(operationName, mock.Anything, true).Return(GoCloudURL{URL: tc.adapterURL.URL})
 			} else {
 				a.On(operationName, mock.Anything).Return(tc.adapterURL)
 			}
@@ -82,7 +82,7 @@ func prepareFakeBuild(tc cacheOperationTest) *common.Build {
 }
 
 func getCacheGoCloudURLAdapter(ctx context.Context, build *common.Build, key string) PresignedURL {
-	return PresignedURL{URL: GetCacheGoCloudURL(ctx, build, key)}
+	return PresignedURL{URL: GetCacheGoCloudURL(ctx, build, key, true).URL}
 }
 
 func testCacheOperation(

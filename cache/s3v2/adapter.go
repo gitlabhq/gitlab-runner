@@ -45,9 +45,12 @@ func (a *s3Adapter) GetUploadHeaders() http.Header {
 	return nil
 }
 
-func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
-	if a.config.UploadRoleARN == "" {
-		return nil
+func (a *s3Adapter) GetGoCloudURL(_ context.Context, upload bool) cache.GoCloudURL {
+	goCloudURL := cache.GoCloudURL{}
+
+	// We only use a GoCloud URL for uploading with an ARN.
+	if !upload || a.config.UploadRoleARN == "" {
+		return goCloudURL
 	}
 
 	u := url.URL{
@@ -95,8 +98,9 @@ func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
 	}
 
 	u.RawQuery = q.Encode()
+	goCloudURL.URL = &u
 
-	return &u
+	return goCloudURL
 }
 
 func (a *s3Adapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {

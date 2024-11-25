@@ -5,15 +5,22 @@ package helpers
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"path"
 	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/fileblob"
 
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 )
@@ -21,6 +28,47 @@ import (
 const cacheExtractorArchive = "archive.zip"
 const cacheExtractorTestArchivedFile = "archive_file"
 const cacheExtractorTestFile = "test_file"
+
+type dirOpener struct {
+	tmpDir string
+}
+
+func (o *dirOpener) OpenBucketURL(_ context.Context, u *url.URL) (*blob.Bucket, error) {
+	return fileblob.OpenBucket(o.tmpDir, nil)
+}
+
+func setupGoCloudFileBucket(t *testing.T, scheme string) (m *blob.URLMux, bucketDir string) {
+	tmpDir := t.TempDir()
+
+	mux := new(blob.URLMux)
+	fake := &dirOpener{tmpDir: tmpDir}
+	mux.RegisterBucket(scheme, fake)
+
+	return mux, tmpDir
+}
+
+func writeZipFile(t *testing.T, filename string) {
+	var buf bytes.Buffer
+
+	zipWriter := zip.NewWriter(&buf)
+	f, err := zipWriter.Create(cacheExtractorTestArchivedFile)
+	require.NoError(t, err)
+
+	_, err = io.WriteString(f, "This is a test.")
+	require.NoError(t, err)
+
+	err = zipWriter.Close()
+	require.NoError(t, err)
+
+	outFile, err := os.Create(filename)
+	require.NoError(t, err)
+	defer outFile.Close()
+
+	_, err = buf.WriteTo(outFile)
+	if err != nil {
+		require.NoError(t, err)
+	}
+}
 
 func TestCacheExtractorValidArchive(t *testing.T) {
 	expectedContents := bytes.Repeat([]byte("198273qhnjbqwdjbqwe2109u3abcdef3"), 1024*1024)
@@ -168,13 +216,18 @@ func TestCacheExtractorRemoteServerTimedOut(t *testing.T) {
 
 func TestCacheExtractorRemoteServer(t *testing.T) {
 	testCases := map[string]struct {
-		handler http.Handler
+		handler    http.Handler
+		goCloudURL bool
 	}{
 		"no ETag": {
 			handler: http.HandlerFunc(testServeCache),
 		},
 		"ETag": {
 			handler: http.HandlerFunc(testServeCacheWithETag),
+		},
+		"GoCloud URL": {
+			handler:    http.HandlerFunc(testServeCache),
+			goCloudURL: true,
 		},
 	}
 
@@ -191,9 +244,20 @@ func TestCacheExtractorRemoteServer(t *testing.T) {
 		defer removeHook()
 		cmd := CacheExtractorCommand{
 			File:    cacheExtractorArchive,
-			URL:     ts.URL + "/cache.zip",
 			Timeout: 0,
 		}
+		if tc.goCloudURL {
+			mux, tmpDir := setupGoCloudFileBucket(t, "testblob")
+			cmd.mux = mux
+			cmd.GoCloudURL = fmt.Sprintf("testblob://bucket/%s", cacheExtractorArchive)
+
+			testFile := path.Join(tmpDir, cacheExtractorArchive)
+			writeZipFile(t, testFile)
+			defer os.Remove(testFile)
+		} else {
+			cmd.URL = ts.URL + "/cache.zip"
+		}
+
 		assert.NotPanics(t, func() {
 			cmd.Execute(nil)
 		})

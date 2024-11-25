@@ -97,7 +97,15 @@ func testCacheOperation(
 		assert.Equal(t, tc.expectedURL, URL.URL)
 
 		ctx := context.Background()
-		assert.Nil(t, adapter.GetGoCloudURL(ctx))
+
+		goCloudURL := adapter.GetGoCloudURL(ctx, true)
+		assert.Nil(t, goCloudURL.URL)
+		assert.Empty(t, goCloudURL.Environment)
+
+		goCloudURL, err = adapter.GetGoCloudURL(ctx, false)
+		assert.NoError(t, err)
+		assert.Nil(t, goCloudURL.URL)
+		assert.Empty(t, goCloudURL.Environment)
 
 		env, err := adapter.GetUploadEnv(ctx)
 		assert.Empty(t, env)
@@ -294,12 +302,18 @@ func TestGoCloudURL(t *testing.T) {
 			adapter, err := New(s3Cache, defaultTimeout, tt.objectName)
 			require.NoError(t, err)
 
-			u := adapter.GetGoCloudURL(context.Background())
+			u := adapter.GetGoCloudURL(context.Background(), true)
 			if tt.expected != "" {
-				assert.Equal(t, tt.expected, u.String())
+				assert.Equal(t, tt.expected, u.URL.String())
 			} else {
-				assert.Nil(t, u)
+				assert.Nil(t, u.URL)
 			}
+
+			assert.Empty(t, u.Environment)
+
+			du := adapter.GetGoCloudURL(context.Background(), false)
+			assert.Nil(t, du.URL)
+			assert.Empty(t, du.Environment)
 		})
 	}
 }

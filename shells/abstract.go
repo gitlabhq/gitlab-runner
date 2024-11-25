@@ -207,8 +207,18 @@ func (b *AbstractShell) addExtractCacheCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	if url := cache.GetCacheDownloadURL(ctx, info.Build, cacheKey); url.URL != nil {
-		args = append(args, "--url", url.URL.String())
+	// Prefer Go Cloud URL if supported
+	goCloudURL := cache.GetCacheGoCloudURL(ctx, info.Build, cacheKey, false)
+	if goCloudURL.URL != nil {
+		args = append(args, "--gocloud-url", goCloudURL.URL.String())
+
+		for key, value := range goCloudURL.Environment {
+			w.Variable(common.JobVariable{Key: key, Value: value})
+		}
+	} else {
+		if url := cache.GetCacheDownloadURL(ctx, info.Build, cacheKey); url.URL != nil {
+			args = append(args, "--url", url.URL.String())
+		}
 	}
 
 	w.Noticef("Checking cache for %s...", cacheKey)
@@ -1021,9 +1031,9 @@ func (b *AbstractShell) addCacheUploadCommand(
 	args = append(args, archiverArgs...)
 
 	// Generate cache upload address
-	args = append(args, getCacheUploadURL(ctx, info.Build, cacheKey)...)
+	extraArgs, env, err := getCacheUploadURLAndEnv(ctx, info.Build, cacheKey)
+	args = append(args, extraArgs...)
 
-	env, err := cache.GetCacheUploadEnv(ctx, info.Build, cacheKey)
 	if err != nil {
 		w.Warningf("Unable to generate cache upload environment: %v", err)
 	}
@@ -1044,18 +1054,18 @@ func (b *AbstractShell) addCacheUploadCommand(
 	})
 }
 
-// getCacheUploadURL will first try to generate the GoCloud URL if it's
+// getCacheUploadURLAndEnv will first try to generate the GoCloud URL if it's
 // available then fallback to a pre-signed URL.
-func getCacheUploadURL(ctx context.Context, build *common.Build, cacheKey string) []string {
+func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string) ([]string, map[string]string, error) {
 	// Prefer Go Cloud URL if supported
-	goCloudURL := cache.GetCacheGoCloudURL(ctx, build, cacheKey)
-	if goCloudURL != nil {
-		return []string{"--gocloud-url", goCloudURL.String()}
+	goCloudURL := cache.GetCacheGoCloudURL(ctx, build, cacheKey, true)
+	if goCloudURL.URL != nil {
+		return []string{"--gocloud-url", goCloudURL.URL.String()}, goCloudURL.Environment, nil
 	}
 
 	uploadURL := cache.GetCacheUploadURL(ctx, build, cacheKey)
 	if uploadURL.URL == nil {
-		return []string{}
+		return []string{}, nil, nil
 	}
 
 	urlArgs := []string{"--url", uploadURL.URL.String()}
@@ -1065,7 +1075,9 @@ func getCacheUploadURL(ctx context.Context, build *common.Build, cacheKey string
 		}
 	}
 
-	return urlArgs
+	env, err := cache.GetCacheUploadEnv(ctx, build, cacheKey)
+
+	return urlArgs, env, err
 }
 
 func (b *AbstractShell) writeUploadArtifact(w ShellWriter, info common.ShellScriptInfo, artifact common.Artifact) bool {

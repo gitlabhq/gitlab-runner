@@ -138,6 +138,12 @@ func TestAdapter(t *testing.T) {
 					assert.Nil(t, u.Headers)
 				}
 			}
+
+			u := adapter.GetGoCloudURL(context.Background(), false)
+			assert.Nil(t, u.URL)
+
+			u = adapter.GetGoCloudURL(context.Background(), true)
+			assert.Nil(t, u.URL)
 		})
 	}
 }
