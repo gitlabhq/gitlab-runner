@@ -61,10 +61,11 @@ which specifies the release, mainstream, and extended support dates.
 Below is a list of versions that are commonly used and their end of life
 date:
 
-| Operating system            | Mainstream end date | Extended end date |
+| Operating system            | Mainstream support end date | Extended support end date |
 |-----------------------------|---------------------| ------------------|
 | Windows Server 2019 (1809)  | January 2024        | January 2029      |
 | Windows Server 2022 (21H2)  | October 2026        | October 2031      |
+| Windows Server 2025 (24H2)  | October 2029        | October 2034      |
 
 ### Future releases
 
