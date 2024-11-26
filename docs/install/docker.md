@@ -10,12 +10,14 @@ DETAILS:
 **Tier:** Free, Premium, Ultimate
 **Offering:** GitLab.com, Self-managed
 
-This page explains how to run GitLab Runner inside a Docker container.
+You can run GitLab Runner in a Docker container to execute CI/CD jobs. The GitLab Runner Docker image includes all dependencies needed to:
 
-GitLab Runner Docker images are based on [Ubuntu or Alpine Linux](#docker-images).
-They are wrappers around the standard `gitlab-runner` command, like if you installed
-GitLab Runner directly on the host.
+- Run GitLab Runner.
+- Execute CI/CD jobs in containers.
 
+The GitLab Runner Docker images use [Ubuntu or Alpine Linux](#docker-images) as their base. They wrap the standard `gitlab-runner` command, similar to installing GitLab Runner directly on the host.
+
+The `gitlab-runner` command runs in a Docker container.
 This setup delegates full control over the Docker daemon to each GitLab Runner container.
 The effect is that isolation guarantees break if you run GitLab Runner inside a Docker daemon
 that also runs other payloads.
@@ -43,9 +45,6 @@ VERSION:
 (...)
 ```
 
-The rest of the command stays as described in the [register documentation](../register/index.md).
-The only difference is that the `gitlab-runner` command runs in a Docker container.
-
 ## Docker Engine version compatibility
 
 The versions for the Docker Engine and GitLab Runner container image
@@ -60,6 +59,10 @@ Prerequisites:
 - You have [installed Docker](https://docs.docker.com/get-docker/).
 - You have read the [FAQ](../faq/index.md) to learn about common problems in GitLab Runner.
 
+1. Download the `gitlab-runner` Docker image by using the `docker pull gitlab/gitlab-runner:<version-tag>` command.
+
+   For the list of available version tags, see [GitLab Runner tags](https://hub.docker.com/r/gitlab/gitlab-runner/tags).
+1. Run the `gitlab-runner` Docker image by using the `docker run -d []options] <image-uri> <runner-command>` command.
 1. When you run `gitlab-runner` in a Docker container, ensure the configuration is not lost when you
    restart the container. Mount a permanent volume to store the configuration. The volume can be mounted in either:
 
