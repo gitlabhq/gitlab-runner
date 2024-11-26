@@ -169,3 +169,30 @@ var (
 		return makeHelperImagePath(s)
 	})
 )
+
+func AssembleHelpers(pkgType Type) Blueprint {
+	base := build.NewBlueprintBase(gPGKeyID, gPGPassphrase, iteration)
+
+	pkgName := HelperImagesPackage
+	pkgFile := fmt.Sprintf("out/%s/%s.%s", pkgType, pkgName, pkgType)
+
+	params := blueprintParams{
+		pkgType:        pkgType,
+		pkgFile:        pkgFile,
+		prebuiltImages: defaultHelperPrebuiltImages,
+	}
+
+	_, osBinaryDependencies, imagesDependencies, macosDependencies := assembleDependencies(params, base.Env())
+
+	return blueprintImpl{
+		BlueprintBase: base,
+
+		osBinaryDependencies:             osBinaryDependencies,
+		prebuiltImageArchiveDependencies: imagesDependencies,
+		macOSDependencies:                macosDependencies,
+
+		artifacts: []string{pkgFile},
+
+		params: params,
+	}
+}
