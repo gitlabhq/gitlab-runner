@@ -48,14 +48,14 @@ func (b blueprintImpl) Dependencies() []build.Component {
 		return build.NewOSBinary(s).WithRequired()
 	})
 
-	imageDebs := lo.Map(b.prebuiltImageArchiveDependencies, func(s string, _ int) build.Component {
+	imageDeps := lo.Map(b.prebuiltImageArchiveDependencies, func(s string, _ int) build.Component {
 		return build.NewDockerImageArchive(s).WithRequired()
 	})
 
 	var deps []build.Component
 	deps = append(deps, fileDeps...)
 	deps = append(deps, binDeps...)
-	deps = append(deps, imageDebs...)
+	deps = append(deps, imageDeps...)
 	deps = append(deps, b.macOSDependencies...)
 
 	return deps
