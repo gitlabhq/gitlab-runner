@@ -63,6 +63,10 @@ func createPackage(blueprint Blueprint, opts []string) error {
 		return err
 	}
 
+	if Type(p.postfix) != "-fips" {
+		opts = append(opts, "--depends", HelperImagesPackage)
+	}
+
 	pkgName := build.AppName
 
 	args := append(opts, []string{ //nolint:gocritic
