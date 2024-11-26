@@ -12,9 +12,6 @@ variables:
 gemnasium-dependency_scanning:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
-semgrep-sast:
-  rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
-
 gitlab-advanced-sast:
   rules: !reference [".rules:merge_request_pipelines:no_docs", rules]
 
