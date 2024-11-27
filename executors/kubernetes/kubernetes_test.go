@@ -1156,12 +1156,12 @@ func TestPrepare(t *testing.T) {
 	}
 
 	defaultHelperImage := helperimage.Info{
-		Architecture:            "x86_64",
-		OSType:                  helperimage.OSTypeLinux,
-		Name:                    helperimage.GitLabRegistryName,
-		Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
-		IsSupportingLocalImport: true,
-		Cmd:                     []string{"gitlab-runner-build"},
+		Architecture: "x86_64",
+		OSType:       helperimage.OSTypeLinux,
+		Name:         helperimage.GitLabRegistryName,
+		Tag:          fmt.Sprintf("x86_64-%s", helperImageTag),
+		Prebuilt:     "prebuilt-alpine-x86_64",
+		Cmd:          []string{"gitlab-runner-build"},
 	}
 
 	osType := helperimage.OSTypeLinux
@@ -1186,23 +1186,24 @@ func TestPrepare(t *testing.T) {
 
 	getExecutorForHelperAutoset := func() *executor {
 		hi := helperimage.Info{
-			Architecture:            "x86_64",
-			OSType:                  helperimage.OSTypeLinux,
-			Name:                    helperimage.GitLabRegistryName,
-			Tag:                     fmt.Sprintf("x86_64-%s", helperImageTag),
-			IsSupportingLocalImport: true,
-			Cmd:                     []string{"gitlab-runner-build"},
+			Architecture: "x86_64",
+			OSType:       helperimage.OSTypeLinux,
+			Name:         helperimage.GitLabRegistryName,
+			Tag:          fmt.Sprintf("x86_64-%s", helperImageTag),
+			Prebuilt:     "prebuilt-alpine-x86_64",
+			Cmd:          []string{"gitlab-runner-build"},
 		}
 		if !strings.Contains(runtime.GOARCH, "amd") {
 			hi.Architecture = runtime.GOARCH
 			hi.Tag = fmt.Sprintf("%s-%s", hi.Architecture, helperImageTag)
+			hi.Prebuilt = "prebuilt-alpine-" + hi.Architecture
 		}
 		if runtime.GOOS == helperimage.OSTypeWindows {
 			hi.OSType = helperimage.OSTypeWindows
 			hi.Name = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"
 			hi.Architecture = "x86_64"
 			hi.Tag = "x86_64-latest-servercore1809"
-			hi.IsSupportingLocalImport = false
+			hi.Prebuilt = "prebuilt-windows-servercore-ltsc2019-x86_64"
 			hi.Cmd = []string{
 				"powershell", "-NoProfile", "-NoLogo", "-InputFormat", "text", "-OutputFormat", "text", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", "-",
 			}
@@ -2198,12 +2199,12 @@ func TestPrepare(t *testing.T) {
 				},
 				configurationOverwrites: defaultOverwrites,
 				helperImageInfo: helperimage.Info{
-					OSType:                  helperimage.OSTypeLinux,
-					Architecture:            "x86_64",
-					Name:                    helperimage.GitLabRegistryName,
-					Tag:                     fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
-					IsSupportingLocalImport: true,
-					Cmd:                     []string{"gitlab-runner-build"},
+					OSType:       helperimage.OSTypeLinux,
+					Architecture: "x86_64",
+					Name:         helperimage.GitLabRegistryName,
+					Tag:          fmt.Sprintf("ubuntu-x86_64-%s", helperImageTag),
+					Prebuilt:     "prebuilt-ubuntu-x86_64",
+					Cmd:          []string{"gitlab-runner-build"},
 				},
 			},
 		},
@@ -2247,12 +2248,12 @@ func TestPrepare(t *testing.T) {
 					helperRequests:  api.ResourceList{},
 				},
 				helperImageInfo: helperimage.Info{
-					OSType:                  "linux",
-					Architecture:            "arm64",
-					Name:                    helperimage.GitLabRegistryName,
-					Tag:                     fmt.Sprintf("arm64-%s", helperImageTag),
-					IsSupportingLocalImport: true,
-					Cmd:                     []string{"gitlab-runner-build"},
+					OSType:       "linux",
+					Architecture: "arm64",
+					Name:         helperimage.GitLabRegistryName,
+					Tag:          fmt.Sprintf("arm64-%s", helperImageTag),
+					Prebuilt:     "prebuilt-alpine-arm64",
+					Cmd:          []string{"gitlab-runner-build"},
 				},
 			},
 		},
@@ -2299,11 +2300,11 @@ func TestPrepare(t *testing.T) {
 					helperRequests:  api.ResourceList{},
 				},
 				helperImageInfo: helperimage.Info{
-					OSType:                  "windows",
-					Architecture:            "x86_64",
-					Name:                    helperimage.GitLabRegistryName,
-					Tag:                     fmt.Sprintf("x86_64-%s-servercore21H2", helperImageTag),
-					IsSupportingLocalImport: false,
+					OSType:       "windows",
+					Architecture: "x86_64",
+					Name:         helperimage.GitLabRegistryName,
+					Tag:          fmt.Sprintf("x86_64-%s-servercore21H2", helperImageTag),
+					Prebuilt:     "prebuilt-windows-servercore-ltsc2022-x86_64",
 					Cmd: []string{
 						"pwsh",
 						"-NoProfile",
@@ -2398,12 +2399,12 @@ func TestPrepare(t *testing.T) {
 					helperRequests:  api.ResourceList{},
 				},
 				helperImageInfo: helperimage.Info{
-					OSType:                  "linux",
-					Architecture:            "arm64",
-					Name:                    helperimage.GitLabRegistryName,
-					Tag:                     fmt.Sprintf("arm64-%s", helperImageTag),
-					IsSupportingLocalImport: true,
-					Cmd:                     []string{"gitlab-runner-build"},
+					OSType:       "linux",
+					Architecture: "arm64",
+					Name:         helperimage.GitLabRegistryName,
+					Tag:          fmt.Sprintf("arm64-%s", helperImageTag),
+					Prebuilt:     "prebuilt-alpine-arm64",
+					Cmd:          []string{"gitlab-runner-build"},
 				},
 			},
 		},

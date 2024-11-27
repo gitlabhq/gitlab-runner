@@ -8,8 +8,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,6 +32,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/exec"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/labels"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/networks"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/pull"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes"
 	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/volumes/parser"
@@ -43,7 +42,6 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/helperimage"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/featureflags"
-	"gitlab.com/gitlab-org/gitlab-runner/helpers/homedir"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/limitwriter"
 	"gitlab.com/gitlab-org/gitlab-runner/shells"
 	"gitlab.com/gitlab-org/gitlab-runner/steps"
@@ -63,8 +61,6 @@ const (
 const ServiceLogOutputLimit = 64 * 1024
 
 var useInit = true
-
-var PrebuiltImagesPaths []string
 
 const (
 	labelServiceType = "service"
@@ -119,37 +115,6 @@ type executor struct {
 
 var version1_44 = version.Must(version.NewVersion("1.44"))
 
-func init() {
-	runner, err := os.Executable()
-	if err != nil {
-		logrus.Errorln(
-			"Docker executor: unable to detect gitlab-runner folder, "+
-				"prebuilt image helpers will be loaded from remote registry.",
-			err,
-		)
-	}
-
-	runnerFolder := filepath.Dir(runner)
-
-	PrebuiltImagesPaths = []string{
-		// When gitlab-runner is running from repository root
-		filepath.Join(runnerFolder, "out/helper-images"),
-		// When gitlab-runner is running from `out/binaries`
-		filepath.Join(runnerFolder, "../helper-images"),
-		// Add working directory path, used when running from temp directory, such as with `go run`
-		filepath.Join(homedir.New().GetWDOrEmpty(), "out/helper-images"),
-	}
-	if runtime.GOOS == "linux" {
-		// This section covers the Linux packaged app scenario, with the binary in /usr/bin.
-		// The helper images are located in /usr/lib/gitlab-runner/helper-images,
-		// as part of the packaging done in the create_package function in ci/package
-		PrebuiltImagesPaths = append(
-			PrebuiltImagesPaths,
-			filepath.Join(runnerFolder, "../lib/gitlab-runner/helper-images"),
-		)
-	}
-}
-
 func (e *executor) getServiceVariables(serviceDefinition common.Image) []string {
 	variables := e.Build.GetAllVariables().PublicOrInternal()
 	variables = append(variables, serviceDefinition.Variables...)
@@ -176,43 +141,6 @@ func (e *executor) expandAndGetDockerImage(
 	}
 
 	return image, nil
-}
-
-func (e *executor) loadPrebuiltImage(path, ref, tag string) (*types.ImageInspect, error) {
-	file, err := os.OpenFile(path, os.O_RDONLY, 0o600)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("cannot load prebuilt image: %s: %w", path, err)
-	}
-	defer func() { _ = file.Close() }()
-
-	e.BuildLogger.Debugln("Loading prebuilt image...")
-
-	source := types.ImageImportSource{
-		Source:     file,
-		SourceName: "-",
-	}
-	options := types.ImageImportOptions{
-		Tag: tag,
-		// NOTE: The ENTRYPOINT metadata is not preserved on export, so we need to reapply this metadata on import.
-		// See https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/2058#note_388341301
-		Changes: []string{`ENTRYPOINT ["/usr/bin/dumb-init", "/entrypoint"]`},
-	}
-
-	if err = e.client.ImageImportBlocking(e.Context, source, ref, options); err != nil {
-		return nil, fmt.Errorf("failed to import image: %w", err)
-	}
-
-	image, _, err := e.client.ImageInspectWithRaw(e.Context, ref+":"+tag)
-	if err != nil {
-		e.BuildLogger.Debugln("Inspecting imported image", ref, "failed:", err)
-		return nil, err
-	}
-
-	return &image, err
 }
 
 func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
@@ -248,45 +176,16 @@ func (e *executor) getPrebuiltImage() (*types.ImageInspect, error) {
 }
 
 func (e *executor) getLocalHelperImage() *types.ImageInspect {
-	if !e.helperImageInfo.IsSupportingLocalImport {
+	if e.helperImageInfo.Prebuilt == "" {
 		return nil
 	}
 
-	var flavor string
-	if e.Config.Docker != nil {
-		flavor = e.ExpandValue(e.Config.Docker.HelperImageFlavor)
+	image, err := prebuilt.Get(e.Context, e.client, e.helperImageInfo)
+	if err != nil {
+		e.BuildLogger.Debugln("Failed to load prebuilt:", err)
 	}
 
-	architecture := e.helperImageInfo.Architecture
-	prebuiltFileName := getPrebuiltFileName(architecture, flavor, e.Config.Shell)
-	for _, dockerPrebuiltImagesPath := range PrebuiltImagesPaths {
-		dockerPrebuiltImageFilePath := filepath.Join(dockerPrebuiltImagesPath, prebuiltFileName)
-		image, err := e.loadPrebuiltImage(
-			dockerPrebuiltImageFilePath,
-			e.helperImageInfo.Name,
-			e.helperImageInfo.Tag,
-		)
-		if err != nil {
-			e.BuildLogger.Debugln("Failed to load prebuilt image from:", dockerPrebuiltImageFilePath, "error:", err)
-			continue
-		}
-
-		return image
-	}
-
-	return nil
-}
-
-func getPrebuiltFileName(architecture, flavor string, shell string) string {
-	if flavor == "" {
-		flavor = helperimage.DefaultFlavor
-	}
-
-	if shell == shells.SNPwsh {
-		return fmt.Sprintf("prebuilt-%s-%s-%s%s", flavor, architecture, shell, prebuiltImageExtension)
-	}
-
-	return fmt.Sprintf("prebuilt-%s-%s%s", flavor, architecture, prebuiltImageExtension)
+	return image
 }
 
 func (e *executor) getBuildImage() (*types.ImageInspect, error) {

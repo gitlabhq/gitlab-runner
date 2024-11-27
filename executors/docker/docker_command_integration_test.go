@@ -31,6 +31,7 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	"gitlab.com/gitlab-org/gitlab-runner/common/buildtest"
 	execDocker "gitlab.com/gitlab-org/gitlab-runner/executors/docker"
+	"gitlab.com/gitlab-org/gitlab-runner/executors/docker/internal/prebuilt"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/container/windows"
 	"gitlab.com/gitlab-org/gitlab-runner/helpers/docker"
@@ -54,7 +55,7 @@ var windowsDockerImageTagMappings = map[string]string{
 }
 
 func TestMain(m *testing.M) {
-	execDocker.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
+	prebuilt.PrebuiltImagesPaths = []string{"../../out/helper-images/"}
 	_ = systemIDState.EnsureSystemID()
 
 	os.Exit(m.Run())

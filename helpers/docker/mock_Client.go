@@ -422,6 +422,34 @@ func (_m *MockClient) ImageInspectWithRaw(ctx context.Context, imageID string) (
 	return r0, r1, r2
 }
 
+// ImageLoad provides a mock function with given fields: ctx, input, quiet
+func (_m *MockClient) ImageLoad(ctx context.Context, input io.Reader, quiet bool) (types.ImageLoadResponse, error) {
+	ret := _m.Called(ctx, input, quiet)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ImageLoad")
+	}
+
+	var r0 types.ImageLoadResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, io.Reader, bool) (types.ImageLoadResponse, error)); ok {
+		return rf(ctx, input, quiet)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, io.Reader, bool) types.ImageLoadResponse); ok {
+		r0 = rf(ctx, input, quiet)
+	} else {
+		r0 = ret.Get(0).(types.ImageLoadResponse)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, io.Reader, bool) error); ok {
+		r1 = rf(ctx, input, quiet)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ImagePullBlocking provides a mock function with given fields: ctx, ref, options
 func (_m *MockClient) ImagePullBlocking(ctx context.Context, ref string, options types.ImagePullOptions) error {
 	ret := _m.Called(ctx, ref, options)
@@ -433,6 +461,24 @@ func (_m *MockClient) ImagePullBlocking(ctx context.Context, ref string, options
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, types.ImagePullOptions) error); ok {
 		r0 = rf(ctx, ref, options)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ImageTag provides a mock function with given fields: ctx, source, target
+func (_m *MockClient) ImageTag(ctx context.Context, source string, target string) error {
+	ret := _m.Called(ctx, source, target)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ImageTag")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, source, target)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -34,12 +34,12 @@ const (
 )
 
 type Info struct {
-	OSType                  string
-	Architecture            string
-	Name                    string
-	Tag                     string
-	IsSupportingLocalImport bool
-	Cmd                     []string
+	OSType       string
+	Architecture string
+	Name         string
+	Tag          string
+	Cmd          []string
+	Prebuilt     string
 }
 
 func (i Info) String() string {

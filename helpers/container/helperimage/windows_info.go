@@ -19,6 +19,11 @@ var helperImages = map[string]string{
 	windows.V24H2: baseImage21H2, // Re-use the 21H2 base image, taking advantage of the backwards compatibility of newer windows kernels
 }
 
+var prebuiltImages = map[string]string{
+	baseImage1809: "servercore-ltsc2019",
+	baseImage21H2: "servercore-ltsc2022",
+}
+
 type windowsInfo struct{}
 
 func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
@@ -27,12 +32,17 @@ func (w *windowsInfo) Create(revision string, cfg Config) (Info, error) {
 		return Info{}, fmt.Errorf("detecting base image: %w", err)
 	}
 
+	var prebuilt string
+	if name, ok := prebuiltImages[baseImage]; ok {
+		prebuilt = fmt.Sprintf("prebuilt-windows-%s-%s", name, windowsSupportedArchitecture)
+	}
+
 	return Info{
-		Architecture:            windowsSupportedArchitecture,
-		Name:                    GitLabRegistryName,
-		Tag:                     fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage),
-		IsSupportingLocalImport: false,
-		Cmd:                     getPowerShellCmd(cfg.Shell),
+		Architecture: windowsSupportedArchitecture,
+		Name:         GitLabRegistryName,
+		Tag:          fmt.Sprintf("%s-%s-%s", windowsSupportedArchitecture, revision, baseImage),
+		Cmd:          getPowerShellCmd(cfg.Shell),
+		Prebuilt:     prebuilt,
 	}, nil
 }
 
