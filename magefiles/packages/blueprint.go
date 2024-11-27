@@ -74,7 +74,7 @@ func (b blueprintImpl) Data() blueprintParams {
 func Assemble(pkgType Type, arch, packageArch string) Blueprint {
 	base := build.NewBlueprintBase(gPGKeyID, gPGPassphrase, iteration)
 
-	prebuiltImages := defaultHelperPrebuiltImages
+	var prebuiltImages []string
 
 	var postfix string
 	if pkgType == RpmFips {
