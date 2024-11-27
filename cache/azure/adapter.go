@@ -89,26 +89,6 @@ func (a *azureAdapter) GetUploadEnv(ctx context.Context) (map[string]string, err
 	return nil, nil
 }
 
-func (a *azureAdapter) presignURL(ctx context.Context, method string) *url.URL {
-	signer := a.getSigner()
-	if signer == nil {
-		return nil
-	}
-
-	u, err := a.generateSignedURL(ctx, a.objectName, &signedURLOptions{
-		ContainerName: a.config.ContainerName,
-		Signer:        signer,
-		Method:        method,
-		Timeout:       a.timeout,
-	})
-	if err != nil {
-		logrus.WithError(err).Errorf("error generating Azure pre-signed URL")
-		return nil
-	}
-
-	return u
-}
-
 func (a *azureAdapter) generateSASToken(ctx context.Context, upload bool) (string, error) {
 	method := http.MethodGet
 	if upload {
