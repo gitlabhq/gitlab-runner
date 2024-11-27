@@ -64,7 +64,7 @@ var packageBuilds = packages.Builds{
 	},
 	"rpm": {
 		{"Rpm64", []string{"amd64"}, []string{"amd64"}, []string{"x86_64"}},
-		{"Rpm32", []string{"386"}, []string{"i686"}, []string{"i686"}},
+		{"Rpm32", []string{"386"}, []string{"i386"}, []string{"i386"}},
 		{"RpmArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
 		{"RpmArm32", []string{"arm", "arm"}, []string{"arm", "armhf"}, []string{"arm", "armhf"}},
 		{"RpmRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
