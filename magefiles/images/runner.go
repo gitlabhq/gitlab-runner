@@ -273,6 +273,7 @@ func assembleDependencies(flavor string, archs []string) []runnerImageFileDepend
 				copyMap["ubuntu"],
 				checksumsFile,
 				fmt.Sprintf("out/deb/gitlab-runner_%s.deb", debArch),
+				"out/deb/gitlab-runner-helper-images.deb",
 			)
 
 			copyMap["alpine"] = append(
