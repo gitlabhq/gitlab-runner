@@ -14,6 +14,7 @@
   - 'package-deb'
   - 'binaries-fips'
   - 'package-rpm: [rpmFips]'
+  - 'package-helpers'
   script:
   - mage images:releaseRunner "$IMAGE_FLAVOR" "$TARGET_ARCHS"
   parallel:
@@ -92,6 +93,7 @@
   - 'fips helper binaries'
   - 'package-deb'
   - 'package-rpm'
+  - 'package-helpers'
   before_script:
   - ./ci/touch_git
   - |
@@ -113,6 +115,7 @@
   dependencies:
   - 'package-deb'
   - 'package-rpm'
+  - 'package-helpers'
   script:
   - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
   - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
