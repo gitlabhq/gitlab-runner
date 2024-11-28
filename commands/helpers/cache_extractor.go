@@ -74,75 +74,6 @@ func (c *CacheExtractorCommand) download(_ int) error {
 	return c.handlePresignedURL()
 }
 
-func (c *CacheExtractorCommand) handlePresignedURL() error {
-	resp, err := c.getCache()
-	if err != nil {
-		return err
-	}
-
-	defer func() { _ = resp.Body.Close() }()
-
-	upToDate, date := checkIfUpToDate(c.File, resp)
-	if upToDate {
-		logrus.Infoln(filepath.Base(c.File), "is up to date")
-		return nil
-	}
-
-	file, err := os.CreateTemp(filepath.Dir(c.File), "cache")
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-	}()
-
-	// For legacy purposes, caches written to disk use the extension `.zip`
-	// even when a different compression format is used. To avoid confusion,
-	// we avoid the extension name in logs.
-	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
-	etag := resp.Header.Get("ETag")
-	cleanedURL := url_helpers.CleanURL(c.URL)
-
-	if etag != "" {
-		logrus.WithField("ETag", etag).Infoln("Downloading", name, "from", cleanedURL)
-	} else {
-		logrus.Infoln("Downloading", name, "from", cleanedURL)
-	}
-
-	writer := meter.NewWriter(
-		file,
-		c.TransferMeterFrequency,
-		meter.LabelledRateFormat(os.Stdout, "Downloading cache", getRemoteCacheSize(resp)),
-	)
-
-	// Close() is checked properly below, where the file handling is being finalized
-	defer func() { _ = writer.Close() }()
-
-	_, err = io.Copy(writer, resp.Body)
-	if err != nil {
-		return retryableErr{err: err}
-	}
-
-	err = os.Chtimes(file.Name(), time.Now(), date)
-	if err != nil {
-		return err
-	}
-
-	err = writer.Close()
-	if err != nil {
-		return err
-	}
-
-	err = os.Rename(file.Name(), c.File)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 	resp, err := c.getClient().Get(c.URL)
 	if err != nil {
@@ -155,6 +86,28 @@ func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 	}
 
 	return resp, retryOnServerError(resp)
+}
+
+func (c *CacheExtractorCommand) handlePresignedURL() error {
+	resp, err := c.getCache()
+	if err != nil {
+		return err
+	}
+
+	// Close() is checked properly below, where the file handling is being finalized
+	defer func() { _ = resp.Body.Close() }()
+
+	upToDate, date := checkIfUpToDate(c.File, resp)
+	if upToDate {
+		logrus.Infoln(filepath.Base(c.File), "is up to date")
+		return nil
+	}
+
+	etag := resp.Header.Get("ETag")
+	cleanedURL := url_helpers.CleanURL(c.URL)
+	contentLength := getRemoteCacheSize(resp)
+
+	return c.downloadAndSaveCache(resp.Body, date, etag, cleanedURL, contentLength)
 }
 
 func (c *CacheExtractorCommand) handleGoCloudURL() error {
@@ -186,8 +139,18 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 		return err
 	}
 
-	date := attrs.ModTime
+	reader, err := b.NewReader(ctx, objectName, nil)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
 
+	cleanedURL := url_helpers.CleanURL(c.GoCloudURL)
+
+	return c.downloadAndSaveCache(reader, attrs.ModTime, attrs.ETag, cleanedURL, attrs.Size)
+}
+
+func (c *CacheExtractorCommand) downloadAndSaveCache(reader io.Reader, date time.Time, etag, cleanedURL string, contentLength int64) error {
 	file, err := os.CreateTemp(filepath.Dir(c.File), "cache")
 	if err != nil {
 		return err
@@ -202,10 +165,6 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 	// even when a different compression format is used. To avoid confusion,
 	// we avoid the extension name in logs.
 	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
-	etag := attrs.ETag
-	contentLength := attrs.Size
-
-	cleanedURL := url_helpers.CleanURL(c.GoCloudURL)
 
 	if etag != "" {
 		logrus.WithField("ETag", etag).Infoln("Downloading", name, "from", cleanedURL)
@@ -219,14 +178,7 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 		meter.LabelledRateFormat(os.Stdout, "Downloading cache", contentLength),
 	)
 
-	// Close() is checked properly bellow, where the file handling is being finalized
 	defer func() { _ = writer.Close() }()
-
-	reader, err := b.NewReader(ctx, objectName, nil)
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
 
 	_, err = io.Copy(writer, reader)
 	if err != nil {
@@ -243,12 +195,7 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 		return err
 	}
 
-	err = os.Rename(file.Name(), c.File)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.Rename(file.Name(), c.File)
 }
 
 func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
