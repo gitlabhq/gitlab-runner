@@ -357,68 +357,68 @@ The following settings define the Docker container parameters. These settings ar
 
 [Docker-in-Docker](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker) as a service, or any container runtime configured inside a job, does not inherit these parameters.
 
-| Parameter | Description |
-| --------- | ----------- |
-| `allowed_images`               | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. |
-| `allowed_privileged_images`    | Wildcard subset of `allowed_images` that runs in privileged mode when `privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. |
-| `allowed_pull_policies`        | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, only the pull policies specified in `pull-policy` are allowed. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. |
-| `allowed_services`             | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. |
-| `allowed_privileged_services`  | Wildcard subset of `allowed_services` that is allowed to run in privileged mode, when `privileged` or `services_privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. |
-| `cache_dir`                    | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. |
-| `cap_add`                      | Add additional Linux capabilities to the container. |
-| `cap_drop`                     | Drop additional Linux capabilities from the container. |
-| `cpuset_cpus`                  | The control group's `CpusetCpus`. A string. |
-| `cpuset_mems`                  | The control group's `CpusetMems`. A string. |
-| `cpu_shares`                   | Number of CPU shares used to set relative CPU usage. Default is `1024`. |
-| `cpus`                         | Number of CPUs (available in Docker 1.13 or later). A string.  |
-| `devices`                      | Share additional host devices with the container. |
-| `device_cgroup_rules`          | Custom device `cgroup` rules (available in Docker 1.28 or later). |
-| `disable_cache`                | The Docker executor has two levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). |
-| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting. |
-| `dns`                          | A list of DNS servers for the container to use. |
-| `dns_search`                   | A list of DNS search domains. |
-| `extra_hosts`                  | Hosts that should be defined in container environment. |
-| `gpus`                         | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). |
-| `group_add`                    | Add additional groups for the container process to run. |
-| `helper_image`                 | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. |
-| `helper_image_flavor`          | Sets the helper image flavor (`alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.19`. |
-| `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image architecture and OS. |
-| `host`                         | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. |
-| `hostname`                     | Custom hostname for the Docker container. |
-| `image`                        | The image to run jobs with. |
-| `links`                        | Containers that should be linked with container that runs the job. |
-| `memory`                       | The memory limit. A string. |
-| `memory_swap`                  | The total memory limit. A string. |
-| `memory_reservation`           | The memory soft limit. A string. |
-| `network_mode`                 | Add container to a custom network. |
-| `mac_address`                  | Container MAC address (for example, 92:d0:c6:0a:29:33). |
-| `oom_kill_disable`             | If an out-of-memory (`OOM`) error occurs, do not terminate processes in a container. |
-| `oom_score_adjust`             | `OOM` score adjustment. Positive means terminate the processes earlier. |
-| `privileged`                   | Make the container run in privileged mode. Insecure. |
-| `services_privileged`          | Allow services to run in privileged mode. If unset (default) `privileged` value is used instead. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. Insecure. |
-| `pull_policy`                  | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images). You can also add [multiple pull policies](../executors/docker.md#set-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#allow-docker-pull-policies). |
-| `runtime`                      | The runtime for the Docker container. |
-| `isolation`                    | Container isolation technology (`default`, `hyperv` and `process`). Windows only. |
-| `security_opt`                 | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. |
-| `shm_size`                     | Shared memory size for images (in bytes). |
-| `sysctls`                      | The `sysctl` options. |
-| `tls_cert_path`                | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Use this setting with `boot2docker`. |
-| `tls_verify`                   | Enable or disable TLS verification of connections to the Docker daemon. Disabled by default. By default, GitLab Runner connects to the Docker Unix socket over SSH. The Unix socket does not support RTLS and communicates over HTTP with SSH to provide encryption and authentication. Enabling `tls_verify` is not typically needed and requires additional configuration. To enable `tls_verify`, the daemon must listen on a port (rather than the default Unix socket) and the GitLab Runner Docker host must use the address the daemon is listening on. |
-| `user`                         | Run all commands in the container as the specified user. |
-| `userns_mode`                  | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. |
-| `ulimit`                       | Ulimit values that are passed to the container. Uses the same syntax as the Docker `--ulimit` flag. |
-| `volumes`                      | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. |
-| `volumes_from`                 | A list of volumes to inherit from another container in the form `<container name>[:<access_level>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). |
-| `volume_driver`                | The volume driver to use for the container. |
-| `wait_for_services_timeout`    | How long to wait for Docker services. Set to `-1` to disable. Default is `30`. |
-| `container_labels`             | A set of labels to add to each container created by the runner. The label value can include environment variables for expansion. |
-| `services_limit`               | Set the maximum allowed services per job. `-1` (default) means there is no limit. |
-| `service_cpuset_cpus`          | String value containing the `cgroups CpusetCpus` to use for a service. |
-| `service_cpu_shares`           | Number of CPU shares used to set a service's relative CPU usage (default:  [`1024`](https://docs.docker.com/config/containers/resource_constraints/#cpu)). |
-| `service_cpus`                 | String value of the number of CPUs for a service. Available in Docker 1.13 or later. |
-| `service_memory`               | String value of the memory limit for a service. |
-| `service_memory_swap`          | String value of the total memory limit for a service. |
-| `service_memory_reservation`   | String value of the memory soft limit for a service. |
+| Parameter | Description | Example |
+| --------- | ----------- | ------- |
+| `allowed_images` | Wildcard list of images that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. | `["ruby:*", "python:*", "php:*"]` |
+| `allowed_privileged_images` | Wildcard subset of `allowed_images` that runs in privileged mode when `privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. | |
+| `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. If not specified, only the pull policies specified in `pull-policy` are allowed. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. | |
+| `allowed_services` | Wildcard list of services that can be specified in the `.gitlab-ci.yml` file. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) or [Kubernetes](../executors/kubernetes/index.md#restrict-docker-images-and-services) executors. | `["postgres:9", "redis:*", "mysql:*"]` |
+| `allowed_privileged_services` | Wildcard subset of `allowed_services` that is allowed to run in privileged mode, when `privileged` or `services_privileged` is enabled. If not present, all images are allowed (equivalent to `["*/*:*"]`). Use with the [Docker](../executors/docker.md#restrict-docker-images-and-services) executors. | |
+| `cache_dir` | Directory where Docker caches should be stored. This path can be absolute or relative to current working directory. See `disable_cache` for more information. | |
+| `cap_add` | Add additional Linux capabilities to the container. | `["NET_ADMIN"]` |
+| `cap_drop` | Drop additional Linux capabilities from the container. | `["DAC_OVERRIDE"]` |
+| `cpuset_cpus` | The control group's `CpusetCpus`. A string. | `"0,1"` |
+| `cpuset_mems` | The control group's `CpusetMems`. A string. | `"0,1"` |
+| `cpu_shares` | Number of CPU shares used to set relative CPU usage. Default is `1024`. | |
+| `cpus` | Number of CPUs (available in Docker 1.13 or later). A string.  | `"2"` |
+| `devices` | Share additional host devices with the container. | `["/dev/net/tun"]` |
+| `device_cgroup_rules` | Custom device `cgroup` rules (available in Docker 1.28 or later). | |
+| `disable_cache` | The Docker executor has two levels of caching: a global one (like any other executor) and a local cache based on Docker volumes. This configuration flag acts only on the local one which disables the use of automatically created (not mapped to a host directory) cache volumes. In other words, it only prevents creating a container that holds temporary files of builds, it does not disable the cache if the runner is configured in [distributed cache mode](autoscale.md#distributed-runners-caching). | |
+| `disable_entrypoint_overwrite` | Disable the image entrypoint overwriting. | |
+| `dns` | A list of DNS servers for the container to use. | `["8.8.8.8"]` |
+| `dns_search` | A list of DNS search domains. | |
+| `extra_hosts` | Hosts that should be defined in container environment. | `["other-host:127.0.0.1"]` |
+| `gpus` | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). | |
+| `group_add` | Add additional groups for the container process to run. | `["docker"]` |
+| `helper_image` | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. | |
+| `helper_image_flavor` | Sets the helper image flavor (`alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.19`. | |
+| `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image architecture and OS. | |
+| `host` | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. | |
+| `hostname` | Custom hostname for the Docker container. | |
+| `image` | The image to run jobs with. | `"ruby:3.3"` |
+| `links` | Containers that should be linked with container that runs the job. | `["mysql_container:mysql"]` |
+| `memory` | The memory limit. A string. | `"128m"` |
+| `memory_swap` | The total memory limit. A string. | `"256m"` |
+| `memory_reservation` | The memory soft limit. A string. | `"64m"` |
+| `network_mode` | Add container to a custom network. | |
+| `mac_address` | Container MAC address | `92:d0:c6:0a:29:33` |
+| `oom_kill_disable` | If an out-of-memory (`OOM`) error occurs, do not terminate processes in a container. | |
+| `oom_score_adjust` | `OOM` score adjustment. Positive means terminate the processes earlier. | |
+| `privileged` | Make the container run in privileged mode. Insecure. | `false` |
+| `services_privileged` | Allow services to run in privileged mode. If unset (default) `privileged` value is used instead. Use with the [Docker](../executors/docker.md#allow-docker-pull-policies) executor. Insecure. | |
+| `pull_policy` | The image pull policy: `never`, `if-not-present` or `always` (default). View details in the [pull policies documentation](../executors/docker.md#configure-how-runners-pull-images). You can also add [multiple pull policies](../executors/docker.md#set-multiple-pull-policies), [retry a failed pull](../executors/docker.md#retry-a-failed-pull), or [restrict pull policies](../executors/docker.md#allow-docker-pull-policies). | |
+| `runtime` | The runtime for the Docker container. | |
+| `isolation` | Container isolation technology (`default`, `hyperv` and `process`). Windows only. | |
+| `security_opt` | Security options (--security-opt in `docker run`). Takes a list of `:` separated key/values. | |
+| `shm_size` | Shared memory size for images (in bytes). | `300000` |
+| `sysctls` | The `sysctl` options. | |
+| `tls_cert_path` | A directory where `ca.pem`, `cert.pem` or `key.pem` are stored and used to make a secure TLS connection to Docker. Use this setting with `boot2docker`. | On macOS `/Users/<username>/.boot2docker/certs`. |
+| `tls_verify` | Enable or disable TLS verification of connections to the Docker daemon. Disabled by default. By default, GitLab Runner connects to the Docker Unix socket over SSH. The Unix socket does not support RTLS and communicates over HTTP with SSH to provide encryption and authentication. Enabling `tls_verify` is not typically needed and requires additional configuration. To enable `tls_verify`, the daemon must listen on a port (rather than the default Unix socket) and the GitLab Runner Docker host must use the address the daemon is listening on. | |
+| `user` | Run all commands in the container as the specified user. | |
+| `userns_mode` | The user namespace mode for the container and Docker services when user namespace remapping option is enabled. Available in Docker 1.10 or later. | |
+| `ulimit` | Ulimit values that are passed to the container. Uses the same syntax as the Docker `--ulimit` flag. | |
+| `volumes` | Additional volumes that should be mounted. Same syntax as the Docker `-v` flag. | `["/data", "/home/project/cache"]` |
+| `volumes_from` | A list of volumes to inherit from another container in the form `<container name>[:<access_level>]`. Access level defaults to read-write, but can be manually set to `ro` (read-only) or `rw` (read-write). | `["storage_container:ro"]` |
+| `volume_driver` | The volume driver to use for the container. | |
+| `wait_for_services_timeout` | How long to wait for Docker services. Set to `-1` to disable. Default is `30`. | `30` |
+| `container_labels` | A set of labels to add to each container created by the runner. The label value can include environment variables for expansion. | |
+| `services_limit` | Set the maximum allowed services per job. `-1` (default) means there is no limit. | |
+| `service_cpuset_cpus` | String value containing the `cgroups CpusetCpus` to use for a service. | |
+| `service_cpu_shares` | Number of CPU shares used to set a service's relative CPU usage (default:  [`1024`](https://docs.docker.com/config/containers/resource_constraints/#cpu)). | |
+| `service_cpus` | String value of the number of CPUs for a service. Available in Docker 1.13 or later. | |
+| `service_memory` | String value of the memory limit for a service. | |
+| `service_memory_swap` | String value of the total memory limit for a service. | |
+| `service_memory_reservation` | String value of the memory soft limit for a service. | |
 
 ### The `[[runners.docker.services]]` section
 
@@ -426,13 +426,13 @@ Specify additional [services](https://docs.gitlab.com/ee/ci/services/) to run wi
 [Docker Registry](https://hub.docker.com).
 Each service runs in a separate container and is linked to the job.
 
-| Parameter | Description |
-| --------- | ----------- |
-| `name`  | The name of the image to be run as a service. |
-| `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service .|
-| `entrypoint` | Command or script that should be executed as the container's entrypoint. The syntax is similar to the [Dockerfile ENTRYPOINT](https://docs.docker.com/reference/dockerfile/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
-| `command` | Command or script that should be used as the container's command. The syntax is similar to the [Dockerfile CMD](https://docs.docker.com/reference/dockerfile/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). |
-| `environment` | Append or overwrite environment variables for the service container. |
+| Parameter | Description | Example |
+| --------- | ----------- | ------- |
+| `name`  | The name of the image to be run as a service. | `"registry.example.com/svc1"` |
+| `alias` | Additional [alias name](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#available-settings-for-services) that can be used to access the service. | `"svc1"` |
+| `entrypoint` | Command or script that should be executed as the container's entrypoint. The syntax is similar to the [Dockerfile ENTRYPOINT](https://docs.docker.com/reference/dockerfile/#entrypoint) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). | `["entrypoint.sh"]` |
+| `command` | Command or script that should be used as the container's command. The syntax is similar to the [Dockerfile CMD](https://docs.docker.com/reference/dockerfile/#cmd) directive, where each shell token is a separate string in the array. Introduced in [GitLab Runner 13.6](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27173). | `["executable","param1","param2"]` |
+| `environment` | Append or overwrite environment variables for the service container. | `["ENV1=value1", "ENV2=value2"]` |
 
 Example:
 
