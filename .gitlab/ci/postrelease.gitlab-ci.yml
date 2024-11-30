@@ -7,11 +7,29 @@ trigger UBI images build:
   trigger: gitlab-org/ci-cd/gitlab-runner-ubi-images
 
 trigger runner-incept tests:
-  extends:
-    - .rules:merge_request_pipelines:no_docs:only_canonical
+  rules:
+    # copy of .rules:merge_request_pipelines:no_docs:only_canonical, slightly modified for variables
+    - if: '$CI_PROJECT_NAMESPACE !~ /^gitlab-org($|\/)/'
+      when: never
+    - if: $CI_PROJECT_PATH != "gitlab-org/gitlab-runner"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: "refs/merge-requests/${CI_MERGE_REQUEST_IID}/merge"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
+    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+?\z/
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
+    - if: $CI_COMMIT_REF_NAME =~ /\Av[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?\z/
+      changes: !reference [.code-backstage-patterns]
+      variables:
+        UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_REF_NAME
   needs:
-    - job: "prepare runner-incept variables"
-      artifacts: true
     - "binaries: [linux/386 linux/arm]"
     - "binaries: [linux/amd64 linux/arm64]"
     - "binaries: [linux/s390x linux/ppc64le]"
@@ -26,7 +44,7 @@ trigger runner-incept tests:
       optional: true
   stage: postrelease
   variables:
-    UPSTREAM_CI_COMMIT_REF: $UPSTREAM_CI_COMMIT_REF
+    UPSTREAM_CI_COMMIT_REF: $CI_COMMIT_BRANCH
     UPSTREAM_CI_COMMIT_SHORT_SHA: $CI_COMMIT_SHORT_SHA
   trigger:
     project: gitlab-org/ci-cd/tests/runner-incept
