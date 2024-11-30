@@ -55,7 +55,7 @@ func (a *azureAdapter) GetGoCloudURL(ctx context.Context, upload bool) (cache.Go
 	u, err := url.Parse(raw)
 	if err != nil {
 		logrus.WithError(err).WithField("url", raw).Errorf("error parsing blob URL")
-		return goCloudURL, fmt.Errorf("error parsing blob URL")
+		return goCloudURL, fmt.Errorf("error parsing blob URL: %q: %w", raw, err)
 	}
 
 	env, err := a.getEnv(ctx, upload)

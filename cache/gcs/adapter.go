@@ -45,7 +45,7 @@ func (a *gcsAdapter) GetUploadHeaders() http.Header {
 	return nil
 }
 
-func (a *gcsAdapter) GetGoCloudURL(_ context.Context, upload bool) (cache.GoCloudURL, error) {
+func (a *gcsAdapter) GetGoCloudURL(_ context.Context, _ bool) (cache.GoCloudURL, error) {
 	return cache.GoCloudURL{}, nil
 }
 

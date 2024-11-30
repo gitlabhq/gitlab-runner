@@ -207,25 +207,19 @@ func (b *AbstractShell) addExtractCacheCommand(
 		"--timeout", strconv.Itoa(info.Build.GetCacheRequestTimeout()),
 	}
 
-	// Prefer Go Cloud URL if supported
-	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, info.Build, cacheKey, false)
+	extraArgs, env, err := getCacheDownloadURLAndEnv(ctx, info.Build, cacheKey)
+	args = append(args, extraArgs...)
+
 	if err != nil {
-		w.Warningf("Failed to get Go Cloud URL for cache key %s: %v", cacheKey, err)
-	}
-
-	if goCloudURL.URL != nil {
-		args = append(args, "--gocloud-url", goCloudURL.URL.String())
-
-		for key, value := range goCloudURL.Environment {
-			w.Variable(common.JobVariable{Key: key, Value: value})
-		}
-	} else {
-		if url := cache.GetCacheDownloadURL(ctx, info.Build, cacheKey); url.URL != nil {
-			args = append(args, "--url", url.URL.String())
-		}
+		w.Warningf("Failed to obtain environment for cache %s: %v", cacheKey, err)
 	}
 
 	w.Noticef("Checking cache for %s...", cacheKey)
+
+	for key, value := range env {
+		w.Variable(common.JobVariable{Key: key, Value: value})
+	}
+
 	w.IfCmdWithOutput(info.RunnerCommand, args...)
 	w.Noticef("Successfully extracted cache")
 	w.Else()
@@ -252,6 +246,23 @@ func (b *AbstractShell) addExtractCacheCommand(
 		}
 	}
 	w.EndIf()
+}
+
+// getCacheDownloadURLAndEnv will first try to generate the GoCloud URL if it's
+// available then fallback to a pre-signed URL.
+func getCacheDownloadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string) ([]string, map[string]string, error) {
+	// Prefer Go Cloud URL if supported
+	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, cacheKey, false)
+
+	if goCloudURL.URL != nil {
+		return []string{"--gocloud-url", goCloudURL.URL.String()}, goCloudURL.Environment, err
+	}
+
+	if url := cache.GetCacheDownloadURL(ctx, build, cacheKey); url.URL != nil {
+		return []string{"--url", url.URL.String()}, nil, nil
+	}
+
+	return []string{}, nil, nil
 }
 
 func (b *AbstractShell) downloadArtifacts(w ShellWriter, job common.Dependency, info common.ShellScriptInfo) {

@@ -105,7 +105,7 @@ func testGoCloudURLWithInvalidConfig(
 		u, err := operation(context.Background(), true)
 
 		if expectedErrorMessage != "" {
-			assert.EqualError(t, err, expectedErrorMessage)
+			assert.ErrorContains(t, err, expectedErrorMessage)
 		} else {
 			assert.NoError(t, err)
 		}
