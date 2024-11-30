@@ -208,7 +208,11 @@ func (b *AbstractShell) addExtractCacheCommand(
 	}
 
 	// Prefer Go Cloud URL if supported
-	goCloudURL := cache.GetCacheGoCloudURL(ctx, info.Build, cacheKey, false)
+	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, info.Build, cacheKey, false)
+	if err != nil {
+		w.Warningf("Failed to get Go Cloud URL for cache key %s: %v", cacheKey, err)
+	}
+
 	if goCloudURL.URL != nil {
 		args = append(args, "--gocloud-url", goCloudURL.URL.String())
 
@@ -1058,9 +1062,9 @@ func (b *AbstractShell) addCacheUploadCommand(
 // available then fallback to a pre-signed URL.
 func getCacheUploadURLAndEnv(ctx context.Context, build *common.Build, cacheKey string) ([]string, map[string]string, error) {
 	// Prefer Go Cloud URL if supported
-	goCloudURL := cache.GetCacheGoCloudURL(ctx, build, cacheKey, true)
+	goCloudURL, err := cache.GetCacheGoCloudURL(ctx, build, cacheKey, true)
 	if goCloudURL.URL != nil {
-		return []string{"--gocloud-url", goCloudURL.URL.String()}, goCloudURL.Environment, nil
+		return []string{"--gocloud-url", goCloudURL.URL.String()}, goCloudURL.Environment, err
 	}
 
 	uploadURL := cache.GetCacheUploadURL(ctx, build, cacheKey)

@@ -98,10 +98,10 @@ func GetCacheUploadURL(ctx context.Context, build *common.Build, key string) Pre
 	return adaptor.GetUploadURL(ctx)
 }
 
-func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string, upload bool) GoCloudURL {
+func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string, upload bool) (GoCloudURL, error) {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
-		return GoCloudURL{}
+		return GoCloudURL{}, nil
 	}
 
 	return adaptor.GetGoCloudURL(ctx, upload)

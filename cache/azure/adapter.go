@@ -39,12 +39,12 @@ func (a *azureAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
 	return cache.PresignedURL{}
 }
 
-func (a *azureAdapter) GetGoCloudURL(ctx context.Context, upload bool) cache.GoCloudURL {
+func (a *azureAdapter) GetGoCloudURL(ctx context.Context, upload bool) (cache.GoCloudURL, error) {
 	goCloudURL := cache.GoCloudURL{}
 
 	if a.config.ContainerName == "" {
 		logrus.Error("ContainerName can't be empty")
-		return goCloudURL
+		return goCloudURL, fmt.Errorf("ContainerName can't be empty")
 	}
 
 	// Go Cloud omits the object name from the URL. Since object storage
@@ -55,18 +55,18 @@ func (a *azureAdapter) GetGoCloudURL(ctx context.Context, upload bool) cache.GoC
 	u, err := url.Parse(raw)
 	if err != nil {
 		logrus.WithError(err).WithField("url", raw).Errorf("error parsing blob URL")
-		return goCloudURL
+		return goCloudURL, fmt.Errorf("error parsing blob URL")
 	}
 
 	env, err := a.getEnv(ctx, upload)
 	if err != nil {
 		logrus.WithError(err).Errorf("error retrieving upload headers for GoCloud URL")
-		return goCloudURL
+		return goCloudURL, err
 	}
 
 	goCloudURL.URL = u
 	goCloudURL.Environment = env
-	return goCloudURL
+	return goCloudURL, nil
 }
 
 func (a *azureAdapter) getEnv(ctx context.Context, upload bool) (map[string]string, error) {

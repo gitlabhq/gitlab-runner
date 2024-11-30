@@ -32,7 +32,7 @@ func (_m *MockAdapter) GetDownloadURL(_a0 context.Context) PresignedURL {
 }
 
 // GetGoCloudURL provides a mock function with given fields: ctx, upload
-func (_m *MockAdapter) GetGoCloudURL(ctx context.Context, upload bool) GoCloudURL {
+func (_m *MockAdapter) GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error) {
 	ret := _m.Called(ctx, upload)
 
 	if len(ret) == 0 {
@@ -40,13 +40,23 @@ func (_m *MockAdapter) GetGoCloudURL(ctx context.Context, upload bool) GoCloudUR
 	}
 
 	var r0 GoCloudURL
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, bool) (GoCloudURL, error)); ok {
+		return rf(ctx, upload)
+	}
 	if rf, ok := ret.Get(0).(func(context.Context, bool) GoCloudURL); ok {
 		r0 = rf(ctx, upload)
 	} else {
 		r0 = ret.Get(0).(GoCloudURL)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, bool) error); ok {
+		r1 = rf(ctx, upload)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetUploadEnv provides a mock function with given fields: _a0

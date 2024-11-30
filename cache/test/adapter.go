@@ -31,19 +31,22 @@ func (t *testAdapter) GetUploadHeaders() http.Header {
 	return headers
 }
 
-func (t *testAdapter) GetGoCloudURL(ctx context.Context, _ bool) cache.GoCloudURL {
+func (t *testAdapter) GetGoCloudURL(ctx context.Context, _ bool) (cache.GoCloudURL, error) {
 	goCloudURL := cache.GoCloudURL{}
 
 	if t.useGoCloud {
 		u, _ := url.Parse(fmt.Sprintf("gocloud://test/%s", t.objectName))
 		goCloudURL.URL = u
 
-		env, _ := t.GetUploadEnv(ctx)
+		env, err := t.GetUploadEnv(ctx)
+		if err != nil {
+			return goCloudURL, err
+		}
 		goCloudURL.Environment = env
-		return goCloudURL
+		return goCloudURL, nil
 	}
 
-	return goCloudURL
+	return goCloudURL, nil
 }
 
 func (t *testAdapter) GetUploadEnv(_ context.Context) (map[string]string, error) {

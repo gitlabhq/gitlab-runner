@@ -96,12 +96,19 @@ func testGoCloudURLWithInvalidConfig(
 	name string,
 	tc adapterOperationInvalidConfigTestCase,
 	adapter *azureAdapter,
-	operation func(ctx context.Context, upload bool) cache.GoCloudURL,
+	operation func(ctx context.Context, upload bool) (cache.GoCloudURL, error),
+	expectedErrorMessage string,
 ) {
 	t.Run(name, func(t *testing.T) {
 		prepareMockedCredentialsResolverForInvalidConfig(adapter, tc)
 
-		u := operation(context.Background(), true)
+		u, err := operation(context.Background(), true)
+
+		if expectedErrorMessage != "" {
+			assert.EqualError(t, err, expectedErrorMessage)
+		} else {
+			assert.NoError(t, err)
+		}
 
 		if tc.expectedGoCloudURL != "" {
 			assert.Equal(t, tc.expectedGoCloudURL, u.URL.String())
@@ -143,34 +150,24 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 			provideAzureConfig:              true,
 			credentialsResolverResolveError: true,
 			containerName:                   containerName,
-			expectedErrorMsg:                `error resolving Azure credentials" error="test error"`,
 			expectedGoCloudURL:              "azblob://test/key",
 		},
 		"no-credentials": {
 			provideAzureConfig: true,
 			containerName:      containerName,
-			expectedErrorMsg:   "error creating Azure SAS signer\" error=\"missing Azure storage account name\"",
-			expectedGoCloudURL: "azblob://test/key",
-		},
-		"no-account-name": {
-			provideAzureConfig: true,
-			accountKey:         accountKey,
-			containerName:      containerName,
-			expectedErrorMsg:   "error creating Azure SAS signer\" error=\"missing Azure storage account name\"",
 			expectedGoCloudURL: "azblob://test/key",
 		},
 		"no-account-key": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      containerName,
-			expectedErrorMsg:   "missing Azure storage account key",
 			expectedGoCloudURL: "azblob://test/key",
 		},
-		"invalid-container-name-and-no-account-key": {
+		"invalid-container-name": {
 			provideAzureConfig: true,
 			accountName:        accountName,
 			containerName:      "\x00",
-			expectedErrorMsg:   "missing Azure storage account key",
+			expectedErrorMsg:   "error parsing blob URL",
 		},
 		"container-not-specified": {
 			provideAzureConfig: true,
@@ -218,7 +215,7 @@ func TestAdapterOperation_InvalidConfig(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Nil(t, uploadEnv)
 
-			testGoCloudURLWithInvalidConfig(t, "GetGoCloudURL", tc, adapter, a.GetGoCloudURL)
+			testGoCloudURLWithInvalidConfig(t, "GetGoCloudURL", tc, adapter, a.GetGoCloudURL, tc.expectedErrorMsg)
 		})
 	}
 }
@@ -302,7 +299,8 @@ func TestAdapterOperation(t *testing.T) {
 			adapter, ok := a.(*azureAdapter)
 			require.True(t, ok, "Adapter should be properly casted to *adapter type")
 
-			u := adapter.GetGoCloudURL(context.Background(), true)
+			u, err := adapter.GetGoCloudURL(context.Background(), true)
+			assert.NoError(t, err)
 			assert.Equal(t, "azblob://test/key", u.URL.String())
 
 			assert.Len(t, u.Environment, 3)
@@ -311,7 +309,8 @@ func TestAdapterOperation(t *testing.T) {
 			assert.Empty(t, u.Environment["AZURE_STORAGE_KEY"])
 			assert.Equal(t, storageDomain, u.Environment["AZURE_STORAGE_DOMAIN"])
 
-			du := adapter.GetGoCloudURL(context.Background(), false)
+			du, err := adapter.GetGoCloudURL(context.Background(), false)
+			assert.NoError(t, err)
 			assert.Equal(t, "azblob://test/key", du.URL.String())
 
 			assert.Len(t, du.Environment, 3)
