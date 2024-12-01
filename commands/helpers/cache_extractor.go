@@ -23,6 +23,7 @@ import (
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
+	"gocloud.dev/gcerrors"
 )
 
 type CacheExtractorCommand struct {
@@ -136,6 +137,10 @@ func (c *CacheExtractorCommand) handleGoCloudURL() error {
 
 	attrs, err := b.Attributes(ctx, objectName)
 	if err != nil {
+		// Ignore 404 errors
+		if gcerrors.Code(err) == gcerrors.NotFound {
+			return nil
+		}
 		return err
 	}
 
