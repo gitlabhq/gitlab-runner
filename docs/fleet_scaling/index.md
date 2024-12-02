@@ -45,7 +45,7 @@ The performance of the CI/CD jobs on the runner fleet is directly related to the
 If you are executing a large number of resource-intensive CI/CD jobs, hosting the fleet on a shared
 computing platform is not recommended.
 
-## Workers, executors, and autoscaling capabilities
+## Runners, executors, and autoscaling capabilities
 
 The `gitlab-runner` executable runs your CI/CD jobs. Each runner is an isolated process that
 picks up requests for job executions and deals with them according to pre-defined configurations.
@@ -63,7 +63,7 @@ The limit is different for autoscaling runners (like Docker Machine and Kubernet
 - On runners that do not autoscale, `limit` defines the capacity of the runner on a host system.
 - On autoscaling runners, `limit` is the number of runners you want to run in total.
 
-### Basic configuration: one runner, one worker
+### Basic configuration: one runner manager, one runner
 
 For the most basic configuration, you install the GitLab Runner software on a supported compute architecture and operating system.
 For example, you might have an x86-64 virtual machine (VM) running Ubuntu Linux.
@@ -86,9 +86,9 @@ It's as if you were running the CI/CD job commands yourself in a terminal. In th
 command one time, the `config.toml` file contains only one `[[runners]]` section. Assuming you set the concurrency value to `1`,
 only one runner "worker" can execute CI/CD jobs for the runner process on this system.
 
-### Intermediate configuration: one runner, multiple workers
+### Intermediate configuration: one runner manager, multiple runners
 
-You can also register multiple runner workers on the same machine.
+You can also register multiple runners on the same machine.
 When you do this, the runner's `config.toml` file has multiple `[[runners]]` sections in it.
 If all of the additional runner workers are registered to use the shell executor,
 and you update the value of the global configuration option, `concurrent`, to `3`,

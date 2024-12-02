@@ -114,7 +114,7 @@ To limit the number of virtual machines (VMs) created by the Docker Machine exec
 
 The `concurrent` parameter **does not** limit the number of VMs.
 
-As detailed [here](../fleet_scaling/index.md#basic-configuration-one-runner-one-worker), one process can be configured to manage multiple runner workers.
+As detailed [here](../fleet_scaling/index.md#basic-configuration-one-runner-manager-one-runner), one process can be configured to manage multiple runner workers.
 
 This example illustrates the values set in the `config.toml` file for one runner process:
 
