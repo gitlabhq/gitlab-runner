@@ -425,7 +425,7 @@ DETAILS:
 
 > - [Introduced](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3114) in GitLab Runner 15.10.
 
-This feature is in [beta](https://docs.gitlab.com/ee/policy/experiment-beta-support.html#beta). We strongly recommend that you use
+This feature is in [beta](https://docs.gitlab.com/ee/policy/development_stages_support.html#beta). We strongly recommend that you use
 this feature on a test Kubernetes cluster before you use it on a production cluster. To use this feature, you must
 enable the `FF_USE_ADVANCED_POD_SPEC_CONFIGURATION` [feature flag](../../configuration/feature-flags.md).
 
