@@ -68,19 +68,18 @@ solutions hosted on the major public cloud providers, or self-managed Kubernetes
 Use the following options to connect to the Kubernetes API. The user account provided must have
 permission to create, list, and attach to Pods in the specified namespace.
 
-| Option      | Description                                                                         |
-|-------------|-------------------------------------------------------------------------------------|
-| `host`      | Optional Kubernetes apiserver host URL (auto-discovery attempted if not specified). |
-| `cert_file` | Optional Kubernetes apiserver user auth certificate.                                |
-| `key_file`  | Optional Kubernetes apiserver user auth private key.                                |
-| `ca_file`   | Optional Kubernetes apiserver ca certificate.                                       |
+| Option      | Description                                                                          |
+|-------------|--------------------------------------------------------------------------------------|
+| `host`      | Optional Kubernetes API server host URL (auto-discovery attempted if not specified). |
+| `cert_file` | Optional Kubernetes API server user auth certificate.                                |
+| `key_file`  | Optional Kubernetes API server user auth private key.                                |
+| `ca_file`   | Optional Kubernetes API server ca certificate.                                       |
 
-If you're running GitLab Runner in the Kubernetes cluster, you should omit
-all of these fields so that the GitLab Runner auto-discovers the Kubernetes API.
+If you're running GitLab Runner in the Kubernetes cluster, omit
+these fields so that the GitLab Runner auto-discovers the Kubernetes API.
 
-If you're running GitLab Runner externally to the Cluster, then you must set each
-of these settings and ensure that GitLab Runner has access to the Kubernetes API
-on the cluster.
+If you're running GitLab Runner externally to the Cluster, these settings ensure that GitLab Runner
+has access to the Kubernetes API on the cluster.
 
 ### Set the bearer token for Kubernetes API calls
 
@@ -132,7 +131,7 @@ You can either:
 
 - _The `namespace` permission is needed only:_
 
-  - _When enabling namespace isolation via `namespace_per_job`._
+  - _When enabling namespace isolation by using `namespace_per_job`._
 
 - _The `pods/log` permission is only needed when one of the following scenarios are true:_
 
@@ -148,20 +147,20 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 
 ### CPU requests and limits
 
-| Setting | Description |
-|---------|-------------|
-| `cpu_limit` | The CPU allocation given to build containers. |
-| `cpu_limit_overwrite_max_allowed` | The maximum amount that the CPU allocation can be written to for build containers. When empty, it disables the cpu limit overwrite feature. |
-| `cpu_request` | The CPU allocation requested for build containers. |
-| `cpu_request_overwrite_max_allowed` | The maximum amount that the CPU allocation request can be written to for build containers. When empty, it disables the cpu request overwrite feature. |
-| `helper_cpu_limit` | The CPU allocation given to build helper containers. |
-| `helper_cpu_limit_overwrite_max_allowed` | The maximum amount that the CPU allocation can be written to for helper containers. When empty, it disables the cpu limit overwrite feature. |
-| `helper_cpu_request` | The CPU allocation requested for build helper containers. |
-| `helper_cpu_request_overwrite_max_allowed` | The maximum amount that the CPU allocation request can be written to for helper containers. When empty, it disables the cpu request overwrite feature. |
-| `service_cpu_limit` | The CPU allocation given to build service containers. |
-| `service_cpu_limit_overwrite_max_allowed` | The maximum amount that the CPU allocation can be written to for service containers. When empty, it disables the cpu limit overwrite feature. |
-| `service_cpu_request` | The CPU allocation requested for build service containers. |
-| `service_cpu_request_overwrite_max_allowed` | The maximum amount that the CPU allocation request can be written to for service containers. When empty, it disables the cpu request overwrite feature. |
+| Setting                                     | Description                                                                                                                                             |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `cpu_limit`                                 | The CPU allocation given to build containers.                                                                                                           |
+| `cpu_limit_overwrite_max_allowed`           | The maximum amount that the CPU allocation can be written to for build containers. When empty, it disables the CPU limit overwrite feature.             |
+| `cpu_request`                               | The CPU allocation requested for build containers.                                                                                                      |
+| `cpu_request_overwrite_max_allowed`         | The maximum amount that the CPU allocation request can be written to for build containers. When empty, it disables the CPU request overwrite feature.   |
+| `helper_cpu_limit`                          | The CPU allocation given to build helper containers.                                                                                                    |
+| `helper_cpu_limit_overwrite_max_allowed`    | The maximum amount that the CPU allocation can be written to for helper containers. When empty, it disables the CPU limit overwrite feature.            |
+| `helper_cpu_request`                        | The CPU allocation requested for build helper containers.                                                                                               |
+| `helper_cpu_request_overwrite_max_allowed`  | The maximum amount that the CPU allocation request can be written to for helper containers. When empty, it disables the CPU request overwrite feature.  |
+| `service_cpu_limit`                         | The CPU allocation given to build service containers.                                                                                                   |
+| `service_cpu_limit_overwrite_max_allowed`   | The maximum amount that the CPU allocation can be written to for service containers. When empty, it disables the CPU limit overwrite feature.           |
+| `service_cpu_request`                       | The CPU allocation requested for build service containers.                                                                                              |
+| `service_cpu_request_overwrite_max_allowed` | The maximum amount that the CPU allocation request can be written to for service containers. When empty, it disables the CPU request overwrite feature. |
 
 ### Memory requests and limits
 
@@ -206,9 +205,9 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `allowed_images` | Wildcard list of images that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
 | `allowed_pull_policies` | List of pull policies that can be specified in the `.gitlab-ci.yml` file or the `config.toml` file. |
 | `allowed_services` | Wildcard list of services that can be specified in `.gitlab-ci.yml`. If not present all images are allowed (equivalent to `["*/*:*"]`). [View details](#restrict-docker-images-and-services). |
-| `automount_service_account_token` | Boolean to control the automount of the service account token in the build pod. |
+| `automount_service_account_token` | Boolean to control whether the service account token automatically mounts in the build pod. |
 | `bearer_token` | Default bearer token used to launch build pods. |
-| `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token that will be used to create the build pod. |
+| `bearer_token_overwrite_allowed` | Boolean to allow projects to specify a bearer token used to create the build pod. |
 | `build_container_security_context` | Sets a container security context for the build container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `cap_add` | Specify Linux capabilities that should be added to the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
 | `cap_drop` | Specify Linux capabilities that should be dropped from the job pod containers. [Read more about capabilities configuration in Kubernetes executor](#specify-container-capabilities). |
@@ -216,9 +215,9 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `dns_policy` | Specify the DNS policy that should be used when constructing the pod: `none`, `default`, `cluster-first`, `cluster-first-with-host-net`. The Kubernetes default (`cluster-first`) is used if not set. |
 | `dns_config` | Specify the DNS configuration that should be used when constructing the pod. [Read more about using pod's DNS config](#configure-pod-dns-settings). |
 | `helper_container_security_context` | Sets a container security context for the helper container. [Read more about security context](#set-a-security-policy-for-the-pod). |
-| `helper_image` | (Advanced) [Override the default helper image](../../configuration/advanced-configuration.md#helper-image) used to clone repos and upload artifacts. |
+| `helper_image` | (Advanced) [Override the default helper image](../../configuration/advanced-configuration.md#helper-image) used to clone repositories and upload artifacts. |
 | `helper_image_flavor` | Sets the helper image flavor (`alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, or `ubuntu`). Defaults to `alpine`. Using `alpine` is the same as `alpine3.18`. |
-| `host_aliases` | List of additional host name aliases that will be added to all containers. [Read more about using extra host aliases](#add-extra-host-aliases). |
+| `host_aliases` | List of additional host name aliases that are added to all containers. [Read more about using extra host aliases](#add-extra-host-aliases). |
 | `image_pull_secrets` | An array of items containing the Kubernetes `docker-registry` secret names used to authenticate Docker image pulling from private registries. |
 | `init_permissions_container_security_context` | Sets a container security context for the init-permissions container. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `namespace` | Namespace in which to run Kubernetes Pods. |
@@ -226,14 +225,14 @@ Use the following settings in the `config.toml` file to configure the Kubernetes
 | `namespace_overwrite_allowed` | Regular expression to validate the contents of the namespace overwrite environment variable (documented below). When empty, it disables the namespace overwrite feature. |
 | `node_selector` | A `table` of `key=value` pairs in the format of `string=string` (`string:string` in the case of environment variables). Setting this limits the creation of pods to Kubernetes nodes matching all the `key=value` pairs. [Read more about using node selectors](#specify-the-node-to-execute-builds). |
 | `node_tolerations` | A `table` of `"key=value" = "Effect"` pairs in the format of `string=string:string`. Setting this allows pods to schedule to nodes with all or a subset of tolerated taints. Only one toleration can be supplied through environment variable configuration. The `key`, `value`, and `effect` match with the corresponding field names in Kubernetes pod toleration configuration. |
-| `pod_annotations` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of annotations to be added to each build pod created by the Runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
+| `pod_annotations` | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of annotations to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod annotations can be overwritten in each build. |
 | `pod_annotations_overwrite_allowed` | Regular expression to validate the contents of the pod annotations overwrite environment variable. When empty, it disables the pod annotations overwrite feature. |
-| `pod_labels` | A `table` of `key=value` pairs in the format of `string=string`. This is the list of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod labels can be overwritten in each build by using `pod_labels_overwrite_allowed`. |
+| `pod_labels` | A `table` of `key=value` pairs in the format of `string=string`. The `table` contains a list of labels to be added to each build pod created by the runner. The value of these can include environment variables for expansion. Pod labels can be overwritten in each build by using `pod_labels_overwrite_allowed`. |
 | `pod_labels_overwrite_allowed` | Regular expression to validate the contents of the pod labels overwrite environment variable. When empty, it disables the pod labels overwrite feature. |
 | `pod_security_context` | Configured through the configuration file, this sets a pod security context for the build pod. [Read more about security context](#set-a-security-policy-for-the-pod). |
 | `pod_termination_grace_period_seconds` | Pod-level setting which determines the duration in seconds which the pod has to terminate gracefully. After this, the processes are forcibly halted with a kill signal. Ignored if `terminationGracePeriodSeconds` is specified. |
-| `poll_interval` | How frequently, in seconds, the runner will poll the Kubernetes pod it has just created to check its status (default = 3). |
-| `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner will time out attempting to connect to the container it has just created. Useful for queueing more builds that the cluster can handle at a time (default = 180). |
+| `poll_interval` | How frequently, in seconds, the runner polls the Kubernetes pod it has just created to check its status (default = 3). |
+| `poll_timeout` | The amount of time, in seconds, that needs to pass before the runner times out attempting to connect to the container it has just created. Use this setting for queueing more builds than the cluster can handle at a time (default = 180). |
 | `cleanup_resources_timeout` | The total amount of time for Kubernetes resources to be cleaned up after the job completes. Supported syntax: `1h30m`, `300s`, `10m`. Default is 5 minutes (`5m`). |
 | `priority_class_name` | Specify the Priority Class to be set to the pod. The default one is used if not set. |
 | `privileged` | Run containers with the privileged flag. |
@@ -339,9 +338,9 @@ can be affected by:
   `activeDeadlineSeconds` is set to `configured timeout + 1 second`.
 
 NOTE:
-If both the `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag is enabled and the
-`pod_termination_grace_period_seconds` is set with a non zero value, the CI job pod is not
-immediately terminated when the job times out. The pod `terminationGracePeriods`
+If you enable the `FF_USE_POD_ACTIVE_DEADLINE_SECONDS` feature flag and set
+`pod_termination_grace_period_seconds` to a non-zero value, the CI/CD job pod
+is not terminated immediately. The pod `terminationGracePeriods`
 ensures the pod is terminated only when it expired.
 
 ### Overwrite pod tolerations
@@ -647,14 +646,14 @@ shutdown_timeout = 0
       patch_type = "strategic"
 ```
 
-#### Create a PVC for each build job by modifying the Pod Spec
+#### Create a `PVC` for each build job by modifying the Pod Spec
 
 To create a [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) for each build job make sure to check out how to enable
 the [Pod Spec functionality](#overwrite-generated-pod-specifications).
 
-Kubernetes allows to create an ephemeral [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) attached to the lifecycle of a Pod.
-This will work if [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled on your Kubernetes cluster allowing
-each `PVC` to request a new [Volume](https://kubernetes.io/docs/concepts/storage/volumes/), the volume too will be tied to the lifetime of the Pod.
+Kubernetes allows you to create an ephemeral [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) attached to a pod's lifecycle.
+This approach works if [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled on your Kubernetes cluster.
+Each `PVC` can request a new [Volume](https://kubernetes.io/docs/concepts/storage/volumes/). The volume is also tied to the pod's lifecycle.
 
 After [dynamic provisioning](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/) is enabled, the `config.toml` can be modified as follows to create an
 ephemeral `PVC`:
@@ -819,12 +818,12 @@ To retry a failed pull:
 
 The GitLab naming convention is different to the Kubernetes one.
 
-| Runner pull policy | Kubernetes pull policy | Description |
-|--------------------|------------------------|-------------|
-| _blank_ | _blank_ | Uses the default policy, as specified by Kubernetes. |
-| `if-not-present` | `IfNotPresent` | The image is pulled only if it is not already present on the node that executes the job. There are [security considerations](../../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) you should be aware of. |
-| `always` | `Always` | The image is pulled every time the job is executed. |
-| `never` | `Never` | The image is never pulled and requires the node to already have it. |
+| Runner pull policy | Kubernetes pull policy | Description                                                                                                                                                                                                                                  |
+|--------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| _blank_            | _blank_                | Uses the default policy, as specified by Kubernetes.                                                                                                                                                                                         |
+| `if-not-present`   | `IfNotPresent`         | The image is pulled only if it is not already present on the node that executes the job. Review the [security considerations](../../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy) before you use this pull policy. |
+| `always`           | `Always`               | The image is pulled every time the job is executed.                                                                                                                                                                                          |
+| `never`            | `Never`                | The image is never pulled and requires the node to already have it.                                                                                                                                                                          |
 
 ### Specify container capabilities
 
@@ -989,7 +988,8 @@ If you don't set either, the overwrite is disabled.
 
 Use `runtime_class_name` to set the [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/) for each job container.
 
-If you specify a RuntimeClass name and it's not configured in the cluster or the feature is not supported, the executor fails to create jobs.
+If you specify a RuntimeClass name but did not configure it in the cluster, or the feature is not supported,
+the executor fails to create jobs.
 
 ```toml
 concurrent = 1
@@ -1072,9 +1072,9 @@ and disables both privileged pods and privilege escalation:
 ```
 
 With user namespaces, you cannot use the default path for the build directory (`builds_dir`),
-the build logs (`logs_base_dir`), or the build scripts (`scripts_base_dir`).
-Otherwise, even the container's root user does not have permission to mount volumes
-or create directories in the root of the container's file system.
+build logs (`logs_base_dir`), or build scripts (`scripts_base_dir`).
+Even the container's root user does not have the permission to mount volumes.
+They also cannot create directories in the root of the container's file system.
 
 Instead, you can [change the base directory for build logs and scripts](#change-the-base-directory-for-build-logs-and-scripts).
 You can also change the build directory by setting `[[runners]].builds_dir`.
@@ -1126,8 +1126,8 @@ The following are the only parameters that influence the operating system, archi
   - `node_selector` configuration
   - `node_selector` overwrites
 
-Other parameters don't have any influence on the above outlined selection process.
-However, other parameters, for example, `affinity` configuration, can be used to further limit the nodes on which builds will be scheduled on.
+Other parameters don't influence the selection process described above.
+However, you can use parameters like `affinity` to further limit the nodes on which builds are scheduled.
 
 ## Nodes
 
@@ -1448,7 +1448,7 @@ of the pods.
 
 | Option       | Type                        | Required | Description |
 |--------------|-----------------------------|----------|-------------|
-| `nameservers`| `string` list               | No       | A list of IP addresses that will be used as DNS servers for the pod. |
+| `nameservers`| `string` list               | No       | A list of IP addresses that are used as DNS servers for the pod. |
 | `options`    | `KubernetesDNSConfigOption` | No       | A optional list of objects where each object may have a name property (required) and a value property (optional). |
 | `searches`   | `string` lists               | No       | A list of DNS search domains for hostname lookup in the pod. |
 
@@ -1512,7 +1512,7 @@ Use the following options:
 | Option       | Type          | Required | Description |
 |--------------|---------------|----------|-------------|
 | `IP`         | string        | Yes      | The IP address you want to attach hosts to. |
-| `Hostnames`  | `string` list | Yes      | A list of host name aliases that will be attached to the IP. |
+| `Hostnames`  | `string` list | Yes      | A list of host name aliases that are attached to the IP. |
 
 Example configuration in the `config.toml` file:
 
@@ -1646,11 +1646,11 @@ Use the following options in the `config.toml`:
 
 | Option       | Type                | Required | Description                                                                                                               |
 |--------------|---------------------|----------|---------------------------------------------------------------------------------------------------------------------------|
-| `name`       | string              | Yes      | The name of the volume and at the same time the name of _configMap_ that should be used.                                  |
+| `name`       | string              | Yes      | The name of the volume and at the same time the name of `configMap` that should be used.                                  |
 | `mount_path` | string              | Yes      | Path in the container where the volume is mounted.                                                                        |
 | `read_only`  | boolean             | No       | Sets the volume to read-only mode (defaults to false).                                                                    |
 | `sub_path`   | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
-| `items`      | `map[string]string` | no       | Key-to-path mapping for keys from the _configMap_ that should be used.                                                    |
+| `items`      | `map[string]string` | no       | Key-to-path mapping for keys from the `configMap` that should be used.                                                    |
 
 Each key from the `configMap` is changed into a file and stored in the mount path. By default:
 
@@ -1676,8 +1676,8 @@ Use the following options in the `config.toml` file:
 | `name`       | string    | Yes      | The name of the volume and at the same time the name of _secret_ that should be used. |
 | `mount_path` | string    | Yes      | Path inside of container where the volume should be mounted. |
 | `read_only`  | boolean   | No       | Sets the volume in read-only mode (defaults to false). |
-| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
-| `items`      | `map[string]string` | No   | Key-to-path mapping for keys from the _configMap_ that should be used. |
+| `sub_path`   | string    | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
+| `items`      | `map[string]string` | No   | Key-to-path mapping for keys from the configMap that should be used. |
 
 Each key from selected `secret` is changed into a file stored in the selected mount path. By default:
 
@@ -1718,9 +1718,9 @@ Use the following options in the `config.toml`:
 | `name`              | string              | Yes      | The name of the volume. |
 | `mount_path`        | string              | Yes      | Path inside of container where the volume should be mounted. |
 | `driver`            | string              | Yes      | A string value that specifies the name of the volume driver to use. |
-| `fs_type`           | string              | No       | A string value that specifies the name of the file system type (Ex. "ext4", "xfs", "ntfs".). |
-| `volume_attributes` | `map[string]string` | No       | Key-value pair mapping for attributes of the CSI volume. |
-| `sub_path`          | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) within the volume instead of the root. |
+| `fs_type`           | string              | No       | A string value that specifies the name of the file system type (for example, `ext4`, `xfs`, `ntfs`). |
+| `volume_attributes` | `map[string]string` | No       | Key-value pair mapping for attributes of the `csi` volume. |
+| `sub_path`          | string              | No       | Mount a [sub-path](https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath) in the volume instead of the root. |
 | `read_only`         | boolean             | No       | Sets the volume in read-only mode (defaults to false). |
 
 ### Mount volumes on service containers
@@ -1744,7 +1744,7 @@ Example configuration in the `config.toml` file:
 
 To store the builds directory for the job, define custom volume mounts to the
 configured `builds_dir` (`/builds` by default).
-If you use [PVC volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
+If you use [`pvc` volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/),
 based on the
 [access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes),
 you might be limited to running jobs on one node.
@@ -1801,8 +1801,8 @@ The image does not receive privileges from the root group, so you must ensure th
 
 NOTE:
 If you only need the `nonroot` environment, you can use the [GitLab Runner UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766421)
-and [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
-OpenShift (OCP) images instead of a helper image.
+OpenShift Container Platform images instead of a helper image. You can also use the [GitLab Runner Helper UBI](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/container_registry/1766433)
+OpenShift Container Platform images.
 
 The following example creates a user and group called `nonroot` and sets the helper image to run as that user.
 
@@ -1823,11 +1823,10 @@ you should be aware of.
 
 ### Exposed `/var/run/docker.sock`
 
-There are certain risks if you use the `runners.kubernetes.volumes.host_path` option
-to expose the `/var/run/docker.sock` of your host into your build container.
-The node's containers are accessible from the build container, and
-depending on if you are running builds in the same cluster as your production
-containers, it might not be wise to do that.
+There is risk involved if you use the `runners.kubernetes.volumes.host_path` option
+to expose `/var/run/docker.sock` of your host into your build container.
+Be careful when you run builds in the same cluster as your production
+containers. The node's containers are accessible from the build container.
 
 ### Using `docker:dind`
 
@@ -1854,7 +1853,7 @@ For `hostname` set the value to:
 
 In Docker 19.03 and later, TLS is enabled by
 default but you must map certificates to your client.
-You can enable non-TLS connection for DIND or
+You can enable non-TLS connection for Docker-in-Docker or
 mount certificates. For more information, see
 [**Use Docker In Docker Workflow with Docker executor**](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#use-docker-in-docker-workflow-with-docker-executor).
 
@@ -1974,8 +1973,9 @@ Follow [issue #27976](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27976
 ### Configure the number of request attempts to the Kubernetes API
 
 By default, the Kubernetes executor retries specific requests to the Kubernetes API after five failed attempts. The delay is controlled by
-a backoff algorithm with a 500 millisecond floor and a customizable ceiling with default value of two second. To configure the number of retries and backoff
-ceiling, use the `retry_limit` and `retry_backoff_max` options respectively in the `config.toml` file.
+a backoff algorithm with a 500 millisecond floor and a customizable ceiling with default value of two seconds.
+To configure the number of retries, use the `retry_limit` option in the `config.toml` file.
+Similarly, for backoff ceiling, use the `retry_backoff_max` option.
 The following failures are automatically retried:
 
 - `error dialing backend`
@@ -1998,8 +1998,8 @@ and is a map of error messages to the amount of retries.
 The error message can be a substring of the error message returned by the Kubernetes API.
 The `retry_limits` option has precedence over the `retry_limit` option.
 
-For example, if you need to control the number of TLS related errors in your environment, you can configure the `retry_limits` option
-to retry those errors 10 times instead of the default of five times:
+For example, configure the `retry_limits` option to retry the TLS related errors in your
+environment 10 times instead of the default five times:
 
 ```toml
 [[runners]]
@@ -2063,7 +2063,7 @@ for the entrypoint to run and spawn the shell. This has the following
 implications:
 
 - If `FF_KUBERNETES_HONOR_ENTRYPOINT` is set, and the image's entrypoint takes
-  longer than `poll_timeout` (default: 180s), the build fails. The
+  longer than `poll_timeout` (default: 180 s), the build fails. The
   `poll_timeout` value (and potentially `poll_interval`)
   must be adapted if the entrypoint is expected to run longer.
 - When `FF_KUBERNETES_HONOR_ENTRYPOINT` *and* `FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY` are set, the system adds a
@@ -2076,7 +2076,7 @@ implications:
   startup probe itself by creating a file named `.gitlab-startup-marker` inside
   the root of the build directory.
   The startup probe checks every `poll_interval` for the `.gitlab-startup-marker`
-  file. If the file is not present within `poll_timeout`, the pod is considered
+  file. If the file is not present in `poll_timeout`, the pod is considered
   unhealthy, and the system abort the build.
 
 ### Restrict access to job variables
@@ -2085,9 +2085,9 @@ When using Kubernetes executor, users with access to the Kubernetes cluster can 
 
 - Pod's environment section
 
-To restrict access to job variable data, you should use role-based access control (RBAC) so that only GitLab administrators have access to the namespace used by the GitLab Runner.
+To restrict access to job variable data, you should use role-based access control (RBAC). When you use RBAC, only GitLab administrators have access to the namespace used by the GitLab Runner.
 
-If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the type of access users have in the GitLab Runner namespace:
+If you need other users to access the GitLab Runner namespace, set the following `verbs` to restrict the user access in the GitLab Runner namespace:
 
 - For `pods` and `configmaps`:
   - `get`
