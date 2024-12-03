@@ -1042,7 +1042,7 @@ configuring a Windows Docker executor.
 With the support for PowerShell Core introduced in the Windows helper image, it is now possible to leverage
 the `nanoserver` variants for the helper image.
 
-### Limitations of Docker executor on Windows
+### Known issues
 
 The following are some limitations of using Windows containers with
 Docker executor:
