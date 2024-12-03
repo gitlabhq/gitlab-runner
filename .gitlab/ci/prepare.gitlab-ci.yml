@@ -104,18 +104,6 @@ prepare ubi base:
     - apk add --no-cache --upgrade curl make bash
     - make ubi-fips-base-docker
 
-prepare runner-incept variables:
-  stage: prepare
-  extends:
-    - .rules:merge_request_pipelines:no_docs:only_canonical
-  script:
-    - echo "UPSTREAM_CI_COMMIT_REF=$(./ci/upstream_commit_ref)" >> incept.env
-  after_script:
-    - cat incept.env
-  artifacts:
-    reports:
-      dotenv: incept.env
-
 test ci scripts:
   stage: prepare
   extends:
