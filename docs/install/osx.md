@@ -65,7 +65,7 @@ If you followed these instructions, the GitLab Runner configuration file (`confi
 
 For more information, see the [glossary](../index.md#glossary).
 
-## Limitations on macOS
+## Known issues
 
 NOTE:
 The service needs to be installed from a Terminal window logged in
@@ -302,7 +302,7 @@ gitlab-runner start
 ```
 
 If the error persists, do a graphical login. A graphical login bootstraps the `LaunchAgent`, which is required to launch the service.
-For more details, see [Limitations on macOS](osx.md#limitations-on-macos).
+For more information, see [known issues](osx.md#known-issues).
 
 The macOS instances hosted on AWS must perform [additional steps](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-to-mac-instance.html) to connect to the instance's GUI.
 Use the `ssh -L` option mentioned in the steps to enable SSH port forwarding to allow a remote desktop client, like VNC, to connect to the remote instance.
