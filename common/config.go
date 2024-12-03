@@ -1252,9 +1252,22 @@ type Config struct {
 	ModTime          time.Time       `toml:"-"`
 	Loaded           bool            `toml:"-"`
 
+	Experimental *Experimental `toml:"experimental" json:"experimental,omitempty"`
+
 	ShutdownTimeout int `toml:"shutdown_timeout,omitempty" json:"shutdown_timeout" description:"Number of seconds until the forceful shutdown operation times out and exits the process"`
 
 	configSaver ConfigSaver
+}
+
+type Experimental struct {
+	UsageLogger UsageLogger `toml:"usage_logger" json:"usage_logger,omitempty"`
+}
+
+type UsageLogger struct {
+	Enabled        bool           `toml:"enabled" json:"enabled"`
+	LogDir         string         `toml:"log_dir,omitempty" json:"log_dir,omitempty"`
+	MaxBackupFiles *int64         `toml:"max_backup_files,omitempty" json:"max_backup_files,omitempty"`
+	MaxRotationAge *time.Duration `toml:"max_rotation_age,omitempty" json:"max_rotation_age,omitempty"`
 }
 
 //go:generate mockery --name=ConfigSaver --inpackage
