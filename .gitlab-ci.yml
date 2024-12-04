@@ -25,6 +25,6 @@ include:
 - local: /.gitlab/ci/release.gitlab-ci.yml
 - local: /.gitlab/ci/postrelease.gitlab-ci.yml
 - local: /.gitlab/ci/docs.gitlab-ci.yml
-- component: ${CI_SERVER_FQDN}/gitlab-org/components/danger-review/danger-review@1.4.1
+- component: ${CI_SERVER_FQDN}/gitlab-org/components/danger-review/danger-review@2.0.0
   rules:
     - if: '$CI_SERVER_HOST == "gitlab.com"'
