@@ -72,28 +72,28 @@ var (
 	}
 
 	oldestRelease = map[string]string{
-		"debian":    "stretch",
+		"debian":    "bullseye",
 		"ubuntu":    "xenial",
-		"raspbian":  "jessie",
-		"linuxmint": "sarah",
-		"fedora":    "32",
+		"raspbian":  "bullseye",
+		"linuxmint": "ulyana",
+		"fedora":    "40",
 		"ol":        "6",
 		"el":        "7",
 		"amazon":    "2",
-		"sles":      "12.3",
-		"opensuse":  "42.3",
+		"sles":      "12.5",
+		"opensuse":  "15.0",
 	}
 
 	skipReleases = map[string][]string{
 		"debian":    {},
-		"ubuntu":    {"hirsute", "groovy", "eoan", "disco", "cosmic", "artful", "zesty", "yakkety"},
+		"ubuntu":    {"hirsute", "groovy", "eoan", "disco", "cosmic", "artful", "zesty", "yakkety", "impish", "kinetic", "lunar", "mantic"},
 		"raspbian":  {},
-		"linuxmint": {"sylvia", "tara", "tessa", "tina", "tricia"},
+		"linuxmint": {},
 		"fedora":    {},
 		"ol":        {},
 		"el":        {},
 		"amazon":    {},
-		"sles":      {},
+		"sles":      {"15.0", "15.1"},
 		"opensuse":  {},
 	}
 )
