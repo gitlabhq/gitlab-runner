@@ -26,10 +26,12 @@
 package packagecloud
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/samber/lo"
@@ -43,6 +45,7 @@ const (
 type (
 	pkgCloudDistroRelease struct {
 		IndexName string `json:"index_name"`
+		ID        int    `json:"id"`
 	}
 
 	pkgCloudDistribution struct {
@@ -142,7 +145,11 @@ func getDistroReleasesToPackage(supportedDistros []string, pkgCloudDistros []pkg
 			continue
 		}
 
-		for _, version := range lo.Reverse(distro.Versions) {
+		slices.SortFunc(distro.Versions, func(a, b pkgCloudDistroRelease) int {
+			return cmp.Compare(b.ID, a.ID)
+		})
+
+		for _, version := range distro.Versions {
 			if !lo.Contains(skipReleases[distro.IndexName], version.IndexName) {
 				versionToPackage = append(versionToPackage, distro.IndexName+"/"+version.IndexName)
 			}
