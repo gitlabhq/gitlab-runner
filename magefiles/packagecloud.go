@@ -3,6 +3,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"gitlab.com/gitlab-org/gitlab-runner/magefiles/mageutils"
@@ -57,4 +59,17 @@ func (p PackageCloud) Push(dist, branch, flavor string) error {
 		Concurrency: config.Concurrency,
 		DryRun:      config.DryRun,
 	})
+}
+
+// SupportedOSVersions prints the list of OS/versions for which runner packages will be released (for the given package type and release branch)
+func (p PackageCloud) SupportedOSVersions(dist, branch string) error {
+	if packageCloudToken == "" {
+		return errors.New("required 'PACKAGE_CLOUD_TOKEN' variable missing")
+	}
+	os, err := packagecloud.Releases(dist, branch, packageCloudToken, packageCloudURL)
+	if err != nil {
+		return err
+	}
+	fmt.Println(strings.Join(os, "\n"))
+	return nil
 }
