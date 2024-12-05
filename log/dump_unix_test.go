@@ -19,7 +19,7 @@ func TestStackDumping(t *testing.T) {
 
 	stopCh := make(chan bool)
 
-	dumpedCh, finishedCh := watchForGoroutinesDump(logger, stopCh)
+	dumpedCh, finishedCh := watchForGoroutinesDump(logger, stopCh, true)
 	require.NotNil(t, dumpedCh)
 	require.NotNil(t, finishedCh)
 

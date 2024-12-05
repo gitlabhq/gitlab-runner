@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func watchForGoroutinesDump(logger *logrus.Logger, stopCh chan bool) (chan bool, chan bool) {
+func watchForGoroutinesDump(logger *logrus.Logger, stopCh chan bool, blocking bool) (chan bool, chan bool) {
 	dumpedCh := make(chan bool)
 	finishedCh := make(chan bool)
 
@@ -27,7 +27,7 @@ func watchForGoroutinesDump(logger *logrus.Logger, stopCh chan bool) (chan bool,
 				len := runtime.Stack(buf, true)
 				logger.Printf("=== received SIGUSR1 ===\n*** goroutine dump...\n%s\n*** end\n", buf[0:len])
 
-				nonBlockingSend(dumpedCh, true)
+				signalChannel(dumpedCh, true, blocking)
 			case <-stopCh:
 				close(finishedCh)
 				return
@@ -36,6 +36,14 @@ func watchForGoroutinesDump(logger *logrus.Logger, stopCh chan bool) (chan bool,
 	}()
 
 	return dumpedCh, finishedCh
+}
+
+func signalChannel(ch chan bool, value bool, blocking bool) {
+	if blocking {
+		ch <- value
+	} else {
+		nonBlockingSend(ch, value)
+	}
 }
 
 func nonBlockingSend(ch chan bool, value bool) {
