@@ -37,7 +37,7 @@ If you want to select a particular shell to use other than the default, you must
 
 ## Sh/Bash shells
 
-This is the default shell used on all Unix based systems. The bash script used
+Sh/Bash is the default shell used on all Unix based systems. The bash script used
 in `.gitlab-ci.yml` is executed by piping the shell script to one of the
 following commands:
 
@@ -104,7 +104,7 @@ passing the filename to the following command:
   pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command generated-windows-powershell.ps1
   ```
 
-This is what an example PowerShell script looks like:
+The following is an example PowerShell script:
 
 ```powershell
 $ErrorActionPreference = "Continue" # This will be set to 'Stop' when targetting PowerShell Core
@@ -280,10 +280,10 @@ You can execute Batch scripts from PowerShell using `Start-Process
 "cmd.exe" "/c C:\Path\file.bat"` for old Batch scripts not ported to
 PowerShell.
 
-### Access CMD shell when PowerShell is the default
+### Access `CMD` shell when PowerShell is the default
 
-The project: [Call CMD From Default PowerShell in GitLab CI](https://gitlab.com/guided-explorations/microsoft/windows/call-cmd-from-powershell)
-demonstrates how to gain access to the CMD shell when PowerShell is the default shell on a runner.
+The [Call `CMD` From Default PowerShell in GitLab CI](https://gitlab.com/guided-explorations/microsoft/windows/call-cmd-from-powershell) project
+demonstrates how to gain access to the `CMD` shell. This approach works when PowerShell is the default shell on a runner.
 
 ### Video walkthrough of working PowerShell examples
 
