@@ -23,20 +23,6 @@ TAR_XZ_ALPINE += ${BASE_TAR_PATH}-alpine-arm64.tar.xz
 TAR_XZ_ALPINE += ${BASE_TAR_PATH}-alpine-s390x.tar.xz
 TAR_XZ_ALPINE += ${BASE_TAR_PATH}-alpine-ppc64le.tar.xz
 
-TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-x86_64.tar.xz
-TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-x86_64-pwsh.tar.xz
-TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-arm.tar.xz
-TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-arm64.tar.xz
-TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-s390x.tar.xz
-TAR_XZ_ALPINE_316 += ${BASE_TAR_PATH}-alpine3.16-ppc64le.tar.xz
-
-TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-x86_64.tar.xz
-TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-x86_64-pwsh.tar.xz
-TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-arm.tar.xz
-TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-arm64.tar.xz
-TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-s390x.tar.xz
-TAR_XZ_ALPINE_317 += ${BASE_TAR_PATH}-alpine3.17-ppc64le.tar.xz
-
 TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-x86_64.tar.xz
 TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-x86_64-pwsh.tar.xz
 TAR_XZ_ALPINE_318 += ${BASE_TAR_PATH}-alpine3.18-arm.tar.xz
@@ -110,8 +96,6 @@ GO_ARCH_NAME_amd64 = x86_64
 # Go files that are used to create the helper binary.
 HELPER_GO_FILES ?= $(shell find common network -name '*.go')
 
-ALPINE_316_VERSION ?= "3.16"
-ALPINE_317_VERSION ?= "3.17"
 ALPINE_318_VERSION ?= "3.18"
 ALPINE_319_VERSION ?= "3.19"
 ALPINE_321_VERSION ?= "3.21"
@@ -168,16 +152,10 @@ helper-dockerarchive-host:
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive
-helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.16 helper-dockerarchive-alpine3.17 helper-dockerarchive-alpine3.18 helper-dockerarchive-alpine3.19 helper-dockerarchive-alpine3.21 helper-dockerarchive-alpine-latest helper-dockerarchive-ubuntu
+helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.18 helper-dockerarchive-alpine3.19 helper-dockerarchive-alpine3.21 helper-dockerarchive-alpine-latest helper-dockerarchive-ubuntu
 
 .PHONY: helper-dockerarchive-alpine
 helper-dockerarchive-alpine: $(TAR_XZ_ALPINE)
-
-.PHONY: helper-dockerarchive-alpine3.16
-helper-dockerarchive-alpine3.16: $(TAR_XZ_ALPINE_316)
-
-.PHONY: helper-dockerarchive-alpine3.17
-helper-dockerarchive-alpine3.17: $(TAR_XZ_ALPINE_317)
 
 .PHONY: helper-dockerarchive-alpine3.18
 helper-dockerarchive-alpine3.18: $(TAR_XZ_ALPINE_318)
@@ -224,18 +202,6 @@ ${BASE_TAR_PATH}-alpine-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ 3.21
 
-${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: export PWSH_VERSION ?= 7.3
-${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ 3.16
-
-${BASE_TAR_PATH}-alpine3.17-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine3.17-%-pwsh.tar: export PWSH_VERSION ?= 7.3
-${BASE_TAR_PATH}-alpine3.17-%-pwsh.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ 3.17
-
 ${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: export PWSH_VERSION ?= 7.3
 ${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: ${BASE_BINARY_PATH}.%
@@ -263,16 +229,6 @@ ${BASE_TAR_PATH}-alpine-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
 ${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ $(ALPINE_321_VERSION)
-
-${BASE_TAR_PATH}-alpine3.16-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
-${BASE_TAR_PATH}-alpine3.16-%.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ $(ALPINE_316_VERSION)
-
-${BASE_TAR_PATH}-alpine3.17-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
-${BASE_TAR_PATH}-alpine3.17-%.tar: ${BASE_BINARY_PATH}.%
-	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ $(ALPINE_317_VERSION)
 
 ${BASE_TAR_PATH}-alpine3.18-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
 ${BASE_TAR_PATH}-alpine3.18-%.tar: ${BASE_BINARY_PATH}.%

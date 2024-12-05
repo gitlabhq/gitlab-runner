@@ -4,20 +4,8 @@ ubuntu-s390x-{{ .Revision }}
 ubuntu-arm64-{{ .Revision }}
 ubuntu-arm-{{ .Revision }}
 ubuntu-x86_64-{{ .Revision }}
-alpine3.16-x86_64-{{ .Revision }}-pwsh
-alpine3.17-x86_64-{{ .Revision }}-pwsh
 alpine3.18-x86_64-{{ .Revision }}-pwsh
 alpine3.21-x86_64-{{ .Revision }}-pwsh
-alpine3.16-ppc64le-{{ .Revision }}
-alpine3.16-s390x-{{ .Revision }}
-alpine3.16-arm64-{{ .Revision }}
-alpine3.16-arm-{{ .Revision }}
-alpine3.16-x86_64-{{ .Revision }}
-alpine3.17-ppc64le-{{ .Revision }}
-alpine3.17-s390x-{{ .Revision }}
-alpine3.17-arm64-{{ .Revision }}
-alpine3.17-arm-{{ .Revision }}
-alpine3.17-x86_64-{{ .Revision }}
 alpine3.18-ppc64le-{{ .Revision }}
 alpine3.18-s390x-{{ .Revision }}
 alpine3.18-arm64-{{ .Revision }}
@@ -56,20 +44,8 @@ ubuntu-s390x-latest
 ubuntu-arm64-latest
 ubuntu-arm-latest
 ubuntu-x86_64-latest
-alpine3.16-x86_64-latest-pwsh
-alpine3.17-x86_64-latest-pwsh
 alpine3.18-x86_64-latest-pwsh
 alpine3.21-x86_64-latest-pwsh
-alpine3.16-ppc64le-latest
-alpine3.16-s390x-latest
-alpine3.16-arm64-latest
-alpine3.16-arm-latest
-alpine3.16-x86_64-latest
-alpine3.17-ppc64le-latest
-alpine3.17-s390x-latest
-alpine3.17-arm64-latest
-alpine3.17-arm-latest
-alpine3.17-x86_64-latest
 alpine3.18-ppc64le-latest
 alpine3.18-s390x-latest
 alpine3.18-arm64-latest

@@ -23,10 +23,6 @@
       TARGET_ARCHS: amd64
     - IMAGE_FLAVOR: ubuntu
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.16
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.17
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.18
       TARGET_ARCHS: amd64 arm64 ppc64le s390x
     - IMAGE_FLAVOR: alpine3.19
@@ -61,10 +57,6 @@
     matrix:
     - IMAGE_FLAVOR: "alpine"
       IMAGE_TAG: ["", "alpine3.21-"]
-    - IMAGE_FLAVOR: "alpine3.16"
-      IMAGE_TAG: ["alpine3.16-"]
-    - IMAGE_FLAVOR: "alpine3.17"
-      IMAGE_TAG: ["alpine3.17-"]
     - IMAGE_FLAVOR: "alpine3.18"
       IMAGE_TAG: ["alpine3.18-" ]
     - IMAGE_FLAVOR: "alpine3.19"

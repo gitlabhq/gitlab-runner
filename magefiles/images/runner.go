@@ -43,8 +43,6 @@ var (
 	gitLfsVersion = env.NewDefault("GIT_LFS_VERSION", "3.4.0")
 
 	ubuntuVersion    = env.NewDefault("UBUNTU_VERSION", "20.04")
-	alpine316Version = env.NewDefault("ALPINE_316_VERSION", "3.16.5")
-	alpine317Version = env.NewDefault("ALPINE_317_VERSION", "3.17.3")
 	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.2")
 	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
 	alpine321Version = env.NewDefault("ALPINE_321_VERSION", "3.21.0")
@@ -116,8 +114,6 @@ func AssembleBuildRunner(flavor, targetArchs string) build.TargetBlueprint[runne
 		dumbInitVersion,
 		gitLfsVersion,
 		ubuntuVersion,
-		alpine316Version,
-		alpine317Version,
 		alpine318Version,
 		alpine319Version,
 		alpine321Version,
@@ -171,8 +167,6 @@ func BuildRunner(blueprint build.TargetBlueprint[runnerImageFileDependency, buil
 
 	baseImagesFlavor := map[string]string{
 		"ubuntu":        fmt.Sprintf("ubuntu:%s", blueprint.Env().Value(ubuntuVersion)),
-		"alpine3.16":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine316Version)),
-		"alpine3.17":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine317Version)),
 		"alpine3.18":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine318Version)),
 		"alpine3.19":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine319Version)),
 		"alpine3.21":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine321Version)),
