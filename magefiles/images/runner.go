@@ -43,8 +43,8 @@ var (
 	gitLfsVersion = env.NewDefault("GIT_LFS_VERSION", "3.4.0")
 
 	ubuntuVersion    = env.NewDefault("UBUNTU_VERSION", "20.04")
-	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.2")
-	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
+	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.9")
+	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.4")
 	alpine321Version = env.NewDefault("ALPINE_321_VERSION", "3.21.0")
 
 	ubiFIPSBaseImage  = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
