@@ -138,7 +138,7 @@ func (l *Config) enableGoroutinesDump() {
 
 	l.goroutinesDumpStopCh = make(chan bool)
 
-	watchForGoroutinesDump(l.logger, l.goroutinesDumpStopCh)
+	watchForGoroutinesDump(l.logger, l.goroutinesDumpStopCh, false)
 }
 
 func (l *Config) disableGoroutinesDump() {
