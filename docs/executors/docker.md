@@ -29,7 +29,7 @@ Prerequisites:
 
 ## Docker executor workflow
 
-The Docker executor uses a special Docker image based on [Alpine Linux](https://alpinelinux.org/) that
+The Docker executor uses a Docker image based on [Alpine Linux](https://alpinelinux.org/) that
 contains the tools to run the prepare, pre-job, and post-job steps. To view the definition of
 the special Docker image, see the [GitLab Runner repository](https://gitlab.com/gitlab-org/gitlab-runner/-/tree/v13.4.1/dockerfiles/runner-helper).
 
@@ -70,8 +70,8 @@ GitLab Runner uses Docker Engine API
 [v1.25](https://docs.docker.com/engine/api/v1.25/) to talk to the Docker
 Engine. This means the
 [minimum supported version](https://docs.docker.com/engine/api/#api-version-matrix)
-of Docker on a Linux server is `1.13.0`,
-[on Windows Server it needs to be more recent](#supported-docker-versions)
+of Docker on a Linux server is `1.13.0`.
+On Windows Server, [it needs to be more recent](#supported-docker-versions)
 to identify the Windows Server version.
 
 ## Use the Docker executor
@@ -460,7 +460,7 @@ To see how this is implemented, use the health check [Go command](https://gitlab
 
 Specify arguments to supply to the Docker volume driver when you create volumes for builds.
 For example, you can use these arguments to limit the space for each build to run, in addition to all other driver specific options.
-The following example shows a `config.toml` where the limit that each build can consume is set to 50GB.
+The following example shows a `config.toml` where the limit that each build can consume is set to 50 GB.
 
 ```toml
 [runners.docker]
@@ -552,13 +552,13 @@ More details on [IPC settings in Docker documentation](https://docs.docker.com/e
 
 ## Privileged mode
 
-The Docker executor supports a number of options that allows fine-tuning of the
+The Docker executor supports several options that allows fine-tuning of the
 build container. One of these options is the [`privileged` mode](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities).
 
 ### Use Docker-in-Docker with privileged mode
 
 The configured `privileged` flag is passed to the build container and all
-services, thus allowing to easily use the Docker-in-Docker approach.
+services. With this flag, you can use the Docker-in-Docker approach.
 
 First, configure your runner (`config.toml`) to run in `privileged` mode:
 
@@ -635,14 +635,14 @@ Only the Docker-in-Docker rootless images you list in `allowed_privileged_servic
 All other containers for jobs and services run in unprivileged mode.
 
 Because they run as non-root, it's _almost safe_ to use with privileged mode
-images like Docker-in-Docker rootless or Buildkit rootless.
+images like Docker-in-Docker rootless or BuildKit rootless.
 
 For more information about security issues,
 see [Security risks for Docker executors](../security/index.md#usage-of-docker-executor).
 
 ## Configure a Docker ENTRYPOINT
 
-By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime) and passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/reference/run/#cmd-default-command-or-options) to start a container that runs the job script.
+By default the Docker executor doesn't override the [`ENTRYPOINT` of a Docker image](https://docs.docker.com/engine/reference/run/#entrypoint-default-command-to-execute-at-runtime). It passes `sh` or `bash` as [`COMMAND`](https://docs.docker.com/engine/reference/run/#cmd-default-command-or-options) to start a container that runs the job script.
 
 To ensure a job can run, its Docker image must:
 
@@ -665,7 +665,7 @@ image:
   entrypoint: [""]
 ```
 
-For more information, see [Override the Entrypoint of an image](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image) and [How CMD and ENTRYPOINT interact in Docker](https://docs.docker.com/reference/dockerfile/#understand-how-cmd-and-entrypoint-interact).
+For more information, see [Override the Entrypoint of an image](https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#override-the-entrypoint-of-an-image) and [How `CMD` and `ENTRYPOINT` interact in Docker](https://docs.docker.com/reference/dockerfile/#understand-how-cmd-and-entrypoint-interact).
 
 ### Job script as ENTRYPOINT
 
@@ -740,7 +740,7 @@ Prerequisites:
 
 1. On your Linux host, install GitLab Runner. If you installed GitLab Runner
    by using your system's package manager, it automatically creates a `gitlab-runner` user.
-1. Sign in as the user that will run GitLab Runner. You must do so in a way that
+1. Sign in as the user who runs GitLab Runner. You must do so in a way that
    doesn't go around [`pam_systemd`](https://www.freedesktop.org/software/systemd/man/latest/pam_systemd.html).
    You can use SSH with the correct user. This ensures you can run `systemctl` as this user.
 1. Make sure that your system fulfills the prerequisites for
@@ -760,7 +760,7 @@ Prerequisites:
    systemctl status --user podman.socket
    ```
 
-1. Copy the socket string in the `Listen` key through which Podman's API is being accessed.
+1. Copy the socket string in the `Listen` key through which the Podman API is being accessed.
 1. Make sure the Podman socket remains available after the GitLab Runner user is logged out:
 
    ```shell
@@ -827,7 +827,7 @@ oci-container-build:
 
 ## Specify which user runs the job
 
-By default, the runner runs jobs as the `root` user within the container. To specify a different, non-root user to run the job, use the `USER` directive in the Dockerfile of the Docker image.
+By default, the runner runs jobs as the `root` user in the container. To specify a different, non-root user to run the job, use the `USER` directive in the Dockerfile of the Docker image.
 
 ```dockerfile
 FROM amazonlinux
@@ -960,7 +960,7 @@ Set the `never` policy in the `config.toml`:
 You can list multiple pull policies to execute if a pull fails. The runner processes pull policies
 in the order listed until a pull attempt is successful or the list is exhausted. For example, if a
 runner uses the `always` pull policy and the registry is not available, you can add the `if-not-present`
-as a second pull policy to use a locally cached Docker image.
+as a second pull policy. This configuration lets the runner use a locally cached Docker image.
 
 For information about the security implications of this pull policy, see
 [Usage of private Docker images with if-not-present pull policy](../security/index.md#usage-of-private-docker-images-with-if-not-present-pull-policy).
@@ -1042,24 +1042,24 @@ configuring a Windows Docker executor.
 With the support for PowerShell Core introduced in the Windows helper image, it is now possible to leverage
 the `nanoserver` variants for the helper image.
 
-### Known issues
+### Known issues with Docker executor on Windows
 
 The following are some limitations of using Windows containers with
 Docker executor:
 
-- Docker-in-Docker is not supported, since it's
+- Docker-in-Docker is not supported, because it's
   [not supported](https://github.com/docker-library/docker/issues/49) by
   Docker itself.
 - Interactive web terminals are not supported.
 - Host device mounting not supported.
-- When mounting a volume directory it has to exist, or Docker will fail
+- When mounting a volume directory it has to exist, or Docker fails
   to start the container, see
   [#3754](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/3754) for
   additional detail.
 - `docker-windows` executor can be run only using GitLab Runner running
   on Windows.
 - [Linux containers on Windows](https://learn.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/linux-containers)
-  are not supported, since they are still experimental. Read
+  are not supported, because they are still experimental. Read
   [the relevant issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4373) for
   more details.
 - Because of a [limitation in Docker](https://github.com/MicrosoftDocs/Virtualization-Documentation/issues/334),
@@ -1101,11 +1101,11 @@ be used:
 
 ### Supported Docker versions
 
-A Windows Server running GitLab Runner must be running a recent version of Docker
-because GitLab Runner uses Docker to detect what version of Windows Server is running.
+GitLab Runner uses Docker to detect what version of Windows Server is running.
+Hence, a Windows Server running GitLab Runner must be running a recent version of Docker.
 
-A known version of Docker that doesn't work with GitLab Runner is `Docker 17.06`
-since Docker does not identify the version of Windows Server resulting in the
+A known version of Docker that doesn't work with GitLab Runner is `Docker 17.06`.
+Docker does not identify the version of Windows Server resulting in the
 following error:
 
 ```plaintext
@@ -1122,7 +1122,7 @@ as a source directory when passing the `--docker-volumes` or
 `DOCKER_VOLUMES` environment variable, there is a
 [known issue](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4312).
 
-Below is an example of the configuration for a simple Docker
+Below is an example of the configuration for a Docker
 executor running Windows.
 
 ```toml
@@ -1182,7 +1182,6 @@ step job:
   - Use the `registry.gitlab.com/gitlab-org/step-runner:v0` image if it includes the dependencies you need to run your
   job.
 
-    This is a temporary workaround. In the future, runner will inject a `step-runner` binary into any build image.
 - Running a step that runs a Docker container must adhere to the same configuration parameters and constraints as
   traditional `scripts`. For example, you must use [Docker-in-Docker](#use-docker-in-docker-with-privileged-mode).
 - This mode of execution does not yet support running [`Github Actions`](https://gitlab.com/components/action-runner).
