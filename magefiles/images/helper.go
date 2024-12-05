@@ -30,6 +30,7 @@ var flavorsSupportingPWSH = []string{
 	"alpine3.16",
 	"alpine3.17",
 	"alpine3.18",
+	"alpine3.21",
 	"ubuntu",
 }
 

@@ -50,6 +50,13 @@ TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-arm64.tar.xz
 TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-s390x.tar.xz
 TAR_XZ_ALPINE_319 += ${BASE_TAR_PATH}-alpine3.19-ppc64le.tar.xz
 
+TAR_XZ_ALPINE_321 += ${BASE_TAR_PATH}-alpine3.21-x86_64.tar.xz
+TAR_XZ_ALPINE_321 += ${BASE_TAR_PATH}-alpine3.21-x86_64-pwsh.tar.xz
+TAR_XZ_ALPINE_321 += ${BASE_TAR_PATH}-alpine3.21-arm.tar.xz
+TAR_XZ_ALPINE_321 += ${BASE_TAR_PATH}-alpine3.21-arm64.tar.xz
+TAR_XZ_ALPINE_321 += ${BASE_TAR_PATH}-alpine3.21-s390x.tar.xz
+TAR_XZ_ALPINE_321 += ${BASE_TAR_PATH}-alpine3.21-ppc64le.tar.xz
+
 TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-x86_64.tar.xz
 TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-arm.tar.xz
 TAR_XZ_ALPINE_LATEST += ${BASE_TAR_PATH}-alpine-latest-arm64.tar.xz
@@ -107,6 +114,7 @@ ALPINE_316_VERSION ?= "3.16"
 ALPINE_317_VERSION ?= "3.17"
 ALPINE_318_VERSION ?= "3.18"
 ALPINE_319_VERSION ?= "3.19"
+ALPINE_321_VERSION ?= "3.21"
 UBUNTU_VERSION ?= "20.04"
 
 # Build the Runner Helper binaries for the host platform.
@@ -160,7 +168,7 @@ helper-dockerarchive-host:
 
 # Build the Runner Helper tar files for all supported platforms.
 .PHONY: helper-dockerarchive
-helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.16 helper-dockerarchive-alpine3.17 helper-dockerarchive-alpine3.18 helper-dockerarchive-alpine3.19 helper-dockerarchive-alpine-latest helper-dockerarchive-ubuntu
+helper-dockerarchive: helper-dockerarchive-alpine helper-dockerarchive-alpine3.16 helper-dockerarchive-alpine3.17 helper-dockerarchive-alpine3.18 helper-dockerarchive-alpine3.19 helper-dockerarchive-alpine3.21 helper-dockerarchive-alpine-latest helper-dockerarchive-ubuntu
 
 .PHONY: helper-dockerarchive-alpine
 helper-dockerarchive-alpine: $(TAR_XZ_ALPINE)
@@ -176,6 +184,9 @@ helper-dockerarchive-alpine3.18: $(TAR_XZ_ALPINE_318)
 
 .PHONY: helper-dockerarchive-alpine3.19
 helper-dockerarchive-alpine3.19: $(TAR_XZ_ALPINE_319)
+
+.PHONY: helper-dockerarchive-alpine3.21
+helper-dockerarchive-alpine3.21: $(TAR_XZ_ALPINE_321)
 
 .PHONY: helper-dockerarchive-alpine-edge
 helper-dockerarchive-alpine-edge: $(TAR_XZ_ALPINE_EDGE)
@@ -231,6 +242,12 @@ ${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ 3.18
 
+${BASE_TAR_PATH}-alpine3.21-%-pwsh.tar: export IMAGE_SHELL := pwsh
+${BASE_TAR_PATH}-alpine3.21-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine3.21-%-pwsh.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ 3.21
+
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.3
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
@@ -266,6 +283,11 @@ ${BASE_TAR_PATH}-alpine3.19-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
 ${BASE_TAR_PATH}-alpine3.19-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ $(ALPINE_319_VERSION)
+
+${BASE_TAR_PATH}-alpine3.21-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
+${BASE_TAR_PATH}-alpine3.21-%.tar: ${BASE_BINARY_PATH}.%
+	@mkdir -p $$(dirname $@_)
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_321_VERSION)
 
 ${BASE_TAR_PATH}-alpine-edge-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
 ${BASE_TAR_PATH}-alpine-edge-%.tar: ${BASE_BINARY_PATH}.%
