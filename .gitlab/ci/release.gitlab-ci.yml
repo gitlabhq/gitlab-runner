@@ -60,7 +60,7 @@
   parallel:
     matrix:
     - IMAGE_FLAVOR: "alpine"
-      IMAGE_TAG: ["", "alpine3.18-"]
+      IMAGE_TAG: ["", "alpine3.21-"]
     - IMAGE_FLAVOR: "alpine3.16"
       IMAGE_TAG: ["alpine3.16-"]
     - IMAGE_FLAVOR: "alpine3.17"

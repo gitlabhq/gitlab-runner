@@ -222,7 +222,7 @@ ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_VERSION ?= 7.3
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ 3.18
+	@./ci/build_helper_docker alpine $* $@ 3.21
 
 ${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: export IMAGE_SHELL := pwsh
 ${BASE_TAR_PATH}-alpine3.16-%-pwsh.tar: export PWSH_VERSION ?= 7.3
@@ -262,7 +262,7 @@ ${BASE_TAR_PATH}-alpine-latest-%.tar: ${BASE_BINARY_PATH}.%
 ${BASE_TAR_PATH}-alpine-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
 ${BASE_TAR_PATH}-alpine-%.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
-	@./ci/build_helper_docker alpine $* $@ $(ALPINE_318_VERSION)
+	@./ci/build_helper_docker alpine $* $@ $(ALPINE_321_VERSION)
 
 ${BASE_TAR_PATH}-alpine3.16-%.tar: export DUMB_INIT_VERSION ?= 1.2.5
 ${BASE_TAR_PATH}-alpine3.16-%.tar: ${BASE_BINARY_PATH}.%
