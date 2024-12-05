@@ -269,6 +269,22 @@ For the runner pods [it's expected that `HOME` would be set to `/home/gitlab-run
 If this variable is changed, the new location must have the [proper permissions](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/e265820a00a6a1b9a271dc132de2618ced43cf92/runner/Dockerfile.OCP#L38).
 These guidelines are also documented in the [Red Hat Container Platform Docs > Creating Images > Support arbitrary user ids](https://docs.openshift.com/container-platform/4.7/openshift_images/create-images.html#support-arbitrary-user-ids).
 
+### Overriding `locked` variable
+
+If set the `locked` variable to `true` when you register a runner token, the error
+"Runner configuration other than name, description, and exector is reserved and cannot be specified"
+appears.
+
+```yaml
+  locked: true # REQUIRED
+  tags: ""
+  runUntagged: false
+  protected: false
+  maximumTimeout: 0
+```
+
+For more information, see [issue 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/472#note_1483346437).
+
 #### Watch out for SCC
 
 By default, when installed in a new OpenShift project, the GitLab Runner Operator will run as non-root.
