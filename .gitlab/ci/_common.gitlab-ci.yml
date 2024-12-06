@@ -46,10 +46,10 @@ variables:
   ALPINE_321_VERSION: "3.21.0"
   # renovate: datasource=docker depName=ubuntu allowedVersions=/20\..+/
   UBUNTU_VERSION: "20.04"
-  # renovate: datasource=docker depName=redhat/ubi9-micro versioning=redhat allowedVersions=/9\.4-[0-9]+/
+  # renovate: datasource=docker depName=redhat/ubi9-micro versioning=redhat allowedVersions=/9\.5-[0-9]+/
   UBI_MICRO_VERSION: "9.5-1731934928"
   UBI_MICRO_IMAGE: redhat/ubi9-micro
-  # renovate: datasource=docker depName=redhat/ubi9-minimal versioning=redhat allowedVersions=/9\.4-[0-9]+/
+  # renovate: datasource=docker depName=redhat/ubi9-minimal versioning=redhat allowedVersions=/9\.5-[0-9]+/
   UBI_MINIMAL_VERSION: "9.5-1731604394"
   UBI_MINIMAL_IMAGE: redhat/ubi9-minimal
   UBI_FIPS_BASE_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base
