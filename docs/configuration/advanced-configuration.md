@@ -381,7 +381,7 @@ The following settings define the Docker container parameters. These settings ar
 | `gpus` | GPU devices for Docker container. Uses the same format as the `docker` CLI. View details in the [Docker documentation](https://docs.docker.com/config/containers/resource_constraints/#gpu). | |
 | `group_add` | Add additional groups for the container process to run. | `["docker"]` |
 | `helper_image` | (Advanced) [The default helper image](#helper-image) used to clone repositories and upload artifacts. | |
-| `helper_image_flavor` | Sets the helper image flavor (`alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.19`. | |
+| `helper_image_flavor` | Sets the helper image flavor (`alpine`, `alpine3.18`, `alpine3.19`, `alpine3.21`, `alpine-latest`, `ubi-fips` or `ubuntu`). Defaults to `alpine`. The `alpine` flavor uses the same version as `alpine3.21`. | |
 | `helper_image_autoset_arch_and_os` | Uses the underlying OS to set the Helper Image architecture and OS. | |
 | `host` | Custom Docker endpoint. Default is `DOCKER_HOST` environment or `unix:///var/run/docker.sock`. | |
 | `hostname` | Custom hostname for the Docker container. | |
@@ -1444,11 +1444,11 @@ The helper image is available for amd64, arm, arm64, s390x, and ppc64le architec
 a `gitlab-runner-helper` binary, which is a special compilation of GitLab Runner binary. It contains only a subset
 of available commands, and Git, Git LFS, and SSL certificates store.
 
-The helper image has a few flavors: `alpine`, `alpine3.17`, `alpine3.18`, `alpine3.19`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is the default due to its small
+The helper image has a few flavors: `alpine`, `alpine3.18`, `alpine3.19`, `alpine3.21`, `alpine-latest`, `ubi-fips` and `ubuntu`. The `alpine` image is the default due to its small
 footprint but can have [DNS issues in some environments](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4129).
 Using `helper_image_flavor = "ubuntu"` selects the `ubuntu` flavor of the helper image.
 
-In GitLab Runner 16.1 to 17.1, the `alpine` flavor is an alias for `alpine3.18`. In GitLab Runner 17.2 and later, it's an alias for `alpine3.19`.
+In GitLab Runner 16.1 to 17.1, the `alpine` flavor is an alias for `alpine3.18`. In GitLab Runner 17.2 to 17.6, it's an alias for `alpine3.19`. In GitLab Runner 17.7 and later, it's an alias for `alpine3.21`.
 
 The `alpine-latest` flavor uses `alpine:latest` as its base image, which could potentially mean it is more unstable.
 
@@ -1483,7 +1483,7 @@ Images are built with multiple versions of Alpine Linux. You can use a newer ver
 
 For the helper image, change the `helper_image_flavor` or read the [Helper image](#helper-image) section.
 
-For the GitLab Runner image, follow the same logic, where `alpine`, `alpine3.16`, `alpine3.17`, `alpine3.18`, `alpine3.19`, or `alpine-latest` is used as a prefix in the image, before the version:
+For the GitLab Runner image, follow the same logic, where `alpine`, `alpine3.18`, `alpine3.19`, `alpine3.21`, or `alpine-latest` is used as a prefix in the image, before the version:
 
 ```shell
 docker pull gitlab/gitlab-runner:alpine3.19-v16.1.0
@@ -1497,7 +1497,7 @@ As of GitLab Runner 16.1 and later, all `alpine` helper images have a `pwsh` var
 Example:
 
 ```shell
-docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:alpine3.18-x86_64-v16.1.0-pwsh
+docker pull registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:alpine3.21-x86_64-v17.7.0-pwsh
 ```
 
 ### Helper image registry
