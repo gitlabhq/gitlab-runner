@@ -1363,6 +1363,34 @@ role assigned to it. If the instance does not have access
 to perform the actions above, GitLab Runner reports an
 `AuthorizationPermissionMismatch` error.
 
+To use Azure workload identities, add the `service_account` associated
+with the identity and the pod label `azure.workload.identity/use` in the
+`runner.kubernetes` section. For example, if `service_account` is
+`gitlab-runner`:
+
+```toml
+  [runners.kubernetes]
+    service_account = "gitlab-runner"
+    [runners.kubernetes.pod_labels]
+      "azure.workload.identity/use" = "true"
+```
+
+To configure the runner pod specification with the GitLab Runner Helm
+chart, add the same service account and pod label:
+
+```yaml
+serviceAccount:
+  name: "gitlab-runner"
+podLabels:
+  azure.workload.identity/use: "true"
+```
+
+The label is needed because the credentials are retrieved from different sources.
+For cache downloads, the credentials are retrieved from the runner manager.
+For cache uploads, credentials are retrieved from the pod that runs the [helper image](#helper-image).
+
+For more details, see [issue 38330](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/38330).
+
 ## The `[runners.kubernetes]` section
 
 > - Introduced in GitLab Runner v1.6.0.
