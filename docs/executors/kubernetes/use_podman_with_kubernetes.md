@@ -457,7 +457,7 @@ To run rootless Podman without privileged containers, follow the steps in the Re
 
 ## Troubleshooting
 
-### `git` cannot save the configuration in `/.gitconfig` when you run the job as a root user
+### `git` cannot save the configuration in `/.gitconfig` when you run the job as a non-root user
 
 Because you are not running the job as root, `git` cannot save the configuration in `/.gitconfig`. As a result, you might encounter the following error:
 
@@ -470,4 +470,4 @@ error: could not lock config file //.gitconfig: Permission denied
 To prevent this error:
 
 1. Mount an `emptyDir` volume on `/my_custom_dir`.
-1. Set the `HOME` environment variable in the `/my_custom_dir` path.
+1. Set the `HOME` environment variable to the `/my_custom_dir` path.
