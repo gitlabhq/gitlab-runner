@@ -17,7 +17,7 @@ func (p Package) Deb64() error {
 // Deb32 builds deb package for 386
 func (p Package) Deb32() error {
 	var err error
-	err = p.Deb("386", "i386")
+	err = p.Deb("386", "i686")
 	if err != nil {
 		return err
 	}

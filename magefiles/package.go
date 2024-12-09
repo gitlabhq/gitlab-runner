@@ -56,7 +56,7 @@ func (p Package) createPackage(pkgType packages.Type, arch, packageArch string) 
 var packageBuilds = packages.Builds{
 	"deb": {
 		{"Deb64", []string{"amd64"}, []string{"amd64"}, []string{"amd64"}},
-		{"Deb32", []string{"386"}, []string{"i386"}, []string{"i386"}},
+		{"Deb32", []string{"386"}, []string{"i686"}, []string{"i686"}},
 		{"DebArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
 		{"DebArm32", []string{"arm", "arm"}, []string{"armel", "armhf"}, []string{"armel", "armhf"}},
 		{"DebRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
@@ -64,7 +64,7 @@ var packageBuilds = packages.Builds{
 	},
 	"rpm": {
 		{"Rpm64", []string{"amd64"}, []string{"amd64"}, []string{"x86_64"}},
-		{"Rpm32", []string{"386"}, []string{"i386"}, []string{"i386"}},
+		{"Rpm32", []string{"386"}, []string{"i686"}, []string{"i686"}},
 		{"RpmArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
 		{"RpmArm32", []string{"arm", "arm"}, []string{"arm", "armhf"}, []string{"arm", "armhf"}},
 		{"RpmRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},

@@ -17,7 +17,7 @@ func (p Package) Rpm64() error {
 // Rpm32 builds rpm package for 386
 func (p Package) Rpm32() error {
 	var err error
-	err = p.Rpm("386", "i386")
+	err = p.Rpm("386", "i686")
 	if err != nil {
 		return err
 	}
