@@ -12,7 +12,7 @@ DETAILS:
 
 NOTE:
 The SSH executor supports only scripts generated in Bash and the caching feature
-is currently not supported.
+is not supported.
 
 This is a simple executor that allows you to execute builds on a remote machine
 by executing commands over SSH.
