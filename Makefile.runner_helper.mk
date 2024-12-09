@@ -197,25 +197,25 @@ ${BASE_TAR_PATH}-ubi-fips-%.tar:
 
 # See https://github.com/PowerShell/powershell/releases for values of PWSH_VERSION/PWSH_IMAGE_DATE
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine-%-pwsh.tar: export PWSH_VERSION ?= 7.4
 ${BASE_TAR_PATH}-alpine-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ 3.21
 
 ${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: export PWSH_VERSION ?= 7.4
 ${BASE_TAR_PATH}-alpine3.18-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ 3.18
 
 ${BASE_TAR_PATH}-alpine3.21-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-alpine3.21-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-alpine3.21-%-pwsh.tar: export PWSH_VERSION ?= 7.4
 ${BASE_TAR_PATH}-alpine3.21-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker alpine $* $@ 3.21
 
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export IMAGE_SHELL := pwsh
-${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.3
+${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: export PWSH_VERSION ?= 7.4
 ${BASE_TAR_PATH}-ubuntu-%-pwsh.tar: ${BASE_BINARY_PATH}.%
 	@mkdir -p $$(dirname $@_)
 	@./ci/build_helper_docker ubuntu $* $@ 20.04

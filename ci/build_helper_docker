@@ -36,13 +36,16 @@ if [[ $IMAGE_SHELL == 'pwsh' ]]; then
         # NOTE: To find the most recent Powershell Core tag that supports the desired Powershell Core version on the
         # desired ${TARGET_FLAVOR} version, run the following command:
         # ```
-        # export PWSH_VERSION="7.3"
-        # export PWSH_TARGET_FLAVOR_IMAGE_VERSION="3.18"
+        # export PWSH_VERSION="7.4"
+        # export PWSH_TARGET_FLAVOR_IMAGE_VERSION="3.21"
         # curl -sL https://mcr.microsoft.com/v2/powershell/tags/list | \
         #   jq -r '.tags[]' | \
         #   grep "${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}" | \
         #   tail -n 1
         # ```
+        # Pull the correct image from mcr.microsoft.com/powershell using the above found tag, and push it to
+        # registry.gitlab.com/gitlab-org/gitlab-runner/powershell:${PWSH_VERSION}-${TARGET_FLAVOR}-${PWSH_TARGET_FLAVOR_IMAGE_VERSION}
+        #
         # Currently PWSH_IMAGE_DATE isn't being used anywhere but the convention is still used in the Powershell images
         # Right now no Alpine or Ubuntu image we need has a date in the tag but if that changes in the future we can use it
         # and not add the code all over again
