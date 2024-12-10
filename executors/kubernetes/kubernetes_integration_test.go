@@ -167,26 +167,28 @@ func TestRunIntegrationTestsWithFeatureFlag(t *testing.T) {
 		"testJobAgainstServiceContainerBehaviour":                 testJobAgainstServiceContainerBehaviour,
 	}
 
-	ff := featureflags.UseLegacyKubernetesExecutionStrategy
-	ffValue := false
-	if testFeatureFlag != "" {
-		ff = testFeatureFlag
-		ffValue = testFeatureFlagValue
+	ffValues := []bool{testFeatureFlagValue}
+	ff := testFeatureFlag
+	if ff == "" {
+		ff = featureflags.UseLegacyKubernetesExecutionStrategy
+		ffValues = []bool{true, false}
 	}
 
 	for name, testFunc := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			toggleText := "off"
-			if ffValue {
-				toggleText = "on"
-			}
+			for _, ffValue := range ffValues {
+				toggleText := "off"
+				if ffValue {
+					toggleText = "on"
+				}
 
-			t.Run(ff+":"+toggleText, func(t *testing.T) {
-				t.Parallel()
-				testFunc(t, ff, ffValue)
-			})
+				t.Run(ff+":"+toggleText, func(t *testing.T) {
+					t.Parallel()
+					testFunc(t, ff, ffValue)
+				})
+			}
 		})
 	}
 }
