@@ -10,7 +10,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 
 	"gitlab.com/gitlab-org/gitlab-runner/common"
@@ -47,7 +46,7 @@ func SkipKubectlIntegrationTests(t *testing.T, cmd ...string) {
 	helpers.SkipIntegrationTests(t, cmd...)
 }
 
-func CreateTestKubernetesResource[T metav1.Object](ctx context.Context, client *k8s.Clientset, defaultNamespace string, resource T) (T, error) {
+func CreateTestKubernetesResource[T metav1.Object](ctx context.Context, client *kubernetes.Clientset, defaultNamespace string, resource T) (T, error) {
 	if resource.GetName() == "" {
 		resource.SetName(fmt.Sprintf("test-unknown-%d", rand.Uint64()))
 	}
