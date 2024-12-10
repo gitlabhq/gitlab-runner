@@ -55,7 +55,7 @@ const stepsPreamble = "{}\n---\n"
 func addStepsPreamble(jsonSteps string) (string, error) {
 	stepSchema := &schema.Step{}
 
-	err := json.Unmarshal([]byte(jsonSteps), &stepSchema.Steps)
+	err := json.Unmarshal([]byte(jsonSteps), &stepSchema.Run)
 	if err != nil {
 		return "", fmt.Errorf("unmarshalling steps %q: %w", jsonSteps, err)
 	}
