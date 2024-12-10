@@ -15,23 +15,23 @@ func Test_addStepsPreamble(t *testing.T) {
 	}{
 		"simple script": {
 			in:   `[{"name":"script", "script": "foo bar baz"}]`,
-			want: "{}\n---\nsteps:\n- name: script\n  script: foo bar baz\n",
+			want: "{}\n---\nrun:\n- name: script\n  script: foo bar baz\n",
 		},
 		"reference local step": {
 			in:   `[{"name":"local", "step":"./some/step", "inputs":{"in":"bar"}}]`,
-			want: "{}\n---\nsteps:\n- inputs:\n    in: bar\n  name: local\n  step: ./some/step\n",
+			want: "{}\n---\nrun:\n- inputs:\n    in: bar\n  name: local\n  step: ./some/step\n",
 		},
 		"reference remote step": {
 			in:   `[{"name":"remote", "step":"https://gitlab.com/components/script@v1", "inputs":{"in":"bar"}}]`,
-			want: "{}\n---\nsteps:\n- inputs:\n    in: bar\n  name: remote\n  step: https://gitlab.com/components/script@v1\n",
+			want: "{}\n---\nrun:\n- inputs:\n    in: bar\n  name: remote\n  step: https://gitlab.com/components/script@v1\n",
 		},
 		"action step": {
 			in:   `[{"name":"action", "action":"some-action@v1", "inputs":{"in":"bar"}}]`,
-			want: "{}\n---\nsteps:\n- action: some-action@v1\n  inputs:\n    in: bar\n  name: action\n",
+			want: "{}\n---\nrun:\n- action: some-action@v1\n  inputs:\n    in: bar\n  name: action\n",
 		},
 		"exec step": {
 			in:   `[{"name":"exec", "exec":{"command":["cmd","arg1", "arg2"],"work_dir":"/foo/bar/baz"}, "inputs":{"in":"bar"}}]`,
-			want: "{}\n---\nsteps:\n- exec:\n    command:\n    - cmd\n    - arg1\n    - arg2\n    work_dir: /foo/bar/baz\n  inputs:\n    in: bar\n  name: exec\n",
+			want: "{}\n---\nrun:\n- exec:\n    command:\n    - cmd\n    - arg1\n    - arg2\n    work_dir: /foo/bar/baz\n  inputs:\n    in: bar\n  name: exec\n",
 		},
 	}
 
