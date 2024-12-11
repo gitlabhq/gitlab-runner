@@ -56,3 +56,12 @@ package-rpm:
       - rpmIbm
       - rpmRiscv64
       - rpmFips
+
+package-helpers:
+  extends:
+  - .packages
+  script:
+  - mage package:prepare
+  - mage package:verifyIterationVariable
+  - mage package:helpersDeb
+  - mage package:helpersRpm

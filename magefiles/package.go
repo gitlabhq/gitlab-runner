@@ -56,7 +56,7 @@ func (p Package) createPackage(pkgType packages.Type, arch, packageArch string) 
 var packageBuilds = packages.Builds{
 	"deb": {
 		{"Deb64", []string{"amd64"}, []string{"amd64"}, []string{"amd64"}},
-		{"Deb32", []string{"386"}, []string{"i386"}, []string{"i386"}},
+		{"Deb32", []string{"386"}, []string{"i686"}, []string{"i686"}},
 		{"DebArm64", []string{"arm64", "arm64"}, []string{"aarch64", "arm64"}, []string{"aarch64", "arm64"}},
 		{"DebArm32", []string{"arm", "arm"}, []string{"armel", "armhf"}, []string{"armel", "armhf"}},
 		{"DebRiscv64", []string{"riscv64"}, []string{"riscv64"}, []string{"riscv64"}},
@@ -91,6 +91,26 @@ func (p Package) Filenames(dist, version string) error {
 type templateContext struct {
 	Dist   string
 	Builds []packages.Build
+}
+
+// HelpersDeb creates a deb package with the exported runner-helper images
+func (p Package) HelpersDeb() error { return p.packageHelpers(packages.Deb) }
+
+// HelpersRpm creates an rpm package with the exported runner-helper images
+func (p Package) HelpersRpm() error { return p.packageHelpers(packages.Rpm) }
+
+func (p Package) packageHelpers(pkgType packages.Type) error {
+	blueprint, err := build.PrintBlueprint(packages.AssembleHelpers(pkgType))
+	if err != nil {
+		return err
+	}
+
+	artifactsPath := fmt.Sprintf("noarch.%s", pkgType)
+	if err := build.Export(blueprint.Artifacts(), build.ReleaseArtifactsPath(artifactsPath)); err != nil {
+		return err
+	}
+
+	return packages.CreateHelper(blueprint)
 }
 
 // Generate generates the Mage package build targets

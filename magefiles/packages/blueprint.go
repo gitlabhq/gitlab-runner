@@ -48,14 +48,14 @@ func (b blueprintImpl) Dependencies() []build.Component {
 		return build.NewOSBinary(s).WithRequired()
 	})
 
-	imageDebs := lo.Map(b.prebuiltImageArchiveDependencies, func(s string, _ int) build.Component {
+	imageDeps := lo.Map(b.prebuiltImageArchiveDependencies, func(s string, _ int) build.Component {
 		return build.NewDockerImageArchive(s).WithRequired()
 	})
 
 	var deps []build.Component
 	deps = append(deps, fileDeps...)
 	deps = append(deps, binDeps...)
-	deps = append(deps, imageDebs...)
+	deps = append(deps, imageDeps...)
 	deps = append(deps, b.macOSDependencies...)
 
 	return deps
@@ -74,11 +74,11 @@ func (b blueprintImpl) Data() blueprintParams {
 func Assemble(pkgType Type, arch, packageArch string) Blueprint {
 	base := build.NewBlueprintBase(gPGKeyID, gPGPassphrase, iteration)
 
-	// This depends on pkgType == RpmFips, which we alter below.
-	prebuiltImages := prebuiltImages(pkgType)
+	var prebuiltImages []string
 
 	var postfix string
 	if pkgType == RpmFips {
+		prebuiltImages = fipsHelperPrebuiltImages
 		pkgType = Rpm
 		postfix = "-fips"
 	}
@@ -141,19 +141,18 @@ func assembleDependencies(p blueprintParams, env build.BlueprintEnv) ([]string, 
 	return fileDependencies, binaryDependencies, imagesDependencies, macosDependencies
 }
 
-func prebuiltImages(t Type) []string {
-	const (
-		baseHelperInputPart  = "out/helper-images/prebuilt-"
-		baseHelperOutputPart = "/usr/lib/gitlab-runner/helper-images/prebuilt-"
-	)
+const (
+	baseHelperInputPart  = "out/helper-images/prebuilt-"
+	baseHelperOutputPart = "/usr/lib/gitlab-runner/helper-images/prebuilt-"
+)
 
-	if t == RpmFips {
-		return []string{
-			fmt.Sprintf("%subi-fips-x86_64.tar.xz=%subi-fips-x86_64.tar.xz", baseHelperInputPart, baseHelperOutputPart),
-		}
-	}
+func makeHelperImagePath(s string) string {
+	return fmt.Sprintf("%s=%s", baseHelperInputPart+s, baseHelperOutputPart+s)
+}
 
-	suffixes := []string{
+var (
+	fipsHelperPrebuiltImages             = []string{makeHelperImagePath("ubi-fips-x86_64.tar.xz")}
+	defaultHelperPrebuiltImages []string = lo.Map([]string{
 		"alpine-arm.tar.xz",
 		"alpine-arm64.tar.xz",
 		"alpine-edge-riscv64.tar.xz",
@@ -166,9 +165,34 @@ func prebuiltImages(t Type) []string {
 		"ubuntu-s390x.tar.xz",
 		"ubuntu-x86_64-pwsh.tar.xz",
 		"ubuntu-x86_64.tar.xz",
+	}, func(s string, _ int) string {
+		return makeHelperImagePath(s)
+	})
+)
+
+func AssembleHelpers(pkgType Type) Blueprint {
+	base := build.NewBlueprintBase(gPGKeyID, gPGPassphrase, iteration)
+
+	pkgName := HelperImagesPackage
+	pkgFile := fmt.Sprintf("out/%s/%s.%s", pkgType, pkgName, pkgType)
+
+	params := blueprintParams{
+		pkgType:        pkgType,
+		pkgFile:        pkgFile,
+		prebuiltImages: defaultHelperPrebuiltImages,
 	}
 
-	return lo.Map(suffixes, func(s string, _ int) string {
-		return fmt.Sprintf("%s=%s", baseHelperInputPart+s, baseHelperOutputPart+s)
-	})
+	_, osBinaryDependencies, imagesDependencies, macosDependencies := assembleDependencies(params, base.Env())
+
+	return blueprintImpl{
+		BlueprintBase: base,
+
+		osBinaryDependencies:             osBinaryDependencies,
+		prebuiltImageArchiveDependencies: imagesDependencies,
+		macOSDependencies:                macosDependencies,
+
+		artifacts: []string{pkgFile},
+
+		params: params,
+	}
 }

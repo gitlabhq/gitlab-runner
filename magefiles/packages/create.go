@@ -16,6 +16,8 @@ const (
 	Deb     Type = "deb"
 	Rpm     Type = "rpm"
 	RpmFips Type = "rpm-fips"
+
+	HelperImagesPackage = build.AppName + "-helper-images"
 )
 
 // Create creates a package based on the type
@@ -61,9 +63,14 @@ func createPackage(blueprint Blueprint, opts []string) error {
 		return err
 	}
 
+	if Type(p.postfix) != "-fips" {
+		opts = append(opts, "--depends", HelperImagesPackage)
+	}
+
 	pkgName := build.AppName
 
 	args := append(opts, []string{ //nolint:gocritic
+		"--verbose",
 		"--package", p.pkgFile,
 		"--force",
 		"--iteration", blueprint.Env().Value(iteration),
@@ -89,6 +96,67 @@ func createPackage(blueprint Blueprint, opts []string) error {
 		"--replaces", "gitlab-ci-multi-runner",
 		"packaging/root/=/",
 		fmt.Sprintf("%s=/usr/bin/gitlab-runner", p.runnerBinary),
+	}...)
+
+	args = append(args, p.prebuiltImages...)
+
+	err := sh.RunV("fpm", args...)
+	if err != nil {
+		return fmt.Errorf("failed to create %s package: %v", p.pkgType, err)
+	}
+
+	return nil
+}
+
+func CreateHelper(blueprint Blueprint) error {
+	var opts []string
+	switch blueprint.Data().pkgType {
+	case Deb:
+		opts = []string{
+			"--category", "admin",
+			"--deb-priority", "optional",
+			"--deb-compression", "bzip2",
+		}
+	case Rpm:
+		opts = []string{
+			"--rpm-compression", "bzip2",
+			"--rpm-os", "linux",
+			"--rpm-digest", "sha256",
+		}
+	}
+
+	if err := createHelperImagesPackage(blueprint, opts); err != nil {
+		return err
+	}
+
+	return signPackage(blueprint)
+}
+
+func createHelperImagesPackage(blueprint Blueprint, opts []string) error {
+	p := blueprint.Data()
+
+	if err := os.MkdirAll(fmt.Sprintf("out/%s", p.pkgType), 0700); err != nil {
+		return err
+	}
+
+	pkgName := HelperImagesPackage
+
+	args := append(opts, []string{ //nolint:gocritic
+		"--verbose",
+		"--package", p.pkgFile,
+		"--force",
+		"--iteration", blueprint.Env().Value(iteration),
+		"--input-type", "dir",
+		"--output-type", string(p.pkgType),
+		"--name", pkgName,
+		"--description", "GitLab Runner Helper Docker Images",
+		"--version", build.Version(),
+		"--url", "https://gitlab.com/gitlab-org/gitlab-runner",
+		"--maintainer", "GitLab Inc. <support@gitlab.com>",
+		"--license", "MIT",
+		"--vendor", "GitLab Inc.",
+		"--architecture", "all",
+		"--provides", pkgName,
 	}...)
 
 	args = append(args, p.prebuiltImages...)
