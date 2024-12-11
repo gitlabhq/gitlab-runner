@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -99,13 +98,13 @@ func GetCacheUploadURL(ctx context.Context, build *common.Build, key string) Pre
 	return adaptor.GetUploadURL(ctx)
 }
 
-func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string) *url.URL {
+func GetCacheGoCloudURL(ctx context.Context, build *common.Build, key string, upload bool) (GoCloudURL, error) {
 	adaptor := getAdaptorForBuild(build, key)
 	if adaptor == nil {
-		return nil
+		return GoCloudURL{}, nil
 	}
 
-	return adaptor.GetGoCloudURL(ctx)
+	return adaptor.GetGoCloudURL(ctx, upload)
 }
 
 func GetCacheUploadEnv(ctx context.Context, build *common.Build, key string) (map[string]string, error) {

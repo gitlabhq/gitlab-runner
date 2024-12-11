@@ -2,8 +2,10 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,17 +20,23 @@ import (
 	"gitlab.com/gitlab-org/gitlab-runner/common"
 	url_helpers "gitlab.com/gitlab-org/gitlab-runner/helpers/url"
 	"gitlab.com/gitlab-org/gitlab-runner/log"
+
+	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/azureblob" // Needed to register the Azure driver
+	"gocloud.dev/gcerrors"
 )
 
 type CacheExtractorCommand struct {
 	retryHelper
 	meter.TransferMeterCommand
 
-	File    string `long:"file" description:"The file containing your cache artifacts"`
-	URL     string `long:"url" description:"URL of remote cache resource"`
-	Timeout int    `long:"timeout" description:"Overall timeout for cache downloading request (in minutes)"`
+	File       string `long:"file" description:"The file containing your cache artifacts"`
+	URL        string `long:"url" description:"URL of remote cache resource"`
+	GoCloudURL string `long:"gocloud-url" description:"Go Cloud URL of remote cache resource (requires credentials)"`
+	Timeout    int    `long:"timeout" description:"Overall timeout for cache downloading request (in minutes)"`
 
 	client *CacheClient
+	mux    *blob.URLMux
 }
 
 func (c *CacheExtractorCommand) getClient() *CacheClient {
@@ -60,72 +68,11 @@ func (c *CacheExtractorCommand) download(_ int) error {
 		return err
 	}
 
-	resp, err := c.getCache()
-	if err != nil {
-		return err
+	if c.GoCloudURL != "" {
+		return c.handleGoCloudURL()
 	}
 
-	defer func() { _ = resp.Body.Close() }()
-
-	upToDate, date := checkIfUpToDate(c.File, resp)
-	if upToDate {
-		logrus.Infoln(filepath.Base(c.File), "is up to date")
-		return nil
-	}
-
-	file, err := os.CreateTemp(filepath.Dir(c.File), "cache")
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		_ = file.Close()
-		_ = os.Remove(file.Name())
-	}()
-
-	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
-	etag := resp.Header.Get("ETag")
-	// For legacy purposes, caches written to disk use the extension `.zip`
-	// even when a different compression format is used. To avoid confusion,
-	// we avoid the extension name in logs.
-	cleanedURL := url_helpers.CleanURL(c.URL)
-
-	if etag != "" {
-		logrus.WithField("ETag", etag).Infoln("Downloading", name, "from", cleanedURL)
-	} else {
-		logrus.Infoln("Downloading", name, "from", cleanedURL)
-	}
-
-	writer := meter.NewWriter(
-		file,
-		c.TransferMeterFrequency,
-		meter.LabelledRateFormat(os.Stdout, "Downloading cache", getRemoteCacheSize(resp)),
-	)
-
-	// Close() is checked properly bellow, where the file handling is being finalized
-	defer func() { _ = writer.Close() }()
-
-	_, err = io.Copy(writer, resp.Body)
-	if err != nil {
-		return retryableErr{err: err}
-	}
-
-	err = os.Chtimes(file.Name(), time.Now(), date)
-	if err != nil {
-		return err
-	}
-
-	err = writer.Close()
-	if err != nil {
-		return err
-	}
-
-	err = os.Rename(file.Name(), c.File)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.handlePresignedURL()
 }
 
 func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
@@ -142,6 +89,120 @@ func (c *CacheExtractorCommand) getCache() (*http.Response, error) {
 	return resp, retryOnServerError(resp)
 }
 
+func (c *CacheExtractorCommand) handlePresignedURL() error {
+	resp, err := c.getCache()
+	if err != nil {
+		return err
+	}
+
+	// Close() is checked properly below, where the file handling is being finalized
+	defer func() { _ = resp.Body.Close() }()
+
+	upToDate, date := checkIfUpToDate(c.File, resp)
+	if upToDate {
+		logrus.Infoln(filepath.Base(c.File), "is up to date")
+		return nil
+	}
+
+	etag := resp.Header.Get("ETag")
+	cleanedURL := url_helpers.CleanURL(c.URL)
+	contentLength := getRemoteCacheSize(resp)
+
+	return c.downloadAndSaveCache(resp.Body, date, etag, cleanedURL, contentLength)
+}
+
+func (c *CacheExtractorCommand) handleGoCloudURL() error {
+	if c.mux == nil {
+		c.mux = blob.DefaultURLMux()
+	}
+
+	ctx, cancelWrite := context.WithCancel(context.Background())
+	defer cancelWrite()
+
+	u, err := url.Parse(c.GoCloudURL)
+	if err != nil {
+		return err
+	}
+
+	objectName := strings.TrimLeft(u.Path, "/")
+	if objectName == "" {
+		return fmt.Errorf("no object name provided")
+	}
+
+	b, err := c.mux.OpenBucket(ctx, c.GoCloudURL)
+	if err != nil {
+		return err
+	}
+	defer b.Close()
+
+	attrs, err := b.Attributes(ctx, objectName)
+	if err != nil {
+		// Ignore 404 errors
+		if gcerrors.Code(err) == gcerrors.NotFound {
+			return nil
+		}
+		return err
+	}
+
+	reader, err := b.NewReader(ctx, objectName, nil)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	cleanedURL := url_helpers.CleanURL(c.GoCloudURL)
+
+	return c.downloadAndSaveCache(reader, attrs.ModTime, attrs.ETag, cleanedURL, attrs.Size)
+}
+
+func (c *CacheExtractorCommand) downloadAndSaveCache(reader io.Reader, date time.Time, etag, cleanedURL string, contentLength int64) error {
+	file, err := os.CreateTemp(filepath.Dir(c.File), "cache")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+	}()
+
+	// For legacy purposes, caches written to disk use the extension `.zip`
+	// even when a different compression format is used. To avoid confusion,
+	// we avoid the extension name in logs.
+	name := strings.TrimSuffix(filepath.Base(c.File), filepath.Ext(c.File))
+
+	if etag != "" {
+		logrus.WithField("ETag", etag).Infoln("Downloading", name, "from", cleanedURL)
+	} else {
+		logrus.Infoln("Downloading", name, "from", cleanedURL)
+	}
+
+	writer := meter.NewWriter(
+		file,
+		c.TransferMeterFrequency,
+		meter.LabelledRateFormat(os.Stdout, "Downloading cache", contentLength),
+	)
+
+	defer func() { _ = writer.Close() }()
+
+	_, err = io.Copy(writer, reader)
+	if err != nil {
+		return retryableErr{err: err}
+	}
+
+	err = os.Chtimes(file.Name(), time.Now(), date)
+	if err != nil {
+		return err
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+
+	return os.Rename(file.Name(), c.File)
+}
+
 func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 	log.SetRunnerFormatter()
 
@@ -154,7 +215,7 @@ func (c *CacheExtractorCommand) Execute(cliContext *cli.Context) {
 		warningln("Missing cache file")
 	}
 
-	if c.URL != "" {
+	if c.URL != "" || c.GoCloudURL != "" {
 		err := c.doRetry(c.download)
 		if err != nil {
 			warningln(err)

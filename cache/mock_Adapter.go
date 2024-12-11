@@ -4,7 +4,6 @@ package cache
 
 import (
 	context "context"
-	url "net/url"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -32,24 +31,32 @@ func (_m *MockAdapter) GetDownloadURL(_a0 context.Context) PresignedURL {
 	return r0
 }
 
-// GetGoCloudURL provides a mock function with given fields: _a0
-func (_m *MockAdapter) GetGoCloudURL(_a0 context.Context) *url.URL {
-	ret := _m.Called(_a0)
+// GetGoCloudURL provides a mock function with given fields: ctx, upload
+func (_m *MockAdapter) GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error) {
+	ret := _m.Called(ctx, upload)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetGoCloudURL")
 	}
 
-	var r0 *url.URL
-	if rf, ok := ret.Get(0).(func(context.Context) *url.URL); ok {
-		r0 = rf(_a0)
+	var r0 GoCloudURL
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, bool) (GoCloudURL, error)); ok {
+		return rf(ctx, upload)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, bool) GoCloudURL); ok {
+		r0 = rf(ctx, upload)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*url.URL)
-		}
+		r0 = ret.Get(0).(GoCloudURL)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, bool) error); ok {
+		r1 = rf(ctx, upload)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetUploadEnv provides a mock function with given fields: _a0

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -77,8 +76,8 @@ func (a *s3Adapter) GetUploadHeaders() http.Header {
 	return headers
 }
 
-func (a *s3Adapter) GetGoCloudURL(_ context.Context) *url.URL {
-	return nil
+func (a *s3Adapter) GetGoCloudURL(_ context.Context, _ bool) (cache.GoCloudURL, error) {
+	return cache.GoCloudURL{}, nil
 }
 
 func (a *s3Adapter) GetUploadEnv(_ context.Context) (map[string]string, error) {

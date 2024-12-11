@@ -48,8 +48,8 @@ func (a *gcsAdapter) GetUploadHeaders() http.Header {
 	return nil
 }
 
-func (a *gcsAdapter) GetGoCloudURL(_ context.Context) *url.URL {
-	return nil
+func (a *gcsAdapter) GetGoCloudURL(_ context.Context, _ bool) (cache.GoCloudURL, error) {
+	return cache.GoCloudURL{}, nil
 }
 
 func (a *gcsAdapter) GetUploadEnv(_ context.Context) (map[string]string, error) {

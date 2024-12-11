@@ -27,40 +27,24 @@ type azureAdapter struct {
 	credentialsResolver credentialsResolver
 }
 
-// GetDownloadURL returns a pre-signed URL for downloading the cache. In
-// the future we should convert the cache extractor to use a GoCloud URL
-// to eliminate this code.
+// GetDownloadURL returns a blank value because we use GoCloud to handle the download.
 func (a *azureAdapter) GetDownloadURL(ctx context.Context) cache.PresignedURL {
-	return cache.PresignedURL{
-		URL: a.presignURL(ctx, http.MethodGet),
-	}
+	return cache.PresignedURL{}
 }
 
-// GetUploadURL returns a legacy URL that is no longer used
-// because uploading via a pre-signed URL is limited to 5 MB (https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob-from-url?tabs=microsoft-entra-id).
+// GetUploadURL returns a blank value because uploading via a pre-signed URL is
+// limited to 5 MB (https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob-from-url?tabs=microsoft-entra-id).
 // We depend on GoCloud to handle the upload.
 func (a *azureAdapter) GetUploadURL(ctx context.Context) cache.PresignedURL {
-	return cache.PresignedURL{
-		URL:     a.presignURL(ctx, http.MethodPut),
-		Headers: a.GetUploadHeaders(),
-	}
+	return cache.PresignedURL{}
 }
 
-// GetUploadHeaders returns legacy HTTP headers that are no longer used because
-// uploading via a pre-signed URL is limited to 5 MB (https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob-from-url?tabs=microsoft-entra-id).
-// We depend on GoCloud to handle the upload.
-func (a *azureAdapter) GetUploadHeaders() http.Header {
-	httpHeaders := http.Header{}
-	httpHeaders.Set(common.ContentType, "application/octet-stream")
-	httpHeaders.Set("x-ms-blob-type", "BlockBlob")
+func (a *azureAdapter) GetGoCloudURL(ctx context.Context, upload bool) (cache.GoCloudURL, error) {
+	goCloudURL := cache.GoCloudURL{}
 
-	return httpHeaders
-}
-
-func (a *azureAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	if a.config.ContainerName == "" {
 		logrus.Error("ContainerName can't be empty")
-		return nil
+		return goCloudURL, fmt.Errorf("ContainerName can't be empty")
 	}
 
 	// Go Cloud omits the object name from the URL. Since object storage
@@ -71,67 +55,63 @@ func (a *azureAdapter) GetGoCloudURL(_ context.Context) *url.URL {
 	u, err := url.Parse(raw)
 	if err != nil {
 		logrus.WithError(err).WithField("url", raw).Errorf("error parsing blob URL")
-		return nil
+		return goCloudURL, fmt.Errorf("error parsing blob URL: %q: %w", raw, err)
 	}
 
-	return u
+	env, err := a.getEnv(ctx, upload)
+	if err != nil {
+		logrus.WithError(err).Errorf("error retrieving upload headers for GoCloud URL")
+		return goCloudURL, err
+	}
+
+	goCloudURL.URL = u
+	goCloudURL.Environment = env
+	return goCloudURL, nil
 }
 
-func (a *azureAdapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {
-	token := a.generateWriteToken(ctx)
-
-	// Return what we do have if the token is missing so the user
-	// sees the right error message instead of "options.AccountName is required".
+func (a *azureAdapter) getEnv(ctx context.Context, upload bool) (map[string]string, error) {
 	env := map[string]string{
 		"AZURE_STORAGE_ACCOUNT": a.config.AccountName,
 		"AZURE_STORAGE_DOMAIN":  a.config.StorageDomain,
 	}
-	if token == "" {
-		return env, nil
+
+	token, err := a.generateSASToken(ctx, upload)
+	// Return what we do have if the token is missing so the user
+	// sees the right error message instead of "options.AccountName is required".
+	if token != "" {
+		env["AZURE_STORAGE_SAS_TOKEN"] = token
 	}
 
-	env["AZURE_STORAGE_SAS_TOKEN"] = token
-	return env, nil
+	return env, err
 }
 
-func (a *azureAdapter) presignURL(ctx context.Context, method string) *url.URL {
-	signer := a.getSigner()
-	if signer == nil {
-		return nil
+func (a *azureAdapter) GetUploadEnv(ctx context.Context) (map[string]string, error) {
+	return nil, nil
+}
+
+func (a *azureAdapter) generateSASToken(ctx context.Context, upload bool) (string, error) {
+	method := http.MethodGet
+	if upload {
+		method = http.MethodPut
 	}
 
-	u, err := a.generateSignedURL(ctx, a.objectName, &signedURLOptions{
+	signer := a.getSigner()
+	if signer == nil {
+		return "", nil
+	}
+
+	t, err := a.blobTokenGenerator(ctx, a.objectName, &signedURLOptions{
 		ContainerName: a.config.ContainerName,
 		Signer:        signer,
 		Method:        method,
 		Timeout:       a.timeout,
 	})
 	if err != nil {
-		logrus.WithError(err).Errorf("error generating Azure pre-signed URL")
-		return nil
-	}
-
-	return u
-}
-
-func (a *azureAdapter) generateWriteToken(ctx context.Context) string {
-	signer := a.getSigner()
-	if signer == nil {
-		return ""
-	}
-
-	t, err := a.blobTokenGenerator(ctx, a.objectName, &signedURLOptions{
-		ContainerName: a.config.ContainerName,
-		Signer:        signer,
-		Method:        http.MethodPut,
-		Timeout:       a.timeout,
-	})
-	if err != nil {
 		logrus.WithError(err).Errorf("error generating Azure SAS token")
-		return ""
+		return t, err
 	}
 
-	return t
+	return t, nil
 }
 
 func (a *azureAdapter) getSigner() sasSigner {

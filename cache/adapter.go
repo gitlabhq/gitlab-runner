@@ -16,12 +16,19 @@ type PresignedURL struct {
 	Headers http.Header
 }
 
+type GoCloudURL struct {
+	URL *url.URL
+	// Environment holds the environment variables needed to access the URL.
+	Environment map[string]string
+}
+
 //go:generate mockery --name=Adapter --inpackage
 type Adapter interface {
 	GetDownloadURL(context.Context) PresignedURL
 	GetUploadURL(context.Context) PresignedURL
-
-	GetGoCloudURL(context.Context) *url.URL
+	GetGoCloudURL(ctx context.Context, upload bool) (GoCloudURL, error)
+	// GetUploadEnv returns the environment variables needed with GetUploadURL().
+	// TODO: Move this into PresignedURL structure.
 	GetUploadEnv(context.Context) (map[string]string, error)
 }
 

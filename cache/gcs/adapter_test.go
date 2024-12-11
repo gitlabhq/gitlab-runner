@@ -368,7 +368,11 @@ func TestAdapterOperation(t *testing.T) {
 			headers := adapter.GetUploadHeaders()
 			assert.Equal(t, headers, tc.expectedHeaders)
 
-			assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
+			goCloudURL, err := adapter.GetGoCloudURL(context.Background(), true)
+			assert.Nil(t, goCloudURL.URL)
+			assert.NoError(t, err)
+			assert.Empty(t, goCloudURL.Environment)
+
 			env, err := adapter.GetUploadEnv(context.Background())
 			assert.NoError(t, err)
 			assert.Empty(t, env)

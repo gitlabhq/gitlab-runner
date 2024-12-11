@@ -96,7 +96,7 @@ func TestSigner(t *testing.T) {
 		"account name and key set": {
 			config:                getCredentialsConfig(accountName, accountKey),
 			errorExpectedOnSigner: false,
-			expectedSignerType:    "accounyKeySigner",
+			expectedSignerType:    "accountKeySigner",
 		},
 	}
 

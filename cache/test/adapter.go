@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -30,13 +31,22 @@ func (t *testAdapter) GetUploadHeaders() http.Header {
 	return headers
 }
 
-func (t *testAdapter) GetGoCloudURL(ctx context.Context) *url.URL {
+func (t *testAdapter) GetGoCloudURL(ctx context.Context, _ bool) (cache.GoCloudURL, error) {
+	goCloudURL := cache.GoCloudURL{}
+
 	if t.useGoCloud {
-		u, _ := url.Parse("gocloud://test")
-		return u
+		u, _ := url.Parse(fmt.Sprintf("gocloud://test/%s", t.objectName))
+		goCloudURL.URL = u
+
+		env, err := t.GetUploadEnv(ctx)
+		if err != nil {
+			return goCloudURL, err
+		}
+		goCloudURL.Environment = env
+		return goCloudURL, nil
 	}
 
-	return nil
+	return goCloudURL, nil
 }
 
 func (t *testAdapter) GetUploadEnv(_ context.Context) (map[string]string, error) {

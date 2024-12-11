@@ -125,7 +125,16 @@ func testCacheOperation(
 			}
 		}
 
-		assert.Nil(t, adapter.GetGoCloudURL(context.Background()))
+		goCloudURL, err := adapter.GetGoCloudURL(context.Background(), true)
+		assert.NoError(t, err)
+		assert.Nil(t, goCloudURL.URL)
+		assert.Empty(t, goCloudURL.Environment)
+
+		goCloudURL, err = adapter.GetGoCloudURL(context.Background(), false)
+		assert.NoError(t, err)
+		assert.Nil(t, goCloudURL.URL)
+		assert.Empty(t, goCloudURL.Environment)
+
 		env, err := adapter.GetUploadEnv(context.Background())
 		assert.NoError(t, err)
 		assert.Empty(t, env)

@@ -14,8 +14,7 @@ type credentialsResolver interface {
 }
 
 type defaultCredentialsResolver struct {
-	config      *common.CacheAzureConfig
-	credentials *common.CacheAzureCredentials
+	config *common.CacheAzureConfig
 }
 
 func (cr *defaultCredentialsResolver) Resolve() error {
@@ -23,7 +22,7 @@ func (cr *defaultCredentialsResolver) Resolve() error {
 }
 
 func (cr *defaultCredentialsResolver) Credentials() *common.CacheAzureCredentials {
-	return cr.credentials
+	return &cr.config.CacheAzureCredentials
 }
 
 func (cr *defaultCredentialsResolver) Signer() (sasSigner, error) {
@@ -33,7 +32,7 @@ func (cr *defaultCredentialsResolver) Signer() (sasSigner, error) {
 	if cr.config.ContainerName == "" {
 		return nil, errors.New("ContainerName can't be empty")
 	}
-	if cr.credentials.AccountKey != "" {
+	if cr.config.CacheAzureCredentials.AccountKey != "" {
 		return newAccountKeySigner(cr.config)
 	}
 
@@ -45,9 +44,6 @@ func (cr *defaultCredentialsResolver) readCredentialsFromConfig() error {
 		return fmt.Errorf("config for Azure present, but account name is not configured")
 	}
 
-	cr.credentials.AccountName = cr.config.AccountName
-	cr.credentials.AccountKey = cr.config.AccountKey
-
 	return nil
 }
 
@@ -56,12 +52,11 @@ func newDefaultCredentialsResolver(config *common.CacheAzureConfig) (*defaultCre
 		return nil, fmt.Errorf("config can't be nil")
 	}
 
-	credentials := &defaultCredentialsResolver{
-		config:      config,
-		credentials: &common.CacheAzureCredentials{},
+	resolver := &defaultCredentialsResolver{
+		config: config,
 	}
 
-	return credentials, nil
+	return resolver, nil
 }
 
 var credentialsResolverInitializer = newDefaultCredentialsResolver
