@@ -36,8 +36,8 @@ integration kubernetes exec legacy:
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
   script:
   - >
-    gotestsum --rerun-fails=3 \
-      --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+    gotestsum --format=pkgname-and-test-fails --format-hide-empty-pkg --rerun-fails=3 \
+      --hide-summary output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
       --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
       -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
       -tags=integration,kubernetes ./executors/kubernetes/...
@@ -50,9 +50,9 @@ integration kubernetes attach:
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
   script:
     - >
-      gotestsum --rerun-fails=3 \
-        --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
+      gotestsum --format=pkgname-and-test-fails --format-hide-empty-pkg --rerun-fails=3 \
+        --hide-summary output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        --hide-summary output--junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
         -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
         -tags=integration,kubernetes ./executors/kubernetes/...
 
@@ -61,8 +61,8 @@ integration kubernetes:
     - .integration kubernetes
   script:
     - >
-      gotestsum --rerun-fails=3 \
-        --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+      gotestsum --format=pkgname-and-test-fails --format-hide-empty-pkg --rerun-fails=3 \
+        --hide-summary output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
         --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
         -timeout=10m -parallel=20 -skip=TestRunIntegrationTestsWithFeatureFlag \
         -tags=integration,kubernetes ./executors/kubernetes/...
