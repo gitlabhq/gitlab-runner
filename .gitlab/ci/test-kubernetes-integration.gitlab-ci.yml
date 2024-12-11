@@ -10,7 +10,13 @@
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-runner-$CI_PIPELINE_ID"
   before_script:
-    - make splitic
+    - go install gotest.tools/gotestsum@latest
+  artifacts:
+    when: always
+    paths:
+      - junit_report.xml
+    reports:
+      junit: junit_report.xml
 
 provision integration kubernetes:
   extends:
@@ -30,11 +36,11 @@ integration kubernetes exec legacy:
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
   script:
   - >
-    splitic test \
-      -tags integration,kubernetes \
-      -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-      gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-      -- -timeout=10m -parallel 20 -run=TestRunIntegrationTestsWithFeatureFlag
+    gotestsum --format=standard-verbose --rerun-fails=3 \
+      --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+      --junitfile=junit_report.xml -- \
+      -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
+      -tags=integration,kubernetes ./executors/kubernetes/...
 
 integration kubernetes attach:
   extends:
@@ -44,22 +50,22 @@ integration kubernetes attach:
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
   script:
     - >
-      splitic test \
-        -tags integration,kubernetes \
-        -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-        gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        -- -timeout=10m -parallel 20 -run=TestRunIntegrationTestsWithFeatureFlag
+      gotestsum --format=standard-verbose --rerun-fails=3 \
+        --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        --junitfile=junit_report.xml -- \
+        -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
+        -tags=integration,kubernetes ./executors/kubernetes/...
 
 integration kubernetes:
   extends:
     - .integration kubernetes
   script:
     - >
-      splitic test \
-        -tags integration,kubernetes \
-        -env-passthrough ./scripts/envs/allowlist_common.env -env-passthrough ./scripts/envs/allowlist_unix.env \
-        gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        -- -timeout=10m -parallel 20 -skip=TestRunIntegrationTestsWithFeatureFlag
+      gotestsum --format=standard-verbose --rerun-fails=3 \
+        --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        --junitfile=junit_report.xml -- \
+        -timeout=10m -parallel=20 -skip=TestRunIntegrationTestsWithFeatureFlag \
+        -tags=integration,kubernetes ./executors/kubernetes/...
 
 destroy integration kubernetes:
   extends:
