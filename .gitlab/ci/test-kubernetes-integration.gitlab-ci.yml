@@ -38,7 +38,7 @@ integration kubernetes exec legacy:
   - >
     gotestsum --format=standard-verbose --rerun-fails=3 \
       --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-      --junitfile=junit_report.xml -- \
+      --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
       -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
       -tags=integration,kubernetes ./executors/kubernetes/...
 
@@ -52,7 +52,7 @@ integration kubernetes attach:
     - >
       gotestsum --format=standard-verbose --rerun-fails=3 \
         --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        --junitfile=junit_report.xml -- \
+        --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
         -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
         -tags=integration,kubernetes ./executors/kubernetes/...
 
@@ -63,7 +63,7 @@ integration kubernetes:
     - >
       gotestsum --format=standard-verbose --rerun-fails=3 \
         --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        --junitfile=junit_report.xml -- \
+        --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
         -timeout=10m -parallel=20 -skip=TestRunIntegrationTestsWithFeatureFlag \
         -tags=integration,kubernetes ./executors/kubernetes/...
 
