@@ -37,7 +37,7 @@ integration kubernetes exec legacy:
   script:
   - >
     gotestsum --format=pkgname-and-test-fails --format-hide-empty-pkg --rerun-fails=3 \
-      --hide-summary output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+      --hide-summary=output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
       --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
       -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
       -tags=integration,kubernetes ./executors/kubernetes/...
@@ -51,8 +51,8 @@ integration kubernetes attach:
   script:
     - >
       gotestsum --format=pkgname-and-test-fails --format-hide-empty-pkg --rerun-fails=3 \
-        --hide-summary output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        --hide-summary output--junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
+        --hide-summary=output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
         -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
         -tags=integration,kubernetes ./executors/kubernetes/...
 
@@ -62,7 +62,7 @@ integration kubernetes:
   script:
     - >
       gotestsum --format=pkgname-and-test-fails --format-hide-empty-pkg --rerun-fails=3 \
-        --hide-summary output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        --hide-summary=output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
         --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
         -timeout=10m -parallel=20 -skip=TestRunIntegrationTestsWithFeatureFlag \
         -tags=integration,kubernetes ./executors/kubernetes/...
