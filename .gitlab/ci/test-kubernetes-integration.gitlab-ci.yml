@@ -11,6 +11,14 @@
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "k8s-runner-integration-tests-runner-$CI_PIPELINE_ID"
   before_script:
     - go install gotest.tools/gotestsum@latest
+  script:
+    # Note: We use hide-summary=output due to https://github.com/gotestyourself/gotestsum/issues/423
+    - >
+      gotestsum --format=testname --format-hide-empty-pkg --rerun-fails=3 \
+        --hide-summary=output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
+        --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
+        -timeout=10m -parallel=20 $EXTRA_GO_TEST_FLAGS \
+        -tags=integration,kubernetes ./executors/kubernetes/...
   artifacts:
     when: always
     paths:
@@ -34,13 +42,7 @@ integration kubernetes exec legacy:
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "true"
-  script:
-  - >
-    gotestsum --format=testname --format-hide-empty-pkg --rerun-fails=3 \
-      --hide-summary=output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-      --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
-      -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
-      -tags=integration,kubernetes ./executors/kubernetes/...
+    EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
 
 integration kubernetes attach:
   extends:
@@ -48,24 +50,13 @@ integration kubernetes attach:
   variables:
     CI_RUNNER_TEST_FEATURE_FLAG: "FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY"
     CI_RUNNER_TEST_FEATURE_FLAG_VALUE: "false"
-  script:
-    - >
-      gotestsum --format=testname --format-hide-empty-pkg --rerun-fails=3 \
-        --hide-summary=output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
-        -timeout=10m -parallel=20 -run=TestRunIntegrationTestsWithFeatureFlag \
-        -tags=integration,kubernetes ./executors/kubernetes/...
+    EXTRA_GO_TEST_FLAGS: "-run=TestRunIntegrationTestsWithFeatureFlag"
 
 integration kubernetes:
   extends:
     - .integration kubernetes
-  script:
-    - >
-      gotestsum --format=testname --format-hide-empty-pkg --rerun-fails=3 \
-        --hide-summary=output --packages=gitlab.com/gitlab-org/gitlab-runner/executors/kubernetes \
-        --junitfile=junit_report.xml --junitfile-hide-empty-pkg -- \
-        -timeout=10m -parallel=20 -skip=TestRunIntegrationTestsWithFeatureFlag \
-        -tags=integration,kubernetes ./executors/kubernetes/...
+  variables:
+    EXTRA_GO_TEST_FLAGS: "-skip=TestRunIntegrationTestsWithFeatureFlag"
 
 destroy integration kubernetes:
   extends:
