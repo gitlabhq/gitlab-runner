@@ -1872,7 +1872,8 @@ func (s *executor) setupBuildNamespace(ctx context.Context) error {
 		},
 	}
 
-	// kubeAPI: namespaces, create
+	//nolint:gocritic
+	// kubeAPI: namespaces, create, kubernetes.NamespacePerJob=true
 	_, err := s.kubeClient.CoreV1().Namespaces().Create(ctx, &nsconfig, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create namespace: %w", err)
@@ -1886,7 +1887,8 @@ func (s *executor) teardownBuildNamespace(ctx context.Context) error {
 
 	s.BuildLogger.Debugln("Tearing down build namespace")
 
-	// kubeAPI: namespaces, delete
+	//nolint:gocritic
+	// kubeAPI: namespaces, delete, kubernetes.NamespacePerJob=true
 	err := s.kubeClient.CoreV1().Namespaces().Delete(ctx, s.configurationOverwrites.namespace, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to delete namespace: %w", err)
@@ -2427,7 +2429,8 @@ func (s *executor) serviceAccountExists() func(context.Context, string) bool {
 		}
 
 		return retry.WithFn(s, func() error {
-			// kubeAPI: serviceAccounts, get
+			// NOTE: Casing is important here
+			// kubeAPI: serviceaccounts, get
 			_, err := s.kubeClient.CoreV1().
 				ServiceAccounts(s.configurationOverwrites.namespace).Get(ctx, saName, metav1.GetOptions{})
 			return err
@@ -2914,11 +2917,13 @@ func (s *executor) captureContainerLogs(ctx context.Context, containerName strin
 		Follow:     true,
 		Timestamps: true,
 	}
+
 	podLogs, err := retry.WithValueFn(s, func() (io.ReadCloser, error) {
 		err := waitForRunningContainer(ctx, s.kubeClient, s.Config.Kubernetes.GetPollTimeout(), s.pod.Namespace, s.pod.Name, containerName)
 		if err != nil {
 			return nil, err
 		}
+
 		// kubeAPI: pods/log, get, list, FF_KUBERNETES_HONOR_ENTRYPOINT=true,FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 		return s.kubeClient.CoreV1().Pods(s.pod.Namespace).GetLogs(s.pod.Name, &podLogOpts).Stream(ctx)
 	}).Run()

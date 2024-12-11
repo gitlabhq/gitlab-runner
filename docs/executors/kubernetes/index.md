@@ -106,22 +106,87 @@ You can either:
 
  <!-- k8s_api_permissions_list_start -->
 
-| Resource | Verb (Optional Feature Flags) |
+| Resource | Verb (Optional Feature/Config Flags) |
 |----------|-------------------------------|
 | events | list, watch (`FF_PRINT_POD_EVENTS=true`) |
-| namespaces | create, delete |
-| pods | attach (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), create, delete, exec, get, watch (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| namespaces | create (`kubernetes.NamespacePerJob=true`), delete (`kubernetes.NamespacePerJob=true`) |
+| pods | create, delete, get, watch (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/attach | create (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), delete (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), get (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`), patch (`FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
+| pods/exec | create, delete, get, patch |
 | pods/log | get (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true`), list (`FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false`) |
 | secrets | create, delete, get, update |
-| serviceAccounts | get |
+| serviceaccounts | get |
 | services | create, get |
 
 <!-- k8s_api_permissions_list_end -->
 
-- _The `serviceAccount` permission is needed only:_
+You can use the following YAML role definition to create a role with the required permissions.
 
-  - _For GitLab 15.0 and 15.1._
-  - _For GitLab 15.0.1, 15.1.1, and 15.2 when `resource_availability_check_max_attempts` is set to a value higher than 0._
+<!-- k8s_api_permissions_role_yaml_start -->
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-runner
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["events"]
+  verbs:
+  - "list"
+  - "watch" # Required when FF_PRINT_POD_EVENTS=true
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs:
+  - "create" # Required when kubernetes.NamespacePerJob=true
+  - "delete" # Required when kubernetes.NamespacePerJob=true
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs:
+  - "create"
+  - "delete"
+  - "get"
+  - "watch" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+- apiGroups: [""]
+  resources: ["pods/attach"]
+  verbs:
+  - "create" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+  - "delete" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+  - "get" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+  - "patch" # Required when FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs:
+  - "create"
+  - "delete"
+  - "get"
+  - "patch"
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs:
+  - "get" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false, FF_WAIT_FOR_POD_TO_BE_REACHABLE=true
+  - "list" # Required when FF_KUBERNETES_HONOR_ENTRYPOINT=true, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs:
+  - "create"
+  - "delete"
+  - "get"
+  - "update"
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs:
+  - "get"
+- apiGroups: [""]
+  resources: ["services"]
+  verbs:
+  - "create"
+  - "get"
+```
+<!-- k8s_api_permissions_role_yaml_end -->
+
+- _For GitLab 15.0 and 15.1._
+- _For GitLab 15.0.1, 15.1.1, and 15.2 when `resource_availability_check_max_attempts` is set to a value higher than 0._
 
 - _As of GitLab Runner 15.8 the `configmaps` permission is no longer needed._
 

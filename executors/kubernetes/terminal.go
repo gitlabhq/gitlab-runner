@@ -71,7 +71,7 @@ func (s *executor) getTerminalSettings() (*terminal.TerminalSettings, error) {
 }
 
 func (s *executor) getTerminalWebSocketURL() *url.URL {
-	// kubeAPI: pods, exec
+	// kubeAPI: pods/exec, get, create, patch, delete
 	wsURL := s.kubeClient.CoreV1().RESTClient().Post().
 		Namespace(s.pod.Namespace).
 		Resource("pods").

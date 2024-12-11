@@ -112,7 +112,7 @@ func (p *AttachOptions) Run() error {
 	stdin := strings.NewReader(strings.Join(p.Command, " ") + "\n")
 
 	//nolint:gocritic
-	// kubeAPI: pods, attach, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
+	// kubeAPI: pods/attach, get, create, patch, delete, FF_USE_LEGACY_KUBERNETES_EXECUTION_STRATEGY=false
 	req := p.KubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(pod.Name).
@@ -173,7 +173,7 @@ func (p *ExecOptions) Run() error {
 }
 
 func (p *ExecOptions) executeRequest() error {
-	// kubeAPI: pods, exec
+	// kubeAPI: pods/exec, get, create, patch, delete
 	req := p.KubeClient.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.PodName).
