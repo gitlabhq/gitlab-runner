@@ -1796,7 +1796,7 @@ func testKubernetesPublicInternalVariables(t *testing.T, featureFlagName string,
 
 			build := getTestBuild(t, func() (common.JobResponse, error) {
 				jobResponse, err := common.GetRemoteBuildResponse(
-					"sleep 5000",
+					"sleep 15000",
 				)
 				require.NoError(t, err)
 
