@@ -1872,6 +1872,7 @@ func (s *executor) setupBuildNamespace(ctx context.Context) error {
 		},
 	}
 
+	//nolint:gocritic
 	// kubeAPI: namespaces, create, kubernetes.NamespacePerJob=true
 	_, err := s.kubeClient.CoreV1().Namespaces().Create(ctx, &nsconfig, metav1.CreateOptions{})
 	if err != nil {
@@ -1886,6 +1887,7 @@ func (s *executor) teardownBuildNamespace(ctx context.Context) error {
 
 	s.BuildLogger.Debugln("Tearing down build namespace")
 
+	//nolint:gocritic
 	// kubeAPI: namespaces, delete, kubernetes.NamespacePerJob=true
 	err := s.kubeClient.CoreV1().Namespaces().Delete(ctx, s.configurationOverwrites.namespace, metav1.DeleteOptions{})
 	if err != nil {
