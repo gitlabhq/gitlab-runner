@@ -32,6 +32,7 @@ Please list here all the steps that must be taken if something goes wrong:
 - Any MRs that need to be rolled back?
 - Communication that needs to happen?
 - What are some things you can think of that could go wrong in the context of GitLab Runner and the existing setups?
+- What settings needs to be changed back, e.g. Feature Flag, or `config.toml` settings ?
 
 ### Cleaning up the feature flag
 
@@ -47,7 +48,7 @@ In most the use case, removing a feature flag will always be a breaking change. 
 - [ ] Close [the feature issue](ISSUE LINK) to indicate the feature will be released in the current milestone.
 - [ ] Close this feature flag cleanup issue.
 
-/label ~"feature flag" ~"section::ci" ~"group::runner" ~"devops::verify" ~"Category:Runner Core" ~"runner::core"
+/label ~"feature flag" ~"section::ci" ~"group::runner" ~"DevOps::verify" ~"Category:Runner Core" ~"runner::core"
 <!-- Uncomment the appropriate type label
 /label ~"type::feature" ~"feature::addition"
 /label ~"type::maintenance"
