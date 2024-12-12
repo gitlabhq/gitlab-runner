@@ -41,7 +41,7 @@ var (
 		},
 	}
 
-	ignoreDirectories = []string{".git", "scripts", ".tmp"}
+	ignoreDirectories = []string{".git", "scripts", ".tmp", "magefiles"}
 )
 
 type tagOverridesFilesMap map[string]tagOverridesMap
