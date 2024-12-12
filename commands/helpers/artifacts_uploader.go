@@ -152,7 +152,7 @@ func (c *ArtifactsUploaderCommand) handleRedirect(location string) error {
 
 	logrus.WithField("location", location).
 		WithField("new-url", c.JobCredentials.URL).
-		Warning("Upload request redirected")
+		Info("Upload request redirected")
 
 	return retryableErr{err: fmt.Errorf("request redirected")}
 }
