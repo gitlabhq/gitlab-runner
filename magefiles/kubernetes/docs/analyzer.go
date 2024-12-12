@@ -97,6 +97,7 @@ func filterTestFiles(fileInfo fs.FileInfo) bool {
 	return !strings.HasSuffix(fileInfo.Name(), "_test.go")
 }
 
+//nolint:gocognit,nestif
 func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, node ast.Node) {
 	expr, ok := node.(*ast.CallExpr)
 	if !ok {
@@ -154,6 +155,7 @@ func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, no
 	positions[sp] = node.Pos()
 }
 
+//nolint:errcheck
 func getCallFieldName(expr *ast.SelectorExpr) string {
 	if expr == nil {
 		return ""
@@ -175,6 +177,7 @@ type typeRoot struct {
 	valueType  string
 }
 
+//nolint:gocognit,staticcheck
 func getTypeRoot(expr any) *typeRoot {
 	if expr == nil || reflect.ValueOf(expr).IsNil() {
 		return nil
