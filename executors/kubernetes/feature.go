@@ -37,6 +37,7 @@ func (s *badVersionError) Is(err error) bool {
 }
 
 func (c *kubeClientFeatureChecker) IsHostAliasSupported() (bool, error) {
+	// kubeAPI: ignore
 	verInfo, err := c.kubeClient.Discovery().ServerVersion()
 	if err != nil {
 		return false, err

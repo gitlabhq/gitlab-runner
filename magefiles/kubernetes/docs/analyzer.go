@@ -1,11 +1,14 @@
 package docs
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"io/fs"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -13,11 +16,7 @@ import (
 	"github.com/samber/lo"
 )
 
-var supportedKubeClientNames = []string{
-	"kubeClient",
-	"KubeClient",
-	"client",
-}
+var supportedKubernetesClientTypes = []string{"kubernetes.Interface"}
 
 type simplePosition struct {
 	fileName string
@@ -61,9 +60,9 @@ type PermissionsGroup map[string][]verb
 
 // Beware, we currently only support the CoreV1 API. If we add resources that require a different API group,
 // for example "rbac.authorization.k8s.io", we will need to update this function to parse the API group too.
-func parsePermissions() (PermissionsGroup, error) {
+func parsePermissions(path string, filter func(fileInfo fs.FileInfo) bool) (PermissionsGroup, error) {
 	fset := token.NewFileSet()
-	f, err := parser.ParseDir(fset, "executors/kubernetes", filterTestFiles, parser.ParseComments)
+	f, err := parser.ParseDir(fset, path, filter, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +73,8 @@ func parsePermissions() (PermissionsGroup, error) {
 	for _, pkg := range f {
 		for _, f := range pkg.Files {
 			ast.Inspect(f, func(node ast.Node) bool {
-				return inspectNode(fset, positions, node)
+				inspectNode(fset, positions, node)
+				return true
 			})
 
 			processPermissions(fset, f.Comments, positions, permissions)
@@ -90,41 +90,60 @@ func parsePermissions() (PermissionsGroup, error) {
 		return permissions, nil
 	}
 
-	return nil, fmt.Errorf("%s\n\nAnnotations must be written as comments directly above each `kubeClient.CoreV1` call and in the format of // kubeAPI: <Resource>, <Verb>, <FF=VALUE>(optional)", strings.Join(errs, "\n"))
+	return permissions, fmt.Errorf("%s\n\nAnnotations must be written as comments directly above each Kubernetes Client usage call and in the format of // kubeAPI: <Resource>, <Verb>, <FF=VALUE>(optional)\n", strings.Join(errs, "\n"))
 }
 
 func filterTestFiles(fileInfo fs.FileInfo) bool {
 	return !strings.HasSuffix(fileInfo.Name(), "_test.go")
 }
 
-func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, node ast.Node) bool {
+func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, node ast.Node) {
 	expr, ok := node.(*ast.CallExpr)
 	if !ok {
-		return true
+		return
 	}
 
 	sel, ok := expr.Fun.(*ast.SelectorExpr)
 	if !ok {
-		return true
+		return
 	}
 
-	if sel.Sel.Name != "CoreV1" {
-		return true
+	root := getTypeRoot(sel.X)
+	if root == nil {
+		return
 	}
 
-	var name string
-	switch selectorIdents := sel.X.(type) {
-	case *ast.SelectorExpr:
-		name = selectorIdents.Sel.Name
-	case *ast.Ident:
-		name = selectorIdents.Name
-	default:
-		return true
-	}
+	if root.structType == nil {
+		if !slices.Contains(supportedKubernetesClientTypes, root.valueType) {
+			return
+		}
+	} else {
+		str := root.structType
+		callFieldName := getCallFieldName(sel)
 
-	// TODO: Check for the type of the field instead of the Name
-	if !slices.Contains(supportedKubeClientNames, name) {
-		return true
+		var found bool
+		for _, field := range str.Fields.List {
+			var name string
+			if len(field.Names) == 0 {
+				expr, ok := field.Type.(*ast.SelectorExpr)
+				if !ok {
+					return
+				}
+				name = expr.Sel.Name
+			} else {
+				name = field.Names[0].Name
+			}
+
+			var buf bytes.Buffer
+			_ = printer.Fprint(&buf, fset, field.Type)
+			if slices.Contains(supportedKubernetesClientTypes, buf.String()) && name == callFieldName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return
+		}
 	}
 
 	callPosition := fset.Position(node.Pos())
@@ -133,8 +152,77 @@ func inspectNode(fset *token.FileSet, positions map[simplePosition]token.Pos, no
 		line:     callPosition.Line - 1,
 	}
 	positions[sp] = node.Pos()
+}
 
-	return true
+func getCallFieldName(expr *ast.SelectorExpr) string {
+	if expr == nil {
+		return ""
+	}
+
+	if expr, ok := expr.X.(*ast.SelectorExpr); ok {
+		return getCallFieldName(expr)
+	}
+
+	if ident, ok := expr.X.(*ast.Ident); ok && ident.Obj != nil {
+		return expr.Sel.Name
+	}
+
+	return getCallFieldName(expr.X.(*ast.SelectorExpr))
+}
+
+type typeRoot struct {
+	structType *ast.StructType
+	valueType  string
+}
+
+func getTypeRoot(expr any) *typeRoot {
+	if expr == nil || reflect.ValueOf(expr).IsNil() {
+		return nil
+	}
+
+	switch exp := expr.(type) {
+	case *ast.Ident:
+		return getTypeRoot(exp.Obj)
+	case *ast.SelectorExpr:
+		ident, ok := exp.X.(*ast.Ident)
+		if !ok || ident.Obj != nil {
+			return getTypeRoot(exp.X)
+		}
+
+		return &typeRoot{
+			valueType: fmt.Sprintf("%s.%s", ident.Name, exp.Sel.Name),
+		}
+	case *ast.Object:
+		return getTypeRoot(exp.Decl)
+	case *ast.Field:
+		return getTypeRoot(exp.Type)
+	case *ast.TypeSpec:
+		return getTypeRoot(exp.Type)
+	case *ast.StarExpr:
+		return getTypeRoot(exp.X)
+	case *ast.AssignStmt:
+		return getTypeRoot(exp.Rhs[0])
+	case *ast.ValueSpec:
+		selectorExpr, ok := exp.Type.(*ast.SelectorExpr)
+		if !ok {
+			return nil
+		}
+
+		ident, ok := selectorExpr.X.(*ast.Ident)
+		if !ok {
+			return nil
+		}
+
+		return &typeRoot{
+			valueType: fmt.Sprintf("%s.%s", ident.Name, selectorExpr.Sel.Name),
+		}
+	case *ast.StructType:
+		return &typeRoot{
+			structType: exp,
+		}
+	default:
+		return nil
+	}
 }
 
 func processPermissions(fset *token.FileSet, comments []*ast.CommentGroup, positions map[simplePosition]token.Pos, permissions PermissionsGroup) {
@@ -172,7 +260,7 @@ func groupPermissions(comment *ast.Comment, permissions PermissionsGroup) {
 
 	// Iterate through all verbs. If a verb is already in
 	// the resource list, append the feature flags to the existing
-	// list. Otherwise add a new entry.
+	// list. Otherwise, add a new entry.
 	for _, v := range verbs {
 		_, verbIndex, _ := lo.FindIndexOf(permissions[resource], func(p verb) bool {
 			return p.Verb == v

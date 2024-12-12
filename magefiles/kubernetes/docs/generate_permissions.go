@@ -36,7 +36,7 @@ type permissionsRender struct {
 }
 
 func ParsePermissions() (PermissionsGroup, error) {
-	return parsePermissions()
+	return parsePermissions("executors/kubernetes", filterTestFiles)
 }
 
 func GeneratePermissionsDocs(roleName, roleNamespace string, permissions PermissionsGroup) error {
