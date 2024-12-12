@@ -1050,6 +1050,7 @@ func testKubernetesBuildFailFeatureFlag(t *testing.T, featureFlagName string, fe
 }
 
 func testKubernetesBuildCancelFeatureFlag(t *testing.T, featureFlagName string, featureFlagValue bool) {
+	t.Skip("TODO: Flaky test https://gitlab.com/gitlab-org/gitlab-runner/-/jobs/8628638315#L318")
 	kubernetes.SkipKubectlIntegrationTests(t, "kubectl", "cluster-info")
 
 	build := getTestBuild(t, func() (common.JobResponse, error) {
