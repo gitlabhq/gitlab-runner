@@ -10,6 +10,15 @@ stages:
 - docs
 
 include:
+- local: /.gitlab/ci/_project_canonical.gitlab-ci.yml
+  rules:
+    - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+      when: always
+- local: /.gitlab/ci/_project_fork.gitlab-ci.yml
+  rules:
+    - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+      when: never
+    - if: $CI_PROJECT_PATH
 - local: /.gitlab/ci/_common.gitlab-ci.yml
 - local: /.gitlab/ci/_rules.gitlab-ci.yml
 - local: /.gitlab/ci/build.gitlab-ci.yml

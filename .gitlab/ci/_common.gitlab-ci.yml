@@ -29,7 +29,7 @@ variables:
 default:
   image: $CI_IMAGE
   tags:
-    - gitlab-org
+    - !reference [.instance-default]
   retry:
     max: 2
     when:
@@ -52,8 +52,7 @@ default:
   variables:
     DOCKER_HOST: "unix:///certs/client/docker.sock"
   tags:
-    - gitlab-org-docker
-
+    - !reference [.instance-default-docker]
 
 .go-cache:
   variables:
@@ -94,8 +93,7 @@ default:
   extends:
     - .windows1809_variables
   tags:
-    - windows
-    - windows-1809
+    - !reference [.instance-windows-2019]
 
 .windows1809_nano:
   extends:
@@ -111,8 +109,7 @@ default:
   extends:
     - .windows21H2_variables
   tags:
-    - windows
-    - windows-21h1 # todo: use windows-2022 when ready (https://gitlab.com/gitlab-org/ci-cd/shared-runners/infrastructure/-/issues/61)
+    - !reference [.instance-windows-2022]
 
 .windows21H2_nano:
   extends:

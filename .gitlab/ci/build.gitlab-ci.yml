@@ -25,7 +25,7 @@ helper images:
 
 prebuilt helper images:
   tags:
-    - saas-linux-2xlarge-amd64
+    - !reference [.instance-2xlarge]
   extends:
   - .docker
   - .rules:merge_request_pipelines:no_docs
@@ -44,7 +44,7 @@ prebuilt helper images:
 
 runner images:
   tags:
-    - saas-linux-2xlarge-amd64
+    - !reference [.instance-2xlarge]
   extends:
   - .docker
   - .rules:merge_request_pipelines:no_docs
@@ -77,7 +77,7 @@ test images:
 binaries:
   image: "${RUNNER_IMAGES_REGISTRY}/ubi-go:${RUNNER_IMAGES_VERSION}"
   tags:
-    - saas-linux-2xlarge-amd64
+    - !reference [.instance-2xlarge]
   extends:
   - .rules:merge_request_pipelines:no_docs
   - .go-cache

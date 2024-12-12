@@ -22,7 +22,7 @@
   script:
   - make release_s3
   tags:
-  - saas-linux-medium-amd64
+  - !reference [.instance-medium]
 
 .release_packagecloud:
   stage: release
