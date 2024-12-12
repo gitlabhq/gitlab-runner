@@ -98,7 +98,7 @@ func TestParseArgs(t *testing.T) {
 			cmdArgs := []cmdArg{
 				{
 					A: "revision",
-					B: "v16.0.0",
+					B: "v17.7.0",
 				},
 			}
 			if tt.cmdArg != nil {
@@ -106,7 +106,7 @@ func TestParseArgs(t *testing.T) {
 			}
 
 			expectedArgs := newDefaultArgs()
-			expectedArgs.Revision = "v16.0.0"
+			expectedArgs.Revision = "v17.7.0"
 			if tt.expectedArgs != nil {
 				tt.expectedArgs(&expectedArgs)
 			}
@@ -141,7 +141,7 @@ func TestGenerateTags(t *testing.T) {
 		"gitlab-runner-helper": {
 			image:              gitlabRunnerHelperImage,
 			expectedImagesFile: "dockerhub_tags_gitlab_runner_helper_test.txt",
-			filter:             `v16\.1\.0`,
+			filter:             `v17\.7\.0`,
 		},
 		"gitlab-runner-helper-latest": {
 			image:              gitlabRunnerHelperImage,
@@ -159,7 +159,7 @@ func TestGenerateTags(t *testing.T) {
 			require.NoError(t, err)
 
 			args := &args{
-				Revision: "v16.1.0",
+				Revision: "v17.7.0",
 				Images:   commaSeparatedList{string(tt.image)},
 				IsLatest: true,
 			}

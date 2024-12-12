@@ -4,7 +4,7 @@
   stage: prerelease
   variables:
     PUBLISH_IMAGES: "true"
-    PWSH_VERSION: "7.3.5"
+    PWSH_VERSION: "7.4.6"
   dependencies:
     - 'helper images binaries'
   before_script:

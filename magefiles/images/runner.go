@@ -43,10 +43,9 @@ var (
 	gitLfsVersion = env.NewDefault("GIT_LFS_VERSION", "3.4.0")
 
 	ubuntuVersion    = env.NewDefault("UBUNTU_VERSION", "20.04")
-	alpine316Version = env.NewDefault("ALPINE_316_VERSION", "3.16.5")
-	alpine317Version = env.NewDefault("ALPINE_317_VERSION", "3.17.3")
-	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.2")
-	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.0")
+	alpine318Version = env.NewDefault("ALPINE_318_VERSION", "3.18.9")
+	alpine319Version = env.NewDefault("ALPINE_319_VERSION", "3.19.4")
+	alpine321Version = env.NewDefault("ALPINE_321_VERSION", "3.21.0")
 
 	ubiFIPSBaseImage  = env.NewDefault("UBI_FIPS_BASE_IMAGE", "registry.gitlab.com/gitlab-org/gitlab-runner/ubi-fips-base")
 	ubiFIPSVersion    = env.NewDefault("UBI_FIPS_VERSION", "9.5-1731934928")
@@ -62,7 +61,7 @@ var checksumsFiles = map[string]string{
 }
 
 var flavorAliases = map[string][]string{
-	"alpine3.19": {"alpine", "alpine3.19"},
+	"alpine3.21": {"alpine", "alpine3.21"},
 }
 
 type buildRunnerParams struct {
@@ -115,10 +114,9 @@ func AssembleBuildRunner(flavor, targetArchs string) build.TargetBlueprint[runne
 		dumbInitVersion,
 		gitLfsVersion,
 		ubuntuVersion,
-		alpine316Version,
-		alpine317Version,
 		alpine318Version,
 		alpine319Version,
+		alpine321Version,
 		ubiFIPSBaseImage,
 		ubiFIPSVersion,
 		ubiMinimalImage,
@@ -169,10 +167,9 @@ func BuildRunner(blueprint build.TargetBlueprint[runnerImageFileDependency, buil
 
 	baseImagesFlavor := map[string]string{
 		"ubuntu":        fmt.Sprintf("ubuntu:%s", blueprint.Env().Value(ubuntuVersion)),
-		"alpine3.16":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine316Version)),
-		"alpine3.17":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine317Version)),
 		"alpine3.18":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine318Version)),
 		"alpine3.19":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine319Version)),
+		"alpine3.21":    fmt.Sprintf("alpine:%s", blueprint.Env().Value(alpine321Version)),
 		"alpine-latest": "alpine:latest",
 		ubiFipsFlavor: fmt.Sprintf(
 			"%s:%s",

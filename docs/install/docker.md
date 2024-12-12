@@ -198,7 +198,7 @@ Prerequisites:
 
 ## Docker images
 
-In GitLab Runner 16.1, the Docker image based on Alpine uses Alpine 3.18. These multi-platform Docker images are available:
+In GitLab Runner 17.7.0, the Docker image based on Alpine uses Alpine 3.21. These multi-platform Docker images are available:
 
 - `gitlab/gitlab-runner:latest` based on Ubuntu, approximately 800 MB.
 - `gitlab/gitlab-runner:alpine` based on Alpine, approximately 460 MB.
