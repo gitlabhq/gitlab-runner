@@ -36,7 +36,7 @@ chmod +x gitlab-runner-linux-amd64
 
 ## Download one of the packages for Debian or Ubuntu
 
-- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_i386.deb>
+- <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_i686.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_amd64.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_armel.deb>
 - <https://s3.dualstack.us-east-1.amazonaws.com/gitlab-runner-downloads/main/deb/gitlab-runner_armhf.deb>
