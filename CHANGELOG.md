@@ -1,3 +1,65 @@
+## v17.7.0 (2024-12-13)
+
+### New features
+
+- Move exported  helper images into separete  package [!5190](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5190)
+
+### Bug fixes
+
+- Use GoCloud URLs for Azure downloads [!5188](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5188)
+- Fix flaky step-integration test [!5199](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5199)
+- Update gitlab.com/gitlab-org/fleeting/fleeting version and other deps [!5207](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5207)
+- Merge Outstanding Security MRs [!5171](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5171)
+- [k8s] Do not wait poll timeout when container has terminated [!5112](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5112)
+- Fix docker network config for Windows [!5182](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5182)
+
+### Maintenance
+
+- Update alpine versions [!5214](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5214)
+- Make build environment cache friendly [!5179](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5179)
+- Update experiment-beta page path [!5193](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5193)
+- Kubernetes API reference analyzer based on types instead of field names [!5158](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5158)
+- Update steps version to 0.2.0 [!5219](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5219)
+- fix apt package install version string and change to a newer version in the docs [!5180](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5180) (Thorsten Banhart @banhartt)
+- Fix fuzz variable mask test [!5135](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5135)
+- Moved some contextual info to runner registration section [!5178](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5178)
+- Update file configuring_runner_operator.md [!5198](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5198)
+- Note in logs when runner manager is being unregistered [!5166](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5166)
+- Skip testKubernetesBuildCancelFeatureFlag as it's flaky [!5228](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5228)
+- Update dependency danger-review to v2 [!5206](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5206)
+- Fix Vale issues in Kubernetes executor doc [!5196](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5196)
+- Make homedir easier to test [!5168](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5168)
+- custom.md: Fix typo [!5163](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5163) (Per Lundberg @perlun)
+- Bump UBI base images to the newest 9.5.x versions [!5185](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5185)
+- Migrate Kubernetes integration tests to use the Runner Kubernetes Cluster [!5175](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5175)
+- Fix podman troubleshooting doc [!5211](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5211) (Thorsten Banhart @banhartt)
+- Docs: Fix `limitations` in `gitlab-runner` repo [!5201](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5201)
+- Add 'Example' column to Docker runner advanced configuration docs [!5177](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5177)
+- Add node tolerations to kubernetes integration tests [!5229](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5229)
+- Document how to use Azure workload identities for the cache [!5204](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5204)
+- Add Windows Server 2025 to the Windows version support policy [!5183](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5183)
+- Bump docker-machine to v0.16.2-gitlab.30 [!5218](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5218)
+- Doc/runner spelling exceptions [!5162](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5162)
+- Add feature flag issue templates [!5156](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5156)
+- Update supported runner OS versions [!5217](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5217)
+- Make fuzz variable mask job required to pass [!5209](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5209)
+- Bump Go compiler version to 1.23.2 [!5153](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5153)
+- Skip homedir fix test on Windows to not block the release [!5164](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5164)
+- Actually update step-runner version to 0.2.0 [!5227](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5227)
+- Remove semgrep-sast CI rules [!5184](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5184)
+- Add docker connection error to troubleshooting [!5165](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5165)
+- Separate kubernetes integration tests resource groups [!5223](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5223)
+- Fix Vale issues in Runner docs: Part 5 [!5191](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5191)
+- Remove the term worker from the Plan and operate a fleet of instance or group runners doc [!5189](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5189)
+- Speed up windows test runs [!5174](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5174)
+- Fix TestStackDumping test freezing [!5210](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5210)
+- Remove redundant prepare runner-incept variables job [!5197](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5197)
+- Simplify kubernetes integration test names [!5024](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5024)
+- Remove links to interactive web terminals [!5176](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5176)
+- Add ability to create review apps by using the GitLab Docs Hugo project [!5205](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5205)
+- Revert "Merge branch 'avonbertoldi/git-lfs-is-bad' into 'main'" [!5169](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5169)
+- Added information about Docker Autoscaler and Instance executors in the executor selection table [!5161](https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/5161)
+
 ## v17.6.0 (2024-11-20)
 
 ### New features
