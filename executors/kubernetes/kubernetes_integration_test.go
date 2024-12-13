@@ -2505,8 +2505,10 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (co
 	slices.Reverse(tt)
 
 	nodeSelector := map[string]string{}
+	nodeTolerations := map[string]string{}
 	if os.Getenv("GITLAB_CI") == "true" {
-		nodeSelector["app"] = "gitlab-runner-job"
+		nodeSelector["runner.gitlab.com/workload-type"] = "job"
+		nodeTolerations["runner.gitlab.com/job"] = "NoExecute"
 	}
 
 	return &common.Build{
@@ -2526,6 +2528,7 @@ func getTestBuildWithImage(t *testing.T, image string, getJobResponse func() (co
 					PodTerminationGracePeriodSeconds: common.Int64Ptr(5),
 					PollTimeout:                      int((time.Minute * 10).Seconds()),
 					NodeSelector:                     nodeSelector,
+					NodeTolerations:                  nodeTolerations,
 
 					CPULimit:            "0.3",
 					MemoryRequest:       "150Mi",
