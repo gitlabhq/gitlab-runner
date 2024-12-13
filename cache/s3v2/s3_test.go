@@ -481,12 +481,12 @@ func TestFetchCredentialsForRole(t *testing.T) {
 			roleARN:  "arn:aws:iam::123456789012:role/TestRole",
 			expected: mockedCreds,
 		},
-		"successful fetch with 12-hour timeout": {
+		"successful fetch with 12-hour timeout downgraded to 1-hour": {
 			config:           &workingConfig,
 			roleARN:          "arn:aws:iam::123456789012:role/TestRole",
 			duration:         12 * time.Hour,
 			expected:         mockedCreds,
-			expectedDuration: 12 * time.Hour,
+			expectedDuration: 1 * time.Hour,
 		},
 		"successful fetch with 10-minute timeout": {
 			config:           &workingConfig,

@@ -146,9 +146,10 @@ func (c *s3Client) FetchCredentialsForRole(ctx context.Context, roleARN, bucketN
 	sessionName := fmt.Sprintf("gitlab-runner-cache-upload-%s", uuid)
 
 	// According to https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_manage-assume.html#id_roles_use_view-role-max-session,
-	// session durations must be between 15 minutes and 12 hours.
+	// session durations must be between 15 minutes and 12 hours. However,
+	// when role chaining is in use, AWS limits the session duration to 1 hour.
 	duration := 1 * time.Hour
-	if timeout >= 15*time.Minute && timeout <= 12*time.Hour {
+	if timeout >= 15*time.Minute && timeout <= 1*time.Hour {
 		duration = timeout
 	}
 
