@@ -27,12 +27,12 @@ The end-of-publishing dates for the base distributions will not necessarily alig
 | Alpine                         | 3.17                   | 2024‑11‑22      | 2024-12-22      |
 | Alpine                         | 3.18                   | 2025‑05‑09      | 2025-05-22      |
 | Alpine                         | 3.19                   | 2025‑11‑01      | 2025-11-22      |
-| Alpine                         | 3.21                   | 2026‑11‑01      | 2026-11-22      |
+| Alpine                         | latest                 |                 |                 |
 | Red Hat Universal Base Image 9 | 9.5                    | 2025-04-31      | 2025-05-22      |
 
-GitLab Runner versions 18.0 and later support only a single Alpine version (the most recent).
-As a result, Alpine version 3.20 was skipped in favor of Alpine 3.21. The GitLab Runner 18.0 release
-removes support for Alpine 3.19 and earlier versions.
+GitLab Runner versions 17.7 and later support only a single Alpine version (`latest`) instead of specific versions.
+Alpine versions 3.18 and 3.19 will be supported to the stated EOL date. In contrast, Ubuntu 20.04, as an LTS release,
+will be supported to its EOL date, at which point we will move to the most recent LTS release.
 
 ## Windows version support
 
