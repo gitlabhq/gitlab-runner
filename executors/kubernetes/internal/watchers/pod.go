@@ -45,6 +45,7 @@ func NewPodWatcher(ctx context.Context, kubeClient kubernetes.Interface, namespa
 func (p *PodWatcher) Start() error {
 	gvr := v1.SchemeGroupVersion.WithResource("pods")
 
+	// kubeAPI: pods, list, watch
 	informer, err := p.factory.ForResource(gvr)
 	if err != nil {
 		return fmt.Errorf("creating informer for pods: %w", err)
@@ -55,8 +56,10 @@ func (p *PodWatcher) Start() error {
 		return fmt.Errorf("registering event handler: %w", err)
 	}
 
+	// kubeAPI: ignore
 	p.factory.Start()
 
+	// kubeAPI: ignore
 	for informer, isSynced := range p.factory.WaitForCacheSync() {
 		if isSynced {
 			continue
@@ -75,6 +78,7 @@ func (p *PodWatcher) UpdatePodName(podName string) {
 // Stop shuts down the pod watcher by shutting down its dependants: the informer factory and thus the
 // informers created based on it.
 func (p *PodWatcher) Stop() {
+	// kubeAPI: ignore
 	p.factory.Shutdown()
 }
 

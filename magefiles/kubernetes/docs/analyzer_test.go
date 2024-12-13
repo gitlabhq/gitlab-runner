@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testAnalyzerFilter(testFile string) func(fileInfo fs.FileInfo) bool {
-	return func(fileInfo fs.FileInfo) bool {
+func testAnalyzerFilter(testFile string) func(fileInfo fs.DirEntry) bool {
+	return func(fileInfo fs.DirEntry) bool {
 		return testFile == fileInfo.Name()
 	}
 }
