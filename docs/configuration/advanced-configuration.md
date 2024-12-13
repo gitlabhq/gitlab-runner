@@ -1375,8 +1375,22 @@ with the identity and the pod label `azure.workload.identity/use` in the
       "azure.workload.identity/use" = "true"
 ```
 
-To configure the runner pod specification with the GitLab Runner Helm
-chart, add the same service account and pod label:
+Ensure that the `service_account` has the `azure.workload.identity/client-id` annotation associated with it:
+
+```yaml
+serviceAccount:
+  annotations:
+    azure.workload.identity/client-id: <YOUR CLIENT ID HERE>
+```
+
+For GitLab 17.7 and later, this configuration is sufficient to set up workload identities.
+
+However, for GitLab Runner 17.5 and 17.6, you must also configure the runner manager with:
+
+- The `azure.workload.identity/use` pod label
+- A service account to use with the workload identity
+
+For example, with the GitLab Runner Helm chart:
 
 ```yaml
 serviceAccount:
