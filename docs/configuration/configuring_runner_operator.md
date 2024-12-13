@@ -14,7 +14,9 @@ This document explains how to configure GitLab Runner on OpenShift.
 
 ## Passing properties to GitLab Runner Operator
 
-When creating a `Runner`, you can configure it by setting properties in its `spec`. For example, you can specify the GitLab URL it will be registered in, or the name of the secret that contains the registration token:
+When creating a `Runner`, you can configure it by setting properties in its `spec`.
+For example, you can specify the GitLab URL where the runner is registered,
+or the name of the secret that contains the registration token:
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -30,62 +32,62 @@ Read about all the available properties in [Operator properties](#operator-prope
 
 ## Operator properties
 
-This is a list of the supported properties that can be passed to the Operator.
+The following properties can be passed to the Operator.
 
 Some properties are only available with more recent versions of the Operator.
 
-| Setting | Operator | Description |
-| ------- | -------- | ----------- |
-| `gitlabUrl`      | all      | The fully qualified domain name for the GitLab instance, for example, `https://gitlab.example.com`. |
-| `token`          | all      | Name of `Secret` containing the `runner-registration-token` key used to register the runner. |
-| `tags`           | all      | List of comma-separated tags to be applied to the runner. |
+| Setting          | Operator | Description                                                                                                                       |
+|------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `gitlabUrl`      | all      | The fully qualified domain name for the GitLab instance, for example, `https://gitlab.example.com`.                               |
+| `token`          | all      | Name of `Secret` containing the `runner-registration-token` key used to register the runner.                                      |
+| `tags`           | all      | List of comma-separated tags to be applied to the runner.                                                                         |
 | `concurrent`     | all      | Limits how many jobs can run concurrently. The maximum number is all defined runners. 0 does not mean unlimited. Default is `10`. |
-| `interval`       | all      | Defines the number of seconds between checks for new jobs. Default is `30`. |
-| `locked`         | 1.8      | Defines if the runner should be locked to a project. Default is `false`. |
-| `runUntagged`    | 1.8      | Defines if jobs without tags should be run. Default is `true` if no tags were specified. Otherwise, it's `false`. |
-| `protected`      | 1.8      | Defines if the runner should run jobs on protected branches only. Default is `false`. |
-| `cloneURL`       | all      | Overwrite the URL for the GitLab instance. Used only if the runner can’t connect to the GitLab URL. |
-| `env`            | all      | Name of `ConfigMap` containing key-value pairs that will be injected as environment variables in the Runner pod. |
-| `runnerImage`    | 1.7      | Overwrites the default GitLab Runner image. Default is the Runner image the operator was bundled with. |
-| `helperImage`    | all      | Overwrites the default GitLab Runner helper image. |
-| `buildImage`     | all      | The default Docker image to use for builds when none is specified. |
-| `cacheType`      | all      | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`. |
-| `cachePath`      | all      | Defines the cache path on the file system. |
-| `cacheShared`    | all      | Enable sharing of cache between runners. |
-| `s3`             | all      | Options used to set up S3 cache. Refer to [Cache properties](#cache-properties). |
-| `gcs`            | all      | Options used to set up GCS cache. Refer to [Cache properties](#cache-properties). |
-| `azure`          | all      | Options used to set up Azure cache. Refer to [Cache properties](#cache-properties). |
-| `ca`             | all      | Name of TLS secret containing the custom certificate authority (CA) certificates. |
-| `serviceaccount` | all      | Use to override service account used to run the Runner pod. |
-| `config`         | all      | Use to provide a custom config map with a [configuration template](../register/index.md#register-with-a-configuration-template). |
+| `interval`       | all      | Defines the number of seconds between checks for new jobs. Default is `30`.                                                       |
+| `locked`         | 1.8      | Defines if the runner should be locked to a project. Default is `false`.                                                          |
+| `runUntagged`    | 1.8      | Defines if jobs without tags should be run. Default is `true` if no tags were specified. Otherwise, it's `false`.                 |
+| `protected`      | 1.8      | Defines if the runner should run jobs on protected branches only. Default is `false`.                                             |
+| `cloneURL`       | all      | Overwrite the URL for the GitLab instance. Used only if the runner can't connect to the GitLab URL.                               |
+| `env`            | all      | Name of `ConfigMap` containing key-value pairs that are injected as environment variables in the Runner pod.                      |
+| `runnerImage`    | 1.7      | Overwrites the default GitLab Runner image. Default is the Runner image the operator was bundled with.                            |
+| `helperImage`    | all      | Overwrites the default GitLab Runner helper image.                                                                                |
+| `buildImage`     | all      | The default Docker image to use for builds when none is specified.                                                                |
+| `cacheType`      | all      | Type of cache used for Runner artifacts. One of: `gcs`, `s3`, `azure`.                                                            |
+| `cachePath`      | all      | Defines the cache path on the file system.                                                                                        |
+| `cacheShared`    | all      | Enable sharing of cache between runners.                                                                                          |
+| `s3`             | all      | Options used to set up S3 cache. Refer to [Cache properties](#cache-properties).                                                  |
+| `gcs`            | all      | Options used to set up `gcs` cache. Refer to [Cache properties](#cache-properties).                                               |
+| `azure`          | all      | Options used to set up Azure cache. Refer to [Cache properties](#cache-properties).                                               |
+| `ca`             | all      | Name of TLS secret containing the custom certificate authority (CA) certificates.                                                 |
+| `serviceaccount` | all      | Use to override service account used to run the Runner pod.                                                                       |
+| `config`         | all      | Use to provide a custom `ConfigMap` with a [configuration template](../register/index.md#register-with-a-configuration-template). |
 
 ## Cache properties
 
 ### S3 cache
 
-| Setting | Operator | Description |
-| ------- | -------- | ----------- |
-| `server`        | all      | The S3 server address. |
-| `credentials`   | all      | Name of the `Secret` containing the `accesskey` and `secretkey` properties used to access the object storage. |
-| `bucket`        | all      | Name of the bucket in which the cache will be stored. |
-| `location`      | all      | Name of the S3 region which the cache will be stored. |
-| `insecure`      | all      | Use insecure connections or `HTTP`. |
+| Setting       | Operator | Description                                                                                                   |
+|---------------|----------|---------------------------------------------------------------------------------------------------------------|
+| `server`      | all      | The S3 server address.                                                                                        |
+| `credentials` | all      | Name of the `Secret` containing the `accesskey` and `secretkey` properties used to access the object storage. |
+| `bucket`      | all      | Name of the bucket in which the cache is stored.                                                              |
+| `location`    | all      | Name of the S3 region in which the cache is stored.                                                              |
+| `insecure`    | all      | Use insecure connections or `HTTP`.                                                                           |
 
-### GCS cache
+### `gcs` cache
 
-| Setting | Operator | Description |
-| ------- | -------- | ----------- |
+| Setting           | Operator | Description                                                                                                     |
+|-------------------|----------|-----------------------------------------------------------------------------------------------------------------|
 | `credentials`     | all      | Name of the `Secret` containing the `access-id` and `private-key` properties used to access the object storage. |
-| `bucket`          | all      | Name of the bucket in which the cache will be stored. |
-| `credentialsFile` | all      | Takes GCS credentials file, `keys.json`. |
+| `bucket`          | all      | Name of the bucket in which the cache is stored.                                                                |
+| `credentialsFile` | all      | Takes the `gcs` credentials file, `keys.json`.                                                                  |
 
 ### Azure cache
 
-| Setting | Operator | Description |
-| ------- | -------- | ----------- |
-| `credentials`     | all      | Name of the `Secret` containing the `accountName` and `privateKey` properties used to access the object storage. |
-| `container`       | all      | Name of the Azure container in which the cache will be stored. |
-| `storageDomain`   | all      | The domain name of the Azure blob storage. |
+| Setting         | Operator | Description                                                                                                      |
+|-----------------|----------|------------------------------------------------------------------------------------------------------------------|
+| `credentials`   | all      | Name of the `Secret` containing the `accountName` and `privateKey` properties used to access the object storage. |
+| `container`     | all      | Name of the Azure container in which the cache is stored.                                                        |
+| `storageDomain` | all      | The domain name of the Azure blob storage.                                                                       |
 
 ## Configure a proxy environment
 
@@ -148,12 +150,12 @@ oc get services --namespace default --field-selector='metadata.name=kubernetes' 
 ## Customize `config.toml` with a configuration template
 
 NOTE:
-The use of a configuration template to customize `config.toml` is currently limited to specifying `[runners.kubernetes.volumes]` settings.
-Support to extend this to other settings is proposed in [issue 49](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/49).
+The use of a configuration template to customize `config.toml` is limited to specifying `[runners.kubernetes.volumes]` settings.
+For details on the support to extend this to other settings, see [issue 49](https://gitlab.com/gitlab-org/gl-openshift/gitlab-runner-operator/-/issues/49).
 
 You can customize the runner's `config.toml` file by using the [configuration template](../register/index.md#register-with-a-configuration-template).
 
-1. Create a custom config template file. For example, let's instruct our runner to mount an `EmptyDir` volume. Create the `custom-config.toml` file:
+1. Create a custom configuration template file. For example, let's instruct our runner to mount an `EmptyDir` volume. Create the `custom-config.toml` file:
 
    ```toml
    [[runners]]
@@ -246,33 +248,43 @@ Job concurrency is dictated by the requirements of the project.
 1. Start by trying to determine the compute and memory resources required to execute a CI job.
 1. Calculate how many times that job would be able to execute given the resources in the cluster.
 
-If you set too large a concurrency value, the Kubernetes executor will process the jobs as soon as it can.
+If you set a high concurrency value, the Kubernetes executor processes the jobs as soon as it can.
 However, the Kubernetes cluster's scheduler capacity determines when the job is scheduled.
 
 ## Troubleshooting
 
 ### Root vs non-root
 
-The GitLab Runner Operator and the GitLab Runner pod run as non-root users. As a result, the build image used in the job would need to run as a non-root user to be able to complete successfully.
-This is to ensure that jobs can run successfully with the least permission. However, for this to work,
-the build image used for the CI jobs also needs to be built to run as non-root and should not write to
-a restricted filesystem. Keep in mind that most container filesystems on an OpenShift cluster will be read-only, except for mounted
-volumes, `/var/tmp`, `/tmp` and other volumes mounted on the root filesystem as `tmpfs`.
+The GitLab Runner Operator and the GitLab Runner pod run as non-root users.
+As a result, the build image used in the job must run as a non-root user to be able to complete successfully.
+This ensures that jobs can run successfully with the least permission.
+
+To make this work, make sure that the build image used for CI/CD jobs:
+
+- Runs as non-root
+- Does not write to restricted filesystems
+
+Most container filesystems on an OpenShift cluster are read-only, except:
+
+- Mounted volumes
+- `/var/tmp`
+- `/tmp`
+- Other volumes mounted on root filesystems as `tmpfs`
 
 #### Overriding the `HOME` environment variable
 
-If creating a custom build image or [overriding env variables](#configure-a-proxy-environment), ensure that the HOME environment variables is not set to `/` which would be read-only.
+If creating a custom build image or [overriding environment variables](#configure-a-proxy-environment), ensure that the `HOME` environment variables is not set to `/` which would be read-only.
 Especially if your jobs would need to write files to the home directory.
 You could create a directory under `/home` for example `/home/ci` and set `ENV HOME=/home/ci` in your `Dockerfile`.
 
 For the runner pods [it's expected that `HOME` would be set to `/home/gitlab-runner`](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/e265820a00a6a1b9a271dc132de2618ced43cf92/runner/Dockerfile.OCP#L14).
 If this variable is changed, the new location must have the [proper permissions](https://gitlab.com/gitlab-org/ci-cd/gitlab-runner-ubi-images/-/blob/e265820a00a6a1b9a271dc132de2618ced43cf92/runner/Dockerfile.OCP#L38).
-These guidelines are also documented in the [Red Hat Container Platform Docs > Creating Images > Support arbitrary user ids](https://docs.openshift.com/container-platform/4.7/openshift_images/create-images.html#support-arbitrary-user-ids).
+These guidelines are also documented in the [Red Hat Container Platform documentation](https://docs.openshift.com/container-platform/4.7/openshift_images/create-images.html#support-arbitrary-user-ids).
 
 ### Overriding `locked` variable
 
-If set the `locked` variable to `true` when you register a runner token, the error
-"Runner configuration other than name, description, and exector is reserved and cannot be specified"
+When you register a runner token, if you set the `locked` variable to `true`, the error
+`Runner configuration other than name, description, and exector is reserved and cannot be specified`
 appears.
 
 ```yaml
@@ -285,18 +297,21 @@ appears.
 
 For more information, see [issue 472](https://gitlab.com/gitlab-org/charts/gitlab-runner/-/issues/472#note_1483346437).
 
-#### Watch out for SCC
+#### Watch out for security context constraints
 
-By default, when installed in a new OpenShift project, the GitLab Runner Operator will run as non-root.
-There are exceptions, when all the service accounts in a project are granted `anyuid` access, such as the `default` project.
-In that case, the user of the image will be `root`. This can be easily checked by running the `whoami` inside any container shell, e.g. a job.
-Read more about SCC in [Red Hat Container Platform Docs > Managing security context constraints](https://docs.openshift.com/container-platform/4.7/authentication/managing-security-context-constraints.html).
+By default, when installed in a new OpenShift project, the GitLab Runner Operator runs as non-root.
+Some projects, like the `default` project, are exceptions where all service accounts have `anyuid` access.
+In that case, the user of the image is `root`. You can check this by running the `whoami` inside any container shell, for example, a job.
+Read more about security context constraints in [Red Hat Container Platform documentation](https://docs.openshift.com/container-platform/4.7/authentication/managing-security-context-constraints.html).
 
-#### Run As anyuid SCC
+#### Run as `anyuid` security context constraints
 
-Though discouraged, in the event that is it absolutely necessary for a CI job to run as the root
-user or to write to the root filesystem, you will need to set the `anyuid` SCC on the GitLab Runner
-service account, `gitlab-runner-sa`, which is used by the GitLab Runner container.
+WARNING:
+Running jobs as root or writing to root filesystems can expose your system to security risks.
+
+To run a CI/CD job as the root user or write to root filesystems,
+set the `anyuid` security context constraints on the `gitlab-runner-sa` service account.
+The GitLab Runner container uses this service account.
 
 In OpenShift 4.3.8 and earlier:
 
@@ -351,9 +366,9 @@ If you use Red Hat OpenShift Container Platform (RHOCP) 4.11 or later, you may g
 error reading allowed ID mappings:error reading subuid mappings for user
 ```
 
-Some jobs (for example, buildah) need the `SETFCAP` capability granted to run correctly. To fix this issue:
+Some jobs (for example, `buildah`) need the `SETFCAP` capability granted to run correctly. To fix this issue:
 
-1. Add the SETFCAP capability to the SCC that GitLab Runner is using (replace the `gitlab-scc` with the SCC assigned to your GitLab Runner pod):
+1. Add the SETFCAP capability to the security context constraints that GitLab Runner is using (replace the `gitlab-scc` with the security context constraints assigned to your GitLab Runner pod):
 
    ```shell
    oc patch scc gitlab-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}'
@@ -370,13 +385,13 @@ Some jobs (for example, buildah) need the `SETFCAP` capability granted to run co
          add = ["SETFCAP"]
    ```
 
-1. Create a configmap using this `config.toml` in the namespace where GitLab Runner is deployed:
+1. Create a `ConfigMap` using this `config.toml` in the namespace where GitLab Runner is deployed:
 
    ```shell
    oc create configmap custom-config-toml --from-file config.toml=config.toml
    ```
 
-1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created configmap (replace my-runner with the correct runner pod name)
+1. Modify the runner you want to fix, adding the `config:` parameter to point to the recently created `ConfigMap` (replace my-runner with the correct runner pod name).
 
    ```shell
    oc patch runner my-runner --type merge -p '{"spec": {"config": "custom-config-toml"}}'
@@ -387,9 +402,10 @@ For more information, see the [Red Hat documentation](https://access.redhat.com/
 ### Using FIPS Compliant GitLab Runner
 
 NOTE:
-Currently, for Operator, you can change only the helper image. [An issue exists](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) to change the GitLab Runner image as well.
+For Operator, you can change only the helper image. You can't change the GitLab Runner image yet.
+[Issue 28814](https://gitlab.com/gitlab-org/gitlab-runner/-/issues/28814) tracks this feature.
 
-To use a [FIPS compliant GitLab Runner Helper](../install/index.md#fips-compliant-gitlab-runner), change the helper image as follows:
+To use a [FIPS compliant GitLab Runner helper](../install/index.md#fips-compliant-gitlab-runner), change the helper image as follows:
 
 ```yaml
 apiVersion: apps.gitlab.com/v1beta2
@@ -405,7 +421,8 @@ spec:
 
 #### Register GitLab Runner by using a self-signed certificate
 
-When you use a self-signed certificate with your GitLab self-managed installation, you must create a secret that contains the CA certificate used to sign your private certificates.
+To use self-signed certificate with GitLab self-managed, create a secret that
+contains the CA certificate you used to sign the private certificates.
 
 The name of the secret is then provided as the CA in the Runner spec section:
 
@@ -428,7 +445,8 @@ oc create secret generic mySecret --from-file=tls.crt=myCert.pem -o yaml
 
 #### Register GitLab Runner with an external URL that points to an IP address
 
-If the runner cannot match the self-signed certificate with the hostname, you might get an error message. This can happen when the GitLab self-managed instance is configured to be accessed from an IP address instead of a hostname (where ###.##.##.## is the IP address of the GitLab server):
+If the runner cannot match the self-signed certificate with the hostname, you might get an error message.
+This issue occurs when you configure GitLab self-managed to use an IP address (like ###.##.##.##) instead of a hostname:
 
 ```shell
 [31;1mERROR: Registering runner... failed               [0;m  [31;1mrunner[0;m=A5abcdEF [31;1mstatus[0;m=couldn't execute POST against https://###.##.##.##/api/v4/runners:
