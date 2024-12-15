@@ -50,7 +50,7 @@ VERSION:
 The versions for the Docker Engine and GitLab Runner container image
 do not have to match. The GitLab Runner images are backwards and forwards compatible.
 To ensure you have the latest features and security updates,
-you should always use the latest stable [Docker Engine version](https://docs.docker.com/engine/release-notes/24.0/).
+you should always use the latest stable [Docker Engine version](https://docs.docker.com/engine/release-notes/).
 
 ## Install the Docker image and start the container
 
