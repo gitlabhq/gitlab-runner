@@ -1,0 +1,5 @@
+.instance-default: gitlab-org
+.instance-default-docker: gitlab-org-docker
+
+.instance-2xlarge: gitlab-org-docker
+.instance-medium: gitlab-org-docker

@@ -1,0 +1,146 @@
+{
+    "dir": "../../out/helper-images/",
+    "export": "../../out/release_artifacts/",
+    "default": {
+        "alpine3.18-arm64": [
+            "alpine3.18-arm64-%",
+            "arm64-%"
+        ],
+        "alpine3.18-arm": [
+            "alpine3.18-arm-%",
+            "3.18-arm-%"
+        ],
+        "alpine3.18-ppc64le": [
+            "alpine3.18-ppc64le-%",
+            "ppc64le-%"
+        ],
+        "alpine3.18-s390x": [
+            "alpine3.18-s390x-%",
+            "s390x-%"
+        ],
+        "alpine3.18-x86_64-pwsh": [
+            "alpine3.18-x86_64-%-pwsh"
+        ],
+        "alpine3.18-x86_64": [
+            "alpine3.18-x86_64-%",
+            "x86_64-%"
+        ],
+        "alpine3.19-arm64": [
+            "alpine3.19-arm64-%"
+        ],
+        "alpine3.19-arm": [
+            "alpine3.19-arm-%"
+        ],
+        "alpine3.19-ppc64le": [
+            "alpine3.19-ppc64le-%"
+        ],
+        "alpine3.19-s390x": [
+            "alpine3.19-s390x-%"
+        ],
+        "alpine3.19-x86_64-pwsh": [
+            "alpine3.19-x86_64-%-pwsh"
+        ],
+        "alpine3.19-x86_64": [
+            "alpine3.19-x86_64-%"
+        ],
+        "alpine3.21-arm64": [
+            "alpine3.21-arm64-%"
+        ],
+        "alpine3.21-arm": [
+            "alpine3.21-arm-%"
+        ],
+        "alpine3.21-ppc64le": [
+            "alpine3.21-ppc64le-%"
+        ],
+        "alpine3.21-riscv64": [
+            "alpine3.21-riscv64-%"
+        ],
+        "alpine3.21-s390x": [
+            "alpine3.21-s390x-%"
+        ],
+        "alpine3.21-x86_64-pwsh": [
+            "alpine3.21-x86_64-%-pwsh"
+        ],
+        "alpine3.21-x86_64": [
+            "alpine3.21-x86_64-%"
+        ],
+        "alpine-edge-arm64": [
+            "alpine-edge-arm64-%"
+        ],
+        "alpine-edge-arm": [
+            "alpine-edge-arm-%"
+        ],
+        "alpine-edge-ppc64le": [
+            "alpine-edge-ppc64le-%"
+        ],
+        "alpine-edge-riscv64": [
+            "alpine-edge-riscv64-%"
+        ],
+        "alpine-edge-s390x": [
+            "alpine-edge-s390x-%"
+        ],
+        "alpine-edge-x86_64-pwsh": [
+            "alpine-edge-x86_64-%-pwsh"
+        ],
+        "alpine-edge-x86_64": [
+            "alpine-edge-x86_64-%"
+        ],
+        "alpine-latest-arm64": [
+            "alpine-latest-arm64-%"
+        ],
+        "alpine-latest-arm": [
+            "alpine-latest-arm-%"
+        ],
+        "alpine-latest-ppc64le": [
+            "alpine-latest-ppc64le-%"
+        ],
+        "alpine-latest-riscv64": [
+            "alpine-latest-riscv64-%"
+        ],
+        "alpine-latest-s390x": [
+            "alpine-latest-s390x-%"
+        ],
+        "alpine-latest-x86_64-pwsh": [
+            "alpine-latest-x86_64-%-pwsh"
+        ],
+        "alpine-latest-x86_64": [
+            "alpine-latest-x86_64-%"
+        ],
+        "ubi-fips-x86_64": [
+            "ubi-fips-x86_64-%"
+        ],
+        "ubuntu-arm64": [
+            "ubuntu-arm64-%"
+        ],
+        "ubuntu-arm": [
+            "ubuntu-arm-%"
+        ],
+        "ubuntu-ppc64le": [
+            "ubuntu-ppc64le-%"
+        ],
+        "ubuntu-riscv64": [
+            "ubuntu-riscv64-%"
+        ],
+        "ubuntu-s390x": [
+            "ubuntu-s390x-%"
+        ],
+        "ubuntu-x86_64-pwsh": [
+            "ubuntu-x86_64-%-pwsh"
+        ],
+        "ubuntu-x86_64": [
+            "ubuntu-x86_64-%"
+        ],
+        "windows-nanoserver-ltsc2019": [
+            "x86_64-%-nanoserver1809"
+        ],
+        "windows-servercore-ltsc2019": [
+            "x86_64-%-servercore1809"
+        ],
+        "windows-nanoserver-ltsc2022": [
+            "x86_64-%-nanoserver21H2"
+        ],
+        "windows-servercore-ltsc2022": [
+            "x86_64-%-servercore21H2"
+        ]
+    }
+}

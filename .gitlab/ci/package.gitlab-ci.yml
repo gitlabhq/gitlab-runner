@@ -5,11 +5,8 @@
   environment:
     name: package/$PKGS/$CI_COMMIT_REF_NAME
   needs:
-  - 'helper images'
-  - 'helper images binaries'
-  - 'helper images fips'
+  - 'prebuilt helper images'
   - 'binaries'
-  - 'binaries-fips'
   before_script:
   - |
     # checking GPG signing support

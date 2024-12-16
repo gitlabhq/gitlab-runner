@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/powershell
 
-COPY tests/dockerfiles/powershell-entrypoint/entrypoint.pre-post-trap.ps1 /entrypoint.ps1
+COPY powershell-entrypoint/entrypoint.pre-post-trap.ps1 /entrypoint.ps1
 
 # non-root user required to enable the docker executor's file ownership change
 USER 1000:1000

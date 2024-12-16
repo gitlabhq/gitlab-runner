@@ -2,7 +2,7 @@ FROM alpine:latest
 
 RUN apk --no-cache add bash
 
-COPY tests/dockerfiles/alpine-entrypoint/entrypoint.pre-post-trap.sh /entrypoint
+COPY alpine-entrypoint/entrypoint.pre-post-trap.sh /entrypoint
 
 # non-root user required to enable the docker executor's file ownership change
 USER 1000:1000

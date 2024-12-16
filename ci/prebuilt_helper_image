@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+
+IMAGE=$1
+
+if echo "$IMAGE" | grep -q "windows"; then
+	exit 0
+fi
+
+if echo "$IMAGE" | grep -q "prebuilt-"; then
+	exit 0
+fi
+
+if echo "$IMAGE" | grep -q "_archive"; then
+	exit 0
+fi
+
+dir=$(basename "$IMAGE" .tar)
+
+mkdir -p out/helper-images/"$dir"
+tar -xf "$IMAGE" -C out/helper-images/"$dir"
+
+archive=$(dirname "$IMAGE")/archive-$(basename "$IMAGE")
+prebuilt=$(dirname "$IMAGE")/prebuilt-$(basename "$IMAGE")
+
+rm -f "${archive}"
+skopeo copy oci:"out/helper-images/${dir}" docker-archive:"${archive}"
+
+docker export -o "$prebuilt" "$(docker create "$(docker load <"${archive}" | grep "Loaded image ID:" | awk '{print $4}')")"
+rm -rf "out/helper-images/${dir}"
+rm "${archive}"
+
+rm -f "${prebuilt}.xz"
+time 7z a -mx8 -txz "${prebuilt}.xz" "${prebuilt}"
+rm "$prebuilt"

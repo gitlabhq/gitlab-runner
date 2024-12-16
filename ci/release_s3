@@ -2,9 +2,26 @@
 
 set -eo pipefail
 
+# Check if the AWS CLI is installed
+if ! command -v aws &> /dev/null
+then
+    echo "AWS CLI not found. Please install it to proceed."
+    exit 1
+fi
+
+echo "AWS CLI is installed."
+
+aws configure set s3.max_concurrent_requests 50
+
 refName=${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_REF_NAME}
 
-make s3-upload "S3_UPLOAD_PATH=${refName}"
+# upload to ref name prefix
+aws s3 cp out/release/ "s3://$ARTIFACTS_S3_BUCKET/${refName}/" --acl public-read --recursive --no-progress
+echo -e "\n\033[1m==> Download index file: \033[36mhttps://$ARTIFACTS_S3_BUCKET.s3.amazonaws.com/${refName}/index.html\033[0m\n"
+
+# if latest, then sync refName to latest prefix
 if [[ -n "${IS_LATEST}" ]]; then
-    make s3-upload "S3_UPLOAD_PATH=latest"
+    aws s3 sync --delete "s3://$ARTIFACTS_S3_BUCKET/${refName}/" "s3://$ARTIFACTS_S3_BUCKET/latest/" --acl public-read --no-progress
+
+    echo -e "\n\033[1m==> Download index file: \033[36mhttps://$ARTIFACTS_S3_BUCKET.s3.amazonaws.com/latest/index.html\033[0m\n"
 fi

@@ -1,0 +1,8 @@
+.instance-default: gitlab-org
+.instance-default-docker: gitlab-org-docker
+
+.instance-2xlarge: saas-linux-2xlarge-amd64
+.instance-medium: saas-linux-medium-amd64
+
+.instance-windows-2019: windows-1809
+.instance-windows-2022: windows-21h1

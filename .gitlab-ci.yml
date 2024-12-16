@@ -1,32 +1,37 @@
 stages:
-- prepare
-- fips helper binaries
-- prebuild
-- prerelease
+- build
+- qa
 - test
 - test kubernetes integration
 - coverage
-- build
 - package
 - release
 - postrelease
 - docs
 
 include:
+- local: /.gitlab/ci/_project_canonical.gitlab-ci.yml
+  rules:
+    - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+      when: always
+- local: /.gitlab/ci/_project_fork.gitlab-ci.yml
+  rules:
+    - if: $CI_PROJECT_PATH == "gitlab-org/gitlab-runner" || $CI_PROJECT_PATH == "gitlab-org/security/gitlab-runner"
+      when: never
+    - if: $CI_PROJECT_PATH
 - local: /.gitlab/ci/_common.gitlab-ci.yml
 - local: /.gitlab/ci/_rules.gitlab-ci.yml
-- local: /.gitlab/ci/prepare.gitlab-ci.yml
-- local: /.gitlab/ci/fips-helper-binaries.gitlab-ci.yml
-- local: /.gitlab/ci/prebuild.gitlab-ci.yml
-- local: /.gitlab/ci/prerelease.gitlab-ci.yml
+- local: /.gitlab/ci/build.gitlab-ci.yml
+- local: /.gitlab/ci/qa.gitlab-ci.yml
 - local: /.gitlab/ci/test.gitlab-ci.yml
 - local: /.gitlab/ci/test-kubernetes-integration.gitlab-ci.yml
 - local: /.gitlab/ci/coverage.gitlab-ci.yml
-- local: /.gitlab/ci/build.gitlab-ci.yml
 - local: /.gitlab/ci/package.gitlab-ci.yml
 - local: /.gitlab/ci/release.gitlab-ci.yml
 - local: /.gitlab/ci/postrelease.gitlab-ci.yml
 - local: /.gitlab/ci/docs.gitlab-ci.yml
 - component: ${CI_SERVER_FQDN}/gitlab-org/components/danger-review/danger-review@2.0.0
+  inputs:
+    job_stage: qa
   rules:
     - if: '$CI_SERVER_HOST == "gitlab.com"'

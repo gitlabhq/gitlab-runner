@@ -1,92 +1,11 @@
-.release_docker_images_base:
-  stage: release
-  extends:
-  - .docker
-  variables:
-    PUBLISH_IMAGES: "true"
-  retry: 2
-
-.release_docker_images:
-  extends:
-  - .release_docker_images_base
-  dependencies:
-  - 'binaries'
-  - 'package-deb'
-  - 'binaries-fips'
-  - 'package-rpm: [rpmFips]'
-  - 'package-helpers'
-  script:
-  - mage images:releaseRunner "$IMAGE_FLAVOR" "$TARGET_ARCHS"
-  parallel:
-    matrix:
-    - IMAGE_FLAVOR: ubi-fips
-      TARGET_ARCHS: amd64
-    - IMAGE_FLAVOR: ubuntu
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.18
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.19
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
-    - IMAGE_FLAVOR: alpine3.21
-      TARGET_ARCHS: amd64 arm64 ppc64le s390x
-
-.sync_docker_images:
-  stage: release
-  extends:
-    - .docker
-  variables:
-    SKOPEO_VERSION: v1.12.0
-    SKOPEO_IMAGE: "quay.io/skopeo/stable:$SKOPEO_VERSION"
-    SYNC_DOCKER_IMAGES_ARGS: "--concurrency=3"
-    SYNC_COMMAND: "docker run -v /tmp:/tmp $SKOPEO_IMAGE"
-    PUSH_TO_DOCKER_HUB: "false"
-    PUSH_TO_ECR_PUBLIC: "false"
-  script:
-    - make REVISION="$REVISION" ARGS="$SYNC_DOCKER_IMAGES_ARGS" SYNC_COMMAND="$SYNC_COMMAND" sync_docker_images
-
-.release_helper_docker_images:
-  extends:
-  - .release_docker_images_base
-  dependencies:
-  - 'binaries'
-  - 'helper images'
-  - 'helper images fips'
-  script:
-  - mage images:releaseHelper "$IMAGE_FLAVOR" "$IMAGE_TAG"
-  parallel:
-    matrix:
-    - IMAGE_FLAVOR: "alpine"
-      IMAGE_TAG: ["", "alpine3.21-"]
-    - IMAGE_FLAVOR: "alpine3.18"
-      IMAGE_TAG: ["alpine3.18-" ]
-    - IMAGE_FLAVOR: "alpine3.19"
-      IMAGE_TAG: [ "alpine3.19-" ]
-    - IMAGE_FLAVOR: "alpine3.21"
-      IMAGE_TAG: ["alpine3.21-"]
-    - IMAGE_FLAVOR: "alpine-latest"
-      IMAGE_TAG: ["alpine-latest-"]
-    - IMAGE_FLAVOR: "alpine-edge"
-      IMAGE_TAG: ["alpine-edge-"]
-    - IMAGE_FLAVOR: "ubuntu"
-      IMAGE_TAG: ["ubuntu-"]
-    - IMAGE_FLAVOR: "ubi-fips"
-      IMAGE_TAG: ["ubi-fips-"]
-
-.release:
-  stage: release
-  before_script:
-  - ./ci/touch_git
+# S3 Releases
+#############
 
 .release_s3:
-  extends:
-  - .release
+  stage: release
   dependencies:
-  - 'helper images'
-  - 'helper images binaries'
-  - 'helper images fips'
+  - 'prebuilt helper images'
   - 'binaries'
-  - 'binaries-fips'
-  - 'fips helper binaries'
   - 'package-deb'
   - 'package-rpm'
   - 'package-helpers'
@@ -103,15 +22,16 @@
   script:
   - make release_s3
   tags:
-  - saas-linux-medium-amd64
+  - !reference [.instance-medium]
 
 .release_packagecloud:
-  extends:
-  - .release
+  stage: release
   dependencies:
   - 'package-deb'
   - 'package-rpm'
   - 'package-helpers'
+  before_script:
+  - ./ci/touch_git
   script:
   - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
   - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
@@ -129,22 +49,6 @@ development S3:
     name: development/s3/${CI_COMMIT_REF_NAME}
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
-development docker images:
-  extends:
-  - .release_docker_images
-  - .rules:release:development:merge-requests
-  - .release_artifacts
-  variables:
-    RUNNER_IMAGE_NAME: "gitlab-runner-dev"
-
-development helper docker images:
-  extends:
-  - .release_helper_docker_images
-  - .rules:release:development:merge-requests
-  - .release_artifacts
-  variables:
-    HELPER_IMAGE_NAME: "gitlab-runner-helper-dev"
-
 bleeding edge S3:
   extends:
   - .release_s3
@@ -152,6 +56,26 @@ bleeding edge S3:
   environment:
     name: bleeding_edge/s3
     url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+
+stable S3:
+  extends:
+  - .release_s3
+  - .rules:release:stable:branch
+  environment:
+    name: stable/s3
+    url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
+
+# Packagecloud Releases
+#######################
+
+.release_packagecloud:
+  stage: release
+  dependencies:
+  - 'package-deb'
+  - 'package-rpm'
+  script:
+  - mage packagecloud:push deb "$CI_JOB_NAME" "$DIST_FLAVOR"
+  - mage packagecloud:push rpm "$CI_JOB_NAME" "$DIST_FLAVOR"
 
 bleeding edge packagecloud:
   extends:
@@ -172,44 +96,6 @@ bleeding edge packagecloud:
       - amazon
       - sles
       - opensuse
-
-.bleeding_edge_docker_images_base:
-  extends:
-  - .rules:release:bleeding-edge
-  environment:
-    name: bleeding_edge/docker_images/linux
-    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-
-bleeding edge docker images:
-  extends:
-  - .bleeding_edge_docker_images_base
-  - .release_docker_images
-  - .release_artifacts
-
-bleeding edge helper docker images:
-  extends:
-  - .bleeding_edge_docker_images_base
-  - .release_helper_docker_images
-  - .release_artifacts
-
-bleeding edge sync docker images:
-  extends:
-    - .sync_docker_images
-    - .bleeding_edge_docker_images_base
-  needs:
-    - bleeding edge docker images
-    - bleeding edge helper docker images
-  variables:
-    PUSH_TO_DOCKER_HUB: "true"
-    REVISION: bleeding
-
-stable S3:
-  extends:
-  - .release_s3
-  - .rules:release:stable:branch
-  environment:
-    name: stable/s3
-    url: https://gitlab-runner-downloads.s3.amazonaws.com/${CI_COMMIT_REF_NAME}/index.html
 
 stable packagecloud:
   extends:
@@ -232,181 +118,89 @@ stable packagecloud:
       - sles
       - opensuse
 
-.docker_images_registry_base_variables_overwrite:
+# Image Registry Releases
+#########################
+
+development docker images:
+  stage: release
+  extends:
+  - .docker
+  - .go-cache
+  - .rules:release:development:merge-requests
+  dependencies:
+  - 'helper images'
+  - 'runner images'
+  artifacts:
+    paths:
+      - out/release_artifacts/*
+  script:
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+    - (cd scripts/pusher && go build)
+    - tags=$(make print_image_tags)
+    # dev gitlab registry images
+    - (cd scripts/pusher && ./pusher runner-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-dev" $tags)
+    - (cd scripts/pusher && ./pusher helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper-dev" $tags)
+
+bleeding edge docker images:
+  stage: release
+  extends:
+  - .docker
+  - .go-cache
+  - .rules:release:bleeding-edge
+  environment:
+    name: bleeding_edge/docker_images/linux
+    url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
+  dependencies:
+  - 'helper images'
+  - 'runner images'
+  artifacts:
+    paths:
+      - out/release_artifacts/*
+  script:
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+    - echo "${DOCKER_HUB_PASSWORD}" | docker login --username "${DOCKER_HUB_USER}" --password-stdin "registry.hub.docker.com/gitlab"
+    - (cd scripts/pusher && go build)
+    - tags=$(make print_image_tags)
+    # bleeding gitlab registry images
+    - (cd scripts/pusher && ./pusher runner-images.json "${CI_REGISTRY_IMAGE}" $tags)
+    - (cd scripts/pusher && ./pusher helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper" $tags)
+    # bleeding docker hub registry images
+    - (cd scripts/pusher && ./pusher runner-images.json "registry.hub.docker.com/gitlab/gitlab-runner" $tags)
+    - (cd scripts/pusher && ./pusher helper-images.json "registry.hub.docker.com/gitlab/gitlab-runner-helper" $tags)
+
+stable docker images:
+  stage: release
   variables:
     # Setting the CI_PROJECT_ID and CI_REGISTRY_IMAGE variable explicitly because we're
     # running this job also from the https://gitlab.com/gitlab-org/security/gitlab-runner
     # fork. But it should still create the release entry in the canonical one.
     CI_REGISTRY: registry.gitlab.com
     CI_REGISTRY_IMAGE: registry.gitlab.com/gitlab-org/gitlab-runner
-
-.stable_docker_images_base:
   extends:
+  - .docker
+  - .go-cache
   - .rules:release:stable:branch
-  - .docker_images_registry_base_variables_overwrite
   environment:
     name: stable/docker_images/linux
     url: https://hub.docker.com/r/gitlab/gitlab-runner/tags/
-
-stable docker images:
-  extends:
-  - .stable_docker_images_base
-  - .release_docker_images
-  - .release_artifacts
-
-stable helper docker images:
-  extends:
-  - .stable_docker_images_base
-  - .release_helper_docker_images
-  - .release_artifacts
-
-stable sync docker images:
-  extends:
-    - .sync_docker_images
-    - .stable_docker_images_base
-  needs:
-    - stable docker images
-    - stable helper docker images
-  variables:
-    PUSH_TO_DOCKER_HUB: "true"
-    PUSH_TO_ECR_PUBLIC: "true"
-    REVISION: $CI_COMMIT_TAG
-
-stable gitlab release:
-  stage: postrelease
-  extends:
-  - .rules:release:stable-or-rc
-  dependencies: []
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
-  variables:
-    CHANGELOG: https://gitlab.com/gitlab-org/gitlab-runner/blob/$CI_COMMIT_TAG/CHANGELOG.md
-    S3: https://gitlab-runner-downloads.s3.amazonaws.com/$CI_COMMIT_TAG
-    # Setting the CI_PROJECT_ID variable explicitly because we're running this job
-    # also from the https://gitlab.com/gitlab-org/security/gitlab-runner fork. But it
-    # should still create the release entry in the canonical one.
-    CI_PROJECT_ID: 250833
-  environment:
-    name: stable/gitlab
-    url: https://gitlab.com/gitlab-org/gitlab-runner/-/releases
-  before_script: []
+  dependencies:
+  - 'helper images'
+  - 'runner images'
+  artifacts:
+    paths:
+      - out/release_artifacts/*
   script:
-  - echo "Releasing to $S3"
-  release:
-    name: '$CI_COMMIT_TAG'
-    description: |
-      See [the changelog]($CHANGELOG) :rocket:
-
-      GitLab Runner documentation can be found at https://docs.gitlab.com/runner/.
-    tag_name: '$CI_COMMIT_TAG'
-    ref: '$CI_COMMIT_TAG'
-    assets:
-      links:
-      # binaries
-      - name: 'binary: Linux amd64'
-        url: '$S3/binaries/gitlab-runner-linux-amd64'
-        filepath: '/binaries/gitlab-runner-linux-amd64'
-      - name: 'binary: Linux amd64-fips'
-        url: '$S3/binaries/gitlab-runner-linux-amd64-fips'
-        filepath: '/binaries/gitlab-runner-linux-amd64-fips'
-      - name: 'binary: Linux 386'
-        url: '$S3/binaries/gitlab-runner-linux-386'
-        filepath: '/binaries/gitlab-runner-linux-386'
-      - name: 'binary: Linux arm'
-        url: '$S3/binaries/gitlab-runner-linux-arm'
-        filepath: '/binaries/gitlab-runner-linux-arm'
-      - name: 'binary: Linux ppc64el'
-        url: '$S3/binaries/gitlab-runner-linux-ppc64el'
-        filepath: '/binaries/gitlab-runner-linux-ppc64el'
-      - name: 'binary: Linux s390x'
-        url: '$S3/binaries/gitlab-runner-linux-s390x'
-        filepath: '/binaries/gitlab-runner-linux-s390x'
-
-      - name: 'binary: macOS amd64'
-        url: '$S3/binaries/gitlab-runner-darwin-amd64'
-        filepath: '/binaries/gitlab-runner-darwin-amd64'
-      - name: 'binary: macOS arm64'
-        url: '$S3/binaries/gitlab-runner-darwin-arm64'
-        filepath: '/binaries/gitlab-runner-darwin-arm64'
-
-      - name: 'binary: FreeBSD amd64'
-        url: '$S3/binaries/gitlab-runner-freebsd-amd64'
-        filepath: '/binaries/gitlab-runner-freebsd-amd64'
-      - name: 'binary: FreeBSD arm'
-        url: '$S3/binaries/gitlab-runner-freebsd-arm'
-        filepath: '/binaries/gitlab-runner-freebsd-arm'
-      - name: 'binary: FreeBSD 386'
-        url: '$S3/binaries/gitlab-runner-freebsd-386'
-        filepath: '/binaries/gitlab-runner-freebsd-386'
-
-      - name: 'binary: Windows amd64'
-        url: '$S3/binaries/gitlab-runner-windows-amd64.zip'
-        filepath: '/binaries/gitlab-runner-windows-amd64.zip'
-      - name: 'binary: Windows i386'
-        url: '$S3/binaries/gitlab-runner-windows-386.zip'
-        filepath: '/binaries/gitlab-runner-windows-386.zip'
-
-      # DEB packages
-      - name: 'package: DEB amd64'
-        url: '$S3/deb/gitlab-runner_amd64.deb'
-        filepath: '/packages/deb/gitlab-runner_amd64.deb'
-      - name: 'package: DEB i386'
-        url: '$S3/deb/gitlab-runner_i686.deb'
-        filepath: '/packages/deb/gitlab-runner_i686.deb'
-      - name: 'package: DEB armel'
-        url: '$S3/deb/gitlab-runner_armel.deb'
-        filepath: '/packages/deb/gitlab-runner_armel.deb'
-      - name: 'package: DEB armhf'
-        url: '$S3/deb/gitlab-runner_armhf.deb'
-        filepath: '/packages/deb/gitlab-runner_armhf.deb'
-      - name: 'package: DEB aarch64'
-        url: '$S3/deb/gitlab-runner_aarch64.deb'
-        filepath: '/packages/deb/gitlab-runner_aarch64.deb'
-      - name: 'package: DEB arm64'
-        url: '$S3/deb/gitlab-runner_arm64.deb'
-        filepath: '/packages/deb/gitlab-runner_arm64.deb'
-      - name: 'package: DEB ppc64el'
-        url: '$S3/deb/gitlab-runner_ppc64el.deb'
-        filepath: '/packages/deb/gitlab-runner_ppc64el.deb'
-      - name: 'package: DEB s390x'
-        url: '$S3/deb/gitlab-runner_s390x.deb'
-        filepath: '/packages/deb/gitlab-runner_s390x.deb'
-
-      # RPM packages
-      - name: 'package: RPM amd64'
-        url: '$S3/rpm/gitlab-runner_amd64.rpm'
-        filepath: '/packages/rpm/gitlab-runner_amd64.rpm'
-      - name: 'package: RPM amd64-fips'
-        url: '$S3/rpm/gitlab-runner_amd64-fips.rpm'
-        filepath: '/packages/rpm/gitlab-runner_amd64-fips.rpm'
-      - name: 'package: RPM i686'
-        url: '$S3/rpm/gitlab-runner_i686.rpm'
-        filepath: '/packages/rpm/gitlab-runner_i686.rpm'
-      - name: 'package: RPM arm'
-        url: '$S3/rpm/gitlab-runner_arm.rpm'
-        filepath: '/packages/rpm/gitlab-runner_arm.rpm'
-      - name: 'package: RPM armhf'
-        url: '$S3/rpm/gitlab-runner_armhf.rpm'
-        filepath: '/packages/rpm/gitlab-runner_armhf.rpm'
-      - name: 'package: RPM arm64'
-        url: '$S3/rpm/gitlab-runner_arm64.rpm'
-        filepath: '/packages/rpm/gitlab-runner_arm64.rpm'
-      - name: 'package: RPM aarch64'
-        url: '$S3/rpm/gitlab-runner_aarch64.rpm'
-        filepath: '/packages/rpm/gitlab-runner_aarch64.rpm'
-      - name: 'package: RPM ppc64le'
-        url: '$S3/rpm/gitlab-runner_ppc64le.rpm'
-        filepath: '/packages/rpm/gitlab-runner_ppc64le.rpm'
-      - name: 'package: RPM s390x'
-        url: '$S3/rpm/gitlab-runner_s390x.rpm'
-        filepath: '/packages/rpm/gitlab-runner_s390x.rpm'
-
-      # Other files
-      - name: 'checksums'
-        url: '$S3/release.sha256'
-        filepath: '/release.sha256'
-      - name: 'checksums GPG signature'
-        url: '$S3/release.sha256.asc'
-        filepath: '/release.sha256.asc'
-      - name: 'other release artifacts'
-        url: '$S3/index.html'
-        filepath: '/index.html'
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+    - echo "${DOCKER_HUB_PASSWORD}" | docker login --username "${DOCKER_HUB_USER}" --password-stdin "registry.hub.docker.com/gitlab"
+    - aws --region us-east-1 ecr-public get-login-password | docker login --username "AWS" --password-stdin "public.ecr.aws/gitlab"
+    - (cd scripts/pusher && go build)
+    - tags=$(make print_image_tags)
+    # stable gitlab registry images
+    - (cd scripts/pusher && ./pusher runner-images.json "${CI_REGISTRY_IMAGE}" $tags)
+    - (cd scripts/pusher && ./pusher helper-images.json "${CI_REGISTRY_IMAGE}/gitlab-runner-helper" $tags)
+    # stable docker hub registry images
+    - (cd scripts/pusher && ./pusher runner-images.json "registry.hub.docker.com/gitlab/gitlab-runner" $tags)
+    - (cd scripts/pusher && ./pusher helper-images.json "registry.hub.docker.com/gitlab/gitlab-runner-helper" $tags)
+    # stable aws registry images
+    - (cd scripts/pusher && ./pusher runner-images.json "public.ecr.aws/gitlab/gitlab-runner" $tags)
+    - (cd scripts/pusher && ./pusher helper-images.json "public.ecr.aws/gitlab/gitlab-runner-helper" $tags)
